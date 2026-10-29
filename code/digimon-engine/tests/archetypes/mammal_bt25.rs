@@ -526,9 +526,9 @@ fn ma3_gazimon_place_branch_tucks_under_existing_stack() {
     );
 }
 
-/// Unhappy path: Gazimon's whole clause is optional ("...or you may place...").
-/// Declining at the optional/effect-choice layer leaves the stack and hand
-/// untouched — the tuck is never forced.
+/// Gazimon must reveal and choose a branch; only the source-placement pick
+/// is optional. Declining that pick keeps the stack and hand unchanged while
+/// returning the revealed cards to the deck.
 #[test]
 fn ma3_gazimon_optional_decline_leaves_stack_untouched() {
     let mut tm_trait = make_test_card("TM-TRAIT-MA3B", "TM Trait MA3B");
@@ -550,8 +550,7 @@ fn ma3_gazimon_optional_decline_leaves_stack_untouched() {
     let hand_before = runner.game.players[0].hand.len();
     stack_deck_top(&mut runner, &["TM-TRAIT-MA3B"]);
 
-    // Confirm the clause is optional at the structural level (no-approx: the
-    // PASS is exposed because the printed text says "you may").
+    // Printed "you may" modifies placement, not the mandatory reveal clause.
     let clause_optional = runner
         .compiled_card(GAZIMON)
         .expect("compiled")
@@ -561,26 +560,22 @@ fn ma3_gazimon_optional_decline_leaves_stack_untouched() {
             matches!(c, CompiledClause::Triggered(t)
             if t.when.contains(&CompiledTiming::OnPlay) && t.optional)
         });
-    assert!(clause_optional, "Gazimon's shared clause is optional");
+    assert!(!clause_optional, "Gazimon's shared reveal clause is mandatory");
 
     let process = on_play_process(&runner, GAZIMON);
     {
         let mut ctx = EffectContext::new(&mut runner.game, src, Some(stack), 0);
         run_steps(&process, &mut ctx, &mut Bindings::new());
     }
-    // Decline at whatever optional gate surfaces.
-    if let Some(sel) = runner.pending_selection() {
-        if sel.is_optional
-            || sel
-                .valid_action_ids
-                .contains(&digimon_engine::action::space::PASS)
-        {
-            let _ = runner
-                .game
-                .resolve_selection(0, digimon_engine::action::space::PASS);
-        }
-    }
-    let _ = runner.auto_resolve();
+    let choice = runner.pending_selection().expect("mandatory branch choice");
+    assert_eq!(choice.kind, SelectionKind::EffectChoice);
+    assert!(!choice.is_optional);
+    let place_action = choice.valid_action_ids[1];
+    runner.execute_action(0, place_action).expect("choose source placement");
+    let pick = runner.pending_selection().expect("optional source pick");
+    assert!(pick.is_optional);
+    runner.execute_action(0, digimon_engine::action::space::PASS).expect("decline placement");
+    runner.auto_resolve().expect("return all revealed cards");
 
     // Stack source count unchanged; nothing tucked, nothing added to hand.
     let perm = &runner.game.players[0].battle_area[stack.index as usize];

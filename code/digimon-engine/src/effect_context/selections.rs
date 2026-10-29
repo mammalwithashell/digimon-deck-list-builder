@@ -123,12 +123,11 @@ pub(crate) fn permanents_to_refs(
 ///   `DigivolutionCards` which also excludes `TopCard`. Used by `Fragment(N)`,
 ///   `ArmorPurge`, and `MaterialSave(N)`.
 ///
-///   For a **battle-area** carrier (`index != BREEDING_TARGET`) action IDs
-///   map to `SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD +
-///   source_index` (range 2000–2167). For a **breeding-area** carrier
-///   (the `index == BREEDING_TARGET` sentinel — King Drasil), action IDs map
-///   to `encode_breeding_source_select(carrier_owner, source_index)` (range
-///   2168–2191). See `material_zone_geometry` for the single branch point.
+///   Material choices expose owned, paged physical source references for both
+///   battle-area and breeding carriers. Consumers must use the resolved source
+///   reference; a page action ID does not encode a carrier or source index.
+///   The 2000..2167 and 2168..2191 geometry remains legacy codec compatibility
+///   only (see `material_zone_geometry`). It does not cap an owned source menu.
 ///
 /// # Stack indexing convention
 /// `Permanent.card_sources` is a `Vec` where index 0 is the **bottom** card
@@ -141,7 +140,7 @@ pub enum CountCappedZone {
     Hand,
     Trash,
     /// Digivolution sources of `perm`, excluding the top card.
-    /// Action IDs: `SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD + i`.
+    /// Owned page rows resolve to the original physical carrier and source.
     Material(crate::permanent::PermanentHandle),
 }
 
@@ -434,6 +433,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::SelectHand;
         self.game.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: Some(of_player),
             kind: SelectionKind::Hand,
             selecting_player,
@@ -506,6 +506,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::SelectTrash;
         self.game.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: Some(of_player),
             kind: SelectionKind::Trash,
             selecting_player,
@@ -561,26 +562,16 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, usize) -> bool,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
     {
-        use crate::action::space::SOURCES_PER_FIELD;
-
-        // material_zone_geometry branches battle-area vs. breeding-area
-        // (BREEDING_TARGET sentinel) carriers — same single branch point as
-        // the multi-pick `CountCappedZone::Material` path.
-        let (source_count, range_start) = match material_zone_geometry(self.game, of_permanent) {
-            Some(geom) => geom,
-            None => return,
-        };
-        // Mirror CountCappedZone::Material: top card is never a candidate.
-        let cap = source_count.min(SOURCES_PER_FIELD as usize);
-        let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
-        for i in 0..cap {
-            if filter(self.game, i) {
-                valid_action_ids.push(range_start + i as u16);
-            }
-        }
-        if valid_action_ids.is_empty() {
-            return;
-        }
+        let Some(stack) = material_zone_slice(self.game, of_permanent) else { return; };
+        let source_count = stack.len().saturating_sub(1);
+        let cards: Vec<_> = (0..source_count).filter(|&i| filter(self.game, i))
+            .map(|i| stack[i].handle()).collect();
+        let pins = cards.into_iter().filter_map(|card|
+            crate::card_choice_page::SourceChoicePin::capture(self.game, of_permanent, card)
+        ).collect();
+        let Some(owner) = crate::owned_card_choice::OwnedCardChoice::sources(self.game, pins, is_optional)
+            else { return; };
+        let valid_action_ids = owner.valid_action_ids(self.game);
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let controller = self.player;
@@ -594,6 +585,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::SelectMaterial;
         self.game.pending_selection = Some(PendingSelection {
+            card_choice: Some(owner),
             zone_owner: None,
             kind: SelectionKind::Material,
             selecting_player,
@@ -606,20 +598,15 @@ impl<'a> EffectContext<'a> {
             source_permanent,
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                // Recover the source index via `range_start` rather than
-                // `decode_source_select`, so a breeding-carrier action ID
-                // (in the BREEDING_SOURCE_SELECT range) decodes correctly.
-                let source_idx = action_id.saturating_sub(range_start) as usize;
-                if let Some(card) = game
-                    .player(of_permanent.player)
-                    .battle_area
-                    .get(of_permanent.index as usize)
-                    .and_then(|p| p.card_sources.get(source_idx))
-                {
-                    let tid = card.card_id(&game.card_data).to_string();
-                    let tname = card.card_name(&game.card_data).to_string();
+                let Some(crate::owned_card_choice::ResolvedCardChoice::Source { host, index: source_idx, card })
+                    = game.resolved_card_choice.take() else { return; };
+                if let Some(data) = game.card_data_for_handle(card) {
+                    let tid = data.card_id.clone(); let tname = data.card_name.clone();
                     push_effect_target(game, controller, source_card, tid, tname);
                 }
+                let source_permanent = if source_permanent == Some(of_permanent) {
+                    Some(host)
+                } else { source_permanent };
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -990,6 +977,7 @@ impl<'a> EffectContext<'a> {
 
         self.game.current_phase = GamePhase::SelectBreedingPermanent;
         self.game.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::BreedingPermanent,
             selecting_player,
@@ -1067,6 +1055,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::EffectChoice;
         self.game.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player,
@@ -1138,6 +1127,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::SelectReveal;
         self.game.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Reveal,
             selecting_player,
@@ -1225,11 +1215,11 @@ impl<'a> EffectContext<'a> {
     /// Prompt `self.player` to pick a card from a security stack. Set
     /// `of_player = self.player` to target own security, or
     /// `self.opponent_id()` to target the opponent's. Filter runs once per
-    /// security position at install time; callback receives the chosen
-    /// index.
+    /// security position at install time and is retained for live recovery
+    /// after invalidation. The callback receives the physical card's current index.
     ///
-    /// Uses sub-ranges 40-49 (own) and 50-59 (opp) of the shared
-    /// HAND_EFFECT action space — disambiguated by `GamePhase::SelectSecurity`.
+    /// The pending physical owner supplies commit and navigation actions; raw
+    /// action offsets never identify a security position.
     /// Mirrors Python's `effect_select_own_security` / `effect_select_opponent_security`.
     pub fn select_security<F, C>(
         &mut self,
@@ -1239,28 +1229,17 @@ impl<'a> EffectContext<'a> {
         filter: F,
         callback: C,
     ) where
-        F: Fn(&Game, usize) -> bool,
+        F: Fn(&Game, usize) -> bool + Send + Sync + 'static,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
     {
-        use crate::action::space::{MAX_SECURITY, SEL_MY_SECURITY_START, SEL_OPP_SECURITY_START};
-
-        let base = if of_player == self.player {
-            SEL_MY_SECURITY_START
-        } else {
-            SEL_OPP_SECURITY_START
-        };
-
         let security_len = self.game.player(of_player).security.len();
-        let cap = security_len.min(MAX_SECURITY);
-        let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
-        for i in 0..cap {
-            if filter(self.game, i) {
-                valid_action_ids.push(base + i as u16);
-            }
-        }
-        if valid_action_ids.is_empty() {
-            return;
-        }
+        let filter = std::sync::Arc::new(filter);
+        let indices = (0..security_len).filter(|&i|filter(self.game, i)).collect();
+        let Some(mut owner) = crate::owned_card_choice::OwnedCardChoice::security(
+            self.game, of_player, indices, is_optional,
+        ) else { return; };
+        owner.set_security_filter(move |game, index| filter(game, index));
+        let valid_action_ids = owner.valid_action_ids(self.game);
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let controller = self.player;
@@ -1280,6 +1259,7 @@ impl<'a> EffectContext<'a> {
             // (face-down) security stack to render. Without it, an
             // opponent-security prompt (e.g. BT24-018 Styracomon) renders
             // against the local player's stack and is unselectable.
+            card_choice: Some(owner),
             zone_owner: Some(of_player),
             kind: SelectionKind::Security,
             selecting_player,
@@ -1292,7 +1272,9 @@ impl<'a> EffectContext<'a> {
             source_permanent,
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                let index = action_id.saturating_sub(base) as usize;
+                let Some(crate::owned_card_choice::ResolvedCardChoice::Security { owner, index, .. })
+                    = game.resolved_card_choice.take() else { return; };
+                if owner != of_player { return; }
                 if let Some(card) = game.player(of_player).security.get(index) {
                     let tid = card.card_id(&game.card_data).to_string();
                     let tname = card.card_name(&game.card_data).to_string();
@@ -1318,11 +1300,9 @@ impl<'a> EffectContext<'a> {
     /// once per card at install time; callback receives a `CardHandle` for the
     /// chosen card.
     ///
-    /// Action IDs reuse existing ranges: hand slots map to `PLAY_HAND_START +
-    /// i`, trash slots map to `TRASH_EFFECT_START + i`, and source-material
-    /// slots map to `SOURCE_SELECT_START + field * SOURCES_PER_FIELD + i`.
-    /// The inner callback disambiguates by range before invoking the user
-    /// callback. No new action range is introduced.
+    /// A physical owner pages the complete mixed-zone candidate pool through
+    /// the shared card-choice aliases. Commits resolve the pinned card in its
+    /// original zone/carrier rather than interpreting a reused action band.
     ///
     /// If no card passes the filter (across all zones), this is a no-op —
     /// matching the silent-empty contract used by the other select_* helpers.
@@ -1336,7 +1316,7 @@ impl<'a> EffectContext<'a> {
     /// [`UnionZoneOrigin`](crate::selection::UnionZoneOrigin) of the zone it
     /// came from, so a downstream consumer can act on the card's true origin
     /// (e.g. play it back from hand, trash, or source materials). The origin is
-    /// recovered from the encoded `action_id` range.
+    /// recovered from the physically pinned selection.
     /// **Filter signature (per-zone aware):** the filter receives the
     /// candidate's origin zone as a single-bit [`UnionZoneSet`]
     /// (`UnionZoneSet::HAND` / `TRASH` / `MATERIAL`) so a consumer can apply a
@@ -1374,25 +1354,15 @@ impl<'a> EffectContext<'a> {
             + Sync
             + 'static,
     {
-        use crate::action::space::{
-            decode_breeding_source_select, decode_source_select, PLAY_HAND_END, PLAY_HAND_START,
-            SOURCE_SELECT_END, SOURCE_SELECT_START, TRASH_EFFECT_END, TRASH_EFFECT_START,
-        };
-
-        let valid_action_ids = union_zone_candidate_actions(
-            self.game,
-            of_player,
-            zones,
-            material_of,
-            material_carrier_filter
-                .as_ref()
+        let candidates = union_zone_candidates_physical(
+            self.game, of_player, zones, material_of,
+            material_carrier_filter.as_ref()
                 .map(|f| &**f as &dyn Fn(&Game, crate::permanent::PermanentHandle) -> bool),
             &filter,
         );
-
-        if valid_action_ids.is_empty() {
-            return;
-        }
+        let Some(owner) = crate::owned_card_choice::OwnedCardChoice::union(
+            self.game, of_player, &candidates, is_optional) else { return; };
+        let valid_action_ids = owner.valid_action_ids(self.game);
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
         let controller = self.player;
@@ -1412,6 +1382,7 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = crate::enums::GamePhase::SelectUnion;
         self.game.pending_selection = Some(PendingSelection {
+            card_choice: Some(owner),
             zone_owner: None,
             kind: SelectionKind::UnionZone { zones },
             selecting_player,
@@ -1423,83 +1394,9 @@ impl<'a> EffectContext<'a> {
             source_card,
             source_permanent,
             source_kind,
-            callback: Box::new(move |game: &mut Game, action_id: u16| {
-                debug_assert!(
-                    action_id < PLAY_HAND_END
-                        || action_id >= TRASH_EFFECT_START
-                        || (crate::action::space::BREEDING_SOURCE_SELECT_START
-                            ..crate::action::space::BREEDING_SOURCE_SELECT_END)
-                            .contains(&action_id)
-                        || (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action_id),
-                    "select_union_zone: action_id {} falls outside supported union-zone action ranges; valid_action_ids was populated incorrectly",
-                    action_id
-                );
-                // Disambiguate by range — the action_id range also records
-                // the picked card's origin zone.
-                let (handle, origin) = if (crate::action::space::BREEDING_SOURCE_SELECT_START
-                    ..crate::action::space::BREEDING_SOURCE_SELECT_END)
-                    .contains(&action_id)
-                {
-                    let (player, source_index) = decode_breeding_source_select(action_id);
-                    let player = player as u8;
-                    let source_index = source_index as u8;
-                    let carrier = crate::permanent::PermanentHandle {
-                        player,
-                        index: crate::action::space::BREEDING_TARGET as u8,
-                    };
-                    let handle = game
-                        .player(player)
-                        .breeding_area
-                        .as_ref()
-                        .and_then(|perm| perm.card_sources.get(source_index as usize))
-                        .map(|card| card.handle())
-                        .expect("valid breeding-source union action must resolve");
-                    (
-                        handle,
-                        crate::selection::UnionZoneOrigin::Material {
-                            carrier,
-                            source_index,
-                        },
-                    )
-                } else if (crate::action::space::SOURCE_SELECT_START
-                    ..crate::action::space::SOURCE_SELECT_END)
-                    .contains(&action_id)
-                {
-                    let (field_index, source_index) = decode_source_select(action_id);
-                    let field_index = field_index as u8;
-                    let source_index = source_index as u8;
-                    let carrier = crate::permanent::PermanentHandle {
-                        player: of_player,
-                        index: field_index,
-                    };
-                    let handle = game
-                        .player(of_player)
-                        .battle_area
-                        .get(field_index as usize)
-                        .and_then(|perm| perm.card_sources.get(source_index as usize))
-                        .map(|card| card.handle())
-                        .expect("valid source union action must resolve");
-                    (
-                        handle,
-                        crate::selection::UnionZoneOrigin::Material {
-                            carrier,
-                            source_index,
-                        },
-                    )
-                } else if (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&action_id) {
-                    let idx = (action_id - TRASH_EFFECT_START) as usize;
-                    (
-                        game.player(of_player).trash[idx].handle(),
-                        crate::selection::UnionZoneOrigin::Trash,
-                    )
-                } else {
-                    // PLAY_HAND_START range (0-29)
-                    let idx = action_id.saturating_sub(PLAY_HAND_START) as usize;
-                    (
-                        game.player(of_player).hand[idx].handle(),
-                        crate::selection::UnionZoneOrigin::Hand,
-                    )
-                };
+            callback: Box::new(move |game: &mut Game, _action_id: u16| {
+                let Some((_, handle, origin)) = game.resolved_card_choice.take()
+                    .and_then(|choice| choice.union_ref()) else { return; };
                 if let Some(cd) = game.card_data_for_handle(handle) {
                     let (tid, tname) = (cd.card_id.clone(), cd.card_name.clone());
                     push_effect_target(game, controller, source_card, tid, tname);
@@ -1617,7 +1514,8 @@ impl<'a> EffectContext<'a> {
     /// **Empty filter**: if no card passes `filter` at install time, `callback`
     /// fires immediately with an empty `Vec`; no `PendingSelection` is installed.
     ///
-    /// **Cap**: `max` is asserted `<= 10` in debug builds.
+    /// `max` uses the full u8 count range; each pick still uses the zone's
+    /// existing legal action geometry. Counts do not allocate new action IDs.
     pub fn select_count_capped_multi<F, C>(
         &mut self,
         of_player: PlayerId,
@@ -1674,11 +1572,10 @@ impl<'a> EffectContext<'a> {
             + Sync
             + 'static,
     {
-        debug_assert!(max <= 10, "select_count_capped_multi: max must be <= 10");
         debug_assert!(min <= max, "select_count_capped_multi: min must be <= max");
 
         use crate::action::space::{
-            HAND_MAIN_LIMIT, PLAY_HAND_START, SOURCES_PER_FIELD, TRASH_EFFECT_START,
+            HAND_MAIN_LIMIT, PLAY_HAND_START, TRASH_EFFECT_START,
             TRASH_MAIN_LIMIT,
         };
 
@@ -1708,11 +1605,6 @@ impl<'a> EffectContext<'a> {
                 CountCappedZone::Material(perm_handle) => {
                     let (source_count, base) =
                         material_zone_geometry(self.game, perm_handle).unwrap_or((0, 0));
-                    debug_assert!(
-                    source_count <= SOURCES_PER_FIELD as usize,
-                    "Material zone: source_count {} exceeds SOURCES_PER_FIELD {} for carrier {:?}",
-                    source_count, SOURCES_PER_FIELD, perm_handle
-                );
                     (source_count, base)
                 }
             };
@@ -1847,8 +1739,8 @@ impl<'a> EffectContext<'a> {
     /// at your security stack and choose 1 card matching <filter>".
     ///
     /// `is_optional` controls whether the controller may PASS without
-    /// picking. Empty-filter case is a silent no-op (no selection
-    /// installed) — matches the contract of every other `select_*` helper.
+    /// picking. A nonempty stack with no match remains inspectable and offers
+    /// Done; an actually empty security stack installs no selection.
     /// The callback receives the chosen security slot index. Caller is
     /// responsible for the post-pick mutation (e.g., add to hand, place in
     /// digivolution stack, return to deck).
@@ -1868,20 +1760,30 @@ impl<'a> EffectContext<'a> {
         filter: F,
         callback: C,
     ) where
-        F: Fn(&Game, &CardSource) -> bool,
+        F: Fn(&Game, &CardSource) -> bool + Send + Sync + 'static,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
     {
         let player = self.player;
         // Adapt the &CardSource filter to the existing `select_security`'s
         // filter signature (Game, usize).
-        let filter_by_index = |game: &Game, idx: usize| -> bool {
+        let filter_by_index = std::sync::Arc::new(move |game: &Game, idx: usize| -> bool {
             game.player(player)
                 .security
                 .get(idx)
                 .map(|c| filter(game, c))
                 .unwrap_or(false)
-        };
-        self.select_security(player, prompt, is_optional, filter_by_index, callback);
+        });
+        let eligible: Vec<_> = (0..self.game.player(player).security.len())
+            .filter(|&index| filter_by_index(self.game, index)).collect();
+        self.select_security(player, prompt, is_optional || eligible.is_empty(), |_, _| true, callback);
+        if let Some(mut pending) = self.game.pending_selection.take() {
+            if let Some(owner) = pending.card_choice.as_mut() {
+                owner.set_security_filter(move |game, index| filter_by_index(game, index));
+                owner.grant_security_inspection(player, &eligible);
+                pending.valid_action_ids = owner.valid_action_ids(self.game);
+            }
+            self.game.pending_selection = Some(pending);
+        }
     }
 
     /// Mark a security slot face-up. Consumed by the observation tensor so
@@ -2044,7 +1946,10 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = phase;
         self.game.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            // The chooser may be overridden without changing whose field the
+            // callback indexes. Keep that target ownership available to clients.
+            card_choice: None,
+            zone_owner: Some(target_player),
             kind,
             selecting_player,
             previous_phase,
@@ -2446,6 +2351,7 @@ fn install_reveal_bucket_step(
 
     game.current_phase = GamePhase::SelectReveal;
     game.pending_selection = Some(PendingSelection {
+        card_choice: None,
         zone_owner: None,
         kind: SelectionKind::RevealBucket {
             bucket_index: bucket_index as u8,
@@ -2572,6 +2478,7 @@ fn install_permutation_step(
 
     game.current_phase = GamePhase::SelectPermutation;
     game.pending_selection = Some(PendingSelection {
+        card_choice: None,
         zone_owner: None,
         kind: SelectionKind::OrderedPermutation { remaining: n },
         selecting_player,
@@ -2629,8 +2536,6 @@ fn partition_source_refs(
     host: PermanentHandle,
     requirements: &[PartitionRequirement],
 ) -> Vec<SourceSelectionRef> {
-    use crate::action::space::SOURCES_PER_FIELD;
-
     let Some(perm) = game
         .player(host.player)
         .battle_area
@@ -2639,13 +2544,12 @@ fn partition_source_refs(
         return Vec::new();
     };
     let source_count = perm.card_sources.len().saturating_sub(1);
-    let cap = source_count.min(SOURCES_PER_FIELD as usize);
     let mut out = Vec::new();
-    for source_index in 0..cap {
+    for source_index in 0..source_count {
         let source_ref = SourceSelectionRef {
             permanent: host,
             field_index: host.index,
-            source_index: source_index as u8,
+            source_index,
             card: perm.card_sources[source_index].handle(),
         };
         if requirements
@@ -2714,9 +2618,7 @@ fn partition_next_candidates(
     host: PermanentHandle,
     requirements: &[PartitionRequirement],
     picked: &[SourceSelectionRef],
-) -> Vec<(u16, SourceSelectionRef)> {
-    use crate::action::space::encode_source_select;
-
+) -> Vec<SourceSelectionRef> {
     partition_source_refs(game, host, requirements)
         .into_iter()
         .filter(|candidate| !picked.iter().any(|p| p.card == candidate.card))
@@ -2724,13 +2626,6 @@ fn partition_next_candidates(
             let mut next = picked.to_vec();
             next.push(*candidate);
             partition_can_extend(game, host, requirements, &next)
-        })
-        .filter_map(|source_ref| {
-            encode_source_select(
-                source_ref.field_index as u16,
-                source_ref.source_index as u16,
-            )
-            .map(|action_id| (action_id, source_ref))
         })
         .collect()
 }
@@ -2790,17 +2685,42 @@ fn install_partition_source_selection(
     if candidates.is_empty() {
         return;
     }
-    let valid_action_ids: Vec<u16> = candidates.iter().map(|(action_id, _)| *action_id).collect();
+    let pins = candidates.iter().filter_map(|source| {
+        crate::card_choice_page::SourceChoicePin::capture(game, source.permanent, source.card)
+    }).collect();
+    let Some(mut owner) = crate::owned_card_choice::OwnedCardChoice::sources(game, pins, false)
+        else { return; };
+
 
     let shared_cb: Arc<Mutex<Option<SourceFinalCallback>>> =
         Arc::new(Mutex::new(Some(final_callback)));
-    let action_to_source = Arc::new(candidates);
     let prompt_for_next = prompt.clone();
     let requirements_for_next = std::sync::Arc::clone(&requirements);
-    let picked_for_pick = picked.clone();
+    let picked_pins: Vec<_> = picked.iter().filter_map(|source| {
+        crate::card_choice_page::SourceChoicePin::capture(game, source.permanent, source.card)
+    }).collect();
+    if picked_pins.len() != picked.len() { return; }
+    owner.require_source_prefix(requirements.len(), picked_pins.clone(), false);
+    let live_requirements = std::sync::Arc::clone(&requirements);
+    let live_prefix = picked_pins.clone();
+    let live_pool = owner.source_pins().unwrap_or_default();
+    owner.set_source_completion_filter(move |game, candidate| {
+        let mut picked: Vec<_> = live_prefix.iter().filter_map(|pin| pin.resolve_ref(game)).collect();
+        if let Some(candidate) = candidate {
+            let crate::owned_card_choice::CardChoicePin::Source(pin) = candidate else { return false; };
+            let Some(source) = pin.resolve_ref(game) else { return false; };
+            if picked.iter().any(|prior| prior.card == source.card) { return false; }
+            picked.push(source);
+        }
+        let remaining: Vec<_> = live_pool.iter().filter_map(|pin| pin.resolve_ref(game))
+            .filter(|source| !picked.iter().any(|prior| prior.card == source.card)).collect();
+        partition_can_extend_from(game, &live_requirements, picked, &remaining, 0)
+    });
+    let valid_action_ids = owner.valid_action_ids(game);
 
     game.current_phase = GamePhase::SelectSource;
     game.pending_selection = Some(PendingSelection {
+        card_choice: Some(owner),
         zone_owner: None,
         kind: SelectionKind::SourceMulti {
             min: requirements.len() as u8,
@@ -2816,13 +2736,15 @@ fn install_partition_source_selection(
         source_card,
         source_permanent,
         source_kind,
-        callback: Box::new(move |game: &mut Game, action_id: u16| {
-            let (_, source_ref) = action_to_source
-                .iter()
-                .find(|(candidate_action, _)| *candidate_action == action_id)
-                .copied()
-                .expect("partition source action must have been in valid_action_ids");
-            let mut next_picked = picked_for_pick;
+        callback: Box::new(move |game: &mut Game, _action_id: u16| {
+            let Some(source_ref) = game.resolved_card_choice.take().and_then(|choice| choice.source_ref())
+                else { return; };
+            let mut next_picked = Vec::with_capacity(picked_pins.len() + 1);
+            for pin in &picked_pins {
+                let Some((permanent, source_index)) = pin.resolve(game) else { return; };
+                next_picked.push(SourceSelectionRef { permanent, field_index: permanent.index,
+                    source_index, card: pin.card() });
+            }
             next_picked.push(source_ref);
 
             let next_cb: SourceFinalCallback = Box::new(move |game, picks| {
@@ -2838,7 +2760,7 @@ fn install_partition_source_selection(
 
             install_partition_source_selection(
                 game,
-                host,
+                source_ref.permanent,
                 controller,
                 selecting_player,
                 override_pin,
@@ -2871,8 +2793,7 @@ fn source_multi_candidates(
     of_player: PlayerId,
     picked: &[SourceSelectionRef],
     filter: &SourceFilter,
-) -> Vec<(u16, SourceSelectionRef)> {
-    use crate::action::space::encode_source_select;
+) -> Vec<SourceSelectionRef> {
 
     let mut out = Vec::new();
     for (field_index, perm) in game.player(of_player).battle_area.iter().enumerate() {
@@ -2888,7 +2809,7 @@ fn source_multi_candidates(
             let source_ref = SourceSelectionRef {
                 permanent,
                 field_index: field_index as u8,
-                source_index: source_index as u8,
+                source_index,
                 card,
             };
             if picked.iter().any(|p| p.card == card) {
@@ -2897,9 +2818,7 @@ fn source_multi_candidates(
             if !(filter)(game, source_ref) {
                 continue;
             }
-            if let Some(action_id) = encode_source_select(field_index as u16, source_index as u16) {
-                out.push((action_id, source_ref));
-            }
+            out.push(source_ref);
         }
     }
     out
@@ -2914,7 +2833,7 @@ fn install_source_multi_selection(
     prompt: String,
     min: u8,
     max: u8,
-    picked: Vec<SourceSelectionRef>,
+    mut picked_pins: Vec<crate::card_choice_page::SourceChoicePin>,
     filter: SourceFilter,
     source_card: crate::card_source::CardHandle,
     source_permanent: Option<PermanentHandle>,
@@ -2922,10 +2841,15 @@ fn install_source_multi_selection(
     previous_phase: GamePhase,
     final_callback: SourceFinalCallback,
 ) {
-    use crate::action::space::PASS;
     use std::sync::{Arc, Mutex};
 
+    // A selected prefix belongs to original physical carriers, not their old slots.
+    picked_pins.retain(|pin| pin.resolve_ref(game).is_some_and(|source| filter(game, source)));
+    let picked: Vec<_> = picked_pins.iter().filter_map(|pin| pin.resolve_ref(game)).collect();
     let candidates = source_multi_candidates(game, of_player, &picked, &filter);
+    if picked.len() + candidates.len() < usize::from(min) {
+        return;
+    }
     if candidates.is_empty() || picked.len() == max as usize {
         if picked.len() >= min as usize {
             final_callback(game, picked);
@@ -2933,23 +2857,26 @@ fn install_source_multi_selection(
         return;
     }
 
-    let mut valid_action_ids: Vec<u16> =
-        candidates.iter().map(|(action_id, _)| *action_id).collect();
-    if picked.len() >= min as usize {
-        valid_action_ids.push(PASS);
-    }
+    let pins = candidates.iter().filter_map(|source| {
+        crate::card_choice_page::SourceChoicePin::capture(game, source.permanent, source.card)
+    }).collect();
+    let Some(mut owner) = crate::owned_card_choice::OwnedCardChoice::sources(
+        game, pins, picked.len() >= usize::from(min),
+    ) else { return; };
+    owner.require_source_prefix(usize::from(min), picked_pins.clone(), min == 0);
+    let valid_action_ids = owner.valid_action_ids(game);
 
     let shared_cb: Arc<Mutex<Option<SourceFinalCallback>>> =
         Arc::new(Mutex::new(Some(final_callback)));
     let shared_cb_decline = Arc::clone(&shared_cb);
-    let action_to_source = Arc::new(candidates);
     let prompt_for_next = prompt.clone();
     let filter_for_next = Arc::clone(&filter);
-    let picked_for_pick = picked.clone();
-    let picked_for_decline = picked.clone();
+    let picked_for_pick = picked_pins.clone();
+    let picked_for_decline = picked_pins;
 
     game.current_phase = GamePhase::SelectSource;
     game.pending_selection = Some(PendingSelection {
+        card_choice: Some(owner),
         zone_owner: None,
         kind: SelectionKind::SourceMulti {
             min,
@@ -2965,12 +2892,9 @@ fn install_source_multi_selection(
         source_card,
         source_permanent,
         source_kind,
-        callback: Box::new(move |game: &mut Game, action_id: u16| {
-            let (_, source_ref) = action_to_source
-                .iter()
-                .find(|(candidate_action, _)| *candidate_action == action_id)
-                .copied()
-                .expect("source action must have been in valid_action_ids");
+        callback: Box::new(move |game: &mut Game, _action_id: u16| {
+            let Some(source_ref) = game.resolved_card_choice.take().and_then(|choice| choice.source_ref())
+                else { return; };
             let mut next_picked = picked_for_pick;
 
             // DCGO-parity live revalidation. The picker's `action_to_source`
@@ -2986,18 +2910,11 @@ fn install_source_multi_selection(
             // preserves prior valid picks while presenting the agent a
             // truthful menu. See change `fix-trash-card-source-stale-handle`
             // and family `G-DSL-TRASH-SOURCES-STALE-HANDLE`.
-            let still_present = game
-                .player(source_ref.permanent.player)
-                .battle_area
-                .get(source_ref.permanent.index as usize)
-                .map(|perm| {
-                    perm.card_sources
-                        .iter()
-                        .any(|c| c.handle() == source_ref.card)
-                })
-                .unwrap_or(false);
+            let still_present = filter_for_next(game, source_ref);
             if still_present {
-                next_picked.push(source_ref);
+                if let Some(pin) = crate::card_choice_page::SourceChoicePin::capture(game, source_ref.permanent, source_ref.card) {
+                    next_picked.push(pin);
+                }
             }
             // When `!still_present`, `next_picked` is unchanged (== prior
             // `picked_for_pick`); the recursive re-install below will
@@ -3036,7 +2953,8 @@ fn install_source_multi_selection(
             let cb_opt = shared_cb_decline.lock().unwrap().take();
             debug_assert!(cb_opt.is_some(), "source final callback already consumed");
             if let Some(cb) = cb_opt {
-                cb(game, picked_for_decline);
+                let picked: Vec<_> = picked_for_decline.iter().filter_map(|pin| pin.resolve_ref(game)).collect();
+                if picked.len() >= usize::from(min) { cb(game, picked); }
             }
         })),
     });
@@ -3125,6 +3043,7 @@ fn install_dp_budget_selection(
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
+        card_choice: None,
         zone_owner: None,
         kind: SelectionKind::DpBudget {
             remaining_dp,
@@ -3215,44 +3134,40 @@ pub(crate) fn material_carrier_permanent(
     }
 }
 
-/// The action ids a union-zone pick (`EffectContext::select_union_zone`)
-/// offers: every card of `of_player`'s hand / trash (capped at the action
-/// space's limits) and every below-top digivolution card of the material
+/// Complete physical candidates offered by a union-zone pick: every card of
+/// `of_player`'s hand / trash and every below-top digivolution card of the material
 /// carriers that `filter` accepts. Material carriers: `material_of` when
 /// pinned, otherwise each of `of_player`'s battle-area permanents whose top
 /// card is a Digimon with at least one digivolution card, restricted by
 /// `material_carrier_filter`. Read-only, so the §15-7-4 payability guard of a
 /// "by trashing 1 card from ..." condition (`CostGuard::UnionZoneTrash`) asks
 /// exactly what the pick will offer.
-pub(crate) fn union_zone_candidate_actions(
+pub(crate) fn union_zone_candidates_physical(
     game: &Game,
     of_player: crate::enums::PlayerId,
     zones: crate::selection::UnionZoneSet,
     material_of: Option<PermanentHandle>,
     material_carrier_filter: Option<&dyn Fn(&Game, PermanentHandle) -> bool>,
     filter: &dyn Fn(&Game, &CardSource, crate::selection::UnionZoneSet) -> bool,
-) -> Vec<u16> {
-    use crate::action::space::{
-        encode_breeding_source_select, encode_source_select, HAND_MAIN_LIMIT, PLAY_HAND_START,
-        TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
-    };
+) -> Vec<(crate::card_source::CardHandle, crate::selection::UnionZoneOrigin)> {
+    use crate::selection::UnionZoneOrigin;
     use crate::selection::UnionZoneSet;
 
-    let mut valid_action_ids: Vec<u16> = Vec::new();
+    let mut candidates = Vec::new();
     let player = game.player(of_player);
 
     if zones.contains(UnionZoneSet::HAND) {
-        for (i, card) in player.hand.iter().take(HAND_MAIN_LIMIT).enumerate() {
+        for card in &player.hand {
             if filter(game, card, UnionZoneSet::HAND) {
-                valid_action_ids.push(PLAY_HAND_START + i as u16);
+                candidates.push((card.handle(), UnionZoneOrigin::Hand));
             }
         }
     }
 
     if zones.contains(UnionZoneSet::TRASH) {
-        for (i, card) in player.trash.iter().take(TRASH_MAIN_LIMIT).enumerate() {
+        for card in &player.trash {
             if filter(game, card, UnionZoneSet::TRASH) {
-                valid_action_ids.push(TRASH_EFFECT_START + i as u16);
+                candidates.push((card.handle(), UnionZoneOrigin::Trash));
             }
         }
     }
@@ -3288,19 +3203,12 @@ pub(crate) fn union_zone_candidate_actions(
                 if !filter(game, card, UnionZoneSet::MATERIAL) {
                     continue;
                 }
-                let action = if carrier.index == crate::action::space::BREEDING_TARGET as u8 {
-                    encode_breeding_source_select(carrier.player, source_index as u16)
-                } else {
-                    encode_source_select(carrier.index as u16, source_index as u16)
-                };
-                if let Some(action) = action {
-                    valid_action_ids.push(action);
-                }
+                candidates.push((card.handle(), UnionZoneOrigin::Material { carrier, source_index }));
             }
         }
     }
 
-    valid_action_ids
+    candidates
 }
 
 /// The carrier's `card_sources` slice — the bottom-up digivolution stack
@@ -3433,6 +3341,7 @@ fn install_play_cost_budget_selection(
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
+        card_choice: None,
         zone_owner: None,
         kind: SelectionKind::PlayCostBudget {
             remaining_play_cost,
@@ -3555,11 +3464,23 @@ fn install_count_capped_step(
     // `min`" (G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N).
     let is_optional = picked >= effective_min || (is_optional_zero && picked == 0);
 
-    // Build valid_action_ids from remaining candidate indices.
-    let valid_action_ids: Vec<u16> = candidate_indices
-        .iter()
-        .map(|&i| range_start + i as u16)
-        .collect();
+    let material_snapshot = if let CountCappedZone::Material(host) = zone {
+        let Some(stack) = material_zone_slice(game, host) else { return; };
+        Some(candidate_indices.iter().filter_map(|&index| stack.get(index).map(|card| card.handle())).collect::<Vec<_>>())
+    } else { None };
+    let material_prefix: Option<Vec<_>> = if let CountCappedZone::Material(host) = zone {
+        Some(accum.iter().filter_map(|&card| crate::card_choice_page::SourceChoicePin::capture(game, host, card)).collect())
+    } else { None };
+    let owner = if let CountCappedZone::Material(host) = zone {
+        let Some(mut owner) = crate::owned_card_choice::OwnedCardChoice::material(game, host, &candidate_indices, is_optional)
+            else { return; };
+        let prefix = material_prefix.clone().unwrap_or_default();
+        owner.require_source_prefix(usize::from(effective_min), prefix, is_optional_zero);
+        owner.require_source_constraints(distinct_by, None);
+        Some(owner)
+    } else { None };
+    let valid_action_ids: Vec<u16> = owner.as_ref().map(|owner| owner.valid_action_ids(game))
+        .unwrap_or_else(|| candidate_indices.iter().map(|&i| range_start + i as u16).collect());
 
     // SAFETY INVARIANT: Exactly one of `callback` or `on_decline` will ever fire
     // per installed PendingSelection. When `resolve_generic_selection` dispatches
@@ -3581,10 +3502,12 @@ fn install_count_capped_step(
     let shared_cb_decline = Arc::clone(&shared_cb);
 
     // Clone the accum for the on_decline path (the callback path moves accum).
-    let accum_for_decline = accum.clone();
+    let mut accum_for_decline = accum.clone();
+    let prefix_for_decline = material_prefix.clone();
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
+        card_choice: owner,
         zone_owner: None,
         kind: SelectionKind::CountCappedMultiSelect {
             min: effective_min,
@@ -3602,15 +3525,22 @@ fn install_count_capped_step(
         source_permanent,
         source_kind,
         callback: Box::new(move |game: &mut Game, action_id: u16| {
+            let (zone, candidate_indices, pick_zone_idx) = if matches!(zone, CountCappedZone::Material(_)) {
+                let Some(source) = game.resolved_card_choice.take().and_then(|choice| choice.source_ref()) else { return; };
+                let Some(stack) = material_zone_slice(game, source.permanent) else { return; };
+                let candidates = material_snapshot.as_ref().into_iter().flatten()
+                    .filter_map(|card| stack.iter().take(stack.len().saturating_sub(1)).position(|current| current.handle() == *card)).collect();
+                (CountCappedZone::Material(source.permanent), candidates, source.source_index)
+            } else {
+                (zone, candidate_indices, action_id.saturating_sub(range_start) as usize)
+            };
             debug_assert!(
-                action_id >= range_start
-                    && candidate_indices.contains(&((action_id - range_start) as usize)),
+                candidate_indices.contains(&pick_zone_idx),
                 "select_count_capped_multi callback: action_id {} not in expected zone range (range_start={}, candidates={:?})",
                 action_id, range_start, candidate_indices
             );
 
             // Identify picked zone index and resolve the CardHandle.
-            let pick_zone_idx = (action_id - range_start) as usize;
             let card_handle = match zone {
                 CountCappedZone::Hand => game.player(of_player).hand[pick_zone_idx].handle(),
                 CountCappedZone::Trash => game.player(of_player).trash[pick_zone_idx].handle(),
@@ -3625,7 +3555,10 @@ fn install_count_capped_step(
 
             // Build new state for the next step.
             let mut new_accum = accum;
-            new_accum.push(card_handle);
+            if let Some(prefix) = &material_prefix {
+                new_accum.retain(|card| prefix.iter().any(|pin| pin.card() == *card && pin.resolve(game).is_some()));
+            }
+            if !new_accum.contains(&card_handle) { new_accum.push(card_handle); }
 
             // Auto-commit when max reached.
             if new_accum.len() == max as usize {
@@ -3699,6 +3632,7 @@ fn install_count_capped_step(
 
             // If no candidates remain, commit early with what we have.
             if new_candidates.is_empty() {
+                if new_accum.len() < usize::from(effective_min) { return; }
                 let cb_opt = shared_cb.lock().unwrap().take();
                 debug_assert!(
                     cb_opt.is_some(),
@@ -3756,7 +3690,11 @@ fn install_count_capped_step(
                 "count_capped invariant violated: final_callback already consumed (both paths fired?)"
             );
             if let Some(cb) = cb_opt {
-                cb(game, accum_for_decline);
+                if let Some(prefix) = &prefix_for_decline {
+                    accum_for_decline.retain(|card| prefix.iter().any(|pin| pin.card() == *card && pin.resolve(game).is_some()));
+                }
+                if accum_for_decline.len() >= usize::from(effective_min)
+                    || (is_optional_zero && accum_for_decline.is_empty()) { cb(game, accum_for_decline); }
             }
         })),
     });

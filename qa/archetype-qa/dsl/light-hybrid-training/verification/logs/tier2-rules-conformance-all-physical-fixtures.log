@@ -1,0 +1,1221 @@
+warning: unused imports: `Expiry`, `ModifierType`, and `Zone`
+   --> code\digimon-engine\src\cards\keyword_effects.rs:126:34
+    |
+126 | use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, Zone};
+    |                                  ^^^^^^           ^^^^^^^^^^^^  ^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `effect_attack_target_action_ids_with_options` and `effect_attack_target_action_ids`
+  --> code\digimon-engine\src\effect_context\mod.rs:37:5
+   |
+37 |     effect_attack_target_action_ids, effect_attack_target_action_ids_with_options,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `SECURITY_TARGET`, `decode_attack`, and `encode_attack`
+  --> code\digimon-engine\src\effect_context\mod.rs:39:28
+   |
+39 | use crate::action::space::{decode_attack, encode_attack, SECURITY_TARGET};
+   |                            ^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused imports: `AttackError`, `AttackInitiator`, `AttackOpen`, `AttackResult`, and `TargetConstraint`
+  --> code\digimon-engine\src\effect_context\mod.rs:42:21
+   |
+42 | use crate::combat::{AttackError, AttackInitiator, AttackOpen, AttackResult, TargetConstraint};
+   |                     ^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `DigiXrosMaterialValidationError`, `DigiXrosMaterialZone`, `DigiXrosTransaction`, and `DigiXrosZoneAllowance`
+  --> code\digimon-engine\src\effect_context\mod.rs:44:29
+   |
+44 |     DigiXrosMaterialOrigin, DigiXrosMaterialValidationError, DigiXrosMaterialZone,
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+45 |     DigiXrosTransaction, DigiXrosZoneAllowance,
+   |     ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::dsl_cards::bindings::Bindings`
+  --> code\digimon-engine\src\effect_context\mod.rs:47:5
+   |
+47 | use crate::dsl_cards::bindings::Bindings;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::dsl_cards::step::StepRuntime`
+  --> code\digimon-engine\src\effect_context\mod.rs:48:5
+   |
+48 | use crate::dsl_cards::step::StepRuntime;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `TimingFilter` and `enumerate_refireable_effects`
+  --> code\digimon-engine\src\effect_context\mod.rs:49:21
+   |
+49 | use crate::effect::{enumerate_refireable_effects, ReFireableEffect, TimingFilter};
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^                    ^^^^^^^^^^^^
+
+warning: unused imports: `DelayTrigger`, `EffectTiming`, `Expiry`, `GamePhase`, `Keyword`, `ModifierType`, `PlaySource`, and `StackPosition`
+  --> code\digimon-engine\src\effect_context\mod.rs:51:15
+   |
+51 |     CardKind, DelayTrigger, EffectSourceKind, EffectTiming, Expiry, GamePhase, Keyword,
+   |               ^^^^^^^^^^^^                    ^^^^^^^^^^^^  ^^^^^^  ^^^^^^^^^  ^^^^^^^
+52 |     ModifierType, PlaySource, PlayerId, StackPosition,
+   |     ^^^^^^^^^^^^  ^^^^^^^^^^            ^^^^^^^^^^^^^
+
+warning: unused import: `crate::game::PendingWouldPlayOrigin`
+  --> code\digimon-engine\src\effect_context\mod.rs:55:5
+   |
+55 | use crate::game::PendingWouldPlayOrigin;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `EffectControllerFilter`, `EffectImmunityFilter`, `ModifierEntry`, and `PlayerModifierEntry`
+  --> code\digimon-engine\src\effect_context\mod.rs:58:5
+   |
+58 |     EffectControllerFilter, EffectImmunityFilter, ModifierEntry, PlayerModifierEntry,
+   |     ^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ReplacementSubject`
+  --> code\digimon-engine\src\effect_context\mod.rs:62:44
+   |
+62 | use crate::replacement::{ReplacementCause, ReplacementSubject};
+   |                                            ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::scheduled_effects::ScheduledEffect`
+  --> code\digimon-engine\src\effect_context\mod.rs:64:5
+   |
+64 | use crate::scheduled_effects::ScheduledEffect;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `AttackTarget`, `DeclineCallback`, `PendingSelection`, and `SelectionKind`
+  --> code\digimon-engine\src\effect_context\mod.rs:65:24
+   |
+65 | use crate::selection::{AttackTarget, DeclineCallback, PendingSelection, SelectionKind};
+   |                        ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^
+
+warning: unused import: `build_registry`
+  --> code\digimon-engine\src\game\mod.rs:10:20
+   |
+10 | use crate::cards::{build_registry, CardEffectRegistry};
+   |                    ^^^^^^^^^^^^^^
+
+warning: unused import: `OriginalDeckCardCount`
+  --> code\digimon-engine\src\game\mod.rs:16:21
+   |
+16 | use crate::player::{OriginalDeckCardCount, Player};
+   |                     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:2915:13
+     |
+2915 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:2916:13
+     |
+2916 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:3098:13
+     |
+3098 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:3099:13
+     |
+3099 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:3248:13
+     |
+3248 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:3249:13
+     |
+3249 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `PendingWouldDigivolveResume` and `PendingWouldPlayResume`
+  --> code\digimon-engine\src\game_actions\mod.rs:20:5
+   |
+20 |     PendingWouldDigivolveResume, PendingWouldLinkResume, PendingWouldPlayOrigin,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+21 |     PendingWouldPlayResume,
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `OptionPlayResult` and `QueuedEffect`
+  --> code\digimon-engine\src\game_actions\mod.rs:25:5
+   |
+25 |     OptionPlayResult, OptionResolutionPhase, OptionSubtype, OptionUseSource, PendingOption,
+   |     ^^^^^^^^^^^^^^^^
+26 |     PendingSelection, QueuedEffect, SelectionKind, TriggerSource,
+   |                       ^^^^^^^^^^^^
+
+warning: unused import: `ReplacementOutcome`
+    --> code\digimon-engine\src\game_actions\mod.rs:4181:34
+     |
+4181 |         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+     |                                  ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `PathBuf`
+  --> code\digimon-engine\src\selfplay\driver.rs:28:23
+   |
+28 | use std::path::{Path, PathBuf};
+   |                       ^^^^^^^
+
+warning: unused import: `rand::seq::SliceRandom`
+  --> code\digimon-engine\src\game_actions\mod.rs:28:5
+   |
+28 | use rand::seq::SliceRandom;
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+  --> code\digimon-engine\src\determinize\invariants.rs:91:9
+   |
+91 |     let mut add_all = |cards: &[crate::card_source::CardSource], ms: &mut CardMultiset| {
+   |         ----^^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `action_id`
+    --> code\digimon-engine\src\dsl_cards\step\selections.rs:3367:5
+     |
+3367 |     action_id: u16,
+     |     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_action_id`
+     |
+     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> code\digimon-engine\src\dsl_cards\step\zone_cards.rs:612:18
+    |
+612 |         let Some(mut c) = ctx.game.take_card_by_handle(card) else {
+    |                  ----^
+    |                  |
+    |                  help: remove this `mut`
+
+warning: unused variable: `source_card`
+   --> code\digimon-engine\src\effect_context\action\security.rs:518:13
+    |
+518 |         let source_card = {
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_card`
+
+warning: unused variable: `top_card`
+   --> code\digimon-engine\src\effect_context\action\security.rs:560:13
+    |
+560 |         let top_card = {
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_top_card`
+
+warning: unused variable: `action_id`
+   --> code\digimon-engine\src\effect_context\selections.rs:601:55
+    |
+601 |             callback: Box::new(move |game: &mut Game, action_id: u16| {
+    |                                                       ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_action_id`
+
+warning: unused variable: `action_id`
+    --> code\digimon-engine\src\effect_context\selections.rs:1275:55
+     |
+1275 |             callback: Box::new(move |game: &mut Game, action_id: u16| {
+     |                                                       ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_action_id`
+
+warning: variable does not need to be mutable
+    --> code\digimon-engine\src\effect_queue.rs:6515:17
+     |
+6515 |             let mut digivolve_scope_order: Vec<_> = self.effect_digivolve_scopes.iter()
+     |                 ----^^^^^^^^^^^^^^^^^^^^^
+     |                 |
+     |                 help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> code\digimon-engine\src\game\snapshot.rs:166:13
+    |
+166 |         let mut push = |cs: &CardSource, ids: &mut Vec<String>| {
+    |             ----^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: type `game_actions::TakenCardSource` is more private than the item `game_actions::sources::<impl game::Game>::take_card_source_ref`
+   --> code\digimon-engine\src\game_actions\sources.rs:161:5
+    |
+161 | /     pub(crate) fn take_card_source_ref(
+162 | |         &mut self,
+163 | |         source: crate::enums::CardSourceRef,
+164 | |     ) -> Option<TakenCardSource> {
+    | |________________________________^ method `game_actions::sources::<impl game::Game>::take_card_source_ref` is reachable at visibility `pub(crate)`
+    |
+note: but type `game_actions::TakenCardSource` is only usable at visibility `pub(self)`
+   --> code\digimon-engine\src\game_actions\mod.rs:85:1
+    |
+ 85 | struct TakenCardSource {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: type `game_actions::TakenCardSource` is more private than the item `game_actions::sources::<impl game::Game>::restore_card_source_ref`
+   --> code\digimon-engine\src\game_actions\sources.rs:261:5
+    |
+261 | /     pub(crate) fn restore_card_source_ref(
+262 | |         &mut self,
+263 | |         source: crate::enums::CardSourceRef,
+264 | |         taken: TakenCardSource,
+265 | |     ) -> bool {
+    | |_____________^ method `game_actions::sources::<impl game::Game>::restore_card_source_ref` is reachable at visibility `pub(crate)`
+    |
+note: but type `game_actions::TakenCardSource` is only usable at visibility `pub(self)`
+   --> code\digimon-engine\src\game_actions\mod.rs:85:1
+    |
+ 85 | struct TakenCardSource {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveReducerState` is more private than the item `AfterSelectionHook::DigivolveReducerChain::state`
+   --> code\digimon-engine\src\resume.rs:66:9
+    |
+ 66 |         state: crate::game_actions::digivolve::DigivolveReducerState,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::DigivolveReducerChain::state` is reachable at visibility `pub`
+    |
+note: but type `DigivolveReducerState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:211:1
+    |
+211 | pub(crate) struct DigivolveReducerState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::DigiXrosResumeContinuation` is more private than the item `AfterSelectionHook::DigiXrosLeaveContinuation::cont`
+  --> code\digimon-engine\src\resume.rs:87:9
+   |
+87 |         cont: crate::game_actions::DigiXrosResumeContinuation,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::DigiXrosLeaveContinuation::cont` is reachable at visibility `pub`
+   |
+note: but type `game_actions::DigiXrosResumeContinuation` is only usable at visibility `pub(crate)`
+  --> code\digimon-engine\src\game_actions\mod.rs:97:1
+   |
+97 | pub(crate) struct DigiXrosResumeContinuation {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::CostTargetContext` is more private than the item `AfterSelectionHook::PlayCostContinuation::target`
+   --> code\digimon-engine\src\resume.rs:95:9
+    |
+ 95 |         target: crate::game_actions::CostTargetContext,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::target` is reachable at visibility `pub`
+    |
+note: but type `game_actions::CostTargetContext` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:325:1
+    |
+325 | pub(crate) struct CostTargetContext {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game::PendingWouldPlayOrigin` is more private than the item `AfterSelectionHook::PlayCostContinuation::origin`
+   --> code\digimon-engine\src\resume.rs:98:9
+    |
+ 98 |         origin: crate::game::PendingWouldPlayOrigin,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::origin` is reachable at visibility `pub`
+    |
+note: but type `game::PendingWouldPlayOrigin` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game\mod.rs:283:1
+    |
+283 | pub(crate) enum PendingWouldPlayOrigin {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `PlayCostAdjustments` is more private than the item `AfterSelectionHook::PlayCostContinuation::accumulated_reduction`
+   --> code\digimon-engine\src\resume.rs:100:9
+    |
+100 |         accumulated_reduction: crate::game_actions::PlayCostAdjustments,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::accumulated_reduction` is reachable at visibility `pub`
+    |
+note: but type `PlayCostAdjustments` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\play_cost_assignment.rs:4:1
+    |
+  4 | pub(crate) struct PlayCostAdjustments {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::CostReductionKey` is more private than the item `AfterSelectionHook::PlayCostContinuation::processed`
+   --> code\digimon-engine\src\resume.rs:101:9
+    |
+101 |         processed: Vec<crate::game_actions::CostReductionKey>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::processed` is reachable at visibility `pub`
+    |
+note: but type `game_actions::CostReductionKey` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:201:1
+    |
+201 | pub(crate) struct CostReductionKey {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionSource` is more private than the item `AfterSelectionHook::InteractiveOptionUseReducer::source`
+   --> code\digimon-engine\src\resume.rs:109:9
+    |
+109 |         source: crate::game_actions::OptionSource,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::InteractiveOptionUseReducer::source` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionSource` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:60:1
+    |
+ 60 | pub(crate) enum OptionSource {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionPlayMode` is more private than the item `AfterSelectionHook::InteractiveOptionUseReducer::mode`
+   --> code\digimon-engine\src\resume.rs:110:9
+    |
+110 |         mode: crate::game_actions::OptionPlayMode,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::InteractiveOptionUseReducer::mode` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionPlayMode` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:164:1
+    |
+164 | pub(crate) enum OptionPlayMode {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionCostPolicy` is more private than the item `AfterSelectionHook::InteractiveOptionUseReducer::cost_policy`
+   --> code\digimon-engine\src\resume.rs:111:9
+    |
+111 |         cost_policy: crate::game_actions::OptionCostPolicy,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::InteractiveOptionUseReducer::cost_policy` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionCostPolicy` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:126:1
+    |
+126 | pub(crate) enum OptionCostPolicy {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `LinkPickState` is more private than the item `ResumeFrame::LinkPickStep::0`
+   --> code\digimon-engine\src\resume.rs:537:18
+    |
+537 |     LinkPickStep(crate::dsl_cards::step::link_cards::LinkPickState),
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::LinkPickStep::0` is reachable at visibility `pub`
+    |
+note: but type `LinkPickState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\dsl_cards\step\link_cards.rs:239:1
+    |
+239 | pub(crate) struct LinkPickState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `ZoneCardPickState` is more private than the item `ResumeFrame::ZoneCardPickStep::0`
+   --> code\digimon-engine\src\resume.rs:541:22
+    |
+541 |     ZoneCardPickStep(crate::dsl_cards::step::zone_cards::ZoneCardPickState),
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::ZoneCardPickStep::0` is reachable at visibility `pub`
+    |
+note: but type `ZoneCardPickState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\dsl_cards\step\zone_cards.rs:65:1
+    |
+ 65 | pub(crate) struct ZoneCardPickState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveCostChoiceState` is more private than the item `ResumeFrame::DigivolveCostChoice::0`
+   --> code\digimon-engine\src\resume.rs:547:25
+    |
+547 |     DigivolveCostChoice(crate::game_actions::digivolve::DigivolveCostChoiceState),
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigivolveCostChoice::0` is reachable at visibility `pub`
+    |
+note: but type `DigivolveCostChoiceState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:61:1
+    |
+ 61 | pub(crate) struct DigivolveCostChoiceState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `EffectDigivolveCostChoiceState` is more private than the item `ResumeFrame::EffectDigivolveCostChoice::0`
+   --> code\digimon-engine\src\resume.rs:549:31
+    |
+549 |     EffectDigivolveCostChoice(crate::game_actions::digivolve::EffectDigivolveCostChoiceState),
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::EffectDigivolveCostChoice::0` is reachable at visibility `pub`
+    |
+note: but type `EffectDigivolveCostChoiceState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:73:1
+    |
+ 73 | pub(crate) struct EffectDigivolveCostChoiceState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `EffectDnaHandDeclaration` is more private than the item `ResumeFrame::EffectDnaHandRoute::0`
+   --> code\digimon-engine\src\resume.rs:551:24
+    |
+551 |     EffectDnaHandRoute(crate::game_actions::effect_dna::EffectDnaHandDeclaration),
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::EffectDnaHandRoute::0` is reachable at visibility `pub`
+    |
+note: but type `EffectDnaHandDeclaration` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\effect_dna.rs:84:1
+    |
+ 84 | pub(crate) struct EffectDnaHandDeclaration {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveReducerState` is more private than the item `ResumeFrame::DigivolveReducerPrompt::0`
+   --> code\digimon-engine\src\resume.rs:557:28
+    |
+557 |     DigivolveReducerPrompt(crate::game_actions::digivolve::DigivolveReducerState),
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigivolveReducerPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `DigivolveReducerState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:211:1
+    |
+211 | pub(crate) struct DigivolveReducerState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveReducerState` is more private than the item `ResumeFrame::DigivolveReducerSuspend::0`
+   --> code\digimon-engine\src\resume.rs:561:29
+    |
+561 |     DigivolveReducerSuspend(crate::game_actions::digivolve::DigivolveReducerState),
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigivolveReducerSuspend::0` is reachable at visibility `pub`
+    |
+note: but type `DigivolveReducerState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:211:1
+    |
+211 | pub(crate) struct DigivolveReducerState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `OptionModeSelectState` is more private than the item `ResumeFrame::OptionModeSelect::0`
+   --> code\digimon-engine\src\resume.rs:580:22
+    |
+580 |     OptionModeSelect(crate::game_actions::options::OptionModeSelectState),
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::OptionModeSelect::0` is reachable at visibility `pub`
+    |
+note: but type `OptionModeSelectState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\options.rs:29:1
+    |
+ 29 | pub(crate) struct OptionModeSelectState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayCancelContinuation` is more private than the item `ResumeFrame::DelayCancelAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:613:9
+     |
+ 613 |         continuation: crate::dsl_cards::lower_replacement::DelayCancelContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayCancelAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayCancelContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1408:1
+     |
+1408 | pub(crate) struct DelayCancelContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayCostContinuation` is more private than the item `ResumeFrame::DelayHandDigivolveAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:621:9
+     |
+ 621 |         continuation: crate::dsl_cards::lower_replacement::DelayCostContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayHandDigivolveAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayCostContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1414:1
+     |
+1414 | pub(crate) struct DelayCostContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayDnaCostContinuation` is more private than the item `ResumeFrame::DelayDnaAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:629:9
+     |
+ 629 |         continuation: crate::dsl_cards::lower_replacement::DelayDnaCostContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayDnaAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayDnaCostContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1995:1
+     |
+1995 | pub(crate) struct DelayDnaCostContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayHandDigivolveSelectionState` is more private than the item `ResumeFrame::DelayHandDigivolveSelection::0`
+    --> code\digimon-engine\src\resume.rs:635:9
+     |
+ 635 |         crate::dsl_cards::lower_replacement::DelayHandDigivolveSelectionState,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayHandDigivolveSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayHandDigivolveSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1425:1
+     |
+1425 | pub(crate) struct DelayHandDigivolveSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayDnaCardSelectionState` is more private than the item `ResumeFrame::DelayDnaCardSelection::0`
+    --> code\digimon-engine\src\resume.rs:639:27
+     |
+ 639 |     DelayDnaCardSelection(crate::dsl_cards::lower_replacement::DelayDnaCardSelectionState),
+     |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayDnaCardSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayDnaCardSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:2021:1
+     |
+2021 | pub(crate) struct DelayDnaCardSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayFieldDnaContinuation` is more private than the item `ResumeFrame::DelayFieldDnaAfterPayment::continuation`
+    --> code\digimon-engine\src\resume.rs:643:9
+     |
+ 643 |         continuation: crate::dsl_cards::lower_replacement::DelayFieldDnaContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayFieldDnaAfterPayment::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayFieldDnaContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1625:1
+     |
+1625 | pub(crate) struct DelayFieldDnaContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayFieldDnaSelectionState` is more private than the item `ResumeFrame::DelayFieldDnaSelection::0`
+    --> code\digimon-engine\src\resume.rs:647:28
+     |
+ 647 |     DelayFieldDnaSelection(crate::dsl_cards::lower_replacement::DelayFieldDnaSelectionState),
+     |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayFieldDnaSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayFieldDnaSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1646:1
+     |
+1646 | pub(crate) struct DelayFieldDnaSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayPlayFromHandContinuation` is more private than the item `ResumeFrame::DelayPlayFromHandAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:653:9
+     |
+ 653 |         continuation: crate::dsl_cards::lower_replacement::DelayPlayFromHandContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayPlayFromHandAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayPlayFromHandContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1285:1
+     |
+1285 | pub(crate) struct DelayPlayFromHandContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayPlayFromHandSelectionState` is more private than the item `ResumeFrame::DelayPlayFromHandSelection::0`
+    --> code\digimon-engine\src\resume.rs:660:9
+     |
+ 660 |         crate::dsl_cards::lower_replacement::DelayPlayFromHandSelectionState,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayPlayFromHandSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayPlayFromHandSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1303:1
+     |
+1303 | pub(crate) struct DelayPlayFromHandSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayPlayFromUnionContinuation` is more private than the item `ResumeFrame::DelayPlayFromUnionAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:669:9
+     |
+ 669 |         continuation: crate::dsl_cards::lower_replacement::DelayPlayFromUnionContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayPlayFromUnionAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayPlayFromUnionContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1393:1
+     |
+1393 | pub(crate) struct DelayPlayFromUnionContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayBodyContinuation` is more private than the item `ResumeFrame::DelayBodyAfterCost::continuation`
+   --> code\digimon-engine\src\resume.rs:677:9
+    |
+677 |         continuation: crate::dsl_cards::lower_delay::DelayBodyContinuation,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayBodyAfterCost::continuation` is reachable at visibility `pub`
+    |
+note: but type `DelayBodyContinuation` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\dsl_cards\lower_delay.rs:226:1
+    |
+226 | pub(crate) struct DelayBodyContinuation {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `AppFuseHostSelectionState` is more private than the item `ResumeFrame::AppFuseHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:683:26
+    |
+683 |     AppFuseHostSelection(crate::effect_context::AppFuseHostSelectionState),
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::AppFuseHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `AppFuseHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\effect_context\action\app_fuse.rs:34:1
+    |
+ 34 | pub(crate) struct AppFuseHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `AppFuseResultSelectionState` is more private than the item `ResumeFrame::AppFuseResultSelection::0`
+   --> code\digimon-engine\src\resume.rs:686:28
+    |
+686 |     AppFuseResultSelection(crate::effect_context::AppFuseResultSelectionState),
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::AppFuseResultSelection::0` is reachable at visibility `pub`
+    |
+note: but type `AppFuseResultSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\effect_context\action\app_fuse.rs:48:1
+    |
+ 48 | pub(crate) struct AppFuseResultSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `ArtsDigivolveSelectionState` is more private than the item `ResumeFrame::ArtsDigivolveSelection::0`
+   --> code\digimon-engine\src\resume.rs:690:28
+    |
+690 |     ArtsDigivolveSelection(crate::game_actions::ArtsDigivolveSelectionState),
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::ArtsDigivolveSelection::0` is reachable at visibility `pub`
+    |
+note: but type `ArtsDigivolveSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:239:1
+    |
+239 | pub(crate) struct ArtsDigivolveSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `LinkOptionHostSelectionState` is more private than the item `ResumeFrame::LinkOptionHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:693:29
+    |
+693 |     LinkOptionHostSelection(crate::game_actions::LinkOptionHostSelectionState),
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::LinkOptionHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `LinkOptionHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:246:1
+    |
+246 | pub(crate) struct LinkOptionHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionHandLinkHostSelectionState` is more private than the item `ResumeFrame::OptionHandLinkHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:698:33
+    |
+698 |     OptionHandLinkHostSelection(crate::game_actions::OptionHandLinkHostSelectionState),
+    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::OptionHandLinkHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionHandLinkHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:261:1
+    |
+261 | pub(crate) struct OptionHandLinkHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::DigimonLinkHostSelectionState` is more private than the item `ResumeFrame::DigimonLinkHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:701:30
+    |
+701 |     DigimonLinkHostSelection(crate::game_actions::DigimonLinkHostSelectionState),
+    |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigimonLinkHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::DigimonLinkHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:272:1
+    |
+272 | pub(crate) struct DigimonLinkHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `LinkCardTrashChoiceState` is more private than the item `ResumeFrame::LinkCardTrashChoice::0`
+    --> code\digimon-engine\src\resume.rs:706:25
+     |
+ 706 |     LinkCardTrashChoice(crate::game_actions::LinkCardTrashChoiceState),
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::LinkCardTrashChoice::0` is reachable at visibility `pub`
+     |
+note: but type `LinkCardTrashChoiceState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\game_actions\link.rs:1148:1
+     |
+1148 | pub(crate) struct LinkCardTrashChoiceState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::PlayFromHandCostReductionPromptState` is more private than the item `ResumeFrame::PlayFromHandCostReductionPrompt::0`
+   --> code\digimon-engine\src\resume.rs:710:37
+    |
+710 |     PlayFromHandCostReductionPrompt(crate::game_actions::PlayFromHandCostReductionPromptState),
+    |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::PlayFromHandCostReductionPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::PlayFromHandCostReductionPromptState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:286:1
+    |
+286 | pub(crate) struct PlayFromHandCostReductionPromptState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::InteractiveDigivolveCostReductionPromptState` is more private than the item `ResumeFrame::InteractiveDigivolveCostReductionPrompt::0`
+   --> code\digimon-engine\src\resume.rs:714:9
+    |
+714 |         crate::game_actions::InteractiveDigivolveCostReductionPromptState,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::InteractiveDigivolveCostReductionPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::InteractiveDigivolveCostReductionPromptState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:303:1
+    |
+303 | pub(crate) struct InteractiveDigivolveCostReductionPromptState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::InteractiveOptionUseCostReductionPromptState` is more private than the item `ResumeFrame::InteractiveOptionUseCostReductionPrompt::0`
+   --> code\digimon-engine\src\resume.rs:719:9
+    |
+719 |         crate::game_actions::InteractiveOptionUseCostReductionPromptState,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::InteractiveOptionUseCostReductionPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::InteractiveOptionUseCostReductionPromptState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:314:1
+    |
+314 | pub(crate) struct InteractiveOptionUseCostReductionPromptState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `guard_carrier_can_be_deleted_for_cost` is never used
+   --> code\digimon-engine\src\cards\keyword_effects.rs:152:4
+    |
+152 | fn guard_carrier_can_be_deleted_for_cost(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `perm_matches_req` is never used
+    --> code\digimon-engine\src\dna_digivolve.rs:1651:4
+     |
+1651 | fn perm_matches_req(perm: &Permanent, req: &DnaRequirement, data: &[CardData]) -> bool {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: fields `subject` and `subject_card` are never read
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1310:5
+     |
+1303 | pub(crate) struct DelayPlayFromHandSelectionState {
+     |                   ------------------------------- fields in this struct
+...
+1310 |     subject: ReplacementSubject,
+     |     ^^^^^^^
+1311 |     subject_card: Option<(PlayerId, CardHandle)>,
+     |     ^^^^^^^^^^^^
+     |
+     = note: `DelayPlayFromHandSelectionState` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: function `source_kind_for_card_kind` is never used
+  --> code\digimon-engine\src\effect_context\mod.rs:92:4
+   |
+92 | fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `donor_card` is never read
+   --> code\digimon-engine\src\game\mod.rs:346:16
+    |
+341 | pub(crate) struct PendingFieldTopSourceMove {
+    |                   ------------------------- field in this struct
+...
+346 |     pub(crate) donor_card: crate::card_source::CardHandle,
+    |                ^^^^^^^^^^
+    |
+    = note: `PendingFieldTopSourceMove` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `0` is never read
+  --> code\digimon-engine\src\game\verification_cost_receipts.rs:11:10
+   |
+11 |     Live(usize),
+   |     ---- ^^^^^
+   |     |
+   |     field in this variant
+   |
+   = note: `ReceiptRef` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+help: consider changing the field to be of unit type to suppress this warning while preserving the field numbering, or remove the field
+   |
+11 -     Live(usize),
+11 +     Live(()),
+   |
+
+warning: field `0` is never read
+  --> code\digimon-engine\src\game\verification_cost_receipts.rs:12:13
+   |
+12 |     Missing(u64),
+   |     ------- ^^^
+   |     |
+   |     field in this variant
+   |
+   = note: `ReceiptRef` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+help: consider changing the field to be of unit type to suppress this warning while preserving the field numbering, or remove the field
+   |
+12 -     Missing(u64),
+12 +     Missing(()),
+   |
+
+warning: method `try_prompt_interactive_digivolve_cost_reducer` is never used
+   --> code\digimon-engine\src\game_actions\cost.rs:729:19
+    |
+ 24 | impl Game {
+    | --------- method in this implementation
+...
+729 |     pub(super) fn try_prompt_interactive_digivolve_cost_reducer(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `insert_source_into_permanent` is never used
+   --> code\digimon-engine\src\game_actions\helpers.rs:290:19
+    |
+ 11 | impl Game {
+    | --------- method in this implementation
+...
+290 |     pub(crate) fn insert_source_into_permanent(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `subject_controller_id` is never used
+   --> code\digimon-engine\src\replacement.rs:231:15
+    |
+231 | pub(crate) fn subject_controller_id(
+    |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `chooser` is never read
+    --> code\digimon-engine\src\resume.rs:1023:16
+     |
+1022 | pub struct TriggerOrderSelectionState {
+     |            -------------------------- field in this struct
+1023 |     pub(crate) chooser: PlayerId,
+     |                ^^^^^^^
+     |
+     = note: `TriggerOrderSelectionState` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: `digimon-engine` (lib) generated 87 warnings (run `cargo fix --lib -p digimon-engine` to apply 35 suggestions)
+warning: fields `pending` and `observer_resolved` are never read
+   --> code\digimon-engine\tests\rules_conformance\ch18_pending_overwrite.rs:838:5
+    |
+834 | struct LoopOutcome {
+    |        ----------- fields in this struct
+...
+838 |     pending: Option<String>,
+    |     ^^^^^^^
+839 |     observer_resolved: bool,
+    |     ^^^^^^^^^^^^^^^^^
+    |
+    = note: `LoopOutcome` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `digimon-engine` (test "rules_conformance") generated 1 warning
+    Finished `test` profile [unoptimized] target(s) in 0.63s
+     Running tests\rules_conformance\main.rs (C:/Users/james/.codex/build-targets/light-hybrid-prefix\debug\deps\rules_conformance-eadf293e7d47a347.exe)
+
+running 362 tests
+test ch03_areas::face_down_card_trashed_from_under_a_tamer_is_face_up_in_the_trash ... ok
+test ch03_areas::face_down_digi_egg_returned_to_the_digi_egg_deck_keeps_no_face_down_state ... ok
+test ch03_areas::face_down_card_returned_to_hand_then_played_is_face_up_on_the_field ... ok
+test ch03_areas::breeding_area_effects_without_a_breeding_reference_do_not_trigger ... ok
+test ch03_areas::face_down_card_returned_to_the_deck_keeps_no_face_down_state ... ok
+test ch03_areas::face_down_card_placed_in_security_is_face_down_there ... ok
+test ch11_14_attack_procedure::attack_target_cannot_block ... ok
+test ch03_areas::breeding_scoped_effect_triggers_only_in_the_breeding_area ... ok
+test ch03_areas::face_down_card_digivolved_into_is_a_face_up_top_card ... ok
+test ch11_14_attack_procedure::attack_does_not_end_until_all_processing_resolved ... ok
+test ch03_areas::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas ... ok
+test ch03_areas::card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack ... ok
+test ch03_areas::opponents_breeding_area_digimon_does_not_meet_an_activation_condition ... ok
+test ch03_areas::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition ... ok
+test ch03_areas::breeding_area_persistent_effect_applies_only_with_a_breeding_reference ... ok
+test ch03_areas::own_breeding_area_digimon_does_not_meet_a_main_activation_condition ... ok
+test ch11_14_attack_procedure::one_block_per_attack ... ok
+test ch11_14_attack_procedure::removed_target_stays_the_target_and_attack_fails ... ok
+test ch11_14_attack_procedure::check_triggered_effects_resolve_before_security_battle ... ok
+test ch11_14_attack_procedure::digimon_that_cannot_suspend_cannot_block ... ok
+test ch11_14_attack_procedure::one_security_check_per_attack_sa_plus_counts_inside_it ... ok
+test ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first ... ok
+test ch11_14_attack_procedure::security_effect_activates_before_other_check_triggers ... ok
+test ch15_04_effect_states::option_disposal_triggers_wait_for_the_using_effect ... ignored, G-ENGINE-OPTION-DISPOSAL-DRAINS-INSIDE-RESOLVING-EFFECT: the <Delay> disposal drains the queue directly inside the using effect (15-8-3-2)
+test ch11_14_attack_procedure::jamming_survives_security_battle_only ... ok
+test ch11_14_attack_procedure::non_digimon_security_card_skips_battle_and_is_trashed ... ok
+test ch11_14_attack_procedure::checking_digimon_leaving_stops_further_checks ... ok
+test ch15_04_effect_states::activated_effect_completes_after_source_becomes_new_card ... ok
+test ch11_14_attack_procedure::attack_timings_continue_when_attacker_leaves_mid_resolution ... ok
+test ch11_14_attack_procedure::unsuccessful_attack_reaches_end_of_attack_timing ... ok
+test ch15_04_effect_states::derived_trigger_resolves_before_pending_siblings ... ok
+test ch11_14_attack_procedure::block_not_offered_when_attacker_left_battle_area ... ok
+test ch15_04_effect_states::digivolving_mid_pending_cancels_sibling_when_attacking ... ok
+test ch15_04_effect_states::non_turn_player_derived_trigger_precedes_turn_player_pending ... ok
+test ch15_04_effect_states::effect_digivolve_triggers_wait_for_the_digivolving_effect_and_pool ... ok
+test ch15_04_effect_states::effect_battle_triggers_wait_for_the_effect_and_pool_with_it ... ok
+test ch11_14_attack_procedure::security_check_trigger_whose_condition_lapsed_before_activation_cannot_activate ... ok
+test ch15_04_effect_states::pending_effects_activate_one_at_a_time ... ok
+test ch15_04_effect_states::replacement_digivolve_triggers_pend_in_one_pool ... ok
+test ch15_04_effect_states::pending_effect_whose_condition_lapsed_is_dropped ... ok
+test ch15_04_effect_states::rule_check_triggers_pend_with_the_finished_effects_triggers ... ok
+test ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool ... ok
+test ch15_04_effect_states::rule_check_after_a_queued_effect_pools_with_its_window_triggers ... ok
+test ch15_04_effect_states::pending_on_play_lost_when_card_leaves_before_activation ... ok
+test ch15_04_effect_states::returned_to_deck_bottom_triggers_wait_for_the_effect_and_pool_with_it ... ok
+test ch15_04_effect_states::triggers_from_two_events_of_one_effect_pend_in_one_pool ... ok
+test ch15_04_effect_states::replacement_digivolve_triggers_wait_for_the_deleting_effect ... ok
+test ch15_04_effect_states::turn_player_orders_first_then_non_turn_player ... ok
+test ch15_04_effect_states::triggers_raised_by_a_pooled_effect_pend_as_a_new_pool ... ok
+test ch15_04_effect_states::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes ... ok
+test ch15_04_effect_states::window_triggers_wait_through_a_direct_drain_inside_a_resumed_effect ... ok
+test ch15_04_effect_states::pending_effect_whose_trigger_condition_lapsed_cannot_activate ... ok
+test ch15_07_optional_conditions::payable_condition_offered_even_when_payload_has_no_target ... ok
+test ch15_04_effect_states::when_attacking_and_alliance_share_one_pool ... ok
+test ch15_07_optional_conditions::invoked_optional_condition_decision_survives_clone ... ok
+test ch15_08_effect_categories::activation_type_declarable_only_when_optional_condition_payable ... ok
+test ch15_07_optional_conditions::declining_invoked_optional_condition_keeps_invoker_remaining_steps ... ok
+test ch15_07_optional_conditions::optional_condition_decided_before_processing_effect ... ok
+test ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates ... ok
+test ch15_07_optional_conditions::declining_condition_skips_everything_after_it ... ok
+test ch11_14_attack_procedure::battle_compares_dp_then_deletes_loser_then_end_of_battle ... ok
+test ch15_08_effect_categories::battle_winner_qualifier_reads_the_material_after_the_winner_dna_digivolves ... ok
+test ch15_08_effect_categories::battle_winner_qualifier_does_not_read_the_digimon_that_slid_into_the_slot ... ok
+test ch15_07_optional_conditions::optional_condition_is_a_choice_then_mandatory_payload ... ok
+test ch15_07_optional_conditions::partial_payment_of_compound_condition_is_impossible ... ok
+test ch15_04_effect_states::one_multi_card_cost_trash_triggers_each_observer_once ... ok
+test ch15_08_effect_categories::end_of_turn_trigger_persists_through_memory_change ... ok
+test ch15_08_effect_categories::immediate_effect_interrupts_before_cause ... ok
+test ch15_08_effect_categories::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves ... ok
+test ch15_08_effect_categories::immediate_effect_with_condition_met_later_can_activate ... ok
+test ch15_08_effect_categories::play_from_trash_of_card_just_trashed_while_source_trash_trigger_pends ... ok
+test ch15_08_effect_categories::processing_condition_in_active_when_read_at_processing ... ok
+test ch15_08_effect_categories::immediate_effects_only_simultaneous_with_immediate_effects ... ok
+test ch15_07_optional_conditions::mandatory_invoker_does_not_force_invoked_optional_condition ... ok
+test ch15_07_optional_conditions::unpayable_optional_condition_cannot_be_chosen ... ok
+test ch15_08_effect_categories::inherited_on_deletion_is_pending_on_the_former_top_card ... ok
+test ch15_08_effect_categories::trigger_condition_qualifier_read_in_triggered_state_after_attacker_leaves ... ok
+test ch15_07_optional_conditions::face_down_under_tamers_condition_takes_the_lowest_face_down_cards ... ok
+test ch15_08_effect_categories::trigger_reference_tied_to_condition_uses_trigger_time_state ... ok
+test ch15_08_effect_categories::permanent_trait_is_the_top_cards_trait ... ok
+test ch15_08_effect_categories::observer_whose_qualifier_was_false_at_the_trigger_never_activates ... ok
+test ch15_08_effect_categories::battle_winner_trait_is_the_top_cards_trait ... ok
+test ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause ... ok
+test ch15_14_effect_icons::security_zone_once_per_turn_effect_is_used_once_per_turn ... ok
+test ch15_14_effect_icons::declined_optional_cost_of_an_activated_effect_spends_its_once_per_turn ... ok
+test ch15_14_effect_icons::activated_you_may_effect_spends_its_once_per_turn ... ok
+test ch15_08_effect_categories::removal_trigger_processing_condition_uses_trigger_state ... ok
+test ch15_14_effect_icons::declined_security_zone_you_may_effect_keeps_its_once_per_turn ... ok
+test ch15_08_effect_categories::trigger_qualifier_reads_live_state_of_a_present_referent ... ok
+test ch15_08_effect_categories::processing_condition_is_still_read_at_activation ... ok
+test ch15_14_effect_icons::then_may_effect_with_both_halves_declined_keeps_its_once_per_turn ... ok
+test ch15_08_effect_categories::trigger_reference_uses_state_at_processing ... ok
+test ch15_14_effect_icons::declined_you_may_effect_keeps_its_once_per_turn ... ok
+test ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish ... ok
+test ch15_08_effect_categories::digimon_name_is_the_top_cards_name ... ok
+test ch15_08_effect_categories::trigger_processing_condition_read_at_processing_after_attacker_leaves ... ok
+test ch15_14_effect_icons::then_may_effect_with_one_half_executed_spends_its_once_per_turn ... ok
+test ch15_15_unaffected::digimon_only_immunity_blocks_a_digimon_tokens_effect ... ok
+test ch15_15_unaffected::effect_applied_before_immunity_stops_affecting_when_immunity_starts ... ok
+test ch15_15_unaffected::departed_tokens_deferred_effect_is_still_a_digimon_effect ... ok
+test ch15_15_unaffected::granted_keyword_stops_being_had_when_immunity_starts ... ok
+test ch15_15_unaffected::full_opponent_immunity_does_not_block_rule_processing ... ok
+test ch15_15_unaffected::granted_keyword_not_considered_had_while_immune_had_once_immunity_lapses ... ok
+test ch15_15_unaffected::digimon_only_immunity_is_affected_by_option_security_activation ... ok
+test ch15_15_unaffected::immunity_suppresses_an_opponent_formula_aura_while_it_lasts ... ok
+test ch15_08_effect_categories::processing_condition_checked_at_activation_not_trigger ... ok
+test ch15_15_unaffected::immune_permanent_is_still_choosable_and_offered_as_only_candidate ... ok
+test ch15_15_unaffected::progress_attacker_does_not_have_a_keyword_an_opponent_granted_while_attacking ... ok
+test ch15_15_unaffected::granted_effect_not_considered_had_while_immune ... ok
+test ch15_15_unaffected::digimon_only_immunity_is_affected_by_opponent_tamer_and_own_effects ... ok
+test ch16_attack_keywords::alliance_kind_matches_rule ... ok
+test ch15_15_unaffected::effect_applied_while_immune_starts_affecting_when_immunity_lapses ... ok
+test ch15_15_unaffected::digimon_only_immunity_is_affected_by_opponent_option_main ... ok
+test ch15_15_unaffected::progress_attacker_not_affected_by_earlier_opponent_effect_while_attacking ... ok
+test ch15_15_unaffected::progress_shield_follows_the_attacker_through_compaction ... ok
+test ch16_attack_keywords::blitz_kind_matches_rule ... ok
+test ch15_15_unaffected::progress_attacker_effect_applied_during_attack_applies_after_it ... ok
+test ch16_attack_keywords::blitz_attack_proceeds_after_memory_returns_to_zero_or_more ... ok
+test ch15_15_unaffected::progress_attacker_not_affected_by_opponent_formula_aura_while_attacking ... ok
+test ch16_attack_keywords::alliance_dp_and_sa_persist_after_suspended_digimon_leaves ... ok
+test ch16_attack_keywords::blocker_kind_matches_rule ... ok
+test ch15_15_unaffected::immunity_granted_mid_effect_covers_later_steps ... ok
+test ch16_attack_keywords::collision_kind_matches_rule ... ok
+test ch16_attack_keywords::alliance_optionality_matches_rule ... ok
+test ch15_15_unaffected::progress_lost_mid_attack_applies_held_opponent_effects_immediately ... ok
+test ch16_attack_keywords::execute_kind_matches_rule ... ok
+test ch16_attack_keywords::blocker_once_per_block_timing_even_with_two_instances ... ok
+test ch16_attack_keywords::deletion_observer_activates_after_on_deletion_pauses_for_a_decision ... ok
+test ch16_attack_keywords::alliance_timing_matches_rule ... ok
+test ch16_attack_keywords::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack ... ok
+test ch16_attack_keywords::collision_blocker_grant_affects_digimon_forced_block_affects_player ... ok
+test ch16_attack_keywords::execute_optionality_matches_rule ... ok
+test ch16_attack_keywords::blitz_optionality_matches_rule ... ok
+test ch16_attack_keywords::overclock_kind_matches_rule ... ok
+test ch16_attack_keywords::blitz_cannot_attack_when_memory_already_zero_or_more ... ok
+test ch16_attack_keywords::collision_timing_matches_rule ... ok
+test ch16_attack_keywords::overclock_optional_cost_then_mandatory_attack_without_suspending ... ok
+test ch16_attack_keywords::overclock_prevented_condition_does_not_attack ... ok
+test ch16_attack_keywords::overclock_timing_matches_rule ... ok
+test ch16_attack_keywords::overclock_prevented_condition_is_not_offered_again ... ok
+test ch16_attack_keywords::jamming_kind_matches_rule ... ok
+test ch16_attack_keywords::overclock_condition_executed_after_declined_prevention_attacks ... ok
+test ch16_attack_keywords::piercing_timing_matches_rule ... ok
+test ch16_attack_keywords::overclock_optionality_matches_rule ... ok
+test ch16_attack_keywords::progress_kind_matches_rule ... ok
+test ch16_attack_keywords::piercing_optionality_matches_rule ... ok
+test ch16_attack_keywords::raid_kind_matches_rule ... ok
+test ch16_attack_keywords::execute_timing_matches_rule ... ok
+test ch16_attack_keywords::iceclad_kind_matches_rule ... ok
+test ch16_attack_keywords::collision_forces_block_whenever_possible ... ok
+test ch16_attack_keywords::raid_switches_to_highest_dp_unsuspended_attacker_chooses_tie ... ok
+test ch16_attack_keywords::retaliation_kind_matches_rule ... ok
+test ch15_15_unaffected::full_opponent_immunity_blocks_option_tamer_digimon_and_token_effects ... ok
+test ch16_attack_keywords::raid_timing_matches_rule ... ok
+test ch16_attack_keywords::piercing_kind_matches_rule ... ok
+test ch16_attack_keywords::vortex_attack_has_block_timing ... ok
+test ch16_attack_keywords::raid_optionality_matches_rule ... ok
+test ch16_attack_keywords::progress_persistent_only_while_attacking ... ok
+test ch16_attack_keywords::vortex_kind_matches_rule ... ok
+test ch16_attack_keywords::retaliation_timing_matches_rule ... ok
+test ch16_attack_keywords::vortex_optionality_matches_rule ... ok
+test ch16_attack_keywords::vortex_timing_matches_rule ... ok
+test ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon ... ok
+test ch16_new_keywords::ascension_kind_matches_rule ... ok
+test ch16_attack_keywords::raid_attacker_declares_on_a_legal_target_then_may_switch ... ok
+test ch16_attack_keywords::vortex_optional_eot_attack_on_digimon_and_same_turn_played ... ok
+test ch16_attack_keywords::rush_kind_matches_rule ... ok
+test ch16_attack_keywords::security_attack_kind_matches_rule ... ok
+test ch16_new_keywords::ascension_optional_places_on_top_of_security ... ok
+test ch16_attack_keywords::retaliation_mandatory_deletes_battled_digimon ... ok
+test ch16_attack_keywords::rush_attacks_the_turn_it_was_played ... ok
+test ch16_new_keywords::detach_kind_matches_rule ... ok
+test ch16_new_keywords::detach_timing_matches_rule ... ok
+test ch16_attack_keywords::iceclad_compares_digivolution_cards_tie_both_lose_not_vs_security ... ok
+test ch16_new_keywords::ascension_optionality_matches_rule ... ok
+test ch16_new_keywords::detach_optionality_matches_rule ... ok
+test ch16_new_keywords::detach_needs_a_specified_link_card ... ok
+test ch16_new_keywords::arts_digivolve_replaces_option_trash_with_free_digivolve ... ok
+test ch16_new_keywords::ascension_timing_matches_rule ... ok
+test ch16_new_keywords::dual_digivolution_card_referenced_as_option_card_for_digivolution_card_search ... ok
+test ch16_new_keywords::dual_digivolution_card_on_field_reads_digimon_information ... ok
+test ch16_new_keywords::detach_optional_cost_then_mandatory_stay ... ok
+test ch16_new_keywords::engage_optionality_matches_rule ... ok
+test ch16_new_keywords::engage_kind_matches_rule ... ok
+test ch16_new_keywords::engage_timing_matches_rule ... ok
+test ch16_new_keywords::engage_optional_eot_attack ... ok
+test ch16_attack_keywords::security_attack_instances_do_not_combine_and_floor_at_zero ... ok
+test ch16_new_keywords::dual_option_information_referenced_as_option_card ... ok
+test ch16_new_keywords::dual_traits_belong_to_both_informations ... ok
+test ch16_new_keywords::dual_digivolution_card_referenced_as_option_card_reads_option_information ... ok
+test ch16_new_keywords::guard_kind_matches_rule ... ok
+test ch16_new_keywords::guard_optionality_matches_rule ... ok
+test ch16_new_keywords::dual_unqualified_colour_reference_reads_digimon_information ... ok
+test ch16_new_keywords::guard_timing_matches_rule ... ok
+test ch16_new_keywords::overflow_memory_moves_immediately_during_processing ... ok
+test ch16_new_keywords::dual_unqualified_reference_holds_through_one_information ... ok
+test ch16_new_keywords::dual_on_field_is_a_digimon_not_an_option ... ok
+test ch16_new_keywords::overflow_not_processed_entering_under_a_card ... ok
+test ch16_new_keywords::dual_digivolution_card_counts_through_the_referenced_information ... ok
+test ch16_new_keywords::succession_timing_matches_rule ... ok
+test ch16_new_keywords::overflow_not_processed_entering_field ... ok
+test ch16_new_keywords::succession_optionality_matches_rule ... ok
+test ch16_new_keywords::succession_kind_matches_rule ... ok
+test ch16_processing_keywords::blast_digivolve_optional_free_digivolve_of_chosen_battle_area_digimon ... ok
+test ch16_new_keywords::use_req_kind_matches_rule ... ok
+test ch16_new_keywords::use_req_timing_matches_rule ... ok
+test ch16_new_keywords::succession_gains_all_effects_of_topmost_specified_source ... ok
+test ch16_new_keywords::use_req_optionality_matches_rule ... ok
+test ch16_processing_keywords::blast_digivolve_optionality_matches_rule ... ok
+test ch16_processing_keywords::blast_digivolve_kind_matches_rule ... ok
+test ch16_new_keywords::dual_use_declares_digimon_or_option_information ... ok
+test ch16_new_keywords::overflow_turn_player_orders_then_non_turn_player ... ok
+test ch16_processing_keywords::blast_dna_optionality_matches_rule ... ok
+test ch16_processing_keywords::blast_dna_kind_matches_rule ... ok
+test ch16_processing_keywords::de_digivolve_kind_matches_rule ... ok
+test ch16_processing_keywords::blast_dna_cannot_ignore_dna_requirements ... ok
+test ch16_new_keywords::guard_immediate_optional_other_digimon_leave_by_opp_effect ... ok
+test ch16_processing_keywords::delay_optional_trash_option_not_the_turn_it_entered_no_color_or_cost ... ok
+test ch16_processing_keywords::de_digivolve_separate_instances_processed_separately ... ok
+test ch16_processing_keywords::blast_dna_without_dna_requirement_is_not_offered ... ok
+test ch16_processing_keywords::delay_optionality_matches_rule ... ok
+test ch16_processing_keywords::declared_link_at_limit_replaces_existing_link_card_by_choice ... ok
+test ch16_processing_keywords::de_digivolve_player_declares_count_mandatory_at_least_one_stops_at_level_3 ... ok
+test ch16_processing_keywords::de_digivolve_multi_card_trash_is_simultaneous_but_sequential ... ok
+test ch16_processing_keywords::de_digivolve_optionality_matches_rule ... ok
+test ch16_processing_keywords::de_digivolve_state_confirmed_after_each_instance ... ok
+test ch16_processing_keywords::digi_burst_optional_trash_sources_then_linked_effect ... ok
+test ch16_processing_keywords::digi_burst_optionality_matches_rule ... ok
+test ch16_processing_keywords::digisorption_not_offered_while_digivolution_cost_cannot_be_reduced ... ok
+test ch16_new_keywords::overflow_moves_memory_when_card_leaves_field_or_from_under ... ok
+test ch16_processing_keywords::digisorption_not_offered_for_a_breeding_area_digivolution ... ok
+test ch16_processing_keywords::digisorption_second_instance_not_offered_once_nothing_can_suspend ... ok
+test ch16_new_keywords::use_req_ignores_color_requirements_with_specified_cards ... ok
+test ch16_processing_keywords::digisorption_kind_matches_rule ... ok
+test ch16_processing_keywords::de_digivolve_trashes_top_cards_not_digivolution_cards ... ok
+test ch16_processing_keywords::digisorption_not_offered_without_a_digimon_to_suspend ... ok
+test ch16_processing_keywords::de_digivolve_cannot_trash_level_3_or_lower ... ok
+test ch16_processing_keywords::digisorption_base_that_cannot_suspend_is_not_a_candidate ... ok
+test ch16_processing_keywords::draw_kind_matches_rule ... ok
+test ch16_processing_keywords::effect_relink_at_limit_offers_the_same_choice ... ok
+test ch16_processing_keywords::draw_is_mandatory ... ok
+test ch16_processing_keywords::effect_link_at_limit_replaces_existing_link_card_by_choice ... ok
+test ch16_processing_keywords::digisorption_optional_suspend_reduces_cost_floors_at_zero_and_stacks ... ok
+test ch16_processing_keywords::material_save_kind_matches_rule ... ok
+test ch16_processing_keywords::fortitude_kind_matches_rule ... ok
+test ch16_processing_keywords::digisorption_optionality_matches_rule ... ok
+test ch16_processing_keywords::material_save_allows_duplicate_specified_cards_and_places_at_bottom ... ok
+test ch16_processing_keywords::delay_scheduled_window_is_optional ... ok
+test ch16_new_keywords::dual_effects_are_digimon_or_option_effects_by_information ... ok
+test ch16_processing_keywords::material_save_optionality_matches_rule ... ok
+test ch16_processing_keywords::material_save_places_the_full_number_whenever_possible ... ok
+test ch16_processing_keywords::mind_link_places_tamer_under_tamerless_digimon_mandatory ... ok
+test ch16_processing_keywords::link_plus_adds_to_max_link_cards_and_instances_add ... ok
+test ch16_processing_keywords::mind_link_kind_matches_rule ... ok
+test ch16_processing_keywords::link_max_base_is_one ... ok
+test ch16_processing_keywords::fortitude_timing_matches_rule ... ok
+test ch16_processing_keywords::reboot_optionality_matches_rule ... ok
+test ch16_processing_keywords::fortitude_mandatory_play_from_trash_when_deleted_with_sources ... ok
+test ch16_processing_keywords::material_save_timing_matches_rule ... ok
+test ch16_processing_keywords::digisorption_timing_matches_rule ... ok
+test ch16_processing_keywords::material_save_player_chooses_placement_order ... ok
+test ch16_processing_keywords::recovery_kind_matches_rule ... ok
+test ch16_processing_keywords::reboot_unsuspends_in_opponents_unsuspend_phase_once_with_two_instances ... ok
+test ch16_processing_keywords::reboot_timing_matches_rule ... ok
+test ch16_processing_keywords::save_optionality_matches_rule ... ok
+test ch16_processing_keywords::reboot_kind_matches_rule ... ok
+test ch16_processing_keywords::save_kind_matches_rule ... ok
+test ch16_processing_keywords::training_optionality_matches_rule ... ok
+test ch16_replacement_keywords::armor_purge_optionality_matches_rule ... ok
+test ch16_processing_keywords::recovery_places_top_deck_cards_face_down_on_security ... ok
+test ch16_processing_keywords::mind_link_timing_matches_rule ... ok
+test ch16_processing_keywords::save_optional_places_under_tamer ... ok
+test ch16_processing_keywords::trashing_a_top_card_is_not_a_digivolution_card_trash ... ok
+test ch16_replacement_keywords::barrier_optionality_matches_rule ... ok
+test ch16_replacement_keywords::armor_purge_timing_matches_rule ... ok
+test ch16_processing_keywords::training_kind_matches_rule ... ok
+test ch16_replacement_keywords::armor_purge_kind_matches_rule ... ok
+test ch16_replacement_keywords::decode_kind_matches_rule ... ok
+test ch16_replacement_keywords::barrier_timing_matches_rule ... ok
+test ch16_replacement_keywords::decode_timing_matches_rule ... ok
+test ch16_replacement_keywords::barrier_kind_matches_rule ... ok
+test ch16_processing_keywords::training_optional_cost_then_mandatory_place_also_in_breeding_area ... ok
+test ch16_replacement_keywords::armor_purge_requires_a_digivolution_card_and_keeps_modifiers ... ok
+test ch16_replacement_keywords::decoy_optionality_matches_rule ... ok
+test ch16_replacement_keywords::evade_kind_matches_rule ... ok
+test ch16_replacement_keywords::decoy_optional_cost_then_mandatory_prevention ... ok
+test ch16_replacement_keywords::evade_optionality_matches_rule ... ok
+test ch16_replacement_keywords::fragment_kind_matches_rule ... ok
+test ch16_replacement_keywords::multiple_instances_of_one_keyword_each_offered_once_per_event ... ok
+test ch16_replacement_keywords::decoy_kind_matches_rule ... ok
+test ch16_replacement_keywords::keyword_reference_matches_every_value_of_the_keyword ... ok
+test ch16_replacement_keywords::decode_optionality_matches_rule ... ok
+test ch16_processing_keywords::link_plus_kind_matches_rule ... ok
+test ch16_replacement_keywords::fragment_optionality_matches_rule ... ok
+test ch16_replacement_keywords::partition_optionality_matches_rule ... ok
+test ch16_replacement_keywords::scapegoat_kind_matches_rule ... ok
+test ch16_replacement_keywords::fragment_trashes_exact_count_of_chosen_sources ... ok
+test ch16_replacement_keywords::partition_timing_matches_rule ... ok
+test ch16_replacement_keywords::barrier_trashes_top_security_only_for_battle_deletion ... ok
+test ch16_replacement_keywords::partition_kind_matches_rule ... ok
+test ch16_replacement_keywords::decoy_timing_matches_rule ... ok
+test ch16_replacement_keywords::fragment_timing_matches_rule ... ok
+test ch16_replacement_keywords::decode_plays_specified_card_not_in_battle ... ok
+test ch17_rule_checks::digimon_without_dp_in_battle_area_is_trashed_not_deleted ... ok
+test ch16_replacement_keywords::evade_suspends_to_prevent_deletion ... ok
+test ch16_replacement_keywords::scapegoat_timing_matches_rule ... ok
+test ch17_rule_checks::excess_link_cards_over_any_limit_prompt_before_trash ... ok
+test ch17_rule_checks::link_card_failing_requirement_is_trashed ... ok
+test ch17_rule_checks::face_down_card_on_field_is_trashed ... ok
+test ch16_replacement_keywords::evade_timing_matches_rule ... ok
+test ch16_replacement_keywords::two_simultaneous_replacements_ordered_by_controller ... ok
+test ch17_rule_checks::rule_check_not_during_rule_processing ... ok
+test ch17_rule_checks::rule_check_not_during_effect_processing ... ok
+test ch17_rule_checks::all_rule_check_targets_processed_simultaneously ... ok
+test ch16_replacement_keywords::scapegoat_other_than_your_own_effect ... ok
+test ch17_rule_checks::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers ... ok
+test ch17_rule_checks::linked_card_of_unlisted_category_is_trashed ... ok
+test ch17_rule_checks::option_in_battle_area_not_placed_by_effect_is_trashed ... ok
+test ch17_rule_checks::non_digimon_in_breeding_area_is_trashed ... ok
+test ch16_replacement_keywords::decoy_only_for_specified_digimon_deleted_by_opponent_effect ... ok
+test ch18_pending_overwrite::departed_pending_deletion_is_not_an_ordering_item ... ok
+test ch16_replacement_keywords::scapegoat_optionality_matches_rule ... ok
+test ch18_pending_overwrite::dp_progress_chain_is_not_an_infinite_loop ... ok
+test ch18_pending_overwrite::forced_prompt_loop_still_ends_in_a_draw ... ok
+test ch18_pending_overwrite::forced_multi_option_pick_loop_still_ends_in_a_draw ... ok
+test ch18_pending_overwrite::choose_one_loop_repeats_until_its_owner_stops_it ... ok
+test ch18_pending_overwrite::forced_replacement_order_loop_still_ends_in_a_draw ... ok
+test ch18_pending_overwrite::end_of_opponents_turn_pool_resolves_before_the_turn_passes ... ok
+test ch18_pending_overwrite::option_with_two_mains_is_trashed_after_the_first ... ok
+test ch18_pending_overwrite::infinite_loop_is_stopped_not_silently_cleared ... ok
+test ch18_pending_overwrite::option_used_by_an_effect_is_trashed_before_the_rule_check_its_main_caused ... ok
+test ch17_rule_checks::excess_link_cards_trashed_player_chooses_which ... ok
+test ch18_pending_overwrite::long_finite_chain_is_not_an_infinite_loop ... ok
+test ch17_rule_checks::zero_dp_digimon_in_battle_area_is_deleted ... ok
+test ch18_pending_overwrite::piercing_is_pending_processing_before_end_of_attack ... ok
+test fixtures::every_fixture_file_is_listed ... ok
+test meta::chapter_source_list_is_complete ... ok
+test meta::cite_known_rule_unpinned_passes ... ok
+test meta::cite_known_rule_with_correct_fingerprint_passes ... ok
+test meta::cite_unknown_id_panics - should panic ... ok
+test meta::cite_with_wrong_fingerprint_panics - should panic ... ok
+test ch18_pending_overwrite::piercing_checks_security_once_however_many_instances ... ok
+test meta::every_test_in_this_target_cites_a_rule ... ok
+test meta::every_pinned_cite_in_source_matches ... ok
+test meta::no_unpinned_cites_remain ... ok
+test meta::rule_text_returns_the_obligation_text ... ok
+test meta::test_block_splitter_flags_an_uncited_test ... ok
+test meta::rust_normalise_matches_python_fingerprints ... ok
+test ch16_replacement_keywords::specified_cards_follow_the_icon_note ... ok
+test ch18_pending_overwrite::stoppable_loop_repeats_until_its_owner_stops_it ... ok
+test ch18_pending_overwrite::piercing_without_the_attacker_checks_nothing ... ok
+test ch18_pending_overwrite::used_option_is_in_no_area_during_its_main ... ok
+test ch18_pending_overwrite::pending_processing_fires_at_its_timing_like_a_trigger ... ok
+test ch18_pending_overwrite::pending_processing_orders_with_simultaneous_triggers ... ok
+test ch18_pending_overwrite::optional_effect_ordered_first_in_the_pool_keeps_its_choice ... ok
+test ch18_pending_overwrite::pending_deletion_orders_with_simultaneous_triggers ... ok
+test ch18_pending_overwrite::infinite_loop_draw_during_an_attack_is_final ... ok
+test ch16_replacement_keywords::partition_plays_one_of_each_specified_all_or_nothing ... ok
+test ch18_pending_overwrite::used_option_trashed_immediately_after_first_main_uninterrupted ... ok
+test ch18_pending_overwrite::optional_instead_lets_the_player_choose ... ok
+test ch18_pending_overwrite::instead_overwrites_the_normal_processing ... ok
+test ch18_pending_overwrite::forced_prompt_loop_with_growing_state_still_ends_in_a_draw has been running for over 60 seconds
+test ch18_pending_overwrite::forced_prompt_loop_with_growing_state_still_ends_in_a_draw ... ok
+
+test result: ok. 361 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 308.45s
+
+CARGO_EXIT 0

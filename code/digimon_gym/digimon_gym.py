@@ -73,14 +73,20 @@ MAX_OPPONENT_TURN_ACTIONS = 200
 
 class NoOpLoopError(RuntimeError):
     """An action was applied `NOOP_LOOP_THRESHOLD`+ times with zero change to the
-    observation — a mask/execution mismatch (the mask is offering an action the
-    engine refuses to perform). Raised from `DigimonEnv.step` so it is caught by
+    observation — execution may refuse it, or a resolution cycle may return to
+    the same state. Raised from `DigimonEnv.step` so it is caught by
     the panic rail (`TrainingRecordingWrapper`): the episode terminates, the game
     is recorded for triage, and `crash_count` increments — the run survives, but
     the bug is impossible to miss."""
 
 
-def _noop_action_kind(action: int) -> str:
+def _noop_action_kind(
+    action: int, pending_selection: Optional[Dict[str, Any]] = None,
+) -> str:
+    # Action IDs are overloaded during pending choices: e.g. 116 can select a
+    # field target instead of declaring an attack. Prefer the active prompt.
+    if pending_selection is not None:
+        return f"SELECT-{pending_selection.get('kind') or 'unknown'}"
     if action == 93: return "CONCEDE"
     if action == 62: return "PASS"
     if 0 <= action < 30: return "PLAY"
@@ -377,6 +383,9 @@ class DigimonEnv(gymnasium.Env):
             record_tensors=self.record_tensors,
         )
         self._step_count = 0
+        card_eval = getattr(self, "card_eval_collector", None)
+        if card_eval is not None:
+            card_eval.start_game(self.runner.to_ui_json(), (deck1, deck2), runner_seed)
         # Reset the no-op tripwire across episode/game boundaries: a fresh game
         # legitimately reproduces an identical early observation (e.g. turn 1,
         # empty board), which must not be mistaken for a stuck-action loop
@@ -411,6 +420,12 @@ class DigimonEnv(gymnasium.Env):
         if self.runner is None:
             raise RuntimeError("Environment must be reset before stepping.")
 
+        card_eval = getattr(self, "card_eval_collector", None)
+        if card_eval is not None:
+            # Observer-only context: never enters the policy tensor or mask.
+            context_reader = getattr(self.runner, "get_eval_decision_context", None)
+            extra = {"effect_context": context_reader()} if callable(context_reader) else {}
+            card_eval.before_step(self._rl_state(), self.runner.to_ui_json(), self.action_mask(), action, **extra)
         self.runner.step(action)
         self._step_count += 1
 
@@ -480,16 +495,19 @@ class DigimonEnv(gymnasium.Env):
         # `emit_reward_occurrences=True` (set by `RewardProfileWrapper`
         # on its wrapped env). Drains events from the Rust runner via
         # `get_events_since_last_step` when present.
-        if self._reward_event_bus is not None:
+        if self._reward_event_bus is not None or card_eval is not None:
             drain_events = getattr(self.runner, "get_events_since_last_step", None)
             if drain_events is not None:
                 events = drain_events()
             else:
                 events = []
             rl_state = self._rl_state()
-            info["reward_occurrences"] = self._reward_event_bus.derive(
-                rl_state, events, self._step_count,
-            )
+            if self._reward_event_bus is not None:
+                info["reward_occurrences"] = self._reward_event_bus.derive(
+                    rl_state, events, self._step_count,
+                )
+            if card_eval is not None:
+                card_eval.after_step(rl_state, self.runner.to_ui_json(), events, terminated, truncated)
 
         return obs, reward, terminated, truncated, info
 
@@ -510,13 +528,22 @@ class DigimonEnv(gymnasium.Env):
                     + (f"+{','.join(mods)}" if mods else "")
                 )
         pend = ui.get("pendingSelection")
+        selection = "pendingSelection=no"
+        if pend is not None:
+            selection = (
+                f"pendingSelection=yes selectionKind={pend.get('kind')!r} "
+                f"selectionPhase={pend.get('phase')} "
+                f"selectingPlayer={pend.get('selectingPlayer')} "
+                f"prompt={pend.get('prompt')!r}"
+            )
         return (
-            f"NO-OP LOOP: action {action} ({_noop_action_kind(action)}) applied "
+            f"NO-OP LOOP: action {action} ({_noop_action_kind(action, pend)}) applied "
             f"{NOOP_LOOP_THRESHOLD}x with no state change "
-            f"(turn={ui.get('turnCount')} currentPlayer={ui.get('currentPlayer')} "
-            f"pendingSelection={'yes' if pend else 'no'}). board=[{'; '.join(board)}]. "
-            f"The action mask offered something execution refuses — a mask/"
-            f"execution mismatch; the recorded game has the repro."
+            f"(turn={ui.get('turnCount')} phase={ui.get('currentPhase')} "
+            f"currentPlayer={ui.get('currentPlayer')} {selection}). "
+            f"board=[{'; '.join(board)}]. "
+            f"Execution refused the action or resolution returned to the same "
+            f"observable state; the recorded game has the repro."
         )
 
     def _skip_obs_value(self) -> np.ndarray:

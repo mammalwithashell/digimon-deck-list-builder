@@ -147,6 +147,32 @@ fn breeding_source_card_ids(runner: &DebugRunner) -> Vec<String> {
         .collect()
 }
 
+
+fn material_rows(r: &DebugRunner) -> Vec<digimon_engine::owned_card_choice::CardChoiceRowView> {
+    let selection = r.game.pending_selection.as_ref().expect("materials prompt");
+    selection.card_choice.as_ref().unwrap().view(&r.game, selection.selecting_player).rows.into_iter()
+        .filter(|row| matches!(row.operation, digimon_engine::owned_card_choice::CardChoiceOperation::CommitCard)).collect()
+}
+fn material_action(r: &DebugRunner, position: usize) -> u16 {
+    let selection = r.game.pending_selection.as_ref().expect("materials prompt");
+    let position = position.to_string();
+    selection.card_choice.as_ref().expect("physical material owner")
+        .view(&r.game, selection.selecting_player).rows.into_iter()
+        .find(|row| row.position.as_deref() == Some(position.as_str())
+            && matches!(row.operation, digimon_engine::owned_card_choice::CardChoiceOperation::CommitCard))
+        .expect("physical material position is selectable").action_id
+}
+fn assert_breeding_rows(r: &DebugRunner) {
+    let selection = r.game.pending_selection.as_ref().unwrap();
+    let rows = material_rows(r);
+    assert_eq!(rows.len() + usize::from(selection.valid_action_ids.contains(&digimon_engine::action::space::PASS)), selection.valid_action_ids.len());
+    for row in rows {
+        assert!(matches!(row.zone, Some(digimon_engine::owned_card_choice::CardChoiceZone::BreedingSource)));
+        assert!(selection.valid_action_ids.contains(&row.action_id));
+        assert_eq!(digimon_engine::action::build_action_mask(&r.game, selection.selecting_player)[row.action_id as usize], 1.0);
+    }
+}
+
 #[test]
 fn select_materials_name_uniqueness_caps_mask_to_one_per_name() {
     // Carrier stack: Alphamon, Omnimon, Omnimon (dup), Gankoomon.
@@ -193,13 +219,13 @@ fn select_materials_name_uniqueness_caps_mask_to_one_per_name() {
         .as_ref()
         .expect("select_materials must install a pending selection");
     assert_eq!(
-        pending.valid_action_ids.len(),
+        material_rows(&runner).len(),
         4,
         "step 1: all four Royal Knight sources are selectable"
     );
 
     // Pick the first Omnimon (index 1 in the stack).
-    let omega_action = pending.valid_action_ids[1];
+    let omega_action = material_action(&runner, 1);
     let selecting_player = pending.selecting_player;
     runner
         .game
@@ -214,7 +240,7 @@ fn select_materials_name_uniqueness_caps_mask_to_one_per_name() {
         .as_ref()
         .expect("pending must re-arm after the first pick");
     assert_eq!(
-        pending.valid_action_ids.len(),
+        material_rows(&runner).len(),
         2,
         "after picking Omnimon, the duplicate Omnimon must be masked out \
          by uniqueness=name; Alphamon + Gankoomon stay selectable"
@@ -232,7 +258,7 @@ fn select_materials_name_uniqueness_caps_mask_to_one_per_name() {
         .as_ref()
         .expect("pending must re-arm after the second pick");
     assert_eq!(
-        pending.valid_action_ids.len(),
+        material_rows(&runner).len(),
         1,
         "third step: only the final distinct name remains"
     );
@@ -573,7 +599,7 @@ fn select_materials_empty_carrier_runs_tail_synchronously() {
 // no-op is gone: a breeding carrier now surfaces a real `pending_selection`
 // with breeding-source action IDs.
 
-use digimon_engine::action::space::{BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START};
+
 use digimon_engine::selection::{BreedingPermanentSelectionRef, SelectionKind};
 
 /// KEY behavioral test — `select_materials` against a King Drasil breeding
@@ -658,16 +684,11 @@ fn select_materials_breeding_carrier_installs_real_pending_selection() {
         "the controller (P0) selects from their own breeding carrier"
     );
     assert_eq!(
-        pending.valid_action_ids.len(),
+        material_rows(&runner).len(),
         2,
         "both breeding sources are selectable"
     );
-    for &aid in &pending.valid_action_ids {
-        assert!(
-            (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&aid),
-            "action id {aid} must be a real breeding-source ID, not a battle-area ID"
-        );
-    }
+    assert_breeding_rows(&runner);
 
     // Resolve the Omnimon pick via its real breeding-source action ID.
     let omega_idx = runner.game.players[0]
@@ -678,7 +699,7 @@ fn select_materials_breeding_carrier_installs_real_pending_selection() {
         .iter()
         .position(|cs| runner.game.card_data[cs.data_index].card_id == "RK-OMEGA")
         .expect("Omnimon source present");
-    let omega_action = BREEDING_SOURCE_SELECT_START + omega_idx as u16;
+    let omega_action = material_action(&runner, omega_idx);
     assert!(pending.valid_action_ids.contains(&omega_action));
 
     let sp = pending.selecting_player;
@@ -772,11 +793,11 @@ fn select_materials_breeding_carrier_distinct_by_exercises_recursive_path() {
 
     // Step 1: all four breeding sources selectable.
     let pending = runner.game.pending_selection.as_ref().unwrap();
-    assert_eq!(pending.valid_action_ids.len(), 4, "step 1: four sources");
+    assert_eq!(material_rows(&runner).len(), 4, "step 1: four sources");
     let sp = pending.selecting_player;
 
     // Pick the first Omnimon (stack index 1).
-    let omega_action = BREEDING_SOURCE_SELECT_START + 1;
+    let omega_action = material_action(&runner, 1);
     assert!(pending.valid_action_ids.contains(&omega_action));
     runner
         .game
@@ -793,17 +814,12 @@ fn select_materials_breeding_carrier_distinct_by_exercises_recursive_path() {
         .as_ref()
         .expect("pending re-arms after the first breeding-source pick");
     assert_eq!(
-        pending.valid_action_ids.len(),
+        material_rows(&runner).len(),
         2,
         "recursive distinct_by over the breeding stack masks the duplicate \
          Omnimon; Alphamon + Gankoomon stay selectable"
     );
-    for &aid in &pending.valid_action_ids {
-        assert!(
-            (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&aid),
-            "re-armed action id {aid} stays in the breeding-source range"
-        );
-    }
+    assert_breeding_rows(&runner);
 
     // Finish the two remaining distinct-name picks.
     let next = pending.valid_action_ids[0];
@@ -812,7 +828,7 @@ fn select_materials_breeding_carrier_distinct_by_exercises_recursive_path() {
         .resolve_selection(sp, next)
         .expect("second pick");
     let pending = runner.game.pending_selection.as_ref().unwrap();
-    assert_eq!(pending.valid_action_ids.len(), 1, "one distinct name left");
+    assert_eq!(material_rows(&runner).len(), 1, "one distinct name left");
     let last = pending.valid_action_ids[0];
     runner.game.resolve_selection(sp, last).expect("third pick");
 

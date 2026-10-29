@@ -224,7 +224,11 @@ async def _handle_action(
         return
 
     # Execute action
-    runner.step(action_id)
+    try:
+        runner.step_checked(action_id, data.get("expected_card_choice"))
+    except (ValueError, TypeError) as exc:
+        await ws.send_json({"type": "error", "message": str(exc)})
+        return
 
     # Collect logs and events (drained once, fanned out by broadcast_state)
     logs = list(runner.get_last_log())

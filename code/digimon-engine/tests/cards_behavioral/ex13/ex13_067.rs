@@ -160,21 +160,19 @@ fn accept_confirm(runner: &mut DebugRunner) {
 fn union_offered(runner: &DebugRunner) -> Vec<String> {
     let view: PendingSelectionView = runner.pending_selection_view().expect("union prompt");
     assert!(matches!(view.kind, SelectionKind::UnionZone { .. }), "{view:?}");
-    let p = &runner.game.players[0];
-    let mut ids: Vec<String> = view
-        .valid_action_ids
-        .iter()
-        .filter_map(|&a| {
-            if (PLAY_HAND_START..PLAY_HAND_END).contains(&a) {
-                p.hand.get((a - PLAY_HAND_START) as usize)
-            } else if (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&a) {
-                p.trash.get((a - TRASH_EFFECT_START) as usize)
-            } else {
-                None
-            }
-        })
-        .map(|c| c.card_id(&runner.game.card_data).to_string())
-        .collect();
+    let mut ids:Vec<String>=physical_menu::commits(&runner.game).iter().map(|row| {
+        assert_eq!(row.owner,Some(0));
+        assert!(matches!(row.zone,Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand|digimon_engine::owned_card_choice::CardChoiceZone::Trash)));
+        let index:usize=row.position.as_ref().unwrap().parse().unwrap();
+        let fixture_card=match row.zone {
+            Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand)=>&runner.game.player(0).hand[index],
+            Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash)=>&runner.game.player(0).trash[index],
+            _=>unreachable!(),
+        };
+        let id=fixture_card.card_id(&runner.game.card_data);
+        if row.identity_visible {assert_eq!(row.card_id.as_deref(),Some(id));} else {assert!(row.card_id.is_none());}
+        id.to_string()
+    }).collect();
     ids.sort();
     ids
 }
@@ -380,3 +378,6 @@ fn ex13_067_security_plays_itself_for_free() {
     assert_eq!(field_ids(&runner, 1), vec![CARD_ID], "Nokia played from security");
     assert_eq!(runner.memory(), 3, "without paying the cost");
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

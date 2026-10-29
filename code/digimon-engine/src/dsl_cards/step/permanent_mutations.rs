@@ -3,7 +3,8 @@
 //! Verbs: DeletePermanent, ReturnToHand, ReturnToDeck, Suspend, Unsuspend,
 //! DeDigivolve. All are binding-consuming: the `target` field resolves to
 //! `ResolvedBinding::Permanent`; any other variant is silently skipped (same
-//! convention as the 2b zone-move handlers).
+//! convention as the 2b zone-move handlers). BindPermanentProperty also
+//! accepts a bound physical card and captures its printed metadata.
 
 use digimon_dsl::compiled::{CompiledPermanentProperty, CompiledStep};
 
@@ -87,82 +88,8 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        // `delete_for_cost_reduction`: delete AS A COST and record the deleted
-        // permanent's PRINTED play cost (snapshotted PRE-removal, rule 25 — DCGO
-        // `permanent.CostJustBeforeRemoveField`) into the Game override so the
-        // cost-reduction continuation credits it as the VARIABLE reduction amount
-        // (BT13-103). `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`.
-        CompiledStep::DeleteForCostReduction { target } => {
-            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
-            {
-                let existed = ctx
-                    .game
-                    .player(h.player)
-                    .battle_area
-                    .get(h.index as usize)
-                    .is_some();
-                if existed {
-                    // Pre-removal printed play cost of the deleted permanent's
-                    // top card (the same reduction DCGO reads via
-                    // `CostJustBeforeRemoveField`). DCGO credits nothing for a
-                    // 0-cost deletion (`if (reduceCost <= 0) yield break`).
-                    let cost = ctx
-                        .game
-                        .player(h.player)
-                        .battle_area
-                        .get(h.index as usize)
-                        .map(|perm| perm.top_card().play_cost(&ctx.game.card_data))
-                        .unwrap_or(0) as i32;
-                    let dp = ctx.game.effective_dp(h);
-                    let is_digimon=ctx.game.permanent_is_digimon_for_rules(h);
-                ctx.delete_permanent(h);
-                    bindings.record_deleted(h, dp, is_digimon);
-                    if cost > 0 {
-                        let acc = ctx
-                            .game
-                            .pending_cost_reduction_amount_override
-                            .get_or_insert(0);
-                        *acc += cost;
-                    }
-                }
-            }
-            true
-        }
-        // G-DSL-DELETE-BOUND-PERMANENTS-ONE-EVENT (BT8-070 "Delete the chosen
-        // cards"; EX4-073 / P-094 / BT17-018 / LM-021 budget picks): the
-        // chosen permanents are deleted at the same time — ONE event (DCGO
-        // `SelectPermanentEffect` Mode.Destroy → one
-        // `DestroyPermanentsClass(list)`; §15-5-2: an observer of that event
-        // triggers once). Vanished / duplicate / effect-immune permanents are
-        // skipped (the immunity gate `ctx.delete_permanent` applies), then one
-        // `delete_permanents_batch` runs — the `delete_permanents` shape.
-        CompiledStep::DeleteBoundPermanents { binding } => {
-            let mut handles: Vec<crate::permanent::PermanentHandle> = Vec::new();
-            for h in bindings.get_permanent_list(binding).unwrap_or_default() {
-                let exists = ctx
-                    .game
-                    .player(h.player)
-                    .battle_area
-                    .get(h.index as usize)
-                    .is_some();
-                if exists && !handles.contains(&h) && ctx.can_affect_permanent(h) {
-                    handles.push(h);
-                }
-            }
-            if handles.is_empty() {
-                return true;
-            }
-            let snapshots: Vec<(crate::permanent::PermanentHandle, Option<i32>, bool)> = handles
-                .iter()
-                .map(|&h| (h, ctx.game.effective_dp(h), ctx.game.permanent_is_digimon_for_rules(h)))
-                .collect();
-            let cause = ctx.game.infer_deletion_cause(handles[0]);
-            ctx.game.delete_permanents_batch(handles, cause);
-            for (h, dp, is_digimon) in snapshots {
-                bindings.record_deleted(h, dp, is_digimon);
-            }
-            true
-        }
+        // DeleteForCostReduction and DeleteBoundPermanents are expanded by
+        // deletion_results into a resumable batch and completed-result finalizer.
         // G-DSL-DELETE-PERMANENTS-BATCH (EX7-071 "Delete 1 of your opponent's
         // level 3, 1 of their level 4, and 1 of their level 5 Digimon"): the
         // picks are separate selections but the deletion is ONE event (DCGO
@@ -252,9 +179,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         CompiledStep::ReturnToHand { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
-                if let Some(card) = ctx.return_to_hand(h) {
-                    bindings.record_returned_card(card);
-                    bindings.record_added_to_hand(card);
+                if let Some(result) = ctx.return_to_hand_with_receipt(h) {
+                    bindings.record_returned_card(result.card);
+                    if result.added_to_hand {
+                        bindings.record_added_to_hand(result.card);
+                    }
                 }
             }
             true
@@ -375,10 +304,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             property,
             bind_as,
         } => {
-            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(from, ctx, bindings) {
-                if let Some(value) = permanent_property(ctx, h, *property) {
-                    bindings.insert_literal(bind_as, value);
-                }
+            let value = match resolve_binding_ref(from, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(h)) => permanent_property(ctx, h, *property),
+                Some(ResolvedBinding::Card(card)) => match property {
+                    CompiledPermanentProperty::Level => ctx.game.card_data_for_handle(card)
+                        .and_then(|data| data.level).map(i64::from),
+                },
+                _ => None,
+            };
+            if let Some(value) = value {
+                bindings.insert_literal(bind_as, value);
             }
             true
         }

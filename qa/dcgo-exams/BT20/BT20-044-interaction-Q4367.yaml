@@ -103,7 +103,6 @@ steps:
   do:
     select:
       decline: true
-      dcgo_only: true
   expect:
     prompt: SelectPermanentEffect
 - actor: 1

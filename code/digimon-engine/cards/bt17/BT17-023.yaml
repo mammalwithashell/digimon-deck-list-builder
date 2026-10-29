@@ -1,0 +1,72 @@
+# Official observation b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755.
+# Image/Q2763-Q2765: a yellow Tamer may be treated as a Lv3 yellow Digimon
+# only when this physical card is in hand. Q2764 also permits that treatment
+# when using the named Koji cost-2 requirement; native and treated routes are
+# distinct choices. The per-card split JSON omits yellow; central runtime data retains both.
+card: BT17-023
+name: KendoGarurumon
+kind: digimon
+level: 4
+color: [blue, yellow]
+cost: 6
+dp: 6000
+form: Hybrid
+attribute: Variable
+traits: [Cyborg]
+alt_paths:
+  # Pure printed circles also supply the metadata borrowed by treated routes.
+  - kind: digivolve
+    from: {level_eq: 3, color_is: blue}
+    cost: 3
+  - kind: digivolve
+    from: {level_eq: 3, color_is: yellow}
+    cost: 3
+  - kind: digivolve
+    from: {kind: tamer, color_is: yellow}
+    source_treated_as: level_3_yellow_digimon_from_hand
+    cost: 3
+  - kind: digivolve
+    from: {kind: tamer, name_is: Koji Minamoto}
+    cost: 2
+  - kind: digivolve
+    from: {kind: tamer, name_is: Koji Minamoto, color_is: yellow}
+    source_treated_as: level_3_yellow_digimon_from_hand
+    cost: 2
+  - kind: digivolve
+    from: {kind: digimon, name_is: Lobomon}
+    cost: 1
+
+effects:
+  - when: when_attacking
+    summary: "Draw 1"
+    process:
+      - draw: {of: you, count: 1}
+  - when: when_attacking
+    optional: true
+    summary: "May digivolve this Digimon into a Hybrid from hand for 1 less"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evolution
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Hybrid
+              - can_digivolve_onto_with_cost: {target: source, cost: {reduce: 1}}
+          prompt: "You may digivolve into a Hybrid card with cost reduced by 1"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evolution
+          cost: {reduce: 1}
+          ignore_requirements: false
+  - scope: inherited
+    when: when_attacking
+    condition:
+      not:
+        count_gte:
+          filter: {of: you, zone: [hand]}
+          n: 8
+    summary: "If your hand has 7 or fewer cards, Draw 1"
+    process:
+      - draw: {of: you, count: 1}

@@ -18,9 +18,9 @@
   "type_eng": [],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory.",
+  "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory.",
   "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may return 1 card with the [Hybrid] or [Ten Warriors] trait from your trash to the hand.",
-  "security_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Play this card without paying the cost.",
   "evo_costs": [],
   "xros_req": ""
 }

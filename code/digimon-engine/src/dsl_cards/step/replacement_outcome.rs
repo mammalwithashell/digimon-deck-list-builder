@@ -77,7 +77,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             delete_carrier_and_cancel_after_payment(ctx);
             true
         }
-        CompiledStep::TrashTopSecurityAndCancelReplacement { of } => {
+        CompiledStep::TrashTopSecurityAndCancelReplacement { of, .. } => {
             let player = crate::dsl_cards::step::resolve_player(ctx, *of);
             if ctx.trash_top_security_and_cancel_current_replacement(player) {
                 set_outcome(ctx, ReplacementOutcome::Cancelled);
@@ -293,7 +293,7 @@ pub(crate) fn delete_selected_and_cancel_after_payment(
     );
 }
 
-fn start_deletion_payment(
+pub(super) fn start_deletion_payment(
     ctx: &mut EffectContext<'_>, payer_handle: crate::permanent::PermanentHandle,
 ) -> Option<(u64,(u8,u16,u64))> {
     if !ctx.can_affect_permanent(payer_handle) { return None; }

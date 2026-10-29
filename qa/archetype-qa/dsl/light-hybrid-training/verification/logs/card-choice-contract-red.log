@@ -1,0 +1,6 @@
+    Blocking waiting for file lock on artifact directory
+   Compiling digimon-engine v0.1.0 (C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-engine)
+error: failed to remove file `D:/cargo-target/light-hybrid-training\debug\deps\libdigimon_engine-0f496505005e1c05.rlib`
+
+Caused by:
+  The process cannot access the file because it is being used by another process. (os error 32)

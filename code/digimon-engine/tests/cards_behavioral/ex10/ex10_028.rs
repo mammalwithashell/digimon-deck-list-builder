@@ -33,7 +33,6 @@
 use digimon_dsl::compiled::{
     CompiledClause, CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
-use digimon_engine::action::space::encode_source_select;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect_context::EffectContext;
@@ -369,8 +368,7 @@ fn ex10_028_on_play_after_source_selection_prompts_own_field() {
         "SourceMulti(1,1) must be pending before source pick; got {:?}",
         runner.pending_kind()
     );
-    let source_action =
-        encode_source_select(host.index as u16, 0).expect("encode source slot 0 action");
+    let source_action = physical_choice::source_action(&runner.game, host, 0);
     runner
         .execute_action(0, source_action)
         .expect("pick source at slot 0");
@@ -556,7 +554,7 @@ fn ex10_028_on_play_can_buff_different_digimon_than_source_host() {
         "SourceMulti(1,1) should be pending; got {:?}",
         runner.pending_kind()
     );
-    let source_action = encode_source_select(host.index as u16, 0).expect("encode source slot 0");
+    let source_action = physical_choice::source_action(&runner.game, host, 0);
     runner
         .execute_action(0, source_action)
         .expect("pick source at slot 0");
@@ -1218,3 +1216,6 @@ fn ex10_028_on_play_optional_cost_may_be_declined() {
         "declining must not grant +3000 DP"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

@@ -1,0 +1,137 @@
+# Printed image, official BT20-087 bundle/Q&A, and DCGO BT20_087.cs.
+# "On the field" includes battle and breeding. Both zones remain player choices.
+card: BT20-087
+name: Kota Domoto & Yuji Musya
+kind: tamer
+color: [black, red]
+cost: 5
+traits: [Chronicle]
+also_treated_as: [Kota Domoto, Yuji Musya]
+
+effects:
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - when: on_ally_attack
+    active_when: { your_turn: true }
+    optional: true
+    trigger_if:
+      event_target_owner: you
+      event_target_kind: digimon
+      event_target_trait_has: Chronicle
+    condition:
+      any_of:
+        - any_permanent:
+            of: you
+            kind: digimon
+            has_digivolve_candidate:
+              of: you
+              zone: [hand]
+              filter: { kind: digimon, level_lte: 6, trait_has: Chronicle }
+              cost: { reduce: 1 }
+        - count_gte:
+            filter:
+              owner: you
+              zone: [breeding]
+              kind: digimon
+              has_digivolve_candidate:
+                of: you
+                zone: [hand]
+                filter: { kind: digimon, level_lte: 6, trait_has: Chronicle }
+                cost: { reduce: 1 }
+            n: 1
+    summary: "[Your Turn] When your Chronicle Digimon attacks, by suspending this Tamer, one of your Digimon on the field may digivolve into a level 6 or lower Chronicle from hand for 1 less"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_effect_choice:
+          bind_as: evolution_zone
+          labels: ["Digivolve a battle area Digimon", "Digivolve a breeding area Digimon"]
+          legal_when:
+            - any_permanent:
+                of: you
+                kind: digimon
+                has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter: { kind: digimon, level_lte: 6, trait_has: Chronicle }
+                  cost: { reduce: 1 }
+            - count_gte:
+                filter:
+                  owner: you
+                  zone: [breeding]
+                  kind: digimon
+                  has_digivolve_candidate:
+                    of: you
+                    zone: [hand]
+                    filter: { kind: digimon, level_lte: 6, trait_has: Chronicle }
+                    cost: { reduce: 1 }
+                n: 1
+          prompt: "Choose a Digimon's area to digivolve"
+      - if:
+          condition: { equals: [evolution_zone, 0] }
+          then:
+            - select_own_permanent:
+                bind_as: host
+                optional: true
+                filter:
+                  kind: digimon
+                  has_digivolve_candidate:
+                    of: you
+                    zone: [hand]
+                    filter: { kind: digimon, level_lte: 6, trait_has: Chronicle }
+                    cost: { reduce: 1 }
+                prompt: "Choose your battle area Digimon to digivolve"
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: evolution
+                      optional: true
+                      filter:
+                        kind: digimon
+                        level_lte: 6
+                        trait_has: Chronicle
+                        can_digivolve_onto_with_cost: { target: host, cost: { reduce: 1 } }
+                      prompt: "Choose a level 6 or lower Chronicle Digimon in hand"
+                  - effect_initiated_digivolve:
+                      target: host
+                      from_hand: evolution
+                      cost: { reduce: 1 }
+                      ignore_requirements: false
+      - if:
+          condition: { equals: [evolution_zone, 1] }
+          then:
+            - select_own_breeding_permanent:
+                bind_as: host
+                optional: true
+                filter:
+                  kind: digimon
+                  has_digivolve_candidate:
+                    of: you
+                    zone: [hand]
+                    filter: { kind: digimon, level_lte: 6, trait_has: Chronicle }
+                    cost: { reduce: 1 }
+                prompt: "Choose your breeding area Digimon to digivolve"
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: evolution
+                      optional: true
+                      filter:
+                        kind: digimon
+                        level_lte: 6
+                        trait_has: Chronicle
+                        can_digivolve_onto_with_cost: { target: host, cost: { reduce: 1 } }
+                      prompt: "Choose a level 6 or lower Chronicle Digimon in hand"
+                  - effect_initiated_digivolve:
+                      target: host
+                      from_hand: evolution
+                      cost: { reduce: 1 }
+                      ignore_requirements: false
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

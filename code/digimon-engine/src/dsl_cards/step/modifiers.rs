@@ -246,6 +246,7 @@ pub fn try_run(
             synth_identity,
             payload: typed_payload,
             continuous,
+            opponent_only,
         } => {
             let Some(expiry) = resolve_expiry("add_modifier", expiry) else {
                 return true;
@@ -264,9 +265,12 @@ pub fn try_run(
                     .map(|p| build_typed_modifier_payload(modifier_ty, p))
             });
             // Closure installs with-or-without payload depending on `payload`.
-            let install = |ctx: &mut crate::effect_context::EffectContext, h, n| match &payload {
-                Some(p) => ctx.add_modifier_with_payload(h, modifier_ty, n, expiry, p.clone()),
-                None => ctx.add_modifier(h, modifier_ty, n, expiry),
+            let install = |ctx: &mut crate::effect_context::EffectContext, h, n| {
+                ctx.add_modifier_scoped(
+                    h, modifier_ty, n, expiry,
+                    payload.clone().unwrap_or(crate::modifiers::ModifierPayload::None),
+                    *opponent_only,
+                );
             };
             match target {
                 CompiledModifierTarget::Binding(b) => {
@@ -291,7 +295,7 @@ pub fn try_run(
                             index: 0,
                         });
                         let n = resolve_modifier_value(value, ctx, dummy, bindings, runtime);
-                        ctx.game.add_floating_mass_modifier(
+                        ctx.game.add_floating_mass_modifier_scoped(
                             pred.clone(),
                             modifier_ty,
                             n,
@@ -303,6 +307,7 @@ pub fn try_run(
                             // continuous mass path (was dropped) — closes
                             // G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH (BT25-104).
                             payload.clone(),
+                            *opponent_only,
                         );
                     } else {
                         // Phase 2d Task 8: scan battle-area, apply modifier to every match.

@@ -77,6 +77,37 @@ The hard prerequisite is `make-engine-cloneable`. Prior exploration confirmed Ti
 - **Deck-prior accuracy (PvP review)** → a wrong prior makes the decision-time grade unfair; mitigated by leaning on the hindsight grade where the prior is irrelevant, and by surfacing prior uncertainty in the review UI.
 - **Scope** → four-to-five capabilities is a program; mitigated by phasing (determinize → search → self-play → review, with deck-prior parallel) and the option to split into separate changes.
 
+**D11 — Independent-tree evaluation batching (2026-10-23).** For the English-meta
+job, batch the next required neural evaluations of independent PIMC world trees.
+Each tree pauses at its leaf and completes that evaluation and backup before
+selecting its next simulation. Preserve sampled-world seeds, root noise,
+per-world budgets, depth/forced-chain caps, first-max ties and aggregation order.
+Use a cooperative scheduler; no speculative leaves or virtual loss within a
+tree. Batch size one retains the serial reference. IS-MCTS remains serial.
+This supersedes D4's virtual-loss choice for this implementation: exact search
+equivalence with a deterministic, batch-independent evaluator is the gate.
+Self-play records requested/effective batching settings in its manifest. Test
+non-uniform policies and values, mixed terminal roots, depth caps, partial
+batches, small/remainder budgets, hidden-card permutations and real ONNX parity.
+
+**D12 — Portable dynamic game queue (2026-10-23).** Native self-play accepts a
+global first-game index. All chunks share a master seed and preserve the
+original serial deck RNG sequence plus index-derived game, action-sampling and
+search streams. Worker count and completion order cannot affect targets. The
+Python controller dispatches bounded chunks dynamically, using private attempt
+directories and atomically publishing only completed, hashed outputs. Explicit
+resume validates immutable input/search identities and committed output hashes;
+worker count may change, chunk partition may not. Interrupted chunks are rerun,
+never adopted as terminal training data. Retain the legacy static scheduler as
+an explicit reference mode; its historical per-worker seed scheme is distinct.
+Use kernel controller locks, heartbeat/events, bounded retries and whole-chunk
+deadlines on Windows and Linux. Long cloud runs require persistent local/POSIX
+storage and a supervisor that terminates the whole process group. No automatic
+restart of a user-stopped training run is introduced. Profiling is opt-in,
+wall-clock and thread-local, with exclusive and inclusive spans distinguished.
+Calibrate concurrency on the actual cloud host; development-prefix measurements
+do not determine production throughput or model quality.
+
 ## Phasing / Migration Plan
 
 1. **Determinization** (gated on `make-engine-cloneable`): `Infoset` extraction + `SamplingRevealSource` + world materializer + invariant checker + round-trip property tests. Self-play regime only (exact deck prior).

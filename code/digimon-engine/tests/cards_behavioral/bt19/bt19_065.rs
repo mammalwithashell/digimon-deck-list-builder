@@ -716,12 +716,14 @@ fn bt19_065_digixros_five_field_materials_reduce_cost_and_attach_sources() {
         let pending = runner
             .pending_selection()
             .expect("material prompt should re-install per material");
+        let action = physical_menu::battle_top_action(&runner.game,
+            digimon_engine::permanent::PermanentHandle { player: 0, index: slot as u8 });
         assert!(
-            pending.valid_action_ids.contains(&slot),
+            pending.valid_action_ids.contains(&action),
             "field material slot {slot} must be selectable"
         );
         runner
-            .execute_action(0, slot)
+            .execute_action(0, action)
             .unwrap_or_else(|_| panic!("select DigiXros material slot {slot}"));
     }
     runner
@@ -747,16 +749,8 @@ fn bt19_065_digixros_five_field_materials_reduce_cost_and_attach_sources() {
     );
 }
 
-/// BLOCKED on G-ENGINE-DIGIXROS-DISTINCT-BY: `DigiXrosRecipeSlot.distinct_by`
-/// is compiled from the YAML (`distinct_by: card_number`) but never consulted
-/// by the runtime candidate filter (`slot_accepts_card` /
-/// `resolve_material_origin` in `code/digimon-engine/src/digixros.rs` check
-/// only name/trait requirements and exact-same-`CardHandle` dedup, not
-/// "same printed card number as an already-picked material"). Two copies of
-/// the identical card are therefore currently BOTH offered as legal DigiXros
-/// materials, which violates the printed "5 ... cards w/different card
-/// numbers" requirement. Proven via the assertion below, which fails today
-/// (the second copy stays selectable) — see docs/RUST_ENGINE_GAPS.md.
+/// Two physical copies of the same printed card number cannot both satisfy
+/// the printed "different card numbers" requirement.
 #[test]
 fn bt19_065_digixros_rejects_duplicate_card_number() {
     // Two copies of the SAME card id ("different card numbers" constraint):
@@ -767,7 +761,7 @@ fn bt19_065_digixros_rejects_duplicate_card_number() {
         .hand(0, &[CARD_ID])
         .start();
 
-    let _first = runner.place_on_field(0, "XR-DUP", Some(0));
+    let first = runner.place_on_field(0, "XR-DUP", Some(0));
     let _second = runner.place_on_field(0, "XR-DUP", Some(0));
 
     let _ = runner.play(0, 0);
@@ -775,33 +769,27 @@ fn bt19_065_digixros_rejects_duplicate_card_number() {
     let prompt = runner
         .pending_selection()
         .expect("DigiXros material prompt installs");
-    // Both XR-DUP copies occupy field slots 0 and 1 at prompt-install time.
-    let first_slot: u16 = 0;
-    assert_eq!(
-        prompt
-            .valid_action_ids
-            .iter()
-            .filter(|&&a| a == 0 || a == 1)
-            .count(),
-        2,
-        "both same-card-number copies start out selectable"
-    );
-    runner
-        .execute_action(0, first_slot)
-        .expect("select the first XR-DUP copy");
+    // Both physical copies start selectable; choose the one at the original first carrier.
+    assert!(prompt.card_choice.is_some());
+    assert_eq!(physical_menu::commits(&runner.game).iter().filter(|row|
+        matches!(row.zone, Some(digimon_engine::owned_card_choice::CardChoiceZone::BattleTop))
+            && row.card_id.as_deref() == Some("XR-DUP")).count(), 2,
+        "both same-card-number copies start out selectable");
+    let first_action = physical_menu::battle_top_action(&runner.game, first);
+    runner.execute_action(0, first_action).expect("select the first XR-DUP copy");
 
-    // Picking slot 0 removes that permanent from the battle area, so the
-    // second copy (originally slot 1) shifts down to slot 0. The engine
-    // SHOULD now exclude it entirely (same printed card number already
-    // committed to this recipe slot) — instead it re-offers slot 0 as the
-    // (still-legal, per the gap) second copy.
+    // Materials remain physically unpaid until the transaction commits, but the
+    // second copy must already be masked by the selected printed card number.
     let after_first = runner
         .pending_selection()
         .expect("material prompt continues after first pick");
-    assert!(
-        !after_first.valid_action_ids.contains(&0),
-        "a second card sharing the SAME card number must be excluded (different card numbers rule)"
-    );
+    let mask = digimon_engine::action::build_action_mask(&runner.game, after_first.selecting_player);
+    let rows = after_first.card_choice.as_ref().map(|owner| owner.view(&runner.game, after_first.selecting_player).rows).unwrap_or_default();
+    assert!(!rows.iter().any(|row| row.card_id.as_deref() == Some("XR-DUP")
+        && matches!(row.operation, digimon_engine::owned_card_choice::CardChoiceOperation::CommitCard)
+        && mask[row.action_id as usize] > 0.5),
+        "a second card sharing the SAME card number must be excluded (different card numbers rule)");
+    assert_eq!(mask[PASS as usize], 1.0, "the optional transaction can still finish with its one legal selected copy");
 }
 
 // ─── Section 6 — Inherited redirect: condition gating + behavior ────────────
@@ -1064,3 +1052,6 @@ fn bt19_065_inherited_redirect_opt_blocks_second_activation_same_turn() {
         "[Once Per Turn] must lock a second redirect attempt in the same turn"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

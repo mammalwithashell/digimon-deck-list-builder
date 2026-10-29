@@ -319,6 +319,7 @@ pub fn modifier_type_str(m: ModifierType) -> Option<&'static str> {
         }
         ModifierType::CannotActivateWhenAttackingEffects => "CannotActivateWhenAttackingEffects",
         ModifierType::CannotActivateSecurityEffects => "CannotActivateSecurityEffects",
+        ModifierType::DoesNotActivateOptionSecurityEffects => "DoesNotActivateOptionSecurityEffects",
         // Attack grants / mandates
         ModifierType::MayAttack => "MayAttack",
         ModifierType::ForceAttack => "ForceAttack",
@@ -538,6 +539,9 @@ fn perm_data(
 fn pending_selection_data(v: &PendingSelectionView, game: &Game) -> Value {
     let mut m = Map::new();
     m.insert("kind".into(), Value::String(v.kind_str()));
+    if let Some(choice) = &v.card_choice {
+        m.insert("cardChoice".into(), serde_json::to_value(choice).expect("card choice DTO serializes"));
+    }
     // phase: int matching Python's GamePhase.value (not a debug string).
     m.insert("phase".into(), Value::from(phase_int(v.previous_phase)));
     m.insert(
@@ -565,7 +569,10 @@ fn pending_selection_data(v: &PendingSelectionView, game: &Game) -> Value {
                         // Resolve the branch's source card so the chooser can
                         // render the actual card face instead of a blank box
                         // (mirrors the desktop wire's EffectChoiceDto).
-                        let card = c.source_card.map(|h| game.card(h));
+                        // On-deletion choices can outlive a token's physical
+                        // card. Keep the labeled action even when its optional
+                        // card-face metadata no longer resolves in a live zone.
+                        let card = c.source_card.and_then(|h| game.card_data_for_handle(h));
                         json!({
                             "label": c.label,
                             "countChoice": c.count_choice.map(crate::count_choice_wire::CountChoiceDto::from),
@@ -607,7 +614,7 @@ pub fn to_ui_json(game: &Game) -> Value {
     let pending_sel_value = game
         .pending_selection
         .as_ref()
-        .map(|s| pending_selection_data(&s.view(), game))
+        .map(|s| pending_selection_data(&s.view(game), game))
         .unwrap_or(Value::Null);
 
     let pending_attack = game

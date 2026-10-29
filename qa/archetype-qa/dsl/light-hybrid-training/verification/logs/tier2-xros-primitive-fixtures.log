@@ -1,0 +1,10 @@
+
+running 9 tests
+
+thread 'xros_reusable_primitives::under_tamer_source_digivolve_can_be_declined_before_source_moves
+thread 'xros_reusable_primitives::selected_hand_or_trash_card_can_be_placed_under_source_tamer' (7856) has overflowed its stack
+' (52332) has overflowed its stack
+
+thread 'xros_reusable_primitives::under_tamer_source_digivolve_offers_matching_cards_under_each_tamer' (47324) has overflowed its stack
+
+thread 'xros_reusable_primitives::select_under_tamer_source_can_feed_effect_initiated_digivolve' (50944) has overflowed its stack

@@ -116,6 +116,7 @@ pub fn install(
         source_kind: ctx.source_kind,
         callback: Box::new(|_, _| panic!("source prefix payment requires typed resume")),
         on_decline: None,
+        card_choice: None,
         zone_owner: Some(ctx.player),
     });
     ctx.game.pending_selection_resume = Some(ResumeStack {

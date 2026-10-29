@@ -61,10 +61,6 @@ steps:
   - actor: 0
     do: { play: { card: BT25-078, from: hand } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: our engine's outer accept/decline gate for an effect our YAML marks
-  # optional; DCGO builds it optional: false and asks nothing here.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
   # SIM-ONLY: our engine's branch choice ("Add a [Three Musketeers] card to hand"),
   # named by LABEL -- an EffectChoice branch carries no number `value:` could
   # match. DCGO decides the branch AFTER the pick, from the picked card's trait.
@@ -104,7 +100,7 @@ assert:
   # the Gazimon that was played); Gazimon stands alone on the field at its printed
   # 1000 DP with no digivolution cards -- the "add to hand" branch leaves the stack
   # untouched. Memory is 3 on P1's side (-3 from P0's perspective).
-  - at: 7
+  - at: 6
     that:
       turn: 2
       p0.memory: -3

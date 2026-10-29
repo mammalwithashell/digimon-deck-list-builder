@@ -1,0 +1,14 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 36 items
+
+code\tests\test_cards_json_integrity.py ..........                       [ 27%]
+code\tests\tools\test_card_registry_manager.py .............             [ 63%]
+code\tests\tools\test_build_registry_offline.py .                        [ 66%]
+code\tests\tools\test_split_cards_json.py ............                   [100%]
+
+============================= 36 passed in 1.17s ==============================

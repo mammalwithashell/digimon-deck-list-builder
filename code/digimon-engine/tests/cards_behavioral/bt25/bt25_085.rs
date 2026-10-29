@@ -362,11 +362,11 @@ fn bt25_085_use_ts_option_from_own_digivolution_cards_free() {
         2,
         "TM-OPT (hand) + TS-OPT (stack); PLAIN-OPTs excluded"
     );
-    let material_pick = candidates
-        .iter()
-        .copied()
-        .find(|&a| a >= digimon_engine::action::space::SOURCE_SELECT_START)
-        .expect("the stack Option is encoded as a source-select action");
+    let rows = physical_menu::commits(&runner.game);
+    assert!(rows.iter().any(|row| matches!(row.zone, Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand))
+        && row.owner == Some(0) && row.card_id.as_deref() == Some("TM-OPT")));
+    assert!(!rows.iter().any(|row| row.card_id.as_deref() == Some("PLAIN-OPT")));
+    let material_pick = physical_menu::source_action(&runner.game, beel, 0);
     runner
         .execute_action(0, material_pick)
         .expect("use from digivolution cards");
@@ -893,3 +893,6 @@ fn bt25_085_counter_window_respects_activation_condition() {
         .valid_action_ids
         .contains(&encode_attack(0, beel.index as u16)));
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

@@ -20,6 +20,8 @@
 //!   pay cost), may PLAY a [Glowing Dawn] Digimon at cost-3, USE a [Glowing
 //!   Dawn] Option at cost-3, optional decline, and the no-target negative.
 //! - inherited End-of-Attack OPT trash-FD → unsuspend self
+//! - CR 4.3 §§15-1-2, 15-1-4, 17-1-2-2: the printed OP/WD effect
+//!   processes in text order and defers the 0-DP rule check until its tail ends.
 //!
 //! # Verdict — IMPLEMENTED
 
@@ -28,18 +30,22 @@
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
+use digimon_engine::action::{
+    build_action_mask,
+    space::{encode_attack, PASS, PLAY_HAND_START},
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::TriggerSource;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const CARD_ID: &str = "ST23-04";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/// A high-DP opponent Digimon (so -5000 DP never deletes it — rule 17-1-3-1-1).
+/// A high-DP opponent Digimon (so -5000 DP does not reach the 0-DP rule check).
 fn opp_digimon(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;
@@ -167,14 +173,18 @@ fn tamer_with_face_down(runner: &mut DebugRunner) -> PermanentHandle {
 
 /// Drive every pending prompt for the [On Play] resolution, choosing
 /// `target_card` at the `Hand` prompt and the first legal action for every
-/// other prompt (TriggerOrder clause ordering, the outer-optional Replacement
-/// accept gate, the DP-minus opponent pick, and the Tamer trash-FD pick).
+/// other prompt (the DP-minus opponent pick and the optional Tamer trash pick).
 fn drive_choosing(runner: &mut DebugRunner, target_card: &str) {
     use digimon_engine::selection::SelectionKind;
     let mut guard = 0;
     while let Some(v) = runner.pending_selection_view() {
         guard += 1;
         assert!(guard < 16, "prompt loop did not terminate");
+        assert_ne!(
+            v.kind,
+            SelectionKind::TriggerOrder,
+            "one printed effect cannot be reordered internally"
+        );
         let action = if v.kind == SelectionKind::Hand {
             let idx = hand_index_of(runner, 0, target_card);
             let want = digimon_engine::action::space::PLAY_HAND_START + idx as u16;
@@ -225,7 +235,7 @@ fn st23_04_metadata_alliance_alt_path_and_main_clause() {
         "Lv.4 [Glowing Dawn] alt-path present"
     );
 
-    // Two [On Play][When Digivolving] clauses (the DP-minus and the play-or-use).
+    // One printed effect contains both the mandatory DP reduction and its tail.
     let op_wd = card
         .effects
         .iter()
@@ -240,8 +250,8 @@ fn st23_04_metadata_alliance_alt_path_and_main_clause() {
         })
         .count();
     assert_eq!(
-        op_wd, 2,
-        "DP-minus clause + play-or-use clause both present"
+        op_wd, 1,
+        "DP-minus and the Then tail must share one effect boundary"
     );
 }
 
@@ -297,9 +307,7 @@ fn st23_04_plays_glowing_dawn_digimon_at_cost_minus_3() {
 
     runner.fire_on_play(0, murasame.index as usize);
 
-    // TriggerOrder (DP-minus vs play-or-use) → DP-minus target → outer-optional
-    // accept → Tamer trash-FD pick → hand pick (the GD Digimon). The driver
-    // accepts the optional gate and picks the named card at the Hand prompt.
+    // DP-minus target → optional Tamer trash pick → optional GD hand pick.
     drive_choosing(&mut runner, "GD-DIGI");
 
     assert_eq!(
@@ -342,7 +350,7 @@ fn st23_04_uses_glowing_dawn_option_at_cost_minus_3() {
 
     runner.fire_on_play(0, murasame.index as usize);
 
-    // TriggerOrder → DP-minus → accept gate → Tamer pick → hand pick (GD Option).
+    // DP-minus target → optional Tamer trash pick → optional GD Option pick.
     drive_choosing(&mut runner, "GD-OPT");
 
     assert_eq!(
@@ -366,8 +374,7 @@ fn st23_04_uses_glowing_dawn_option_at_cost_minus_3() {
 }
 
 /// DECLINE: the player may decline the play-or-use entirely (no trash, no play).
-/// The DP-minus (clause A) still resolves; only the optional engagement gate is
-/// declined.
+/// The mandatory DP reduction still resolves; decline only the Tamer payment.
 #[test]
 fn st23_04_play_or_use_is_declinable() {
     use digimon_engine::selection::SelectionKind;
@@ -382,13 +389,18 @@ fn st23_04_play_or_use_is_declinable() {
 
     runner.fire_on_play(0, murasame.index as usize);
 
-    // Walk prompts; DECLINE the optional Replacement engagement gate (PASS).
+    // Walk prompts; DECLINE the optional Tamer payment (PASS).
     let mut declined = false;
     let mut guard = 0;
     while let Some(v) = runner.pending_selection_view() {
         guard += 1;
         assert!(guard < 16);
-        if v.kind == SelectionKind::Replacement && v.is_optional {
+        assert_ne!(
+            v.kind,
+            SelectionKind::TriggerOrder,
+            "the Then tail is not independently orderable"
+        );
+        if v.kind == SelectionKind::OwnField && v.is_optional {
             runner
                 .execute_action(v.selecting_player, digimon_engine::action::space::PASS)
                 .unwrap();
@@ -401,7 +413,7 @@ fn st23_04_play_or_use_is_declinable() {
     }
     assert!(
         declined,
-        "the optional engagement gate was offered and declined"
+        "the optional Tamer payment was offered and declined"
     );
 
     assert_eq!(
@@ -437,7 +449,7 @@ fn st23_04_no_glowing_dawn_card_in_hand_no_play() {
 
     runner.fire_on_play(0, murasame.index as usize);
 
-    // Accept every prompt (DP-minus, engagement gate, Tamer trash-FD). With no
+    // Accept every prompt (DP-minus and Tamer trash-FD). With no
     // GD card in hand, `select_hand` finds no candidate → no Hand prompt → the
     // play-or-use is inert. `auto_resolve` accepts every prompt by first id.
     let _ = runner.auto_resolve();
@@ -457,7 +469,358 @@ fn st23_04_no_glowing_dawn_card_in_hand_no_play() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 4 — Inherited [End of Attack][OPT]: trash FD → unsuspend self
+// Section 4 — One-effect ordering, rule-check boundary, and optional-tail gates
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fn fire_shared(runner: &mut DebugRunner, timing: EffectTiming, source: PermanentHandle) {
+    runner
+        .game
+        .enqueue_triggered(timing, TriggerSource::Permanent(source));
+    runner.game.drain_effect_queue();
+}
+
+fn assert_prompt(runner: &DebugRunner, kind: SelectionKind, ids: &[u16], optional: bool) {
+    let view = runner
+        .pending_selection_view()
+        .expect("player-visible choice");
+    assert_eq!(view.kind, kind);
+    assert_eq!(view.selecting_player, 0);
+    assert_eq!(view.is_optional, optional);
+    assert_eq!(view.valid_action_ids, ids);
+    for (action, enabled) in build_action_mask(&runner.game, 0).iter().enumerate() {
+        assert_eq!(
+            *enabled,
+            if ids.contains(&(action as u16)) || (optional && action == PASS as usize) {
+                1.0
+            } else {
+                0.0
+            },
+            "unexpected mask bit {action} for {kind:?}"
+        );
+    }
+    assert!(build_action_mask(&runner.game, 1)
+        .iter()
+        .all(|value| *value == 0.0));
+}
+
+#[test]
+fn st23_04_shared_effect_starts_with_mandatory_dp_choice_without_trigger_order() {
+    for timing in [EffectTiming::OnPlay, EffectTiming::WhenDigivolving] {
+        let mut runner = base();
+        let first = runner.place_on_field(1, "OPP", Some(0));
+        let second = runner.place_on_field(1, "FILLER", Some(0));
+        tamer_with_face_down(&mut runner);
+        push_to_hand(&mut runner, 0, "GD-DIGI");
+        let source = runner.place_on_field(0, CARD_ID, Some(0));
+
+        fire_shared(&mut runner, timing, source);
+
+        assert_prompt(
+            &runner,
+            SelectionKind::OppField,
+            &[
+                encode_attack(0, first.index as u16),
+                encode_attack(0, second.index as u16),
+            ],
+            false,
+        );
+    }
+}
+
+#[test]
+fn st23_04_zero_dp_target_survives_tamer_and_hand_choices_until_whole_effect_ends() {
+    for timing in [EffectTiming::OnPlay, EffectTiming::WhenDigivolving] {
+        for payload in [Some("GD-DIGI"), Some("GD-OPT"), None] {
+            let mut runner = base();
+            let other = runner.place_on_field(1, "OPP", Some(0));
+            let doomed = runner.place_on_field(1, "FILLER", Some(0));
+            let first_tamer = tamer_with_face_down(&mut runner);
+            let paid_tamer = tamer_with_face_down(&mut runner);
+            let face_up_tamer = runner.place_stack(0, &["FILLER", "TAMER"]);
+            push_to_hand(&mut runner, 0, "PLAIN");
+            push_to_hand(&mut runner, 0, "GD-DIGI");
+            push_to_hand(&mut runner, 0, "GD-OPT");
+            let source = runner.place_on_field(0, CARD_ID, Some(0));
+            let memory_before = runner.memory();
+            let trash_before = runner.trash_size(0);
+
+            fire_shared(&mut runner, timing, source);
+            // Admit the old authoring's DP-first ordering only here, so this
+            // regression independently exposes its premature rule check.
+            // The separate test above forbids that TriggerOrder altogether.
+            if runner.pending_kind() == Some(SelectionKind::TriggerOrder) {
+                let first = runner.pending_selection_view().unwrap().valid_action_ids[0];
+                runner.execute_action(0, first).unwrap();
+            }
+            assert_prompt(
+                &runner,
+                SelectionKind::OppField,
+                &[
+                    encode_attack(0, other.index as u16),
+                    encode_attack(0, doomed.index as u16),
+                ],
+                false,
+            );
+            runner
+                .execute_action(0, encode_attack(0, doomed.index as u16))
+                .unwrap();
+
+            assert_eq!(
+                runner.game.players[1].battle_area.len(),
+                2,
+                "CR 17-1-2-2: no 0-DP deletion before the Tamer decision"
+            );
+            assert!(runner.effective_dp(doomed).unwrap() <= 0);
+            assert_eq!(runner.effective_dp(other), Some(9000));
+            assert_eq!(runner.trash_size(1), 0);
+            assert_prompt(
+                &runner,
+                SelectionKind::OwnField,
+                &[
+                    encode_attack(0, first_tamer.index as u16),
+                    encode_attack(0, paid_tamer.index as u16),
+                ],
+                true,
+            );
+            runner
+                .execute_action(0, encode_attack(0, paid_tamer.index as u16))
+                .unwrap();
+
+            assert_eq!(
+                runner.game.players[1].battle_area.len(),
+                2,
+                "CR 17-1-2-2: no 0-DP deletion before the hand decision"
+            );
+            assert!(runner.effective_dp(doomed).unwrap() <= 0);
+            assert_eq!(runner.trash_size(1), 0);
+            assert_eq!(runner.trash_size(0), trash_before + 1);
+            assert_eq!(
+                runner.game.players[0].battle_area[first_tamer.index as usize]
+                    .card_sources
+                    .len(),
+                2
+            );
+            assert_eq!(
+                runner.game.players[0].battle_area[paid_tamer.index as usize]
+                    .card_sources
+                    .len(),
+                1
+            );
+            assert_eq!(
+                runner.game.players[0].battle_area[face_up_tamer.index as usize]
+                    .card_sources
+                    .len(),
+                2
+            );
+            let digimon = PLAY_HAND_START + hand_index_of(&runner, 0, "GD-DIGI") as u16;
+            let option = PLAY_HAND_START + hand_index_of(&runner, 0, "GD-OPT") as u16;
+            assert_prompt(&runner, SelectionKind::Hand, &[digimon, option], true);
+            let action = match payload {
+                Some("GD-DIGI") => digimon,
+                Some("GD-OPT") => option,
+                None => PASS,
+                _ => unreachable!(),
+            };
+            runner.execute_action(0, action).unwrap();
+
+            assert!(runner.pending_selection().is_none());
+            assert_eq!(
+                runner.game.players[1].battle_area.len(),
+                1,
+                "the rule check deletes the 0-DP Digimon after the whole effect"
+            );
+            assert_eq!(
+                runner.game.players[1].battle_area[0]
+                    .top_card()
+                    .card_id(&runner.game.card_data),
+                "OPP"
+            );
+            assert_eq!(runner.trash_size(1), 1);
+            assert_eq!(
+                runner.memory(),
+                memory_before - if payload.is_some() { 2 } else { 0 }
+            );
+            assert_eq!(
+                runner.trash_size(0),
+                trash_before + if payload == Some("GD-OPT") { 2 } else { 1 }
+            );
+            assert_eq!(
+                runner.game.players[0]
+                    .battle_area
+                    .iter()
+                    .filter(|p| p.top_card().card_id(&runner.game.card_data) == "GD-DIGI")
+                    .count(),
+                usize::from(payload == Some("GD-DIGI"))
+            );
+            assert!(runner.game.players[0]
+                .hand
+                .iter()
+                .any(|c| c.card_id(&runner.game.card_data) == "PLAIN"));
+        }
+    }
+}
+
+#[test]
+fn st23_04_declining_tamer_payment_finishes_dp_effect_without_spending_source() {
+    for timing in [EffectTiming::OnPlay, EffectTiming::WhenDigivolving] {
+        let mut runner = base();
+        let doomed = runner.place_on_field(1, "FILLER", Some(0));
+        let tamer = tamer_with_face_down(&mut runner);
+        push_to_hand(&mut runner, 0, "GD-DIGI");
+        let source = runner.place_on_field(0, CARD_ID, Some(0));
+        let memory_before = runner.memory();
+        fire_shared(&mut runner, timing, source);
+        assert_prompt(
+            &runner,
+            SelectionKind::OppField,
+            &[encode_attack(0, doomed.index as u16)],
+            false,
+        );
+        runner
+            .execute_action(0, encode_attack(0, doomed.index as u16))
+            .unwrap();
+        assert_eq!(runner.game.players[1].battle_area.len(), 1);
+        assert_prompt(
+            &runner,
+            SelectionKind::OwnField,
+            &[encode_attack(0, tamer.index as u16)],
+            true,
+        );
+        runner.execute_action(0, PASS).unwrap();
+
+        assert!(runner.pending_selection().is_none());
+        assert!(runner.game.players[1].battle_area.is_empty());
+        assert_eq!(runner.trash_size(1), 1);
+        assert_eq!(
+            runner.game.players[0].battle_area[tamer.index as usize]
+                .card_sources
+                .len(),
+            2
+        );
+        assert_eq!(runner.trash_size(0), 0);
+        assert_eq!(runner.memory(), memory_before);
+        assert!(runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "GD-DIGI"));
+    }
+}
+
+#[test]
+fn st23_04_opponents_turn_applies_dp_but_does_not_offer_payment_or_payload() {
+    for timing in [EffectTiming::OnPlay, EffectTiming::WhenDigivolving] {
+        let mut runner = base();
+        runner.set_first_player(1);
+        let opp = runner.place_on_field(1, "OPP", Some(0));
+        let tamer = tamer_with_face_down(&mut runner);
+        push_to_hand(&mut runner, 0, "GD-DIGI");
+        let source = runner.place_on_field(0, CARD_ID, Some(0));
+        let memory_before = runner.memory();
+        fire_shared(&mut runner, timing, source);
+        assert_prompt(
+            &runner,
+            SelectionKind::OppField,
+            &[encode_attack(0, opp.index as u16)],
+            false,
+        );
+        runner
+            .execute_action(0, encode_attack(0, opp.index as u16))
+            .unwrap();
+
+        assert_eq!(runner.effective_dp(opp), Some(4000));
+        assert!(runner.pending_selection().is_none());
+        assert_eq!(
+            runner.game.players[0].battle_area[tamer.index as usize]
+                .card_sources
+                .len(),
+            2
+        );
+        assert_eq!(runner.memory(), memory_before);
+        assert_eq!(runner.trash_size(0), 0);
+        assert!(runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "GD-DIGI"));
+    }
+}
+
+#[test]
+fn st23_04_no_payable_tamer_still_applies_dp_without_free_payload() {
+    for timing in [EffectTiming::OnPlay, EffectTiming::WhenDigivolving] {
+        for has_face_up_tamer in [false, true] {
+            let mut runner = base();
+            let opp = runner.place_on_field(1, "OPP", Some(0));
+            if has_face_up_tamer {
+                runner.place_stack(0, &["FILLER", "TAMER"]);
+            }
+            // A face-down card under a Digimon does not pay the Tamer cost.
+            let wrong_host = runner.place_stack(0, &["FILLER", "HOST"]);
+            runner.game.players[0].battle_area[wrong_host.index as usize].card_sources[0]
+                .face_down = true;
+            push_to_hand(&mut runner, 0, "GD-DIGI");
+            let source = runner.place_on_field(0, CARD_ID, Some(0));
+            let memory_before = runner.memory();
+            fire_shared(&mut runner, timing, source);
+            assert_prompt(
+                &runner,
+                SelectionKind::OppField,
+                &[encode_attack(0, opp.index as u16)],
+                false,
+            );
+            runner
+                .execute_action(0, encode_attack(0, opp.index as u16))
+                .unwrap();
+
+            assert_eq!(runner.effective_dp(opp), Some(4000));
+            assert!(
+                runner.pending_selection().is_none(),
+                "unpayable cost must not offer a hand pick"
+            );
+            assert_eq!(runner.memory(), memory_before);
+            assert_eq!(runner.trash_size(0), 0);
+            assert!(runner.game.players[0]
+                .hand
+                .iter()
+                .any(|c| c.card_id(&runner.game.card_data) == "GD-DIGI"));
+        }
+    }
+}
+
+#[test]
+fn st23_04_without_opponent_digimon_still_offers_then_payment_and_payload() {
+    for timing in [EffectTiming::OnPlay, EffectTiming::WhenDigivolving] {
+        let mut runner = base();
+        runner.place_on_field(1, "TAMER", Some(0));
+        let tamer = tamer_with_face_down(&mut runner);
+        push_to_hand(&mut runner, 0, "GD-DIGI");
+        let source = runner.place_on_field(0, CARD_ID, Some(0));
+        let memory_before = runner.memory();
+        fire_shared(&mut runner, timing, source);
+        assert_prompt(
+            &runner,
+            SelectionKind::OwnField,
+            &[encode_attack(0, tamer.index as u16)],
+            true,
+        );
+        runner
+            .execute_action(0, encode_attack(0, tamer.index as u16))
+            .unwrap();
+        let hand_pick = PLAY_HAND_START + hand_index_of(&runner, 0, "GD-DIGI") as u16;
+        assert_prompt(&runner, SelectionKind::Hand, &[hand_pick], true);
+        runner.execute_action(0, hand_pick).unwrap();
+
+        assert!(runner.pending_selection().is_none());
+        assert_eq!(runner.memory(), memory_before - 2);
+        assert_eq!(runner.trash_size(0), 1);
+        assert!(runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "GD-DIGI"));
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 5 — Inherited [End of Attack][OPT]: trash FD → unsuspend self
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[test]
@@ -489,4 +852,102 @@ fn st23_04_inherited_unsuspends_glowing_dawn_host() {
         trash_before + 1,
         "the bottom face-down source was trashed as the cost"
     );
+}
+
+/// CR 4.3 §15-7-5: the cost can be paid even when the non-Glowing-Dawn
+/// carrier cannot receive the conditional unsuspend payload.
+#[test]
+fn st23_04_inherited_non_glowing_dawn_host_can_pay_or_decline_cost() {
+    for decline in [false, true] {
+        let mut host_data = gd_host("PLAIN-HOST");
+        host_data.traits.clear();
+        let mut runner = DebugRunner::builder()
+            .dsl_card(CARD_ID)
+            .unwrap()
+            .add_card(host_data)
+            .add_card(make_tamer("TAMER"))
+            .add_card(filler("FILLER"))
+            .deck(0, &["FILLER"; 8])
+            .deck(1, &["FILLER"; 8])
+            .memory(8)
+            .start();
+        runner.set_first_player(0);
+        let host = runner.place_stack(0, &[CARD_ID, "PLAIN-HOST"]);
+        runner.game.players[0].battle_area[host.index as usize].is_suspended = true;
+        let first = runner.place_stack(0, &["FILLER", "TAMER"]);
+        let second = runner.place_stack(0, &["FILLER", "TAMER"]);
+        for tamer in [first, second] {
+            runner.game.players[0].battle_area[tamer.index as usize].card_sources[0].face_down =
+                true;
+        }
+        fire_shared(&mut runner, EffectTiming::EndOfAttack, host);
+        let view = runner
+            .pending_selection_view()
+            .expect("payment remains optional on a non-GD host");
+        assert_eq!(view.kind, SelectionKind::Replacement);
+        assert_eq!(view.selecting_player, 0);
+        assert!(view.is_optional);
+        let accept = digimon_engine::action::space::REPLACEMENT_ACCEPT;
+        for (action, legal) in build_action_mask(&runner.game, 0).iter().enumerate() {
+            assert_eq!(
+                *legal,
+                if [accept, PASS].contains(&(action as u16)) {
+                    1.0
+                } else {
+                    0.0
+                }
+            );
+        }
+        if decline {
+            runner.execute_action(0, PASS).unwrap();
+            assert!(runner.game.pending_selection.is_none());
+            assert_eq!(runner.trash_size(0), 0);
+            fire_shared(&mut runner, EffectTiming::EndOfAttack, host);
+            assert!(
+                runner.game.pending_selection.is_some(),
+                "decline preserves the per-turn use"
+            );
+        }
+        runner.execute_action(0, accept).unwrap();
+        let view = runner
+            .pending_selection_view()
+            .expect("choose the payment Tamer");
+        assert_eq!(view.kind, SelectionKind::OwnField);
+        assert_eq!(view.valid_action_ids, vec![101, 102]);
+        assert!(!view.is_optional);
+        for (action, legal) in build_action_mask(&runner.game, 0).iter().enumerate() {
+            assert_eq!(
+                *legal,
+                if [101, 102].contains(&(action as u16)) {
+                    1.0
+                } else {
+                    0.0
+                }
+            );
+        }
+        runner.execute_action(0, 102).unwrap();
+        assert_eq!(runner.trash_size(0), 1);
+        assert_eq!(
+            runner.game.players[0].battle_area[first.index as usize]
+                .card_sources
+                .len(),
+            2
+        );
+        assert_eq!(
+            runner.game.players[0].battle_area[second.index as usize]
+                .card_sources
+                .len(),
+            1
+        );
+        assert!(
+            runner.game.players[0].battle_area[host.index as usize].is_suspended,
+            "the non-GD host pays but does not unsuspend"
+        );
+        assert!(runner.game.pending_selection.is_none());
+        fire_shared(&mut runner, EffectTiming::EndOfAttack, host);
+        assert!(
+            runner.game.pending_selection.is_none(),
+            "paid activation consumes OPT even with no payload"
+        );
+    }
 }

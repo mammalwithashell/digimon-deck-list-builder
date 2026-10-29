@@ -34,6 +34,32 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use serde_json::Value;
 
+/// Async transports carry the token of the page actually rendered. Serial RL
+/// callers retain step(); checking and stepping here share the same mutable
+/// runner borrow so a token cannot be validated against a different prompt.
+fn validate_card_choice_submission(
+    game: &::digimon_engine::game::Game,
+    expected: Option<&Bound<'_, PyDict>>,
+) -> PyResult<()> {
+    let current = game.pending_selection.as_ref().and_then(|p| p.card_choice.as_ref());
+    match (current, expected) {
+        (None, None) => Ok(()),
+        (Some(owner), Some(expected)) if expected.len() == 2 => {
+            let prompt: String = expected.get_item("prompt_id")?
+                .ok_or_else(|| PyValueError::new_err("Missing card choice prompt_id"))?.extract()?;
+            let generation: String = expected.get_item("page_generation")?
+                .ok_or_else(|| PyValueError::new_err("Missing card choice page_generation"))?.extract()?;
+            let token = owner.token();
+            if prompt == token.prompt_id.to_string() && generation == token.page_generation.to_string() {
+                Ok(())
+            } else {
+                Err(PyValueError::new_err("Stale card choice prompt or page"))
+            }
+        }
+        _ => Err(PyValueError::new_err("Missing or stale card choice token")),
+    }
+}
+
 use pyo3::wrap_pyfunction;
 
 use ::digimon_engine::action::space::{
@@ -646,6 +672,33 @@ fn profile_to_pydict(py: Python<'_>, profile: &RustTensorProfile) -> PyResult<Py
         )?;
         count.set_item("row_offsets", offsets)?;
         d.set_item("count_choice", count)?;
+        let card = PyDict::new_bound(py);
+        card.set_item("encoding", "u64_le_u16_normalized")?;
+        card.set_item("limb_count", count_layout::PENDING_COUNT_LIMBS)?;
+        card.set_item("limb_denominator", count_layout::PENDING_COUNT_LIMB_DENOMINATOR)?;
+        card.set_item("row_size", count_layout::PENDING_CHOICE_ROW_SIZE)?;
+        card.set_item("rows_per_page", ::digimon_engine::card_choice_page::CARD_CHOICES_PER_PAGE)?;
+        card.set_item("presentation_order", "card_choice.rows")?;
+        card.set_item("includes_nonselectable_inspection_rows", true)?;
+        let offsets = PyDict::new_bound(py);
+        for &(name, offset) in count_layout::PENDING_CARD_ROW_OFFSETS {
+            offsets.set_item(name, offset)?;
+        }
+        card.set_item("row_offsets", offsets)?;
+        let zones = PyDict::new_bound(py);
+        for (name, code) in [("battle_source", 1), ("breeding_source", 2), ("security", 3), ("hand", 4), ("trash", 5), ("battle_top", 6)] {
+            zones.set_item(name, code)?;
+        }
+        card.set_item("zone_codes", zones)?;
+        let actions = PyDict::new_bound(py);
+        actions.set_item("commit_start", ::digimon_engine::card_choice_page::CARD_CHOICE_START)?;
+        actions.set_item("previous_page", ::digimon_engine::card_choice_page::CARD_CHOICE_PREVIOUS)?;
+        actions.set_item("next_page", ::digimon_engine::card_choice_page::CARD_CHOICE_NEXT)?;
+        actions.set_item("decline", ::digimon_engine::card_choice_page::CARD_CHOICE_DECLINE)?;
+        actions.set_item("refresh_page", ::digimon_engine::card_choice_page::CARD_CHOICE_NEXT)?;
+        actions.set_item("finish_impossible", ::digimon_engine::card_choice_page::CARD_CHOICE_DECLINE)?;
+        card.set_item("actions", actions)?;
+        d.set_item("card_choice", card)?;
     }
 
     Ok(d.into_py(py))
@@ -764,6 +817,7 @@ impl CardDatabase {
 #[pyclass(module = "digimon_engine", name = "RustHeadlessGame")]
 pub struct RustHeadlessGame {
     inner: HeadlessRunner,
+    development_teachers: [::digimon_engine::policies::DevelopmentPolicy; 2],
 }
 
 #[pymethods]
@@ -803,13 +857,20 @@ impl RustHeadlessGame {
             profile,
         )
         .map_err(PyValueError::new_err)?;
-        Ok(Self { inner: runner })
+        Ok(Self { inner: runner, development_teachers: Default::default() })
     }
 
     /// Execute a single action for the current decision player. No-op after
     /// `game_over`. Matches `HeadlessGame.step`.
     fn step(&mut self, action_id: u16) {
         self.inner.step(action_id);
+    }
+
+    #[pyo3(signature = (action_id, expected_card_choice = None))]
+    fn step_checked(&mut self, action_id: u16, expected_card_choice: Option<&Bound<'_, PyDict>>) -> PyResult<()> {
+        validate_card_choice_submission(&self.inner.game, expected_card_choice)?;
+        self.inner.step(action_id);
+        Ok(())
     }
 
     /// Return the action mask for the current decision player as a
@@ -889,6 +950,44 @@ impl RustHeadlessGame {
         choose_greedy_action(&self.inner.game, &mask)
     }
 
+    /// Explicit bootstrap teacher, with independent state for each deciding seat.
+    /// The returned JSON records the chosen action and its feature provenance.
+    fn teacher_decision(&mut self, teacher: &str) -> PyResult<String> {
+        let mask = self.inner.get_action_mask();
+        let player = self.inner.current_decision_player();
+        match teacher {
+            "greedy" => Ok(serde_json::json!({"version": "greedy", "player": player,
+                "action": choose_greedy_action(&self.inner.game, &mask)}).to_string()),
+            "development_v1" => {
+                let decision = self.development_teachers[player as usize].decide(&self.inner.game, &mask)
+                    .map_err(PyValueError::new_err)?;
+                serde_json::to_string(&decision).map_err(|e| PyValueError::new_err(e.to_string()))
+            }
+            _ => Err(PyValueError::new_err(format!("unknown bootstrap teacher: {teacher}"))),
+        }
+    }
+
+    /// Internal evaluation telemetry only. Avoid building renderer descriptions
+    /// and effective-stat tooltips for every bootstrap decision. Like to_ui_json,
+    /// this includes both hands and MUST NOT be used as a player policy input.
+    fn get_card_eval_state(&self, py: Python) -> PyResult<PyObject> {
+        let game = &self.inner.game;
+        let player = |pid| {
+            let p = game.player(pid);
+            serde_json::json!({
+                "handIds": p.hand.iter().map(|c| c.card_id(&game.card_data)).collect::<Vec<_>>(),
+                "battleArea": p.battle_area.iter().map(|perm| serde_json::json!({
+                    "topCardId": perm.top_card().card_id(&game.card_data)
+                })).collect::<Vec<_>>(),
+                "breedingArea": p.breeding_area.as_ref().map(|perm| serde_json::json!({
+                    "topCardId": perm.top_card().card_id(&game.card_data)
+                }))
+            })
+        };
+        json_to_pyobject(py, &serde_json::json!({"player1": player(0), "player2": player(1),
+            "pendingSelection": game.pending_selection.as_ref().map(|_| true)}))
+    }
+
     /// Run to conclusion. `policy_fn`, if provided, is
     /// `Callable[[game, mask], int]`. Returns Python player_id
     /// (1 or 2), or 0 for draw/timeout. Matches
@@ -942,6 +1041,11 @@ impl RustHeadlessGame {
         json_to_pyobject(py, &value)
     }
 
+    /// Observer-only sequence diagnostics; never included in policy inputs.
+    fn get_eval_decision_context(&self, py: Python) -> PyResult<PyObject> {
+        json_to_pyobject(py, &::digimon_engine::evaluation_context::decision_context(&self.inner.game))
+    }
+
     /// Decoded list of every currently-legal action for the current decision
     /// player, each carrying source-card and effect identity (`card_id`,
     /// `card_name`, `effect_name`, `source_zone`, `source_index`, `label`).
@@ -975,7 +1079,7 @@ impl RustHeadlessGame {
         match game.pending_selection.as_ref() {
             None => Ok(py.None()),
             Some(sel) => {
-                let v = sel.view();
+                let v = sel.view(game);
                 let d = PyDict::new_bound(py);
                 d.set_item("kind", v.kind_str())?;
                 d.set_item("phase", v.previous_phase_str())?;
@@ -983,6 +1087,11 @@ impl RustHeadlessGame {
                 d.set_item("validIndices", v.valid_action_ids.clone())?;
                 d.set_item("isOptional", v.is_optional)?;
                 d.set_item("prompt", v.prompt.clone())?;
+                if let Some(choice) = &v.card_choice {
+                    let value = serde_json::to_value(choice)
+                        .map_err(|error| PyValueError::new_err(error.to_string()))?;
+                    d.set_item("cardChoice", json_to_pyobject(py, &value)?)?;
+                }
                 if let Some(choices) = v.effect_choices.as_ref() {
                     let list = PyList::empty_bound(py);
                     for c in choices {
@@ -1273,6 +1382,13 @@ impl RustDebugGame {
         self.inner.step(action_id);
     }
 
+    #[pyo3(signature = (action_id, expected_card_choice = None))]
+    fn step_checked(&mut self, action_id: u16, expected_card_choice: Option<&Bound<'_, PyDict>>) -> PyResult<()> {
+        validate_card_choice_submission(&self.inner.game, expected_card_choice)?;
+        self.inner.step(action_id);
+        Ok(())
+    }
+
     fn get_action_mask<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f32>> {
         PyArray1::from_vec_bound(py, self.inner.get_action_mask())
     }
@@ -1308,7 +1424,7 @@ impl RustDebugGame {
         match game.pending_selection.as_ref() {
             None => Ok(py.None()),
             Some(sel) => {
-                let v = sel.view();
+                let v = sel.view(game);
                 let d = PyDict::new_bound(py);
                 d.set_item("kind", v.kind_str())?;
                 d.set_item("phase", v.previous_phase_str())?;
@@ -1316,6 +1432,11 @@ impl RustDebugGame {
                 d.set_item("validIndices", v.valid_action_ids.clone())?;
                 d.set_item("isOptional", v.is_optional)?;
                 d.set_item("prompt", v.prompt.clone())?;
+                if let Some(choice) = &v.card_choice {
+                    let value = serde_json::to_value(choice)
+                        .map_err(|error| PyValueError::new_err(error.to_string()))?;
+                    d.set_item("cardChoice", json_to_pyobject(py, &value)?)?;
+                }
                 Ok(d.into_py(py))
             }
         }
@@ -1635,6 +1756,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             cost_paid,
             cost_printed,
             via_alt_path,
+            effect_initiated,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
@@ -1646,6 +1768,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             // the existing top-level keys stay stable.
             let meta = PyDict::new_bound(py);
             meta.set_item("cost_paid", *cost_paid)?;
+            meta.set_item("effect_initiated", *effect_initiated)?;
             meta.set_item("cost_printed", *cost_printed)?;
             meta.set_item(
                 "via_alt_path",
@@ -1667,6 +1790,9 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             was_blast_dna,
             memory_paid,
             ..
+        } | GameEvent::EvalDigivolve {
+            player, top_card_id, card_name, field_index, from_stack_top,
+            was_dna, was_blast_dna, memory_paid, ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", top_card_id.as_str())?;
@@ -1683,6 +1809,17 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             meta.set_item("was_blast_dna", *was_blast_dna)?;
             meta.set_item("memory_paid", *memory_paid)?;
             d.set_item("meta", meta)?;
+        }
+        GameEvent::BreedingMove { player, card_id, card_name, field_index, .. } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
+            d.set_item("source_slot", *field_index)?;
+        }
+        GameEvent::Hatch { player, card_id, card_name, .. } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
         }
         GameEvent::Attack {
             player,
@@ -1894,6 +2031,7 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_models_dir, m)?)?;
     m.add_function(wrap_pyfunction!(load_implemented_card_ids, m)?)?;
     m.add("ACTION_SPACE_SIZE", ACTION_SPACE_SIZE)?;
+    m.add("CARD_EVAL_EVENT_VERSION", 2)?;
     m.add("ACTION_SCHEMA_VERSION", ::digimon_engine::action::space::SCHEMA_VERSION)?;
     // Source-selection sub-range boundaries — Python callers (digimon_gym)
     // pin ACTION_SOURCE_END to SOURCE_SELECT_END - 1, and use the breeding

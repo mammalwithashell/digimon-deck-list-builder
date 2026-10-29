@@ -2,6 +2,9 @@
 //! machine: opponent-field targeting, DNA material picks, and the
 //! selection-kind routing dispatch.
 
+#[path = "../support/owned_card_choice.rs"]
+mod owned_choices;
+
 mod behavioral_end_to_end;
 mod breeding_permanent;
 mod count_capped;
@@ -15,4 +18,7 @@ mod ordered_permutation;
 mod place_remainder;
 mod reveal_buckets;
 mod source_multi;
+mod selfplay_phase_resume;
+mod training_pool_main_cancel;
 mod union_zone;
+mod departed_source_serialization;

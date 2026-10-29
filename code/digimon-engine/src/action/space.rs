@@ -9,7 +9,7 @@
 ///
 /// Independent of `ACTION_SPACE_SIZE` because non-size changes (e.g. swapping
 /// the meaning of an existing ID) also need to break old artifacts.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// Total action space size for standard 2-player game.
 ///

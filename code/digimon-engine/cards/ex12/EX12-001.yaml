@@ -26,8 +26,11 @@ effects:
           ignore_requirements: false
           optional: true
           prompt: "DNA digivolve this [VB] Digimon and another Digimon into a [VB] Digimon in hand"
-      - may_attack_now:
-          attacker: source
-          targets: any
-          optional: true
-          prompt: "That DNA-digivolved Digimon may attack"
+      - if:
+          condition: { effect_digivolved_any_digimon: true }
+          then:
+            - may_attack_now:
+                attacker: source
+                targets: any
+                optional: true
+                prompt: "That DNA-digivolved Digimon may attack"

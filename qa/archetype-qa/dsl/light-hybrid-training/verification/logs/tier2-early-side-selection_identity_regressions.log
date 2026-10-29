@@ -1,0 +1,9 @@
+
+running 3 tests
+test any_field_target_preserves_opponent_owner_when_both_slots_are_legal ... ok
+test blast_dna_field_material_uses_parked_defender_and_raw_slot ... ok
+test compact_remainder_keeps_identity_when_play_cost_passes_turn ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.17s
+
+SUITE_EXIT 0

@@ -14,13 +14,14 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
-    encode_breeding_select, encode_breeding_source_select, BREEDING_TARGET, PASS,
+    encode_breeding_select, BREEDING_TARGET, PASS,
 };
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardKind, EffectTiming};
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
 use digimon_engine::selection::SelectionKind;
 use digimon_engine::trigger_context::EventCause;
 use std::sync::{Arc, Mutex};
@@ -456,9 +457,20 @@ fn bt20_083_inherited_breeding_security_removed_suspends_carrier_and_plays_omeka
         ),
         "select_materials should expose a one-pick source selection"
     );
-    runner
-        .execute_action(1, encode_breeding_source_select(1, 0).unwrap())
-        .expect("choose Omekamon breeding source");
+    let action = {
+        let pending = runner.game.pending_selection.as_ref().unwrap();
+        let page = pending.card_choice.as_ref().expect("physical breeding-source choice").view(&runner.game, 1);
+        let commits: Vec<_> = page.rows.iter().filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard)).collect();
+        assert_eq!(commits.len(), 1, "only the Omekamon source is eligible");
+        let row = commits[0];
+        assert_eq!(row.owner, Some(1));
+        assert!(matches!(row.zone, Some(CardChoiceZone::BreedingSource)));
+        assert_eq!(row.position.as_deref(), Some("0"));
+        assert_eq!(row.card_id.as_deref(), Some("BT20-083"));
+        assert_eq!(build_action_mask(&runner.game, 1)[row.action_id as usize], 1.0);
+        row.action_id
+    };
+    runner.execute_action(1, action).expect("choose Omekamon breeding source");
 
     let breeding = runner.game.player(1).breeding_area.as_ref().unwrap();
     assert!(

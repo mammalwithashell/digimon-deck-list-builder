@@ -1,6 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-use digimon_engine::action::space::encode_source_select;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
@@ -109,14 +108,14 @@ fn ex10_003_pay_cost_can_end_pending_attack() {
         "Tumblemon pay-cost prompt is exposed"
     );
     r.game
-        .resolve_selection(0, encode_source_select(blocker.index as u16, 0).unwrap())
+        .resolve_selection(0, physical_menu::source_action(&r.game, blocker, 0))
         .unwrap();
     r.game
-        .resolve_selection(0, encode_source_select(blocker.index as u16, 1).unwrap())
+        .resolve_selection(0, physical_menu::source_action(&r.game, blocker, 1))
         .unwrap();
     assert_eq!(*end_of_attack.lock().unwrap(), 0);
     r.game
-        .resolve_selection(0, encode_source_select(blocker.index as u16, 2).unwrap())
+        .resolve_selection(0, physical_menu::source_action(&r.game, blocker, 2))
         .unwrap();
 
     assert_eq!(*fired.lock().unwrap(), 1);
@@ -169,3 +168,6 @@ effects:
     assert_eq!(r.security_count(1), 1, "security was not checked");
     assert_eq!(r.memory(), 1, "EndOfAttack fired exactly once");
 }
+
+#[path = "../support/owned_card_choice.rs"]
+mod physical_menu;

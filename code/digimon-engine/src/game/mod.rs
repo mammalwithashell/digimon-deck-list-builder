@@ -114,6 +114,11 @@ pub(crate) enum DelayedOptionLifecycleResumeKind {
     Event {
         timing: crate::enums::EffectTiming,
     },
+    /// Cleanup of a native Delay body captured in the simultaneous start pool.
+    /// Its due turn has already advanced; no phase scan resumes after cleanup.
+    CapturedStartTurnDelay {
+        carrier_identity: u64,
+    },
     /// Standard `<Delay>` activated by a player `[Main]`-phase action
     /// (PUPPETS-G009). The Option's `DelayEffect` body installed a pending
     /// selection; once it resolves, the Option is trashed as the activation
@@ -279,7 +284,17 @@ pub(crate) struct PendingAddedSources {
     pub(crate) cards: Vec<crate::card_source::CardHandle>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// One physical security play's completion, retained across replacement prompts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SecurityPlayReceipt {
+    pub(crate) id: u64,
+    pub(crate) player: u8,
+    pub(crate) card: CardHandle,
+    pub(crate) original_index: usize,
+    pub(crate) committed: Option<(PermanentHandle, u64)>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PendingWouldPlayOrigin {
     Hand,
     Trash {
@@ -288,6 +303,8 @@ pub(crate) enum PendingWouldPlayOrigin {
     SecurityTop {
         was_face_up: bool,
     },
+    SecurityRecorded { was_face_up: bool, index: usize, receipt: u64 },
+    SecurityAt { was_face_up: bool, index: usize },
     Reveal {
         index: usize,
     },
@@ -300,10 +317,27 @@ pub(crate) enum PendingWouldPlayOrigin {
     },
 }
 
+// Preserve archival origin Debug bytes; V4 hashes the typed extension separately.
+impl std::fmt::Debug for PendingWouldPlayOrigin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Hand => f.write_str("Hand"),
+            Self::Trash { index } => f.debug_struct("Trash").field("index", index).finish(),
+            Self::SecurityTop { was_face_up } | Self::SecurityAt { was_face_up, .. }
+            | Self::SecurityRecorded { was_face_up, .. } => f.debug_struct("SecurityTop").field("was_face_up", was_face_up).finish(),
+            Self::Reveal { index } => f.debug_struct("Reveal").field("index", index).finish(),
+            Self::Source { permanent, host_identity, source_index, suspended, receipt } => f.debug_struct("Source")
+                .field("permanent", permanent).field("host_identity", host_identity).field("source_index", source_index)
+                .field("suspended", suspended).field("receipt", receipt).finish(),
+        }
+    }
+}
+
 impl PendingWouldPlayOrigin {
     pub(crate) fn source_play_receipt(&self) -> Option<u64> {
         match self {
             Self::Source { receipt, .. } => *receipt,
+            Self::SecurityRecorded { receipt, .. } => Some(*receipt),
             _ => None,
         }
     }
@@ -320,8 +354,7 @@ impl PendingWouldPlayOrigin {
 
 #[derive(Debug, Clone)]
 pub(crate) struct PendingSecurityMove {
-    /// Explicit printed top-stacked-card extraction, not permanent departure.
-    pub(crate) top_only: bool,
+    pub(crate) kind: SecurityMoveKind,
     pub(crate) donor: (PlayerId, u64),
     pub(crate) card: crate::card_source::CardHandle,
     pub(crate) player: PlayerId,
@@ -329,6 +362,13 @@ pub(crate) struct PendingSecurityMove {
     pub(crate) face_up: bool,
     pub(crate) observer: PlayerId,
     pub(crate) leave_complete: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SecurityMoveKind {
+    Permanent,
+    TopCard,
+    SourceCard,
 }
 
 #[derive(Debug, Clone)]
@@ -432,6 +472,14 @@ pub struct EffectsCache(
     std::cell::RefCell<
         std::collections::HashMap<
             (usize, crate::card_source::CardHandle, bool),
+            Option<std::sync::Arc<Vec<crate::effect::Effect>>>,
+        >,
+    >,
+    /// Registry-only memo for [`Game::registry_effects`]: `CardEffect::effects`
+    /// is a pure function of `(card, handle)`, so no invalidation is needed.
+    std::cell::RefCell<
+        std::collections::HashMap<
+            (usize, crate::card_source::CardHandle),
             Option<std::sync::Arc<Vec<crate::effect::Effect>>>,
         >,
     >,
@@ -562,6 +610,9 @@ pub struct Game {
     /// `Game::resolve_selection`. See `selection.rs` for the design.
     /// Always `None` until the selection subsystem lands (PR2/PR3).
     pub pending_selection: Option<PendingSelection>,
+    pub(crate) next_card_choice_id: u64,
+    pub(crate) security_shuffle_generations: [u64; 2],
+    pub(crate) resolved_card_choice: Option<crate::owned_card_choice::ResolvedCardChoice>,
     /// Coexistence-phase data continuation paired with `pending_selection`
     /// (make-engine-cloneable Phase 2). When `Some`, `resolve_generic_selection`
     /// runs the data-frame VM (`crate::resume::run_resume`) instead of the
@@ -760,11 +811,13 @@ pub struct Game {
         Option<(PermanentHandle, u64)>,
     )>,
     pub(crate) next_source_play_receipt: u64,
+    pub(crate) security_play_receipts: Vec<SecurityPlayReceipt>,
+    pub(crate) next_security_play_receipt: u64,
     /// Receipt-owned preparation slots; no ambient batch flag can capture nested plays.
     pub(crate) prepared_source_plays: Vec<(u64, Option<PreparedSourcePlay>)>,
     pub(crate) deletion_receipts: Vec<(u64, Vec<(PermanentHandle, Option<i32>, bool, (u16, u64))>)>,
     pub(crate) next_deletion_receipt: u64,
-    pub(crate) return_receipts: Vec<(u64, Vec<(CardHandle, bool)>)>,
+    pub(crate) return_receipts: Vec<(u64, Vec<crate::game_actions::ReturnedCard>)>,
     pub(crate) next_return_receipt: u64,
     pub(crate) field_source_receipts: Vec<(u64, Option<crate::card_source::CardHandle>)>,
     pub(crate) current_deletion_receipt: Option<u64>,
@@ -823,6 +876,7 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) pending_would_digivolve_resume: Option<PendingWouldDigivolveResume>,
     pub(crate) effect_digivolve_scopes: Vec<crate::game_actions::digivolve::EffectDigivolveScope>,
+    pub(crate) effect_dna_would_scopes: Vec<crate::game_actions::effect_dna::EffectDnaWouldScope>,
 
     /// Player-scoped one-shot future-digivolve cost reducers
     /// (`G-COST-REDUCE-ALLY-DIGIVOLVE`). Installed by a `[Main]` effect with
@@ -950,23 +1004,23 @@ pub struct Game {
     /// reducer/replacement re-entries). `None` means "no pending choice".
     pub(crate) pending_digivolve_route_choice: Option<crate::dna_digivolve::DigivolveRouteMatch>,
 
-    /// Spec §7.5 once-per-event guard. Records `(timing, subject)` pairs that
-    /// have already fired within the current `try_replace` call chain so a
+    /// Spec §7.5 once-per-event guard. Records `(timing, stable subject)` pairs
+    /// already offered for the current interrupting cause so a
     /// redirected route does not re-fire the same timing for the same subject
     /// (e.g. `WhenWouldLeaveBattleArea` super-timing double-fire when a
     /// `Redirected(Deck)` outcome on `WhenWouldBeDeleted` routes through
     /// `return_to_deck`, which would otherwise re-invoke
     /// `WhenWouldLeaveBattleArea` for the same permanent).
     ///
-    /// Cleared at the outermost entry (when `replacement_depth == 0`) of
-    /// `try_replace_impl` — unless `in_replacement_commit` is set, in which
-    /// case we are continuing the original call chain across a callback
-    /// resolution boundary and the set must be preserved. See
-    /// `replacement::try_replace_impl`.
+    /// Fresh deletion calls isolate this ledger from enclosing events. Owned
+    /// windows retain consumed candidates across selections and reconstruct
+    /// their commit guard; permanent keys survive compaction and distinguish
+    /// replayed incarnations. See `replacement::with_deletion_event` and
+    /// `replacement::run_commit_with_flag`.
     #[doc(hidden)]
     pub replacement_fired: std::collections::HashSet<(
         crate::enums::EffectTiming,
-        crate::replacement::ReplacementSubject,
+        crate::replacement::ReplacementSubjectIdentity,
     )>,
 
     /// Spec §7.5 continuation marker. Set by the optional-replacement callback
@@ -1011,7 +1065,7 @@ pub struct Game {
     /// commit may never re-offer the window it is committing, full stop.
     pub(crate) replacement_commit_key: Option<(
         crate::enums::EffectTiming,
-        crate::replacement::ReplacementSubject,
+        crate::replacement::ReplacementSubjectIdentity,
     )>,
 
     /// Controller of the effect whose `process` is currently running, if
@@ -1728,6 +1782,20 @@ impl Game {
     /// Works uniformly for every `SelectionKind`: TriggerOrder, OppField,
     /// Hand, Trash, EffectChoice, etc. The callback stored on the
     /// selection does kind-specific decoding.
+    /// Strict transport entry point. Serial engine/RL callers resolve the
+    /// current prompt; asynchronous callers must echo its exact page token.
+    pub fn resolve_selection_checked(
+        &mut self,
+        player: PlayerId,
+        action_id: u16,
+        expected: crate::card_choice_page::CardChoiceToken,
+    ) -> Result<(), crate::selection::SelectionError> {
+        let current = self.pending_selection.as_ref().and_then(|p| p.card_choice.as_ref())
+            .map(|owner| owner.token());
+        if current != Some(expected) { return Err(crate::selection::SelectionError::InvalidAction); }
+        self.resolve_selection(player, action_id)
+    }
+
     pub fn resolve_selection(
         &mut self,
         player: PlayerId,
@@ -1886,6 +1954,7 @@ impl Game {
             // alt-path; `via_alt_path` is reserved for
             // CompiledAltPathKind variants.
             via_alt_path: None,
+            effect_initiated: true,
         });
         // Effect-initiated play (`effect_initiated: true`) — helper wraps
         // OnPlay + OnEnterFieldAnyone + OnAllyPlayed in a deferred-drain
@@ -1983,6 +2052,7 @@ impl Game {
                 cost_paid: 0,
                 cost_printed,
                 via_alt_path: None,
+                effect_initiated: true,
             });
             entered.push((player_id, field_index, permanent, card));
         }
@@ -2090,6 +2160,7 @@ impl Game {
                 cost_paid: 0,
                 cost_printed,
                 via_alt_path: None,
+                effect_initiated: true,
             });
             entered.push(field_index);
         }
@@ -2183,34 +2254,17 @@ impl Game {
         crate::replacement::try_replace_impl(self, timing, subject, cause, original_destination)
     }
 
-    /// Infer the `ReplacementCause` for a deletion of `target_handle` given
-    /// the current game state. Priority:
-    ///   1. `security_resolution.is_some()` → `SecurityCheck`
-    ///   2. `pending_attack.is_some()` → `Battle`
-    ///   3. `effect_source_player.is_some()` — an effect is currently
-    ///      running; `Own` if its controller equals the target's
-    ///      controller, otherwise `Opponent`.
-    ///   4. Fallback → `OwnEffect`.
+    /// Infer provenance for an effect-driven deletion. An attack or security
+    /// check can contain resolving card effects; neither ambient procedure
+    /// turns an effect deletion into battle deletion. Actual normal and
+    /// security battles pass `ReplacementCause::Battle` explicitly.
     ///
     /// Consumed by the deletion fire-site in `combat::delete_permanent_with_effects`.
     pub(crate) fn infer_deletion_cause(
         &self,
         target_handle: crate::permanent::PermanentHandle,
     ) -> crate::replacement::ReplacementCause {
-        use crate::replacement::ReplacementCause;
-        if self.security_resolution.is_some() {
-            return ReplacementCause::SecurityCheck;
-        }
-        if self.pending_attack.is_some() {
-            return ReplacementCause::Battle;
-        }
-        if let Some(acting) = self.effect_source_player {
-            if acting == target_handle.player {
-                return ReplacementCause::OwnEffect;
-            }
-            return ReplacementCause::OpponentEffect;
-        }
-        ReplacementCause::OwnEffect
+        self.infer_effect_cause(target_handle.player)
     }
 
     /// The observer-facing `EventCause` for the deletion currently being
@@ -2239,9 +2293,8 @@ impl Game {
     /// (return-to-hand/deck, trash-by-effect, draw, place-in-security,
     /// de-digivolve, etc.).
     ///
-    /// Differs from `infer_deletion_cause` in that `Battle` is NOT a candidate:
-    /// non-deletion routes are never reached via `resolve_battle`, so the only
-    /// live signals are security-resolution and the effect-source player.
+    /// `Battle` is never inferred from an ambient attack. Battle fire-sites
+    /// provide their cause explicitly; deletion uses this same effect path.
     ///
     /// Priority:
     ///   1. `effect_source_player.is_some()` — compare against `target_player`;
@@ -3049,30 +3102,16 @@ impl Game {
     /// merged permanent is topped with `result_index` (also a hand card —
     /// typically the Omnimon-name level-7 result).
     ///
-    /// This is the BT17-095-shaped DNA: the printed text "That Digimon and a
-    /// card in the hand may DNA digivolve into a Digimon card with [Omnimon]
-    /// in its name in the hand" — only one DNA material is a field permanent;
-    /// the second is materialised from hand inline. Mirrors DCGO's
-    /// `BT17_095.SuccessProcess` which builds a temporary `Permanent` from the
-    /// hand-card partner and runs `PlayCardClass.PlayCard` with `SetJogress`.
+    /// The field-plus-hand DNA commit keeps the hand partner in hand until
+    /// the merge. It never creates a temporary battle-area permanent or fires
+    /// play effects for that material. The printed left requirement is the
+    /// upper material and each material's internal source order is preserved.
+    /// The field slot survives while its old object state is reset.
     ///
-    /// ## Stacking order
-    ///
-    /// `target.card_sources ++ [hand_partner] ++ [result]`. `target` is the
-    /// `requirement1` material; the hand partner is `requirement2`. The merged
-    /// permanent stays at `target`'s index (no on-field permanent is removed).
-    ///
-    /// ## Triggers
-    ///
-    /// Identical to `dna_digivolve_inner`: self and global evolution triggers
-    /// are queued together before draining, all carrying the DNA origin marker.
-    ///
-    /// ## Returns
-    ///
-    /// `Some(merged_handle)` on success; `None` if `target` is out of range,
-    /// either hand index is out of range, the two hand indices coincide, or
-    /// `cost > 0` and `pay_memory` fails.
-    pub(crate) fn dna_digivolve_hand_partner_inner(
+    /// Evolution triggers are queued together with the DNA origin marker.
+    /// Both hand cards must be distinct and owned by the field controller;
+    /// memory payment is checked from that controller's perspective.
+    pub(crate) fn dna_digivolve_hand_partner_with_order(
         &mut self,
         target: PermanentHandle,
         hand_owner: PlayerId,
@@ -3080,6 +3119,7 @@ impl Game {
         result_index: usize,
         cost: u16,
         effect_initiated: bool,
+        field_is_upper: bool,
     ) -> Option<PermanentHandle> {
         use crate::enums::EffectTiming;
         use crate::selection::TriggerSource;
@@ -3095,7 +3135,7 @@ impl Game {
             return None;
         }
 
-        if cost > 0 && !self.pay_memory(cost) {
+        if target.player != hand_owner || !self.pay_memory_for(hand_owner, cost) {
             return None;
         }
 
@@ -3130,7 +3170,11 @@ impl Game {
         let turn = self.turn_count;
         {
             let perm = &mut self.player_mut(target.player).battle_area[target.index as usize];
-            perm.card_sources.push(partner_source);
+            if field_is_upper {
+                perm.card_sources.insert(0, partner_source);
+            } else {
+                perm.card_sources.push(partner_source);
+            }
             perm.push_top(result_source);
             perm.turn_digivolved = turn;
         }
@@ -3209,7 +3253,7 @@ impl Game {
     ///
     /// ## Triggers
     ///
-    /// Identical to `dna_digivolve_hand_partner_inner`: self and global evolution
+    /// Identical to `dna_digivolve_hand_partner_with_order`: self and global evolution
     /// triggers are queued together before draining with the DNA origin marker.
     ///
     /// ## Returns
@@ -3361,10 +3405,27 @@ impl Game {
         effect_immunity: Option<crate::modifiers::EffectImmunityFilter>,
         payload: Option<crate::modifiers::ModifierPayload>,
     ) {
+        self.add_floating_mass_modifier_scoped(filter, modifier, value, source_card,
+            source_player, expiry, effect_immunity, payload, false);
+    }
+
+    pub fn add_floating_mass_modifier_scoped(
+        &mut self,
+        filter: digimon_dsl::compiled::CompiledPredicate,
+        modifier: ModifierType,
+        value: i32,
+        source_card: crate::card_source::CardHandle,
+        source_player: PlayerId,
+        expiry: Expiry,
+        effect_immunity: Option<crate::modifiers::EffectImmunityFilter>,
+        payload: Option<crate::modifiers::ModifierPayload>,
+        opponent_only: bool,
+    ) {
         let pending_skips =
             crate::modifiers::pending_skips_for_install(expiry, source_player, self.turn_player());
         self.floating_mass_modifiers
             .push(crate::floating_modifier::FloatingMassModifier {
+                opponent_only,
                 filter,
                 modifier,
                 value,
@@ -3395,6 +3456,7 @@ impl Game {
             crate::modifiers::pending_skips_for_install(expiry, source_player, self.turn_player());
         self.floating_mass_modifiers
             .push(crate::floating_modifier::FloatingMassModifier {
+                opponent_only: false,
                 filter,
                 modifier: ModifierType::ChangeDp,
                 value: 0,
@@ -3749,6 +3811,11 @@ impl Game {
                     }
                 }
                 if let Some(value) = formula_fn(&ctx, target) {
+                    // DP-minus protection is per contribution, before summing:
+                    // positive and own-scoped auras must still apply.
+                    if !security_attack && value < 0 && self.dp_minus_is_blocked(target, controller) {
+                        continue;
+                    }
                     if security_attack {
                         total = if found { total.max(value) } else { value };
                     } else {
@@ -3818,6 +3885,11 @@ impl Game {
                     }
                 }
                 if let Some(value) = formula_fn(&ctx, target) {
+                    // DP-minus protection is per contribution, before summing:
+                    // positive and own-scoped auras must still apply.
+                    if !security_attack && value < 0 && self.dp_minus_is_blocked(target, controller) {
+                        continue;
+                    }
                     if security_attack {
                         total = if found { total.max(value) } else { value };
                     } else {
@@ -3893,6 +3965,32 @@ impl Game {
             .build_effects_for_card(card_id, handle, under_top)
             .map(std::sync::Arc::new);
         self.effects_cache.insert(key, built.clone());
+        built
+    }
+
+    /// Memoized `effect_registry.get(card_id).effects(handle)`: the registry
+    /// list alone, WITHOUT the keyword auto-effects `effects_for_card` appends.
+    /// For per-source OPT / DP queries (observation tensor) whose counts and
+    /// slot keys are defined over the registry list.
+    pub(crate) fn registry_effects(
+        &self,
+        card_id: &str,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
+        let build = || {
+            self.effect_registry
+                .get(card_id)
+                .map(|impl_| std::sync::Arc::new(impl_.effects(handle)))
+        };
+        let Some(&data_index) = self.card_id_index.get(card_id) else {
+            return build();
+        };
+        let key = (data_index, handle);
+        if let Some(cached) = self.effects_cache.1.borrow().get(&key) {
+            return cached.clone();
+        }
+        let built = build();
+        self.effects_cache.1.borrow_mut().insert(key, built.clone());
         built
     }
 
@@ -4229,26 +4327,14 @@ impl Game {
         let mut used = 0u32;
         for (source_index, source) in permanent.card_sources.iter().enumerate() {
             let is_under = source_index + 1 < stack_size;
-            let card_id = source.card_id(&self.card_data).to_string();
-            let Some(impl_) = self.effect_registry.get(&card_id) else {
+            let Some(effects) =
+                self.registry_effects(source.card_id(&self.card_data), source.handle())
+            else {
                 continue;
             };
-            let effects = impl_.effects(source.handle());
-            for (slot, effect) in effects.iter().enumerate() {
-                if effect.max_per_turn == 0 {
-                    continue;
-                }
-                if is_under != effect.inherited {
-                    continue;
-                }
-                total += 1;
-                // Shared-OPT groups count on their group key (`Game::opt_slot_key`).
-                let key = effect.shared_opt_group.unwrap_or(slot as u8);
-                let count = permanent.activation_count(source.handle(), key);
-                if count >= effect.max_per_turn {
-                    used += 1;
-                }
-            }
+            let counts = Self::source_opt_counts(permanent, source.handle(), is_under, &effects);
+            total += counts.0;
+            used += counts.1;
         }
         (total, used)
     }

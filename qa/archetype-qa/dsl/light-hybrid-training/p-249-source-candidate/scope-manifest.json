@@ -1,0 +1,30 @@
+{
+  "complete": true,
+  "expected_count": 1,
+  "failed_ids": [],
+  "first_acquired_at": "2026-10-24T18:24:55.740138+00:00",
+  "observation_ids": [
+    "6abbe7d2ec9340c4c6673da3b0e74c640cb3372787fb1696aaabdb47507b7c4a",
+    "be26e4ba2747b32e83071389eada307a4c0946aa1cdc476c2d5ff0bb48359b0d"
+  ],
+  "observation_refs": [
+    {
+      "gameplay_card_id": "P-249",
+      "observation_id": "6abbe7d2ec9340c4c6673da3b0e74c640cb3372787fb1696aaabdb47507b7c4a",
+      "printing_id": "P-249"
+    },
+    {
+      "gameplay_card_id": "P-249",
+      "observation_id": "be26e4ba2747b32e83071389eada307a4c0946aa1cdc476c2d5ff0bb48359b0d",
+      "printing_id": "P-249_P1"
+    }
+  ],
+  "parser_version": "official-html-v5",
+  "schema_version": 1,
+  "scope": "cards:P-249",
+  "source": "official",
+  "source_locations": [
+    "https://world.digimoncard.com/cards/index.php?free=Store+Tournament+2026+Vol.+4&search=true"
+  ],
+  "source_schema_version": "world-card-list-html-v1"
+}

@@ -37,6 +37,7 @@ fn select_security_opponent_binds_picked_handle() {
 
     let steps = vec![
         CompiledStep::SelectSecurity {
+            continue_on_decline: false,
             then: vec![],
             of: CompiledPlayerRef::Opponent,
             filter: CompiledPredicate::default(),

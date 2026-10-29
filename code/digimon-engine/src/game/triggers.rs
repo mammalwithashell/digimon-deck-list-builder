@@ -198,7 +198,7 @@ impl Game {
 
                 let stack_size = perm.card_sources.len();
                 for (source_index, source) in perm.card_sources.iter().enumerate() {
-                    if source_index + 1 >= stack_size {
+                    if source_index + 1 >= stack_size || source.face_down {
                         continue;
                     }
                     sources.push((
@@ -461,7 +461,18 @@ impl Game {
                     // is the sole lifetime authority. Using `fm.expiry` here would
                     // expire the entry one turn-end early relative to the descriptor
                     // (`*NextTurn` skips live on the descriptor, not the entry).
-                    if let Some(kw) = fm.keyword {
+                    if fm.opponent_only {
+                        if ctx.can_affect_permanent(h) {
+                            let mut entry = crate::modifiers::ModifierEntry::materialized_declarative(
+                                fm.modifier, fm.value, Expiry::Permanent, None, fm.source_player,
+                            ).opponent_only();
+                            if let Some(payload) = &fm.payload {
+                                entry = entry.with_payload(payload.clone());
+                            }
+                            ctx.game.modifiers.add(h, entry);
+                            ctx.game.mark_until_condition_dirty();
+                        }
+                    } else if let Some(kw) = fm.keyword {
                         // Continuous mass keyword grant (BT26-101 Cross Arts).
                         // G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT.
                         ctx.grant_declarative_keyword(h, kw, Expiry::Permanent);

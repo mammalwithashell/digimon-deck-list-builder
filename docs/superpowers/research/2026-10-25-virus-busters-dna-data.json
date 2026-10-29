@@ -1,0 +1,130 @@
+{
+  "finding": "EX12-032 runtime had both legal level-4 and illegal level-5 DNA recipes before correction",
+  "live_image_changed": false,
+  "pre_fix_commit": "f54f72ab8",
+  "targets": {
+    "source_audit_sha256": "f272ee79743915e0c1ba9f73ca0de2f4ca08a95662ca784a14090cccfe9585a7",
+    "scope": "Attribute existing DNA-cohort audit rows to the target card in hand.\n\nNo game reconstruction: these counts do not establish which material recipe\nmade an action legal or whether a DNA action was ultimately selected/resolved.\n",
+    "generations": {
+      "1": {
+        "EX12-035": {
+          "opportunities": 26,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.4187499994877726
+        },
+        "EX12-032": {
+          "opportunities": 105,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 1.3250000101979822
+        },
+        "BT23-047": {
+          "opportunities": 97,
+          "teacher_argmax": 2,
+          "teacher_mass_sum": 3.187499994644895
+        },
+        "EX13-045": {
+          "opportunities": 97,
+          "teacher_argmax": 9,
+          "teacher_mass_sum": 5.887499968986958
+        },
+        "EX12-044": {
+          "opportunities": 55,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 1.2437500038649887
+        },
+        "BT24-037": {
+          "opportunities": 7,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.1250000004656613
+        },
+        "BT8-084": {
+          "opportunities": 4,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.02500000037252903
+        },
+        "EX12-037": {
+          "opportunities": 1,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.01875000074505806
+        }
+      },
+      "2": {
+        "BT23-047": {
+          "opportunities": 91,
+          "teacher_argmax": 3,
+          "teacher_mass_sum": 3.1562499965075403
+        },
+        "EX12-044": {
+          "opportunities": 62,
+          "teacher_argmax": 2,
+          "teacher_mass_sum": 1.7906250096857548
+        },
+        "EX12-032": {
+          "opportunities": 153,
+          "teacher_argmax": 11,
+          "teacher_mass_sum": 8.062499999534339
+        },
+        "EX12-035": {
+          "opportunities": 54,
+          "teacher_argmax": 2,
+          "teacher_mass_sum": 1.9437499959021807
+        },
+        "EX13-045": {
+          "opportunities": 118,
+          "teacher_argmax": 5,
+          "teacher_mass_sum": 4.550000026123598
+        },
+        "BT24-037": {
+          "opportunities": 31,
+          "teacher_argmax": 2,
+          "teacher_mass_sum": 1.4656250281259418
+        },
+        "EX12-037": {
+          "opportunities": 10,
+          "teacher_argmax": 2,
+          "teacher_mass_sum": 0.950000018812716
+        },
+        "BT16-077": {
+          "opportunities": 6,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.2343750074505806
+        },
+        "BT20-060": {
+          "opportunities": 2,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.0
+        },
+        "BT8-084": {
+          "opportunities": 3,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.05312500172294676
+        }
+      }
+    }
+  },
+  "validation": {
+    "rust_before": {
+      "passed": 3,
+      "failed": 1,
+      "failure": "level-5 pair mask 1 instead of 0"
+    },
+    "rust_after": {
+      "passed": 4,
+      "failed": 0
+    },
+    "python_ingest_parser": {
+      "passed": 14,
+      "failed": 0
+    },
+    "split_consistency": "passed",
+    "tier0": {
+      "passed": 13,
+      "failed": 0
+    }
+  },
+  "logs_sha256": {
+    "virus-busters-before.log": "a9e85b42c456a2b7a61bd8c14c1cb1d1abdba4957c8313fbe063065925dc5fb7",
+    "virus-busters-after.log": "7e2219c2a43212676ab3c57d13fcd8355033977d66ece24178b091d121ed5078",
+    "virus-busters-ingest-before.log": "60a7a3aacf3f2ee9b861cb17b3ef6005d61f434d7879ef75208a6b69c1d69f83"
+  }
+}

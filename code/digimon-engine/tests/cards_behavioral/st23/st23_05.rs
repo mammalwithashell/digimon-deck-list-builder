@@ -24,6 +24,8 @@
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -159,7 +161,7 @@ fn st23_05_places_opponent_lowest_dp_as_top_security() {
         let v = runner.pending_selection_view().unwrap();
         let last = v.effect_choices.as_ref().unwrap().len() - 1;
         runner
-            .execute_branch(last)
+            .execute_action(v.selecting_player, v.valid_action_ids[last])
             .expect("decline the trash choice");
     }
     let _ = runner.auto_resolve();
@@ -255,7 +257,7 @@ fn st23_05_trash_own_security_recovers_to_owner() {
 }
 
 /// NEGATIVE (most-security gate): when own security < opponent's, the "trash
-/// your own" branch is gated out — declining/own-trash applies no Recovery.
+/// your own" branch must not be a legal action.
 #[test]
 fn st23_05_own_trash_gated_when_not_most_security() {
     let mut runner = DebugRunner::builder()
@@ -282,64 +284,390 @@ fn st23_05_own_trash_gated_when_not_most_security() {
     runner
         .execute_action(v.selecting_player, v.valid_action_ids[0])
         .unwrap();
-    // Choose "trash own" — but own is NOT the most-security player, so the
-    // formula-gated branch does NOT fire (no trash, no Recovery).
-    if let Some(SelectionKind::EffectChoice) = runner.pending_kind() {
-        runner.execute_branch(0).expect("attempt to trash own");
-    }
-    let _ = runner.auto_resolve();
+    assert_most_security_choice(&runner, false, true);
+    assert!(
+        runner.execute_action(0, HAND_EFFECT_START).is_err(),
+        "a player with fewer security cards is not a legal payment choice"
+    );
+    runner
+        .execute_action(0, HAND_EFFECT_START + 2)
+        .expect("decline the legal payment choice");
+    runner.auto_resolve().expect("complete the attack");
 
     assert_eq!(
         runner.security_count(0),
         own_sec_before,
-        "own is not the most-security player → no own-trash, no Recovery"
+        "declining pays no security and recovers no card"
     );
+}
+
+fn most_security_choice_runner(own_count: usize, opponent_count: usize) -> DebugRunner {
+    let own_security = vec!["SEC"; own_count];
+    let opponent_security = vec!["SEC"; opponent_count];
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("Habakirimon compiles")
+        .add_card(sec_filler("SEC"))
+        .deck(0, &["SEC"; 10])
+        .deck(1, &["SEC"; 10])
+        .security(0, &own_security)
+        .security(1, &opponent_security)
+        .memory(8)
+        .start();
+    runner.set_first_player(0);
+    let hab = runner.place_stack(0, &[CARD_ID]);
+    // No opponent Digimon can be placed, but "Then" still reaches the
+    // most-security choice via Habakirimon's real When Attacking trigger.
+    runner.attack_player(hab, 1, false);
+    runner
+}
+
+fn assert_most_security_choice(runner: &DebugRunner, own_legal: bool, opponent_legal: bool) {
+    let view = runner
+        .pending_selection_view()
+        .expect("payable recovery choice");
+    assert_eq!(view.kind, SelectionKind::EffectChoice);
+    assert_eq!(view.selecting_player, 0);
+    let expected_actions: Vec<_> = [own_legal, opponent_legal, true]
+        .iter()
+        .enumerate()
+        .filter_map(|(index, &legal)| legal.then_some(HAND_EFFECT_START + index as u16))
+        .collect();
+    assert_eq!(view.valid_action_ids, expected_actions);
+    let choices = view.effect_choices.as_ref().expect("named choices");
+    assert_eq!(choices.len(), expected_actions.len());
+    let mask = build_action_mask(&runner.game, 0);
+    for (index, expected_legal) in [own_legal, opponent_legal, true].into_iter().enumerate() {
+        assert_eq!(
+            mask[HAND_EFFECT_START as usize + index] > 0.5,
+            expected_legal,
+            "choice {index} must match the payment's current legality"
+        );
+    }
+    assert_eq!(
+        mask.iter().filter(|&&legal| legal > 0.5).count(),
+        expected_actions.len()
+    );
+    assert!(build_action_mask(&runner.game, 1)
+        .iter()
+        .all(|&legal| legal == 0.0));
+}
+
+#[test]
+fn st23_05_most_security_choice_masks_the_lower_stack() {
+    for (own, opponent) in [(4, 2), (1, 3), (1, 0), (0, 1)] {
+        let mut runner = most_security_choice_runner(own, opponent);
+        assert_most_security_choice(&runner, own > opponent, opponent > own);
+        let illegal_action = HAND_EFFECT_START + u16::from(own > opponent);
+        assert!(runner.execute_action(0, illegal_action).is_err());
+        assert_eq!(
+            runner.security_count(0),
+            own,
+            "no cost before a legal choice"
+        );
+        assert_eq!(runner.security_count(1), opponent);
+        runner
+            .execute_action(0, HAND_EFFECT_START + 2)
+            .expect("decline stays legal regardless of which player has most");
+        runner.auto_resolve().expect("complete the attack");
+        assert_eq!(runner.security_count(0), own, "decline never recovers");
+    }
+}
+
+#[test]
+fn st23_05_most_security_choice_tie_offers_both_players() {
+    let runner = most_security_choice_runner(2, 2);
+    assert_most_security_choice(&runner, true, true);
+}
+
+#[test]
+fn st23_05_most_security_choice_empty_stacks_skip_unpayable_menu() {
+    let runner = most_security_choice_runner(0, 0);
+    assert!(
+        runner.pending_selection().is_none(),
+        "only decline remains, so no choice is needed"
+    );
+    assert_eq!(runner.security_count(0), 0);
+    assert_eq!(runner.security_count(1), 0);
+    assert_eq!(
+        runner.deck_size(0),
+        10,
+        "unpayable recovery must not draw from deck"
+    );
+    assert!(
+        runner.game_over(),
+        "the attack proceeds after skipping the unpayable menu"
+    );
+    assert_eq!(runner.winner(), Some(0));
 }
 
 // ─── Section 4 — leave-prevention replacement (Glowing Dawn) ────────────────
 
-#[test]
-fn st23_05_glowing_dawn_leave_prevention_installs() {
-    let mut runner = DebugRunner::builder()
+fn leave_prevention_runner(security: &[&str]) -> DebugRunner {
+    let mut glowing_dawn_tamer = sec_filler("GD-TAMER");
+    glowing_dawn_tamer.traits = vec!["Glowing Dawn".to_string()];
+    DebugRunner::builder()
         .dsl_card(CARD_ID)
-        .expect("compiles")
+        .expect("Habakirimon compiles")
+        .dsl_card("BT25-032")
+        .expect("Glowing Dawn ally compiles")
+        .add_card(opp_digimon("NON-GD", 4000))
+        .add_card(glowing_dawn_tamer)
         .add_card(sec_filler("SEC"))
         .deck(0, &["SEC"; 10])
         .deck(1, &["SEC"; 10])
-        .security(0, &["SEC"; 3])
+        .security(0, security)
+        .security(1, &["SEC"; 3])
         .memory(8)
-        .start();
+        .start()
+}
 
-    // Habakirimon itself is a [Glowing Dawn] Digimon → its own would-leave is
-    // protectable while >=1 own security exists.
-    let hab = runner.place_stack(0, &["ST23-05"]);
-    let sec_before = runner.security_count(0);
+fn assert_leave_prevention_choice(runner: &DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("payable Glowing Dawn leave prevention must be offered");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert_eq!(view.selecting_player, 0, "Habakirimon's owner decides");
+    assert!(runner.pending_is_optional(), "by trashing is optional");
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(mask[REPLACEMENT_ACCEPT as usize], 1.0);
+    assert_eq!(mask[PASS as usize], 1.0);
+    assert_eq!(mask.iter().filter(|&&legal| legal > 0.5).count(), 2);
+    assert!(
+        build_action_mask(&runner.game, 1)
+            .iter()
+            .all(|&legal| legal == 0.0),
+        "only the effect's controller may accept or decline"
+    );
+}
+
+#[test]
+fn st23_05_glowing_dawn_leave_prevention_installs() {
+    let mut runner = leave_prevention_runner(&["SEC", "NON-GD"]);
+    let hab = runner.place_stack(0, &[CARD_ID]);
+    let hab_card = runner.top_card(hab);
+    let top_security = runner.game.player(0).security.last().unwrap().handle();
 
     runner
         .game
         .delete_permanents_batch(vec![hab], ReplacementCause::OpponentEffect);
 
-    match runner.pending_kind() {
-        Some(SelectionKind::Replacement) => {
-            assert!(runner.pending_is_optional(), "prevention is optional");
-            let view = runner.pending_selection_view().unwrap();
-            runner
-                .execute_action(view.selecting_player, view.valid_action_ids[0])
-                .expect("accept prevention");
-            let _ = runner.auto_resolve();
-            assert_eq!(
-                runner.security_count(0),
-                sec_before - 1,
-                "trashing top security pays the prevention cost"
-            );
-            assert!(
-                runner.battle_area_size(0) >= 1,
-                "Habakirimon does not leave the battle area"
-            );
-        }
-        _ => {
-            // Structural test guards the clause's presence; accept either
-            // auto-resolved outcome here.
-        }
+    assert_leave_prevention_choice(&runner);
+    assert_eq!(runner.security_count(0), 2, "no payment before consent");
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept prevention");
+    runner.auto_resolve().expect("complete prevention");
+    assert_eq!(runner.security_count(0), 1);
+    assert_eq!(runner.security_count(1), 3);
+    assert_eq!(runner.trash_size(0), 1);
+    assert_eq!(runner.game.player(0).trash[0].handle(), top_security);
+    assert_eq!(runner.battle_area_size(0), 1);
+    assert_eq!(runner.top_card(hab), hab_card, "the same Digimon survives");
+}
+
+#[test]
+fn st23_05_glowing_dawn_leave_prevention_empty_security_is_not_offered() {
+    // CR 15-7-4: an unpayable optional processing condition cannot be chosen.
+    let mut runner = leave_prevention_runner(&[]);
+    let hab = runner.place_stack(0, &[CARD_ID]);
+    runner
+        .game
+        .delete_permanents_batch(vec![hab], ReplacementCause::OpponentEffect);
+
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(runner.battle_area_size(0), 0, "deletion proceeds");
+    assert_eq!(runner.security_count(0), 0);
+    assert_eq!(
+        runner.security_count(1),
+        3,
+        "opponent cannot fund this cost"
+    );
+    assert_eq!(runner.trash_size(0), 1);
+    assert_eq!(
+        runner.game.player(0).trash[0].card_id(&runner.game.card_data),
+        CARD_ID
+    );
+}
+
+#[test]
+fn st23_05_glowing_dawn_leave_prevention_decline_leaves_opt_available() {
+    let mut runner = leave_prevention_runner(&["SEC"; 2]);
+    let hab = runner.place_stack(0, &[CARD_ID]);
+    let hab_card = runner.top_card(hab);
+    let ally = runner.place_stack(0, &["BT25-032"]);
+    runner
+        .game
+        .delete_permanents_batch(vec![ally], ReplacementCause::OpponentEffect);
+    assert_leave_prevention_choice(&runner);
+    runner.execute_action(0, PASS).expect("decline prevention");
+    runner.auto_resolve().expect("complete deletion");
+
+    assert_eq!(runner.battle_area_size(0), 1);
+    assert_eq!(runner.top_card(hab), hab_card);
+    assert_eq!(runner.security_count(0), 2, "declining pays no security");
+    assert_eq!(runner.trash_size(0), 1);
+    assert_eq!(
+        runner.game.player(0).trash[0].card_id(&runner.game.card_data),
+        "BT25-032"
+    );
+
+    let later_ally = runner.place_stack(0, &["BT25-032"]);
+    let later_card = runner.top_card(later_ally);
+    runner
+        .game
+        .delete_permanents_batch(vec![later_ally], ReplacementCause::OpponentEffect);
+    assert_leave_prevention_choice(&runner);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("unused OPT remains available after declining");
+    runner.auto_resolve().expect("complete prevention");
+    assert_eq!(runner.battle_area_size(0), 2);
+    assert_eq!(runner.top_card(later_ally), later_card);
+    assert_eq!(runner.security_count(0), 1);
+}
+
+#[test]
+fn st23_05_glowing_dawn_leave_prevention_payment_consumes_opt() {
+    let mut runner = leave_prevention_runner(&["SEC"; 2]);
+    runner.place_stack(0, &[CARD_ID]);
+    let ally = runner.place_stack(0, &["BT25-032"]);
+    runner
+        .game
+        .delete_permanents_batch(vec![ally], ReplacementCause::OpponentEffect);
+    assert_leave_prevention_choice(&runner);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("pay prevention cost");
+    runner.auto_resolve().expect("complete prevention");
+    assert_eq!(runner.battle_area_size(0), 2);
+    assert_eq!(
+        runner.security_count(0),
+        1,
+        "another payment is still possible"
+    );
+
+    runner
+        .game
+        .delete_permanents_batch(vec![ally], ReplacementCause::OpponentEffect);
+    assert!(
+        runner.pending_selection().is_none(),
+        "OPT prevents another offer"
+    );
+    assert_eq!(runner.battle_area_size(0), 1);
+    assert_eq!(runner.security_count(0), 1, "no second cost");
+    assert_eq!(runner.trash_size(0), 2);
+    assert_eq!(
+        runner.game.player(0).trash[1].card_id(&runner.game.card_data),
+        "BT25-032"
+    );
+}
+
+#[test]
+fn st23_05_glowing_dawn_leave_prevention_rejects_wrong_trait_kind_and_owner() {
+    for (owner, target_id) in [(0, "NON-GD"), (0, "GD-TAMER"), (1, "BT25-032")] {
+        let mut runner = leave_prevention_runner(&["SEC"; 2]);
+        runner.place_stack(0, &[CARD_ID]);
+        let target = runner.place_stack(owner, &[target_id]);
+        runner
+            .game
+            .delete_permanents_batch(vec![target], ReplacementCause::OpponentEffect);
+
+        assert!(
+            runner.pending_selection().is_none(),
+            "invalid target: {target_id}"
+        );
+        assert_eq!(runner.battle_area_size(0), 1, "Habakirimon remains alone");
+        assert_eq!(runner.battle_area_size(1), 0);
+        assert_eq!(
+            runner.security_count(0),
+            2,
+            "invalid target cannot spend security"
+        );
+        assert_eq!(runner.trash_size(owner), 1);
+        assert_eq!(
+            runner.game.player(owner).trash[0].card_id(&runner.game.card_data),
+            target_id
+        );
+    }
+}
+
+#[test]
+fn st23_05_glowing_dawn_leave_prevention_accepts_own_effect_on_opponents_turn() {
+    let mut runner = leave_prevention_runner(&["SEC"]);
+    runner.set_first_player(1);
+    runner.place_stack(0, &[CARD_ID]);
+    let ally = runner.place_stack(0, &["BT25-032"]);
+    runner
+        .game
+        .delete_permanents_batch(vec![ally], ReplacementCause::OwnEffect);
+    assert_leave_prevention_choice(&runner);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("all turns protection also applies to own effects");
+    runner.auto_resolve().expect("complete prevention");
+    assert_eq!(runner.battle_area_size(0), 2);
+    assert_eq!(runner.security_count(0), 0);
+}
+
+#[test]
+fn st23_05_glowing_dawn_leave_prevention_one_payment_saves_all_matching_simultaneous_leaves() {
+    for security_count in [1, 2] {
+        let security = vec!["SEC"; security_count];
+        let mut runner = leave_prevention_runner(&security);
+        let hab = runner.place_stack(0, &[CARD_ID]);
+        let ally = runner.place_stack(0, &["BT25-032"]);
+        let non_gd = runner.place_stack(0, &["NON-GD"]);
+        let hab_card = runner.top_card(hab);
+        let ally_card = runner.top_card(ally);
+        let paid_card = runner.game.player(0).security.last().unwrap().handle();
+
+        // "Any ... they don't leave": one payment protects all qualifying
+        // Digimon in this simultaneous leave event, including Habakirimon itself.
+        // A non-Glowing-Dawn Digimon in the same deletion remains unprotected.
+        runner
+            .game
+            .delete_permanents_batch(vec![hab, ally, non_gd], ReplacementCause::OpponentEffect);
+        assert_leave_prevention_choice(&runner);
+        runner
+            .execute_action(0, REPLACEMENT_ACCEPT)
+            .expect("pay once for all matching simultaneous leaves");
+        assert!(
+            runner.pending_selection().is_none(),
+            "one payment covers the whole matching leave group"
+        );
+        runner
+            .auto_resolve()
+            .expect("complete the simultaneous deletion");
+
+        assert_eq!(
+            runner.security_count(0),
+            security_count - 1,
+            "exactly one security pays"
+        );
+        assert_eq!(
+            runner.battle_area_size(0),
+            2,
+            "both Glowing Dawn Digimon survive"
+        );
+        assert_eq!(runner.top_card(hab), hab_card);
+        assert_eq!(runner.top_card(ally), ally_card);
+        assert_eq!(
+            runner.trash_size(0),
+            2,
+            "only payment and ineligible target leave"
+        );
+        assert!(runner
+            .game
+            .player(0)
+            .trash
+            .iter()
+            .any(|card| card.handle() == paid_card));
+        assert!(runner
+            .game
+            .player(0)
+            .trash
+            .iter()
+            .any(|card| { card.card_id(&runner.game.card_data) == "NON-GD" }));
     }
 }

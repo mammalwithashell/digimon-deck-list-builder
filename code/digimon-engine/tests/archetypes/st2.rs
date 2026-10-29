@@ -389,7 +389,7 @@ fn kaiser_nail_recurs_own_digivolution_source_for_free() {
     choose_first_pending(&mut runner); // choose your host Digimon
 
     let source_action =
-        encode_source_select(host.index as u16, 0).expect("encode under-card source action");
+        crate::owned_choices::source_action(&runner.game, host, 0);
     {
         let pending = runner
             .pending_selection()

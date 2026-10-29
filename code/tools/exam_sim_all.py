@@ -64,7 +64,14 @@ def run_one(harness: str, scenario: str, book: str) -> tuple[bool, list[str]]:
     out = subprocess.run(cmd, capture_output=True, text=True)
     text = out.stdout + out.stderr
     ok = out.returncode == 0 and "/ failed 0" in text
-    return ok, [line.strip() for line in text.splitlines() if "FAILED" in line]
+    errors = [
+        line.strip()
+        for line in text.splitlines()
+        if "FAILED" in line or ("RULING " in line and " CONTRADICTED:" in line)
+    ]
+    if not ok and not errors:
+        errors = [f"harness exited {out.returncode}: {text.strip()[-2000:] or '(no output)'}"]
+    return ok, errors
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -88,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
                 passed += 1
                 break
         else:
-            failed.append((scenario, books_for[0], last))
+            failed.append((scenario, book, last))
 
     for scenario, book, lines in failed:
         print(f"FAILED {scenario} (book {book})")

@@ -443,7 +443,6 @@ fn fire_when_attacking(
 /// digivolution sources — a Lv5 source must never be selectable.
 #[test]
 fn ex4_073_clause_c_trashes_up_to_3_lv6_or_higher_sources() {
-    use digimon_engine::action::space::encode_source_select;
 
     let mut runner = DebugRunner::builder()
         .dsl_card("EX4-073")
@@ -465,28 +464,15 @@ fn ex4_073_clause_c_trashes_up_to_3_lv6_or_higher_sources() {
     let view = runner
         .pending_selection_view()
         .expect("clause C must install a source-select when Lv6+ sources exist");
-    let lv6_action = encode_source_select(handle.index as u16, 0).expect("Lv6 source action");
-    let lv7_action = encode_source_select(handle.index as u16, 2).expect("Lv7 source action");
-    let lv5_action = encode_source_select(handle.index as u16, 1).expect("Lv5 source action");
-    assert!(
-        view.valid_action_ids.contains(&lv6_action) && view.valid_action_ids.contains(&lv7_action),
-        "both Lv6+ digivolution sources must be selectable; valid={:?}",
-        view.valid_action_ids
-    );
-    assert!(
-        !view.valid_action_ids.contains(&lv5_action),
-        "the Lv5 digivolution source must NOT be selectable (level_gte: 6 filter); valid={:?}",
-        view.valid_action_ids
-    );
-
-    // Pick both Lv6+ sources — they must move to trash.
+    let rows = physical_choice::commits(&runner.game);
+    assert_eq!(rows.len(), 2, "only level6+ sources are selectable; level5 is excluded");
+    let lv6_action = physical_choice::source_action(&runner.game, handle, 0);
+    physical_choice::source_action(&runner.game, handle, 2);
+    assert!(view.valid_action_ids.contains(&lv6_action));
     let trash_before = runner.trash_size(0);
-    runner
-        .execute_action(0, lv6_action)
-        .expect("pick Lv6 source");
-    runner
-        .execute_action(0, lv7_action)
-        .expect("pick Lv7 source");
+    runner.execute_action(0, lv6_action).expect("pick Lv6 source");
+    let lv7_action = physical_choice::card_action(&runner.game, "LV7-SRC", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
+    runner.execute_action(0, lv7_action).expect("pick Lv7 source");
     // Resolve the per-trash delete prompts + finish.
     while let Some(v) = runner.pending_selection_view() {
         let act = v
@@ -509,7 +495,7 @@ fn ex4_073_clause_c_trashes_up_to_3_lv6_or_higher_sources() {
 /// cheapest candidate(s).
 #[test]
 fn ex4_073_clause_c_inner_deletes_opp_lowest_play_cost_per_trash() {
-    use digimon_engine::action::space::{encode_source_select, PASS};
+    use digimon_engine::action::space::PASS;
 
     let mut runner = DebugRunner::builder()
         .dsl_card("EX4-073")
@@ -531,7 +517,7 @@ fn ex4_073_clause_c_inner_deletes_opp_lowest_play_cost_per_trash() {
     let view = runner
         .pending_selection_view()
         .expect("source-select installs");
-    let src_action = encode_source_select(handle.index as u16, 0).expect("Lv6 source action");
+    let src_action = physical_choice::source_action(&runner.game, handle, 0);
     runner
         .execute_action(0, src_action)
         .expect("pick Lv6 source");
@@ -578,7 +564,6 @@ fn ex4_073_clause_c_inner_deletes_opp_lowest_play_cost_per_trash() {
 /// opponent's security stack". Trashing all 3 Lv6+ sources fires the tail.
 #[test]
 fn ex4_073_clause_c_trashes_2_opp_security_when_3_sources_trashed() {
-    use digimon_engine::action::space::encode_source_select;
 
     let mut runner = DebugRunner::builder()
         .dsl_card("EX4-073")
@@ -611,8 +596,8 @@ fn ex4_073_clause_c_trashes_2_opp_security_when_3_sources_trashed() {
     fire_when_attacking(&mut runner, handle);
 
     // Trash all 3 Lv6 sources.
-    for src_index in 0..3u16 {
-        let act = encode_source_select(handle.index as u16, src_index).expect("Lv6 source action");
+    for id in ["LV6-A", "LV6-B", "LV6-C"] {
+        let act = physical_choice::card_action(&runner.game, id, digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
         runner.execute_action(0, act).expect("pick Lv6 source");
     }
     // Resolve the 3 per-trash delete prompts + tail.
@@ -677,3 +662,6 @@ fn ex4_073_clause_c_player_may_decline_to_trash_any_sources() {
         "declining must delete no opponent permanents"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

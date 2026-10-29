@@ -344,22 +344,10 @@ fn permutation_then_opponent_union_zone_tech_flow() {
             "valid_action_ids must cover 2 hand + 2 trash = 4 total; got {:?}",
             sel.valid_action_ids
         );
-        assert!(
-            sel.valid_action_ids.contains(&PLAY_HAND_START),
-            "hand slot 0 must be valid"
-        );
-        assert!(
-            sel.valid_action_ids.contains(&(PLAY_HAND_START + 1)),
-            "hand slot 1 must be valid"
-        );
-        assert!(
-            sel.valid_action_ids.contains(&TRASH_EFFECT_START),
-            "trash slot 0 must be valid"
-        );
-        assert!(
-            sel.valid_action_ids.contains(&(TRASH_EFFECT_START + 1)),
-            "trash slot 1 must be valid"
-        );
+        for zone in [digimon_engine::owned_card_choice::CardChoiceZone::Hand,digimon_engine::owned_card_choice::CardChoiceZone::Trash] {
+            for i in 0..2 { let a=crate::owned_choices::zone_action(&r.game,p0,i,zone.clone());assert!(sel.valid_action_ids.contains(&a)); }
+        }
+
     }
 
     // ─── 6. Mask-level routing check ─────────────────────────────────────────
@@ -397,30 +385,18 @@ fn permutation_then_opponent_union_zone_tech_flow() {
         !legal_p1.contains(&(CONCEDE_GAME as usize)),
         "concede is disabled in the action mask in all formats (2026-06-19)"
     );
-    assert!(
-        legal_p1.contains(&(PLAY_HAND_START as usize)),
-        "p1 mask: hand slot 0"
-    );
-    assert!(
-        legal_p1.contains(&(PLAY_HAND_START as usize + 1)),
-        "p1 mask: hand slot 1"
-    );
-    assert!(
-        legal_p1.contains(&(TRASH_EFFECT_START as usize)),
-        "p1 mask: trash slot 0"
-    );
-    assert!(
-        legal_p1.contains(&(TRASH_EFFECT_START as usize + 1)),
-        "p1 mask: trash slot 1"
-    );
+    for zone in [digimon_engine::owned_card_choice::CardChoiceZone::Hand,digimon_engine::owned_card_choice::CardChoiceZone::Trash] {
+        for i in 0..2 { let a=crate::owned_choices::zone_action(&r.game,p0,i,zone.clone());assert!(legal_p1.contains(&(a as usize))); }
+    }
 
     // ─── 7. Opponent resolves — picks hand index 0 (HAND-0) ──────────────────
     //
     // We pick the hand card so the state change (removal from hand) is clearly
     // observable. Trash-from-trash would be a no-op in terms of position.
     let hand_size_before = r.game.players[p0 as usize].hand.len();
+    let action=crate::owned_choices::zone_action(&r.game,p0,0,digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     r.game
-        .resolve_selection(p1, PLAY_HAND_START)
+        .resolve_selection(p1, action)
         .expect("p1 resolving union-zone with hand slot 0 must succeed");
 
     // ─── 8. Final assertions ──────────────────────────────────────────────────

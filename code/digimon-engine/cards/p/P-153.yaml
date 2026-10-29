@@ -1,0 +1,72 @@
+card: P-153
+name: MagnaGarurumon
+kind: digimon
+level: 6
+color: [yellow, blue]
+cost: 12
+dp: 12000
+form: Hybrid
+traits: [Cyborg]
+attribute: Variable
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - name_is: MagnaGarurumon
+        - self_color_count_gte: 3
+        - self_color_count_lte: 3
+    cost: 2
+effects:
+  - kind: grant_keyword
+    keyword: ArmorPurge
+  - when: when_digivolving
+    summary: "Return 1 opponent level 3, 1 level 4 and 1 level 5 Digimon to hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: lv3
+          filter: { kind: digimon, level_eq: 3 }
+          prompt: "Return 1 opponent level 3 Digimon"
+      - select_opponent_permanent:
+          bind_as: lv4
+          filter: { kind: digimon, level_eq: 4 }
+          prompt: "Return 1 opponent level 4 Digimon"
+      - select_opponent_permanent:
+          bind_as: lv5
+          filter: { kind: digimon, level_eq: 5 }
+          prompt: "Return 1 opponent level 5 Digimon"
+      # All picks precede one grouped departure. A missing arm matches nothing.
+      - return_all_to_hand:
+          over:
+            all_of:
+              - of: opponent
+              - kind: digimon
+              - any_of:
+                  - all_of: [{ binding_exists: lv3 }, { not: { not_in_binding: lv3 } }]
+                  - all_of: [{ binding_exists: lv4 }, { not: { not_in_binding: lv4 } }]
+                  - all_of: [{ binding_exists: lv5 }, { not: { not_in_binding: lv5 } }]
+  - when: end_of_attack
+    optional: true
+    condition:
+      all_of:
+        - materials_count_gte: 1
+        - owner_can_add_security: true
+        - controller_can_add_security: true
+    summary: "By placing this Digimon's top stacked card as top security, this Digimon or Tamer unsuspends"
+    process:
+      - security_place_top_stacked_card:
+          carrier: source
+          of: you
+          position: top
+          face: down
+          bind_success_as: paid
+          to_owner: true
+      - if:
+          condition: { equals: [paid, 1] }
+          then:
+            - unsuspend: { target: source }

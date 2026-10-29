@@ -1,34 +1,47 @@
 use crate::action::explain::{explain_action, ActionKind, ActionZone};
-use crate::action::{build_action_mask, ACTION_SPACE_SIZE};
+use crate::action::ACTION_SPACE_SIZE;
 use crate::card_registry::CardRegistry;
 use crate::enums::{GamePhase, PlayerId};
 use crate::game::Game;
 use crate::tensor_profiles::standard::{v2_full, v2_lite};
-use crate::tensor_v2_lite::build_tensor_standard_lite_v2;
+use crate::tensor_v2_lite::build_tensor_standard_lite_v2_with_mask;
 
 pub fn build_tensor_standard_full_v2(
     game: &Game,
     player_id: PlayerId,
     registry: &CardRegistry,
 ) -> Vec<f32> {
-    let lite = build_tensor_standard_lite_v2(game, player_id, registry);
+    let mask = crate::action::build_action_mask(game, player_id);
+    build_tensor_standard_full_v2_with_mask(game, player_id, registry, &mask)
+}
+
+pub(crate) fn build_tensor_standard_full_v2_with_mask(
+    game: &Game,
+    player_id: PlayerId,
+    registry: &CardRegistry,
+    mask: &[f32],
+) -> Vec<f32> {
+    let lite = build_tensor_standard_lite_v2_with_mask(game, player_id, registry, mask);
     let mut tensor = vec![0.0f32; v2_full::TENSOR_SIZE];
     tensor[..v2_lite::OFF_RESERVED].copy_from_slice(&lite[..v2_lite::OFF_RESERVED]);
-    write_action_id_features(&mut tensor, game, player_id);
+    write_action_id_features(&mut tensor, game, player_id, mask);
     tensor
 }
 
-fn write_action_id_features(tensor: &mut [f32], game: &Game, player_id: PlayerId) {
-    let mask = build_action_mask(game, player_id);
+fn write_action_id_features(tensor: &mut [f32], game: &Game, player_id: PlayerId, mask: &[f32]) {
+    let page_actions: Option<Vec<u16>> = game.pending_selection.as_ref()
+        .and_then(|pending| pending.card_choice.as_ref())
+        .map(|owner| owner.view(game, player_id).rows.into_iter().map(|row| row.action_id).collect());
     for action_id in 0..ACTION_SPACE_SIZE {
         let action_id_u16 = action_id as u16;
-        let explanation = explain_action(game, player_id, action_id_u16);
         let base = v2_full::OFF_ACTION_ID_FEATURES + action_id * v2_full::ACTION_ID_ROW_SIZE;
 
         tensor[base] = mask[action_id];
         tensor[base + 1] = action_id as f32 / ACTION_SPACE_SIZE as f32;
-        tensor[base + 2] = action_kind_bucket(explanation.kind);
         tensor[base + 3] = phase_bucket(game.current_phase);
+        if page_actions.as_ref().is_some_and(|actions| !actions.contains(&action_id_u16)) { continue; }
+        let explanation = explain_action(game, player_id, action_id_u16);
+        tensor[base + 2] = action_kind_bucket(explanation.kind);
         tensor[base + 4] = explanation.source_zone.map(zone_bucket).unwrap_or(0.0);
         tensor[base + 5] = index_bucket(explanation.source_index);
         tensor[base + 6] = explanation.target_zone.map(zone_bucket).unwrap_or(0.0);

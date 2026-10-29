@@ -1,0 +1,76 @@
+
+running 31 tests
+test bt21::bt21_091::bt21_091_color_bypass_with_tamer_with_inherited_effects ... ok
+test bt21::bt21_091::bt21_091_color_bypass_uses_option_end_to_end ... ok
+test bt21::bt21_091::bt21_091_declining_delay_keeps_it_parked ... ok
+test bt21::bt21_091::bt21_091_delay_digivolve_is_optional ... ok
+test bt21::bt21_091::bt21_091_delay_fires_on_opponents_turn_all_turns ... FAILED
+test bt21::bt21_091::bt21_091_delay_ignores_digimon_play ... ok
+test bt21::bt21_091::bt21_091_delay_not_on_placing_turn ... ok
+test bt21::bt21_091::bt21_091_delay_ignores_tamer_without_inherited_effects ... ok
+test bt21::bt21_091::bt21_091_delay_tamer_digivolves_into_hybrid_for_free ... ok
+test bt21::bt21_091::bt21_091_delay_tamer_without_route_is_not_offered ... ok
+test bt21::bt21_091::bt21_091_main_declining_cost_skips_draw_but_still_places ... ok
+test bt21::bt21_091::bt21_091_main_only_hybrid_cards_are_trashable ... ok
+test bt21::bt21_091::bt21_091_main_without_hybrid_in_hand_still_places ... ok
+test bt21::bt21_091::bt21_091_main_trashes_hybrid_draws_two_and_places ... ok
+test bt21::bt21_091::bt21_091_no_color_bypass_without_inherited_tamer ... ok
+test bt21::bt21_091::bt21_091_security_decline_still_adds_self ... ok
+test bt21::bt21_091::bt21_091_security_plays_inherited_tamer_from_hand_then_adds_self ... FAILED
+test bt21::bt21_091::bt21_091_security_plays_inherited_tamer_from_trash ... FAILED
+test bt21::bt21_091::bt21_091_security_without_candidates_adds_self ... ok
+test bt21::bt21_091::bt21_091_structure ... ok
+test bt21::bt21_098::bt21_098_delay_does_not_fire_on_placing_turn ... ok
+test bt21::bt21_098::bt21_098_delay_decline_keeps_cannon_parked ... ok
+test bt21::bt21_098::bt21_098_delay_galacticmon_attack_deletes_lowest_cost ... ok
+test bt21::bt21_098::bt21_098_delay_ignores_non_galacticmon_attacker ... ok
+test bt21::bt21_098::bt21_098_delay_without_delete_trims_security_to_one ... ok
+test bt21::bt21_098::bt21_098_main_deletes_only_the_lowest_play_cost_digimon_then_places_self ... ok
+test bt21::bt21_098::bt21_098_main_tied_lowest_cost_offers_both ... ok
+test bt21::bt21_098::bt21_098_main_without_opponent_digimon_still_places_self ... ok
+test bt21::bt21_098::bt21_098_security_trash_origin_and_decline_still_adds_to_hand ... FAILED
+test bt21::bt21_098::bt21_098_security_plays_vemmon_text_card_then_adds_self_to_hand ... FAILED
+test bt21::bt21_098::bt21_098_structure ... ok
+
+failures:
+
+---- bt21::bt21_091::bt21_091_delay_fires_on_opponents_turn_all_turns stdout ----
+
+thread 'bt21::bt21_091::bt21_091_delay_fires_on_opponents_turn_all_turns' (10524) panicked at code\digimon-engine\tests\cards_behavioral\bt21\bt21_091.rs:698:5:
+RED-TAMER-INH not a legal hand pick (valid [30, 62])
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt21::bt21_091::bt21_091_security_plays_inherited_tamer_from_hand_then_adds_self stdout ----
+
+thread 'bt21::bt21_091::bt21_091_security_plays_inherited_tamer_from_hand_then_adds_self' (23344) panicked at code\digimon-engine\tests\cards_behavioral\bt21\bt21_091.rs:698:5:
+RED-TAMER-INH not a legal hand pick (valid [30, 62])
+
+---- bt21::bt21_091::bt21_091_security_plays_inherited_tamer_from_trash stdout ----
+
+thread 'bt21::bt21_091::bt21_091_security_plays_inherited_tamer_from_trash' (9876) panicked at code\digimon-engine\tests\cards_behavioral\bt21\bt21_091.rs:714:5:
+BLUE-TAMER-INH not a legal trash pick (valid [30, 62])
+
+---- bt21::bt21_098::bt21_098_security_trash_origin_and_decline_still_adds_to_hand stdout ----
+
+thread 'bt21::bt21_098::bt21_098_security_trash_origin_and_decline_still_adds_to_hand' (36200) panicked at code\digimon-engine\tests\cards_behavioral\bt21\bt21_098.rs:461:5:
+assertion `left == right` failed: trash candidate offered
+  left: 2
+ right: 1
+
+---- bt21::bt21_098::bt21_098_security_plays_vemmon_text_card_then_adds_self_to_hand stdout ----
+
+thread 'bt21::bt21_098::bt21_098_security_plays_vemmon_text_card_then_adds_self_to_hand' (39068) panicked at code\digimon-engine\tests\cards_behavioral\bt21\bt21_098.rs:434:5:
+assertion `left == right` failed: only the cost<=6 [Vemmon]-text card is eligible
+  left: 2
+ right: 1
+
+
+failures:
+    bt21::bt21_091::bt21_091_delay_fires_on_opponents_turn_all_turns
+    bt21::bt21_091::bt21_091_security_plays_inherited_tamer_from_hand_then_adds_self
+    bt21::bt21_091::bt21_091_security_plays_inherited_tamer_from_trash
+    bt21::bt21_098::bt21_098_security_plays_vemmon_text_card_then_adds_self_to_hand
+    bt21::bt21_098::bt21_098_security_trash_origin_and_decline_still_adds_to_hand
+
+test result: FAILED. 26 passed; 5 failed; 0 ignored; 0 measured; 12724 filtered out; finished in 30.30s
+

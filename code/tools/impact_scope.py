@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
+import tomllib
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -63,6 +65,7 @@ def scope_for_changed_paths(
     side_binaries: set[str] = set()
     reasons: list[str] = []
     full_suite_required = False
+    test_sources = None
     card_by_path = card_path_index(dsl_index)
 
     for raw in paths:
@@ -80,6 +83,22 @@ def scope_for_changed_paths(
             card_id = card_by_path.get(path) or Path(path).stem
             cards.add(card_id)
             side_binaries.add("dsl")
+            continue
+        if path.startswith("code/digimon-engine/tests/support/"):
+            if test_sources is None:
+                test_sources = integration_test_sources(CODE_DIR / "digimon-engine")
+            sources, uncertain = test_sources
+            helper = (CODE_DIR.parent / path).resolve()
+            consumers = {name for name, files in sources.items() if helper in files}
+            consumers.update(uncertain)
+            if not consumers:
+                full_suite_required = True
+                consumers.update(sources)
+                reasons.append(f"{path} is a shared test helper with unresolved consumers; require full real-target scope")
+            elif uncertain:
+                full_suite_required = True
+                reasons.append(f"{path} is a shared test helper with dynamic dependencies; include uncertain real targets")
+            side_binaries.update(consumers)
             continue
         if path.startswith("code/digimon-engine/tests/"):
             side_binaries.add(engine_test_binary_for_path(path))
@@ -110,6 +129,73 @@ def normalize_path(path: str) -> str:
     return path.strip().replace("\\", "/").lstrip("./")
 
 
+
+def integration_test_sources(engine_dir: Path) -> tuple[dict[str, set[Path]], set[str]]:
+    """Discover real Cargo targets and conservatively follow their Rust modules.
+
+    Folder targets include every sibling Rust file, even cfg-disabled modules.
+    Literal #[path] and include! edges also cover shared and standalone helpers.
+    Unresolvable generated includes stay visible as uncertain consumers.
+    """
+    manifest = tomllib.loads((engine_dir / "Cargo.toml").read_text(encoding="utf-8"))
+    tests = engine_dir / "tests"
+    targets: dict[str, Path] = {}
+    for target in manifest.get("test", []):
+        name = target["name"]
+        targets[name] = engine_dir / target.get("path", f"tests/{name}.rs")
+    if manifest.get("package", {}).get("autotests", True):
+        declared_paths = {source.resolve() for source in targets.values()}
+        for source in tests.glob("*.rs"):
+            if source.resolve() not in declared_paths:
+                targets.setdefault(source.stem, source)
+        for source in tests.glob("*/main.rs"):
+            if source.resolve() not in declared_paths:
+                targets.setdefault(source.parent.name, source)
+
+    text_cache: dict[Path, str | None] = {}
+    sources: dict[str, set[Path]] = {}
+    uncertain: set[str] = set()
+    path_attr = re.compile(r'#\s*\[\s*path\s*=\s*"([^"\n]+)"\s*\]')
+    literal_include = re.compile(r'\binclude!\s*\(\s*"([^"\n]+)"')
+    module = re.compile(r'\bmod\s+([A-Za-z_][A-Za-z_0-9]*)\s*;')
+    for name, entry in targets.items():
+        queue = [entry.resolve()]
+        # A grouped test's crate modules may be declared through macros/cfg.
+        # Reading the complete directory is a safe over-approximation.
+        if entry.parent != tests:
+            queue.extend(source.resolve() for source in entry.parent.rglob("*.rs"))
+        seen: set[Path] = set()
+        while queue:
+            source = queue.pop()
+            if source in seen:
+                continue
+            seen.add(source)
+            if source not in text_cache:
+                try:
+                    text_cache[source] = source.read_text(encoding="utf-8")
+                except (OSError, UnicodeError):
+                    text_cache[source] = None
+            text = text_cache[source]
+            if text is None:
+                uncertain.add(name)
+                continue
+            literals = list(path_attr.finditer(text)) + list(literal_include.finditer(text))
+            for match in literals:
+                linked = (source.parent / match[1]).resolve()
+                queue.append(linked)
+            if len(re.findall(r'\binclude!\s*\(', text)) > len(literal_include.findall(text)):
+                uncertain.add(name)
+            for match in module.finditer(text):
+                # Both bases are conservative: crate/mod.rs children use the
+                # parent; ordinary foo.rs children may use the foo directory.
+                for base in (source.parent, source.with_suffix("")):
+                    for linked in (base / f"{match[1]}.rs", base / match[1] / "mod.rs"):
+                        if linked.is_file():
+                            queue.append(linked.resolve())
+        sources[name] = seen
+    return sources, uncertain
+
+
 def engine_test_binary_for_path(path: str) -> str:
     rel = path.removeprefix("code/digimon-engine/tests/")
     first = rel.split("/", 1)[0]
@@ -117,13 +203,23 @@ def engine_test_binary_for_path(path: str) -> str:
 
 
 def changed_paths_from_git(base: str | None, head: str | None) -> list[str]:
+    revision_only = bool(base and head)
     cmd = ["git", "diff", "--name-only"]
-    if base and head:
+    if revision_only:
         cmd.extend([base, head])
-    elif base:
-        cmd.append(base)
+    else:
+        # HEAD includes both staged and unstaged tracked changes. A supplied
+        # base still compares that revision with the complete working tree.
+        cmd.append(base or "HEAD")
     result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-    return [line for line in result.stdout.splitlines() if line.strip()]
+    paths = [line for line in result.stdout.splitlines() if line.strip()]
+    if not revision_only:
+        untracked = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            check=True, capture_output=True, text=True,
+        )
+        paths.extend(line for line in untracked.stdout.splitlines() if line.strip())
+    return list(dict.fromkeys(paths))
 
 
 def changed_paths_from_args(args: argparse.Namespace) -> list[str]:

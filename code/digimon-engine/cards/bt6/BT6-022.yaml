@@ -1,0 +1,27 @@
+# Official observation c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440.
+# Card image and DCGO BT6_022 agree this is an inherited effect.
+card: BT6-022
+name: Strabimon
+kind: digimon
+level: 3
+color: [blue]
+cost: 4
+dp: 3000
+form: Hybrid
+attribute: Variable
+traits: [Beastkin]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      any_of:
+        - source_permanent_trait_has: Hybrid
+        - source_permanent_trait_has: Ten Warriors
+    summary: "[When Attacking] [Once Per Turn] If this Digimon has Hybrid or Ten Warriors, gain 1 memory."
+    process:
+      - gain_memory: 1

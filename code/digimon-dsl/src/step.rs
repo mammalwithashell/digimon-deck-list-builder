@@ -290,7 +290,7 @@ pub enum StepSpec {
     /// battle area through the effect-initiated engine path. Pair with
     /// `select_own_breeding_permanent optional: true` when printed text says
     /// "you may move..." so the accept/decline choice stays visible.
-    MoveFromBreeding(PlayerArg),
+    MoveFromBreeding(MoveFromBreedingArgs),
 
     // Play / digivolve
     PlayFromHand(PlayFromHandArgs),
@@ -369,7 +369,7 @@ pub enum StepSpec {
     TrashTopSecurity(TrashTopSecurityArgs),
     TrashBottomSecurity(PlayerArg),
     AddBottomSecurityToHand(PlayerArg),
-    TrashTopSecurityAndCancelReplacement(PlayerArg),
+    TrashTopSecurityAndCancelReplacement(TrashTopSecurityPreventionArgs),
     BounceSelf(EmptyArgs),
     /// Relocate THIS effect's source Option (an in-battle-area field Option)
     /// face-down under a chosen own permanent — a new Option-lifecycle exit
@@ -1543,6 +1543,29 @@ pub struct PlayerArg {
     pub of: PlayerRef,
 }
 
+/// Promote the real breeding permanent, optionally retaining that exact
+/// permanent for later steps. The result exists only after a successful move
+/// and follows its battle identity rather than a field position or card ID.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MoveFromBreedingArgs {
+    pub of: PlayerRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+}
+
+/// Atomic security payment and cancellation of one impending departure, or
+/// every matching subject in that simultaneous departure when specified.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashTopSecurityPreventionArgs {
+    pub of: PlayerRef,
+    /// Subject qualification only. Payment availability belongs in
+    /// `active_when`, since this filter is evaluated after payment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub all_matching: Option<PredicateSpec>,
+}
+
 /// Args for `return_top_security_to_deck` (G-DSL-RETURN-TOP-SECURITY-TO-DECK).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -2397,6 +2420,11 @@ impl SecurityReplacementDisposition {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SecurityPlaceStackedCardArgs {
+    /// Publish 1 only for a completed security movement, otherwise 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_success_as: Option<String>,
+    #[serde(default)]
+    pub to_owner: bool,
     pub carrier: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<BindingRef>,
@@ -2411,6 +2439,12 @@ pub struct SecurityPlaceStackedCardArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SecurityPlaceTopStackedCardArgs {
+    /// Publish 1 only when this placement was processed, otherwise 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_success_as: Option<String>,
+    /// Unspecified destination ownership rule (CR 3-1-3-8), opt-in.
+    #[serde(default)]
+    pub to_owner: bool,
     pub carrier: BindingRef,
     #[serde(default = "default_player_ref_you", alias = "target_player")]
     pub of: PlayerRef,
@@ -2986,7 +3020,8 @@ pub enum AppFuseZone {
 /// App-Fusion materials linked. Two engine-driven selections (own permanent,
 /// then result card); no explicit target binding (both are fresh picks). The
 /// result card's App-Fusion materials live on its own `app_fusion` alt-path, so
-/// this step only carries the source zone + an optional result-card filter. See
+/// this step carries the source zone, optional result-card filter and optional
+/// success receipt. See
 /// `docs/superpowers/specs/2026-06-13-effect-initiated-app-fuse-design.md`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -3002,6 +3037,11 @@ pub struct AppFuseArgs {
     /// true; defaults false to match every other step's convention.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Bind the result Card only after a successful commit. Absent on PASS or
+    /// unavailable/rejected selection. Opts into continuing the tail on PASS;
+    /// authors decide whether the enclosing effect should refund its OPT.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -3077,6 +3117,9 @@ pub struct AddDpModifierArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AddModifierArgs {
+    /// Restrict this modifier's replacement cause to an opponent effect.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub opponent_only: bool,
     pub target: ModifierTarget,
     pub modifier: String,
     #[serde(deserialize_with = "deserialize_modifier_value")]
@@ -3448,6 +3491,10 @@ pub struct SelectDnaPairArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectZoneArgs {
+    /// Security only: on optional decline run the following process steps,
+    /// skipping the accepted selection's `then` body. Forbidden for costs.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub continue_on_decline: bool,
     pub of: PlayerRef,
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3741,6 +3788,10 @@ pub struct SelectZoneCardsArgs {
     /// all-or-nothing cost such as BT26-102's "by placing 6 …").
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional_zero: bool,
+    /// Per-pick uniqueness across all selected zones. Color uses an injective
+    /// card-to-printed-color assignment, matching `select_count_capped`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub distinct_by: Option<crate::alt_path::DistinctBy>,
     /// "Up to N play cost's total worth": each pick's play cost must fit the
     /// remaining budget.
     #[serde(default, skip_serializing_if = "Option::is_none")]

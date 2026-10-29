@@ -72,7 +72,7 @@ mod queue_handle_rekey_tests {
                     };
                     let mut game = DebugRunner::builder().build().game;
                     game.current_trigger_context = Some(context.clone());
-                    game.effect_queue.push_back(QueuedEffect {
+                    let queued = QueuedEffect {
                         source_card: CardHandle(0),
                         source_permanent: Some(handle),
                         source_kind: EffectSourceKind::Digimon,
@@ -85,14 +85,24 @@ mod queue_handle_rekey_tests {
                         effect_slot: 0,
                         is_optional: false,
                         is_turn_player: false,
-                        card_id: String::new(),
+                        card_id: "SOURCE-OBSERVER".into(),
                         allow_below_top_liveness: false,
                         dna_origin_context: None,
                         granted_effect_id: None,
                         keyword_effect: None,
                         trigger_batch: 0,
                         pending_processing: None,
-                    });
+                    };
+                    game.effect_queue.push_back(queued.clone());
+                    // A surviving carrier still observes the captured handle
+                    // even when that target was the removed source. This pins
+                    // context rekeying independently of source invalidation.
+                    let witness_source = PermanentHandle { player: 1 - player, index: 1 };
+                    let mut witness = queued;
+                    witness.source_permanent = Some(witness_source);
+                    witness.controller = witness_source.player;
+                    witness.card_id = "SURVIVING-OBSERVER".into();
+                    game.effect_queue.push_back(witness);
                     game.shift_effect_queue_after_battle_area_remove(player, 0);
                     let expected_source = Some(PermanentHandle {
                         index: if owner == player && index > 0 && index < 14 {
@@ -107,23 +117,27 @@ mod queue_handle_rekey_tests {
                     } else {
                         expected_source
                     };
-                    let queued = &game.effect_queue[0];
-                    assert_eq!(
-                        queued.source_permanent, expected_source,
-                        "source owner={owner} index={index} removed_owner={player}"
-                    );
-                    assert_eq!(
-                        queued
-                            .trigger_context
-                            .as_ref()
-                            .unwrap()
-                            .security_check_source_invalidated,
-                        owner == player && index == 0
-                    );
-                    for ctx in [
-                        queued.trigger_context.as_ref().unwrap(),
-                        game.current_trigger_context.as_ref().unwrap(),
-                    ] {
+                    let source_removed = owner == player && index == 0;
+                    assert_eq!(game.effect_queue.len(), if source_removed { 1 } else { 2 });
+                    let original = game.effect_queue.iter().find(|qe| qe.card_id == "SOURCE-OBSERVER");
+                    if source_removed {
+                        assert!(original.is_none(), "a departed carrier cannot keep its pending effect");
+                    } else {
+                        assert_eq!(
+                            original.unwrap().source_permanent, expected_source,
+                            "source owner={owner} index={index} removed_owner={player}"
+                        );
+                    }
+                    let witness = game.effect_queue.back().unwrap();
+                    assert_eq!(witness.card_id, "SURVIVING-OBSERVER");
+                    assert_eq!(witness.source_permanent, Some(witness_source));
+                    for queued in &game.effect_queue {
+                        assert!(!queued.trigger_context.as_ref().unwrap().security_check_source_invalidated);
+                    }
+                    for ctx in game.effect_queue.iter()
+                        .map(|qe| qe.trigger_context.as_ref().unwrap())
+                        .chain(std::iter::once(game.current_trigger_context.as_ref().unwrap()))
+                    {
                         assert_eq!(
                             (
                                 ctx.target_permanent,
@@ -452,15 +466,10 @@ impl Game {
         if !perm.is_digimon_for_rules(&self.card_data, &self.modifiers, handle) {
             return false;
         }
-        // 11-2-5 is UNQUALIFIED: "An attack declaration can't be made using
-        // a Digimon that can't suspend" — it applies even to granted
-        // "without suspending" attacks. NOTE: DCGO diverges here
-        // (`CanAttackTargetDigimon` skips the `CanSuspend` consult when
-        // `withoutTap == true`); per source priority the rules manual
-        // governs over DCGO for pure rules questions.
-        if self.modifiers.has(handle, ModifierType::CannotSuspend) {
-            return false;
-        }
+        // Official Q3185 (BT19-101) permits a granted attack without
+        // suspending even when the attacker cannot suspend. DCGO likewise
+        // skips CanSuspend when withoutTap is true. Ordinary attacks retain
+        // the CannotSuspend gate in can_attack_inner.
         // CannotAttack is a `WhenWouldAttack` cancel replacement, not a
         // can_attack rejection — see `can_attack`.
         // "Without suspending" bypasses only the suspend cost/unsuspended
@@ -1573,7 +1582,8 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::AllianceTiming;
         self.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            card_choice: None,
+            zone_owner: Some(attacker.player),
             kind: SelectionKind::OwnField,
             selecting_player: attacker.player,
             previous_phase,
@@ -1870,6 +1880,7 @@ impl Game {
         self.current_phase = GamePhase::CounterTiming;
 
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             // SelectionKind::Hand is a defensible umbrella — the primary
             // resource is the defender's hand, and the mask renderer is
@@ -2091,6 +2102,7 @@ impl Game {
         let source_card = self.player(defender).hand[result_hand_index].handle();
         self.current_phase = GamePhase::SelectMaterial;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Material,
             selecting_player: defender,
@@ -2117,6 +2129,7 @@ impl Game {
                 }
                 game.current_phase = GamePhase::SelectHand;
                 game.pending_selection = Some(PendingSelection {
+                    card_choice: None,
                     zone_owner: None,
                     kind: SelectionKind::Hand,
                     selecting_player: defender,
@@ -2177,6 +2190,7 @@ impl Game {
 
         self.current_phase = GamePhase::SelectHand;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Hand,
             selecting_player: defender,
@@ -2303,6 +2317,7 @@ impl Game {
         let event_card = self.player(defender).battle_area[field_idx]
             .top_card()
             .handle();
+        self.emit_eval_digivolve(handle, 0, true, true);
         self.fire_digivolve_event_triggers(handle, event_card, true, true);
     }
 
@@ -2469,7 +2484,8 @@ impl Game {
         self.current_phase = GamePhase::BlockTiming;
 
         self.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            card_choice: None,
+            zone_owner: Some(defender_player),
             // The selecting player is picking from their *own* field; kind
             // reflects that. Block is the *window*, signalled by the phase.
             kind: SelectionKind::OwnField,
@@ -2726,7 +2742,8 @@ impl Game {
         self.current_phase = GamePhase::SelectTarget;
 
         self.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            card_choice: None,
+            zone_owner: Some(opp_id),
             kind: SelectionKind::OppField,
             selecting_player: attacker_player,
             previous_phase,
@@ -2835,6 +2852,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Target,
             selecting_player: attacker.player,
@@ -4184,6 +4202,12 @@ impl Game {
         // attacker (11-2-5); keep the declaration's suspended state even if
         // the chokepoint no-op'd.
         perm.is_suspended = true;
+        self.count_attack(handle);
+        event_card
+    }
+
+    fn count_attack(&mut self, handle: PermanentHandle) {
+        let perm = &mut self.players[handle.player as usize].battle_area[handle.index as usize];
         perm.attacks_this_turn = perm.attacks_this_turn.saturating_add(1);
         if let Some(count) = self
             .digimon_attacks_this_turn
@@ -4191,7 +4215,6 @@ impl Game {
         {
             *count = count.saturating_add(1);
         }
-        event_card
     }
 
     fn handle_valid(&self, handle: PermanentHandle) -> bool {
@@ -4546,11 +4569,12 @@ impl Game {
             pa.declaration_committed = true;
         }
 
-        // Suspend + record attack — skipped for Overclock, which attacks
-        // without suspending.
+        // Every committed declaration counts, including Overclock and other
+        // attacks without suspending; only their suspension is skipped.
         let suspend_event = if !is_overclock {
             self.suspend_and_count_attack(attacker)
         } else {
+            self.count_attack(attacker);
             None
         };
         self.reevaluate_until_condition_modifiers_if_dirty();

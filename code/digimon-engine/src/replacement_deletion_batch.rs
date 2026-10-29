@@ -261,8 +261,8 @@ fn finish_deletion_candidate(game:&mut crate::game::Game,mut window:ReplacementW
         other=>{
             let m=&mut window.deletion_batch.as_mut().unwrap().members[index];m.prevented=true;m.terminal=true;
             let mut single=window.clone();single.deletion_batch=None;
-            game.replacement_fired.insert((window.timing,window.subject));
-            game.replacement_fired.insert((EffectTiming::WhenWouldLeaveBattleArea,window.subject));
+            // commit_window reconstructs this member's stable guard from its
+            // owned timing; sibling members keep independent window state.
             commit_window(game,single,other);
             if game.pending_selection.is_some(){
                 game.after_selection_resume_hooks.0.push(crate::resume::AfterSelectionHook::DeletionWindowContinue{window:Box::new(window)});

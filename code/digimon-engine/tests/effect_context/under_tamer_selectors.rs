@@ -108,15 +108,15 @@ fn select_own_tamer_sources_spans_own_tamers_and_preserves_origin() {
         .pending_selection
         .as_ref()
         .expect("matching own Tamer sources install a prompt");
-    let tamer_a_action = encode_source_select(tamer_a.index as u16, 0).unwrap();
-    let tamer_b_action = encode_source_select(tamer_b.index as u16, 0).unwrap();
-    let digi_action = encode_source_select(digi_host.index as u16, 0).unwrap();
+    let tamer_a_action = crate::owned_choices::source_action(&runner.game, tamer_a, 0);
+    let tamer_b_action = crate::owned_choices::source_action(&runner.game, tamer_b, 0);
+    assert!(!crate::owned_choices::commits(&runner.game).iter().any(|row| row.carrier_slot == Some(digi_host.index)));
 
     assert_eq!(
         pending.valid_action_ids,
         vec![tamer_a_action, tamer_b_action]
     );
-    assert!(!pending.valid_action_ids.contains(&digi_action));
+
 
     runner
         .game
@@ -172,10 +172,9 @@ fn select_sources_under_one_own_tamer_excludes_other_tamer_stashes() {
         .pending_selection
         .as_ref()
         .expect("matching source under the chosen Tamer installs a prompt");
-    let tamer_a_action = encode_source_select(tamer_a.index as u16, 0).unwrap();
-    let tamer_b_action = encode_source_select(tamer_b.index as u16, 0).unwrap();
+    let tamer_a_action = crate::owned_choices::source_action(&runner.game, tamer_a, 0);
     assert_eq!(pending.valid_action_ids, vec![tamer_a_action]);
-    assert!(!pending.valid_action_ids.contains(&tamer_b_action));
+    assert!(!crate::owned_choices::commits(&runner.game).iter().any(|row| row.carrier_slot == Some(tamer_b.index)));
 
     runner
         .game

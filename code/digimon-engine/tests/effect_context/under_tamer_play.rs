@@ -112,7 +112,7 @@ fn play_under_tamer_source_without_cost_routes_through_on_play() {
         .pending_selection
         .as_ref()
         .expect("under-Tamer source play installs source selection");
-    let source_action = encode_source_select(tamer.index as u16, 0).unwrap();
+    let source_action = crate::owned_choices::source_action(&runner.game, tamer, 0);
     assert_eq!(pending.valid_action_ids, vec![source_action]);
 
     runner

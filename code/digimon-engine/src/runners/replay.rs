@@ -284,6 +284,28 @@ impl std::fmt::Display for ReplayError {
 
 impl std::error::Error for ReplayError {}
 
+/// Native recordings without a marker predate owned page aliases. Reject malformed
+/// or future markers instead of guessing based on action-space size.
+fn native_action_schema_version(recording: &Value) -> Result<u32, ReplayError> {
+    let version = match recording.get("action_schema_version") {
+        None => 1,
+        Some(value) => value.as_u64().and_then(|v| u32::try_from(v).ok())
+            .ok_or_else(|| ReplayError::MalformedRecording("action_schema_version must be an integer".into()))?,
+    };
+    validate_action_schema_version(version)?;
+    Ok(version)
+}
+pub(crate) fn validate_action_schema_version(version: u32) -> Result<(), ReplayError> {
+    if version != 1 && version != crate::action::space::SCHEMA_VERSION {
+        return Err(ReplayError::MalformedRecording(format!("unsupported action_schema_version {version}")));
+    }
+    Ok(())
+}
+fn legacy_owned_card_alias(game: &Game, version: u32) -> bool {
+    version < crate::action::space::SCHEMA_VERSION
+        && game.pending_selection.as_ref().is_some_and(|s| s.card_choice.is_some())
+}
+
 /// A scripted game replay over a `GameRecorder` recording.
 pub struct ReplayRunner {
     pub game: Game,
@@ -294,6 +316,7 @@ pub struct ReplayRunner {
     replayable_action_indices: Vec<usize>,
     current_step: u32,
     verify: bool,
+    paused: bool,
 }
 
 impl ReplayRunner {
@@ -307,6 +330,7 @@ impl ReplayRunner {
         all_card_data: &HashMap<String, CardData>,
         verify: bool,
     ) -> Result<Self, ReplayError> {
+        native_action_schema_version(&recording)?;
         let initial = recording
             .get("initial_state")
             .ok_or(ReplayError::MissingInitialState)?;
@@ -349,6 +373,7 @@ impl ReplayRunner {
             replayable_action_indices: Vec::new(),
             current_step: 0,
             verify,
+            paused: false,
         };
         runner.build_game(all_card_data)?;
         Ok(runner)
@@ -363,6 +388,8 @@ impl ReplayRunner {
     pub fn current_step(&self) -> u32 {
         self.current_step
     }
+
+    pub fn is_paused(&self) -> bool { self.paused }
 
     pub fn is_complete(&self) -> bool {
         self.current_step as usize >= self.replayable_action_indices.len()
@@ -379,7 +406,7 @@ impl ReplayRunner {
     /// Apply exactly one replayable action and return a `ReplayStepResult`.
     /// Returns a no-op result when called past completion (matches the spec).
     pub fn step(&mut self) -> ReplayStepResult {
-        if self.is_complete() {
+        if self.is_complete() || self.paused {
             return ReplayStepResult {
                 step_number: self.current_step,
                 player_id: 0,
@@ -405,6 +432,18 @@ impl ReplayRunner {
         let memory_before = self.game.memory;
         let turn_number = self.game.turn_count;
 
+        if legacy_owned_card_alias(&self.game, native_action_schema_version(&self.recording).expect("validated native metadata")) {
+            self.paused = true;
+            return ReplayStepResult {
+                step_number: self.current_step, player_id, action_id,
+                phase_before: phase_before.clone(), phase_after: phase_before,
+                memory_before, memory_after: memory_before, turn_number,
+                is_game_over: self.game.game_over, winner_id: self.game.winner,
+                divergences: vec![DivergenceReport { step: self.current_step,
+                    field: "action_schema_version", recorded: "1".into(),
+                    replayed: format!("owned card page requires action_schema_version {}", crate::action::space::SCHEMA_VERSION) }],
+            };
+        }
         self.game.decode_action(action_id, player_id);
         self.current_step += 1;
 
@@ -446,7 +485,7 @@ impl ReplayRunner {
             self.game.reset_for_replay();
             self.relay_initial_state()?;
         }
-        while self.current_step < target && !self.is_game_over() {
+        while self.current_step < target && !self.is_game_over() && !self.paused {
             self.step();
         }
         Ok(())
@@ -464,7 +503,7 @@ impl ReplayRunner {
 
     /// Step through every remaining action.
     pub fn run_to_completion(&mut self) {
-        while !self.is_complete() && !self.is_game_over() {
+        while !self.is_complete() && !self.is_game_over() && !self.paused {
             self.step();
         }
     }
@@ -486,6 +525,7 @@ impl ReplayRunner {
     /// makes backward stepping cheap.
     fn relay_initial_state(&mut self) -> Result<(), ReplayError> {
         self.current_step = 0;
+        self.paused = false;
 
         let initial = &self.recording["initial_state"];
         let first_player_py = initial["first_player_id"].as_u64().ok_or_else(|| {
@@ -685,6 +725,9 @@ pub struct StepSpec {
 /// single [`ReplaySession`] core serves both batch and interactive callers
 /// and both recording families.
 pub trait RecordingSource: Send {
+    /// Runtime-authored sources use current actions; recording adapters override explicitly.
+    fn action_schema_version(&self) -> u32 { crate::action::space::SCHEMA_VERSION }
+
     /// Select digest semantics from explicit recording metadata. All current
     /// non-verification adapters use the current protocol.
     fn verification_digest_version(&self) -> crate::recorder::VerificationDigestVersion {
@@ -817,6 +860,7 @@ impl NativeAdapter {
         recording: Value,
         all_card_data: &HashMap<String, CardData>,
     ) -> Result<Self, ReplayError> {
+        native_action_schema_version(&recording)?;
         let initial = recording
             .get("initial_state")
             .ok_or(ReplayError::MissingInitialState)?;
@@ -886,6 +930,10 @@ impl NativeAdapter {
 }
 
 impl RecordingSource for NativeAdapter {
+    fn action_schema_version(&self) -> u32 {
+        native_action_schema_version(&self.recording).expect("validated native metadata")
+    }
+
     fn build_initial_game(
         &self,
         card_data: &HashMap<String, CardData>,
@@ -1163,6 +1211,10 @@ impl DcgoAdapter {
 }
 
 impl RecordingSource for DcgoAdapter {
+    // Raw DCGO action IDs never declare the engine-owned paging protocol.
+    // Semantic selection payloads have their own live mapping path.
+    fn action_schema_version(&self) -> u32 { 1 }
+
     fn build_initial_game(
         &self,
         _card_data: &HashMap<String, CardData>,
@@ -1455,6 +1507,7 @@ impl VerificationReplayAdapter {
         recording: VerificationReplayRecording,
         card_data: &HashMap<String, CardData>,
     ) -> Result<Self, ReplayError> {
+        validate_action_schema_version(recording.action_schema_version)?;
         if recording.format_version != crate::recorder::VERIFICATION_REPLAY_FORMAT_VERSION {
             return Err(ReplayError::MalformedRecording(format!("unsupported verification replay format {}", recording.format_version)));
         }
@@ -1505,6 +1558,8 @@ impl VerificationReplayAdapter {
 }
 
 impl RecordingSource for VerificationReplayAdapter {
+    fn action_schema_version(&self) -> u32 { self.recording.action_schema_version }
+
     fn verification_digest_version(&self) -> crate::recorder::VerificationDigestVersion {
         crate::recorder::VerificationDigestVersion::from_engine_schema(self.recording.engine_schema_version)
             .expect("recording schema validated at construction")
@@ -1882,6 +1937,21 @@ impl ReplayDriver {
                 s.expected_digest,
             )
         };
+
+        // A legacy raw ID must never acquire a different meaning simply because
+        // an owned physical-card page now occupies that ID range. Stop before
+        // remapping, mask checks, callbacks or mutation, even under Trust.
+        if legacy_owned_card_alias(game, self.source.action_schema_version()) {
+            self.divergences.push(Divergence {
+                step: self.cursor, action_id, actor, phase: phase_rec.clone(),
+                kind: DivergenceKind::SelectionResolution {
+                    reason: format!("action_schema_version {} cannot answer an owned card page; version {} is required",
+                        self.source.action_schema_version(), crate::action::space::SCHEMA_VERSION),
+                }, board: describe_board(game),
+            });
+            self.paused = true;
+            return self.no_progress_result(game);
+        }
 
         // DCGO indexes the battle area by on-screen frame order; the engine
         // indexes it by play order. Rewrite the recorded action's board

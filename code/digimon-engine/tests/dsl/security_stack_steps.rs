@@ -1,6 +1,7 @@
+use digimon_engine::card_choice_page::CARD_CHOICE_START;
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
 use digimon_dsl::{compile::compile, spec::CardSpec};
-use digimon_engine::action::space::{PASS, SEL_MY_SECURITY_START};
+use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::{EffectTiming, TriggerSource};
 
@@ -129,9 +130,9 @@ fn may_add_top_security_accepts_then_runs_tail_recovery() {
         "only the top-security add should be optional"
     );
     let view = runner.pending_selection_view().expect("security prompt");
-    assert_eq!(view.valid_action_ids, vec![SEL_MY_SECURITY_START]);
+    assert_eq!(view.valid_action_ids, vec![CARD_CHOICE_START, PASS]);
     runner
-        .execute_action(0, SEL_MY_SECURITY_START)
+        .execute_action(0, CARD_CHOICE_START)
         .expect("accept top security add");
 
     assert_eq!(

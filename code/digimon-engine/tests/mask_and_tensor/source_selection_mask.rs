@@ -76,22 +76,22 @@ fn breeding_source_select_ids_survive_the_mask() {
         );
     }
 
-    // Every pending action ID is in the breeding-source range.
-    let sel = r
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("pending installed");
-    for &aid in &sel.valid_action_ids {
-        assert!(
-            (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&aid),
-            "action id {aid} must be a breeding-source ID"
-        );
-        assert!(
-            (aid as usize) < ACTION_SPACE_SIZE,
-            "breeding-source ID {aid} must fit inside ACTION_SPACE_SIZE"
-        );
+    // Owned pages retain breeding provenance independently of action IDs.
+    let sel = r.game.pending_selection.as_ref().expect("pending installed");
+    let rows = sel.card_choice.as_ref().expect("physical material owner")
+        .view(&r.game, p0).rows;
+    assert_eq!(rows.len(), 2, "both physical breeding sources are offered");
+    let mut positions = Vec::new();
+    for row in rows {
+        assert!(matches!(row.operation, digimon_engine::owned_card_choice::CardChoiceOperation::CommitCard));
+        assert!(matches!(row.zone, Some(digimon_engine::owned_card_choice::CardChoiceZone::BreedingSource)));
+        assert_eq!(row.owner, Some(p0));
+        assert!(sel.valid_action_ids.contains(&row.action_id));
+        assert!((row.action_id as usize) < ACTION_SPACE_SIZE);
+        positions.push(row.position.expect("source position"));
     }
+    positions.sort();
+    assert_eq!(positions, vec!["0", "1"]);
 
     let p0_mask = build_action_mask(&r.game, p0);
     let p1_mask = build_action_mask(&r.game, p1);

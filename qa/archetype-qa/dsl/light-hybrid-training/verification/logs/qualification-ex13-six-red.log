@@ -1,0 +1,264 @@
+
+running 95 tests
+test ex13::ex13_013::ex13_013_buff_lasts_for_the_turn_only ... ok
+test ex13::ex13_013::ex13_013_end_of_attack_offers_the_tamer_play ... ok
+test ex13::ex13_013::ex13_013_inherited_gallantmon_carrier_trashes_opponent_top_security ... ok
+test ex13::ex13_013::ex13_013_engage_opens_an_end_of_turn_attack_window ... ok
+test ex13::ex13_013::ex13_013_inherited_once_per_turn ... ok
+test ex13::ex13_013::ex13_013_inherited_non_gallantmon_carrier_does_nothing ... ok
+test ex13::ex13_013::ex13_013_on_deletion_decline_plays_nothing ... ok
+test ex13::ex13_013::ex13_013_inherited_own_digimon_deletion_does_not_trigger ... ok
+test ex13::ex13_013::ex13_013_on_deletion_plays_guilmon_text_tamer_from_trash_free ... FAILED
+test ex13::ex13_013::ex13_013_on_deletion_plays_guilmon_named_tamer_from_hand ... ok
+test ex13::ex13_013::ex13_013_printed_metadata_engage_and_clause_shape ... ok
+test ex13::ex13_013::ex13_013_when_attacking_also_deletes ... ok
+test ex13::ex13_013::ex13_013_when_digivolving_without_target_gains_piercing_and_3000 ... ok
+test ex13::ex13_013::ex13_013_when_digivolving_must_delete_a_5000_or_less_digimon ... ok
+test ex13::ex13_014::ex13_014_clause_shapes ... ok
+test ex13::ex13_014::ex13_014_assembly_huckmon_text_line_for_7 ... ok
+test ex13::ex13_014::ex13_014_decline_uses_nothing_and_keeps_the_opt ... ok
+test ex13::ex13_014::ex13_014_declining_delete_still_offers_the_token ... ok
+test ex13::ex13_014::ex13_014_digimon_played_may_delete_lowest_dp_then_play_token ... ok
+test ex13::ex13_014::ex13_014_metadata_and_alt_paths ... ok
+test ex13::ex13_014::ex13_014_no_eligible_option_no_prompt ... ok
+test ex13::ex13_014::ex13_014_no_token_offer_while_you_already_have_atho ... ok
+test ex13::ex13_014::ex13_014_opponent_play_does_not_trigger ... ok
+test ex13::ex13_014::ex13_014_played_trigger_is_once_per_turn ... ok
+test ex13::ex13_014::ex13_014_wa_uses_a_huckmon_text_option_from_digivolution_cards ... FAILED
+test ex13::ex13_014::ex13_014_use_is_once_per_turn ... ok
+test ex13::ex13_031::ex13_031_assembly_excludes_lv5_and_non_sukamon_materials ... ok
+test ex13::ex13_014::ex13_014_wd_uses_a_huckmon_text_option_from_hand_free ... ok
+test ex13::ex13_031::ex13_031_assembly_three_lv4_or_lower_sukamon_for_3 ... ok
+test ex13::ex13_031::ex13_031_base_dp_change_keeps_other_dp_modifiers_on_top ... FAILED
+test ex13::ex13_031::ex13_031_change_lasts_until_the_end_of_the_opponents_turn ... FAILED
+test ex13::ex13_031::ex13_031_clause_shapes ... ok
+test ex13::ex13_031::ex13_031_cost_can_be_a_chuumon_source_under_your_digimon ... FAILED
+test ex13::ex13_031::ex13_031_cost_is_offered_even_with_no_opponent_digimon ... FAILED
+test ex13::ex13_031::ex13_031_declining_the_cost_changes_nothing ... ok
+test ex13::ex13_031::ex13_031_inherited_decline_trashes_all_three ... ok
+test ex13::ex13_031::ex13_031_inherited_ignores_non_sukamon_deletions ... ok
+test ex13::ex13_031::ex13_031_inherited_fires_on_an_opponents_sukamon_too ... ok
+test ex13::ex13_031::ex13_031_inherited_other_sukamon_deleted_reveals_and_plays_free ... ok
+test ex13::ex13_031::ex13_031_inherited_is_once_per_turn ... ok
+test ex13::ex13_031::ex13_031_metadata_and_alt_paths ... ok
+test ex13::ex13_031::ex13_031_no_payable_card_no_prompt ... ok
+test ex13::ex13_031::ex13_031_on_deletion_pays_from_hand_and_changes_target ... FAILED
+test ex13::ex13_031::ex13_031_non_matching_cards_are_not_payable ... FAILED
+test ex13::ex13_031::ex13_031_on_play_trash_hand_sukamon_changes_target_to_white_3000_sukamon ... FAILED
+test ex13::ex13_031::ex13_031_renamed_opponent_digimon_deletion_fires_the_inherited ... FAILED
+test ex13::ex13_031::ex13_031_renamed_target_matches_sukamon_name_filters ... FAILED
+test ex13::ex13_031::ex13_031_target_is_chosen_among_opponent_digimon ... FAILED
+test ex13::ex13_031::ex13_031_unrenamed_opponent_digimon_deletion_does_not_fire ... ok
+test ex13::ex13_031::ex13_031_when_digivolving_fires_the_same_effect ... FAILED
+test ex13::ex13_035::ex13_035_aura_active_with_three_sukamon_or_etemon ... ok
+test ex13::ex13_035::ex13_035_aura_counts_digimon_on_both_fields ... ok
+test ex13::ex13_035::ex13_035_aura_does_not_touch_own_digimon ... ok
+test ex13::ex13_035::ex13_035_aura_inactive_with_two ... ok
+test ex13::ex13_035::ex13_035_cannot_digivolve_from_red_lv5 ... ok
+test ex13::ex13_035::ex13_035_declining_the_return_keeps_the_six_maximum ... ok
+test ex13::ex13_035::ex13_035_digivolves_from_black_lv5_for_5 ... ok
+test ex13::ex13_035::ex13_035_digivolves_from_yellow_lv5_for_5 ... ok
+test ex13::ex13_035::ex13_035_etemon_named_lv5_offers_the_cost_4_route ... ok
+test ex13::ex13_035::ex13_035_on_play_excludes_cards_over_the_six_budget ... FAILED
+test ex13::ex13_035::ex13_035_on_play_plays_two_named_digimon_within_six ... FAILED
+test ex13::ex13_035::ex13_035_play_is_declinable ... ok
+test ex13::ex13_035::ex13_035_plays_from_trash ... FAILED
+test ex13::ex13_035::ex13_035_return_choice_absent_with_fewer_than_ten_such_cards ... ok
+test ex13::ex13_035::ex13_035_returning_ten_raises_the_maximum_to_twelve ... FAILED
+test ex13::ex13_035::ex13_035_second_pick_uses_remaining_budget ... FAILED
+test ex13::ex13_035::ex13_035_structure ... ok
+test ex13::ex13_035::ex13_035_when_digivolving_offers_the_free_play ... FAILED
+test ex13::ex13_045::ex13_045_carrier_keywords ... ok
+test ex13::ex13_045::ex13_045_clause_shapes ... ok
+test ex13::ex13_045::ex13_045_cost_above_12_is_not_offered ... ok
+test ex13::ex13_045::ex13_045_dna_digivolve_buffs_all_own_digimon_and_forces_an_attack ... ok
+test ex13::ex13_045::ex13_045_dna_may_battle_an_opponent_digimon ... ok
+test ex13::ex13_045::ex13_045_losing_or_no_battle_does_not_trigger ... ok
+test ex13::ex13_045::ex13_045_metadata_and_alt_paths ... ok
+test ex13::ex13_045::ex13_045_non_dna_digivolve_only_offers_the_battle ... ok
+test ex13::ex13_045::ex13_045_win_trigger_decline_keeps_the_opt ... ok
+test ex13::ex13_045::ex13_045_win_trigger_is_once_per_turn ... ok
+test ex13::ex13_045::ex13_045_winning_a_battle_plays_a_dracomon_text_digimon_from_hand_free ... ok
+test ex13::ex13_045::ex13_045_winning_a_battle_uses_an_examon_text_option_from_sources ... FAILED
+test ex13::ex13_053::ex13_053_at_most_three_returns ... FAILED
+test ex13::ex13_053::ex13_053_cannot_digivolve_from_red_lv3 ... ok
+test ex13::ex13_053::ex13_053_clause_shapes ... ok
+test ex13::ex13_053::ex13_053_counts_as_mamemon_named_for_princemamemons_aura ... ok
+test ex13::ex13_053::ex13_053_delete_with_no_opponent_digimon_is_skipped ... FAILED
+test ex13::ex13_053::ex13_053_inherited_does_not_run_the_face_up_return_body ... ok
+test ex13::ex13_053::ex13_053_digivolves_from_black_or_yellow_lv3_for_2 ... ok
+test ex13::ex13_053::ex13_053_inherited_on_deletion_de_digivolves_1 ... ok
+test ex13::ex13_053::ex13_053_no_eligible_trash_goes_straight_to_the_cost_3_delete ... ok
+test ex13::ex13_053::ex13_053_on_deletion_runs_the_same_body ... FAILED
+test ex13::ex13_053::ex13_053_only_mamemon_text_digimon_cards_are_returnable ... FAILED
+test ex13::ex13_053::ex13_053_printed_metadata_paths_and_rule_name ... ok
+test ex13::ex13_053::ex13_053_returning_none_deletes_cost_3_or_less ... ok
+test ex13::ex13_053::ex13_053_returning_one_raises_the_cap_to_4 ... FAILED
+test ex13::ex13_053::ex13_053_returning_three_raises_the_cap_to_6_and_stacks_in_pick_order ... FAILED
+
+failures:
+
+---- ex13::ex13_013::ex13_013_on_deletion_plays_guilmon_text_tamer_from_trash_free stdout ----
+
+thread 'ex13::ex13_013::ex13_013_on_deletion_plays_guilmon_text_tamer_from_trash_free' (7908) panicked at code\digimon-engine\tests\cards_behavioral\ex13\orphan_support.rs:202:28:
+GUIL-T not selectable in trash: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Trash), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("GUIL-T"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(3) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "You may play 1 Tamer card with [Guilmon] in its text from your hand or trash without paying the cost", effect_choices: None, source_card: CardHandle(15), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- ex13::ex13_014::ex13_014_wa_uses_a_huckmon_text_option_from_digivolution_cards stdout ----
+
+thread 'ex13::ex13_014::ex13_014_wa_uses_a_huckmon_text_option_from_digivolution_cards' (46768) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_014.rs:232:10:
+the stacked Option is offered
+
+---- ex13::ex13_031::ex13_031_base_dp_change_keeps_other_dp_modifiers_on_top stdout ----
+
+thread 'ex13::ex13_031::ex13_031_base_dp_change_keeps_other_dp_modifiers_on_top' (52020) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_031.rs:107:5:
+SUKA-H payable: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Hand), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("SUKA-H"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(5) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "Trash 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards to change 1 of your opponent's Digimon into a white 3000 DP [Sukamon]?", effect_choices: None, source_card: CardHandle(13), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+
+---- ex13::ex13_031::ex13_031_change_lasts_until_the_end_of_the_opponents_turn stdout ----
+
+thread 'ex13::ex13_031::ex13_031_change_lasts_until_the_end_of_the_opponents_turn' (27296) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_031.rs:107:5:
+SUKA-H payable: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Hand), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("SUKA-H"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(5) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "Trash 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards to change 1 of your opponent's Digimon into a white 3000 DP [Sukamon]?", effect_choices: None, source_card: CardHandle(13), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+
+---- ex13::ex13_031::ex13_031_cost_can_be_a_chuumon_source_under_your_digimon stdout ----
+
+thread 'ex13::ex13_031::ex13_031_cost_can_be_a_chuumon_source_under_your_digimon' (10016) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_031.rs:243:5:
+Chuumon source payable: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(BattleSource), owner: Some(0), carrier_slot: Some(1), carrier_identity: Some("1"), position: Some("0"), card_id: Some("CHUU-L4"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(5) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "Trash 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards to change 1 of your opponent's Digimon into a white 3000 DP [Sukamon]?", effect_choices: None, source_card: CardHandle(12), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+
+---- ex13::ex13_031::ex13_031_cost_is_offered_even_with_no_opponent_digimon stdout ----
+
+thread 'ex13::ex13_031::ex13_031_cost_is_offered_even_with_no_opponent_digimon' (27440) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_031.rs:107:5:
+SUKA-H payable: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Hand), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("SUKA-H"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(5) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "Trash 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards to change 1 of your opponent's Digimon into a white 3000 DP [Sukamon]?", effect_choices: None, source_card: CardHandle(13), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+
+---- ex13::ex13_031::ex13_031_on_deletion_pays_from_hand_and_changes_target stdout ----
+
+thread 'ex13::ex13_031::ex13_031_on_deletion_pays_from_hand_and_changes_target' (25228) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_031.rs:107:5:
+SUKA-H payable: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Hand), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("SUKA-H"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(5) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "Trash 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards to change 1 of your opponent's Digimon into a white 3000 DP [Sukamon]?", effect_choices: None, source_card: CardHandle(13), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+
+---- ex13::ex13_031::ex13_031_non_matching_cards_are_not_payable stdout ----
+
+thread 'ex13::ex13_031::ex13_031_non_matching_cards_are_not_payable' (39188) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_031.rs:260:5:
+assertion failed: view.valid_action_ids.contains(&chuu)
+
+---- ex13::ex13_031::ex13_031_on_play_trash_hand_sukamon_changes_target_to_white_3000_sukamon stdout ----
+
+thread 'ex13::ex13_031::ex13_031_on_play_trash_hand_sukamon_changes_target_to_white_3000_sukamon' (5892) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_031.rs:107:5:
+SUKA-H payable: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Hand), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("SUKA-H"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(5) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "Trash 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards to change 1 of your opponent's Digimon into a white 3000 DP [Sukamon]?", effect_choices: None, source_card: CardHandle(13), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+
+---- ex13::ex13_031::ex13_031_renamed_opponent_digimon_deletion_fires_the_inherited stdout ----
+
+thread 'ex13::ex13_031::ex13_031_renamed_opponent_digimon_deletion_fires_the_inherited' (6416) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_031.rs:107:5:
+SUKA-H payable: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Hand), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("SUKA-H"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 31, operation: CommitCard, zone: Some(BattleSource), owner: Some(0), carrier_slot: Some(0), carrier_identity: Some("1"), position: Some("0"), card_id: Some("EX13-031"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(5) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 31, 62], is_optional: true, prompt: "Trash 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards to change 1 of your opponent's Digimon into a white 3000 DP [Sukamon]?", effect_choices: None, source_card: CardHandle(14), source_permanent: Some(PermanentHandle { player: 0, index: 1 }), source_kind: Digimon, zone_owner: None }
+
+---- ex13::ex13_031::ex13_031_renamed_target_matches_sukamon_name_filters stdout ----
+
+thread 'ex13::ex13_031::ex13_031_renamed_target_matches_sukamon_name_filters' (24544) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_031.rs:107:5:
+SUKA-H payable: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Hand), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("SUKA-H"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(5) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "Trash 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards to change 1 of your opponent's Digimon into a white 3000 DP [Sukamon]?", effect_choices: None, source_card: CardHandle(13), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+
+---- ex13::ex13_031::ex13_031_target_is_chosen_among_opponent_digimon stdout ----
+
+thread 'ex13::ex13_031::ex13_031_target_is_chosen_among_opponent_digimon' (51184) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_031.rs:107:5:
+SUKA-H payable: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Hand), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("SUKA-H"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(5) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "Trash 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards to change 1 of your opponent's Digimon into a white 3000 DP [Sukamon]?", effect_choices: None, source_card: CardHandle(13), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+
+---- ex13::ex13_031::ex13_031_when_digivolving_fires_the_same_effect stdout ----
+
+thread 'ex13::ex13_031::ex13_031_when_digivolving_fires_the_same_effect' (49504) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_031.rs:107:5:
+CHUU-H payable: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Hand), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("CHUU-H"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(5) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "Trash 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards to change 1 of your opponent's Digimon into a white 3000 DP [Sukamon]?", effect_choices: None, source_card: CardHandle(13), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+
+---- ex13::ex13_035::ex13_035_on_play_excludes_cards_over_the_six_budget stdout ----
+
+thread 'ex13::ex13_035::ex13_035_on_play_excludes_cards_over_the_six_budget' (35416) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_035.rs:177:5:
+assertion failed: view.valid_action_ids.contains(&hand_action(&r, "CHUU"))
+
+---- ex13::ex13_035::ex13_035_on_play_plays_two_named_digimon_within_six stdout ----
+
+thread 'ex13::ex13_035::ex13_035_on_play_plays_two_named_digimon_within_six' (16200) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_035.rs:164:50:
+called `Result::unwrap()` on an `Err` value: InvalidAction
+
+---- ex13::ex13_035::ex13_035_plays_from_trash stdout ----
+
+thread 'ex13::ex13_035::ex13_035_plays_from_trash' (29180) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_035.rs:202:5:
+assertion failed: view.valid_action_ids.contains(&a)
+
+---- ex13::ex13_035::ex13_035_returning_ten_raises_the_maximum_to_twelve stdout ----
+
+thread 'ex13::ex13_035::ex13_035_returning_ten_raises_the_maximum_to_twelve' (45524) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_035.rs:246:5:
+assertion failed: v.valid_action_ids.contains(&hand_action(&r, "ETE"))
+
+---- ex13::ex13_035::ex13_035_second_pick_uses_remaining_budget stdout ----
+
+thread 'ex13::ex13_035::ex13_035_second_pick_uses_remaining_budget' (17848) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_035.rs:186:51:
+called `Result::unwrap()` on an `Err` value: InvalidAction
+
+---- ex13::ex13_035::ex13_035_when_digivolving_offers_the_free_play stdout ----
+
+thread 'ex13::ex13_035::ex13_035_when_digivolving_offers_the_free_play' (40636) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_035.rs:278:50:
+called `Result::unwrap()` on an `Err` value: InvalidAction
+
+---- ex13::ex13_045::ex13_045_winning_a_battle_uses_an_examon_text_option_from_sources stdout ----
+
+thread 'ex13::ex13_045::ex13_045_winning_a_battle_uses_an_examon_text_option_from_sources' (52208) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_045.rs:308:10:
+stacked Option offered
+
+---- ex13::ex13_053::ex13_053_at_most_three_returns stdout ----
+
+thread 'ex13::ex13_053::ex13_053_at_most_three_returns' (46100) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_053.rs:336:59:
+called `Result::unwrap()` on an `Err` value: InvalidAction
+
+---- ex13::ex13_053::ex13_053_delete_with_no_opponent_digimon_is_skipped stdout ----
+
+thread 'ex13::ex13_053::ex13_053_delete_with_no_opponent_digimon_is_skipped' (26640) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_053.rs:349:61:
+called `Result::unwrap()` on an `Err` value: InvalidAction
+
+---- ex13::ex13_053::ex13_053_on_deletion_runs_the_same_body stdout ----
+
+thread 'ex13::ex13_053::ex13_053_on_deletion_runs_the_same_body' (24824) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_053.rs:369:61:
+called `Result::unwrap()` on an `Err` value: InvalidAction
+
+---- ex13::ex13_053::ex13_053_only_mamemon_text_digimon_cards_are_returnable stdout ----
+
+thread 'ex13::ex13_053::ex13_053_only_mamemon_text_digimon_cards_are_returnable' (37564) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_053.rs:275:5:
+assertion `left == right` failed: name / effect text / inherited text all count; the Option and the plain card don't
+  left: []
+ right: ["MAME-1", "MAME-3", "MAME-4"]
+
+---- ex13::ex13_053::ex13_053_returning_one_raises_the_cap_to_4 stdout ----
+
+thread 'ex13::ex13_053::ex13_053_returning_one_raises_the_cap_to_4' (49596) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_053.rs:298:61:
+called `Result::unwrap()` on an `Err` value: InvalidAction
+
+---- ex13::ex13_053::ex13_053_returning_three_raises_the_cap_to_6_and_stacks_in_pick_order stdout ----
+
+thread 'ex13::ex13_053::ex13_053_returning_three_raises_the_cap_to_6_and_stacks_in_pick_order' (37948) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_053.rs:308:61:
+called `Result::unwrap()` on an `Err` value: InvalidAction
+
+
+failures:
+    ex13::ex13_013::ex13_013_on_deletion_plays_guilmon_text_tamer_from_trash_free
+    ex13::ex13_014::ex13_014_wa_uses_a_huckmon_text_option_from_digivolution_cards
+    ex13::ex13_031::ex13_031_base_dp_change_keeps_other_dp_modifiers_on_top
+    ex13::ex13_031::ex13_031_change_lasts_until_the_end_of_the_opponents_turn
+    ex13::ex13_031::ex13_031_cost_can_be_a_chuumon_source_under_your_digimon
+    ex13::ex13_031::ex13_031_cost_is_offered_even_with_no_opponent_digimon
+    ex13::ex13_031::ex13_031_non_matching_cards_are_not_payable
+    ex13::ex13_031::ex13_031_on_deletion_pays_from_hand_and_changes_target
+    ex13::ex13_031::ex13_031_on_play_trash_hand_sukamon_changes_target_to_white_3000_sukamon
+    ex13::ex13_031::ex13_031_renamed_opponent_digimon_deletion_fires_the_inherited
+    ex13::ex13_031::ex13_031_renamed_target_matches_sukamon_name_filters
+    ex13::ex13_031::ex13_031_target_is_chosen_among_opponent_digimon
+    ex13::ex13_031::ex13_031_when_digivolving_fires_the_same_effect
+    ex13::ex13_035::ex13_035_on_play_excludes_cards_over_the_six_budget
+    ex13::ex13_035::ex13_035_on_play_plays_two_named_digimon_within_six
+    ex13::ex13_035::ex13_035_plays_from_trash
+    ex13::ex13_035::ex13_035_returning_ten_raises_the_maximum_to_twelve
+    ex13::ex13_035::ex13_035_second_pick_uses_remaining_budget
+    ex13::ex13_035::ex13_035_when_digivolving_offers_the_free_play
+    ex13::ex13_045::ex13_045_winning_a_battle_uses_an_examon_text_option_from_sources
+    ex13::ex13_053::ex13_053_at_most_three_returns
+    ex13::ex13_053::ex13_053_delete_with_no_opponent_digimon_is_skipped
+    ex13::ex13_053::ex13_053_on_deletion_runs_the_same_body
+    ex13::ex13_053::ex13_053_only_mamemon_text_digimon_cards_are_returnable
+    ex13::ex13_053::ex13_053_returning_one_raises_the_cap_to_4
+    ex13::ex13_053::ex13_053_returning_three_raises_the_cap_to_6_and_stacks_in_pick_order
+
+test result: FAILED. 69 passed; 26 failed; 0 ignored; 0 measured; 12660 filtered out; finished in 64.82s
+

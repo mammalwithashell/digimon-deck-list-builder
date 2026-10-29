@@ -37,7 +37,16 @@ use std::collections::BTreeSet;
 // 0.24.0 adds `play_from_hand_free.suspended` and
 // `grant_triggered_effect.trigger_if`, and the `can_gain_memory` predicate
 // leaf. Rebuild packs; bincode layouts differ.
-pub const PACK_FORMAT_VERSION: &str = "0.24.0";
+// 0.25.0 adds an explicit plural subject filter to atomic security-paid
+// replacement prevention. Rebuild packs; bincode layouts differ.
+// 0.26.0 adds correlated, payment-aware hand-partner DNA candidate predicates.
+// 0.27.0 adds distinctness constraints to mixed-zone card picks. Rebuild packs.
+// 0.28.0 adds target-hand evolution reducers and cost-base predicates. Rebuild packs.
+// 0.29.0 adds opponent-scoped modifiers and opt-in security decline tails. Rebuild packs.
+// 0.30.0 adds top-security placement success bindings and owner destinations. Rebuild packs.
+// 0.31.0 extends selected-source security placements with receipts and owner destinations.
+// 0.32.0 adds controller-relative security-add eligibility to predicates.
+pub const PACK_FORMAT_VERSION: &str = "0.32.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {
@@ -452,6 +461,9 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
             collect_formula_raw_rust_fns(formula, names);
         }
     }
+    if let Some(inner) = &predicate.cost_target_permanent {
+        collect_predicate_raw_rust_fns(inner, names);
+    }
     if let Some(has_inherited) = &predicate.has_inherited {
         collect_predicate_raw_rust_fns(has_inherited, names);
     }
@@ -705,6 +717,7 @@ mod tests {
                     active_when: None,
                     reduction_timing: None,
                     when_playing_this: true,
+                    when_digivolving_this: false,
                     when_any_ally_played: None,
                     when_any_ally_digivolves_into: None,
                     condition: None,

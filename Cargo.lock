@@ -995,6 +995,8 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "digimon-engine",
+ "mimalloc",
+ "ort",
  "serde",
  "serde_json",
 ]

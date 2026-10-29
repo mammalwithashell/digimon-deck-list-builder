@@ -293,7 +293,6 @@ fn shuffle_security_turns_all_cards_face_down_only_for_shuffled_player() {
 
 #[test]
 fn bt26_082_q7121_tk_shuffle_prevents_security_revival() {
-    use digimon_engine::action::space::SEL_MY_SECURITY_START;
 
     let mut r = builder()
         .dsl_card("BT1-087")
@@ -313,7 +312,7 @@ fn bt26_082_q7121_tk_shuffle_prevents_security_revival() {
     let deck_before = r.game.players[0].deck.len();
     fire(&mut r, EffectTiming::OnPlay, tk);
     // Select a non-yellow card using the real DSL/VM security selection.
-    r.execute_action(0, SEL_MY_SECURITY_START + 1)
+    r.execute_action(0, physical_menu::security_action(&r.game, 0, 1))
         .expect("pick non-yellow JUNK");
     assert!(r.game.pending_selection.is_none());
     assert!(r.game.players[0]
@@ -333,3 +332,6 @@ fn bt26_082_q7121_tk_shuffle_prevents_security_revival() {
     assert!(!field_ids(&r, 0).contains(&CARD_ID.to_string()));
     assert!(r.game.players[0].face_up_security.is_empty());
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

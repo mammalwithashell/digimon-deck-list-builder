@@ -91,6 +91,23 @@ fn card_ids(cards: &[CardSource], data: &[digimon_engine::card_data::CardData]) 
     cards.iter().map(|c| c.card_id(data).to_string()).collect()
 }
 
+
+// Resolve the currently presented physical source, never a legacy positional action.
+fn physical_source_action(r: &DebugRunner, host: digimon_engine::permanent::PermanentHandle, index: usize) -> u16 {
+    let selection = r.game.pending_selection.as_ref().expect("source prompt");
+    let position = index.to_string();
+    selection.card_choice.as_ref().expect("physical source owner")
+        .view(&r.game, selection.selecting_player).rows.into_iter()
+        .find(|row| row.owner == Some(host.player) && row.carrier_slot == Some(host.index)
+            && row.position.as_deref() == Some(position.as_str())
+            && matches!(row.operation, digimon_engine::owned_card_choice::CardChoiceOperation::CommitCard))
+        .map(|row| {
+            assert_eq!(digimon_engine::action::build_action_mask(&r.game, selection.selecting_player)
+                [row.action_id as usize], 1.0, "the requested physical source must be legal");
+            row.action_id
+        }).expect("the requested physical source must be presented")
+}
+
 #[test]
 fn bounce_self_and_place_self_at_security_lower_into_self_helpers() {
     let mut bounce_runner = DebugRunner::builder()
@@ -344,8 +361,19 @@ fn search_own_security_stack_runs_select_or_no_match_body() {
             .pending_selection
             .as_ref()
             .expect("security search");
-        assert_eq!(pending.valid_action_ids.len(), 1);
-        (pending.selecting_player, pending.valid_action_ids[0])
+        use digimon_engine::owned_card_choice::CardChoiceOperation;
+        let view = pending.card_choice.as_ref().expect("owned security search")
+            .view(&runner.game, pending.selecting_player);
+        assert_eq!(view.rows.iter().filter(|row| row.position.is_some()).count(), 2,
+            "the complete stack remains inspectable, including ineligible cards");
+        let selected = view.rows.iter().find(|row| row.card_id.as_deref() == Some("WANTED")
+            && matches!(row.operation, CardChoiceOperation::CommitCard)).unwrap();
+        assert_eq!(selected.position.as_deref(), Some("1"));
+        assert!(!pending.is_optional, "a search without optional:true must choose an eligible card");
+        assert_eq!(pending.valid_action_ids, [selected.action_id]);
+        assert_eq!(digimon_engine::action::build_action_mask(&runner.game, pending.selecting_player)
+            [selected.action_id as usize], 1.0);
+        (pending.selecting_player, selected.action_id)
     };
     runner
         .game
@@ -372,6 +400,13 @@ fn search_own_security_stack_runs_select_or_no_match_body() {
 "#,
         ),
     );
+    let pending = runner.game.pending_selection.as_ref().expect("no-match inspection remains a choice");
+    let view = pending.card_choice.as_ref().unwrap().view(&runner.game, pending.selecting_player);
+    assert!(view.inspection_only);
+    assert_eq!(pending.valid_action_ids, [digimon_engine::action::space::PASS]);
+    assert_eq!(runner.memory(), 0, "the no-match continuation waits until inspection completes");
+    let actor = pending.selecting_player;
+    runner.game.resolve_selection(actor, digimon_engine::action::space::PASS).unwrap();
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(runner.memory(), 1);
 }
@@ -728,7 +763,7 @@ fn move_trash_card_to_deck_top_feeds_returned_card_matching() {
 #[test]
 fn return_selected_sources_to_hand_routes_picked_source_to_owner_hand() {
     use digimon_dsl::compiled::CompiledPredicate;
-    use digimon_engine::action::space::encode_source_select;
+
     use digimon_engine::dsl_cards::step::RunOutcome;
     use digimon_engine::selection::SelectionKind;
 
@@ -777,8 +812,7 @@ fn return_selected_sources_to_hand_routes_picked_source_to_owner_hand() {
     );
 
     // SRC-MID is the digivolution source at source_index 1 (just under TOP).
-    let pick = encode_source_select(host.index as u16, 1).expect("Dragon Mode source action");
-    runner.execute_action(0, pick).expect("pick Dragon Mode");
+    runner.execute_action(0, physical_source_action(&runner, host, 1)).expect("pick Dragon Mode");
 
     assert!(runner.game.pending_selection.is_none());
 
@@ -824,7 +858,7 @@ fn return_selected_sources_to_hand_routes_picked_source_to_owner_hand() {
 /// not P0's — even though P0 is the controller running the effect.
 #[test]
 fn return_selected_sources_to_hand_routes_to_source_owner_not_controller() {
-    use digimon_engine::action::space::encode_source_select;
+
     use digimon_engine::dsl_cards::step::RunOutcome;
 
     let mut runner = DebugRunner::builder()
@@ -862,8 +896,7 @@ fn return_selected_sources_to_hand_routes_to_source_owner_not_controller() {
     assert_eq!(outcome, RunOutcome::Parked);
 
     // The P1-owned source is at source_index 0 (below TOP).
-    let pick = encode_source_select(host.index as u16, 0).expect("foreign source action");
-    runner.execute_action(0, pick).expect("pick foreign source");
+    runner.execute_action(0, physical_source_action(&runner, host, 0)).expect("pick foreign source");
 
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(
@@ -900,7 +933,7 @@ fn return_selected_sources_to_hand_routes_to_source_owner_not_controller() {
 #[test]
 fn return_selected_sources_to_deck_routes_picked_source_to_owner_deck_bottom() {
     use digimon_dsl::compiled::{CompiledPredicate, CompiledStackPosition};
-    use digimon_engine::action::space::encode_source_select;
+
     use digimon_engine::dsl_cards::step::RunOutcome;
     use digimon_engine::selection::SelectionKind;
 
@@ -951,8 +984,7 @@ fn return_selected_sources_to_deck_routes_picked_source_to_owner_deck_bottom() {
     );
 
     // SRC-MID is the digivolution source at source_index 1 (just under TOP).
-    let pick = encode_source_select(host.index as u16, 1).expect("Dragon Mode source action");
-    runner.execute_action(0, pick).expect("pick Dragon Mode");
+    runner.execute_action(0, physical_source_action(&runner, host, 1)).expect("pick Dragon Mode");
 
     assert!(runner.game.pending_selection.is_none());
 
@@ -1000,7 +1032,7 @@ fn return_selected_sources_to_deck_routes_picked_source_to_owner_deck_bottom() {
 #[test]
 fn return_selected_sources_to_deck_routes_to_source_owner_deck_top() {
     use digimon_dsl::compiled::CompiledStackPosition;
-    use digimon_engine::action::space::encode_source_select;
+
     use digimon_engine::dsl_cards::step::RunOutcome;
 
     let mut runner = DebugRunner::builder()
@@ -1039,8 +1071,7 @@ fn return_selected_sources_to_deck_routes_to_source_owner_deck_top() {
     assert_eq!(outcome, RunOutcome::Parked);
 
     // The P1-owned source is at source_index 0 (below TOP).
-    let pick = encode_source_select(host.index as u16, 0).expect("foreign source action");
-    runner.execute_action(0, pick).expect("pick foreign source");
+    runner.execute_action(0, physical_source_action(&runner, host, 0)).expect("pick foreign source");
 
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(

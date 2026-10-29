@@ -1,0 +1,42 @@
+
+running 36 tests
+test current_native_replay_can_apply_owned_card_decline ... ok
+test dcgo_bot_backward_seek_rebuilds_to_fresh_state ... ok
+test dcgo_bot_recording_places_recorded_egg_decks ... ok
+test dcgo_bot_recording_reconstructs_deterministically ... ok
+test dcgo_bot_recording_with_initial_state_snapshot_reconstructs_exact_zones ... ok
+test dcgo_bot_recording_without_egg_decks_still_constructs ... ok
+test dcgo_bot_redraw_replays_under_check_then_apply_without_divergence ... ok
+test dcgo_bot_replays_mulligan_under_trust ... ok
+test dcgo_opaque_recording_reconstructs_via_opaque_path ... ok
+test dcgo_opaque_recording_with_initial_state_overwrites_only_my_side ... ok
+test dcgo_recording_without_initial_state_row_keeps_mulligan_in_stream ... ok
+test dcgo_row_memory_agreeing_produces_no_divergence ... ok
+test dcgo_row_memory_disagreeing_produces_memory_divergence ... ok
+test dcgo_row_without_memory_field_produces_no_divergence ... ok
+test historical_digests_ignore_new_card_choice_allocator_and_shuffle_counters ... ok
+test legacy_native_plain_actions_remain_replayable_and_classic_runner_refuses_owned_aliases ... ok
+test legacy_native_replay_stops_before_reinterpreting_owned_card_alias ... ok
+test legacy_verification_metadata_defaults_to_one_and_refuses_owned_aliases ... ok
+test native_recording_declares_action_semantics_and_rejects_unknown_versions ... ok
+test opaque_security_placeholder_renders_hidden_then_concrete ... ok
+test replay_session_check_then_apply_passes_legal_recording ... ok
+test replay_session_check_then_apply_pauses_on_masked_out_action ... ok
+test replay_session_round_trip_matches_replay_runner ... ok
+test replay_session_seek_backward_equals_fresh ... ok
+test replay_session_seek_forward_equivalent_to_sequential_steps ... ok
+test replay_session_step_back_decrements_and_matches_fresh ... ok
+test replay_session_trust_ignores_illegality ... ok
+test replay_session_verification_recording_round_trips_with_digest_checks ... ok
+test round_trip_construct_replay_no_divergence ... ok
+test run_to_completion_advances_through_all_actions ... ok
+test seek_backward_rebuilds_from_initial ... ok
+test seek_forward_equivalent_to_sequential_steps ... ok
+test unknown_card_in_recording_errors ... ok
+test verification_recording_reports_first_digest_divergence ... ok
+test verification_recording_reports_first_mask_legality_divergence ... ok
+test verify_mode_detects_injected_memory_divergence ... ok
+
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.08s
+
+SUITE_EXIT 0

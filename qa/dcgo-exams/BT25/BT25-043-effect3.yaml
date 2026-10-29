@@ -3,19 +3,13 @@
 #  would leave the battle area, by trashing your top security card, they
 #  don't leave."
 #
-# PROVISIONAL: the assert block is OUR engine's result, not backfilled from
-# DCGO. It stays unconfirmed until the oracle pass.
+# CONFIRMED 2026-10-22: the saved DCGO trace matches all paired rows.
+# Assertions below were backfilled from those confirmed comparisons.
+# Recording provenance and hashes are in this card's exam-verdict record.
 #
-# ENGINE FINDING -- EXPECTED ORACLE DIVERGENCE. Our engine does NOT offer the
-# replacement: Habakirimon is deleted outright and no security is trashed
-# (measured; the assert block records OUR behaviour, which contradicts the
-# printed text). Likely cause: the clause's `active_when` gates on
-# `any_permanent { of: you, zone: [security] }`, but security cards are not
-# Permanents (see the ST20-15.yaml note on that predicate), so the gate never
-# holds; `security_count_gte: 1` is the faithful gate. ST23-05.yaml carries the
-# byte-identical clause. The per-card test
-# bt25_043_glowing_dawn_leave_prevention_installs has a catch-all `_ =>` arm
-# that accepts "no prompt", which is why this never went red.
+# The replacement's payable gate is `security_count_gte: 1`: security cards
+# are not battle-area permanents. The acceptance row is shared by both engines,
+# and the final assertion requires the paid security card and surviving stack.
 #
 # THE WITNESS (intended). On P1's turn ([All Turns]) P1 uses Gaia Force ST1-16 ("Delete
 # 1 of your opponent's Digimon") on Habakirimon itself -- a [Glowing Dawn]
@@ -32,9 +26,10 @@
 #              requirement needs) -> the replacement fires          -> P0 5
 #
 # PROMPT SHAPE.
-#   * Cost pick + [WD] menu as BT25-043-effect0.yaml (dcgo_only value 3 is a
-#     GUESS there).
+#   * Cost pick + [WD] menu as BT25-043-effect0.yaml; DCGO value 3 declines
+#     the security trash.
 #   * Gaia Force: SelectPermanentEffect (Mode.Destroy), one candidate.
+#     Card-ID picks name unique candidates and match the live player wire format.
 #   * The replacement (BT25-043.yaml; ST23-05.yaml crosscheck of the
 #     byte-identical clause: WhenRemoveField ActivateClass, maxPerTurn 1,
 #     OPTIONAL, gated on own SecurityCards.Count > 0): DCGO OptionalSkill
@@ -104,15 +99,12 @@ steps:
     do: { play: { card: ST1-16, from: hand } }
     expect: { prompt: main_phase }
   - actor: 1
-    do: { select: { targets: [opp.field.0] } }
+    do: { select: { cards: [BT25-043] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
   # THE CLAUSE: Habakirimon (a [Glowing Dawn] Digimon) would leave the battle
   # area -> P0 may trash its top security card so it doesn't leave. Accept.
-  # DCGO-ONLY -- ENGINE FINDING: our engine parks NOTHING here (measured: the
-  # row "answered no live prompt" when authored as a shared row) and deletes
-  # Habakirimon. DCGO is expected to ask this OptionalSkill and keep it.
   - actor: 0
-    do: { select: { yes: true, dcgo_only: true } }
+    do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
   # T5 (P0): one step past the clause; P1's -5 handed the turn over (P0 5).
   - actor: 0
@@ -130,15 +122,447 @@ assert:
           dp: 12000
           suspended: false
           sources: [BT25-041]
-  # After -- OUR ENGINE (expected to DIVERGE from DCGO and from the printed
-  # text): Habakirimon was deleted, no security card was paid. The printed
-  # clause would leave Habakirimon in play, P0 security 5 and the ST23-06
-  # (recovered T3, top card) in P0's trash.
+  # After paying ST23-06 (recovered T3) from security, the stack survives.
   - at: 15
     that:
       turn: 5
       p0.memory: 5
-      p0.security: 6
-      p0.trash: [BT25-041, BT25-043]
-      p0.field: []
+      p0.security: 5
+      p0.trash: [ST23-06]
+      p0.field:
+        - card_id: BT25-043
+          dp: 12000
+          suspended: false
+          sources: [BT25-041]
       p1.trash: [ST1-16]
+  - at: 0
+    that:
+      _backfilled: true
+      memory: 0
+      p0.field: []
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-041
+      - BT25-043
+      - BT25-090
+      p0.security: 5
+      p0.trash: []
+      p1.field: []
+      p1.hand:
+      - BT1-009
+      - BT3-007
+      - ST1-03
+      - ST1-04
+      - ST1-16
+      p1.security: 5
+      p1.trash: []
+      phase: Breeding
+      turn: 1
+  - at: 1
+    that:
+      _backfilled: true
+      memory: 0
+      p0.field: []
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-041
+      - BT25-043
+      - BT25-090
+      p0.security: 5
+      p0.trash: []
+      p1.field: []
+      p1.hand:
+      - BT1-009
+      - BT3-007
+      - ST1-03
+      - ST1-04
+      - ST1-16
+      p1.security: 5
+      p1.trash: []
+      phase: Main
+      turn: 1
+  - at: 2
+    that:
+      _backfilled: true
+      memory: -7
+      p0.field:
+      - card_id: BT25-041
+        dp: 7000
+        suspended: false
+        sources: []
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-043
+      - BT25-090
+      p0.security: 5
+      p0.trash: []
+      p1.field: []
+      p1.hand:
+      - BT1-009
+      - BT3-007
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      - ST1-16
+      p1.security: 5
+      p1.trash: []
+      phase: Breeding
+      turn: 2
+  - at: 3
+    that:
+      _backfilled: true
+      memory: -7
+      p0.field:
+      - card_id: BT25-041
+        dp: 7000
+        suspended: false
+        sources: []
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-043
+      - BT25-090
+      p0.security: 5
+      p0.trash: []
+      p1.field: []
+      p1.hand:
+      - BT1-009
+      - BT3-007
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      - ST1-16
+      p1.security: 5
+      p1.trash: []
+      phase: Main
+      turn: 2
+  - at: 4
+    that:
+      _backfilled: true
+      memory: -5
+      p0.field:
+      - card_id: BT25-041
+        dp: 7000
+        suspended: false
+        sources: []
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-043
+      - BT25-090
+      p0.security: 5
+      p0.trash: []
+      p1.field:
+      - card_id: BT3-007
+        dp: 4000
+        suspended: false
+        sources: []
+      p1.hand:
+      - BT1-009
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      - ST1-16
+      p1.security: 5
+      p1.trash: []
+      phase: Main
+      turn: 2
+  - at: 5
+    that:
+      _backfilled: true
+      memory: 3
+      p0.field:
+      - card_id: BT25-041
+        dp: 7000
+        suspended: false
+        sources: []
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-043
+      - BT25-049
+      - BT25-090
+      p0.security: 5
+      p0.trash: []
+      p1.field:
+      - card_id: BT3-007
+        dp: 4000
+        suspended: false
+        sources: []
+      p1.hand:
+      - BT1-009
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      - ST1-16
+      p1.security: 5
+      p1.trash: []
+      phase: Breeding
+      turn: 3
+  - at: 6
+    that:
+      _backfilled: true
+      memory: 3
+      p0.field:
+      - card_id: BT25-041
+        dp: 7000
+        suspended: false
+        sources: []
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-043
+      - BT25-049
+      - BT25-090
+      p0.security: 5
+      p0.trash: []
+      p1.field:
+      - card_id: BT3-007
+        dp: 4000
+        suspended: false
+        sources: []
+      p1.hand:
+      - BT1-009
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      - ST1-16
+      p1.security: 5
+      p1.trash: []
+      phase: Main
+      turn: 3
+  - at: 7
+    that:
+      _backfilled: true
+      memory: 3
+      p0.field:
+      - card_id: BT25-041
+        dp: 7000
+        suspended: false
+        sources: []
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-043
+      - BT25-049
+      - BT25-090
+      p0.security: 5
+      p0.trash: []
+      p1.field:
+      - card_id: BT3-007
+        dp: 4000
+        suspended: false
+        sources: []
+      p1.hand:
+      - BT1-009
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      - ST1-16
+      p1.security: 5
+      p1.trash: []
+      turn: 3
+  - at: 10
+    that:
+      _backfilled: true
+      memory: 0
+      p0.field:
+      - card_id: BT25-043
+        dp: 12000
+        suspended: false
+        sources:
+        - BT25-041
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-049
+      - BT25-090
+      - ST23-12
+      p0.security: 6
+      p0.trash: []
+      p1.field:
+      - card_id: BT3-007
+        dp: 4000
+        suspended: false
+        sources: []
+      p1.hand:
+      - BT1-009
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      - ST1-16
+      p1.security: 5
+      p1.trash: []
+      phase: Main
+      turn: 3
+  - at: 11
+    that:
+      _backfilled: true
+      memory: -3
+      p0.field:
+      - card_id: BT25-043
+        dp: 12000
+        suspended: false
+        sources:
+        - BT25-041
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-049
+      - BT25-090
+      - ST23-12
+      p0.security: 6
+      p0.trash: []
+      p1.field:
+      - card_id: BT3-007
+        dp: 4000
+        suspended: false
+        sources: []
+      p1.hand:
+      - BT1-009
+      - ST1-03
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      - ST1-16
+      p1.security: 5
+      p1.trash: []
+      phase: Breeding
+      turn: 4
+  - at: 12
+    that:
+      _backfilled: true
+      memory: -3
+      p0.field:
+      - card_id: BT25-043
+        dp: 12000
+        suspended: false
+        sources:
+        - BT25-041
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-049
+      - BT25-090
+      - ST23-12
+      p0.security: 6
+      p0.trash: []
+      p1.field:
+      - card_id: BT3-007
+        dp: 4000
+        suspended: false
+        sources: []
+      p1.hand:
+      - BT1-009
+      - ST1-03
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      - ST1-16
+      p1.security: 5
+      p1.trash: []
+      phase: Main
+      turn: 4
+  - at: 13
+    that:
+      _backfilled: true
+      memory: 5
+      p0.field:
+      - card_id: BT25-043
+        dp: 12000
+        suspended: false
+        sources:
+        - BT25-041
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-049
+      - BT25-090
+      - ST23-12
+      p0.security: 6
+      p0.trash: []
+      p1.field:
+      - card_id: BT3-007
+        dp: 4000
+        suspended: false
+        sources: []
+      p1.hand:
+      - BT1-009
+      - ST1-03
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      p1.security: 5
+      p1.trash: []
+      turn: 4
+  - at: 14
+    that:
+      _backfilled: true
+      memory: 5
+      p0.field:
+      - card_id: BT25-043
+        dp: 12000
+        suspended: false
+        sources:
+        - BT25-041
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-049
+      - BT25-090
+      - ST23-12
+      p0.security: 6
+      p0.trash: []
+      p1.field:
+      - card_id: BT3-007
+        dp: 4000
+        suspended: false
+        sources: []
+      p1.hand:
+      - BT1-009
+      - ST1-03
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      p1.security: 5
+      p1.trash: []
+      turn: 4
+  - at: 15
+    that:
+      _backfilled: true
+      memory: 5
+      p0.field:
+      - card_id: BT25-043
+        dp: 12000
+        suspended: false
+        sources:
+        - BT25-041
+      p0.hand:
+      - BT16-082
+      - BT16-082
+      - BT25-049
+      - BT25-090
+      - ST23-12
+      - ST23-13
+      p0.security: 5
+      p0.trash:
+      - ST23-06
+      p1.field:
+      - card_id: BT3-007
+        dp: 4000
+        suspended: false
+        sources: []
+      p1.hand:
+      - BT1-009
+      - ST1-03
+      - ST1-03
+      - ST1-04
+      - ST1-04
+      p1.security: 5
+      p1.trash:
+      - ST1-16
+      phase: Breeding
+      turn: 5

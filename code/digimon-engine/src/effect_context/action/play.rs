@@ -134,6 +134,7 @@ impl<'a> EffectContext<'a> {
             cost_paid: 0,
             cost_printed,
             via_alt_path: None,
+            effect_initiated: true,
         });
         self.game.enqueue_triggered(
             crate::enums::EffectTiming::OnEnterFieldAnyone,
@@ -743,6 +744,10 @@ impl<'a> EffectContext<'a> {
         player: PlayerId,
         security_index: usize,
     ) -> Option<PermanentHandle> {
+        self.play_from_security_index_with_receipt(player, security_index, None)
+    }
+
+    pub(crate) fn play_from_security_index_with_receipt(&mut self, player: PlayerId, security_index: usize, receipt: Option<u64>) -> Option<PermanentHandle> {
         // Opaque-aware: materialize before play — a played card must
         // have a real data_index for cost/effect resolution to work.
         if security_index >= self.game.player(player).security.len() {
@@ -779,7 +784,7 @@ impl<'a> EffectContext<'a> {
                 crate::enums::CostDelta::Free,
                 PlaySource::ByEffect,
                 false,
-                PendingWouldPlayOrigin::SecurityTop { was_face_up },
+                receipt.map(|receipt| PendingWouldPlayOrigin::SecurityRecorded { was_face_up, index: security_index, receipt }).unwrap_or(PendingWouldPlayOrigin::SecurityAt { was_face_up, index: security_index }),
             )
         }) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
@@ -798,15 +803,11 @@ impl<'a> EffectContext<'a> {
                     .hand
                     .pop()
                     .expect("invariant: card was just pushed to hand");
-                // Note: we deliberately do NOT re-insert into
-                // face_up_security on rollback — the card is back in the
-                // security zone but its visibility-state was already
-                // consumed by the abortive play attempt. Matches the
-                // tradeoff `play_from_hand_with_cost` makes elsewhere on
-                // gated rollbacks.
+                // Rejection restores the original physical position and visibility.
                 let player_state = self.game.player_mut(player);
                 let restore_at = security_index.min(player_state.security.len());
                 player_state.insert_in_security(restore_at, card);
+                if was_face_up { player_state.face_up_security.insert(card_index); }
                 None
             }
         }

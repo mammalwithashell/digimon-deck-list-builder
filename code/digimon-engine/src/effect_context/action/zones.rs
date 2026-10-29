@@ -239,15 +239,31 @@ impl<'a> EffectContext<'a> {
         self.game.move_from_breeding_by_effect(player)
     }
 
+    /// Preserve the identity captured at promotion, before move observers.
+    pub(crate) fn move_from_breeding_with_identity(
+        &mut self,
+        player: PlayerId,
+    ) -> Option<(PermanentHandle, u64)> {
+        self.game.move_from_breeding_with_identity(player)
+    }
+
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
     pub fn return_to_hand(
         &mut self,
         target: PermanentHandle,
     ) -> Option<crate::card_source::CardHandle> {
+        self.return_to_hand_with_receipt(target)
+            .map(|result| result.card)
+    }
+
+    pub(crate) fn return_to_hand_with_receipt(
+        &mut self,
+        target: PermanentHandle,
+    ) -> Option<crate::game_actions::ReturnedCard> {
         if !self.can_affect_permanent(target) {
             return None;
         }
-        self.game.return_to_hand(target)
+        self.game.return_to_hand_with_receipt(target)
     }
 
     /// Return the resolving effect's own permanent (`self.source_permanent`)
@@ -274,10 +290,11 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return false;
         }
+        // The insertion sink owns OnAddToDeck: a successful return can remove
+        // a token, route an egg elsewhere, or be redirected without adding.
+        let previous = self.game.effect_source_player.replace(self.player);
         let moved = self.game.return_to_deck(target, position);
-        if moved {
-            self.game.note_effect_deck_add(self.player);
-        }
+        self.game.effect_source_player = previous;
         moved
     }
 
@@ -291,10 +308,9 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return false;
         }
+        let previous = self.game.effect_source_player.replace(self.player);
         let moved = self.game.return_stack_to_deck(target, position);
-        if moved {
-            self.game.note_effect_deck_add(self.player);
-        }
+        self.game.effect_source_player = previous;
         moved
     }
 
@@ -311,7 +327,8 @@ impl<'a> EffectContext<'a> {
         cards: &[CardHandle],
     ) -> Vec<CardHandle> {
         let mut moved = Vec::with_capacity(cards.len());
-        for &handle in cards {
+        // Insertion at index zero reverses iteration order.
+        for &handle in cards.iter().rev() {
             let Some(pos) = self
                 .game
                 .player(player)
@@ -325,6 +342,7 @@ impl<'a> EffectContext<'a> {
             self.move_card_to_deck(card, true);
             moved.push(handle);
         }
+        moved.reverse();
         moved
     }
 

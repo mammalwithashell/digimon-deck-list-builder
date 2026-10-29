@@ -1,0 +1,50 @@
+
+running 45 tests
+test a_immunity_scope::cluster_a_self_immunity_blocks_own_controller_effect ... ok
+test a_immunity_scope::q17_magnamon_x_immunity_removes_granted_eot_delete ... ok
+test a_immunity_scope::q18_quantumon_self_immunity_blocks_own_blast_digivolve ... ok
+test a_immunity_scope::q1_belphemon_opp_turn_ends_attack_through_progress ... ok
+test a_immunity_scope::q28_control_no_protection_on_play_suppressed ... ok
+test a_immunity_scope::q28_gankoomon_x_protection_beats_dragomon_on_play_lock ... ok
+test b_deferred_rules_check::dp_less_digi_egg_top_trashed_by_rules_check ... ok
+test a_immunity_scope::q2_medusamon_progress_blocks_ice_wall_memory_loss ... ok
+test b_deferred_rules_check::q13_nyabootmon_dp_minus_measured_before_shoeshoemon_on_play ... ok
+test b_deferred_rules_check::q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode ... ok
+test b_deferred_rules_check::q24_analog_rules_check_deletes_between_queued_effects ... ok
+test b_deferred_rules_check::q14_ruin_mode_mass_debuff_is_continuous_catches_later_entrant ... ok
+test b_deferred_rules_check::q6_analog_no_mid_effect_deletion_within_single_effect ... ok
+test b_deferred_rules_check::q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves ... ok
+test b_deferred_rules_check::q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger ... ok
+test b_deferred_rules_check::q8_burst_digivolve_dp_less_digimon_trash_chain_at_eot ... ignored, BLOCKED-PRIMITIVE: G-BURST-ON-TURN-END-NOT-EXECUTED — the Burst-Digivolve `on_burst_turn_end` step list (trash the top card at the end of the burst turn) is compiled but NEVER scheduled/executed (BurstDigivolve is lowered only to a blast-counter marker in dsl_cards/mod.rs). So 'Agumon trashed → Koromon trashed' can't occur. (Also: the DP-less-can't-remain rule, and a DebugRunner burst-digivolve driver, are needed.) All quiz cards are implemented.
+test b_deferred_rules_check::zero_dp_probe_healthy_digimon_survives_drain ... ok
+test b_deferred_rules_check::zero_dp_probe_reduced_digimon_deleted_after_effect_resolves ... ok
+test b_deferred_rules_check::q7_eye_of_the_gorgon_sequential_delete_then_play ... ok
+test c_declare_then_pay::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo ... ok
+test c_declare_then_pay::q26_limbo_replacement_accept_and_decline_are_both_executable_after_clone ... ok
+test c_declare_then_pay::q27_dorbickmon_pays_zero_memory_when_returned_to_hand ... ok
+test c_declare_then_pay::q30_partition_interruptive_suspends_both_with_cost_reduction ... ok
+test c_declare_then_pay::q5_assembly_declaration_legal_when_cost_can_be_made_payable ... ok
+test c_declare_then_pay::q30_partition_second_play_hook_clones_faithfully_mid_chain ... ok
+test d_activation_site::cluster_d_on_trash_observer_fires_synchronously_not_deferred ... ok
+test d_activation_site::q19_on_deletion_suppressed_when_returned_to_hand ... ok
+test d_activation_site::q20_all_on_deletion_fire_when_eyesmon_stays_in_trash ... ok
+test d_activation_site::q21_remaining_on_deletion_suppressed_when_played_from_trash ... ok
+test d_activation_site::q23_inherited_trash_memory_gated_on_remaining_in_trash ... ok
+test d_activation_site::q9_gatomon_not_in_battle_area_during_removal_no_memory ... ok
+test e_partition_digixros::q15_sequential_de_digivolve_halted_by_x_antibody_immunity ... ok
+test e_partition_digixros::q16_partition_not_triggered_when_leaving_by_own_granted_effect ... ok
+test e_partition_digixros::q25_all_turns_fires_on_digixros_departure_not_battle ... ok
+test e_partition_digixros::q29_legal_digixros_stack_orderings_with_yuu_amano ... ok
+test e_partition_digixros::q29_single_under_tamer_card_yields_third_legal_stack ... ok
+test f_token_and_memory::digi_egg_returned_to_deck_top_routes_to_digitama_deck ... ok
+test f_token_and_memory::q11_non_opt_gravity_crush_refires_memory_four ... ok
+test f_token_and_memory::q10_multi_effect_memory_arithmetic_ends_at_zero ... ok
+test f_token_and_memory::q12_token_placeable_as_digivolution_card_unsuspends ... ok
+test f_token_and_memory::q22_digi_egg_returned_to_deck_bottom_routes_to_digitama_deck ... ok
+test g_zone_keyword::q3_breeding_area_effect_inactive_allows_digivolve ... ok
+test g_zone_keyword::q4_control_atomic_inferno_plus_one_alone_checks_two ... ok
+test g_zone_keyword::q4_security_attack_net_modifiers_one_check ... ok
+test loader::all_implemented_quiz_cards_load_from_embedded_pack ... ok
+
+test result: ok. 44 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 93.07s
+

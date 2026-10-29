@@ -16,6 +16,17 @@ use crate::selection::*;
 use crate::trigger_context::*;
 
 impl Game {
+    /// Acting-controller eligibility shared by security cost offers and their
+    /// actual movement. Card ownership determines destinations separately.
+    pub fn can_add_security_by_effect(&self, controller: PlayerId) -> bool {
+        let Some(player) = self.players.get(controller as usize) else { return false; };
+        !self.modifiers.player_has(controller, ModifierType::CannotAddSecurityByEffect)
+            && !player.battle_area.iter().enumerate().any(|(index, _)| {
+                self.modifiers.has(PermanentHandle { player: controller, index: index as u8 },
+                    ModifierType::CannotAddSecurity)
+            })
+    }
+
     /// Returns `true` when `card` may digivolve onto `perm` per standard
     /// evo-cost rules: `card` has an `EvoCost` entry whose `level` matches
     /// `perm.top_card()`'s level and whose color is present on
@@ -582,6 +593,33 @@ impl Game {
         perm: crate::permanent::PermanentHandle,
         source_index: usize,
     ) -> i32 {
+        let Some(permanent) = self
+            .players
+            .get(perm.player as usize)
+            .and_then(|p| p.battle_area.get(perm.index as usize))
+        else {
+            return 0;
+        };
+        let Some(source) = permanent.card_sources.get(source_index) else {
+            return 0;
+        };
+        let is_adopted = self.succession_source_indices(perm).contains(&source_index);
+        let Some(effects) =
+            self.registry_effects(source.card_id(&self.card_data), source.handle())
+        else {
+            return 0;
+        };
+
+        self.source_dp_from_effects(perm, source_index, is_adopted, &effects)
+    }
+
+    pub(crate) fn source_dp_from_effects(
+        &self,
+        perm: PermanentHandle,
+        source_index: usize,
+        is_adopted: bool,
+        effects: &[Effect],
+    ) -> i32 {
         use crate::effect_context::EffectReadContext;
         let Some(permanent) = self
             .players
@@ -590,17 +628,10 @@ impl Game {
         else {
             return 0;
         };
-        let stack_size = permanent.card_sources.len();
         let Some(source) = permanent.card_sources.get(source_index) else {
             return 0;
         };
-        let is_adopted = self.succession_source_indices(perm).contains(&source_index);
-        let card_id = source.card_id(&self.card_data).to_string();
-        let Some(impl_) = self.effect_registry.get(&card_id) else {
-            return 0;
-        };
-        let effects = impl_.effects(source.handle());
-
+        let stack_size = permanent.card_sources.len();
         let mut total = 0i32;
         for effect in effects.iter() {
             if effect.dp_modifier == 0 && effect.dp_modifier_fn.is_none() {

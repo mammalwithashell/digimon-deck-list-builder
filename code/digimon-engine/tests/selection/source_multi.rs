@@ -59,23 +59,16 @@ fn exact_two_sources_can_be_selected_across_own_battle_area() {
         }
     );
     assert!(!sel.valid_action_ids.contains(&PASS));
-    let first_source_a = encode_source_select(first.index as u16, 0).unwrap();
-    let first_source_b = encode_source_select(first.index as u16, 1).unwrap();
-    let first_top_action = encode_source_select(first.index as u16, 2).unwrap();
-    let second_source_c = encode_source_select(second.index as u16, 0).unwrap();
-    let second_top_action = encode_source_select(second.index as u16, 1).unwrap();
-
+    let first_source_a=crate::owned_choices::source_action(&r.game,first,0);
+    let first_source_b=crate::owned_choices::source_action(&r.game,first,1);
+    let second_source_c=crate::owned_choices::source_action(&r.game,second,0);
     assert!(sel.valid_action_ids.contains(&first_source_a));
     assert!(sel.valid_action_ids.contains(&first_source_b));
     assert!(sel.valid_action_ids.contains(&second_source_c));
-    assert!(
-        !sel.valid_action_ids.contains(&first_top_action),
-        "top card of first stack must not be selectable as a source"
-    );
-    assert!(
-        !sel.valid_action_ids.contains(&second_top_action),
-        "top card of second stack must not be selectable as a source"
-    );
+    let rows=crate::owned_choices::commits(&r.game);
+    assert_eq!(rows.len(),3);
+    assert!(!rows.iter().any(|row| row.carrier_slot==Some(first.index)&&row.position.as_deref()==Some("2")));
+    assert!(!rows.iter().any(|row| row.carrier_slot==Some(second.index)&&row.position.as_deref()==Some("1")));
 
     r.game
         .resolve_selection(p0, first_source_b)
@@ -94,19 +87,12 @@ fn exact_two_sources_can_be_selected_across_own_battle_area() {
         }
     );
     assert!(!sel.valid_action_ids.contains(&PASS));
-    assert!(
-        !sel.valid_action_ids.contains(&first_source_b),
-        "already-picked source must not remain legal"
-    );
-    assert!(
-        !sel.valid_action_ids.contains(&first_top_action),
-        "top card of first stack must remain illegal"
-    );
-    assert!(
-        !sel.valid_action_ids.contains(&second_top_action),
-        "top card of second stack must remain illegal"
-    );
-
+    let rows=crate::owned_choices::commits(&r.game);
+    assert_eq!(rows.len(),2);
+    assert!(!rows.iter().any(|row|row.carrier_slot==Some(first.index)&&row.position.as_deref()==Some("1")),"already-picked source excluded");
+    assert!(!rows.iter().any(|row|row.carrier_slot==Some(first.index)&&row.position.as_deref()==Some("2")),"first top excluded");
+    assert!(!rows.iter().any(|row|row.carrier_slot==Some(second.index)&&row.position.as_deref()==Some("1")),"second top excluded");
+    let second_source_c=crate::owned_choices::source_action(&r.game,second,0);
     r.game
         .resolve_selection(p0, second_source_c)
         .expect("pick source C");
@@ -163,7 +149,7 @@ fn up_to_sources_enables_pass_only_after_minimum_is_met() {
     r.game
         .resolve_selection(
             p0,
-            encode_source_select(source_stack.index as u16, 0).unwrap(),
+            crate::owned_choices::source_action(&r.game,source_stack,0),
         )
         .expect("pick one");
     assert!(r
@@ -218,7 +204,7 @@ fn source_multi_picker_re_installs_on_stale_pick_min_one_no_op() {
     }
 
     // Picker offers exactly one candidate: slot 0, source 0 (SRC-A).
-    let stale_action = encode_source_select(stack.index as u16, 0).unwrap();
+    let stale_action = crate::owned_choices::source_action(&r.game,stack,0);
     let sel = r
         .game
         .pending_selection
@@ -251,7 +237,8 @@ fn source_multi_picker_re_installs_on_stale_pick_min_one_no_op() {
     // Agent submits the now-stale action_id.
     r.game
         .resolve_selection(p0, stale_action)
-        .expect("submitting a stale-but-once-valid action must not error");
+        .expect_err("stale physical action must be rejected");
+    r.game.resolve_selection(p0,PASS).expect("finish impossible mandatory choice without payment");
 
     // The picker should NOT have called final_callback (min=1, picked=0 after
     // refusing the stale pick, re-install finds no candidates, return without
@@ -293,7 +280,7 @@ fn source_multi_picker_re_installs_on_stale_pick_min_zero_finalizes_empty() {
         );
     }
 
-    let stale_action = encode_source_select(stack.index as u16, 0).unwrap();
+    let stale_action = crate::owned_choices::source_action(&r.game,stack,0);
     assert!(r
         .game
         .pending_selection
@@ -310,7 +297,8 @@ fn source_multi_picker_re_installs_on_stale_pick_min_zero_finalizes_empty() {
     // Submit the stale action.
     r.game
         .resolve_selection(p0, stale_action)
-        .expect("stale submit must not error");
+        .expect_err("stale physical action must be rejected");
+    r.game.resolve_selection(p0,PASS).expect("decline stale optional choice");
 
     // min=0 path: re-install lands with empty candidates AND picked.len()=0 >= min=0,
     // so final_callback fires with an empty Vec.

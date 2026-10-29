@@ -214,10 +214,10 @@ pub(super) fn field_offered(runner: &DebugRunner, h: PermanentHandle) -> bool {
 pub(super) fn pick_hand(runner: &mut DebugRunner, player: u8, id: &str) {
     let view = runner.pending_selection_view().expect("hand prompt");
     let slot = hand_index(runner, player, id) as u16;
-    let action = [PLAY_HAND_START + slot, HAND_EFFECT_START + slot]
-        .into_iter()
-        .find(|a| view.valid_action_ids.contains(a))
-        .unwrap_or_else(|| panic!("{id} must be selectable from hand: {view:?}"));
+    let action = if runner.game.pending_selection.as_ref().is_some_and(|pending|pending.card_choice.is_some()) {
+        physical_menu::zone_action(&runner.game,player,usize::from(slot),digimon_engine::owned_card_choice::CardChoiceZone::Hand)
+    } else { [PLAY_HAND_START + slot,HAND_EFFECT_START + slot].into_iter()
+        .find(|a|view.valid_action_ids.contains(a)).unwrap_or_else(||panic!("{id} must be selectable from hand: {view:?}")) };
     runner.execute_action(view.selecting_player, action).expect("pick hand");
 }
 
@@ -232,15 +232,22 @@ pub(super) fn hand_offered(runner: &DebugRunner, player: u8, id: &str) -> bool {
     else {
         return false;
     };
-    let slot = slot as u16;
-    view.valid_action_ids.contains(&(PLAY_HAND_START + slot))
-        || view.valid_action_ids.contains(&(HAND_EFFECT_START + slot))
+    if runner.game.pending_selection.as_ref().is_some_and(|pending|pending.card_choice.is_some()) {
+        return physical_menu::commits(&runner.game).iter().any(|row|row.owner==Some(player)
+            &&matches!(row.zone,Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand))
+            &&row.position.as_deref()==Some(slot.to_string().as_str()));
+    }
+    let slot=slot as u16;
+    view.valid_action_ids.contains(&(PLAY_HAND_START+slot)) || view.valid_action_ids.contains(&(HAND_EFFECT_START+slot))
 }
 
 /// Pick trash card `id` at a UnionZone prompt.
 pub(super) fn pick_trash(runner: &mut DebugRunner, player: u8, id: &str) {
     let view = runner.pending_selection_view().expect("trash/union prompt");
-    let action = TRASH_EFFECT_START + trash_index(runner, player, id) as u16;
+    let index=trash_index(runner,player,id);
+    let action=if runner.game.pending_selection.as_ref().is_some_and(|pending|pending.card_choice.is_some()) {
+        physical_menu::zone_action(&runner.game,player,index,digimon_engine::owned_card_choice::CardChoiceZone::Trash)
+    } else {TRASH_EFFECT_START+index as u16};
     assert!(view.valid_action_ids.contains(&action), "{id} selectable from trash: {view:?}");
     runner.execute_action(view.selecting_player, action).expect("pick trash");
 }
@@ -254,7 +261,11 @@ pub(super) fn trash_offered(runner: &DebugRunner, player: u8, id: &str) -> bool 
         .iter()
         .position(|c| c.card_id(&runner.game.card_data) == id)
     {
-        Some(i) => view.valid_action_ids.contains(&(TRASH_EFFECT_START + i as u16)),
+        Some(i) => if runner.game.pending_selection.as_ref().is_some_and(|pending|pending.card_choice.is_some()) {
+            physical_menu::commits(&runner.game).iter().any(|row|row.owner==Some(player)
+                &&matches!(row.zone,Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash))
+                &&row.position.as_deref()==Some(i.to_string().as_str()))
+        } else {view.valid_action_ids.contains(&(TRASH_EFFECT_START+i as u16))},
         None => false,
     }
 }
@@ -341,3 +352,6 @@ pub(super) fn digivolve_choosing_cost(
     runner.execute_action(view.selecting_player, pick.action_id).expect("pick route");
     true
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

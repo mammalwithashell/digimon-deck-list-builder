@@ -114,8 +114,12 @@ steps:
   # the Landramon effect when no [Close] is in hand. The row picks Close so both
   # engines resolve the clause under exam first.
   - actor: 0
-    do: { select: { cards: [EX8-067], dcgo_only: true } }
-    expect: { prompt: MultipleSkills }
+    do:
+      select:
+        cards:
+        - EX8-067
+    expect:
+      prompt: MultipleSkills
   # THE CLAUSE. DCGO: OptionalSkill yes/no, then ONE SelectCardEffect (maxCount 2,
   # trash). Ours: the optional gate doubles as a Close pick (OwnField), then the
   # trash picks.

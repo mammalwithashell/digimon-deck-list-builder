@@ -80,3 +80,18 @@ pub fn run_actions(r: &mut DebugRunner, actions: &[(PlayerId, u16)]) {
         let _ = r.auto_resolve();
     }
 }
+
+/// Select by physical zone, owner and printed identity, checking the legal mask.
+pub fn physical_zone_action(r: &DebugRunner, owner: u8, id: &str, trash: bool) -> Option<u16> {
+    use digimon_engine::{owned_card_choice::{CardChoiceOperation,CardChoiceZone},action::build_action_mask};
+    let pending=r.game.pending_selection.as_ref()?;
+    let page=pending.card_choice.as_ref()?.view(&r.game,pending.selecting_player);
+    let row=page.rows.iter().find(|row| matches!(row.operation,CardChoiceOperation::CommitCard)
+        && row.owner==Some(owner) && row.card_id.as_deref()==Some(id)
+        && matches!((&row.zone,trash),(Some(CardChoiceZone::Hand),false)|(Some(CardChoiceZone::Trash),true)))?;
+    let index:usize=row.position.as_deref()?.parse().ok()?;
+    let card=if trash {r.game.player(owner).trash.get(index)?} else {r.game.player(owner).hand.get(index)?};
+    assert_eq!(card.card_id(&r.game.card_data),id);
+    assert_eq!(build_action_mask(&r.game,pending.selecting_player)[row.action_id as usize],1.0);
+    Some(row.action_id)
+}

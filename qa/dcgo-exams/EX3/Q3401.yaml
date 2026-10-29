@@ -156,6 +156,12 @@ steps:
     select:
       targets:
       - opp.field.1
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX13-041
+      sim_only: true
 - actor: 1
   do:
     pass: {}
@@ -184,7 +190,7 @@ expect_ruling:
         suspended: true
       - card_id: ST2-04
         suspended: false
-  - at: 23
+  - at: 24
     that:
       p0.field:
       - card_id: EX3-074

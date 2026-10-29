@@ -1,0 +1,17 @@
+[Unit]
+Description=Digimon English meta and pet-deck search experiment
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/digimon-search/image.env
+ExecStart=/usr/bin/docker run --name digimon-search-experiment --rm --init --network=none --memory=28g --cpus=8 --stop-timeout=120 --mount type=bind,src=/opt/digimon-search/experiment,dst=/experiment --mount type=bind,src=/opt/digimon-search/deployment,dst=/deployment,readonly ${SEARCH_IMAGE} python /deployment/run_experiment.py
+ExecStop=-/usr/bin/docker stop --time=120 digimon-search-experiment
+Restart=no
+RuntimeMaxSec=48h
+TimeoutStopSec=150
+KillMode=control-group
+
+[Install]
+WantedBy=multi-user.target

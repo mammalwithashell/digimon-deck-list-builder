@@ -1,0 +1,14 @@
+
+running 9 tests
+test xros_reusable_primitives::unsupported_xros_primitive_fields_report_explicit_compile_errors ... ok
+test xros_reusable_primitives::under_tamer_source_digivolve_can_be_declined_before_source_moves ... ok
+test xros_reusable_primitives::selected_hand_or_trash_card_can_be_placed_under_source_tamer ... ok
+test xros_reusable_primitives::under_tamer_source_digivolve_offers_matching_cards_under_each_tamer ... ok
+test xros_reusable_primitives::select_under_tamer_source_can_feed_effect_initiated_digivolve ... ok
+test xros_reusable_primitives::select_under_tamer_sources_can_play_origin_preserved_source_for_free ... ok
+test xros_reusable_primitives::under_tamer_source_digivolve_with_no_candidate_installs_no_hidden_selection ... ok
+test xros_reusable_primitives::trash_top_stacked_sources_and_no_source_target_filter_are_authorable ... ok
+test xros_reusable_primitives::moved_source_count_can_reduce_followup_play_cost ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 1584 filtered out; finished in 2.58s
+

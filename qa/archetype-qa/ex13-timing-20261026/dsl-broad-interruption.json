@@ -1,0 +1,11 @@
+{
+  "status": "interrupted_for_target_handoff",
+  "suite": "dsl",
+  "planned": 1597,
+  "completed_before_stop": 478,
+  "failed_before_stop": 0,
+  "elapsed_seconds": 306.0,
+  "long_test_warnings": 0,
+  "reason": "Full suite projected about 13 more minutes; focused native Delay repair and scoped final DSL controls take priority. No full-suite pass claimed.",
+  "binary": "D:\\cargo-target\\p3-eval-telemetry-fast\\debug\\deps\\dsl-725af7d0c90fd80e.exe"
+}

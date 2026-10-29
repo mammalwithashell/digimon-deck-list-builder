@@ -226,10 +226,7 @@ fn ex13_014_wd_uses_a_huckmon_text_option_from_hand_free() {
 fn ex13_014_wa_uses_a_huckmon_text_option_from_digivolution_cards() {
     let (mut runner, me) = use_runner(&[], &["H5", "HUCK-OPT"]);
     fire(&mut runner, EffectTiming::WhenAttacking, me);
-    let a = non_pass(&runner)
-        .into_iter()
-        .find(|&a| a >= SOURCE_SELECT_START)
-        .expect("the stacked Option is offered");
+    let a = physical_fixture::commits(&runner.game).into_iter().find(|row|row.card_id.as_deref()==Some("HUCK-OPT")).expect("physical Huckmon text source option").action_id;
     runner.execute_action(0, a).expect("use from sources");
     let _ = runner.auto_resolve();
     let stack = &runner.game.players[0].battle_area[me.index as usize].card_sources;
@@ -389,3 +386,6 @@ fn ex13_014_assembly_huckmon_text_line_for_7() {
     assert_eq!(runner.game.players[0].battle_area[0].card_sources.len(), 4);
     assert_eq!(mem0 - runner.game.memory, 7);
 }
+
+#[path="../../support/owned_card_choice.rs"]
+mod physical_fixture;

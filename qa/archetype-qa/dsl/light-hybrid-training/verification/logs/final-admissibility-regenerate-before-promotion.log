@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon_gym\agents\card_admissibility.py", line 629, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon_gym\agents\card_admissibility.py", line 621, in main
+    with open(args.out, "w", encoding="utf-8", newline="\n") as f:
+         ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 22] Invalid argument: 'C:\\Users\\james\\.codex\\worktrees\\light-hybrid-training\\digimon-deck-list-builder-1\\data\\card_admissibility.json'

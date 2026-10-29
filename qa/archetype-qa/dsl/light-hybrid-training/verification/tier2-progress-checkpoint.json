@@ -1,0 +1,368 @@
+{
+  "status": "running",
+  "superseding_session": 32392,
+  "original_session": 51281,
+  "command": "scripts/verify --tier 2 --continue-on-failure --json",
+  "required_suite_count": 67,
+  "dsl": {
+    "total": 1593,
+    "passed": 1535,
+    "failed": 57,
+    "ignored": 1,
+    "elapsed_seconds": 222.2,
+    "allocator": "test-only mimalloc",
+    "log": "logs/final-tier2-mimalloc-full-run.log",
+    "scope": "complete DSL suite, unchanged 1593 test denominator"
+  },
+  "original_run": {
+    "status": "intentionally_cancelled",
+    "session": 51281,
+    "session_exit": -1,
+    "reason": "Root authorized cancellation after stronger complete current1593-case DSL proof terminal1592pass0fail1existingignore; obsolete run had pre-mimalloc/pre-fixture DSL binary. Not a timeout or restart.",
+    "observed_old_dsl": {
+      "passed": 1535,
+      "failed": 57,
+      "ignored": 1,
+      "seconds": 3187.23
+    },
+    "observed_old_judge": {
+      "passed": 44,
+      "failed": 0,
+      "ignored": 1,
+      "seconds": 36.98
+    },
+    "safety": "Exact shell command named prefix target and original log; actual Python parent stopped first, then venv launcher and verified current Cargo descendant tree. Initial guard refused changed oldDSL ancestry before any mutation, then currentRulesCargo reidentified.",
+    "process_tree_record": "obsolete-tier2-process-tree.json",
+    "primary_32392": "untouched and still running"
+  },
+  "fixture_followup": {
+    "production_changes": false,
+    "source_fixture_modules": {
+      "cost_target_event": 31,
+      "phase2g_select_sources": 13,
+      "select_materials": 7,
+      "stack_pair_and_protection": 8,
+      "st2_substrate": 8
+    },
+    "source_fixture_module_result": "67/67 passed",
+    "zone_movement_verbs": "16 passed,1 parent-owned security-search failure from earlier snapshot; assigned four source cases passed",
+    "rules_ch03": "14/14 passed",
+    "logs": [
+      "logs/tier2-source-fixture-followup.log",
+      "logs/tier2-materials-fixture-green.log",
+      "logs/tier2-rules-ch03-followup.log"
+    ],
+    "semantic_notes": [
+      "Required exact-two source menu with one candidate now rejects infeasible prefix before prompting; no payment or paid tails.",
+      "Counts compare physical CommitCard rows; optional Done/PASS is explicitly accounted for, not mistaken for an extra material.",
+      "All source identity selections re-resolve typed presented positions; atomic protect-after-first-pick payment refusal retained."
+    ],
+    "aggregate_limit": "Focused fixture corrections do not erase first aggregate failures. Final regenerated full ladder required."
+  },
+  "promotion": "none",
+  "completed_suites": {
+    "dsl": {
+      "passed": 1535,
+      "failed": 57,
+      "ignored": 1,
+      "seconds": 222.2
+    },
+    "judge_quiz": {
+      "passed": 38,
+      "failed": 6,
+      "ignored": 1,
+      "seconds": 161.77
+    },
+    "rules_conformance": {
+      "passed": 346,
+      "failed": 15,
+      "ignored": 1,
+      "seconds": 301.25
+    },
+    "rules_faq": {
+      "passed": 31,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 225.54
+    },
+    "keyword_semantics_matrix": {
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 4.6
+    }
+  },
+  "harness_followup": {
+    "files": [
+      "code/digimon-engine/tests/judge_quiz/main.rs",
+      "code/digimon-engine/tests/rules_faq/main.rs"
+    ],
+    "change": "Five-line test-only global mimalloc block, using existing dev dependency, after original full-run binaries advanced. No assertions, case counts, modules, gameplay allocator, or production code changed.",
+    "authorization": "Root authorized after observed Windows heap contention.",
+    "validation": {
+      "exit": 0,
+      "judge_quiz": {
+        "passed": 44,
+        "failed": 0,
+        "ignored": 1,
+        "seconds": 38.8
+      },
+      "rules_faq": {
+        "passed": 31,
+        "failed": 0,
+        "ignored": 0,
+        "seconds": 15.98
+      },
+      "profile": "dev opt0 debug0 debug assertions on, RUST_MIN_STACK268435456, default test threads"
+    },
+    "initial_compile": "Initial insertion preceded crate inner attributes; compile rejected with no tests executed. Moved allocator after crate #![allow(...)] attributes.",
+    "red_log": "logs/tier2-judge-faq-mimalloc-harness.log",
+    "green_log": "logs/tier2-judge-faq-mimalloc-harness-green.log"
+  },
+  "current_required_suite": {
+    "name": "cards_behavioral_full_required",
+    "test_denominator": 12755,
+    "status": "running"
+  },
+  "mask_tensor_followup": {
+    "red": {
+      "passed": 167,
+      "failed": 10,
+      "ignored": 0
+    },
+    "green": {
+      "passed": 177,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 2.57,
+      "exit": 0
+    },
+    "files": [
+      "source_selection_mask.rs",
+      "tensor_profile.rs",
+      "tensor_profile_full_v2.rs",
+      "tensor_profile_lite_deck_v2.rs",
+      "tensor_profile_v2.rs",
+      "tensor_v2_lite_deck.rs"
+    ],
+    "directory": "code/digimon-engine/tests/mask_and_tensor",
+    "scope": "Test-only expected values updated to published TENSOR_SPEC current schemas and owned physical breeding row provenance. All177 cases retained; no production layout/action changes.",
+    "invariants_preserved": [
+      "Independent explicit section shapes and offsets",
+      "Card/scalar positions cover tensor exactly once and remain disjoint",
+      "Both pending-row card IDs at44 and93 explicitly expected",
+      "Selecting player legal mask and other player all-zero mask",
+      "Legacy source codec range/capacity tests unchanged"
+    ],
+    "logs": [
+      "logs/tier2-mask-and-tensor-contract-red.log",
+      "logs/tier2-mask-and-tensor-contract-green.log"
+    ]
+  },
+  "early_side_suites": {
+    "status": "all_green_after_test_only_followups",
+    "target": "C:/Users/james/.codex/build-targets/light-hybrid-prefix",
+    "binaries": [
+      "count_choice_tensor_contract",
+      "digixros_conditional_trash_zone",
+      "ffi_parity",
+      "infra",
+      "material_save_keyword",
+      "named_source_group_selection",
+      "phase_flow",
+      "replacements",
+      "replay_runner",
+      "selection_identity_regressions"
+    ],
+    "scope": "Whole ten binaries, allcases; does not replace final current40-suite ladder.",
+    "results": {
+      "count_choice_tensor_contract": {
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/tier2-early-side-count_choice_tensor_contract.log"
+      },
+      "digixros_conditional_trash_zone": {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/tier2-early-side-digixros_conditional_trash_zone.log"
+      },
+      "ffi_parity": {
+        "passed": 30,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/tier2-early-side-ffi_parity.log"
+      },
+      "infra": {
+        "passed": 42,
+        "failed": 0,
+        "ignored": 2,
+        "log": "logs/tier2-early-side-infra-green.log"
+      },
+      "material_save_keyword": {
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/tier2-early-side-material_save_keyword.log"
+      },
+      "named_source_group_selection": {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/tier2-early-side-named_source_group_selection.log"
+      },
+      "phase_flow": {
+        "passed": 73,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/tier2-early-side-phase_flow.log"
+      },
+      "replacements": {
+        "passed": 126,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/tier2-early-side-replacements-green.log"
+      },
+      "replay_runner": {
+        "passed": 36,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/tier2-early-side-replay_runner.log"
+      },
+      "selection_identity_regressions": {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/tier2-early-side-selection_identity_regressions.log"
+      }
+    },
+    "passed": 331,
+    "failed": 0,
+    "ignored": 2,
+    "initial_batch_exit": 1,
+    "initial_failure_scope": "infra3 and replacements2 retained in original per-binary logs",
+    "followup_changes": "Infra expected current tensor dimensions plus serial libtest prefix tolerant marker extraction (strict JSON and exact digest equality unchanged); replacements exact physical source picks (attack cancel and Decode/Evade lifecycle assertions unchanged)."
+  },
+  "cards_source_followup": {
+    "BT12-031": {
+      "passed": 16,
+      "failed": 0,
+      "log": "logs/tier2-cards-bt12-031-green.log",
+      "change": "Legacy source action replaced with original physical carrier/position/card identity/legal mask helper."
+    },
+    "BT13_source_union": {
+      "modules": [
+        "BT13-019",
+        "BT13-040",
+        "BT13-110",
+        "BT13-112"
+      ],
+      "red": {
+        "passed": 17,
+        "failed": 5,
+        "log": "logs/tier2-cards-bt13-sources-red.log"
+      },
+      "status": "green",
+      "scope": "Exact name exclusions, per-zone eligibility, cost, origin, OnPlay suppression/triggering, Rush and distinct-name outcomes preserved; mandatory/optional menu accounting explicit.",
+      "passed": 22,
+      "failed": 0,
+      "log": "logs/tier2-cards-bt13-sources-green.log",
+      "compile_log": "logs/tier2-cards-bt13-sources-compile.log"
+    },
+    "BT21-074": {
+      "actual_red": {
+        "passed": 12,
+        "failed": 1,
+        "log": "logs/tier2-cards-bt21-074-red.log"
+      },
+      "status": "test fixture migrated; awaiting combined cards binary",
+      "change": "Exact typed legal Trash row replaces old action alias; added selected physical handle preservation under destination, existing protection and optional/OPT assertions retained."
+    }
+  },
+  "whole_rules_followup": {
+    "status": "green",
+    "test_denominator": 362,
+    "log": "logs/tier2-rules-conformance-all-physical-fixtures.log",
+    "scope": "Whole unfiltered suite on final test fixtures with tier1 default threads and256MB stack; no focused-proof substitution",
+    "passed": 361,
+    "failed": 0,
+    "ignored": 1,
+    "seconds": 308.45,
+    "exit": 0,
+    "source_limit": "Compiled before later three security-search YAML corrections; full362-rung proof of physical fixture and existing engine snapshot, no final aggregate substitute."
+  },
+  "primary_run_liveness": {
+    "session": 32392,
+    "status": "live confirmed by owning handle and OS process ancestry",
+    "actual_python_pid": 21840,
+    "venv_launcher_pid": 40088,
+    "cards_pid": 43856,
+    "cards_target": "light-hybrid-training-tdd",
+    "cached_cards_pid_separate": 41664,
+    "note": "Parent observer Unknown process ID did not imply termination; no restart."
+  },
+  "required_scope_note": "Historical first invocation35, later40 exposed phony support. Real helper fanout produced42; inclusive staged/unstaged/untracked inventory now yields67, preserving all42 valid priorentries and adding25 new native sides. Exact regenerated inclusive plan governs final proof.",
+  "current_plan": "optimized-tier2-plan-inclusive.json",
+  "shared_helper_fanout_followup": {
+    "status": "frozen_green",
+    "tool_files": [
+      "code/tools/impact_scope.py",
+      "code/tests/tools/test_impact_scope.py"
+    ],
+    "actual_cli_red": "logs/tier2-support-target-plan-red.log (Cargo exit101: no support test target)",
+    "unit_red": {
+      "passed": 3,
+      "failed": 3,
+      "log": "logs/tier2-support-fanout-unit-red.log"
+    },
+    "unit_green": {
+      "passed": 8,
+      "failed": 0,
+      "log": "logs/tier2-support-fanout-unit-green.log"
+    },
+    "all_verification_tools_green": {
+      "passed": 179,
+      "failed": 0,
+      "seconds": 25.66,
+      "exit": 0,
+      "log": "logs/tier2-support-fanout-all-verification-tools.log"
+    },
+    "cargo_validation": "support-helper-fanout-proof.json (266/266 discovered names match actual Cargo metadata)",
+    "behavior": "Real manifest/autodiscovered target discovery, conservative grouped module/literal path/include dependency traversal; shared and standalone consumers retained; unknown/generated dependencies expand scope instead of emitting a phony target or dropping tests.",
+    "fresh_plan": "optimized-tier2-plan-helper-fanout.json",
+    "suite_count": 42,
+    "promotion": "none"
+  },
+  "worktree_inventory_followup": {
+    "status": "frozen_green",
+    "tool_files": [
+      "code/tools/impact_scope.py",
+      "code/tests/tools/test_impact_scope.py"
+    ],
+    "unit_red": {
+      "passed": 9,
+      "failed": 3,
+      "log": "logs/tier2-worktree-inventory-red.log"
+    },
+    "unit_green": {
+      "passed": 12,
+      "failed": 0,
+      "log": "logs/tier2-worktree-inventory-green.log"
+    },
+    "actual_git_case": "Temporary repository with separately staged, unstaged and untracked files; no workspace index mutation.",
+    "scope_semantics": "Default gitdiffHEAD includes staged+unstaged tracked files and unions gitls-files --others --exclude-standard; base-only isworkingtree+untracked; explicitbase+head remainsrevision-only. Stable dedup preserves trackedthenuntracked order.",
+    "whole_verification_tool_tests": {
+      "passed": 183,
+      "failed": 0,
+      "exit": 0,
+      "seconds": 37.82,
+      "log": "logs/tier2-inclusive-all-verification-tools.log"
+    },
+    "current_plan": "optimized-tier2-plan-inclusive.json",
+    "suite_count": 67,
+    "actual_cargo_validation": "logs/tier2-inclusive-plan-cargo-validation.log (all44 sides are realCargo targets; all42prior entries retained)",
+    "promotion": "none"
+  },
+  "security_receipt_hash_followup": "security-play-receipt-hash-checkpoint.json"
+}

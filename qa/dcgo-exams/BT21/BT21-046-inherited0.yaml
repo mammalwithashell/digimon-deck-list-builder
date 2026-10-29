@@ -87,13 +87,6 @@ steps:
     pass: {}
   expect:
     prompt: main_phase
-- actor: 0
-  do:
-    select:
-      decline: true
-      sim_only: true
-  expect:
-    prompt: OptionalSkill
 - actor: 1
   do:
     pass: {}
@@ -122,12 +115,6 @@ steps:
       'yes': true
   expect:
     prompt: OptionalSkill
-- actor: 0
-  do:
-    select:
-      targets:
-      - own.field.1
-      sim_only: true
 - actor: 0
   do:
     select:
@@ -406,7 +393,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 3
-- at: 10
+- at: 9
   that:
     _backfilled: true
     memory: -3
@@ -438,7 +425,7 @@ assert:
     p1.trash: []
     phase: Breeding
     turn: 4
-- at: 11
+- at: 10
   that:
     _backfilled: true
     memory: -3
@@ -470,7 +457,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 4
-- at: 12
+- at: 11
   that:
     _backfilled: true
     memory: 3
@@ -503,7 +490,7 @@ assert:
     p1.trash: []
     phase: Breeding
     turn: 5
-- at: 13
+- at: 12
   that:
     _backfilled: true
     memory: 3
@@ -535,6 +522,41 @@ assert:
     p1.security: 5
     p1.trash: []
     phase: Main
+    turn: 5
+- at: 13
+  that:
+    _backfilled: true
+    memory: -4
+    p0.field:
+    - card_id: BT20-025
+      dp: 7000
+      suspended: false
+      sources:
+      - BT21-046
+      - EX3-018
+    - card_id: BT20-042
+      dp: 7000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT13-096
+    - BT13-096
+    - BT20-027
+    - BT20-027
+    - BT20-045
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT13-096
+    - BT13-096
+    - BT20-027
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - EX3-018
+    p1.security: 5
+    p1.trash: []
     turn: 5
 - at: 14
   that:
@@ -571,42 +593,7 @@ assert:
     p1.security: 5
     p1.trash: []
     turn: 5
-- at: 16
-  that:
-    _backfilled: true
-    memory: -4
-    p0.field:
-    - card_id: BT20-025
-      dp: 7000
-      suspended: false
-      sources:
-      - BT21-046
-      - EX3-018
-    - card_id: BT20-042
-      dp: 7000
-      suspended: false
-      sources: []
-    p0.hand:
-    - BT13-096
-    - BT13-096
-    - BT20-027
-    - BT20-027
-    - BT20-045
-    p0.security: 5
-    p0.trash: []
-    p1.field: []
-    p1.hand:
-    - BT13-096
-    - BT13-096
-    - BT20-027
-    - BT23-047
-    - BT23-047
-    - BT23-047
-    - EX3-018
-    p1.security: 5
-    p1.trash: []
-    turn: 5
-- at: 19
+- at: 17
   that:
     _backfilled: true
     memory: -4

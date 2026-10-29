@@ -140,13 +140,13 @@ fn st5_13_digi_burst_two_trashes_sources_and_buffs_one_own_digimon() {
     runner
         .execute_action(
             0,
-            encode_source_select(blitzgreymon.index as u16, 0).expect("first source pick"),
+            physical_fixture::source_action(&runner.game,blitzgreymon,0),
         )
         .expect("pick first source");
     runner
         .execute_action(
             0,
-            encode_source_select(blitzgreymon.index as u16, 1).expect("second source pick"),
+            physical_fixture::source_action(&runner.game,blitzgreymon,1),
         )
         .expect("pick second source");
 
@@ -210,3 +210,6 @@ fn st5_12_reboot_grant_can_be_declined_without_targets() {
         .expect("decline Reboot grant");
     assert!(!runner.game.has_keyword(machinedramon, Keyword::Reboot));
 }
+
+#[path="../../support/owned_card_choice.rs"]
+mod physical_fixture;

@@ -24,3 +24,5 @@ mod tensor_source_contributions;
 mod tensor_v2_full;
 mod tensor_v2_lite;
 mod tensor_v2_lite_deck;
+
+mod observation_reuse;

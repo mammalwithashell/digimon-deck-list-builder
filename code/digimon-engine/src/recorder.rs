@@ -19,20 +19,23 @@ use crate::enums::PlayerId;
 use crate::game::Game;
 
 pub const VERIFICATION_REPLAY_FORMAT_VERSION: u32 = 1;
-pub const VERIFICATION_ENGINE_SCHEMA_VERSION: u32 = 2;
+pub const VERIFICATION_ENGINE_SCHEMA_VERSION: u32 = 3;
 
 /// Verification digest protocol; independent of action and tensor versions.
 /// Schema 1 recordings retain their original v2 digest bytes. New recordings
-/// use schema 2/v3, which also discriminates pending reducer credit and order.
+/// use schema 3/v4, adding owned card-page identity and shuffle generations.
+/// Schema 2/v3 retains reducer credit/order semantics without page state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VerificationDigestVersion { LegacyV2, V3 }
+pub enum VerificationDigestVersion { LegacyV2, V3, V4 }
 impl VerificationDigestVersion {
-    pub const CURRENT: Self = Self::V3;
+    pub const CURRENT: Self = Self::V4;
     pub fn from_engine_schema(version: u32) -> Option<Self> {
-        match version { 1 => Some(Self::LegacyV2), 2 => Some(Self::V3), _ => None }
+        match version { 1 => Some(Self::LegacyV2), 2 => Some(Self::V3), 3 => Some(Self::V4), _ => None }
     }
 }
 
+
+fn legacy_action_schema_version() -> u32 { 1 }
 
 /// Deck references embedded in a canonical verification replay. Goldens may
 /// use stable decklist ids when available, or inline card-id lists for
@@ -82,6 +85,9 @@ pub struct VerificationReplayAction {
 pub struct VerificationReplayRecording {
     pub format_version: u32,
     pub engine_schema_version: u32,
+    /// Missing metadata identifies archival action semantics, never the current version.
+    #[serde(default = "legacy_action_schema_version")]
+    pub action_schema_version: u32,
     pub cards_hash: String,
     pub deck_refs: ReplayDeckRefs,
     pub seed: Option<u64>,
@@ -276,6 +282,7 @@ impl GameRecorder {
         VerificationReplayRecording {
             format_version: VERIFICATION_REPLAY_FORMAT_VERSION,
             engine_schema_version: VERIFICATION_ENGINE_SCHEMA_VERSION,
+            action_schema_version: crate::action::space::SCHEMA_VERSION,
             cards_hash: cards_hash.into(),
             deck_refs,
             seed,
@@ -351,6 +358,7 @@ impl GameRecorder {
             .collect();
 
         let mut result = serde_json::Map::new();
+        result.insert("action_schema_version".into(), json!(crate::action::space::SCHEMA_VERSION));
         result.insert("initial_state".into(), initial_state);
         result.insert("actions".into(), Value::Array(actions));
         result.insert("total_actions".into(), json!(self.actions.len()));

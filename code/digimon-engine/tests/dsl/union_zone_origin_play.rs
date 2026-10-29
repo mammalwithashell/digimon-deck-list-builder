@@ -96,7 +96,7 @@ fn union_zone_origin_play_plays_hand_card_from_hand() {
         .as_ref()
         .expect("select_union_zone must install a pending selection");
     // 2 hand cards (SRC + HAND-CARD) + 1 trash card = 3 candidates.
-    assert_eq!(pending.valid_action_ids.len(), 3);
+    assert_eq!(crate::union_fixture_candidates(&runner.game).len(), 3);
     let selecting_player = pending.selecting_player;
 
     // Resolve the HAND-CARD pick. Hand candidates are encoded in the
@@ -105,7 +105,7 @@ fn union_zone_origin_play_plays_hand_card_from_hand() {
     let action_id = PLAY_HAND_START + 1;
     runner
         .game
-        .resolve_selection(selecting_player, action_id)
+        .resolve_selection(selecting_player, crate::union_fixture_action(&runner.game, action_id))
         .expect("resolve hand-origin pick");
 
     assert!(runner.game.pending_selection.is_none());
@@ -200,7 +200,7 @@ fn union_zone_origin_play_plays_trash_card_from_trash() {
         .pending_selection
         .as_ref()
         .expect("select_union_zone must install a pending selection");
-    assert_eq!(pending.valid_action_ids.len(), 3);
+    assert_eq!(crate::union_fixture_candidates(&runner.game).len(), 3);
     let selecting_player = pending.selecting_player;
 
     // Resolve the TRASH-CARD pick. Trash candidates are encoded in the
@@ -209,7 +209,7 @@ fn union_zone_origin_play_plays_trash_card_from_trash() {
     let action_id = TRASH_EFFECT_START;
     runner
         .game
-        .resolve_selection(selecting_player, action_id)
+        .resolve_selection(selecting_player, crate::union_fixture_action(&runner.game, action_id))
         .expect("resolve trash-origin pick");
 
     assert!(runner.game.pending_selection.is_none());
@@ -344,19 +344,19 @@ fn union_zone_origin_play_plays_material_card_from_source_stack() {
         .pending_selection
         .as_ref()
         .expect("material union selection must install a pending selection");
-    assert_eq!(pending.valid_action_ids.len(), 1);
+    assert_eq!(crate::union_fixture_candidates(&runner.game).len(), 1);
     let selecting_player = pending.selecting_player;
 
     let source_action = digimon_engine::action::space::encode_source_select(host.index as u16, 0)
         .expect("source action id");
     assert!(
-        pending.valid_action_ids.contains(&source_action),
+        crate::union_fixture_candidates(&runner.game).contains(&source_action),
         "material union selection must expose the source-select action"
     );
 
     runner
         .game
-        .resolve_selection(selecting_player, source_action)
+        .resolve_selection(selecting_player, crate::union_fixture_action(&runner.game, source_action))
         .expect("resolve material-origin pick");
 
     assert!(runner.game.pending_selection.is_none());

@@ -1,0 +1,14 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 14 items
+
+code\tests\tools\test_impact_scope.py ........                           [ 57%]
+code\tests\tools\test_verification_tier_manifest.py ..                   [ 71%]
+code\tests\tools\test_nextest_config.py ..                               [ 85%]
+code\tests\tools\test_verify_script.py ..                                [100%]
+
+============================= 14 passed in 1.36s ==============================

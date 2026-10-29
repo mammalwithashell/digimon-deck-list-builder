@@ -1,0 +1,159 @@
+{
+  "extracted": {
+    "attribute": "Variable",
+    "card_id": "BT17-023",
+    "card_type": "Digimon",
+    "colors": [
+      "Blue",
+      "Yellow"
+    ],
+    "dp": 6000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Blue",
+          "Yellow"
+        ],
+        "cost": 3,
+        "from_level": 3,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue",
+          "Yellow"
+        ],
+        "dp": 6000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 4,
+        "name": "KendoGarurumon",
+        "play_cost": 6,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Koji Minamoto]: Cost 2/[Lobomon]: Cost 1"
+          },
+          {
+            "label": "Effect",
+            "text": "This card may digivolve from the hand onto one of your yellow Tamers as if that card is a level 3 yellow Digimon.\n[When Attacking] ＜Draw 1＞\n[When Attacking] This Digimon may digivolve into a Digimon card with the [Hybrid] trait in the hand with the digivolution cost reduced by 1."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] If you have 7 or fewer cards in your hand, ＜Draw 1＞."
+          }
+        ]
+      }
+    ],
+    "form": "Hybrid",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 4,
+    "name": "KendoGarurumon",
+    "play_cost": 6,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522023",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT17-023.png?260529",
+      "printing_id": "BT17-023"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, it also treats the Tamer as a Digimon when it digivolves. It treats it as a Digimon that digivolves, therefore \"when a Digimon would digivolve\" effects and \"when a Digimon digivolves\" effects will trigger.\nIn addition, if a \"Digimon can't digivolve\" effect activates, digivolution won't be possible using this effect that also treats the Tamer as a Digimon.",
+        "date": "Jun. 19, 2026",
+        "number": "Q2763",
+        "question": "Does a \"may digivolve this card as if the Tamer is a Digimon\" effect also treat the Tamer that will become a digivolution card as a Digimon when it digivolves?"
+      },
+      {
+        "answer": "Yes, you can. If you do, it's treated as a Digimon that digivolves, therefore \"when a Digimon would digivolve\" effects and \"when a Digimon digivolves\" effects will trigger.\nIn addition, if a \"Digimon can't digivolve\" effect activates, it won't be possible to use this effect to treat that Tamer as a Digimon.",
+        "date": "Jun. 19, 2026",
+        "number": "Q2764",
+        "question": "When using the [Koji Minamoto]: Cost 2 digivolution requirement to digivolve, can I use a \"may digivolve this card as if the Tamer is a Digimon\" effect to treat that [Koji Minamoto] as a Digimon for digivolving?"
+      },
+      {
+        "answer": "Yes, you perform a digivolution bonus draw.\nA digivolution bonus draw is performed for any kind of digivolution.",
+        "date": "Jun. 19, 2026",
+        "number": "Q2765",
+        "question": "Is a digivolution bonus draw performed even when a Tamer digivolves?"
+      },
+      {
+        "answer": "No, it can't.\nEven if a card digivolves from a card that was placed on the field in the same turn, it can't attack during that turn. It can only attack in the turns after it's played.\nRelated Cards",
+        "date": "Jun. 19, 2026",
+        "number": "Q2766",
+        "question": "If this card digivolves from a Tamer that was played this turn, can it attack in the same turn?"
+      },
+      {
+        "answer": "Yes, it becomes a digivolution card.\nIf that Digimon would leave the field, the Tamer card will be trashed like a normal digivolution card.\nRelated Cards",
+        "date": "Jun. 19, 2026",
+        "number": "Q2767",
+        "question": "Does a Tamer card placed under a Digimon become a digivolution card?"
+      },
+      {
+        "answer": "No, this card's [When Attacking] effect does not allow ignoring digivolution requirements, so you can only digivolve into a card that meets the digivolution requirements.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2768",
+        "question": "When I use this card's 2nd [When Attacking] effect to digivolve into a Digimon card with the [Hybrid] trait in the hand, can it digivolve regardless of its digivolution requirements?"
+      },
+      {
+        "answer": "They trigger simultaneously, so the turn player chooses the effect to activate first.\nHowever, if you activate the 2nd [When Attacking] effect first and digivolve, the 1st [When Attacking] can no longer be activated.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2769",
+        "question": "When this card attacks, which of its 2 [When Attacking] effects activate first?"
+      },
+      {
+        "answer": "No, you can't.\nFor this card's 1st effect, you declare a digivolution, then upon revealing this card, you can also choose a Tamer as the card to digivolve, and that Tamer is also treated as a level 3 Digimon. As with the normal digivolution procedure, after revealing this card and declaring a digivolution, you can't choose to not digivolve.\nIn addition, you can't declare digivolution into this card in the first place unless there is a card on the field that you can digivolve.",
+        "date": "Apr. 4, 2025",
+        "number": "Q4660",
+        "question": "Can I choose to not digivolve with this card's 1st effect?"
+      },
+      {
+        "answer": "No, it does not.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6566",
+        "question": "Does a Digimon gain the security effects in the lower text of a Tamer card in its digivolution cards?"
+      },
+      {
+        "answer": "Yes, it does.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6567",
+        "question": "Does a Digimon gain the inherited effects in the lower text of a Tamer card in its digivolution cards?"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] [Koji Minamoto]: Cost 2/[Lobomon]: Cost 1"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Koji Minamoto]: Cost 2/[Lobomon]: Cost 1"
+      },
+      {
+        "label": "Effect",
+        "text": "This card may digivolve from the hand onto one of your yellow Tamers as if that card is a level 3 yellow Digimon.\n[When Attacking] ＜Draw 1＞\n[When Attacking] This Digimon may digivolve into a Digimon card with the [Hybrid] trait in the hand with the digivolution cost reduced by 1."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] If you have 7 or fewer cards in your hand, ＜Draw 1＞."
+      }
+    ],
+    "type": "Cyborg"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "1102533396b8cf62e17c6757c4666f17a1bd30cee3f5c69f781e56ed0991500b",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522023:BT17-023:BT17-023",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522023"
+}

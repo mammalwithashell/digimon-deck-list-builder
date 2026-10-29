@@ -20,18 +20,13 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::enums::PlayerId;
 use digimon_engine::inference::BatchedPolicyValueEvaluator;
 use digimon_engine::observation::{
-    build_observation_tensor, default_observation_profile, parse_observation_profile,
-    ObservationProfileId,
+    build_observation_tensor, parse_observation_profile, ObservationProfileId,
 };
 use digimon_engine::runners::ReplaySession;
 use serde_json::{json, Value};
 
-/// Resolve the observation profile the model expects. Precedence:
-/// explicit `--tensor-profile` flag > the export's `<model>.meta.json`
-/// (`observation_profile` field, written by `code/tools/export_onnx.py`) >
-/// the engine default. Feeding a model tensors in a different profile than
-/// it was exported with is an ONNX input-shape error at best and silent
-/// garbage at worst.
+/// Use the embedded model contract; an explicit override is subsequently
+/// validated by the evaluator. Never infer compatibility from a sidecar.
 pub(crate) fn resolve_profile(
     model_path: &std::path::Path,
     flag: Option<&str>,
@@ -39,21 +34,23 @@ pub(crate) fn resolve_profile(
     if let Some(raw) = flag {
         return parse_observation_profile(raw);
     }
-    let meta_path = std::path::PathBuf::from(format!("{}.meta.json", model_path.display()));
-    if let Ok(text) = std::fs::read_to_string(&meta_path) {
-        let meta: Value = serde_json::from_str(&text)
-            .map_err(|e| format!("malformed {}: {e}", meta_path.display()))?;
-        if let Some(raw) = meta.get("observation_profile").and_then(|v| v.as_str()) {
-            return parse_observation_profile(raw)
-                .map_err(|e| format!("{} names an unknown profile: {e}", meta_path.display()));
-        }
-    }
-    eprintln!(
-        "note: no --tensor-profile and no readable {} — using the engine default profile ({})",
-        meta_path.display(),
-        default_observation_profile().as_str()
-    );
-    Ok(default_observation_profile())
+    // The embedded contract is authoritative. A moved ONNX file need not
+    // carry a sibling sidecar, and a stale sidecar must not choose its profile.
+    let session = ort::session::Session::builder()
+        .map_err(|e| e.to_string())?
+        .with_intra_threads(1)
+        .map_err(|e| e.to_string())?
+        .commit_from_file(model_path)
+        .map_err(|e| e.to_string())?;
+    let metadata = session.metadata().map_err(|e| e.to_string())?;
+    let raw = metadata
+        .custom("digimon_contract")
+        .ok_or("missing embedded digimon_contract")?;
+    let contract: digimon_engine::inference::contract::ModelContract =
+        serde_json::from_str(&raw).map_err(|e| format!("invalid embedded model contract: {e}"))?;
+    let profile = parse_observation_profile(&contract.observation_profile)?;
+    contract.validate_for_profile(&digimon_engine::observation::observation_layout(profile))?;
+    Ok(profile)
 }
 
 struct Decision {
@@ -115,7 +112,7 @@ pub fn run(
         }
     };
 
-    let mut evaluator = match BatchedPolicyValueEvaluator::load(&model_path) {
+    let mut evaluator = match BatchedPolicyValueEvaluator::load_for_profile(&model_path, profile) {
         Ok(e) => e,
         Err(e) => {
             eprintln!(
@@ -236,7 +233,11 @@ pub fn run(
         "recording": recording_path.to_string_lossy(),
         "model": model_path.to_string_lossy(),
         "observation_profile": profile.as_str(),
-        "value_semantics": "SB3 value head: expected discounted shaped return for the player to move (viewer-relative). NOT a calibrated win probability.",
+        "value_semantics": if evaluator.require_terminal_value().is_ok() {
+            "terminal outcome for the player to move, bounded to [-1,1]; target semantics alone do not certify probability calibration"
+        } else {
+            "SB3 expected discounted shaped return for the player to move; NOT a calibrated win probability"
+        },
         "winner_id": winner_py,
         "decisions": records,
     });

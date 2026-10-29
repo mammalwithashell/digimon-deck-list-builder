@@ -1,0 +1,182 @@
+   Compiling digimon-dsl v0.1.0 (C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-dsl)
+warning: struct `Pass` is never constructed
+  --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\references.rs:20:12
+   |
+20 | pub struct Pass {
+   |            ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated items `new` and `finish` are never used
+  --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\references.rs:31:8
+   |
+30 | impl Collector {
+   | -------------- associated items in this implementation
+31 |     fn new() -> Self {
+   |        ^^^
+...
+58 |     fn finish(self) -> Pass {
+   |        ^^^^^^
+
+warning: function `visit` is never used
+   --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\references.rs:124:8
+    |
+124 | pub fn visit(
+    |        ^^^^^
+
+warning: struct `ReferenceFile` is never constructed
+   --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\core.rs:144:12
+    |
+144 | pub struct ReferenceFile {
+    |            ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `ReferenceGraph` is never constructed
+   --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\core.rs:152:12
+    |
+152 | pub struct ReferenceGraph {
+    |            ^^^^^^^^^^^^^^
+
+warning: struct `ReferenceInventory` is never constructed
+   --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\core.rs:163:12
+    |
+163 | pub struct ReferenceInventory {
+    |            ^^^^^^^^^^^^^^^^^^
+
+warning: function `build_inventory_with_references` is never used
+   --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\core.rs:168:8
+    |
+168 | pub fn build_inventory_with_references(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: struct `Node` is never constructed
+  --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\references.rs:13:12
+   |
+13 | pub struct Node {
+   |            ^^^^
+
+warning: struct `Pass` is never constructed
+  --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\references.rs:20:12
+   |
+20 | pub struct Pass {
+   |            ^^^^
+
+warning: struct `Collector` is never constructed
+  --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\references.rs:25:12
+   |
+25 | pub struct Collector {
+   |            ^^^^^^^^^
+
+warning: associated items `new`, `node`, `unknown`, and `finish` are never used
+  --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\references.rs:31:8
+   |
+30 | impl Collector {
+   | -------------- associated items in this implementation
+31 |     fn new() -> Self {
+   |        ^^^
+...
+38 |     fn node(&mut self, path: &str, typ: &str, role: &str, value: Value) {
+   |        ^^^^
+...
+53 |     fn unknown(&mut self, path: &str, code: &str, detail: String) {
+   |        ^^^^^^^
+...
+58 |     fn finish(self) -> Pass {
+   |        ^^^^^^
+
+warning: trait `Walk` is never used
+  --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\references.rs:66:11
+   |
+66 | pub trait Walk {
+   |           ^^^^
+
+warning: `digimon-dsl` (test "implementation_inventory") generated 10 warnings (1 duplicate)
+warning: `digimon-dsl` (test "implementation_reference_coverage") generated 3 warnings
+    Finished `test` profile [unoptimized] target(s) in 21.20s
+     Running tests\implementation_current_equals_witness.rs (C:/Users/james/.codex/build-targets/light-hybrid-prefix\debug\deps\implementation_current_equals_witness-4ad1f9aa48b8e6f7.exe)
+
+running 11 tests
+test saved_inventory_identity_and_unresolved_gates_are_retained ... ok
+test changed_binding_cannot_use_the_saved_original_compiled_record ... ok
+test comment_only_change_is_preserved_not_misrepresented_as_old_source ... ok
+test compiler_fallback_on_the_actual_card_is_not_lossless_correspondence ... ok
+test actual_target_reordering_coercion_and_adjacent_predicates_refuse ... ok
+test source_cost_drift_cannot_reuse_the_saved_whole_compiled_card ... ok
+test then_else_and_other_valid_locations_remain_distinct_occurrences ... ok
+test foreign_owner_and_foreign_compiled_card_refuse ... ok
+test whole_compiled_card_metadata_and_unrelated_effect_drift_refuse ... ok
+test missing_effect_step_and_ancestor_locations_refuse ... ok
+test current_three_full_cards_bind_all_eight_locations_and_sixteen_paths ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s
+
+     Running tests\implementation_equals_witness.rs (C:/Users/james/.codex/build-targets/light-hybrid-prefix\debug\deps\implementation_equals_witness-c743cfa3fa4ce80a.exe)
+
+running 5 tests
+test foreign_compiled_owner_binding_and_path_refuse ... ok
+test compiler_zero_fallback_is_not_a_witness ... ok
+test malformed_shapes_refuse ... ok
+test strict_positive_card_shaped_and_numeric_binding_strings ... ok
+test actual_eight_pairs_keep_distinct_occurrences ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests\implementation_inventory.rs (C:/Users/james/.codex/build-targets/light-hybrid-prefix\debug\deps\implementation_inventory-b20ef91c801f3c9f.exe)
+
+running 6 tests
+test ids_paths_and_duplicate_input_paths_refuse ... ok
+test parsed_empty_effects_are_never_vanilla_or_complete ... ok
+test missing_and_duplicate_ids_remain_visible ... ok
+test parse_failures_and_unselected_inventory_are_retained ... ok
+test deterministic_order_preserves_requested_order ... ok
+test actual_dual_both_faces_preserved_despite_empty_top_level ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\implementation_inventory_cli.rs (C:/Users/james/.codex/build-targets/light-hybrid-prefix\debug\deps\implementation_inventory_cli-8237bcb5e6e42b4a.exe)
+
+running 4 tests
+test global_unselected_duplicates_parse_errors_and_missing_ids_remain_evidence ... ok
+test create_new_refuses_existing_output_without_truncation_in_both_modes ... ok
+test usage_and_invalid_request_keep_nonzero_error_and_no_publication ... ok
+test real_parsed_compiled_cards_survive_default_main_stack_and_preserve_wire ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.63s
+
+     Running tests\implementation_reference_coverage.rs (C:/Users/james/.codex/build-targets/light-hybrid-prefix\debug\deps\implementation_reference_coverage-7d764e2a109fb0b6.exe)
+
+running 3 tests
+test top_card_references_and_runtime_finalizers_preserve_binding_roles ... ok
+test new_predicate_fields_visit_nested_bindings_and_name_matches_in_both_forms ... ok
+test authored_new_steps_and_deck_evidence_are_traversed_without_blessing_references ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\implementation_reference_roles.rs (C:/Users/james/.codex/build-targets/light-hybrid-prefix\debug\deps\implementation_reference_roles-5f59299904e11c59.exe)
+
+running 4 tests
+test identity_categories_are_not_card_references ... ok
+test keyword_modifier_and_expiry_names_require_engine_witness ... ok
+test opaque_hook_token_and_actual_card_predicates_remain_distinct ... ok
+test binding_predicates_are_instance_slots_even_if_card_shaped ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests\implementation_references.rs (C:/Users/james/.codex/build-targets/light-hybrid-prefix\debug\deps\implementation_references-4759dd634c9d4aef.exe)
+
+running 11 tests
+test missing_is_not_traversed_or_vanilla ... ok
+test opaque_authored_extension_is_blocked_even_if_compiler_drops_it ... ok
+test duplicate_rows_remain_blocked_and_v1_bytes_stable ... ok
+test opt_in_retains_exact_v1_and_original_bytes ... ok
+test repeated_formula_and_alternate_path_predicates_keep_occurrence_paths ... ok
+test binding_slot_and_name_slot_never_conflate ... ok
+test visitor_patterns_have_no_rest_or_fallback_success ... ok
+test typed_recursive_branches_aliases_and_metadata_are_distinct ... ok
+test actual_self_filters_are_matching_not_construction ... ok
+test both_dual_faces_are_visited_without_top_level_effects ... ok
+test all_actual_seven_literal_filters_have_exact_typed_paths ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+

@@ -272,6 +272,7 @@ pub fn lower_for_kind_with_clause_index(
         if steps_provide_resource_flow(&process) {
             builder = builder.resource_flow();
         }
+        builder = builder.development_hand(crate::policies::development::HandBenefit::from_steps(&clause.process));
         // G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT: an Option [Main] body
         // that authors its own `place_self_as_delay_option` owns the
         // placement — `dispose_option` trashes the card if the body ended
@@ -372,8 +373,19 @@ pub fn lower_for_kind_with_clause_index(
         // (`Game::discard_entries_not_triggered`, §15-8-3-1 / §15-8-3-4);
         // `EffectBuilder::build` folds it into the activation-time
         // `condition` above (§15-4-4-5).
-        if trigger_if.is_some() || security_check_gate.is_some() {
+        // CR 4.3 15-16-15-1: the printed [End of Attack] timing is scoped to
+        // the attacking carrier, including an inherited effect's host. The
+        // engine timing remains broad for native observers and scheduled
+        // processing; only the printed DSL clause gets this qualifier.
+        let end_of_attack_carrier = engine_timing == EffectTiming::EndOfAttack;
+        if trigger_if.is_some() || security_check_gate.is_some() || end_of_attack_carrier {
             builder = builder.trigger_qualifier(move |rctx| {
+                if end_of_attack_carrier
+                    && (rctx.source_permanent.is_none()
+                        || rctx.event_permanent() != rctx.source_permanent)
+                {
+                    return false;
+                }
                 let subject = predicate_subject_for_source(rctx);
                 trigger_if
                     .as_ref()
@@ -816,6 +828,7 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
         | CompiledStep::SelectDnaPair { optional, .. }
         | CompiledStep::LinkToOwnDigimon { optional, .. }
         | CompiledStep::MayAttackNow { optional, .. }
+        | CompiledStep::MayDnaDigivolveNow { optional, .. }
         | CompiledStep::RedirectAttackTarget { optional, .. }
         | CompiledStep::RefireEffect { optional, .. }
         // `use_option_from_hand` / `use_option_from_trash` with `optional: true`
@@ -912,6 +925,34 @@ pub(crate) fn first_step_candidate_guard(
     step: &CompiledStep,
 ) -> Option<Box<dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync>> {
     match step {
+        CompiledStep::MayDnaDigivolveNow {
+            anchor, partner_filter, target_filter, ignore_requirements, ..
+        } => {
+            // A leading step has no earlier selection bindings. Do not guess
+            // an unresolved named anchor; source/carrier are readable here.
+            if !matches!(anchor, CompiledBindingRef::Source | CompiledBindingRef::Carrier) {
+                return None;
+            }
+            let partner_filter = partner_filter.clone();
+            let target_filter = target_filter.clone();
+            let ignore_requirements = *ignore_requirements;
+            Some(Box::new(move |rctx| {
+                let Some(anchor) = rctx.source_permanent else { return false; };
+                (0..rctx.game.player(rctx.player).battle_area.len()).any(|i| {
+                    let partner = crate::permanent::PermanentHandle {
+                        player: rctx.player, index: i as u8,
+                    };
+                    crate::effect_context::dna_partner_has_target(
+                        rctx.game, rctx.player, anchor, partner, ignore_requirements,
+                        &|_, h| eval_predicate(&partner_filter, rctx, PredicateSubject::Permanent(h)),
+                        &|game, i| eval_predicate(
+                            &target_filter, rctx,
+                            PredicateSubject::Card(game.player(rctx.player).hand[i].handle()),
+                        ),
+                    )
+                })
+            }))
+        }
         CompiledStep::SelectHand { of, filter, .. } => {
             let of = *of;
             let filter = Arc::new(filter.clone());
@@ -1030,7 +1071,7 @@ pub enum CostGuard {
     /// (BT25-083 "1 Option card from any of your Digimon's digivolution
     /// cards"): the `select_union_zone` pick that `trash_union_bound` pays
     /// offers a card whose trash isn't blocked -- asked through the pick's own
-    /// candidate builder (`union_zone_candidate_actions`), so the guard reads a
+    /// candidate builder (`union_zone_candidates_physical`), so the guard reads a
     /// card exactly as the pick does (a DUAL digivolution card is an Option
     /// card there, §4-6-6-2, official Q&A Q6395).
     UnionZoneTrash {
@@ -1086,6 +1127,10 @@ pub enum CostPickZone {
 pub(crate) fn leading_cost_guard(steps: &[CompiledStep]) -> Option<CostGuard> {
     let first = steps.first()?;
     match first {
+        CompiledStep::TrashTopSecurityAndCancelReplacement {
+            of: CompiledPlayerRef::You,
+            ..
+        } => Some(CostGuard::Security { n: 1 }),
         CompiledStep::TrashTopSecurity {
             of: CompiledPlayerRef::You,
             count,
@@ -1104,6 +1149,9 @@ pub(crate) fn leading_cost_guard(steps: &[CompiledStep]) -> Option<CostGuard> {
         }),
         CompiledStep::Suspend {
             target: CompiledBindingRef::Source,
+        }
+        | CompiledStep::SuspendAndCancelAllMatchingLeaves {
+            target: CompiledBindingRef::Source, ..
         } => Some(CostGuard::SuspendSource),
         CompiledStep::SelectOwnPermanent {
             filter,
@@ -1338,7 +1386,7 @@ impl CostGuard {
                                 let source = crate::selection::SourceSelectionRef {
                                     permanent: host,
                                     field_index: host.index,
-                                    source_index: *index as u8,
+                                    source_index: *index,
                                     card: card.handle(),
                                 };
                                 (!trash_cost
@@ -1400,7 +1448,7 @@ impl CostGuard {
                         None,
                     )
                 };
-                let offered = crate::effect_context::selections::union_zone_candidate_actions(
+                let offered = crate::effect_context::selections::union_zone_candidates_physical(
                     game,
                     rctx.player,
                     *zones,
@@ -1410,13 +1458,7 @@ impl CostGuard {
                 );
                 // A digivolution card whose trash is prohibited can't pay
                 // "by trashing" (§15-7-4); a hand card can always be trashed.
-                crate::dsl_cards::step::selections::union_zone_candidates(
-                    game,
-                    rctx.player,
-                    &offered,
-                )
-                .into_iter()
-                .any(|(_, card, origin)| match origin {
+                offered.into_iter().any(|(card, origin)| match origin {
                     crate::selection::UnionZoneOrigin::Material { carrier, .. } => {
                         !game.source_card_trash_blocked(carrier, card, rctx.player)
                     }

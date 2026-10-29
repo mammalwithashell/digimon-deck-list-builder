@@ -1,0 +1,57 @@
+
+running 16 tests
+test bt1::bt1_087::bt1_087_clause1_is_start_of_your_turn_triggered ... ok
+test bt1::bt1_087::bt1_087_clause2_is_on_play_triggered_and_mandatory ... ok
+test bt1::bt1_087::bt1_087_clause3_on_security_plays_self_without_cost ... ok
+test bt1::bt1_087::bt1_087_compiles ... ok
+test bt1::bt1_087::bt1_087_has_exactly_three_clauses ... ok
+test bt1::bt1_087::bt1_087_metadata_is_yellow_tamer_cost_four ... ok
+test bt1::bt1_087::bt1_087_on_play_add_to_hand_clears_face_up_security_bookkeeping ... FAILED
+test bt1::bt1_087::bt1_087_on_play_installs_mandatory_security_selection_when_non_empty ... FAILED
+test bt1::bt1_087::bt1_087_on_play_no_op_when_security_is_empty ... ok
+test bt1::bt1_087::bt1_087_on_play_non_yellow_pick_adds_to_hand_without_recovery ... FAILED
+test bt1::bt1_087::bt1_087_on_play_resolves_fully_leaving_no_pending_selection ... FAILED
+test bt1::bt1_087::bt1_087_on_play_search_is_unfiltered_even_with_zero_yellow_cards ... ok
+test bt1::bt1_087::bt1_087_on_play_yellow_pick_adds_to_hand_and_triggers_recovery ... FAILED
+test bt1::bt1_087::bt1_087_start_of_turn_does_not_change_memory_above_two ... ok
+test bt1::bt1_087::bt1_087_start_of_turn_raises_zero_memory_to_three ... ok
+test bt1::bt1_087::bt1_087_start_of_turn_sets_memory_to_three_when_two_or_less ... ok
+
+failures:
+
+---- bt1::bt1_087::bt1_087_on_play_add_to_hand_clears_face_up_security_bookkeeping stdout ----
+
+thread 'bt1::bt1_087::bt1_087_on_play_add_to_hand_clears_face_up_security_bookkeeping' (41576) panicked at code\digimon-engine\tests\cards_behavioral\bt1\bt1_087.rs:483:10:
+pick the sole security card: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt1::bt1_087::bt1_087_on_play_installs_mandatory_security_selection_when_non_empty stdout ----
+
+thread 'bt1::bt1_087::bt1_087_on_play_installs_mandatory_security_selection_when_non_empty' (4312) panicked at code\digimon-engine\tests\cards_behavioral\bt1\bt1_087.rs:298:5:
+assertion failed: view.valid_action_ids.contains(&SEL_MY_SECURITY_START)
+
+---- bt1::bt1_087::bt1_087_on_play_non_yellow_pick_adds_to_hand_without_recovery stdout ----
+
+thread 'bt1::bt1_087::bt1_087_on_play_non_yellow_pick_adds_to_hand_without_recovery' (5168) panicked at code\digimon-engine\tests\cards_behavioral\bt1\bt1_087.rs:367:10:
+pick the sole security card: InvalidAction
+
+---- bt1::bt1_087::bt1_087_on_play_resolves_fully_leaving_no_pending_selection stdout ----
+
+thread 'bt1::bt1_087::bt1_087_on_play_resolves_fully_leaving_no_pending_selection' (22808) panicked at code\digimon-engine\tests\cards_behavioral\bt1\bt1_087.rs:425:10:
+pick a security card: InvalidAction
+
+---- bt1::bt1_087::bt1_087_on_play_yellow_pick_adds_to_hand_and_triggers_recovery stdout ----
+
+thread 'bt1::bt1_087::bt1_087_on_play_yellow_pick_adds_to_hand_and_triggers_recovery' (1048) panicked at code\digimon-engine\tests\cards_behavioral\bt1\bt1_087.rs:320:10:
+pick the sole security card: InvalidAction
+
+
+failures:
+    bt1::bt1_087::bt1_087_on_play_add_to_hand_clears_face_up_security_bookkeeping
+    bt1::bt1_087::bt1_087_on_play_installs_mandatory_security_selection_when_non_empty
+    bt1::bt1_087::bt1_087_on_play_non_yellow_pick_adds_to_hand_without_recovery
+    bt1::bt1_087::bt1_087_on_play_resolves_fully_leaving_no_pending_selection
+    bt1::bt1_087::bt1_087_on_play_yellow_pick_adds_to_hand_and_triggers_recovery
+
+test result: FAILED. 11 passed; 5 failed; 0 ignored; 0 measured; 12739 filtered out; finished in 34.04s
+

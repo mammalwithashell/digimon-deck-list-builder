@@ -350,13 +350,15 @@ impl Game {
         let Some(target) = self.player(opponent).battle_area.get(target_idx as usize) else {
             return false;
         };
-        if !target.is_digimon(&self.card_data) {
-            return false;
-        }
         let defender = PermanentHandle {
             player: opponent,
             index: target_idx,
         };
+        // Match the mask's rules identity: tokens and transformed Tamers can
+        // be Digimon targets even when their printed card kind is different.
+        if !self.permanent_is_digimon_for_rules(defender) {
+            return false;
+        }
         // Track C / D consult site (2026-05-08): `CanAttackTargetDefendingPermanent`
         // overrides `CannotAttackTarget` at attack action decode.
         if self.attack_target_blocked_by_modifier(attacker, defender) {

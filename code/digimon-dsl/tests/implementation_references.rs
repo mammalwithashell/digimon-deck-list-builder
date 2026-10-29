@@ -133,6 +133,7 @@ fn repeated_formula_and_alternate_path_predicates_keep_occurrence_paths() {
     };
     c.use_requirement = Some(p.clone());
     c.effects = vec![CompiledClause::Triggered(CompiledTriggeredClause {
+        trigger_if: None,
         when: vec![CompiledTiming::OnPlay],
         scope: CompiledScope::FaceUp,
         active_when: Some(p.clone()),

@@ -58,7 +58,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{CompiledClause, CompiledStep, CompiledTiming};
-use digimon_engine::action::space::SEL_MY_SECURITY_START;
+use digimon_engine::action::build_action_mask;
+use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -75,6 +76,22 @@ fn fire_timing(runner: &mut DebugRunner, timing: EffectTiming, source: Permanent
         .game
         .enqueue_triggered(timing, TriggerSource::Permanent(source));
     runner.game.drain_effect_queue();
+}
+
+fn security_action(runner: &DebugRunner, position: usize) -> u16 {
+    let pending = runner.game.pending_selection.as_ref().expect("mandatory security choice");
+    assert!(!pending.is_optional);
+    let page = pending.card_choice.as_ref().expect("physical security choices").view(&runner.game, 0);
+    let commits: Vec<_> = page.rows.iter().filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard)).collect();
+    assert_eq!(pending.valid_action_ids, commits.iter().map(|row| row.action_id).collect::<Vec<_>>());
+    let position_text = position.to_string();
+    let row = commits.into_iter().find(|row| row.position.as_deref() == Some(position_text.as_str()))
+        .expect("requested physical security position is a legal pick");
+    assert_eq!(row.owner, Some(0));
+    assert!(matches!(row.zone, Some(CardChoiceZone::Security)));
+    assert_eq!(row.card_id.as_deref(), Some(runner.game.player(0).security[position].card_id(&runner.game.card_data)));
+    assert_eq!(build_action_mask(&runner.game, 0)[row.action_id as usize], 1.0);
+    row.action_id
 }
 
 fn make_yellow_sec(id: &str) -> CardData {
@@ -295,7 +312,7 @@ fn bt1_087_on_play_installs_mandatory_security_selection_when_non_empty() {
     let view = runner
         .pending_selection_view()
         .expect("a Security selection must install when security is non-empty");
-    assert!(view.valid_action_ids.contains(&SEL_MY_SECURITY_START));
+    assert!(view.valid_action_ids.contains(&security_action(&runner, 0)));
 }
 
 /// Picking the (only) yellow security card adds it to hand and triggers
@@ -316,7 +333,7 @@ fn bt1_087_on_play_yellow_pick_adds_to_hand_and_triggers_recovery() {
 
     fire_timing(&mut runner, EffectTiming::OnPlay, tk);
     runner
-        .execute_action(0, SEL_MY_SECURITY_START)
+        .execute_action(0, security_action(&runner, 0))
         .expect("pick the sole security card");
     let _ = runner.auto_resolve();
 
@@ -363,7 +380,7 @@ fn bt1_087_on_play_non_yellow_pick_adds_to_hand_without_recovery() {
 
     fire_timing(&mut runner, EffectTiming::OnPlay, tk);
     runner
-        .execute_action(0, SEL_MY_SECURITY_START)
+        .execute_action(0, security_action(&runner, 0))
         .expect("pick the sole security card");
     let _ = runner.auto_resolve();
 
@@ -421,7 +438,7 @@ fn bt1_087_on_play_resolves_fully_leaving_no_pending_selection() {
 
     fire_timing(&mut runner, EffectTiming::OnPlay, tk);
     runner
-        .execute_action(0, SEL_MY_SECURITY_START + 1) // pick the middle (blue) slot
+        .execute_action(0, security_action(&runner, 1)) // pick the middle (blue) slot
         .expect("pick a security card");
     let _ = runner.auto_resolve();
 
@@ -479,7 +496,7 @@ fn bt1_087_on_play_add_to_hand_clears_face_up_security_bookkeeping() {
 
     fire_timing(&mut runner, EffectTiming::OnPlay, tk);
     runner
-        .execute_action(0, SEL_MY_SECURITY_START)
+        .execute_action(0, security_action(&runner, 0))
         .expect("pick the sole security card");
     let _ = runner.auto_resolve();
 

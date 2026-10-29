@@ -1,0 +1,86 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 12 items
+
+code\tests\tools\test_impact_scope.py ........FF.F                       [100%]
+
+================================== FAILURES ===================================
+__________ test_default_worktree_paths_include_staged_and_untracked ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000185389C86E0>
+
+    def test_default_worktree_paths_include_staged_and_untracked(monkeypatch):
+        from types import SimpleNamespace
+        from tools import impact_scope
+        calls = []
+        def run(command, **kwargs):
+            calls.append(command)
+            if command[1] == "ls-files":
+                return SimpleNamespace(stdout="new.rs\nworking.rs\n")
+            return SimpleNamespace(stdout="staged.rs\nworking.rs\n" if "HEAD" in command else "working.rs\n")
+        monkeypatch.setattr(impact_scope.subprocess, "run", run)
+>       assert impact_scope.changed_paths_from_git(None, None) == ["staged.rs", "working.rs", "new.rs"]
+E       AssertionError: assert ['working.rs'] == ['staged.rs',...rs', 'new.rs']
+E         
+E         At index 0 diff: 'working.rs' != 'staged.rs'
+E         Right contains 2 more items, first extra item: 'working.rs'
+E         Use -v to get more diff
+
+code\tests\tools\test_impact_scope.py:164: AssertionError
+__________ test_base_without_head_includes_untracked_worktree_paths ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000018538A51470>
+
+    def test_base_without_head_includes_untracked_worktree_paths(monkeypatch):
+        from types import SimpleNamespace
+        from tools import impact_scope
+        calls = []
+        def run(command, **kwargs):
+            calls.append(command)
+            return SimpleNamespace(stdout="new.rs\n" if command[1] == "ls-files" else "base-change.rs\n")
+        monkeypatch.setattr(impact_scope.subprocess, "run", run)
+>       assert impact_scope.changed_paths_from_git("origin/main", None) == ["base-change.rs", "new.rs"]
+E       AssertionError: assert ['base-change.rs'] == ['base-change.rs', 'new.rs']
+E         
+E         Right contains one more item: 'new.rs'
+E         Use -v to get more diff
+
+code\tests\tools\test_impact_scope.py:177: AssertionError
+_______ test_real_git_worktree_inventory_keeps_all_three_change_states ________
+
+tmp_path = WindowsPath('C:/Users/james/AppData/Local/Temp/pytest-of-james/pytest-144/test_real_git_worktree_invento0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000018538A4BEE0>
+
+    def test_real_git_worktree_inventory_keeps_all_three_change_states(tmp_path, monkeypatch):
+        import subprocess
+        from tools.impact_scope import changed_paths_from_git
+        def git(*args):
+            return subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True, text=True)
+        git("init")
+        for name in ("staged.rs", "working.rs"):
+            (tmp_path / name).write_text("old", encoding="utf-8")
+        git("add", ".")
+        git("-c", "user.name=Scope Probe", "-c", "user.email=scope@example.invalid", "commit", "-m", "fixture")
+        (tmp_path / "staged.rs").write_text("staged", encoding="utf-8")
+        git("add", "staged.rs")
+        (tmp_path / "working.rs").write_text("working", encoding="utf-8")
+        (tmp_path / "new.rs").write_text("untracked", encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+>       assert set(changed_paths_from_git(None, None)) == {"staged.rs", "working.rs", "new.rs"}
+E       AssertionError: assert {'working.rs'} == {'new.rs', 's... 'working.rs'}
+E         
+E         Extra items in the right set:
+E         'staged.rs'
+E         'new.rs'
+E         Use -v to get more diff
+
+C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\tests\tools\test_impact_scope.py:208: AssertionError
+=========================== short test summary info ===========================
+FAILED code/tests/tools/test_impact_scope.py::test_default_worktree_paths_include_staged_and_untracked
+FAILED code/tests/tools/test_impact_scope.py::test_base_without_head_includes_untracked_worktree_paths
+FAILED code/tests/tools/test_impact_scope.py::test_real_git_worktree_inventory_keeps_all_three_change_states
+========================= 3 failed, 9 passed in 1.72s =========================

@@ -7,3 +7,5 @@ mod bt6_103;
 mod bt6_105;
 mod bt6_108;
 mod bt6_068;
+
+mod bt6_022;

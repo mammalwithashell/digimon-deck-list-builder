@@ -1,0 +1,95 @@
+"""Exercise the published CPU image's native/Python boundary; no quality claim."""
+from pathlib import Path
+import json
+import subprocess
+import tempfile
+
+import digimon_engine
+import tools.anchored_eval_cli  # noqa: F401
+import tools.export_onnx  # noqa: F401
+import tools.run_selfplay_generation  # noqa: F401
+from digimon_gym.agents.gauntlet import require_mechanics_ready, validate_admissible_deck
+from model_contract import current_contract
+
+
+def check_deletion_payment_replay(root):
+    """The shipping wheel must clear the exact failed payment boundary."""
+    fixture = root / "code/digimon-engine/tests/fixtures/training/medusamon-immune-token-payment.json"
+    recording = json.loads(fixture.read_text(encoding="utf-8"))
+    replay = digimon_engine.RustReplayRunner(json.dumps(recording), verify=True)
+    for row in recording["actions"]:
+        if row["phase"] == "Mulligan":
+            continue
+        result = replay.step()
+        if row["step"] == 93:
+            state = result["state"]
+            assert all(p["topCardId"] != "EX11-012" for p in state["player1"]["battleArea"]), \
+                "Unpayable token deletion must not protect Medusamon"
+            assert any(p["topCardId"] == "TOKEN_PETRIFICATION" for p in state["player2"]["battleArea"]), \
+                "The immune token must remain in play"
+            pending = state.get("pendingSelection") or {}
+            assert "Delete 1 Token" not in pending.get("prompt", ""), "Impossible payment prompt reappeared"
+            return
+        assert not result["divergences"], f"Replay diverged before payment boundary: {row['step']}"
+    raise AssertionError("Missing recorded payment boundary")
+
+
+def main():
+    require_mechanics_ready()
+    root = Path(__file__).resolve().parents[3]
+    check_deletion_payment_replay(root)
+    cards = root / "data/cards.json"
+    native = set(json.loads(subprocess.check_output([
+        "digimon-engine-cli", "--cards-json", str(cards), "pool"], text=True)))
+    raw = json.loads(cards.read_text(encoding="utf-8"))
+    available = set(raw) if isinstance(raw, dict) else {r["card_id"] for r in raw}
+    assert native == set(digimon_engine.load_implemented_card_ids()) & available
+    contract = current_contract("standard_lite_v2")
+    library = json.loads((root / "data/deck_library.json").read_text(encoding="utf-8"))
+    deck = None
+    for row in library["archetypes"]["Medusamon"]["decklists"]:
+        candidate = row["decklist"]
+        if isinstance(candidate, str):
+            candidate = json.loads(candidate)
+        if not set(candidate) <= native:
+            continue
+        try:
+            validate_admissible_deck(candidate)
+        except ValueError:
+            continue
+        if digimon_engine.validate_deck(candidate).is_valid:
+            deck = candidate
+            break
+    assert deck, "No admitted legal smoke deck"
+    game = digimon_engine.RustHeadlessGame(deck, deck, seed=20261025, observation_profile="standard_lite_v2")
+    assert digimon_engine.CARD_EVAL_EVENT_VERSION >= 2
+    assert game.get_eval_decision_context()["schema_version"] == 1
+    for _ in range(8):
+        state = game.get_card_eval_state()
+        full = game.to_ui_json()
+        for player in ("player1", "player2"):
+            assert state[player]["handIds"] == full[player]["handIds"]
+        decision = json.loads(game.teacher_decision("development_v1"))
+        assert decision["player"] + 1 == game.current_player_id
+        assert game.get_action_mask()[decision["action"]] > .5
+        assert json.loads(game.teacher_decision("greedy"))["action"] == game.greedy_action()
+        game.step(decision["action"])
+    with tempfile.TemporaryDirectory() as temp:
+        directory = Path(temp)
+        pool = directory / "decks.json"
+        pool.write_text(json.dumps([{"name": "ci-smoke", "cards": deck}]))
+        output = directory / "native"
+        subprocess.run([
+            "digimon-engine-cli", "--pool", "implemented", "--cards-json", str(cards),
+            "selfplay", "--uniform", "--tensor-profile", "standard_lite_v2",
+            "--decks", str(pool), "--games", "2", "--sims", "8", "--worlds", "4",
+            "--eval-batch-size", "4", "--decision-cap", "12", "--seed", "20261024",
+            "--out", str(output)], check=True, timeout=120)
+        manifest = json.loads((output / "manifest.json").read_text())
+        assert manifest["games"] == 2 and manifest["rows"] > 0
+        assert manifest["model_contract"] == contract
+    print("SEARCH_CPU_IMAGE_OK: imports, deletion-payment replay, compiled registry parity, admission, native shards")
+
+
+if __name__ == "__main__":
+    main()

@@ -9,14 +9,16 @@
 //!   - determinism per seed,
 //!   - completes within budget on messy mid-game states from real decks,
 //!   - determinized aggregation (PIMC / IS-MCTS, task 2.3) and the
-//!     no-X-ray guard (task 2.5) in `determinized.rs`.
+//!     no-X-ray guard (task 2.5) in `determinized.rs`,
 //!
 //! Registry construction recurses deeply — every test body runs on a
 //! 256 MB-stack thread (same mitigation as `tests/clone_fuzz/main.rs`).
 //! Run: RUST_MIN_STACK=268435456 cargo test --test search
 
+mod batching;
 mod determinized;
 mod midgame;
 mod perfect_information;
 mod profile;
+mod paging;
 mod support;

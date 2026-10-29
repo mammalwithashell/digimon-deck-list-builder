@@ -1,0 +1,704 @@
+{
+  "game": 268,
+  "seed": 5659078089716629489,
+  "search_seed": 15930221759238541125,
+  "deck1": [
+    "BT24-031",
+    "BT24-031",
+    "BT24-031",
+    "BT24-031",
+    "BT25-028",
+    "BT25-028",
+    "BT24-003",
+    "BT24-003",
+    "BT24-003",
+    "BT24-003",
+    "BT24-101",
+    "BT24-101",
+    "BT24-101",
+    "BT24-101",
+    "BT24-083",
+    "BT24-083",
+    "BT26-029",
+    "BT26-029",
+    "BT26-029",
+    "BT26-029",
+    "BT25-030",
+    "BT25-030",
+    "BT25-030",
+    "BT26-092",
+    "BT26-092",
+    "EX13-077",
+    "BT26-033",
+    "BT8-097",
+    "BT24-100",
+    "BT4-104",
+    "BT24-084",
+    "BT24-084",
+    "BT24-084",
+    "BT26-096",
+    "BT26-087",
+    "BT26-087",
+    "BT25-025",
+    "BT25-025",
+    "P-213",
+    "P-213",
+    "BT25-022",
+    "BT25-022",
+    "BT25-022",
+    "BT26-103",
+    "BT26-103",
+    "BT26-103",
+    "BT25-033",
+    "BT25-033",
+    "BT25-033",
+    "BT25-033",
+    "BT24-034",
+    "BT24-034",
+    "BT24-034",
+    "BT24-034"
+  ],
+  "deck2": [
+    "EX12-002",
+    "EX12-002",
+    "EX12-002",
+    "EX12-002",
+    "EX12-006",
+    "EX12-006",
+    "EX12-006",
+    "EX12-006",
+    "EX12-022",
+    "EX12-022",
+    "EX12-022",
+    "EX12-022",
+    "EX12-039",
+    "EX12-039",
+    "EX12-039",
+    "EX12-039",
+    "EX12-012",
+    "EX12-012",
+    "EX12-012",
+    "EX12-012",
+    "EX12-025",
+    "EX12-043",
+    "EX12-043",
+    "EX12-043",
+    "EX12-043",
+    "EX12-015",
+    "EX12-029",
+    "EX12-029",
+    "EX12-029",
+    "EX12-045",
+    "EX12-045",
+    "EX12-045",
+    "EX12-045",
+    "EX12-056",
+    "EX12-056",
+    "EX12-056",
+    "EX12-019",
+    "EX12-034",
+    "EX12-034",
+    "EX12-034",
+    "EX12-034",
+    "EX12-048",
+    "EX12-057",
+    "EX12-057",
+    "EX12-076",
+    "BT26-104",
+    "BT26-104",
+    "EX12-071",
+    "EX12-071",
+    "EX12-071",
+    "EX12-071",
+    "EX12-074",
+    "EX12-075",
+    "EX12-075"
+  ],
+  "prefix": [
+    {
+      "decision": 0,
+      "player": 1,
+      "action": 0
+    },
+    {
+      "decision": 1,
+      "player": 0,
+      "action": 0
+    },
+    {
+      "decision": 2,
+      "player": 1,
+      "action": 60
+    },
+    {
+      "decision": 3,
+      "player": 1,
+      "action": 2
+    },
+    {
+      "decision": 4,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 5,
+      "player": 0,
+      "action": 60
+    },
+    {
+      "decision": 6,
+      "player": 0,
+      "action": 5
+    },
+    {
+      "decision": 7,
+      "player": 0,
+      "action": 59
+    },
+    {
+      "decision": 8,
+      "player": 0,
+      "action": 100
+    },
+    {
+      "decision": 9,
+      "player": 0,
+      "action": 100
+    },
+    {
+      "decision": 10,
+      "player": 1,
+      "action": 4
+    },
+    {
+      "decision": 11,
+      "player": 1,
+      "action": 32
+    },
+    {
+      "decision": 12,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 13,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 14,
+      "player": 0,
+      "action": 414
+    },
+    {
+      "decision": 15,
+      "player": 0,
+      "action": 5
+    },
+    {
+      "decision": 16,
+      "player": 1,
+      "action": 129
+    },
+    {
+      "decision": 17,
+      "player": 0,
+      "action": 31
+    },
+    {
+      "decision": 18,
+      "player": 0,
+      "action": 59
+    },
+    {
+      "decision": 19,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 20,
+      "player": 0,
+      "action": 100
+    },
+    {
+      "decision": 21,
+      "player": 0,
+      "action": 101
+    },
+    {
+      "decision": 22,
+      "player": 1,
+      "action": 114
+    },
+    {
+      "decision": 23,
+      "player": 1,
+      "action": 5
+    },
+    {
+      "decision": 24,
+      "player": 0,
+      "action": 61
+    },
+    {
+      "decision": 25,
+      "player": 0,
+      "action": 30
+    },
+    {
+      "decision": 26,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 27,
+      "player": 0,
+      "action": 144
+    },
+    {
+      "decision": 28,
+      "player": 0,
+      "action": 0
+    },
+    {
+      "decision": 29,
+      "player": 0,
+      "action": 100
+    },
+    {
+      "decision": 30,
+      "player": 0,
+      "action": 30
+    },
+    {
+      "decision": 31,
+      "player": 0,
+      "action": 30
+    },
+    {
+      "decision": 32,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 33,
+      "player": 1,
+      "action": 6
+    },
+    {
+      "decision": 34,
+      "player": 1,
+      "action": 5
+    },
+    {
+      "decision": 35,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 36,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 37,
+      "player": 1,
+      "action": 100
+    },
+    {
+      "decision": 38,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 39,
+      "player": 0,
+      "action": 60
+    },
+    {
+      "decision": 40,
+      "player": 0,
+      "action": 5
+    },
+    {
+      "decision": 41,
+      "player": 1,
+      "action": 4
+    },
+    {
+      "decision": 42,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 43,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 44,
+      "player": 1,
+      "action": 101
+    },
+    {
+      "decision": 45,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 46,
+      "player": 1,
+      "action": 101
+    },
+    {
+      "decision": 47,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 48,
+      "player": 1,
+      "action": 4
+    },
+    {
+      "decision": 49,
+      "player": 0,
+      "action": 5
+    },
+    {
+      "decision": 50,
+      "player": 0,
+      "action": 129
+    },
+    {
+      "decision": 51,
+      "player": 0,
+      "action": 100
+    },
+    {
+      "decision": 52,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 53,
+      "player": 0,
+      "action": 1
+    },
+    {
+      "decision": 54,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 55,
+      "player": 1,
+      "action": 4
+    },
+    {
+      "decision": 56,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 57,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 58,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 59,
+      "player": 1,
+      "action": 103
+    },
+    {
+      "decision": 60,
+      "player": 1,
+      "action": 101
+    },
+    {
+      "decision": 61,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 62,
+      "player": 0,
+      "action": 2
+    },
+    {
+      "decision": 63,
+      "player": 0,
+      "action": 1
+    },
+    {
+      "decision": 64,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 65,
+      "player": 1,
+      "action": 4
+    },
+    {
+      "decision": 66,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 67,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 68,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 69,
+      "player": 1,
+      "action": 159
+    },
+    {
+      "decision": 70,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 71,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 72,
+      "player": 1,
+      "action": 129
+    },
+    {
+      "decision": 73,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 74,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 75,
+      "player": 1,
+      "action": 114
+    },
+    {
+      "decision": 76,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 77,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 78,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 79,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 80,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 81,
+      "player": 1,
+      "action": 4
+    },
+    {
+      "decision": 82,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 83,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 84,
+      "player": 1,
+      "action": 102
+    },
+    {
+      "decision": 85,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 86,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 87,
+      "player": 1,
+      "action": 102
+    },
+    {
+      "decision": 88,
+      "player": 0,
+      "action": 30
+    },
+    {
+      "decision": 89,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 90,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 91,
+      "player": 0,
+      "action": 2
+    },
+    {
+      "decision": 92,
+      "player": 0,
+      "action": 100
+    },
+    {
+      "decision": 93,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 94,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 95,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 96,
+      "player": 1,
+      "action": 159
+    },
+    {
+      "decision": 97,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 98,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 99,
+      "player": 0,
+      "action": 30
+    },
+    {
+      "decision": 100,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 101,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 102,
+      "player": 1,
+      "action": 129
+    },
+    {
+      "decision": 103,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 104,
+      "player": 0,
+      "action": 30
+    },
+    {
+      "decision": 105,
+      "player": 0,
+      "action": 30
+    },
+    {
+      "decision": 106,
+      "player": 0,
+      "action": 30
+    },
+    {
+      "decision": 107,
+      "player": 0,
+      "action": 62
+    },
+    {
+      "decision": 108,
+      "player": 1,
+      "action": 114
+    },
+    {
+      "decision": 109,
+      "player": 0,
+      "action": 103
+    },
+    {
+      "decision": 110,
+      "player": 0,
+      "action": 103
+    },
+    {
+      "decision": 111,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 112,
+      "player": 1,
+      "action": 4
+    },
+    {
+      "decision": 113,
+      "player": 1,
+      "action": 30
+    },
+    {
+      "decision": 114,
+      "player": 1,
+      "action": 62
+    },
+    {
+      "decision": 115,
+      "player": 1,
+      "action": 103
+    },
+    {
+      "decision": 116,
+      "player": 1,
+      "action": 3
+    }
+  ]
+}

@@ -68,6 +68,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CannotPlayFromHand" => ModifierType::CannotPlayFromHand,
         "CannotUseOptionCards" => ModifierType::CannotUseOptionCards,
         "CannotActivateSecurityEffects" => ModifierType::CannotActivateSecurityEffects,
+        "DoesNotActivateOptionSecurityEffects" => ModifierType::DoesNotActivateOptionSecurityEffects,
         "CannotPlayDigimonByEffect" => ModifierType::CannotPlayDigimonByEffect,
         "CannotPlayDigimonWithDPAtMost" => ModifierType::CannotPlayDigimonWithDPAtMost,
         "CannotPlayTamerByEffect" => ModifierType::CannotPlayTamerByEffect,
@@ -200,6 +201,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CannotActivateWhenDigivolvingEffects
         | ModifierType::CannotActivateWhenAttackingEffects
         | ModifierType::CannotActivateSecurityEffects
+        | ModifierType::DoesNotActivateOptionSecurityEffects
         | ModifierType::CannotDigivolveDigimonByEffect
         | ModifierType::CannotDrawByEffect
         | ModifierType::CannotAddSecurityByEffect
@@ -321,6 +323,7 @@ mod tests {
             ModifierType::CannotActivateWhenDigivolvingEffects,
             ModifierType::CannotActivateWhenAttackingEffects,
             ModifierType::CannotActivateSecurityEffects,
+            ModifierType::DoesNotActivateOptionSecurityEffects,
             ModifierType::CannotDigivolveDigimonByEffect,
             ModifierType::CannotDrawByEffect,
             ModifierType::CannotAddSecurityByEffect,

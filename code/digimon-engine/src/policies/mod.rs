@@ -21,12 +21,14 @@
 //! this module stays free of the `ort` dependency.
 
 pub mod greedy;
+pub mod development;
 pub mod random;
 
 use crate::enums::PlayerId;
 use crate::game::Game;
 
 pub use greedy::greedy_action;
+pub use development::DevelopmentPolicy;
 pub use random::RandomPolicy;
 
 /// Stateful action selection. Implementations must return a valid action

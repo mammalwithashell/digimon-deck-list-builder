@@ -1,0 +1,36 @@
+
+running 17 tests
+test bt13::bt13_012::bt13_012_accept_delete_removes_opponent_digimon ... ok
+test bt13::bt13_012::bt13_012_alt_path_agumon_dinosaur_lv3_cost2 ... ok
+test bt13::bt13_012::bt13_012_clause1_decline_skips_play_and_recovery ... ok
+test bt13::bt13_012::bt13_012_clause1_when_digivolving_is_blocked ... FAILED
+test bt13::bt13_012::bt13_012_decline_leaves_opponent_digimon ... ok
+test bt13::bt13_012::bt13_012_does_not_fire_for_own_green_or_purple_tamer ... ok
+test bt13::bt13_012::bt13_012_does_not_fire_on_opponents_turn ... ok
+test bt13::bt13_012::bt13_012_does_not_fire_when_opponent_tamer_suspends ... ok
+test bt13::bt13_012::bt13_012_does_not_fire_when_own_digimon_suspends ... ok
+test bt13::bt13_012::bt13_012_does_not_install_prompt_when_opponent_has_no_digimon ... ok
+test bt13::bt13_012::bt13_012_dp_lte_filter_excludes_high_dp_targets ... ok
+test bt13::bt13_012::bt13_012_has_exactly_one_triggered_clause ... ok
+test bt13::bt13_012::bt13_012_inherited_on_suspend_clause_shape ... ok
+test bt13::bt13_012::bt13_012_metadata_matches_printed ... ok
+test bt13::bt13_012::bt13_012_on_own_red_tamer_suspend_installs_delete_prompt ... ok
+test bt13::bt13_012::bt13_012_opt_lockout_blocks_second_activation_in_same_turn ... ok
+test bt13::bt13_012::bt13_012_when_digivolving_clause_intentionally_omitted ... ok
+
+failures:
+
+---- bt13::bt13_012::bt13_012_clause1_when_digivolving_is_blocked stdout ----
+
+thread 'bt13::bt13_012::bt13_012_clause1_when_digivolving_is_blocked' (36368) panicked at code\digimon-engine\tests\cards_behavioral\bt13\bt13_012.rs:270:9:
+assertion `left == right` failed: filter must admit exactly the 2 red/yellow Tamers; got [30, 31, 62]
+  left: 3
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt13::bt13_012::bt13_012_clause1_when_digivolving_is_blocked
+
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 12738 filtered out; finished in 24.06s
+

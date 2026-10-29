@@ -1,0 +1,85 @@
+# Official P-249 source observations in light-hybrid-training/p-249-source-candidate;
+# verified P-249.webp and base DCGO P/Yellow/P_249.cs.
+# CR 4.3 15-7-2/15-7-5: successful placement gates evolution; payment remains
+# legal even when no evolution is available. There is no once-per-turn clause.
+card: P-249
+name: Strabimon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+form: Hybrid
+attribute: Variable
+traits: [Beastkin]
+alt_paths:
+  - kind: digivolve
+    from: {level_eq: 2, color_is: yellow}
+    cost: 0
+  - kind: digivolve
+    from: {level_eq: 2, color_is: blue}
+    cost: 0
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter: {of: you, zone: [hand, trash], trait_has: Hybrid}
+        n: 1
+    process:
+      - select_zone_cards:
+          of: you
+          zones: [hand, trash]
+          min: 0
+          max: 1
+          filter: {trait_has: Hybrid}
+          bind_as: payment
+          prompt: You may place 1 Hybrid card from hand or trash under this Digimon or a Tamer with inherited effects
+      - per_selected:
+          selection: payment
+          bind_as: material
+          body:
+            - select_own_permanent:
+                bind_as: host
+                optional: true
+                filter:
+                  any_of:
+                    - is_source: true
+                    - all_of: [{kind: tamer}, {has_inherited: {}}]
+                prompt: Choose this Digimon or one of your Tamers with inherited effects
+                then:
+                  - place_as_bottom_source: {source: material, target: host, bind_placed_as: placed}
+                  - if:
+                      condition: {binding_present: placed}
+                      then:
+                        - select_hand:
+                            of: you
+                            bind_as: hybrid
+                            optional: true
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - trait_has: Hybrid
+                                - can_digivolve_onto_with_cost: {target: host, cost: {reduce: 2}}
+                            prompt: You may digivolve that Digimon or Tamer into a Hybrid from hand for 2 less
+                            then:
+                              - effect_initiated_digivolve:
+                                  target: host
+                                  source: hybrid
+                                  cost: {reduce: 2}
+                                  ignore_requirements: false
+  - scope: inherited
+    when: on_deletion
+    process:
+      - select_hand:
+          of: you
+          optional: true
+          bind_as: tamer
+          filter:
+            all_of:
+              - kind: tamer
+              - has_inherited: {}
+              - can_play_from_effect_without_cost: true
+          prompt: You may play 1 Tamer with inherited effects from hand for free
+          then:
+            - play_from_hand_free: {of: you, hand_index: tamer}

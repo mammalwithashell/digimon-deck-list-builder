@@ -1,0 +1,323 @@
+
+running 13 tests
+test bt24::bt24_098::bt24_098_delay_ignores_non_titan_play ... ok
+test bt24::bt24_098::bt24_098_declining_delay_keeps_it_parked ... ok
+test bt24::bt24_098::bt24_098_delay_not_on_placing_turn ... ok
+test bt24::bt24_098::bt24_098_delay_not_on_opponents_turn ... ok
+test bt24::bt24_098::bt24_098_delay_plays_titan_from_trash_when_opponent_has_five ... ok
+test bt24::bt24_098::bt24_098_delay_play_is_optional ... ok
+test bt24::bt24_098::bt24_098_main_draws_two_trashes_two_and_parks ... ok
+test bt24::bt24_098::bt24_098_delay_without_opponent_five_memory_plays_nothing ... ok
+test bt24::bt24_098::bt24_098_main_with_one_card_to_trash_trashes_one ... ok
+test bt24::bt24_098::bt24_098_security_decline_still_adds_self ... ok
+test bt24::bt24_098::bt24_098_security_plays_titan_from_hand_then_adds_self ... ok
+test bt24::bt24_098::bt24_098_security_plays_titan_from_trash ... FAILED
+test bt24::bt24_098::bt24_098_structure ... ok
+
+failures:
+
+---- bt24::bt24_098::bt24_098_security_plays_titan_from_trash stdout ----
+
+thread 'bt24::bt24_098::bt24_098_security_plays_titan_from_trash' (29840) panicked at code\digimon-engine\tests\cards_behavioral\bt24\bt24_098.rs:618:5:
+TITAN4 not a legal trash pick (valid [30, 62])
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt24::bt24_098::bt24_098_security_plays_titan_from_trash
+
+test result: FAILED. 12 passed; 1 failed; 0 ignored; 0 measured; 12742 filtered out; finished in 17.30s
+
+
+running 12 tests
+test bt25::bt25_092::bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced ... FAILED
+test bt25::bt25_092::bt25_092_main_cost_from_digivolution_cards_of_any_own_digimon ... FAILED
+test bt25::bt25_092::bt25_092_main_decline_result_pick_after_target ... FAILED
+test bt25::bt25_092::bt25_092_main_cost_union_offers_both_hand_and_sources_in_one_prompt ... FAILED
+test bt25::bt25_092::bt25_092_main_digivolve_into_card_resident_in_trash ... FAILED
+test bt25::bt25_092::bt25_092_main_decline_target_keeps_cost_paid_and_does_not_digivolve ... FAILED
+test bt25::bt25_092::bt25_092_main_not_offered_without_any_option_to_trash ... ok
+test bt25::bt25_092::bt25_092_main_not_offered_when_tamer_suspended ... ok
+test bt25::bt25_092::bt25_092_start_of_main_no_cost_card_does_not_fire ... ok
+test bt25::bt25_092::bt25_092_main_target_pick_excludes_digimon_without_a_legal_result ... FAILED
+test bt25::bt25_092::bt25_092_start_of_main_trashes_ts_card_draws_and_gains_memory ... ok
+test bt25::bt25_092::bt25_092_structure_start_of_main_and_security ... ok
+
+failures:
+
+---- bt25::bt25_092::bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced stdout ----
+
+thread 'bt25::bt25_092::bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced' (52960) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_092.rs:239:5:
+assertion `left == right` failed: only the Option card is trashable
+  left: [30]
+ right: [0]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt25::bt25_092::bt25_092_main_cost_from_digivolution_cards_of_any_own_digimon stdout ----
+
+thread 'bt25::bt25_092::bt25_092_main_cost_from_digivolution_cards_of_any_own_digimon' (5416) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_092.rs:330:5:
+assertion `left == right` failed: only the buried Option (BASE source 0) is offered; the hand holds no Option
+  left: [30]
+ right: [2012]
+
+---- bt25::bt25_092::bt25_092_main_decline_result_pick_after_target stdout ----
+
+thread 'bt25::bt25_092::bt25_092_main_decline_result_pick_after_target' (45060) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_092.rs:493:42:
+trash Option: InvalidAction
+
+---- bt25::bt25_092::bt25_092_main_cost_union_offers_both_hand_and_sources_in_one_prompt stdout ----
+
+thread 'bt25::bt25_092::bt25_092_main_cost_union_offers_both_hand_and_sources_in_one_prompt' (10500) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_092.rs:381:5:
+assertion `left == right` failed: DCGO's From-hand / From-digivolution-cards bool + pick fold into one union prompt
+  left: [30, 31]
+ right: [0, 2012]
+
+---- bt25::bt25_092::bt25_092_main_digivolve_into_card_resident_in_trash stdout ----
+
+thread 'bt25::bt25_092::bt25_092_main_digivolve_into_card_resident_in_trash' (21248) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_092.rs:397:42:
+trash Option: InvalidAction
+
+---- bt25::bt25_092::bt25_092_main_decline_target_keeps_cost_paid_and_does_not_digivolve stdout ----
+
+thread 'bt25::bt25_092::bt25_092_main_decline_target_keeps_cost_paid_and_does_not_digivolve' (10412) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_092.rs:459:42:
+trash Option: InvalidAction
+
+---- bt25::bt25_092::bt25_092_main_target_pick_excludes_digimon_without_a_legal_result stdout ----
+
+thread 'bt25::bt25_092::bt25_092_main_target_pick_excludes_digimon_without_a_legal_result' (26332) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_092.rs:435:42:
+trash Option: InvalidAction
+
+
+failures:
+    bt25::bt25_092::bt25_092_main_cost_from_digivolution_cards_of_any_own_digimon
+    bt25::bt25_092::bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced
+    bt25::bt25_092::bt25_092_main_cost_union_offers_both_hand_and_sources_in_one_prompt
+    bt25::bt25_092::bt25_092_main_decline_result_pick_after_target
+    bt25::bt25_092::bt25_092_main_decline_target_keeps_cost_paid_and_does_not_digivolve
+    bt25::bt25_092::bt25_092_main_digivolve_into_card_resident_in_trash
+    bt25::bt25_092::bt25_092_main_target_pick_excludes_digimon_without_a_legal_result
+
+test result: FAILED. 5 passed; 7 failed; 0 ignored; 0 measured; 12743 filtered out; finished in 13.58s
+
+
+running 7 tests
+test bt26::bt26_066::bt26_066_inherited_hand_trash_digivolves_into_titamon ... FAILED
+test bt26::bt26_066::bt26_066_inherited_decline_refunds_once_per_turn ... FAILED
+test bt26::bt26_066::bt26_066_inherited_requires_a_titan_host ... ok
+test bt26::bt26_066::bt26_066_inherited_ignores_opponent_hand_trash ... ok
+test bt26::bt26_066::bt26_066_start_of_main_can_pick_another_titan_digimon ... FAILED
+test bt26::bt26_066::bt26_066_start_of_main_digivolves_titan_into_trash_titan ... FAILED
+test bt26::bt26_066::bt26_066_start_of_main_needs_hand_of_five_or_fewer ... ok
+
+failures:
+
+---- bt26::bt26_066::bt26_066_inherited_hand_trash_digivolves_into_titamon stdout ----
+
+thread 'bt26::bt26_066::bt26_066_inherited_hand_trash_digivolves_into_titamon' (11644) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:312:5:
+TITAMON is not a legal trash pick (valid [30, 62])
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt26::bt26_066::bt26_066_inherited_decline_refunds_once_per_turn stdout ----
+
+thread 'bt26::bt26_066::bt26_066_inherited_decline_refunds_once_per_turn' (19212) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt26::bt26_066::bt26_066_start_of_main_can_pick_another_titan_digimon stdout ----
+
+thread 'bt26::bt26_066::bt26_066_start_of_main_can_pick_another_titan_digimon' (52904) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt26::bt26_066::bt26_066_start_of_main_digivolves_titan_into_trash_titan stdout ----
+
+thread 'bt26::bt26_066::bt26_066_start_of_main_digivolves_titan_into_trash_titan' (53660) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+
+failures:
+    bt26::bt26_066::bt26_066_inherited_decline_refunds_once_per_turn
+    bt26::bt26_066::bt26_066_inherited_hand_trash_digivolves_into_titamon
+    bt26::bt26_066::bt26_066_start_of_main_can_pick_another_titan_digimon
+    bt26::bt26_066::bt26_066_start_of_main_digivolves_titan_into_trash_titan
+
+test result: FAILED. 3 passed; 4 failed; 0 ignored; 0 measured; 12748 filtered out; finished in 11.78s
+
+
+running 7 tests
+test bt26::bt26_069::bt26_069_already_in_trash_does_not_fire_on_other_discards ... ok
+test bt26::bt26_069::bt26_069_inherited_digivolves_on_own_hand_trash ... FAILED
+test bt26::bt26_069::bt26_069_on_play_trash_cost_deletes_level_four_or_lower_either_side ... ok
+test bt26::bt26_069::bt26_069_opponent_effect_trashing_it_still_draws_for_owner ... ok
+test bt26::bt26_069::bt26_069_trashed_from_hand_draws_one ... ok
+test bt26::bt26_069::bt26_069_trashed_from_hand_with_big_hand_does_not_draw ... ok
+test bt26::bt26_069::bt26_069_when_digivolving_decline_cost_deletes_nothing ... ok
+
+failures:
+
+---- bt26::bt26_069::bt26_069_inherited_digivolves_on_own_hand_trash stdout ----
+
+thread 'bt26::bt26_069::bt26_069_inherited_digivolves_on_own_hand_trash' (18456) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt26::bt26_069::bt26_069_inherited_digivolves_on_own_hand_trash
+
+test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 12748 filtered out; finished in 11.21s
+
+
+running 8 tests
+test bt26::bt26_085::bt26_085_assembly_needs_five_distinct_levels ... ok
+test bt26::bt26_085::bt26_085_assembly_picks_five_different_levels_and_reduces_cost_by_five ... ok
+test bt26::bt26_085::bt26_085_keywords_and_assembly_shape ... ok
+test bt26::bt26_085::bt26_085_on_play_grants_opponent_scoped_dp_and_stack_trash_immunity ... ok
+test bt26::bt26_085::bt26_085_rejected_digivolution_does_not_cancel_the_pending_leave ... FAILED
+test bt26::bt26_085::bt26_085_would_leave_chooses_production_destroy_mode_from_hand_or_trash_free ... FAILED
+test bt26::bt26_085::bt26_085_would_leave_is_not_once_per_turn ... ok
+test bt26::bt26_085::bt26_085_would_leave_without_destroy_mode_or_declined_leaves ... ok
+
+failures:
+
+---- bt26::bt26_085::bt26_085_rejected_digivolution_does_not_cancel_the_pending_leave stdout ----
+
+thread 'bt26::bt26_085::bt26_085_rejected_digivolution_does_not_cancel_the_pending_leave' (44836) panicked at code\digimon-engine\tests\cards_behavioral\bt26\bt26_085.rs:67:5:
+assertion `left == right` failed: Digivolve this Digimon into [Chronomon: Destroy Mode] in your hand or trash without paying the cost
+  left: [30, 31]
+ right: [0, 1150]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt26::bt26_085::bt26_085_would_leave_chooses_production_destroy_mode_from_hand_or_trash_free stdout ----
+
+thread 'bt26::bt26_085::bt26_085_would_leave_chooses_production_destroy_mode_from_hand_or_trash_free' (13108) panicked at code\digimon-engine\tests\cards_behavioral\bt26\bt26_085.rs:67:5:
+assertion `left == right` failed: Digivolve this Digimon into [Chronomon: Destroy Mode] in your hand or trash without paying the cost
+  left: [30, 31]
+ right: [0, 1150]
+
+
+failures:
+    bt26::bt26_085::bt26_085_rejected_digivolution_does_not_cancel_the_pending_leave
+    bt26::bt26_085::bt26_085_would_leave_chooses_production_destroy_mode_from_hand_or_trash_free
+
+test result: FAILED. 6 passed; 2 failed; 0 ignored; 0 measured; 12747 filtered out; finished in 12.67s
+
+
+running 6 tests
+test bt26::bt26_096::bt26_096_main_decline_still_returns_tamer ... ok
+test bt26::bt26_096::bt26_096_main_bounces_self_and_plays_from_trash_reduced ... FAILED
+test bt26::bt26_096::bt26_096_security_plays_self ... ok
+test bt26::bt26_096::bt26_096_main_plays_ts_tamer_from_hand_reduced ... FAILED
+test bt26::bt26_096::bt26_096_start_of_turn_sets_memory_to_three ... ok
+test bt26::bt26_096::bt26_096_start_of_turn_no_change_above_two ... ok
+
+failures:
+
+---- bt26::bt26_096::bt26_096_main_bounces_self_and_plays_from_trash_reduced stdout ----
+
+thread 'bt26::bt26_096::bt26_096_main_bounces_self_and_plays_from_trash_reduced' (18888) panicked at code\digimon-engine\tests\cards_behavioral\bt26\bt26_096.rs:108:5:
+assertion `left == right` failed
+  left: ["TS-T"]
+ right: ["CHRONO"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt26::bt26_096::bt26_096_main_plays_ts_tamer_from_hand_reduced stdout ----
+
+thread 'bt26::bt26_096::bt26_096_main_plays_ts_tamer_from_hand_reduced' (15896) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:175:5:
+TS-T is not a legal hand pick (valid [30, 62])
+
+
+failures:
+    bt26::bt26_096::bt26_096_main_bounces_self_and_plays_from_trash_reduced
+    bt26::bt26_096::bt26_096_main_plays_ts_tamer_from_hand_reduced
+
+test result: FAILED. 4 passed; 2 failed; 0 ignored; 0 measured; 12749 filtered out; finished in 8.79s
+
+
+running 25 tests
+test bt26::bt26_097::bt26_097_has_use_cost_increase_main_and_security ... ok
+test bt26::bt26_097::bt26_097_main_aegiomon_pick_excludes_other_digimon ... ok
+test bt26::bt26_097::bt26_097_main_after_is_optional ... FAILED
+test bt26::bt26_097::bt26_097_main_after_can_top_any_jupitermon_even_without_digivolving ... ok
+test bt26::bt26_097::bt26_097_main_after_is_skipped_without_aegiochusmon_in_trash ... FAILED
+test bt26::bt26_097::bt26_097_main_after_is_skipped_without_a_jupitermon_on_the_field ... ok
+test bt26::bt26_097::bt26_097_main_can_digivolve_into_jupitermon_in_the_trash ... FAILED
+test bt26::bt26_097::bt26_097_main_digivolve_is_optional_after_the_placement ... ok
+test bt26::bt26_097::bt26_097_main_does_nothing_without_a_dan_or_kanan_tamer ... ok
+test bt26::bt26_097::bt26_097_main_does_nothing_without_an_aegiomon ... ok
+test bt26::bt26_097::bt26_097_main_offers_only_dan_or_kanan_tamers ... ok
+test bt26::bt26_097::bt26_097_main_placement_declining_bt24_101_protection_proceeds ... FAILED
+test bt26::bt26_097::bt26_097_main_places_tamer_digivolves_from_hand_then_tops_aegiochusmon ... FAILED
+test bt26::bt26_097::bt26_097_main_placement_offers_bt24_101_protection_and_accepting_stops_the_effect ... ok
+test bt26::bt26_097::bt26_097_main_tamer_pick_is_optional_and_declining_does_nothing ... ok
+test bt26::bt26_097::bt26_097_main_trashes_the_cards_under_the_placed_tamer ... FAILED
+test bt26::bt26_097::bt26_097_main_works_when_the_tamer_sits_left_of_the_aegiomon ... FAILED
+test bt26::bt26_097::bt26_097_paying_the_increased_use_cost ... ok
+test bt26::bt26_097::bt26_097_security_declined_still_adds_self_to_hand ... ok
+test bt26::bt26_097::bt26_097_security_can_play_a_cost_five_or_lower_ts_tamer_free ... FAILED
+test bt26::bt26_097::bt26_097_security_with_no_eligible_card_still_adds_self_to_hand ... ok
+test bt26::bt26_097::bt26_097_security_plays_cost_five_or_lower_ts_from_hand_free_then_adds_self ... FAILED
+test bt26::bt26_097::bt26_097_use_cost_grows_with_own_security ... ok
+test bt26::bt26_097::bt26_097_unusable_when_the_increase_exceeds_the_memory_floor ... ok
+test bt26::bt26_097::bt26_097_use_cost_is_printed_two_with_no_security ... ok
+
+failures:
+
+---- bt26::bt26_097::bt26_097_main_after_is_optional stdout ----
+
+thread 'bt26::bt26_097::bt26_097_main_after_is_optional' (12480) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:175:5:
+JUPI is not a legal hand pick (valid [30, 62])
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt26::bt26_097::bt26_097_main_after_is_skipped_without_aegiochusmon_in_trash stdout ----
+
+thread 'bt26::bt26_097::bt26_097_main_after_is_skipped_without_aegiochusmon_in_trash' (52312) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:175:5:
+JUPI is not a legal hand pick (valid [30, 62])
+
+---- bt26::bt26_097::bt26_097_main_can_digivolve_into_jupitermon_in_the_trash stdout ----
+
+thread 'bt26::bt26_097::bt26_097_main_can_digivolve_into_jupitermon_in_the_trash' (25944) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:312:5:
+JUPI is not a legal trash pick (valid [30, 62])
+
+---- bt26::bt26_097::bt26_097_main_placement_declining_bt24_101_protection_proceeds stdout ----
+
+thread 'bt26::bt26_097::bt26_097_main_placement_declining_bt24_101_protection_proceeds' (43976) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:175:5:
+JUPI is not a legal hand pick (valid [30, 62])
+
+---- bt26::bt26_097::bt26_097_main_places_tamer_digivolves_from_hand_then_tops_aegiochusmon stdout ----
+
+thread 'bt26::bt26_097::bt26_097_main_places_tamer_digivolves_from_hand_then_tops_aegiochusmon' (54008) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:175:5:
+JUPI is not a legal hand pick (valid [30, 62])
+
+---- bt26::bt26_097::bt26_097_main_trashes_the_cards_under_the_placed_tamer stdout ----
+
+thread 'bt26::bt26_097::bt26_097_main_trashes_the_cards_under_the_placed_tamer' (33128) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:175:5:
+JUPI is not a legal hand pick (valid [30, 62])
+
+---- bt26::bt26_097::bt26_097_main_works_when_the_tamer_sits_left_of_the_aegiomon stdout ----
+
+thread 'bt26::bt26_097::bt26_097_main_works_when_the_tamer_sits_left_of_the_aegiomon' (37632) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:175:5:
+JUPI is not a legal hand pick (valid [30, 62])
+
+---- bt26::bt26_097::bt26_097_security_can_play_a_cost_five_or_lower_ts_tamer_free stdout ----
+
+thread 'bt26::bt26_097::bt26_097_security_can_play_a_cost_five_or_lower_ts_tamer_free' (20652) panicked at code\digimon-engine\tests\cards_behavioral\bt26\bt26_097.rs:634:5:
+a cost-3 [TS] Tamer is offered
+
+---- bt26::bt26_097::bt26_097_security_plays_cost_five_or_lower_ts_from_hand_free_then_adds_self stdout ----
+
+thread 'bt26::bt26_097::bt26_097_security_plays_cost_five_or_lower_ts_from_hand_free_then_adds_self' (32760) panicked at code\digimon-engine\tests\cards_behavioral\bt26\bt26_097.rs:588:5:
+assertion failed: ids.contains(&hand_action(ts5))
+
+
+failures:
+    bt26::bt26_097::bt26_097_main_after_is_optional
+    bt26::bt26_097::bt26_097_main_after_is_skipped_without_aegiochusmon_in_trash
+    bt26::bt26_097::bt26_097_main_can_digivolve_into_jupitermon_in_the_trash
+    bt26::bt26_097::bt26_097_main_placement_declining_bt24_101_protection_proceeds
+    bt26::bt26_097::bt26_097_main_places_tamer_digivolves_from_hand_then_tops_aegiochusmon
+    bt26::bt26_097::bt26_097_main_trashes_the_cards_under_the_placed_tamer
+    bt26::bt26_097::bt26_097_main_works_when_the_tamer_sits_left_of_the_aegiomon
+    bt26::bt26_097::bt26_097_security_can_play_a_cost_five_or_lower_ts_tamer_free
+    bt26::bt26_097::bt26_097_security_plays_cost_five_or_lower_ts_from_hand_free_then_adds_self
+
+test result: FAILED. 16 passed; 9 failed; 0 ignored; 0 measured; 12730 filtered out; finished in 29.82s
+

@@ -77,6 +77,22 @@ dual:
                 - "Trash your own top security card"
                 - "Trash your opponent's top security card"
                 - "Don't trash security"
+              legal_when:
+                - all_of:
+                    - security_count_gte: 1
+                    - security_count_gte:
+                        formula:
+                          base: 0
+                          per: { card_count_in_zone: { of: opponent, zone: security } }
+                          delta: 1
+                - all_of:
+                    - opponent_security_count_gte: 1
+                    - opponent_security_count_gte:
+                        formula:
+                          base: 0
+                          per: { card_count_in_zone: { of: you, zone: security } }
+                          delta: 1
+                - {}
               prompt: "Trash 1 player's top security card to unsuspend this Digimon?"
           - if:
               condition:
@@ -120,13 +136,16 @@ dual:
             - replacement_subject_is_mine: true
             - kind: digimon
             - trait_has: "Glowing Dawn"
-            - any_permanent:
-                of: you
-                zone: [security]
+            - security_count_gte: 1
         summary: "[All Turns][OPT] When your [Glowing Dawn] Digimon would leave, by trashing your top security card, they don't leave"
         process:
-          - trash_top_security: { of: you }
-          - cancel_replacement: {}
+          - trash_top_security_and_cancel_replacement:
+              of: you
+              all_matching:
+                all_of:
+                  - replacement_subject_is_mine: true
+                  - kind: digimon
+                  - trait_has: "Glowing Dawn"
   option:
     use_cost: 6
     colors: [yellow]

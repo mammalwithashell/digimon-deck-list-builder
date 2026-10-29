@@ -1,0 +1,105 @@
+# Actual printed BT9-104.webp and official Q1911/Q5976.
+# DCGO BT9/Black/BT9_104.cs: normal evolution requirements, optional
+# evolution, mandatory independent bottom-source placement, optional
+# Security reveal followed by a mandatory matching-card add.
+card: BT9-104
+name: X Digivolution!
+kind: option
+color: [black]
+cost: 3
+traits: [X Antibody]
+
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+    trait_has: X Antibody
+
+effects:
+  - when: main_from_hand
+    summary: "Reveal 3; optionally evolve an own Digimon into a revealed X Antibody Digimon free; trash the rest; place an X Antibody trash card as an own X Antibody Digimon's bottom source"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_own_permanent:
+          bind_as: host
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [reveal]
+                  filter: { kind: digimon, trait_has: X Antibody }
+          prompt: "You may choose a Digimon to digivolve using a revealed card"
+          then:
+            - select_reveal:
+                of: you
+                bind_as: evolution
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: X Antibody
+                    - can_digivolve_onto: host
+                prompt: "You may digivolve into 1 revealed X Antibody Digimon without paying its memory cost"
+                then:
+                  - effect_initiated_digivolve:
+                      target: host
+                      source: evolution
+                      cost: free
+      # Q1911: the evolution and its bonus draw happen before this cleanup.
+      # Q5976: When Digivolving activates after this Option finishes processing.
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+      # This is independent of whether evolution was accepted or succeeded.
+      # Gate the card pick on an eligible recipient; both actual picks are
+      # mandatory when available. Tokens cannot receive digivolution cards.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              all_of:
+                - kind: digimon
+                - trait_has: X Antibody
+                - not: { kind: token }
+          then:
+            - select_trash:
+                of: you
+                bind_as: material
+                filter: { trait_has: X Antibody }
+                prompt: "Choose 1 X Antibody card in your trash to place as a bottom digivolution card"
+                then:
+                  - select_own_permanent:
+                      bind_as: recipient
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - trait_has: X Antibody
+                          - not: { kind: token }
+                      prompt: "Choose 1 of your X Antibody Digimon to receive the card"
+                      then:
+                        - place_as_bottom_source: { source: material, target: recipient }
+
+  - when: on_security
+    optional: true
+    summary: "You may reveal 3; add 1 X Antibody card among them to hand and trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter: { trait_has: X Antibody }
+          prompt: "Add 1 revealed X Antibody card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }

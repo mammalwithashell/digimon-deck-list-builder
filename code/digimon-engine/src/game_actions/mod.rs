@@ -32,6 +32,7 @@ use rand::seq::SliceRandom;
 mod breeding;
 mod cost;
 pub(crate) mod digivolve;
+pub(crate) mod effect_dna;
 mod field_top_source_move;
 mod helpers; // facade-decomposition Tier-2 primitives (trash_source_and_fire, would_replacement_*, …)
 pub use helpers::DeDigivolveCountState;
@@ -41,6 +42,7 @@ pub use link::LinkRuleTarget;
 mod misc;
 mod movement;
 mod grouped_return;
+pub(crate) use grouped_return::ReturnedCard;
 pub(crate) mod options;
 mod play;
 mod security;
@@ -108,6 +110,9 @@ pub(crate) struct DigiXrosResumeContinuation {
 impl DigiXrosResumeContinuation {
     pub(crate) fn pending_cost_payment(&self) -> Option<u64> {
         self.total_reduction.pending_payment
+    }
+    pub(crate) fn pending_cost_reduction(&self) -> Option<i32> {
+        self.total_reduction.pending_reduction
     }
 }
 
@@ -535,15 +540,15 @@ impl Game {
     fn pending_digixros_material_candidates(
         &self,
         player_id: PlayerId,
-    ) -> Vec<(u16, DigiXrosMaterialOrigin)> {
+    ) -> Vec<DigiXrosMaterialOrigin> {
         let Some(transaction) = self.pending_digixros_transaction.as_ref() else {
             return Vec::new();
         };
         self.digixros_material_candidates_for(transaction, player_id)
     }
 
-    /// Candidate material origins (with their selection action ids) for a
-    /// DigiXros / cast-time-assembly `transaction`, in the mask's selection
+    /// Complete physical material origins for a
+    /// DigiXros / cast-time-assembly `transaction`, in the menu presentation
     /// order. Extracted from `pending_digixros_material_candidates` so the
     /// mask-time availability probe (`cast_time_assembly_play_reduction_for_
     /// hand_card`) can enumerate against a scratch transaction that is not
@@ -552,12 +557,7 @@ impl Game {
         &self,
         transaction: &crate::digixros::DigiXrosTransaction,
         player_id: PlayerId,
-    ) -> Vec<(u16, DigiXrosMaterialOrigin)> {
-        use crate::action::space::{
-            encode_source_select, HAND_EFFECT_START, HAND_MAIN_LIMIT, MAX_FIELD_SLOTS,
-            TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
-        };
-
+    ) -> Vec<DigiXrosMaterialOrigin> {
         if transaction.controller != player_id {
             return Vec::new();
         }
@@ -565,7 +565,7 @@ impl Game {
         let player = self.player(player_id);
         let mut candidates = Vec::new();
 
-        for (index, card) in player.hand.iter().enumerate().take(HAND_MAIN_LIMIT) {
+        for (index, card) in player.hand.iter().enumerate() {
             if card.handle() == transaction.played_card {
                 continue;
             }
@@ -574,11 +574,9 @@ impl Game {
                 index,
                 card: card.handle(),
             };
-            if transaction
-                .validate_material_origin(origin, &self.card_data[card.data_index])
-                .is_ok()
+            if self.digixros_material_is_eligible(transaction, origin)
             {
-                candidates.push((HAND_EFFECT_START + index as u16, origin));
+                candidates.push(origin);
             }
         }
 
@@ -586,7 +584,6 @@ impl Game {
             .battle_area
             .iter()
             .enumerate()
-            .take(MAX_FIELD_SLOTS as usize)
         {
             let card = permanent.top_card();
             let origin = DigiXrosMaterialOrigin::BattleArea {
@@ -596,25 +593,21 @@ impl Game {
                 },
                 card: card.handle(),
             };
-            if transaction
-                .validate_material_origin(origin, &self.card_data[card.data_index])
-                .is_ok()
+            if self.digixros_material_is_eligible(transaction, origin)
             {
-                candidates.push((index as u16, origin));
+                candidates.push(origin);
             }
         }
 
-        for (index, card) in player.trash.iter().enumerate().take(TRASH_MAIN_LIMIT) {
+        for (index, card) in player.trash.iter().enumerate() {
             let origin = DigiXrosMaterialOrigin::Trash {
                 player: player_id,
                 index,
                 card: card.handle(),
             };
-            if transaction
-                .validate_material_origin(origin, &self.card_data[card.data_index])
-                .is_ok()
+            if self.digixros_material_is_eligible(transaction, origin)
             {
-                candidates.push((TRASH_EFFECT_START + index as u16, origin));
+                candidates.push(origin);
             }
         }
 
@@ -622,16 +615,11 @@ impl Game {
             .battle_area
             .iter()
             .enumerate()
-            .take(MAX_FIELD_SLOTS as usize)
         {
             if permanent.top_card().card_kind(&self.card_data) != CardKind::Tamer {
                 continue;
             }
-            for (source_index, card) in permanent.card_sources.iter().enumerate() {
-                let Some(action_id) = encode_source_select(field_index as u16, source_index as u16)
-                else {
-                    continue;
-                };
+            for (source_index, card) in permanent.card_sources.iter().take(permanent.card_sources.len().saturating_sub(1)).enumerate() {
                 let origin = DigiXrosMaterialOrigin::UnderTamer {
                     tamer: PermanentHandle {
                         player: player_id,
@@ -640,11 +628,9 @@ impl Game {
                     source_index,
                     card: card.handle(),
                 };
-                if transaction
-                    .validate_material_origin(origin, &self.card_data[card.data_index])
-                    .is_ok()
+                if self.digixros_material_is_eligible(transaction, origin)
                 {
-                    candidates.push((action_id, origin));
+                    candidates.push(origin);
                 }
             }
         }
@@ -822,7 +808,7 @@ impl Game {
         let base = transaction.final_cost() as i32;
         loop {
             let candidates = self.digixros_material_candidates_for(&transaction, player_id);
-            let Some((_, origin)) = candidates.first().copied() else {
+            let Some(origin) = candidates.first().copied() else {
                 break;
             };
             let Some(card_data) = self.card_data_for_handle(origin.card()) else {
@@ -954,6 +940,7 @@ impl Game {
                     resume.suppress_on_play,
                     resume.origin.enters_suspended(),
                     resume.origin.source_play_receipt(),
+                    matches!(resume.origin, PendingWouldPlayOrigin::SecurityTop { .. } | PendingWouldPlayOrigin::SecurityRecorded { .. } | PendingWouldPlayOrigin::SecurityAt { .. }),
                 );
                 self.effect_source_player = previous_controller;
                 if played.is_none() {
@@ -1198,7 +1185,8 @@ impl Game {
         }
         self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            card_choice: None,
+            zone_owner: Some(owner),
             kind: SelectionKind::OwnField,
             selecting_player: owner,
             previous_phase,
@@ -1312,6 +1300,7 @@ impl Game {
         let turn = self.turn_count;
         self.player_mut(target.player).battle_area[target.index as usize]
             .digivolve(pending.card, turn);
+        self.emit_eval_digivolve(target, 0, false, false);
         self.player_mut(target.player).draw();
 
         // Arts digivolve runs the ≤0-DP rules-check immediately (before the
@@ -1375,6 +1364,9 @@ impl Game {
         if let Some(breeding) = self.player_mut(owner).breeding_area.as_mut() {
             breeding.digivolve(pending.card, turn);
         }
+        self.emit_eval_digivolve(PermanentHandle {
+            player: owner, index: crate::action::space::BREEDING_TARGET as u8,
+        }, 0, false, false);
         self.player_mut(owner).draw();
         self.check_turn_end();
         true
@@ -2029,7 +2021,8 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            card_choice: None,
+            zone_owner: Some(owner),
             kind: SelectionKind::OwnField,
             selecting_player: owner,
             previous_phase,
@@ -3157,7 +3150,8 @@ impl Game {
                     return infos;
                 };
                 for (slot, effect) in effects.iter().enumerate() {
-                    if effect.timing == EffectTiming::BeforePayCost && effect.when_playing_this {
+                    if effect.timing == EffectTiming::BeforePayCost
+                        && (effect.when_playing_this || effect.when_digivolving_this) {
                         infos.push(BeforePayCostSourceInfo {
                             source_permanent: None,
                             source_card: target,
@@ -3230,7 +3224,7 @@ impl Game {
             if effect.timing != EffectTiming::BeforePayCost {
                 continue;
             }
-            if effect.when_playing_this && !allow_when_playing_this {
+            if (effect.when_playing_this || effect.when_digivolving_this) && !allow_when_playing_this {
                 continue;
             }
             infos.push(BeforePayCostSourceInfo {
@@ -3375,7 +3369,7 @@ impl Game {
             if effect.timing != EffectTiming::BeforePayCostObserve {
                 continue;
             }
-            if effect.when_playing_this && !allow_when_playing_this {
+            if (effect.when_playing_this || effect.when_digivolving_this) && !allow_when_playing_this {
                 continue;
             }
             infos.push(BeforePayCostSourceInfo {
@@ -3450,7 +3444,8 @@ impl Game {
     /// Gates on `CannotAddSecurityByEffect` (player-scoped, checked against
     /// `observer_player`). Routes through `WhenWouldLeaveBattleArea` then
     /// `WhenWouldPlaceInSecurity` replacements; bails (`false`) on any
-    /// non-`None` outcome or installed pending selection.
+    /// blocked move or installed pending selection. A pending move resumes
+    /// through the shared security-placement continuation.
     ///
     /// Used by `EffectContext::place_self_at_security` (Track E) — printed
     /// text "place this Digimon at the bottom of your security stack face
@@ -3472,142 +3467,10 @@ impl Game {
         face_up: bool,
         observer_player: PlayerId,
     ) -> bool {
-        use crate::enums::{EffectTiming, Zone};
-        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
-
-        if self
-            .modifiers
-            .player_has(observer_player, ModifierType::CannotAddSecurityByEffect)
-        {
-            return false;
-        }
-
-        let Some(permanent) = self
-            .player(target.player)
-            .battle_area
-            .get(target.index as usize)
-        else {
-            return false;
-        };
-        if permanent.card_sources.is_empty() {
-            return false;
-        }
-
-        let source_card = permanent.top_card().handle();
-        let cause = self.infer_effect_cause(player_id);
-        let leave_subject = ReplacementSubject::Permanent(target);
-        let leave_outcome = self.try_replace(
-            EffectTiming::WhenWouldLeaveBattleArea,
-            leave_subject,
-            cause,
-            Some(Zone::Security),
-        );
-        if self.pending_selection.is_some() || !matches!(leave_outcome, ReplacementOutcome::None) {
-            return false;
-        }
-
-        let place_subject = ReplacementSubject::Card(source_card, Zone::BattleArea);
-        let place_outcome = self.try_replace(
-            EffectTiming::WhenWouldPlaceInSecurity,
-            place_subject,
-            cause,
-            Some(Zone::Security),
-        );
-        if self.pending_selection.is_some() || !matches!(place_outcome, ReplacementOutcome::None) {
-            return false;
-        }
-
-        let mut permanent = self
-            .player_mut(target.player)
-            .battle_area
-            .remove(target.index as usize);
-
-        // Pop top card; if somehow empty (shouldn't happen — we checked
-        // above), bail without further state changes.
-        let Some(card) = permanent.card_sources.pop() else {
-            return false;
-        };
-
-        // Modifier cleanup BEFORE the source-trash dispatch — modifiers are
-        // keyed on `PermanentHandle`, which becomes invalid after `remove()`
-        // shifts indices. Mirrors `attach_tamer_to_digimon`.
-        self.clear_permanent_full(target);
-        self.modifiers.expire_player_on_permanent_leave(target);
-        // The `remove()` above shifted every higher-indexed permanent down;
-        // re-key the modifier registry and the in-flight attack's handles
-        // (EX8-028 pays a battle-area Digimon into security MID-ATTACK —
-        // without these, higher-indexed permanents' modifiers migrate to the
-        // wrong permanent and the attacker's handle goes stale, fizzling the
-        // attack before its security check).
-        self.modifiers
-            .shift_after_battle_area_remove(target.player, target.index);
-        self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
-        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
-
-        // Sources-below-top → each source's owner's trash, all at the same
-        // time: ONE `OnDigivolutionCardTrashed` event (§15-5-2). Nothing
-        // activates before this placement has finished (§15-8-3-2): the
-        // queue is drained (if no effect is resolving) after the top card
-        // reaches security.
-        let had_sources = !permanent.card_sources.is_empty();
-        for source in permanent.card_sources.drain(..) {
-            let owner = source.owner;
-            self.player_mut(owner).put_in_trash(source);
-        }
-        if had_sources {
-            for pid in 0..self.players.len() {
-                self.enqueue_triggered(
-                    EffectTiming::OnDigivolutionCardTrashed,
-                    TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-                );
-            }
-        }
-
-        // Linked cards → controller's trash; fire OnLinkedCardTrashed once
-        // if any were present. Mirrors `attach_tamer_to_digimon`.
-        let had_linked = !permanent.linked_cards.is_empty();
-        for linked in permanent.linked_cards.drain(..) {
-            let owner = linked.owner;
-            self.player_mut(owner).put_in_trash(linked);
-        }
-        if had_linked {
-            for pid in 0..self.players.len() {
-                self.enqueue_triggered(
-                    EffectTiming::OnLinkedCardTrashed,
-                    TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-                );
-            }
-        }
-
-        // Place top card in security at the requested position.
-        let face_up_key = card.card_index;
-        match position {
-            crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).put_on_security_top(card);
-            }
-            crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).insert_in_security(0, card);
-            }
-            crate::enums::StackPosition::Random => {
-                use rand::Rng;
-                let sec_len = self.player(player_id).security.len();
-                let idx = if sec_len == 0 {
-                    0
-                } else {
-                    self.rng.gen_range(0..=sec_len)
-                };
-                self.player_mut(player_id).insert_in_security(idx, card);
-            }
-        }
-        if face_up {
-            self.player_mut(player_id)
-                .face_up_security
-                .insert(face_up_key);
-        }
-        // The placement has finished: the trash observers enqueued above may
-        // activate now, unless an effect is still resolving (§15-8-3-2).
-        self.maybe_drain_effect_queue();
-        true
+        // Use the same resumable departure and placement receipts as selected
+        // permanents. In particular, tokens are removed by §4-21-5 without
+        // adding a security card or a face-up marker.
+        self.place_permanent_on_security(player_id, target, position, face_up, observer_player)
     }
 
     /// Place a battle-area Digimon with no digivolution cards at the bottom of
@@ -3700,7 +3563,7 @@ impl Game {
         let donor = (target.player, id);
         let key = (target.player, id, player, position, face_up, observer);
         if let Some(state) = self.pending_security_moves.iter_mut().rfind(|s| {
-            !s.top_only
+            s.kind == crate::game::SecurityMoveKind::Permanent
                 && s.donor == donor
                 && s.player == player
                 && s.position == position
@@ -3717,7 +3580,7 @@ impl Game {
                 .handle();
             self.pending_security_moves
                 .push(crate::game::PendingSecurityMove {
-                    top_only: false,
+                    kind: crate::game::SecurityMoveKind::Permanent,
                     donor,
                     card,
                     player,
@@ -3744,7 +3607,7 @@ impl Game {
             || self.resolve_digivolve_host_identity(key.0, key.1).is_none()
         {
             self.pending_security_moves.retain(|s| {
-                !(!s.top_only
+                !(s.kind == crate::game::SecurityMoveKind::Permanent
                     && s.donor == (key.0, key.1)
                     && s.player == key.2
                     && s.position == key.3
@@ -3796,19 +3659,21 @@ impl Game {
         outcome: crate::replacement::ReplacementOutcome,
     ) -> bool {
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
-        let key = match subject {
+        let index = match subject {
             ReplacementSubject::Permanent(h) => self
                 .player(h.player)
                 .battle_area
                 .get(h.index as usize)
                 .and_then(|p| p.battle_identity)
-                .map(|id| (h.player, id)),
+                .and_then(|id| self.pending_security_moves.iter().rposition(|s|
+                    s.kind == crate::game::SecurityMoveKind::Permanent && s.donor == (h.player, id)
+                )),
             ReplacementSubject::Card(card, _) => self
                 .pending_security_moves
                 .iter()
-                .rfind(|s| {
+                .rposition(|s| {
                     s.card == card
-                        || self
+                        || (s.kind == crate::game::SecurityMoveKind::Permanent && self
                             .resolve_digivolve_host_identity(s.donor.0, s.donor.1)
                             .and_then(|h| {
                                 self.player(h.player)
@@ -3816,35 +3681,28 @@ impl Game {
                                     .get(h.index as usize)
                                     .map(|p| p.top_card().handle())
                             })
-                            == Some(card)
-                })
-                .map(|s| s.donor),
+                            == Some(card))
+                }),
             _ => None,
         };
-        let Some(key) = key else { return false };
-        let Some(i) = self
-            .pending_security_moves
-            .iter()
-            .rposition(|s| s.donor == key)
-        else {
-            return false;
-        };
+        let Some(i) = index else { return false };
         let state = self.pending_security_moves.remove(i);
+        let key = state.donor;
         let Some(h) = self.resolve_digivolve_host_identity(key.0, key.1) else {
             return true;
         };
-        if state.top_only {
+        if state.kind != crate::game::SecurityMoveKind::Permanent {
             if outcome == ReplacementOutcome::None {
-                let still_exact_top = self
-                    .player(h.player)
-                    .battle_area
-                    .get(h.index as usize)
-                    .is_some_and(|p| {
-                        p.card_sources.len() >= 2 && p.top_card().handle() == state.card
-                    });
-                if still_exact_top {
-                    // Re-enter the same WouldPlace window so a declined or
-                    // non-replacing optional effect cannot skip remaining candidates.
+                // Re-enter the same window after declining a replacement;
+                // physical membership is revalidated by the owning operation.
+                if state.kind == crate::game::SecurityMoveKind::SourceCard {
+                    self.place_source_on_security(
+                        state.player, h, state.card, state.position,
+                        state.face_up, state.observer,
+                    );
+                } else if self.player(h.player).battle_area.get(h.index as usize)
+                    .is_some_and(|p| p.card_sources.len() >= 2 && p.top_card().handle() == state.card)
+                {
                     self.place_top_stacked_on_security(
                         state.player,
                         h,
@@ -3854,7 +3712,7 @@ impl Game {
                     );
                 }
             } else {
-                self.finish_top_stacked_security_move(state, outcome);
+                self.finish_stacked_security_move(state, outcome);
             }
             return true;
         }
@@ -4166,24 +4024,35 @@ impl Game {
         face_up: bool,
         observer: PlayerId,
     ) -> bool {
+        self.start_stacked_security_move(player, target, None, position, face_up, observer)
+    }
+
+    pub(crate) fn place_source_on_security(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+        card: crate::card_source::CardHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer: PlayerId,
+    ) -> bool {
+        self.start_stacked_security_move(player, target, Some(card), position, face_up, observer)
+    }
+
+    fn start_stacked_security_move(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+        selected_card: Option<crate::card_source::CardHandle>,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer: PlayerId,
+    ) -> bool {
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
-        if self
-            .modifiers
-            .player_has(observer, ModifierType::CannotAddSecurityByEffect)
-            || self
-                .player(observer)
-                .battle_area
-                .iter()
-                .enumerate()
-                .any(|(i, _)| {
-                    self.modifiers.has(
-                        PermanentHandle {
-                            player: observer,
-                            index: i as u8,
-                        },
-                        ModifierType::CannotAddSecurity,
-                    )
-                })
+        if !self.can_add_security_by_effect(observer)
+            || (selected_card.is_none() && self
+                .modifiers
+                .player_has(player, ModifierType::CannotAddSecurityByEffect))
         {
             return false;
         }
@@ -4200,9 +4069,15 @@ impl Game {
         if permanent.card_sources.len() < 2 {
             return false;
         }
-        let card = permanent.top_card().handle();
+        let (kind, card) = if let Some(card) = selected_card {
+            if !permanent.card_sources.iter().take(permanent.card_sources.len() - 1)
+                .any(|source| source.handle() == card) { return false; }
+            (crate::game::SecurityMoveKind::SourceCard, card)
+        } else {
+            (crate::game::SecurityMoveKind::TopCard, permanent.top_card().handle())
+        };
         let state = crate::game::PendingSecurityMove {
-            top_only: true,
+            kind,
             donor: (target.player, id),
             card,
             player,
@@ -4225,7 +4100,7 @@ impl Game {
             return false;
         }
         if let Some(i) = self.pending_security_moves.iter().rposition(|s| {
-            s.top_only
+            s.kind == state.kind
                 && s.donor == state.donor
                 && s.card == card
                 && s.player == player
@@ -4235,10 +4110,10 @@ impl Game {
         }) {
             self.pending_security_moves.remove(i);
         }
-        self.finish_top_stacked_security_move(state, outcome)
+        self.finish_stacked_security_move(state, outcome)
     }
 
-    fn finish_top_stacked_security_move(
+    fn finish_stacked_security_move(
         &mut self,
         state: crate::game::PendingSecurityMove,
         outcome: crate::replacement::ReplacementOutcome,
@@ -4254,10 +4129,20 @@ impl Game {
             return false;
         };
         let p = &self.player(h.player).battle_area[h.index as usize];
-        // A nested operation cannot redirect this request onto a fresh top.
-        if p.card_sources.len() < 2 || p.top_card().handle() != state.card {
-            return false;
-        }
+        // Both operations re-find the exact physical card. Source extraction
+        // permits index compaction but cannot extract a newly exposed top.
+        let source_index = match state.kind {
+            crate::game::SecurityMoveKind::SourceCard => {
+                let Some(index) = p.card_sources.iter().take(p.card_sources.len().saturating_sub(1))
+                    .position(|source| source.handle() == state.card) else { return false; };
+                index
+            }
+            crate::game::SecurityMoveKind::TopCard => {
+                if p.card_sources.len() < 2 || p.top_card().handle() != state.card { return false; }
+                p.card_sources.len() - 1
+            }
+            crate::game::SecurityMoveKind::Permanent => return false,
+        };
         let destination = match outcome {
             ReplacementOutcome::None => Zone::Security,
             ReplacementOutcome::Redirected(z) => z,
@@ -4271,8 +4156,7 @@ impl Game {
         }
         let card = self.player_mut(h.player).battle_area[h.index as usize]
             .card_sources
-            .pop()
-            .unwrap();
+            .remove(source_index);
         let leaving = vec![card.clone()];
         let is_egg = card.card_kind(&self.card_data) == crate::enums::CardKind::DigiEgg;
         let owner = card.owner;
@@ -4314,6 +4198,14 @@ impl Game {
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
         self.apply_ace_overflow_for_sources(&leaving);
+        // Mark before observer effects: correlate the original physical card,
+        // never infer success from where a card happens to be after triggers.
+        if destination == Zone::Security {
+            if let Some(receipt) = self.security_placement_receipts.iter_mut()
+                .rfind(|(card, _)| *card == state.card.0) {
+                receipt.1 = true;
+            }
+        }
         if security {
             self.fire_on_place_security(state.player, state.observer, state.card);
         }
@@ -4658,8 +4550,8 @@ fn assembly_assign_keyed(
 }
 
 /// Install the trash selection for assembly element `element_idx`, chaining
-/// to the next element on resolution. Element 0 is the optional gate
-/// (declining plays the card at full cost); later elements are required
+/// to the next element on resolution. Element 0 can be declined only when
+/// payment without Assembly is affordable; later elements are required
 /// (exact count, DCGO `canEndNotMax: false`). After the final element the
 /// play is finished at the reduced cost and the chosen materials are placed
 /// under the new permanent.
@@ -4682,6 +4574,17 @@ fn install_assembly_element(
     let is_last = element_idx + 1 >= elements.len();
     let source_card = target_card;
     let distinct_by = assembly_element_distinct_mode(game, target_card, element_idx);
+    // CR 1-3-11-4: when Assembly is needed to pay a declared play, its
+    // otherwise optional processing must be completed. Use the same typed
+    // cost calculation as commit so effect reductions/assignments survive.
+    let can_decline = is_first
+        && game.card_data_for_handle(target_card).is_some_and(|card| {
+            let cost = params.total_reduction.final_cost(
+                params.cost_delta.resolve(card.play_cost) as i32,
+                0,
+            );
+            game.can_pay_memory_for(player, cost)
+        });
 
     // Distinctness across elements: exclude handles already picked.
     let exclude = picked_so_far.clone();
@@ -4693,14 +4596,15 @@ fn install_assembly_element(
         eval_predicate(&filter_pred, &rctx, PredicateSubject::Card(cs.handle()))
     };
 
-    // Every element requires its exact printed count. The first element may
-    // decline at zero via is_optional_zero below; after a pick it cannot end
+    // Every element requires its exact printed count. An affordable first
+    // element may decline at zero; after a pick it cannot end
     // early (Assembly rules 7-3-2-4/5, optional zero 7-3-2-7/9).
     let min = count;
     let max = count;
     let prompt = format!(
-        "Assembly: select {} card(s) from trash to place under (No Selection to skip).",
-        count
+        "Assembly: select {} card(s) from trash to place under{}.",
+        count,
+        if can_decline { " (No Selection to skip)" } else { "" }
     );
 
     let elements_for_cb = std::sync::Arc::clone(&elements);
@@ -4719,7 +4623,7 @@ fn install_assembly_element(
         min,
         max,
         &prompt,
-        is_first, // is_optional_zero: only the gate (element 0) may finish at 0 picks
+        can_decline,
         distinct_by,
         filter,
         move |cctx, picks| {
@@ -4762,9 +4666,10 @@ fn install_assembly_element(
                     zone: CountCappedZone::Trash,
                     min,
                     max,
-                    is_optional_zero: is_first,
+                    is_optional_zero: can_decline,
                     distinct_by,
                     candidate_actions: pending.valid_action_ids.clone(),
+                        source_candidates: None,
                     accum: Vec::new(),
                     prompt: pending.prompt.clone(),
                     previous_phase: pending.previous_phase,

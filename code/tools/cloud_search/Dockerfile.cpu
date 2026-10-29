@@ -1,0 +1,28 @@
+# Build against a Git archive of the frozen experiment revision.
+FROM rust:1.94-slim AS builder
+WORKDIR /build
+RUN apt-get update && apt-get install -y --no-install-recommends python3-dev python3-pip g++ libssl-dev pkg-config && rm -rf /var/lib/apt/lists/*
+RUN pip install --break-system-packages --no-cache-dir maturin==1.13.1
+COPY Cargo.toml Cargo.lock ./
+COPY code/ code/
+COPY data/ data/
+ENV CARGO_BUILD_JOBS=4
+RUN cargo build --locked --release -p digimon-engine-cli
+RUN cargo build --locked --release -p digimon-engine --example search_quality
+RUN maturin build --locked --release --manifest-path code/digimon-engine-py/Cargo.toml --out /wheels
+RUN mkdir /native && cp target/release/digimon-engine-cli /native/ && find target/release -name 'libonnxruntime.so*' -exec cp -L {} /native/ \;
+RUN cp target/release/examples/search_quality /native/digimon-search-quality
+
+FROM python:3.11-slim AS runtime
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends libstdc++6 libgomp1 && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir torch==2.11.0 --index-url https://download.pytorch.org/whl/cpu
+COPY requirements-training.txt ./
+RUN printf 'stable-baselines3==2.7.1\nsb3-contrib==2.7.1\nnumpy==2.4.2\nonnx==1.21.0\nonnxruntime==1.24.4\ngymnasium==1.2.3\n' > /constraints.txt && pip install --no-cache-dir -r requirements-training.txt -c /constraints.txt
+COPY --from=builder /wheels/ /wheels/
+RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
+COPY --from=builder /native/ /usr/local/bin/
+COPY code/ code/
+COPY data/ data/
+ENV PYTHONPATH=/app/code PYTHONUNBUFFERED=1 DIGIMON_BACKEND=rust DIGIMON_DATA_DIR=/app/data OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 DIGIMON_SEARCH_EVAL_CACHE_ENTRIES=0 LD_LIBRARY_PATH=/usr/local/bin
+CMD ["python", "code/tools/run_selfplay_generation.py", "--help"]

@@ -163,6 +163,18 @@ fn place_patamon(runner: &mut DebugRunner) -> PermanentHandle {
     runner.place_on_field(0, "BT14-033", None)
 }
 
+fn security_commits(runner: &DebugRunner) -> Vec<u16> {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let view = runner.pending_selection_view().expect("security choice");
+    let page = view.card_choice.expect("physical security rows");
+    let commits: Vec<_> = page.rows.iter().filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard)).collect();
+    assert!(commits.iter().all(|row| row.owner == Some(0) && matches!(row.zone, Some(CardChoiceZone::Security))));
+    let mut legal: Vec<_> = commits.iter().map(|row| row.action_id).collect();
+    legal.push(digimon_engine::action::space::PASS);
+    assert_eq!(view.valid_action_ids, legal, "only matching cards plus optional decline are legal");
+    commits.iter().map(|row| row.action_id).collect()
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Section 1 — Structural assertions
 // ═══════════════════════════════════════════════════════════════════════════
@@ -368,7 +380,7 @@ fn bt14_033_security_selection_filters_out_non_matching_colors_and_traits() {
         .pending_selection_view()
         .expect("selection view present");
     assert_eq!(
-        view.valid_action_ids.len(),
+        security_commits(&runner).len(),
         1,
         "only the yellow [Vaccine] security card should be a legal pick (RED-VAC excluded)"
     );
@@ -454,7 +466,7 @@ fn bt14_033_accepting_digivolve_removes_exactly_the_picked_card_from_security_pr
     let view = runner
         .pending_selection_view()
         .expect("Security selection must install");
-    assert_eq!(view.valid_action_ids.len(), 1, "only YEL-VAC is eligible");
+    assert_eq!(security_commits(&runner).len(), 1, "only YEL-VAC is eligible");
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("accept");
@@ -646,9 +658,18 @@ fn bt14_033_accepting_hand_to_bottom_security_moves_the_card_to_the_bottom() {
         .security(0, &["YEL-VAC"])
         .security(1, &["FILLER"; 3])
         .start();
-    let _p = place_patamon(&mut runner);
+    let patamon = place_patamon(&mut runner);
 
-    let hand_before = runner.hand_size(0);
+    let patamon_card =
+        runner.game.players[0].battle_area[patamon.index as usize].card_sources[0].handle();
+    let hand_card = runner.game.players[0].hand[0].handle();
+    let evolution_card = runner.game.players[0].security[0].handle();
+    let mut remaining_deck: Vec<_> = runner.game.players[0]
+        .deck
+        .iter()
+        .map(CardSource::handle)
+        .collect();
+    let drawn_card = remaining_deck.pop().expect("five-card deck has a top card");
     let sec_before = runner.security_count(0);
 
     runner.game.enter_main_phase();
@@ -659,18 +680,63 @@ fn bt14_033_accepting_hand_to_bottom_security_moves_the_card_to_the_bottom() {
         .execute_action(0, view.valid_action_ids[0])
         .expect("accept the digivolve");
 
+    // CR 8-1-3-3: digivolving from security draws before this follow-up.
+    assert_eq!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .map(CardSource::handle)
+            .collect::<Vec<_>>(),
+        vec![hand_card, drawn_card],
+        "the exact deck-top card joins the existing hand card"
+    );
+    assert_eq!(
+        runner.game.players[0]
+            .deck
+            .iter()
+            .map(CardSource::handle)
+            .collect::<Vec<_>>(),
+        remaining_deck,
+        "the digivolution draws exactly one physical card"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[patamon.index as usize]
+            .card_sources
+            .iter()
+            .map(CardSource::handle)
+            .collect::<Vec<_>>(),
+        vec![patamon_card, evolution_card]
+    );
     let followup_view = runner
         .pending_selection_view()
         .expect("hand-to-bottom-security follow-up must install");
+    assert_eq!(
+        followup_view.valid_action_ids,
+        vec![digimon_engine::action::space::PLAY_HAND_START],
+        "only the original yellow Vaccine hand card is eligible; the drawn filler is not"
+    );
     runner
         .execute_action(0, followup_view.valid_action_ids[0])
         .expect("accept placing the hand card at bottom of security");
     let _ = runner.auto_resolve();
 
     assert_eq!(
-        runner.hand_size(0),
-        hand_before - 1,
-        "the placed hand card must leave the hand"
+        runner.game.players[0]
+            .hand
+            .iter()
+            .map(CardSource::handle)
+            .collect::<Vec<_>>(),
+        vec![drawn_card],
+        "the selected physical hand card leaves, while the digivolution draw stays"
+    );
+    assert_eq!(
+        runner.game.players[0]
+            .deck
+            .iter()
+            .map(CardSource::handle)
+            .collect::<Vec<_>>(),
+        remaining_deck,
+        "placing the hand card causes no additional draw"
     );
     // Security net change: -1 (digivolved YEL-VAC left security) + 1 (hand
     // card placed at bottom) = net 0 relative to sec_before.
@@ -680,17 +746,18 @@ fn bt14_033_accepting_hand_to_bottom_security_moves_the_card_to_the_bottom() {
         "security count nets to the same size: one card left (digivolved), one card added (from hand)"
     );
     assert_eq!(
+        runner.game.players[0].security[0].handle(),
+        hand_card,
+        "the original hand instance moves to the bottom of security"
+    );
+    assert_eq!(
         runner.game.players[0].security[0].card_id(&runner.game.card_data),
         "YEL-VAC-HAND",
         "the placed card must sit at the BOTTOM of the security stack (index 0)"
     );
-    // NOTE: the inherited [Your Turn][OPT] on_added_to_security clause does
-    // NOT fire here — per RULES 15-3-1, a Digimon's printed "Inherited
-    // Effect" only activates once that card becomes a digivolution SOURCE
-    // beneath another card on the battle area. Patamon itself is still the
-    // top (and only) card of its own permanent in this scenario, so its own
-    // inherited text stays dormant. See `bt14_033_inherited_gains_memory_*`
-    // below for coverage of the inherited clause once Patamon is buried.
+    // Patamon is now a digivolution source, so its inherited effect is live.
+    // This fixture starts at the memory ceiling; the dedicated inherited
+    // tests below provide headroom to measure its +1 memory.
 }
 
 #[test]
@@ -704,7 +771,13 @@ fn bt14_033_declining_hand_to_bottom_security_leaves_hand_and_security_unchanged
         .start();
     let _p = place_patamon(&mut runner);
 
-    let hand_before = runner.hand_size(0);
+    let hand_card = runner.game.players[0].hand[0].handle();
+    let mut remaining_deck: Vec<_> = runner.game.players[0]
+        .deck
+        .iter()
+        .map(CardSource::handle)
+        .collect();
+    let drawn_card = remaining_deck.pop().expect("five-card deck has a top card");
 
     runner.game.enter_main_phase();
     let view = runner
@@ -714,6 +787,34 @@ fn bt14_033_declining_hand_to_bottom_security_leaves_hand_and_security_unchanged
         .execute_action(0, view.valid_action_ids[0])
         .expect("accept the digivolve");
 
+    let hand_after_digivolve: Vec<_> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(CardSource::handle)
+        .collect();
+    assert_eq!(
+        hand_after_digivolve,
+        vec![hand_card, drawn_card],
+        "security digivolution draws the exact deck-top card before the optional placement"
+    );
+    assert_eq!(
+        runner.game.players[0]
+            .deck
+            .iter()
+            .map(CardSource::handle)
+            .collect::<Vec<_>>(),
+        remaining_deck,
+        "the digivolution draws exactly one physical card"
+    );
+    let security_after_digivolve: Vec<_> = runner.game.players[0]
+        .security
+        .iter()
+        .map(CardSource::handle)
+        .collect();
+    assert!(
+        security_after_digivolve.is_empty(),
+        "the selected evolution left security"
+    );
     let _followup_view = runner
         .pending_selection_view()
         .expect("hand-to-bottom-security follow-up must install");
@@ -727,9 +828,31 @@ fn bt14_033_declining_hand_to_bottom_security_leaves_hand_and_security_unchanged
     let _ = runner.auto_resolve();
 
     assert_eq!(
-        runner.hand_size(0),
-        hand_before,
-        "declining the follow-up must leave the hand unchanged"
+        runner.game.players[0]
+            .hand
+            .iter()
+            .map(CardSource::handle)
+            .collect::<Vec<_>>(),
+        hand_after_digivolve,
+        "declining preserves both the original hand card and digivolution draw"
+    );
+    assert_eq!(
+        runner.game.players[0]
+            .security
+            .iter()
+            .map(CardSource::handle)
+            .collect::<Vec<_>>(),
+        security_after_digivolve,
+        "declining adds no card to security"
+    );
+    assert_eq!(
+        runner.game.players[0]
+            .deck
+            .iter()
+            .map(CardSource::handle)
+            .collect::<Vec<_>>(),
+        remaining_deck,
+        "declining causes no additional draw"
     );
 }
 
@@ -961,4 +1084,19 @@ fn bt14_033_inherited_dormant_while_patamon_is_top_card() {
         memory_before,
         "RULES 15-3-1: Patamon's own inherited clause is dormant while it is the top card of its own permanent"
     );
+}
+
+#[path = "../../support/printed_security_search.rs"]
+mod printed_security_search;
+
+#[test]
+fn bt14_033_printed_search_inspects_full_stack_with_and_without_matches_for_both_seats() {
+    for actor in [0,1] { for has_match in [false,true] {
+        let mut security=vec!["RED-VAC";40];if has_match {security[39]="YEL-VAC";}
+        let mut r=patamon_base().security(actor,&security).deck(0,&["FILLER";20]).deck(1,&["FILLER";20]).start();
+        r.skip_mulligan();r.game.turn_player_idx=actor as usize;
+        let host=r.place_on_field(actor,"BT14-033",Some(0));
+        r.game.enqueue_triggered(digimon_engine::EffectTiming::StartOfYourMainPhase,digimon_engine::TriggerSource::Permanent(host));r.game.drain_effect_queue();
+        printed_security_search::inspect_all_then_decline(&mut r,actor,if has_match {&[39]}else{&[]});
+    }}
 }

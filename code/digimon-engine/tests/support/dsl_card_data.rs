@@ -3,7 +3,10 @@ use digimon_engine::card_data::{CardData, DualCardData, DualDigimonFace, DualOpt
 use digimon_engine::enums::{CardColor, CardKind};
 
 pub fn compiled(card_id: &str) -> CompiledCard {
-    digimon_engine::dsl_registry::from_embedded()
+    // The embedded pack is immutable for this test executable. Reuse the
+    // existing registry cache, then clone the selected card so fixture edits
+    // remain independent across tests.
+    digimon_engine::dsl_registry::from_embedded_cached()
         .expect("embedded DSL registry loads")
         .lookup(card_id)
         .unwrap_or_else(|| panic!("{card_id} not found in embedded DSL pack"))

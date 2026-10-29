@@ -1,0 +1,222 @@
+
+running 15 tests
+test ex13::ex13_055::ex13_055_black_lv3_uses_the_cost_3_circle ... ok
+test ex13::ex13_055::ex13_055_barrier_trashes_top_security_instead_of_battle_deletion ... ok
+test ex13::ex13_055::ex13_055_digivolves_from_any_colour_lv3_chronicle_for_2 ... ok
+test ex13::ex13_055::ex13_055_digivolves_from_dorumon_for_2 ... ok
+test ex13::ex13_055::ex13_055_inherited_barrier_is_granted_to_the_carrier_only_from_the_stack ... ok
+test ex13::ex13_055::ex13_055_on_play_gives_chosen_opponent_minus_3000_for_the_turn ... ok
+test ex13::ex13_055::ex13_055_on_play_without_opponent_digimon_fizzles ... ok
+test ex13::ex13_055::ex13_055_red_lv3_without_chronicle_has_no_route ... ok
+test ex13::ex13_055::ex13_055_structure_matches_printed_text ... ok
+test ex13::ex13_055::ex13_055_when_attacking_digivolve_can_be_declined ... ok
+test ex13::ex13_055::ex13_055_when_attacking_digivolves_from_trash ... FAILED
+test ex13::ex13_055::ex13_055_when_attacking_digivolves_from_hand_paying_the_cost ... ok
+test ex13::ex13_055::ex13_055_when_attacking_offers_chronicle_cards_in_hand_and_trash ... FAILED
+test ex13::ex13_055::ex13_055_when_attacking_with_no_chronicle_card_offers_nothing ... ok
+test ex13::ex13_055::ex13_055_when_digivolving_gives_minus_3000 ... ok
+
+failures:
+
+---- ex13::ex13_055::ex13_055_when_attacking_digivolves_from_trash stdout ----
+
+thread 'ex13::ex13_055::ex13_055_when_attacking_digivolves_from_trash' (54544) panicked at code\digimon-engine\tests\cards_behavioral\ex13\chronicle_support.rs:244:5:
+CHRON-L5-T selectable from trash: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Trash), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("CHRON-L5-T"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(3) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand or trash", effect_choices: None, source_card: CardHandle(9), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- ex13::ex13_055::ex13_055_when_attacking_offers_chronicle_cards_in_hand_and_trash stdout ----
+
+thread 'ex13::ex13_055::ex13_055_when_attacking_offers_chronicle_cards_in_hand_and_trash' (34748) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_055.rs:287:5:
+assertion failed: trash_offered(&runner, 0, "CHRON-L5-T")
+
+
+failures:
+    ex13::ex13_055::ex13_055_when_attacking_digivolves_from_trash
+    ex13::ex13_055::ex13_055_when_attacking_offers_chronicle_cards_in_hand_and_trash
+
+test result: FAILED. 13 passed; 2 failed; 0 ignored; 0 measured; 12740 filtered out; finished in 13.08s
+
+
+running 22 tests
+test ex13::ex13_057::ex13_057_black_lv4_uses_the_cost_4_circle ... ok
+test ex13::ex13_057::ex13_057_digivolves_from_any_colour_lv4_chronicle_for_3 ... ok
+test ex13::ex13_057::ex13_057_digivolves_from_raptordramon_for_3 ... ok
+test ex13::ex13_057::ex13_057_during_attack_rider_adds_immunity_and_plus_5000 ... ok
+test ex13::ex13_057::ex13_057_end_of_attack_can_be_declined ... ok
+test ex13::ex13_057::ex13_057_during_attack_rider_persists_until_the_end_of_the_opponents_turn ... ok
+test ex13::ex13_057::ex13_057_end_of_attack_digivolves_from_trash ... FAILED
+test ex13::ex13_057::ex13_057_end_of_attack_digivolves_paying_the_cost ... ok
+test ex13::ex13_057::ex13_057_end_of_attack_offers_chronicle_cards_in_hand_and_trash ... FAILED
+test ex13::ex13_057::ex13_057_end_of_attack_once_per_turn_lockout_and_reset ... ok
+test ex13::ex13_057::ex13_057_face_up_grademon_does_not_carry_its_inherited_protection ... ok
+test ex13::ex13_057::ex13_057_granted_keywords_last_until_the_end_of_the_opponents_turn ... ok
+test ex13::ex13_057::ex13_057_inherited_also_protects_the_carrier_itself_from_bounce ... ok
+test ex13::ex13_057::ex13_057_inherited_declined_lets_it_leave ... ok
+test ex13::ex13_057::ex13_057_inherited_does_not_protect_non_chronicle_digimon ... ok
+test ex13::ex13_057::ex13_057_inherited_is_once_per_turn ... ok
+test ex13::ex13_057::ex13_057_inherited_needs_a_security_card_to_pay ... ok
+test ex13::ex13_057::ex13_057_inherited_protects_another_chronicle_digimon_by_trashing_top_security ... ok
+test ex13::ex13_057::ex13_057_on_play_targets_only_x_antibody_or_chronicle_digimon ... ok
+test ex13::ex13_057::ex13_057_red_lv4_without_chronicle_has_no_route ... ok
+test ex13::ex13_057::ex13_057_structure_matches_printed_text ... ok
+test ex13::ex13_057::ex13_057_when_digivolving_grants_reboot_and_blocker_without_attack_rider ... ok
+
+failures:
+
+---- ex13::ex13_057::ex13_057_end_of_attack_digivolves_from_trash stdout ----
+
+thread 'ex13::ex13_057::ex13_057_end_of_attack_digivolves_from_trash' (37276) panicked at code\digimon-engine\tests\cards_behavioral\ex13\chronicle_support.rs:244:5:
+CHRON-L6-T selectable from trash: PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Trash), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("CHRON-L6-T"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 62, operation: Decline, zone: None, owner: None, carrier_slot: None, carrier_identity: None, position: None, card_id: None, card_registry_index: None, identity_visible: false }] }), kind: UnionZone { zones: UnionZoneSet(3) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 62], is_optional: true, prompt: "This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand or trash", effect_choices: None, source_card: CardHandle(14), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Digimon, zone_owner: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- ex13::ex13_057::ex13_057_end_of_attack_offers_chronicle_cards_in_hand_and_trash stdout ----
+
+thread 'ex13::ex13_057::ex13_057_end_of_attack_offers_chronicle_cards_in_hand_and_trash' (49712) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_057.rs:378:5:
+assertion failed: trash_offered(&runner, 0, "CHRON-L6-T")
+
+
+failures:
+    ex13::ex13_057::ex13_057_end_of_attack_digivolves_from_trash
+    ex13::ex13_057::ex13_057_end_of_attack_offers_chronicle_cards_in_hand_and_trash
+
+test result: FAILED. 20 passed; 2 failed; 0 ignored; 0 measured; 12733 filtered out; finished in 17.34s
+
+
+running 18 tests
+test ex13::ex13_065::ex13_065_cannot_digivolve_from_other_sistermon ... ok
+test ex13::ex13_065::ex13_065_arts_digivolves_onto_sistermon_blanc_instead_of_trashing ... ok
+test ex13::ex13_065::ex13_065_cannot_digivolve_from_plain_lv2 ... ok
+test ex13::ex13_065::ex13_065_decode_does_not_fire_on_battle_deletion ... ok
+test ex13::ex13_065::ex13_065_decode_does_not_play_a_non_matching_source ... ok
+test ex13::ex13_065::ex13_065_decode_plays_sistermon_blanc_source_on_non_battle_leave ... ok
+test ex13::ex13_065::ex13_065_digimon_face_declares_guard ... ok
+test ex13::ex13_065::ex13_065_digivolves_from_huckmon_text_lv2_for_1 ... ok
+test ex13::ex13_065::ex13_065_digivolves_from_sistermon_blanc_for_0 ... ok
+test ex13::ex13_065::ex13_065_guard_deletion_then_decode_plays_sistermon_blanc ... ok
+test ex13::ex13_065::ex13_065_guard_deletion_with_decode_declined_still_saves_ally ... ok
+test ex13::ex13_065::ex13_065_guard_saves_an_ally_from_an_opponent_effect ... ok
+test ex13::ex13_065::ex13_065_has_guard_on_field ... ok
+test ex13::ex13_065::ex13_065_is_dual_with_both_faces ... ok
+test ex13::ex13_065::ex13_065_option_excludes_cost_5_sistermon ... ok
+test ex13::ex13_065::ex13_065_option_play_is_declinable_and_dp_still_applies ... ok
+test ex13::ex13_065::ex13_065_option_plays_sistermon_from_hand_then_dp_minus_per_ally ... FAILED
+test ex13::ex13_065::ex13_065_option_plays_sistermon_from_trash ... FAILED
+
+failures:
+
+---- ex13::ex13_065::ex13_065_option_plays_sistermon_from_hand_then_dp_minus_per_ally stdout ----
+
+thread 'ex13::ex13_065::ex13_065_option_plays_sistermon_from_hand_then_dp_minus_per_ally' (52680) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_065.rs:350:5:
+assertion failed: view.valid_action_ids.contains(&ciel)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- ex13::ex13_065::ex13_065_option_plays_sistermon_from_trash stdout ----
+
+thread 'ex13::ex13_065::ex13_065_option_plays_sistermon_from_trash' (20076) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_065.rs:368:5:
+assertion failed: view.valid_action_ids.contains(&blanc)
+
+
+failures:
+    ex13::ex13_065::ex13_065_option_plays_sistermon_from_hand_then_dp_minus_per_ally
+    ex13::ex13_065::ex13_065_option_plays_sistermon_from_trash
+
+test result: FAILED. 16 passed; 2 failed; 0 ignored; 0 measured; 12737 filtered out; finished in 16.43s
+
+
+running 17 tests
+test ex13::ex13_066::ex13_066_cannot_digivolve_from_plain_lv3 ... ok
+test ex13::ex13_066::ex13_066_arts_digivolves_onto_sistermon_ciel_instead_of_trashing ... ok
+test ex13::ex13_066::ex13_066_cannot_digivolve_from_sistermon_blanc ... ok
+test ex13::ex13_066::ex13_066_decode_does_not_fire_on_battle_deletion ... ok
+test ex13::ex13_066::ex13_066_decode_ignores_non_matching_source ... ok
+test ex13::ex13_066::ex13_066_decode_plays_sistermon_ciel_source ... ok
+test ex13::ex13_066::ex13_066_decode_plays_sistermon_noir_source ... ok
+test ex13::ex13_066::ex13_066_digivolves_from_huckmon_text_lv3_for_3 ... ok
+test ex13::ex13_066::ex13_066_digivolves_from_sistermon_ciel_for_1 ... ok
+test ex13::ex13_066::ex13_066_digivolves_from_sistermon_noir_for_1 ... ok
+test ex13::ex13_066::ex13_066_is_dual_with_both_faces ... ok
+test ex13::ex13_066::ex13_066_option_declined_play_de_digivolves_once ... ok
+test ex13::ex13_066::ex13_066_option_excludes_cost_5_sistermon ... ok
+test ex13::ex13_066::ex13_066_option_plays_sistermon_from_trash ... FAILED
+test ex13::ex13_066::ex13_066_option_plays_then_de_digivolves_per_ally ... FAILED
+test ex13::ex13_066::ex13_066_when_digivolving_deletes_cost_4_opponent_digimon ... ok
+test ex13::ex13_066::ex13_066_when_digivolving_spares_cost_5_opponent_digimon ... ok
+
+failures:
+
+---- ex13::ex13_066::ex13_066_option_plays_sistermon_from_trash stdout ----
+
+thread 'ex13::ex13_066::ex13_066_option_plays_sistermon_from_trash' (5324) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_066.rs:324:5:
+assertion failed: view.valid_action_ids.contains(&noir)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- ex13::ex13_066::ex13_066_option_plays_then_de_digivolves_per_ally stdout ----
+
+thread 'ex13::ex13_066::ex13_066_option_plays_then_de_digivolves_per_ally' (49796) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_066.rs:291:31:
+called `Result::unwrap()` on an `Err` value: InvalidAction
+
+
+failures:
+    ex13::ex13_066::ex13_066_option_plays_sistermon_from_trash
+    ex13::ex13_066::ex13_066_option_plays_then_de_digivolves_per_ally
+
+test result: FAILED. 15 passed; 2 failed; 0 ignored; 0 measured; 12738 filtered out; finished in 17.01s
+
+
+running 15 tests
+test ex13::ex13_067::ex13_067_clause_shape_matches_printed_text ... ok
+test ex13::ex13_067::ex13_067_declining_leaves_nokia_unsuspended ... ok
+test ex13::ex13_067::ex13_067_garurumon_digivolve_plays_agumon ... FAILED
+test ex13::ex13_067::ex13_067_does_not_trigger_on_the_opponents_turn ... ok
+test ex13::ex13_067::ex13_067_greymon_branch_does_not_offer_agumon_or_name_variants ... FAILED
+test ex13::ex13_067::ex13_067_greymon_digivolve_can_play_gabumon_from_trash ... FAILED
+test ex13::ex13_067::ex13_067_greymon_digivolve_plays_gabumon_from_hand_free ... FAILED
+test ex13::ex13_067::ex13_067_no_playable_card_does_not_trigger ... ok
+test ex13::ex13_067::ex13_067_other_names_do_not_trigger ... ok
+test ex13::ex13_067::ex13_067_second_copy_fails_the_1_or_fewer_recheck ... ok
+test ex13::ex13_067::ex13_067_security_plays_itself_for_free ... ok
+test ex13::ex13_067::ex13_067_start_of_main_gains_1_when_the_opponent_has_a_digimon ... ok
+test ex13::ex13_067::ex13_067_start_of_main_no_gain_when_the_opponent_has_no_digimon ... ok
+test ex13::ex13_067::ex13_067_suspended_nokia_cannot_pay_the_cost ... ok
+test ex13::ex13_067::ex13_067_two_digimon_do_not_trigger ... ok
+
+failures:
+
+---- ex13::ex13_067::ex13_067_garurumon_digivolve_plays_agumon stdout ----
+
+thread 'ex13::ex13_067::ex13_067_garurumon_digivolve_plays_agumon' (44520) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_067.rs:267:5:
+assertion `left == right` failed
+  left: []
+ right: ["AGUMON"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- ex13::ex13_067::ex13_067_greymon_branch_does_not_offer_agumon_or_name_variants stdout ----
+
+thread 'ex13::ex13_067::ex13_067_greymon_branch_does_not_offer_agumon_or_name_variants' (2316) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_067.rs:259:5:
+assertion `left == right` failed: exactly [Gabumon]
+  left: []
+ right: ["GABUMON"]
+
+---- ex13::ex13_067::ex13_067_greymon_digivolve_can_play_gabumon_from_trash stdout ----
+
+thread 'ex13::ex13_067::ex13_067_greymon_digivolve_can_play_gabumon_from_trash' (49256) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_067.rs:248:5:
+assertion `left == right` failed
+  left: []
+ right: ["GABUMON"]
+
+---- ex13::ex13_067::ex13_067_greymon_digivolve_plays_gabumon_from_hand_free stdout ----
+
+thread 'ex13::ex13_067::ex13_067_greymon_digivolve_plays_gabumon_from_hand_free' (35908) panicked at code\digimon-engine\tests\cards_behavioral\ex13\ex13_067.rs:237:5:
+assertion `left == right` failed
+  left: []
+ right: ["GABUMON"]
+
+
+failures:
+    ex13::ex13_067::ex13_067_garurumon_digivolve_plays_agumon
+    ex13::ex13_067::ex13_067_greymon_branch_does_not_offer_agumon_or_name_variants
+    ex13::ex13_067::ex13_067_greymon_digivolve_can_play_gabumon_from_trash
+    ex13::ex13_067::ex13_067_greymon_digivolve_plays_gabumon_from_hand_free
+
+test result: FAILED. 11 passed; 4 failed; 0 ignored; 0 measured; 12740 filtered out; finished in 15.94s
+

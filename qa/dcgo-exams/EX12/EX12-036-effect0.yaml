@@ -129,6 +129,13 @@ steps:
     do: { digivolve: { from: field.0, using: EX12-036 } }
     expect: { prompt: main_phase }
   - actor: 0
+    do:
+      select:
+        cards:
+        - EX12-036
+        ordinal: 0
+        sim_only: true
+  - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
   # THE CLAUSE: accept <Barrier> on the losing 12000-vs-12000 check.
@@ -144,7 +151,7 @@ assert:
   # suspended from the attack, Karakurumon beneath it), p0 paid the top of
   # security (5 -> 4, EX12-046 in trash), and the flipped EX12-036 is in
   # p1's trash with p1 down to 4 security.
-  - at: 8
+  - at: 9
     that:
       p0.field:
         - { card_id: EX12-036, dp: 12000, suspended: true,

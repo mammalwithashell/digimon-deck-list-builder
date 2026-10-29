@@ -90,11 +90,6 @@ steps:
     pass: {}
   expect:
     prompt: main_phase
-- actor: 0
-  do:
-    select:
-      decline: true
-      sim_only: true
 - actor: 1
   do:
     pass: {}
@@ -123,7 +118,7 @@ steps:
       cards:
       - EX3-020
 # RE-LOWERED 2026-10-19: shared (was dcgo_only). An optional effect picked
-# from our TriggerOrder now passes through its own you-may gate (§15-7-1;
+# from our TriggerOrder now passes through its own you-may gate (Â§15-7-1;
 # Task 2, da93979e8) -- the same OptionalSkill DCGO asks here.
 - actor: 0
   do:
@@ -131,12 +126,6 @@ steps:
       'yes': true
   expect:
     prompt: OptionalSkill
-- actor: 0
-  do:
-    select:
-      targets:
-      - own.field.1
-      sim_only: true
 - actor: 0
   do:
     select:
@@ -380,7 +369,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 3
-- at: 9
+- at: 8
   that:
     _backfilled: true
     memory: -3
@@ -411,7 +400,7 @@ assert:
     p1.trash: []
     phase: Breeding
     turn: 4
-- at: 10
+- at: 9
   that:
     _backfilled: true
     memory: -3
@@ -442,6 +431,38 @@ assert:
     p1.trash: []
     phase: Main
     turn: 4
+- at: 10
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: EX3-020
+      dp: 9000
+      suspended: false
+      sources:
+      - BT20-023
+    p0.hand:
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - EX3-041
+    - EX3-074
+    - ST1-02
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 5
 - at: 11
   that:
     _backfilled: true
@@ -472,23 +493,26 @@ assert:
     - ST2-09
     p1.security: 5
     p1.trash: []
-    phase: Breeding
+    phase: Main
     turn: 5
 - at: 12
   that:
     _backfilled: true
-    memory: 3
+    memory: -4
     p0.field:
     - card_id: EX3-020
       dp: 9000
       suspended: false
       sources:
       - BT20-023
+    - card_id: EX3-041
+      dp: 7000
+      suspended: false
+      sources: []
     p0.hand:
     - BT1-090
     - BT3-093
     - BT3-093
-    - EX3-041
     - EX3-074
     - ST1-02
     p0.security: 5
@@ -504,9 +528,8 @@ assert:
     - ST2-09
     p1.security: 5
     p1.trash: []
-    phase: Main
     turn: 5
-- at: 13
+- at: 14
   that:
     _backfilled: true
     memory: -4
@@ -540,41 +563,7 @@ assert:
     p1.security: 5
     p1.trash: []
     turn: 5
-- at: 16
-  that:
-    _backfilled: true
-    memory: -4
-    p0.field:
-    - card_id: EX3-020
-      dp: 9000
-      suspended: false
-      sources:
-      - BT20-023
-    - card_id: EX3-041
-      dp: 7000
-      suspended: false
-      sources: []
-    p0.hand:
-    - BT1-090
-    - BT3-093
-    - BT3-093
-    - EX3-074
-    - ST1-02
-    p0.security: 5
-    p0.trash: []
-    p1.field: []
-    p1.hand:
-    - BT1-090
-    - BT1-090
-    - BT3-093
-    - BT3-093
-    - BT3-093
-    - BT3-093
-    - ST2-09
-    p1.security: 5
-    p1.trash: []
-    turn: 5
-- at: 19
+- at: 17
   that:
     _backfilled: true
     memory: -4

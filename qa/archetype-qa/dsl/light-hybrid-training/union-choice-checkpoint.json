@@ -1,0 +1,63 @@
+{
+  "status": "implemented_focused_verified_not_full_training_qualification",
+  "implementation": [
+    "Complete physical mixed hand/trash/source owner menu; no legacy band truncation.",
+    "Source pins rebase original carrier and stack positions after compaction; hand/trash pins stay in their original zone.",
+    "VM binds the physically resolved card and live origin; cloneable success/decline continuations preserved.",
+    "Raw collector and optional-cost payability guard use the same complete physical candidate pool.",
+    "Generic trash_card_source now resolves explicitly selected breeding carriers.",
+    "Typed zones4 hand/5 trash and6 battle top documented; descriptor zone_codes exported; frontend labels/types synchronized.",
+    "Actor/peer tensor identity filtering and HTTP/WebSocket hand-row privacy preserved."
+  ],
+  "proof": [
+    {
+      "log": "verification/logs/union-choice-red.log",
+      "result": "0 passed, 3 failed",
+      "scope": "Actual preimplementation owner/deep-choice regressions."
+    },
+    {
+      "log": "verification/logs/union-choice-green.log",
+      "result": "2 passed, 1 failed",
+      "scope": "Complete raw/mixed menu passed; DSL breeding source movement exposed existing silent no-op."
+    },
+    {
+      "log": "verification/logs/union-choices-and-observation-green.log",
+      "result": "5 union tests and4 tensor tests passed",
+      "scope": "Both owners; source depths11/12/39 battle+breeding; required DSL clones and exact movement; mixed >old hand/trash bands; carrier and stack compaction."
+    },
+    {
+      "log": "verification/logs/union-hand-privacy-red.log",
+      "result": "3 passed, 1 failed",
+      "scope": "Actual peer/spectator hand-row leak before server filtering fix."
+    },
+    {
+      "log": "verification/logs/union-hand-privacy-green.log",
+      "result": "4 passed",
+      "scope": "Owner privacy, peer/spectator redaction, public trash, exact tokens, no input mutation."
+    },
+    {
+      "log": "verification/logs/union-frontend-selection.log",
+      "result": "13 passed",
+      "scope": "Typed union hand/trash labels dispatch supplied page actions; existing UI controls."
+    },
+    {
+      "log": "verification/logs/union-frontend-types.log",
+      "result": "TypeScript exit0"
+    },
+    {
+      "log": "verification/logs/union-existing-dsl-contracts.log",
+      "result": "14 passed, 15 failed",
+      "scope": "Old fixtures asserted/dispatched former encoded IDs and omitted explicit optional decline."
+    },
+    {
+      "log": "verification/logs/union-existing-dsl-contracts-migrated-rerun.log",
+      "result": "29 passed, 0 failed",
+      "scope": "Existing union behavioral controls migrated via test-only semantic row lookup; exact live mask checks retained. No production legacy action adapter."
+    }
+  ],
+  "limits": [
+    "Focused checks predate final combined recovery/DigiXros integration.",
+    "Fresh wheel and full verification ladder remain parent tasks.",
+    "No card ledger admission flags changed by this subtask."
+  ]
+}

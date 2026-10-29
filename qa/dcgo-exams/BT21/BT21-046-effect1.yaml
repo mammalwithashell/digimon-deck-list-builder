@@ -37,9 +37,6 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
-  # Our inherited empty end-turn optional gate; DCGO suppresses it without another ally.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
 assert:
   - at: 6
     that:

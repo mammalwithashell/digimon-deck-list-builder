@@ -215,8 +215,9 @@ fn bt26_021_inherited_needs_a_hand_card() {
 }
 
 #[test]
-fn bt26_021_main_decline_refunds_once_per_turn() {
+fn bt26_021_main_decline_spends_once_per_turn() {
     let mut r = setup();
+    r.place_on_field(0, CARD_ID, Some(0));
     r.place_on_field(0, CARD_ID, Some(0));
     push_trash(&mut r, 0, "TS-T");
     r.game.enter_main_phase();
@@ -224,7 +225,8 @@ fn bt26_021_main_decline_refunds_once_per_turn() {
     r.game.decode_action(main_bit(0), 0);
     pass(&mut r, 0);
     let _ = r.auto_resolve();
-    assert_eq!(field_ids(&r, 0).len(), 1, "nothing played");
-    // DCGO RemoveUse: declining the pick does not spend the [Once Per Turn].
-    assert!(main_legal(&r), "[Main] still available after declining");
+    assert_eq!(field_ids(&r, 0).len(), 2, "nothing played");
+    assert!(!main_legal(&r), "CR 15-14-1-4: activation spends the use");
+    assert!(build_action_mask(&r.game, 0)[main_bit(1) as usize] > 0.0,
+        "another copy retains its independent use");
 }

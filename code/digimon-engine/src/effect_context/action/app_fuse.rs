@@ -23,16 +23,24 @@ use crate::game_actions::AppFuseSourceZone;
 use crate::permanent::{OptionState, PermanentHandle};
 use crate::selection::{PendingSelection, SelectionKind};
 
+/// A result belongs to the initiating clause's lexical binding scope.
+#[derive(Debug, Clone)]
+pub(crate) struct AppFuseReceipt {
+    pub(crate) name: String,
+    pub(crate) bindings: crate::dsl_cards::bindings::Bindings,
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct AppFuseHostSelectionState {
     pub(crate) controller: PlayerId,
-    pub(crate) per_perm: Vec<(u16, PermanentHandle, Vec<(u16, CardHandle)>)>,
+    pub(crate) per_perm: Vec<(u16, PermanentHandle, u64, Vec<(u16, CardHandle)>)>,
     pub(crate) from_zone: CompiledAppFuseZone,
     pub(crate) optional: bool,
     pub(crate) selecting_player: PlayerId,
     pub(crate) source_card: CardHandle,
     pub(crate) source_permanent: Option<PermanentHandle>,
     pub(crate) source_kind: EffectSourceKind,
+    pub(crate) receipt: Option<AppFuseReceipt>,
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
@@ -40,8 +48,10 @@ pub(crate) struct AppFuseHostSelectionState {
 pub(crate) struct AppFuseResultSelectionState {
     pub(crate) controller: PlayerId,
     pub(crate) host: PermanentHandle,
+    pub(crate) host_identity: u64,
     pub(crate) results: Vec<(u16, CardHandle)>,
     pub(crate) zone: CompiledAppFuseZone,
+    pub(crate) receipt: Option<AppFuseReceipt>,
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
@@ -57,6 +67,18 @@ impl EffectContext<'_> {
         from_zone: CompiledAppFuseZone,
         result_filter: Option<&CompiledPredicate>,
         optional: bool,
+    ) {
+        self.initiate_effect_app_fuse_with_receipt(from_zone, result_filter, optional, None);
+    }
+
+    /// Receipt-aware DSL entry point. Only the authored binding opts into
+    /// running the enclosing tail after a declined selection.
+    pub(crate) fn initiate_effect_app_fuse_with_receipt(
+        &mut self,
+        from_zone: CompiledAppFuseZone,
+        result_filter: Option<&CompiledPredicate>,
+        optional: bool,
+        receipt: Option<AppFuseReceipt>,
     ) {
         let controller = self.player;
         let source_card = self.source_card;
@@ -103,7 +125,7 @@ impl EffectContext<'_> {
 
         // 2. For each own standing-Digimon permanent, which result cards fuse?
         let n = self.game.player(controller).battle_area.len();
-        let mut per_perm: Vec<(u16, PermanentHandle, Vec<(u16, CardHandle)>)> = Vec::new();
+        let mut per_perm: Vec<(u16, PermanentHandle, u64, Vec<(u16, CardHandle)>)> = Vec::new();
         for idx in 0..n {
             let host = PermanentHandle {
                 player: controller,
@@ -124,7 +146,16 @@ impl EffectContext<'_> {
                 .map(|(aid, h, _)| (*aid, *h))
                 .collect();
             if !fusable.is_empty() {
-                per_perm.push((encode_attack(controller as u16, idx as u16), host, fusable));
+                let identity = self
+                    .game
+                    .capture_source_play_host_identity(host)
+                    .expect("enumerated battle-area host exists");
+                per_perm.push((
+                    encode_attack(controller as u16, idx as u16),
+                    host,
+                    identity,
+                    fusable,
+                ));
             }
         }
 
@@ -133,10 +164,21 @@ impl EffectContext<'_> {
         }
 
         // 3. Install selection #1 over the eligible permanents.
-        let valid_action_ids: Vec<u16> = per_perm.iter().map(|(a, _, _)| *a).collect();
+        let valid_action_ids: Vec<u16> = per_perm.iter().map(|(a, _, _, _)| *a).collect();
         let previous_phase = self.game.current_phase;
-        let callback_per_perm = per_perm.clone();
-        let callback_from_zone = from_zone.clone();
+        let state = AppFuseHostSelectionState {
+            controller,
+            per_perm,
+            from_zone,
+            optional,
+            selecting_player,
+            source_card,
+            source_permanent,
+            source_kind,
+            receipt,
+            outer_conts: Vec::new(),
+        };
+        let callback_state = state.clone();
         self.game.current_phase = GamePhase::SelectTarget;
         self.game.pending_selection = Some(PendingSelection {
             kind: SelectionKind::Target,
@@ -149,44 +191,19 @@ impl EffectContext<'_> {
             source_card,
             source_permanent,
             source_kind,
+            card_choice: None,
             zone_owner: None,
             callback: Box::new(move |game, action_id| {
-                let Some((_, host, results)) = callback_per_perm
-                    .iter()
-                    .find(|(a, _, _)| *a == action_id)
-                    .cloned()
-                else {
-                    return;
-                };
-                install_result_selection(
-                    game,
-                    controller,
-                    host,
-                    results,
-                    callback_from_zone,
-                    optional,
-                    selecting_player,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                );
+                run_app_fuse_host_selection_step(game, callback_state, action_id);
             }),
-            on_decline: None,
+            on_decline: state.receipt.clone().map(|receipt| {
+                Box::new(move |game: &mut crate::game::Game| {
+                    publish_app_fuse_receipt(game, Some(&receipt), None);
+                }) as _
+            }),
         });
         self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
-            frames: vec![crate::resume::ResumeFrame::AppFuseHostSelection(
-                AppFuseHostSelectionState {
-                    controller,
-                    per_perm,
-                    from_zone,
-                    optional,
-                    selecting_player,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    outer_conts: Vec::new(),
-                },
-            )],
+            frames: vec![crate::resume::ResumeFrame::AppFuseHostSelection(state)],
         });
     }
 }
@@ -196,18 +213,24 @@ pub(crate) fn run_app_fuse_host_selection_step(
     state: AppFuseHostSelectionState,
     action_id: u16,
 ) {
-    let Some((_, host, results)) = state
+    let picked = state
         .per_perm
         .iter()
-        .find(|(a, _, _)| *a == action_id)
+        .find(|(a, _, _, _)| *a == action_id)
         .cloned()
-    else {
+        .and_then(|(_, host, identity, results)| {
+            game.resolve_source_play_host_identity(host, identity)
+                .map(|host| (host, identity, results))
+        });
+    let Some((host, identity, results)) = picked else {
+        publish_app_fuse_receipt(game, state.receipt.as_ref(), None);
         return;
     };
     install_result_selection(
         game,
         state.controller,
         host,
+        identity,
         results,
         state.from_zone,
         state.optional,
@@ -215,6 +238,7 @@ pub(crate) fn run_app_fuse_host_selection_step(
         state.source_card,
         state.source_permanent,
         state.source_kind,
+        state.receipt,
     );
 }
 
@@ -223,15 +247,31 @@ pub(crate) fn run_app_fuse_result_selection_step(
     state: AppFuseResultSelectionState,
     action_id: u16,
 ) {
-    let Some((_, card)) = state.results.iter().find(|(a, _)| *a == action_id).copied() else {
-        return;
-    };
-    game.commit_effect_app_fuse(
-        state.controller,
-        state.host,
-        card,
-        app_fuse_source_zone(state.zone),
-    );
+    let result = (|| {
+        let (_, card) = state
+            .results
+            .iter()
+            .find(|(a, _)| *a == action_id)
+            .copied()?;
+        // Field indices are presentation coordinates, not stable identities.
+        let host = game.resolve_source_play_host_identity(state.host, state.host_identity)?;
+        let cards = match state.zone {
+            CompiledAppFuseZone::Hand => &game.player(state.controller).hand,
+            CompiledAppFuseZone::Trash => &game.player(state.controller).trash,
+        };
+        let result = cards.iter().find(|c| c.handle() == card)?;
+        if !game.can_app_fuse_onto(result, host) {
+            return None;
+        }
+        game.commit_effect_app_fuse(
+            state.controller,
+            host,
+            card,
+            app_fuse_source_zone(state.zone),
+        )
+        .then_some(card)
+    })();
+    publish_app_fuse_receipt(game, state.receipt.as_ref(), result);
 }
 
 /// Install selection #2: the result card (in `zone`) to app-fuse onto `host`.
@@ -241,6 +281,7 @@ fn install_result_selection(
     game: &mut crate::game::Game,
     controller: crate::enums::PlayerId,
     host: PermanentHandle,
+    host_identity: u64,
     results: Vec<(u16, CardHandle)>,
     zone: CompiledAppFuseZone,
     optional: bool,
@@ -248,14 +289,23 @@ fn install_result_selection(
     source_card: CardHandle,
     source_permanent: Option<PermanentHandle>,
     source_kind: crate::enums::EffectSourceKind,
+    receipt: Option<AppFuseReceipt>,
 ) {
     if results.is_empty() {
         return;
     }
     let valid_action_ids: Vec<u16> = results.iter().map(|(a, _)| *a).collect();
     let previous_phase = game.current_phase;
-    let gz = app_fuse_source_zone(zone.clone());
-    let callback_results = results.clone();
+    let state = AppFuseResultSelectionState {
+        controller,
+        host,
+        host_identity,
+        results,
+        zone,
+        receipt,
+        outer_conts: Vec::new(),
+    };
+    let callback_state = state.clone();
     game.current_phase = GamePhase::SelectTarget;
     game.pending_selection = Some(PendingSelection {
         kind: SelectionKind::Target,
@@ -268,30 +318,40 @@ fn install_result_selection(
         source_card,
         source_permanent,
         source_kind,
+        card_choice: None,
         zone_owner: None,
         callback: Box::new(move |game, action_id| {
-            let Some((_, card)) = callback_results
-                .iter()
-                .find(|(a, _)| *a == action_id)
-                .copied()
-            else {
-                return;
-            };
-            game.commit_effect_app_fuse(controller, host, card, gz);
+            run_app_fuse_result_selection_step(game, callback_state, action_id);
         }),
-        on_decline: None,
+        on_decline: state.receipt.clone().map(|receipt| {
+            Box::new(move |game: &mut crate::game::Game| {
+                publish_app_fuse_receipt(game, Some(&receipt), None);
+            }) as _
+        }),
     });
     game.pending_selection_resume = Some(crate::resume::ResumeStack {
-        frames: vec![crate::resume::ResumeFrame::AppFuseResultSelection(
-            AppFuseResultSelectionState {
-                controller,
-                host,
-                results,
-                zone,
-                outer_conts: Vec::new(),
-            },
-        )],
+        frames: vec![crate::resume::ResumeFrame::AppFuseResultSelection(state)],
     });
+}
+
+/// Terminal publication replaces the channel with this receipt's own scope.
+/// Synchronous no-pair clears never enter the channel; enclosing tails receive
+/// those directly from the interpreter's returned lexical bindings.
+pub(crate) fn publish_app_fuse_receipt(
+    game: &mut crate::game::Game,
+    receipt: Option<&AppFuseReceipt>,
+    result: Option<CardHandle>,
+) {
+    let Some(receipt) = receipt else {
+        return;
+    };
+    let mut bindings = receipt.bindings.clone();
+    if let Some(card) = result {
+        bindings.insert_card(&receipt.name, card);
+    } else {
+        bindings.clear_for_merge(&receipt.name);
+    }
+    game.dsl_resolved_tail_bindings = Some(bindings);
 }
 
 fn app_fuse_source_zone(zone: CompiledAppFuseZone) -> AppFuseSourceZone {

@@ -47,7 +47,7 @@
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
-use digimon_engine::action::space::{PASS, PLAY_HAND_START, TRASH_EFFECT_START};
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, Keyword, PlaySource};
@@ -103,21 +103,10 @@ fn base() -> DebugRunnerBuilder {
 }
 
 fn hand_pick(runner: &DebugRunner, card_id: &str) -> u16 {
-    let idx = runner.game.players[0]
-        .hand
-        .iter()
-        .position(|c| c.card_id(&runner.game.card_data) == card_id)
-        .unwrap_or_else(|| panic!("{card_id} not in hand"));
-    PLAY_HAND_START + idx as u16
+    physical_choice::card_action(&runner.game, card_id, digimon_engine::owned_card_choice::CardChoiceZone::Hand)
 }
-
 fn trash_pick(runner: &DebugRunner, card_id: &str) -> u16 {
-    let idx = runner.game.players[0]
-        .trash
-        .iter()
-        .position(|c| c.card_id(&runner.game.card_data) == card_id)
-        .unwrap_or_else(|| panic!("{card_id} not in trash"));
-    TRASH_EFFECT_START + idx as u16
+    physical_choice::card_action(&runner.game, card_id, digimon_engine::owned_card_choice::CardChoiceZone::Trash)
 }
 
 fn assert_union_prompt(runner: &DebugRunner, optional: bool) {
@@ -423,3 +412,6 @@ fn ex7_043_cannot_digivolve_from_plain_red_lv3() {
         .game
         .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

@@ -1658,7 +1658,31 @@ impl Walk for digimon_dsl::step::StepSpec {
                 );
                 f0.walk(c, &format!("{}@ActivationCost.0", path), role);
             }
-        }
+                    digimon_dsl::step::StepSpec::PaySourcePrefix(value) => {
+                c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("PaySourcePrefix"));
+                value.walk(c, &format!("{}@PaySourcePrefix.0", path), role);
+            }
+            digimon_dsl::step::StepSpec::ReturnAllToHand(value) => {
+                c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("ReturnAllToHand"));
+                value.walk(c, &format!("{}@ReturnAllToHand.0", path), role);
+            }
+            digimon_dsl::step::StepSpec::ReturnAllToDeck(value) => {
+                c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("ReturnAllToDeck"));
+                value.walk(c, &format!("{}@ReturnAllToDeck.0", path), role);
+            }
+            digimon_dsl::step::StepSpec::SuspendAndCancelAllMatchingLeaves(value) => {
+                c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("SuspendAndCancelAllMatchingLeaves"));
+                value.walk(c, &format!("{}@SuspendAndCancelAllMatchingLeaves.0", path), role);
+            }
+            digimon_dsl::step::StepSpec::TrashSelectedSourcesAsCost(value) => {
+                c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("TrashSelectedSourcesAsCost"));
+                value.walk(c, &format!("{}@TrashSelectedSourcesAsCost.0", path), role);
+            }
+            digimon_dsl::step::StepSpec::PlayToBreedingFromHand(value) => {
+                c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("PlayToBreedingFromHand"));
+                value.walk(c, &format!("{}@PlayToBreedingFromHand.0", path), role);
+            }
+}
     }
 }
 impl Walk for digimon_dsl::step::BindingRef {
@@ -1888,6 +1912,7 @@ impl Walk for digimon_dsl::step::StructuredBindingRef {
             deck_top,
             security_top,
             own_breeding,
+            top_of,
         } = self;
         binding.walk(c, &format!("{}.binding", path), "EXISTING_INSTANCE_BINDING");
         permanent.walk(
@@ -1909,7 +1934,8 @@ impl Walk for digimon_dsl::step::StructuredBindingRef {
         deck_top.walk(c, &format!("{}.deck_top", path), "UNCLASSIFIED_STRING");
         security_top.walk(c, &format!("{}.security_top", path), "UNCLASSIFIED_STRING");
         own_breeding.walk(c, &format!("{}.own_breeding", path), "UNCLASSIFIED_STRING");
-    }
+            top_of.walk(c, &format!("{}.top_of", path), "EXISTING_INSTANCE_BINDING");
+}
 }
 impl Walk for digimon_dsl::step::PlayerArg {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -1921,6 +1947,22 @@ impl Walk for digimon_dsl::step::PlayerArg {
         );
         let digimon_dsl::step::PlayerArg { of } = self;
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
+    }
+}
+impl Walk for digimon_dsl::step::MoveFromBreedingArgs {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::step::MoveFromBreedingArgs", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::step::MoveFromBreedingArgs { of, bind_as } = self;
+        of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
+        bind_as.walk(c, &format!("{}.bind_as", path), "BINDING_DEFINITION");
+    }
+}
+impl Walk for digimon_dsl::step::TrashTopSecurityPreventionArgs {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::step::TrashTopSecurityPreventionArgs", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::step::TrashTopSecurityPreventionArgs { of, all_matching } = self;
+        of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
+        all_matching.walk(c, &format!("{}.all_matching", path), role);
     }
 }
 impl Walk for digimon_dsl::step::ReturnTopSecurityToDeckArgs {
@@ -2375,11 +2417,13 @@ impl Walk for digimon_dsl::step::RefireEffectArgs {
             source,
             timing,
             optional,
+            target_attribution,
         } = self;
         source.walk(c, &format!("{}.source", path), "EXISTING_INSTANCE_BINDING");
         timing.walk(c, &format!("{}.timing", path), "ENGINE_TIMING_NAME");
         optional.walk(c, &format!("{}.optional", path), "UNCLASSIFIED_STRING");
-    }
+            target_attribution.walk(c, &format!("{}.target_attribution", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::step::RefireCardEffectArgs {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -3052,6 +3096,8 @@ impl Walk for digimon_dsl::step::SecurityPlaceStackedCardArgs {
             serde_json::Value::Null,
         );
         let digimon_dsl::step::SecurityPlaceStackedCardArgs {
+            bind_success_as,
+            to_owner,
             carrier,
             source,
             source_index_from_top,
@@ -3059,6 +3105,8 @@ impl Walk for digimon_dsl::step::SecurityPlaceStackedCardArgs {
             position,
             face,
         } = self;
+        bind_success_as.walk(c, &format!("{}.bind_success_as", path), "BINDING_DEFINITION");
+        to_owner.walk(c, &format!("{}.to_owner", path), "UNCLASSIFIED_STRING");
         carrier.walk(c, &format!("{}.carrier", path), "UNCLASSIFIED_STRING");
         source.walk(c, &format!("{}.source", path), "EXISTING_INSTANCE_BINDING");
         source_index_from_top.walk(
@@ -3080,11 +3128,15 @@ impl Walk for digimon_dsl::step::SecurityPlaceTopStackedCardArgs {
             serde_json::Value::Null,
         );
         let digimon_dsl::step::SecurityPlaceTopStackedCardArgs {
+            bind_success_as,
+            to_owner,
             carrier,
             of,
             position,
             face,
         } = self;
+        bind_success_as.walk(c, &format!("{}.bind_success_as", path), "BINDING_DEFINITION");
+        to_owner.walk(c, &format!("{}.to_owner", path), "UNCLASSIFIED_STRING");
         carrier.walk(c, &format!("{}.carrier", path), "UNCLASSIFIED_STRING");
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
         position.walk(c, &format!("{}.position", path), "UNCLASSIFIED_STRING");
@@ -3696,6 +3748,7 @@ impl Walk for digimon_dsl::step::PlayFromMaterialsArgs {
             cost_delta,
             suppress_on_play,
             bind_as,
+            suspended,
         } = self;
         target.walk(c, &format!("{}.target", path), "EXISTING_INSTANCE_BINDING");
         source_index.walk(c, &format!("{}.source_index", path), "UNCLASSIFIED_STRING");
@@ -3706,7 +3759,8 @@ impl Walk for digimon_dsl::step::PlayFromMaterialsArgs {
             "UNCLASSIFIED_STRING",
         );
         bind_as.walk(c, &format!("{}.bind_as", path), "EXISTING_INSTANCE_BINDING");
-    }
+            suspended.walk(c, &format!("{}.suspended", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::step::PlayFromSecurityArgs {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -3784,10 +3838,12 @@ impl Walk for digimon_dsl::step::AppFuseArgs {
             from,
             result_filter,
             optional,
+            bind_as,
         } = self;
         from.walk(c, &format!("{}.from", path), "EXISTING_INSTANCE_BINDING");
         result_filter.walk(c, &format!("{}.result_filter", path), "UNCLASSIFIED_STRING");
         optional.walk(c, &format!("{}.optional", path), "UNCLASSIFIED_STRING");
+        bind_as.walk(c, &format!("{}.bind_as", path), "EXISTING_INSTANCE_BINDING");
     }
 }
 impl Walk for digimon_dsl::step::EffectDnaDigivolveArgs {
@@ -3908,6 +3964,7 @@ impl Walk for digimon_dsl::step::AddModifierArgs {
             serde_json::Value::Null,
         );
         let digimon_dsl::step::AddModifierArgs {
+            opponent_only,
             target,
             modifier,
             value,
@@ -3916,6 +3973,7 @@ impl Walk for digimon_dsl::step::AddModifierArgs {
             payload,
             continuous,
         } = self;
+        opponent_only.walk(c, &format!("{}.opponent_only", path), "UNCLASSIFIED_STRING");
         target.walk(c, &format!("{}.target", path), "EXISTING_INSTANCE_BINDING");
         modifier.walk(c, &format!("{}.modifier", path), "ENGINE_MODIFIER_NAME");
         value.walk(c, &format!("{}.value", path), "UNCLASSIFIED_STRING");
@@ -4102,13 +4160,15 @@ impl Walk for digimon_dsl::step::GrantTriggeredEffectArgs {
             expiry,
             body,
             trigger_if,
+            dynamic,
         } = self;
         target.walk(c, &format!("{}.target", path), "EXISTING_INSTANCE_BINDING");
         timing.walk(c, &format!("{}.timing", path), "ENGINE_TIMING_NAME");
         expiry.walk(c, &format!("{}.expiry", path), "ENGINE_EXPIRY_NAME");
         body.walk(c, &format!("{}.body", path), "UNCLASSIFIED_STRING");
         trigger_if.walk(c, &format!("{}.trigger_if", path), "UNCLASSIFIED_STRING");
-    }
+            dynamic.walk(c, &format!("{}.dynamic", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::step::EffectSourceKindSpec {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -4342,6 +4402,7 @@ impl Walk for digimon_dsl::step::SelectZoneArgs {
             serde_json::Value::Null,
         );
         let digimon_dsl::step::SelectZoneArgs {
+            continue_on_decline,
             of,
             filter,
             bind_as,
@@ -4351,6 +4412,7 @@ impl Walk for digimon_dsl::step::SelectZoneArgs {
             prompt_key,
             then,
         } = self;
+        continue_on_decline.walk(c, &format!("{}.continue_on_decline", path), "UNCLASSIFIED_STRING");
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
         filter.walk(c, &format!("{}.filter", path), "UNCLASSIFIED_STRING");
         bind_as.walk(c, &format!("{}.bind_as", path), "EXISTING_INSTANCE_BINDING");
@@ -4472,6 +4534,8 @@ impl Walk for digimon_dsl::step::SelectMaterialsArgs {
             prompt,
             optional_zero,
             prompt_key,
+            named_groups,
+            require_max,
         } = self;
         of_permanent.walk(
             c,
@@ -4495,7 +4559,9 @@ impl Walk for digimon_dsl::step::SelectMaterialsArgs {
             &format!("{}.prompt_key", path),
             "METADATA_NO_EXECUTABLE_REFERENCE",
         );
-    }
+            named_groups.walk(c, &format!("{}.named_groups", path), "MATCH_NAME_EXACT");
+        require_max.walk(c, &format!("{}.require_max", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::step::SelectOwnSourcesArgs {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -4668,6 +4734,7 @@ impl Walk for digimon_dsl::step::SelectZoneCardsArgs {
             min,
             max,
             optional_zero,
+            distinct_by,
             play_cost_budget,
             exclude,
             bind_as,
@@ -4680,6 +4747,7 @@ impl Walk for digimon_dsl::step::SelectZoneCardsArgs {
         min.walk(c, &format!("{}.min", path), "UNCLASSIFIED_STRING");
         max.walk(c, &format!("{}.max", path), "UNCLASSIFIED_STRING");
         optional_zero.walk(c, &format!("{}.optional_zero", path), "UNCLASSIFIED_STRING");
+        distinct_by.walk(c, &format!("{}.distinct_by", path), "UNCLASSIFIED_STRING");
         play_cost_budget.walk(
             c,
             &format!("{}.play_cost_budget", path),
@@ -5498,7 +5566,7 @@ digimon_dsl::compiled::CompiledStep::PlaceSelectedSourcesUnderTamer{source_refs,
 digimon_dsl::compiled::CompiledStep::MoveMatchingSourcesUnderTamer{from,tamer,filter,bind_count_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("MoveMatchingSourcesUnderTamer"));from.walk(c, &format!("{}.from", &format!("{}@MoveMatchingSourcesUnderTamer",path)), "EXISTING_INSTANCE_BINDING");tamer.walk(c, &format!("{}.tamer", &format!("{}@MoveMatchingSourcesUnderTamer",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@MoveMatchingSourcesUnderTamer",path)), "UNCLASSIFIED_STRING");bind_count_as.walk(c, &format!("{}.bind_count_as", &format!("{}@MoveMatchingSourcesUnderTamer",path)), "BINDING_DEFINITION");},
 digimon_dsl::compiled::CompiledStep::TrashTopStackedSources{target,count,include_top_card} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashTopStackedSources"));target.walk(c, &format!("{}.target", &format!("{}@TrashTopStackedSources",path)), "EXISTING_INSTANCE_BINDING");count.walk(c, &format!("{}.count", &format!("{}@TrashTopStackedSources",path)), "UNCLASSIFIED_STRING");include_top_card.walk(c, &format!("{}.include_top_card", &format!("{}@TrashTopStackedSources",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::Hatch{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("Hatch"));of.walk(c, &format!("{}.of", &format!("{}@Hatch",path)), "UNCLASSIFIED_STRING");},
-digimon_dsl::compiled::CompiledStep::MoveFromBreeding{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("MoveFromBreeding"));of.walk(c, &format!("{}.of", &format!("{}@MoveFromBreeding",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::MoveFromBreeding{of,bind_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("MoveFromBreeding"));of.walk(c, &format!("{}.of", &format!("{}@MoveFromBreeding",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@MoveFromBreeding",path)), "BINDING_DEFINITION");},
 digimon_dsl::compiled::CompiledStep::PlayFromHand{of,hand_index,cost_delta,bind_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayFromHand"));of.walk(c, &format!("{}.of", &format!("{}@PlayFromHand",path)), "UNCLASSIFIED_STRING");hand_index.walk(c, &format!("{}.hand_index", &format!("{}@PlayFromHand",path)), "UNCLASSIFIED_STRING");cost_delta.walk(c, &format!("{}.cost_delta", &format!("{}@PlayFromHand",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayFromHand",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::PlayFromHandFree{of,hand_index,bind_as,suspended} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayFromHandFree"));of.walk(c, &format!("{}.of", &format!("{}@PlayFromHandFree",path)), "UNCLASSIFIED_STRING");hand_index.walk(c, &format!("{}.hand_index", &format!("{}@PlayFromHandFree",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayFromHandFree",path)), "EXISTING_INSTANCE_BINDING");suspended.walk(c, &format!("{}.suspended", &format!("{}@PlayFromHandFree",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::UseOptionFromHand{of,filter,use_cost_lte_opponent_memory,optional,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("UseOptionFromHand"));of.walk(c, &format!("{}.of", &format!("{}@UseOptionFromHand",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@UseOptionFromHand",path)), "UNCLASSIFIED_STRING");use_cost_lte_opponent_memory.walk(c, &format!("{}.use_cost_lte_opponent_memory", &format!("{}@UseOptionFromHand",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@UseOptionFromHand",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@UseOptionFromHand",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
@@ -5515,28 +5583,34 @@ digimon_dsl::compiled::CompiledStep::PlayUnionBoundFree{binding,bind_as,suppress
 digimon_dsl::compiled::CompiledStep::TrashUnionBound{binding} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashUnionBound"));binding.walk(c, &format!("{}.binding", &format!("{}@TrashUnionBound",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::ReturnUnionBoundToDeck{binding,position} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnUnionBoundToDeck"));binding.walk(c, &format!("{}.binding", &format!("{}@ReturnUnionBoundToDeck",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@ReturnUnionBoundToDeck",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::PlayFromSecurity => c.node(path,"digimon_dsl::compiled::CompiledStep","ENUM_SCALAR",serde_json::json!("PlayFromSecurity")),
-digimon_dsl::compiled::CompiledStep::PlayFromMaterials{target,source_index,cost_delta,suppress_on_play,bind_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayFromMaterials"));target.walk(c, &format!("{}.target", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");source_index.walk(c, &format!("{}.source_index", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");cost_delta.walk(c, &format!("{}.cost_delta", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");suppress_on_play.walk(c, &format!("{}.suppress_on_play", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");},
+digimon_dsl::compiled::CompiledStep::PlayFromMaterials{target,source_index,cost_delta,suppress_on_play,bind_as,
+            suspended,
+        } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayFromMaterials"));target.walk(c, &format!("{}.target", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");source_index.walk(c, &format!("{}.source_index", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");cost_delta.walk(c, &format!("{}.cost_delta", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");suppress_on_play.walk(c, &format!("{}.suppress_on_play", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");suspended.walk(c, &format!("{}@PlayFromMaterials.suspended", path), "UNCLASSIFIED_STRING");
+},
 digimon_dsl::compiled::CompiledStep::PlaySelectedSourcesFree{source_refs} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlaySelectedSourcesFree"));source_refs.walk(c, &format!("{}.source_refs", &format!("{}@PlaySelectedSourcesFree",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::PlayUnderTamerSource{source_refs,cost_delta,bind_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayUnderTamerSource"));source_refs.walk(c, &format!("{}.source_refs", &format!("{}@PlayUnderTamerSource",path)), "EXISTING_INSTANCE_BINDING");cost_delta.walk(c, &format!("{}.cost_delta", &format!("{}@PlayUnderTamerSource",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayUnderTamerSource",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::EffectInitiatedDigivolve{target,from_hand,cost,ignore_requirements,ignore_level} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("EffectInitiatedDigivolve"));target.walk(c, &format!("{}.target", &format!("{}@EffectInitiatedDigivolve",path)), "EXISTING_INSTANCE_BINDING");from_hand.walk(c, &format!("{}.from_hand", &format!("{}@EffectInitiatedDigivolve",path)), "UNCLASSIFIED_STRING");cost.walk(c, &format!("{}.cost", &format!("{}@EffectInitiatedDigivolve",path)), "UNCLASSIFIED_STRING");ignore_requirements.walk(c, &format!("{}.ignore_requirements", &format!("{}@EffectInitiatedDigivolve",path)), "UNCLASSIFIED_STRING");ignore_level.walk(c, &format!("{}.ignore_level", &format!("{}@EffectInitiatedDigivolve",path)), "UNCLASSIFIED_STRING");},
-digimon_dsl::compiled::CompiledStep::AppFuse{from_zone,result_filter,optional} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("AppFuse"));from_zone.walk(c, &format!("{}.from_zone", &format!("{}@AppFuse",path)), "UNCLASSIFIED_STRING");result_filter.walk(c, &format!("{}.result_filter", &format!("{}@AppFuse",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@AppFuse",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::AppFuse{from_zone,result_filter,optional,bind_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("AppFuse"));from_zone.walk(c, &format!("{}.from_zone", &format!("{}@AppFuse",path)), "UNCLASSIFIED_STRING");result_filter.walk(c, &format!("{}.result_filter", &format!("{}@AppFuse",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@AppFuse",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@AppFuse",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::EffectInitiatedDnaDigivolve{target_a,target_b,from_hand,cost,ignore_requirements} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("EffectInitiatedDnaDigivolve"));target_a.walk(c, &format!("{}.target_a", &format!("{}@EffectInitiatedDnaDigivolve",path)), "UNCLASSIFIED_STRING");target_b.walk(c, &format!("{}.target_b", &format!("{}@EffectInitiatedDnaDigivolve",path)), "UNCLASSIFIED_STRING");from_hand.walk(c, &format!("{}.from_hand", &format!("{}@EffectInitiatedDnaDigivolve",path)), "UNCLASSIFIED_STRING");cost.walk(c, &format!("{}.cost", &format!("{}@EffectInitiatedDnaDigivolve",path)), "UNCLASSIFIED_STRING");ignore_requirements.walk(c, &format!("{}.ignore_requirements", &format!("{}@EffectInitiatedDnaDigivolve",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::EffectInitiatedDnaDigivolveHandPartner{target,hand_partner,from_hand,cost,ignore_requirements} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("EffectInitiatedDnaDigivolveHandPartner"));target.walk(c, &format!("{}.target", &format!("{}@EffectInitiatedDnaDigivolveHandPartner",path)), "EXISTING_INSTANCE_BINDING");hand_partner.walk(c, &format!("{}.hand_partner", &format!("{}@EffectInitiatedDnaDigivolveHandPartner",path)), "UNCLASSIFIED_STRING");from_hand.walk(c, &format!("{}.from_hand", &format!("{}@EffectInitiatedDnaDigivolveHandPartner",path)), "UNCLASSIFIED_STRING");cost.walk(c, &format!("{}.cost", &format!("{}@EffectInitiatedDnaDigivolveHandPartner",path)), "UNCLASSIFIED_STRING");ignore_requirements.walk(c, &format!("{}.ignore_requirements", &format!("{}@EffectInitiatedDnaDigivolveHandPartner",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::EffectInitiatedDnaDigivolveTrashPartner{target,trash_partner,from_hand,cost,ignore_requirements} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("EffectInitiatedDnaDigivolveTrashPartner"));target.walk(c, &format!("{}.target", &format!("{}@EffectInitiatedDnaDigivolveTrashPartner",path)), "EXISTING_INSTANCE_BINDING");trash_partner.walk(c, &format!("{}.trash_partner", &format!("{}@EffectInitiatedDnaDigivolveTrashPartner",path)), "UNCLASSIFIED_STRING");from_hand.walk(c, &format!("{}.from_hand", &format!("{}@EffectInitiatedDnaDigivolveTrashPartner",path)), "UNCLASSIFIED_STRING");cost.walk(c, &format!("{}.cost", &format!("{}@EffectInitiatedDnaDigivolveTrashPartner",path)), "UNCLASSIFIED_STRING");ignore_requirements.walk(c, &format!("{}.ignore_requirements", &format!("{}@EffectInitiatedDnaDigivolveTrashPartner",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::TrashTopSecurity{of,count,leave,bind_count_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashTopSecurity"));of.walk(c, &format!("{}.of", &format!("{}@TrashTopSecurity",path)), "UNCLASSIFIED_STRING");count.walk(c, &format!("{}.count", &format!("{}@TrashTopSecurity",path)), "UNCLASSIFIED_STRING");leave.walk(c, &format!("{}.leave", &format!("{}@TrashTopSecurity",path)), "UNCLASSIFIED_STRING");bind_count_as.walk(c, &format!("{}.bind_count_as", &format!("{}@TrashTopSecurity",path)), "BINDING_DEFINITION");},
 digimon_dsl::compiled::CompiledStep::TrashBottomSecurity{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashBottomSecurity"));of.walk(c, &format!("{}.of", &format!("{}@TrashBottomSecurity",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::AddBottomSecurityToHand{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("AddBottomSecurityToHand"));of.walk(c, &format!("{}.of", &format!("{}@AddBottomSecurityToHand",path)), "UNCLASSIFIED_STRING");},
-digimon_dsl::compiled::CompiledStep::TrashTopSecurityAndCancelReplacement{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashTopSecurityAndCancelReplacement"));of.walk(c, &format!("{}.of", &format!("{}@TrashTopSecurityAndCancelReplacement",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::TrashTopSecurityAndCancelReplacement{of,all_matching} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashTopSecurityAndCancelReplacement"));of.walk(c, &format!("{}.of", &format!("{}@TrashTopSecurityAndCancelReplacement",path)), "UNCLASSIFIED_STRING");all_matching.walk(c, &format!("{}.all_matching", &format!("{}@TrashTopSecurityAndCancelReplacement",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::BounceSelf => c.node(path,"digimon_dsl::compiled::CompiledStep","ENUM_SCALAR",serde_json::json!("BounceSelf")),
 digimon_dsl::compiled::CompiledStep::PlaceSelfAtSecurity{position,face_up} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlaceSelfAtSecurity"));position.walk(c, &format!("{}.position", &format!("{}@PlaceSelfAtSecurity",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@PlaceSelfAtSecurity",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::PlaceSelfOptionAtSecurity{position,face_up} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlaceSelfOptionAtSecurity"));position.walk(c, &format!("{}.position", &format!("{}@PlaceSelfOptionAtSecurity",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@PlaceSelfOptionAtSecurity",path)), "UNCLASSIFIED_STRING");},
-digimon_dsl::compiled::CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement{of,target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentBottomSecurityAndCancelReplacement"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "EXISTING_INSTANCE_BINDING");},
+digimon_dsl::compiled::CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement{of,target,
+            to_owner,
+        } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentBottomSecurityAndCancelReplacement"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "EXISTING_INSTANCE_BINDING");to_owner.walk(c, &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement.to_owner", path), "UNCLASSIFIED_STRING");
+},
 digimon_dsl::compiled::CompiledStep::PlacePermanentOnSecurity{of,target,position,face_up,to_owner,bind_placed_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentOnSecurity"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentOnSecurity",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");to_owner.walk(c, &format!("{}.to_owner", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");bind_placed_as.walk(c, &format!("{}.bind_placed_as", &format!("{}@PlacePermanentOnSecurity",path)), "BINDING_DEFINITION");},
 digimon_dsl::compiled::CompiledStep::PlacePermanentOnSecurityAndHandleReplacement{of,target,position,face_up} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentOnSecurityAndHandleReplacement"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentOnSecurityAndHandleReplacement",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentOnSecurityAndHandleReplacement",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@PlacePermanentOnSecurityAndHandleReplacement",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@PlacePermanentOnSecurityAndHandleReplacement",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::PlacePermanentOnSecurityObserved{of,target,position,face_up,include_sources} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentOnSecurityObserved"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentOnSecurityObserved",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentOnSecurityObserved",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@PlacePermanentOnSecurityObserved",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@PlacePermanentOnSecurityObserved",path)), "UNCLASSIFIED_STRING");include_sources.walk(c, &format!("{}.include_sources", &format!("{}@PlacePermanentOnSecurityObserved",path)), "UNCLASSIFIED_STRING");},
-digimon_dsl::compiled::CompiledStep::SecurityPlaceStackedCard{carrier,source,source_index_from_top,of,position,face_up} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SecurityPlaceStackedCard"));carrier.walk(c, &format!("{}.carrier", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");source.walk(c, &format!("{}.source", &format!("{}@SecurityPlaceStackedCard",path)), "EXISTING_INSTANCE_BINDING");source_index_from_top.walk(c, &format!("{}.source_index_from_top", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");of.walk(c, &format!("{}.of", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");position.walk(c, &format!("{}.position", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");},
-digimon_dsl::compiled::CompiledStep::SecurityPlaceTopStackedCard{carrier,of,position,face_up} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SecurityPlaceTopStackedCard"));carrier.walk(c, &format!("{}.carrier", &format!("{}@SecurityPlaceTopStackedCard",path)), "UNCLASSIFIED_STRING");of.walk(c, &format!("{}.of", &format!("{}@SecurityPlaceTopStackedCard",path)), "UNCLASSIFIED_STRING");position.walk(c, &format!("{}.position", &format!("{}@SecurityPlaceTopStackedCard",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@SecurityPlaceTopStackedCard",path)), "UNCLASSIFIED_STRING");},
-digimon_dsl::compiled::CompiledStep::SecurityPlaceTopCard{carrier,of,position,face_up} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SecurityPlaceTopCard"));carrier.walk(c, &format!("{}.carrier", &format!("{}@SecurityPlaceTopCard",path)), "UNCLASSIFIED_STRING");of.walk(c, &format!("{}.of", &format!("{}@SecurityPlaceTopCard",path)), "UNCLASSIFIED_STRING");position.walk(c, &format!("{}.position", &format!("{}@SecurityPlaceTopCard",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@SecurityPlaceTopCard",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::SecurityPlaceStackedCard{bind_success_as,to_owner,carrier,source,source_index_from_top,of,position,face_up} => { bind_success_as.walk(c, &format!("{}.bind_success_as", path), "BINDING_DEFINITION");to_owner.walk(c, &format!("{}.to_owner", path), "UNCLASSIFIED_STRING"); c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SecurityPlaceStackedCard"));carrier.walk(c, &format!("{}.carrier", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");source.walk(c, &format!("{}.source", &format!("{}@SecurityPlaceStackedCard",path)), "EXISTING_INSTANCE_BINDING");source_index_from_top.walk(c, &format!("{}.source_index_from_top", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");of.walk(c, &format!("{}.of", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");position.walk(c, &format!("{}.position", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::SecurityPlaceTopStackedCard{carrier,of,position,face_up,bind_success_as,to_owner} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SecurityPlaceTopStackedCard"));bind_success_as.walk(c, &format!("{}.bind_success_as", path), "BINDING_DEFINITION");to_owner.walk(c, &format!("{}.to_owner", path), "UNCLASSIFIED_STRING");carrier.walk(c, &format!("{}.carrier", &format!("{}@SecurityPlaceTopStackedCard",path)), "UNCLASSIFIED_STRING");of.walk(c, &format!("{}.of", &format!("{}@SecurityPlaceTopStackedCard",path)), "UNCLASSIFIED_STRING");position.walk(c, &format!("{}.position", &format!("{}@SecurityPlaceTopStackedCard",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@SecurityPlaceTopStackedCard",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::SecurityPlaceTopCard{carrier,of,position,face_up,bind_success_as,to_owner} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SecurityPlaceTopCard"));bind_success_as.walk(c, &format!("{}.bind_success_as", path), "BINDING_DEFINITION");to_owner.walk(c, &format!("{}.to_owner", path), "UNCLASSIFIED_STRING");carrier.walk(c, &format!("{}.carrier", &format!("{}@SecurityPlaceTopCard",path)), "UNCLASSIFIED_STRING");of.walk(c, &format!("{}.of", &format!("{}@SecurityPlaceTopCard",path)), "UNCLASSIFIED_STRING");position.walk(c, &format!("{}.position", &format!("{}@SecurityPlaceTopCard",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@SecurityPlaceTopCard",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::ReturnAllTrashToDeckBottom{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnAllTrashToDeckBottom"));of.walk(c, &format!("{}.of", &format!("{}@ReturnAllTrashToDeckBottom",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::ReturnTrashListToDeckBottom{of,cards,to_top} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnTrashListToDeckBottom"));of.walk(c, &format!("{}.of", &format!("{}@ReturnTrashListToDeckBottom",path)), "UNCLASSIFIED_STRING");cards.walk(c, &format!("{}.cards", &format!("{}@ReturnTrashListToDeckBottom",path)), "UNCLASSIFIED_STRING");to_top.walk(c, &format!("{}.to_top", &format!("{}@ReturnTrashListToDeckBottom",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::MoveTrashCardToDeckTop{of,card} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("MoveTrashCardToDeckTop"));of.walk(c, &format!("{}.of", &format!("{}@MoveTrashCardToDeckTop",path)), "UNCLASSIFIED_STRING");card.walk(c, &format!("{}.card", &format!("{}@MoveTrashCardToDeckTop",path)), "EXISTING_INSTANCE_BINDING");},
@@ -5547,7 +5621,7 @@ digimon_dsl::compiled::CompiledStep::Recover{of,count} => { c.node(path,"digimon
 digimon_dsl::compiled::CompiledStep::MarkSecurityFaceUp{of,card} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("MarkSecurityFaceUp"));of.walk(c, &format!("{}.of", &format!("{}@MarkSecurityFaceUp",path)), "UNCLASSIFIED_STRING");card.walk(c, &format!("{}.card", &format!("{}@MarkSecurityFaceUp",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::FlipSecurityFaceUp{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("FlipSecurityFaceUp"));of.walk(c, &format!("{}.of", &format!("{}@FlipSecurityFaceUp",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::AddDpModifier{target,value,expiry} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("AddDpModifier"));target.walk(c, &format!("{}.target", &format!("{}@AddDpModifier",path)), "EXISTING_INSTANCE_BINDING");value.walk(c, &format!("{}.value", &format!("{}@AddDpModifier",path)), "UNCLASSIFIED_STRING");expiry.walk(c, &format!("{}.expiry", &format!("{}@AddDpModifier",path)), "ENGINE_EXPIRY_NAME");},
-digimon_dsl::compiled::CompiledStep::AddModifier{target,modifier,value,expiry,synth_identity,payload,continuous} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("AddModifier"));target.walk(c, &format!("{}.target", &format!("{}@AddModifier",path)), "EXISTING_INSTANCE_BINDING");modifier.walk(c, &format!("{}.modifier", &format!("{}@AddModifier",path)), "ENGINE_MODIFIER_NAME");value.walk(c, &format!("{}.value", &format!("{}@AddModifier",path)), "UNCLASSIFIED_STRING");expiry.walk(c, &format!("{}.expiry", &format!("{}@AddModifier",path)), "ENGINE_EXPIRY_NAME");synth_identity.walk(c, &format!("{}.synth_identity", &format!("{}@AddModifier",path)), "UNCLASSIFIED_STRING");payload.walk(c, &format!("{}.payload", &format!("{}@AddModifier",path)), "UNCLASSIFIED_STRING");continuous.walk(c, &format!("{}.continuous", &format!("{}@AddModifier",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::AddModifier{opponent_only,target,modifier,value,expiry,synth_identity,payload,continuous} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("AddModifier"));opponent_only.walk(c, &format!("{}.opponent_only", &format!("{}@AddModifier",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@AddModifier",path)), "EXISTING_INSTANCE_BINDING");modifier.walk(c, &format!("{}.modifier", &format!("{}@AddModifier",path)), "ENGINE_MODIFIER_NAME");value.walk(c, &format!("{}.value", &format!("{}@AddModifier",path)), "UNCLASSIFIED_STRING");expiry.walk(c, &format!("{}.expiry", &format!("{}@AddModifier",path)), "ENGINE_EXPIRY_NAME");synth_identity.walk(c, &format!("{}.synth_identity", &format!("{}@AddModifier",path)), "UNCLASSIFIED_STRING");payload.walk(c, &format!("{}.payload", &format!("{}@AddModifier",path)), "UNCLASSIFIED_STRING");continuous.walk(c, &format!("{}.continuous", &format!("{}@AddModifier",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::AddPlayerModifier{target_player,modifier,value,expiry} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("AddPlayerModifier"));target_player.walk(c, &format!("{}.target_player", &format!("{}@AddPlayerModifier",path)), "UNCLASSIFIED_STRING");modifier.walk(c, &format!("{}.modifier", &format!("{}@AddPlayerModifier",path)), "ENGINE_MODIFIER_NAME");value.walk(c, &format!("{}.value", &format!("{}@AddPlayerModifier",path)), "UNCLASSIFIED_STRING");expiry.walk(c, &format!("{}.expiry", &format!("{}@AddPlayerModifier",path)), "ENGINE_EXPIRY_NAME");},
 digimon_dsl::compiled::CompiledStep::GrantKeyword{target,keyword,expiry,value} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("GrantKeyword"));target.walk(c, &format!("{}.target", &format!("{}@GrantKeyword",path)), "EXISTING_INSTANCE_BINDING");keyword.walk(c, &format!("{}.keyword", &format!("{}@GrantKeyword",path)), "ENGINE_KEYWORD_NAME");expiry.walk(c, &format!("{}.expiry", &format!("{}@GrantKeyword",path)), "ENGINE_EXPIRY_NAME");value.walk(c, &format!("{}.value", &format!("{}@GrantKeyword",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::GrantKeywordContinuous{targets,keyword,expiry,value} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("GrantKeywordContinuous"));targets.walk(c, &format!("{}.targets", &format!("{}@GrantKeywordContinuous",path)), "UNCLASSIFIED_STRING");keyword.walk(c, &format!("{}.keyword", &format!("{}@GrantKeywordContinuous",path)), "ENGINE_KEYWORD_NAME");expiry.walk(c, &format!("{}.expiry", &format!("{}@GrantKeywordContinuous",path)), "ENGINE_EXPIRY_NAME");value.walk(c, &format!("{}.value", &format!("{}@GrantKeywordContinuous",path)), "UNCLASSIFIED_STRING");},
@@ -5560,7 +5634,12 @@ digimon_dsl::compiled::CompiledStep::GrantEffectImmunity{target,source_kind,sour
 digimon_dsl::compiled::CompiledStep::GrantNarrowOpponentEffectProtection{target,expiry} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("GrantNarrowOpponentEffectProtection"));target.walk(c, &format!("{}.target", &format!("{}@GrantNarrowOpponentEffectProtection",path)), "EXISTING_INSTANCE_BINDING");expiry.walk(c, &format!("{}.expiry", &format!("{}@GrantNarrowOpponentEffectProtection",path)), "ENGINE_EXPIRY_NAME");},
 digimon_dsl::compiled::CompiledStep::GrantStackProtectionFromOpponentEffects{target,expiry} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("GrantStackProtectionFromOpponentEffects"));target.walk(c, &format!("{}.target", &format!("{}@GrantStackProtectionFromOpponentEffects",path)), "EXISTING_INSTANCE_BINDING");expiry.walk(c, &format!("{}.expiry", &format!("{}@GrantStackProtectionFromOpponentEffects",path)), "ENGINE_EXPIRY_NAME");},
 digimon_dsl::compiled::CompiledStep::GrantStackTrashImmunityFromOpponentEffects{target,expiry} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("GrantStackTrashImmunityFromOpponentEffects"));target.walk(c, &format!("{}.target", &format!("{}@GrantStackTrashImmunityFromOpponentEffects",path)), "EXISTING_INSTANCE_BINDING");expiry.walk(c, &format!("{}.expiry", &format!("{}@GrantStackTrashImmunityFromOpponentEffects",path)), "ENGINE_EXPIRY_NAME");},
-digimon_dsl::compiled::CompiledStep::GrantTriggeredEffect{target,timing,expiry,body} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("GrantTriggeredEffect"));target.walk(c, &format!("{}.target", &format!("{}@GrantTriggeredEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_TIMING_NAME");expiry.walk(c, &format!("{}.expiry", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_EXPIRY_NAME");body.walk(c, &format!("{}.body", &format!("{}@GrantTriggeredEffect",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::GrantTriggeredEffect{target,timing,expiry,body,
+            dynamic,
+            trigger_if,
+        } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("GrantTriggeredEffect"));target.walk(c, &format!("{}.target", &format!("{}@GrantTriggeredEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_TIMING_NAME");expiry.walk(c, &format!("{}.expiry", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_EXPIRY_NAME");body.walk(c, &format!("{}.body", &format!("{}@GrantTriggeredEffect",path)), "UNCLASSIFIED_STRING");dynamic.walk(c, &format!("{}@GrantTriggeredEffect.dynamic", path), "UNCLASSIFIED_STRING");
+trigger_if.walk(c, &format!("{}@GrantTriggeredEffect.trigger_if", path), "UNCLASSIFIED_STRING");
+},
 digimon_dsl::compiled::CompiledStep::SelectOwnPermanent{filter,bind_as,selector,prompt,prompt_key,optional,continue_on_decline,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectOwnPermanent"));filter.walk(c, &format!("{}.filter", &format!("{}@SelectOwnPermanent",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectOwnPermanent",path)), "EXISTING_INSTANCE_BINDING");selector.walk(c, &format!("{}.selector", &format!("{}@SelectOwnPermanent",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectOwnPermanent",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectOwnPermanent",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@SelectOwnPermanent",path)), "UNCLASSIFIED_STRING");continue_on_decline.walk(c, &format!("{}.continue_on_decline", &format!("{}@SelectOwnPermanent",path)), "UNCLASSIFIED_STRING");then.walk(c, &format!("{}.then", &format!("{}@SelectOwnPermanent",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SelectOpponentPermanent{filter,bind_as,selector,prompt,prompt_key,optional,continue_on_decline,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectOpponentPermanent"));filter.walk(c, &format!("{}.filter", &format!("{}@SelectOpponentPermanent",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectOpponentPermanent",path)), "EXISTING_INSTANCE_BINDING");selector.walk(c, &format!("{}.selector", &format!("{}@SelectOpponentPermanent",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectOpponentPermanent",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectOpponentPermanent",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@SelectOpponentPermanent",path)), "UNCLASSIFIED_STRING");continue_on_decline.walk(c, &format!("{}.continue_on_decline", &format!("{}@SelectOpponentPermanent",path)), "UNCLASSIFIED_STRING");then.walk(c, &format!("{}.then", &format!("{}@SelectOpponentPermanent",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SelectAnyPermanent{filter,bind_as,selector,prompt,prompt_key,optional,then,continue_on_decline} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectAnyPermanent"));filter.walk(c, &format!("{}.filter", &format!("{}@SelectAnyPermanent",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectAnyPermanent",path)), "EXISTING_INSTANCE_BINDING");selector.walk(c, &format!("{}.selector", &format!("{}@SelectAnyPermanent",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectAnyPermanent",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectAnyPermanent",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@SelectAnyPermanent",path)), "UNCLASSIFIED_STRING");then.walk(c, &format!("{}.then", &format!("{}@SelectAnyPermanent",path)), "UNCLASSIFIED_STRING");continue_on_decline.walk(c, &format!("{}.continue_on_decline", &format!("{}@SelectAnyPermanent",path)), "UNCLASSIFIED_STRING");},
@@ -5568,11 +5647,16 @@ digimon_dsl::compiled::CompiledStep::SelectDnaPair{left_filter,right_filter,bind
 digimon_dsl::compiled::CompiledStep::SelectHand{of,filter,bind_as,prompt,prompt_key,optional,cost,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectHand"));of.walk(c, &format!("{}.of", &format!("{}@SelectHand",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectHand",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectHand",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectHand",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectHand",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@SelectHand",path)), "UNCLASSIFIED_STRING");cost.walk(c, &format!("{}.cost", &format!("{}@SelectHand",path)), "UNCLASSIFIED_STRING");then.walk(c, &format!("{}.then", &format!("{}@SelectHand",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SelectTrash{of,filter,bind_as,prompt,prompt_key,optional,cost,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectTrash"));of.walk(c, &format!("{}.of", &format!("{}@SelectTrash",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectTrash",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectTrash",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectTrash",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectTrash",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@SelectTrash",path)), "UNCLASSIFIED_STRING");cost.walk(c, &format!("{}.cost", &format!("{}@SelectTrash",path)), "UNCLASSIFIED_STRING");then.walk(c, &format!("{}.then", &format!("{}@SelectTrash",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SelectMaterial{of_permanent,filter,bind_as,prompt,prompt_key,optional} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectMaterial"));of_permanent.walk(c, &format!("{}.of_permanent", &format!("{}@SelectMaterial",path)), "EXISTING_INSTANCE_BINDING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectMaterial",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectMaterial",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectMaterial",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectMaterial",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@SelectMaterial",path)), "UNCLASSIFIED_STRING");},
-digimon_dsl::compiled::CompiledStep::SelectMaterials{of_permanent,max,filter,uniqueness,bind_as,prompt,prompt_key,optional_zero,min,same_by} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectMaterials"));of_permanent.walk(c, &format!("{}.of_permanent", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");max.walk(c, &format!("{}.max", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");uniqueness.walk(c, &format!("{}.uniqueness", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional_zero.walk(c, &format!("{}.optional_zero", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");same_by.walk(c, &format!("{}.same_by", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::SelectMaterials{of_permanent,max,filter,uniqueness,bind_as,prompt,prompt_key,optional_zero,min,same_by,
+            named_groups,
+            require_max,
+        } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectMaterials"));of_permanent.walk(c, &format!("{}.of_permanent", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");max.walk(c, &format!("{}.max", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");uniqueness.walk(c, &format!("{}.uniqueness", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional_zero.walk(c, &format!("{}.optional_zero", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");same_by.walk(c, &format!("{}.same_by", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");named_groups.walk(c, &format!("{}@SelectMaterials.named_groups", path), "MATCH_NAME_EXACT");
+require_max.walk(c, &format!("{}@SelectMaterials.require_max", path), "UNCLASSIFIED_STRING");
+},
 digimon_dsl::compiled::CompiledStep::SelectOwnSources{target,filter,min,max,bind_as,prompt,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectOwnSources"));target.walk(c, &format!("{}.target", &format!("{}@SelectOwnSources",path)), "EXISTING_INSTANCE_BINDING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectOwnSources",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectOwnSources",path)), "UNCLASSIFIED_STRING");max.walk(c, &format!("{}.max", &format!("{}@SelectOwnSources",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectOwnSources",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectOwnSources",path)), "METADATA_NO_EXECUTABLE_REFERENCE");then.walk(c, &format!("{}.then", &format!("{}@SelectOwnSources",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SelectOpponentSources{target,filter,min,max,clamp_to_available,bind_as,prompt,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectOpponentSources"));target.walk(c, &format!("{}.target", &format!("{}@SelectOpponentSources",path)), "EXISTING_INSTANCE_BINDING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectOpponentSources",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectOpponentSources",path)), "UNCLASSIFIED_STRING");max.walk(c, &format!("{}.max", &format!("{}@SelectOpponentSources",path)), "UNCLASSIFIED_STRING");clamp_to_available.walk(c, &format!("{}.clamp_to_available", &format!("{}@SelectOpponentSources",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectOpponentSources",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectOpponentSources",path)), "METADATA_NO_EXECUTABLE_REFERENCE");then.walk(c, &format!("{}.then", &format!("{}@SelectOpponentSources",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SelectOpponentDpBudget{dp_budget,min_picks,filter,bind_as,prompt,then,deletion_cap} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectOpponentDpBudget"));dp_budget.walk(c, &format!("{}.dp_budget", &format!("{}@SelectOpponentDpBudget",path)), "UNCLASSIFIED_STRING");min_picks.walk(c, &format!("{}.min_picks", &format!("{}@SelectOpponentDpBudget",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectOpponentDpBudget",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectOpponentDpBudget",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectOpponentDpBudget",path)), "METADATA_NO_EXECUTABLE_REFERENCE");then.walk(c, &format!("{}.then", &format!("{}@SelectOpponentDpBudget",path)), "UNCLASSIFIED_STRING");deletion_cap.walk(c, &format!("{}.deletion_cap", &format!("{}@SelectOpponentDpBudget",path)), "UNCLASSIFIED_STRING");},
-digimon_dsl::compiled::CompiledStep::SelectZoneCards{of,zones,filter,min,max,optional_zero,play_cost_budget,exclude,bind_as,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectZoneCards"));of.walk(c, &format!("{}.of", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");zones.walk(c, &format!("{}.zones", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");max.walk(c, &format!("{}.max", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");optional_zero.walk(c, &format!("{}.optional_zero", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");play_cost_budget.walk(c, &format!("{}.play_cost_budget", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");exclude.walk(c, &format!("{}.exclude", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectZoneCards",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectZoneCards",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
+digimon_dsl::compiled::CompiledStep::SelectZoneCards{of,zones,filter,min,max,optional_zero,distinct_by,play_cost_budget,exclude,bind_as,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectZoneCards"));of.walk(c, &format!("{}.of", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");zones.walk(c, &format!("{}.zones", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");max.walk(c, &format!("{}.max", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");optional_zero.walk(c, &format!("{}.optional_zero", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");distinct_by.walk(c, &format!("{}.distinct_by", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");play_cost_budget.walk(c, &format!("{}.play_cost_budget", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");exclude.walk(c, &format!("{}.exclude", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectZoneCards",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectZoneCards",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
 digimon_dsl::compiled::CompiledStep::PlayCardsFree{cards} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayCardsFree"));cards.walk(c, &format!("{}.cards", &format!("{}@PlayCardsFree",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::PlaceCardsAsBottomSources{cards,target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlaceCardsAsBottomSources"));cards.walk(c, &format!("{}.cards", &format!("{}@PlaceCardsAsBottomSources",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlaceCardsAsBottomSources",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::ReturnTopStackedToDeck{targets,count,position,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnTopStackedToDeck"));targets.walk(c, &format!("{}.targets", &format!("{}@ReturnTopStackedToDeck",path)), "UNCLASSIFIED_STRING");count.walk(c, &format!("{}.count", &format!("{}@ReturnTopStackedToDeck",path)), "UNCLASSIFIED_STRING");position.walk(c, &format!("{}.position", &format!("{}@ReturnTopStackedToDeck",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@ReturnTopStackedToDeck",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
@@ -5586,7 +5670,7 @@ digimon_dsl::compiled::CompiledStep::ReturnAllSourcesToDeck{target,position} => 
 digimon_dsl::compiled::CompiledStep::BindPermanentProperty{from,property,bind_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("BindPermanentProperty"));from.walk(c, &format!("{}.from", &format!("{}@BindPermanentProperty",path)), "EXISTING_INSTANCE_BINDING");property.walk(c, &format!("{}.property", &format!("{}@BindPermanentProperty",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@BindPermanentProperty",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::SelectReveal{of,filter,bind_as,prompt,prompt_key,optional,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectReveal"));of.walk(c, &format!("{}.of", &format!("{}@SelectReveal",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectReveal",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectReveal",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectReveal",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectReveal",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@SelectReveal",path)), "UNCLASSIFIED_STRING");then.walk(c, &format!("{}.then", &format!("{}@SelectReveal",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SelectRevealBuckets{from,buckets,no_duplicate_cards,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectRevealBuckets"));from.walk(c, &format!("{}.from", &format!("{}@SelectRevealBuckets",path)), "EXISTING_INSTANCE_BINDING");buckets.walk(c, &format!("{}.buckets", &format!("{}@SelectRevealBuckets",path)), "UNCLASSIFIED_STRING");no_duplicate_cards.walk(c, &format!("{}.no_duplicate_cards", &format!("{}@SelectRevealBuckets",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectRevealBuckets",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
-digimon_dsl::compiled::CompiledStep::SelectSecurity{of,filter,bind_as,prompt,prompt_key,optional,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectSecurity"));of.walk(c, &format!("{}.of", &format!("{}@SelectSecurity",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectSecurity",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectSecurity",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectSecurity",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectSecurity",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@SelectSecurity",path)), "UNCLASSIFIED_STRING");then.walk(c, &format!("{}.then", &format!("{}@SelectSecurity",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::SelectSecurity{continue_on_decline,of,filter,bind_as,prompt,prompt_key,optional,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectSecurity"));continue_on_decline.walk(c, &format!("{}.continue_on_decline", &format!("{}@SelectSecurity",path)), "UNCLASSIFIED_STRING");of.walk(c, &format!("{}.of", &format!("{}@SelectSecurity",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectSecurity",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectSecurity",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectSecurity",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectSecurity",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@SelectSecurity",path)), "UNCLASSIFIED_STRING");then.walk(c, &format!("{}.then", &format!("{}@SelectSecurity",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SelectUnionZone{of,zones,material_of,filter,zone_filters,material_carrier_filter,bind_as,prompt,prompt_key,optional,cost,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectUnionZone"));of.walk(c, &format!("{}.of", &format!("{}@SelectUnionZone",path)), "UNCLASSIFIED_STRING");zones.walk(c, &format!("{}.zones", &format!("{}@SelectUnionZone",path)), "UNCLASSIFIED_STRING");material_of.walk(c, &format!("{}.material_of", &format!("{}@SelectUnionZone",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectUnionZone",path)), "UNCLASSIFIED_STRING");zone_filters.walk(c, &format!("{}.zone_filters", &format!("{}@SelectUnionZone",path)), "UNCLASSIFIED_STRING");material_carrier_filter.walk(c, &format!("{}.material_carrier_filter", &format!("{}@SelectUnionZone",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectUnionZone",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectUnionZone",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectUnionZone",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@SelectUnionZone",path)), "UNCLASSIFIED_STRING");cost.walk(c, &format!("{}.cost", &format!("{}@SelectUnionZone",path)), "UNCLASSIFIED_STRING");then.walk(c, &format!("{}.then", &format!("{}@SelectUnionZone",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SelectOrderedPermutation{items,bind_as,prompt,prompt_key} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectOrderedPermutation"));items.walk(c, &format!("{}.items", &format!("{}@SelectOrderedPermutation",path)), "EXISTING_INSTANCE_BINDING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectOrderedPermutation",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectOrderedPermutation",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectOrderedPermutation",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
 digimon_dsl::compiled::CompiledStep::SelectCountCappedMulti{of,zone,max,min,clamp_to_available,filter,bind_as,prompt,prompt_key,optional_zero,distinct_by} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectCountCappedMulti"));of.walk(c, &format!("{}.of", &format!("{}@SelectCountCappedMulti",path)), "UNCLASSIFIED_STRING");zone.walk(c, &format!("{}.zone", &format!("{}@SelectCountCappedMulti",path)), "UNCLASSIFIED_STRING");max.walk(c, &format!("{}.max", &format!("{}@SelectCountCappedMulti",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectCountCappedMulti",path)), "UNCLASSIFIED_STRING");clamp_to_available.walk(c, &format!("{}.clamp_to_available", &format!("{}@SelectCountCappedMulti",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectCountCappedMulti",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectCountCappedMulti",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectCountCappedMulti",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectCountCappedMulti",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional_zero.walk(c, &format!("{}.optional_zero", &format!("{}@SelectCountCappedMulti",path)), "UNCLASSIFIED_STRING");distinct_by.walk(c, &format!("{}.distinct_by", &format!("{}@SelectCountCappedMulti",path)), "UNCLASSIFIED_STRING");},
@@ -5612,9 +5696,13 @@ digimon_dsl::compiled::CompiledStep::RedirectAttackTarget{new_target,player,targ
 digimon_dsl::compiled::CompiledStep::CancelAttack => c.node(path,"digimon_dsl::compiled::CompiledStep","ENUM_SCALAR",serde_json::json!("CancelAttack")),
 digimon_dsl::compiled::CompiledStep::OpenCounterWindow => c.node(path,"digimon_dsl::compiled::CompiledStep","ENUM_SCALAR",serde_json::json!("OpenCounterWindow")),
 digimon_dsl::compiled::CompiledStep::RefundOpt => c.node(path,"digimon_dsl::compiled::CompiledStep","ENUM_SCALAR",serde_json::json!("RefundOpt")),
-digimon_dsl::compiled::CompiledStep::RefireEffect{source,timing,optional} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RefireEffect"));source.walk(c, &format!("{}.source", &format!("{}@RefireEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@RefireEffect",path)), "ENGINE_TIMING_NAME");optional.walk(c, &format!("{}.optional", &format!("{}@RefireEffect",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::RefireEffect{source,timing,optional,
+            target_attribution,
+        } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RefireEffect"));source.walk(c, &format!("{}.source", &format!("{}@RefireEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@RefireEffect",path)), "ENGINE_TIMING_NAME");optional.walk(c, &format!("{}.optional", &format!("{}@RefireEffect",path)), "UNCLASSIFIED_STRING");target_attribution.walk(c, &format!("{}@RefireEffect.target_attribution", path), "UNCLASSIFIED_STRING");
+},
 digimon_dsl::compiled::CompiledStep::RefireCardEffect{card,timing} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RefireCardEffect"));card.walk(c, &format!("{}.card", &format!("{}@RefireCardEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@RefireCardEffect",path)), "ENGINE_TIMING_NAME");},
 digimon_dsl::compiled::CompiledStep::EndAttack{enabled} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("EndAttack"));enabled.walk(c, &format!("{}.enabled", &format!("{}@EndAttack",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::SecurityPlacementSuccessFinalize { card, bind_as } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SecurityPlacementSuccessFinalize"));card.walk(c, &format!("{}.card", path), "PHYSICAL_CARD_HANDLE");bind_as.walk(c, &format!("{}.bind_as", path), "BINDING_DEFINITION");},
 digimon_dsl::compiled::CompiledStep::CancelReplacement => c.node(path,"digimon_dsl::compiled::CompiledStep","ENUM_SCALAR",serde_json::json!("CancelReplacement")),
 digimon_dsl::compiled::CompiledStep::TrashOwnLinkCardAndCancelLeave => c.node(path,"digimon_dsl::compiled::CompiledStep","ENUM_SCALAR",serde_json::json!("TrashOwnLinkCardAndCancelLeave")),
 digimon_dsl::compiled::CompiledStep::TrashOwnLinkCardMatchingAndCancelLeave{filter} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashOwnLinkCardMatchingAndCancelLeave"));filter.walk(c, &format!("{}.filter", &format!("{}@TrashOwnLinkCardMatchingAndCancelLeave",path)), "UNCLASSIFIED_STRING");},
@@ -5626,6 +5714,200 @@ digimon_dsl::compiled::CompiledStep::RawRust{fn_name,consumes,binds} => { c.node
 digimon_dsl::compiled::CompiledStep::ActivationCost{kind} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ActivationCost"));kind.walk(c, &format!("{}.kind", &format!("{}@ActivationCost",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::ArmDigivolveCostReducer{amount,single_fire,target_color,suspend_cost} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ArmDigivolveCostReducer"));amount.walk(c, &format!("{}.amount", &format!("{}@ArmDigivolveCostReducer",path)), "UNCLASSIFIED_STRING");single_fire.walk(c, &format!("{}.single_fire", &format!("{}@ArmDigivolveCostReducer",path)), "UNCLASSIFIED_STRING");target_color.walk(c, &format!("{}.target_color", &format!("{}@ArmDigivolveCostReducer",path)), "UNCLASSIFIED_STRING");suspend_cost.walk(c, &format!("{}.suspend_cost", &format!("{}@ArmDigivolveCostReducer",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::MayDnaDigivolveNow{anchor,partner_filter,target_filter,cost,ignore_requirements,optional,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("MayDnaDigivolveNow"));anchor.walk(c, &format!("{}.anchor", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");partner_filter.walk(c, &format!("{}.partner_filter", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");target_filter.walk(c, &format!("{}.target_filter", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");cost.walk(c, &format!("{}.cost", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");ignore_requirements.walk(c, &format!("{}.ignore_requirements", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@MayDnaDigivolveNow",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
+            digimon_dsl::compiled::CompiledStep::CompleteCostPayment { receipt } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("CompleteCostPayment"));
+                receipt.walk(c, &format!("{}@CompleteCostPayment.receipt", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::PaySourcePrefix { host_filter, minimum, optional } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("PaySourcePrefix"));
+                host_filter.walk(c, &format!("{}@PaySourcePrefix.host_filter", path), "UNCLASSIFIED_STRING");
+                minimum.walk(c, &format!("{}@PaySourcePrefix.minimum", path), "UNCLASSIFIED_STRING");
+                optional.walk(c, &format!("{}@PaySourcePrefix.optional", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::DeleteSelfAndCancelAllMatchingLeaves => c.node(path, "digimon_dsl::compiled::CompiledStep", "ENUM_SCALAR", serde_json::json!("DeleteSelfAndCancelAllMatchingLeaves")),
+            digimon_dsl::compiled::CompiledStep::PlayToBreedingFromHand { of, hand_index } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("PlayToBreedingFromHand"));
+                of.walk(c, &format!("{}@PlayToBreedingFromHand.of", path), "UNCLASSIFIED_STRING");
+                hand_index.walk(c, &format!("{}@PlayToBreedingFromHand.hand_index", path), "EXISTING_INSTANCE_BINDING");
+            }
+            digimon_dsl::compiled::CompiledStep::TrashSelectedSourcesAsCost { source_refs, min_count } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("TrashSelectedSourcesAsCost"));
+                source_refs.walk(c, &format!("{}@TrashSelectedSourcesAsCost.source_refs", path), "EXISTING_INSTANCE_BINDING");
+                min_count.walk(c, &format!("{}@TrashSelectedSourcesAsCost.min_count", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::SourcePlayCaptured { player, host_identity, breeding, card, receipt, cost_delta, suppress_on_play, suspended } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("SourcePlayCaptured"));
+                player.walk(c, &format!("{}@SourcePlayCaptured.player", path), "UNCLASSIFIED_STRING");
+                host_identity.walk(c, &format!("{}@SourcePlayCaptured.host_identity", path), "UNCLASSIFIED_STRING");
+                breeding.walk(c, &format!("{}@SourcePlayCaptured.breeding", path), "UNCLASSIFIED_STRING");
+                card.walk(c, &format!("{}@SourcePlayCaptured.card", path), "UNCLASSIFIED_STRING");
+                receipt.walk(c, &format!("{}@SourcePlayCaptured.receipt", path), "UNCLASSIFIED_STRING");
+                cost_delta.walk(c, &format!("{}@SourcePlayCaptured.cost_delta", path), "UNCLASSIFIED_STRING");
+                suppress_on_play.walk(c, &format!("{}@SourcePlayCaptured.suppress_on_play", path), "UNCLASSIFIED_STRING");
+                suspended.walk(c, &format!("{}@SourcePlayCaptured.suspended", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::SourcePlayBatchCommit { receipts } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("SourcePlayBatchCommit"));
+                receipts.walk(c, &format!("{}@SourcePlayBatchCommit.receipts", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::WithSimultaneousPlaySubject { binding, body } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("WithSimultaneousPlaySubject"));
+                binding.walk(c, &format!("{}@WithSimultaneousPlaySubject.binding", path), "EXISTING_INSTANCE_BINDING");
+                body.walk(c, &format!("{}@WithSimultaneousPlaySubject.body", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::SourcePlayFinalize { receipt, card, bind_as } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("SourcePlayFinalize"));
+                receipt.walk(c, &format!("{}@SourcePlayFinalize.receipt", path), "UNCLASSIFIED_STRING");
+                card.walk(c, &format!("{}@SourcePlayFinalize.card", path), "UNCLASSIFIED_STRING");
+                bind_as.walk(c, &format!("{}@SourcePlayFinalize.bind_as", path), "BINDING_DEFINITION");
+            }
+            digimon_dsl::compiled::CompiledStep::DeleteCapturedBatch { receipt, targets } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("DeleteCapturedBatch"));
+                receipt.walk(c, &format!("{}@DeleteCapturedBatch.receipt", path), "UNCLASSIFIED_STRING");
+                targets.walk(c, &format!("{}@DeleteCapturedBatch.targets", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::DeleteReceiptFinalize { receipt, cost_credit } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("DeleteReceiptFinalize"));
+                receipt.walk(c, &format!("{}@DeleteReceiptFinalize.receipt", path), "UNCLASSIFIED_STRING");
+                cost_credit.walk(c, &format!("{}@DeleteReceiptFinalize.cost_credit", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::SecurityPlacementCancelFinalize { card } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("SecurityPlacementCancelFinalize"));
+                card.walk(c, &format!("{}@SecurityPlacementCancelFinalize.card", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::PaidDeletionPreventionFinalize { receipt, payer } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("PaidDeletionPreventionFinalize"));
+                receipt.walk(c, &format!("{}@PaidDeletionPreventionFinalize.receipt", path), "UNCLASSIFIED_STRING");
+                payer.walk(c, &format!("{}@PaidDeletionPreventionFinalize.payer", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, payer, members, filter, protect_all, cause, cause_player } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("PaidDeletionBatchPreventionFinalize"));
+                receipt.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.receipt", path), "UNCLASSIFIED_STRING");
+                payer.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.payer", path), "UNCLASSIFIED_STRING");
+                members.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.members", path), "UNCLASSIFIED_STRING");
+                filter.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.filter", path), "UNCLASSIFIED_STRING");
+                protect_all.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.protect_all", path), "UNCLASSIFIED_STRING");
+                cause.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.cause", path), "UNCLASSIFIED_STRING");
+                cause_player.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.cause_player", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::PreventDeletionMemberFinalize { binding, members, filter, cause, cause_player } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("PreventDeletionMemberFinalize"));
+                binding.walk(c, &format!("{}@PreventDeletionMemberFinalize.binding", path), "EXISTING_INSTANCE_BINDING");
+                members.walk(c, &format!("{}@PreventDeletionMemberFinalize.members", path), "UNCLASSIFIED_STRING");
+                filter.walk(c, &format!("{}@PreventDeletionMemberFinalize.filter", path), "UNCLASSIFIED_STRING");
+                cause.walk(c, &format!("{}@PreventDeletionMemberFinalize.cause", path), "UNCLASSIFIED_STRING");
+                cause_player.walk(c, &format!("{}@PreventDeletionMemberFinalize.cause_player", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::ForEachRemaining { members, bind_as, body } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("ForEachRemaining"));
+                members.walk(c, &format!("{}@ForEachRemaining.members", path), "UNCLASSIFIED_STRING");
+                bind_as.walk(c, &format!("{}@ForEachRemaining.bind_as", path), "BINDING_DEFINITION");
+                body.walk(c, &format!("{}@ForEachRemaining.body", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::ReturnAllToHand { over, selector } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("ReturnAllToHand"));
+                over.walk(c, &format!("{}@ReturnAllToHand.over", path), "UNCLASSIFIED_STRING");
+                selector.walk(c, &format!("{}@ReturnAllToHand.selector", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::ReturnAllToDeck { over, selector, position, include_sources } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("ReturnAllToDeck"));
+                over.walk(c, &format!("{}@ReturnAllToDeck.over", path), "UNCLASSIFIED_STRING");
+                selector.walk(c, &format!("{}@ReturnAllToDeck.selector", path), "UNCLASSIFIED_STRING");
+                position.walk(c, &format!("{}@ReturnAllToDeck.position", path), "UNCLASSIFIED_STRING");
+                include_sources.walk(c, &format!("{}@ReturnAllToDeck.include_sources", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::ReturnCapturedBatch { receipt, targets, position, include_sources } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("ReturnCapturedBatch"));
+                receipt.walk(c, &format!("{}@ReturnCapturedBatch.receipt", path), "UNCLASSIFIED_STRING");
+                targets.walk(c, &format!("{}@ReturnCapturedBatch.targets", path), "UNCLASSIFIED_STRING");
+                position.walk(c, &format!("{}@ReturnCapturedBatch.position", path), "UNCLASSIFIED_STRING");
+                include_sources.walk(c, &format!("{}@ReturnCapturedBatch.include_sources", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::ReturnReceiptFinalize { receipt } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("ReturnReceiptFinalize"));
+                receipt.walk(c, &format!("{}@ReturnReceiptFinalize.receipt", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::SuspendAndCancelAllMatchingLeaves { target, filter } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("SuspendAndCancelAllMatchingLeaves"));
+                target.walk(c, &format!("{}@SuspendAndCancelAllMatchingLeaves.target", path), "UNCLASSIFIED_STRING");
+                filter.walk(c, &format!("{}@SuspendAndCancelAllMatchingLeaves.filter", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::FieldSourceCaptured { receipt, donor, target, target_breeding, face_down } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("FieldSourceCaptured"));
+                receipt.walk(c, &format!("{}@FieldSourceCaptured.receipt", path), "UNCLASSIFIED_STRING");
+                donor.walk(c, &format!("{}@FieldSourceCaptured.donor", path), "UNCLASSIFIED_STRING");
+                target.walk(c, &format!("{}@FieldSourceCaptured.target", path), "UNCLASSIFIED_STRING");
+                target_breeding.walk(c, &format!("{}@FieldSourceCaptured.target_breeding", path), "UNCLASSIFIED_STRING");
+                face_down.walk(c, &format!("{}@FieldSourceCaptured.face_down", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::SecurityPlayCaptured { receipt, player, card } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("SecurityPlayCaptured"));
+                receipt.walk(c, &format!("{}@SecurityPlayCaptured.receipt", path), "UNCLASSIFIED_STRING");
+                player.walk(c, &format!("{}@SecurityPlayCaptured.player", path), "UNCLASSIFIED_STRING");
+                card.walk(c, &format!("{}@SecurityPlayCaptured.card", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::SecurityPlayFinalize { receipt, player, card } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("SecurityPlayFinalize"));
+                receipt.walk(c, &format!("{}@SecurityPlayFinalize.receipt", path), "UNCLASSIFIED_STRING");
+                player.walk(c, &format!("{}@SecurityPlayFinalize.player", path), "UNCLASSIFIED_STRING");
+                card.walk(c, &format!("{}@SecurityPlayFinalize.card", path), "UNCLASSIFIED_STRING");
+            }
+            digimon_dsl::compiled::CompiledStep::FieldSourceFinalize { receipt, bind_as, source_anchor, source_breeding, rebind } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("FieldSourceFinalize"));
+                receipt.walk(c, &format!("{}@FieldSourceFinalize.receipt", path), "UNCLASSIFIED_STRING");
+                bind_as.walk(c, &format!("{}@FieldSourceFinalize.bind_as", path), "BINDING_DEFINITION");
+                source_anchor.walk(c, &format!("{}@FieldSourceFinalize.source_anchor", path), "UNCLASSIFIED_STRING");
+                source_breeding.walk(c, &format!("{}@FieldSourceFinalize.source_breeding", path), "UNCLASSIFIED_STRING");
+                rebind.walk(c, &format!("{}@FieldSourceFinalize.rebind", path), "EXISTING_INSTANCE_BINDING");
+            }
 }
+    }
+}
+
+impl Walk for digimon_dsl::step::PaySourcePrefixArgs {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::step::PaySourcePrefixArgs", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::step::PaySourcePrefixArgs { host_filter, minimum, optional } = self;
+        host_filter.walk(c, &format!("{}.host_filter", path), "UNCLASSIFIED_STRING");
+        minimum.walk(c, &format!("{}.minimum", path), "UNCLASSIFIED_STRING");
+        optional.walk(c, &format!("{}.optional", path), "UNCLASSIFIED_STRING");
+    }
+}
+
+impl Walk for digimon_dsl::step::ReturnAllToDeckArgs {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::step::ReturnAllToDeckArgs", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::step::ReturnAllToDeckArgs { over, position, include_sources, selector } = self;
+        over.walk(c, &format!("{}.over", path), "UNCLASSIFIED_STRING");
+        position.walk(c, &format!("{}.position", path), "UNCLASSIFIED_STRING");
+        include_sources.walk(c, &format!("{}.include_sources", path), "UNCLASSIFIED_STRING");
+        selector.walk(c, &format!("{}.selector", path), "UNCLASSIFIED_STRING");
+    }
+}
+
+impl Walk for digimon_dsl::step::SuspendAllPreventionArgs {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::step::SuspendAllPreventionArgs", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::step::SuspendAllPreventionArgs { target, filter } = self;
+        target.walk(c, &format!("{}.target", path), "UNCLASSIFIED_STRING");
+        filter.walk(c, &format!("{}.filter", path), "UNCLASSIFIED_STRING");
+    }
+}
+
+impl Walk for digimon_dsl::step::TrashSelectedSourcesCostArgs {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::step::TrashSelectedSourcesCostArgs", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::step::TrashSelectedSourcesCostArgs { source_refs, min_count } = self;
+        source_refs.walk(c, &format!("{}.source_refs", path), "EXISTING_INSTANCE_BINDING");
+        min_count.walk(c, &format!("{}.min_count", path), "UNCLASSIFIED_STRING");
+    }
+}
+
+impl Walk for digimon_dsl::step::PlayToBreedingFromHandArgs {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::step::PlayToBreedingFromHandArgs", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::step::PlayToBreedingFromHandArgs { of, hand_index } = self;
+        of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
+        hand_index.walk(c, &format!("{}.hand_index", path), "EXISTING_INSTANCE_BINDING");
     }
 }

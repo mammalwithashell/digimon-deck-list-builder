@@ -1,0 +1,145 @@
+{
+  "extracted": {
+    "attribute": "Variable",
+    "card_id": "BT18-067",
+    "card_type": "Digimon",
+    "colors": [
+      "Black",
+      "Yellow"
+    ],
+    "dp": 7000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Black",
+          "Yellow"
+        ],
+        "cost": 4,
+        "from_level": 3,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Black",
+          "Yellow"
+        ],
+        "dp": 7000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 4,
+        "name": "MetalKabuterimon",
+        "play_cost": 6,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [J.P. Shibayama]: Cost 3/[Beetlemon]: Cost 1"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Blocker＞\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+          }
+        ]
+      }
+    ],
+    "form": "Hybrid",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 4,
+    "name": "MetalKabuterimon",
+    "play_cost": 6,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522025",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT18-067.png?260529",
+      "printing_id": "BT18-067"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "No, it digivolves from the Tamer as-is. It isn't treated as a Digimon that digivolves, therefore \"when a Digimon would digivolve\" effects and \"when a Digimon digivolves\" effects don't trigger.\nIn addition, this digivolution requirement can be used to digivolve a Tamer even if a \"Digimon can't digivolve\" effect activates.",
+        "date": "Jun. 19, 2026",
+        "number": "Q3002",
+        "question": "Does a digivolution requirement that digivolves from a Tamer mean that the Tamer that will become a digivolution card is treated as a Digimon when it digivolves?"
+      },
+      {
+        "answer": "Yes, you perform a digivolution bonus draw.\nA digivolution bonus draw is performed for any kind of digivolution.",
+        "date": "Jun. 19, 2026",
+        "number": "Q3003",
+        "question": "Is a digivolution bonus draw performed even when a Tamer digivolves?"
+      },
+      {
+        "answer": "No, it can't.\nEven if a card digivolves from a card that was placed on the field in the same turn, it can't attack during that turn. It can only attack in the turns after it's played.",
+        "date": "Jun. 19, 2026",
+        "number": "Q3004",
+        "question": "If this card digivolves from a Tamer that was played this turn, can it attack in the same turn?"
+      },
+      {
+        "answer": "Yes, it is.\nIf the Digimon leaves the field, that Tamer is trashed like normal digivolution cards.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6643",
+        "question": "Is a Tamer card placed under a Digimon considered a digivolution card?"
+      },
+      {
+        "answer": "No, it does not.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6644",
+        "question": "Does a Digimon gain the security effects in the lower text of a Tamer card in its digivolution cards?"
+      },
+      {
+        "answer": "Yes, it does.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6645",
+        "question": "Does a Digimon gain the inherited effects in the lower text of a Tamer card in its digivolution cards?"
+      }
+    ],
+    "rarity": "R",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] [J.P. Shibayama]: Cost 3/[Beetlemon]: Cost 1"
+    ],
+    "tamer_evolution_routes": [
+      {
+        "colors": [
+          "Black",
+          "Yellow"
+        ],
+        "cost": 4,
+        "from_kind": "Tamer",
+        "slot": 2
+      }
+    ],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [J.P. Shibayama]: Cost 3/[Beetlemon]: Cost 1"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+      }
+    ],
+    "type": "Cyborg"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "8639bd1c2beb0c57dfa05a8c533f45bd31f0039cfd7f4c70a53b8e708fd8769d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522025:BT18-067:BT18-067",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522025"
+}

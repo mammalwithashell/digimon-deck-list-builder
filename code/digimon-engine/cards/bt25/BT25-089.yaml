@@ -72,7 +72,13 @@ effects:
     once_per_turn: true
     summary: "[End of Your Turn][OPT] 1 of your Digimon may app fuse into a Digimon card in the hand"
     process:
-      - app_fuse: { from: hand, optional: true }
+      # The entire effect is a may (Q1818; CR 15-14-1-4), so a declined or
+      # unavailable fusion spends no use. This is not a generic step refund.
+      - app_fuse: { from: hand, optional: true, bind_as: fused_result }
+      - if:
+          condition: { binding_absent: fused_result }
+          then:
+            - refund_opt: {}
 
   # ─── [Security] Play this card without paying the cost ─────────────────────
   - when: on_security

@@ -12,6 +12,17 @@ use crate::spec::CardSpec;
 use crate::step::{BindingRef, StepSpec, StructuredBindingRef};
 use std::collections::BTreeSet;
 
+#[path = "validator_evolution_costs.rs"]
+mod evolution_costs;
+
+#[cfg(test)]
+#[path = "validator_cost_predicate_tests.rs"]
+mod cost_predicate_tests;
+
+#[cfg(test)]
+#[path = "validator_candidate_tests.rs"]
+mod candidate_predicate_tests;
+
 pub struct ValidationContext<'a> {
     pub raw_rust: &'a dyn RawRustRegistry,
 }
@@ -522,6 +533,10 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
         }
     }
 
+    // The new affordability leaves can occur in any typed predicate or
+    // formula, including fields the legacy semantic visitor does not walk.
+    evolution_costs::validate_card(spec, ctx, &mut errors);
+
     if errors.is_empty() {
         Ok(())
     } else {
@@ -633,6 +648,40 @@ fn validate_triggered(
         &mut scope,
         errors,
     );
+}
+
+/// Both cost-aware evolution predicates are read-only. Their formulas must
+/// have the same interpretation in candidate probing and the mutable commit.
+/// Validate this independently of process binding scope, since trigger gates
+/// and declarative clauses also contain these predicates.
+fn validate_evolution_predicate_cost(
+    cost: &crate::step::CostDelta,
+    prefix: &str,
+    card_id: &str,
+    ctx: &ValidationContext<'_>,
+    errors: &mut Vec<ValidationError>,
+) {
+    if let crate::step::CostDelta::Reduce { reduce } = cost {
+        let path = format!("{prefix}.reduce");
+        validate_formula(reduce, &path, card_id, ctx, errors);
+        // Legacy commit callbacks use FormulaExtensionRegistry whereas
+        // immutable predicate evaluation uses EngineRawRustRegistry.
+        fn contains_raw_callback(value: &serde_json::Value) -> bool {
+            match value {
+                serde_json::Value::Object(fields) => fields.contains_key("raw_rust")
+                    || fields.values().any(contains_raw_callback),
+                serde_json::Value::Array(values) => values.iter().any(contains_raw_callback),
+                _ => false,
+            }
+        }
+        if contains_raw_callback(&serde_json::to_value(reduce).expect("formula serializes")) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path,
+                message: "cost-aware evolution predicates require declarative cost formulas; raw-Rust callbacks do not share a read-only evaluation contract".into(),
+            });
+        }
+    }
 }
 
 fn validate_predicate(
@@ -850,6 +899,9 @@ fn validate_predicate(
             errors,
         );
     }
+    if let Some(inner) = &pred.cost_target_permanent {
+        validate_predicate(inner, &format!("{prefix}.cost_target_permanent"), card_id, ctx, errors);
+    }
     if let Some(inh) = &pred.has_inherited {
         validate_predicate(
             inh,
@@ -882,20 +934,22 @@ fn validate_predicate(
             errors.push(ValidationError {
                 card_id: card_id.to_string(),
                 path: format!("{prefix}.has_digivolve_candidate.zone"),
-                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash`"
+                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash` / `reveal`"
                     .to_string(),
             });
         }
         for z in &hdc.zone {
             if !matches!(
                 z,
-                crate::predicate::Zone::Hand | crate::predicate::Zone::Trash
+                crate::predicate::Zone::Hand
+                    | crate::predicate::Zone::Trash
+                    | crate::predicate::Zone::Reveal
             ) {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.has_digivolve_candidate.zone"),
                     message: format!(
-                        "has_digivolve_candidate.zone only supports `hand` / `trash` (got {z:?})"
+                        "has_digivolve_candidate.zone only supports `hand` / `trash` / `reveal` (got {z:?})"
                     ),
                 });
             }
@@ -921,6 +975,42 @@ fn validate_predicate(
     }
 }
 
+/// Context-free mode checks also required by the direct compiler/inline loader.
+pub(crate) fn validate_scoped_step_modes(
+    step: &StepSpec,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) {
+    match step {
+        StepSpec::AddModifier(args) => {
+            if args.opponent_only && !matches!(args.modifier.as_str(),
+                "CannotBeDestroyed" | "CannotBeDestroyedByEffect" |
+                "CannotBeReturnedToDeck" | "CannotBeReturnedToHand" |
+                "CannotBeTrashedByEffect" | "CannotBeDeDigivolved") {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.opponent_only"),
+                    message: "opponent_only requires a modifier with an effect-cause replacement consult".into(),
+                });
+            }
+        }
+        StepSpec::SelectHand(args)
+        | StepSpec::SelectTrash(args)
+        | StepSpec::SelectReveal(args)
+        | StepSpec::SelectSecurity(args) => {
+            if args.continue_on_decline && (!matches!(step, StepSpec::SelectSecurity(_)) || !args.optional || args.cost) {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.continue_on_decline"),
+                    message: "continue_on_decline requires optional non-cost select_security".into(),
+                });
+            }
+        }
+        _ => {}
+    }
+}
+
 fn validate_step(
     step: &StepSpec,
     prefix: &str,
@@ -928,6 +1018,7 @@ fn validate_step(
     ctx: &ValidationContext<'_>,
     errors: &mut Vec<ValidationError>,
 ) {
+    validate_scoped_step_modes(step, prefix, card_id, errors);
     match step {
         StepSpec::PlaceAsBottomSource(args) => {
             validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
@@ -1534,6 +1625,14 @@ fn validate_step(
             validate_binding_ref(&a.target,&format!("{prefix}.target"),card_id,errors);
             validate_predicate(&a.filter,&format!("{prefix}.filter"),card_id,ctx,errors);
         }
+        StepSpec::TrashTopSecurityAndCancelReplacement(a) => {
+            if let Some(filter) = &a.all_matching {
+                validate_predicate(filter, &format!("{prefix}.all_matching"), card_id, ctx, errors);
+                validate_post_payment_plural_filter(
+                    filter, &format!("{prefix}.all_matching"), card_id, errors,
+                );
+            }
+        }
         StepSpec::DeleteAllPermanents(a) | StepSpec::ReturnAllToHand(a) => {
             validate_predicate(&a.over, &format!("{prefix}.over"), card_id, ctx, errors);
         }
@@ -1570,6 +1669,114 @@ fn validate_step(
         }
         _ => {}
     }
+}
+
+/// A plural security-prevention filter is evaluated by the departure batch
+/// finalizer with the paying source and replacement cause, but no `Bindings`
+/// or effect-result log. An in-scope local binding is therefore still unsafe.
+///
+/// Walk the serialized *typed* predicate so dependencies inside all nested
+/// predicates, aggregate filters, legacy/canonical scalar comparators and
+/// compound formulas receive the same check. Inspect schema keys and specific
+/// formula-selector payloads only; ordinary name/trait/text strings are data.
+fn validate_post_payment_plural_filter(
+    filter: &crate::predicate::PredicateSpec,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) {
+    fn reject(path: String, card_id: &str, errors: &mut Vec<ValidationError>) {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path,
+            message: "post-payment plural filter cannot reference local bindings or effect results; use subject, source, or global state predicates".into(),
+        });
+    }
+
+    fn walk(
+        value: &serde_json::Value,
+        prefix: &str,
+        card_id: &str,
+        errors: &mut Vec<ValidationError>,
+    ) {
+        match value {
+            serde_json::Value::Object(fields) => {
+                for (field, value) in fields {
+                    let path = format!("{prefix}.{field}");
+                    // Only string operands are binding names in comparisons.
+                    // Other operands are literals, not nested predicates.
+                    if matches!(field.as_str(), "equals" | "not_equals") {
+                        if value.as_array().is_some_and(|values| {
+                            values.iter().any(serde_json::Value::is_string)
+                        }) {
+                            reject(path, card_id, errors);
+                        }
+                        continue;
+                    }
+                    let unsupported = match field.as_str() {
+                        // Predicate leaves and formula leaves that always read
+                        // the local binding map, even for magic-looking names.
+                        "binding_exists" | "binding_present" | "binding_absent"
+                        | "binding_count_eq" | "level_eq_binding" | "level_lte_binding"
+                        | "level_gte_binding" | "color_matches_binding" | "not_in_binding"
+                        | "name_not_in_binding" | "of_permanent" | "binding_owner"
+                        | "binding_card_kind" | "binding_card_color" | "binding_card_name_is"
+                        | "binding_dp" | "binding_play_cost" | "binding_value" => true,
+                        // `source` has an explicit carrier fallback in the
+                        // evaluator; other names require the local binding map.
+                        "can_digivolve_onto" => value.as_str() != Some("source"),
+                        "can_digivolve_onto_with_cost" => {
+                            value.get("target").and_then(serde_json::Value::as_str)
+                                != Some("source")
+                        }
+                        "dna_hand_candidate" => {
+                            value.get("result").is_some() || value.get("field").is_some()
+                        }
+                        // Only event_target has a global trigger-context
+                        // fallback in reference_play_cost. replacement_subject
+                        // and ordinary names are still local bindings here.
+                        "play_cost_eq_binding" => {
+                            value.get("binding").and_then(serde_json::Value::as_str)
+                                != Some("event_target")
+                        }
+                        // Result-log predicates: reject both true and false,
+                        // since absence of the log cannot establish either.
+                        "effect_suspended_any_own_digimon"
+                        | "effect_suspended_any_opponent_digimon" | "effect_returned_any_card"
+                        | "effect_trashed_any_hand_card" | "effect_deleted_any_own_digimon"
+                        | "effect_deleted_any_opponent_digimon" | "effect_played_any_digimon"
+                        | "effect_digivolved_any_digimon" | "effect_added_any_card_to_hand"
+                        | "color_matches_returned_card" | "returned_card_matching"
+                        | "trashed_hand_card_matching" | "effect_deleted_opponent_digimon_dp_gte" => true,
+                        // These two per-selectors read the same lost result log.
+                        "per" => matches!(value.as_str(),
+                            Some("returned_card_color_count" | "effect_suspended_count")),
+                        // Formula targets may explicitly name the carrier or
+                        // current subject; other target names require bindings.
+                        "source_stack_count" | "source_stack_dp_sum" => {
+                            value.get("target").and_then(serde_json::Value::as_str)
+                                .is_some_and(|target| !matches!(target, "self" | "target" | "source"))
+                        }
+                        _ => false,
+                    };
+                    if unsupported {
+                        reject(path, card_id, errors);
+                    } else {
+                        walk(value, &path, card_id, errors);
+                    }
+                }
+            }
+            serde_json::Value::Array(values) => {
+                for (index, value) in values.iter().enumerate() {
+                    walk(value, &format!("{prefix}[{index}]"), card_id, errors);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let value = serde_json::to_value(filter).expect("typed predicate serializes");
+    walk(&value, prefix, card_id, errors);
 }
 
 fn validate_steps_binding_scope(
@@ -1621,6 +1828,13 @@ fn validate_step_binding_scope(
         }
         StepSpec::TrashTopNDigivolutionCardsOfEach(args) => {
             validate_formula_binding_scope(&args.n, &format!("{prefix}.n"), card_id, scope, errors);
+        }
+        StepSpec::SecurityPlaceStackedCard(args) => {
+            declare_optional_binding(scope, &args.bind_success_as);
+        }
+        StepSpec::SecurityPlaceTopStackedCard(args) | StepSpec::SecurityPlaceTopCard(args) => {
+            validate_binding_ref(&args.carrier, &format!("{prefix}.carrier"), card_id, errors);
+            declare_optional_binding(scope, &args.bind_success_as);
         }
         StepSpec::TrashOpponentHandToCount(args) => {
             validate_formula_binding_scope(
@@ -2063,11 +2277,17 @@ fn validate_step_binding_scope(
             // steps in the same body (e.g. `schedule_delete_played_at_turn_end`).
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::MoveFromBreeding(args) => {
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::PlayFromHand(args) => {
             // Cost-paying sibling of PlayFromHandFree: `bind_as` (honored only
             // on play_from_hand — the trash variants sharing these args reject
             // it at compile time) exposes the played permanent to later steps.
             // G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (BT25-039).
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::AppFuse(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::LinkCards(args) => {
@@ -2191,6 +2411,11 @@ fn validate_step_binding_scope(
         }
         StepSpec::SuspendAndCancelAllMatchingLeaves(args) => {
             validate_predicate_binding_scope(&args.filter,&format!("{prefix}.filter"),card_id,scope,errors);
+        }
+        StepSpec::TrashTopSecurityAndCancelReplacement(args) => {
+            if let Some(filter) = &args.all_matching {
+                validate_predicate_binding_scope(filter, &format!("{prefix}.all_matching"), card_id, scope, errors);
+            }
         }
         StepSpec::DeleteAllPermanents(args) | StepSpec::ReturnAllToHand(args) => {
             validate_predicate_binding_scope(
@@ -2419,6 +2644,9 @@ fn validate_predicate_binding_scope(
             scope,
             errors,
         );
+    }
+    if let Some(inner) = &pred.cost_target_permanent {
+        validate_predicate_binding_scope(inner, &format!("{prefix}.cost_target_permanent"), card_id, scope, errors);
     }
     if let Some(inh) = &pred.has_inherited {
         validate_predicate_binding_scope(
@@ -3017,6 +3245,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "CannotActivateWhenDigivolvingEffects",
     "CannotActivateWhenAttackingEffects",
     "CannotActivateSecurityEffects",
+    "DoesNotActivateOptionSecurityEffects",
     "CannotDigivolveDigimonByEffect",
     "CannotDrawByEffect",
     "CannotAddSecurityByEffect",

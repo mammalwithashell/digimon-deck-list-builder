@@ -1,0 +1,244 @@
+//! Cooperative independent-tree scheduler. Each tree has at most one pending
+//! evaluation and backs it up before selecting again: no virtual loss and no
+//! speculative same-tree leaves. Evaluation must be batch-independent.
+use super::*;
+use crate::search::profiling::{measure, span};
+
+enum Pending {
+    Root(PreparedNode),
+    Expand {
+        prepared: PreparedNode,
+        parent: usize,
+        edge: usize,
+        path: Vec<(usize, usize)>,
+    },
+    Depth {
+        mover: PlayerId,
+        path: Vec<(usize, usize)>,
+    },
+}
+
+struct Tree {
+    arena: Vec<Node>,
+    config: SearchConfig,
+    rng: StdRng,
+    completed: u32,
+    pending: Option<Pending>,
+}
+
+impl Tree {
+    fn new(mcts: &Mcts<'_>, root: &Game, config: &SearchConfig) -> Self {
+        debug_assert_eq!(root.rules.player_count, 2);
+        let mut tree = Self {
+            arena: Vec::new(),
+            config: config.clone(),
+            rng: StdRng::seed_from_u64(config.seed),
+            completed: 0,
+            pending: None,
+        };
+        match mcts.prepare_node(measure("clone", || root.clone()), false, config) {
+            PreparedNode::Ready(node, _) => {
+                tree.arena.push(node);
+            }
+            prepared => tree.pending = Some(Pending::Root(prepared)),
+        }
+        tree
+    }
+
+    fn backup(&mut self, path: &[(usize, usize)], value: f32, mover: PlayerId) {
+        for &(node_idx, edge_idx) in path {
+            let node = &mut self.arena[node_idx];
+            let v = signed_value(value, mover, node.mover);
+            let edge = &mut node.edges[edge_idx];
+            edge.visits += 1;
+            edge.w += v;
+        }
+        self.completed += 1;
+    }
+
+    fn attach(&mut self, parent: usize, edge: usize, node: Node) {
+        let child = self.arena.len();
+        self.arena.push(node);
+        self.arena[parent].edges[edge].child = Some(child);
+    }
+
+    fn next_request(&mut self, mcts: &Mcts<'_>) -> Option<Vec<EvalRequest>> {
+        if let Some(Pending::Root(prepared)) = &mut self.pending {
+            return Some(mcts.node_requests(prepared));
+        }
+        assert!(
+            self.pending.is_none(),
+            "pending evaluation must be backed up before selecting"
+        );
+        if self.arena[0].terminal_value.is_some() || self.arena[0].edges.is_empty() {
+            return None;
+        }
+        while self.completed < self.config.simulations {
+            let mut path = Vec::new();
+            let mut cur = 0;
+            loop {
+                if let Some(value) = self.arena[cur].terminal_value {
+                    self.backup(&path, value, self.arena[cur].mover);
+                    break;
+                }
+                if path.len() as u32 >= self.config.max_decisions {
+                    let node = &self.arena[cur];
+                    let mask = measure("mask", || build_action_mask(&node.game, node.mover));
+                    let request = EvalRequest {
+                        obs: build_observation_tensor_with_mask(
+                            &node.game,
+                            node.mover,
+                            mcts.registry,
+                            self.config.observation_profile,
+                            &mask,
+                        ),
+                        mask,
+                    };
+                    self.pending = Some(Pending::Depth {
+                        mover: node.mover,
+                        path,
+                    });
+                    return Some(vec![request]);
+                }
+                let edge = select_edge(&self.arena[cur], self.config.c_puct);
+                path.push((cur, edge));
+                match self.arena[cur].edges[edge].child {
+                    Some(child) => cur = child,
+                    None => {
+                        let parent = &self.arena[cur];
+                        let mut game = measure("clone", || parent.game.clone());
+                        measure("step", || {
+                            apply_plan(&mut game, parent.mover, &parent.edges[edge].plan)
+                        });
+                        match mcts.prepare_node(game, true, &self.config) {
+                            PreparedNode::Ready(node, value) => {
+                                let mover = node.mover;
+                                self.attach(cur, edge, node);
+                                self.backup(&path, value, mover);
+                                break;
+                            }
+                            mut prepared => {
+                                let request = mcts.node_requests(&mut prepared);
+                                self.pending = Some(Pending::Expand {
+                                    prepared,
+                                    parent: cur,
+                                    edge,
+                                    path,
+                                });
+                                return Some(request);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn accept(&mut self, mcts: &Mcts<'_>, evaluations: &[Evaluation]) {
+        match self.pending.take().expect("unsolicited neural evaluation") {
+            Pending::Root(prepared) => {
+                let (mut node, _) = mcts.finish_node(prepared, evaluations);
+                if self.config.dirichlet_epsilon > 0.0 && node.edges.len() > 1 {
+                    let noise = sample_dirichlet(
+                        &mut self.rng,
+                        self.config.dirichlet_alpha as f64,
+                        node.edges.len(),
+                    );
+                    let eps = self.config.dirichlet_epsilon;
+                    for (edge, n) in node.edges.iter_mut().zip(noise) {
+                        edge.prior = (1.0 - eps) * edge.prior + eps * n;
+                    }
+                }
+                self.arena.push(node);
+            }
+            Pending::Expand {
+                prepared,
+                parent,
+                edge,
+                path,
+            } => {
+                let (node, value) = mcts.finish_node(prepared, evaluations);
+                let mover = node.mover;
+                self.attach(parent, edge, node);
+                self.backup(&path, value, mover);
+            }
+            Pending::Depth { mover, path } => self.backup(&path, evaluations[0].value, mover),
+        }
+    }
+
+    fn result(&self) -> SearchResult {
+        let root = &self.arena[0];
+        let total_visits: u32 = root.edges.iter().map(|e| e.visits).sum();
+        let total_w: f32 = root.edges.iter().map(|e| e.w).sum();
+        SearchResult::from_plans(
+            root.edges
+                .iter()
+                .map(|e| {
+                    (
+                        e.plan.clone(),
+                        e.visits,
+                        if e.visits > 0 {
+                            e.w / e.visits as f32
+                        } else {
+                            0.
+                        },
+                    )
+                })
+                .collect(),
+            root.terminal_value.unwrap_or_else(|| {
+                if total_visits > 0 {
+                    total_w / total_visits as f32
+                } else {
+                    0.
+                }
+            }),
+            self.completed,
+        )
+    }
+}
+
+impl Mcts<'_> {
+    /// Search independent roots together, preserving the serial algorithm in
+    /// each tree. One root/config per slot; results retain input order. No
+    /// tree can have more than one outstanding leaf. A deterministic,
+    /// batch-independent evaluator gives the exact serial SearchResult.
+    pub fn search_batch(
+        &self,
+        roots: &[Game],
+        evaluator: &mut dyn PolicyValueFn,
+        configs: &[SearchConfig],
+    ) -> Vec<SearchResult> {
+        let _profile = span("search_batch");
+        assert_eq!(roots.len(), configs.len(), "one configuration per root");
+        let mut trees: Vec<_> = roots
+            .iter()
+            .zip(configs)
+            .map(|(r, c)| Tree::new(self, r, c))
+            .collect();
+        loop {
+            let mut requests = Vec::new();
+            let mut slots = Vec::new();
+            for (slot, tree) in trees.iter_mut().enumerate() {
+                if let Some(request) = tree.next_request(self) {
+                    let start = requests.len();
+                    requests.extend(request);
+                    slots.push((slot, start..requests.len()));
+                }
+            }
+            if requests.is_empty() {
+                break;
+            }
+            let evaluations = evaluate_requests(&requests, evaluator, roots.len());
+            assert_eq!(
+                evaluations.len(),
+                requests.len(),
+                "evaluator returned wrong batch size"
+            );
+            for (slot, range) in slots {
+                trees[slot].accept(self, &evaluations[range]);
+            }
+        }
+        trees.iter().map(Tree::result).collect()
+    }
+}

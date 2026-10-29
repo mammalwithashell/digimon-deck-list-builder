@@ -62,10 +62,6 @@ steps:
     do: { play: { card: ST23-08, from: hand } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { cards: [ST23-08], ordinal: 0, sim_only: true } }
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
-  - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
   - actor: 0
@@ -86,7 +82,7 @@ assert:
           dp: -1
           suspended: false
           sources: [BT26-070]
-  - at: 11
+  - at: 9
     that:
       turn: 4
       p0.memory: -3

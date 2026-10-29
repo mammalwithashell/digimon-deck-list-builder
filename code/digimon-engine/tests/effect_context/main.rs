@@ -4,6 +4,9 @@
 //! introduced incrementally. Each test module corresponds to a distinct
 //! feature or primitive; add new modules here as Phase D primitives land.
 
+#[path = "../support/owned_card_choice.rs"]
+mod owned_choices;
+
 mod armor_purge_top;
 mod battle_opponent_of;
 mod breeding_zone_movement;

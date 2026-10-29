@@ -881,12 +881,7 @@ fn bt17_097_security_auto_collapses_zone_when_only_hand_eligible() {
         1,
         "exactly one eligible card (the hand Davis Tamer); got {card_actions:?}"
     );
-    assert!(
-        card_actions[0] >= PLAY_HAND_START && card_actions[0] < PLAY_HAND_END,
-        "the only eligible card action must be a hand slot \
-         (PLAY_HAND range 0..{PLAY_HAND_END}); got {}",
-        card_actions[0]
-    );
+    assert!(owned_union_fixture::is_zone(&runner.game, card_actions[0], false));
 
     // Drive the rest of the clause to completion — proves the union pick feeds
     // play_union_bound_free without a follow-up zone-choice prompt.
@@ -1018,3 +1013,6 @@ fn bt17_097_digivolved_when_digivolving_waits_for_the_deleting_effect() {
         "BT16-027's [When Digivolving] returned P1's Digimon to the deck"
     );
 }
+
+#[path = "../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

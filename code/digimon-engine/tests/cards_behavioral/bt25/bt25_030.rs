@@ -17,7 +17,7 @@
 //! (Group E/G), alt-digivolve recipe registration.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
-use digimon_engine::action::space::{PASS, SEL_MY_SECURITY_START};
+use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::{EffectTiming, TriggerSource};
 
@@ -273,7 +273,7 @@ fn bt25_030_inherited_adds_top_security_then_recovers_at_zero() {
     // The "you may add top security" surfaces as an optional pick.
     assert!(runner.pending_is_optional());
     runner
-        .execute_action(0, SEL_MY_SECURITY_START)
+        .execute_action(0, top_action(&runner))
         .expect("accept security add");
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
@@ -365,3 +365,9 @@ fn bt25_030_inherited_recovers_when_security_already_zero() {
         "RECOVER"
     );
 }
+
+fn top_action(runner:&DebugRunner)->u16 {
+    physical_menu::security_action(&runner.game,0,runner.game.players[0].security.len()-1)
+}
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

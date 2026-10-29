@@ -27,7 +27,7 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
     CompiledDeclarativeClause, CompiledReplacementCause, CompiledScope, CompiledStep,
 };
-use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
+
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, CardSourceRef, CostDelta, PlaySource};
 use digimon_engine::replacement::ReplacementCause;
@@ -364,38 +364,12 @@ fn ex11_022_on_play_union_selection_filter_excludes_non_puppet_and_high_dp() {
         "the selection must be optional ('you may')"
     );
 
-    // Exactly 2 eligible candidates: PUPPET-HAND (hand[0]) + PUPPET-TRASH (trash[0]).
-    assert_eq!(
-        view.valid_action_ids.len(),
-        2,
-        "only PUPPET-HAND and PUPPET-TRASH should be eligible; got {:?}",
-        view.valid_action_ids
-    );
+    let rows = physical_choice::commits(&runner.game);
+    assert_eq!(rows.len(), 2, "only DP4000-or-lower Puppet cards qualify");
+    physical_choice::card_action(&runner.game, "PUPPET-HAND", digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+    physical_choice::card_action(&runner.game, "PUPPET-TRASH", digimon_engine::owned_card_choice::CardChoiceZone::Trash);
+    assert!(view.valid_action_ids.contains(&digimon_engine::action::space::PASS));
 
-    // Hand index 0 maps to PLAY_HAND_START + 0.
-    assert!(
-        view.valid_action_ids.contains(&(PLAY_HAND_START + 0)),
-        "PUPPET-HAND (hand index 0, DP 3000, Puppet) must be offered"
-    );
-    // Trash index 0 maps to TRASH_EFFECT_START + 0.
-    assert!(
-        view.valid_action_ids.contains(&(TRASH_EFFECT_START + 0)),
-        "PUPPET-TRASH (trash index 0, DP 4000, Puppet) must be offered"
-    );
-
-    // Verify the excluded cards are absent.
-    assert!(
-        !view.valid_action_ids.contains(&(PLAY_HAND_START + 1)),
-        "PUPPET-HIGH (DP 5000) must be excluded"
-    );
-    assert!(
-        !view.valid_action_ids.contains(&(PLAY_HAND_START + 2)),
-        "NON-PUPPET (Beast trait) must be excluded"
-    );
-    assert!(
-        !view.valid_action_ids.contains(&(TRASH_EFFECT_START + 1)),
-        "PUPPET-HIGH-T (DP 6000) must be excluded"
-    );
 }
 
 /// PUPPETS-G003 (Task 11): On Play union-zone play + turn-end cleanup.
@@ -418,14 +392,10 @@ fn ex11_022_on_play_selected_puppet_is_played_free_and_deleted_at_turn_end() {
     let view = runner
         .pending_selection_view()
         .expect("On Play union-zone selection installs");
-    assert_eq!(
-        view.valid_action_ids.len(),
-        1,
-        "only PUPPET-HAND is eligible"
-    );
-    runner
-        .execute_action(0, view.valid_action_ids[0])
-        .expect("pick PUPPET-HAND");
+    assert_eq!(physical_choice::commits(&runner.game).len(), 1, "only PUPPET-HAND is eligible");
+    assert!(view.valid_action_ids.contains(&digimon_engine::action::space::PASS));
+    let action = physical_choice::card_action(&runner.game, "PUPPET-HAND", digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+    runner.execute_action(0, action).expect("pick PUPPET-HAND");
     runner.auto_resolve().expect("finish On Play body");
 
     // PUPPET-HAND is now on field, played for free.
@@ -792,3 +762,6 @@ fn ex11_022_effect_initiated_digivolve_onto_nonmatching_base_is_rejected() {
         "the base must be untouched after a rejected digivolve"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

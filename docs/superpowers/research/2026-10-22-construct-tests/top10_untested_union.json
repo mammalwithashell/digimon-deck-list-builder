@@ -1,0 +1,199 @@
+{
+ "predicate:effect_deleted_any_opponent_digimon": [
+  "1-Beelstarmon (3M)",
+  "5-Chronomon"
+ ],
+ "predicate:event_added_card_any": [
+  "1-Beelstarmon (3M)"
+ ],
+ "verb:trash_selected_sources_as_cost": [
+  "1-Beelstarmon (3M)"
+ ],
+ "predicate:binding_count_eq": [
+  "1-Beelstarmon (3M)",
+  "5-Chronomon",
+  "7-Toho Braves",
+  "9-Medusamon"
+ ],
+ "predicate:card_number_is": [
+  "1-Beelstarmon (3M)",
+  "2-Rebootmon",
+  "3-Jupitermon",
+  "4-TS Toolbox",
+  "5-Chronomon",
+  "8-Jupitermon",
+  "9-Medusamon"
+ ],
+ "predicate:source_count": [
+  "1-Beelstarmon (3M)"
+ ],
+ "predicate:link_card_count": [
+  "1-Beelstarmon (3M)",
+  "2-Rebootmon"
+ ],
+ "verb:delete_permanents": [
+  "1-Beelstarmon (3M)"
+ ],
+ "predicate:play_cost": [
+  "1-Beelstarmon (3M)"
+ ],
+ "predicate:can_digivolve_from_source": [
+  "1-Beelstarmon (3M)",
+  "10-DATA SQUAD Ravemon"
+ ],
+ "timing:when_linked": [
+  "1-Beelstarmon (3M)",
+  "2-Rebootmon"
+ ],
+ "timing:on_add_digivolution_cards": [
+  "1-Beelstarmon (3M)"
+ ],
+ "verb:return_top_security_to_deck": [
+  "1-Beelstarmon (3M)",
+  "2-Rebootmon",
+  "5-Chronomon"
+ ],
+ "predicate:would_link_card_trait_any_of": [
+  "2-Rebootmon"
+ ],
+ "timing:when_would_link_to_this": [
+  "2-Rebootmon"
+ ],
+ "timing:when_card_linked_to_this": [
+  "2-Rebootmon"
+ ],
+ "verb:add_top_security_to_hand": [
+  "2-Rebootmon",
+  "3-Jupitermon",
+  "4-TS Toolbox",
+  "5-Chronomon",
+  "8-Jupitermon"
+ ],
+ "verb:app_fuse": [
+  "2-Rebootmon"
+ ],
+ "timing:on_any_link": [
+  "2-Rebootmon"
+ ],
+ "predicate:name_not_in_binding": [
+  "2-Rebootmon"
+ ],
+ "verb:reduce_link_cost": [
+  "2-Rebootmon"
+ ],
+ "verb:arm_digivolve_cost_reducer": [
+  "2-Rebootmon"
+ ],
+ "predicate:name_in": [
+  "2-Rebootmon"
+ ],
+ "predicate:can_attack": [
+  "3-Jupitermon",
+  "4-TS Toolbox",
+  "5-Chronomon",
+  "8-Jupitermon"
+ ],
+ "timing:on_lose_security": [
+  "3-Jupitermon",
+  "8-Jupitermon"
+ ],
+ "verb:play_or_use_from_hand": [
+  "10-DATA SQUAD Ravemon",
+  "3-Jupitermon",
+  "5-Chronomon",
+  "6-Examon",
+  "7-Toho Braves",
+  "8-Jupitermon"
+ ],
+ "verb:grant_stack_protection_from_opponent_effects": [
+  "3-Jupitermon",
+  "8-Jupitermon"
+ ],
+ "verb:grant_narrow_opponent_effect_protection": [
+  "3-Jupitermon",
+  "8-Jupitermon"
+ ],
+ "verb:security_place_top_card": [
+  "3-Jupitermon",
+  "5-Chronomon",
+  "8-Jupitermon"
+ ],
+ "verb:may_dna_digivolve_now": [
+  "3-Jupitermon",
+  "4-TS Toolbox",
+  "5-Chronomon",
+  "6-Examon",
+  "8-Jupitermon"
+ ],
+ "predicate:effect_deleted_any_own_digimon": [
+  "10-DATA SQUAD Ravemon",
+  "4-TS Toolbox",
+  "5-Chronomon"
+ ],
+ "verb:select_zone_cards": [
+  "4-TS Toolbox",
+  "5-Chronomon"
+ ],
+ "predicate:owner_can_add_security": [
+  "4-TS Toolbox",
+  "5-Chronomon"
+ ],
+ "verb:return_union_bound_to_deck": [
+  "5-Chronomon"
+ ],
+ "verb:suspend_and_cancel_all_matching_leaves": [
+  "6-Examon"
+ ],
+ "verb:return_all_to_deck": [
+  "6-Examon"
+ ],
+ "timing:start_of_opponents_main_phase": [
+  "6-Examon"
+ ],
+ "predicate:can_change_orientation": [
+  "6-Examon",
+  "7-Toho Braves"
+ ],
+ "predicate:binding_card_kind": [
+  "6-Examon"
+ ],
+ "predicate:event_target_name_contains": [
+  "6-Examon"
+ ],
+ "predicate:during_attack": [
+  "6-Examon"
+ ],
+ "predicate:trait_contains": [
+  "10-DATA SQUAD Ravemon",
+  "7-Toho Braves"
+ ],
+ "verb:hatch": [
+  "7-Toho Braves"
+ ],
+ "predicate:source_is_cost_target_permanent": [
+  "7-Toho Braves",
+  "9-Medusamon"
+ ],
+ "predicate:cost_target": [
+  "7-Toho Braves",
+  "9-Medusamon"
+ ],
+ "predicate:self_color_count_gte": [
+  "7-Toho Braves"
+ ],
+ "verb:trash_selected_security": [
+  "9-Medusamon"
+ ],
+ "predicate:on_field": [
+  "9-Medusamon"
+ ],
+ "predicate:face_down_sources_under_tamers_gte": [
+  "10-DATA SQUAD Ravemon"
+ ],
+ "verb:play_security_card": [
+  "10-DATA SQUAD Ravemon"
+ ],
+ "verb:move_self_option_under_permanent": [
+  "10-DATA SQUAD Ravemon"
+ ]
+}

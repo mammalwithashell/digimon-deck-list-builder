@@ -432,11 +432,11 @@ fn bt21_098_security_plays_vemmon_text_card_then_adds_self_to_hand() {
     assert!(matches!(view.kind, SelectionKind::UnionZone { .. }));
     assert!(r.pending_is_optional(), "'you may play'");
     assert_eq!(
-        view.valid_action_ids.len(),
+        view.valid_action_ids.iter().filter(|&&a|a != PASS).count(),
         1,
         "only the cost<=6 [Vemmon]-text card is eligible"
     );
-    r.execute_action(view.selecting_player, view.valid_action_ids[0])
+    r.execute_action(view.selecting_player, owned_union_fixture::action(&r.game,1,"VEM-6",false).expect("eligible physical hand row"))
         .expect("play VEM-6");
     r.auto_resolve().expect("resolve");
     assert!(on_field(&r, 1, "VEM-6"), "played without paying the cost");
@@ -458,10 +458,13 @@ fn bt21_098_security_trash_origin_and_decline_still_adds_to_hand() {
     let atk = r.place_on_field(0, "ATK", Some(0));
     r.attack_player(atk, 1, false);
     let view = r.pending_selection_view().expect("security union pick");
-    assert_eq!(view.valid_action_ids.len(), 1, "trash candidate offered");
+    assert_eq!(view.valid_action_ids.iter().filter(|&&a|a != PASS).count(), 1, "trash candidate offered");
     r.execute_action(view.selecting_player, PASS)
         .expect("decline");
     r.auto_resolve().expect("resolve");
     assert!(in_trash(&r, 1, "VEM-6"), "declined: stays in trash");
     assert!(in_hand(&r, 1, CARD_ID), "Cannon still added to hand");
 }
+
+#[path="../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

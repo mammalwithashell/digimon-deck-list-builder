@@ -1,4 +1,3 @@
-use digimon_engine::action::space::encode_source_select;
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
@@ -73,7 +72,7 @@ fn bt19_047_on_play_may_digivolve_from_atlurballistamon_under_tamer() {
         .pending_selection()
         .expect("On Play should offer AtlurBallistamon under a Tamer");
     assert!(pending.is_optional, "printed 'may digivolve' is declinable");
-    let action = encode_source_select(tamer.index as u16, 0).unwrap();
+    let action = physical_menu::source_action(&runner.game,tamer,0);
     assert!(pending.valid_action_ids.contains(&action));
     runner
         .execute_action(0, action)
@@ -120,3 +119,6 @@ fn bt19_047_save_is_auto_installed_from_printed_keyword() {
         .expect("Save should offer a Tamer destination after deletion");
     assert!(pending.is_optional);
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

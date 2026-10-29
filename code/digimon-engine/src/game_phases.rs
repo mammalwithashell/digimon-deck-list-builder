@@ -45,6 +45,23 @@ impl Game {
     pub(crate) fn begin_turn(&mut self) {
         let tp = self.turn_player();
 
+        // CR 4.3 15-14-1-5-1: reset when the turn changes, before
+        // start-turn effects (and their derived events) can spend new uses.
+        // Reset per-turn state. [Once Per Turn] counters reset for BOTH
+        // players — "per turn" is per GAME turn, so an [All Turns][Once Per
+        // Turn] effect (e.g. BT21-073's linked leave-replacement) re-arms on
+        // the opponent's turn too. Attack counters stay owner-turn-scoped.
+        self.player_mut(tp).new_turn();
+        for pid in 0..self.players.len() {
+            if pid as crate::PlayerId != tp {
+                self.player_mut(pid as crate::PlayerId)
+                    .reset_effect_activations();
+            }
+        }
+        if let Some(count) = self.digimon_attacks_this_turn.get_mut(tp as usize) {
+            *count = 0;
+        }
+
         // StartOfYourTurn fires BEFORE Unsuspend — matches Python's OnStartTurn.
         // Scripts that care about turn beginning (e.g. "at the start of your turn,
         // +1 memory") observe this timing.
@@ -52,6 +69,10 @@ impl Game {
             EffectTiming::StartOfYourTurn,
             crate::selection::TriggerSource::PlayerBattleArea(tp),
         );
+        // CR 4.3 15-4-3: a printed [Start of Your Turn] <Delay> shares
+        // this timing with ordinary triggers. Collect the entire window
+        // before the player chooses the next effect (LM-027 + BT24-088).
+        self.enqueue_start_delayed_options(self.turn_count);
         self.drain_effect_queue();
         if self.pending_selection.is_some() {
             self.park_delayed_option_lifecycle(DelayedOptionLifecycleResume {
@@ -101,21 +122,6 @@ impl Game {
 
     fn continue_begin_turn_after_until_next_unsuspend(&mut self) {
         let tp = self.turn_player();
-
-        // Reset per-turn state. [Once Per Turn] counters reset for BOTH
-        // players — "per turn" is per GAME turn, so an [All Turns][Once Per
-        // Turn] effect (e.g. BT21-073's linked leave-replacement) re-arms on
-        // the opponent's turn too. Attack counters stay owner-turn-scoped.
-        self.player_mut(tp).new_turn();
-        for pid in 0..self.players.len() {
-            if pid as crate::PlayerId != tp {
-                self.player_mut(pid as crate::PlayerId)
-                    .reset_effect_activations();
-            }
-        }
-        if let Some(count) = self.digimon_attacks_this_turn.get_mut(tp as usize) {
-            *count = 0;
-        }
 
         // Unsuspend phase. The bulk turn-start unsuspend honors the
         // `CannotUnsuspend` modifier ("[All Turns] … don't unsuspend" —
@@ -1061,7 +1067,8 @@ impl Game {
         let decline_state = callback_state.clone();
 
         self.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            card_choice: None,
+            zone_owner: Some(player),
             kind: SelectionKind::OwnField,
             selecting_player: player,
             previous_phase,
@@ -1442,6 +1449,58 @@ impl Game {
         );
     }
 
+    /// Capture due [Start of Your Turn] <Delay> entries without draining.
+    /// The lowered Delay body pays its own trash-before-processing cost,
+    /// including parked replacement decisions; the queue adapter retains
+    /// native post-body cleanup. Move each surviving carrier's next window forward at
+    /// capture: decline, a later-false condition, or an unpaid cost then keeps
+    /// it available next turn without re-offering it in this same window.
+    /// The queued entry retains its physical source identity across clones
+    /// and field compaction; accepting normally removes that source anyway.
+    fn enqueue_start_delayed_options(&mut self, starting_turn: u16) {
+        let due: Vec<_> = self
+            .players
+            .iter()
+            .enumerate()
+            .flat_map(|(player, state)| {
+                state
+                    .battle_area
+                    .iter()
+                    .enumerate()
+                    .filter_map(move |(index, perm)| {
+                        let crate::permanent::OptionState::Delayed {
+                            trash_on_turn,
+                            trigger: DelayTrigger::StartOfYourNextTurn,
+                            ..
+                        } = perm.option_state
+                        else {
+                            return None;
+                        };
+                        if trash_on_turn != starting_turn {
+                            return None;
+                        }
+                        Some((
+                            PermanentHandle {
+                                player: player as PlayerId,
+                                index: index as u8,
+                            },
+                            (player as PlayerId, perm.card_sources.first()?.card_index),
+                        ))
+                    })
+            })
+            .collect();
+        for (handle, key) in due {
+            // An "if" processing condition is checked on activation, not
+            // capture (CR 15-6-1, 15-8-3-9). Keep a currently false entry:
+            // an earlier sibling can enable it before it is chosen.
+            self.enqueue_triggered(
+                EffectTiming::DelayEffect,
+                crate::selection::TriggerSource::Permanent(handle),
+            );
+            self.reschedule_delayed_option(key);
+        }
+    }
+
     fn resolve_delayed_options_matching(
         &mut self,
         turn: u16,
@@ -1733,6 +1792,18 @@ impl Game {
                     DelayedOptionLifecycleResumeKind::Event { timing } => {
                         self.find_event_delayed_permanent_by_key(key, timing)
                     }
+                    DelayedOptionLifecycleResumeKind::CapturedStartTurnDelay {
+                        carrier_identity,
+                    } => self
+                        .find_delayed_permanent_by_key(
+                            key,
+                            resume.turn,
+                            &[DelayTrigger::StartOfYourNextTurn],
+                        )
+                        .filter(|h| {
+                            self.player(h.player).battle_area[h.index as usize].battle_identity
+                                == Some(carrier_identity)
+                        }),
                     _ => {
                         let triggers = Self::delay_lifecycle_triggers(resume.kind);
                         self.find_delayed_permanent_by_key(key, resume.turn, triggers)
@@ -1757,6 +1828,7 @@ impl Game {
 
                 match resume.kind {
                     DelayedOptionLifecycleResumeKind::Event { .. }
+                    | DelayedOptionLifecycleResumeKind::CapturedStartTurnDelay { .. }
                     | DelayedOptionLifecycleResumeKind::MainPhaseActivation
                     | DelayedOptionLifecycleResumeKind::UnsuspendPhase => continue,
                     _ => {
@@ -1807,6 +1879,7 @@ impl Game {
                     return;
                 }
                 DelayedOptionLifecycleResumeKind::Event { .. }
+                | DelayedOptionLifecycleResumeKind::CapturedStartTurnDelay { .. }
                 | DelayedOptionLifecycleResumeKind::MainPhaseActivation => continue,
             }
         }
@@ -1815,6 +1888,9 @@ impl Game {
     fn delay_lifecycle_triggers(kind: DelayedOptionLifecycleResumeKind) -> &'static [DelayTrigger] {
         match kind {
             DelayedOptionLifecycleResumeKind::StartTurn => &[DelayTrigger::StartOfYourNextTurn],
+            DelayedOptionLifecycleResumeKind::CapturedStartTurnDelay { .. } => {
+                &[DelayTrigger::StartOfYourNextTurn]
+            }
             DelayedOptionLifecycleResumeKind::EndTurn { .. } => {
                 &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn]
             }

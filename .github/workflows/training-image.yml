@@ -6,6 +6,7 @@ on:
   push:
     tags:
       - "training-v*"
+      - "training-search-v*"
 
 permissions:
   contents: read
@@ -13,6 +14,7 @@ permissions:
 
 jobs:
   build-and-publish:
+    if: startsWith(github.ref_name, 'training-v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -72,3 +74,36 @@ jobs:
           tags: |
             ghcr.io/${{ steps.owner.outputs.value }}/digimon-trainer:${{ github.ref_name }}
             ghcr.io/${{ steps.owner.outputs.value }}/digimon-trainer:latest
+
+  build-search-cpu:
+    if: startsWith(github.ref_name, 'training-search-v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Lowercase owner for GHCR
+        id: owner
+        run: echo "value=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+      - name: Build CPU search image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: code/tools/cloud_search/Dockerfile.cpu
+          tags: digimon-search-cpu:smoke
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+          load: true
+          push: false
+      - name: Check native search and Python runtime together
+        run: docker run --rm digimon-search-cpu:smoke python code/tools/cloud_search/smoke.py
+      - name: Publish tested image without changing the standard trainer latest tag
+        run: |
+          image=ghcr.io/${{ steps.owner.outputs.value }}/digimon-search-cpu:${{ github.ref_name }}
+          docker tag digimon-search-cpu:smoke "$image"
+          docker push "$image"
+          docker inspect "$image" --format '{{json .RepoDigests}}' >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,24 @@
+{
+  "copies": 54,
+  "unique_ids": 20,
+  "training_launched": false,
+  "source_artifact_sha256": "1128f4efc64fe9881a0e797a76ce49d11d7489fa3297f144dfcb579e53dc5e9a",
+  "mechanics_ready": true,
+  "result": "blocked_as_expected",
+  "exception_type": "NotAdmissibleDeckError",
+  "message": "Exact local LightHybrid contains cards that are not admissible: BT18-037 (failed_verdict), BT18-042 (failed_verdict), BT18-063 (failed_verdict), BT18-076 (failed_verdict)",
+  "blocked_cards": {
+    "BT18-037": [
+      "failed_verdict"
+    ],
+    "BT18-063": [
+      "failed_verdict"
+    ],
+    "BT18-076": [
+      "failed_verdict"
+    ],
+    "BT18-042": [
+      "failed_verdict"
+    ]
+  }
+}

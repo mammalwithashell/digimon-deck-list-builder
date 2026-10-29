@@ -1,0 +1,44 @@
+{
+  "status": "frozen_green",
+  "scope": "Canonical P-170/189/224/244 physical-choice fixture migration",
+  "actual_red": {
+    "p_170": {
+      "actual_red": "test result: FAILED. 10 passed; 1 failed; 0 ignored; 0 measured; 12744 filtered out; finished in 15.94s",
+      "canonical_cases": 11,
+      "same_test_names": true
+    },
+    "p_189": {
+      "actual_red": "test result: FAILED. 19 passed; 4 failed; 0 ignored; 0 measured; 12732 filtered out; finished in 30.47s",
+      "canonical_cases": 23,
+      "same_test_names": true
+    },
+    "p_224": {
+      "actual_red": "test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 12753 filtered out; finished in 5.01s",
+      "canonical_cases": 2,
+      "same_test_names": true
+    },
+    "p_244": {
+      "actual_red": "test result: FAILED. 9 passed; 3 failed; 0 ignored; 0 measured; 12743 filtered out; finished in 21.45s",
+      "canonical_cases": 12,
+      "same_test_names": true
+    }
+  },
+  "red_log_pattern": "logs/<lowercase_id_with_underscore>-physical-red.log",
+  "green": {
+    "passed": 48,
+    "failed": 0,
+    "ignored": 0,
+    "seconds": 61.88,
+    "cargo_exit": 0,
+    "log": "logs/promo-four-modules-green.log",
+    "target": "light_hybrid_promo_source_fixtures"
+  },
+  "coverage": [
+    "Exact trash Three Musketeers free play eligibility",
+    "LIBERATOR cost4 boundary, high cost and trait exclusions preserved",
+    "P224 hand/trash selection and physical under-Tamer source play",
+    "P244 Vemmon exact name, Xeno Zenith alias and legal evolution choice",
+    "All canonical test names preserved; only candidate counts use CommitCard rows rather than optional PASS-inclusive menus"
+  ],
+  "limits": "No production changes, no added ignore, no ledger promotion; final fresh whole verification remains required."
+}

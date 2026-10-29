@@ -3,16 +3,41 @@
 Operational guide for the Digimon TCG RL training pipeline.
 For architecture details, see `../AGENTS.md`.
 
+For periodic per-card usage, entry routes, legal opportunities, W&B checkpoint
+Tables, and the local/W&B dashboard, see [Card evaluation](CARD_EVALUATION.md).
+
 > **Running training in the cloud?** See [CLOUD_TRAINING.md](CLOUD_TRAINING.md) —
 > end-to-end runbook for Hetzner/DO CPU droplets with Tailscale-based
 > TensorBoard access and rsync-mirrored `runs/` so `digimon-training-mcp`
 > can query cloud runs from your local Claude sessions. Use it for long
 > (>~8h) jobs, off-machine training, or phone-checkable runs.
 
+## Owned source/security choices: current contract
+
+`support-complete-digivolution-source-choices` uses action semantic schema **2**
+with **2192** actions. Pending card pages carry 128-float rows; active profile
+sizes are `standard_lite_v2` **9434**, `standard_lite_deck_v2` **9874**, and
+`standard_full_v2` **44506**. Resolve sizes, positions, schemas and hashes from
+`digimon_engine.get_observation_layout()`; the older migration numbers below
+record earlier allocations.
+
+Rebuild the optimized PyO3 wheel before training. Old checkpoints and exports
+must fail the seven-field model contract, including `action_schema_version`,
+even when an action-head size happens to match. Do not relabel old metadata to
+accept old weights. Newly initialized current-contract models and their exports
+can be validated independently of policy quality; a compatibility smoke test is
+not model promotion or oracle certification.
+
+Paged choices include legal commit rows, navigation and permission-filtered
+inspection rows. Navigation never pays a cost or advances effect processing.
+Refresh rechecks live eligibility; impossible mandatory completion contributes
+no payment or reduction credit. The action mask remains the legality oracle.
+See [ACTION_SPEC.md](ACTION_SPEC.md) and [TENSOR_SPEC.md](TENSOR_SPEC.md).
+
 > ## ⚠️ Engine default profile flipped — 2026-05-25 (`flip-engine-default-to-lite-deck-v2`)
 >
 > The engine's canonical default observation profile is now
-> **`standard_lite_deck_v2`** (`8850` floats; v2_lite prefix + 55-row own
+> **`standard_lite_deck_v2`** (currently `9874` floats, `8850` at the original flip; v2_lite prefix + 55-row own
 > original decklist + 256 reserved). `tensor::TENSOR_SIZE`,
 > `tensor_profiles::default_profile()`, and the PyO3
 > `digimon_engine.TENSOR_PROFILE_ID` all report this value. Previously the
@@ -535,7 +560,7 @@ champion pool; Tier 2 distributed league with a shared store + per-round barrier
 ### Standard Training Chain
 
 ```
-DigimonEnv                        (1375-obs, 2192-action, reward shaping)
+DigimonEnv                        (selected observation layout, exported action space, reward shaping)
   → OpponentWrapper              (single-agent MDP, auto-plays P2)
   → DeckPoolWrapper              (agent deck variation, optional)
   → GauntletWrapper              (opponent deck sampling from MetaGauntlet, optional)
@@ -982,6 +1007,26 @@ mechanics suites (`tests/dsl`, `tests/rules_conformance`, ... -- never
 tools.lowering_coverage --report OUT.md --decks deckpool.json` ranks the untested
 constructs by decks blocked.
 
+### DigiLab-11087 top-10 construct campaign (2026-10-22)
+
+For the frozen `qa/impact/decks/digilab-11087-top10.json` pool (10 lists,
+540 card entries, 167 unique IDs), the per-card artifact now admits **10/10
+lists and 167/167 unique IDs**. The original campaign reached 9/10; the
+[App Fuse OPT followup](superpowers/research/2026-10-22-construct-tests/app-fuse-opt-followup.md)
+closed BT25-089's verdict hold and admitted Rebootmon. All 51 keys in the
+original frozen untested union, plus four previously parsed-only keys
+(`memory_lte`, `name_not_shared_by_field_tamer`, `event_target_is_source`,
+`on_ally_played`), have behavioral construct tests. The scanner's deck report
+also says **10/10 lowering-covered**; it includes parsed-only credits and
+is not the admission gate. Regenerate both artifacts with
+`PYTHONPATH=code python -m tools.lowering_coverage` and
+`PYTHONPATH=code python -m digimon_gym.agents.card_admissibility`, then compare
+each deck's IDs against `cards[id].admissible`. Gate semantics and global
+mechanics triage are unchanged. This result does not certify DCGO parity or
+training fidelity: separate App Fuse procedure details, effect-link timing,
+and other campaign findings remain in `docs/RUST_ENGINE_GAPS.md` and
+`qa/dsl-vocab-gaps.md`.
+
 ### What `ready` means, and what it does not
 
 `ready` = **no mechanics obligation is flagged outcome-changing**.
@@ -1048,3 +1093,720 @@ never admits a deck they reject) for transition comparison runs; only that path
 reads the report and can raise `OracleReadinessMissingError`. Spec:
 `docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md` (§4.7 is
 superseded as a gate).
+
+## Search budget for self-play generation (default since 2026-10-28)
+
+`run_selfplay_generation.py` now generates with **both budget levers on by
+default**; nothing has to be passed to get them:
+
+| Lever | Flag (selfplay and the generation driver) | Default | What it does |
+|---|---|---|---|
+| Phase budget | `--reduced-sims N` | 64 | Roots that are not an unconstrained Main-phase decision (pending selections, mulligan, breeding, block/counter/alliance windows) get N total simulations; Main roots keep `--sims`/`--worlds` (320/4). |
+| Playout-cap randomization | `--full-search-fraction p --cheap-sims n` | 0.25 / 64 | Only a fraction p of non-forced decisions gets the full search and becomes a policy target; the rest get a cheap noise-free n-sim search recorded with `policy_weight 0` (value-only). `azero_trainer` weights the policy loss by `policy_weight.npy`. |
+
+Together they cost **~0.27× the search seconds** of full 320/4 search (phase
+alone 0.55×, cap alone 0.38×, measured in-run — the per-decision estimates
+understated it). `--full-search` restores the old behaviour (every root at
+320/4); `--reduced-sims 0` or `--full-search-fraction 1` turns one lever off.
+The flags are recorded in each generation's `summary.json` and are part of
+the frozen identity a dynamic `--resume-selfplay` validates, so a run cannot
+silently change budget mid-stage.
+
+Why this is the default (`docs/superpowers/research/2026-10-27-search-budget-experiments.md`):
+one generation from the archetype-audit parent, 1000 games per arm, children
+compared in 2112-game seat-balanced no-search panels. At equal games every
+reduced-budget child matched the full-search child (cap 0.507, phase 0.492,
+both 0.492; all intervals span 0.5) and beat the parent by the same 2–3
+points. Spending the saving on more games per generation (`cap_eq`,
+`phase_eq`, `both_eq`) did **not** help, so the saving is banked as **more
+generations**, roughly 3.7 per former full generation. Re-check the decision
+after 3+ generations with `code/tools/policy_head_to_head.py` (4 blocks per
+pair; the default 1 block gives 528-game panels that cannot separate arms)
+against a full-search lineage. Fixed-root panel agreement and the in-run
+vs-greedy score do not measure this; both were saturated or misleading.
+
+There is no Gumbel root: it was built, measured (worse than PUCT at 64–320
+simulations with the paper constants) and removed when the plan-based search
+results from PR #754 landed; the research doc keeps the numbers.
+
+## Independent-world search evaluation batching
+
+Physical card menus are searched as complete commitments across all pages.
+Serial MCTS, batched PIMC and IS-MCTS evaluate each permitted page and expand
+routes ending in a card commit or a legal decline. Navigation does not create
+game-tree edges or consume additional simulations. The native self-play actor
+selects a complete route once, validates each transport action against the live
+mask, and records conditional visit targets on every non-forced page along it.
+Search consumers must execute `SearchResult::best_plan()` (or sample
+`root_plans` by visits) rather than re-searching after page navigation.
+`root_visits` and `root_q` are projections for the current page, not complete
+card-choice rankings. The public action IDs, tensor layout and model contracts
+are unchanged; all physical candidates remain available.
+
+The generation-3 Proximamon mirror failure (game 398, seed
+5215200225685576850, 2026-10-27) demonstrated why this matters: fresh searches
+alternated pages for 991 decisions. Raising the decision cap cannot repair that
+cycle. Preserve the source shards and checkpoint when replacing an affected run.
+
+Native search self-play and `run_selfplay_generation.py` accept
+`--eval-batch-size` (default 4). This batches the next required evaluation of
+independent PIMC world trees; each tree finishes its own evaluation and backup
+before selecting another simulation. It uses no virtual loss or speculative
+same-tree leaves. `--eval-batch-size 1` is the serial reference. IS-MCTS remains
+serial. The search simulation budget and world count are separate knobs:
+`--sims 320 --worlds 4` remains 320 total simulations, not 320 per world.
+
+Native manifests record requested and effective evaluation batch sizes. Game
+workers remain separate processes (`--procs`); within each worker the independent
+trees cooperate on one thread and share one batched ONNX evaluator. Batch size
+is bounded by available worlds, so increasing it above the world count creates
+no additional simulations or worlds. The evaluator must be deterministic and
+batch-independent. Compare complete search results and recorded targets against
+batch size one when changing model/runtime/provider, not merely model argmaxes.
+
+The optional exact-input output cache remains controlled independently by
+`DIGIMON_SEARCH_EVAL_CACHE_ENTRIES` (default zero); use matching cache settings
+when measuring batching. The Windows native CLI uses mimalloc. Compare generated
+decision positions/sec as well as games/hour on the same hardware, model, pool
+and search budget. Inference-only speedups are not full-game speedups.
+
+Use fresh output directories for validation and retries. Do not relabel partial
+shards or a user-stopped generation as complete, and do not reuse truncated
+diagnostic prefixes as terminal-outcome training data.
+
+### Dynamic native search scheduling and recovery
+
+`run_selfplay_generation.py` defaults to `--scheduling dynamic --chunk-games 16`.
+The controller assigns the next chunk to whichever process becomes available.
+All workers use one master seed and global game indices (`selfplay --game-start`),
+preserving the serial deck RNG stream and per-game/search/action seeds. Search
+simulations, sampled worlds, depth caps, noise and temperature are unchanged.
+Changing concurrency cannot change targets. Legacy `--scheduling static` retains
+the historical per-worker seed scheme and does not support partial resume.
+
+Completed chunks appear under `genN/shards/proc<global-first-game>/`, sorted by
+game ID, with hashed `chunk_commit.json` records. Workers write private
+`genN/attempts/` directories; incomplete attempts never enter the training window.
+`schedule.json` freezes inputs/settings. `scheduler_progress.json` reports
+committed games/rows, active PIDs and heartbeat time; `scheduler_events.jsonl`
+records dispatches, completions and retries. Keep failed attempts/logs for diagnosis.
+Reported native game completions inside an unfinished chunk are not committed
+training rows. The maximum recomputation is the active chunks, not the generation.
+
+Use explicit `--resume-selfplay` with the same run directory and frozen inputs.
+Resume validates native executable, model/metadata, deck/card/admission data,
+search/environment settings and every committed array hash. It permits a changed
+`--procs`, but rejects changed chunk partition, incompatible inputs, corrupt data,
+legacy untracked outputs, or generations already containing training artifacts.
+There is no automatic resume of a user-stopped run. This resumes the self-play
+stage of an explicitly invoked generation command; once complete, that command
+continues to its configured training/evaluation stages. To perform diagnostics
+without any training, use the benchmark tool below instead.
+
+Defaults are one retry and a 3600-second **whole-chunk** deadline, including
+startup (`--worker-retries`, `--worker-timeout-seconds`). Set the deadline above
+the measured slow-chunk tail on the target machine. A deterministic crash still
+fails after bounded retries; it is never dropped from the requested game set.
+Ctrl-C/SIGTERM stops dispatch and terminates/drains owned child processes. Kernel
+file locks prevent simultaneous controllers and release on process death.
+
+### Development measurements versus unattended Linux runs
+
+Use bounded diagnostics in new directories, with `PYTHONPATH=code`:
+
+```bash
+python -m tools.benchmark_search_workers profile --cli /path/to/digimon-engine-cli \
+  --model /path/to/seed.onnx --decks /path/to/decks.json --cards-json data/cards.json \
+  --out runs/profile-new --games 2 --decision-cap 40
+python -m tools.benchmark_search_workers scale --cli /path/to/digimon-engine-cli \
+  --model /path/to/seed.onnx --decks /path/to/decks.json --cards-json data/cards.json \
+  --out runs/scaling-new --workers 1 2 4 --games 8 --chunk-games 1 --decision-cap 40
+```
+
+Profiling toggles `DIGIMON_SEARCH_PROFILE=1` and checks all target arrays against
+an unprofiled reference. Native manifest spans report inclusive and exclusive
+wall time; sum **self_seconds**, not overlapping inclusive totals. Timings cover
+registered search regions, not all allocations or effects individually. Use
+`perf`/flamegraphs on Linux for deeper hotspots once coarse spans identify a region.
+The scaling benchmark uses the identical global game set and verifies all saved
+arrays across worker counts. It reports wall-clock generated positions/sec,
+budgeted simulations/sec, truncations, native chunk durations and native-work
+utilization (not CPU utilization). Deliberately capped rows are not outcome data.
+Both tools leave training stopped. Profile overhead and process startup are
+visible; short prefixes are not full-game production ETAs.
+
+For cloud Linux, build the native release executable for Linux in the frozen
+training image; do not copy the Windows executable or infer Linux allocator
+performance from Windows. Re-run profiling and scaling on the actual instance,
+respecting its CPU quota/affinity and memory limit. Increase the game set and
+repeat count, then measure representative full games and chunk sizes (for
+example 4/8/16) before selecting concurrency/deadlines. More workers can increase
+contention. One native inference thread per worker remains the default.
+
+Store schedules, attempts, shards and checkpoints on the same persistent local
+POSIX volume. Publication assumes same-filesystem atomic rename and working OS
+locks; object-store mounts and unverified network filesystems are unsuitable.
+Hashes detect corruption, but this is process-interruption recovery, not a
+power-loss durability guarantee for native array writes. Keep off-host backups.
+Use a process-group-aware supervisor (for systemd, `KillMode=control-group` and
+a bounded stop timeout) so a hard-killed controller cannot leave orphan workers.
+Make any supervisor restart policy explicit; never enable one for a run stopped
+by the user. Alert on stale controller heartbeat, exhausted retries, disk space,
+memory pressure, or absent committed progress over the calibrated slow-chunk
+interval. A fresh heartbeat alone does not prove a worker is making progress.
+
+### Frozen-model search-budget evaluation
+
+`search_quality` is a diagnostic native example, separate from the self-play
+training driver. Build with `cargo build --release -p digimon-engine --example
+search_quality`. With `PYTHONPATH=code`, invoke:
+
+```bash
+python -m tools.search_quality_study \
+  --engine target/release/examples/search_quality \
+  --model models/<frozen-run>/seed.onnx \
+  --snapshot models/<frozen-run>/heldout_snapshot.json \
+  --cards-json data/cards.json --out runs/<new-budget-study> --workers 4
+```
+
+On Windows use the actual isolated Cargo target and `.exe` suffix. The tool
+freezes model, executable, card/admission and held-out-pool hashes. It creates
+replayable decision roots, compares a simulation/world grid, runs six abstract
+tactical controls, selects two alternatives using declared proxy criteria, and
+runs seat/deck-balanced full games against the baseline plus fixed greedy and
+policy-only anchors. Root noise is zero for competitive evaluation. Training
+exploration settings and model weights are untouched; no trainer is imported.
+
+Outputs include `plan.json`, `corpus.json`, per-job requests/results and hashes,
+`study_progress.json`, `sweep_summary.json`, and `evaluation_summary.json`.
+`--stage sweep`/`evaluate` supports staged execution; `--resume` is explicit and
+validates completed output hashes. A failed native job stops the study and
+preserves logs/results. Unknown uncommitted result files are not overwritten.
+The existing model run's user-stopped pipeline state, when present, is hashed
+and checked before dispatch. Do not point output at the training run directory.
+
+Read the [preregistered protocol](superpowers/research/2026-10-23-search-budget-study.md)
+before interpreting results. Higher-budget agreement is not tactical ground
+truth, the small paired panel is exploratory, and synthetic controls do not
+certify real card interactions. A fixed-model budget recommendation does not
+establish the best budget for learning at equal total training compute, nor does
+it enable closed-decklist beliefs or model promotion.
+
+For the expanded 640/4-versus-320/4 panel with main's per-card statistics, use
+`python -m tools.search_budget_confirmation --engine <new-native-example>
+--parent-study runs/<completed-budget-study> --out runs/<fresh-confirmation>
+--workers 4`. Build into a separate Cargo target to preserve the earlier frozen
+executable. The confirmation uses fresh seeds and all ordered pairings of the
+same eight lists, with fixed sample size and reversed-budget seats. It reuses
+`CardEvalCollector` offline on actual-game events and masks, never search-rollout
+events. This path uses the native executable directly and requires no training
+wheel rebuild. No training job is resumed or model fit.
+
+The output includes `summary.json`, `report.md`, `cards.csv`, `routes.csv`, and
+dashboard-compatible reports under `eval_cards/s640-w4` and `eval_cards/s320-w4`.
+In each report player1 is the named budget, regardless of native seat; the two
+reports describe the same games from opposite roles and must not be added as
+independent samples. Use the existing card dashboard's Local reports source.
+`--resume` validates frozen identities and committed jobs; `--analyze-only
+--resume` regenerates reports from verified completed results. The earlier build's
+score is contextual, never pooled into the new panel. See the
+[confirmation protocol](superpowers/research/2026-10-23-search-budget-confirmation.md).
+
+### Quarantining verified bad self-play games
+
+Keep committed shard arrays and `chunk_commit.json` intact. To exclude a verified
+bad game from both policy and value fitting, place `training_exclusions.json`
+beside that chunk's `manifest.json`:
+
+```json
+{
+  "schema": "selfplay-training-exclusions-v1",
+  "manifest_sha256": "<SHA-256 of manifest.json bytes>",
+  "games": [{"game_id": 875, "reason": "Verified repeated-state loop"}]
+}
+```
+
+IDs refer to that chunk's original `game_id.npy`, before loader rebasing. The
+loader verifies the manifest hash, nonempty reasons, unique IDs, and that every
+excluded ID exists; invalid exclusions stop fitting. Other games in the same
+chunk remain eligible. The trainer reports `excluded_rows`, `excluded_games`,
+and `training_exclusions` in its summary. These are explicit exclusions, separate
+from the default handling of truncations: unquarantined truncated rows still
+contribute policy loss, while their value loss is masked.
+
+The generation driver imports the trainer after collection. Any operational
+Python overlay applied to an already-running container must record its original
+and replacement hashes and be reinstalled on an explicit resume into a fresh
+container. A local source edit alone does not change a running cloud job.
+
+
+## Matched development-teacher seed comparison
+
+`tools.cloud_search.run_seed_comparison` is an opt-in, isolated fresh-seed path.
+It collects greedy-only, `development_v1`-only and 50/50 player-game mixtures
+using the same frozen 13-archetype snapshots, seeds and list schedule. Each arm
+has 416 full games, 64 appearances per archetype, with independent opening-seat
+and teacher balance. Two-list archetypes expose both teachers to both lists.
+`development_v1` scores legal native candidates; unknown conditional benefits
+and optional cost reducers remain explicitly unknown, not guaranteed gains.
+Its versioned weights and limitations are recorded in
+`openspec/changes/add-mixed-development-bootstrap/`.
+
+Each player-game contributes 64 sampled rows with replacement; game IDs remain
+intact for the terminal-value held-out split. All three corpora must finish
+without caps or crashes before any fitting begins. Four imitation epochs and
+eight critic epochs use matching initialization and update budgets. These
+one-hot demonstrations never enter the later search replay pool.
+
+Each seed is evaluated for 5,200 policy-only games against the same greedy and
+frozen greedy-bootstrap anchors, then gets one 1,100-game search update at
+320 simulations / four worlds / batch four. A second 5,200-game evaluation
+uses the same decks and seeds. Meta held-out and pet same-list panels remain
+separate. Paired opening-seat bootstrap intervals use a predeclared five-point
+aggregate noninferiority gate; there is no automatic promotion.
+
+The controller requires `DIGIMON_DEPLOYED_IMAGE` to be an immutable digest.
+Run `python -m tools.cloud_search.run_seed_comparison --root /experiment` only
+in a fresh directory with `inputs/{decks,train_snapshot,heldout_snapshot,
+pet_evaluation_snapshot}.json`. `deploy_seed_comparison.py` provisions separate
+48-hour, no-restart systemd services on the existing CPU host after the image
+passes the recorded game-268 search regression. It does not modify or resume
+the failed baseline. W&B has one run per arm, including bootstrap counts,
+checkpoint artifacts and per-card evaluation reports.
+
+An explicitly approved retry before search starts can use
+`--validate-resume`, followed by `--resume-before-search`, on the same root.
+The gate requires a failed comparison, unchanged frozen inputs/settings and
+runtime contract, qualified bootstrap corpora, byte-identical saved seed copies,
+the shared anchor, and no generation beyond `gen0`. Completed evaluation windows
+are reused only after model/cohort provenance and complete paired-game checks.
+Failed windows move into a timestamped `resume-history` directory before being
+rerun in full; old reports are never mixed into the replacement window. No
+bootstrap recollection or fitting occurs. The resume record preserves old/new
+image digests, controller hash, seed hashes and archived deployment metadata.
+This is not automatic recovery or support for resuming interrupted search.
+
+For a controller-only operational overlay, mount the committed controller file
+read-only into the tested immutable image and retain its source commit and
+SHA-256 in the host resume record. Keep `Restart=no`, preserve the original
+service definition, and verify the resumed stage and existing W&B run IDs.
+
+Preserve any `failure.json`, partial shards and recording. Investigate and use
+a new directory/image for a changed teacher; do not skip a failed game, resume
+into an altered corpus, or fit from partial outputs. DNA denominators are exact
+lists containing printed DNA targets, not archetype names. Per-action net hand
+changes are available; gross draw/search/retrieval counts remain unmeasured
+where native events do not distinguish them.
+
+For a live, read-only local dashboard of progress, checkpoint comparisons and
+card behavior, see [Live experiment dashboard](CARD_EVALUATION.md#live-experiment-dashboard).
+Its SSH collector caches compact summaries and never starts or stops training.
+The dashboard distinguishes stale observations, saved models, completed
+evaluation panels and per-game progress (when supported by the deployed image).
+
+### Frozen mixed/development head-to-head
+
+`python -m tools.cloud_search.head_to_head --prepare --source /source --root /experiment`
+validates the completed seed comparison, checkpoint-1 model contracts, card-data
+hash and native-image identity. It combines the frozen held-out meta and pet
+snapshots through the existing admission gate, copies both models, and saves
+the exact game schedule. Run the same command without `--prepare` to evaluate;
+the root cannot be silently restarted or overwritten.
+
+Default coverage is 6,760 policy-only games: 13 x 13 ordered deck cells x 40
+games. Each model is the candidate in one 3,380-game evaluator process, with
+opposite first players for each deck pair. Both processes use Torch inference,
+unchanged action masks and fresh fixed seeds, with per-card reports and progress
+heartbeats. No optimizer or search runs. Meta/pet source identities remain in
+the plan; the joint pool adds the previously missing cross-pool matchups.
+
+The result normalizes both engine roles to mixed's perspective and emits a full
+matrix plus a 95% bootstrap interval over four-game blocks (both roles/openers).
+Missing, duplicate, mismatched or incomplete games fail the comparison rather
+than counting as draws. A small per-cell sample is descriptive; the aggregate
+interval does not certify every matchup. Use the same immutable native image
+plus a recorded, committed read-only Python overlay; retain failure recordings
+and keep `Restart=no`. No automatic model promotion follows evaluation.
+
+### Versioned global EX13 pool refresh
+
+The prepared October 26 pool lives in
+[`data/training_pools/ex13-20261026`](../data/training_pools/ex13-20261026/README.md).
+It retains the same 13 archetypes and uses exact global lists; English-only
+legality is not a source filter. The report separates competitive qualification,
+lower-evidence published variants, engine admission and original pet fallbacks.
+Never substitute cards to make a sourced list pass admission.
+
+`decks.json` is the native flat-sampler input. Repeated `:slotN` entries give
+archetypes equal sampling weight when they have fewer distinct training lists;
+they are not additional deck variants. `train_snapshot.json` preserves distinct
+training lists, `heldout_snapshot.json` contains unseen list fingerprints, and
+`pet_regression_snapshot.json` preserves the five original pets. Use
+`combined_diagnostic_snapshot.json` for an all-archetype panel, retaining its
+explicit same-list fallback labels rather than calling the entire panel held out.
+
+Rebuild into a fresh directory using the prepared source evidence and the actual
+baseline snapshot being excluded from held-out selection:
+
+```bash
+python -m tools.cloud_search.prepare_ex13_pool prepare \
+  --sources data/training_pools/ex13-20261026/source_candidates.json \
+  --baseline data/training_pools/ex13-20261026/source_baseline_train_snapshot.json \
+  --cli-bin /path/to/digimon-engine-cli --out /new-pool
+```
+
+The native registry must agree with the Python binding registry. The preparer
+checks current admission and standard deck legality, records source/gate/binary
+hashes, rejects an existing output, and does not deploy a run. Record a fresh
+engine image and pool identity before using the new assets; keep affected
+diagnostic replay and evaluation results separate from repaired-engine results.
+
+Balanced evaluation now records `cohort_scheme=archetype-paired-v2`. Within each
+ordered archetype matchup it rotates through the Cartesian product of list
+variants while preserving paired first-player balance. With two variants per
+side, four pairs per cell are needed to visit all four list combinations once.
+Smaller quotas do not certify full variant coverage. Preserve the saved schedule
+and its hash when comparing checkpoints; do not compare a new multi-list cohort
+to an old lockstep cohort as if the deck schedule were unchanged.
+
+## EX13 training lessons and raising diagnostic (2026-10-28)
+
+These are dated experiment findings, not proof of model proficiency or agreement
+with tournament meta rankings. The portable [raising experiment evidence](training-evidence/2026-10-28-raising-diagnostic.json)
+records model/input hashes, counts, estimates and the selected counterexample.
+
+### Collection, fitting, evaluation and promotion are separate
+
+The EX13 campaign uses **13 archetypes, 21 distinct training lists and 26
+equally weighted native sampling slots**. Repeated slots balance archetype
+weight; they do not create new lists. Each 1,100-game generation supplies about
+169 expected player-side appearances per archetype. Three generations provide
+up to 3,300 replay games, or about 508 expected appearances per archetype per
+update. These are expectations, not quotas; longer games supply more decision
+rows. Scale generation size with pool size to preserve the rough floor of 150
+appearances per archetype. More training alone does not establish strength.
+
+The recorded operating point is **320 total simulations, four worlds, leaf
+batch four and eight workers**. Four worlds divide the simulation budget;
+batching and workers control throughput. This is not a demonstrated optimal
+search budget. The fit uses two epochs, batch 512, learning rate 0.0001 and a
+three-generation replay window. Do not change rewards, search quality or
+sampling to conceal a rules failure or improve a throughput headline.
+
+This search/self-play path fits policy visit targets and a terminal-outcome
+value head (+1/-1 from the mover's perspective; 0 for a completed draw). It is
+not a PPO update and does not use the dense PPO gameplay reward profile above.
+Truncation is marked separately and excluded from terminal-value fitting;
+verified bad games are quarantined before either training loss. Changing a PPO
+quick-win or digivolution reward will not change this native search objective.
+The recorded models use `standard_lite_v2`, feature schema `standard_lite_v2.4`,
+9,434 floats and action schema 2 with 2,192 actions. Validate exported layout
+metadata rather than assuming these dated dimensions apply to future images.
+
+Evaluate stable new checkpoints with the frozen policy-only panel. The 10,800
+games comprise **7,800 combined diagnostic games** (13 archetypes x three
+anchors x 200 games) and **3,000 original-pet regression games** (five
+archetypes x three anchors x 200). The combined panel has 24 distinct lists,
+including a same-list Light Hybrid fallback; it is not entirely held out. The
+five-list pet panel stays separate. Anchors are greedy, `parent-checkpoint4`
+and `development-fixed`.
+
+Checkpoint numbers are local to their campaign. The anchor named
+`parent-checkpoint4` is an earlier campaign's model, not the page-recovery
+campaign's checkpoint 4. Identify models by campaign and artifact hash. Compare
+complete, seat-paired cohorts with matching seeds, lists, inference mode,
+engine and observation/action contracts. A high greedy win rate can coexist
+with weakness against learned anchors. A simulator matchup matrix measures
+model-plus-deck performance under that protocol, not tournament meta strength.
+A saved checkpoint, completed generation or lower fit loss is not promotion
+evidence.
+
+### Continuation lineage and the latest interruption
+
+The page-search recovery warm-started from checkpoint 2 and regenerated
+generations 3–4. After completion, the continuation copied checkpoint 4 plus
+generations 3–4 and requested bounded updates 5–8. Those **2,200 inherited
+replay games are not new collection progress**. `extend_completed_campaign`
+validates the completed source, checkpoint, runtime, full evaluation and chunk
+hashes before copying replay; preparation and launch are separate commands.
+`run_small_generations` allows one to four updates at continuing logical
+indices and rejects existing output. No automatic restart or promotion follows.
+
+As of October 28, checkpoint 5 has a complete evaluation. Checkpoint 6 was
+fitted, but its combined evaluation failed at seed **44524569**, SW versus Toho
+Braves. Its completed pet panel does not make the whole evaluation complete.
+Updates 7–8 did not run. The failed source and weights remain preserved;
+training is stopped. The token repair and raising diagnostic below were
+validated locally and have not been deployed to this cloud run.
+
+The failure exposed a token returned into hand and subsequently offered by the
+play mask. **CR 4.3 4-21-5, 15-1-9 and 15-1-10** distinguish a processed return
+or placement from an actual addition: a departing token is removed from the
+game, still counts for applicable return/placement conditions, and does not
+trigger an actual hand/deck addition. The repair covers zone-entry guards,
+return receipts, grouped moves and resumable security placement.
+`token_departure_rules` verifies the 88-step recording prefix, resumes action
+62, and reaches game over after 263 continuation decisions with matching clone
+digests. Eleven token regressions and 94 adjacent tests passed. This is
+simulator evidence, not new DCGO oracle certification.
+
+Earlier failures established two further invariants: deletion replacements
+must verify that their payment succeeded, and paged search must commit a
+complete physical-card route. Preserve exact executed decisions from
+`DIGIMON_SELFPLAY_TRACE_DECISIONS`; projected visit argmax is not an action log.
+Action IDs are phase-dependent, so include pending-selection/phase context
+when diagnosing a loop.
+
+Before resuming on a repaired image, qualify the checkpoint on that exact image,
+preserve the failed root and explicitly validate reused replay/evaluation.
+Do not relabel old-engine data as repaired-engine evidence. A fresh logger
+heartbeat is not game progress: compare committed games/rows, controller stage
+and evaluation progress, allowing for fitting and worker deadlines. Local
+committed artifacts remain the evidence source when W&B is stale or out of
+storage. A healthy logger does not establish healthy training.
+
+### Matched raising experiment
+
+This tests **promotion out of raising**, not digivolving in raising or DNA
+digivolution. Keep these routes separate and measure opportunities as well as
+choices. For Virus Busters, use its egg-mediated DNA sequence telemetry;
+a low generic DNA-action count alone is not decisive.
+
+We generated 52 source games (four per archetype, balanced between checkpoints
+2/5 and seats, against checkpoint 4), then reservoir-sampled one legal
+promote/wait position per completed game. Eight games offered no such position,
+leaving **44 unique roots across all 13 archetypes and 23 of the 24 panel
+lists**. Rootless games were not replaced. Each root was replayed exactly and
+tested with both policies and noise-free search at 320 simulations/four
+worlds/batch four on the same local token-corrected engine, with frozen model,
+executable and input hashes.
+
+| Model | Policy promotes | Search promotes |
+|---|---:|---:|
+| Checkpoint 2 | 44/44 (100%) | 35/44 (79.5%) |
+| Checkpoint 5 | 31/44 (70.5%) | 34/44 (77.3%) |
+
+For each root, force promotion or waiting, then finish with each actor policy
+(checkpoints 2/5) against each opponent policy (checkpoints 2/4/6). All **528
+continuations, or 264 action pairs**, completed without failure or truncation.
+They are midgame counterfactuals, not 528 independent full-game strength tests.
+The same source-game root is the comparison/resampling unit across opponents.
+
+- **Policy/search disagreement:** checkpoint 5 waits where search promotes in
+  eight roots. A Chronomon root changes losses into wins against checkpoints
+  2 and 4 when promotion is forced. The other seven disagreements do not change
+  terminal outcomes under these policy continuations.
+- **A search/value counterexample:** in SW root `06-0-2` (seed `28267029`),
+  checkpoint 5 and root search wait. Search repeats that choice under five
+  seeds. Against checkpoint 2, promoting wins and waiting loses even when the
+  actor uses full search for subsequent decisions (38 and 31 searched decisions
+  respectively). Inspect the value estimates and sampled worlds; one actual
+  hidden realization does not prove an engine bug or an expected-value failure
+  across all hidden states.
+- **Waiting does not explain the whole decline:** among checkpoint 5's 13 wait
+  roots across three opponents, promotion improves five outcomes, worsens two
+  and leaves 32 unchanged. Always promoting adds zero net wins against
+  checkpoint 2. Averaged over three opponents, the estimated gain is 2.3
+  percentage points, with a 95% paired bootstrap interval of -2.3 to +7.6.
+  Do not hard-code promotion from this evidence.
+- **Opponent diversity remains an open hypothesis:** the change in waiting's
+  advantage against checkpoint 6 versus checkpoint 2 is 0 points (95% interval
+  -11.4 to +11.4). This screen does not establish that waiting works only against
+  recent models, nor rule out broader opponent overfitting.
+
+The 4,000-resample bootstrap keeps action pairs together and samples roots
+within archetype. Conditional subsets with a single root in an archetype do
+not get a falsely precise interval. The cohort is small, per-archetype findings
+are exploratory, and search uses exact-composition open-decklist PIMC.
+Policy-only continuations alone cannot diagnose search quality; the selected
+SW case therefore also received two complete searched continuations. No model
+was fitted, promoted or deployed by this diagnostic.
+
+Next priorities are the saved SW value/search trace and the eight policy/search
+disagreements. Check target-to-policy learning and continuation play before
+changing reward shaping, forcing promotions or attributing the regression to
+opponent diversity.
+
+### Reproducing the raising screen
+
+Build the native example from the engine revision being tested. From the repo
+root, with `PYTHONPATH=code`, use a new diagnostic directory containing
+`inputs/cp2.onnx`, `cp4.onnx`, `cp5.onnx`, `cp6.onnx`, their `.onnx.meta.json`
+sidecars and `inputs/combined_diagnostic_snapshot.json`:
+
+```bash
+cargo build -p digimon-engine --example raising_diagnostic
+python -m tools.cloud_search.raising_diagnostic prepare \
+  --root /new-diagnostic --engine /path/to/raising_diagnostic
+python -m tools.cloud_search.raising_diagnostic collect --root /new-diagnostic --workers 4
+python -m tools.cloud_search.raising_diagnostic probe --root /new-diagnostic --workers 8
+python -m tools.cloud_search.raising_diagnostic summarize --root /new-diagnostic
+```
+
+The frozen plan records identities, hashes, search budget, sampling and limits.
+Results retain exact prefixes, choices, search values/visits and branch traces.
+Incomplete branches never count as draws; both actions must complete before a
+pair enters outcome summaries. Preserve partial/failed output and investigate
+before explicitly retrying.
+
+For the exploratory SW follow-up, copy the plan to a separate directory, retain
+all model entries, set actors to `[2]` (checkpoint 5) and opponents to `[0]`
+(checkpoint 2), and copy request `probe-06-0-2.json` with its `plan` path updated
+and `search_continuations: true`. Run the same native example as
+`raising_diagnostic probe REQUEST.json NEW_RESULT.json`. For root-only seed
+sensitivity, use another plan with opponents `[]`, omit the continuation flag,
+and vary only `search_seed`. These post-screen checks are selected
+counterexamples, not additional independent population samples.
+
+## Historical checkpoints as search-training opponents
+
+Native search self-play can opt into frozen historical opponents. This is
+separate from replaying old training shards (`--window`) and from PPO's
+`--opponent pool`. Without any history options, the native driver retains the
+existing current-versus-current behavior, seeds and targets.
+
+Use named ONNX checkpoints, a recent completed-generation window, or both:
+
+```bash
+python -m tools.run_selfplay_generation \
+  --run-dir runs/history-experiment --seed-model models/current.zip \
+  --seed-model-onnx models/current.onnx --decks training_jobs/decks.json \
+  --cli-bin target/release/digimon-engine-cli --generations 4 \
+  --games 1300 --procs 8 --chunk-games 4 --sims 320 --worlds 4 \
+  --eval-batch-size 4 --decision-cap 1200 --fail-on-truncation \
+  --window 3 --replay-games-per-generation 1300 \
+  --opponent-checkpoint previous-campaign-cp2=models/older-cp2.onnx \
+  --history-window 3 --selfplay-probability 0.5 \
+  --deck-pool-snapshot evaluation/heldout.json --champions evaluation/anchors.json
+```
+
+The example illustrates configuration, not an approved cloud rollout or a
+claim that 50/50 is optimal. Keep evaluation anchors fixed so opponent-pool
+changes do not change the strength measurement. An anchor used in training is
+no longer an unseen opponent; retain additional frozen evaluation-only models.
+Existing cloud campaigns continue to use their separate checkpoint evaluator.
+
+`--opponent-checkpoint ID=PATH` is repeatable and gives each explicit opponent
+weight one. `--history-window N` adds the latest N completed generations older
+than the current actor's generation, also with weight one. A generation needs
+its summary, ZIP, ONNX and canonical `model.onnx.meta.json` to qualify. Current,
+future and incomplete generations are excluded. Checkpoint IDs should include
+campaign provenance when numbering could be ambiguous. Duplicate IDs or model
+hashes, including a copy of the current actor, are rejected. A window alone at
+bootstrap fails with an empty-history error; provide explicit older models or
+start from a later generation with existing completed history.
+
+For weighted pins, use `--opponent-pool opponents.json`:
+
+```json
+{
+  "schema": "search-opponent-pool-v1",
+  "selfplay_probability": 0.5,
+  "opponents": [{
+    "id": "older-campaign-cp2",
+    "path": "models/cp2.onnx",
+    "sha256": "<64 lowercase hex characters for the ONNX>",
+    "metadata_sha256": "<64 lowercase hex characters for cp2.onnx.meta.json>",
+    "weight": 2.0
+  }]
+}
+```
+
+Paths in a source manifest are relative to that manifest. Use real SHA256
+values (`sha256sum` on Linux, `Get-FileHash -Algorithm SHA256` on PowerShell,
+converting hex to lowercase). Explicit CLI pins compute these hashes for you.
+All models must share the current observation/action contract and have a
+terminal-outcome value head; both sidecars and embedded ONNX contracts are
+checked. A shaped-value PPO export is rejected. The probability flag overrides
+the manifest value; with pins/window alone the default is 0.5. The remaining
+probability is split proportionally among historical weights.
+
+Each generation freezes `opponent_pool.json` and its request receipt before
+collection. Scheduler identity binds the manifest and every opponent's model
+and sidecar. Resume (`--resume-selfplay`) must use the same inputs; mutation,
+removal or addition of a history pool fails without overwriting evidence.
+Use dynamic scheduling; legacy static scheduling and uniform bootstrap do not
+support historical opponents. Do not modify model files while workers run.
+
+Opponent selection uses a separate random stream and one assignment per global
+game pair, independent of worker count, chunk boundaries or retries. The
+learner opens the even-indexed game and plays second in its paired odd game.
+Deck sampling and shuffled game seeds remain unchanged: these are balanced
+opening-order assignments, **not** identical-deal evaluation pairs. An odd
+tail can leave one unmatched opening order. Realized opponent frequencies are
+random, not exact quotas.
+
+At each real decision the acting seat supplies its own evaluator to the full
+existing search. Both actors keep the same simulation/world/batch budget and
+temperature schedule. Within a search tree, that actor's evaluator still
+evaluates all leaves; this is not opponent-model-aware tree search. Separate
+models also have separate optional evaluation caches. Nothing here changes
+the current open-decklist PIMC information assumptions or tensor/action layout.
+
+Current-current games emit both seats' targets. Against history, only the
+current actor's rows enter the learner's policy and value losses. The older
+actor still searches and executes its complete legal choice, including page
+navigation; its decisions do not supply training targets. Terminal labels and
+truncation/quarantine handling are unchanged.
+
+This changes coverage accounting. With G games, A equally weighted archetypes
+and current-self-play probability p, expected learner appearances per
+archetype are `G * (1 + p) / A`. At 13 archetypes and p=0.5, 1,100 games yield
+about 127 learner appearances; **1,300 games yield 150**. Old replay remains
+valid, but a game's learner-row count can differ across generations. Compare
+retained training rows and learner coverage alongside games and compute.
+
+Native manifests record `opponent_pool` and `opponent_games`: stable identities,
+game seeds, learner seat, opening seat, winner, truncation, searched decisions
+and training rows by seat. Generation `opponent_coverage.json` separates learner
+deck appearances from all-player appearances. At collection completion the
+W&B monitor logs `selfplay/opponent_games/*`,
+`selfplay/learner_archetype_appearances/*`,
+`selfplay/historical_learner_first`, `selfplay/historical_learner_second` and
+`selfplay/learner_training_rows`. These are collection counts before quarantine,
+not evaluation win rates or post-quarantine fitting counts.
+
+A new cloud campaign plan can include:
+
+```json
+"historical_opponents": {
+  "pool": "inputs/opponents.json",
+  "history_window": 3,
+  "selfplay_probability": 0.5
+}
+```
+
+Place pins inside the campaign root. Include the source manifest, selected
+models and canonical sidecars, current sidecar, and initial historical
+generation summaries/ZIPs in the plan's `files` hashes. Validation checks these
+before launch and enforces at least 150 **expected learner** appearances per
+archetype for the configured mixture. Later generations freeze their newly
+eligible history independently. A new image containing this implementation is
+required. This documentation/PR does not start training or deploy an image.
+
+Historical diversity remains an experiment: the matched raising study did not
+establish it as the cause of the regression. Test the mixture against a
+current-only control with matched search budgets and fixed evaluation panels;
+report rows, compute, archetype coverage and uncertainty. Additional resident
+ONNX models consume memory per worker, so use a bounded history window.
+
+Validation for this addition: 100 Python regressions passed (one platform
+skip), all 24 native search/self-play tests passed, and all 13 tier-zero checks
+passed. Native tests compare retained observations, policy visits, terminal
+labels and mover IDs against an identical-evaluator baseline; they also cover
+split game pairs, opening-order assignment, artifact drift and byte-identical
+targets with a 100% current-current mixture. This establishes pipeline
+behavior, not a strength benefit from historical opponents.
+
+The local real-model check used checkpoint 5 versus checkpoint 2 at 320/four
+worlds/batch four on Chronicle/Chronomon decks. One full game completed with 46
+decisions, 28 learner rows and no truncation. The second exceeded the local
+600-second Windows dev-build worker deadline; the failed attempt is preserved
+under `runs/history-opponent-smoke-20261028`. This is a development validation
+limit, not a measured strength or production throughput result. Qualify the
+release image separately before an unattended cloud run.
+
+A separate six-decision routing probe completed both opening orders at the
+same search budget, emitting four learner rows and no historical-actor rows.
+Its two truncations were intentional; these probe shards were not fitted or
+used to measure strength (`runs/history-opponent-routing-probe-20261028`).

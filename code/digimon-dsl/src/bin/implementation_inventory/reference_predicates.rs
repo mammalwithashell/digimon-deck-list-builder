@@ -43,6 +43,9 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             affordable_with_cost_reduce,
             can_digivolve_from_source,
             can_digivolve_onto,
+            can_digivolve_onto_with_cost,
+            dna_hand_candidate,
+            can_move_from_breeding_by_effect,
             dp_eq,
             dp_lte,
             dp_gte,
@@ -57,6 +60,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             is_suspended,
             is_unsuspended,
             can_change_orientation,
+            controller_can_add_security,
             can_attack,
             has_keyword,
             has_security_attack_change,
@@ -207,6 +211,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             not,
             has_alt_path,
             cost_target,
+            cost_target_permanent,
             source_is_cost_target_permanent,
             cost_target_from_hand,
             dp,
@@ -218,6 +223,14 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             level,
             event_target_level,
             extra,
+            can_play_from_effect_without_cost,
+            can_play_to_breeding_from_hand,
+            can_unsuspend,
+            owner_can_add_security,
+            source_name_is,
+            event_battle_surviving_deleter,
+            event_card_name_is,
+            event_card_kind,
         } = self;
         kind.walk(c, &format!("{}.kind", path), "UNCLASSIFIED_STRING");
         level_eq.walk(c, &format!("{}.level_eq", path), "UNCLASSIFIED_STRING");
@@ -329,6 +342,9 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             &format!("{}.can_digivolve_onto", path),
             "EXISTING_INSTANCE_BINDING",
         );
+        can_digivolve_onto_with_cost.walk(c, &format!("{}.can_digivolve_onto_with_cost", path), role);
+        dna_hand_candidate.walk(c, &format!("{}.dna_hand_candidate", path), role);
+        can_move_from_breeding_by_effect.walk(c, &format!("{}.can_move_from_breeding_by_effect", path), role);
         dp_eq.walk(c, &format!("{}.dp_eq", path), "UNCLASSIFIED_STRING");
         dp_lte.walk(c, &format!("{}.dp_lte", path), "UNCLASSIFIED_STRING");
         dp_gte.walk(c, &format!("{}.dp_gte", path), "UNCLASSIFIED_STRING");
@@ -376,6 +392,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             "UNCLASSIFIED_STRING",
         );
         can_attack.walk(c, &format!("{}.can_attack", path), "UNCLASSIFIED_STRING");
+        controller_can_add_security.walk(c, &format!("{}.controller_can_add_security", path), "UNCLASSIFIED_STRING");
         has_keyword.walk(c, &format!("{}.has_keyword", path), "UNCLASSIFIED_STRING");
         has_security_attack_change.walk(
             c,
@@ -989,6 +1006,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         not.walk(c, &format!("{}.not", path), "UNCLASSIFIED_STRING");
         has_alt_path.walk(c, &format!("{}.has_alt_path", path), "UNCLASSIFIED_STRING");
         cost_target.walk(c, &format!("{}.cost_target", path), "UNCLASSIFIED_STRING");
+        cost_target_permanent.walk(c, &format!("{}.cost_target_permanent", path), "UNCLASSIFIED_STRING");
         source_is_cost_target_permanent.walk(
             c,
             &format!("{}.source_is_cost_target_permanent", path),
@@ -1024,7 +1042,15 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             "UNCLASSIFIED_STRING",
         );
         extra.walk(c, &format!("{}.extra", path), "UNCLASSIFIED_STRING");
-    }
+            can_play_from_effect_without_cost.walk(c, &format!("{}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
+        can_play_to_breeding_from_hand.walk(c, &format!("{}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
+        can_unsuspend.walk(c, &format!("{}.can_unsuspend", path), "UNCLASSIFIED_STRING");
+        owner_can_add_security.walk(c, &format!("{}.owner_can_add_security", path), "UNCLASSIFIED_STRING");
+        source_name_is.walk(c, &format!("{}.source_name_is", path), "MATCH_NAME_EXACT");
+        event_battle_surviving_deleter.walk(c, &format!("{}.event_battle_surviving_deleter", path), "UNCLASSIFIED_STRING");
+        event_card_name_is.walk(c, &format!("{}.event_card_name_is", path), "MATCH_NAME_EXACT");
+        event_card_kind.walk(c, &format!("{}.event_card_kind", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::predicate::BindingOwnerPredicate {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -1449,10 +1475,27 @@ impl Walk for digimon_dsl::predicate::DigivolveCandidatePredicate {
             "COMPOSITE",
             serde_json::Value::Null,
         );
-        let digimon_dsl::predicate::DigivolveCandidatePredicate { of, zone, filter } = self;
+        let digimon_dsl::predicate::DigivolveCandidatePredicate { of, zone, filter, cost } = self;
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
         zone.walk(c, &format!("{}.zone", path), "UNCLASSIFIED_STRING");
         filter.walk(c, &format!("{}.filter", path), "UNCLASSIFIED_STRING");
+        cost.walk(c, &format!("{}.cost", path), "UNCLASSIFIED_STRING");
+    }
+}
+impl Walk for digimon_dsl::predicate::DigivolveCostPredicate {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::predicate::DigivolveCostPredicate", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::predicate::DigivolveCostPredicate { target, cost } = self;
+        target.walk(c, &format!("{path}.target"), "EXISTING_INSTANCE_BINDING");
+        cost.walk(c, &format!("{path}.cost"), role);
+    }
+}
+impl Walk for digimon_dsl::compiled::CompiledDigivolveCostPredicate {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::compiled::CompiledDigivolveCostPredicate", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::compiled::CompiledDigivolveCostPredicate { target, cost } = self;
+        target.walk(c, &format!("{path}.target"), "EXISTING_INSTANCE_BINDING");
+        cost.walk(c, &format!("{path}.cost"), role);
     }
 }
 impl Walk for digimon_dsl::predicate::CanAttackPredicate {
@@ -1662,6 +1705,9 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             affordable_with_cost_reduce,
             can_digivolve_from_source,
             can_digivolve_onto,
+            can_digivolve_onto_with_cost,
+            dna_hand_candidate,
+            can_move_from_breeding_by_effect,
             dp_eq,
             dp_lte,
             dp_lte_deletion_cap,
@@ -1832,8 +1878,18 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             trashed_source_trait_has,
             trashed_source_card_id_is,
             cost_target,
+            cost_target_permanent,
             source_is_cost_target_permanent,
             cost_target_from_hand,
+            can_play_from_effect_without_cost,
+            can_play_to_breeding_from_hand,
+            can_unsuspend,
+            owner_can_add_security,
+            controller_can_add_security,
+            source_name_is,
+            event_card_name_is,
+            event_card_kind,
+            event_battle_surviving_deleter,
         } = self;
         kind.walk(c, &format!("{}.kind", path), "UNCLASSIFIED_STRING");
         level_eq.walk(c, &format!("{}.level_eq", path), "UNCLASSIFIED_STRING");
@@ -1938,6 +1994,9 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         );
         dp_eq.walk(c, &format!("{}.dp_eq", path), "UNCLASSIFIED_STRING");
         dp_lte.walk(c, &format!("{}.dp_lte", path), "UNCLASSIFIED_STRING");
+        can_digivolve_onto_with_cost.walk(c, &format!("{}.can_digivolve_onto_with_cost", path), role);
+        dna_hand_candidate.walk(c, &format!("{}.dna_hand_candidate", path), role);
+        can_move_from_breeding_by_effect.walk(c, &format!("{}.can_move_from_breeding_by_effect", path), role);
         dp_lte_deletion_cap.walk(
             c,
             &format!("{}.dp_lte_deletion_cap", path),
@@ -2637,6 +2696,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             "MATCH_CARD_ID",
         );
         cost_target.walk(c, &format!("{}.cost_target", path), "UNCLASSIFIED_STRING");
+        cost_target_permanent.walk(c, &format!("{}.cost_target_permanent", path), "UNCLASSIFIED_STRING");
         source_is_cost_target_permanent.walk(
             c,
             &format!("{}.source_is_cost_target_permanent", path),
@@ -2647,5 +2707,47 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             &format!("{}.cost_target_from_hand", path),
             "UNCLASSIFIED_STRING",
         );
+            can_play_from_effect_without_cost.walk(c, &format!("{}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
+        can_play_to_breeding_from_hand.walk(c, &format!("{}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
+        can_unsuspend.walk(c, &format!("{}.can_unsuspend", path), "UNCLASSIFIED_STRING");
+        owner_can_add_security.walk(c, &format!("{}.owner_can_add_security", path), "UNCLASSIFIED_STRING");
+        controller_can_add_security.walk(c, &format!("{}.controller_can_add_security", path), "UNCLASSIFIED_STRING");
+        source_name_is.walk(c, &format!("{}.source_name_is", path), "MATCH_NAME_EXACT");
+        event_card_name_is.walk(c, &format!("{}.event_card_name_is", path), "MATCH_NAME_EXACT");
+        event_card_kind.walk(c, &format!("{}.event_card_kind", path), "UNCLASSIFIED_STRING");
+        event_battle_surviving_deleter.walk(c, &format!("{}.event_battle_surviving_deleter", path), "UNCLASSIFIED_STRING");
+}
+}
+
+impl Walk for digimon_dsl::predicate::DnaHandCandidateRole {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        let name = match self {
+            Self::Result => "Result", Self::Field => "Field", Self::Partner => "Partner",
+        };
+        c.node(path, "digimon_dsl::predicate::DnaHandCandidateRole", role, serde_json::json!(name));
+    }
+}
+impl Walk for digimon_dsl::predicate::DnaHandCandidatePredicate {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        let Self { role: stage, result, field, field_filter, partner_filter, cost, ignore_requirements } = self;
+        stage.walk(c, &format!("{}.role", path), role);
+        result.walk(c, &format!("{}.result", path), "EXISTING_INSTANCE_BINDING");
+        field.walk(c, &format!("{}.field", path), "EXISTING_INSTANCE_BINDING");
+        field_filter.walk(c, &format!("{}.field_filter", path), role);
+        partner_filter.walk(c, &format!("{}.partner_filter", path), role);
+        cost.walk(c, &format!("{}.cost", path), role);
+        ignore_requirements.walk(c, &format!("{}.ignore_requirements", path), role);
+    }
+}
+impl Walk for digimon_dsl::compiled::CompiledDnaHandCandidate {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        let Self { role: stage, result, field, field_filter, partner_filter, cost, ignore_requirements } = self;
+        stage.walk(c, &format!("{}.role", path), role);
+        result.walk(c, &format!("{}.result", path), "EXISTING_INSTANCE_BINDING");
+        field.walk(c, &format!("{}.field", path), "EXISTING_INSTANCE_BINDING");
+        field_filter.walk(c, &format!("{}.field_filter", path), role);
+        partner_filter.walk(c, &format!("{}.partner_filter", path), role);
+        cost.walk(c, &format!("{}.cost", path), role);
+        ignore_requirements.walk(c, &format!("{}.ignore_requirements", path), role);
     }
 }

@@ -1,0 +1,23 @@
+[
+  {
+    "ProcessId": 52012,
+    "ParentProcessId": 28076,
+    "CreationDate": "2026-10-24T22:53:38.385346-05:00",
+    "ExecutablePath": "C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\python3.13.exe",
+    "CommandLine": "\"C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe\" scripts/verify --tier 2 --continue-on-failure --json"
+  },
+  {
+    "ProcessId": 28076,
+    "ParentProcessId": 27152,
+    "CreationDate": "2026-10-24T22:53:38.243923-05:00",
+    "ExecutablePath": "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+    "CommandLine": "\"C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe\" scripts/verify --tier 2 --continue-on-failure --json"
+  },
+  {
+    "ProcessId": 49268,
+    "ParentProcessId": 52012,
+    "CreationDate": "2026-10-24T23:53:26.872184-05:00",
+    "ExecutablePath": "C:\\Users\\james\\.cargo\\bin\\cargo.exe",
+    "CommandLine": "cargo test --manifest-path code/digimon-engine/Cargo.toml --test rules_conformance"
+  }
+]

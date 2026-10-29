@@ -1,4 +1,5 @@
 import type { CountChoice } from '@/types/countChoice';
+import type { CardChoice } from '@/types/cardChoice';
 // DTOs returned by the native desktop game engine bridge.
 
 // ─── DTO types ────────────────────────────────────────────────────────
@@ -112,6 +113,7 @@ export interface EffectChoiceDto {
 }
 
 export interface PendingSelectionDto {
+  card_choice?: CardChoice | null;
   phase: string;
   selecting_player: number;
   valid_action_ids: number[];

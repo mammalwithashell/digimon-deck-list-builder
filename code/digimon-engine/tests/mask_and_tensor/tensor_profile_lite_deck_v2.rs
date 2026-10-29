@@ -8,10 +8,10 @@ fn standard_lite_deck_v2_layout_matches_spec() {
     assert_eq!(profile.game_mode, "standard");
     assert_eq!(profile.version, 2);
     assert_eq!(profile.tensor_version, 2);
-    assert_eq!(profile.feature_schema_version, "standard_lite_deck_v2.2");
-    assert_eq!(profile.tensor_size, 8850);
-    assert_eq!(profile.card_id_slot_count, 627);
-    assert_eq!(profile.scalar_slot_count, 8223);
+    assert_eq!(profile.feature_schema_version, "standard_lite_deck_v2.3");
+    assert_eq!(profile.tensor_size, 9874);
+    assert_eq!(profile.card_id_slot_count, 659);
+    assert_eq!(profile.scalar_slot_count, 9215);
     assert!(profile.layout_hash.starts_with("sha256:"));
     assert_eq!(profile.layout_hash.len(), "sha256:".len() + 64);
 
@@ -22,9 +22,9 @@ fn standard_lite_deck_v2_layout_matches_spec() {
         ("own_hand", 3098, &[30, 32][..], 960),
         ("known_zone_cards", 4058, &[120, 8][..], 960),
         ("decision_context", 5018, &[64][..], 64),
-        ("pending_choice_features", 5082, &[32, 96][..], 3072),
-        ("own_original_decklist", 8154, &[55, 8][..], 440),
-        ("reserved", 8594, &[256][..], 256),
+        ("pending_choice_features", 5082, &[32, 128][..], 4096),
+        ("own_original_decklist", 9178, &[55, 8][..], 440),
+        ("reserved", 9618, &[256][..], 256),
     ];
 
     for (id, start, shape, len) in expected_sections {
@@ -49,8 +49,8 @@ fn standard_lite_deck_v2_positions_cover_tensor_once() {
     let profile = profile_by_id("standard_lite_deck_v2").unwrap();
     let (cards, scalars) = profile.positions();
 
-    assert_eq!(cards.len(), 627);
-    assert_eq!(scalars.len(), 8223);
+    assert_eq!(cards.len(), 659);
+    assert_eq!(scalars.len(), 9215);
     assert_eq!(cards.len() + scalars.len(), profile.tensor_size);
 
     let card_set: std::collections::BTreeSet<_> = cards.iter().copied().collect();

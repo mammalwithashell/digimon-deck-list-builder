@@ -701,7 +701,7 @@ fn choose_breakdramon_from_union(runner: &mut DebugRunner) {
         .iter()
         .position(|c| c == BREAKDRAMON)
         .expect("Breakdramon is one of Examon's digivolution cards");
-    let a = encode_source_select(ex.index as u16, src as u16).expect("encodable");
+    let a = crate::owned_choices::source_action(&runner.game, ex, src);
     act(runner, a);
 }
 
@@ -742,7 +742,6 @@ fn dracomon_inherited_eot_dna_turns_breakdramon_and_blue_six_into_examon() {
     // Dracomon's inherited [End of Your Turn] "may" → partner → DNA result.
     let view = runner.pending_selection_view().expect("Dracomon's inherited EoT trigger");
     assert!(view.is_optional, "\"may DNA digivolve\"");
-    accept(&mut runner);
     act(&mut runner, one_side(plesio));
     pick_hand(&mut runner, EXAMON);
 
@@ -924,7 +923,6 @@ fn dracomon_inherited_eot_dna_uses_wingdramon_as_the_blue_lv6() {
     runner.end_turn();
     let view = runner.pending_selection_view().expect("Dracomon's inherited EoT trigger");
     assert!(view.is_optional, "\"may DNA digivolve\"");
-    accept(&mut runner);
     act(&mut runner, one_side(brk));
     pick_hand(&mut runner, EXAMON);
 

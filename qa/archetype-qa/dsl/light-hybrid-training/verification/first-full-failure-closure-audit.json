@@ -1,0 +1,1258 @@
+{
+  "audit": "First optimized full cards failure closure; read-only source review",
+  "initial_full": {
+    "log": "logs/optimized-final-tier2-full-run.log",
+    "sha256": "66f3a08d8ac0e02b77d61b46391cef63dd249343907acd6911c25e4a5b6e4fc9",
+    "total": 12764,
+    "passed": 12567,
+    "failed": 162,
+    "ignored": 35
+  },
+  "closure": {
+    "failed_cases": 162,
+    "mapped_to_whole_canonical_green": 162,
+    "canonical_modules": 57,
+    "unproven": [],
+    "new_proof_ignores": [],
+    "retained_existing_proof_ignore": "ex12_031::ex12_031_aquatic_ordinary_full_r4_subjects_and_stripped_witness"
+  },
+  "source_snapshot_caveat": {
+    "bt21_generic_link_tail": "The original full binary predates the generic Link physical tail fix. BT21-023 is mapped specifically to tier2-source-cards-batch-b-carrier-pins-green.log: all 30 canonical BT21-023 functions are present, within the latest 70-pass/zero-fail/zero-ignore proof. Old generic Link failure is not an unresolved current failure."
+  },
+  "assertion_review": {
+    "method": "Compared HEAD and current canonical assertion/ignore counts for all 57 modules, then read all 19 diffs replacing assertions. Reviewed the three lower assertion-count modules in full diff. Geometry assertions are replaced by exact physical commit sets/positions plus legal-mask helpers; payment, timing, benefit, final zone and outcome assertions remain. This is scoped review, not independent proof of every game rule.",
+    "assertion_replacement_modules_reviewed": 19,
+    "count_decreases_reviewed": {
+      "bt26_097": "83 to 81: four individual exclusions consolidated into exactly one named physical commit; cost-five TS Digimon/Tamer outcomes and free memory retained.",
+      "ex10_003": "16 to 12: four positive and two negative raw source aliases consolidated into four physical carrier positions, exclusion of bad trait/other carrier and exact payment identities; cancel-attack outcome retained.",
+      "ex11_022": "62 to 59: raw hand/trash positive/negative bands consolidated into exact two named legal physical commits, explicit decline, free play and turn-end deletion retained."
+    },
+    "unexplained_assertion_drops": [],
+    "new_ignore_attributes_in_57_modules": 0
+  },
+  "does_not_replace": "A fresh all-12764 aggregate on final frozen sources, native/PyO3 qualification, or the exact-deck training admission gate. Live second aggregate was not used to close any case here.",
+  "proof_logs": {
+    "tier2-source-cards-batch-b-carrier-pins-green.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/tier2-source-cards-batch-b-carrier-pins-green.log",
+      "sha256": "de282518e6ad3a74db5277770c8af1960cf0495b39e174502fb09f784f9df9f1",
+      "test_results": [
+        {
+          "passed": 70,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "ignored_cases": []
+    },
+    "root-late-five-physical-green.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/root-late-five-physical-green.log",
+      "sha256": "3f9e04dbeeeae15b4bd522934b712566402de48c28712bb3a52b800beaaf839a",
+      "test_results": [
+        {
+          "passed": 64,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "ignored_cases": []
+    },
+    "qualification-late-ten-final.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/qualification-late-ten-final.log",
+      "sha256": "274103b777d491d137f2a2b91372d8a469f239ea8c13cdd32dac9dcb5a870ec7",
+      "test_results": [
+        {
+          "passed": 52,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 86,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 46,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "ignored_cases": []
+    },
+    "tier2-late-source-cards-green.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/tier2-late-source-cards-green.log",
+      "sha256": "ded373e624b8a6fa37728fa180752daa2ddda1ca23eda65712ed263b56c68c21",
+      "test_results": [
+        {
+          "passed": 39,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 39,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "ignored_cases": []
+    },
+    "late-source-three-modules-green.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/late-source-three-modules-green.log",
+      "sha256": "43e5c9484e30945572cf041f7b429d155d93bb3790d2d62480b5a0398629328e",
+      "test_results": [
+        {
+          "passed": 48,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "ignored_cases": []
+    },
+    "ex-source-six-modules-green.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/ex-source-six-modules-green.log",
+      "sha256": "420d21b7f434e5cb7d192f65c83e543ca43f31d36ad3525346a8a9d8a4ecf346",
+      "test_results": [
+        {
+          "passed": 85,
+          "failed": 0,
+          "ignored": 1
+        }
+      ],
+      "ignored_cases": [
+        "ex12_031::ex12_031_aquatic_ordinary_full_r4_subjects_and_stripped_witness"
+      ]
+    },
+    "qualification-ex13-six-current.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/qualification-ex13-six-current.log",
+      "sha256": "0004d5042744d6a53c9084b3f5285a824ecc9ae039f60b56fd4b822ddf78ab59",
+      "test_results": [
+        {
+          "passed": 68,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 27,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "ignored_cases": []
+    },
+    "tier2-ex13-source-last-five-green.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/tier2-ex13-source-last-five-green.log",
+      "sha256": "0c2bd42331bc8ca19a577727f9fcf7301a3ad969bbbb00c66f81ba304b105644",
+      "test_results": [
+        {
+          "passed": 72,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 15,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "ignored_cases": []
+    },
+    "ex4-ex7-source-two-modules-green.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/ex4-ex7-source-two-modules-green.log",
+      "sha256": "fb819ffe1fab3549c20569f21beae5a452256c7efec3773cf279f689d63a556f",
+      "test_results": [
+        {
+          "passed": 24,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "ignored_cases": []
+    },
+    "ex7-late-four-modules-green.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/ex7-late-four-modules-green.log",
+      "sha256": "6abc0777a1ab9339ec25b2236036b290ecb9718f071c3ef8f275c9630b084866",
+      "test_results": [
+        {
+          "passed": 61,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "ignored_cases": []
+    },
+    "promo-four-modules-green.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/promo-four-modules-green.log",
+      "sha256": "b7cf6883dafddb82fecfb24c988d7896491edcaa16a48ab5de8739aa294f2ec9",
+      "test_results": [
+        {
+          "passed": 48,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "ignored_cases": []
+    },
+    "qualification-st-late-current.log": {
+      "path": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/qualification-st-late-current.log",
+      "sha256": "d06a9c6e87c11574b00e059425835113ea9185c3de49856bba0da2896c641580",
+      "test_results": [
+        {
+          "passed": 41,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "ignored_cases": []
+    }
+  },
+  "canonical_modules": {
+    "bt21_023": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_023.rs",
+      "source_sha256": "28519b85bb1d3728c97985570c23342e1d81a0af805c123c5cc8c69c0d431ae1",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 30,
+      "proof_log": "tier2-source-cards-batch-b-carrier-pins-green.log"
+    },
+    "bt23_032": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_032.rs",
+      "source_sha256": "56f1855428703845fc3891669bb54522894268612d56ab7398e5bcc98dda3099",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 22,
+      "proof_log": "root-late-five-physical-green.log"
+    },
+    "bt23_072": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_072.rs",
+      "source_sha256": "fd6fa6f74c87913e5ea1139641799aadde648c9fe9282fa9446c680e5be9a2c0",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 7,
+      "proof_log": "qualification-late-ten-final.log"
+    },
+    "bt23_076": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_076.rs",
+      "source_sha256": "cf569942476655e628344d805e157eee70e1b2fc76e4377b0c83310446793217",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 13,
+      "proof_log": "qualification-late-ten-final.log"
+    },
+    "bt24_007": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_007.rs",
+      "source_sha256": "30f91c3f5cf4e61407f8f82e1566343e470762e0d1dc324c6f03607e4b5c63d7",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 10,
+      "proof_log": "qualification-late-ten-final.log"
+    },
+    "bt24_009": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_009.rs",
+      "source_sha256": "9757b37547eab15a328f3422ecfe4e93d3ff3f2e9602079d35043c71256f508e",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 22,
+      "proof_log": "qualification-late-ten-final.log"
+    },
+    "bt24_013": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_013.rs",
+      "source_sha256": "5a09623d96162c374876a22a880a5d20839c9afb4e291b42b5b5d1767ec0a9cf",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 21,
+      "proof_log": "qualification-late-ten-final.log"
+    },
+    "bt24_021": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_021.rs",
+      "source_sha256": "21957f7e0028f2a27c58fe01a30a6c3396d574ada1e129c2b18e771785ac2722",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 23,
+      "proof_log": "qualification-late-ten-final.log"
+    },
+    "bt24_026": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_026.rs",
+      "source_sha256": "15fc933b598d32d79388b0dac0235368fa1ca4f67be0c960eceff329a26b7041",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 20,
+      "proof_log": "qualification-late-ten-final.log"
+    },
+    "bt24_042": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_042.rs",
+      "source_sha256": "f5276e45057170072b3f987224fb9f6b89cfacc7192d891afd69f942c17ab4fc",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 22,
+      "proof_log": "qualification-late-ten-final.log"
+    },
+    "bt24_045": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_045.rs",
+      "source_sha256": "e7a1fabe44180284bf449c53b542f22c70e35be879b4d585f0d52976e2b099da",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 23,
+      "proof_log": "qualification-late-ten-final.log"
+    },
+    "bt24_089": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_089.rs",
+      "source_sha256": "bbd19e270a3b2a137030432eba0665f138aa72c4b5d8ab8133464b0699944c63",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 23,
+      "proof_log": "qualification-late-ten-final.log"
+    },
+    "bt24_098": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_098.rs",
+      "source_sha256": "ef26ea87f56bda63b8a2ad8a710bca8c72b8f8302ed8770ed21fd4f2defe21e5",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 13,
+      "proof_log": "tier2-late-source-cards-green.log"
+    },
+    "bt25_085": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_085.rs",
+      "source_sha256": "a17434344f51ea12dce89c2db4af74bc657de779d94ea65b65fe6aa15dacf90d",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 20,
+      "proof_log": "root-late-five-physical-green.log"
+    },
+    "bt25_092": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_092.rs",
+      "source_sha256": "fdb10344f172edde0f15e9cbdf9cc61112a5fce5439297ed33c5fb2be450dfcc",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 12,
+      "proof_log": "tier2-late-source-cards-green.log"
+    },
+    "bt25_097": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_097.rs",
+      "source_sha256": "6f2f41d6a017ecde75a4bed61f51c958e8b411c18a0f43c4b5ef755b758aa483",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 18,
+      "proof_log": "late-source-three-modules-green.log"
+    },
+    "bt26_009": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_009.rs",
+      "source_sha256": "3d00d9afd5d6c775c0c7b35de2ce53ce649e003583ebbeaa55147eafa57672d7",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 7,
+      "proof_log": "root-late-five-physical-green.log"
+    },
+    "bt26_066": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_066.rs",
+      "source_sha256": "769274d718814bd8e21dde46bcea626d67439d1421cdd61f5c9d4be2db8910cd",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 7,
+      "proof_log": "tier2-late-source-cards-green.log"
+    },
+    "bt26_069": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_069.rs",
+      "source_sha256": "3a3c8d83a576de474697bf5dafa61e2323f6a4f7ef5808d2c2c7bd067589a4af",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 7,
+      "proof_log": "tier2-late-source-cards-green.log"
+    },
+    "bt26_082": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_082.rs",
+      "source_sha256": "04ad939d6824d778545c43374f8f1d68e76ff005dbc4091d43ab937c1f005595",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 10,
+      "proof_log": "root-late-five-physical-green.log"
+    },
+    "bt26_085": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_085.rs",
+      "source_sha256": "fdd47a7f2056c0ad5484ede62aa19dd3099ef391618219160b7945a89a815694",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 8,
+      "proof_log": "tier2-late-source-cards-green.log"
+    },
+    "bt26_096": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_096.rs",
+      "source_sha256": "c300054ed629996b4d047227c19329e04d806aa8e0d5f4ea61306299c7463f18",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 6,
+      "proof_log": "tier2-late-source-cards-green.log"
+    },
+    "bt26_097": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_097.rs",
+      "source_sha256": "767092bd4d95da724fac0b448716f5122d3c152b2b80dfb2eef3c236ffebe8c1",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 25,
+      "proof_log": "tier2-late-source-cards-green.log"
+    },
+    "bt4_072": {
+      "source": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_072.rs",
+      "source_sha256": "961c8d2b4101d6f5880bb6ad7ededa8898612b719b8384fd2abaaddf7525650f",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 5,
+      "proof_log": "root-late-five-physical-green.log"
+    },
+    "ex10_003": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_003.rs",
+      "source_sha256": "e0b6547c530ba2048a63d01d7f739747748ab976a2f3e8007923860d712ca439",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 2,
+      "proof_log": "late-source-three-modules-green.log"
+    },
+    "ex10_028": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_028.rs",
+      "source_sha256": "9005675034297870f826cde6b804203ffc398db9fc95064036b3b3a95f0a1f3b",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 28,
+      "proof_log": "late-source-three-modules-green.log"
+    },
+    "ex11_022": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_022.rs",
+      "source_sha256": "77099b7904bd535c1023bf50837c804d4faca2635f3dbd7f2a3b3ea1d81667b9",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 13,
+      "proof_log": "ex-source-six-modules-green.log"
+    },
+    "ex11_038": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_038.rs",
+      "source_sha256": "f0b12694c9f5bdf2038c4cdc31604ce5b58447491503306906e8ce4a9a2a1a2f",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 6,
+      "proof_log": "ex-source-six-modules-green.log"
+    },
+    "ex11_053": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_053.rs",
+      "source_sha256": "39fcf0a7132912f72f1d24682e0eddac07103e390d14319e73c59837c128e4e4",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 9,
+      "proof_log": "ex-source-six-modules-green.log"
+    },
+    "ex11_057": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_057.rs",
+      "source_sha256": "3e78e01445aee038c6babf86bfe72a8f6db532f263e3d497d58f1101f22d03fd",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 20,
+      "proof_log": "ex-source-six-modules-green.log"
+    },
+    "ex11_065": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_065.rs",
+      "source_sha256": "cef6f1c2b228cff5b74bef486c8e743f19a8833772177053c64d664e490f7fbe",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 18,
+      "proof_log": "ex-source-six-modules-green.log"
+    },
+    "ex12_031": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex12/ex12_031.rs",
+      "source_sha256": "a0f08a9efbf49a79e075d75ca832fd89278d8d35531e9650ef5568fbf3ed1490",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 20,
+      "proof_log": "ex-source-six-modules-green.log"
+    },
+    "ex13_013": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_013.rs",
+      "source_sha256": "24b79aac7a93fe8a3969f9e00573b26d53ff4423768e8cac71367d628eadf616",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 14,
+      "proof_log": "qualification-ex13-six-current.log"
+    },
+    "ex13_014": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_014.rs",
+      "source_sha256": "d9769aadf81a14f26e5c425563122586294241bf1e2886a8adc1f566867355fb",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 13,
+      "proof_log": "qualification-ex13-six-current.log"
+    },
+    "ex13_031": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_031.rs",
+      "source_sha256": "9c1e2185af86174dbd49ea323ad58da70745261940858c8334ea4ec55cf10a6a",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 23,
+      "proof_log": "qualification-ex13-six-current.log"
+    },
+    "ex13_035": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_035.rs",
+      "source_sha256": "1238c35f9c6ae98589314170fd095eb00535ba0b35945a4f819be14b87095b6e",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 18,
+      "proof_log": "qualification-ex13-six-current.log"
+    },
+    "ex13_045": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_045.rs",
+      "source_sha256": "9ee1840b4e196118042ad120c387e89c32dbdf0c44a9f747d98027a00e8f9df3",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 12,
+      "proof_log": "qualification-ex13-six-current.log"
+    },
+    "ex13_053": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_053.rs",
+      "source_sha256": "ea838933b4ef38903779c25f81ee8186efda9431847087b5de6260df830a7951",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 15,
+      "proof_log": "qualification-ex13-six-current.log"
+    },
+    "ex13_055": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_055.rs",
+      "source_sha256": "35fc00652a94b62f686c2ff6e38fc124900b968a5aa39399709b3ff30deccf61",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 15,
+      "proof_log": "tier2-ex13-source-last-five-green.log"
+    },
+    "ex13_057": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_057.rs",
+      "source_sha256": "37450a42735ba4bd6b27fac63ef85496d6d11d54bf0829a1b99f624fdd9ab3a1",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 22,
+      "proof_log": "tier2-ex13-source-last-five-green.log"
+    },
+    "ex13_065": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_065.rs",
+      "source_sha256": "341b5fc22ea4222bf68a54fc31fc134e0fa046bb2f325762ad25c1c580fbc420",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 18,
+      "proof_log": "tier2-ex13-source-last-five-green.log"
+    },
+    "ex13_066": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_066.rs",
+      "source_sha256": "d148b9d657cead0d34dd2fec0a772acdfec90a8742c4027943de0caee21fad2d",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 17,
+      "proof_log": "tier2-ex13-source-last-five-green.log"
+    },
+    "ex13_067": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_067.rs",
+      "source_sha256": "17a1b2ec9c1e0113ff0606e8dab4ac11f1d2426a9ddfe2c26d65daff815c50d8",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 15,
+      "proof_log": "tier2-ex13-source-last-five-green.log"
+    },
+    "ex4_073": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_073.rs",
+      "source_sha256": "cba039a4e10cd5766ad2919a32ba7d6563c2cc88cb24487e053c88842a3d5336",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 13,
+      "proof_log": "ex4-ex7-source-two-modules-green.log"
+    },
+    "ex7_011": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_011.rs",
+      "source_sha256": "499714a16cc5784334db36b913c120cb4f8f89caaadbde13ecdd899130841851",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 11,
+      "proof_log": "ex4-ex7-source-two-modules-green.log"
+    },
+    "ex7_021": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_021.rs",
+      "source_sha256": "362bfd4674735f20a0150b7acc441bf5aa737219a6d3a3fce0f4217f40158b18",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 17,
+      "proof_log": "ex7-late-four-modules-green.log"
+    },
+    "ex7_043": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_043.rs",
+      "source_sha256": "3908908722ec338188ec3b1fc5fd6ee3b69bb8bf625c976f2291024bc2265cb4",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 12,
+      "proof_log": "ex7-late-four-modules-green.log"
+    },
+    "ex7_051": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_051.rs",
+      "source_sha256": "83e5271271082eb2f2d6d85b2f666e54664cd4e83ffe70960ec18b416d5f4772",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 12,
+      "proof_log": "ex7-late-four-modules-green.log"
+    },
+    "ex7_073": {
+      "source": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_073.rs",
+      "source_sha256": "4de18bd98d16bb6df3e40ce162ce1db1ab6fadd10d16ac9aa0f1ef182d43fac9",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 20,
+      "proof_log": "ex7-late-four-modules-green.log"
+    },
+    "p_170": {
+      "source": "code/digimon-engine/tests/cards_behavioral/p/p_170.rs",
+      "source_sha256": "119971589188b1893601d02d88427fdcbd96234851b2ca9aa13c7e2f3ec1b27d",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 11,
+      "proof_log": "promo-four-modules-green.log"
+    },
+    "p_189": {
+      "source": "code/digimon-engine/tests/cards_behavioral/p/p_189.rs",
+      "source_sha256": "7fa4a4f735c4cd5b22be4e280e3bbce6b16823762ab0f957765318ddeba4c5b0",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 23,
+      "proof_log": "promo-four-modules-green.log"
+    },
+    "p_224": {
+      "source": "code/digimon-engine/tests/cards_behavioral/p/p_224.rs",
+      "source_sha256": "82138d102303e4e965d6f43ce8ff9f852dfbc03acd1a0ddc917f5f0af7befae2",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 2,
+      "proof_log": "promo-four-modules-green.log"
+    },
+    "p_244": {
+      "source": "code/digimon-engine/tests/cards_behavioral/p/p_244.rs",
+      "source_sha256": "0171e3fa32ce522c0a3054443854a7eefe8b3eb720f3f993ad49b699f4753a6d",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 12,
+      "proof_log": "promo-four-modules-green.log"
+    },
+    "st19_08": {
+      "source": "code/digimon-engine/tests/cards_behavioral/st19/st19_08.rs",
+      "source_sha256": "8b1da604d4c3934ceb7b59b06791b9c691a74d498db198e21a29815e71b28744",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 9,
+      "proof_log": "qualification-st-late-current.log"
+    },
+    "st2_cards": {
+      "source": "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs",
+      "source_sha256": "c9a800fca379832b18cff7bb8282403547f7eaddafeba9cf4934d6c000926969",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 17,
+      "proof_log": "qualification-st-late-current.log"
+    },
+    "st5_effects": {
+      "source": "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs",
+      "source_sha256": "785b4853f69c62044d5b35c3317542bb20292d245da2609b494ca5c010827daa",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 5,
+      "proof_log": "qualification-st-late-current.log"
+    },
+    "st9_06": {
+      "source": "code/digimon-engine/tests/cards_behavioral/st9/st9_06.rs",
+      "source_sha256": "42ca5157d2afdd0a8a2d20e62a69db209e8b56ae2e9eb64abd8749491fc6a5a5",
+      "all_current_test_functions_present": true,
+      "current_test_functions": 10,
+      "proof_log": "qualification-st-late-current.log"
+    }
+  },
+  "cases": {
+    "bt21::bt21_023::generic_other_source_link_keeps_the_original_destination_after_compaction_and_source_card_moves": {
+      "proof_log": "tier2-source-cards-batch-b-carrier-pins-green.log",
+      "passed_case": "bt21_023::generic_other_source_link_keeps_the_original_destination_after_compaction_and_source_card_moves"
+    },
+    "bt23::bt23_032::bt23_032_would_leave_prompt_offers_only_matching_sources": {
+      "proof_log": "root-late-five-physical-green.log",
+      "passed_case": "bt23_032::bt23_032_would_leave_prompt_offers_only_matching_sources"
+    },
+    "bt23::bt23_072::bt23_072_inherited_breeding_start_main_plays_king_drasil_source_at_six_sources": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt23_072::bt23_072_inherited_breeding_start_main_plays_king_drasil_source_at_six_sources"
+    },
+    "bt23::bt23_072::bt23_072_inherited_can_play_self_as_king_drasil_source": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt23_072::bt23_072_inherited_can_play_self_as_king_drasil_source"
+    },
+    "bt23::bt23_076::bt23_076_evolves_from_trash_pays_reduced_cost": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt23_076::bt23_076_evolves_from_trash_pays_reduced_cost"
+    },
+    "bt23::bt23_076::bt23_076_reduction_does_not_generate_memory_from_zero_cost": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt23_076::bt23_076_reduction_does_not_generate_memory_from_zero_cost"
+    },
+    "bt23::bt23_076::bt23_076_self_is_excluded_even_when_a_legal_evolution_exists_for_it": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt23_076::bt23_076_self_is_excluded_even_when_a_legal_evolution_exists_for_it"
+    },
+    "bt23::bt23_076::bt23_076_union_mask_includes_names_and_traits_excludes_illegal_routes_and_self": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt23_076::bt23_076_union_mask_includes_names_and_traits_excludes_illegal_routes_and_self"
+    },
+    "bt24::bt24_007::bt24_007_decline_keeps_the_once_per_turn_use": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_007::bt24_007_decline_keeps_the_once_per_turn_use"
+    },
+    "bt24::bt24_007::bt24_007_demon_trait_level_five_also_qualifies": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_007::bt24_007_demon_trait_level_five_also_qualifies"
+    },
+    "bt24::bt24_007::bt24_007_once_per_turn_after_a_play": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_007::bt24_007_once_per_turn_after_a_play"
+    },
+    "bt24::bt24_007::bt24_007_only_the_just_trashed_cards_are_candidates": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_007::bt24_007_only_the_just_trashed_cards_are_candidates"
+    },
+    "bt24::bt24_007::bt24_007_plays_trashed_titan_with_cost_reduced_by_two": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_007::bt24_007_plays_trashed_titan_with_cost_reduced_by_two"
+    },
+    "bt24::bt24_009::bt24_009_inherited_can_pick_titamon_by_name": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_009::bt24_009_inherited_can_pick_titamon_by_name"
+    },
+    "bt24::bt24_009::bt24_009_inherited_decline_refunds_then_once_per_turn_locks": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_009::bt24_009_inherited_decline_refunds_then_once_per_turn_locks"
+    },
+    "bt24::bt24_009::bt24_009_inherited_digivolves_demon_host_into_titan_in_trash": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_009::bt24_009_inherited_digivolves_demon_host_into_titan_in_trash"
+    },
+    "bt24::bt24_009::bt24_009_inherited_titan_host_also_qualifies": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_009::bt24_009_inherited_titan_host_also_qualifies"
+    },
+    "bt24::bt24_009::bt24_009_on_play_cost_trash_feeds_another_shamanmon_inherited": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_009::bt24_009_on_play_cost_trash_feeds_another_shamanmon_inherited"
+    },
+    "bt24::bt24_013::bt24_013_inherited_decline_refunds_and_is_once_per_turn": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_013::bt24_013_inherited_decline_refunds_and_is_once_per_turn"
+    },
+    "bt24::bt24_013::bt24_013_inherited_demon_carrier_digivolves_on_own_hand_trash": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_013::bt24_013_inherited_demon_carrier_digivolves_on_own_hand_trash"
+    },
+    "bt24::bt24_021::bt24_021_inherited_can_pick_titamon_by_name": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_021::bt24_021_inherited_can_pick_titamon_by_name"
+    },
+    "bt24::bt24_021::bt24_021_inherited_decline_refunds_then_once_per_turn_locks": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_021::bt24_021_inherited_decline_refunds_then_once_per_turn_locks"
+    },
+    "bt24::bt24_021::bt24_021_inherited_digivolves_demon_host_into_titan_in_trash": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_021::bt24_021_inherited_digivolves_demon_host_into_titan_in_trash"
+    },
+    "bt24::bt24_021::bt24_021_inherited_titan_host_also_qualifies": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_021::bt24_021_inherited_titan_host_also_qualifies"
+    },
+    "bt24::bt24_021::bt24_021_post_add_trash_feeds_inherited_digivolve": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_021::bt24_021_post_add_trash_feeds_inherited_digivolve"
+    },
+    "bt24::bt24_026::bt24_026_inherited_decline_refunds_and_is_once_per_turn": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_026::bt24_026_inherited_decline_refunds_and_is_once_per_turn"
+    },
+    "bt24::bt24_026::bt24_026_inherited_demon_carrier_digivolves_on_own_hand_trash": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_026::bt24_026_inherited_demon_carrier_digivolves_on_own_hand_trash"
+    },
+    "bt24::bt24_042::bt24_042_inherited_can_pick_titamon_by_name": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_042::bt24_042_inherited_can_pick_titamon_by_name"
+    },
+    "bt24::bt24_042::bt24_042_inherited_decline_refunds_then_once_per_turn_locks": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_042::bt24_042_inherited_decline_refunds_then_once_per_turn_locks"
+    },
+    "bt24::bt24_042::bt24_042_inherited_digivolves_demon_host_into_titan_in_trash": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_042::bt24_042_inherited_digivolves_demon_host_into_titan_in_trash"
+    },
+    "bt24::bt24_042::bt24_042_inherited_titan_host_also_qualifies": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_042::bt24_042_inherited_titan_host_also_qualifies"
+    },
+    "bt24::bt24_042::bt24_042_reduction_stacks_with_effect_digivolve_from_trash": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_042::bt24_042_reduction_stacks_with_effect_digivolve_from_trash"
+    },
+    "bt24::bt24_045::bt24_045_inherited_decline_refunds_and_is_once_per_turn": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_045::bt24_045_inherited_decline_refunds_and_is_once_per_turn"
+    },
+    "bt24::bt24_045::bt24_045_inherited_demon_carrier_digivolves_on_own_hand_trash": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_045::bt24_045_inherited_demon_carrier_digivolves_on_own_hand_trash"
+    },
+    "bt24::bt24_089::bt24_089_main_picks_from_hand_or_trash_in_one_masked_choice": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_089::bt24_089_main_picks_from_hand_or_trash_in_one_masked_choice"
+    },
+    "bt24::bt24_089::bt24_089_main_plays_elizamon_from_hand_free": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_089::bt24_089_main_plays_elizamon_from_hand_free"
+    },
+    "bt24::bt24_089::bt24_089_main_plays_owen_from_hand_free": {
+      "proof_log": "qualification-late-ten-final.log",
+      "passed_case": "bt24_089::bt24_089_main_plays_owen_from_hand_free"
+    },
+    "bt24::bt24_098::bt24_098_security_plays_titan_from_trash": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt24_098::bt24_098_security_plays_titan_from_trash"
+    },
+    "bt25::bt25_085::bt25_085_use_ts_option_from_own_digivolution_cards_free": {
+      "proof_log": "root-late-five-physical-green.log",
+      "passed_case": "bt25_085::bt25_085_use_ts_option_from_own_digivolution_cards_free"
+    },
+    "bt25::bt25_092::bt25_092_main_cost_from_digivolution_cards_of_any_own_digimon": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt25_092::bt25_092_main_cost_from_digivolution_cards_of_any_own_digimon"
+    },
+    "bt25::bt25_092::bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt25_092::bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced"
+    },
+    "bt25::bt25_092::bt25_092_main_cost_union_offers_both_hand_and_sources_in_one_prompt": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt25_092::bt25_092_main_cost_union_offers_both_hand_and_sources_in_one_prompt"
+    },
+    "bt25::bt25_092::bt25_092_main_decline_result_pick_after_target": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt25_092::bt25_092_main_decline_result_pick_after_target"
+    },
+    "bt25::bt25_092::bt25_092_main_decline_target_keeps_cost_paid_and_does_not_digivolve": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt25_092::bt25_092_main_decline_target_keeps_cost_paid_and_does_not_digivolve"
+    },
+    "bt25::bt25_092::bt25_092_main_digivolve_into_card_resident_in_trash": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt25_092::bt25_092_main_digivolve_into_card_resident_in_trash"
+    },
+    "bt25::bt25_092::bt25_092_main_target_pick_excludes_digimon_without_a_legal_result": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt25_092::bt25_092_main_target_pick_excludes_digimon_without_a_legal_result"
+    },
+    "bt25::bt25_097::bt25_097_security_plays_level_four_yellow_or_purple_ts_from_hand_free": {
+      "proof_log": "late-source-three-modules-green.log",
+      "passed_case": "bt25_097::bt25_097_security_plays_level_four_yellow_or_purple_ts_from_hand_free"
+    },
+    "bt26::bt26_009::bt26_009_inherited_draw_then_bottom_one_at_six": {
+      "proof_log": "root-late-five-physical-green.log",
+      "passed_case": "bt26_009::bt26_009_inherited_draw_then_bottom_one_at_six"
+    },
+    "bt26::bt26_066::bt26_066_inherited_decline_refunds_once_per_turn": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_066::bt26_066_inherited_decline_refunds_once_per_turn"
+    },
+    "bt26::bt26_066::bt26_066_inherited_hand_trash_digivolves_into_titamon": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_066::bt26_066_inherited_hand_trash_digivolves_into_titamon"
+    },
+    "bt26::bt26_066::bt26_066_start_of_main_can_pick_another_titan_digimon": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_066::bt26_066_start_of_main_can_pick_another_titan_digimon"
+    },
+    "bt26::bt26_066::bt26_066_start_of_main_digivolves_titan_into_trash_titan": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_066::bt26_066_start_of_main_digivolves_titan_into_trash_titan"
+    },
+    "bt26::bt26_069::bt26_069_inherited_digivolves_on_own_hand_trash": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_069::bt26_069_inherited_digivolves_on_own_hand_trash"
+    },
+    "bt26::bt26_082::bt26_082_q7121_tk_shuffle_prevents_security_revival": {
+      "proof_log": "root-late-five-physical-green.log",
+      "passed_case": "bt26_082::bt26_082_q7121_tk_shuffle_prevents_security_revival"
+    },
+    "bt26::bt26_085::bt26_085_rejected_digivolution_does_not_cancel_the_pending_leave": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_085::bt26_085_rejected_digivolution_does_not_cancel_the_pending_leave"
+    },
+    "bt26::bt26_085::bt26_085_would_leave_chooses_production_destroy_mode_from_hand_or_trash_free": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_085::bt26_085_would_leave_chooses_production_destroy_mode_from_hand_or_trash_free"
+    },
+    "bt26::bt26_096::bt26_096_main_bounces_self_and_plays_from_trash_reduced": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_096::bt26_096_main_bounces_self_and_plays_from_trash_reduced"
+    },
+    "bt26::bt26_096::bt26_096_main_plays_ts_tamer_from_hand_reduced": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_096::bt26_096_main_plays_ts_tamer_from_hand_reduced"
+    },
+    "bt26::bt26_097::bt26_097_main_after_is_optional": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_097::bt26_097_main_after_is_optional"
+    },
+    "bt26::bt26_097::bt26_097_main_after_is_skipped_without_aegiochusmon_in_trash": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_097::bt26_097_main_after_is_skipped_without_aegiochusmon_in_trash"
+    },
+    "bt26::bt26_097::bt26_097_main_can_digivolve_into_jupitermon_in_the_trash": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_097::bt26_097_main_can_digivolve_into_jupitermon_in_the_trash"
+    },
+    "bt26::bt26_097::bt26_097_main_placement_declining_bt24_101_protection_proceeds": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_097::bt26_097_main_placement_declining_bt24_101_protection_proceeds"
+    },
+    "bt26::bt26_097::bt26_097_main_places_tamer_digivolves_from_hand_then_tops_aegiochusmon": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_097::bt26_097_main_places_tamer_digivolves_from_hand_then_tops_aegiochusmon"
+    },
+    "bt26::bt26_097::bt26_097_main_trashes_the_cards_under_the_placed_tamer": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_097::bt26_097_main_trashes_the_cards_under_the_placed_tamer"
+    },
+    "bt26::bt26_097::bt26_097_main_works_when_the_tamer_sits_left_of_the_aegiomon": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_097::bt26_097_main_works_when_the_tamer_sits_left_of_the_aegiomon"
+    },
+    "bt26::bt26_097::bt26_097_security_can_play_a_cost_five_or_lower_ts_tamer_free": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_097::bt26_097_security_can_play_a_cost_five_or_lower_ts_tamer_free"
+    },
+    "bt26::bt26_097::bt26_097_security_plays_cost_five_or_lower_ts_from_hand_free_then_adds_self": {
+      "proof_log": "tier2-late-source-cards-green.log",
+      "passed_case": "bt26_097::bt26_097_security_plays_cost_five_or_lower_ts_from_hand_free_then_adds_self"
+    },
+    "bt4::bt4_072::bt4_072_digi_burst_dp_buff_expires_at_end_of_opponents_next_turn": {
+      "proof_log": "root-late-five-physical-green.log",
+      "passed_case": "bt4_072::bt4_072_digi_burst_dp_buff_expires_at_end_of_opponents_next_turn"
+    },
+    "bt4::bt4_072::bt4_072_digi_burst_trashes_self_source_then_buffs_own_digimon": {
+      "proof_log": "root-late-five-physical-green.log",
+      "passed_case": "bt4_072::bt4_072_digi_burst_trashes_self_source_then_buffs_own_digimon"
+    },
+    "ex10::ex10_003::ex10_003_trashes_three_matching_carrier_sources_to_cancel_attack": {
+      "proof_log": "late-source-three-modules-green.log",
+      "passed_case": "ex10_003::ex10_003_trashes_three_matching_carrier_sources_to_cancel_attack"
+    },
+    "ex10::ex10_028::ex10_028_on_play_after_source_selection_prompts_own_field": {
+      "proof_log": "late-source-three-modules-green.log",
+      "passed_case": "ex10_028::ex10_028_on_play_after_source_selection_prompts_own_field"
+    },
+    "ex10::ex10_028::ex10_028_on_play_can_buff_different_digimon_than_source_host": {
+      "proof_log": "late-source-three-modules-green.log",
+      "passed_case": "ex10_028::ex10_028_on_play_can_buff_different_digimon_than_source_host"
+    },
+    "ex11::ex11_022::ex11_022_on_play_selected_puppet_is_played_free_and_deleted_at_turn_end": {
+      "proof_log": "ex-source-six-modules-green.log",
+      "passed_case": "ex11_022::ex11_022_on_play_selected_puppet_is_played_free_and_deleted_at_turn_end"
+    },
+    "ex11::ex11_022::ex11_022_on_play_union_selection_filter_excludes_non_puppet_and_high_dp": {
+      "proof_log": "ex-source-six-modules-green.log",
+      "passed_case": "ex11_022::ex11_022_on_play_union_selection_filter_excludes_non_puppet_and_high_dp"
+    },
+    "ex11::ex11_038::ex11_038_on_play_trash_hand_mineral_draws_one": {
+      "proof_log": "ex-source-six-modules-green.log",
+      "passed_case": "ex11_038::ex11_038_on_play_trash_hand_mineral_draws_one"
+    },
+    "ex11::ex11_038::ex11_038_on_play_trash_own_source_rock_draws_one": {
+      "proof_log": "ex-source-six-modules-green.log",
+      "passed_case": "ex11_038::ex11_038_on_play_trash_own_source_rock_draws_one"
+    },
+    "ex11::ex11_053::ex11_053_on_deletion_material_scan_restricted_to_king_drasil_carriers": {
+      "proof_log": "ex-source-six-modules-green.log",
+      "passed_case": "ex11_053::ex11_053_on_deletion_material_scan_restricted_to_king_drasil_carriers"
+    },
+    "ex11::ex11_053::ex11_053_on_deletion_plays_omnimon_x_from_hand_and_attaches_self": {
+      "proof_log": "ex-source-six-modules-green.log",
+      "passed_case": "ex11_053::ex11_053_on_deletion_plays_omnimon_x_from_hand_and_attaches_self"
+    },
+    "ex11::ex11_053::ex11_053_on_deletion_plays_omnimon_x_from_king_drasil_source_and_attaches_self": {
+      "proof_log": "ex-source-six-modules-green.log",
+      "passed_case": "ex11_053::ex11_053_on_deletion_plays_omnimon_x_from_king_drasil_source_and_attaches_self"
+    },
+    "ex11::ex11_057::ex11_057_on_play_two_ice_snow_exact_two_cross_permanent_pick": {
+      "proof_log": "ex-source-six-modules-green.log",
+      "passed_case": "ex11_057::ex11_057_on_play_two_ice_snow_exact_two_cross_permanent_pick"
+    },
+    "ex11::ex11_065::ex11_065_start_of_main_trash_hand_mineral_gains_memory": {
+      "proof_log": "ex-source-six-modules-green.log",
+      "passed_case": "ex11_065::ex11_065_start_of_main_trash_hand_mineral_gains_memory"
+    },
+    "ex11::ex11_065::ex11_065_start_of_main_trash_source_mineral_gains_memory": {
+      "proof_log": "ex-source-six-modules-green.log",
+      "passed_case": "ex11_065::ex11_065_start_of_main_trash_source_mineral_gains_memory"
+    },
+    "ex12::ex12_031::ex12_031_printed_decode_main_and_inherited_preserve_digimon_kind_and_level": {
+      "proof_log": "ex-source-six-modules-green.log",
+      "passed_case": "ex12_031::ex12_031_printed_decode_main_and_inherited_preserve_digimon_kind_and_level"
+    },
+    "ex13::ex13_013::ex13_013_on_deletion_plays_guilmon_text_tamer_from_trash_free": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_013::ex13_013_on_deletion_plays_guilmon_text_tamer_from_trash_free"
+    },
+    "ex13::ex13_014::ex13_014_wa_uses_a_huckmon_text_option_from_digivolution_cards": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_014::ex13_014_wa_uses_a_huckmon_text_option_from_digivolution_cards"
+    },
+    "ex13::ex13_031::ex13_031_base_dp_change_keeps_other_dp_modifiers_on_top": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_031::ex13_031_base_dp_change_keeps_other_dp_modifiers_on_top"
+    },
+    "ex13::ex13_031::ex13_031_change_lasts_until_the_end_of_the_opponents_turn": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_031::ex13_031_change_lasts_until_the_end_of_the_opponents_turn"
+    },
+    "ex13::ex13_031::ex13_031_cost_can_be_a_chuumon_source_under_your_digimon": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_031::ex13_031_cost_can_be_a_chuumon_source_under_your_digimon"
+    },
+    "ex13::ex13_031::ex13_031_cost_is_offered_even_with_no_opponent_digimon": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_031::ex13_031_cost_is_offered_even_with_no_opponent_digimon"
+    },
+    "ex13::ex13_031::ex13_031_non_matching_cards_are_not_payable": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_031::ex13_031_non_matching_cards_are_not_payable"
+    },
+    "ex13::ex13_031::ex13_031_on_deletion_pays_from_hand_and_changes_target": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_031::ex13_031_on_deletion_pays_from_hand_and_changes_target"
+    },
+    "ex13::ex13_031::ex13_031_on_play_trash_hand_sukamon_changes_target_to_white_3000_sukamon": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_031::ex13_031_on_play_trash_hand_sukamon_changes_target_to_white_3000_sukamon"
+    },
+    "ex13::ex13_031::ex13_031_renamed_opponent_digimon_deletion_fires_the_inherited": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_031::ex13_031_renamed_opponent_digimon_deletion_fires_the_inherited"
+    },
+    "ex13::ex13_031::ex13_031_renamed_target_matches_sukamon_name_filters": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_031::ex13_031_renamed_target_matches_sukamon_name_filters"
+    },
+    "ex13::ex13_031::ex13_031_target_is_chosen_among_opponent_digimon": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_031::ex13_031_target_is_chosen_among_opponent_digimon"
+    },
+    "ex13::ex13_031::ex13_031_when_digivolving_fires_the_same_effect": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_031::ex13_031_when_digivolving_fires_the_same_effect"
+    },
+    "ex13::ex13_035::ex13_035_on_play_excludes_cards_over_the_six_budget": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_035::ex13_035_on_play_excludes_cards_over_the_six_budget"
+    },
+    "ex13::ex13_035::ex13_035_on_play_plays_two_named_digimon_within_six": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_035::ex13_035_on_play_plays_two_named_digimon_within_six"
+    },
+    "ex13::ex13_035::ex13_035_plays_from_trash": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_035::ex13_035_plays_from_trash"
+    },
+    "ex13::ex13_035::ex13_035_returning_ten_raises_the_maximum_to_twelve": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_035::ex13_035_returning_ten_raises_the_maximum_to_twelve"
+    },
+    "ex13::ex13_035::ex13_035_second_pick_uses_remaining_budget": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_035::ex13_035_second_pick_uses_remaining_budget"
+    },
+    "ex13::ex13_035::ex13_035_when_digivolving_offers_the_free_play": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_035::ex13_035_when_digivolving_offers_the_free_play"
+    },
+    "ex13::ex13_045::ex13_045_winning_a_battle_uses_an_examon_text_option_from_sources": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_045::ex13_045_winning_a_battle_uses_an_examon_text_option_from_sources"
+    },
+    "ex13::ex13_053::ex13_053_at_most_three_returns": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_053::ex13_053_at_most_three_returns"
+    },
+    "ex13::ex13_053::ex13_053_delete_with_no_opponent_digimon_is_skipped": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_053::ex13_053_delete_with_no_opponent_digimon_is_skipped"
+    },
+    "ex13::ex13_053::ex13_053_on_deletion_runs_the_same_body": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_053::ex13_053_on_deletion_runs_the_same_body"
+    },
+    "ex13::ex13_053::ex13_053_only_mamemon_text_digimon_cards_are_returnable": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_053::ex13_053_only_mamemon_text_digimon_cards_are_returnable"
+    },
+    "ex13::ex13_053::ex13_053_returning_one_raises_the_cap_to_4": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_053::ex13_053_returning_one_raises_the_cap_to_4"
+    },
+    "ex13::ex13_053::ex13_053_returning_three_raises_the_cap_to_6_and_stacks_in_pick_order": {
+      "proof_log": "qualification-ex13-six-current.log",
+      "passed_case": "ex13_053::ex13_053_returning_three_raises_the_cap_to_6_and_stacks_in_pick_order"
+    },
+    "ex13::ex13_055::ex13_055_when_attacking_digivolves_from_trash": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_055::ex13_055_when_attacking_digivolves_from_trash"
+    },
+    "ex13::ex13_055::ex13_055_when_attacking_offers_chronicle_cards_in_hand_and_trash": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_055::ex13_055_when_attacking_offers_chronicle_cards_in_hand_and_trash"
+    },
+    "ex13::ex13_057::ex13_057_end_of_attack_digivolves_from_trash": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_057::ex13_057_end_of_attack_digivolves_from_trash"
+    },
+    "ex13::ex13_057::ex13_057_end_of_attack_offers_chronicle_cards_in_hand_and_trash": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_057::ex13_057_end_of_attack_offers_chronicle_cards_in_hand_and_trash"
+    },
+    "ex13::ex13_065::ex13_065_option_plays_sistermon_from_hand_then_dp_minus_per_ally": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_065::ex13_065_option_plays_sistermon_from_hand_then_dp_minus_per_ally"
+    },
+    "ex13::ex13_065::ex13_065_option_plays_sistermon_from_trash": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_065::ex13_065_option_plays_sistermon_from_trash"
+    },
+    "ex13::ex13_066::ex13_066_option_plays_sistermon_from_trash": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_066::ex13_066_option_plays_sistermon_from_trash"
+    },
+    "ex13::ex13_066::ex13_066_option_plays_then_de_digivolves_per_ally": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_066::ex13_066_option_plays_then_de_digivolves_per_ally"
+    },
+    "ex13::ex13_067::ex13_067_garurumon_digivolve_plays_agumon": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_067::ex13_067_garurumon_digivolve_plays_agumon"
+    },
+    "ex13::ex13_067::ex13_067_greymon_branch_does_not_offer_agumon_or_name_variants": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_067::ex13_067_greymon_branch_does_not_offer_agumon_or_name_variants"
+    },
+    "ex13::ex13_067::ex13_067_greymon_digivolve_can_play_gabumon_from_trash": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_067::ex13_067_greymon_digivolve_can_play_gabumon_from_trash"
+    },
+    "ex13::ex13_067::ex13_067_greymon_digivolve_plays_gabumon_from_hand_free": {
+      "proof_log": "tier2-ex13-source-last-five-green.log",
+      "passed_case": "ex13_067::ex13_067_greymon_digivolve_plays_gabumon_from_hand_free"
+    },
+    "ex4::ex4_073::ex4_073_clause_c_inner_deletes_opp_lowest_play_cost_per_trash": {
+      "proof_log": "ex4-ex7-source-two-modules-green.log",
+      "passed_case": "ex4_073::ex4_073_clause_c_inner_deletes_opp_lowest_play_cost_per_trash"
+    },
+    "ex4::ex4_073::ex4_073_clause_c_trashes_2_opp_security_when_3_sources_trashed": {
+      "proof_log": "ex4-ex7-source-two-modules-green.log",
+      "passed_case": "ex4_073::ex4_073_clause_c_trashes_2_opp_security_when_3_sources_trashed"
+    },
+    "ex4::ex4_073::ex4_073_clause_c_trashes_up_to_3_lv6_or_higher_sources": {
+      "proof_log": "ex4-ex7-source-two-modules-green.log",
+      "passed_case": "ex4_073::ex4_073_clause_c_trashes_up_to_3_lv6_or_higher_sources"
+    },
+    "ex7::ex7_011::ex7_011_cost_paid_but_no_legal_target_still_places_the_option": {
+      "proof_log": "ex4-ex7-source-two-modules-green.log",
+      "passed_case": "ex7_011::ex7_011_cost_paid_but_no_legal_target_still_places_the_option"
+    },
+    "ex7::ex7_011::ex7_011_on_play_prompts_union_pick_with_tm_option_in_trash": {
+      "proof_log": "ex4-ex7-source-two-modules-green.log",
+      "passed_case": "ex7_011::ex7_011_on_play_prompts_union_pick_with_tm_option_in_trash"
+    },
+    "ex7::ex7_011::ex7_011_places_option_from_hand_under_self_and_deletes_low_dp_opponent": {
+      "proof_log": "ex4-ex7-source-two-modules-green.log",
+      "passed_case": "ex7_011::ex7_011_places_option_from_hand_under_self_and_deletes_low_dp_opponent"
+    },
+    "ex7::ex7_011::ex7_011_places_option_from_trash_under_self": {
+      "proof_log": "ex4-ex7-source-two-modules-green.log",
+      "passed_case": "ex7_011::ex7_011_places_option_from_trash_under_self"
+    },
+    "ex7::ex7_011::ex7_011_when_digivolving_offers_the_same_effect": {
+      "proof_log": "ex4-ex7-source-two-modules-green.log",
+      "passed_case": "ex7_011::ex7_011_when_digivolving_offers_the_same_effect"
+    },
+    "ex7::ex7_021::ex7_021_wd_picks_any_two_from_same_stack_and_no_unsuspend_while_sources_remain": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_021::ex7_021_wd_picks_any_two_from_same_stack_and_no_unsuspend_while_sources_remain"
+    },
+    "ex7::ex7_021::ex7_021_wd_trashes_one_source_from_each_of_two_digimon_and_unsuspends": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_021::ex7_021_wd_trashes_one_source_from_each_of_two_digimon_and_unsuspends"
+    },
+    "ex7::ex7_043::ex7_043_cost_paid_with_no_opponent_digimon_still_returns_cards": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_043::ex7_043_cost_paid_with_no_opponent_digimon_still_returns_cards"
+    },
+    "ex7::ex7_043::ex7_043_de_digivolve_stops_at_level_three": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_043::ex7_043_de_digivolve_stops_at_level_three"
+    },
+    "ex7::ex7_043::ex7_043_returns_three_to_deck_top_in_pick_order_then_de_digivolves_opponent": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_043::ex7_043_returns_three_to_deck_top_in_pick_order_then_de_digivolves_opponent"
+    },
+    "ex7::ex7_043::ex7_043_when_digivolving_offers_the_same_cost": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_043::ex7_043_when_digivolving_offers_the_same_cost"
+    },
+    "ex7::ex7_051::ex7_051_places_hand_option_under_chosen_digimon_and_draws_one": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_051::ex7_051_places_hand_option_under_chosen_digimon_and_draws_one"
+    },
+    "ex7::ex7_051::ex7_051_places_trash_option_under_self_and_draws_one": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_051::ex7_051_places_trash_option_under_self_and_draws_one"
+    },
+    "ex7::ex7_051::ex7_051_token_is_not_a_legal_host": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_051::ex7_051_token_is_not_a_legal_host"
+    },
+    "ex7::ex7_051::ex7_051_union_pick_offers_only_tm_options_from_hand_and_trash": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_051::ex7_051_union_pick_offers_only_tm_options_from_hand_and_trash"
+    },
+    "ex7::ex7_073::ex7_073_wa_trash_two_sources_deletes_opp_digimon_and_trashes_security": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_073::ex7_073_wa_trash_two_sources_deletes_opp_digimon_and_trashes_security"
+    },
+    "ex7::ex7_073::ex7_073_wa_trash_two_sources_with_no_opp_digimon_still_trashes_security": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_073::ex7_073_wa_trash_two_sources_with_no_opp_digimon_still_trashes_security"
+    },
+    "ex7::ex7_073::ex7_073_wd_delete_targets_highest_level_opponent_only": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_073::ex7_073_wd_delete_targets_highest_level_opponent_only"
+    },
+    "ex7::ex7_073::ex7_073_wd_partial_pick_of_one_source_does_not_trigger_delete_or_security": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_073::ex7_073_wd_partial_pick_of_one_source_does_not_trigger_delete_or_security"
+    },
+    "ex7::ex7_073::ex7_073_wd_trash_two_sources_deletes_opp_digimon_and_trashes_security": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_073::ex7_073_wd_trash_two_sources_deletes_opp_digimon_and_trashes_security"
+    },
+    "ex7::ex7_073::ex7_073_wd_trash_two_sources_with_no_opp_digimon_still_trashes_security": {
+      "proof_log": "ex7-late-four-modules-green.log",
+      "passed_case": "ex7_073::ex7_073_wd_trash_two_sources_with_no_opp_digimon_still_trashes_security"
+    },
+    "p::p_170::p_170_on_deletion_plays_tm_digimon_free_from_trash": {
+      "proof_log": "promo-four-modules-green.log",
+      "passed_case": "p_170::p_170_on_deletion_plays_tm_digimon_free_from_trash"
+    },
+    "p::p_189::p_189_security_clause_offers_hand_and_trash_candidates": {
+      "proof_log": "promo-four-modules-green.log",
+      "passed_case": "p_189::p_189_security_clause_offers_hand_and_trash_candidates"
+    },
+    "p::p_189::p_189_security_clause_plays_liberator_free_from_trash": {
+      "proof_log": "promo-four-modules-green.log",
+      "passed_case": "p_189::p_189_security_clause_plays_liberator_free_from_trash"
+    },
+    "p::p_189::p_189_security_filter_includes_cost_4_liberator_card": {
+      "proof_log": "promo-four-modules-green.log",
+      "passed_case": "p_189::p_189_security_filter_includes_cost_4_liberator_card"
+    },
+    "p::p_189::p_189_security_filter_offers_only_eligible_card_among_mixed_hand": {
+      "proof_log": "promo-four-modules-green.log",
+      "passed_case": "p_189::p_189_security_filter_offers_only_eligible_card_among_mixed_hand"
+    },
+    "p::p_224::p_224_main_suspends_to_play_level5_or_higher_xros_heart_from_under_tamers_at_cost_minus_one": {
+      "proof_log": "promo-four-modules-green.log",
+      "passed_case": "p_224::p_224_main_suspends_to_play_level5_or_higher_xros_heart_from_under_tamers_at_cost_minus_one"
+    },
+    "p::p_224::p_224_on_play_places_xros_or_twilight_from_hand_or_trash_under_self_and_draws_if_hand_small": {
+      "proof_log": "promo-four-modules-green.log",
+      "passed_case": "p_224::p_224_on_play_places_xros_or_twilight_from_hand_or_trash_under_self_and_draws_if_hand_small"
+    },
+    "p::p_244::p_244_delay_vemmon_placed_by_effect_digivolves_with_cost_minus_3": {
+      "proof_log": "promo-four-modules-green.log",
+      "passed_case": "p_244::p_244_delay_vemmon_placed_by_effect_digivolves_with_cost_minus_3"
+    },
+    "p::p_244::p_244_main_plays_vemmon_from_hand_free_then_places_self": {
+      "proof_log": "promo-four-modules-green.log",
+      "passed_case": "p_244::p_244_main_plays_vemmon_from_hand_free_then_places_self"
+    },
+    "p::p_244::p_244_main_plays_zenith_or_xeno_alias_from_trash": {
+      "proof_log": "promo-four-modules-green.log",
+      "passed_case": "p_244::p_244_main_plays_zenith_or_xeno_alias_from_trash"
+    },
+    "st19::st19_08::st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone": {
+      "proof_log": "qualification-st-late-current.log",
+      "passed_case": "st19_08::st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone"
+    },
+    "st19::st19_08::st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate": {
+      "proof_log": "qualification-st-late-current.log",
+      "passed_case": "st19_08::st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate"
+    },
+    "st2::st2_cards::st2_15_kaiser_nail_plays_selected_digimon_source_for_free": {
+      "proof_log": "qualification-st-late-current.log",
+      "passed_case": "st2_cards::st2_15_kaiser_nail_plays_selected_digimon_source_for_free"
+    },
+    "st5::st5_effects::st5_13_digi_burst_two_trashes_sources_and_buffs_one_own_digimon": {
+      "proof_log": "qualification-st-late-current.log",
+      "passed_case": "st5_effects::st5_13_digi_burst_two_trashes_sources_and_buffs_one_own_digimon"
+    },
+    "st9::st9_06::st9_06_when_digivolving_no_blue_candidate_still_offers_green_candidate": {
+      "proof_log": "qualification-st-late-current.log",
+      "passed_case": "st9_06::st9_06_when_digivolving_no_blue_candidate_still_offers_green_candidate"
+    },
+    "st9::st9_06::st9_06_when_digivolving_no_green_candidate_skips_green_pick": {
+      "proof_log": "qualification-st-late-current.log",
+      "passed_case": "st9_06::st9_06_when_digivolving_no_green_candidate_skips_green_pick"
+    },
+    "st9::st9_06::st9_06_when_digivolving_plays_blue_and_green_from_stack_free": {
+      "proof_log": "qualification-st-late-current.log",
+      "passed_case": "st9_06::st9_06_when_digivolving_plays_blue_and_green_from_stack_free"
+    }
+  }
+}

@@ -265,17 +265,18 @@ fn bt13_012_clause1_when_digivolving_is_blocked() {
             "the security-search play is 'you may', so optional"
         );
         // The `filter` admits exactly the 2 red/yellow Tamers — the Blue
-        // filler Digimon in security is excluded. (PASS is surfaced via the
-        // `is_optional` flag, not as a `valid_action_ids` entry.)
+        // filler Digimon in security is excluded. The owned menu also
+        // exposes an explicit legal decline action.
         assert_eq!(
-            pending.valid_action_ids.len(),
+            pending.valid_action_ids.iter().filter(|&&id| id != PASS).count(),
             2,
             "filter must admit exactly the 2 red/yellow Tamers; got {:?}",
             pending.valid_action_ids
         );
+        assert!(pending.valid_action_ids.contains(&PASS), "optional decline is legal");
         (
             pending.selecting_player,
-            *pending.valid_action_ids.first().expect("a Tamer pick"),
+            *pending.valid_action_ids.iter().find(|&&id| id != PASS).expect("a Tamer pick"),
         )
     };
     runner
@@ -715,4 +716,22 @@ fn bt13_012_dp_lte_filter_excludes_high_dp_targets() {
         "dp_lte: 3000 must filter out the 4000 DP opp Digimon; got {:?}",
         pending.valid_action_ids
     );
+}
+
+#[path = "../../support/printed_security_search.rs"]
+mod printed_security_search;
+
+#[test]
+fn bt13_012_printed_search_inspects_full_stack_with_and_without_matches_for_both_seats() {
+    for actor in [0,1] { for has_match in [false,true] {
+        let mut security=vec!["SEARCH-FILLER";40];if has_match {security[39]="SEARCH-TAMER";}
+        let mut r=DebugRunner::builder().dsl_card("BT13-012").unwrap()
+            .add_card(make_tamer("SEARCH-TAMER",vec![CardColor::Yellow]))
+            .add_card(make_digimon("SEARCH-FILLER",3000,CardColor::Blue))
+            .security(actor,&security).deck(0,&["SEARCH-FILLER";20]).deck(1,&["SEARCH-FILLER";20]).memory(10).start();
+        r.skip_mulligan();r.game.turn_player_idx=actor as usize;
+        let host=r.place_on_field(actor,"BT13-012",Some(0));
+        r.game.enqueue_triggered(EffectTiming::WhenDigivolving,TriggerSource::Permanent(host));r.game.drain_effect_queue();
+        printed_security_search::inspect_all_then_decline(&mut r,actor,if has_match {&[39]}else{&[]});
+    }}
 }

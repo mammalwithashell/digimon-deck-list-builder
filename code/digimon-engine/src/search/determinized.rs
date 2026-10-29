@@ -57,6 +57,7 @@
 //! - the first simulation is spent evaluating the root (so root visit
 //!   totals are `simulations - 1`).
 
+use crate::search::profiling::{measure, span};
 use std::collections::BTreeMap;
 
 use rand::rngs::StdRng;
@@ -68,9 +69,10 @@ use crate::card_source::CardSource;
 use crate::determinize::materialize;
 use crate::enums::PlayerId;
 use crate::game::Game;
-use crate::observation::build_observation_tensor;
+use crate::observation::build_observation_tensor_with_mask;
 use crate::player::Player;
 
+use super::decision::{apply_plan, evaluate_requests, Surface};
 use super::dirichlet::sample_dirichlet;
 use super::evaluator::{EvalRequest, PolicyValueFn};
 use super::mcts::{
@@ -126,6 +128,25 @@ pub fn determinized_search(
     evaluator: &mut dyn PolicyValueFn,
     config: &DeterminizedConfig,
 ) -> SearchResult {
+    determinized_search_batched(registry, root, viewer, evaluator, config, 1)
+}
+
+/// PIMC evaluation batching across independent worlds. Batch size one is the
+/// serial reference; IS-MCTS remains serial. World seeds, individual tree
+/// order and world-order aggregation do not depend on the batch size.
+pub fn determinized_search_batched(
+    registry: &CardRegistry,
+    root: &Game,
+    viewer: PlayerId,
+    evaluator: &mut dyn PolicyValueFn,
+    config: &DeterminizedConfig,
+    evaluation_batch_size: usize,
+) -> SearchResult {
+    let _profile = span("determinized_search_batched");
+    assert!(
+        evaluation_batch_size > 0,
+        "evaluation batch size must be positive"
+    );
     assert_eq!(
         root.players.len(),
         2,
@@ -134,6 +155,7 @@ pub fn determinized_search(
     assert!((viewer as usize) < 2, "viewer out of range");
     if root.game_over {
         return SearchResult {
+            root_plans: Vec::new(),
             root_visits: Vec::new(),
             root_q: Vec::new(),
             root_value: terminal_value(root, viewer),
@@ -147,9 +169,16 @@ pub fn determinized_search(
          (an opponent-owned pending selection references their re-dealt hand)"
     );
 
-    let canon = canonicalize_hidden(root, viewer);
+    let canon = measure("canonicalize", || canonicalize_hidden(root, viewer));
     match config.mode {
-        DeterminizationMode::Pimc => pimc_search(registry, &canon, viewer, evaluator, config),
+        DeterminizationMode::Pimc => pimc_search(
+            registry,
+            &canon,
+            viewer,
+            evaluator,
+            config,
+            evaluation_batch_size,
+        ),
         DeterminizationMode::IsMcts => ismcts_search(registry, &canon, viewer, evaluator, config),
     }
 }
@@ -162,6 +191,7 @@ fn pimc_search(
     viewer: PlayerId,
     evaluator: &mut dyn PolicyValueFn,
     config: &DeterminizedConfig,
+    evaluation_batch_size: usize,
 ) -> SearchResult {
     // Respect the TOTAL simulation budget. A naive `(sims / worlds).max(1)`
     // per-world floor would overshoot (sims=1, worlds=8 → 8 sims), so clamp
@@ -178,52 +208,72 @@ fn pimc_search(
     let mcts = Mcts::new(registry);
 
     let mut ref_legal: Option<Vec<u16>> = None;
-    let mut visits: BTreeMap<u16, u32> = BTreeMap::new();
-    let mut weighted_q: BTreeMap<u16, f64> = BTreeMap::new();
+    let mut visits: BTreeMap<Vec<u16>, u32> = BTreeMap::new();
+    let mut weighted_q: BTreeMap<Vec<u16>, f64> = BTreeMap::new();
+    let mut ref_plans: Option<Vec<Vec<u16>>> = None;
     let mut value_sum = 0.0f64;
     let mut sims_total = 0u32;
 
-    for world_idx in 0..worlds {
-        let world_seed = derive_seed(config.search.seed, STREAM_WORLD, world_idx as u64);
-        let world = sample_world(canon, viewer, world_seed);
-        check_root_surface(&world, viewer, &mut ref_legal, world_idx);
-
-        let world_config = SearchConfig {
-            simulations: per_world,
-            seed: derive_seed(world_seed, STREAM_SEARCH, world_idx as u64),
-            ..config.search.clone()
+    let batch_size = evaluation_batch_size.min(worlds as usize);
+    for first_world in (0..worlds as usize).step_by(batch_size) {
+        let end = (first_world + batch_size).min(worlds as usize);
+        let mut roots = Vec::with_capacity(end - first_world);
+        let mut configs = Vec::with_capacity(end - first_world);
+        for world_idx in first_world..end {
+            let world_seed = derive_seed(config.search.seed, STREAM_WORLD, world_idx as u64);
+            let world = sample_world(canon, viewer, world_seed);
+            check_root_surface(&world, viewer, &mut ref_legal, world_idx as u32);
+            roots.push(world);
+            configs.push(SearchConfig {
+                simulations: per_world,
+                seed: derive_seed(world_seed, STREAM_SEARCH, world_idx as u64),
+                ..config.search.clone()
+            });
+        }
+        let results = if batch_size == 1 {
+            vec![mcts.search(&roots[0], evaluator, &configs[0])]
+        } else {
+            mcts.search_batch(&roots, evaluator, &configs)
         };
-        let result = mcts.search(&world, evaluator, &world_config);
-        sims_total += result.simulations_run;
-        value_sum += result.root_value as f64;
-        for ((action, v), (action_q, q)) in result.root_visits.iter().zip(result.root_q.iter()) {
-            debug_assert_eq!(action, action_q, "visits/q must be parallel");
-            *visits.entry(*action).or_insert(0) += v;
-            *weighted_q.entry(*action).or_insert(0.0) += (*q as f64) * (*v as f64);
+        for result in results {
+            let plans: Vec<_> = result
+                .root_plans
+                .iter()
+                .map(|(route, _, _)| route.clone())
+                .collect();
+            if let Some(reference) = &ref_plans {
+                assert_eq!(
+                    &plans, reference,
+                    "determinization changed off-page root choices"
+                );
+            } else {
+                ref_plans = Some(plans);
+            }
+            sims_total += result.simulations_run;
+            value_sum += result.root_value as f64;
+            for (route, v, q) in result.root_plans {
+                *visits.entry(route.clone()).or_insert(0) += v;
+                *weighted_q.entry(route).or_insert(0.0) += q as f64 * v as f64;
+            }
         }
     }
 
-    let root_visits: Vec<(u16, u32)> = visits.iter().map(|(&a, &v)| (a, v)).collect();
-    let root_q: Vec<(u16, f32)> = visits
+    let plans = visits
         .iter()
-        .map(|(&a, &v)| {
-            let q = if v > 0 {
-                (weighted_q[&a] / v as f64) as f32
-            } else {
-                0.0
-            };
-            (a, q)
+        .map(|(route, &v)| {
+            (
+                route.clone(),
+                v,
+                if v > 0 {
+                    (weighted_q[route] / v as f64) as f32
+                } else {
+                    0.
+                },
+            )
         })
         .collect();
-    SearchResult {
-        root_visits,
-        root_q,
-        root_value: (value_sum / worlds as f64) as f32,
-        simulations_run: sims_total,
-    }
+    SearchResult::from_plans(plans, (value_sum / worlds as f64) as f32, sims_total)
 }
-
-// ──────────────────────────── IS-MCTS ────────────────────────────
 
 struct IsEdge {
     prior: f32,
@@ -240,7 +290,7 @@ struct IsNode {
     /// Whether some world has evaluated this node (set its priors).
     evaluated: bool,
     /// BTreeMap for deterministic iteration order.
-    edges: BTreeMap<u16, IsEdge>,
+    edges: BTreeMap<Vec<u16>, IsEdge>,
 }
 
 fn ismcts_search(
@@ -262,14 +312,21 @@ fn ismcts_search(
 
         // ── Descend on THIS world ────────────────────────────────────
         let mut cur = 0usize;
-        let mut path: Vec<(usize, u16)> = Vec::new();
+        let mut path: Vec<(usize, Vec<u16>)> = Vec::new();
         let (leaf_value, leaf_mover) = loop {
             if world.game_over {
                 break (terminal_value(&world, viewer), viewer);
             }
             let pid = decision_player(&world);
-            let mask = build_action_mask(&world, pid);
-            let legal = legal_set(&mask);
+            let mask = measure("mask", || build_action_mask(&world, pid));
+            let surface = Surface::new(
+                &world,
+                pid,
+                registry,
+                search.observation_profile,
+                mask.clone(),
+            );
+            let legal = &surface.plans;
             if legal.is_empty() {
                 debug_assert!(false, "non-terminal state with empty action mask");
                 break (0.0, pid);
@@ -277,18 +334,12 @@ fn ismcts_search(
 
             if !arena[cur].evaluated {
                 // Expansion: this world sets the node's priors.
-                let (policy, value) = evaluate(registry, evaluator, &world, pid, &mask, search);
-                let legal_mass: f32 = legal.iter().map(|&a| policy[a as usize]).sum();
-                let uniform = 1.0 / legal.len() as f32;
+                let evaluations = evaluate_requests(&surface.requests, evaluator, 1);
+                let (priors, value) = surface.evaluate(&evaluations);
                 let node = &mut arena[cur];
-                for &a in &legal {
-                    let prior = if legal_mass > 0.0 {
-                        policy[a as usize] / legal_mass
-                    } else {
-                        uniform
-                    };
+                for (a, prior) in legal.iter().zip(priors) {
                     node.edges.insert(
-                        a,
+                        a.clone(),
                         IsEdge {
                             prior,
                             visits: 0,
@@ -326,8 +377,8 @@ fn ismcts_search(
             {
                 let uniform = 1.0 / legal.len() as f32;
                 let node = &mut arena[cur];
-                for &a in &legal {
-                    node.edges.entry(a).or_insert(IsEdge {
+                for a in legal {
+                    node.edges.entry(a.clone()).or_insert(IsEdge {
                         prior: uniform,
                         visits: 0,
                         w: 0.0,
@@ -353,11 +404,11 @@ fn ismcts_search(
                         (e.prior, e.visits, q)
                     })
                     .collect();
-                legal[puct_argmax_q(&stats, search.c_puct)]
+                legal[puct_argmax_q(&stats, search.c_puct)].clone()
             };
 
-            path.push((cur, chosen));
-            world.decode_action(chosen, pid);
+            path.push((cur, chosen.clone()));
+            apply_plan(&mut world, pid, &chosen);
             // Same granularity rule as the core: forced chains collapse.
             let _ = advance_forced_chain(&mut world, search.max_decisions);
 
@@ -377,10 +428,10 @@ fn ismcts_search(
         };
 
         // ── Backup (identity-keyed sign, per stored edge perspective) ──
-        for &(node_idx, action) in &path {
-            let edge = arena[node_idx]
+        for (node_idx, action) in &path {
+            let edge = arena[*node_idx]
                 .edges
-                .get_mut(&action)
+                .get_mut(action)
                 .expect("path edge exists");
             edge.visits += 1;
             edge.w += signed_value(leaf_value, leaf_mover, edge.perspective);
@@ -389,35 +440,33 @@ fn ismcts_search(
 
     // ── Result extraction (root edges' perspective is always the viewer) ──
     let root = &arena[0];
-    let root_visits: Vec<(u16, u32)> = root.edges.iter().map(|(&a, e)| (a, e.visits)).collect();
-    let root_q: Vec<(u16, f32)> = root
-        .edges
-        .iter()
-        .map(|(&a, e)| {
-            debug_assert_eq!(e.perspective, viewer, "root edges are viewer-owned");
-            let q = if e.visits > 0 {
-                e.w / e.visits as f32
-            } else {
-                0.0
-            };
-            (a, q)
-        })
-        .collect();
     let total_visits: u32 = root.edges.values().map(|e| e.visits).sum();
     let total_w: f32 = root.edges.values().map(|e| e.w).sum();
-    SearchResult {
-        root_visits,
-        root_q,
-        root_value: if total_visits > 0 {
+    let plans = root
+        .edges
+        .iter()
+        .map(|(route, e)| {
+            (
+                route.clone(),
+                e.visits,
+                if e.visits > 0 {
+                    e.w / e.visits as f32
+                } else {
+                    0.
+                },
+            )
+        })
+        .collect();
+    SearchResult::from_plans(
+        plans,
+        if total_visits > 0 {
             total_w / total_visits as f32
         } else {
-            0.0
+            0.
         },
-        simulations_run: search.simulations,
-    }
+        search.simulations,
+    )
 }
-
-// ─────────────────────────── shared plumbing ───────────────────────────
 
 const STREAM_WORLD: u64 = 0xD1B54A32D192ED03;
 const STREAM_SEARCH: u64 = 0x2545F4914F6CDD1D;
@@ -447,6 +496,7 @@ fn legal_set(mask: &[f32]) -> Vec<u16> {
 /// (D1: chance frozen by world choice) and, in debug builds, the full
 /// Phase 1 invariant checker on every sampled world.
 fn sample_world(canon: &Game, viewer: PlayerId, seed: u64) -> Game {
+    let _profile = span("sample_world");
     let world = materialize(canon, viewer, seed);
     debug_assert!(
         world.reveal_source.is_none(),
@@ -472,7 +522,7 @@ fn check_root_surface(
         viewer,
         "world {world_idx}: decision player diverged from the viewer"
     );
-    let legal = legal_set(&build_action_mask(world, viewer));
+    let legal = legal_set(&measure("mask", || build_action_mask(world, viewer)));
     match ref_legal {
         None => *ref_legal = Some(legal),
         Some(reference) => assert_eq!(
@@ -491,7 +541,8 @@ fn evaluate(
     mask: &[f32],
     search: &SearchConfig,
 ) -> (Vec<f32>, f32) {
-    let obs = build_observation_tensor(world, pid, registry, search.observation_profile);
+    let obs =
+        build_observation_tensor_with_mask(world, pid, registry, search.observation_profile, mask);
     let mut evaluations = evaluator.evaluate_batch(&[EvalRequest {
         obs,
         mask: mask.to_vec(),
@@ -508,12 +559,31 @@ fn evaluate(
 /// the viewer's infoset (see module docs — the strong no-X-ray form). A
 /// pure hidden-to-hidden rearrangement: infoset-preserving by definition.
 fn canonicalize_hidden(root: &Game, viewer: PlayerId) -> Game {
-    let mut canon = root.clone();
+    let mut canon = measure("clone", || root.clone());
+    let inspected = root
+        .pending_selection
+        .as_ref()
+        .and_then(|s| s.card_choice.as_ref())
+        .and_then(|choice| choice.inspected_security_owner(viewer));
     // Viewer: own hand is known (untouched); deck ∪ face-down security is
     // the hidden pool.
-    canonicalize_player_hidden(&mut canon.players[viewer as usize], false);
+    canonicalize_player_hidden(
+        &mut canon.players[viewer as usize],
+        false,
+        inspected == Some(viewer),
+    );
     // Opponent: hand is hidden too.
-    canonicalize_player_hidden(&mut canon.players[(1 - viewer) as usize], true);
+    canonicalize_player_hidden(
+        &mut canon.players[(1 - viewer) as usize],
+        true,
+        inspected == Some(1 - viewer),
+    );
+    if let Some(mut selection) = canon.pending_selection.take() {
+        if let Some(choice) = &mut selection.card_choice {
+            choice.rebind_sampled_security(root, &canon);
+        }
+        canon.pending_selection = Some(selection);
+    }
     canon
 }
 
@@ -527,7 +597,7 @@ fn card_key(c: &CardSource) -> (usize, u16) {
 /// security), sort by [`card_key`], and redistribute deterministically
 /// (hand → face-down security slots → deck). Pinned (face-up) security
 /// cards keep their slots. The digitama deck is sorted in place.
-fn canonicalize_player_hidden(p: &mut Player, include_hand: bool) {
+fn canonicalize_player_hidden(p: &mut Player, include_hand: bool, security_inspected: bool) {
     let mut pool: Vec<CardSource> = std::mem::take(&mut p.deck);
     let hand_count = p.hand.len();
     if include_hand {
@@ -537,7 +607,7 @@ fn canonicalize_player_hidden(p: &mut Player, include_hand: bool) {
     let old_security = std::mem::take(&mut p.security);
     let mut slots: Vec<Option<CardSource>> = Vec::with_capacity(old_security.len());
     for c in old_security {
-        if face_up.contains(&c.card_index) {
+        if security_inspected || face_up.contains(&c.card_index) {
             slots.push(Some(c));
         } else {
             pool.push(c);

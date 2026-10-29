@@ -672,12 +672,12 @@ fn bt24_089_main_plays_elizamon_from_hand_free() {
         .pending_selection_view()
         .expect("union-zone prompt must be present");
     assert_eq!(
-        view.valid_action_ids.len(),
+        view.valid_action_ids.iter().filter(|&&a|a!=digimon_engine::action::space::PASS).count(),
         1,
         "only the Elizamon should be an eligible union-zone target"
     );
     runner
-        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, owned_fixture::action(&runner.game,0,"ELIZAMON","hand"))
         .expect("choose Elizamon");
     runner.auto_resolve().expect("resolve Main");
 
@@ -714,12 +714,12 @@ fn bt24_089_main_plays_owen_from_hand_free() {
         .pending_selection_view()
         .expect("union-zone prompt must be present");
     assert_eq!(
-        view.valid_action_ids.len(),
+        view.valid_action_ids.iter().filter(|&&a|a!=digimon_engine::action::space::PASS).count(),
         1,
         "only the Owen Dreadnought should be eligible"
     );
     runner
-        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, owned_fixture::action(&runner.game,0,"OWEN","hand"))
         .expect("choose Owen Dreadnought");
     runner.auto_resolve().expect("resolve Main");
 
@@ -777,7 +777,7 @@ fn bt24_089_main_picks_from_hand_or_trash_in_one_masked_choice() {
         "union-zone pick must expose PASS — the text says 'You may'"
     );
     assert_eq!(
-        view.valid_action_ids.len(),
+        view.valid_action_ids.iter().filter(|&&a|a!=digimon_engine::action::space::PASS).count(),
         2,
         "only [Owen Dreadnought] (hand) and [Elizamon] (trash) should be eligible; \
          non-matching cards must be filtered out"
@@ -786,7 +786,7 @@ fn bt24_089_main_picks_from_hand_or_trash_in_one_masked_choice() {
     let trash_before = runner.game.players[0].trash.len();
     let hand_before = runner.game.players[0].hand.len();
     runner
-        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, owned_fixture::action(&runner.game,0,"ELIZAMON","trash"))
         .expect("select one valid union target");
     runner.auto_resolve().expect("resolve Main");
 
@@ -1181,3 +1181,6 @@ fn bt24_089_security_clause_fires_union_zone_selection() {
     // Resolve to completion without panic.
     runner.auto_resolve().expect("security clause resolves");
 }
+
+#[path="../../support/late_owned_fixture.rs"]
+mod owned_fixture;

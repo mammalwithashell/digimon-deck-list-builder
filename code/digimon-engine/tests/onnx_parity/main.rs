@@ -3,6 +3,9 @@ use std::path::PathBuf;
 use digimon_engine::inference::{load_policy, BatchedPolicyValueEvaluator};
 use serde::Deserialize;
 
+#[path = "../search/support.rs"]
+mod search_support;
+
 #[derive(Deserialize)]
 struct Shapes {
     obs_size: usize,
@@ -180,7 +183,82 @@ fn batched_evaluator_rejects_policy_only_graph() {
 }
 
 #[test]
+fn search_evaluator_honors_selected_profile_and_rejects_mismatches() {
+    use digimon_engine::observation::{observation_layout, ObservationProfileId};
+    let lite = ObservationProfileId::StandardLiteV2;
+    let path = fixtures_dir().join("mlp_lite_value.onnx");
+    let mut evaluator = BatchedPolicyValueEvaluator::load_for_profile(&path, lite)
+        .expect("non-default profile model must load");
+    assert!(
+        evaluator.require_terminal_value().is_err(),
+        "a PPO-shaped value export must not silently become a terminal search critic"
+    );
+    let obs = vec![0.0; observation_layout(lite).tensor_size];
+    let mask = vec![1.0; digimon_engine::action::ACTION_SPACE_SIZE];
+    assert_eq!(
+        evaluator.evaluate_batch(&[&obs], &[&mask]).unwrap().len(),
+        1
+    );
+    assert!(evaluator.evaluate_batch(&[&obs[..8]], &[&mask]).is_err());
+    assert!(BatchedPolicyValueEvaluator::load(&path).is_err());
+    assert!(BatchedPolicyValueEvaluator::load_for_profile(
+        &fixtures_dir().join("mlp_tiny_value.onnx"),
+        lite
+    )
+    .is_err());
+}
+
+#[test]
 fn mlp_hidden_size_matches_fixture() {
     let expected = load_expected();
     assert_eq!(expected.shapes.hidden_size, 4);
+}
+
+#[test]
+fn independent_tree_batching_matches_serial_onnx_search() {
+    use digimon_engine::card_registry::CardRegistry;
+    use digimon_engine::observation::ObservationProfileId;
+    use digimon_engine::runners::HeadlessRunner;
+    use digimon_engine::search::{Mcts, SearchConfig};
+    search_support::run_big_stack(|| {
+        let data = search_support::load_card_data();
+        let registry = CardRegistry::from_cards(&data);
+        let owned = |d: &[&str]| d.iter().map(|s| s.to_string()).collect();
+        let roots: Vec<_> = [7, 11, 21]
+            .into_iter()
+            .map(|seed| {
+                HeadlessRunner::new(
+                    owned(search_support::ST1_DECK),
+                    owned(search_support::ST5_DECK),
+                    &data,
+                    false,
+                    false,
+                    false,
+                    Some(seed),
+                )
+                .unwrap()
+                .game
+            })
+            .collect();
+        let profile = ObservationProfileId::StandardLiteV2;
+        let configs: Vec<_> = [19, 41, 63]
+            .into_iter()
+            .map(|seed| SearchConfig {
+                simulations: 32,
+                seed,
+                observation_profile: profile,
+                ..Default::default()
+            })
+            .collect();
+        let path = fixtures_dir().join("mlp_lite_value.onnx");
+        let mut serial = BatchedPolicyValueEvaluator::load_for_profile(&path, profile).unwrap();
+        let mut batched = BatchedPolicyValueEvaluator::load_for_profile(&path, profile).unwrap();
+        let mcts = Mcts::new(&registry);
+        let expected: Vec<_> = roots
+            .iter()
+            .zip(&configs)
+            .map(|(r, c)| mcts.search(r, &mut serial, c))
+            .collect();
+        assert_eq!(mcts.search_batch(&roots, &mut batched, &configs), expected);
+    });
 }

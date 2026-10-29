@@ -707,6 +707,10 @@ pub struct CostReductionBody {
     pub reduction_timing: Option<String>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub when_playing_this: bool,
+    /// Target-card reducer hosted by this physical card in hand while it
+    /// becomes a digivolution. Never a play reducer or a field observer.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub when_digivolving_this: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub when_any_ally_played: Option<PredicateSpec>,
     /// Digivolution-target-keyed cost-reduction trigger. When set, the

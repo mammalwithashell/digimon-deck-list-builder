@@ -21,6 +21,7 @@ import type {
   TensorSummary,
 } from '@/types/game';
 import { GamePhase } from '@/types/game';
+import type { CardChoiceToken } from '@/types/cardChoice';
 import type {
   CardDto,
   GameStateDto,
@@ -425,6 +426,7 @@ export function dtoToGameState(dto: GameStateDto): GameState {
     pendingSelection: dto.pending_selection
       ? {
           phase: mapPhase(dto.pending_selection.phase),
+          cardChoice: dto.pending_selection.card_choice,
           validIndices: dto.pending_selection.valid_action_ids,
           isOptional: dto.pending_selection.is_optional,
           prompt: dto.pending_selection.prompt,
@@ -627,7 +629,7 @@ function toKind(type: string | undefined, policy: string | undefined): PlayerKin
 export async function sendAction(
   gameId: string,
   action: number,
-  opts?: { paced?: boolean },
+  opts?: { paced?: boolean; expectedCardChoice?: CardChoiceToken },
 ): Promise<ActionResponse> {
   const paced = opts?.paced ?? false;
   if (!isInTauriRuntime()) {
@@ -640,7 +642,9 @@ export async function sendAction(
       action_context?: Record<string, unknown>;
       agent_pending?: boolean;
       seed?: string;
-    }>(`/games/${gameId}/actions`, { method: 'POST', body: { action, paced } });
+    }>(`/games/${gameId}/actions`, { method: 'POST', body: {
+      action, paced, expected_card_choice: opts?.expectedCardChoice,
+    } });
     return {
       state: httpResp.state,
       action_mask: httpResp.action_mask,
@@ -660,6 +664,7 @@ export async function sendAction(
   const resp = await invoke<ActionCommandResponse>('rust_submit_action', {
     action,
     paced,
+    expectedCardChoice: opts?.expectedCardChoice,
   });
   return {
     state: dtoToGameState(resp.state),

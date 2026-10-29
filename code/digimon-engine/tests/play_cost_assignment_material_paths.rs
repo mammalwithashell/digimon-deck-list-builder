@@ -107,6 +107,20 @@ fn assignment_survives_assembly_decline_and_both_material_parks_in_clones() {
         assert_eq!(r.game.players[0].trash.len(), 0);
     }
 }
+
+#[test]
+fn assignment_makes_assembly_decline_payable_at_standard_memory_limit() {
+    let mut r = fixture(true, false);
+    r.game.rules.memory_range = (-10, 10);
+    r.game.memory = 0;
+    start(&mut r);
+    assert!(r.game.pending_selection.as_ref().unwrap().is_optional,
+        "the assigned cost of 5 is payable even though the printed cost of 20 is not");
+    choose(&mut r, PASS);
+    assert_eq!(played_sources(&r), 1);
+    assert_eq!(r.game.players[0].trash.len(), 2);
+    assert_eq!(r.game.memory, 5);
+}
 #[test]
 fn assignment_survives_digixros_material_selection_and_stop_clones() {
     let mut r = fixture(false, false);

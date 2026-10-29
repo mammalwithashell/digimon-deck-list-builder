@@ -1,0 +1,417 @@
+
+running 184 tests
+test bt23::bt23_072::bt23_072_has_printed_metadata_and_three_effect_clauses ... ok
+test bt23::bt23_072::bt23_072_hand_main_pays_three_tucks_self_and_draws ... ok
+test bt23::bt23_072::bt23_072_inherited_breeding_start_main_requires_six_sources ... ok
+test bt23::bt23_072::bt23_072_inherited_breeding_start_main_plays_king_drasil_source_at_six_sources ... FAILED
+test bt23::bt23_072::bt23_072_played_digimon_observer_can_be_declined_before_suspend_cost ... ok
+test bt23::bt23_072::bt23_072_inherited_can_play_self_as_king_drasil_source ... FAILED
+test bt23::bt23_072::bt23_072_played_digimon_observer_grants_four_keywords_after_suspend_cost ... ok
+test bt23::bt23_076::bt23_076_empty_deck_still_adds_top_security_to_hand ... ok
+test bt23::bt23_076::bt23_076_can_decline_either_base_or_result ... ok
+test bt23::bt23_076::bt23_076_evolves_from_trash_pays_reduced_cost ... FAILED
+test bt23::bt23_076::bt23_076_empty_security_still_recovers ... ok
+test bt23::bt23_076::bt23_076_no_eligible_evolution_ends_without_prompt ... ok
+test bt23::bt23_076::bt23_076_on_play_exchanges_top_security_then_recovers ... ok
+test bt23::bt23_076::bt23_076_opponent_turn_does_not_trigger ... ok
+test bt23::bt23_076::bt23_076_other_suspend_does_not_trigger ... ok
+test bt23::bt23_076::bt23_076_printed_metadata ... ok
+test bt23::bt23_076::bt23_076_reduction_does_not_generate_memory_from_zero_cost ... FAILED
+test bt23::bt23_076::bt23_076_self_is_excluded_even_when_a_legal_evolution_exists_for_it ... FAILED
+test bt23::bt23_076::bt23_076_union_mask_includes_names_and_traits_excludes_illegal_routes_and_self ... FAILED
+test bt23::bt23_076::bt23_076_suspend_trigger_has_no_once_per_turn_limit ... ok
+test bt24::bt24_007::bt24_007_demon_trait_level_five_also_qualifies ... FAILED
+test bt24::bt24_007::bt24_007_decline_keeps_the_once_per_turn_use ... FAILED
+test bt24::bt24_007::bt24_007_does_not_trigger_on_opponents_hand_trash ... ok
+test bt24::bt24_007::bt24_007_does_not_trigger_on_opponents_turn ... ok
+test bt24::bt24_007::bt24_007_level_four_without_demon_or_titan_does_not_trigger ... ok
+test bt24::bt24_007::bt24_007_level_three_titan_does_not_trigger ... ok
+test bt24::bt24_007::bt24_007_once_per_turn_after_a_play ... FAILED
+test bt24::bt24_007::bt24_007_only_the_just_trashed_cards_are_candidates ... FAILED
+test bt24::bt24_007::bt24_007_structure_single_inherited_opt_discard_observer ... ok
+test bt24::bt24_007::bt24_007_plays_trashed_titan_with_cost_reduced_by_two ... FAILED
+test bt24::bt24_009::bt24_009_cannot_digivolve_from_plain_off_color_lv2 ... ok
+test bt24::bt24_009::bt24_009_digivolves_from_lv2_ts_for_zero ... ok
+test bt24::bt24_009::bt24_009_digivolves_from_purple_lv2_for_one ... ok
+test bt24::bt24_009::bt24_009_digivolves_from_other_printed_color_lv2_for_one ... ok
+test bt24::bt24_009::bt24_009_digivolves_from_tsunomon_for_zero ... ok
+test bt24::bt24_009::bt24_009_inherited_can_pick_titamon_by_name ... FAILED
+test bt24::bt24_009::bt24_009_inherited_digivolves_demon_host_into_titan_in_trash ... FAILED
+test bt24::bt24_009::bt24_009_inherited_decline_refunds_then_once_per_turn_locks ... FAILED
+test bt24::bt24_009::bt24_009_inherited_ignores_opponent_hand_trash ... ok
+test bt24::bt24_009::bt24_009_inherited_not_from_face_up_top ... ok
+test bt24::bt24_009::bt24_009_inherited_not_on_opponents_turn ... ok
+test bt24::bt24_009::bt24_009_inherited_requires_demon_or_titan_host ... ok
+test bt24::bt24_009::bt24_009_inherited_shaman_host_does_not_qualify ... ok
+test bt24::bt24_009::bt24_009_inherited_structure ... ok
+test bt24::bt24_009::bt24_009_inherited_titan_host_also_qualifies ... FAILED
+test bt24::bt24_009::bt24_009_metadata_colors_and_traits ... ok
+test bt24::bt24_009::bt24_009_on_play_accepts_demon_shaman_or_titan_any_card_kind ... ok
+test bt24::bt24_009::bt24_009_on_play_cost_trash_feeds_another_shamanmon_inherited ... FAILED
+test bt24::bt24_009::bt24_009_on_play_declining_cost_draws_nothing ... ok
+test bt24::bt24_009::bt24_009_on_play_structure ... ok
+test bt24::bt24_009::bt24_009_on_play_trash_demon_card_draws_two ... ok
+test bt24::bt24_009::bt24_009_on_play_without_qualifying_card_does_nothing ... ok
+test bt24::bt24_013::bt24_013_alt_digivolve_from_demon_lv3_costs_2 ... ok
+test bt24::bt24_013::bt24_013_alt_digivolve_from_ts_lv3_costs_2 ... ok
+test bt24::bt24_013::bt24_013_cannot_digivolve_from_unrelated_lv3 ... ok
+test bt24::bt24_013::bt24_013_decline_cost_does_nothing_and_spends_the_once_per_turn ... ok
+test bt24::bt24_013::bt24_013_colour_circles_cost_3 ... ok
+test bt24::bt24_013::bt24_013_empty_hand_does_not_activate_or_spend_the_once_per_turn ... ok
+test bt24::bt24_013::bt24_013_inherited_decline_refunds_and_is_once_per_turn ... FAILED
+test bt24::bt24_013::bt24_013_inherited_demon_carrier_digivolves_on_own_hand_trash ... FAILED
+test bt24::bt24_013::bt24_013_inherited_ignores_opponent_hand_trash ... ok
+test bt24::bt24_013::bt24_013_inherited_only_on_your_turn ... ok
+test bt24::bt24_013::bt24_013_inherited_requires_demon_or_titan_carrier ... ok
+test bt24::bt24_013::bt24_013_metadata_and_clause_shape ... ok
+test bt24::bt24_013::bt24_013_no_target_over_6000_deletes_nothing ... ok
+test bt24::bt24_013::bt24_013_on_play_deletes_opponent_digimon_with_6000_dp_or_less ... ok
+test bt24::bt24_013::bt24_013_once_per_turn_shared_and_resets_next_turn ... ok
+test bt24::bt24_013::bt24_013_other_hand_trash_does_not_draw_from_trash ... ok
+test bt24::bt24_013::bt24_013_own_cost_trashing_a_second_copy_draws ... ok
+test bt24::bt24_013::bt24_013_trashed_from_hand_draws_one ... ok
+test bt24::bt24_013::bt24_013_trashed_with_exactly_five_left_draws ... ok
+test bt24::bt24_013::bt24_013_trashed_with_six_left_does_not_draw ... ok
+test bt24::bt24_013::bt24_013_when_attacking_deletes ... ok
+test bt24::bt24_021::bt24_021_adds_one_per_bucket_bottoms_rest_then_trashes_one ... ok
+test bt24::bt24_021::bt24_021_cannot_digivolve_from_plain_off_color_lv2 ... ok
+test bt24::bt24_021::bt24_021_bucket_a_requires_a_digimon_card ... ok
+test bt24::bt24_021::bt24_021_digivolves_from_lv2_ts_for_zero ... ok
+test bt24::bt24_021::bt24_021_digivolves_from_other_printed_color_lv2_for_one ... ok
+test bt24::bt24_021::bt24_021_digivolves_from_purple_lv2_for_one ... ok
+test bt24::bt24_021::bt24_021_digivolves_from_tsunomon_for_zero ... ok
+test bt24::bt24_021::bt24_021_inherited_can_pick_titamon_by_name ... FAILED
+test bt24::bt24_021::bt24_021_inherited_decline_refunds_then_once_per_turn_locks ... FAILED
+test bt24::bt24_021::bt24_021_inherited_digivolves_demon_host_into_titan_in_trash ... FAILED
+test bt24::bt24_021::bt24_021_inherited_ignores_opponent_hand_trash ... ok
+test bt24::bt24_021::bt24_021_inherited_not_from_face_up_top ... ok
+test bt24::bt24_021::bt24_021_inherited_not_on_opponents_turn ... ok
+test bt24::bt24_021::bt24_021_inherited_shaman_host_does_not_qualify ... ok
+test bt24::bt24_021::bt24_021_inherited_requires_demon_or_titan_host ... ok
+test bt24::bt24_021::bt24_021_inherited_titan_host_also_qualifies ... FAILED
+test bt24::bt24_021::bt24_021_inherited_structure ... ok
+test bt24::bt24_021::bt24_021_metadata_colors_and_traits ... ok
+test bt24::bt24_021::bt24_021_nothing_revealed_matches_no_trash ... ok
+test bt24::bt24_021::bt24_021_on_play_structure ... ok
+test bt24::bt24_021::bt24_021_shaman_digimon_fills_bucket_a ... ok
+test bt24::bt24_021::bt24_021_post_add_trash_feeds_inherited_digivolve ... FAILED
+test bt24::bt24_021::bt24_021_titan_only_still_counts_as_added ... ok
+test bt24::bt24_026::bt24_026_alt_digivolve_from_demon_lv3_costs_2 ... ok
+test bt24::bt24_026::bt24_026_cannot_digivolve_from_unrelated_lv3 ... ok
+test bt24::bt24_026::bt24_026_alt_digivolve_from_ts_lv3_costs_2 ... ok
+test bt24::bt24_026::bt24_026_decline_cost_does_nothing_and_spends_the_once_per_turn ... ok
+test bt24::bt24_026::bt24_026_colour_circles_cost_3 ... ok
+test bt24::bt24_026::bt24_026_empty_hand_does_not_activate_or_spend_the_once_per_turn ... ok
+test bt24::bt24_026::bt24_026_inherited_decline_refunds_and_is_once_per_turn ... FAILED
+test bt24::bt24_026::bt24_026_inherited_demon_carrier_digivolves_on_own_hand_trash ... FAILED
+test bt24::bt24_026::bt24_026_inherited_ignores_opponent_hand_trash ... ok
+test bt24::bt24_026::bt24_026_inherited_only_on_your_turn ... ok
+test bt24::bt24_026::bt24_026_metadata_and_clause_shape ... ok
+test bt24::bt24_026::bt24_026_inherited_requires_demon_or_titan_carrier ... ok
+test bt24::bt24_026::bt24_026_on_play_grants_jamming_and_blocker_until_opponent_turn_ends ... ok
+test bt24::bt24_026::bt24_026_once_per_turn_shared_and_resets_next_turn ... ok
+test bt24::bt24_026::bt24_026_other_hand_trash_does_not_draw_from_trash ... ok
+test bt24::bt24_026::bt24_026_own_cost_trashing_a_second_copy_draws ... ok
+test bt24::bt24_026::bt24_026_trashed_from_hand_draws_one ... ok
+test bt24::bt24_026::bt24_026_trashed_with_exactly_five_left_draws ... ok
+test bt24::bt24_026::bt24_026_trashed_with_six_left_does_not_draw ... ok
+test bt24::bt24_026::bt24_026_when_attacking_can_target_itself ... ok
+test bt24::bt24_042::bt24_042_digivolve_into_demon_costs_one_less ... ok
+test bt24::bt24_042::bt24_042_cannot_digivolve_from_plain_off_color_lv2 ... ok
+test bt24::bt24_042::bt24_042_digivolve_into_plain_digimon_pays_full_cost ... ok
+test bt24::bt24_042::bt24_042_digivolve_into_titan_costs_one_less ... ok
+test bt24::bt24_042::bt24_042_digivolves_from_lv2_ts_for_zero ... ok
+test bt24::bt24_042::bt24_042_digivolves_from_other_printed_color_lv2_for_one ... ok
+test bt24::bt24_042::bt24_042_digivolves_from_tsunomon_for_zero ... ok
+test bt24::bt24_042::bt24_042_digivolves_from_purple_lv2_for_one ... ok
+test bt24::bt24_042::bt24_042_inherited_can_pick_titamon_by_name ... FAILED
+test bt24::bt24_042::bt24_042_inherited_decline_refunds_then_once_per_turn_locks ... FAILED
+test bt24::bt24_042::bt24_042_inherited_ignores_opponent_hand_trash ... ok
+test bt24::bt24_042::bt24_042_inherited_digivolves_demon_host_into_titan_in_trash ... FAILED
+test bt24::bt24_042::bt24_042_inherited_not_from_face_up_top ... ok
+test bt24::bt24_042::bt24_042_inherited_not_on_opponents_turn ... ok
+test bt24::bt24_042::bt24_042_inherited_shaman_host_does_not_qualify ... ok
+test bt24::bt24_042::bt24_042_inherited_requires_demon_or_titan_host ... ok
+test bt24::bt24_042::bt24_042_inherited_titan_host_also_qualifies ... FAILED
+test bt24::bt24_042::bt24_042_metadata_colors_and_traits ... ok
+test bt24::bt24_042::bt24_042_inherited_structure ... ok
+test bt24::bt24_042::bt24_042_reduction_is_your_turn_gated ... ok
+test bt24::bt24_042::bt24_042_reduction_only_for_this_digimon ... ok
+test bt24::bt24_042::bt24_042_reduction_stacks_with_effect_digivolve_from_trash ... FAILED
+test bt24::bt24_045::bt24_045_alt_digivolve_from_demon_lv3_costs_2 ... ok
+test bt24::bt24_045::bt24_045_alt_digivolve_from_ts_lv3_costs_2 ... ok
+test bt24::bt24_045::bt24_045_cannot_digivolve_from_unrelated_lv3 ... ok
+test bt24::bt24_045::bt24_045_decline_cost_does_nothing_and_spends_the_once_per_turn ... ok
+test bt24::bt24_045::bt24_045_empty_hand_does_not_activate_or_spend_the_once_per_turn ... ok
+test bt24::bt24_045::bt24_045_colour_circles_cost_3 ... ok
+test bt24::bt24_045::bt24_045_inherited_demon_carrier_digivolves_on_own_hand_trash ... FAILED
+test bt24::bt24_045::bt24_045_inherited_decline_refunds_and_is_once_per_turn ... FAILED
+test bt24::bt24_045::bt24_045_inherited_ignores_opponent_hand_trash ... ok
+test bt24::bt24_045::bt24_045_inherited_only_on_your_turn ... ok
+test bt24::bt24_045::bt24_045_inherited_requires_demon_or_titan_carrier ... ok
+test bt24::bt24_045::bt24_045_lock_installed_on_their_turn_survives_to_their_next_unsuspend_phase ... ok
+test bt24::bt24_045::bt24_045_metadata_and_clause_shape ... ok
+test bt24::bt24_045::bt24_045_lock_lasts_only_one_unsuspend_phase ... ok
+test bt24::bt24_045::bt24_045_on_play_suspends_and_locks_their_next_unsuspend_phase ... ok
+test bt24::bt24_045::bt24_045_no_opponent_digimon_still_pays_cost_silently ... ok
+test bt24::bt24_045::bt24_045_other_hand_trash_does_not_draw_from_trash ... ok
+test bt24::bt24_045::bt24_045_once_per_turn_shared_and_resets_next_turn ... ok
+test bt24::bt24_045::bt24_045_own_cost_trashing_a_second_copy_draws ... ok
+test bt24::bt24_045::bt24_045_trashed_from_hand_draws_one ... ok
+test bt24::bt24_045::bt24_045_trashed_with_exactly_five_left_draws ... ok
+test bt24::bt24_045::bt24_045_trashed_with_six_left_does_not_draw ... ok
+test bt24::bt24_089::bt24_089_clause0_is_main_from_hand_face_up ... ok
+test bt24::bt24_045::bt24_045_when_attacking_suspends_and_locks ... ok
+test bt24::bt24_089::bt24_089_clause1_is_event_gated_delay_on_owen_suspend ... ok
+test bt24::bt24_089::bt24_089_clause2_is_on_security_inherited ... ok
+test bt24::bt24_089::bt24_089_delay_body_selects_reptile_dragonkin_then_digivolves_cost_minus_3 ... ok
+test bt24::bt24_089::bt24_089_delay_body_digivolves_reptile_dragonkin_with_cost_reduction ... ok
+test bt24::bt24_089::bt24_089_delay_does_not_open_for_non_owen_suspend ... ok
+test bt24::bt24_089::bt24_089_delay_opens_when_owen_dreadnought_suspends ... ok
+test bt24::bt24_089::bt24_089_has_three_clauses ... ok
+test bt24::bt24_089::bt24_089_has_two_triggered_and_one_delay_clause ... ok
+test bt24::bt24_089::bt24_089_is_option_cost_3 ... ok
+test bt24::bt24_089::bt24_089_main_clause_places_self_as_delay_option ... ok
+test bt24::bt24_089::bt24_089_main_clause_uses_optional_union_zone_select ... ok
+test bt24::bt24_089::bt24_089_main_decline_optional_play_still_places_self ... ok
+test bt24::bt24_089::bt24_089_main_free_play_emits_play_event ... ok
+test bt24::bt24_089::bt24_089_main_from_hand_installs_union_zone_prompt ... ok
+test bt24::bt24_089::bt24_089_main_no_eligible_card_no_panic ... ok
+test bt24::bt24_089::bt24_089_main_picks_from_hand_or_trash_in_one_masked_choice ... FAILED
+test bt24::bt24_089::bt24_089_main_plays_elizamon_from_hand_free ... FAILED
+test bt24::bt24_089::bt24_089_main_places_self_as_delayed_battle_area_permanent ... ok
+test bt24::bt24_089::bt24_089_main_plays_owen_from_hand_free ... FAILED
+test bt24::bt24_089::bt24_089_security_clause_fires_union_zone_selection ... ok
+test bt24::bt24_089::bt24_089_yaml_parses_and_compiles ... ok
+test bt24::bt24_089::bt24_089_security_clause_mirrors_main ... ok
+
+failures:
+
+---- bt23::bt23_072::bt23_072_inherited_breeding_start_main_plays_king_drasil_source_at_six_sources stdout ----
+
+thread 'bt23::bt23_072::bt23_072_inherited_breeding_start_main_plays_king_drasil_source_at_six_sources' (52296) panicked at code\digimon-engine\tests\cards_behavioral\bt23\bt23_072.rs:306:10:
+choose King Drasil source: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt23::bt23_072::bt23_072_inherited_can_play_self_as_king_drasil_source stdout ----
+
+thread 'bt23::bt23_072::bt23_072_inherited_can_play_self_as_king_drasil_source' (32416) panicked at code\digimon-engine\tests\cards_behavioral\bt23\bt23_072.rs:368:10:
+choose BT23-072 source itself: InvalidAction
+
+---- bt23::bt23_076::bt23_076_evolves_from_trash_pays_reduced_cost stdout ----
+
+thread 'bt23::bt23_076::bt23_076_evolves_from_trash_pays_reduced_cost' (6892) panicked at code\digimon-engine\tests\cards_behavioral\bt23\bt23_076.rs:70:5:
+assertion `left == right` failed
+  left: [30, 62]
+ right: [1150]
+
+---- bt23::bt23_076::bt23_076_reduction_does_not_generate_memory_from_zero_cost stdout ----
+
+thread 'bt23::bt23_076::bt23_076_reduction_does_not_generate_memory_from_zero_cost' (16220) panicked at code\digimon-engine\tests\cards_behavioral\bt23\bt23_076.rs:79:28:
+called `Result::unwrap()` on an `Err` value: InvalidAction
+
+---- bt23::bt23_076::bt23_076_self_is_excluded_even_when_a_legal_evolution_exists_for_it stdout ----
+
+thread 'bt23::bt23_076::bt23_076_self_is_excluded_even_when_a_legal_evolution_exists_for_it' (6708) panicked at code\digimon-engine\tests\cards_behavioral\bt23\bt23_076.rs:70:5:
+assertion `left == right` failed
+  left: [30, 62]
+ right: [1]
+
+---- bt23::bt23_076::bt23_076_union_mask_includes_names_and_traits_excludes_illegal_routes_and_self stdout ----
+
+thread 'bt23::bt23_076::bt23_076_union_mask_includes_names_and_traits_excludes_illegal_routes_and_self' (48724) panicked at code\digimon-engine\tests\cards_behavioral\bt23\bt23_076.rs:70:5:
+assertion `left == right` failed
+  left: [30, 31, 32, 62]
+ right: [0, 1, 1150]
+
+---- bt24::bt24_007::bt24_007_demon_trait_level_five_also_qualifies stdout ----
+
+thread 'bt24::bt24_007::bt24_007_demon_trait_level_five_also_qualifies' (33592) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+DEMON5 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_007::bt24_007_decline_keeps_the_once_per_turn_use stdout ----
+
+thread 'bt24::bt24_007::bt24_007_decline_keeps_the_once_per_turn_use' (46036) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+DEMON5 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_007::bt24_007_once_per_turn_after_a_play stdout ----
+
+thread 'bt24::bt24_007::bt24_007_once_per_turn_after_a_play' (31088) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_007::bt24_007_only_the_just_trashed_cards_are_candidates stdout ----
+
+thread 'bt24::bt24_007::bt24_007_only_the_just_trashed_cards_are_candidates' (53704) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_007::bt24_007_plays_trashed_titan_with_cost_reduced_by_two stdout ----
+
+thread 'bt24::bt24_007::bt24_007_plays_trashed_titan_with_cost_reduced_by_two' (54072) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_009::bt24_009_inherited_can_pick_titamon_by_name stdout ----
+
+thread 'bt24::bt24_009::bt24_009_inherited_can_pick_titamon_by_name' (14080) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAMON is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_009::bt24_009_inherited_digivolves_demon_host_into_titan_in_trash stdout ----
+
+thread 'bt24::bt24_009::bt24_009_inherited_digivolves_demon_host_into_titan_in_trash' (41792) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_009::bt24_009_inherited_decline_refunds_then_once_per_turn_locks stdout ----
+
+thread 'bt24::bt24_009::bt24_009_inherited_decline_refunds_then_once_per_turn_locks' (50288) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_009::bt24_009_inherited_titan_host_also_qualifies stdout ----
+
+thread 'bt24::bt24_009::bt24_009_inherited_titan_host_also_qualifies' (47372) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_009::bt24_009_on_play_cost_trash_feeds_another_shamanmon_inherited stdout ----
+
+thread 'bt24::bt24_009::bt24_009_on_play_cost_trash_feeds_another_shamanmon_inherited' (38620) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_013::bt24_013_inherited_decline_refunds_and_is_once_per_turn stdout ----
+
+thread 'bt24::bt24_013::bt24_013_inherited_decline_refunds_and_is_once_per_turn' (9908) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN5 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_013::bt24_013_inherited_demon_carrier_digivolves_on_own_hand_trash stdout ----
+
+thread 'bt24::bt24_013::bt24_013_inherited_demon_carrier_digivolves_on_own_hand_trash' (12180) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN5 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_021::bt24_021_inherited_can_pick_titamon_by_name stdout ----
+
+thread 'bt24::bt24_021::bt24_021_inherited_can_pick_titamon_by_name' (29504) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAMON is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_021::bt24_021_inherited_decline_refunds_then_once_per_turn_locks stdout ----
+
+thread 'bt24::bt24_021::bt24_021_inherited_decline_refunds_then_once_per_turn_locks' (50276) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_021::bt24_021_inherited_digivolves_demon_host_into_titan_in_trash stdout ----
+
+thread 'bt24::bt24_021::bt24_021_inherited_digivolves_demon_host_into_titan_in_trash' (53768) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_021::bt24_021_inherited_titan_host_also_qualifies stdout ----
+
+thread 'bt24::bt24_021::bt24_021_inherited_titan_host_also_qualifies' (27396) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_021::bt24_021_post_add_trash_feeds_inherited_digivolve stdout ----
+
+thread 'bt24::bt24_021::bt24_021_post_add_trash_feeds_inherited_digivolve' (44728) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_026::bt24_026_inherited_decline_refunds_and_is_once_per_turn stdout ----
+
+thread 'bt24::bt24_026::bt24_026_inherited_decline_refunds_and_is_once_per_turn' (53928) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN5 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_026::bt24_026_inherited_demon_carrier_digivolves_on_own_hand_trash stdout ----
+
+thread 'bt24::bt24_026::bt24_026_inherited_demon_carrier_digivolves_on_own_hand_trash' (28040) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN5 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_042::bt24_042_inherited_can_pick_titamon_by_name stdout ----
+
+thread 'bt24::bt24_042::bt24_042_inherited_can_pick_titamon_by_name' (25192) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAMON is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_042::bt24_042_inherited_decline_refunds_then_once_per_turn_locks stdout ----
+
+thread 'bt24::bt24_042::bt24_042_inherited_decline_refunds_then_once_per_turn_locks' (17012) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_042::bt24_042_inherited_digivolves_demon_host_into_titan_in_trash stdout ----
+
+thread 'bt24::bt24_042::bt24_042_inherited_digivolves_demon_host_into_titan_in_trash' (23840) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_042::bt24_042_inherited_titan_host_also_qualifies stdout ----
+
+thread 'bt24::bt24_042::bt24_042_inherited_titan_host_also_qualifies' (40612) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_042::bt24_042_reduction_stacks_with_effect_digivolve_from_trash stdout ----
+
+thread 'bt24::bt24_042::bt24_042_reduction_stacks_with_effect_digivolve_from_trash' (15880) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN4 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_045::bt24_045_inherited_demon_carrier_digivolves_on_own_hand_trash stdout ----
+
+thread 'bt24::bt24_045::bt24_045_inherited_demon_carrier_digivolves_on_own_hand_trash' (26820) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN5 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_045::bt24_045_inherited_decline_refunds_and_is_once_per_turn stdout ----
+
+thread 'bt24::bt24_045::bt24_045_inherited_decline_refunds_and_is_once_per_turn' (4876) panicked at code\digimon-engine\tests\cards_behavioral\bt24\..\bt26\support.rs:312:5:
+TITAN5 is not a legal trash pick (valid [30, 62])
+
+---- bt24::bt24_089::bt24_089_main_picks_from_hand_or_trash_in_one_masked_choice stdout ----
+
+thread 'bt24::bt24_089::bt24_089_main_picks_from_hand_or_trash_in_one_masked_choice' (28132) panicked at code\digimon-engine\tests\cards_behavioral\bt24\bt24_089.rs:779:5:
+assertion `left == right` failed: only [Owen Dreadnought] (hand) and [Elizamon] (trash) should be eligible; non-matching cards must be filtered out
+  left: 3
+ right: 2
+
+---- bt24::bt24_089::bt24_089_main_plays_elizamon_from_hand_free stdout ----
+
+thread 'bt24::bt24_089::bt24_089_main_plays_elizamon_from_hand_free' (43944) panicked at code\digimon-engine\tests\cards_behavioral\bt24\bt24_089.rs:674:5:
+assertion `left == right` failed: only the Elizamon should be an eligible union-zone target
+  left: 2
+ right: 1
+
+---- bt24::bt24_089::bt24_089_main_plays_owen_from_hand_free stdout ----
+
+thread 'bt24::bt24_089::bt24_089_main_plays_owen_from_hand_free' (29180) panicked at code\digimon-engine\tests\cards_behavioral\bt24\bt24_089.rs:716:5:
+assertion `left == right` failed: only the Owen Dreadnought should be eligible
+  left: 2
+ right: 1
+
+
+failures:
+    bt23::bt23_072::bt23_072_inherited_breeding_start_main_plays_king_drasil_source_at_six_sources
+    bt23::bt23_072::bt23_072_inherited_can_play_self_as_king_drasil_source
+    bt23::bt23_076::bt23_076_evolves_from_trash_pays_reduced_cost
+    bt23::bt23_076::bt23_076_reduction_does_not_generate_memory_from_zero_cost
+    bt23::bt23_076::bt23_076_self_is_excluded_even_when_a_legal_evolution_exists_for_it
+    bt23::bt23_076::bt23_076_union_mask_includes_names_and_traits_excludes_illegal_routes_and_self
+    bt24::bt24_007::bt24_007_decline_keeps_the_once_per_turn_use
+    bt24::bt24_007::bt24_007_demon_trait_level_five_also_qualifies
+    bt24::bt24_007::bt24_007_once_per_turn_after_a_play
+    bt24::bt24_007::bt24_007_only_the_just_trashed_cards_are_candidates
+    bt24::bt24_007::bt24_007_plays_trashed_titan_with_cost_reduced_by_two
+    bt24::bt24_009::bt24_009_inherited_can_pick_titamon_by_name
+    bt24::bt24_009::bt24_009_inherited_decline_refunds_then_once_per_turn_locks
+    bt24::bt24_009::bt24_009_inherited_digivolves_demon_host_into_titan_in_trash
+    bt24::bt24_009::bt24_009_inherited_titan_host_also_qualifies
+    bt24::bt24_009::bt24_009_on_play_cost_trash_feeds_another_shamanmon_inherited
+    bt24::bt24_013::bt24_013_inherited_decline_refunds_and_is_once_per_turn
+    bt24::bt24_013::bt24_013_inherited_demon_carrier_digivolves_on_own_hand_trash
+    bt24::bt24_021::bt24_021_inherited_can_pick_titamon_by_name
+    bt24::bt24_021::bt24_021_inherited_decline_refunds_then_once_per_turn_locks
+    bt24::bt24_021::bt24_021_inherited_digivolves_demon_host_into_titan_in_trash
+    bt24::bt24_021::bt24_021_inherited_titan_host_also_qualifies
+    bt24::bt24_021::bt24_021_post_add_trash_feeds_inherited_digivolve
+    bt24::bt24_026::bt24_026_inherited_decline_refunds_and_is_once_per_turn
+    bt24::bt24_026::bt24_026_inherited_demon_carrier_digivolves_on_own_hand_trash
+    bt24::bt24_042::bt24_042_inherited_can_pick_titamon_by_name
+    bt24::bt24_042::bt24_042_inherited_decline_refunds_then_once_per_turn_locks
+    bt24::bt24_042::bt24_042_inherited_digivolves_demon_host_into_titan_in_trash
+    bt24::bt24_042::bt24_042_inherited_titan_host_also_qualifies
+    bt24::bt24_042::bt24_042_reduction_stacks_with_effect_digivolve_from_trash
+    bt24::bt24_045::bt24_045_inherited_decline_refunds_and_is_once_per_turn
+    bt24::bt24_045::bt24_045_inherited_demon_carrier_digivolves_on_own_hand_trash
+    bt24::bt24_089::bt24_089_main_picks_from_hand_or_trash_in_one_masked_choice
+    bt24::bt24_089::bt24_089_main_plays_elizamon_from_hand_free
+    bt24::bt24_089::bt24_089_main_plays_owen_from_hand_free
+
+test result: FAILED. 149 passed; 35 failed; 0 ignored; 0 measured; 12571 filtered out; finished in 165.24s
+

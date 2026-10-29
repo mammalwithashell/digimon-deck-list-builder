@@ -102,7 +102,7 @@ steps:
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect }
   # RE-LOWERED 2026-10-19: ST23-13's trash-from-under trigger now waits for
-  # the digivolution to finish (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-
+  # the digivolution to finish (Ã‚Â§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-
   # TRIGGERS, 0870820d1) and pends beside ST23-08's [When Digivolving]
   # effects, so the turn player orders them: ST23-13's first (then declined).
   - actor: 0
@@ -112,14 +112,10 @@ steps:
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   - actor: 0
-    do: { select: { cards: [ST23-08], ordinal: 0, sim_only: true } }
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
-  - actor: 0
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect }
   # (Re-lowered: ST23-08's own trash fires ST23-13 again; that trigger now
-  # waits for ST23-08's effect -- the hand pick -- to finish, §15-8-3-2.)
+  # waits for ST23-08's effect -- the hand pick -- to finish, Ã‚Â§15-8-3-2.)
   - actor: 0
     do: { select: { cards: [BT25-049] } }
     expect: { prompt: SelectHandEffect }
@@ -154,15 +150,16 @@ assert:
       p0.memory: 2
       p0.trash: [BT25-032]
       p0.field:
+        # Printed ST23-08 mandatory +3000 resolves before its optional payment.
         - card_id: ST23-08
-          dp: 7000
+          dp: 10000
           suspended: false
           sources: [ST23-01, ST23-11, ST23-12]
         - card_id: ST23-13
           dp: -1
           suspended: false
           sources: [ST23-06]
-  - at: 26
+  - at: 24
     that:
       turn: 5
       p0.memory: 1

@@ -150,7 +150,7 @@ fn bt20_084_has_printed_stats_alt_path_and_supported_shared_lock_clause() {
         .expect("end-of-all-turns top-stacked-card-to-security clause");
     assert!(matches!(
         stacked_to_security.process.as_slice(),
-        [CompiledStep::SecurityPlaceTopStackedCard { carrier, of, position, face_up }]
+        [CompiledStep::SecurityPlaceTopStackedCard { carrier, of, position, face_up, .. }]
             if *carrier == digimon_dsl::compiled::CompiledBindingRef::Source
                 && *of == digimon_dsl::compiled::CompiledPlayerRef::You
                 && *position == digimon_dsl::compiled::CompiledStackPosition::Top

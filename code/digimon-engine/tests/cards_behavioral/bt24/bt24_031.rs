@@ -6,7 +6,7 @@ use digimon_dsl::compiled::{
     CompiledClause, CompiledColor, CompiledCost, CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_dsl::{compile::compile, spec::CardSpec};
-use digimon_engine::action::space::{PASS, SEL_MY_SECURITY_START, SEL_REVEAL_START};
+use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::{EffectTiming, TriggerSource};
 
@@ -129,9 +129,9 @@ fn bt24_031_inherited_when_attacking_adds_top_security_then_recovers_at_zero() {
     let view = runner
         .pending_selection_view()
         .expect("security add prompt");
-    assert_eq!(view.valid_action_ids, vec![SEL_MY_SECURITY_START]);
+    assert_eq!(view.valid_action_ids, vec![top_action(&runner), PASS]);
     runner
-        .execute_action(0, SEL_MY_SECURITY_START)
+        .execute_action(0, top_action(&runner))
         .expect("accept security add");
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
@@ -187,13 +187,13 @@ fn bt24_031_security_to_hand_clones_faithfully_at_the_prompt() {
             .pending_selection_view()
             .expect("prompt")
             .valid_action_ids,
-        vec![SEL_MY_SECURITY_START]
+        vec![top_action(&runner), PASS]
     );
 
     // Clone, then resolve the accept on the CLONE only.
     let mut clone = runner.game.clone();
     clone
-        .resolve_selection(0, SEL_MY_SECURITY_START)
+        .resolve_selection(0, top_action(&runner))
         .expect("clone accepts the security add");
     let clone_hand = zone_ids(&clone.players[0].hand, &clone.card_data);
     assert!(
@@ -223,7 +223,7 @@ fn bt24_031_security_to_hand_clones_faithfully_at_the_prompt() {
 
     // REPLAYS IDENTICALLY: resolving the same accept on the original matches.
     runner
-        .execute_action(0, SEL_MY_SECURITY_START)
+        .execute_action(0, top_action(&runner))
         .expect("original accepts");
     assert!(
         zone_ids(&runner.game.players[0].hand, &runner.game.card_data)
@@ -354,3 +354,9 @@ fn revealed_action_for_id(runner: &DebugRunner, id: &str) -> u16 {
         })
         .expect("revealed card exists")
 }
+
+fn top_action(runner:&DebugRunner)->u16 {
+    physical_menu::security_action(&runner.game,0,runner.game.players[0].security.len()-1)
+}
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

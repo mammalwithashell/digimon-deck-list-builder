@@ -39,7 +39,10 @@ impl Game {
         true
     }
 
-    /// Move a specific card from `player`'s trash to their hand.
+    /// Move a specific card from `player`'s trash to their hand. Returns true
+    /// only if it actually enters hand. CR 3-1-3-9-2 redirects Digi-Eggs to
+    /// the bottom of their owner's Digi-Egg deck instead; that is not a hand
+    /// addition for triggers or effect-result bindings.
     pub fn add_to_hand_from_trash(
         &mut self,
         player_id: PlayerId,
@@ -48,10 +51,15 @@ impl Game {
         let Some(removed) = self.player_mut(player_id).remove_from_trash_by_handle(card) else {
             return false;
         };
-        self.player_mut(player_id).add_to_hand(removed);
+        let added_to_hand = removed.card_kind(&self.card_data) != CardKind::DigiEgg;
+        if added_to_hand {
+            self.player_mut(player_id).add_to_hand(removed);
+        } else {
+            self.player_mut(removed.owner).insert_in_digi_egg_deck(0, removed);
+        }
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
-        true
+        added_to_hand
     }
 
     /// Move a specific card from `player_id`'s security stack to their hand.
@@ -168,6 +176,7 @@ impl Game {
     /// Turn every card in `player_id`'s security stack face down, then shuffle
     /// without changing its contents (qa:Q7121).
     pub fn shuffle_security(&mut self, player_id: PlayerId) {
+        self.security_shuffle_generations[player_id as usize] = self.security_shuffle_generations[player_id as usize].checked_add(1).expect("security shuffle generation exhausted");
         self.player_mut(player_id).face_up_security.clear();
         let mut security = std::mem::take(&mut self.player_mut(player_id).security);
         security.shuffle(&mut self.rng);

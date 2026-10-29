@@ -1,0 +1,39 @@
+
+running 22 tests
+test ex12::ex12_031::ex12_031_aquatic_compiled_registry_retains_rule_grant ... ok
+test ex12::ex12_031::ex12_031_aquatic_ordinary_full_r4_subjects_and_stripped_witness ... ignored, requires explicitly supplied source-reviewed full cards JSON
+test ex12::ex12_031::ex12_031_decode_does_not_open_a_window_for_another_permanents_leave ... ok
+test ex12::ex12_031::ex12_031_decode_plays_matching_tb_source_on_non_battle_leave ... ok
+test ex12::ex12_031::ex12_031_on_play_places_matching_hand_card_as_bottom_source_then_bounces_low_source_digimon ... ok
+test ex12::ex12_031::ex12_031_printed_assembly_aqua_substring_only_is_selectable ... ok
+test ex12::ex12_031::ex12_031_printed_assembly_exact_tb_is_selectable ... ok
+test ex12::ex12_031::ex12_031_printed_assembly_level_bearing_option_card_is_selectable ... ok
+test ex12::ex12_031::ex12_031_printed_assembly_level_bearing_tamer_card_is_selectable ... ok
+test ex12::ex12_031::ex12_031_printed_assembly_rejects_wrong_level_trait_zone_and_no_level ... ok
+test ex12::ex12_031::ex12_031_printed_assembly_sea_animal_substring_only_is_selectable ... ok
+
+thread 'ex12::ex12_031::ex12_031_printed_decode_main_and_inherited_preserve_digimon_kind_and_level' (34024) panicked at code\digimon-engine\tests\cards_behavioral\ex12\ex12_031.rs:507:13:
+assertion `left == right` failed: only the level-4 Digimon Aqua witness qualifies for Decode
+  left: [30]
+ right: [2000]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ex12::ex12_031::ex12_031_printed_decode_main_and_inherited_preserve_digimon_kind_and_level ... FAILED
+test ex12::ex12_031::ex12_031_printed_op_wd_aqua_substring_only_is_selectable ... ok
+test ex12::ex12_031::ex12_031_printed_op_wd_exact_tb_is_selectable ... ok
+test ex12::ex12_031::ex12_031_printed_op_wd_hand_selector_includes_card_kinds_and_excludes_bad_cards ... ok
+test ex12::ex12_031::ex12_031_printed_op_wd_level_bearing_option_card_is_selectable ... ok
+test ex12::ex12_031::ex12_031_printed_op_wd_level_bearing_tamer_card_is_selectable ... ok
+test ex12::ex12_031::ex12_031_printed_op_wd_only_own_hand_qualifies_for_cost ... ok
+test ex12::ex12_031::ex12_031_printed_op_wd_rejects_level_seven_no_level_unrelated_and_partial_tb ... ok
+test ex12::ex12_031::ex12_031_printed_op_wd_sea_animal_substring_only_is_selectable ... ok
+test printed_form_filters::batch6::ex12_031_json ... ok
+test printed_form_filters::batch6::ex12_031_yaml ... ok
+
+failures:
+
+failures:
+    ex12::ex12_031::ex12_031_printed_decode_main_and_inherited_preserve_digimon_kind_and_level
+
+test result: FAILED. 20 passed; 1 failed; 1 ignored; 0 measured; 12733 filtered out; finished in 105.02s
+
+FILTER_EXIT 101

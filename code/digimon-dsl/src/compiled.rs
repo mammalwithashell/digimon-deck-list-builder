@@ -435,9 +435,16 @@ pub struct CompiledPredicate {
     #[serde(default)]
     pub can_digivolve_onto: Option<String>,
     #[serde(default)]
+    pub can_digivolve_onto_with_cost: Option<CompiledDigivolveCostPredicate>,
+    pub dna_hand_candidate: Option<CompiledDnaHandCandidate>,
+    #[serde(default)]
     pub can_play_from_effect_without_cost: Option<bool>,
     #[serde(default)]
     pub can_play_to_breeding_from_hand: Option<bool>,
+    /// Subject must be an existing breeding permanent. Compare its real move
+    /// eligibility, including field capacity and CannotMove, to this value.
+    #[serde(default)]
+    pub can_move_from_breeding_by_effect: Option<bool>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
     /// `dp_lte` is the DP maximum of a DELETION effect ("delete 1 Digimon with
@@ -486,6 +493,9 @@ pub struct CompiledPredicate {
     /// See `PredicateSpec::owner_can_add_security` (BT24-040).
     #[serde(default)]
     pub owner_can_add_security: Option<bool>,
+    /// Resolving effect controller's security-add permission, not card owner.
+    #[serde(default)]
+    pub controller_can_add_security: Option<bool>,
     /// See `PredicateSpec::can_attack` (G-DSL-CAN-ATTACK-PREDICATE).
     #[serde(default)]
     pub can_attack: Option<CompiledCanAttack>,
@@ -805,6 +815,7 @@ pub struct CompiledPredicate {
     /// context). Fails when no cost target is active. Used by
     /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
     pub cost_target: Option<Box<CompiledPredicate>>,
+    pub cost_target_permanent: Option<Box<CompiledPredicate>>,
     /// True when the effect's `source_permanent` is one of the
     /// digivolve-target permanents on the read context's
     /// `cost_target_permanents`. Used to gate
@@ -937,13 +948,33 @@ pub struct CompiledExistential {
 
 /// Compiled form of `has_digivolve_candidate` — "some card in `zones` of `of`
 /// matches `filter` and has a normal-digivolve route onto the subject
-/// permanent". `zones` is validated to `Hand` / `Trash` only.
+/// permanent". Zones are `Hand` / `Trash` / owner-filtered `Reveal`.
+/// An explicit cost opts into payment feasibility; None keeps route-only
+/// compatibility with existing free-evolution card scripts.
 /// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledDigivolveCandidate {
     pub of: CompiledPlayerRef,
     pub zones: Vec<CompiledZone>,
     pub filter: Option<Box<CompiledPredicate>>,
+    pub cost: Option<CompiledCostDelta>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDigivolveCostPredicate {
+    pub target: String,
+    pub cost: CompiledCostDelta,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDnaHandCandidate {
+    pub role: crate::predicate::DnaHandCandidateRole,
+    pub result: Option<String>,
+    pub field: Option<String>,
+    pub field_filter: Option<Box<CompiledPredicate>>,
+    pub partner_filter: Option<Box<CompiledPredicate>>,
+    pub cost: CompiledCostDelta,
+    pub ignore_requirements: bool,
 }
 
 /// Compiled form of `no_face_up_security_named`. Exactly one of
@@ -1274,6 +1305,7 @@ pub enum CompiledDeclarativeClause {
         active_when: Option<CompiledPredicate>,
         reduction_timing: Option<String>,
         when_playing_this: bool,
+        when_digivolving_this: bool,
         when_any_ally_played: Option<CompiledPredicate>,
         /// Digivolution-target-keyed trigger — fires only for a DIGIVOLVE
         /// cost whose target card matches this predicate.
@@ -2001,6 +2033,8 @@ pub enum CompiledStep {
     },
     MoveFromBreeding {
         of: CompiledPlayerRef,
+        #[serde(default)]
+        bind_as: Option<String>,
     },
     PlayFromHand {
         of: CompiledPlayerRef,
@@ -2175,6 +2209,7 @@ pub enum CompiledStep {
         from_zone: CompiledAppFuseZone,
         result_filter: Option<CompiledPredicate>,
         optional: bool,
+        bind_as: Option<String>,
     },
     EffectInitiatedDnaDigivolve {
         target_a: CompiledBindingRef,
@@ -2230,6 +2265,8 @@ pub enum CompiledStep {
     },
     TrashTopSecurityAndCancelReplacement {
         of: CompiledPlayerRef,
+        /// Post-payment subject filter; omission retains singular prevention.
+        all_matching: Option<CompiledPredicate>,
     },
     BounceSelf,
     PlaceSelfAtSecurity {
@@ -2272,6 +2309,8 @@ pub enum CompiledStep {
         include_sources: bool,
     },
     SecurityPlaceStackedCard {
+        bind_success_as: Option<String>,
+        to_owner: bool,
         carrier: CompiledBindingRef,
         source: Option<CompiledBindingRef>,
         source_index_from_top: Option<u8>,
@@ -2280,6 +2319,8 @@ pub enum CompiledStep {
         face_up: bool,
     },
     SecurityPlaceTopStackedCard {
+        bind_success_as: Option<String>,
+        to_owner: bool,
         carrier: CompiledBindingRef,
         of: CompiledPlayerRef,
         position: CompiledStackPosition,
@@ -2287,6 +2328,8 @@ pub enum CompiledStep {
     },
     /// G-DSL-SECURITY-PLACE-VISIBLE-TOP-CARD — the carrier's visible top card.
     SecurityPlaceTopCard {
+        bind_success_as: Option<String>,
+        to_owner: bool,
         carrier: CompiledBindingRef,
         of: CompiledPlayerRef,
         position: CompiledStackPosition,
@@ -2346,6 +2389,8 @@ pub enum CompiledStep {
         expiry: String,
     },
     AddModifier {
+        #[serde(default)]
+        opponent_only: bool,
         target: CompiledModifierTarget,
         modifier: String,
         value: CompiledModifierValue,
@@ -2642,6 +2687,7 @@ pub enum CompiledStep {
         min: u8,
         max: u8,
         optional_zero: bool,
+        distinct_by: Option<CompiledDistinctBy>,
         play_cost_budget: Option<CompiledFormula>,
         exclude: Option<CompiledBindingRef>,
         bind_as: Option<String>,
@@ -2741,6 +2787,8 @@ pub enum CompiledStep {
         prompt: Option<String>,
     },
     SelectSecurity {
+        #[serde(default)]
+        continue_on_decline: bool,
         of: CompiledPlayerRef,
         filter: CompiledPredicate,
         bind_as: Option<String>,
@@ -3097,6 +3145,13 @@ pub enum CompiledStep {
     },
     DeleteReceiptFinalize {
         receipt: u64,
+        /// Credit only the original payer after its deletion physically completes.
+        cost_credit: Option<(u8, u64, i32)>,
+    },
+    /// Internal continuation: consume this physical card's LIFO placement receipt.
+    SecurityPlacementSuccessFinalize {
+        card: u16,
+        bind_as: String,
     },
     /// Engine-only: after a "by placing X as the bottom security card, it
     /// doesn't leave" payment (`PlacePermanentBottomSecurityAndCancelReplacement`),
@@ -3159,6 +3214,9 @@ pub enum CompiledStep {
         #[serde(default)]
         rebind: Vec<(String, (u8, u64))>,
     },
+    /// Runtime-only security play and correlated completion; appended to preserve pack tags.
+    SecurityPlayCaptured { receipt: u64, player: u8, card: u16 },
+    SecurityPlayFinalize { receipt: u64, player: u8, card: u16 },
 }
 
 /// Compiled per-zone filter overrides for `select_union_zone`. Each `Some`

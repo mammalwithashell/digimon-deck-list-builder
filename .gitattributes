@@ -7,6 +7,13 @@ Dockerfile.* text eol=lf
 *.yaml text eol=lf
 Caddyfile text eol=lf
 
+# Frozen EX13 evidence binds exact bytes; preserve its recorded hashes across
+# Windows development checkouts and Linux training/evaluation hosts.
+/data/training_pools/ex13-20261026/*.json -text whitespace=cr-at-eol
+/qa/archetype-qa/ex13-timing-20261026/*.json -text whitespace=cr-at-eol
+/qa/archetype-qa/ex13-timing-20261026/*timing-inventory.json linguist-generated=true
+/code/tools/cloud_search/prepare_ex13_pool.py text eol=lf
+
 # Per-card metadata is byte-exact-checked by tools/build_card_meta --check.
 # Force LF on every platform so the generator's output matches the on-disk
 # tree on Windows checkouts.

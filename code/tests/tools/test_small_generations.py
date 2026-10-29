@@ -1,0 +1,251 @@
+import json
+from collections import Counter
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from tools.cloud_search.card_eval_worker import due_checkpoint
+from tools.cloud_search.replay_window import appearance_counts, bounded_window
+from digimon_gym.agents.anchored_eval import balanced_deck_pairs, _seat_balanced_seed
+from tools.cloud_search.run_small_generations import validate, evaluation_options
+from tools.selfplay_scheduler import sha256
+
+
+def test_checkpoint_only_never_repeats_unchanged_weights():
+    a, b = dict(sha256='a'), dict(sha256='b')
+    state = dict(attempted=['a'], next_due_unix=0)
+    for terminal in (False, True):
+        assert due_checkpoint([a], state, 999999, 1, terminal, checkpoint_only=True) is None
+        assert due_checkpoint([a, b], state, 999999, 1, terminal, checkpoint_only=True) == (b, 'new_checkpoint')
+
+
+def test_balanced_cohort_has_exact_quotas_and_both_opening_orders():
+    pool = SimpleNamespace(archetypes={
+        name: [SimpleNamespace(archetype_name=name, deck_id=f'{name}{j}') for j in range(count)]
+        for name, count in [('A', 2), ('B', 1), ('C', 3)]})
+    cohort = list(balanced_deck_pairs(pool, 200, 47))
+    assert len(cohort) == 600
+    assert cohort == list(balanced_deck_pairs(pool, 200, 47))
+    for name in pool.archetypes:
+        selected = [(i, b) for i, (a, b) in enumerate(cohort) if a.archetype_name == name]
+        assert len(selected) == 200
+        assert Counter(_seat_balanced_seed(47, i) % 2 for i, _ in selected) == {0: 100, 1: 100}
+        opponents = Counter(b.archetype_name for _, b in selected)
+        assert max(opponents.values()) - min(opponents.values()) <= 2
+    for i in range(0, len(cohort), 2):
+        assert cohort[i] == cohort[i + 1]
+    with pytest.raises(ValueError):
+        list(balanced_deck_pairs(pool, 199, 1))
+
+
+@pytest.mark.parametrize('counts', [[2] * 13, [2] * 12, [1, 2, 3]])
+def test_balanced_cohort_visits_every_variant_matchup(counts):
+    """Adding held-out variants must not silently omit half their matchups."""
+    pool = SimpleNamespace(archetypes={
+        f'A{i:02d}': [SimpleNamespace(archetype_name=f'A{i:02d}', deck_id=f'A{i:02d}-{j}')
+                     for j in range(count)]
+        for i, count in enumerate(counts)})
+    quota = 2 * len(counts) * max(counts) ** 2
+    cohort = list(balanced_deck_pairs(pool, quota, 47))
+    seen = {(a.deck_id, b.deck_id) for a, b in cohort}
+    expected = {(a.deck_id, b.deck_id)
+                for first in pool.archetypes.values() for second in pool.archetypes.values()
+                for a in first for b in second}
+    assert seen == expected
+    assert all(cohort[i] == cohort[i + 1] for i in range(0, len(cohort), 2))
+
+
+def test_replay_caps_old_large_generation_and_is_stable(tmp_path):
+    for generation, chunks in [(0, 825), (1, 250), (2, 250)]:
+        for i in range(chunks):
+            path = tmp_path / f'gen{generation}' / 'shards' / f'proc{i:08d}'
+            path.mkdir(parents=True)
+            (path / 'manifest.json').write_text(json.dumps(dict(games=4)))
+    selected, record = bounded_window(tmp_path, 2, 3, 1000, 123)
+    assert len(selected) == 750
+    assert [g['games_before_quarantine'] for g in record['generations']] == [1000] * 3
+    earlier, _ = bounded_window(tmp_path, 1, 3, 1000, 123)
+    assert [p for p in selected if 'gen0' in p.parts] == [p for p in earlier if 'gen0' in p.parts]
+    _, shifted = bounded_window(tmp_path, 3, 3, 1000, 123)
+    assert [g['generation'] for g in shifted['generations']] == [1, 2, 3]
+    assert len(list((tmp_path / 'gen0/shards').glob('*/manifest.json'))) == 825
+
+
+def test_coverage_counts_both_seats(tmp_path):
+    (tmp_path / 'manifest.json').write_text(json.dumps(dict(
+        deck_names=['A:sha256:a:slot0', 'B:sha256:b:slot1'], game_decks=[[0, 1], [0, 0]])))
+    result = appearance_counts([tmp_path])
+    assert result['appearances'] == {'A': 3, 'B': 1}
+    assert result['by_seat'] == [{'A': 2}, {'A': 1, 'B': 1}]
+
+
+@pytest.fixture
+def campaign(tmp_path, monkeypatch):
+    names = ['inputs/decks.json', 'inputs/seed.zip', 'inputs/seed.onnx',
+             'inputs/heldout_snapshot.json', 'inputs/pet_evaluation_snapshot.json',
+             'inputs/anchors.json', 'generation/gen0/model.zip', 'generation/gen0/model.onnx',
+             'validation/generation0-recovery.json']
+    for name in names:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(name)
+    (tmp_path / 'inputs/decks.json').write_text(json.dumps([
+        dict(name=f'A{i}:sha256:hash:slot0', cards=[]) for i in range(12)]))
+    (tmp_path / 'validation/generation0-recovery.json').write_text(json.dumps(dict(
+        status='passed', image='pinned', checkpoint_sha256=sha256(tmp_path / 'generation/gen0/model.zip'))))
+    parent = tmp_path / 'generation/gen0'
+    (tmp_path / 'generation/state.json').write_text(json.dumps(dict(next_gen=1,
+        prev=dict(model_zip=str(parent / 'model.zip'), model_onnx=str(parent / 'model.onnx')))))
+    plan = dict(generations=4, games=1000, workers=8, image='pinned', runtime_files={},
+                files={name: sha256(tmp_path / name) for name in names})
+    monkeypatch.setenv('DIGIMON_DEPLOYED_IMAGE', 'pinned')
+    return tmp_path, plan
+
+
+def test_campaign_accepts_validated_parent(campaign):
+    assert len(validate(*campaign)) == 12
+
+
+def historical_campaign(campaign):
+    from tools.search_opponents import CONTRACT_KEYS, checkpoint_entry, metadata_path, SCHEMA
+    root, plan = campaign
+    current = root / 'generation/gen0/model.onnx'
+    old = root / 'inputs/old.onnx'
+    old.write_text('old-model')
+    for model in (current, old):
+        metadata_path(model).write_text(json.dumps({**{key: key for key in CONTRACT_KEYS},
+                                                   'value_semantics': 'terminal_outcome'}))
+    pool = root / 'inputs/opponents.json'
+    pool.write_text(json.dumps(dict(schema=SCHEMA, selfplay_probability=0.5,
+                                   opponents=[checkpoint_entry('older-campaign', old)])))
+    plan.update(games=1200, seed=17, historical_opponents=dict(pool='inputs/opponents.json'))
+    for path in (old, metadata_path(old), metadata_path(current), pool):
+        plan['files'][path.relative_to(root).as_posix()] = sha256(path)
+    return root, plan
+
+
+def test_cloud_plan_forwards_pinned_opponents_without_reducing_search(campaign):
+    from tools.cloud_search.run_small_generations import generation_command
+    root, plan = historical_campaign(campaign)
+    assert len(validate(root, plan)) == 12
+    command = generation_command(root, plan)
+    assert command[command.index('--opponent-pool') + 1] == str(root / 'inputs/opponents.json')
+    assert command[command.index('--sims') + 1] == '320'
+    assert command[command.index('--worlds') + 1] == '4'
+    assert command[command.index('--eval-batch-size') + 1] == '4'
+
+
+def test_cloud_plan_requires_hashes_for_opponent_models_and_sidecars(campaign):
+    root, plan = historical_campaign(campaign)
+    del plan['files']['inputs/old.onnx.meta.json']
+    with pytest.raises(ValueError, match='Missing historical opponent input hash'):
+        validate(root, plan)
+
+
+def test_cloud_plan_counts_learner_appearances_not_historical_actor_appearances(campaign):
+    root, plan = historical_campaign(campaign)
+    plan['games'] = 1000
+    with pytest.raises(ValueError, match='learner appearances'):
+        validate(root, plan)
+
+
+@pytest.mark.parametrize('first,last', [(5, 8), (9, 10)])
+def test_completed_campaign_can_continue_with_logical_indices(campaign, first, last):
+    root, plan = campaign
+    parent = root / 'generation' / f'gen{first - 1}'
+    parent.mkdir()
+    for suffix in ('zip', 'onnx'):
+        old = root / f'generation/gen0/model.{suffix}'
+        target = parent / f'model.{suffix}'
+        target.write_bytes(old.read_bytes())
+        plan['files'][target.relative_to(root).as_posix()] = sha256(target)
+    (root / 'generation/state.json').write_text(json.dumps(dict(next_gen=first,
+        prev=dict(model_zip=str(parent / 'model.zip'), model_onnx=str(parent / 'model.onnx')))))
+    plan.update(first_generation=first, generations=last)
+    assert len(validate(root, plan)) == 12
+    plan['generations'] = first + 4
+    with pytest.raises(ValueError, match='scope'):
+        validate(root, plan)
+    plan['generations'] = last
+    (root / 'generation' / f'gen{last + 1}').mkdir()
+    with pytest.raises(ValueError, match='Existing campaign output'):
+        validate(root, plan)
+
+
+def test_search_repair_keeps_logical_generation_and_requires_baseline_receipt(campaign):
+    root, plan = campaign
+    parent = root / 'generation/gen2'
+    parent.mkdir()
+    for suffix in ('zip', 'onnx'):
+        old = f'generation/gen0/model.{suffix}'
+        new = f'generation/gen2/model.{suffix}'
+        (root / new).write_bytes((root / old).read_bytes())
+        plan['files'][new] = sha256(root / new)
+    (root / 'generation/state.json').write_text(json.dumps(dict(next_gen=3,
+        prev=dict(model_zip=str(parent / 'model.zip'), model_onnx=str(parent / 'model.onnx')))))
+    plan.update(first_generation=3, reuse_parent_evaluation=True,
+                evaluation_panels=[['heldout', 'heldout_snapshot.json']],
+                evaluation_seed=7, evaluation_games_per_archetype_per_anchor=200)
+    with pytest.raises(ValueError, match='hash-bound receipt'):
+        validate(root, plan)
+    receipt = dict(status='complete', checkpoint_sha256=sha256(parent / 'model.zip'),
+        evaluation_panels=plan['evaluation_panels'], evaluation_seed=7,
+        games_per_archetype=200, policy_evaluation_unchanged=True)
+    path = root / 'validation/parent-evaluation.json'
+    path.write_text(json.dumps(receipt))
+    plan['files']['validation/parent-evaluation.json'] = sha256(path)
+    assert len(validate(root, plan)) == 12
+    receipt['checkpoint_sha256'] = 'wrong'
+    path.write_text(json.dumps(receipt))
+    plan['files']['validation/parent-evaluation.json'] = sha256(path)
+    with pytest.raises(ValueError, match='reuse evidence differs'):
+        validate(root, plan)
+
+
+def test_combined_evaluation_requires_hash_bound_snapshot(campaign):
+    root, plan = campaign
+    plan.update(evaluation_panels=[['combined_validation', 'combined_snapshot.json']], evaluation_seed=7)
+    with pytest.raises(ValueError, match='hash-bound'):
+        validate(root, plan)
+    path = root / 'inputs/combined_snapshot.json'
+    path.write_text('{}')
+    plan['files']['inputs/combined_snapshot.json'] = sha256(path)
+    validate(root, plan)
+    options = evaluation_options(plan)
+    assert options.seed == 7 and options.games_per_archetype == 200
+    plan['evaluation_panels'] = [['../escape', 'combined_snapshot.json']]
+    with pytest.raises(ValueError, match='local labels'):
+        validate(root, plan)
+
+
+def test_campaign_accepts_two_remaining_updates_with_fresh_replay(campaign):
+    root, plan = campaign
+    plan['generations'] = 2
+    assert len(validate(root, plan)) == 12
+    selected, record = bounded_window(root / 'generation', 1, 3, 1000, 123)
+    assert selected == []  # A warm-start checkpoint alone is not replay data.
+    assert all(g['games_before_quarantine'] == 0 for g in record['generations'])
+
+
+@pytest.mark.parametrize('change', ['parent', 'image', 'hash', 'scope', 'already_started', 'pool_size'])
+def test_campaign_refuses_drift(campaign, monkeypatch, change):
+    root, plan = campaign
+    if change == 'parent':
+        path = root / 'validation/generation0-recovery.json'
+        path.write_text(json.dumps(dict(status='failed', image='pinned')))
+        plan['files']['validation/generation0-recovery.json'] = sha256(path)
+    elif change == 'image':
+        monkeypatch.setenv('DIGIMON_DEPLOYED_IMAGE', 'other')
+    elif change == 'hash':
+        (root / 'inputs/seed.zip').write_text('different')
+    elif change == 'scope':
+        plan['generations'] = 8
+    elif change == 'already_started':
+        (root / 'generation/gen1').mkdir()
+    else:
+        path = root / 'inputs/decks.json'
+        path.write_text(json.dumps([dict(name=f'A{i}:sha256:x') for i in range(18)]))
+        plan['files']['inputs/decks.json'] = sha256(path)
+    with pytest.raises(ValueError):
+        validate(root, plan)

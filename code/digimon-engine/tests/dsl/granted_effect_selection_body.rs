@@ -58,8 +58,12 @@ effects:
 /// Build a runner with the grantor in P0's hand + P1 security so a forced attack
 /// has a legal target.
 fn setup() -> DebugRunner {
+    setup_with_yaml(GRANTOR_YAML)
+}
+
+fn setup_with_yaml(yaml: &str) -> DebugRunner {
     DebugRunner::builder()
-        .from_dsl_yaml(GRANTOR_YAML)
+        .from_dsl_yaml(yaml)
         .expect("grantor YAML must parse + compile (grant_triggered_effect + force_attack body)")
         .add_card(make_test_card("OPP-A", "Opponent A"))
         .add_card(make_test_card("OPP-B", "Opponent B"))
@@ -233,17 +237,24 @@ fn granted_force_attack_body_expires_and_cleans_up_registry() {
 }
 
 #[test]
-fn two_granted_force_attack_bodies_both_park_via_trigger_order() {
-    // Composition proof: when TWO opponent Digimon each carry a granted
-    // force-attack body, the start-of-main fan-out queues both. The controller
-    // picks the resolution order (TriggerOrder), then each granted body parks
-    // its own mandatory attack in turn — the SECOND body parks correctly AFTER
-    // the first resolves (the queue stays alive across the parked selections).
-    let mut runner = setup();
+fn two_granted_force_attack_bodies_finish_without_nested_declaration() {
+    // Composition proof under CR 11-1-4 / 11-2-4 and Q3046: both granted
+    // bodies must finish before counter timing, but the second cannot declare
+    // while the first attack is pending. Independent memory tails make both
+    // bodies' completion observable; the production force-attack fixture and
+    // the other single-body/clone/expiry tests remain unchanged.
+    let yaml = GRANTOR_YAML.replace(
+        r#"                prompt: "This Digimon attacks""#,
+        r#"                prompt: "This Digimon attacks"
+            - gain_memory: 1"#,
+    );
+    let mut runner = setup_with_yaml(&yaml);
     let opp_a = runner.place_on_field(1, "OPP-A", None);
     let opp_b = runner.place_on_field(1, "OPP-B", None);
     runner.play(0, 0).expect("play grantor");
-    runner.end_turn();
+    // A legal pass gives the new active player positive memory; do not force
+    // a turn switch with the grantor's large positive fixture memory.
+    runner.pass_turn();
 
     // First: a TriggerOrder prompt (two queued granted bodies for P1 to order).
     let pending = runner
@@ -282,33 +293,32 @@ fn two_granted_force_attack_bodies_both_park_via_trigger_order() {
             .find(|&&a| a != PASS)
             .expect("a legal attack action"),
     );
-    // Resolve the first attack (attack security).
+    // Commit the first declaration. Remaining triggered bodies resolve before
+    // its counter/security processing; they cannot create a nested declaration.
+    assert_eq!(runner.game.turn_player(), 1);
+    assert_eq!(runner.game.memory_pair.0, 1);
+    let memory_before = runner.game.memory;
+    let security_before = runner.game.players[0].security.len();
+    assert!(digimon_engine::action::build_action_mask(&runner.game, 1)
+        [encode_attack(first_attacker, SECURITY_TARGET) as usize] > 0.0);
     runner
         .game
         .resolve_selection(1, encode_attack(first_attacker, SECURITY_TARGET))
         .expect("resolve first granted attack");
 
-    // The SECOND granted body must then park its own mandatory attack — proving
-    // the granted-selection bodies COMPOSE across the queue (the v1 gap).
-    let pending = runner
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("second granted body must park after the first resolves (composition)");
-    assert_eq!(pending.kind, SelectionKind::Target);
-    assert!(!pending.is_optional);
-    let (second_attacker, _) = digimon_engine::action::space::decode_attack(
-        *pending
-            .valid_action_ids
-            .iter()
-            .find(|&&a| a != PASS)
-            .expect("a legal attack action for the second body"),
+    assert!(
+        !runner.game.pending_selection.as_ref().is_some_and(|p| p.kind == SelectionKind::Target),
+        "the second force-attack body cannot offer a nested declaration"
     );
-    assert_ne!(
-        first_attacker, second_attacker,
-        "the two granted bodies force DIFFERENT carriers to attack"
-    );
-    // Sanity: both attackers are the two opponent Digimon.
-    let attackers = [first_attacker as u8, second_attacker as u8];
-    assert!(attackers.contains(&opp_a.index) && attackers.contains(&opp_b.index));
+    if let Some(attack) = runner.game.pending_attack.as_ref() {
+        assert_eq!(attack.attacker.player, 1);
+        assert_eq!(attack.attacker.index as u16, first_attacker);
+    }
+    runner.auto_resolve().expect("finish original attack and both granted tails");
+    assert_eq!(runner.game.memory, memory_before + 2, "both granted bodies gain 1 memory for P1");
+    assert_eq!(runner.game.digimon_attacks_this_turn[1], 1, "only one declaration is legal");
+    assert_eq!(runner.game.players[0].security.len(), security_before - 1, "only the first attack checked security");
+    assert!(runner.game.pending_selection.is_none());
+    assert!(runner.game.pending_attack.is_none());
+    assert!(first_attacker == u16::from(opp_a.index) || first_attacker == u16::from(opp_b.index));
 }

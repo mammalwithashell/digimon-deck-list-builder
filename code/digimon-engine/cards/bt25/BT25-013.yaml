@@ -100,6 +100,7 @@ effects:
       event_card_color_has: [blue]
     trigger_if:
       event_target_owner: you
+      event_target_kind: digimon
     summary: "[Your Turn] When a blue Digimon of yours is played/digivolves, may digivolve this into [Flaremon] from hand, cost -1"
     process:
       - select_hand:

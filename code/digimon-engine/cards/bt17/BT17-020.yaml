@@ -1,0 +1,69 @@
+card: BT17-020
+name: Strabimon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+form: Hybrid
+attribute: Variable
+traits: [Beastkin]
+# Official observation 9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - any_of:
+            - color_is: blue
+            - color_is: yellow
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "Reveal 3; add one Hybrid/Ten Warriors and one inherited-effect Tamer"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: hybrid_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - trait_has: Hybrid
+                  - trait_has: Ten Warriors
+            - bind_as: tamer_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: tamer
+                  - has_inherited: {}
+          no_duplicate_cards: true
+          prompt: "Select 1 Hybrid/Ten Warriors and 1 Tamer with inherited effects"
+      - add_to_hand_from_reveal: { of: you, card: hybrid_pick }
+      - add_to_hand_from_reveal: { of: you, card: tamer_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "May play 1 inherited-effect Tamer from hand with cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - has_inherited: {}
+              # Eligibility checks controller prohibitions and recipient capacity;
+              # affordability separately uses this effect's reduced paid cost.
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost_reduce: 2
+          prompt: "Play 1 Tamer with inherited effects with cost reduced by 2"
+      - play_from_hand: { of: you, hand_index: tamer, cost_delta: { reduce: 2 } }

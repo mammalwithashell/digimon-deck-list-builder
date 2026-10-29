@@ -1,0 +1,1907 @@
+{
+  "provenance": {
+    "baseline_commit": "eaedce7ce01c5441f627b8510f369031b74eafb7",
+    "remote_main": "ec360e35230f845b2155646357b275aeaeaf3f9a",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+    "target": "D:/cargo-target/p3-constructs",
+    "baseline_rules_include_lamiamon_fix": true,
+    "production_unchanged": true,
+    "probe_source_sha256": "9459442ea75a7a59a4e56be64147b3b66a3ba4e8fdbb9f9a9bdc7018af84417b",
+    "baseline-probe.exe_sha256": "095a4c7e498c710c7958a27f6cba60b50bbbf525b689638af39dcad28e640e4f",
+    "candidate-probe.exe_sha256": "256b97208cdfbdad6683924462b42a9e3aec708511ed1befa30ef802d65ed408",
+    "validation": {
+      "rust_tests": 224,
+      "tier0_checks": 13,
+      "verification_tool_tests": 174
+    }
+  },
+  "hardware": "AMD Ryzen 7 3700X, 8 physical cores / 16 threads, Windows development host",
+  "summary": {
+    "baseline": {
+      "positions": 294,
+      "native_seconds": 314.5569283,
+      "process_wall_seconds": 316.44652070011944,
+      "observation_seconds": 223.12027670000026,
+      "positions_per_second": 0.9346479875325003
+    },
+    "candidate": {
+      "positions": 294,
+      "native_seconds": 142.332469,
+      "process_wall_seconds": 144.08167529990897,
+      "observation_seconds": 63.1209046,
+      "positions_per_second": 2.065586313970286
+    }
+  },
+  "paired": {
+    "diagnostic_only": true,
+    "simulations": 320,
+    "worlds": 4,
+    "batch_size": 4,
+    "cache_entries": 0,
+    "settings": {
+      "baseline": "runs\\2026-10-24-observation-performance\\baseline-probe.exe",
+      "candidate": "runs\\2026-10-24-observation-performance\\candidate-probe.exe",
+      "model": "runs\\cloud-search-20261024\\inputs\\seed.onnx",
+      "decks": "runs\\cloud-search-20261024\\inputs\\decks.json",
+      "out": "runs\\2026-10-24-observation-performance\\paired",
+      "seeds": [
+        24261024,
+        24261025,
+        26261024,
+        26261025
+      ],
+      "repeats": 2,
+      "games": 1,
+      "decision_cap": 40,
+      "hash_leaves": false
+    },
+    "hashes": {
+      "baseline": "095a4c7e498c710c7958a27f6cba60b50bbbf525b689638af39dcad28e640e4f",
+      "candidate": "256b97208cdfbdad6683924462b42a9e3aec708511ed1befa30ef802d65ed408",
+      "model": "13e5e59ad7d4a3c7d71d94d1c5f5a22ce7f38fef6a4cbe8d1b4ad077b5f016e1",
+      "decks": "5860cf948cd49d9ab4e1ac23b271dfffbccbac69d78288ed4123af1ef410b06a"
+    },
+    "cards_sha256": "6c9e8437dbb29b73628b7e527d3e6b01dcf5af9371e9825595710057a15936a4",
+    "cases": [
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11988,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 30.3515461,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2997,
+        "model_rows": 11988,
+        "model_seconds": 3.1145011,
+        "rows": 37,
+        "seed": 24261024,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "baseline",
+        "repeat": 0,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\24261024-0-baseline",
+        "process_wall_seconds": 30.553980799973942,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 37,
+              "inclusive_seconds": 0.0040164000000000016,
+              "self_seconds": 0.000366
+            },
+            "clone": {
+              "calls": 12025,
+              "inclusive_seconds": 1.4715476999999981,
+              "self_seconds": 1.4715476999999981
+            },
+            "determinized_search_batched": {
+              "calls": 37,
+              "inclusive_seconds": 29.935970800000003,
+              "self_seconds": 0.006436400000000064
+            },
+            "finish_node": {
+              "calls": 11988,
+              "inclusive_seconds": 0.013692599999999467,
+              "self_seconds": 0.013692599999999467
+            },
+            "inference_total": {
+              "calls": 2997,
+              "inclusive_seconds": 3.110662499999994,
+              "self_seconds": 0.16393060000000043
+            },
+            "mask": {
+              "calls": 13401,
+              "inclusive_seconds": 1.205077599999965,
+              "self_seconds": 1.205077599999965
+            },
+            "node_request": {
+              "calls": 11988,
+              "inclusive_seconds": 20.254922100000023,
+              "self_seconds": 20.254922100000023
+            },
+            "onnx_run": {
+              "calls": 2997,
+              "inclusive_seconds": 2.9467319000000005,
+              "self_seconds": 2.9467319000000005
+            },
+            "prepare_node": {
+              "calls": 11988,
+              "inclusive_seconds": 1.4338841999999834,
+              "self_seconds": 0.028135600000000063
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.001653,
+              "self_seconds": 0.001653
+            },
+            "sample_world": {
+              "calls": 148,
+              "inclusive_seconds": 0.0070494,
+              "self_seconds": 0.0070494
+            },
+            "search_batch": {
+              "calls": 37,
+              "inclusive_seconds": 29.9151021,
+              "self_seconds": 0.7146939999999906
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.006365,
+              "self_seconds": 0.006365
+            },
+            "step": {
+              "calls": 13105,
+              "inclusive_seconds": 3.123386899999997,
+              "self_seconds": 3.123386899999997
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11988,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 15.0995233,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2997,
+        "model_rows": 11988,
+        "model_seconds": 2.9910568,
+        "rows": 37,
+        "seed": 24261024,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "candidate",
+        "repeat": 0,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\24261024-0-candidate",
+        "process_wall_seconds": 15.29603099997621,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 37,
+              "inclusive_seconds": 0.0035549999999999996,
+              "self_seconds": 0.0003474000000000001
+            },
+            "clone": {
+              "calls": 12025,
+              "inclusive_seconds": 1.077560599999997,
+              "self_seconds": 1.077560599999997
+            },
+            "determinized_search_batched": {
+              "calls": 37,
+              "inclusive_seconds": 14.730096399999997,
+              "self_seconds": 0.006565499999999919
+            },
+            "finish_node": {
+              "calls": 11988,
+              "inclusive_seconds": 0.012550799999999515,
+              "self_seconds": 0.012550799999999515
+            },
+            "inference_total": {
+              "calls": 2997,
+              "inclusive_seconds": 2.987848599999998,
+              "self_seconds": 0.1600278999999998
+            },
+            "mask": {
+              "calls": 13401,
+              "inclusive_seconds": 1.1188547999999838,
+              "self_seconds": 1.1188547999999838
+            },
+            "node_request": {
+              "calls": 11988,
+              "inclusive_seconds": 6.1064435999999915,
+              "self_seconds": 6.1064435999999915
+            },
+            "onnx_run": {
+              "calls": 2997,
+              "inclusive_seconds": 2.8278207000000006,
+              "self_seconds": 2.8278207000000006
+            },
+            "prepare_node": {
+              "calls": 11988,
+              "inclusive_seconds": 1.3312509999999926,
+              "self_seconds": 0.02544359999999989
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.001714,
+              "self_seconds": 0.001714
+            },
+            "sample_world": {
+              "calls": 148,
+              "inclusive_seconds": 0.007534,
+              "self_seconds": 0.007534
+            },
+            "search_batch": {
+              "calls": 37,
+              "inclusive_seconds": 14.709119300000003,
+              "self_seconds": 0.593562099999985
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0049061,
+              "self_seconds": 0.0049061
+            },
+            "step": {
+              "calls": 13105,
+              "inclusive_seconds": 2.79338540000001,
+              "self_seconds": 2.79338540000001
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11988,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 15.5988559,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2997,
+        "model_rows": 11988,
+        "model_seconds": 3.0655488,
+        "rows": 37,
+        "seed": 24261024,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "candidate",
+        "repeat": 1,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\24261024-1-candidate",
+        "process_wall_seconds": 15.805131700006314,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 37,
+              "inclusive_seconds": 0.0030574999999999995,
+              "self_seconds": 0.0003359
+            },
+            "clone": {
+              "calls": 12025,
+              "inclusive_seconds": 1.1287820000000062,
+              "self_seconds": 1.1287820000000062
+            },
+            "determinized_search_batched": {
+              "calls": 37,
+              "inclusive_seconds": 15.187267300000002,
+              "self_seconds": 0.0061989000000003125
+            },
+            "finish_node": {
+              "calls": 11988,
+              "inclusive_seconds": 0.01368759999999948,
+              "self_seconds": 0.01368759999999948
+            },
+            "inference_total": {
+              "calls": 2997,
+              "inclusive_seconds": 3.0622638000000006,
+              "self_seconds": 0.15395760000000017
+            },
+            "mask": {
+              "calls": 13401,
+              "inclusive_seconds": 1.1578391999999804,
+              "self_seconds": 1.1578391999999804
+            },
+            "node_request": {
+              "calls": 11988,
+              "inclusive_seconds": 6.277663200000028,
+              "self_seconds": 6.277663200000028
+            },
+            "onnx_run": {
+              "calls": 2997,
+              "inclusive_seconds": 2.9083062000000033,
+              "self_seconds": 2.9083062000000033
+            },
+            "prepare_node": {
+              "calls": 11988,
+              "inclusive_seconds": 1.377868699999993,
+              "self_seconds": 0.025582299999999836
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0018388,
+              "self_seconds": 0.0018388
+            },
+            "sample_world": {
+              "calls": 148,
+              "inclusive_seconds": 0.007227600000000003,
+              "self_seconds": 0.007227600000000003
+            },
+            "search_batch": {
+              "calls": 37,
+              "inclusive_seconds": 15.1676687,
+              "self_seconds": 0.63046499999998
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0049488,
+              "self_seconds": 0.0049488
+            },
+            "step": {
+              "calls": 13105,
+              "inclusive_seconds": 2.8772218000000085,
+              "self_seconds": 2.8772218000000085
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11988,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 29.8478992,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2997,
+        "model_rows": 11988,
+        "model_seconds": 3.1118667,
+        "rows": 37,
+        "seed": 24261024,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "baseline",
+        "repeat": 1,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\24261024-1-baseline",
+        "process_wall_seconds": 30.05210180010181,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 37,
+              "inclusive_seconds": 0.0040522,
+              "self_seconds": 0.00036130000000000005
+            },
+            "clone": {
+              "calls": 12025,
+              "inclusive_seconds": 1.4038015999999995,
+              "self_seconds": 1.4038015999999995
+            },
+            "determinized_search_batched": {
+              "calls": 37,
+              "inclusive_seconds": 29.450636099999993,
+              "self_seconds": 0.00656599999999985
+            },
+            "finish_node": {
+              "calls": 11988,
+              "inclusive_seconds": 0.01318569999999945,
+              "self_seconds": 0.01318569999999945
+            },
+            "inference_total": {
+              "calls": 2997,
+              "inclusive_seconds": 3.1077957999999994,
+              "self_seconds": 0.16021459999999976
+            },
+            "mask": {
+              "calls": 13401,
+              "inclusive_seconds": 1.1978497999999618,
+              "self_seconds": 1.1978497999999618
+            },
+            "node_request": {
+              "calls": 11988,
+              "inclusive_seconds": 19.950933900000006,
+              "self_seconds": 19.950933900000006
+            },
+            "onnx_run": {
+              "calls": 2997,
+              "inclusive_seconds": 2.947581200000007,
+              "self_seconds": 2.947581200000007
+            },
+            "prepare_node": {
+              "calls": 11988,
+              "inclusive_seconds": 1.4250305999999842,
+              "self_seconds": 0.02763120000000016
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0014083,
+              "self_seconds": 0.0014083
+            },
+            "sample_world": {
+              "calls": 148,
+              "inclusive_seconds": 0.007082500000000001,
+              "self_seconds": 0.007082500000000001
+            },
+            "search_batch": {
+              "calls": 37,
+              "inclusive_seconds": 29.4298911,
+              "self_seconds": 0.6411115999999859
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0056781,
+              "self_seconds": 0.0056781
+            },
+            "step": {
+              "calls": 13105,
+              "inclusive_seconds": 3.0943167000000105,
+              "self_seconds": 3.0943167000000105
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11664,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 37.0264164,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2916,
+        "model_rows": 11664,
+        "model_seconds": 3.4142049,
+        "rows": 36,
+        "seed": 24261025,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "baseline",
+        "repeat": 0,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\24261025-0-baseline",
+        "process_wall_seconds": 37.22562550008297,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 36,
+              "inclusive_seconds": 0.0045065999999999995,
+              "self_seconds": 0.0004038
+            },
+            "clone": {
+              "calls": 11700,
+              "inclusive_seconds": 1.692973199999999,
+              "self_seconds": 1.692973199999999
+            },
+            "determinized_search_batched": {
+              "calls": 36,
+              "inclusive_seconds": 36.398495999999994,
+              "self_seconds": 0.00710949999999988
+            },
+            "finish_node": {
+              "calls": 11664,
+              "inclusive_seconds": 0.017171599999999867,
+              "self_seconds": 0.017171599999999867
+            },
+            "inference_total": {
+              "calls": 2916,
+              "inclusive_seconds": 3.4098274999999925,
+              "self_seconds": 0.2085535000000001
+            },
+            "mask": {
+              "calls": 12724,
+              "inclusive_seconds": 1.3258480999999391,
+              "self_seconds": 1.3258480999999391
+            },
+            "node_request": {
+              "calls": 11664,
+              "inclusive_seconds": 25.53228579999995,
+              "self_seconds": 25.53228579999995
+            },
+            "onnx_run": {
+              "calls": 2916,
+              "inclusive_seconds": 3.2012739999999944,
+              "self_seconds": 3.2012739999999944
+            },
+            "prepare_node": {
+              "calls": 11664,
+              "inclusive_seconds": 1.652547299999992,
+              "self_seconds": 0.02935099999999974
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0018748,
+              "self_seconds": 0.0018748
+            },
+            "sample_world": {
+              "calls": 144,
+              "inclusive_seconds": 0.007734099999999998,
+              "self_seconds": 0.007734099999999998
+            },
+            "search_batch": {
+              "calls": 36,
+              "inclusive_seconds": 36.373357199999994,
+              "self_seconds": 0.7223361000000333
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.1757231,
+              "self_seconds": 0.1757231
+            },
+            "step": {
+              "calls": 12436,
+              "inclusive_seconds": 3.653455299999988,
+              "self_seconds": 3.653455299999988
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11664,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 15.7757328,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2916,
+        "model_rows": 11664,
+        "model_seconds": 2.9017676999999997,
+        "rows": 36,
+        "seed": 24261025,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "candidate",
+        "repeat": 0,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\24261025-0-candidate",
+        "process_wall_seconds": 15.970465400023386,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 36,
+              "inclusive_seconds": 0.0033601,
+              "self_seconds": 0.0003377
+            },
+            "clone": {
+              "calls": 11700,
+              "inclusive_seconds": 1.0193481999999996,
+              "self_seconds": 1.0193481999999996
+            },
+            "determinized_search_batched": {
+              "calls": 36,
+              "inclusive_seconds": 15.273622800000004,
+              "self_seconds": 0.006338499999999914
+            },
+            "finish_node": {
+              "calls": 11664,
+              "inclusive_seconds": 0.012655699999999435,
+              "self_seconds": 0.012655699999999435
+            },
+            "inference_total": {
+              "calls": 2916,
+              "inclusive_seconds": 2.898703800000001,
+              "self_seconds": 0.1557996000000001
+            },
+            "mask": {
+              "calls": 12724,
+              "inclusive_seconds": 1.1143099999999804,
+              "self_seconds": 1.1143099999999804
+            },
+            "node_request": {
+              "calls": 11664,
+              "inclusive_seconds": 6.65771859999997,
+              "self_seconds": 6.65771859999997
+            },
+            "onnx_run": {
+              "calls": 2916,
+              "inclusive_seconds": 2.742904200000001,
+              "self_seconds": 2.742904200000001
+            },
+            "prepare_node": {
+              "calls": 11664,
+              "inclusive_seconds": 1.385642800000003,
+              "self_seconds": 0.02398409999999955
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0019808,
+              "self_seconds": 0.0019808
+            },
+            "sample_world": {
+              "calls": 144,
+              "inclusive_seconds": 0.006999599999999999,
+              "self_seconds": 0.006999599999999999
+            },
+            "search_batch": {
+              "calls": 36,
+              "inclusive_seconds": 15.251322400000003,
+              "self_seconds": 0.587665499999964
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.1139323,
+              "self_seconds": 0.1139323
+            },
+            "step": {
+              "calls": 12436,
+              "inclusive_seconds": 2.945561100000001,
+              "self_seconds": 2.945561100000001
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11664,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 16.8014926,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2916,
+        "model_rows": 11664,
+        "model_seconds": 2.9699223,
+        "rows": 36,
+        "seed": 24261025,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "candidate",
+        "repeat": 1,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\24261025-1-candidate",
+        "process_wall_seconds": 16.993662099936046,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 36,
+              "inclusive_seconds": 0.003549799999999999,
+              "self_seconds": 0.00034510000000000004
+            },
+            "clone": {
+              "calls": 11700,
+              "inclusive_seconds": 1.162461899999999,
+              "self_seconds": 1.162461899999999
+            },
+            "determinized_search_batched": {
+              "calls": 36,
+              "inclusive_seconds": 16.4154994,
+              "self_seconds": 0.007763899999999768
+            },
+            "finish_node": {
+              "calls": 11664,
+              "inclusive_seconds": 0.01400949999999953,
+              "self_seconds": 0.01400949999999953
+            },
+            "inference_total": {
+              "calls": 2916,
+              "inclusive_seconds": 2.966627099999994,
+              "self_seconds": 0.17683540000000006
+            },
+            "mask": {
+              "calls": 12724,
+              "inclusive_seconds": 1.167321999999993,
+              "self_seconds": 1.167321999999993
+            },
+            "node_request": {
+              "calls": 11664,
+              "inclusive_seconds": 7.283130000000004,
+              "self_seconds": 7.283130000000004
+            },
+            "onnx_run": {
+              "calls": 2916,
+              "inclusive_seconds": 2.7897917000000008,
+              "self_seconds": 2.7897917000000008
+            },
+            "prepare_node": {
+              "calls": 11664,
+              "inclusive_seconds": 1.4537341000000032,
+              "self_seconds": 0.025457999999999342
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0025938,
+              "self_seconds": 0.0025938
+            },
+            "sample_world": {
+              "calls": 144,
+              "inclusive_seconds": 0.007547800000000002,
+              "self_seconds": 0.007547800000000002
+            },
+            "search_batch": {
+              "calls": 36,
+              "inclusive_seconds": 16.3908926,
+              "self_seconds": 0.5859069999999837
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0048216,
+              "self_seconds": 0.0048216
+            },
+            "step": {
+              "calls": 12436,
+              "inclusive_seconds": 3.194927099999997,
+              "self_seconds": 3.194927099999997
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11664,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 34.1960125,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2916,
+        "model_rows": 11664,
+        "model_seconds": 3.0233161,
+        "rows": 36,
+        "seed": 24261025,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "baseline",
+        "repeat": 1,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\24261025-1-baseline",
+        "process_wall_seconds": 34.430181499919854,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 36,
+              "inclusive_seconds": 0.004894599999999999,
+              "self_seconds": 0.00037539999999999985
+            },
+            "clone": {
+              "calls": 11700,
+              "inclusive_seconds": 1.390990700000001,
+              "self_seconds": 1.390990700000001
+            },
+            "determinized_search_batched": {
+              "calls": 36,
+              "inclusive_seconds": 33.72794629999999,
+              "self_seconds": 0.007019700000000684
+            },
+            "finish_node": {
+              "calls": 11664,
+              "inclusive_seconds": 0.013537099999999505,
+              "self_seconds": 0.013537099999999505
+            },
+            "inference_total": {
+              "calls": 2916,
+              "inclusive_seconds": 3.019412099999995,
+              "self_seconds": 0.16584590000000035
+            },
+            "mask": {
+              "calls": 12724,
+              "inclusive_seconds": 1.1242879999999629,
+              "self_seconds": 1.1242879999999629
+            },
+            "node_request": {
+              "calls": 11664,
+              "inclusive_seconds": 24.161303099999927,
+              "self_seconds": 24.161303099999927
+            },
+            "onnx_run": {
+              "calls": 2916,
+              "inclusive_seconds": 2.853566200000005,
+              "self_seconds": 2.853566200000005
+            },
+            "prepare_node": {
+              "calls": 11664,
+              "inclusive_seconds": 1.403443099999984,
+              "self_seconds": 0.02646070000000004
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0019033,
+              "self_seconds": 0.0019033
+            },
+            "sample_world": {
+              "calls": 144,
+              "inclusive_seconds": 0.0080483,
+              "self_seconds": 0.0080483
+            },
+            "search_batch": {
+              "calls": 36,
+              "inclusive_seconds": 33.7020232,
+              "self_seconds": 0.6322180000000082
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0114193,
+              "self_seconds": 0.0114193
+            },
+            "step": {
+              "calls": 12436,
+              "inclusive_seconds": 3.3442932000000036,
+              "self_seconds": 3.3442932000000036
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 12636,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 61.4554704,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 3159,
+        "model_rows": 12636,
+        "model_seconds": 3.9710579,
+        "rows": 39,
+        "seed": 26261024,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "baseline",
+        "repeat": 0,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\26261024-0-baseline",
+        "process_wall_seconds": 61.84344950004015,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 39,
+              "inclusive_seconds": 0.0068591,
+              "self_seconds": 0.0006334999999999997
+            },
+            "clone": {
+              "calls": 12675,
+              "inclusive_seconds": 2.502563799999993,
+              "self_seconds": 2.502563799999993
+            },
+            "determinized_search_batched": {
+              "calls": 39,
+              "inclusive_seconds": 60.66077960000002,
+              "self_seconds": 0.009397200000000105
+            },
+            "finish_node": {
+              "calls": 12636,
+              "inclusive_seconds": 0.02004729999999982,
+              "self_seconds": 0.02004729999999982
+            },
+            "inference_total": {
+              "calls": 3159,
+              "inclusive_seconds": 3.9656050999999986,
+              "self_seconds": 0.24730159999999982
+            },
+            "mask": {
+              "calls": 13410,
+              "inclusive_seconds": 1.5179529999999588,
+              "self_seconds": 1.5179529999999588
+            },
+            "node_request": {
+              "calls": 12636,
+              "inclusive_seconds": 46.86297640000001,
+              "self_seconds": 46.86297640000001
+            },
+            "onnx_run": {
+              "calls": 3159,
+              "inclusive_seconds": 3.718303500000004,
+              "self_seconds": 3.718303500000004
+            },
+            "prepare_node": {
+              "calls": 12636,
+              "inclusive_seconds": 1.7253504999999947,
+              "self_seconds": 0.03940459999999972
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.002403,
+              "self_seconds": 0.002403
+            },
+            "sample_world": {
+              "calls": 156,
+              "inclusive_seconds": 0.011614700000000006,
+              "self_seconds": 0.011614700000000006
+            },
+            "search_batch": {
+              "calls": 39,
+              "inclusive_seconds": 60.62913909999998,
+              "self_seconds": 0.912246000000018
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0125485,
+              "self_seconds": 0.0125485
+            },
+            "step": {
+              "calls": 13098,
+              "inclusive_seconds": 4.818338000000018,
+              "self_seconds": 4.818338000000018
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 12636,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 26.0508154,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 3159,
+        "model_rows": 12636,
+        "model_seconds": 3.7367783,
+        "rows": 39,
+        "seed": 26261024,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "candidate",
+        "repeat": 0,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\26261024-0-candidate",
+        "process_wall_seconds": 26.317692100070417,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 39,
+              "inclusive_seconds": 0.004824200000000001,
+              "self_seconds": 0.00041739999999999995
+            },
+            "clone": {
+              "calls": 12675,
+              "inclusive_seconds": 1.9338327000000035,
+              "self_seconds": 1.9338327000000035
+            },
+            "determinized_search_batched": {
+              "calls": 39,
+              "inclusive_seconds": 25.2021257,
+              "self_seconds": 0.00834510000000016
+            },
+            "finish_node": {
+              "calls": 12636,
+              "inclusive_seconds": 0.017390099999999648,
+              "self_seconds": 0.017390099999999648
+            },
+            "inference_total": {
+              "calls": 3159,
+              "inclusive_seconds": 3.7318378000000005,
+              "self_seconds": 0.2320346999999999
+            },
+            "mask": {
+              "calls": 13410,
+              "inclusive_seconds": 1.3229490999999842,
+              "self_seconds": 1.3229490999999842
+            },
+            "node_request": {
+              "calls": 12636,
+              "inclusive_seconds": 13.198788499999978,
+              "self_seconds": 13.198788499999978
+            },
+            "onnx_run": {
+              "calls": 3159,
+              "inclusive_seconds": 3.4998031000000043,
+              "self_seconds": 3.4998031000000043
+            },
+            "prepare_node": {
+              "calls": 12636,
+              "inclusive_seconds": 1.4924952999999896,
+              "self_seconds": 0.03338340000000001
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0042569,
+              "self_seconds": 0.0042569
+            },
+            "sample_world": {
+              "calls": 156,
+              "inclusive_seconds": 0.0088644,
+              "self_seconds": 0.0088644
+            },
+            "search_batch": {
+              "calls": 39,
+              "inclusive_seconds": 25.1767811,
+              "self_seconds": 0.7957166999999905
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0047106,
+              "self_seconds": 0.0047106
+            },
+            "step": {
+              "calls": 13098,
+              "inclusive_seconds": 4.15060050000001,
+              "self_seconds": 4.15060050000001
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 12636,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 23.3041957,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 3159,
+        "model_rows": 12636,
+        "model_seconds": 3.330916,
+        "rows": 39,
+        "seed": 26261024,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "candidate",
+        "repeat": 1,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\26261024-1-candidate",
+        "process_wall_seconds": 23.53190810000524,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 39,
+              "inclusive_seconds": 0.0045874,
+              "self_seconds": 0.0004351
+            },
+            "clone": {
+              "calls": 12675,
+              "inclusive_seconds": 1.588829799999996,
+              "self_seconds": 1.588829799999996
+            },
+            "determinized_search_batched": {
+              "calls": 39,
+              "inclusive_seconds": 22.892791499999998,
+              "self_seconds": 0.00759329999999972
+            },
+            "finish_node": {
+              "calls": 12636,
+              "inclusive_seconds": 0.015131399999999537,
+              "self_seconds": 0.015131399999999537
+            },
+            "inference_total": {
+              "calls": 3159,
+              "inclusive_seconds": 3.3270646999999993,
+              "self_seconds": 0.18477580000000043
+            },
+            "mask": {
+              "calls": 13410,
+              "inclusive_seconds": 1.105969999999988,
+              "self_seconds": 1.105969999999988
+            },
+            "node_request": {
+              "calls": 12636,
+              "inclusive_seconds": 12.181197300000049,
+              "self_seconds": 12.181197300000049
+            },
+            "onnx_run": {
+              "calls": 3159,
+              "inclusive_seconds": 3.1422889000000045,
+              "self_seconds": 3.1422889000000045
+            },
+            "prepare_node": {
+              "calls": 12636,
+              "inclusive_seconds": 1.2482089999999884,
+              "self_seconds": 0.028405600000000267
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0018051,
+              "self_seconds": 0.0018051
+            },
+            "sample_world": {
+              "calls": 156,
+              "inclusive_seconds": 0.008253400000000004,
+              "self_seconds": 0.008253400000000004
+            },
+            "search_batch": {
+              "calls": 39,
+              "inclusive_seconds": 22.8688008,
+              "self_seconds": 0.71827449999998
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0136193,
+              "self_seconds": 0.0136193
+            },
+            "step": {
+              "calls": 13098,
+              "inclusive_seconds": 3.911636400000007,
+              "self_seconds": 3.911636400000007
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 12636,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 56.7780316,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 3159,
+        "model_rows": 12636,
+        "model_seconds": 3.6822925,
+        "rows": 39,
+        "seed": 26261024,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "baseline",
+        "repeat": 1,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\26261024-1-baseline",
+        "process_wall_seconds": 57.01567949994933,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 39,
+              "inclusive_seconds": 0.0061809,
+              "self_seconds": 0.00042699999999999986
+            },
+            "clone": {
+              "calls": 12675,
+              "inclusive_seconds": 2.2448424999999976,
+              "self_seconds": 2.2448424999999976
+            },
+            "determinized_search_batched": {
+              "calls": 39,
+              "inclusive_seconds": 56.13840799999999,
+              "self_seconds": 0.007909800000001854
+            },
+            "finish_node": {
+              "calls": 12636,
+              "inclusive_seconds": 0.018553099999999656,
+              "self_seconds": 0.018553099999999656
+            },
+            "inference_total": {
+              "calls": 3159,
+              "inclusive_seconds": 3.6771757999999943,
+              "self_seconds": 0.2392899999999994
+            },
+            "mask": {
+              "calls": 13410,
+              "inclusive_seconds": 1.220072400000003,
+              "self_seconds": 1.220072400000003
+            },
+            "node_request": {
+              "calls": 12636,
+              "inclusive_seconds": 43.72234260000029,
+              "self_seconds": 43.72234260000029
+            },
+            "onnx_run": {
+              "calls": 3159,
+              "inclusive_seconds": 3.437885799999997,
+              "self_seconds": 3.437885799999997
+            },
+            "prepare_node": {
+              "calls": 12636,
+              "inclusive_seconds": 1.3737764999999966,
+              "self_seconds": 0.03227469999999993
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0029293,
+              "self_seconds": 0.0029293
+            },
+            "sample_world": {
+              "calls": 156,
+              "inclusive_seconds": 0.0097921,
+              "self_seconds": 0.0097921
+            },
+            "search_batch": {
+              "calls": 39,
+              "inclusive_seconds": 56.1102281,
+              "self_seconds": 0.7923822000000135
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0065566,
+              "self_seconds": 0.0065566
+            },
+            "step": {
+              "calls": 13098,
+              "inclusive_seconds": 4.412635800000006,
+              "self_seconds": 4.412635800000006
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11340,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 36.3997373,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2835,
+        "model_rows": 11340,
+        "model_seconds": 3.6480628,
+        "rows": 35,
+        "seed": 26261025,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "baseline",
+        "repeat": 0,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\26261025-0-baseline",
+        "process_wall_seconds": 36.619766600080766,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 35,
+              "inclusive_seconds": 0.0057084,
+              "self_seconds": 0.0003844
+            },
+            "clone": {
+              "calls": 11375,
+              "inclusive_seconds": 2.3070148000000006,
+              "self_seconds": 2.3070148000000006
+            },
+            "determinized_search_batched": {
+              "calls": 35,
+              "inclusive_seconds": 35.9415248,
+              "self_seconds": 0.011090499999999837
+            },
+            "finish_node": {
+              "calls": 11340,
+              "inclusive_seconds": 0.01915639999999953,
+              "self_seconds": 0.01915639999999953
+            },
+            "inference_total": {
+              "calls": 2835,
+              "inclusive_seconds": 3.643560700000007,
+              "self_seconds": 0.20725930000000004
+            },
+            "mask": {
+              "calls": 12838,
+              "inclusive_seconds": 1.3103713000000117,
+              "self_seconds": 1.3103713000000117
+            },
+            "node_request": {
+              "calls": 11340,
+              "inclusive_seconds": 24.15394320000005,
+              "self_seconds": 24.15394320000005
+            },
+            "onnx_run": {
+              "calls": 2835,
+              "inclusive_seconds": 3.4363013999999987,
+              "self_seconds": 3.4363013999999987
+            },
+            "prepare_node": {
+              "calls": 11340,
+              "inclusive_seconds": 1.8092943999999909,
+              "self_seconds": 0.03543219999999982
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0020715,
+              "self_seconds": 0.0020715
+            },
+            "sample_world": {
+              "calls": 140,
+              "inclusive_seconds": 0.010782199999999999,
+              "self_seconds": 0.010782199999999999
+            },
+            "search_batch": {
+              "calls": 35,
+              "inclusive_seconds": 35.9093523,
+              "self_seconds": 0.8155560000000044
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0094882,
+              "self_seconds": 0.0094882
+            },
+            "step": {
+              "calls": 12558,
+              "inclusive_seconds": 3.6342331000000074,
+              "self_seconds": 3.6342331000000074
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11340,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 15.3202006,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2835,
+        "model_rows": 11340,
+        "model_seconds": 3.0688422,
+        "rows": 35,
+        "seed": 26261025,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "candidate",
+        "repeat": 0,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\26261025-0-candidate",
+        "process_wall_seconds": 15.558113099890761,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 35,
+              "inclusive_seconds": 0.0035583,
+              "self_seconds": 0.0003484
+            },
+            "clone": {
+              "calls": 11375,
+              "inclusive_seconds": 1.3639674,
+              "self_seconds": 1.3639674
+            },
+            "determinized_search_batched": {
+              "calls": 35,
+              "inclusive_seconds": 14.836732799999998,
+              "self_seconds": 0.007304299999999958
+            },
+            "finish_node": {
+              "calls": 11340,
+              "inclusive_seconds": 0.014287199999999495,
+              "self_seconds": 0.014287199999999495
+            },
+            "inference_total": {
+              "calls": 2835,
+              "inclusive_seconds": 3.065170500000007,
+              "self_seconds": 0.1891905000000002
+            },
+            "mask": {
+              "calls": 12838,
+              "inclusive_seconds": 0.9936859999999894,
+              "self_seconds": 0.9936859999999894
+            },
+            "node_request": {
+              "calls": 11340,
+              "inclusive_seconds": 5.93127539999998,
+              "self_seconds": 5.93127539999998
+            },
+            "onnx_run": {
+              "calls": 2835,
+              "inclusive_seconds": 2.875980000000005,
+              "self_seconds": 2.875980000000005
+            },
+            "prepare_node": {
+              "calls": 11340,
+              "inclusive_seconds": 1.4010290999999884,
+              "self_seconds": 0.026202400000000247
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0025915,
+              "self_seconds": 0.0025915
+            },
+            "sample_world": {
+              "calls": 140,
+              "inclusive_seconds": 0.007537100000000002,
+              "self_seconds": 0.007537100000000002
+            },
+            "search_batch": {
+              "calls": 35,
+              "inclusive_seconds": 14.815650799999998,
+              "self_seconds": 0.6156608999999852
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0077429,
+              "self_seconds": 0.0077429
+            },
+            "step": {
+              "calls": 12558,
+              "inclusive_seconds": 2.811293199999996,
+              "self_seconds": 2.811293199999996
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11340,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 14.3816527,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2835,
+        "model_rows": 11340,
+        "model_seconds": 2.9766707,
+        "rows": 35,
+        "seed": 26261025,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "candidate",
+        "repeat": 1,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\26261025-1-candidate",
+        "process_wall_seconds": 14.608671800000593,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 35,
+              "inclusive_seconds": 0.0031964000000000003,
+              "self_seconds": 0.0003356000000000001
+            },
+            "clone": {
+              "calls": 11375,
+              "inclusive_seconds": 1.2116094000000002,
+              "self_seconds": 1.2116094000000002
+            },
+            "determinized_search_batched": {
+              "calls": 35,
+              "inclusive_seconds": 13.9778619,
+              "self_seconds": 0.00642329999999991
+            },
+            "finish_node": {
+              "calls": 11340,
+              "inclusive_seconds": 0.013086699999999531,
+              "self_seconds": 0.013086699999999531
+            },
+            "inference_total": {
+              "calls": 2835,
+              "inclusive_seconds": 2.973380299999992,
+              "self_seconds": 0.1649769000000002
+            },
+            "mask": {
+              "calls": 12838,
+              "inclusive_seconds": 0.956980599999977,
+              "self_seconds": 0.956980599999977
+            },
+            "node_request": {
+              "calls": 11340,
+              "inclusive_seconds": 5.484687999999999,
+              "self_seconds": 5.484687999999999
+            },
+            "onnx_run": {
+              "calls": 2835,
+              "inclusive_seconds": 2.8084033999999938,
+              "self_seconds": 2.8084033999999938
+            },
+            "prepare_node": {
+              "calls": 11340,
+              "inclusive_seconds": 1.3493005999999843,
+              "self_seconds": 0.024820499999999676
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0027085,
+              "self_seconds": 0.0027085
+            },
+            "sample_world": {
+              "calls": 140,
+              "inclusive_seconds": 0.0066971999999999995,
+              "self_seconds": 0.0066971999999999995
+            },
+            "search_batch": {
+              "calls": 35,
+              "inclusive_seconds": 13.959137199999997,
+              "self_seconds": 0.6246290999999737
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.005466,
+              "self_seconds": 0.005466
+            },
+            "step": {
+              "calls": 12558,
+              "inclusive_seconds": 2.6752112000000023,
+              "self_seconds": 2.6752112000000023
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "cache_capacity": "0",
+        "cache_entries": 0,
+        "cache_hits": 0,
+        "cache_misses": 11340,
+        "decision_cap": 40,
+        "decisions": 40,
+        "diagnostic_only": true,
+        "elapsed_seconds_including_registry": 28.5018148,
+        "evaluation_batch_size": 4,
+        "games": 1,
+        "leaf_hash_enabled": false,
+        "leaf_input_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "model_calls": 2835,
+        "model_rows": 11340,
+        "model_seconds": 3.0818817,
+        "rows": 35,
+        "seed": 26261025,
+        "simulations": 320,
+        "truncated": 1,
+        "worlds": 4,
+        "kind": "baseline",
+        "repeat": 1,
+        "directory": "runs\\2026-10-24-observation-performance\\paired\\26261025-1-baseline",
+        "process_wall_seconds": 28.705735499970615,
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 35,
+              "inclusive_seconds": 0.0046334,
+              "self_seconds": 0.00035400000000000004
+            },
+            "clone": {
+              "calls": 11375,
+              "inclusive_seconds": 1.6968658000000068,
+              "self_seconds": 1.6968658000000068
+            },
+            "determinized_search_batched": {
+              "calls": 35,
+              "inclusive_seconds": 28.086997799999995,
+              "self_seconds": 0.006863600000000469
+            },
+            "finish_node": {
+              "calls": 11340,
+              "inclusive_seconds": 0.014375899999999619,
+              "self_seconds": 0.014375899999999619
+            },
+            "inference_total": {
+              "calls": 2835,
+              "inclusive_seconds": 3.077904799999998,
+              "self_seconds": 0.19180070000000005
+            },
+            "mask": {
+              "calls": 12838,
+              "inclusive_seconds": 1.0492820999999923,
+              "self_seconds": 1.0492820999999923
+            },
+            "node_request": {
+              "calls": 11340,
+              "inclusive_seconds": 18.481569599999997,
+              "self_seconds": 18.481569599999997
+            },
+            "onnx_run": {
+              "calls": 2835,
+              "inclusive_seconds": 2.886104099999999,
+              "self_seconds": 2.886104099999999
+            },
+            "prepare_node": {
+              "calls": 11340,
+              "inclusive_seconds": 1.4816087999999905,
+              "self_seconds": 0.02800630000000005
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.0019205,
+              "self_seconds": 0.0019205
+            },
+            "sample_world": {
+              "calls": 140,
+              "inclusive_seconds": 0.0070588,
+              "self_seconds": 0.0070588
+            },
+            "search_batch": {
+              "calls": 35,
+              "inclusive_seconds": 28.065254099999997,
+              "self_seconds": 0.6748478999999984
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.0061229,
+              "self_seconds": 0.0061229
+            },
+            "step": {
+              "calls": 12558,
+              "inclusive_seconds": 3.0498690000000006,
+              "self_seconds": 3.0498690000000006
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      }
+    ],
+    "comparisons": [
+      {
+        "seed": 24261024,
+        "repeat": 0,
+        "arrays_equal": {
+          "shard-000\\game_id.npy": true,
+          "shard-000\\mover.npy": true,
+          "shard-000\\obs.npy": true,
+          "shard-000\\policy_actions.npy": true,
+          "shard-000\\policy_offsets.npy": true,
+          "shard-000\\policy_visits.npy": true,
+          "shard-000\\terminated.npy": true,
+          "shard-000\\z.npy": true
+        },
+        "leaf_inputs_equal": null,
+        "throughput_ratio": 2.0100996234761928
+      },
+      {
+        "seed": 24261024,
+        "repeat": 1,
+        "arrays_equal": {
+          "shard-000\\game_id.npy": true,
+          "shard-000\\mover.npy": true,
+          "shard-000\\obs.npy": true,
+          "shard-000\\policy_actions.npy": true,
+          "shard-000\\policy_offsets.npy": true,
+          "shard-000\\policy_visits.npy": true,
+          "shard-000\\terminated.npy": true,
+          "shard-000\\z.npy": true
+        },
+        "leaf_inputs_equal": null,
+        "throughput_ratio": 1.913467204989053
+      },
+      {
+        "seed": 24261025,
+        "repeat": 0,
+        "arrays_equal": {
+          "shard-000\\game_id.npy": true,
+          "shard-000\\mover.npy": true,
+          "shard-000\\obs.npy": true,
+          "shard-000\\policy_actions.npy": true,
+          "shard-000\\policy_offsets.npy": true,
+          "shard-000\\policy_visits.npy": true,
+          "shard-000\\terminated.npy": true,
+          "shard-000\\z.npy": true
+        },
+        "leaf_inputs_equal": null,
+        "throughput_ratio": 2.347048905392211
+      },
+      {
+        "seed": 24261025,
+        "repeat": 1,
+        "arrays_equal": {
+          "shard-000\\game_id.npy": true,
+          "shard-000\\mover.npy": true,
+          "shard-000\\obs.npy": true,
+          "shard-000\\policy_actions.npy": true,
+          "shard-000\\policy_offsets.npy": true,
+          "shard-000\\policy_visits.npy": true,
+          "shard-000\\terminated.npy": true,
+          "shard-000\\z.npy": true
+        },
+        "leaf_inputs_equal": null,
+        "throughput_ratio": 2.035296108156486
+      },
+      {
+        "seed": 26261024,
+        "repeat": 0,
+        "arrays_equal": {
+          "shard-000\\game_id.npy": true,
+          "shard-000\\mover.npy": true,
+          "shard-000\\obs.npy": true,
+          "shard-000\\policy_actions.npy": true,
+          "shard-000\\policy_offsets.npy": true,
+          "shard-000\\policy_visits.npy": true,
+          "shard-000\\terminated.npy": true,
+          "shard-000\\z.npy": true
+        },
+        "leaf_inputs_equal": null,
+        "throughput_ratio": 2.3590612983269614
+      },
+      {
+        "seed": 26261024,
+        "repeat": 1,
+        "arrays_equal": {
+          "shard-000\\game_id.npy": true,
+          "shard-000\\mover.npy": true,
+          "shard-000\\obs.npy": true,
+          "shard-000\\policy_actions.npy": true,
+          "shard-000\\policy_offsets.npy": true,
+          "shard-000\\policy_visits.npy": true,
+          "shard-000\\terminated.npy": true,
+          "shard-000\\z.npy": true
+        },
+        "leaf_inputs_equal": null,
+        "throughput_ratio": 2.4363866631964473
+      },
+      {
+        "seed": 26261025,
+        "repeat": 0,
+        "arrays_equal": {
+          "shard-000\\game_id.npy": true,
+          "shard-000\\mover.npy": true,
+          "shard-000\\obs.npy": true,
+          "shard-000\\policy_actions.npy": true,
+          "shard-000\\policy_offsets.npy": true,
+          "shard-000\\policy_visits.npy": true,
+          "shard-000\\terminated.npy": true,
+          "shard-000\\z.npy": true
+        },
+        "leaf_inputs_equal": null,
+        "throughput_ratio": 2.3759308543257585
+      },
+      {
+        "seed": 26261025,
+        "repeat": 1,
+        "arrays_equal": {
+          "shard-000\\game_id.npy": true,
+          "shard-000\\mover.npy": true,
+          "shard-000\\obs.npy": true,
+          "shard-000\\policy_actions.npy": true,
+          "shard-000\\policy_offsets.npy": true,
+          "shard-000\\policy_visits.npy": true,
+          "shard-000\\terminated.npy": true,
+          "shard-000\\z.npy": true
+        },
+        "leaf_inputs_equal": null,
+        "throughput_ratio": 1.981817764240684
+      }
+    ],
+    "status": "complete",
+    "total_native_seconds": {
+      "baseline": 314.5569283,
+      "candidate": 142.332469
+    },
+    "aggregate_throughput_ratio": 2.2100152587109267
+  },
+  "full_game_parity": {
+    "diagnostic_only": true,
+    "full_games": 2,
+    "decisions": 108,
+    "saved_positions": 98,
+    "evaluated_leaves": 29864,
+    "leaf_inputs_equal": true,
+    "arrays_equal": {
+      "shard-000\\game_id.npy": true,
+      "shard-000\\mover.npy": true,
+      "shard-000\\obs.npy": true,
+      "shard-000\\policy_actions.npy": true,
+      "shard-000\\policy_offsets.npy": true,
+      "shard-000\\policy_visits.npy": true,
+      "shard-000\\terminated.npy": true,
+      "shard-000\\z.npy": true
+    },
+    "leaf_input_sha256": "b0bafe1be4cf1c58525f2547ac08aed10103fcb1ead10a5912a50a591270af53",
+    "baseline": {
+      "cache_capacity": "0",
+      "cache_entries": 0,
+      "cache_hits": 0,
+      "cache_misses": 29864,
+      "decision_cap": 1200,
+      "decisions": 108,
+      "diagnostic_only": true,
+      "elapsed_seconds_including_registry": 120.3126252,
+      "evaluation_batch_size": 4,
+      "games": 2,
+      "leaf_hash_enabled": true,
+      "leaf_input_sha256": "b0bafe1be4cf1c58525f2547ac08aed10103fcb1ead10a5912a50a591270af53",
+      "model_calls": 7567,
+      "model_rows": 29864,
+      "model_seconds": 10.8709236,
+      "rows": 98,
+      "seed": 24261024,
+      "simulations": 320,
+      "truncated": 0,
+      "worlds": 4
+    },
+    "candidate": {
+      "cache_capacity": "0",
+      "cache_entries": 0,
+      "cache_hits": 0,
+      "cache_misses": 29864,
+      "decision_cap": 1200,
+      "decisions": 108,
+      "diagnostic_only": true,
+      "elapsed_seconds_including_registry": 50.8919781,
+      "evaluation_batch_size": 4,
+      "games": 2,
+      "leaf_hash_enabled": true,
+      "leaf_input_sha256": "b0bafe1be4cf1c58525f2547ac08aed10103fcb1ead10a5912a50a591270af53",
+      "model_calls": 7567,
+      "model_rows": 29864,
+      "model_seconds": 8.5327932,
+      "rows": 98,
+      "seed": 24261024,
+      "simulations": 320,
+      "truncated": 0,
+      "worlds": 4
+    },
+    "limits": "Full-game parity run overlapped compilation; use separate paired runs for timing conclusions."
+  },
+  "limits": [
+    "Four seeded 40-decision prefixes, each repeated twice in reversed order. Diagnostic caps are not training data.",
+    "Full-game parity timings overlapped compilation and are excluded from the speedup calculation.",
+    "One occupied Windows host; no Linux cloud throughput or playing-strength improvement is inferred.",
+    "Cloud generation was not restarted, replaced or modified."
+  ]
+}

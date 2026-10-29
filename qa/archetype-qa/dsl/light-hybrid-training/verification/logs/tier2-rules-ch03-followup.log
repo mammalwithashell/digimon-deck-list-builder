@@ -1,0 +1,20 @@
+
+running 14 tests
+test ch03_areas::breeding_scoped_effect_triggers_only_in_the_breeding_area ... ok
+test ch03_areas::breeding_area_effects_without_a_breeding_reference_do_not_trigger ... ok
+test ch03_areas::breeding_area_persistent_effect_applies_only_with_a_breeding_reference ... ok
+test ch03_areas::face_down_card_digivolved_into_is_a_face_up_top_card ... ok
+test ch03_areas::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition ... ok
+test ch03_areas::face_down_card_returned_to_the_deck_keeps_no_face_down_state ... ok
+test ch03_areas::face_down_card_returned_to_hand_then_played_is_face_up_on_the_field ... ok
+test ch03_areas::face_down_card_placed_in_security_is_face_down_there ... ok
+test ch03_areas::card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack ... ok
+test ch03_areas::face_down_card_trashed_from_under_a_tamer_is_face_up_in_the_trash ... ok
+test ch03_areas::face_down_digi_egg_returned_to_the_digi_egg_deck_keeps_no_face_down_state ... ok
+test ch03_areas::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas ... ok
+test ch03_areas::opponents_breeding_area_digimon_does_not_meet_an_activation_condition ... ok
+test ch03_areas::own_breeding_area_digimon_does_not_meet_a_main_activation_condition ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 348 filtered out; finished in 8.60s
+
+FILTER_EXIT 0

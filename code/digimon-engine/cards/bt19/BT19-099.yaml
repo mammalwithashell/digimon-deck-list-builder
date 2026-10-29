@@ -76,18 +76,15 @@
 # `DelaySelfTrashPlayFromHandFlow`:
 #   delete_permanent { target: source }  →  select_union_zone  →
 #   play_union_bound_free
-# The flow marks the replacement `handled()`, pays the <Delay> self-trash,
-# finishes the OWNED leave by the subject's stable card handle (the leaving
-# Digimon still leaves — resolved BEFORE the reward play so the play cannot
-# collide with the leaver's battle-area slot), then runs the reward steps with
-# `replacement_subject` re-bound as the subject's STABLE TOP-CARD SNAPSHOT so
-# the `play_cost_eq_binding` comparator reads the pre-leave printed cost —
-# exactly DCGO's hashtable-snapshot comparator above. Without this flow the
-# generic step runner's parked-replacement Proceed commit deletes by a STALE
-# battle-area index after the self-trash + reward play shift the vector — the
-# freshly played card got trashed and the subject survived
-# (G-ENGINE-DELAY-SELF-TRASH-THEN-FREE-PLAY-IN-LEAVE-REPLACEMENT, RESOLVED
-# 2026-07-04, docs/RUST_ENGINE_GAPS.md).
+# The flow pays the <Delay> self-trash, then runs the reward steps while the
+# original departure is still pending. `replacement_subject` is bound to the
+# subject's stable top-card snapshot for the printed-cost comparator above.
+# After the reward, the original replacement window resumes its remaining
+# effects and commits the original cause/destination by battle-area identity.
+# This avoids both the historical stale-slot deletion of the reward card and
+# the later workaround's premature deletion/re-dispatch of the subject.
+# See fix-deletion-event-identity and
+# G-ENGINE-DELAY-SELF-TRASH-THEN-FREE-PLAY-IN-LEAVE-REPLACEMENT.
 #
 # `play_cost_eq_binding: { binding: replacement_subject, offset: 1, op: eq }`
 # is G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT (RESOLVED 2026-07-03, filed for this

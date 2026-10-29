@@ -1,0 +1,36 @@
+
+running 30 tests
+test events::drain_events_clears_buffer ... ok
+test events::events_have_monotonic_seq_numbers ... ok
+test events::memory_change_event_emitted_on_gain_memory ... ok
+test events::play_and_memory_events_emitted_on_play ... ok
+test perm_inspector::active_modifier_list_emits_structured_entries ... ok
+test perm_inspector::dp_breakdown_neutral_without_modifier ... ok
+test perm_inspector::dp_breakdown_reflects_modifier ... ok
+test perm_inspector::innate_printed_keyword_breakdown ... ok
+test perm_inspector::link_effect_text_listed_for_link_cards_only ... ok
+test perm_inspector::modifier_granted_keyword_is_gained ... ok
+test perm_inspector::permanent_has_documented_keys ... ok
+test perm_inspector::security_attack_modifier_default_zero ... ok
+test perm_inspector::single_card_permanent_has_no_inherited_effects ... ok
+test perm_inspector::source_and_inherited_effect_text_populated ... ok
+test perm_inspector::source_count_excludes_the_top_card ... ok
+test recorder::lazy_capture_fires_on_pre_action_window ... ok
+test recorder::record_tensors_produces_snapshots ... ok
+test recorder::recording_has_expected_top_level_keys ... ok
+test recorder::recording_initial_state_has_both_players ... ok
+test recorder::recording_returns_none_when_disabled ... ok
+test selection_view::pending_selection_view_kind_as_str_round_trips ... ok
+test selection_view::pending_selection_view_mirrors_serializable_fields ... ok
+test ui_json::colors_emitted_as_python_int_values ... ok
+test ui_json::current_phase_is_integer_matching_python ... ok
+test ui_json::pending_selection_null_when_no_selection ... ok
+test ui_json::pending_selection_serializes_when_installed ... ok
+test ui_json::player_ids_use_python_convention ... ok
+test ui_json::player_memory_is_player_relative ... ok
+test ui_json::player_ui_data_has_full_key_set ... ok
+test ui_json::to_ui_json_has_all_top_level_keys ... ok
+
+test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.25s
+
+SUITE_EXIT 0

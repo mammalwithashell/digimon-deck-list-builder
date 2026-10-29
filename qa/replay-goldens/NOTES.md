@@ -124,3 +124,43 @@ Step numbers are 0-based action indices, as in the entry above.
   removed decline are unchanged. Verified 10/10 with `replay_corpus verify`
   (with `data/cards.json` and with the LF copy);
   `replay_empty_replacement_window` passes.
+
+## P-103 mandatory selection and field-owner metadata -- 2026-10-22
+
+Baseline: `66762dc44b0756f1c64a692bd68a4b49d7ef6255`. Original action counts
+were 64/64/64/64/65/58/64/59/64/67 (633 total). Indices below are zero-based.
+
+- **Rules correction:** P-103's Main effect adds a red card without "may".
+  CR 4.3 §15-1-5 requires possible processing; reveal cleanup must also finish
+  (§15-15-3-4). The YAML now makes the add mandatory. A shared optional reveal
+  decline separately retains its independent outer tail, including remainder
+  cleanup. The old P-103 paths had declined the add and stranded revealed cards.
+- **Retirement:** fresh `replay_corpus bless` rejected illegal PASS 62 in 000..007
+  at indices 11/12/7/13/20/12/24/14 respectively (legal picks 30/31).
+  Original recordings and exact reasons are retained in
+  `retired/2026-10-22-p103/*.retired.json`. No illegal action was forced.
+- **Ordinary paths:** 000 and 002..007 were regenerated with
+  `replay_corpus regenerate --goldens <candidate directory> --cards data/cards.json --id greedy_NNN_`.
+  Every inline deck, seed and original action budget is retained, including
+  004's 65, 005's 58 and 007's 59 actions. Actions before each index above are
+  identical; thereafter the greedy policy follows the corrected legal game.
+  Regeneration writes engine schema 2 and the current card-data hash.
+- **Curated 001:** hand-migrated by physical identity, not greedy regeneration.
+  At original index 12, P1 takes handle 66 (EX11-008) and bottoms sole remainder
+  91 (BT24-018). At original index 48, P0 takes handle 10 (BT24-008) and bottoms
+  sole remainder 52 (BT8-097). Subsequent hand choices are remapped to their
+  original physical cards; no extra card is chosen merely because its numeric
+  slot became legal. Two old declines become four legal choices: 64 -> 66.
+  Schema 1, decks and seed remain; cards_hash intentionally updates to current
+  LF-normalized production data. The permanent regression asserts these choices,
+  BT24-082's accept at index 45 (source 43), exactly two security-removal
+  observers at 55 attributed to source 27 / P0 index 0, and an actual pending
+  clone at 58 with the complete seven-action suffix. An archival-only diagnostic
+  first reproduced all 64 original digests before constructing the new candidate;
+  the corrected candidate uses production effects and normal legal action masks.
+- **008/009:** action arrays and all non-digest fields are unchanged. Exactly
+  9/5 per-step digests change from explicit field-target owner metadata; 009's
+  final_digest changes consistently. These two alone are digest-only refreshes.
+- **Verification:** independently reviewed 001 candidate passed all 66 actions
+  and clone checks. Fresh `replay_corpus verify` passed all ten candidates
+  (635 actions) before promotion. No game engine action or tensor contract changed.

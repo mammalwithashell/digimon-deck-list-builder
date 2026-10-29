@@ -121,10 +121,14 @@ fn trash_pick(runner: &DebugRunner, card_id: &str) -> u16 {
         .iter()
         .position(|c| c.card_id(&runner.game.card_data) == card_id)
         .unwrap_or_else(|| panic!("{card_id} not in trash"));
+    if runner.game.pending_selection.as_ref().and_then(|p|p.card_choice.as_ref()).is_some(){return physical_fixture::zone_action(&runner.game,0,idx,digimon_engine::owned_card_choice::CardChoiceZone::Trash);}
     TRASH_EFFECT_START + idx as u16
 }
 
 fn offered_trash_ids(runner: &DebugRunner) -> Vec<String> {
+    if runner.game.pending_selection.as_ref().and_then(|p|p.card_choice.as_ref()).is_some(){
+        let mut ids:Vec<_>=physical_fixture::commits(&runner.game).into_iter().filter(|row|matches!(row.zone,Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash))).map(|row|row.card_id.expect("public trash identity")).collect();ids.sort();return ids;
+    }
     let view = runner.pending_selection_view().expect("trash prompt");
     let trash = ids(&runner.game.players[0].trash, runner);
     let mut out: Vec<String> = view
@@ -430,3 +434,6 @@ fn ex13_053_counts_as_mamemon_named_for_princemamemons_aura() {
         "Thundermon is a Digimon with [Mamemon] in its name"
     );
 }
+
+#[path="../../support/owned_card_choice.rs"]
+mod physical_fixture;

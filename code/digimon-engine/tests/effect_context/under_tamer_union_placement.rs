@@ -102,14 +102,13 @@ fn place_union_hand_or_trash_card_under_source_tamer_uses_origin() {
         .pending_selection
         .as_ref()
         .expect("union hand-or-trash stash selection installs a prompt");
-    assert_eq!(
-        pending.valid_action_ids,
-        vec![PLAY_HAND_START, TRASH_EFFECT_START]
-    );
+    let hand_action = crate::owned_choices::zone_action(&runner.game, 0, 0, digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+    let trash_action = crate::owned_choices::zone_action(&runner.game, 0, 0, digimon_engine::owned_card_choice::CardChoiceZone::Trash);
+    assert_eq!(pending.valid_action_ids, vec![hand_action, trash_action]);
 
     runner
         .game
-        .resolve_selection(pending.selecting_player, TRASH_EFFECT_START)
+        .resolve_selection(pending.selecting_player, trash_action)
         .expect("resolve trash-origin union placement");
 
     assert_eq!(*moved.lock().unwrap(), Some(trash_handle));
@@ -160,11 +159,12 @@ fn place_union_card_under_chosen_tamer_handles_hand_origin() {
         .pending_selection
         .as_ref()
         .expect("hand-origin union stash selection installs a prompt");
-    assert_eq!(pending.valid_action_ids, vec![PLAY_HAND_START]);
+    let hand_action = crate::owned_choices::zone_action(&runner.game, 0, 0, digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+    assert_eq!(pending.valid_action_ids, vec![hand_action]);
 
     runner
         .game
-        .resolve_selection(pending.selecting_player, PLAY_HAND_START)
+        .resolve_selection(pending.selecting_player, hand_action)
         .expect("resolve hand-origin union placement");
 
     assert_eq!(*moved.lock().unwrap(), Some(hand_handle));

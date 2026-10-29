@@ -2642,7 +2642,7 @@ impl CardEffect for MyBarrier {
 ### Phase 7 v1 constraints
 
 1. **Partition / ArmorPurge / Fragment(N)** — resolved in Phase D (2026-04-25); all seven alpha-tier selection-bearing keywords now auto-install. See the "Selection-bearing keyword authoring pattern" section for the template.
-2. **Optional replacements for `Card` / `Player` subjects** still need fire-site-specific resume support unless the subject is handled by an existing parked flow. The generic `commit_deferred_outcome` helper is Permanent-only in v1, guarded by `debug_assert!`. The named pre-play and pre-link windows currently have mandatory-cancel coverage; optional accept/decline semantics for those `Card` subjects require a follow-up resume slot before real optional card text should target them.
+2. **Optional replacements for `Card` / `Player` subjects** still need fire-site-specific resume support unless the subject is handled by an existing parked flow. The generic `commit_deferred_outcome` helper is Permanent-only in v1, guarded by `debug_assert!`. Player-action Digimon links already park `pending_digimon_link` across the optional `WhenWouldLink` accept/decline window, then pay the final cost and attach. Effect links and Plug-In Option links do not open that window; see G-ENGINE-WOULD-LINK-WINDOW-EFFECT-LINKS-2026-10-22. Other Card/Player fire sites still require their own parked continuation.
 3. **Multi-replacement `TriggerOrder` prompts** are not emitted when both sides have >1 candidates. v1 runs candidates in collection order (own-first, opp-second) and the last non-None outcome wins.
 4. **`ACTION_SPACE_SIZE` unchanged at 2168.** `REPLACEMENT_ACCEPT` reuses the existing `EffectChoice` action range (specifically the HAND_EFFECT slot 59) and `PASS` (62) serves as decline, so no tensor/mask regression.
 5. **Spec §7.5 once-per-event guard** (Task 7): a `(timing, subject)` pair that already fired in the current call chain is skipped on re-entry. During a callback-commit continuation (`in_replacement_commit`) the guard strengthens to "any prior fire for this subject blocks" — preventing a redirect route from re-prompting for a different Would* timing on the same subject (e.g. Decode's deck→hand redirect must not cascade into a second hand-timing prompt).
@@ -3942,7 +3942,7 @@ Use `bind_permanent_property` when text chooses one permanent and later compares
           position: bottom
 ```
 
-`property: level` reads the selected permanent's current top-card level at process time and stores it as a literal binding. `level_eq_binding` compares a later predicate subject's level to that bound value. This is the canonical shape for "choose 1, affect all with the same level" text such as BT17-078.
+`property: level` reads the selected permanent's current top-card level at process time and stores it as a literal binding. `level_eq_binding` compares a later predicate subject's level to that bound value. This is the canonical shape for "choose 1, affect all with the same level" text such as BT17-078. A named physical-card binding is also supported: its printed level is captured into the literal before later movement. This supports selecting a digivolution card, capturing its level, paying a source movement cost and then comparing other Digimon against that saved value. Permanent bindings retain their existing current-level semantics.
 
 `level_lte_binding` / `level_gte_binding` are the inequality siblings — the subject's level must be `<=` / `>=` the literal bound to `binding`. Used by BT8-107 ("delete 1 opponent Digimon with a level less than or equal to the deleted Digimon's level").
 
@@ -4240,7 +4240,7 @@ but from the player's Digi-Egg deck. DSL `reveal_top_deck` honors
 | `place_self_at_security_and_cancel_current_replacement(StackPosition, face_up: bool)` → `bool` | (Track E) Replacement-aware sibling: runs `place_self_at_security`; if a parked replacement is active, cancels it on success so the original event does not also fire. Used by EX4-060-style "would leave" replacement reroutes. |
 | `place_self_option_at_security(StackPosition, face_up: bool)` → `bool` | (Track E) Option-card flavor: consumes `Game.pending_option` (the in-flight Option card mid-resolution) and routes it to the owner's security at `position` / `face_up`. Used by ST20-15-style "Then, place this card face up as the top security card." Suppresses dispose-trash by consuming `pending_option`. |
 | `security_place_stacked_card(carrier, source_card, target_player, position, face_up)` → `bool` | (Track E) Extract a digivolution source by stable `CardHandle` and place it in security. Resolves `source_card` to its current index in `carrier.card_sources` so battle-area shifts don't invalidate the reference. |
-| `security_place_top_stacked_card(carrier, target_player, position, face_up)` → `bool` | (Track E) Convenience: extracts `card_sources[len-2]` (the topmost digivolution source below the visible top) and routes to security. Used by Puppets G027 "move top stacked card to top security card." Returns `false` when the stack has fewer than 2 cards. |
+| `security_place_top_stacked_card(carrier, target_player, position, face_up)` → `bool` | (Track E) Moves the visible top card (`card_sources.last()`) to security, exposing the underlying Digimon or Tamer. Requires at least two cards: CR 4.3 4-7-2 says a single card is not "stacked cards." The immediate boolean is not proof of completed payment across pending replacements; cost-gated DSL rewards use `bind_success_as` on the selected-source or top-card step. |
 | `return_all_trash_to_deck_bottom(player)` → `Vec<CardHandle>` | (Track E) Drain `player`'s trash → each card to its **owner's** deck bottom. Returns moved handles in original trash order. Used by BT17-077 "return all cards in your trash to the bottom of the deck." |
 | `trash_top_n_digivolution_cards_of_each(target_player, n)` → `usize` | (Track E) Trim up to `n` digivolution sources (`card_sources[len-2]` topmost first) from every battle-area permanent of `target_player`. Routes through `trash_card_source` per source; fires per-source `OnDigivolutionCardTrashed`. Skips single-source permanents (no source below the visible top). Used by BT12-028 et al. |
 | `trash_bottom_face_down_source(target: PermanentHandle)` → `bool` | Trash the bottom-most face-down digivolution source of `target` (i.e. `card_sources[0]`) to its owner's trash, firing `OnDigivolutionCardTrashed`. Returns `false` with **no mutation** when `card_sources[0]` is not face-down. Does NOT honor `ImmuneFromStackTrashing` — this is a voluntary cost ("by trashing the bottom face-down card from under any of your Tamers, …"), not involuntary stack-peeling. Used by the BEATBREAK / DATA SQUAD cost-form trash family (ST23-01/03/04/08/11/12, ST24-01/06/10/11/12). |
@@ -4894,7 +4894,7 @@ pub fn select_count_capped_multi<F, C>(
     &mut self,
     of_player: PlayerId,
     zone: CountCappedZone,    // Hand, Trash, or a permanent's sources
-    max: u8,                  // upper bound; debug_assert!(max <= 10)
+    max: u8,                  // full u8 count bound; picks retain zone action geometry
     prompt: &str,
     is_optional_zero: bool,   // true → player may pick 0; PASS available from first step
     filter: F,
@@ -5060,7 +5060,7 @@ lives in `code/digimon-engine/tests/dsl/zone_movement_verbs.rs`.
 | `place_self_at_security` | `position: top|bottom|random`, `face: up|down` | `EffectContext::place_self_at_security(position, face_up)` |
 | `place_self_option_at_security` | `position: top|bottom|random`, `face: up|down` | `EffectContext::place_self_option_at_security(position, face_up)` |
 | `place_permanent_on_security_observed` | `of`, `target`, `position`, `face`, `include_sources` | `Game::place_permanent_on_security_observed(...)` when `include_sources: true`; otherwise the normal `EffectContext::place_permanent_on_security(...)` path |
-| `security_place_stacked_card` | `carrier`, `source` or `source_index_from_top`, `of`, `position`, `face` | `EffectContext::security_place_stacked_card(...)` |
+| `security_place_stacked_card` | `carrier`, `source` or `source_index_from_top`, `of`, `position`, `face`; optional `to_owner`, `bind_success_as` completed 0/1 receipt | `EffectContext::security_place_stacked_card(...)` |
 | `security_place_top_stacked_card` | `carrier`, `of`, `position`, `face` | `EffectContext::security_place_top_stacked_card(...)` |
 | `return_all_trash_to_deck_bottom` | `of` | `EffectContext::return_all_trash_to_deck_bottom(player)` |
 | `trash_top_n_digivolution_cards_of_each` | `of`, `n` formula | `EffectContext::trash_top_n_digivolution_cards_of_each(target_player, n)` |
@@ -5348,3 +5348,23 @@ the `Player` (preserving the composition view) but the reveal source on
 Setup-time behaviors are covered in `code/digimon-engine/tests/opaque_deck.rs`
 (10 integration tests). Mid-game draw integration tests will follow once
 the corresponding draw paths are wired.
+
+
+## App Fuse success receipt (2026-10-22)
+
+The DSL step accepts `app_fuse: { from: hand, optional: true, bind_as: fused }`.
+`bind_as` is optional and names a Card binding containing the chosen result
+only after App Fuse commits. The binding is cleared when the step starts;
+no eligible pair, declining either prompt, or rejecting an invalidated choice
+leaves it absent. Receipt-bearing steps continue their enclosing process on
+both PASS paths, so authors can branch on `binding_present` / `binding_absent`.
+Existing steps without `bind_as` retain their previous decline behavior.
+
+For a whole-effect optional trigger such as BT25-089's End of Your Turn
+clause, author `if: { condition: { binding_absent: fused }, then: [refund_opt] }`
+after the step. Do not add this refund to an effect that already activated and
+performed earlier processing merely because a later optional App Fuse was
+declined (CR 4.3 15-14-1-4; official Q1818 addresses declining the whole effect).
+The public `EffectContext::initiate_effect_app_fuse` signature is unchanged;
+the DSL uses a receipt-aware internal path. Both selections remain visible,
+and their result survives the typed resume/clone path.

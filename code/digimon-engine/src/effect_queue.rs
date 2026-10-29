@@ -127,6 +127,38 @@ fn security_activation_blocked_for_timing(
             .player_has(player, ModifierType::CannotActivateSecurityEffects)
 }
 
+/// BT20-015's inherited restriction follows the actual checking Digimon;
+/// it is not a defender-wide prohibition. Consult at collection and again
+/// before activation, since an earlier Security clause may change a live aura.
+/// Never consult while resuming an already activated body's process tail.
+fn checked_option_security_activation_blocked(
+    game: &mut Game,
+    player: PlayerId,
+    timing: EffectTiming,
+    card: CardHandle,
+) -> bool {
+    if timing != EffectTiming::SecuritySkill {
+        return false;
+    }
+    let Some(attacker) = game.security_resolution.as_ref().and_then(|state| {
+        (state.phase == crate::selection::SecurityPhase::SecuritySkillDrain
+            && state.defender == player
+            && state.revealed_card == card
+            && state.card_kind == CardKind::Option)
+            .then_some(state.attacker)
+            .flatten()
+    }) else {
+        return false;
+    };
+    // An earlier clause may move the checked card out of pending_security.
+    // The active resolution above still identifies its queued Security clauses.
+    if game.player(attacker.player).battle_area.get(attacker.index as usize).is_none() {
+        return false;
+    }
+    game.tick_declarative_effects();
+    game.modifiers.has(attacker, ModifierType::DoesNotActivateOptionSecurityEffects)
+}
+
 fn permanent_activation_blocked_for_timing(
     game: &Game,
     handle: PermanentHandle,
@@ -405,6 +437,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player: chooser,
@@ -2755,6 +2788,30 @@ impl Game {
         if context.source_effect.is_none() {
             context.source_effect = self.current_effect_attribution();
         }
+        // CR 4.3 15-16-15-1: printed [End of Attack] belongs to the
+        // Digimon which performed the attack, not every carrier scanned by
+        // the broad timing broadcast. Capture its stable event referent here
+        // so DSL trigger qualifiers can distinguish the attacker while native
+        // "at the end of an attack" observers and scheduled processing still
+        // receive the timing. The identity/snapshot capture below keeps this
+        // referent correct through cloning and field compaction.
+        if timing == EffectTiming::EndOfAttack {
+            let attacker = if self.pending_attack.is_some() {
+                self.pending_attack
+                    .as_ref()
+                    .filter(|attack| attack.declaration_committed)
+                    .and_then(|_| self.live_attack_attacker())
+            } else if let TriggerSource::Permanent(handle) = *source {
+                // Explicit single-carrier timing injection (DebugRunner and
+                // rule fixtures) names the card whose attack ended. A broad
+                // field scan without an attack does not invent an attacker.
+                Some(handle)
+            } else {
+                None
+            };
+            context.event_permanent = attacker;
+            context.event_card = attacker.and_then(|handle| self.top_card_handle(handle));
+        }
         // Capture before any observer resolves. The existing stack identity is
         // shared with battle/replacement tracking: it survives ordinary stack
         // edits, is invalidated by every DNA path, and is absent on a new play.
@@ -2982,6 +3039,9 @@ impl Game {
         card: CardHandle,
         trigger_context: Option<TriggerContext>,
     ) {
+        if checked_option_security_activation_blocked(self, defender, timing, card) {
+            return;
+        }
         let Some(pending) = self.pending_security.as_ref() else {
             return;
         };
@@ -3565,6 +3625,9 @@ impl Game {
                 .iter()
                 .enumerate()
                 .take(stack_len.saturating_sub(1))
+                // CR 4.3 4-7-9: face-down sources have no card information.
+                // Filter after enumerate so Succession keeps physical indices.
+                .filter(|(_, c)| !c.face_down)
                 .map(|(i, c)| {
                     (
                         c.card_id(&self.card_data).to_string(),
@@ -3724,6 +3787,8 @@ impl Game {
             perm.card_sources
                 .iter()
                 .take(stack_len.saturating_sub(1))
+                // Explicit breeding permission does not reveal hidden text.
+                .filter(|c| !c.face_down)
                 .map(|c| {
                     (
                         c.card_id(&self.card_data).to_string(),
@@ -4001,6 +4066,11 @@ impl Game {
     }
 
     fn queued_single_effect_gate_passes(&mut self, qe: &QueuedEffect, gate: QueuedGate) -> bool {
+        if gate == QueuedGate::Condition
+            && checked_option_security_activation_blocked(self, qe.controller, qe.timing, qe.source_card)
+        {
+            return false;
+        }
         // A provenance deletion whose played Digimon already left the battle
         // area has nothing to delete: DCGO attaches it to that permanent
         // (`EX11_022.cs`), so it vanishes with it. Not an orderable branch.
@@ -4469,6 +4539,9 @@ impl Game {
     /// effect removed from the registry, etc.) — same tolerance the legacy
     /// `fire_*` loops had.
     fn run_queued_effect(&mut self, mut qe: QueuedEffect) {
+        if checked_option_security_activation_blocked(self, qe.controller, qe.timing, qe.source_card) {
+            return;
+        }
         qe.source_kind = self.queued_effect_activation_kind(&qe);
         if qe.trigger_context.as_ref().is_some_and(|c| !c.simultaneous_play_members.is_empty()) {
             let members = self.matching_simultaneous_play_contexts(&qe);
@@ -4503,7 +4576,7 @@ impl Game {
         if qe.dna_origin_context.is_some() {
             self.current_dna_origin = qe.dna_origin_context;
         }
-        let out = self.run_queued_effect_inner(qe);
+        let out = crate::replacement::with_effect_body(self, |game| game.run_queued_effect_inner(qe));
         if is_pending_option_main {
             self.option_first_main_resolved = true;
         }
@@ -4767,12 +4840,14 @@ impl Game {
         }
 
         let event_delay_source = self.event_gated_delay_source(&qe);
+        let start_delay_source = self.native_start_delay_cleanup_source(&qe);
         if activation_cost_paid {
             self.run_queued_effect_process_tail_after_activation_cost(&qe);
         } else {
             self.run_queued_effect_process_tail(&qe);
         }
         self.trash_event_gated_delay_after_activation(event_delay_source);
+        self.cleanup_native_start_delay_after_activation(start_delay_source);
     }
 
     /// Variant of [`Self::run_queued_effect_process_tail`] used after a
@@ -4913,6 +4988,87 @@ impl Game {
             return None;
         }
         Some((owner, qe.source_card.0, timing))
+    }
+
+    fn native_start_delay_cleanup_source(
+        &mut self,
+        qe: &QueuedEffect,
+    ) -> Option<(PlayerId, u16, u16, u64)> {
+        if qe.timing != EffectTiming::DelayEffect {
+            return None;
+        }
+        let effects = self.effects_for_card(&qe.card_id, qe.source_card)?;
+        let effect = effects.get(qe.effect_slot as usize)?;
+        if effect.delay_cost_in_body || effect.ordinary_field_option {
+            return None;
+        }
+        let handle = qe.source_permanent?;
+        let perm = self
+            .players
+            .get(handle.player as usize)?
+            .battle_area
+            .get(handle.index as usize)?;
+        let OptionState::Delayed {
+            trigger: DelayTrigger::StartOfYourNextTurn,
+            trash_on_turn,
+            ..
+        } = perm.option_state
+        else {
+            return None;
+        };
+        if trash_on_turn <= self.turn_count || perm.card_sources.last()?.handle() != qe.source_card
+        {
+            return None;
+        }
+        // A native body can remove and re-place this physical Option. Pin
+        // the old permanent, not merely the card or its next due turn.
+        let identity = match perm.battle_identity {
+            Some(identity) => identity,
+            None => {
+                let identity = self.next_battle_identity;
+                self.next_battle_identity =
+                    identity.checked_add(1).expect("stack identity exhausted");
+                self.player_mut(handle.player).battle_area[handle.index as usize].battle_identity =
+                    Some(identity);
+                identity
+            }
+        };
+        Some((handle.player, qe.source_card.0, trash_on_turn, identity))
+    }
+
+    fn cleanup_native_start_delay_after_activation(
+        &mut self,
+        source: Option<(PlayerId, u16, u16, u64)>,
+    ) {
+        let Some((owner, card, next_turn, carrier_identity)) = source else {
+            return;
+        };
+        if self.pending_selection.is_some() {
+            let cleanup = DelayedOptionLifecycleResume {
+                turn: next_turn,
+                kind: DelayedOptionLifecycleResumeKind::CapturedStartTurnDelay { carrier_identity },
+                pending_delete_key: Some((owner, card)),
+                skip_key: None,
+            };
+            // This body can be selected after the outer StartTurn resume
+            // was parked by TriggerOrder. Finish its inner cost cleanup
+            // before that outer continuation advances into draw/main.
+            if let Some(outer) = self.pending_delayed_option_lifecycle.replace(cleanup) {
+                self.pending_delayed_option_lifecycle_stack.push(outer);
+            }
+        } else if let Some(handle) = self
+            .find_delayed_permanent_by_key(
+                (owner, card),
+                next_turn,
+                &[DelayTrigger::StartOfYourNextTurn],
+            )
+            .filter(|h| {
+                self.player(h.player).battle_area[h.index as usize].battle_identity
+                    == Some(carrier_identity)
+            })
+        {
+            self.delete_permanent_with_cause(handle, ReplacementCause::Cost);
+        }
     }
 
     fn trash_event_gated_delay_after_activation(
@@ -5342,8 +5498,10 @@ impl Game {
         self.effect_source_permanent = qe.source_permanent;
         self.current_trigger_context = qe.trigger_context.clone();
         let event_delay_source = self.event_gated_delay_source(&qe);
-        self.run_queued_effect_process_tail(&qe);
+        let start_delay_source = self.native_start_delay_cleanup_source(&qe);
+        crate::replacement::with_effect_body(self, |game| game.run_queued_effect_process_tail(&qe));
         self.trash_event_gated_delay_after_activation(event_delay_source);
+        self.cleanup_native_start_delay_after_activation(start_delay_source);
         self.current_trigger_context = prev_trigger_context;
         self.effect_source_permanent = prev_effect_source_permanent;
         self.effect_source_card = prev_effect_source_card;
@@ -5527,7 +5685,7 @@ impl Game {
                         }
                     }
                     SecurityRemovalDestination::Digivolve {
-                        player: _,
+                        player,
                         target,
                         turn,
                     } => {
@@ -5538,6 +5696,10 @@ impl Game {
                         {
                             let event_card = security.card.handle();
                             perm.digivolve(security.card, turn);
+                            // CR 4.3 §8-1-3-3: the draw belongs to the
+                            // digivolution procedure, including results from
+                            // security, and precedes When Digivolving effects.
+                            self.player_mut(player).draw();
                             completed_digivolve = Some((target, event_card));
                         } else {
                             let owner = security.card.owner;
@@ -5852,6 +6014,7 @@ impl Game {
         let declined_permanent = qe.source_permanent;
 
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Replacement,
             selecting_player: chooser,
@@ -5932,6 +6095,17 @@ impl Game {
         else {
             return;
         };
+        // Start-turn Delay entries are captured into the simultaneous pool
+        // and their next window is already advanced. A decline runs neither
+        // DSL cost nor native cleanup, so no serial-scan key must survive.
+        if matches!(perm.option_state, crate::permanent::OptionState::Delayed {
+            trigger: crate::enums::DelayTrigger::StartOfYourNextTurn,
+            trash_on_turn,
+            ..
+        } if trash_on_turn > self.turn_count)
+        {
+            return;
+        }
         // Same stable key the scan uses: an Option has no digivolution stack,
         // so its bottom card is the Option itself.
         // ONLY the turn-scheduled triggers need this. An `OnEvent` Delay already
@@ -6070,6 +6244,7 @@ impl Game {
         self.current_phase = GamePhase::EffectChoice;
 
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::TriggerOrder,
             selecting_player: chooser,
@@ -6299,6 +6474,64 @@ impl Game {
         self.resolve_selection_with_lifecycle(player, action_id, false)
     }
 
+    fn dispatch_selection_continuations(&mut self, payment_hooks_before: usize,
+        payment_owner: Option<crate::card_source::CardHandle>,
+        mut digivolve_scope_order: Vec<crate::card_source::CardHandle>,
+        declined: bool, payment_aborted: bool, recovery_abort: bool) {
+            for scope in &self.effect_digivolve_scopes {
+                if !digivolve_scope_order.contains(&scope.declaration.result_card) {
+                    digivolve_scope_order.push(scope.declaration.result_card);
+                }
+            }
+            let hooks = std::mem::take(&mut self.after_selection_resume_hooks.0);
+            let mut indexed: Vec<_> = hooks.into_iter().enumerate().collect();
+            // Nested evolution payments finish before their enclosing payment.
+            // Preserve other continuation kinds and the original index used to
+            // attribute this selection's payment outcome. Scope depth is live
+            // typed ownership, not prompt text or a permanent's shifting index.
+            let chain_positions: Vec<_> = indexed.iter().enumerate().filter_map(|(slot, (_, hook))| {
+                matches!(hook, crate::resume::AfterSelectionHook::DigivolveReducerChain { .. }).then_some(slot)
+            }).collect();
+            let depth = |hook: &crate::resume::AfterSelectionHook| match hook {
+                crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } => state.effect.as_ref()
+                    .and_then(|effect| digivolve_scope_order.iter().rposition(|card| *card == effect.result_card))
+                    .map_or(0, |index| index + 1),
+                _ => 0,
+            };
+            // Stable insertion swaps only reducer slots; repeated parking
+            // therefore cannot invert nested ownership on the next decision.
+            for right in 1..chain_positions.len() {
+                let mut at = right;
+                while at > 0 && depth(&indexed[chain_positions[at]].1) > depth(&indexed[chain_positions[at - 1]].1) {
+                    indexed.swap(chain_positions[at], chain_positions[at - 1]);
+                    at -= 1;
+                }
+            }
+            crate::game_actions::effect_dna::order_nested_dna_payment_hooks(&mut indexed);
+            for (index, mut hook) in indexed {
+                if recovery_abort && index < payment_hooks_before {
+                    self.fail_owned_choice_payment_hook(&mut hook);
+                }
+                // Passing an immediate replacement declines that replacement,
+                // not the enclosing evolution used to pay this cost. Its
+                // declaration still commits after the remaining window closes.
+                if index < payment_hooks_before
+                    && (declined
+                        || payment_aborted)
+                {
+                    if let crate::resume::AfterSelectionHook::DigivolveReducerChain {
+                        state, paid, ..
+                    } = &mut hook
+                    {
+                        if payment_owner.is_none() || payment_owner == Some(state.result_card()) {
+                            *paid = false;
+                        }
+                    }
+                }
+                self.run_after_selection_hook(hook);
+            }
+    }
+
     fn resolve_selection_with_lifecycle(
         &mut self,
         player: PlayerId,
@@ -6315,14 +6548,19 @@ impl Game {
             return Err(SelectionError::WrongPlayer);
         }
         let is_pass = action_id == PASS;
-        if is_pass && !sel.is_optional {
-            return Err(SelectionError::InvalidAction);
-        }
-        if !is_pass && !sel.valid_action_ids.contains(&action_id) {
-            return Err(SelectionError::InvalidAction);
+        let recovery_abort = sel.card_choice.as_ref().is_some_and(|owner|
+            owner.recovery(self) == crate::owned_card_choice::CardChoiceRecovery::Impossible);
+        if let Some(owner) = &sel.card_choice {
+            if !owner.valid_action_ids(self).contains(&action_id) { return Err(SelectionError::InvalidAction); }
+        } else {
+            if is_pass && !sel.is_optional { return Err(SelectionError::InvalidAction); }
+            if !is_pass && !sel.valid_action_ids.contains(&action_id) { return Err(SelectionError::InvalidAction); }
         }
         // Page navigation is presentation state only. Do not run payment hooks,
         // triggers, turn checks, or any other post-selection lifecycle.
+        if crate::owned_card_choice::prepare_resolution(self, action_id)? {
+            return Ok(());
+        }
         if self.navigate_play_cost_order(action_id) {
             return Ok(());
         }
@@ -6364,6 +6602,11 @@ impl Game {
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
         let resume = self.pending_selection_resume.take();
+        let raw_continuations = resume.is_none();
+        let raw_hooks_before = self.after_selection_resume_hooks.0.len();
+        let raw_scope_order = self.effect_digivolve_scopes.iter().map(|scope| scope.declaration.result_card).collect();
+        let raw_declined = is_pass && sel.kind != crate::selection::SelectionKind::Replacement;
+        let mut raw_aborted = false;
         self.current_phase = sel.previous_phase;
         // G-ENGINE-TURN-END-MID-EFFECT: the callback and every post-callback
         // continuation below (pay-cost tails, parked security removals,
@@ -6392,7 +6635,17 @@ impl Game {
             let mut digivolve_scope_order: Vec<_> = self.effect_digivolve_scopes.iter()
                 .map(|scope| scope.declaration.result_card).collect();
             let prev_aborted = std::mem::replace(&mut self.dsl_clause_aborted, false);
-            crate::dsl_cards::step::selections::run_resume(self, stack, action_id, is_pass);
+            if recovery_abort {
+                self.decline_pending_pay_cost();
+                self.resolved_card_choice = None;
+                self.dsl_clause_aborted = true;
+                crate::dsl_cards::step::selections::abandon_owned_choice(self, stack);
+                if let Some((tail, _, _)) = self.dsl_outer_tail.take() {
+                    crate::dsl_cards::step::cleanup_aborted_steps(self, &tail);
+                }
+            } else {
+                crate::dsl_cards::step::selections::run_resume(self, stack, action_id, is_pass);
+            }
             let payment_aborted = self.dsl_clause_aborted;
             self.dsl_clause_aborted = prev_aborted;
             // Run continuations that wrappers (play-cost / reducer /
@@ -6401,53 +6654,13 @@ impl Game {
             // run_resume. Each hook is plain data (`AfterSelectionHook`);
             // a hook that installs another resume-driven selection re-arms by
             // pushing onto the (now-drained) channel for the next resolution.
-            for scope in &self.effect_digivolve_scopes {
-                if !digivolve_scope_order.contains(&scope.declaration.result_card) {
-                    digivolve_scope_order.push(scope.declaration.result_card);
-                }
-            }
-            let hooks = std::mem::take(&mut self.after_selection_resume_hooks.0);
-            let mut indexed: Vec<_> = hooks.into_iter().enumerate().collect();
-            // Nested evolution payments finish before their enclosing payment.
-            // Preserve other continuation kinds and the original index used to
-            // attribute this selection's payment outcome. Scope depth is live
-            // typed ownership, not prompt text or a permanent's shifting index.
-            let chain_positions: Vec<_> = indexed.iter().enumerate().filter_map(|(slot, (_, hook))| {
-                matches!(hook, crate::resume::AfterSelectionHook::DigivolveReducerChain { .. }).then_some(slot)
-            }).collect();
-            let depth = |hook: &crate::resume::AfterSelectionHook| match hook {
-                crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } => state.effect.as_ref()
-                    .and_then(|effect| digivolve_scope_order.iter().rposition(|card| *card == effect.result_card))
-                    .map_or(0, |index| index + 1),
-                _ => 0,
-            };
-            // Stable insertion swaps only reducer slots; repeated parking
-            // therefore cannot invert nested ownership on the next decision.
-            for right in 1..chain_positions.len() {
-                let mut at = right;
-                while at > 0 && depth(&indexed[chain_positions[at]].1) > depth(&indexed[chain_positions[at - 1]].1) {
-                    indexed.swap(chain_positions[at], chain_positions[at - 1]);
-                    at -= 1;
-                }
-            }
-            for (index, mut hook) in indexed {
-                // Passing an immediate replacement declines that replacement,
-                // not the enclosing evolution used to pay this cost. Its
-                // declaration still commits after the remaining window closes.
-                if index < payment_hooks_before
-                    && ((is_pass && sel.kind != crate::selection::SelectionKind::Replacement)
-                        || payment_aborted)
-                {
-                    if let crate::resume::AfterSelectionHook::DigivolveReducerChain {
-                        state, paid, ..
-                    } = &mut hook
-                    {
-                        if payment_owner == Some(state.result_card()) {
-                            *paid = false;
-                        }
-                    }
-                }
-                self.run_after_selection_hook(hook);
+            self.dispatch_selection_continuations(payment_hooks_before, payment_owner, digivolve_scope_order,
+                is_pass && sel.kind != crate::selection::SelectionKind::Replacement, payment_aborted, recovery_abort);
+        } else if recovery_abort {
+            self.decline_pending_pay_cost();
+            self.resolved_card_choice = None;
+            if let Some((tail, _, _)) = self.dsl_outer_tail.take() {
+                crate::dsl_cards::step::cleanup_aborted_steps(self, &tail);
             }
         } else if is_pass {
             if let Some(on_decline) = sel.on_decline {
@@ -6461,10 +6674,16 @@ impl Game {
                 // checked by the DSL step runner.
                 let prev_aborted = std::mem::replace(&mut self.dsl_clause_aborted, false);
                 on_decline(self);
+                raw_aborted = self.dsl_clause_aborted;
                 self.dsl_clause_aborted = prev_aborted;
             }
         } else {
             (sel.callback)(self, action_id);
+            raw_aborted = self.dsl_clause_aborted;
+        }
+        if raw_continuations {
+            self.dispatch_selection_continuations(raw_hooks_before, None, raw_scope_order,
+                raw_declined, raw_aborted, recovery_abort);
         }
         if !resume_lifecycle {
             // The caller is searching payment branches on a clone. Preserve

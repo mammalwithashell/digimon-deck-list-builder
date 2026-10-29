@@ -194,6 +194,13 @@ steps:
   # both sides. The security battle deletes it. The [When Attacking] copy of
   # the shared effect is unpayable for the same reason as above.
   - actor: 0
+    do:
+      select:
+        cards:
+        - EX12-036
+        ordinal: 0
+        sim_only: true
+  - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
   # Decline Barrier. RE-DERIVED FROM THE DCGO SOURCE (2026-08-24), because the
@@ -240,7 +247,7 @@ assert:
   #   p0.memory  -- 0: the alt digivolve route cost 3 from 3. A cost prompt
   #                 taken the other way (the printed blue circle, 4) would show
   #                 up here as -1.
-  - at: 15
+  - at: 16
     that:
       p0.field:
         - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }

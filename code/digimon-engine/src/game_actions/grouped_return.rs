@@ -1,11 +1,23 @@
 //! Commit an already processed simultaneous departure, then enqueue its events.
 use crate::{
+    card_source::CardHandle,
     enums::{CardKind, EffectTiming, StackPosition},
     game::Game,
     permanent::PermanentHandle,
     selection::TriggerSource,
     trigger_context::EventCause,
 };
+
+/// A completed return and its distinct physical hand-addition outcome.
+/// A departing token satisfies the former but never the latter (CR 4.3
+/// §§4-21-5, 15-1-9, 15-1-10).
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ReturnedCard {
+    pub card: CardHandle,
+    pub to_hand: bool,
+    pub added_to_hand: bool,
+}
+
 impl Game {
     pub(crate) fn commit_simultaneous_returns(
         &mut self,
@@ -76,14 +88,28 @@ impl Game {
                     } else {
                         self.insert_card_into_deck(owner, top, position);
                     }
-                    completed.push((card, false));
                 }
-            } else if !token {
+                completed.push(ReturnedCard {
+                    card,
+                    to_hand: false,
+                    added_to_hand: false,
+                });
+            } else if token {
+                completed.push(ReturnedCard {
+                    card,
+                    to_hand: true,
+                    added_to_hand: false,
+                });
+            } else {
                 if top.card_kind(&self.card_data) == CardKind::DigiEgg {
                     self.player_mut(owner).insert_in_digi_egg_deck(0, top);
                 } else {
                     self.player_mut(owner).put_in_hand(top);
-                    completed.push((card, true));
+                    completed.push(ReturnedCard {
+                        card,
+                        to_hand: true,
+                        added_to_hand: true,
+                    });
                     hand_events.push(owner);
                 }
             }
@@ -134,9 +160,14 @@ impl Game {
                 );
             }
         }
+        let first_leave_observer = self.effect_queue.len();
         for (h, snapshot) in leave_events {
             self.fire_on_leave_field(h, snapshot);
         }
+        // CR 4.3 15-5-2: all departures in this return are one event.
+        // Retain matching members, as for deletion, without merging earlier
+        // or later returns queued by separate process steps.
+        self.collapse_simultaneous_deletion_event_batch(first_leave_observer);
         for owner in hand_events {
             self.fire_on_add_to_hand_by_effect(owner);
         }

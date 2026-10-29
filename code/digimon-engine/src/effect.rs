@@ -320,6 +320,8 @@ pub struct Effect {
     /// hand, or Save-like deletion value. This is deliberately advisory; it
     /// never affects rules execution.
     pub resource_flow: bool,
+    /// Teacher-only static metadata; not part of observation/action contracts.
+    pub development_hand: crate::policies::development::HandBenefit,
     /// Marks this effect as a blast-digivolve declaration — the card can be
     /// stacked onto a battle-area Digimon during the defender's
     /// `CounterTiming` window at zero memory cost. Consumed by
@@ -469,6 +471,9 @@ pub struct Effect {
     pub explicit_self_placement: bool,
     /// Delay trigger for a Delay Option's body. Set by `.delay(trigger)`.
     pub delay_trigger: Option<DelayTrigger>,
+    /// The Delay body pays its own trash cost before processing (DSL lowering).
+    /// Native legacy Delay bodies otherwise retain lifecycle-owned cleanup.
+    pub delay_cost_in_body: bool,
     /// Memory cost paid to link this card to a host Digimon. Set by
     /// `.link(cost, filter)`. `None` for non-link Options.
     pub link_cost: Option<u16>,
@@ -506,6 +511,9 @@ pub struct Effect {
     /// whose effect has this flag) and
     /// `scan_before_pay_cost_reduction_for_hand_card` (which evaluates it).
     pub when_playing_this: bool,
+    /// This exact physical hand card's own digivolution-cost reducer.
+    /// Excluded from field scans and from play/use cost calculation.
+    pub when_digivolving_this: bool,
 
     /// When `true`, a lone triggered firing of this OPTIONAL effect installs
     /// an explicit outer accept/decline `PendingSelection` before its body
@@ -961,6 +969,7 @@ impl EffectBuilder {
                 paid_prevention_all: false,
                 paid_prevention_filter: None,
                 resource_flow: false,
+                development_hand: Default::default(),
                 blast_digivolve: false,
                 max_per_turn: 0,
                 shared_opt_group: None,
@@ -989,6 +998,7 @@ impl EffectBuilder {
                 option_color_requirement_bypass: None,
                 explicit_self_placement: false,
                 delay_trigger: None,
+                delay_cost_in_body: false,
                 link_cost: None,
                 link_filter: None,
                 succession_filter: None,
@@ -998,6 +1008,7 @@ impl EffectBuilder {
                 ordinary_field_option: false,
                 linked: false,
                 when_playing_this: false,
+                when_digivolving_this: false,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
                 optional_condition_guard: None,
@@ -1013,6 +1024,12 @@ impl EffectBuilder {
     /// separately in `scan_before_pay_cost_reduction_for_hand_card`.
     pub fn when_playing_this(mut self) -> Self {
         self.inner.when_playing_this = true;
+        self
+    }
+
+    /// Host a reducer on the physical incoming card in hand during evolution.
+    pub fn when_digivolving_this(mut self) -> Self {
+        self.inner.when_digivolving_this = true;
         self
     }
 
@@ -1118,6 +1135,11 @@ impl EffectBuilder {
     /// Mark the effect as card/resource-flow positive for policy heuristics.
     pub fn resource_flow(mut self) -> Self {
         self.inner.resource_flow = true;
+        self
+    }
+
+    pub fn development_hand(mut self, hint: crate::policies::development::HandBenefit) -> Self {
+        self.inner.development_hand = hint;
         self
     }
 
@@ -1580,6 +1602,11 @@ impl EffectBuilder {
     pub fn ordinary_field_option(mut self) -> Self {
         self.inner.delay_trigger = None;
         self.inner.ordinary_field_option = true;
+        self
+    }
+
+    pub fn delay_cost_in_body(mut self) -> Self {
+        self.inner.delay_cost_in_body = true;
         self
     }
 

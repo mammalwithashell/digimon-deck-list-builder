@@ -1,0 +1,24 @@
+{
+  "scope": "BT22-098 canonical whole module; tests only",
+  "actual_red": {
+    "log": "verification/logs/qualification-bt22-098-red.log",
+    "passed": 11,
+    "failed": 3,
+    "ignored": 0
+  },
+  "final_green": {
+    "log": "verification/logs/qualification-bt22-098-green.log",
+    "passed": 14,
+    "failed": 0,
+    "ignored": 0
+  },
+  "native_stack_bytes": 268435456,
+  "production_edits": false,
+  "migration": "Count card commits separately from explicit optional PASS; resolve current public physical rows for exact Shoemon and Arisa, reject wrong-name cards, preserve existing free-play and Security-Main self-placement assertions. Mixed origin test additionally resolves cloned hand choice and live trash choice, preserving free-play memory.",
+  "qualification_limit": "Focused proof only; fresh full aggregate qualification remains required. Prior twelve-module source hashes unchanged.",
+  "sha256": {
+    "code/digimon-engine/tests/cards_behavioral/bt22/bt22_098.rs": "18545b76f09e5b3c223b73570980d00d1432705783a9af9dbf8e3d55ce76aee2",
+    "code/digimon-engine/tests/light_hybrid_qualification_union_e.rs": "8f7487509485829f029cee09f664c0e69564d0b8a4b7b7a2b4c6f234ee0dea33",
+    "code/digimon-engine/tests/support/owned_union_fixture.rs": "86c8f154bbd2f5939c7c66813ac32a02ab7793e40fec29f53795c7ed7d2918cc"
+  }
+}

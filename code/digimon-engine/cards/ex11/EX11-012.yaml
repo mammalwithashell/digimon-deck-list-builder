@@ -26,15 +26,15 @@ effects:
         zone: [battle_area]
         all_of:
           - kind: digimon
-          - dp_lte: 12000
-    summary: "Delete <=12000 DP Digimon; return trash; play Petrification Token"
+          - dp_lte: { formula: { source_dp: {} } }
+    summary: "Delete Digimon with DP <= this Digimon; return trash; play Petrification Token"
     process:
       - select_opponent_permanent:
           bind_as: tgt
           filter:
             all_of:
               - kind: digimon
-              - dp_lte: 12000
+              - dp_lte: { formula: { source_dp: {} } }
           prompt: "Delete 1 opponent Digimon with <= this Digimon's DP"
       - delete_permanent: { target: tgt }
       - select_trash:

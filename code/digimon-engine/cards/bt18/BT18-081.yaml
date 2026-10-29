@@ -1,0 +1,88 @@
+# Official Bandai observation and BT18-081.webp; CR 4.3 16-9 Jamming.
+card: BT18-081
+name: Rhihimon
+kind: digimon
+level: 5
+color: [purple, yellow]
+cost: 8
+dp: 8000
+form: Hybrid
+attribute: Variable
+traits: [Warrior]
+alt_paths:
+  - kind: digivolve
+    from:
+      kind: digimon
+      level_eq: 4
+      any_of: [{color_is: purple}, {color_is: yellow}]
+    cost: 4
+  - kind: digivolve
+    from:
+      kind: digimon
+      level_eq: 4
+      trait_has: Hybrid
+      any_of: [{color_is: purple}, {color_is: yellow}]
+    cost: 3
+effects:
+  - kind: grant_keyword
+    keyword: Jamming
+  - when: main_from_hand
+    condition:
+      all_of:
+        - count_gte:
+            filter: {of: you, zone: [trash], name_is: Loweemon}
+            n: 1
+        - count_gte:
+            filter: {of: you, zone: [trash], name_is: KaiserLeomon}
+            n: 1
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            any_of: [{color_is: purple}, {color_is: yellow}]
+    process:
+      - select_own_permanent:
+          bind_as: host
+          filter:
+            kind: tamer
+            any_of: [{color_is: purple}, {color_is: yellow}]
+          prompt: Choose 1 purple or yellow Tamer
+      - select_zone_cards:
+          zones: [trash]
+          filter:
+            any_of: [{name_is: Loweemon}, {name_is: KaiserLeomon}]
+          min: 2
+          max: 2
+          distinct_by: name
+          bind_as: spirits
+          prompt: Place 1 Loweemon and 1 KaiserLeomon under that Tamer
+      - if:
+          condition: {binding_present: spirits}
+          then:
+            - place_cards_as_bottom_sources: {cards: spirits, target: host}
+            - effect_initiated_digivolve:
+                target: host
+                from_hand: self
+                cost: 3
+                ignore_requirements: true
+  - when: when_digivolving
+    process:
+      - select_trash:
+          of: you
+          bind_as: tamer
+          optional: true
+          filter:
+            kind: tamer
+            has_inherited: {}
+            can_play_from_effect_without_cost: true
+          prompt: You may play 1 Tamer with inherited effects from your trash
+      - play_from_trash_free: {of: you, hand_index: tamer}
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: {kind: digimon}
+          prompt: Choose 1 opponent Digimon to get -4000 DP for the turn
+      - add_dp_modifier: {target: victim, value: -4000, expiry: end_of_turn}

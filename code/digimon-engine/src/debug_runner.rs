@@ -796,7 +796,7 @@ impl DebugRunner {
     }
 
     pub fn pending_selection_view(&self) -> Option<PendingSelectionView> {
-        self.pending_selection().map(PendingSelection::view)
+        self.pending_selection().map(|selection| selection.view(&self.game))
     }
 
     pub fn pending_kind(&self) -> Option<SelectionKind> {
@@ -1363,7 +1363,7 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
     use crate::dsl_cards::modifier_map::lookup_keyword;
     use digimon_dsl::compiled::{
         CompiledAltPathDirection, CompiledAltPathKind, CompiledClause, CompiledCost,
-        CompiledDeclarativeClause, CompiledScope,
+        CompiledDeclarativeClause, CompiledPredicate, CompiledScope,
     };
 
     // Populate native keywords from face-up `grant_keyword` declarative clauses.
@@ -1435,13 +1435,16 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
     // so `from` is the base candidate — the evo-cost reading. Direction `Into`
     // registers on the *source* and describes warping this card into another,
     // which is not this card's evo cost, so it is skipped. Alt-paths whose
-    // `from` lacks a level or color (e.g. trait-only digivolves) or that carry
-    // a non-literal (formula) cost cannot be expressed as a static row and are
-    // resolved through the alt-path registration machinery instead.
+    // `from` lacks a level or color, includes additional restrictions, has an
+    // activation condition or extra cost, or carries a non-literal cost cannot
+    // be expressed as an unconditional row. Those paths remain registered and
+    // are resolved with their full predicates instead.
     let mut evo_costs: Vec<EvoCost> = Vec::new();
     for ap in &card.alt_paths {
         if !matches!(ap.kind, CompiledAltPathKind::Digivolve)
             || !matches!(ap.direction, CompiledAltPathDirection::From)
+            || ap.condition.is_some()
+            || !ap.extra_cost.is_empty()
         {
             continue;
         }
@@ -1451,6 +1454,14 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         let (Some(level), Some(color)) = (from.level_eq, from.color_is) else {
             continue;
         };
+        let printed_requirement = CompiledPredicate {
+            level_eq: Some(level),
+            color_is: Some(color),
+            ..CompiledPredicate::default()
+        };
+        if from.as_ref() != &printed_requirement {
+            continue;
+        }
         let memory_cost = match &ap.cost {
             Some(CompiledCost::Literal(n)) => (*n).max(0) as u16,
             _ => continue,
@@ -1788,6 +1799,100 @@ pub fn make_test_dna_card(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const RESTRICTED_EVOLUTION_YAML: &str = r#"
+card: TEST-RESTRICTED-EVOLUTION
+name: Restricted Evolution
+kind: digimon
+level: 3
+color: [red, black]
+cost: 3
+dp: 1000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black, trait_has: X Antibody }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red, name_is: Restricted Egg }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    condition: { your_turn: true }
+    cost: 0
+"#;
+
+    #[test]
+    fn restricted_evolution_routes_do_not_become_unconditional_printed_circles() {
+        let r = DebugRunner::builder()
+            .from_dsl_yaml(RESTRICTED_EVOLUTION_YAML)
+            .unwrap()
+            .start();
+        let card = r
+            .game
+            .card_data
+            .iter()
+            .find(|c| c.card_id == "TEST-RESTRICTED-EVOLUTION")
+            .unwrap();
+        assert_eq!(
+            card.evo_costs,
+            vec![
+                EvoCost {
+                    card_color: 0,
+                    level: 2,
+                    memory_cost: 1
+                },
+                EvoCost {
+                    card_color: 5,
+                    level: 2,
+                    memory_cost: 2
+                },
+            ]
+        );
+        assert_eq!(
+            r.compiled_card("TEST-RESTRICTED-EVOLUTION")
+                .unwrap()
+                .alt_paths
+                .len(),
+            5,
+            "restricted alternatives stay registered for normal predicate evaluation"
+        );
+    }
+
+    #[test]
+    fn loading_dsl_preserves_explicit_printed_evolution_metadata() {
+        let mut card = make_test_card("TEST-RESTRICTED-EVOLUTION", "Restricted Evolution");
+        let printed = vec![EvoCost {
+            card_color: 5,
+            level: 2,
+            memory_cost: 4,
+        }];
+        card.evo_costs = printed.clone();
+        let r = DebugRunner::builder()
+            .add_card(card)
+            .from_dsl_yaml(RESTRICTED_EVOLUTION_YAML)
+            .unwrap()
+            .start();
+        let card = r
+            .game
+            .card_data
+            .iter()
+            .find(|c| c.card_id == "TEST-RESTRICTED-EVOLUTION")
+            .unwrap();
+        assert_eq!(card.evo_costs, printed);
+        assert_eq!(
+            r.compiled_card("TEST-RESTRICTED-EVOLUTION")
+                .unwrap()
+                .alt_paths
+                .len(),
+            5
+        );
+    }
 
     #[test]
     fn dna_material_in_text_contains_lowers_to_the_requirement_text() {

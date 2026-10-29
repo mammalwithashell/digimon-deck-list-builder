@@ -20,7 +20,7 @@
 //! # Clause map
 //!
 //! - Clause 0 ([Main], `main_from_hand`, mandatory): reveal top 2 →
-//!   `select_reveal` (optional, red filter) → `add_to_hand_from_reveal` →
+//!   `select_reveal` (mandatory, red filter) → `add_to_hand_from_reveal` →
 //!   `place_remainder_on_deck(bottom)` → `place_self_as_delay_option`.
 //! - Clause 1 ([Main] ＜Delay＞, `kind: delay`, `trigger: delayed` →
 //!   DelayTrigger::MainPhaseActivated — player-initiated): `select_own_permanent`
@@ -41,8 +41,8 @@
 //!
 //! # Patterns this test covers
 //! - A2  Two-pass reveal (reveal 2, select-1 red, place rest at bottom)
-//! - E2  optional select in reveal pipeline (`select_reveal optional: true`),
-//!       including the no-red-card path where `select_reveal` installs nothing
+//! - Mandatory red-card selection, including the no-red-card path where
+//!   `select_reveal` installs nothing and remainder placement still resolves
 //! - E1  Delay body: `select_own_permanent` → `select_hand` →
 //!       `effect_initiated_digivolve` (cost reduce 2)
 //! - Option-as-permanent placement via `place_self_as_delay_option` (Main +
@@ -56,6 +56,7 @@ use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space;
 use digimon_engine::action::space::{
     EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
 };
@@ -65,7 +66,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
 use digimon_engine::permanent::OptionState;
-use digimon_engine::selection::{OptionPlayResult, TriggerSource};
+use digimon_engine::selection::{OptionPlayResult, SelectionKind, TriggerSource};
 
 const YAML: &str = include_str!("../../../cards/p/P-103.yaml");
 
@@ -451,6 +452,198 @@ fn p_103_has_exactly_two_triggered_clauses() {
 }
 
 // ─── §2 Main clause — reveal pipeline (condition gating + behavioral) ─────────
+
+fn mandatory_main_runner(owner: u8, top_first: &[&str]) -> DebugRunner {
+    let mut red_tamer = make_test_card("RED-TAMER", "RED-TAMER");
+    red_tamer.card_kind = CardKind::Tamer;
+    red_tamer.colors = vec![CardColor::Red];
+    red_tamer.level = None;
+    red_tamer.dp = None;
+    let mut deck = vec!["FILL", "FILL"];
+    deck.extend(top_first.iter().rev().copied());
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("P-103 parses")
+        .add_card(make_red_carrier("RED-HOST"))
+        .add_card(make_red_digimon("RED-DIGIMON"))
+        .add_card(make_red_option("RED-OPTION"))
+        .add_card(red_tamer)
+        .add_card(make_blue_card("BLUE1"))
+        .add_card(make_blue_card("BLUE2"))
+        .add_card(make_filler("FILL"))
+        .hand(owner, &["P-103"])
+        .deck(owner, &deck)
+        .deck(1 - owner, &["FILL"; 5])
+        .memory(8)
+        .start();
+    runner.set_first_player(owner);
+    runner.skip_mulligan();
+    runner.game.enter_main_phase();
+    runner.place_on_field(owner, "RED-HOST", Some(owner as u16));
+    assert_eq!(
+        build_action_mask(&runner.game, owner)[space::PLAY_HAND_START as usize],
+        1.0,
+        "P-103 must be playable through its normal Main action for owner {owner}"
+    );
+    runner.game.decode_action(space::PLAY_HAND_START, owner);
+    runner
+}
+
+fn assert_mandatory_main_mask(runner: &DebugRunner, owner: u8, expected: &[u16]) {
+    let view = runner
+        .pending_selection_view()
+        .expect("visible Main choice");
+    assert_eq!(view.selecting_player, owner);
+    let mask = build_action_mask(&runner.game, owner);
+    assert_eq!(mask[PASS as usize], 0.0, "{} is mandatory", view.prompt);
+    assert!(!view.is_optional, "{} is mandatory", view.prompt);
+    assert_eq!(view.valid_action_ids, expected);
+    for (action, legal) in mask.iter().enumerate() {
+        assert_eq!(
+            *legal,
+            if expected.contains(&(action as u16)) {
+                1.0
+            } else {
+                0.0
+            },
+            "owner {owner}, action {action}: {}",
+            view.prompt
+        );
+    }
+    assert!(build_action_mask(&runner.game, 1 - owner)
+        .iter()
+        .all(|legal| *legal == 0.0));
+}
+
+fn assert_main_placed_delay(runner: &DebugRunner, owner: u8) {
+    assert!(runner.game.pending_selection.is_none());
+    assert!(runner.game.revealed_cards.is_empty());
+    let placed = runner
+        .game
+        .player(owner)
+        .battle_area
+        .iter()
+        .find(|permanent| permanent.top_card().card_id(&runner.game.card_data) == "P-103")
+        .expect("Main must finish by placing P-103 in the battle area");
+    assert!(matches!(placed.option_state,
+        OptionState::Delayed { owner: actual_owner, trigger: DelayTrigger::MainPhaseActivated, .. }
+            if actual_owner == owner));
+    assert!(runner
+        .game
+        .player(owner)
+        .hand
+        .iter()
+        .all(|card| { card.card_id(&runner.game.card_data) != "P-103" }));
+}
+
+/// Printed Main says "Add 1 red card" without "may". Every eligible red
+/// Digimon, Option, or Tamer remains a player-visible choice, but PASS is not.
+#[test]
+fn p_103_main_mandatory_red_add_exposes_every_choice_for_both_owners() {
+    for owner in 0..2 {
+        for top_first in [
+            ["RED-DIGIMON", "RED-OPTION"],
+            ["RED-TAMER", "RED-DIGIMON"],
+            ["BLUE1", "RED-TAMER"],
+        ] {
+            let eligible: Vec<_> = top_first
+                .iter()
+                .enumerate()
+                .filter(|(_, id)| id.starts_with("RED-"))
+                .map(|(index, _)| index)
+                .collect();
+            for selected in eligible.iter().copied() {
+                let mut runner = mandatory_main_runner(owner, &top_first);
+                let actions: Vec<_> = eligible
+                    .iter()
+                    .map(|index| space::SEL_REVEAL_START + *index as u16)
+                    .collect();
+                assert_mandatory_main_mask(&runner, owner, &actions);
+                assert_eq!(runner.game.revealed_cards.len(), 2);
+                runner
+                    .execute_action(owner, space::SEL_REVEAL_START + selected as u16)
+                    .expect("take an exposed red-card choice");
+                // A single remainder may also expose its placement decision.
+                while let Some(view) = runner.pending_selection_view() {
+                    assert!(matches!(
+                        view.kind,
+                        SelectionKind::OrderedPermutation { remaining: 1 }
+                    ));
+                    assert_mandatory_main_mask(&runner, owner, &view.valid_action_ids);
+                    runner
+                        .execute_action(owner, view.valid_action_ids[0])
+                        .unwrap();
+                }
+                assert_main_placed_delay(&runner, owner);
+                let hand: Vec<_> = runner
+                    .game
+                    .player(owner)
+                    .hand
+                    .iter()
+                    .map(|card| card.card_id(&runner.game.card_data))
+                    .collect();
+                assert_eq!(hand, vec![top_first[selected]]);
+                let deck: Vec<_> = runner
+                    .game
+                    .player(owner)
+                    .deck
+                    .iter()
+                    .map(|card| card.card_id(&runner.game.card_data))
+                    .collect();
+                assert_eq!(deck, vec![top_first[1 - selected], "FILL", "FILL"]);
+            }
+        }
+    }
+}
+
+/// A mandatory search with no eligible cards skips only the impossible add;
+/// both remainder orders and the later Delay placement must still resolve.
+#[test]
+fn p_103_main_mandatory_red_add_no_match_keeps_order_and_delay_for_both_owners() {
+    for owner in 0..2 {
+        for first_index in 0..2 {
+            let mut runner = mandatory_main_runner(owner, &["BLUE1", "BLUE2"]);
+            let view = runner.pending_selection_view().expect("remainder ordering");
+            assert_eq!(
+                view.kind,
+                SelectionKind::OrderedPermutation { remaining: 2 }
+            );
+            assert_mandatory_main_mask(
+                &runner,
+                owner,
+                &[space::SEL_REVEAL_START, space::SEL_REVEAL_START + 1],
+            );
+            runner
+                .execute_action(owner, space::SEL_REVEAL_START + first_index)
+                .unwrap();
+            while let Some(view) = runner.pending_selection_view() {
+                assert!(matches!(
+                    view.kind,
+                    SelectionKind::OrderedPermutation { remaining: 1 }
+                ));
+                assert_mandatory_main_mask(&runner, owner, &view.valid_action_ids);
+                runner
+                    .execute_action(owner, view.valid_action_ids[0])
+                    .unwrap();
+            }
+            assert_main_placed_delay(&runner, owner);
+            assert!(runner.game.player(owner).hand.is_empty());
+            let deck: Vec<_> = runner
+                .game
+                .player(owner)
+                .deck
+                .iter()
+                .map(|card| card.card_id(&runner.game.card_data))
+                .collect();
+            let expected = if first_index == 0 {
+                vec!["BLUE2", "BLUE1", "FILL", "FILL"]
+            } else {
+                vec!["BLUE1", "BLUE2", "FILL", "FILL"]
+            };
+            assert_eq!(deck, expected);
+        }
+    }
+}
 
 /// When P-103's [Main] effect fires from hand, the reveal pipeline runs.
 ///

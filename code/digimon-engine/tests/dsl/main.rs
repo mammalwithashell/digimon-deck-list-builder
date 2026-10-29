@@ -1,12 +1,19 @@
 //! DSL test binary. Submodules (one per task group) contribute the `#[test]`
 //! functions. See `digimon-engine/Cargo.toml` for the `[[test]]` entry.
 
+// Match the behavioral harness allocator and avoid Windows heap contention.
+// This affects test allocation only; gameplay and assertions are unchanged.
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 mod activation_cost;
+mod name_standardization;
 mod add_modifier_typed_payload;
 mod also_treated_as;
 mod assembly_play;
 mod attack_history_predicate;
 mod collapse_then_tail;
+mod constructs;
 mod cross_check;
 mod battle_deleter;
 mod delay;
@@ -175,3 +182,37 @@ mod zone_movement_verbs;
 
 mod assembly_material_equivalence;
 mod folded_may_opt_refund;
+mod effect_dna_candidate_masks;
+
+// Older fixtures name a card by its original zone/position coordinate. These
+// helpers inspect the typed menu and translate that coordinate to the supplied
+// live action ID; they never send a legacy alias or bypass the action mask.
+fn union_fixture_rows(game: &digimon_engine::game::Game) -> Option<Vec<(u16, u16)>> {
+    use digimon_engine::{action::space::*, owned_card_choice::{CardChoiceOperation, CardChoiceZone}};
+    let pending = game.pending_selection.as_ref()?;
+    if !matches!(pending.kind, digimon_engine::selection::SelectionKind::UnionZone { .. }) { return None; }
+    let owner = pending.card_choice.as_ref()?;
+    Some(owner.view(game, pending.selecting_player).rows.into_iter().filter_map(|row| {
+        if !matches!(row.operation, CardChoiceOperation::CommitCard) { return None; }
+        let position: u16 = row.position.as_deref()?.parse().ok()?;
+        let fixture = match row.zone? {
+            CardChoiceZone::Hand => PLAY_HAND_START.checked_add(position)?,
+            CardChoiceZone::Trash => TRASH_EFFECT_START.checked_add(position)?,
+            CardChoiceZone::BattleSource => encode_source_select(u16::from(row.carrier_slot?), position)?,
+            CardChoiceZone::BreedingSource => encode_breeding_source_select(row.owner?, position)?,
+            _ => return None,
+        };
+        Some((fixture, row.action_id))
+    }).collect())
+}
+fn union_fixture_candidates(game: &digimon_engine::game::Game) -> Vec<u16> {
+    union_fixture_rows(game).expect("owned union prompt").into_iter().map(|(fixture, _)| fixture).collect()
+}
+fn union_fixture_action(game: &digimon_engine::game::Game, fixture: u16) -> u16 {
+    let Some(rows) = union_fixture_rows(game) else { return fixture; };
+    let action = if fixture == digimon_engine::action::space::PASS { fixture }
+        else { rows.into_iter().find(|(old, _)| *old == fixture).expect("fixture card must be in typed menu").1 };
+    let actor = game.pending_selection.as_ref().unwrap().selecting_player;
+    assert_eq!(digimon_engine::action::build_action_mask(game, actor)[action as usize], 1.0);
+    action
+}

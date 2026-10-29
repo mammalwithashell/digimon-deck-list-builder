@@ -1,6 +1,6 @@
 //! Named-binding environment for DSL process steps.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use crate::card_source::CardHandle;
 use crate::enums::PlayerId;
@@ -65,11 +65,36 @@ fn trash_pin_key(name: &str) -> String {
     format!("\u{0}trash_pin:{name}")
 }
 
-#[derive(Debug, Default, Clone)]
+pub(crate) fn is_private_link_pin_name(name:&str)->bool {
+    name.starts_with("\0link_source_carrier:") || name.starts_with("\0link_material_carrier:")
+}
+
+#[derive(Default, Clone)]
 pub struct Bindings {
     slots: HashMap<String, BindingValue>,
+    // Explicit receipt clears must survive overlays of pre-selection snapshots.
+    // Ordinary `remove` remains local; only `clear_for_merge` creates a tombstone.
+    cleared_slots: BTreeSet<String>,
     result_log: EffectResultLog,
     played_identity_pins: HashMap<String, (PlayerId, u64)>,
+    // Singular battle-area selections retain the permanent, not its field slot
+    // or top card. Digivolving that same permanent does not invalidate the pin.
+    selected_identity_pins: HashMap<String, (PlayerId, u64)>,
+}
+
+// Some archival verification paths debug enclosing declarations. Preserve the
+// pre-selected-pin field projection there; current verification hashes the new
+// identity metadata explicitly, in sorted order and with continuation paths.
+impl std::fmt::Debug for Bindings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let cleared: BTreeSet<_>=self.cleared_slots.iter().filter(|name|!is_private_link_pin_name(name)).collect();
+        f.debug_struct("Bindings")
+            .field("slots", &self.slots)
+            .field("cleared_slots", &cleared)
+            .field("result_log", &self.result_log)
+            .field("played_identity_pins", &self.played_identity_pins)
+            .finish()
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -107,12 +132,31 @@ pub struct EffectResultLogCursor {
 }
 
 impl Bindings {
+    /// Stable projection for new typed declarations; archival Debug stays unchanged.
+    pub(crate) fn canonical_verification_debug(&self) -> String {
+        let slots: std::collections::BTreeMap<_, _> = self.slots.iter().collect();
+        let played: std::collections::BTreeMap<_, _> = self.played_identity_pins.iter().collect();
+        let selected: std::collections::BTreeMap<_, _> = self.selected_identity_pins.iter().collect();
+        format!("{:?}", (slots, &self.cleared_slots, &self.result_log, played, selected))
+    }
+    /// V3 DNA declarations predate the private Link continuation namespace.
+    pub(crate) fn legacy_canonical_verification_debug(&self)->String {
+        let mut legacy=self.clone();
+        legacy.selected_identity_pins.retain(|name,_|!is_private_link_pin_name(name));
+        legacy.cleared_slots.retain(|name|!is_private_link_pin_name(name));
+        legacy.canonical_verification_debug()
+    }
+    pub(crate) fn private_link_clears_for_verification(&self)->Vec<String> {
+        self.cleared_slots.iter().filter(|name|is_private_link_pin_name(name)).cloned().collect()
+    }
     pub fn new() -> Self {
         Self::default()
     }
 
     pub fn insert(&mut self, name: &str, value: BindingValue) {
+        self.cleared_slots.remove(name);
         self.played_identity_pins.remove(name);
+        self.selected_identity_pins.remove(name);
         // Re-binding a name drops any stable-identity pin from a previous
         // trash pick under the same name.
         self.slots.remove(&trash_pin_key(name));
@@ -125,7 +169,15 @@ impl Bindings {
         self.slots.remove(&trash_pin_key(name));
         self.slots.remove(&hand_pin_key(name));
         self.played_identity_pins.remove(name);
+        self.selected_identity_pins.remove(name);
     }
+    /// Publish an explicit absence through nested continuation snapshots.
+    /// Unlike a missing key, this clears an older value during an overlay.
+    pub(crate) fn clear_for_merge(&mut self, name: &str) {
+        self.remove(name);
+        self.cleared_slots.insert(name.to_owned());
+    }
+
     pub fn get(&self, name: &str) -> Option<BindingValue> {
         self.get_ref(name).cloned()
     }
@@ -137,11 +189,26 @@ impl Bindings {
     /// `binding_exists` / `binding_absent` after a nested select would
     /// otherwise read a stale absence (G-OPT-REFUND-ON-DECLINE fallout).
     pub fn merge_slots_from(&mut self, other: &Bindings) {
+        for name in &other.cleared_slots {
+            self.clear_for_merge(name);
+        }
         for (k, v) in &other.slots {
+            self.cleared_slots.remove(k);
             self.slots.insert(k.clone(), v.clone());
             self.played_identity_pins.remove(k);
             if let Some(pin) = other.played_identity_pins.get(k) {
                 self.played_identity_pins.insert(k.clone(), *pin);
+            }
+            self.selected_identity_pins.remove(k);
+            if let Some(pin) = other.selected_identity_pins.get(k) {
+                self.selected_identity_pins.insert(k.clone(), *pin);
+            }
+        }
+        for (name, pin) in &other.selected_identity_pins {
+            if (name.starts_with("\0link_source_carrier:") || name.starts_with("\0link_material_carrier:"))
+                && !other.cleared_slots.contains(name) && !other.slots.contains_key(name) {
+                self.cleared_slots.remove(name);
+                self.selected_identity_pins.insert(name.clone(), *pin);
             }
         }
     }
@@ -322,6 +389,41 @@ impl Bindings {
 
     pub fn insert_permanent(&mut self, name: &str, h: PermanentHandle) {
         self.insert(name, BindingValue::Permanent(h));
+    }
+
+    /// Bind a selected battle-area permanent by stable identity. The raw slot
+    /// remains available for legacy consumers; `resolve_binding_ref` must use
+    /// the pin and never fall back to that slot when the permanent has left.
+    pub(crate) fn insert_selected_permanent_with_identity(
+        &mut self,
+        name: &str,
+        handle: PermanentHandle,
+        identity: u64,
+    ) {
+        self.insert_permanent(name, handle);
+        self.selected_identity_pins
+            .insert(name.to_owned(), (handle.player, identity));
+    }
+
+    pub(crate) fn selected_identity_pin(&self, name: &str) -> Option<(PlayerId, u64)> {
+        self.selected_identity_pins.get(name).copied()
+    }
+
+    /// Private link continuation metadata, never an authored binding value.
+    pub(crate) fn pin_private_link_identity(&mut self, name: &str, player: PlayerId, identity: u64) {
+        assert!(name.starts_with("\0link_source_carrier:") || name.starts_with("\0link_material_carrier:"));
+        self.cleared_slots.remove(name);
+        self.slots.remove(name);
+        self.played_identity_pins.remove(name);
+        self.selected_identity_pins.insert(name.to_owned(), (player, identity));
+    }
+
+    pub(crate) fn selected_identity_pins_for_verification(&self) -> Vec<(String, PlayerId, u64)> {
+        let mut pins: Vec<_> = self.selected_identity_pins.iter()
+            .map(|(name, (player, identity))| (name.clone(), *player, *identity))
+            .collect();
+        pins.sort_unstable();
+        pins
     }
 
     /// Insert a played-permanent binding tagged with stable identity
@@ -527,6 +629,28 @@ impl Bindings {
         self.insert(name, BindingValue::BreedingPermanentRef(breeding_ref));
     }
 
+    pub(crate) fn insert_breeding_permanent_with_identity(
+        &mut self, name: &str, breeding_ref: BreedingPermanentSelectionRef, identity: u64,
+    ) {
+        self.insert_breeding_permanent_ref(name, breeding_ref);
+        self.selected_identity_pins.insert(name.to_owned(), (breeding_ref.player, identity));
+    }
+
+    /// The binding's zone is part of the pin: a breeder moved to battle cannot
+    /// become the original breeding target of a parked effect.
+    pub(crate) fn resolve_selected_identity(
+        &self, game: &crate::game::Game, name: &str,
+    ) -> Option<PermanentHandle> {
+        let (player, identity) = self.selected_identity_pin(name)?;
+        if self.get_breeding_permanent_ref(name).is_some() {
+            game.resolve_source_play_host_identity(PermanentHandle {
+                player, index: crate::action::space::BREEDING_TARGET as u8,
+            }, identity)
+        } else {
+            game.resolve_digivolve_host_identity(player, identity)
+        }
+    }
+
     pub fn get_permanent_list(&self, name: &str) -> Option<Vec<PermanentHandle>> {
         match self.get(name)? {
             BindingValue::PermanentList(v) => Some(v),
@@ -559,6 +683,56 @@ impl Bindings {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn selected_permanent_pin_survives_clone_and_overlay() {
+        let handle = PermanentHandle {
+            player: 1,
+            index: 2,
+        };
+        let mut selected = Bindings::new();
+        selected.insert_selected_permanent_with_identity("target", handle, 17);
+        let cloned = selected.clone();
+        selected.insert_selected_permanent_with_identity("target", handle, 18);
+        assert_eq!(cloned.selected_identity_pin("target"), Some((1, 17)));
+
+        let mut outer = Bindings::new();
+        outer.insert_selected_permanent_with_identity("target", handle, 99);
+        outer.merge_slots_from(&cloned);
+        assert_eq!(outer.selected_identity_pin("target"), Some((1, 17)));
+
+        let mut rebound = Bindings::new();
+        rebound.insert_permanent("target", handle);
+        outer.merge_slots_from(&rebound);
+        assert_eq!(
+            outer.selected_identity_pin("target"),
+            None,
+            "an unpinned rebind must not inherit the old selection's identity"
+        );
+    }
+
+    #[test]
+    fn selected_permanent_rebind_remove_and_merged_clear_drop_the_pin() {
+        let handle = PermanentHandle {
+            player: 0,
+            index: 0,
+        };
+        let mut bindings = Bindings::new();
+        bindings.insert_selected_permanent_with_identity("target", handle, 7);
+        bindings.insert_literal("target", 3);
+        assert_eq!(bindings.selected_identity_pin("target"), None);
+
+        bindings.insert_selected_permanent_with_identity("target", handle, 7);
+        bindings.remove("target");
+        assert_eq!(bindings.selected_identity_pin("target"), None);
+
+        bindings.insert_selected_permanent_with_identity("target", handle, 7);
+        let mut cleared = bindings.clone();
+        cleared.clear_for_merge("target");
+        bindings.merge_slots_from(&cleared);
+        assert_eq!(bindings.selected_identity_pin("target"), None);
+        assert_eq!(bindings.get("target"), None);
+    }
 
     #[test]
     fn clone_preserves_slots() {
@@ -667,5 +841,38 @@ mod tests {
             .expect("clone preserved");
         assert_eq!(clone_token, token);
         assert_eq!(clone_fallback, fallback);
+    }
+}
+
+#[cfg(test)]
+mod private_link_identity_tests {
+    use super::*;
+    #[test]
+    fn private_link_pins_survive_clone_merge_and_resolve_compacted_carriers() {
+        let mut r=crate::debug_runner::DebugRunner::builder().add_card(crate::debug_runner::make_test_card("PIN-HOST","Pin Host")).start();
+        r.place_on_field(0,"PIN-HOST",None);let host=r.place_on_field(0,"PIN-HOST",None);
+        let identity=r.game.capture_digivolve_host_identity(host);
+        for key in ["\0link_source_carrier:7","\0link_material_carrier:8"] {
+            let mut original=Bindings::new();let archival=format!("{:?}",original);
+            original.pin_private_link_identity(key,0,identity);assert!(original.get(key).is_none());assert_eq!(format!("{:?}",original),archival);
+            let cloned=original.clone();let mut merged=Bindings::new();merged.merge_slots_from(&cloned);
+            assert_eq!(merged.selected_identity_pin(key),Some((0,identity)));
+            r.game.player_mut(0).battle_area.swap(0,1);
+            assert_eq!(merged.resolve_selected_identity(&r.game,key),Some(PermanentHandle{player:0,index:0}));
+            assert_eq!(original.selected_identity_pin(key),Some((0,identity)));
+            r.game.player_mut(0).battle_area.swap(0,1);
+        }
+    }
+    #[test]
+    fn private_link_pin_clear_and_explicit_rebind_override_prior_metadata() {
+        for key in ["\0link_source_carrier:7","\0link_material_carrier:8"] {
+            let mut prior=Bindings::new();prior.pin_private_link_identity(key,0,42);
+            let mut cleared=prior.clone();cleared.clear_for_merge(key);prior.merge_slots_from(&cleared);
+            assert!(prior.selected_identity_pin(key).is_none());assert!(prior.get(key).is_none());
+            prior.pin_private_link_identity(key,0,42);
+            let mut rebound=prior.clone();rebound.insert(key,BindingValue::Literal(9));prior.merge_slots_from(&rebound);
+            assert!(prior.selected_identity_pin(key).is_none());assert_eq!(prior.get(key),Some(BindingValue::Literal(9)));
+            assert!(cleared.selected_identity_pin(key).is_none());
+        }
     }
 }

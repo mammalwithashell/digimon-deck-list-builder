@@ -83,7 +83,7 @@ Production card specs live at `code/digimon-engine/cards/<set>/<card_id>.yaml`. 
 
 ## 2. Test taxonomy
 
-Four buckets. Each bucket has a clear home; do not mix them.
+Five buckets. Each bucket has a clear home; do not mix them.
 
 ### Per-card behavioral tests (`tests/cards_behavioral/<set>/<card_id>.rs`)
 
@@ -105,6 +105,12 @@ Shared multi-card fixtures live in `tests/archetypes/support.rs`:
 
 Richer board setup (digivolution stacks via `place_stack` / `place_field_stack`, breeding, security/trash seeding) is already on `DebugRunner` / `DebugRunnerBuilder`. See `tests/archetypes/rocks.rs` for the exemplar (the Koromon-enabled Greymon removal combo: the same opponent board flips from deletable to safe depending on whether the enabler is in the stack — a system-level fact no per-card test sees).
 
+### Construct tests (`tests/dsl/constructs/<family>.rs`)
+
+Prove one DSL construct's lowering and the engine behavior it reaches for the training gate. Use minimal inline `const` YAML fixtures and private helpers in the same family file so the coverage scanner can attribute the construct. Drive real play and clause execution through `DebugRunner`; inspecting compiled IR alone does not establish behavioral coverage.
+
+Each construct needs positive and negative outcomes. Timings also need an adjacent timing that does not fire. Where a player choice exists, build at least two candidates, assert the real `pending_selection` and legal action surface, and resolve it with `execute_action`; `auto_resolve` must not be the only path through that choice. Cite the CR 4.3 rule numbers proved in the module doc comment, or label a card-text idiom and name two printing cards. See [the conformance design, §5d](superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md#5d-construct-tests-proving-the-lowering-not-the-card-owner-direction-2026-10-2122) for the full contract and reviewer rubric. Construct coverage does not establish that a production card's YAML faithfully uses the construct.
+
 ### DSL infra tests (`tests/dsl/...`)
 
 Parser, validator, and lowering tests. Out of scope for card-script authors — touched only when the DSL vocabulary itself changes. Existing infra tests already use inline YAML extensively (see `tests/dsl/phase2b_end_to_end.rs`); preserve that style there.
@@ -124,6 +130,7 @@ Current Phase 3 infra coverage includes:
 > Is the test about a single card's effects? → **per-card** in `cards_behavioral/<set>/`.
 > Is the test about one engine *mechanic* across ≥2 cards (e.g. Alliance triggering off another card's attack)? → **mechanic-level** under the relevant mechanic dir.
 > Is the test a *named combo* from an archetype's model (its real cards playing as the deck does)? → **archetype interaction** in `tests/archetypes/<slug>.rs`.
+> Is the test about one DSL construct's lowering, for the training gate? → **construct test** in `tests/dsl/constructs/<family>.rs`.
 > Is the test about whether the DSL parses, validates, or lowers correctly? → **DSL infra** under `tests/dsl/`.
 
 When a test could plausibly live in two buckets, prefer per-card. Mechanic tests should focus on mechanics that span ≥2 cards; archetype interaction tests should be traceable to a specific combo in the archetype-model doc.
@@ -1259,6 +1266,52 @@ each example through the embedded pack loader. When adding a new pattern,
 prefer adding a worked example here over writing inline YAML in a test file.
 
 ---
+
+### 14.11 Completed play results and conditional follow-ups
+
+A selected card binding proves a choice, not a completed play. For printed
+"if you did" follow-ups, assert the actual play result rather than
+`binding_present` alone. The historical predicate name
+`effect_played_any_digimon` reads the current effect's played-permanent result
+log; it includes both Digimon and Tamer plays. It does not provide a card-kind
+filter. A previous effect's successful play must not make a fresh effect's
+predicate true.
+
+Cover immediate success, late play restrictions, accepted cancellation, and a
+successful play resumed after declining an optional replacement. A deferred
+security play must publish its exact correlated completion into the caller's
+lexical result log when the card actually enters. Finish the current effect
+before resolving the entrant's newly triggered On Play effect; a later On Play
+choice must not publish the caller's result twice. Test both actors and
+independently resumed clones. Cancellation must restore the selected
+physical security card's original position and face-up state.
+
+Reusable immediate/scoping examples are in
+[`effect_play_results.rs`](../code/digimon-engine/tests/dsl/constructs/effect_play_results.rs).
+The deferred security-play scenarios are in
+[`security_search_actual_outcomes.rs`](../code/digimon-engine/tests/security_search_actual_outcomes.rs).
+
+### 14.12 Owned physical-choice consumers
+
+For a source or security choice with `card_choice` metadata, select a legal
+`CommitCard` row by its physical zone, owner and position (and card ID when
+inspection is permitted), then submit that row's action through the public
+mask. A page action is an operation, not a source or security array offset.
+Do not derive a selected card with `decode_source_select`, a legacy security
+base, or hand/trash action bands when an owned choice is installed.
+
+Native source-selector callbacks already receive typed `SourceSelectionRef`
+values. Resumable VM consumers must take the corresponding resolved physical
+choice and revalidate its exact card, carrier, authored filter and operation
+gate before moving or linking it. Test indices beyond the old range, both
+actors, independent clones, and movement or same-number replacement of the
+original card while the choice is pending. A stale position must not retarget
+another physical copy.
+
+Keep legacy geometry decoding only on explicitly identified compatibility
+paths. Contract fixture migrations must preserve whole eligibility masks and
+observable play, movement and payment assertions; replacing an old numeric
+assertion with an unconstrained first-valid-action choice is insufficient.
 
 ## 15. Cross-references
 

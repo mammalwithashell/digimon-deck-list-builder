@@ -1,0 +1,21 @@
+
+running 2 tests
+
+thread 'p::p_224::p_224_main_suspends_to_play_level5_or_higher_xros_heart_from_under_tamers_at_cost_minus_one' (17224) panicked at code\digimon-engine\tests\cards_behavioral\p\p_224.rs:208:10:
+eligible level 5+ Xros Heart source should be selectable
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test p::p_224::p_224_main_suspends_to_play_level5_or_higher_xros_heart_from_under_tamers_at_cost_minus_one ... FAILED
+
+thread 'p::p_224::p_224_on_play_places_xros_or_twilight_from_hand_or_trash_under_self_and_draws_if_hand_small' (18420) panicked at code\digimon-engine\tests\cards_behavioral\p\p_224.rs:78:17:
+XH-HAND in hand should be legal for P-224; view=PendingSelectionView { card_choice: Some(CardChoiceView { prompt_id: "1", page_generation: "0", page_index: "0", page_count: "1", inspection_only: false, rows: [CardChoiceRowView { action_id: 30, operation: CommitCard, zone: Some(Hand), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("XH-HAND"), card_registry_index: Some(0), identity_visible: true }, CardChoiceRowView { action_id: 31, operation: CommitCard, zone: Some(Trash), owner: Some(0), carrier_slot: None, carrier_identity: None, position: Some("0"), card_id: Some("TWILIGHT-TRASH"), card_registry_index: Some(0), identity_visible: true }] }), kind: UnionZone { zones: UnionZoneSet(3) }, selecting_player: 0, previous_phase: Main, valid_action_ids: [30, 31], is_optional: false, prompt: "Place 1 Xros Heart or Twilight Digimon from hand or trash under this Tamer", effect_choices: None, source_card: CardHandle(3), source_permanent: Some(PermanentHandle { player: 0, index: 0 }), source_kind: Tamer, zone_owner: None }
+test p::p_224::p_224_on_play_places_xros_or_twilight_from_hand_or_trash_under_self_and_draws_if_hand_small ... FAILED
+
+failures:
+
+failures:
+    p::p_224::p_224_main_suspends_to_play_level5_or_higher_xros_heart_from_under_tamers_at_cost_minus_one
+    p::p_224::p_224_on_play_places_xros_or_twilight_from_hand_or_trash_under_self_and_draws_if_hand_small
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 12753 filtered out; finished in 5.01s
+
+FILTER_EXIT 101

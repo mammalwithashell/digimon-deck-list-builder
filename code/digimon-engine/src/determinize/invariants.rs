@@ -237,6 +237,12 @@ pub fn check_world_invariants(source: &Game, viewer: PlayerId, world: &Game) -> 
     }
 
     // 4b. Viewer's own hand: exact, in order.
+    if let Some(owner) = source.pending_selection.as_ref().and_then(|s| s.card_choice.as_ref())
+        .and_then(|choice| choice.inspected_security_owner(viewer)) {
+        if zone_ids(&source.player(owner).security, source) != zone_ids(&world.player(owner).security, world) {
+            return Err("viewer's privately inspected security drifted".into());
+        }
+    }
     let sv = &source.players[viewer as usize];
     let wv = &world.players[viewer as usize];
     if zone_ids(&sv.hand, source) != zone_ids(&wv.hand, world) {

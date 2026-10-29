@@ -40,15 +40,17 @@ impl CardEffect for AfterProtectedBattle {
                 let pa=ctx.game.pending_attack.as_ref().expect("outer attack remains");
                 assert!(!pa.battle_defender_deleted,
                     "effect battle with a new DNA Digimon must not overwrite old attack battle receipt");
-                assert!(pa.effect_battle_piercing_pending,
-                    "deleting the new result by effect battle earns effect-battle Piercing");
+                // The effect battle queues its BattleResult/Piercing trigger;
+                // activation waits until this enclosing effect finishes.
+                assert!(!pa.effect_battle_piercing_pending,
+                    "effect-battle Piercing must not activate inside the resolving effect");
             }).build()
     ]}
 }
 fn setup(effect:Arc<dyn CardEffect>,keyword:Keyword)->(DebugRunner,PermanentHandle,PermanentHandle){
     let mut mat=make_test_card("MAT","Material");mat.level=Some(6);mat.dp=Some(2000);
-    let mut partner=make_test_card("PARTNER","Partner");partner.level=Some(6);
-    let mut result=make_test_dna_card("RESULT","Result",6,6,0);result.level=Some(7);result.dp=Some(5000);
+    let mut partner=make_test_card("PARTNER","Partner");partner.level=Some(5);
+    let mut result=make_test_dna_card("RESULT","Result",6,5,0);result.level=Some(7);result.dp=Some(5000);
     let mut attacker=make_test_card("ATT","Attacker");attacker.dp=Some(12000);
     let mut r=DebugRunner::builder().add_card(mat).add_card(partner).add_card(result).add_card(attacker)
         .add_card(make_test_card("SEC","Security")).add_card(make_test_card("DRAW","Draw"))

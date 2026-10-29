@@ -1,0 +1,78 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "BT18-094",
+    "card_type": "Tamer",
+    "colors": [
+      "Purple",
+      "Yellow"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Purple",
+          "Yellow"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "tamer",
+        "level": null,
+        "name": "Koichi Kimura",
+        "play_cost": 4,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Security] Play this card without paying the cost.\n[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] You may return 1 card with the [Hybrid] or [Ten Warriors] trait from your trash to the hand."
+          }
+        ]
+      }
+    ],
+    "form": "",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": null,
+    "name": "Koichi Kimura",
+    "play_cost": 4,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522025",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT18-094.png?260529",
+      "printing_id": "BT18-094"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "R",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] Play this card without paying the cost.\n[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] You may return 1 card with the [Hybrid] or [Ten Warriors] trait from your trash to the hand."
+      }
+    ],
+    "type": ""
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "8639bd1c2beb0c57dfa05a8c533f45bd31f0039cfd7f4c70a53b8e708fd8769d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522025:BT18-094:BT18-094",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522025"
+}

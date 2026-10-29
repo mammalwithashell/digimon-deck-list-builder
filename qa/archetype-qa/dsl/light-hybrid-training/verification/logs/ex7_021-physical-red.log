@@ -1,0 +1,36 @@
+
+running 17 tests
+test ex7::ex7_021::ex7_021_aura_off_on_opponents_turn ... ok
+test ex7::ex7_021::ex7_021_aura_off_when_carrier_lacks_ice_snow_trait ... ok
+test ex7::ex7_021::ex7_021_aura_off_when_opp_digimon_has_digivolution_cards ... ok
+test ex7::ex7_021::ex7_021_aura_on_grants_piercing_and_security_attack_plus_1 ... ok
+test ex7::ex7_021::ex7_021_compiles_with_printed_stats_and_lv4_blue_path ... ok
+test ex7::ex7_021::ex7_021_iceclad_equal_sources_mutual_destruction ... ok
+test ex7::ex7_021::ex7_021_iceclad_keyword_attached ... ok
+test ex7::ex7_021::ex7_021_iceclad_loses_with_fewer_sources_despite_higher_dp ... ok
+test ex7::ex7_021::ex7_021_iceclad_wins_battle_on_source_count_despite_lower_dp ... ok
+test ex7::ex7_021::ex7_021_inherited_aura_shape_piercing_and_security_attack_plus_1 ... ok
+test ex7::ex7_021::ex7_021_wd_clause_shape_mandatory_and_ungated ... ok
+
+thread 'ex7::ex7_021::ex7_021_wd_picks_any_two_from_same_stack_and_no_unsuspend_while_sources_remain' (50568) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_021.rs:582:10:
+pick the bottom digivolution card: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ex7::ex7_021::ex7_021_wd_picks_any_two_from_same_stack_and_no_unsuspend_while_sources_remain ... FAILED
+test ex7::ex7_021::ex7_021_wd_single_available_source_trashes_it_and_unsuspends ... ok
+
+thread 'ex7::ex7_021::ex7_021_wd_trashes_one_source_from_each_of_two_digimon_and_unsuspends' (35128) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_021.rs:494:5:
+both opponent stacks' sources are candidates (cross-permanent); got [30, 31]
+test ex7::ex7_021::ex7_021_wd_trashes_one_source_from_each_of_two_digimon_and_unsuspends ... FAILED
+test ex7::ex7_021::ex7_021_wd_unsuspend_fires_when_opponent_already_sourceless ... ok
+test ex7::ex7_021::ex7_021_wd_unsuspend_fires_with_empty_opponent_board ... ok
+test ex7::ex7_021::ex7_021_wd_unsuspend_noop_when_already_unsuspended ... ok
+
+failures:
+
+failures:
+    ex7::ex7_021::ex7_021_wd_picks_any_two_from_same_stack_and_no_unsuspend_while_sources_remain
+    ex7::ex7_021::ex7_021_wd_trashes_one_source_from_each_of_two_digimon_and_unsuspends
+
+test result: FAILED. 15 passed; 2 failed; 0 ignored; 0 measured; 12738 filtered out; finished in 26.96s
+
+FILTER_EXIT 101

@@ -34,6 +34,8 @@ use crate::enums::{Expiry, ModifierType, PlayerId};
 /// candidate set every declarative tick until its `expiry` fires.
 #[derive(Debug, Clone)]
 pub struct FloatingMassModifier {
+    /// Restrict replacement-backed protections to opponent effects on every tick.
+    pub opponent_only: bool,
     /// Target predicate, evaluated relative to `source_player` (so `of:
     /// opponent` resolves against the installing controller even after the
     /// source card has left the field).

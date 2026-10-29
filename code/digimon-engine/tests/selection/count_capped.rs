@@ -731,22 +731,11 @@ fn breeding_carrier_multi_select_installs_pending() {
         matches!(sel.kind, SelectionKind::CountCappedMultiSelect { .. }),
         "kind must be CountCappedMultiSelect"
     );
-    assert_eq!(
-        sel.valid_action_ids.len(),
-        2,
-        "two breeding sources offered"
-    );
-    for &aid in &sel.valid_action_ids {
-        assert!(
-            (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&aid),
-            "action id {aid} must be in the breeding-source range"
-        );
-    }
-    // P0's carrier → sources encode at 2168 + 0*12 + i.
-    assert!(sel.valid_action_ids.contains(&BREEDING_SOURCE_SELECT_START));
-    assert!(sel
-        .valid_action_ids
-        .contains(&(BREEDING_SOURCE_SELECT_START + 1)));
+    let rows=crate::owned_choices::commits(&r.game);
+    assert_eq!(rows.len(),2,"two breeding sources offered");
+    assert!(rows.iter().all(|row| matches!(row.zone,Some(digimon_engine::owned_card_choice::CardChoiceZone::BreedingSource)) && row.owner==Some(tp)));
+    assert_eq!(rows.iter().map(|row|row.position.as_deref()).collect::<Vec<_>>(),vec![Some("0"),Some("1")]);
+
 }
 
 /// Multi-pick over a breeding carrier, resolving picks one at a time. The

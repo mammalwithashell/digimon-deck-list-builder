@@ -1,0 +1,849 @@
+    Checking digimon-dsl v0.1.0 (C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-dsl)
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:1045:106
+     |
+1045 | ...   can_play_from_effect_without_cost.walk(c, &format!("{{}}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
+     |                                                          ----------------------------------------  ^^^^ argument never used
+     |                                                          |
+     |                                                          formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1045 |             can_play_from_effect_without_cost.walk(c, &format!("{{}}.can_play_from_effect_without_cost{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                                       ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:1046:96
+     |
+1046 |         can_play_to_breeding_from_hand.walk(c, &format!("{{}}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
+     |                                                         -------------------------------------  ^^^^ argument never used
+     |                                                         |
+     |                                                         formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1046 |         can_play_to_breeding_from_hand.walk(c, &format!("{{}}.can_play_to_breeding_from_hand{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:1047:62
+     |
+1047 |         can_unsuspend.walk(c, &format!("{{}}.can_unsuspend", path), "UNCLASSIFIED_STRING");
+     |                                        --------------------  ^^^^ argument never used
+     |                                        |
+     |                                        formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1047 |         can_unsuspend.walk(c, &format!("{{}}.can_unsuspend{}", path), "UNCLASSIFIED_STRING");
+     |                                                           ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:1048:80
+     |
+1048 |         owner_can_add_security.walk(c, &format!("{{}}.owner_can_add_security", path), "UNCLASSIFIED_STRING");
+     |                                                 -----------------------------  ^^^^ argument never used
+     |                                                 |
+     |                                                 formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1048 |         owner_can_add_security.walk(c, &format!("{{}}.owner_can_add_security{}", path), "UNCLASSIFIED_STRING");
+     |                                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:1049:64
+     |
+1049 |         source_name_is.walk(c, &format!("{{}}.source_name_is", path), "MATCH_NAME_EXACT");
+     |                                         ---------------------  ^^^^ argument never used
+     |                                         |
+     |                                         formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1049 |         source_name_is.walk(c, &format!("{{}}.source_name_is{}", path), "MATCH_NAME_EXACT");
+     |                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:1050:96
+     |
+1050 |         event_battle_surviving_deleter.walk(c, &format!("{{}}.event_battle_surviving_deleter", path), "UNCLASSIFIED_STRING");
+     |                                                         -------------------------------------  ^^^^ argument never used
+     |                                                         |
+     |                                                         formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1050 |         event_battle_surviving_deleter.walk(c, &format!("{{}}.event_battle_surviving_deleter{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:1051:72
+     |
+1051 |         event_card_name_is.walk(c, &format!("{{}}.event_card_name_is", path), "MATCH_NAME_EXACT");
+     |                                             -------------------------  ^^^^ argument never used
+     |                                             |
+     |                                             formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1051 |         event_card_name_is.walk(c, &format!("{{}}.event_card_name_is{}", path), "MATCH_NAME_EXACT");
+     |                                                                     ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:1052:66
+     |
+1052 |         event_card_kind.walk(c, &format!("{{}}.event_card_kind", path), "UNCLASSIFIED_STRING");
+     |                                          ----------------------  ^^^^ argument never used
+     |                                          |
+     |                                          formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1052 |         event_card_kind.walk(c, &format!("{{}}.event_card_kind{}", path), "UNCLASSIFIED_STRING");
+     |                                                               ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:2710:106
+     |
+2710 | ...   can_play_from_effect_without_cost.walk(c, &format!("{{}}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
+     |                                                          ----------------------------------------  ^^^^ argument never used
+     |                                                          |
+     |                                                          formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+2710 |             can_play_from_effect_without_cost.walk(c, &format!("{{}}.can_play_from_effect_without_cost{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                                       ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:2711:96
+     |
+2711 |         can_play_to_breeding_from_hand.walk(c, &format!("{{}}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
+     |                                                         -------------------------------------  ^^^^ argument never used
+     |                                                         |
+     |                                                         formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+2711 |         can_play_to_breeding_from_hand.walk(c, &format!("{{}}.can_play_to_breeding_from_hand{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:2712:62
+     |
+2712 |         can_unsuspend.walk(c, &format!("{{}}.can_unsuspend", path), "UNCLASSIFIED_STRING");
+     |                                        --------------------  ^^^^ argument never used
+     |                                        |
+     |                                        formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+2712 |         can_unsuspend.walk(c, &format!("{{}}.can_unsuspend{}", path), "UNCLASSIFIED_STRING");
+     |                                                           ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:2713:80
+     |
+2713 |         owner_can_add_security.walk(c, &format!("{{}}.owner_can_add_security", path), "UNCLASSIFIED_STRING");
+     |                                                 -----------------------------  ^^^^ argument never used
+     |                                                 |
+     |                                                 formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+2713 |         owner_can_add_security.walk(c, &format!("{{}}.owner_can_add_security{}", path), "UNCLASSIFIED_STRING");
+     |                                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:2714:90
+     |
+2714 |         controller_can_add_security.walk(c, &format!("{{}}.controller_can_add_security", path), "UNCLASSIFIED_STRING");
+     |                                                      ----------------------------------  ^^^^ argument never used
+     |                                                      |
+     |                                                      formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+2714 |         controller_can_add_security.walk(c, &format!("{{}}.controller_can_add_security{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                       ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:2715:64
+     |
+2715 |         source_name_is.walk(c, &format!("{{}}.source_name_is", path), "MATCH_NAME_EXACT");
+     |                                         ---------------------  ^^^^ argument never used
+     |                                         |
+     |                                         formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+2715 |         source_name_is.walk(c, &format!("{{}}.source_name_is{}", path), "MATCH_NAME_EXACT");
+     |                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:2716:72
+     |
+2716 |         event_card_name_is.walk(c, &format!("{{}}.event_card_name_is", path), "MATCH_NAME_EXACT");
+     |                                             -------------------------  ^^^^ argument never used
+     |                                             |
+     |                                             formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+2716 |         event_card_name_is.walk(c, &format!("{{}}.event_card_name_is{}", path), "MATCH_NAME_EXACT");
+     |                                                                     ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:2717:66
+     |
+2717 |         event_card_kind.walk(c, &format!("{{}}.event_card_kind", path), "UNCLASSIFIED_STRING");
+     |                                          ----------------------  ^^^^ argument never used
+     |                                          |
+     |                                          formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+2717 |         event_card_kind.walk(c, &format!("{{}}.event_card_kind{}", path), "UNCLASSIFIED_STRING");
+     |                                                               ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:2718:96
+     |
+2718 |         event_battle_surviving_deleter.walk(c, &format!("{{}}.event_battle_surviving_deleter", path), "UNCLASSIFIED_STRING");
+     |                                                         -------------------------------------  ^^^^ argument never used
+     |                                                         |
+     |                                                         formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+2718 |         event_battle_surviving_deleter.walk(c, &format!("{{}}.event_battle_surviving_deleter{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1663:66
+     |
+1663 |                 value.walk(c, &format!("{{}}@PaySourcePrefix.0", path), role);
+     |                                        ------------------------  ^^^^ argument never used
+     |                                        |
+     |                                        formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1663 |                 value.walk(c, &format!("{{}}@PaySourcePrefix.0{}", path), role);
+     |                                                               ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1667:66
+     |
+1667 |                 value.walk(c, &format!("{{}}@ReturnAllToHand.0", path), role);
+     |                                        ------------------------  ^^^^ argument never used
+     |                                        |
+     |                                        formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1667 |                 value.walk(c, &format!("{{}}@ReturnAllToHand.0{}", path), role);
+     |                                                               ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1671:66
+     |
+1671 |                 value.walk(c, &format!("{{}}@ReturnAllToDeck.0", path), role);
+     |                                        ------------------------  ^^^^ argument never used
+     |                                        |
+     |                                        formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1671 |                 value.walk(c, &format!("{{}}@ReturnAllToDeck.0{}", path), role);
+     |                                                               ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1675:84
+     |
+1675 |                 value.walk(c, &format!("{{}}@SuspendAndCancelAllMatchingLeaves.0", path), role);
+     |                                        ------------------------------------------  ^^^^ argument never used
+     |                                        |
+     |                                        formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1675 |                 value.walk(c, &format!("{{}}@SuspendAndCancelAllMatchingLeaves.0{}", path), role);
+     |                                                                                 ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1679:77
+     |
+1679 |                 value.walk(c, &format!("{{}}@TrashSelectedSourcesAsCost.0", path), role);
+     |                                        -----------------------------------  ^^^^ argument never used
+     |                                        |
+     |                                        formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1679 |                 value.walk(c, &format!("{{}}@TrashSelectedSourcesAsCost.0{}", path), role);
+     |                                                                          ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1683:73
+     |
+1683 |                 value.walk(c, &format!("{{}}@PlayToBreedingFromHand.0", path), role);
+     |                                        -------------------------------  ^^^^ argument never used
+     |                                        |
+     |                                        formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1683 |                 value.walk(c, &format!("{{}}@PlayToBreedingFromHand.0{}", path), role);
+     |                                                                      ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1937:52
+     |
+1937 |             top_of.walk(c, &format!("{{}}.top_of", path), "EXISTING_INSTANCE_BINDING");
+     |                                     -------------  ^^^^ argument never used
+     |                                     |
+     |                                     formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1937 |             top_of.walk(c, &format!("{{}}.top_of{}", path), "EXISTING_INSTANCE_BINDING");
+     |                                                 ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:2425:76
+     |
+2425 |             target_attribution.walk(c, &format!("{{}}.target_attribution", path), "UNCLASSIFIED_STRING");
+     |                                                 -------------------------  ^^^^ argument never used
+     |                                                 |
+     |                                                 formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+2425 |             target_attribution.walk(c, &format!("{{}}.target_attribution{}", path), "UNCLASSIFIED_STRING");
+     |                                                                         ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:3762:58
+     |
+3762 |             suspended.walk(c, &format!("{{}}.suspended", path), "UNCLASSIFIED_STRING");
+     |                                        ----------------  ^^^^ argument never used
+     |                                        |
+     |                                        formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+3762 |             suspended.walk(c, &format!("{{}}.suspended{}", path), "UNCLASSIFIED_STRING");
+     |                                                       ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:4170:54
+     |
+4170 |             dynamic.walk(c, &format!("{{}}.dynamic", path), "UNCLASSIFIED_STRING");
+     |                                      --------------  ^^^^ argument never used
+     |                                      |
+     |                                      formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+4170 |             dynamic.walk(c, &format!("{{}}.dynamic{}", path), "UNCLASSIFIED_STRING");
+     |                                                   ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:4562:64
+     |
+4562 |             named_groups.walk(c, &format!("{{}}.named_groups", path), "MATCH_NAME_EXACT");
+     |                                           -------------------  ^^^^ argument never used
+     |                                           |
+     |                                           formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+4562 |             named_groups.walk(c, &format!("{{}}.named_groups{}", path), "MATCH_NAME_EXACT");
+     |                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:4563:58
+     |
+4563 |         require_max.walk(c, &format!("{{}}.require_max", path), "UNCLASSIFIED_STRING");
+     |                                      ------------------  ^^^^ argument never used
+     |                                      |
+     |                                      formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+4563 |         require_max.walk(c, &format!("{{}}.require_max{}", path), "UNCLASSIFIED_STRING");
+     |                                                       ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5588:733
+     |
+5588 | ...NG");suspended.walk(c, &format!("{{}}@PlayFromMaterials.suspended", path), "UNCLASSIFIED_STRING");
+     |                                    ----------------------------------  ^^^^ argument never used
+     |                                    |
+     |                                    formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+5588 |         } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayFromMaterials"));target.walk(c, &format!("{}.target", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");source_index.walk(c, &format!("{}.source_index", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");cost_delta.walk(c, &format!("{}.cost_delta", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");suppress_on_play.walk(c, &format!("{}.suppress_on_play", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");suspended.walk(c, &format!("{{}}@PlayFromMaterials.suspended{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5606:499
+     |
+5606 | ...walk(c, &format!("{{}}@PlacePermanentBottomSecurityAndCancelReplacement.to_owner", path), "UNCLASSIFIED_STRING");
+     |                     ----------------------------------------------------------------  ^^^^ argument never used
+     |                     |
+     |                     formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+5606 |         } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentBottomSecurityAndCancelReplacement"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "EXISTING_INSTANCE_BINDING");to_owner.walk(c, &format!("{{}}@PlacePermanentBottomSecurityAndCancelReplacement.to_owner{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5640:593
+     |
+5640 | ...ING");dynamic.walk(c, &format!("{{}}@GrantTriggeredEffect.dynamic", path), "UNCLASSIFIED_STRING");
+     |                                   -----------------------------------  ^^^^ argument never used
+     |                                   |
+     |                                   formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+5640 |         } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("GrantTriggeredEffect"));target.walk(c, &format!("{}.target", &format!("{}@GrantTriggeredEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_TIMING_NAME");expiry.walk(c, &format!("{}.expiry", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_EXPIRY_NAME");body.walk(c, &format!("{}.body", &format!("{}@GrantTriggeredEffect",path)), "UNCLASSIFIED_STRING");dynamic.walk(c, &format!("{{}}@GrantTriggeredEffect.dynamic{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5641:69
+     |
+5641 | trigger_if.walk(c, &format!("{{}}@GrantTriggeredEffect.trigger_if", path), "UNCLASSIFIED_STRING");
+     |                             --------------------------------------  ^^^^ argument never used
+     |                             |
+     |                             formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+5641 | trigger_if.walk(c, &format!("{{}}@GrantTriggeredEffect.trigger_if{}", path), "UNCLASSIFIED_STRING");
+     |                                                                  ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5653:1233
+     |
+5653 | ...;named_groups.walk(c, &format!("{{}}@SelectMaterials.named_groups", path), "MATCH_NAME_EXACT");
+     |                                   -----------------------------------  ^^^^ argument never used
+     |                                   |
+     |                                   formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+5653 |         } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectMaterials"));of_permanent.walk(c, &format!("{}.of_permanent", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");max.walk(c, &format!("{}.max", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");uniqueness.walk(c, &format!("{}.uniqueness", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional_zero.walk(c, &format!("{}.optional_zero", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");same_by.walk(c, &format!("{}.same_by", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");named_groups.walk(c, &format!("{{}}@SelectMaterials.named_groups{}", path), "MATCH_NAME_EXACT");
+     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5654:66
+     |
+5654 | require_max.walk(c, &format!("{{}}@SelectMaterials.require_max", path), "UNCLASSIFIED_STRING");
+     |                              ----------------------------------  ^^^^ argument never used
+     |                              |
+     |                              formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+5654 | require_max.walk(c, &format!("{{}}@SelectMaterials.require_max{}", path), "UNCLASSIFIED_STRING");
+     |                                                               ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5701:481
+     |
+5701 | ..._attribution.walk(c, &format!("{{}}@RefireEffect.target_attribution", path), "UNCLASSIFIED_STRING");
+     |                                  --------------------------------------  ^^^^ argument never used
+     |                                  |
+     |                                  formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+5701 |         } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RefireEffect"));source.walk(c, &format!("{}.source", &format!("{}@RefireEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@RefireEffect",path)), "ENGINE_TIMING_NAME");optional.walk(c, &format!("{}.optional", &format!("{}@RefireEffect",path)), "UNCLASSIFIED_STRING");target_attribution.walk(c, &format!("{{}}@RefireEffect.target_attribution{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ++
+
+error: argument never used
+   --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:192:58
+    |
+192 |             deck_rule.walk(c, &format!("{{}}.deck_rule", path), "UNCLASSIFIED_STRING");
+    |                                        ----------------  ^^^^ argument never used
+    |                                        |
+    |                                        formatting specifier missing
+    |
+help: format specifiers use curly braces, consider adding a format specifier
+    |
+192 |             deck_rule.walk(c, &format!("{{}}.deck_rule{}", path), "UNCLASSIFIED_STRING");
+    |                                                       ++
+
+error: argument never used
+   --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:941:60
+    |
+941 |             trigger_if.walk(c, &format!("{{}}.trigger_if", path), "UNCLASSIFIED_STRING");
+    |                                         -----------------  ^^^^ argument never used
+    |                                         |
+    |                                         formatting specifier missing
+    |
+help: format specifiers use curly braces, consider adding a format specifier
+    |
+941 |             trigger_if.walk(c, &format!("{{}}.trigger_if{}", path), "UNCLASSIFIED_STRING");
+    |                                                         ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:1781:96
+     |
+1781 |             source_card_trash_protection.walk(c, &format!("{{}}.source_card_trash_protection", path), "UNCLASSIFIED_STRING");
+     |                                                           -----------------------------------  ^^^^ argument never used
+     |                                                           |
+     |                                                           formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1781 |             source_card_trash_protection.walk(c, &format!("{{}}.source_card_trash_protection{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:1801:64
+     |
+1801 |             result_scope.walk(c, &format!("{{}}.result_scope", path), "UNCLASSIFIED_STRING");
+     |                                           -------------------  ^^^^ argument never used
+     |                                           |
+     |                                           formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1801 |             result_scope.walk(c, &format!("{{}}.result_scope{}", path), "UNCLASSIFIED_STRING");
+     |                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:1886:56
+     |
+1886 |             set_cost.walk(c, &format!("{{}}.set_cost", path), "UNCLASSIFIED_STRING");
+     |                                       ---------------  ^^^^ argument never used
+     |                                       |
+     |                                       formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1886 |             set_cost.walk(c, &format!("{{}}.set_cost{}", path), "UNCLASSIFIED_STRING");
+     |                                                     ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:1918:80
+     |
+1918 |             prevent_all_matching.walk(c, &format!("{{}}.prevent_all_matching", path), "UNCLASSIFIED_STRING");
+     |                                                   ---------------------------  ^^^^ argument never used
+     |                                                   |
+     |                                                   formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+1918 |             prevent_all_matching.walk(c, &format!("{{}}.prevent_all_matching{}", path), "UNCLASSIFIED_STRING");
+     |                                                                             ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:2304:58
+     |
+2304 |             deck_rule.walk(c, &format!("{{}}.deck_rule", path), "UNCLASSIFIED_STRING");
+     |                                        ----------------  ^^^^ argument never used
+     |                                        |
+     |                                        formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+2304 |             deck_rule.walk(c, &format!("{{}}.deck_rule{}", path), "UNCLASSIFIED_STRING");
+     |                                                       ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:3727:60
+     |
+3727 |             trigger_if.walk(c, &format!("{{}}.trigger_if", path), "UNCLASSIFIED_STRING");
+     |                                         -----------------  ^^^^ argument never used
+     |                                         |
+     |                                         formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+3727 |             trigger_if.walk(c, &format!("{{}}.trigger_if{}", path), "UNCLASSIFIED_STRING");
+     |                                                         ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:3896:101
+     |
+3896 |             source_card_trash_protection.walk(c, &format!("{{}}@Aura.source_card_trash_protection", path), "UNCLASSIFIED_STRING");
+     |                                                           ----------------------------------------  ^^^^ argument never used
+     |                                                           |
+     |                                                           formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+3896 |             source_card_trash_protection.walk(c, &format!("{{}}@Aura.source_card_trash_protection{}", path), "UNCLASSIFIED_STRING");
+     |                                                                                                  ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:3999:70
+     |
+3999 |             set_cost.walk(c, &format!("{{}}@CostReduction.set_cost", path), "UNCLASSIFIED_STRING");
+     |                                       -----------------------------  ^^^^ argument never used
+     |                                       |
+     |                                       formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+3999 |             set_cost.walk(c, &format!("{{}}@CostReduction.set_cost{}", path), "UNCLASSIFIED_STRING");
+     |                                                                   ++
+
+error: argument never used
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:5092:64
+     |
+5092 |             result_scope.walk(c, &format!("{{}}.result_scope", path), "UNCLASSIFIED_STRING");
+     |                                           -------------------  ^^^^ argument never used
+     |                                           |
+     |                                           formatting specifier missing
+     |
+help: format specifiers use curly braces, consider adding a format specifier
+     |
+5092 |             result_scope.walk(c, &format!("{{}}.result_scope{}", path), "UNCLASSIFIED_STRING");
+     |                                                             ++
+
+error[E0599]: no method named `walk` found for reference `&PaySourcePrefixArgs` in the current scope
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1663:23
+     |
+1663 |                 value.walk(c, &format!("{{}}@PaySourcePrefix.0", path), role);
+     |                       ^^^^ method not found in `&PaySourcePrefixArgs`
+     |
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+help: some of the expressions' fields have a method of the same name
+     |
+1663 |                 value.host_filter.walk(c, &format!("{{}}@PaySourcePrefix.0", path), role);
+     |                       ++++++++++++
+1663 |                 value.minimum.walk(c, &format!("{{}}@PaySourcePrefix.0", path), role);
+     |                       ++++++++
+1663 |                 value.optional.walk(c, &format!("{{}}@PaySourcePrefix.0", path), role);
+     |                       +++++++++
+
+error[E0599]: no method named `walk` found for reference `&ReturnAllToDeckArgs` in the current scope
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1671:23
+     |
+1671 |                 value.walk(c, &format!("{{}}@ReturnAllToDeck.0", path), role);
+     |                       ^^^^ method not found in `&ReturnAllToDeckArgs`
+     |
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+help: some of the expressions' fields have a method of the same name
+     |
+1671 |                 value.include_sources.walk(c, &format!("{{}}@ReturnAllToDeck.0", path), role);
+     |                       ++++++++++++++++
+1671 |                 value.over.walk(c, &format!("{{}}@ReturnAllToDeck.0", path), role);
+     |                       +++++
+1671 |                 value.position.walk(c, &format!("{{}}@ReturnAllToDeck.0", path), role);
+     |                       +++++++++
+1671 |                 value.selector.walk(c, &format!("{{}}@ReturnAllToDeck.0", path), role);
+     |                       +++++++++
+
+error[E0599]: no method named `walk` found for reference `&SuspendAllPreventionArgs` in the current scope
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1675:23
+     |
+1675 |                 value.walk(c, &format!("{{}}@SuspendAndCancelAllMatchingLeaves.0", path), role);
+     |                       ^^^^ method not found in `&SuspendAllPreventionArgs`
+     |
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+help: some of the expressions' fields have a method of the same name
+     |
+1675 |                 value.filter.walk(c, &format!("{{}}@SuspendAndCancelAllMatchingLeaves.0", path), role);
+     |                       +++++++
+1675 |                 value.target.walk(c, &format!("{{}}@SuspendAndCancelAllMatchingLeaves.0", path), role);
+     |                       +++++++
+
+error[E0599]: no method named `walk` found for reference `&TrashSelectedSourcesCostArgs` in the current scope
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1679:23
+     |
+1679 |                 value.walk(c, &format!("{{}}@TrashSelectedSourcesAsCost.0", path), role);
+     |                       ^^^^ method not found in `&TrashSelectedSourcesCostArgs`
+     |
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+help: some of the expressions' fields have a method of the same name
+     |
+1679 |                 value.min_count.walk(c, &format!("{{}}@TrashSelectedSourcesAsCost.0", path), role);
+     |                       ++++++++++
+1679 |                 value.source_refs.walk(c, &format!("{{}}@TrashSelectedSourcesAsCost.0", path), role);
+     |                       ++++++++++++
+
+error[E0599]: no method named `walk` found for reference `&PlayToBreedingFromHandArgs` in the current scope
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1683:23
+     |
+1683 |                 value.walk(c, &format!("{{}}@PlayToBreedingFromHand.0", path), role);
+     |                       ^^^^ method not found in `&PlayToBreedingFromHandArgs`
+     |
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+help: some of the expressions' fields have a method of the same name
+     |
+1683 |                 value.hand_index.walk(c, &format!("{{}}@PlayToBreedingFromHand.0", path), role);
+     |                       +++++++++++
+1683 |                 value.of.walk(c, &format!("{{}}@PlayToBreedingFromHand.0", path), role);
+     |                       +++
+
+error[E0599]: the method `walk` exists for reference `&std::option::Option<DeckCopyRule>`, but its trait bounds were not satisfied
+   --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:192:23
+    |
+192 |             deck_rule.walk(c, &format!("{{}}.deck_rule", path), "UNCLASSIFIED_STRING");
+    |                       ^^^^ method cannot be called on `&std::option::Option<DeckCopyRule>` due to unsatisfied trait bounds
+    |
+   ::: code\digimon-dsl\src\deck_rule.rs:5:1
+    |
+  5 | pub struct DeckCopyRule {
+    | ----------------------- doesn't satisfy `DeckCopyRule: Walk`
+    |
+note: trait bound `DeckCopyRule: Walk` was not satisfied
+   --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:76:9
+    |
+ 76 | impl<T: Walk> Walk for Option<T> {
+    |         ^^^^  ----     ---------
+    |         |
+    |         unsatisfied trait bound introduced here
+    = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+   --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+    |
+ 66 | pub trait Walk {
+    | ^^^^^^^^^^^^^^
+
+error[E0599]: the method `walk` exists for reference `&std::option::Option<DnaMaterialResultScope>`, but its trait bounds were not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:1801:26
+     |
+1801 |             result_scope.walk(c, &format!("{{}}.result_scope", path), "UNCLASSIFIED_STRING");
+     |                          ^^^^ method cannot be called on `&std::option::Option<DnaMaterialResultScope>` due to unsatisfied trait bounds
+     |
+    ::: code\digimon-dsl\src\clause.rs:670:1
+     |
+ 670 | pub enum DnaMaterialResultScope {
+     | ------------------------------- doesn't satisfy `DnaMaterialResultScope: Walk`
+     |
+note: trait bound `DnaMaterialResultScope: Walk` was not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:76:9
+     |
+  76 | impl<T: Walk> Walk for Option<T> {
+     |         ^^^^  ----     ---------
+     |         |
+     |         unsatisfied trait bound introduced here
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+
+error[E0599]: the method `walk` exists for reference `&std::option::Option<DeckCopyRule>`, but its trait bounds were not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:2304:23
+     |
+2304 |             deck_rule.walk(c, &format!("{{}}.deck_rule", path), "UNCLASSIFIED_STRING");
+     |                       ^^^^ method cannot be called on `&std::option::Option<DeckCopyRule>` due to unsatisfied trait bounds
+     |
+    ::: code\digimon-dsl\src\deck_rule.rs:5:1
+     |
+   5 | pub struct DeckCopyRule {
+     | ----------------------- doesn't satisfy `DeckCopyRule: Walk`
+     |
+note: trait bound `DeckCopyRule: Walk` was not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:76:9
+     |
+  76 | impl<T: Walk> Walk for Option<T> {
+     |         ^^^^  ----     ---------
+     |         |
+     |         unsatisfied trait bound introduced here
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+
+error[E0599]: the method `walk` exists for reference `&std::option::Option<CompiledDnaMaterialResultScope>`, but its trait bounds were not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:5092:26
+     |
+5092 |             result_scope.walk(c, &format!("{{}}.result_scope", path), "UNCLASSIFIED_STRING");
+     |                          ^^^^ method cannot be called due to unsatisfied trait bounds
+     |
+    ::: code\digimon-dsl\src\compiled.rs:1598:1
+     |
+1598 | pub enum CompiledDnaMaterialResultScope {
+     | --------------------------------------- doesn't satisfy `CompiledDnaMaterialResultScope: Walk`
+     |
+note: trait bound `CompiledDnaMaterialResultScope: Walk` was not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:76:9
+     |
+  76 | impl<T: Walk> Walk for Option<T> {
+     |         ^^^^  ----     ---------
+     |         |
+     |         unsatisfied trait bound introduced here
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+
+error[E0004]: non-exhaustive patterns: `&CompiledStep::CompleteCostPayment { .. }`, `&CompiledStep::PaySourcePrefix { .. }`, `&CompiledStep::DeleteSelfAndCancelAllMatchingLeaves` and 20 more not covered
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5506:15
+     |
+5506 |         match self {
+     |               ^^^^ patterns `&CompiledStep::CompleteCostPayment { .. }`, `&CompiledStep::PaySourcePrefix { .. }`, `&CompiledStep::DeleteSelfAndCancelAllMatchingLeaves` and 20 more not covered
+     |
+note: `CompiledStep` defined here
+    --> code\digimon-dsl\src\compiled.rs:1643:1
+     |
+1643 | pub enum CompiledStep {
+     | ^^^^^^^^^^^^^^^^^^^^^
+1644 |     /// Runtime-only success marker appended to a declaration-scoped pay_cost.
+1645 |     CompleteCostPayment {
+     |     ------------------- not covered
+...
+1648 |     PaySourcePrefix {
+     |     --------------- not covered
+...
+1987 |     DeleteSelfAndCancelAllMatchingLeaves,
+     |     ------------------------------------ not covered
+...
+2050 |     PlayToBreedingFromHand {
+     |     ---------------------- not covered
+...
+2735 |     TrashSelectedSourcesAsCost {
+     |     -------------------------- not covered
+     = note: the matched value is of type `&CompiledStep`
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern as shown, or multiple match arms
+     |
+5716 ~ digimon_dsl::compiled::CompiledStep::MayDnaDigivolveNow{anchor,partner_filter,target_filter,cost,ignore_requirements,optional,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("MayDnaDigivolveNow"));anchor.walk(c, &format!("{}.anchor", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");partner_filter.walk(c, &format!("{}.partner_filter", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");target_filter.walk(c, &format!("{}.target_filter", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");cost.walk(c, &format!("{}.cost", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");ignore_requirements.walk(c, &format!("{}.ignore_requirements", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@MayDnaDigivolveNow",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@MayDnaDigivolveNow",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
+5717 ~ _ => todo!(),
+     |
+
+Some errors have detailed explanations: E0004, E0599.
+For more information about an error, try `rustc --explain E0004`.
+error: could not compile `digimon-dsl` (bin "implementation_inventory") due to 57 previous errors

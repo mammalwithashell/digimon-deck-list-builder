@@ -92,11 +92,6 @@ steps:
     select:
       cards:
       - EX3-020
-- actor: 0
-  do:
-    select:
-      decline: true
-      sim_only: true
 - actor: 1
   do:
     pass: {}
@@ -106,7 +101,7 @@ assert: []
 expect_ruling:
   q_id: Q7222
   assert:
-  - at: 10
+  - at: 9
     that:
       memory: -3
       p0.field:

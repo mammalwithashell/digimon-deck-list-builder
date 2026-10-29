@@ -515,10 +515,9 @@ fn bt25_089_eot_app_fuse_stacks_hand_result() {
     );
 }
 
-/// OPT lockout: the EoT app-fuse fires once per turn. A second EoT trigger the
-/// same turn installs no selection; after the turn cycles, it can fire again.
+/// Declining the whole optional EOT effect leaves its OPT available (Q1818).
 #[test]
-fn bt25_089_eot_app_fuse_once_per_turn() {
+fn bt25_089_eot_app_fuse_host_decline_preserves_opt() {
     use digimon_engine::action::space::encode_attack;
 
     let mut r = app_fuse_base()
@@ -530,7 +529,7 @@ fn bt25_089_eot_app_fuse_once_per_turn() {
     let host = r.place_on_field(0, "TEST-KABEMON", Some(0));
     r.push_linked_owned(host, "TEST-GOMIMON", 0);
 
-    // First fire → selection installs; decline it (PASS) but the OPT use is recorded.
+    // Q1818: declining the whole may does not consume the OPT.
     fire_eot(&mut r, 0, kazuki.index as usize);
     assert!(
         r.pending_selection_view().is_some(),
@@ -539,11 +538,11 @@ fn bt25_089_eot_app_fuse_once_per_turn() {
     r.execute_action(0, digimon_engine::action::space::PASS)
         .expect("decline");
 
-    // Second fire same turn → OPT lockout, no selection.
+    // The same-turn EOT window can offer the effect again.
     fire_eot(&mut r, 0, kazuki.index as usize);
     assert!(
-        r.pending_selection_view().is_none(),
-        "second EoT app-fuse same turn is locked out by once_per_turn"
+        r.pending_selection_view().is_some(),
+        "declined whole-effect may must remain available this turn"
     );
 }
 
@@ -771,4 +770,79 @@ fn bt25_089_main_link_at_link_limit_offers_the_replacement_choice() {
         r.game.player(0).trash.iter().any(|c| c.handle() == existing[1]),
         "the picked link card is trashed"
     );
+}
+
+
+#[test]
+fn bt25_089_eot_app_fuse_receipt_refunds_only_unexecuted_fusion() {
+    use digimon_engine::action::{
+        mask::build_action_mask,
+        space::{encode_attack, HAND_EFFECT_START, PASS},
+    };
+    for mode in [
+        "success",
+        "result_pass",
+        "no_pair",
+        "lost_material",
+        "lost_result",
+    ] {
+        let mut r = app_fuse_base()
+            .hand(0, &["TEST-APPFUSE", "TEST-APPFUSE"])
+            .deck(0, &["DECK-PAD"; 12])
+            .memory(5)
+            .start();
+        let tamer = r.place_on_field(0, CARD_ID, Some(0));
+        let host = r.place_on_field(0, "TEST-KABEMON", Some(0));
+        if mode != "no_pair" {
+            r.push_linked_owned(host, "TEST-GOMIMON", 0);
+        }
+        fire_eot(&mut r, 0, tamer.index as usize);
+        if mode != "no_pair" {
+            let host_action = encode_attack(0, host.index as u16);
+            assert_eq!(build_action_mask(&r.game, 0)[host_action as usize], 1.0);
+            assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 1.0);
+            let mut host_clone = r.game.clone();
+            host_clone.resolve_selection(0, host_action).unwrap();
+            r.execute_action(0, host_action).unwrap();
+            let mut result_clone = r.game.clone();
+            let action = if mode == "result_pass" {
+                PASS
+            } else {
+                HAND_EFFECT_START
+            };
+            for game in [&mut r.game, &mut host_clone, &mut result_clone] {
+                if mode == "lost_material" {
+                    game.players[0].battle_area[host.index as usize]
+                        .linked_cards
+                        .clear();
+                }
+                if mode == "lost_result" {
+                    game.players[0].hand.clear();
+                }
+                assert_eq!(build_action_mask(game, 0)[action as usize], 1.0);
+                game.resolve_selection(0, action).unwrap();
+                let permanent = &game.players[0].battle_area[tamer.index as usize];
+                assert_eq!(
+                    permanent.effect_activations.values().copied().sum::<u8>(),
+                    u8::from(mode == "success"),
+                    "{mode}"
+                );
+                assert!(game.pending_selection.is_none());
+            }
+        }
+        let permanent = &r.game.players[0].battle_area[tamer.index as usize];
+        assert_eq!(
+            permanent.effect_activations.values().copied().sum::<u8>(),
+            u8::from(mode == "success"),
+            "{mode}"
+        );
+        // Restore an eligible pair so second-trigger availability is meaningful.
+        let second = r.place_on_field(0, "TEST-KABEMON", Some(0));
+        r.push_linked_owned(second, "TEST-GOMIMON", 0);
+        if mode == "lost_result" {
+            continue;
+        } // direct activation count covers rejection
+        fire_eot(&mut r, 0, tamer.index as usize);
+        assert_eq!(r.pending_selection().is_some(), mode != "success", "{mode}");
+    }
 }

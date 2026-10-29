@@ -35,10 +35,10 @@ effects:
   # `condition:` gates the masked action on "If you have [Owen Dreadnought]" (a
   # Tamer permanent named "Owen Dreadnought" on your battle area — DCGO `IsOwen`)
   # AND on an [Elizamon] being on your battle area (the digivolve target must
-  # exist). The Dimetromon-in-trash cost is enforced inside the body: the
-  # mandatory `select_trash` finds no candidate when the trash holds no
-  # Dimetromon, and the `if binding_present` gate then skips the place + digivolve
-  # so the cost is never half-paid.
+  # exist). A Dimetromon must also be present in our trash before the action
+  # is offered (CR 4.3 15-7-4; DCGO CanUseCondition). Otherwise choosing the
+  # Elizamon returns to the identical Main state and permits an endless loop.
+  # The body still checks both bindings before paying the cost and evolving.
   #
   # G-ACTIVATED-DIGIVOLVE-EXECUTION: the `kind: activated_digivolve` alt-path
   # kind has no engine execution route; this clause re-models the same printed
@@ -58,6 +58,13 @@ effects:
             zone: [battle_area]
             kind: digimon
             name_contains: "Elizamon"
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              kind: digimon
+              name_contains: "Dimetromon"
+            n: 1
     process:
       # Step 1: choose which [Elizamon] to digivolve into.
       - select_own_permanent:
@@ -71,7 +78,7 @@ effects:
       - select_trash:
           of: you
           bind_as: dimetromon
-          filter: { name_contains: "Dimetromon" }
+          filter: { kind: digimon, name_contains: "Dimetromon" }
           prompt: "Place a Dimetromon from your trash as the Elizamon's bottom digivolution card"
       # Steps 3-4: only when both the target and the Dimetromon cost are bound —
       # place the Dimetromon as the Elizamon's bottom source, then digivolve.

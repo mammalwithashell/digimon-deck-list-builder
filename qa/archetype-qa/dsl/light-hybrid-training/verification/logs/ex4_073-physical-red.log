@@ -1,0 +1,36 @@
+
+running 13 tests
+test ex4::ex4_073::ex4_073_clause_b_arm2_deletes_opp_digimon_within_play_cost_sum_6 ... ok
+test ex4::ex4_073::ex4_073_clause_b_arm2_excludes_opp_digimon_with_play_cost_above_6 ... ok
+test ex4::ex4_073::ex4_073_clause_b_arm2_silent_noop_when_no_eligible_targets ... ok
+test ex4::ex4_073::ex4_073_clause_b_fires_on_when_digivolving_mandatory_face_up ... ok
+test ex4::ex4_073::ex4_073_clause_b_installs_selection_for_de_digivolve_target ... ok
+test ex4::ex4_073::ex4_073_clause_b_no_fire_when_opponent_has_no_digimon ... ok
+
+thread 'ex4::ex4_073::ex4_073_clause_c_inner_deletes_opp_lowest_play_cost_per_trash' (17472) panicked at code\digimon-engine\tests\cards_behavioral\ex4\ex4_073.rs:537:10:
+pick Lv6 source: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ex4::ex4_073::ex4_073_clause_c_inner_deletes_opp_lowest_play_cost_per_trash ... FAILED
+test ex4::ex4_073::ex4_073_clause_c_player_may_decline_to_trash_any_sources ... ok
+
+thread 'ex4::ex4_073::ex4_073_clause_c_trashes_2_opp_security_when_3_sources_trashed' (14260) panicked at code\digimon-engine\tests\cards_behavioral\ex4\ex4_073.rs:616:39:
+pick Lv6 source: InvalidAction
+test ex4::ex4_073::ex4_073_clause_c_trashes_2_opp_security_when_3_sources_trashed ... FAILED
+
+thread 'ex4::ex4_073::ex4_073_clause_c_trashes_up_to_3_lv6_or_higher_sources' (47140) panicked at code\digimon-engine\tests\cards_behavioral\ex4\ex4_073.rs:471:5:
+both Lv6+ digivolution sources must be selectable; valid=[30, 31, 62]
+test ex4::ex4_073::ex4_073_clause_c_trashes_up_to_3_lv6_or_higher_sources ... FAILED
+test ex4::ex4_073::ex4_073_has_two_alt_paths ... ok
+test ex4::ex4_073::ex4_073_has_two_triggered_clauses_authored ... ok
+test ex4::ex4_073::ex4_073_yaml_compiles_without_error ... ok
+
+failures:
+
+failures:
+    ex4::ex4_073::ex4_073_clause_c_inner_deletes_opp_lowest_play_cost_per_trash
+    ex4::ex4_073::ex4_073_clause_c_trashes_2_opp_security_when_3_sources_trashed
+    ex4::ex4_073::ex4_073_clause_c_trashes_up_to_3_lv6_or_higher_sources
+
+test result: FAILED. 10 passed; 3 failed; 0 ignored; 0 measured; 12742 filtered out; finished in 20.16s
+
+FILTER_EXIT 101

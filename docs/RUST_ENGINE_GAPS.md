@@ -1,5 +1,210 @@
 # Rust Engine Gaps
 
+## Shared start-turn ordering and usage reset [G-ENGINE-START-TURN-CAPTURE-RESET] — resolved, focused verification (2026-10-26)
+
+Due start-turn Delay effects were collected after ordinary start-turn effects
+had resolved. LM-027 Red Scramble and BT24-088 Asuna reproduced the missing
+simultaneous ordering choice. Both now enter one queue before draining.
+Processing conditions are rechecked at activation rather than filtering out
+triggered entries at capture, so another simultaneous effect can enable a Delay.
+Capture advances each surviving carrier's next legal window, including declined
+or unavailable entries, without re-offering it in the same window. DSL bodies retain
+trash-before-processing costs; native bodies retain their legacy cleanup through
+stable-source continuations, including selection and phase resumption.
+
+The same audit reproduced per-turn usage resetting too late: a prior-turn use
+could suppress BT25-077 Bacchusmon after Asuna played a Digimon at turn start;
+alternatively, a successful start-turn use was erased before Main. Per-turn
+reset now runs once before start-turn trigger collection (CR 4.3 15-14-1-5-1).
+The witness combines real pool cards to isolate the shared timing substrate;
+it is not a claim about how often those cards share a tournament list.
+
+Twenty-two timing regressions and all 143 option-flow tests pass, covering the four
+event-kind repairs below, either start-turn order, clone/decline recurrence,
+processing conditions becoming true or false, native cleanup and both OPT
+boundaries. Native cleanup also retains the old permanent's stack identity:
+two valid bounce/replay witnesses pass, including a cloned selection, and fail
+when only those identity guards are removed. Earlier invalid reseating fixtures
+are excluded as evidence. This does not certify out-of-pool opponent-start dispatch or all
+end-turn scheduling APIs. No action or observation contract changed.
+
+## Printed End of Attack carrier scope [G-ENGINE-PRINTED-END-ATTACK-CARRIER] — resolved, focused verification (2026-10-26)
+
+The shared EndOfAttack broadcast activated printed effects on unrelated allies
+and opponents. CR 4.3 15-16-15-1 scopes printed `[End of Attack]` to the Digimon
+that performed the attack, including the host of an inherited effect. Capture
+now records the declared attacker's stable identity; DSL lowering conjoins that
+carrier qualification with authored trigger predicates. Native broad observers
+and scheduled attack-end callbacks retain their existing broadcast semantics.
+
+Failing production regressions covered ST23-04, EX4-074, AD1-015, BT25-041,
+EX11-012, EX12-046, EX13-057 and P-153. The repaired scope and independent
+controls pass in `archetype_audit_regressions.rs` and `end_of_attack_scope.rs`,
+including cloning, field compaction, attacker departure, declaration cancellation
+and a declared attack that cannot complete. Static review covered all 22 printed
+EndOfAttack clauses in the production YAML registry; that review is not 22-card
+behavioral or DCGO certification. No action/tensor contract changed.
+
+This closes the carrier-scope part of the October 4 Glowing Dawn finding below.
+Its separate payability and face-down inherited-source findings are not closed
+by this change.
+
+## Digimon-play event-kind qualification [G-DSL-ALLY-PLAYED-DIGIMON-KIND] — resolved, focused verification (2026-10-26)
+
+`on_ally_played` also observes Tamer plays. EX12-034, EX12-036, EX12-057 and
+BT25-013 omitted the printed Digimon-only qualification, allowing those plays
+to activate their effects. Their YAML now combines `event_target_kind: digimon`
+with the existing controller/color requirements. Twelve production-card tests
+in `training_pool_timing_audit.rs` cover own-Digimon positives, opponent-event
+negatives and Tamer negatives. This repairs four authored clauses; it does not
+narrow the generic event, which is also needed by legitimate Tamer observers.
+
+## End-of-turn DNA success receipts [G-DSL-EOT-DNA-SUCCESS-RECEIPT] — resolved, focused verification (2026-10-26)
+
+The cloneable `may_dna_digivolve_now` partner/result chain did not publish the
+initiating clause's completed-evolution receipt. EX12-001 also authored its
+attack as an unconditional next step, allowing an attack when DNA had no legal
+target or its result disappeared before commitment. Both cases were reproduced
+by failing behavioral tests and a frozen cloud game (seed 44522532).
+
+The result-selection executor now records success only after the DNA primitive
+returns a committed result, and only in continuations belonging to the same
+source card/controller. EX12-001 gates its optional attack with the existing
+`effect_digivolved_any_digimon` predicate; its source resolves to the actual
+carrier after field compaction. No new actions, tensors or automatic choices.
+
+Eight Nyaromon behavioral tests, 25 event-emission tests and four DNA cost/recipe
+controls pass. Coverage includes unavailable target/partner, declines at both
+prompts, invalidated target, rejected commit, successful attack, and cloning
+with a lower-index partner. Full corrected cloud evaluation is recorded in the
+training research handoff when complete; this is not a whole-pool oracle claim.
+
+## Face-down source characteristic filters [G-ENGINE-FACE-DOWN-SOURCE-INFORMATION] — fix authored, verification pending (2026-10-24)
+
+CR 4-7-9 removes card information from face-down cards underneath cards;
+owner inspection under 4-7-10 does not restore those characteristics for rules
+filters. Card-subject predicate evaluation previously read printed metadata,
+allowing a face-down underlying Digimon to pay a Digimon-card-only cost and
+face-down Hybrid sources to satisfy evolution requirements. Both Source and
+Card subjects are affected because source-count aggregates use Card subjects.
+
+Actual RED: `tests/source_face_down_characteristics.rs` fails because the
+face-down source matches `kind: digimon`. A reusable under-top/face-down query
+and central printed-characteristic predicate guard are authored; native GREEN,
+broader predicate controls and BT18-042's card-specific witnesses remain pending.
+This entry does not certify other raw characteristic readers or card admission.
+
+## Nested immediate attack offers [G-ENGINE-NESTED-EFFECT-ATTACK-PROMPT] — resolved, focused controls verified (2026-10-24)
+
+BT18-088 Q3046 and CR 4.3 11-2-4 allow an effect to activate during an attack,
+but prohibit another declaration until that attack ends, including its
+EndOfAttackDrain timing (11-6-2). Execution already rejected nesting; immediate
+effect target enumeration incorrectly offered an illegal target. Legal-now
+attack wrappers now return no choices while pending_attack exists.
+
+End-of-turn keyword activation remains separate: Engage/Execute/Vortex can
+activate while an earlier attack is pending and defer their offer. Their
+activation predicate queries intrinsic potential targets; actual offers still
+use the guarded legal-now path. The first generic guard exposed two existing
+Engage deferral failures, which this separation repairs. No new action IDs or
+observation schema changes were introduced.
+
+TDD: production Q3046 and an independent construct failed before the guard;
+the final focused suite passes 33 tests (both seats, four immediate-attack
+modes, Declared/EndOfAttackDrain, plus existing immediate/Blitz/end-turn mask
+and deferred-keyword controls). BT18-088 passes ten card tests with explicit
+activation versus optional-processing choices. CR 15-14-1-4 counts an accepted
+activation even when processing cannot execute; CR 16-16-3 identifies attack
+permission as optional processing. Independent source review approved the
+separation. This is simulator evidence, not new live DCGO confirmation.
+
+## Complete security-card choices [G-ACTION-COMPLETE-SECURITY-SELECTION] — BLOCKED; coordinated contract plan (2026-10-24)
+
+BT18-037 Lobomon may search its security stack for an eligible card, but
+`select_security` enumerates only indices 0..9 (`MAX_SECURITY`), while recovery
+and the underlying security vector permit larger stacks. The production-card
+diagnostic `tests/light_hybrid_security_capacity.rs` passed its index-9 control
+and failed at index 10 before that deep witness was explicitly ignored.
+Nine shallow behavioral tests do not qualify Lobomon; its ledger remains BLOCKED.
+Top-card-only security movement and full-stack count predicates are unaffected.
+
+The action/tensor migration plan at
+`openspec/changes/support-complete-digivolution-source-choices/` also covers
+owned security paging, physical identity, allowed visibility, clone/generation
+validation and coordinated consumer/model compatibility. No action constants
+or observation contracts were changed in this card implementation.
+
+## Complete digivolution-source choices [G-ACTION-COMPLETE-SOURCE-SELECTION] — BLOCKED; coordinated contract plan (2026-10-24)
+
+Source piles are uncapped, but material and own-source action encodings expose
+only twelve source positions. A legal Tamer at index 12 is unreachable in
+BT18-063 and BT18-076 inherited effects; their shallow behavioral suites do not
+qualify them for training. BT18-042's selected-source security cost has the same
+selection gap. Its completed selected-source placement receipt primitive is now
+verified: ten selected-source and twelve top-placement controls pass, including
+pending replacements, cloning and field/source compaction. A separate regression
+captures a selected card's printed level before movement. These prerequisites
+do not qualify BT18-042 until paging and its own full behavioral tests pass.
+Never cap legal source piles or automatically select the hidden target.
+
+`tests/light_hybrid_source_capacity.rs` produced two passing index-11 controls
+and two failing index-12 cases before those deep witnesses were explicitly
+ignored under this gap. `tests/cards_behavioral/bt18/bt18_042.rs` retains its
+ignored geometry witness. All three card-ledger rows remain BLOCKED.
+
+The repository action/tensor change rule requires a separate coordinated change:
+`openspec/changes/support-complete-digivolution-source-choices/` is validated and
+is applying owned paging, physical identity, generation checks, receipt completion,
+Rust/PyO3/RL/frontend/replay/model compatibility and card requalification. No
+active action or tensor contract was changed in this card implementation.
+
+## Target-hand-card digivolution cost reducers [G-ENGINE-HAND-HOSTED-DIGIVOLVE-REDUCERS] — focused repair verified (Light Hybrid, 2026-10-24)
+
+The explicit `when_digivolving_this` reducer flag hosts a mandatory reduction
+on the incoming physical card only while it is in hand and its digivolution
+cost is being computed. It is distinct from play-only `when_playing_this`;
+conflicting flags are rejected. Field/breeding observers cannot use either
+target-host flag. Existing reduction prohibitions and real payment remain in
+force; this is not a cheaper alternative recipe.
+
+The nested `cost_target_permanent` predicate evaluates the actual evolution
+base(s), including breeding, with the normal predicate/binding validation.
+It is false without an applicable cost context. JetSilphymon can therefore
+check the base Digimon's Tamer sources rather than a neighboring permanent.
+
+TDD: missing-syntax failures observed before implementation; 15 focused
+construct tests pass, with independent spec/quality approval. Coverage includes
+both seats, breeding, hand/trash effect provenance, another physical copy,
+wrong cost-kind isolation, prohibitions, effect-selection affordability, query
+purity and the zero floor. Public `lower_with_formula` signature and action /
+observation contracts are unchanged. Introduced in pack format 0.28.0.
+
+BT7-038 production YAML now passes nine behavioral tests and independent review.
+This is simulator evidence, with no new live DCGO confirmation.
+
+## Source-cost atomic payment and deletion-result receipts — construct regressions (2026-10-22)
+
+`trash_selected_sources_as_cost` now preflights every selected physical source
+before moving any of them. A protected or departed selected source aborts both
+inner and outer tails without partial payment (CR 4.3 §§15-7-1–4). Mandatory
+source pickers offer no decision when fewer eligible sources than their minimum
+remain. A zero-source optional picker still evaluates its trash-cost tail, so an
+unpaid `min_count` cannot execute the outer reward. Ordinary non-cost source
+selection behavior is unchanged.
+
+`delete_bound_permanents` and `delete_for_cost_reduction` now use the existing
+resumable deletion receipt path. Result predicates log only completed deletions;
+Evade prevention is not a deletion result. Variable cost reduction captures the
+payer's printed play cost before removal and credits it only after that physical
+payer's matching receipt completes, including across replacement prompts.
+Tokens count as Digimon; a Decoy substitute remains outside the original effect's
+receipt. No action or observation contract changed.
+
+Behavioral coverage: `tests/dsl/constructs/cost_target_event.rs`, including a
+mixed two-target batch whose high-DP target Evades, actual play-cost payment,
+atomic source payment, below-minimum and zero-source cases. These are focused
+engine/DSL tests, not live DCGO or complete production-card certification.
+
 ## Effect-play target eligibility separates controller and destination [G-DSL-EFFECT-PLAY-CROSS-OWNER-TARGETS] — focused repair verified; live pending
 
 BT8-097 Q4663/Q4664 distinguish the player causing an effect play from the
@@ -1889,18 +2094,63 @@ Digivolving] trims "both players' security stacks so they have 3 cards left" â�
 - **Cards closed:** BT21-084, BT23-079, P-241, BT24-087 (trash + System/Life/Transmutation filter) â€” all PARTIALâ†’IMPLEMENTED. **BT25-089** had its app-fuse rider shipped too, but remains PARTIAL on the *separate* `G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES` DSL gap (the [Main] link source "from your Digimon's digivolution cards"), which is unrelated to App Fuse.
 - **Tests:** `tests/cards_behavioral/app_fuse_primitive.rs` (8 primitive tests) + `tests/app_fuse_commit.rs` (zone-parameterized commit) + per-card app-fuse tests on the 5 cards. Spec: `docs/superpowers/specs/2026-06-13-effect-initiated-app-fuse-design.md`; plan: `docs/superpowers/plans/2026-06-13-effect-initiated-app-fuse.md`.
 
-## Effect-initiated DNA digivolve does not pay the result card's printed DNA cost  [G-ENGINE-DNA-PRINTED-COST]
-**Status: RESOLVED (2026-07-03, DNA workstream).** `lower_dna_cost` routes `cost: printed` through printed-cost lookup (pair/hand-partner/field-trash variants); cost 0/free users unaffected. Tests: tests/dna_printed_cost_dsl.rs (4).
-Surfaced by: EX6-072 Mega Digimon Assembly! (migrate-examples-to-dsl, 2026-06-14); PRE-EXISTING, shared by EX3-008 (`cost: printed`) and BT17-095.
-`effect_initiated_dna_digivolve` / `effect_initiated_dna_digivolve_hand_partner` take a `cost: CostDelta`; `cost: printed` lowers via `lower_cost_delta` to `Reduce(0)` (play_digivolve.rs â€” "DNA printed-cost lookup is not available here"), so the result card's printed `dna_costs` are never deducted from memory. DCGO passes `payCost=true`.
-Fix: a `cost: printed`/`dna_printed` that resolves the result card's printed DNA digivolution cost and pays it for the effect-initiated DNA verbs.
-Status: open (pre-existing; affects all effect-initiated DNA cards).
+## Effect-initiated DNA printed cost [G-ENGINE-DNA-PRINTED-COST] — RESOLVED
 
-## Effect-initiated DNA digivolve does not validate the result card's printed recipe  [G-ENGINE-DNA-RECIPE-ENFORCEMENT]
-**Status: RESOLVED (2026-07-03, DNA workstream).** Commit-time recipe backstop on all three effect-initiated DNA verbs (both orderings, slash-colours) + mask-level exclusion already via dna_pair_can_reach_hand_card (pinned). Also fixed the latent card_store fingerprint bug (dna_costs content now hashed).
-Surfaced by: EX6-072; PRE-EXISTING, shared by BT17-095 / EX3-008.
-`Game::dna_digivolve_hand_partner_inner` (game/mod.rs:1895) merges the two chosen materials unconditionally â€” it does NOT validate them against the result card's printed DNA recipe (`jogressCondition`). DCGO gates with `CardSource.CanJogressFromTargetPermanents` (each material vs the result's `jogressCondition.elements[i].EvoRootCondition`). DSL selection filters are static and cannot depend on the dynamically-chosen result, so enforcement must live in the engine primitive (validate/abort illegal pairings; ideally restrict the candidate set).
-Status: open (pre-existing; affects effect-initiated DNA cards).
+Printed-cost lookup shipped in the 2026-07-03 DNA workstream. `lower_dna_cost`
+reads the selected result's printed cost for field-pair, hand-partner and
+field-trash variants. Existing evidence: `tests/dna_printed_cost_dsl.rs`.
+The October source audit confirms this implementation; EX6-072's old comment
+that printed cost always becomes zero is stale. The completed payment lifecycle is
+recorded separately below.
+
+## Effect-initiated DNA recipe backstop [G-ENGINE-DNA-RECIPE-ENFORCEMENT] — RESOLVED SLICE
+
+Commit-time recipe checks shipped in the 2026-07-03 DNA workstream and accept
+both material assignments and slash colors. Hand-partner commit rejects a
+result used as its own physical material. This does not establish that every
+DSL selection offers only legal and payable continuations. EX6-072 now uses
+the separately tested correlated eligibility and declaration capability below.
+
+## Effect breeding evolution [G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET] — RESOLVED HAND/TRASH SLICE (2026-10-22)
+
+The ordinary effect-evolution declaration now pins the breeding host's zone,
+physical identity and top through routes, clone/resume, commit, one draw,
+result/outer tails and breeding-appropriate event suppression. Eight shared
+regressions plus the full BT20-018/056/087 tests pass; ordinary effect evolution
+controls remain green. The initiating free/reduced policy applies, while
+ordinary field cost effects and evolution triggers do not activate in breeding.
+The separate Security-removal commit pipeline remains unsupported for breeding;
+both route-only/cost-aware predicates and direct execution reject it without
+mutation. This does not block the measured hand/trash consumers. No action or
+tensor change, or new live oracle confirmation, is claimed.
+
+## Effect DNA hand-partner declaration [G-ENGINE-EFFECT-DNA-HAND-PARTNER-DECLARATION] — RESOLVED HAND-PARTNER SLICE (2026-10-22)
+
+The typed hand-partner declaration now retains both materials and the result in
+original zones, physical identities and tops, every matching printed recipe and
+orientation, cost policy, payer, effect/DNA context and clause continuations.
+The field material's owner supplies both hand cards and pays; the initiating
+effect's controller is retained separately for immunity and replacement causes.
+`dna_hand_candidate` correlates the result, field and partner selections with
+clone-only payment probes. Hand materials stay inactive in hand until merge.
+Interactive reducer decisions and replacement windows revalidate those pins;
+stack order, one payment/draw and DNA result/trigger context survive resume.
+
+Runtime evidence: `effect_dna_hand_declaration` (15),
+`effect_dna_candidate_masks` (7), `effect_dna_nested_payment` (5),
+`effect_dna_observer_context` (3), and `effect_dna_delay_replacement` (4) all
+pass. Controls include equal-cost orientations, inactive payer, selected
+physical duplicates, stale origins, scalar observers, three-deep payment
+ancestry, parked DSL payment provenance and failed replacement cleanup.
+EX6-072's 12 full-card tests and BT17-095's four actual Delay compatibility
+controls pass. Independent spec and quality re-reviews approve the fixes.
+
+Interactive `BeforePayCostObserve` bodies remain the pre-existing unimplemented
+primitive documented in `game_actions/cost.rs`; scalar observers and interactive
+reducers are covered here. Related field-pair and trash-partner cards are not
+individually recertified. No action/tensor expansion or new live oracle
+confirmation is claimed. See `remaining-meta-repairs.md` under the construct
+campaign research directory for cumulative verification and admission.
 
 ## Store-champs June-2026 audit â€” Three Musketeers BeelStarmon + Galacticmon (2026-07-02)
 
@@ -2317,6 +2567,8 @@ Surfaced by BT19-099 The Wicked God Descends! clause 2 ("[All Turns] When any of
 - **Offer gating (DCGO-verified):** the accept prompt installs **even with zero eligible reward candidates** â€” DCGO's `CanUseCondition` (BT19_099.cs:205-219) checks only on-battle-area + subject-match + Delay-declarable; the candidate scan (BT19_099.cs:275-277) is post-self-trash inside `ActivateCoroutine`. Accepting with zero candidates trashes the Option, plays nothing, and the leave still completes. (Note: ST20-14's engine preflight gates its offer on a hand candidate; its DCGO `CanUseCondition` (ST20_14.cs:83-87) likewise has NO candidate check â€” that pre-existing divergence is ST20-14-scoped and untouched here.)
 - **Tests:** `tests/dsl/delay_union_play_flow.rs` (3 â€” engine contract with synthetic cards) + `tests/cards_behavioral/bt19/bt19_099.rs` (Clause B suite; `bt19_099_replacement_delay_then_plays_wicked_god_at_cost_plus_one_free` is the defect regression).
 - **Verdict:** RESOLVED; BT19-099 fully authorable via the DSL (no raw_rust).
+- **Original-window correction (2026-10-26):** the historical `handled()` + owned-leave workaround above is superseded by `fix-deletion-event-identity`. Hand/union Delay rewards now resolve before the observed departure, then the original window resumes its remaining candidates and original cause/destination. Stable incarnation keys prevent field-compaction collisions and distinguish replayed cards; fresh deletion events isolate their activation guards. The old workaround's `OwnEffect` re-deletion and premature departure were not faithful timing. Native evidence: 13 replacement regressions (including 24 Arrival/Decode branches) and 88 selection tests pass; details and broader validation are in `docs/superpowers/research/2026-10-26-deletion-event-identity.md`. Repeated non-deletion event scoping and the separately documented cross-timing prevention limitations are outside this repair.
+- **Hand-only continuation repair (2026-10-25):** game 850 from the cloud self-play audit exposed the analogous hand-only flow overwriting a nested leave-replacement prompt before installing its reward. `install_delay_play_from_hand_after_paid` now parks the reward through the existing clone-safe continuation until that inner selection finishes, matching the union-zone flow. The regression in `tests/selection/selfplay_phase_resume.rs` replays the recorded prefix and covers accepting/declining the inner replacement and reward, cloned resumption, and return to playable Main or a terminal game. This is engine regression evidence, not DCGO certification.
 
 ## G-ENGINE-SECURITY-STACK-END-OF-YOUR-TURN â€” `EndOfYourTurn` never fanned out to the persistent security stack (RESOLVED 2026-07-04)
 
@@ -5390,6 +5642,7 @@ no dedicated clause test in `dna_result_new_card.rs`.
 
 ### An unpayable optional processing condition is still offered, and accepting it runs the effect for free  [G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED] — RESOLVED (2026-10-17, 82a2bf29c)
 
+- **Deletion-payment follow-up (2026-10-27):** selected `delete_permanent` followed by `cancel_replacement` now uses the existing exact physical deletion receipt before preventing the original departure. The shared selection/preflight path rejects effect immunity and passive deletion restrictions only for this payment shape; ordinary effect targets remain selectable. Printed extrema are computed first, so an immune lowest-DP Digimon does not make a higher-DP one payable. Optional prevention and redirection remain executable attempts, but neither an undeleted payer nor a deleted substitute pays the condition. Regressions in `tests/replacements/deletion_payment.rs` cover EX11-012 Medusamon, BT24-018 Styracomon, clone continuations, controller attribution, and the unchanged seed-44524201 diagnostic recording through action 93. This closes the observed zero-DP Medusamon/immune Petrification Token loop; non-deletion replacement costs keep their existing handling.
 - **Rule:** §15-7-4 (Ver. 4.3, **reversed** from 3.6) "If executing an optional processing condition's contents isn't possible, then the player can't choose to execute them. (Example: … "[When Attacking] By trashing your top security card, 1 of your opponent's Digimon gets -5000 DP for the turn," and the player doesn't have even 1 security card, then they can't choose to execute that condition's contents.)" §15-8-4-4-1: an activation-type effect with an optional processing condition can only be declared while the condition can be performed. §15-7-2: if the condition isn't executed, nothing after it is. Owner ruling 2026-10-10 #6: never offer a trigger whose condition can't be paid. Ver. 3.6 let the player choose the unpayable condition; the engine still behaves that way.
 - **Ours:** a printed "by X, Y" clause is `optional: true` with X as its leading steps; nothing marks X as the condition, so neither the prompt nor the mask asks whether X can be executed.
   - Trigger-type: `code/digimon-engine/src/effect_queue.rs` drain, single-trigger branch — `needs_pre_cost_prompt` (`:1577`) checks only `activation_cost_fn.is_some()` + the clause condition (not `ActivationCostKind::is_payable`), and the outer accept/decline prompt (`:1649` → `queued_effect_wants_outer_optional_prompt`, `:4692`) consults `outer_optional_guard`, which `dsl_cards/lower_triggered.rs::first_step_candidate_guard` (`:664`) builds only for a leading select step (`_ => None` at `:722` for `trash_top_security`, memory payment, `suspend`, …). Observed (`WA_TRASH_SEC_MINUS5000`, 0 security): the `Replacement` "You may activate …" prompt is parked; accepting trashes nothing, then the -5000 DP target pick follows and the payload resolves (the 7000 DP defender loses the battle it should have won).
@@ -6187,6 +6440,7 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
   - every later step depends on that pick: it names the binding, or it is an `if binding_present` on it.
 
   The rewrite is: the pick (continuing on PASS for permanent picks), then `if binding_absent: <pick> then refund_opt else <rest>`.
+- **Explicit Main-declaration correction (2026-10-25):** BT26-012 had an authored `refund_opt` after declining its hand pick, despite the field Main action already declaring activation. Removed that refund under CR 4.3 15-14-1-1/4. The per-card test now requires spent OPT with hand/memory unchanged and another copy still available; the recorded cloud game-340 prefix verifies the reopen/cancel cycle is unavailable in both original and cloned states. This does not change the folded optional-trigger refund behavior above. The local DCGO C# refund conflicts with the rule; no installed-DCGO replay is claimed.
 - **Clauses the rewrite covers:** 26 production clauses inherit it, listed and pinned by `dsl -- folded_may_opt_refund::production_inventory_matches_the_reviewed_list` (the reproducible filter is that function plus the test). BT21-001 joins through a card fix: its "may digivolve" is now `optional: true` with the hand pick gated on the Digimon pick (DCGO `isOptional: true`).
 - **Tests:**
   - `rules_conformance -- ch15_14_effect_icons::{declined_you_may_effect_keeps_its_once_per_turn, activated_you_may_effect_spends_its_once_per_turn, declined_optional_cost_of_an_activated_effect_spends_its_once_per_turn}`. The first was red before. §15-14-1-4 is now `proven`.
@@ -6216,8 +6470,8 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
   - **Production clauses:** BT25-028#2 and EX8-074#4 ("you may activate 1 of this Digimon's [When Digivolving] effects", DCGO `isOptional: true`), pinned by `dsl -- folded_may_opt_refund::production_then_may_inventory_matches_the_reviewed_list`.
   - **BT25-028 card change:** its DNA half now has one decision, the first-Digimon pick (`may_dna_digivolve_now` is no longer `optional`). **Divergence from DCGO (re-review N2):** DCGO (`BT25_028.cs:142-181`, `DNADigivolveEffects.cs:456-610`) asks a skippable GraceNovamon hand pick, shown only when a DNA-able GraceNovamon is in hand and there are 2 or more Digimon, then a skippable roots pick. Its `executed` is set only when the DNA succeeds, so every failed DNA path refunds the use. Ours offers the `dna_anchor` pick over any own Digimon, even when no DNA is possible. Picking it then does nothing but spends the use, which DCGO never charges. That choice is dominated, and still costs the [Once Per Turn]. Fix shape: gate the refund on the DNA result (a DNA result in the clause's result log), or constrain `dna_anchor` to Digimon that have a partner and a reachable GraceNovamon (widen the DSL). OPEN, minor, non-blocking.
   - **Tests:** `rules_conformance -- ch15_14_effect_icons::then_may_effect_with_both_halves_declined_keeps_its_once_per_turn` (red before) and `::then_may_effect_with_one_half_executed_spends_its_once_per_turn`; `cards_behavioral -- bt25_028_all_turns_both_halves_declined_keeps_once_per_turn` (red before) and `bt25_028_all_turns_one_half_executed_spends_once_per_turn`.
-- **BT25-089 is held back from training:** `qa/qa-reports/validated_cards_dsl.json` row is set to `PARTIAL`, `gap_kind: engine`, naming this residual, so card admissibility rejects it as `failed_verdict` until the app-fuse result signal exists.
-- **Blocks training:** yes (BT25-089 only). The unread per-card list above may add cards once read.
+- **Historical 2026-10-21 hold (closed by the 2026-10-22 followup below):** `qa/qa-reports/validated_cards_dsl.json` row is set to `PARTIAL`, `gap_kind: engine`, naming this residual, so card admissibility rejects it as `failed_verdict` until the app-fuse result signal exists.
+- **Followup:** the BT25-089 result/refund residual is closed below. The unread per-card list above still needs separate review; this does not close the whole audit.
 
 ### Declining Callismon's "You may suspend" skips the "Then, ... can't unsuspend" lock  [G-CARD-BT25-058-DECLINED-SUSPEND-SKIPS-THEN-LOCK] — OPEN (2026-10-21, Plan 2 Task 5b exam triage)
 
@@ -6261,3 +6515,248 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
 - **Residuals (fix round 1 review):**
   - **`EndOfTurnAction` window now comes after the non-turn player's effects.** The window (`MayAttack` grants, registered end-of-turn DNA routes) models turn-player end-of-turn actions. The non-turn player's [End of Opponent's Turn] effects now resolve before it, so an attacker using that window sees, for example, a played Ravemon before declaring. §15-4-3-5 orders the turn player's effects first. The window itself is a pre-existing approximation of effects that should pend in the pool.
   - **Three shared-change claims have no test yet.** [End of Opponent's Turn] effects now trigger again after a §6-6-4 swing-back, resolve before the ending player's "for the turn" expiries, and resolve before that window. Deferred.
+
+
+## Identity/state predicate follow-ups (2026-10-22)
+
+- **G-ATTACK-PREDICATE-DURING-ATTACK-2026-10-22 — open.** `can_attack`
+  enumerates targets without consulting `pending_attack`; CR 4.3 §11-2-4
+  prohibits a new attack declaration during an attack. The execution entry
+  already rejects a live `pending_attack` in `combat/mod.rs`; align the offered
+  `may_attack_now` choice with that execution gate in a separate combat task.
+- **G-PLAY-COST-ABSENT-VS-ZERO-2026-10-22 — open.** Digi-Egg CardData uses 0
+  for absent play cost, so `play_cost: { op: lte, value: N }` can match eggs.
+  Represent missing information or require an explicit kind guard; do not
+  conflate a missing cost with a printed zero (§§2-6-1, 2-7-1).
+- **G-CARD-NUMBER-ALIASES-2026-10-22 — open.** `card_number_is` matches only
+  printed IDs. RB1-004, RB1-006 and RB1-007's Rule card-number aliases are not
+  modeled (CR 4.3 §2-3-4-5). Alias metadata and all equality consumers need a
+  coordinated implementation.
+- **G-SOURCE-COUNT-FACE-DOWN-2026-10-22 — reopened; rule-based fix authored, verification pending (2026-10-24).**
+  `source_count` reads printed identity even when a source is face down.
+  CR 4.3 §4-7-9 says that information cannot be referenced. BT25_085.cs
+  `PermanentWithTrashableCard` uses `DigivolutionOrLinkCards.Any(CanTrashCardSource)`;
+  `CanTrashCardSource` reads `IsOption`, which is `CardKinds.Contains(Option)`
+  and `CardKinds` reads `_cEntity_Base.cardKind` (CardSource.cs:3537,3606).
+  The selection also sets `canLookReverseCard: true`. The earlier fix-or-file
+  decision deferred this conflict and pinned research row D; that historical
+  evidence remains relevant. The current user-supplied source priority makes
+  printed text and rules authoritative over DCGO, so the Light Hybrid change
+  now follows CR 4-7-9. Actual RED confirms a face-down source passes a printed
+  Digimon filter. See G-ENGINE-FACE-DOWN-SOURCE-INFORMATION above for the shared
+  guard and pending verification. DCGO disagreement is preserved, not treated
+  as oracle confirmation or grounds for admitting the affected cards.
+
+### Q3185: CannotSuspend and attacks without suspending — resolved 2026-10-22
+
+Official Q3185 (BT19-101, 2024-09-20; local `data/card_qa.json`) explicitly
+allows an effect-granted attack without suspending when that Digimon cannot
+suspend. The shared `can_attack_without_suspending_inner` now honors this
+exception; ordinary attack declarations retain their CannotSuspend restriction.
+Both attack-choice masks and execution use this shared eligibility check.
+DCGO `Permanent.CanAttackTargetDigimon` agrees by consulting CanSuspend only
+when `withoutTap` is false. Identity/state construct row 8 and a real optional
+attacker/target selection regression cover the exception and attack completion.
+The execution regression also exposed attack counters being skipped with
+suspension. Committed attacks now increment both permanent and player counters
+regardless of suspension; the existing declaration-committed guard prevents
+resumed attacks from counting twice. Rejected declarations do not count.
+
+## Security-stack construct audit (2026-10-22)
+
+- **G-ENGINE-ON-LOSE-SECURITY-DEFENDER-ONLY-2026-10-22 — open.**
+  `effect_queue.rs` dispatches `OnLoseSecurity` only to the removed card's
+  security-scoped clauses and the stack owner's battle area. BT23-102 Mastemon
+  says "When security stacks are removed from" (either stack); DCGO
+  `BT23_102.cs:337` uses `CanTriggerWhenLoseSecurity(hashtable, null)`.
+  Add an explicit either-stack observer variant; do not globally widen the
+  existing timing: BT24-101, BT25-044, BT25-088 and BT26-089 correctly observe
+  only their own stack. The construct tests pin that current narrower contract.
+- **G-ENGINE-SECURITY-PLAY-CANCEL-ORDER-2026-10-22 — open.** A security card
+  chosen below the top and parked on a would-play replacement is restored to
+  TOP if later cancelled (`PendingWouldPlayOrigin::SecurityTop`,
+  `game_actions/misc.rs::restore_pending_would_play_origin`). Immediate refusal
+  restores its original index. Preserve the original index in the pending
+  origin and restore there; security order is fixed (CR 4.3 §3-7-3).
+- **G-ENGINE-SECURITY-SELECTION-TEN-SLOTS-2026-10-22 — open.**
+  `effect_context/selections.rs::select_security` addresses only indices
+  `0..min(len, 10)` from the bottom. Above ten cards, the top cards cannot be
+  selected. Requires a separately planned player-visible choice contract;
+  the construct campaign does not expand action/tensor contracts.
+
+
+## Play/digivolve/link construct audit (2026-10-22)
+
+- **Resolved: hatch observer ordering.** `Game::hatch` now uses
+  `maybe_drain_effect_queue`: OnHatch observers wait until the enclosing effect
+  body completes (CR 4.3 15-8-3-2). The construct fixture hatches, gains memory,
+  then the observer sets memory to 5; the prior nested drain ended at 6.
+- **Resolved: leading optional DNA offers.** `MayDnaDigivolveNow` supplies its
+  own decline path. The clause offer guard and runtime partner picker share
+  `dna_partner_has_target`, requiring a compatible filtered hand target. An
+  optional clause no longer offers an extra accept prompt or an impossible
+  action. Named anchors remain resolved by the running body, not guessed by
+  the read-only leading-step guard.
+- **G-ENGINE-WOULD-LINK-WINDOW-EFFECT-LINKS-2026-10-22 — open.** Player-action
+  standing/hand Digimon links park `pending_digimon_link`, offer WhenWouldLink
+  before payment, and resume after accept/decline. Effect links and Plug-In
+  links do not open this window or populate that pending state. Therefore
+  BT25-004/BT25-045 cannot reduce the cost of BT25-089's Main effect link.
+  Add a shared resumable link declaration before cost payment, preserving the
+  source zone and host identity, rather than bypassing the window in effect
+  helpers. Construct coverage of player-action links does not close this gap.
+- **G-ENGINE-APP-FUSE-PROCEDURE-2026-10-22 — open.**
+  `Game::commit_effect_app_fuse` does not draw the procedure card required by
+  CR 4.3 8-4-3-3, assumes cost zero instead of the selected path's cost
+  (8-4-3-2), and consumes all linked cards. DCGO's `SetAppFusion` carries the
+  host and chosen link index into `PlayPermanent`; its `isEvolution` commit
+  draws one (`Script/CardController.cs:1762`). The material/link retention
+  scope for multiple links remains a rules question; do not certify the
+  current all-links consumption. This campaign ports current primitive
+  coverage without treating its behavior as complete App Fusion fidelity.
+- **BT25-089#2 OPT result signal — implemented 2026-10-22 followup.**
+  `app_fuse.bind_as` is an optional success-only Card receipt. It clears at
+  entry and survives both callback and typed resume paths. Receipt-bearing
+  PASS paths continue to the authored tail; no eligible pair or a rejected
+  stale selection leaves it absent. BT25-089 explicitly refunds its whole-
+  effect optional EOT use when the receipt is absent (Q1818; CR 15-14-1-4;
+  DCGO `RemoveUse` when no eligible fusion was executed). A successful fuse
+  keeps the use. No automatic refund is applied to other effects with earlier
+  completed processing. Host incarnation and current route/result are
+  revalidated before commit. This closes the specific result/refund residual;
+  the separate procedure and effect-link-window gaps above remain open.
+- **Unmeasured:** armed player digivolve-cost reducers' applicability to DNA
+  and App Fusion (CR 4.3 8-2-2-5, 8-4-2-3); DNA requirement-ordered stacking.
+  The construct suite does not assert or repair these contracts.
+
+## Zone-movement construct audit (2026-10-22)
+
+- **G-ENGINE-ZONE-CARD-SELECTION-RANGES-2026-10-22 — open.**
+  `dsl_cards/step/zone_cards.rs::encode_zone_card` drops otherwise legal
+  candidates outside the existing action ranges: hand index >= 30, trash
+  index >= 45, stack/link combined index >= 12, or field index >= 14.
+  `select_zone_cards` can therefore omit legal choices. A coordinated
+  action/tensor contract plan is required; this audit changes neither.
+- **G-DSL-UNION-RETURN-N-SIMULTANEITY-2026-10-22 — open.**
+  EX7-043 encodes printed "return 3" as three sequential
+  `select_union_zone` / `return_union_bound_to_deck` pairs. The primitive
+  has a single-card receipt; this does not express one simultaneous move
+  (CR 4.3 3-1-3-3), so return observers can see three events instead of one
+  (15-5-2). Construct coverage does not certify that production sequence.
+- **G-DSL-DELETE-PERMANENTS-DUPLICATE-DISPATCH-2026-10-22 — maintenance.**
+  `permanent_mutations.rs` still has an unreachable `DeletePermanents` arm
+  that writes snapshots without the actual-deletion receipt. The dispatcher
+  first expands this variant in `deletion_results.rs`; that live path owns
+  deduplication, immunity, replacement windows and completed receipts.
+  Remove the obsolete fallback separately to avoid diverging semantics.
+- **Resolved locally:** field-Option relocation now captures the recipient's
+  battle identity before removing the Option and resolves it after field
+  compaction. Selected trash-list bottom return now preserves first-picked
+  deepest ordering and the returned receipt's selection order. Grouped
+  returns now collapse only their own `OnLeaveField` observer batch with
+  matching members retained (15-5-2); separate steps remain separate events.
+  `OnReturn` is an unused engine enum, not a DSL timing; the return observer
+  regression uses the genuine `on_leave_field` dispatch for returned objects.
+
+- **G-ENGINE-SEQUENTIAL-DELETION-OBSERVER-COMPACTION-2026-10-22 — open.**
+  In the Task 6 synthetic two-step deletion probe, an `on_any_deletion`
+  witness placed after both victims produced net zero memory instead of
+  two gains for its controller. With the witness before the victims, both
+  pending events survive and require trigger ordering. The batch variant
+  works with the witness after the victims. Queued observer identity across
+  consecutive compactions remains unresolved; the event-multiplicity
+  contrast anchors its witness before the victims to isolate batching.
+
+
+## Protection construct follow-up (2026-10-22)
+
+- **Resolved: formula DP-minus immunity.** `live_declarative_formula_sum` now applies the same controller-scope gate as materialized negative `ChangeDp` entries, per negative contribution (including linked formulas). Positive contributions and own effects remain applicable. Construct evidence: `tests/dsl/constructs/protection.rs`; this does not certify every production card.
+- **Resolved: stack grant omitted individual-source returns.** `grant_stack_protection_from_opponent_effects` now installs opponent-scoped `ImmuneFromStackReturn` alongside stack-trash and whole-permanent return protection. DCGO `BT26_029.cs:115` covers stacked-card hand/deck returns. Deletion still trashes the whole stack (CR 4.3 §§4-7-8, 4-16-3); this grant is not deletion immunity.
+- **Resolved: unpayable source suspension prevention offered.** Leading `suspend_and_cancel_all_matching_leaves { target: source }` now uses `SuspendSource` payability, including already suspended and CannotSuspend. CR 4.3 §15-7-4 reverses 3.6: an impossible optional processing condition cannot be chosen. Authored chosen-target filters remain responsible for qualifying their selectable payers.
+- **Open: Any-scoped bulk source-trash inconsistency.** `EffectContext::trash_all_sources` checks controller != target.player before stack immunity; individual source trash consults Any-scoped immunity for both controllers. This is a source-inspection finding, not a new behavioral certification. The opponent-scoped grant tested here is unaffected; a separate bulk-source-trash fix needs its own RED case.
+- **Unmeasured: protection scope after control change.** Narrow DP protection compares the effect controller against the protected permanent's current controller at read time. Control change can therefore flip own/opponent applicability. No control-change experiment was run in this construct task; do not treat this as a demonstrated rules defect.
+
+
+### Simultaneous non-batch leaves lose plural prevention [G-ENGINE-PLURAL-PREVENTION-NONBATCH-LEAVES] — OPEN (2026-10-22)
+
+Confirmed construct probe: an opponent effect places every opposing Digimon under its source via a `for_each` over the battle area and `place_as_bottom_source`. With two Guarded Digimon and an unsuspended once-per-turn payer using `suspend_and_cancel_all_matching_leaves`, one acceptance keeps only one Guarded Digimon; the other leaves (field count 2, expected 3 including payer). CR 4.3 §§3-1-3-3 and 15-8-5-4 require all matching simultaneous subjects of that cause to share prevention. Native deletion and hand/deck departure batches pass their plural tests; the gap is leave paths outside those windows. A reusable simultaneous departure window is required, not a one-card workaround.
+
+The full expected-behavior reproducer is parked at `.superpowers/sdd/2026-10-22-construct-tests/task7-nonbatch-reproducer.rs`, test `plural_nonbatch_simultaneous_tuck_probe`; observed failure is in `task7-expanded.log` in that directory. These are ignored local diagnostic artifacts. Per campaign plan the failing probe was removed from the active suite without changing its expected assertion; no ignored test or current-bug expectation is used as coverage. Security-placement and direct permanent-trash plural behavior remain unmeasured, not independently proven failures.
+
+
+## Assembly offers an unpayable decline [G-ASSEMBLY-REQUIRED-PAYMENT] - RESOLVED (2026-10-23)
+
+Exact replay of English-meta seed 42522129 exposes a declaration loop: at zero memory, EX13-060 Alphamon (printed cost 13, Assembly -5) is played from hand slot 5, PASS 62 declines its first material prompt, the unpaid card returns unchanged to hand, and the policy redeclares it until the step limit. Full scenario snapshots before consecutive declarations are identical. This is an engine legality error, not evidence that the policy must learn to avoid a legal decline.
+
+CR 4.3 section 1-3-11-4 requires completing as much Assembly processing as needed to pay a declared play; optionality in 7-3-2-9 does not permit an unpayable branch. The local DCGO `SelectAssemblyClass.cs` uses unconditional `canNoSelect: () => true` and is not followed where it conflicts with the official rule. Official source: https://world.digimoncard.com/rule/pdf/general_rule.pdf.
+
+`install_assembly_element` now makes the zero-pick gate optional only if the pending cost without Assembly is payable by that player, using `PlayCostAdjustments::final_cost` and `can_pay_memory_for`. The exact flag is also stored in `NonDslCountCappedStep` for clone/resume. Effect reductions and assigned bases are included. All material choices remain explicit; decline remains legal when the unreduced payment is affordable. The broad greedy material-preference workaround was removed.
+
+Evidence: the new required-payment Rust regression fails on the old engine; 36 `dsl::assembly_play` tests and 28 policy/cast-time/assignment controls pass after repair. Controls cover exact memory boundary, explicit legal material actions, cloned states, full-cost decline, effect reductions and assigned costs. Logs and original replay trace are under `runs/2026-10-23-assembly-payment-fix/` and `runs/2026-10-23-english-search/assembly-loop-trace.json`. This is simulator evidence, with no new DCGO confirmation or action/tensor contract expansion. The partial v2 search check is invalidated and preserved; full-run replay/restart evidence is recorded in the English search pilot report.
+
+## Token returned to hand is offered as a play the engine refuses [G-ENGINE-TOKEN-RETURNED-TO-HAND] — OPEN (2026-10-27)
+
+Found by the seat-balanced head-to-head panels of the cap-randomization
+generation experiment (`code/tools/policy_head_to_head.py`, seed 54207751,
+Toho Braves (P1) vs SW (P2), both the parent and the `full` child as P2 hit it
+on turn 13). Repro: `qa/engine-faults/2026-10-27-token-in-hand/recording.json`
+(`DigimonEnv.get_recording()` format, 286 actions; `context.json` has decks and
+seed). View the state with
+`digimon-engine-cli --pool implemented --cards-json data/cards.json replay <rec> --step 278 --show hand --player 1`.
+
+Symptom: P2's hand holds `TOKEN_KOTENKEN` (Kotenken Token, play cost 0) at
+hand index 9; `--show actions --player 1` lists "Play Kotenken Token from hand
+9" as legal, and `Game::step` refuses it with no state change, so the policy
+re-picks it until the no-op tripwire (`NoOpLoopError`, 8 repeats) ends the
+game. Board at that point: P1 Kaguyamon (EX12-065, suspended, attacked this
+turn), MarineBullmon; P2 Kunlun (BT26-104), Saneiketsu Invitation (EX12-071)
+as a placed option.
+
+Two defects, either of which would close the loop:
+
+1. **A token reached a hand.** CR 4.3 4-21-5: when a token leaves the field it is removed from
+   the game; it never enters hand, deck, trash or security. Some return-to-hand/bounce path (candidates on this board:
+   Kaguyamon EX12-065, Saneiketsu Invitation EX12-071, MarineBullmon) moved the
+   token card object into P2's hand instead of discarding it. The zone-move
+   facade for bounce should drop tokens (`is_token`) rather than append them.
+2. **Mask/execution mismatch.** The action mask treated the hand entry as a
+   playable 0-cost Digimon while play execution refused it. Whatever rule
+   execution applies (token card data not playable from hand) must be applied
+   by the mask too; rule 3 forbids the agent side from papering over this.
+
+Not scored in the experiment (`--on-engine-error skip` records the game as
+`incomplete`). No other engine fault appeared in 19,000 panel games.
+
+## Medusamon's leave-replacement offers an unaffectable token and refuses the pick [G-ENGINE-REPLACEMENT-PICK-UNAFFECTABLE-TOKEN] — OPEN (2026-10-28)
+
+Found by the phase-budget generation panels (`policy_head_to_head.py`, seed
+54204079, Chronicle (P1) vs Medusamon (P2), turn 9). Repro:
+`qa/engine-faults/2026-10-28-attack-noop-pending-selection/recording.json`
+(300 actions; `context.json` has decks + seed). View with
+`digimon-engine-cli --pool implemented --cards-json data/cards.json replay <rec> --step 291 --show pending --player 1`.
+
+Symptom: Medusamon (EX11-012)'s `when_would_leave_battle_area` replacement
+("by deleting 1 Token, this Digimon doesn't leave") installs an optional
+`AnyField` selection for P2 with two options, action ids 102 and 104 — the
+two Petrification Tokens Medusamon had gifted to P1's field (P1s2 and P1s4).
+P1s2 carries a `CannotBeAffected` modifier (Chronicle board: Kota Domoto &
+Yuji Musya, Kota Domoto, Alphamon: Ouryuken). The policy picks 102; `Game`
+applies it with **no state change** — the selection stays pending with the same
+options — and after 8 repeats the no-op tripwire (`NoOpLoopError`) ends the
+game. The action list at that step still shows 102 as a legal `selection`.
+
+Reading: the `select_any_permanent` step builds its options from the
+`{ kind: token }` filter alone, while resolution (or the following
+`delete_permanent` / `cancel_replacement`) refuses the unaffectable token and
+leaves the prompt open instead of consuming the pick. Compare the per-colour
+delete terminal in `dsl_cards/step/selections.rs` (`run_per_color_delete_terminal`),
+which under CR 4.3 §15-15-5-1/-3 lets an unaffectable permanent be *picked*
+and then simply does not delete it. Either rule is acceptable, but mask and
+execution must agree: (a) exclude unaffectable permanents from the option set,
+or (b) accept the pick, apply no deletion, and resolve the selection (in which
+case the replacement cost was not paid, so Medusamon must still leave). (b)
+matches the §15-15-5 pattern already used for deletes. Rule 3 forbids an
+agent-side workaround.
+
+Not scored in the experiment (`incomplete`). Hypothesis on the cause is from
+the recording and the YAML, not yet confirmed in the resolver.

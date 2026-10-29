@@ -1,0 +1,32 @@
+
+running 18 tests
+test bt25::bt25_097::bt25_097_bypass_does_not_unlock_other_options ... ok
+test bt25::bt25_097::bt25_097_compiles_color_bypass_two_security_auras_main_and_security ... ok
+test bt25::bt25_097::bt25_097_face_down_in_security_grants_nothing ... ok
+test bt25::bt25_097::bt25_097_face_up_in_security_grants_alliance_to_yellow_or_purple_ts ... ok
+test bt25::bt25_097::bt25_097_face_up_security_still_usable_when_colors_match ... ok
+test bt25::bt25_097::bt25_097_granted_scapegoat_substitutes_another_digimon_for_the_deletion ... ok
+test bt25::bt25_097::bt25_097_main_play_is_optional ... ok
+test bt25::bt25_097::bt25_097_main_replaces_bottom_security_and_plays_yellow_or_purple_ts_reduced ... ok
+test bt25::bt25_097::bt25_097_main_with_zero_security_just_places_this_card_face_up ... ok
+test bt25::bt25_097::bt25_097_no_scapegoat_offer_without_junomon ... ok
+test bt25::bt25_097::bt25_097_off_color_is_unusable_with_a_face_up_security_card ... ok
+test bt25::bt25_097::bt25_097_scapegoat_not_granted_to_red_ts ... ok
+test bt25::bt25_097::bt25_097_scapegoat_only_while_you_have_a_junomon ... ok
+test bt25::bt25_097::bt25_097_scapegoat_still_resolves_when_the_junomon_is_deleted_in_the_same_batch ... ok
+test bt25::bt25_097::bt25_097_security_can_play_from_trash ... ok
+test bt25::bt25_097::bt25_097_security_play_is_optional ... ok
+
+thread 'bt25::bt25_097::bt25_097_security_plays_level_four_yellow_or_purple_ts_from_hand_free' (24644) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_097.rs:451:5:
+assertion failed: v.valid_action_ids.contains(&hand_action(&r, 0, "Y-TS"))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bt25::bt25_097::bt25_097_security_plays_level_four_yellow_or_purple_ts_from_hand_free ... FAILED
+test bt25::bt25_097::bt25_097_usable_off_color_with_no_face_up_security ... ok
+
+failures:
+
+failures:
+    bt25::bt25_097::bt25_097_security_plays_level_four_yellow_or_purple_ts_from_hand_free
+
+test result: FAILED. 17 passed; 1 failed; 0 ignored; 0 measured; 12737 filtered out; finished in 36.91s
+

@@ -1461,7 +1461,8 @@ mod verdict_event_tests {
 mod oracle_exam_tests {
     //! The one-call loop against a fake oracle node: a temp harness root and a
     //! thread that plays DCGO's part by filing a real scripted-v19 recording
-    //! and sidecar (tests/fixtures/oracle) for the submitted job. No Unity.
+    //! and sidecar (tests/fixtures/oracle) for the submitted job. ST23-04
+    //! negative controls deliberately alter one temporary sidecar row. No Unity.
     use super::*;
     use std::path::{Path, PathBuf};
     use std::time::Duration;
@@ -1517,6 +1518,11 @@ mod oracle_exam_tests {
             let rec = rec_dir.join(format!("{stem}.jsonl"));
             std::fs::copy(fixture(&format!("{stem}.jsonl")), &rec).unwrap();
             let side = std::fs::read_to_string(fixture(&format!("{stem}.state.jsonl"))).unwrap();
+            let side = if stem == "ST23-04-effect0" {
+                crate::exam::test_support::with_synthetic_st23_memory_divergence(&side)
+            } else {
+                side
+            };
             let side: String = match f.sidecar_lines {
                 Some(n) => side.lines().take(n).map(|l| format!("{l}\n")).collect(),
                 None => side,
@@ -1620,7 +1626,7 @@ mod oracle_exam_tests {
         h.join().unwrap();
         assert_eq!(r.verdict, "diverged", "{r:?}");
         assert!(
-            r.first_divergence.as_deref().unwrap_or("").starts_with("DIVERGED at step 14"),
+            r.first_divergence.as_deref().unwrap_or("").starts_with("DIVERGED at step 12"),
             "{r:?}"
         );
         assert!(!r.backfilled);
@@ -1628,8 +1634,10 @@ mod oracle_exam_tests {
         assert_eq!(b.stored("ST23-04#effect#0").unwrap().verdict, Verdict::Diverged);
         // Spec 4.2(6): the first divergence as fields, not only a line of text.
         let d = r.divergence.expect("structured first divergence");
-        assert_eq!(d.step, 14);
-        assert!(!d.field.is_empty() && d.ours != d.dcgo, "{d:?}");
+        assert_eq!(d.step, 12);
+        assert_eq!(d.field, "memory");
+        assert_eq!(d.ours, "-3");
+        assert_eq!(d.dcgo, "-2");
     }
 
     #[test]
@@ -1653,25 +1661,31 @@ mod oracle_exam_tests {
 
     #[test]
     fn a_prompt_mismatch_names_the_scenario_step_not_dcgos_row() {
-        // ST23-04-effect0 has sim-only rows, so DCGO's row index and the
-        // scenario step drift apart; the harness knows the wire rows per step.
+        // Deliberately make the existing optional suspend decline sim-only
+        // in this TEMP scenario. The same legal action still runs locally,
+        // while the fake job's row index now differs from the scenario step.
+        // This tests indexing independently of obsolete card prompt splits.
         let b = bench(true, true);
         let sc = b.scenario("ST23-04-effect0");
+        let text = std::fs::read_to_string(&sc).unwrap();
+        let decline = "do: { select: { decline: true } }";
+        assert!(text.contains(decline));
+        std::fs::write(&sc, text.replacen(decline, "do: { select: { decline: true, sim_only: true } }", 1)).unwrap();
         let h = b.play(
             "ST23-04-effect0",
             Filing {
                 outcome: "failed",
-                message: "prompt mismatch: step 14 expected actor 0 but DCGO asked actor 1",
+                message: "prompt mismatch: step 13 expected actor 0 but DCGO asked actor 1",
                 sidecar_lines: None,
             },
         );
         let r = run_oracle_exam(&sc, &b.opts(Duration::from_secs(60))).unwrap();
         h.join().unwrap();
         let m = r.mismatch.expect("a prompt-mismatch job carries its mismatch");
-        assert_eq!(m.row, 14);
+        assert_eq!(m.row, 13);
         let s = crate::exam::scenario::Scenario::from_yaml(&std::fs::read_to_string(&sc).unwrap()).unwrap();
         assert!((m.step as usize) < s.steps.len(), "{m:?}");
-        assert!(m.step >= 14, "sim-only rows before it push the step past the row: {m:?}");
+        assert_eq!(m.step, 14, "the deliberate sim-only row shifts the scenario step: {m:?}");
         assert_eq!(m.expected, None);
         assert_eq!(m.asked, None);
     }

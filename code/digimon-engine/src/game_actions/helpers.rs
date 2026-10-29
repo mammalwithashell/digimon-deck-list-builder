@@ -138,6 +138,57 @@ impl Game {
         );
     }
 
+    /// A committed security play removes one card (CR 4.3 15-15-3-2).
+    /// Queue the same loss/own/opponent chain as other effect removals, but
+    /// do not move the card: the successful play commit owns it. No observer
+    /// drains until the play and its event bundle have finished (15-8-3-2).
+    pub(crate) fn enqueue_security_play_removal(
+        &mut self,
+        defender: PlayerId,
+        effect_player: PlayerId,
+        card: &CardSource,
+    ) {
+        let handle = card.handle();
+        let previous = self.pending_security.replace(crate::selection::PendingSecurity {
+            defender,
+            card: card.clone(),
+            played: true,
+        });
+        let previous_effect = self.pending_security_loss_effect_initiated;
+        self.pending_security_loss_effect_initiated = true;
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnLoseSecurity,
+            crate::selection::TriggerSource::SecurityRevealed { defender, card: handle },
+        );
+        self.pending_security_loss_effect_initiated = previous_effect;
+        self.pending_security = previous;
+
+        let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(defender));
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnOwnSecurityRemoved,
+            crate::selection::TriggerSource::SecurityRemoved {
+                affected_player: defender,
+                observer_player: defender,
+                source_player: effect_player,
+                card: handle,
+                cause,
+            },
+        );
+        let opponent = self.next_clockwise(defender);
+        if opponent != defender {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnOpponentSecurityRemoved,
+                crate::selection::TriggerSource::SecurityRemoved {
+                    affected_player: defender,
+                    observer_player: opponent,
+                    source_player: effect_player,
+                    card: handle,
+                    cause,
+                },
+            );
+        }
+    }
+
     /// Tier-2 replacement-window dispatch for facade "would-be-X" operations.
     /// Fires `timing` for `subject` (cause inferred from `cause_player`), then
     /// reports whether the operation may PROCEED: `false` if a selection parked
@@ -202,6 +253,28 @@ impl Game {
     ) {
         let turn = self.turn_count;
         self.player_mut(target.player).battle_area[target.index as usize].digivolve(card, turn);
+        self.emit_eval_digivolve(target, 0, false, false);
+    }
+
+    /// Observational event for routes not covered by legacy reward events.
+    pub(crate) fn emit_eval_digivolve(
+        &mut self, target: PermanentHandle, memory_paid: i16, was_dna: bool, was_blast_dna: bool,
+    ) {
+        let perm = if target.index == crate::action::space::BREEDING_TARGET as u8 {
+            self.player(target.player).breeding_area.as_ref()
+        } else {
+            self.player(target.player).battle_area.get(target.index as usize)
+        };
+        let Some(perm) = perm else { return; };
+        let top_card_id = perm.top_card().card_id(&self.card_data).to_string();
+        let card_name = perm.top_card().card_name(&self.card_data).to_string();
+        let from_stack_top = perm.card_sources.iter().rev().nth(1)
+            .map(|c| c.card_id(&self.card_data).to_string()).unwrap_or_default();
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::EvalDigivolve {
+            seq, player: target.player, top_card_id, card_name, field_index: target.index,
+            from_stack_top, was_dna, was_blast_dna, memory_paid,
+        });
     }
 
     pub(crate) fn remove_source_from_permanent(

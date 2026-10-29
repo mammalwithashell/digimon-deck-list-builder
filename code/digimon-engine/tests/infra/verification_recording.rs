@@ -146,7 +146,7 @@ fn current_replay_protocol_round_trips_and_unknown_versions_are_rejected() {
     runner.step(62);
     let recording = runner.get_verification_replay_recording("sha256:test-cards").unwrap();
     assert_eq!(recording.engine_schema_version, VERIFICATION_ENGINE_SCHEMA_VERSION);
-    assert_eq!(recording.engine_schema_version, 2);
+    assert_eq!(recording.engine_schema_version, 3);
     let report = ReplaySession::verify_verification_recording("current-digest", recording.clone(), &db).unwrap();
     assert!(report.divergence.is_none(), "{report:?}");
     let mut unknown = recording.clone(); unknown.engine_schema_version = 999;

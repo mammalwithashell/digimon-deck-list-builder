@@ -18,6 +18,12 @@
 
 #![allow(dead_code, unused_imports)]
 
+// Match the behavioral harness allocator and avoid Windows heap contention.
+// This affects test allocation only; gameplay and assertions are unchanged.
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+
 mod loader;
 
 mod a_immunity_scope;

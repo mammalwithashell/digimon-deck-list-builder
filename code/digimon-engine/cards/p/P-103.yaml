@@ -20,12 +20,11 @@ cost: 2
 #
 # DSL modelling:
 #   - when: main_from_hand  (OptionSkill / MainFromHand timing)
-#   - optional: false — printed text has no "you may" on the reveal step itself;
-#     the select is optional (canNoSelect implied by 0 results = skip).
+#   - optional: false — the printed reveal and "Add 1 red card" are mandatory.
 #   - reveal_top_deck: { of: you, count: 2 }
-#   - select_reveal: { filter: { color_is: red }, optional: true, bind_as: picked }
+#   - select_reveal: { filter: { color_is: red }, optional: false, bind_as: picked }
 #     When no revealed card matches the red filter, select_reveal installs no
-#     selection and returns false → the runner advances to the sibling steps;
+#     selection regardless of optionality → the runner advances to sibling steps;
 #     add_to_hand_from_reveal no-ops on the absent `picked` binding and
 #     place_remainder_on_deck still returns all revealed cards to the bottom.
 #   - add_to_hand_from_reveal: { of: you, card: picked }
@@ -106,7 +105,7 @@ effects:
       - select_reveal:
           of: you
           bind_as: picked
-          optional: true
+          optional: false
           filter:
             color_is: red
           prompt: "Select 1 red card to add to your hand"

@@ -1,0 +1,94 @@
+{
+  "extracted": {
+    "attribute": "Variable",
+    "card_id": "P-249",
+    "card_type": "Digimon",
+    "colors": [
+      "Yellow"
+    ],
+    "dp": 1000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Yellow",
+          "Blue"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 1000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Strabimon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Start of Your Main Phase] By placing 1 [Hybrid] trait card from your hand or trash as this Digimon's bottom digivolution card or under any of your Tamers with inherited effects, that Digimon or Tamer may digivolve into a [Hybrid] trait card in the hand with the cost reduced by 2."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[On Deletion] You may play 1 Tamer card with inherited effects from your hand without paying the cost."
+          }
+        ]
+      }
+    ],
+    "form": "Hybrid",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Strabimon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522901",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-249.png?260529",
+      "printing_id": "P-249"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "The card is placed on the bottom of the cards under the Tamer.",
+        "date": "Sep. 18, 2026",
+        "number": "Q7481",
+        "question": "If I use this card's [Start of Your Main Phase] effect to place a card under a Tamer with cards under it, in what order do I place the card?"
+      }
+    ],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "forms": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Start of Your Main Phase] By placing 1 [Hybrid] trait card from your hand or trash as this Digimon's bottom digivolution card or under any of your Tamers with inherited effects, that Digimon or Tamer may digivolve into a [Hybrid] trait card in the hand with the cost reduced by 2."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[On Deletion] You may play 1 Tamer card with inherited effects from your hand without paying the cost."
+      }
+    ],
+    "type": "Beastkin"
+  },
+  "first_acquired_at": "2026-10-24T18:24:55.740138+00:00",
+  "observation_id": "6abbe7d2ec9340c4c6673da3b0e74c640cb3372787fb1696aaabdb47507b7c4a",
+  "parser_version": "official-html-v5",
+  "raw_payload_digest": "25923eaadc56900c233d9cddda51d00522e517390f35c1e6be0bc2d3d51052cb",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522901:P-249:P-249",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/index.php?free=Store+Tournament+2026+Vol.+4&search=true"
+}

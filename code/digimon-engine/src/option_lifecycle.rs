@@ -402,20 +402,17 @@ impl Game {
             return false;
         }
 
-        // Resolve the target by its stable top-card identity BEFORE removing
-        // the Option permanent (removal shifts later battle-area indices).
-        let Some(target_top) = self
+        // Capture the battle incarnation before removing the Option: the
+        // target's field index can change when an earlier Option leaves.
+        if self
             .player(target.player)
             .battle_area
             .get(target.index as usize)
-            .map(|perm| perm.top_card().handle())
-        else {
+            .is_none()
+        {
             return false;
-        };
-
-        // `target_top` was captured above (before removal) purely to assert the
-        // target existed; `seat_card_source_under_permanent` re-resolves it.
-        let _ = target_top;
+        }
+        let target_identity = self.capture_digivolve_host_identity(target);
 
         let permanent = self
             .player_mut(owner)
@@ -434,6 +431,10 @@ impl Game {
         // Seat the moved card under the target (re-resolved by stable identity;
         // the Option removal above may have shifted battle-area indices). On
         // failure the helper routes the card to its owner's trash.
+        let Some(target) = self.resolve_digivolve_host_identity(target.player, target_identity) else {
+            self.player_mut(top.owner).put_in_trash(top);
+            return false;
+        };
         self.seat_card_source_under_permanent(top, target, face_down, cause)
     }
 

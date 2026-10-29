@@ -311,6 +311,9 @@ pub struct PlayerDto {
 /// dict shape (see `digimon_gym/engine/game/serialization.py:338`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PendingSelectionDto {
+    /// Engine-owned card rows and exact decimal prompt/page tokens.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_choice: Option<serde_json::Value>,
     /// Game phase the engine is parked in (`SelectReveal`, `SelectTarget`, …).
     pub phase: String,
     pub selecting_player: PlayerId,
@@ -750,6 +753,7 @@ fn player_dto(game: &Game, id: PlayerId) -> PlayerDto {
 
 fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
     let sel = game.pending_selection.as_ref()?;
+    let view = sel.view(game);
     let effect_choices = sel
         .effect_choices
         .as_ref()
@@ -758,7 +762,9 @@ fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
                 .iter()
                 .enumerate()
                 .map(|(i, entry)| {
-                    let card = entry.source_card.map(|h| game.card(h));
+                    // A deleted token can still have a pending trigger after
+                    // its physical card has left the game. Preserve the choice.
+                    let card = entry.source_card.and_then(|h| game.card_data_for_handle(h));
                     EffectChoiceDto {
                         count_choice: entry
                             .count_choice
@@ -774,9 +780,11 @@ fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
         })
         .unwrap_or_default();
     Some(PendingSelectionDto {
+        card_choice: view.card_choice.as_ref().map(|choice|
+            serde_json::to_value(choice).expect("card choice DTO serializes")),
         phase: phase_str(game.current_phase).to_string(),
         selecting_player: sel.selecting_player,
-        valid_action_ids: sel.valid_action_ids.clone(),
+        valid_action_ids: view.valid_action_ids,
         is_optional: sel.is_optional,
         prompt: sel.prompt.clone(),
         // Same stable discriminant string the engine's own serialization
@@ -1664,15 +1672,40 @@ fn validate_models_loaded(
 /// immediately follow, so the response reflects the next state the
 /// player needs to see — same pattern the hosted API uses in
 /// `InteractiveGame.step`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ExpectedCardChoice {
+    pub prompt_id: String,
+    pub page_generation: String,
+}
+
+fn validate_card_choice_submission(game: &Game, expected: Option<&ExpectedCardChoice>) -> Result<(), String> {
+    match (game.pending_selection.as_ref().and_then(|p| p.card_choice.as_ref()), expected) {
+        (None, None) => Ok(()),
+        (Some(owner), Some(expected)) => {
+            let token = owner.token();
+            if expected.prompt_id == token.prompt_id.to_string()
+                && expected.page_generation == token.page_generation.to_string() {
+                Ok(())
+            } else {
+                Err("Stale card choice prompt or page".into())
+            }
+        }
+        _ => Err("Missing or stale card choice token".into()),
+    }
+}
+
 #[tauri::command]
 pub async fn rust_submit_action(
     engine: tauri::State<'_, EngineHandle>,
     action: u32,
     paced: Option<bool>,
+    expected_card_choice: Option<ExpectedCardChoice>,
 ) -> Result<ActionResponseDto, String> {
     engine
         .run(move |world| -> Result<ActionResponseDto, String> {
             let game = ensure_game(&mut world.game)?;
+            validate_card_choice_submission(game, expected_card_choice.as_ref())?;
             let session = &world.session;
             let inference = &world.inference;
             let pid = current_decision_player(game);
@@ -2624,6 +2657,34 @@ mod tests {
     // interesting logic (dispatch + mask rebuild + envelope) can be exercised
     // directly.
     #[test]
+    fn async_card_page_submission_rejects_missing_or_stale_tokens_before_mutation() {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        let mut game = Game::new(&decks, &db, Rules::standard(), Some(42)).unwrap();
+        game.start_game();
+        let card = game.players[0].security[0].handle();
+        digimon_engine::effect_context::EffectContext::new(&mut game, card, None, 0)
+            .select_security(0, "Choose security", true, |_, _| true, |_, _| {});
+        let token = game.pending_selection.as_ref().unwrap().card_choice.as_ref().unwrap().token();
+        let current = ExpectedCardChoice { prompt_id: token.prompt_id.to_string(),
+            page_generation: token.page_generation.to_string() };
+        let stale = ExpectedCardChoice { page_generation: (token.page_generation + 1).to_string(),
+            ..current.clone() };
+        let before = game.verification_digest();
+        assert!(validate_card_choice_submission(&game, None).is_err());
+        assert!(validate_card_choice_submission(&game, Some(&stale)).is_err());
+        assert_eq!(game.verification_digest(), before);
+        assert!(validate_card_choice_submission(&game, Some(&current)).is_ok());
+        let dto = pending_selection_dto(&game).unwrap();
+        let wire = dto.card_choice.unwrap();
+        assert_eq!(wire["prompt_id"], current.prompt_id);
+        assert_eq!(wire["page_generation"], current.page_generation);
+        game.pending_selection = None;
+        assert!(validate_card_choice_submission(&game, Some(&current)).is_err());
+        assert!(validate_card_choice_submission(&game, None).is_ok());
+    }
+
+    #[test]
     fn rust_submit_action_dispatches_and_rebuilds_mask() {
         let db = test_card_db();
         let decks = vec![test_deck(), test_deck()];
@@ -2734,11 +2795,11 @@ mod tests {
         assert_eq!(summary.player_id, pid);
         assert_eq!(summary.profile_id, profile.id);
         // After `flip-engine-default-to-lite-deck-v2`, the default profile is
-        // `standard_lite_deck_v2` (version 2, 8850 floats).
+        // `standard_lite_deck_v2`; selected layout metadata owns its size.
         assert_eq!(summary.profile_id, "standard_lite_deck_v2");
         assert_eq!(summary.profile_version, profile.version as u16);
         assert_eq!(summary.tensor_size, digimon_engine::tensor::TENSOR_SIZE);
-        assert_eq!(summary.tensor_size, 8850);
+        assert_eq!(summary.tensor_size, profile.tensor_size);
         assert_eq!(
             summary.mask_size,
             digimon_engine::action::space::ACTION_SPACE_SIZE
@@ -2780,8 +2841,8 @@ mod tests {
         // After `flip-engine-default-to-lite-deck-v2` the engine reports
         // `standard_lite_deck_v2` shapes through the default surface.
         assert!(
-            json.contains("\"tensor_size\":8850"),
-            "expected tensor_size 8850 in trace JSON; got: {json}"
+            json.contains(&format!("\"tensor_size\":{}", default_profile().tensor_size)),
+            "expected selected profile tensor_size in trace JSON; got: {json}"
         );
         assert!(
             json.contains("\"mask_size\":2192"),

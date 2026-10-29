@@ -1,9 +1,17 @@
+// Match the DSL/card harnesses for allocation-heavy clone tests on Windows.
+// This allocator is local to the test binary; production allocation is unchanged.
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 mod attack_cancel;
 mod behavioral_end_to_end;
 mod context_predicates;
 mod cross_permanent;
 mod declined_replacements;
 mod deletion_replacements;
+mod deletion_event_identity;
+mod deletion_event_routes;
+mod deletion_payment;
 mod dispatcher_core;
 mod dispatcher_guard;
 mod enum_and_context;

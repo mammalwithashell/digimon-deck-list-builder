@@ -1,0 +1,14 @@
+
+running 8 tests
+test material_save_decline_leaves_sources_in_trash ... ok
+test material_save_does_not_emit_main_phase_action ... ok
+test material_save_filters_recipe_sources_and_enforces_cap ... ok
+test material_save_never_offers_a_token_tamer ... ok
+test material_save_places_every_eligible_card_when_n_exceeds_them ... ok
+test material_save_prompts_clone_faithfully ... ok
+test material_save_skips_when_no_tamer_or_no_eligible_source_exists ... ok
+test material_save_two_carriers_in_one_batch_each_offer_their_own_stack ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.49s
+
+SUITE_EXIT 0

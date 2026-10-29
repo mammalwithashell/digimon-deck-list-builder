@@ -83,12 +83,14 @@ pub(super) fn try_run(
                 .iter()
                 .position(|(id, _)| id == receipt)
             {
-                for (card, hand) in ctx.game.return_receipts.remove(i).1 {
-                    if hand {
-                        bindings.record_returned_card(card);
-                        bindings.record_added_to_hand(card);
+                for result in ctx.game.return_receipts.remove(i).1 {
+                    if result.to_hand {
+                        bindings.record_returned_card(result.card);
+                        if result.added_to_hand {
+                            bindings.record_added_to_hand(result.card);
+                        }
                     } else {
-                        bindings.record_returned_to_deck(card);
+                        bindings.record_returned_to_deck(result.card);
                     }
                 }
             }

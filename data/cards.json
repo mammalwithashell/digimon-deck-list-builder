@@ -27226,8 +27226,8 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3. \r\n[On Play] Reveal the top 4 cards of your deck. Add 1 card with the [X Antibody] trait among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
-    "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying its memory cost.",
-    "security_effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Play this card without paying its memory cost.",
     "evo_costs": [],
     "xros_req": ""
   },
@@ -35355,9 +35355,9 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "While you have an [X Antibody] trait Digimon, you can ignore this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. You may digivolve 1 of your Digimon into a Digimon card with the [X Antibody] trait without its memory cost. Trash the rest. Then, place 1 card with the [X Antibody] trait from your trash under 1 of your Digimon with the [X Antibody] trait as its bottom digivolution card.",
-    "inherited_effect_description_eng": "Security Effect [Security] You may Reveal the top 3 cards of your deck. You may add 1 card with the [X Antibody] trait among them to your hand. Trash the rest.",
-    "security_effect_description_eng": "",
+    "effect_description_eng": "While you have a Digimon with [X Antibody] in its traits in play, you may use this card without meeting its color requirements.\r\n[Main] Reveal the top 3 cards of your deck. You may digivolve 1 of your Digimon into a Digimon card with [X Antibody] in its traits among them without paying its memory cost. Trash the rest. Then, place 1 card with [X Antibody] in its traits from your trash under 1 of your Digimon with [X Antibody] in its traits as its bottom digivolution card.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] You may reveal the top 3 cards of your deck. Add 1 card with [X Antibody] in its traits among them to your hand. Trash the rest.",
     "evo_costs": [],
     "xros_req": ""
   },
@@ -68241,7 +68241,7 @@
     "attribute_eng": [
       "Variable"
     ],
-    "effect_description_eng": "[When Digivolving] [End of Opponent's Turn] [Once Per Turn] By placing 1 Digimon card from this Digimon's digivolution cards as your bottom security card, delete all of your opponent's Digimon with the same level as the placed card.\r\n[All Turns] [Once Per Turn] When a Digimon attacks, by adding the top card of your security stack to the hand, unsuspend this Digimon.",
+    "effect_description_eng": "[When Digivolving] [End of Opponent's Turn] [Once Per Turn] By placing 1 Digimon card from this Digimon's digivolution cards as the bottom security card, delete all of your opponent's Digimon with the same level as the placed card.\n[All Turns] [Once Per Turn] When Digimon attack, by adding your top security card to the hand, this Digimon unsuspends.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -70354,9 +70354,9 @@
     "type_eng": [],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory.",
+    "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory.",
     "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may return 1 card with the [Hybrid] or [Ten Warriors] trait from your trash to the hand.",
-    "security_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Play this card without paying the cost.",
     "evo_costs": [],
     "xros_req": ""
   },
@@ -70441,8 +70441,8 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "[Main] You may place up to 5 [Hybrid] trait cards with different names from your hand or trash under 1 of your Tamers. Then, 1 of your Tamers with 5 or more cards under it may digivolve into [MagnaGarurumon] in the hand or trash, ignoring digivolution requirements and without paying the cost.",
-    "inherited_effect_description_eng": "Security Effect [Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand.",
-    "security_effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand.",
     "evo_costs": [],
     "xros_req": ""
   },
@@ -74802,11 +74802,13 @@
       5
     ],
     "type_eng": [
-      "Beast Dragon",
+      "Beast",
       "X Antibody",
       "Chronicle"
     ],
-    "form_eng": [],
+    "form_eng": [
+      "Rookie"
+    ],
     "attribute_eng": [
       "Vaccine"
     ],
@@ -74889,7 +74891,9 @@
       "X Antibody",
       "Chronicle"
     ],
-    "form_eng": [],
+    "form_eng": [
+      "Champion"
+    ],
     "attribute_eng": [
       "Vaccine"
     ],
@@ -75002,7 +75006,9 @@
       "X Antibody",
       "Chronicle"
     ],
-    "form_eng": [],
+    "form_eng": [
+      "Ultimate"
+    ],
     "attribute_eng": [
       "Vaccine"
     ],
@@ -76457,7 +76463,9 @@
       "X Antibody",
       "Chronicle"
     ],
-    "form_eng": [],
+    "form_eng": [
+      "Rookie"
+    ],
     "attribute_eng": [
       "Data"
     ],
@@ -76577,7 +76585,9 @@
       "X Antibody",
       "Chronicle"
     ],
-    "form_eng": [],
+    "form_eng": [
+      "Champion"
+    ],
     "attribute_eng": [
       "Vaccine"
     ],
@@ -76662,7 +76672,9 @@
       "X Antibody",
       "Chronicle"
     ],
-    "form_eng": [],
+    "form_eng": [
+      "Ultimate"
+    ],
     "attribute_eng": [
       "Vaccine"
     ],
@@ -78351,8 +78363,8 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add 1 [Chronicle] trait card among them to the hand. Return the rest to the top or bottom of the deck. Then, place this card in the battle area.\r\n[All Turns] When any of your [Chronicle] trait Digimon are deleted, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・By moving your level 3 or higher Digimon from the breeding area to the battle area, it may digivolve into a [Chronicle] trait Digimon card in the hand or trash without paying the cost.",
-    "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Chronicle] trait card with a play cost of 5 or less from your hand or trash without paying the cost. Then, place this card in the battle area.",
-    "security_effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] You may play 1 [Chronicle] trait card with a play cost of 5 or less from your hand or trash without paying the cost. Then, place this card in the battle area.",
     "evo_costs": [],
     "xros_req": ""
   },
@@ -83116,7 +83128,7 @@
       1
     ],
     "type_eng": [
-      "Mythical Dragon",
+      "Holy Dragon",
       "CS"
     ],
     "form_eng": [],
@@ -110651,7 +110663,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "While you have a Digimon, you can ignore this card's color requirements.\r\n[Security] Add this card to the hand.\r\n[Main] 1 of your Digimon without [X Antibody] in its digivolution cards may digivolve into a Digimon card with the [X Antibody] trait in your hand with the digivolution cost reduced by 1. If it did, place this card as its bottom digivolution card.",
+    "effect_description_eng": "While you have a Digimon, you can ignore this card's color requirements.\r\n[Security] Add this card to the hand.\r\n[Main] 1 of your Digimon without [X Antibody] in its digivolution cards may digivolve into a Digimon card with the [X Antibody] trait in your hand with the digivolution cost reduced by 1. If it did, place this card as its bottom digivolution card.\r\n(Rule) Name: Also treated as [X Antibody].",
     "inherited_effect_description_eng": "[All Turns] When this Digimon would leave the battle area other than by one of your effects, from this Digimon's digivolution cards, return 1 Digimon card to the hand and place 1 [X Antibody] on top of your security stack.",
     "security_effect_description_eng": "",
     "evo_costs": [],
@@ -135925,7 +135937,9 @@
       "X Antibody",
       "Chronicle"
     ],
-    "form_eng": [],
+    "form_eng": [
+      "In-Training"
+    ],
     "attribute_eng": [],
     "effect_description_eng": "",
     "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand.",
@@ -136937,8 +136951,8 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "[Main] By trashing 1 card with the [X Antibody] or [Chronicle] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place this card in the battle area.\r\n[All Turns] When Digimon attack players, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Grademon] or Digimon with the [Chronicle] trait may digivolve into [Alphamon] or a level 6 or lower Digimon card with the [Chronicle] trait in the hand without paying the cost.",
-    "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
-    "security_effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Activate this card's [Main] effects.",
     "evo_costs": [],
     "xros_req": ""
   },
@@ -138188,6 +138202,34 @@
         ]
       }
     ]
+  },
+  "P-241": {
+    "index": 4480,
+    "norm_id": 0.224,
+    "card_id": "P-241",
+    "card_index": 241,
+    "card_name_eng": "Yujin Ozora",
+    "card_name_jpn": "大空勇仁",
+    "card_effect_class_name": "P_241",
+    "play_cost": 4,
+    "dp": null,
+    "level": null,
+    "card_kind": 1,
+    "rarity": 5,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "App Driver",
+      "Appmon"
+    ],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When any of your Digimon get linked, by suspending this Tamer, 1 of your Digimon with the [Appmon] trait gains <Vortex> (At the end of your turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack the turn it was played.) and +3000 DP for the turn. Then, 1 of your Digimon may app fuse into a Digimon card in the hand.",
+    "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+    "security_effect_description_eng": "",
+    "evo_costs": [],
+    "xros_req": ""
   },
   "P-244": {
     "index": 4200,
@@ -152572,7 +152614,8 @@
     "type_eng": [
       "Mollusk",
       "Shambala",
-      "TB"
+      "TB",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -152787,7 +152830,8 @@
     "type_eng": [
       "Mollusk",
       "Shambala",
-      "TB"
+      "TB",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -152846,11 +152890,11 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] Lv.4 w/[Garurumon] in name or w/[NSo]/[VB] trait: Cost 3 \r\n[DNA Digivolve] Blue/Yellow Lv.5 + Purple/Red Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "xros_req": "[Digivolve] Lv.4 w/[Garurumon] in name or w/[NSo]/[VB] trait: Cost 3 \r\n[DNA Digivolve] Blue/Yellow Lv.4 + Purple/Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
     "dna_costs": [
       {
         "requirement1": {
-          "level": 5,
+          "level": 4,
           "card_colors": [
             "Blue",
             "Yellow"
@@ -152859,7 +152903,7 @@
           "text_contains": ""
         },
         "requirement2": {
-          "level": 5,
+          "level": 4,
           "card_colors": [
             "Purple",
             "Red"
@@ -162589,5 +162633,47 @@
         ]
       }
     ]
+  },
+  "P-249": {
+    "index": 4481,
+    "norm_id": 0.22405,
+    "card_id": "P-249",
+    "card_index": 249,
+    "attribute_eng": [
+      "Variable"
+    ],
+    "card_colors": [
+      2
+    ],
+    "card_effect_class_name": "P_249",
+    "card_kind": 0,
+    "card_name_eng": "Strabimon",
+    "card_name_jpn": "",
+    "dp": 1000,
+    "effect_description_eng": "[Start of Your Main Phase] By placing 1 [Hybrid] trait card from your hand or trash as this Digimon's bottom digivolution card or under any of your Tamers with inherited effects, that Digimon or Tamer may digivolve into a [Hybrid] trait card in the hand with the cost reduced by 2.",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "form_eng": [
+      "Hybrid"
+    ],
+    "inherited_effect_description_eng": "[On Deletion] You may play 1 Tamer card with inherited effects from your hand without paying the cost.",
+    "level": 3,
+    "play_cost": 3,
+    "rarity": 0,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Beastkin"
+    ],
+    "xros_req": ""
   }
 }

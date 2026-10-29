@@ -143,8 +143,10 @@ def _section_field(label, card, text=""):
             return "link_effect_description_eng"
         return "inherited_effect_description_eng"
     if label == "Security Effect":
+        if card.get("security_effect_description_eng"):
+            return "security_effect_description_eng"
         # cards.json files a Tamer's or Option's security text under the inherited key
-        # (the API's convention, 460 of 485 Options with a security box).
+        # in older API rows. Reviewed corrections use the dedicated field.
         if card.get("card_kind") in (1, 2):
             return "inherited_effect_description_eng"
         return "security_effect_description_eng"
@@ -298,6 +300,18 @@ def test_a_link_box_is_compared_with_the_link_effect():
         assert stats_violations(cards, official, ["X-1"]) == [], section["label"]
         cards["X-1"]["link_effect_description_eng"] = "Suspend 1 of your opponent's Digimon."
         assert len(stats_violations(cards, official, ["X-1"])) == 1, section["label"]
+
+
+def test_security_sections_use_the_dedicated_field_when_corrected():
+    text = "[Security] Play 1 [Hybrid] card."
+    for kind in (1, 2):
+        cards, official = _synthetic(
+            {"card_kind": kind, "security_effect_description_eng": text,
+             "inherited_effect_description_eng": ""},
+            {"text_sections": [{"label": "Security Effect", "text": text}]})
+        assert stats_violations(cards, official, ["X-1"]) == []
+        cards["X-1"]["security_effect_description_eng"] = "[Security] Play 1 card."
+        assert len(stats_violations(cards, official, ["X-1"])) == 1
 
 
 def test_stage_forms_are_not_required_but_trait_forms_are():

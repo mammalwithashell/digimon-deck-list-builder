@@ -1,0 +1,218 @@
+{
+  "production_yaml_files_scanned": 1178,
+  "printed_end_of_attack_clauses": 22,
+  "all_match_printed_end_of_attack": true,
+  "clauses": [
+    {
+      "card": "AD1-002",
+      "file": "code/digimon-engine/cards/ad1/AD1-002.yaml",
+      "clause_index": 2,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "\uff1cRush\uff1e (This Digimon can attack the turn it comes into play.)\r\n[When Digivolving] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon.\r\n[End of Attack] [On Deletion] You may trash 1 [Hybrid] or [Ten Warriors]\u00a0trait card from your hand. If this effect trashed, \uff1cDraw 2\uff1e (Draw 2 cards from your deck.) Then, you may play 1 red, blue or green Tamer card with inherited effects from your hand or trash without paying the cost.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "AD1-015",
+      "file": "code/digimon-engine/cards/ad1/AD1-015.yaml",
+      "clause_index": 2,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "\uff1cJamming\uff1e (This Digimon can't be deleted in battles against Security Digimon.)\r\n[When Digivolving] [When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn.br>[End of Attack] [On Deletion] You may trash 1 [Hybrid] or [Ten Warriors]\u00a0trait card from your hand. If this effect trashed, \uff1cDraw 2\uff1e (Draw 2 cards from your deck.) Then, you may play 1 yellow, black or purple Tamer card with inherited effects from your hand or trash without paying the cost.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "BT11-018",
+      "file": "code/digimon-engine/cards/bt11/BT11-018.yaml",
+      "clause_index": 2,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "\uff1cMaterial Save 2\uff1e (When this Digimon would be deleted, you may place 2 cards in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)\r\n[On Play] Delete 1 of your opponent's Digimon with 8000 DP or less. 1 of your opponent's Digimon can't attack until the end of their turn.\r\n[End of Attack] By deleting this Digimon, gain 1 memory.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "BT12-016",
+      "file": "code/digimon-engine/cards/bt12/BT12-016.yaml",
+      "clause_index": 1,
+      "scope": "inherited",
+      "printed_field": "inherited_effect_description_eng",
+      "printed_text": "[End of Attack] [Once Per Turn] If your opponent has no Digimon in play, and this Digimon has [Growlmon] or [Gallantmon]\u00a0in its name, gain 2 memory.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "BT12-028",
+      "file": "code/digimon-engine/cards/bt12/BT12-028.yaml",
+      "clause_index": 1,
+      "scope": "inherited",
+      "printed_field": "inherited_effect_description_eng",
+      "printed_text": "[End of Attack] If this Digimon has [Imperialdramon]\u00a0in its name or [Free]\u00a0trait, gain 1 memory.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "BT12-030",
+      "file": "code/digimon-engine/cards/bt12/BT12-030.yaml",
+      "clause_index": 1,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "[When Digivolving] If this Digimon has a blue digivolution card, unsuspend this Digimon. If it has a green digivolution card, suspend 1 of your opponent's Digimon.\r\n[End of Attack] You may digivolve this Digimon into a Digimon card with [Imperialdramon]\u00a0in its name in your hand for its digivolution cost. When this Digimon would digivolve by this effect, reduce the digivolution cost by 2.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "BT16-027",
+      "file": "code/digimon-engine/cards/bt16/BT16-027.yaml",
+      "clause_index": 2,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "[Hand] [Counter] \uff1cBlast Digivolve\uff1e (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck.\r\n[End of Attack] [Once Per Turn] Unsuspend this Digimon. Then, if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards, return 1 of your opponent's suspended Digimon to the bottom of the deck.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "BT21-021",
+      "file": "code/digimon-engine/cards/bt21/BT21-021.yaml",
+      "clause_index": 0,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "This card is also treated as [Shoutmon] for DigiXros.\r\n[End of Attack] You may play 1 card with the [Xros Heart], [Blue Flare] or [Hero]\u00a0trait from your hand with the play cost reduced by 5. If you did, delete this Digimon.\r\n[On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare]\u00a0trait from your hand or trash under any of your Tamers. Then, \uff1cSave\uff1e (You may place this card under one of your Tamers.)",
+      "printed_timing_present": true
+    },
+    {
+      "card": "BT21-029",
+      "file": "code/digimon-engine/cards/bt21/BT21-029.yaml",
+      "clause_index": 2,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "\uff1cSecurity A. +1\uff1e (This Digimon checks 1 additional security card.)\r\n\uff1cProgress\uff1e (While attacking, your opponent's effects don't affect this Digimon.)\r\n[When Digivolving] [End of Attack] [Once Per Turn] You may delete 1 of your opponent's lowest DP Digimon.\r\n[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted or their security stack is removed from, they play 1 [Petrification] Token. (Digimon/White/3000 DP/[Your Turn] This Digimon can't suspend. [On Deletion] Trash your top security card.)",
+      "printed_timing_present": true
+    },
+    {
+      "card": "BT25-041",
+      "file": "code/digimon-engine/cards/bt25/BT25-041.yaml",
+      "clause_index": 2,
+      "scope": "inherited",
+      "printed_field": "inherited_effect_description_eng",
+      "printed_text": "[End of Attack] [Once Per Turn] By trashing the bottom face-down card from under any of your Tamers, this Digimon with the [Glowing Dawn]\u00a0trait unsuspends.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "BT26-082",
+      "file": "code/digimon-engine/cards/bt26/BT26-082.yaml",
+      "clause_index": 1,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "[Security] [End of Opponent's Turn] Play this card without paying the cost.\r\n[When Digivolving] [End of Attack] By deleting this Digimon or trashing 2 bottom face-down cards from under any of your Tamers, delete 1 of your opponent's highest DP Digimon.\r\n[On Deletion] Your opponent trashes 1 card in their hand. Then, if their hand has 7 or fewer cards, you may place this card face up as the bottom security card.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "EX11-012",
+      "file": "code/digimon-engine/cards/ex11/EX11-012.yaml",
+      "clause_index": 2,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "\uff1cRush\uff1e (This Digimon can attack the turn it comes into play.)\r\n\uff1cProgress\uff1e (While attacking, your opponent's effects don't affect this Digimon.)\r\n[When Digivolving] [End of Attack] You may delete 1 of your opponent's Digimon with as much or less DP as this Digimon. Then, by returning 1 card from your opponent's trash to the bottom of the deck, they play 1 [Petrification] Token. (Digimon/White/3000 DP/[Your Turn] This Digimon can't suspend. [On Deletion] Trash your top security card.)\r\n[All Turns] When this Digimon would leave the battle area, by deleting 1 Token, it doesn't leave.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "EX12-046",
+      "file": "code/digimon-engine/cards/ex12/EX12-046.yaml",
+      "clause_index": 2,
+      "scope": "inherited",
+      "printed_field": "inherited_effect_description_eng",
+      "printed_text": "[End of Attack] [Once Per Turn] You may play 1 [TB]\u00a0trait Digimon card with 5000 DP or less from your hand without paying the cost.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "EX13-013",
+      "file": "code/digimon-engine/cards/ex13/EX13-013.yaml",
+      "clause_index": 2,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "\uff1cEngage\uff1e (At the end of your turn, this Digimon may attack.)\r\n[When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 5000 DP or less. If this effect didn't delete, this Digimon gains \uff1cPiercing\uff1e (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.) and +3000 DP for the turn.\r\n[End of Attack] [On Deletion] You may play 1 Tamer card with [Guilmon]\u00a0in its text from your hand or trash without paying the cost.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "EX13-036",
+      "file": "code/digimon-engine/cards/ex13/EX13-036.yaml",
+      "clause_index": 2,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "[Security] [On Play] 1 of your opponent's Digimon gets -7000 DP for the turn. If there are 6 or fewer total cards in both players' security stacks, instead all of their Digimon get -7000 DP for the turn.\r\n[When Digivolving] By trashing the top security card of 1 player with the most security cards, you may activate 1 of this Digimon's [Security] effects.\r\n[When Digivolving] [End of Attack] [Counter] [Once Per Turn] You may place 1 of each player's Digimon as the top security cards.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "EX13-057",
+      "file": "code/digimon-engine/cards/ex13/EX13-057.yaml",
+      "clause_index": 1,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "[On Play] [When Digivolving] Until your opponent's turn ends, 1 of your [X Antibody] or [Chronicle]\u00a0trait Digimon gains \uff1cReboot\uff1e (This Digimon also unsuspends in your opponent's unsuspend phase.) and \uff1cBlocker\uff1e (This Digimon can block in the blocker timing.). If during an attack, it also isn't affected by their Digimon effects and gets +5000 DP.\r\n[End of Attack] [Once Per Turn] This Digimon may digivolve into a Digimon card with the [Chronicle]\u00a0trait in the hand or trash.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "EX4-074",
+      "file": "code/digimon-engine/cards/ex4/EX4-074.yaml",
+      "clause_index": 1,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "[When Digivolving] [On Deletion] Until the end of your opponent's next turn, all of your opponent's Digimon get -5000DP.\r\n[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and \uff1cRecovery +1 (Deck)\uff1e. Then, if you have a Tamer in play, hatch 1 Digi-Egg card to an empty space in your breeding area.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "EX8-073",
+      "file": "code/digimon-engine/cards/ex8/EX8-073.yaml",
+      "clause_index": 1,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "[When Digivolving] [When Attacking] If [Gallantmon] or [X Antibody] is in this Digimon's digivolution cards, this Digimon gets +4000 DP and 1 of your opponent's Digimon gets -4000 DP until the end of their turn.\r\n[When Digivolving] [End of Attack] [Once Per Turn] Delete 1 of your opponent's Digimon with 10000 DP or less. If this didn't delete, trash your opponent's top security card and this Digimon unsuspends.\r\n[All Turns] While you have 0 or less memory, this Digimon isn't affected by the effects of your opponent's Digimon.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "EX9-021",
+      "file": "code/digimon-engine/cards/ex9/EX9-021.yaml",
+      "clause_index": 2,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "[When Digivolving] If DNA digivolving, your opponent's effects don't affect this Digimon for the turn. Then, delete all of their Digimon with the highest level.\r\n[End of Attack] You may play 1 card with [Greymon]\u00a0in its name or the [Ver.1]\u00a0trait and 1 card with [Garurumon]\u00a0in its name or the [Ver.2]\u00a0trait from this Digimon's digivolution cards without paying the costs. If this effect played, place this Digimon as your top security card.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "P-153",
+      "file": "code/digimon-engine/cards/p/P-153.yaml",
+      "clause_index": 2,
+      "scope": "face_up",
+      "printed_field": "effect_description_eng",
+      "printed_text": "\uff1cArmor Purge\uff1e (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Digivolving] Return 1 of your opponent's level 3, 1 of their level 4 and 1 of their level 5 Digimon to the hand.\r\n[End of Attack] By placing this Digimon's top card as your top security card, unsuspend this Digimon or Tamer.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "ST23-04",
+      "file": "code/digimon-engine/cards/st23/ST23-04.yaml",
+      "clause_index": 2,
+      "scope": "inherited",
+      "printed_field": "inherited_effect_description_eng",
+      "printed_text": "[End of Attack] [Once Per Turn] By trashing the bottom face-down card from under any of your Tamers, this [Glowing Dawn]\u00a0trait Digimon unsuspends.",
+      "printed_timing_present": true
+    },
+    {
+      "card": "ST23-08",
+      "file": "code/digimon-engine/cards/st23/ST23-08.yaml",
+      "clause_index": 2,
+      "scope": "inherited",
+      "printed_field": "inherited_effect_description_eng",
+      "printed_text": "[End of Attack] [Once Per Turn] By trashing the bottom face-down card from under any of your Tamers, this [Glowing Dawn] trait Digimon unsuspends.",
+      "printed_timing_present": true
+    }
+  ],
+  "granted_end_of_attack_steps": [],
+  "scheduled_end_of_attack_steps": [],
+  "rules": [
+    "CR4.3 15-16-15-1",
+    "CR4.3 11-1-5",
+    "CR4.3 11-5-1-4",
+    "CR4.3 11-6-2"
+  ],
+  "design": "Apply carrier event qualifier to printed DSL EndOfAttack clauses. Keep broad engine timing, native observers and scheduled processing unchanged. Explicit single-carrier timing injections identify their event carrier; real field broadcasts use declared attack stack identity.",
+  "native_card_end_of_attack_call_sites": [
+    "code/digimon-engine/src/cards/keyword_effects.rs:2183 (Execute; unchanged)"
+  ],
+  "no_raw_rust_printed_end_of_attack_cards": true
+}

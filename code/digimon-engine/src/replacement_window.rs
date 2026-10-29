@@ -172,7 +172,7 @@ fn start_replacement_window(
                 matches!(subject, ReplacementSubject::Card(card, _) if card == r.card)).cloned()
         } else { None },
         effect_digivolve_card: if timing == EffectTiming::WhenPermanentWouldDigivolve {
-            game.effect_digivolve_window_card(subject)
+            game.effect_digivolve_window_card(subject).or_else(|| game.effect_dna_window_card(subject))
         } else {
             None
         },
@@ -326,7 +326,11 @@ fn commit_window(
         } else {
             ReplacementOutcome::Cancelled
         };
-        game.commit_effect_would_digivolve(card, outcome, true);
+        if game.effect_dna_would_scopes.iter().any(|scope| scope.declaration.result == card) {
+            game.commit_effect_dna_would_digivolve(card, outcome, true);
+        } else {
+            game.commit_effect_would_digivolve(card, outcome, true);
+        }
         game.replacement_pending_outcome = None;
         return;
     }
@@ -582,6 +586,9 @@ fn run_window_step(
         return;
     }
     let Some(subject) = resolve_subject_card(game, window.subject, window.stable_subject) else {
+        // Even an invalidated subject still owns its declaration's cleanup
+        // and failed-result continuation. Accept and decline share this boundary.
+        commit_window(game, window, ReplacementOutcome::Cancelled);
         return;
     };
     window.subject = subject;

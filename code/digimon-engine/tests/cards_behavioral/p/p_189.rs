@@ -426,7 +426,7 @@ fn p_189_security_clause_offers_hand_and_trash_candidates() {
         "the [Security] clause surfaces a UnionZone selection"
     );
     assert_eq!(
-        view.valid_action_ids.len(),
+        physical_choice::commits(&runner.game).len(),
         2,
         "exactly the hand LIBERATOR card and the trash LIBERATOR card are legal"
     );
@@ -466,13 +466,14 @@ fn p_189_security_filter_includes_cost_4_liberator_card() {
         "the [Security] clause surfaces a UnionZone selection"
     );
     assert_eq!(
-        view.valid_action_ids.len(),
+        physical_choice::commits(&runner.game).len(),
         1,
         "the cost-4 LIBERATOR card passes play_cost_lte: 4 and is the sole candidate"
     );
 
+    let action = physical_choice::card_action(&runner.game, "LIB-4", digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     runner
-        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, action)
         .expect("play the cost-4 LIBERATOR card free");
     let _ = runner.auto_resolve();
 
@@ -608,14 +609,15 @@ fn p_189_security_filter_offers_only_eligible_card_among_mixed_hand() {
         "the [Security] clause surfaces a UnionZone selection"
     );
     assert_eq!(
-        view.valid_action_ids.len(),
+        physical_choice::commits(&runner.game).len(),
         1,
         "only the LIBERATOR cost-3 card passes both filters; \
          the cost-5 LIBERATOR and the non-LIBERATOR card are excluded"
     );
 
+    let action = physical_choice::card_action(&runner.game, "LIB-OK", digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     runner
-        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, action)
         .expect("play the sole eligible card free");
     let _ = runner.auto_resolve();
 
@@ -672,12 +674,13 @@ fn p_189_security_clause_plays_liberator_free_from_trash() {
         "the [Security] clause surfaces a UnionZone selection"
     );
     assert_eq!(
-        view.valid_action_ids.len(),
+        physical_choice::commits(&runner.game).len(),
         1,
         "the LIBERATOR cost-3 card in trash is the sole eligible candidate"
     );
+    let action = physical_choice::card_action(&runner.game, "LIB-TRASH", digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     runner
-        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, action)
         .expect("play the LIBERATOR card free from trash");
     let _ = runner.auto_resolve();
 
@@ -1092,3 +1095,6 @@ fn p_189_progress_dormant_when_not_attacking() {
         "not attacking → <Progress> is dormant → opponent effects are NOT excluded"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

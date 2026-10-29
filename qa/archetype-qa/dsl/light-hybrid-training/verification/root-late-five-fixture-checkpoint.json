@@ -1,0 +1,26 @@
+{
+  "status": "five_whole_canonical_modules_green_full_aggregate_pending",
+  "modules": {
+    "BT23-032": 22,
+    "BT25-085": 20,
+    "BT26-009": 7,
+    "BT26-082": 10,
+    "BT4-072": 5
+  },
+  "red": {
+    "passed": 58,
+    "failed": 6,
+    "ignored": 0,
+    "log": "logs/root-late-five-physical-red.log"
+  },
+  "green": {
+    "passed": 64,
+    "failed": 0,
+    "ignored": 0,
+    "seconds": 95.39,
+    "log": "logs/root-late-five-physical-green.log"
+  },
+  "changes": "Exact physical source/security/hand rows and masks replace legacy numeric geometry; optional PASS is counted separately. BT26-009 uses the independently updated shared picker. All original source eligibility, DP expiry, free Option use/draw, face-up bookkeeping, shuffle prevention and zone-count outcomes retained.",
+  "production_changes": false,
+  "admission_promoted": false
+}

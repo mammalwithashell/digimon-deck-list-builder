@@ -1,0 +1,116 @@
+# English card face and official Q3679-Q3682; DCGO EX5/White/EX5_070.cs.
+# The inherited effect performs two independent mandatory instructions. It
+# neither pays a two-card cost nor prevents the original departure.
+card: EX5-070
+name: X Antibody Proto Form
+kind: option
+color: [white]
+cost: 0
+traits: [X Antibody]
+also_treated_as: [X Antibody]
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+
+effects:
+  - when: main_from_hand
+    summary: "A Digimon without X Antibody sources may digivolve into an X Antibody trait Digimon in hand for 1 less; if it did, place this Option as its bottom source"
+    process:
+      - select_own_permanent:
+          bind_as: host
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - not:
+                  source_count:
+                    filter: { name_is: X Antibody }
+                    at_least: 1
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_has: X Antibody
+                  cost: { reduce: 1 }
+          prompt: "You may choose a Digimon without X Antibody in its digivolution cards to digivolve"
+      - if:
+          condition: { binding_present: host }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evolution
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: X Antibody
+                    - can_digivolve_onto_with_cost: { target: host, cost: { reduce: 1 } }
+                prompt: "You may digivolve into an X Antibody trait Digimon for 1 less"
+            - effect_initiated_digivolve:
+                target: host
+                from_hand: evolution
+                cost: { reduce: 1 }
+                ignore_requirements: false
+            - if:
+                condition: { effect_digivolved_any_digimon: true }
+                then:
+                  - place_self_under_permanent: { target: host }
+
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    active_when:
+      all_of:
+        - kind: digimon
+        - is_source_permanent: true
+        - not: { replacement_cause: own_effect }
+    summary: "When this Digimon would leave other than by your effect, return 1 Digimon source to hand and place 1 X Antibody source on top of security"
+    process:
+      - if:
+          condition:
+            self_source_count:
+              filter: { kind: digimon }
+              op: gte
+              value: 1
+          then:
+            - select_own_sources:
+                target: source
+                bind_as: returned
+                min: 1
+                max: 1
+                filter: { kind: digimon }
+                prompt: "Return 1 Digimon card from this Digimon's digivolution cards to the hand"
+            - return_selected_sources_to_hand: { source_refs: returned }
+      - if:
+          condition:
+            all_of:
+              - self_source_count:
+                  filter: { name_is: X Antibody }
+                  op: gte
+                  value: 1
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  is_source_permanent: true
+                  owner_can_add_security: true
+          then:
+            - select_material:
+                of_permanent: source
+                bind_as: antibody
+                filter: { name_is: X Antibody }
+                prompt: "Place 1 X Antibody from this Digimon's digivolution cards on top of security"
+            - security_place_stacked_card:
+                carrier: source
+                source: antibody
+                of: you
+                position: top
+                face: down
+
+  - when: on_security
+    summary: "Add this card to the hand"
+    process:
+      - add_this_option_to_hand: {}

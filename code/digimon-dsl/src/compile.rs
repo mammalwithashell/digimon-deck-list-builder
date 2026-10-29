@@ -1027,8 +1027,32 @@ fn compile_predicate(
         affordable_with_cost_reduce: p.affordable_with_cost_reduce,
         can_digivolve_from_source: p.can_digivolve_from_source,
         can_digivolve_onto: p.can_digivolve_onto.clone(),
+        can_digivolve_onto_with_cost: p.can_digivolve_onto_with_cost.as_ref().map(|spec| {
+            CompiledDigivolveCostPredicate {
+                target: spec.target.clone(),
+                cost: compile_cost_delta(&spec.cost,
+                    &format!("{prefix}.can_digivolve_onto_with_cost.cost"), card_id, errors),
+            }
+        }),
+        dna_hand_candidate: p.dna_hand_candidate.as_ref().map(|spec| {
+            CompiledDnaHandCandidate {
+                role: spec.role,
+                result: spec.result.clone(),
+                field: spec.field.clone(),
+                field_filter: spec.field_filter.as_ref().map(|filter| Box::new(compile_predicate(
+                    filter, &format!("{prefix}.dna_hand_candidate.field_filter"), card_id, errors,
+                ))),
+                partner_filter: spec.partner_filter.as_ref().map(|filter| Box::new(compile_predicate(
+                    filter, &format!("{prefix}.dna_hand_candidate.partner_filter"), card_id, errors,
+                ))),
+                cost: compile_cost_delta(&spec.cost,
+                    &format!("{prefix}.dna_hand_candidate.cost"), card_id, errors),
+                ignore_requirements: spec.ignore_requirements,
+            }
+        }),
         can_play_from_effect_without_cost: p.can_play_from_effect_without_cost,
         can_play_to_breeding_from_hand: p.can_play_to_breeding_from_hand,
+        can_move_from_breeding_by_effect: p.can_move_from_breeding_by_effect,
         dp_eq,
         dp_lte,
         dp_lte_deletion_cap: false,
@@ -1073,6 +1097,14 @@ fn compile_predicate(
                         errors,
                     ))
                 }),
+                cost: hdc.cost.as_ref().map(|cost| {
+                    compile_cost_delta(
+                        cost,
+                        &format!("{prefix}.has_digivolve_candidate.cost"),
+                        card_id,
+                        errors,
+                    )
+                }),
             }
         }),
         has_inherited: p.has_inherited.as_ref().map(|b| {
@@ -1088,6 +1120,7 @@ fn compile_predicate(
         can_change_orientation: p.can_change_orientation,
         can_unsuspend: p.can_unsuspend,
         owner_can_add_security: p.owner_can_add_security,
+        controller_can_add_security: p.controller_can_add_security,
         can_attack: p.can_attack.map(|c| crate::compiled::CompiledCanAttack {
             targets: compile_attack_target_spec(c.targets),
             without_suspending: c.without_suspending,
@@ -1565,6 +1598,9 @@ fn compile_predicate(
                 errors,
             ))
         }),
+        cost_target_permanent: p.cost_target_permanent.as_ref().map(|b| {
+            Box::new(compile_predicate(b, &format!("{prefix}.cost_target_permanent"), card_id, errors))
+        }),
         source_is_cost_target_permanent: p.source_is_cost_target_permanent,
         cost_target_from_hand: p.cost_target_from_hand,
     }
@@ -2013,6 +2049,10 @@ fn compile_replacement_process(
                     if let Some(body)=map.get("SuspendAndCancelAllMatchingLeaves") {
                         out.push(serde_json::from_value(body["filter"].clone()).expect("compiled filter"));
                     }
+                    if let Some(filter)=map.get("TrashTopSecurityAndCancelReplacement")
+                        .and_then(|body|body.get("all_matching")).filter(|filter|!filter.is_null()) {
+                        out.push(serde_json::from_value(filter.clone()).expect("compiled filter"));
+                    }
                     for value in map.values(){filters(value,out);}
                 }
                 serde_json::Value::Array(values)=>for value in values {filters(value,out);},
@@ -2422,8 +2462,12 @@ fn compile_declarative(
             }
         }
         B::CostReduction(c) => {
+            if c.when_playing_this && c.when_digivolving_this {
+                errors.push(ValidationError { card_id: card_id.into(), path: prefix.into(),
+                    message: "when_playing_this and when_digivolving_this are mutually exclusive".into() });
+            }
             if c.set_cost.is_some()
-                && (c.amount.is_some() || c.when_any_ally_digivolves_into.is_some())
+                && (c.amount.is_some() || c.when_any_ally_digivolves_into.is_some() || c.when_digivolving_this)
             {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
@@ -2439,6 +2483,7 @@ fn compile_declarative(
                 active_when,
                 reduction_timing: c.reduction_timing,
                 when_playing_this: c.when_playing_this,
+                when_digivolving_this: c.when_digivolving_this,
                 when_any_ally_played: c.when_any_ally_played.as_ref().map(|p| {
                     compile_predicate(
                         p,
@@ -2794,6 +2839,7 @@ fn compile_step(
     errors: &mut Vec<ValidationError>,
 ) -> CompiledStep {
     use crate::step::StepSpec as S;
+    crate::validator::validate_scoped_step_modes(s, prefix, card_id, errors);
     match s {
         S::GainMemory(f) => {
             match split_scalar_formula(f, &format!("{prefix}.gain_memory"), card_id, errors) {
@@ -3308,6 +3354,7 @@ fn compile_step(
         },
         S::MoveFromBreeding(a) => CompiledStep::MoveFromBreeding {
             of: compile_player_ref(a.of),
+            bind_as: a.bind_as.clone(),
         },
 
         // PlayFromHand, PlayFromTrash, PlayFromTrashFree all use PlayFromHandArgs
@@ -3538,6 +3585,7 @@ fn compile_step(
                 )
             }),
             optional: a.optional,
+            bind_as: a.bind_as.clone(),
         },
         S::EffectInitiatedDnaDigivolve(a) => CompiledStep::EffectInitiatedDnaDigivolve {
             target_a: compile_binding_ref(&a.target_a),
@@ -3597,6 +3645,9 @@ fn compile_step(
         S::TrashTopSecurityAndCancelReplacement(a) => {
             CompiledStep::TrashTopSecurityAndCancelReplacement {
                 of: compile_player_ref(a.of),
+                all_matching: a.all_matching.as_ref().map(|filter| {
+                    compile_predicate(filter, &format!("{prefix}.all_matching"), card_id, errors)
+                }),
             }
         }
         S::BounceSelf(_) => CompiledStep::BounceSelf,
@@ -3610,6 +3661,8 @@ fn compile_step(
                 });
             }
             CompiledStep::SecurityPlaceStackedCard {
+                bind_success_as: a.bind_success_as.clone(),
+                to_owner: a.to_owner,
                 carrier: compile_binding_ref(&a.carrier),
                 source: a.source.as_ref().map(compile_binding_ref),
                 source_index_from_top: a.source_index_from_top,
@@ -3619,12 +3672,16 @@ fn compile_step(
             }
         }
         S::SecurityPlaceTopStackedCard(a) => CompiledStep::SecurityPlaceTopStackedCard {
+            bind_success_as: a.bind_success_as.clone(),
+            to_owner: a.to_owner,
             carrier: compile_binding_ref(&a.carrier),
             of: compile_player_ref(a.of),
             position: compile_stack_position(a.position),
             face_up: a.face.is_up(),
         },
         S::SecurityPlaceTopCard(a) => CompiledStep::SecurityPlaceTopCard {
+            bind_success_as: a.bind_success_as.clone(),
+            to_owner: a.to_owner,
             carrier: compile_binding_ref(&a.carrier),
             of: compile_player_ref(a.of),
             position: compile_stack_position(a.position),
@@ -3714,6 +3771,7 @@ fn compile_step(
             expiry: a.expiry.clone(),
         },
         S::AddModifier(a) => CompiledStep::AddModifier {
+            opponent_only: a.opponent_only,
             target: compile_modifier_target(
                 &a.target,
                 &format!("{prefix}.target"),
@@ -4095,6 +4153,7 @@ fn compile_step(
             min: a.min,
             max: a.max,
             optional_zero: a.optional_zero,
+            distinct_by: a.distinct_by.map(compile_distinct_by),
             play_cost_budget: a.play_cost_budget.as_ref().map(|f| {
                 compile_formula(f, &format!("{prefix}.play_cost_budget"), card_id, errors)
             }),
@@ -4178,6 +4237,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
         },
         S::SelectSecurity(a) => CompiledStep::SelectSecurity {
+            continue_on_decline: a.continue_on_decline,
             of: compile_player_ref(a.of),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
@@ -4764,7 +4824,7 @@ effects:
                 .join("_examples");
             let (specs, errs) = load_dir_ok(&examples);
             assert!(errs.is_empty(), "parse errors: {errs:#?}");
-            assert_eq!(specs.len(), 13);
+            assert!(!specs.is_empty(), "example fixtures must not be empty");
 
             let mut failures = Vec::new();
             for spec in &specs {

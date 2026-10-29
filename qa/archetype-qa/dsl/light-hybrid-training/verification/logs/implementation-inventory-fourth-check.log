@@ -1,0 +1,105 @@
+    Checking digimon-dsl v0.1.0 (C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-dsl)
+error[E0599]: the method `walk` exists for reference `&std::option::Option<(u8, u64, i32)>`, but its trait bounds were not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5772:29
+     |
+5772 |                 cost_credit.walk(c, &format!("{}@DeleteReceiptFinalize.cost_credit", path), "UNCLASSIFIED_STRING");
+     |                             ^^^^ method cannot be called on `&std::option::Option<(u8, u64, i32)>` due to unsatisfied trait bounds
+     |
+note: trait bound `(u8, u64, i32): Walk` was not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:76:9
+     |
+  76 | impl<T: Walk> Walk for Option<T> {
+     |         ^^^^  ----     ---------
+     |         |
+     |         unsatisfied trait bound introduced here
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+
+error[E0599]: no method named `walk` found for reference `&(u8, u16, u64)` in the current scope
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5781:23
+     |
+5781 |                 payer.walk(c, &format!("{}@PaidDeletionPreventionFinalize.payer", path), "UNCLASSIFIED_STRING");
+     |                       ^^^^ method not found in `&(u8, u16, u64)`
+     |
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+help: some of the expressions' fields have a method of the same name
+     |
+5781 |                 payer.0.walk(c, &format!("{}@PaidDeletionPreventionFinalize.payer", path), "UNCLASSIFIED_STRING");
+     |                       ++
+5781 |                 payer.1.walk(c, &format!("{}@PaidDeletionPreventionFinalize.payer", path), "UNCLASSIFIED_STRING");
+     |                       ++
+5781 |                 payer.2.walk(c, &format!("{}@PaidDeletionPreventionFinalize.payer", path), "UNCLASSIFIED_STRING");
+     |                       ++
+
+error[E0599]: no method named `walk` found for reference `&(u8, u16, u64)` in the current scope
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5786:23
+     |
+5786 |                 payer.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.payer", path), "UNCLASSIFIED_STRING");
+     |                       ^^^^ method not found in `&(u8, u16, u64)`
+     |
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+help: some of the expressions' fields have a method of the same name
+     |
+5786 |                 payer.0.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.payer", path), "UNCLASSIFIED_STRING");
+     |                       ++
+5786 |                 payer.1.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.payer", path), "UNCLASSIFIED_STRING");
+     |                       ++
+5786 |                 payer.2.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.payer", path), "UNCLASSIFIED_STRING");
+     |                       ++
+
+error[E0599]: the method `walk` exists for reference `&Vec<(u8, u16, u64)>`, but its trait bounds were not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5787:25
+     |
+5787 |                 members.walk(c, &format!("{}@PaidDeletionBatchPreventionFinalize.members", path), "UNCLASSIFIED_STRING");
+     |                         ^^^^ method cannot be called on `&Vec<(u8, u16, u64)>` due to unsatisfied trait bounds
+     |
+note: trait bound `(u8, u16, u64): Walk` was not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:84:9
+     |
+  84 | impl<T: Walk> Walk for Vec<T> {
+     |         ^^^^  ----     ------
+     |         |
+     |         unsatisfied trait bound introduced here
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+
+error[E0599]: the method `walk` exists for reference `&Vec<(u8, u16, u64)>`, but its trait bounds were not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5796:25
+     |
+5796 |                 members.walk(c, &format!("{}@PreventDeletionMemberFinalize.members", path), "UNCLASSIFIED_STRING");
+     |                         ^^^^ method cannot be called on `&Vec<(u8, u16, u64)>` due to unsatisfied trait bounds
+     |
+note: trait bound `(u8, u16, u64): Walk` was not satisfied
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:84:9
+     |
+  84 | impl<T: Walk> Walk for Vec<T> {
+     |         ^^^^  ----     ------
+     |         |
+     |         unsatisfied trait bound introduced here
+     = help: items from traits can only be used if the trait is implemented and in scope
+note: `Walk` defines an item `walk`, perhaps you need to implement it
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:66:1
+     |
+  66 | pub trait Walk {
+     | ^^^^^^^^^^^^^^
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `digimon-dsl` (bin "implementation_inventory") due to 5 previous errors

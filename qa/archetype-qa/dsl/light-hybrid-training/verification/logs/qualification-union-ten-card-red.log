@@ -1,0 +1,281 @@
+
+running 136 tests
+test bt17::bt17_095::bt17_095_has_replacement_clause_for_when_would_leave_battle_area ... ok
+test bt17::bt17_095::bt17_095_delay_dna_prompts_clone_faithfully ... ok
+test bt17::bt17_095::bt17_095_main_auto_collapses_zone_choice_when_only_one_zone_eligible ... FAILED
+test bt17::bt17_095::bt17_095_has_three_clauses ... ok
+test bt17::bt17_095::bt17_095_main_clause_is_optional_face_up ... ok
+test bt17::bt17_095::bt17_095_main_installs_zone_choice_selection ... ok
+test bt17::bt17_095::bt17_095_main_no_panic_when_no_eligible_named_digimon_anywhere ... ok
+test bt17::bt17_095::bt17_095_replacement_dna_consumes_leaving_subject_into_merged_permanent ... ok
+test bt17::bt17_095::bt17_095_replacement_dna_digivolves_into_omnimon_when_eligible ... ok
+test bt17::bt17_095::bt17_095_replacement_does_not_fire_for_opponent_digimon_leaving ... ok
+test bt17::bt17_095::bt17_095_replacement_does_not_fire_for_own_l6_unmatched_name ... ok
+test bt17::bt17_095::bt17_095_replacement_does_not_fire_for_own_low_level_greymon ... ok
+test bt17::bt17_095::bt17_095_security_adds_card_to_hand_after_play ... ok
+test bt17::bt17_095::bt17_095_security_auto_collapses_zone_when_only_trash_eligible ... FAILED
+test bt17::bt17_095::bt17_095_security_clause_is_optional_inherited ... ok
+test bt17::bt17_095::bt17_095_security_no_panic_with_empty_hand_and_trash ... ok
+test bt17::bt17_095::bt17_095_yaml_parses_without_error ... ok
+test bt17::bt17_097::bt17_097_delay_does_not_fire_for_non_free_digimon_deletion ... ok
+test bt17::bt17_097::bt17_097_delay_does_not_fire_for_opponent_free_digimon_deletion ... ok
+test bt17::bt17_097::bt17_097_delay_does_not_fire_for_own_effect_deletion_of_free_digimon ... ok
+test bt17::bt17_097::bt17_097_delay_fires_for_battle_deletion_of_free_digimon ... ok
+test bt17::bt17_097::bt17_097_delay_fires_for_opponent_effect_deletion_of_free_digimon ... ok
+test bt17::bt17_097::bt17_097_has_replacement_clause_for_when_would_be_deleted ... ok
+test bt17::bt17_097::bt17_097_digivolved_when_digivolving_waits_for_the_deleting_effect ... ok
+test bt17::bt17_097::bt17_097_has_three_compiled_clauses ... ok
+test bt17::bt17_097::bt17_097_main_clause_is_optional_face_up ... ok
+test bt17::bt17_097::bt17_097_main_digivolves_into_free_lv5_hand_card_cost_reduced_by_4_then_places_self ... ok
+test bt17::bt17_097::bt17_097_main_places_self_as_delay_option_on_field ... ok
+test bt17::bt17_097::bt17_097_security_auto_collapses_zone_when_only_hand_eligible ... FAILED
+test bt17::bt17_097::bt17_097_security_clause_is_optional_inherited ... ok
+test bt17::bt17_097::bt17_097_security_eligible_filter_accepts_ken_ichijoji ... ok
+test bt17::bt17_097::bt17_097_security_plays_davis_from_hand_and_places_self_on_field ... ok
+test bt17::bt17_097::bt17_097_security_smoke_no_eligible_tamer_no_panic ... ok
+test bt17::bt17_097::bt17_097_yaml_parses_without_error ... ok
+test bt19::bt19_012::bt19_012_declares_shoutmon_digixros_alias_and_alt_paths ... ok
+test bt19::bt19_012::bt19_012_inherited_grants_rush_to_xros_heart_carrier ... ok
+test bt19::bt19_012::bt19_012_on_deletion_places_xros_or_blue_flare_from_hand_or_trash_under_tamer ... FAILED
+test bt19::bt19_012::bt19_012_on_play_reduces_dp_then_deletes_three_thousand_or_less ... ok
+test bt19::bt19_061::bt19_061_declares_sparrowmon_digixros_alias_without_generic_identity_alias ... ok
+test bt19::bt19_061::bt19_061_on_deletion_places_matching_hand_or_trash_card_under_own_tamer ... FAILED
+test bt19::bt19_099::bt19_099_decline_replacement_keeps_option_and_leave_proceeds ... ok
+test bt19::bt19_099::bt19_099_has_three_clauses ... ok
+test bt19::bt19_099::bt19_099_main_clause_is_optional_face_up ... ok
+test bt19::bt19_099::bt19_099_main_does_not_offer_non_composite_trash_digimon ... ok
+test bt19::bt19_099::bt19_099_main_installs_trash_selection_when_composite_present ... ok
+test bt19::bt19_099::bt19_099_main_plays_composite_from_trash_at_reduced_cost_and_places_self ... ok
+test bt19::bt19_099::bt19_099_main_places_self_even_when_trash_pick_declined ... ok
+test bt19::bt19_099::bt19_099_offer_installs_even_with_zero_reward_candidates ... ok
+test bt19::bt19_099::bt19_099_replacement_delay_then_plays_wicked_god_at_cost_plus_one_free ... FAILED
+test bt19::bt19_099::bt19_099_replacement_clause_matches_recognised_union_flow_shape ... ok
+test bt19::bt19_099::bt19_099_replacement_does_not_fire_for_opponent_millenniummon ... ok
+test bt19::bt19_099::bt19_099_replacement_does_not_cancel_the_leave ... ok
+test bt19::bt19_099::bt19_099_replacement_does_not_fire_for_own_non_millenniummon ... ok
+test bt19::bt19_099::bt19_099_replacement_fires_for_own_millenniummon_leaving ... ok
+test bt19::bt19_099::bt19_099_reward_filter_rejects_non_wicked_god_at_correct_cost ... ok
+test bt19::bt19_099::bt19_099_reward_can_be_declined_after_delay_cost_paid ... ok
+test bt19::bt19_099::bt19_099_reward_offers_only_exact_cost_plus_one ... FAILED
+test bt19::bt19_099::bt19_099_reward_filter_rejects_wicked_god_at_wrong_cost ... ok
+test bt19::bt19_099::bt19_099_reward_plays_wicked_god_from_trash ... FAILED
+test bt19::bt19_099::bt19_099_security_clause_is_mandatory_inherited ... ok
+test bt19::bt19_099::bt19_099_yaml_parses_without_error ... ok
+test bt19::bt19_099::bt19_099_security_places_self_in_battle_area_on_attack ... ok
+test bt20::bt20_018::bt20_018_attack_tail_can_use_hand_or_trash_without_opponent_target ... FAILED
+test bt20::bt20_018::bt20_018_attack_tail_can_be_declined_at_breeder_or_card_choice ... ok
+test bt20::bt20_018::bt20_018_attack_tail_runs_after_de_digivolve_during_opponents_attack ... FAILED
+test bt20::bt20_018::bt20_018_de_digivolve_stops_at_level_three ... ok
+test bt20::bt20_018::bt20_018_attack_tail_requires_attack_breeder_and_legal_candidate ... ok
+test bt20::bt20_018::bt20_018_inherited_attack_trashes_only_for_exact_ouryuken_once_each_turn ... ok
+test bt20::bt20_018::bt20_018_piercing_checks_security_after_surviving_battle ... ok
+test bt20::bt20_018::bt20_018_de_digivolve_target_and_one_or_two_card_declaration_are_mandatory ... ok
+test bt20::bt20_018::bt20_018_security_removal_without_digimon_has_no_target_prompt ... ok
+test bt20::bt20_018::bt20_018_security_removal_from_either_stack_selects_one_lowest_dp_digimon ... ok
+test bt20::bt20_018::bt20_018_union_filters_require_chronicle_level_at_most_six_and_legal_evolution ... FAILED
+test bt20::bt20_018::bt20_018_standard_evolution_requires_red_or_black_level_five_and_costs_three ... ok
+test bt20::bt20_056::bt20_056_attack_tail_evolves_from_hand_or_trash_for_both_controllers_and_attackers ... FAILED
+test bt20::bt20_056::bt20_056_attack_tail_decline_at_each_stage_preserves_recovery ... ok
+test bt20::bt20_056::bt20_056_attack_tail_is_independent_of_successful_recovery ... ok
+test bt20::bt20_056::bt20_056_attack_tail_union_masks_filter_trait_level_kind_and_evolution_requirements ... FAILED
+test bt20::bt20_056::bt20_056_attack_tail_requires_breeder_and_legal_candidate_but_recovery_still_runs ... ok
+test bt20::bt20_056::bt20_056_inherited_replacement_masks_and_opt_hold_for_both_controllers ... ok
+test bt20::bt20_056::bt20_056_barrier_cost_may_be_accepted_or_declined_only_for_battle_deletion ... ok
+test bt20::bt20_056::bt20_056_loads_barrier_recovery_slice ... ok
+test bt20::bt20_056::bt20_056_inherited_replacement_requires_exact_name_and_available_security ... ok
+test bt20::bt20_056::bt20_056_ouryuken_inherited_replacement_declined_lets_it_leave ... ok
+test bt20::bt20_056::bt20_056_ouryuken_inherited_replacement_prevents_leave_for_top_security ... ok
+test bt20::bt20_056::bt20_056_ouryuken_replacement_does_not_fire_for_non_ouryuken_top ... ok
+test bt20::bt20_056::bt20_056_ouryuken_replacement_does_not_fire_for_own_effect_leave ... ok
+test bt20::bt20_056::bt20_056_printed_routes_cost_three_and_recovery_occurs_on_evolution ... ok
+test bt20::bt20_056::bt20_056_recovery_is_mandatory_for_both_timings_and_controllers_without_attack ... ok
+test bt20::bt20_056::bt20_056_security_removed_debuff_fires_once_across_both_stacks ... ok
+test bt20::bt20_056::bt20_056_security_debuff_choice_is_mandatory_excludes_tamers_and_expires_and_resets ... ok
+test bt20::bt20_056::bt20_056_security_removed_debuff_is_optional_when_no_opponent_digimon ... ok
+test bt20::bt20_056::bt20_056_security_removed_debuffs_one_opponent_digimon_by_8000 ... ok
+test bt20::bt20_093::delay_decline_before_payment_preserves_option ... ok
+test bt20::bt20_093::delay_field_dna_decline_after_payment_preserves_original_subject ... ok
+test bt20::bt20_093::delay_field_dna_opponent_turn_pays_for_controller ... ok
+test bt20::bt20_093::delay_field_dna_material_selection_order_does_not_change_recipe_stack_order ... ok
+test bt20::bt20_093::delay_field_dna_same_turn_not_offered ... ok
+test bt20::bt20_093::delay_field_dna_paid_legal_pair_cost_and_clone_each_prompt ... ok
+test bt20::bt20_093::delay_rejects_battle_unrelated_and_opponent_subjects ... ok
+test bt20::bt20_093::security_plays_name_only_from_both_zones_free_and_always_places_option ... FAILED
+test bt20::bt20_095::bt20_095_delay_decline_keeps_option_for_the_next_matching_deletion ... ok
+test bt20::bt20_093::main_optional_play_filters_and_reduces_three_then_places_option ... ok
+test bt20::bt20_095::bt20_095_delay_works_on_both_turns_from_hand_and_trash_for_free ... FAILED
+test bt20::bt20_095::bt20_095_evolution_mask_keeps_printed_routes_and_chronicle_digimon_restriction ... FAILED
+test bt20::bt20_095::bt20_095_delay_requires_own_chronicle_digimon_deletion_and_an_older_placement ... ok
+test bt20::bt20_095::bt20_095_evolution_prohibition_does_not_prevent_paying_the_movement_cost ... ok
+test bt20::bt20_095::bt20_095_main_exposes_all_matching_cards_and_both_remainder_orders_at_either_end ... ok
+test bt20::bt20_095::bt20_095_main_mandatorily_adds_a_chronicle_card_of_each_kind ... ok
+test bt20::bt20_095::bt20_095_main_reveals_only_available_cards_from_a_short_deck ... ok
+test bt20::bt20_095::bt20_095_main_without_a_match_returns_every_revealed_card_and_still_places ... ok
+test bt20::bt20_095::bt20_095_move_and_evolution_have_independent_declines_after_delay_payment ... ok
+test bt20::bt20_095::bt20_095_move_result_survives_compaction_and_clone_at_the_evolution_prompt ... ok
+test bt20::bt20_095::bt20_095_move_cost_does_not_offer_empty_egg_or_cannot_move_breeding ... ok
+test bt20::bt20_095::bt20_095_movement_allows_a_level_four_non_chronicle_breeder_without_a_result ... ok
+test bt20::bt20_095::bt20_095_movement_can_be_paid_without_a_legal_evolution_result ... ok
+test bt20::bt20_095::bt20_095_official_errata_allows_a_non_chronicle_lv3_breeder_to_move_and_evolve ... ok
+test bt20::bt20_095::bt20_095_security_decline_or_no_candidate_still_places_delay ... ok
+test bt20::bt20_095::bt20_095_security_masks_effect_play_prohibitions_without_suppressing_delay_placement ... ok
+test bt20::bt20_095::bt20_095_security_plays_cost_five_chronicle_digimon_or_tamer_from_hand_or_trash ... FAILED
+test bt20::bt20_095::bt20_095_unpaid_move_after_capacity_changes_never_offers_evolution ... ok
+test bt20::bt20_095::bt20_095_security_union_mask_excludes_wrong_trait_cost_options_and_eggs ... FAILED
+test bt21::bt21_062::bt21_062_loads_with_printed_metadata ... ok
+test bt21::bt21_062::bt21_062_has_snatchmon_alt_digivolve ... ok
+test bt21::bt21_062::bt21_062_start_of_your_main_deletes_one_opponent_digimon ... ok
+test bt21::bt21_062::bt21_062_start_of_your_main_does_nothing_with_no_opponent_digimon ... ok
+test bt21::bt21_062::bt21_062_when_digivolving_does_nothing_with_only_three_vemmon_in_trash ... ok
+test bt21::bt21_062::bt21_062_when_digivolving_decline_pick_one_aborts_whole_clause ... ok
+test bt21::bt21_062::bt21_062_when_digivolving_ignores_non_cannon_options ... ok
+test bt21::bt21_062::bt21_062_when_digivolving_ignores_non_vemmon_trash_cards ... ok
+test bt21::bt21_062::bt21_062_when_digivolving_places_four_vemmon_sources ... ok
+test bt21::bt21_062::bt21_062_when_digivolving_may_use_ragnarok_cannon_from_trash_free ... FAILED
+test bt21::bt21_062::bt21_062_would_leave_also_triggers_on_battle_removal ... ok
+test bt21::bt21_062::bt21_062_would_leave_decline_lets_it_leave ... ok
+test bt21::bt21_062::bt21_062_would_leave_returns_four_vemmon_sources_and_prevents ... ok
+test bt21::bt21_062::bt21_062_would_leave_no_prevention_with_fewer_than_four_vemmon_sources ... ok
+
+failures:
+
+---- bt17::bt17_095::bt17_095_main_auto_collapses_zone_choice_when_only_one_zone_eligible stdout ----
+
+thread 'bt17::bt17_095::bt17_095_main_auto_collapses_zone_choice_when_only_one_zone_eligible' (14556) panicked at code\digimon-engine\tests\cards_behavioral\bt17\bt17_095.rs:374:5:
+the only eligible card action must be a trash slot (>= TRASH_EFFECT_START), not a hand slot (0); got 30
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt17::bt17_095::bt17_095_security_auto_collapses_zone_when_only_trash_eligible stdout ----
+
+thread 'bt17::bt17_095::bt17_095_security_auto_collapses_zone_when_only_trash_eligible' (17236) panicked at code\digimon-engine\tests\cards_behavioral\bt17\bt17_095.rs:1182:5:
+the only eligible card action must be a trash slot; got 30
+
+---- bt17::bt17_097::bt17_097_security_auto_collapses_zone_when_only_hand_eligible stdout ----
+
+thread 'bt17::bt17_097::bt17_097_security_auto_collapses_zone_when_only_hand_eligible' (21248) panicked at code\digimon-engine\tests\cards_behavioral\bt17\bt17_097.rs:884:5:
+the only eligible card action must be a hand slot (PLAY_HAND range 0..30); got 30
+
+---- bt19::bt19_012::bt19_012_on_deletion_places_xros_or_blue_flare_from_hand_or_trash_under_tamer stdout ----
+
+thread 'bt19::bt19_012::bt19_012_on_deletion_places_xros_or_blue_flare_from_hand_or_trash_under_tamer' (54588) panicked at code\digimon-engine\tests\cards_behavioral\bt19\bt19_012.rs:154:13:
+assertion failed: view.valid_action_ids.contains(&hand_action)
+
+---- bt19::bt19_061::bt19_061_on_deletion_places_matching_hand_or_trash_card_under_own_tamer stdout ----
+
+thread 'bt19::bt19_061::bt19_061_on_deletion_places_matching_hand_or_trash_card_under_own_tamer' (50904) panicked at code\digimon-engine\tests\cards_behavioral\bt19\bt19_061.rs:110:13:
+Xros Heart card in hand should be legal
+
+---- bt19::bt19_099::bt19_099_replacement_delay_then_plays_wicked_god_at_cost_plus_one_free stdout ----
+
+thread 'bt19::bt19_099::bt19_099_replacement_delay_then_plays_wicked_god_at_cost_plus_one_free' (18888) panicked at code\digimon-engine\tests\cards_behavioral\bt19\bt19_099.rs:790:5:
+assertion `left == right` failed: the sole candidate is the hand's [Wicked God] at hand index 0
+  left: 30
+ right: 0
+
+---- bt19::bt19_099::bt19_099_reward_offers_only_exact_cost_plus_one stdout ----
+
+thread 'bt19::bt19_099::bt19_099_reward_offers_only_exact_cost_plus_one' (24916) panicked at code\digimon-engine\tests\cards_behavioral\bt19\bt19_099.rs:937:5:
+assertion `left == right` failed: only the cost-11 [Wicked God] (hand index 0) is offered; the cost-10 sibling (hand index 1) fails the +1 comparator
+  left: [30]
+ right: [0]
+
+---- bt19::bt19_099::bt19_099_reward_plays_wicked_god_from_trash stdout ----
+
+thread 'bt19::bt19_099::bt19_099_reward_plays_wicked_god_from_trash' (29136) panicked at code\digimon-engine\tests\cards_behavioral\bt19\bt19_099.rs:865:5:
+assertion `left == right` failed: the sole candidate is the trash's [Wicked God] at trash index 0
+  left: [30]
+ right: [1150]
+
+---- bt20::bt20_018::bt20_018_attack_tail_can_use_hand_or_trash_without_opponent_target stdout ----
+
+thread 'bt20::bt20_018::bt20_018_attack_tail_can_use_hand_or_trash_without_opponent_target' (41484) panicked at code\digimon-engine\tests\cards_behavioral\bt20\bt20_018.rs:306:13:
+assertion failed: choices(&r, 1, true).contains(&action)
+
+---- bt20::bt20_018::bt20_018_attack_tail_runs_after_de_digivolve_during_opponents_attack stdout ----
+
+thread 'bt20::bt20_018::bt20_018_attack_tail_runs_after_de_digivolve_during_opponents_attack' (10944) panicked at code\digimon-engine\tests\cards_behavioral\bt20\bt20_018.rs:118:5:
+assertion `left == right` failed
+  left: 0.0
+ right: 1.0
+
+---- bt20::bt20_018::bt20_018_union_filters_require_chronicle_level_at_most_six_and_legal_evolution stdout ----
+
+thread 'bt20::bt20_018::bt20_018_union_filters_require_chronicle_level_at_most_six_and_legal_evolution' (23648) panicked at code\digimon-engine\tests\cards_behavioral\bt20\bt20_018.rs:352:9:
+BT20-056
+
+---- bt20::bt20_056::bt20_056_attack_tail_evolves_from_hand_or_trash_for_both_controllers_and_attackers stdout ----
+
+thread 'bt20::bt20_056::bt20_056_attack_tail_evolves_from_hand_or_trash_for_both_controllers_and_attackers' (20788) panicked at code\digimon-engine\tests\cards_behavioral\bt20\bt20_056.rs:571:21:
+assertion failed: choices(&r, owner, 1, true).contains(&action)
+
+---- bt20::bt20_056::bt20_056_attack_tail_union_masks_filter_trait_level_kind_and_evolution_requirements stdout ----
+
+thread 'bt20::bt20_056::bt20_056_attack_tail_union_masks_filter_trait_level_kind_and_evolution_requirements' (49612) panicked at code\digimon-engine\tests\cards_behavioral\bt20\bt20_056.rs:627:13:
+BT20-056
+
+---- bt20::bt20_093::security_plays_name_only_from_both_zones_free_and_always_places_option stdout ----
+
+thread 'bt20::bt20_093::security_plays_name_only_from_both_zones_free_and_always_places_option' (8104) panicked at code\digimon-engine\tests\cards_behavioral\bt20\bt20_093.rs:387:9:
+assertion `left == right` failed: hand/trash Dracomon only
+  left: 3
+ right: 2
+
+---- bt20::bt20_095::bt20_095_delay_works_on_both_turns_from_hand_and_trash_for_free stdout ----
+
+thread 'bt20::bt20_095::bt20_095_delay_works_on_both_turns_from_hand_and_trash_for_free' (40196) panicked at code\digimon-engine\tests\cards_behavioral\bt20\bt20_095.rs:160:5:
+assertion `left == right` failed
+  left: 0.0
+ right: 1.0
+
+---- bt20::bt20_095::bt20_095_evolution_mask_keeps_printed_routes_and_chronicle_digimon_restriction stdout ----
+
+thread 'bt20::bt20_095::bt20_095_evolution_mask_keeps_printed_routes_and_chronicle_digimon_restriction' (39472) panicked at code\digimon-engine\tests\cards_behavioral\bt20\bt20_095.rs:519:9:
+assertion `left == right` failed: EVOLUTION
+  left: 0.0
+ right: 1.0
+
+---- bt20::bt20_095::bt20_095_security_plays_cost_five_chronicle_digimon_or_tamer_from_hand_or_trash stdout ----
+
+thread 'bt20::bt20_095::bt20_095_security_plays_cost_five_chronicle_digimon_or_tamer_from_hand_or_trash' (37040) panicked at code\digimon-engine\tests\cards_behavioral\bt20\bt20_095.rs:160:5:
+assertion `left == right` failed
+  left: 0.0
+ right: 1.0
+
+---- bt20::bt20_095::bt20_095_security_union_mask_excludes_wrong_trait_cost_options_and_eggs stdout ----
+
+thread 'bt20::bt20_095::bt20_095_security_union_mask_excludes_wrong_trait_cost_options_and_eggs' (36196) panicked at code\digimon-engine\tests\cards_behavioral\bt20\bt20_095.rs:646:9:
+assertion `left == right` failed: CHRON5
+  left: 0.0
+ right: 1.0
+
+---- bt21::bt21_062::bt21_062_when_digivolving_may_use_ragnarok_cannon_from_trash_free stdout ----
+
+thread 'bt21::bt21_062::bt21_062_when_digivolving_may_use_ragnarok_cannon_from_trash_free' (13328) panicked at code\digimon-engine\tests\cards_behavioral\bt21\bt21_062.rs:344:5:
+assertion `left == right` failed: only the Ragnarok Cannon in trash is a legal pick
+  left: 2
+ right: 1
+
+
+failures:
+    bt17::bt17_095::bt17_095_main_auto_collapses_zone_choice_when_only_one_zone_eligible
+    bt17::bt17_095::bt17_095_security_auto_collapses_zone_when_only_trash_eligible
+    bt17::bt17_097::bt17_097_security_auto_collapses_zone_when_only_hand_eligible
+    bt19::bt19_012::bt19_012_on_deletion_places_xros_or_blue_flare_from_hand_or_trash_under_tamer
+    bt19::bt19_061::bt19_061_on_deletion_places_matching_hand_or_trash_card_under_own_tamer
+    bt19::bt19_099::bt19_099_replacement_delay_then_plays_wicked_god_at_cost_plus_one_free
+    bt19::bt19_099::bt19_099_reward_offers_only_exact_cost_plus_one
+    bt19::bt19_099::bt19_099_reward_plays_wicked_god_from_trash
+    bt20::bt20_018::bt20_018_attack_tail_can_use_hand_or_trash_without_opponent_target
+    bt20::bt20_018::bt20_018_attack_tail_runs_after_de_digivolve_during_opponents_attack
+    bt20::bt20_018::bt20_018_union_filters_require_chronicle_level_at_most_six_and_legal_evolution
+    bt20::bt20_056::bt20_056_attack_tail_evolves_from_hand_or_trash_for_both_controllers_and_attackers
+    bt20::bt20_056::bt20_056_attack_tail_union_masks_filter_trait_level_kind_and_evolution_requirements
+    bt20::bt20_093::security_plays_name_only_from_both_zones_free_and_always_places_option
+    bt20::bt20_095::bt20_095_delay_works_on_both_turns_from_hand_and_trash_for_free
+    bt20::bt20_095::bt20_095_evolution_mask_keeps_printed_routes_and_chronicle_digimon_restriction
+    bt20::bt20_095::bt20_095_security_plays_cost_five_chronicle_digimon_or_tamer_from_hand_or_trash
+    bt20::bt20_095::bt20_095_security_union_mask_excludes_wrong_trait_cost_options_and_eggs
+    bt21::bt21_062::bt21_062_when_digivolving_may_use_ragnarok_cannon_from_trash_free
+
+test result: FAILED. 117 passed; 19 failed; 0 ignored; 0 measured; 12619 filtered out; finished in 201.14s
+

@@ -12,6 +12,53 @@ fn setup()->DebugRunner {
  r.place_stack(0,&["PROBE-SOURCE","EX2-007"]);r
 }
 fn h()->PermanentHandle {PermanentHandle{player:0,index:0}}
+#[test]
+fn trash_to_hand_redirects_egg_to_owner_bottom_without_reporting_hand_addition() {
+    let mut r=setup();
+    let mut egg=r.game.players[0].battle_area[0].card_sources.pop().unwrap();
+    egg.owner=1;
+    let handle=egg.handle();
+    r.game.players[0].trash.push(egg);
+    let mut cloned=r.game.clone();
+    for game in [&mut r.game,&mut cloned] {
+        assert!(!game.add_to_hand_from_trash(0,handle),"no card actually added to hand");
+        assert_eq!(game.players[1].digitama_deck[0].handle(),handle);
+        assert_eq!(game.players[1].digitama_deck.len(),2);
+        assert!(game.players[0].trash.is_empty());
+        assert!(game.players.iter().all(|p|p.hand.iter().all(|c|c.handle()!=handle)));
+    }
+}
+#[test]
+fn misplaced_egg_in_hand_is_never_advertised_as_playable() {
+    let mut r=setup();
+    let egg=r.game.players[0].digitama_deck.pop().unwrap();
+    r.game.players[0].hand.push(egg);
+    r.set_first_player(0);r.set_phase(digimon_engine::enums::GamePhase::Main);
+    assert_eq!(digimon_engine::action::build_action_mask(&r.game,0)[0],0.0);
+}
+struct HandAdditionObserver;
+impl digimon_engine::effect::CardEffect for HandAdditionObserver {
+    fn effects(&self,c:digimon_engine::card_source::CardHandle)->Vec<digimon_engine::effect::Effect> {
+        vec![digimon_engine::effect::EffectBuilder::new(c,digimon_engine::enums::EffectTiming::OnAddToHand)
+            .process(|ctx| {ctx.gain_memory(1);}).build()]
+    }
+}
+#[test]
+fn redirected_egg_does_not_trigger_hand_addition_but_ordinary_card_does() {
+    for egg in [false,true] {
+        let mut r=setup();
+        r.register_effect("PROBE-SOURCE",std::sync::Arc::new(HandAdditionObserver));
+        r.place_stack(0,&["PROBE-SOURCE"]);
+        let source=r.game.players[0].battle_area[1].top_card().handle();
+        let card=if egg {r.game.players[0].digitama_deck.pop().unwrap()}
+            else {r.game.players[0].deck.pop().unwrap()};
+        let handle=card.handle();r.game.players[0].trash.push(card);
+        let mut ctx=digimon_engine::effect_context::EffectContext::new(&mut r.game,source,None,0);
+        assert_eq!(ctx.add_to_hand_from_trash(0,handle),!egg);
+        let queued=r.game.effect_queue.iter().filter(|e|e.timing==digimon_engine::enums::EffectTiming::OnAddToHand).count();
+        assert_eq!(queued,usize::from(!egg));
+    }
+}
 fn assert_routed(r:&DebugRunner,owner:usize,top:bool){
  assert!(r.game.players[0].battle_area.is_empty());assert_eq!(r.game.players[0].trash.len(),1);
  let eggs=&r.game.players[owner].digitama_deck;assert_eq!(eggs.len(),2);assert_eq!(eggs[usize::from(top)].card_id(&r.game.card_data),"EX2-007");

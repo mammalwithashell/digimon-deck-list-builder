@@ -10,6 +10,14 @@ pub(super) enum ReceiptRef {
     None,
     Live(usize),
     Missing(u64),
+    SecurityStep(super::security_play_hash::StepReference),
+    SecurityOrigin(super::security_play_hash::OriginReference),
+}
+impl ReceiptRef {
+    fn is_security(&self)->bool {matches!(self,Self::SecurityStep(_)|Self::SecurityOrigin(_))}
+}
+fn security_origin(g:&Game,path:String,origin:crate::game::PendingWouldPlayOrigin,player:u8,card:Option<crate::card_source::CardHandle>,out:&mut Vec<(String,ReceiptRef)>) {
+    if let Some(value)=super::security_play_hash::origin(g,origin,player,card) {out.push((path,ReceiptRef::SecurityOrigin(value)));}
 }
 fn reference(g: &Game, id: Option<u64>) -> ReceiptRef {
     match id {
@@ -36,6 +44,9 @@ pub(super) fn adjustment(
 fn value_refs(g: &Game, path: &str, v: &serde_json::Value, out: &mut Vec<(String, ReceiptRef)>) {
     match v {
         serde_json::Value::Object(map) => {
+            if let Some(value)=super::security_play_hash::step(g,v) {
+                out.push((path.into(),ReceiptRef::SecurityStep(value))); return;
+            }
             if let Some(id) = map
                 .get("CompleteCostPayment")
                 .and_then(|v| v.get("receipt"))
@@ -49,8 +60,14 @@ fn value_refs(g: &Game, path: &str, v: &serde_json::Value, out: &mut Vec<(String
             }
         }
         serde_json::Value::Array(values) => {
-            for (i, v) in values.iter().enumerate() {
-                value_refs(g, &format!("{path}/{i}"), v, out);
+            let mut archival_index=0;
+            for (index, v) in values.iter().enumerate() {
+                if super::security_play_hash::is_runtime_value(v) {
+                    value_refs(g,&format!("{path}/security/{index}"),v,out);
+                } else {
+                    value_refs(g,&format!("{path}/{archival_index}"),v,out);
+                    archival_index+=1;
+                }
             }
         }
         _ => {}
@@ -83,6 +100,14 @@ fn frames(g: &Game, path: &str, stack: &ResumeStack, out: &mut Vec<(String, Rece
                 outer(g, &format!("{path}/outer"), outer_conts, out);
                 if let ResumeDecline::RunTail { tail, .. } = decline {
                     steps(g, &format!("{path}/decline"), tail, out);
+                }
+            }
+            F::OptionalReplacement(state) => {
+                let mut security=Vec::new();
+                outer(g,&format!("{path}/optional/outer"),&state.outer_conts,&mut security);
+                out.extend(security.into_iter().filter(|(_,r)|r.is_security()));
+                if let Some(declaration)=state.window.as_ref().and_then(|w|w.verification_play_declaration(g.pending_would_play_resume.as_ref())) {
+                    security_origin(g,format!("{path}/optional/origin"),declaration.origin,declaration.player,Some(declaration.card),out);
                 }
             }
             F::ReplacementBody { inner, outer_conts }
@@ -575,10 +600,14 @@ fn frames(g: &Game, path: &str, stack: &ResumeStack, out: &mut Vec<(String, Rece
                 );
             }
             F::DigivolveReducerPrompt(s) | F::DigivolveReducerSuspend(s) => {
+                if let Some(dna) = &s.dna_effect {
+                    outer(g, &format!("{path}/dna/outer"), &dna.outer_conts, out);
+                }
                 if let Some(effect) = &s.effect {
                     outer(g, &format!("{path}/effect/outer"), &effect.outer_conts, out);
                 }
             }
+            F::EffectDnaHandRoute(s) => outer(g, &format!("{path}/dna_route/outer"), &s.outer_conts, out),
             _ => {}
         }
     }
@@ -593,7 +622,10 @@ fn erase_completion_tokens(value: &mut serde_json::Value) {
             }
             for child in map.values_mut() { erase_completion_tokens(child); }
         }
-        serde_json::Value::Array(values)=>for child in values { erase_completion_tokens(child); },
+        serde_json::Value::Array(values)=>{
+            values.retain(|value|!super::security_play_hash::is_runtime_value(value));
+            for child in values { erase_completion_tokens(child); }
+        },
         _=>{}
     }
 }
@@ -606,8 +638,11 @@ pub(super) fn effect_declaration(state:&crate::game_actions::digivolve::EffectDi
     }
     normalized
 }
-pub(super) fn write(h: &mut Sha256, g: &Game) {
+fn all_references(g: &Game)->Vec<(String,ReceiptRef)> {
     let mut refs = vec![("active".into(), reference(g, g.active_cost_payment_receipt))];
+    if let Some(declaration)=&g.pending_would_play_resume {
+        security_origin(g,"would_play".into(),declaration.origin,declaration.player,Some(declaration.card),&mut refs);
+    }
     if let Some(stack) = &g.pending_selection_resume {
         frames(g, "pending", stack, &mut refs);
     }
@@ -616,21 +651,27 @@ pub(super) fn write(h: &mut Sha256, g: &Game) {
     }
     for (i, p) in g.parked_replacement.iter().enumerate() {
         outer(g, &format!("replacement/{i}"), &p.outer_conts, &mut refs);
+        if let Some(declaration)=p.window.as_ref().and_then(|w|w.verification_play_declaration(g.pending_would_play_resume.as_ref())) {
+            security_origin(g,format!("replacement/{i}/origin"),declaration.origin,declaration.player,Some(declaration.card),&mut refs);
+        }
     }
     for (i, hook) in g.after_selection_resume_hooks.0.iter().enumerate() {
         match hook {
-            AfterSelectionHook::PlayCostContinuation {
-                accumulated_reduction,
-                ..
-            } => refs.push((
-                format!("hook/{i}"),
-                reference(g, accumulated_reduction.pending_payment),
-            )),
+            AfterSelectionHook::PlayCostContinuation { accumulated_reduction,origin,player_id,hand_index,target,.. } => {
+                refs.push((format!("hook/{i}"),reference(g,accumulated_reduction.pending_payment)));
+                if let Some(mut value)=super::security_play_hash::origin(g,*origin,*player_id,None) {
+                    value.context=Some(format!("{hand_index}:{target:?}"));
+                    refs.push((format!("hook/{i}/security"),ReceiptRef::SecurityOrigin(value)));
+                }
+            }
             AfterSelectionHook::DigiXrosLeaveContinuation { cont } => refs.push((
                 format!("hook/{i}/digixros"),
                 reference(g, cont.pending_cost_payment()),
             )),
             AfterSelectionHook::DigivolveReducerChain { state, .. } => {
+                if let Some(dna) = &state.dna_effect {
+                    outer(g, &format!("hook/{i}/dna/outer"), &dna.outer_conts, &mut refs);
+                }
                 if let Some(effect) = &state.effect {
                     outer(
                         g,
@@ -646,6 +687,16 @@ pub(super) fn write(h: &mut Sha256, g: &Game) {
     for (index, scope) in g.effect_digivolve_scopes.iter().enumerate() {
         outer(g, &format!("effect_scope/{index}/outer"), &scope.declaration.outer_conts, &mut refs);
     }
+    for (index, scope) in g.effect_dna_would_scopes.iter().enumerate() {
+        outer(g, &format!("dna_would_scope/{index}/outer"), &scope.declaration.outer_conts, &mut refs);
+    }
+    refs
+}
+pub(super) fn security_references(g:&Game)->Vec<(String,ReceiptRef)> {
+    all_references(g).into_iter().filter(|(_,r)|r.is_security()).collect()
+}
+pub(super) fn write(h: &mut Sha256, g: &Game) {
+    let refs:Vec<_>=all_references(g).into_iter().filter(|(_,r)|!r.is_security()).collect();
     if g.cost_payment_receipts.is_empty() && refs.iter().all(|(_, r)| matches!(r, ReceiptRef::None))
     {
         return;
@@ -666,4 +717,47 @@ pub(super) fn write(h: &mut Sha256, g: &Game) {
         .collect();
     debug_field(h, "cost_payment_receipts", &rows);
     debug_field(h, "cost_payment_references", &refs);
+}
+
+/// V4-only credit state. Keep this out of the historical adjustment tuple and
+/// Debug representation: older protocols must retain their exact bytes.
+pub(super) fn write_pending_play_credits(h: &mut Sha256, g: &Game) {
+    fn frames(path: &str, stack: &ResumeStack, rows: &mut Vec<(String, Option<i32>)>) {
+        for (i, frame) in stack.frames.iter().enumerate() {
+            let path = format!("{path}/{i}");
+            match frame {
+                F::PlayFromHandCostReductionPrompt(state) => rows.push((
+                    format!("{path}/play_cost"), state.accumulated_reduction.pending_reduction)),
+                F::DigiXrosMaterialSelection(state) => rows.push((
+                    format!("{path}/digixros"), state.total_reduction.pending_reduction)),
+                F::NonDslCountCappedStep(state) => {
+                    if let crate::resume::NonDslCountCappedTerminal::Assembly { params, .. } = &state.terminal {
+                        rows.push((format!("{path}/assembly"), params.total_reduction.pending_reduction));
+                    }
+                }
+                F::ReplacementBody { inner, .. }
+                | F::FieldTopSourceBatch { inner, .. }
+                | F::DelayCancelAfterSelection { inner, .. }
+                | F::DelayHandDigivolveAfterSelection { inner, .. }
+                | F::DelayDnaAfterSelection { inner, .. }
+                | F::DelayFieldDnaAfterPayment { inner, .. }
+                | F::DelayPlayFromHandAfterSelection { inner, .. }
+                | F::DelayPlayFromUnionAfterSelection { inner, .. }
+                | F::DelayBodyAfterCost { inner, .. } => frames(&format!("{path}/inner"), inner, rows),
+                _ => {}
+            }
+        }
+    }
+    let mut rows = Vec::new();
+    if let Some(stack) = &g.pending_selection_resume { frames("pending", stack, &mut rows); }
+    for (i, hook) in g.after_selection_resume_hooks.0.iter().enumerate() {
+        match hook {
+            AfterSelectionHook::PlayCostContinuation { accumulated_reduction, .. } =>
+                rows.push((format!("hook/{i}/play_cost"), accumulated_reduction.pending_reduction)),
+            AfterSelectionHook::DigiXrosLeaveContinuation { cont } =>
+                rows.push((format!("hook/{i}/digixros"), cont.pending_cost_reduction())),
+            _ => {}
+        }
+    }
+    debug_field(h, "play_cost.pending_credits.v4", &rows);
 }

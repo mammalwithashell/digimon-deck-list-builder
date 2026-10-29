@@ -1,0 +1,104 @@
+{
+  "generated_at": "2026-10-26T20:31:31.823528+00:00",
+  "frozen": {
+    "card_ids": 280,
+    "panel_entries": {
+      "train": 21,
+      "eval": 13
+    },
+    "clauses": 817,
+    "explicit_timings": 665
+  },
+  "refreshed": {
+    "card_ids": 311,
+    "panel_entries": {
+      "train": 21,
+      "heldout": 23,
+      "pet_regression": 5
+    },
+    "clauses": 908,
+    "explicit_timings": 739,
+    "added_ids": 45,
+    "removed_ids": 14
+  },
+  "confirmed_repaired": [
+    "Four printed Digimon-play clauses incorrectly accepted Tamers: EX12-034, EX12-036, EX12-057, BT25-013",
+    "Start-turn ordinary and Delay effects did not share one simultaneous pool",
+    "Per-turn counters reset after start-turn effects rather than when turn changed"
+  ],
+  "repair_controls": [
+    "Native Delay cleanup before phase continuation",
+    "Start-delay decline/reschedule/clone/choice order",
+    "False-to-true and true-to-false processing conditions within simultaneous pool",
+    "Native cleanup uses old stack identity across actual same-card bounce/replay, immediate and parked/cloned"
+  ],
+  "tests": {
+    "training_pool_timing_audit": {
+      "passed": 22,
+      "failed": 0
+    },
+    "option_flow": {
+      "passed": 143,
+      "failed": 0
+    }
+  },
+  "final_log": "runs/timing-pool-refresh-20261026/timing-options-final-verified.log",
+  "red_logs": [
+    "timing-audit-red-final.log",
+    "timing-audit-delay-red-final.log",
+    "timing-opt-red.log",
+    "timing-condition-red.log",
+    "timing-native-incarnation-red-valid.log"
+  ],
+  "unmeasured": [
+    "No blanket individual-card correctness certificate",
+    "Generated keyword timing not included in authored YAML count",
+    "No new live DCGO oracle runs",
+    "No cloud mutation",
+    "StartOfOpponentsTurn general dispatch outside both pools",
+    "Active scheduled end-turn Delay bodies outside both pools",
+    "Additional refreshed candidate timings listed in timing-audit.md"
+  ],
+  "invalid_fixture_attempts": [
+    {
+      "logs": [
+        "timing-native-incarnation-red.log",
+        "timing-options-incarnation-green.log",
+        "timing-native-incarnation-diagnostic.log",
+        "timing-native-incarnation-diagnostic2.log"
+      ],
+      "reason": "Initial native body called place_self_as_delay_option_permanent on its top/only card; the API extracts only below-top sources when a source permanent exists. It did not create a new permanent. Failures are fixture construction evidence, not an engine RED."
+    },
+    {
+      "logs": [
+        "timing-native-incarnation-valid-fixture.log"
+      ],
+      "reason": "Correct bounce/replay body had a legacy closure-only no-op selection that cannot be cloned; replaced by explicit empty typed ResumeStack. Clone panic was a fixture issue."
+    }
+  ],
+  "native_incarnation_validation": {
+    "status": "GREEN",
+    "method": "Corrected bounce/replay with new-placement positive assertion; empty typed continuation for cloned no-op selection. Both tests fail when only the two identity filters are removed, pass after restoration. Earlier invalid fixture failures are excluded.",
+    "ablation_red_log": "timing-native-incarnation-red-valid.log",
+    "ablation_red_result": {
+      "passed": 0,
+      "failed": 2
+    },
+    "final_log": "timing-options-final-verified.log",
+    "final_result": {
+      "timing_passed": 22,
+      "option_flow_passed": 143,
+      "failed": 0,
+      "exit_code": 0
+    }
+  },
+  "final_source_sha256": {
+    "code/digimon-engine/src/game_phases.rs": "6397562d98ca2a13ce3d75821ac6020fa4036bc257121065f4d19d6ec1e4ee56",
+    "code/digimon-engine/src/effect_queue.rs": "e2a11c25963bb77cca0330714a5cb0f5a2db2362e602356b68f125b59347729e",
+    "code/digimon-engine/src/effect.rs": "55d8fcc046505b32d3cac7930ff74e999350c2c3b69bcaf4d7e3c74a52e73095",
+    "code/digimon-engine/src/game/mod.rs": "f422e1b6a8bd491c771e18bdb8497cdfc2a5c4a961bb78884e2e3c19ee572ed9",
+    "code/digimon-engine/src/dsl_cards/lower_delay.rs": "8e233d009c72235fdc19fa1805140e2b4905064303bbd4b785564297c6ee5e02",
+    "code/digimon-engine/tests/training_pool_timing_audit.rs": "d43be0be70c9d80dfc536bb4dbe2cd77ae52742f33ade38ee13a2cb663b94a61",
+    "code/digimon-engine/tests/option_flow/start_delay_flow.rs": "5a5a3b10497eefe91b368f0f6dc91960d61923da3399330cb9b27b794ffa5a2b"
+  }
+}

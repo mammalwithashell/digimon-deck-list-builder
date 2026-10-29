@@ -10,6 +10,7 @@ checkpoint round-trips through SB3.
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 
 import numpy as np
@@ -22,11 +23,23 @@ import gymnasium as gym  # noqa: E402
 import torch  # noqa: E402
 from sb3_contrib import MaskablePPO  # noqa: E402
 
-from digimon_gym.agents.azero_trainer import load_shards, train  # noqa: E402
+from digimon_gym.agents.azero_trainer import calibrate_value, load_shards, train  # noqa: E402
 
 OBS_DIM = 12
 ACTION_DIM = 9
 PROFILE = "test_profile_v0"
+
+
+def _contract():
+    return dict(observation_profile=PROFILE, tensor_version=2, feature_schema_version="test-v1",
+                tensor_size=OBS_DIM, tensor_layout_hash="test-hash", action_space_size=ACTION_DIM,
+                action_schema_version=1)
+
+
+@pytest.fixture(autouse=True)
+def synthetic_contract_registry(monkeypatch):
+    # Synthetic network dimensions only. Production validation remains strict.
+    monkeypatch.setattr("model_contract.current_contract", lambda profile: _contract())
 
 
 class _TinyEnv(gym.Env):
@@ -71,8 +84,9 @@ def _write_shard_dir(root: Path, rows: int, seed: int) -> Path:
     np.save(shard / "policy_actions.npy", np.asarray(actions, np.int32))
     np.save(shard / "policy_visits.npy", np.asarray(visits, np.float32))
     np.save(shard / "z.npy", z)
+    np.save(shard / "terminated.npy", np.ones(rows, np.uint8))
     np.save(shard / "mover.npy", np.zeros(rows, np.uint8))
-    np.save(shard / "game_id.npy", np.zeros(rows, np.int32))
+    np.save(shard / "game_id.npy", np.arange(rows, dtype=np.int32) // 2)
     (root / "manifest.json").write_text(
         json.dumps(
             {
@@ -80,6 +94,8 @@ def _write_shard_dir(root: Path, rows: int, seed: int) -> Path:
                 "obs_dim": OBS_DIM,
                 "action_dim": ACTION_DIM,
                 "observation_profile": PROFILE,
+                "model_contract": _contract(),
+                "value_target": "terminal_outcome",
                 "shards": [{"dir": "shard-000", "rows": rows}],
             }
         )
@@ -99,11 +115,72 @@ def test_loader_stitches_multiple_dirs(tmp_path):
     # Row 6 is gen1's row 0 — its slice must land on gen1 data, not gen0's.
     s, e = ds.offsets[6], ds.offsets[7]
     assert list(ds.actions[s:e]) == [1, 3, 5]
+    expected = np.concatenate([np.load(p / 'shard-000/obs.npy') for p in (a, b)])
+    assert isinstance(ds.obs, np.memmap)
+    assert ds.obs.tobytes() == expected.tobytes()
+    assert ds.obs[[9, 0, 6, 2]].tobytes() == expected[[9, 0, 6, 2]].tobytes()
+    assert ds.obs.flags.writeable  # private backing file; same ndarray contract
+
+
+def _exclude_games(directory, ids):
+    (directory / "training_exclusions.json").write_text(json.dumps({
+        "schema": "selfplay-training-exclusions-v1",
+        "manifest_sha256": hashlib.sha256((directory / "manifest.json").read_bytes()).hexdigest(),
+        "games": [{"game_id": gid, "reason": "verified repeated-state loop"} for gid in ids],
+    }))
+
+
+def test_game_exclusions_preserve_sparse_rows_and_other_chunks(tmp_path):
+    a = _write_shard_dir(tmp_path / "a", rows=6, seed=0)
+    b = _write_shard_dir(tmp_path / "b", rows=4, seed=1)
+    original = load_shards([a, b])
+    _exclude_games(a, [1])
+    filtered = load_shards([a, b])
+    keep = [0, 1, 4, 5, 6, 7, 8, 9]
+    np.testing.assert_array_equal(filtered.obs, original.obs[keep])
+    np.testing.assert_array_equal(filtered.game_ids, original.game_ids[keep])
+    np.testing.assert_array_equal(filtered.z, original.z[keep])
+    for new, old in enumerate(keep):
+        start, end = filtered.offsets[new:new+2]
+        old_start, old_end = original.offsets[old:old+2]
+        np.testing.assert_array_equal(filtered.actions[start:end], original.actions[old_start:old_end])
+        np.testing.assert_array_equal(filtered.visits[start:end], original.visits[old_start:old_end])
+    assert filtered.exclusions[0]["excluded_rows"] == 2
+    assert filtered.exclusions[0]["games"][0]["game_id"] == 1
+
+
+@pytest.mark.parametrize("invalid", ["hash", "unknown_game"])
+def test_game_exclusions_fail_closed(tmp_path, invalid):
+    a = _write_shard_dir(tmp_path / "a", rows=6, seed=0)
+    _exclude_games(a, [999] if invalid == "unknown_game" else [1])
+    if invalid == "hash":
+        p = a / "manifest.json"
+        p.write_text(p.read_text() + "\n")
+    with pytest.raises(ValueError, match="exclusion"):
+        load_shards([a])
+
+
+def test_train_excludes_quarantined_game_from_both_losses(tmp_path):
+    a = _write_shard_dir(tmp_path / "a", rows=6, seed=0)
+    _exclude_games(a, [1])
+    # Only the quarantined game is truncated; neither its policy nor value
+    # targets may reach training. Remaining four rows fit normally.
+    np.save(a / "shard-000/terminated.npy", np.array([1, 1, 0, 0, 1, 1], np.uint8))
+    model = MaskablePPO("MlpPolicy", _TinyEnv(), n_steps=8, batch_size=8, verbose=0)
+    model.digimon_contract = _contract()
+    model.save(str(tmp_path / "seed.zip"))
+    summary = train(init_from=tmp_path / "seed.zip", shard_dirs=[a], out=tmp_path / "fit.zip",
+                    epochs=1, batch_size=4, device="cpu")
+    assert summary["rows"] == 4
+    assert summary["truncated_rows"] == 0
+    assert summary["excluded_rows"] == 2
+    assert summary["excluded_games"] == 1
 
 
 def test_train_moves_policy_and_value_toward_targets(tmp_path):
     shard_dir = _write_shard_dir(tmp_path / "gen0", rows=32, seed=2)
     model = MaskablePPO("MlpPolicy", _TinyEnv(), n_steps=8, batch_size=8, verbose=0)
+    model.digimon_contract = _contract()
     init_zip = tmp_path / "init.zip"
     model.save(str(init_zip))
 
@@ -145,5 +222,100 @@ def test_loader_rejects_profile_mismatch(tmp_path):
     manifest = json.loads((b / "manifest.json").read_text())
     manifest["observation_profile"] = "other_profile"
     (b / "manifest.json").write_text(json.dumps(manifest))
-    with pytest.raises(ValueError, match="observation_profile"):
+    with pytest.raises(ValueError, match="profile"):
         load_shards([a, b])
+
+
+def test_critic_calibration_preserves_actor_and_excludes_truncations(tmp_path):
+    directory = _write_shard_dir(tmp_path / "data", rows=80, seed=3)
+    ended = np.ones(80, np.uint8)
+    ended[-10:] = 0
+    np.save(directory / "shard-000" / "terminated.npy", ended)
+    model = MaskablePPO("MlpPolicy", _TinyEnv(), n_steps=8, batch_size=8, verbose=0, seed=0, device="cpu")
+    model.digimon_contract = _contract()
+    with torch.no_grad():
+        model.policy.value_net.bias.fill_(50.)  # a shaped-return head must be reset
+    model.save(str(tmp_path / "seed.zip"))
+    summary = calibrate_value(tmp_path / "seed.zip", [directory], tmp_path / "calibrated.zip",
+                              epochs=20, batch_size=16, lr=1e-2, device="cpu")
+    calibrated = MaskablePPO.load(str(tmp_path / "calibrated.zip"), device="cpu")
+    obs = torch.as_tensor(load_shards([directory]).obs)
+    with torch.no_grad():
+        before = model.policy.get_distribution(obs).distribution.probs
+        after = calibrated.policy.get_distribution(obs).distribution.probs
+    assert torch.equal(before, after)
+    assert summary["excluded_truncated_rows"] == 10
+    assert summary["fit_rows"] + summary["heldout_rows"] == 70
+    assert summary["history"][-1]["heldout_mse"] < 0.5
+    assert calibrated.digimon_value_semantics == "terminal_outcome"
+
+
+def test_loader_rejects_same_shape_stale_action_semantics(tmp_path):
+    directory = _write_shard_dir(tmp_path / "data", rows=4, seed=0)
+    path = directory / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["model_contract"]["action_schema_version"] += 1
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="action_schema_version"):
+        load_shards([directory])
+
+
+def test_loader_requires_terminal_semantics_and_completion_flags(tmp_path):
+    directory = _write_shard_dir(tmp_path / "data", rows=4, seed=0)
+    path = directory / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["value_target"] = "shaped_return"
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="terminal_outcome"):
+        load_shards([directory])
+
+
+def test_shards_without_policy_weight_are_full_searches(tmp_path):
+    directory = _write_shard_dir(tmp_path / "data", rows=4, seed=0)
+    ds = load_shards([directory])
+    assert ds.policy_weight.shape == (4,)
+    assert np.all(ds.policy_weight == 1.0)
+
+
+def test_policy_weight_is_loaded_filtered_and_validated(tmp_path):
+    a = _write_shard_dir(tmp_path / "a", rows=6, seed=0)
+    b = _write_shard_dir(tmp_path / "b", rows=4, seed=1)
+    np.save(a / "shard-000/policy_weight.npy", np.array([1, 0, 1, 0, 1, 0], np.float32))
+    # b keeps no policy_weight array: every row is a full search.
+    ds = load_shards([a, b])
+    assert ds.policy_weight.tolist() == [1, 0, 1, 0, 1, 0, 1, 1, 1, 1]
+
+    # Game exclusions (two rows per game) filter the weights alongside rows.
+    _exclude_games(a, [1])
+    ds = load_shards([a, b])
+    assert len(ds) == 8
+    assert ds.policy_weight.tolist() == [1, 0, 1, 0, 1, 1, 1, 1]
+
+    np.save(a / "shard-000/policy_weight.npy", np.array([1, 0, 1], np.float32))
+    with pytest.raises(ValueError, match="policy_weight"):
+        load_shards([a])
+    np.save(a / "shard-000/policy_weight.npy", np.array([1, -1, 1, 0, 1, 0], np.float32))
+    with pytest.raises(ValueError, match="policy_weight"):
+        load_shards([a])
+
+
+def test_cheap_rows_train_the_value_head_but_not_the_policy(tmp_path):
+    """Rows with policy_weight 0 must leave the actor untouched while the
+    critic still learns from them."""
+    shard_dir = _write_shard_dir(tmp_path / "gen0", rows=32, seed=2)
+    np.save(shard_dir / "shard-000/policy_weight.npy", np.zeros(32, np.float32))
+    model = MaskablePPO("MlpPolicy", _TinyEnv(), n_steps=8, batch_size=8, verbose=0, seed=0, device="cpu")
+    model.digimon_contract = _contract()
+    init = tmp_path / "init.zip"
+    model.save(str(init))
+    with pytest.raises(ValueError, match="policy-target rows"):
+        train(init, [shard_dir], tmp_path / "out.zip", epochs=1, batch_size=8, lr=1e-2, device="cpu")
+
+    # Half the rows are cheap: the policy still moves toward the targets on
+    # the weighted rows and the value head fits every row.
+    np.save(shard_dir / "shard-000/policy_weight.npy",
+            np.tile(np.array([1, 0], np.float32), 16))
+    summary = train(init, [shard_dir], tmp_path / "out.zip", epochs=6, batch_size=8, lr=1e-2, device="cpu")
+    history = summary["epochs"]
+    assert history[-1]["policy_loss"] < history[0]["policy_loss"]
+    assert history[-1]["value_loss"] < history[0]["value_loss"]

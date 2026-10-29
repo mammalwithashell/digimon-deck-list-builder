@@ -22,8 +22,8 @@
   "form_eng": [],
   "attribute_eng": [],
   "effect_description_eng": "[Main] You may place up to 5 [Hybrid] trait cards with different names from your hand or trash under 1 of your Tamers. Then, 1 of your Tamers with 5 or more cards under it may digivolve into [MagnaGarurumon] in the hand or trash, ignoring digivolution requirements and without paying the cost.",
-  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand.",
-  "security_effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand.",
   "evo_costs": [],
   "xros_req": ""
 }

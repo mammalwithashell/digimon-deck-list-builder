@@ -361,7 +361,7 @@ fn triggered_pay_cost_source_selection_parks_process_until_selection_resolves() 
     ));
     assert_eq!(r.memory(), memory_before - 3);
 
-    let action = encode_source_select(host.index as u16, 0).expect("source selection action");
+    let action = crate::owned_choices::source_action(&r.game, host, 0);
     r.game
         .resolve_selection(0, action)
         .expect("source-selection action resolves");
@@ -422,7 +422,7 @@ fn pay_cost_selection_decline_discards_parked_process() {
     assert_eq!(*log.lock().unwrap(), vec!["pay_cost"]);
     assert!(r.game.pending_pay_cost_effect.is_some());
 
-    let action = encode_source_select(host.index as u16, 0).expect("source selection action");
+    let action = crate::owned_choices::source_action(&r.game, host, 0);
     r.game
         .resolve_selection(0, action)
         .expect("source-selection action resolves");
@@ -499,7 +499,7 @@ fn optional_pay_cost_accept_pays_cost_and_resumes_process() {
     let memory_before = r.memory();
     r.play(0, 0);
 
-    let action = encode_source_select(host.index as u16, 0).expect("source selection action");
+    let action = crate::owned_choices::source_action(&r.game, host, 0);
     r.game
         .resolve_selection(0, action)
         .expect("optional pay-cost source selection resolves");
@@ -541,7 +541,7 @@ fn nested_pay_cost_selection_does_not_overwrite_outer_continuation() {
     r.play(0, 0);
 
     let outer_action =
-        encode_source_select(outer_host.index as u16, 0).expect("outer source action");
+        crate::owned_choices::source_action(&r.game, outer_host, 0);
     r.game
         .resolve_selection(0, outer_action)
         .expect("outer source-selection action resolves");
@@ -554,7 +554,7 @@ fn nested_pay_cost_selection_does_not_overwrite_outer_continuation() {
     assert!(r.game.pending_pay_cost_effect.is_some());
 
     let inner_action =
-        encode_source_select(inner_host.index as u16, 0).expect("inner source action");
+        crate::owned_choices::source_action(&r.game, inner_host, 0);
     r.game
         .resolve_selection(0, inner_action)
         .expect("inner source-selection action resolves");
@@ -605,7 +605,7 @@ fn nested_optional_pay_cost_decline_skips_active_inner_and_resumes_outer() {
     r.play(0, 0);
 
     let outer_action =
-        encode_source_select(outer_host.index as u16, 0).expect("outer source action");
+        crate::owned_choices::source_action(&r.game, outer_host, 0);
     r.game
         .resolve_selection(0, outer_action)
         .expect("outer source-selection action resolves");
@@ -657,7 +657,7 @@ fn resumed_pay_cost_process_rechecks_once_per_turn_slot() {
     let memory_before = r.memory();
     r.play(0, 0);
 
-    let action = encode_source_select(host.index as u16, 0).expect("source selection action");
+    let action = crate::owned_choices::source_action(&r.game, host, 0);
     r.game
         .resolve_selection(0, action)
         .expect("source-selection action resolves");
@@ -687,7 +687,7 @@ fn resumed_pay_cost_process_rechecks_source_liveness() {
     let memory_before = r.memory();
     r.play(0, 0);
 
-    let action = encode_source_select(host.index as u16, 0).expect("source selection action");
+    let action = crate::owned_choices::source_action(&r.game, host, 0);
     r.game
         .resolve_selection(0, action)
         .expect("source-selection action resolves");

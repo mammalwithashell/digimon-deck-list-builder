@@ -99,6 +99,11 @@ steps:
       - ST1-03
       - ST1-09
       dcgo_only: true
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
 - actor: 1
   do:
     pass: {}
@@ -182,7 +187,7 @@ steps:
 expect_ruling:
   q_id: Q4365
   assert:
-  - at: 25
+  - at: 26
     that:
       p0.field:
       - card_id: EX13-045

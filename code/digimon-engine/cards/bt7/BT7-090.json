@@ -18,8 +18,8 @@
   "form_eng": [],
   "attribute_eng": [],
   "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3. \r\n[On Play] Reveal the top 4 cards of your deck. Add 1 card with the [X Antibody] trait among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
-  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying its memory cost.",
-  "security_effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Play this card without paying its memory cost.",
   "evo_costs": [],
   "xros_req": ""
 }

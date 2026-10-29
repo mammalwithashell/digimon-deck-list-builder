@@ -1,0 +1,108 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT16-082",
+    "card_type": "Digimon",
+    "colors": [
+      "White"
+    ],
+    "dp": 2000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Blue",
+          "Yellow",
+          "Green",
+          "White",
+          "Black",
+          "Purple"
+        ],
+        "cost": 1,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "White"
+        ],
+        "dp": 2000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Ukkomon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Your Turn] [Once Per Turn] When one of your Digimon moves from the breeding area to the battle area, reveal the top 3 cards of your deck. Add 1 Digimon card or Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, you may hatch in your breeding area."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Ukkomon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522021",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT16-082.png?260529",
+      "printing_id": "BT16-082"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, it activates.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2668",
+        "question": "Does this card's [Your Turn] effect activate when this Digimon itself moves from the breeding area to the battle area?"
+      },
+      {
+        "answer": "It activates during the breeding phase. If effects trigger during the breeding phase, the main phase will come after all effects have activated.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2669",
+        "question": "When one of my Digimon moves from the breeding area to the battle area during the breeding phase, does this card's [Your Turn] effect activate during the breeding phase or main phase?"
+      },
+      {
+        "answer": "Yes, it activates.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2670",
+        "question": "I moved one of my Digimon from the breeding area to the battle area when all of my Digimon's DP is reduced by an effect. The moved Digimon's DP becomes 0 and is deleted due to the DP-reducing effect, but does this card's [All Turns] effect activate?"
+      },
+      {
+        "answer": "No, you can't activate it.\nWhen a card with an effect that's pending activation leaves an area while activation is pending, the effect can no longer be activated.\nIn this case, the effect triggers when this card is moved, but because the DP becomes 0 before activation, this card is deleted and removed from the battle area, and the effect can't be activated.",
+        "date": "May. 24, 2024",
+        "number": "Q2671",
+        "question": "I moved this card from the breeding area to the battle area when all of my Digimon's DP is reduced by an effect. At such times, if this card's DP becomes 0 and is deleted due to the DP-reducing effect after it's moved, can I activate this card's [Your Turn] effect?"
+      }
+    ],
+    "rarity": "R",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Your Turn] [Once Per Turn] When one of your Digimon moves from the breeding area to the battle area, reveal the top 3 cards of your deck. Add 1 Digimon card or Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, you may hatch in your breeding area."
+      }
+    ],
+    "type": "Ancient Fairy"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "27b49a3729e5accb9309f25a4b8c046bbbb100d81ce069fe7799af71802445da",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522021:BT16-082:BT16-082",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522021"
+}

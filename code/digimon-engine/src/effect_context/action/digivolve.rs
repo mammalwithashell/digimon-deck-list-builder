@@ -489,29 +489,18 @@ impl<'a> EffectContext<'a> {
     /// verb requires BOTH DNA materials to be on-field permanents. See
     /// G-DSL-DNA-FROM-HAND-PARTNER.
     ///
-    /// ## Stacking order
+    /// The selected printed left DNA requirement is the upper material, with
+    /// each material's internal source order preserved. Matching requirements
+    /// and distinct material orientations remain player-visible choices.
+    /// Evolution triggers are queued together with the DNA origin marker.
     ///
-    /// `target.card_sources ++ [hand_partner] ++ [result_from_hand]`.
-    ///
-    /// ## Triggers
-    ///
-    /// `WhenDigivolving` → `OnDnaDigivolve` → `OnDigivolve` (global), each
-    /// followed by a queue drain, all carrying the `dna_origin` marker — the
-    /// same firing sequence as `effect_initiated_dna_digivolve`.
-    ///
-    /// ## Defensive validation
-    ///
-    /// Returns `None` if:
-    /// - `target`'s index is out of range on its player's battle area,
-    /// - `hand_partner` and `result_from_hand` are not both in the SAME
-    ///   player's hand (they must share a hand owner),
-    /// - `hand_partner == result_from_hand`,
-    /// - the hand owner has `CannotDigivolveDigimonByEffect`,
-    /// - `cost > 0` and `!ignore_requirements` and the controller cannot pay
-    ///   the memory cost.
-    ///
-    /// `ignore_requirements` bypasses the memory affordability floor exactly
-    /// as in `effect_initiated_dna_digivolve` (the cost is still subtracted).
+    /// Both distinct hand cards must be in the field material owner's hand.
+    /// That owner pays the cost; this context's player remains the effect
+    /// controller for immunity and replacement causes. The declaration retains
+    /// physical identities through payment and replacement choices, then
+    /// validates them again. `ignore_requirements` waives recipe matching only;
+    /// the material owner must be able to pay within the memory bounds.
+    /// `None` means either a pending choice or a failed declaration.
     pub fn effect_initiated_dna_digivolve_with_hand_partner(
         &mut self,
         target: PermanentHandle,
@@ -520,120 +509,31 @@ impl<'a> EffectContext<'a> {
         cost: i32,
         ignore_requirements: bool,
     ) -> Option<PermanentHandle> {
-        if hand_partner == result_from_hand {
-            return None;
-        }
-        // The leaving subject may be parked in the DigiXros leaving/limbo slot
-        // (G-DIGIXROS-REDIRECT-EXTRACTION). Re-materialize it into `battle_area`
-        // first so the merge operates on a real permanent — this is the EXTRACT
-        // that pulls the material out of the in-flight DigiXros transaction.
-        let target = if crate::digixros::is_limbo_index(target.index) {
-            self.game.rematerialize_digixros_limbo(target)?
-        } else {
-            target
-        };
-        if (target.index as usize) >= self.game.player(target.player).battle_area.len() {
-            return None;
-        }
-
-        // Both hand cards must live in the SAME player's hand; locate it.
-        let mut hand_owner: Option<PlayerId> = None;
-        let mut partner_index: Option<usize> = None;
-        let mut result_index: Option<usize> = None;
-        for pid in 0..self.game.players.len() {
-            let hand = &self.game.players[pid].hand;
-            let p = hand.iter().position(|c| c.handle() == hand_partner);
-            let r = hand.iter().position(|c| c.handle() == result_from_hand);
-            if let (Some(p), Some(r)) = (p, r) {
-                hand_owner = Some(pid as PlayerId);
-                partner_index = Some(p);
-                result_index = Some(r);
-                break;
-            }
-        }
-        let (hand_owner, partner_index, result_index) =
-            (hand_owner?, partner_index?, result_index?);
-
-        if self
-            .game
-            .modifiers
-            .player_has(hand_owner, ModifierType::CannotDigivolveDigimonByEffect)
-        {
-            return None;
-        }
-
-        // G-ENGINE-DNA-RECIPE-ENFORCEMENT (gap 2) — commit-time backstop for the
-        // hand-partner shape. Unless requirements are explicitly ignored, the
-        // {field target, hand partner} pair MUST satisfy the result's printed
-        // DNA recipe. DCGO `CanJogressFromTargetPermanent` after the partner is
-        // materialised.
-        if !ignore_requirements
-            && !self.field_and_card_satisfy_recipe(target, hand_owner, partner_index, result_index)
-        {
-            return None;
-        }
-
-        let effective_cost: u16 = cost.max(0) as u16;
-
-        if ignore_requirements && effective_cost > 0 {
-            self.game.pay_memory_unchecked(effective_cost);
-            self.game.dna_digivolve_hand_partner_inner(
-                target,
-                hand_owner,
-                partner_index,
-                result_index,
-                0,
-                true,
-            )
-        } else {
-            self.game.dna_digivolve_hand_partner_inner(
-                target,
-                hand_owner,
-                partner_index,
-                result_index,
-                effective_cost,
-                true,
-            )
-        }
+        self.effect_initiated_dna_digivolve_with_hand_partner_cost(
+            target, hand_partner, result_from_hand,
+            CostDelta::Fixed(cost.clamp(0, i16::MAX as i32) as i16), ignore_requirements,
+        )
     }
 
-    /// Recipe oracle for the field+card (hand or trash) DNA shape: does the
-    /// battle-area permanent `field` plus the card at `card_owner`'s
-    /// `card_index` (in `zone`) satisfy the printed DNA recipe of the result at
-    /// `card_owner`'s `result_index` (a hand card)? DCGO
-    /// `CanJogressFromTargetPermanent`.
-    fn field_and_card_satisfy_recipe(
-        &self,
-        field: PermanentHandle,
-        card_owner: PlayerId,
-        partner_hand_index: usize,
-        result_hand_index: usize,
-    ) -> bool {
-        let hand = &self.game.player(card_owner).hand;
-        let Some(result) = hand.get(result_hand_index) else {
-            return false;
-        };
-        let Some(partner) = hand.get(partner_hand_index) else {
-            return false;
-        };
-        let Some(result_meta) = self.game.card_data.get(result.data_index) else {
-            return false;
-        };
-        let Some(partner_meta) = self.game.card_data.get(partner.data_index) else {
-            return false;
-        };
-        let Some(field_perm) = self
-            .game
-            .player(field.player)
-            .battle_area
-            .get(field.index as usize)
-        else {
-            return false;
-        };
-        let _ = field_perm;
-        self.game
-            .matching_dna_cost_for_handle_and_card(result, result_meta, field, partner_meta)
-            .is_some()
+    /// Policy-aware declaration: printed/reduced costs are resolved against the
+    /// chosen DNA requirement, then normal optional/interactive payments run.
+    /// `None` can mean a pending recipe or payment choice, just like ordinary
+    /// effect-driven digivolution. The declaration retains both hand identities.
+    pub fn effect_initiated_dna_digivolve_with_hand_partner_cost(
+        &mut self,
+        target: PermanentHandle,
+        hand_partner: CardHandle,
+        result_from_hand: CardHandle,
+        delta: CostDelta,
+        ignore_requirements: bool,
+    ) -> Option<PermanentHandle> {
+        if hand_partner == result_from_hand { return None; }
+        let target = if crate::digixros::is_limbo_index(target.index) {
+            self.game.rematerialize_digixros_limbo(target)?
+        } else { target };
+        self.game.begin_effect_dna_hand(target.player, target, hand_partner, result_from_hand,
+            delta, ignore_requirements, self.source_card, self.source_permanent,
+            self.source_kind, self.player)
     }
 
     /// The printed DNA cost the {field target, hand partner} pair would pay to
@@ -907,12 +807,10 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let partner_target_filter = std::sync::Arc::clone(&target_filter);
         let partner_filter = std::sync::Arc::new(move |game: &Game, partner| {
-            partner_filter(game, partner)
-                && (0..game.player(controller).hand.len()).any(|i| {
-                    partner_target_filter(game, i)
-                        && (ignore_requirements
-                            || dna_pair_can_reach_hand_card(game, controller, anchor, partner, i))
-                })
+            crate::effect_context::dna_partner_has_target(
+                game, controller, anchor, partner, ignore_requirements,
+                partner_filter.as_ref(), partner_target_filter.as_ref(),
+            )
         });
 
         // Quick install-time eligibility checks. If either side has zero

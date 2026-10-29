@@ -1,5 +1,8 @@
 //! Official EX13-045 Q7364/65: effect battle precedes Raid attack battle.
 //! Q7366: Wingdramon suspension and Examon win triggers wait until WD finishes.
+#[path = "support/owned_card_choice.rs"]
+mod owned_choices;
+
 use digimon_engine::{
     action::{
         build_action_mask,
@@ -252,7 +255,8 @@ fn complete_trigger(r: &mut DebugRunner, id: &str) {
             .iter()
             .position(|c| r.game.card_data[c.data_index].card_id == "BT20-023")
             .unwrap();
-        cloned_act(r, digimon_engine::action::space::PLAY_HAND_START + i as u16);
+        let action = owned_choices::zone_action(&r.game, 0, i, digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+        cloned_act(r, action);
         assert!(r.game.players[0]
             .battle_area
             .iter()
