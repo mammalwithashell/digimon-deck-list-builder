@@ -48,6 +48,22 @@ pub fn validate_cards(
     Ok(())
 }
 
+/// Admit a card population without pretending that the population is a deck.
+/// Complete candidate decks still go through the deck validator separately.
+pub fn validate_population(
+    ids: &[String], card_data: &HashMap<String,CardData>, data_dir:&Path,
+) -> Result<(),String> {
+    let read = |name:&str| -> Result<Value,String> {
+        serde_json::from_slice(&std::fs::read(data_dir.join(name)).map_err(|e|e.to_string())?)
+            .map_err(|e|e.to_string())
+    };
+    let registered=digimon_engine::cards::build_registry_cached().registered_card_ids()
+        .into_iter().collect();
+    let available=card_data.keys().cloned().collect();
+    validate_cards(&read("mechanics_readiness.json")?,&read("card_admissibility.json")?,
+        &[ids.to_vec()],&registered,&available)
+}
+
 pub fn validate_pool(
     decks: &[Vec<String>],
     card_data: &HashMap<String, CardData>,

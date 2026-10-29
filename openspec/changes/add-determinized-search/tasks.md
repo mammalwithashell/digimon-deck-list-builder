@@ -67,7 +67,7 @@ Phased; each phase independently testable. **Gate analysis REVISED 2026-07-01** 
 - [ ] 5.3 Decision-time (belief-aware over K sampled worlds) + hindsight (true recorded world) grades; brilliant/great/best/inaccuracy/mistake/blunder mapping incl. the brilliant heuristic (best + low prior + only-winning-line).
 - [ ] 5.4 Surface annotations in the replay viewer.
 
-## 6. Opponent deck prior (PvP review; parallel, non-blocking)
+## 6. Opponent deck prior (provider/training owned by add-fair-belief-selfplay; replay integration stays here)
 
 - [ ] 6.1 `DeckPrior` representation (decklist point estimate vs archetype distribution vs per-card inclusion probabilities) — resolve the design Open Question.
 - [ ] 6.2 Deck classifier: infer the prior from revealed cards + `data/deck_library.json` meta + color/turn signals; training labels from the recording corpus' eventual full decklists.

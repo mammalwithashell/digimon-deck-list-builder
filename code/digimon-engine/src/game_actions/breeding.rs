@@ -187,6 +187,7 @@ impl Game {
         if !self.can_play_to_breeding_from_hand(player_id, hand_index, controller) {
             return false;
         }
+        self.remember_belief_public_hand_departure(player_id, hand_index);
         let card = self.player_mut(player_id).hand.remove(hand_index);
         let mut permanent = crate::permanent::Permanent::new(card, self.turn_count);
         // §17-1-3-2-3: placed in the breeding area by an effect.
@@ -224,10 +225,7 @@ impl Game {
     /// not an effect (it is not "affected by effects") and not a deletion, so
     /// no `[On Deletion]` / leave triggers. Returns the leaving cards for the
     /// caller's single `<Overflow>` pass (§4-19-5).
-    pub(crate) fn trash_breeding_permanent_by_rule(
-        &mut self,
-        player: PlayerId,
-    ) -> Vec<CardSource> {
+    pub(crate) fn trash_breeding_permanent_by_rule(&mut self, player: PlayerId) -> Vec<CardSource> {
         let movement_snapshot = self.breeding_movement_snapshot(player);
         let Some(perm) = self.player_mut(player).breeding_area.take() else {
             return Vec::new();
@@ -509,12 +507,13 @@ impl Game {
             .unwrap_or_default();
 
         let turn = self.turn_count;
+        self.remember_belief_public_hand_departure(player_id, hand_index);
         let removed = self.player_mut(player_id).hand.remove(hand_index);
         let player_mut = self.player_mut(player_id);
         if let Some(breeding) = player_mut.breeding_area.as_mut() {
             breeding.digivolve(removed, turn);
         }
-        player_mut.draw();
+        let _ = self.draw_one_for_player(player_id);
 
         // `GameEvent::Digivolve` for the breeding-area digivolve path.
         // `field_index` uses `BREEDING_TARGET` (the breeding-slot marker

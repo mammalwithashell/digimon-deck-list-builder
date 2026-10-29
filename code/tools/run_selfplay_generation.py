@@ -122,6 +122,8 @@ def run_selfplay_stage(
     worker_timeout_seconds: float = 3600,
     budget_flags: list[str] | None = None,
     opponent_pool: Path | None = None,
+    information_regime: str = "open_decklist",
+    belief_prior: Path | None = None,
 ) -> list[Path]:
     """Run bounded native workers; return only successful, published outputs.
 
@@ -129,7 +131,11 @@ def run_selfplay_stage(
     playout-cap randomization, see ``search_budget_flags``); they are part of the
     frozen identity a dynamic resume validates.
     """
-    budget_flags = list(budget_flags or [])
+    from digimon_gym.agents.belief_contract import run_information
+    information = run_information(information_regime,belief_prior)
+    budget_flags = list(budget_flags or []) + ["--information-regime", information_regime]
+    if belief_prior is not None:
+        budget_flags += ["--belief-prior", str(belief_prior)]
     if eval_batch_size < 1:
         raise ValueError("eval_batch_size must be positive")
     if min(games, procs) < 1:
@@ -157,6 +163,8 @@ def run_selfplay_stage(
             for index, candidate in enumerate((Path(str(model_onnx) + ".meta.json"),
                                                Path(model_onnx).with_suffix(".meta.json"))):
                 assets[f"model_meta_{index}"] = candidate
+        if belief_prior is not None:
+            assets["belief_prior"] = belief_prior
         if opponent_pool:
             from tools.search_opponents import pool_assets
             assets.update(pool_assets(opponent_pool, Path(model_onnx)))
@@ -365,6 +373,8 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
         max_retries=args.worker_retries,
         worker_timeout_seconds=args.worker_timeout_seconds,
         opponent_pool=opponent_pool,
+        information_regime=getattr(args,"information_regime","open_decklist"),
+        belief_prior=Path(args.belief_prior) if getattr(args,"belief_prior",None) else None,
     )
     t_selfplay = time.time() - t0
 
@@ -429,6 +439,8 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
         print(f"anchored eval: {eval_result}", flush=True)
 
     summary = {
+        "information_regime": getattr(args,"information_regime","open_decklist"),
+        "promotion": {"eligible": False,"reason":"independent robustness evidence is required"},
         "generation": gen,
         "opponent_coverage": opponent_coverage,
         "opponent_pool": str(opponent_pool) if opponent_pool else None,
@@ -544,6 +556,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--deck-pool-snapshot", default=None)
     p.add_argument("--champions", default=None, help="frozen compatible anchor registry")
 
+    p.add_argument("--information-regime", choices=["open_decklist","closed_decklist"],default="open_decklist")
+    p.add_argument("--belief-prior", default=None)
     p.add_argument("--seed", type=int, default=0)
     return p
 
@@ -561,6 +575,8 @@ def main(argv: list[str] | None = None) -> int:
 
     run_dir = Path(args.run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
+    from digimon_gym.agents.belief_contract import freeze_run_information
+    freeze_run_information(run_dir,args.information_regime,Path(args.belief_prior) if args.belief_prior else None)
     state = load_state(run_dir)
     start_gen = state["next_gen"]
     prev = state.get("prev")

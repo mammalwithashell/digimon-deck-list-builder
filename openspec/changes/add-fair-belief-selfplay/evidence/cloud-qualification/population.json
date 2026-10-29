@@ -1,0 +1,91 @@
+{
+  "schema": "belief-experiment-population-v1",
+  "source": "frozen EX13 cloud cohort ex13-20261026",
+  "format": "standard",
+  "region": "ENG",
+  "restriction_policy": "committed repository snapshot; no live tournament legality claim",
+  "partition_policy": "original cloud partitions retained; no resplit or list substitution",
+  "coverage": {
+    "train": {
+      "distinct_lists": 21,
+      "runtime_slots": 26,
+      "archetypes": {
+        "Chronicle": 2,
+        "Chronomon": 2,
+        "Examon": 2,
+        "Glowing Dawn": 2,
+        "Light Hybrid": 1,
+        "Medusamon": 1,
+        "SW": 1,
+        "ShineGreymon Data Squad": 1,
+        "TS Jupitermon": 2,
+        "TS Mervamon": 2,
+        "Three Musketeers": 2,
+        "Toho Braves": 2,
+        "Virus Busters": 1
+      }
+    },
+    "validation": {
+      "distinct_lists": 36,
+      "runtime_slots": 36,
+      "archetypes": {
+        "Chronicle": 4,
+        "Chronomon": 4,
+        "Examon": 4,
+        "Glowing Dawn": 4,
+        "SW": 3,
+        "ShineGreymon Data Squad": 1,
+        "TS Jupitermon": 4,
+        "TS Mervamon": 4,
+        "Three Musketeers": 4,
+        "Toho Braves": 4
+      }
+    },
+    "test": {
+      "distinct_lists": 23,
+      "runtime_slots": 23,
+      "archetypes": {
+        "Chronicle": 2,
+        "Chronomon": 2,
+        "Examon": 2,
+        "Glowing Dawn": 2,
+        "Medusamon": 1,
+        "SW": 2,
+        "ShineGreymon Data Squad": 2,
+        "TS Jupitermon": 2,
+        "TS Mervamon": 2,
+        "Three Musketeers": 2,
+        "Toho Braves": 2,
+        "Virus Busters": 2
+      }
+    },
+    "pet_regression": {
+      "distinct_lists": 5,
+      "runtime_slots": 5,
+      "archetypes": {
+        "Light Hybrid": 1,
+        "Medusamon": 1,
+        "SW": 1,
+        "ShineGreymon Data Squad": 1,
+        "Virus Busters": 1
+      }
+    }
+  },
+  "splits": {
+    "train": {
+      "sha256": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa"
+    },
+    "validation": {
+      "sha256": "9ec6bd0f50bcbcf7021f1f3dff47ff34f8ce11aea34bef3f73ae3f553cca3839"
+    },
+    "test": {
+      "sha256": "427ffc8f23f4cade3e2ef66eb00b646f88c720187cbcd101118b46582685706a"
+    },
+    "pet_regression": {
+      "sha256": "84a63eb62047e29ddfa6e446aa418e9d7907a96062d60824a8e45f1822190fb1"
+    }
+  },
+  "provenance_sha256": "ade70a2c6de460d3e34f1974bd46ee06127e4a6a56f9dfb5db7668ad565666d5",
+  "native_admission_report_sha256": "7fba56d8759a6714bb516040a4ded776711f661cf648f3a31e7bae53e5a69db9",
+  "hash": "8229966198628fb9eae49f2a5b96ca3d2c669a2eda890cfd6b429e28dcc7a07c"
+}

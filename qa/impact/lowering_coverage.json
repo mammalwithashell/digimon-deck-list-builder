@@ -77356,6 +77356,7 @@
   "ex13_lists": 568,
   "parse_only_files": [
    "src/dsl_cards/binding_ref.rs",
+   "src/dsl_cards/context_liveness.rs",
    "src/dsl_cards/expiry_map.rs",
    "src/dsl_cards/formula_eval.rs",
    "src/dsl_cards/formula_registry.rs",
@@ -77467,7 +77468,7 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 389,
+  "scanned_files": 390,
   "scanned_tests": 2540,
   "top_untested": [
    {

@@ -1,0 +1,19 @@
+{
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.14",
+  "logical_cpus": 16,
+  "physical_memory_bytes": 68638216192,
+  "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+  "native_build": "release, digimon-engine opt-level=1, default debug assertions off; DSL opt-level=3",
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "stable-baselines3": "2.7.1",
+    "sb3-contrib": "2.7.1",
+    "onnx": "1.21.0",
+    "onnxruntime": "1.24.4",
+    "psutil": "7.2.2",
+    "numpy": "2.4.2"
+  },
+  "native_libraries": {},
+  "software_commit": "c8f3e8c7d"
+}

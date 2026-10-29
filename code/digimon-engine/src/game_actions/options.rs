@@ -185,8 +185,13 @@ impl Game {
         source: OptionSource,
     ) -> Option<crate::card_source::CardSource> {
         match source {
-            OptionSource::Hand(i) => (i < self.player(player_id).hand.len())
-                .then(|| self.player_mut(player_id).hand.remove(i)),
+            OptionSource::Hand(i) => {
+                if i >= self.player(player_id).hand.len() {
+                    return None;
+                }
+                self.remember_belief_public_hand_departure(player_id, i);
+                Some(self.player_mut(player_id).hand.remove(i))
+            }
             OptionSource::Trash(i) => (i < self.player(player_id).trash.len())
                 .then(|| self.player_mut(player_id).trash.remove(i)),
             OptionSource::Revealed(h) => {

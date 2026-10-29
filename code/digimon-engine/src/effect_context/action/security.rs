@@ -220,6 +220,8 @@ impl<'a> EffectContext<'a> {
         }
 
         // Commit the move. Move pending.card into security at `position`.
+        self.game
+            .remember_belief_public_security_placement(&pending.card, position);
         let card = pending.card;
         match position {
             crate::enums::StackPosition::Top => {
@@ -263,6 +265,11 @@ impl<'a> EffectContext<'a> {
         else {
             return false;
         };
+        self.game.remember_belief_security_departure(
+            player,
+            card.0,
+            self.game.player(player).security.len() - 1 - idx,
+        );
         // Opaque-aware: materialize before moving to hand — the card's
         // identity must be real to land in hand sensibly (subsequent
         // hand reads, plays, etc. expect a real data_index).
@@ -303,6 +310,11 @@ impl<'a> EffectContext<'a> {
         else {
             return false;
         };
+        self.game.remember_belief_security_departure(
+            player,
+            card.0,
+            self.game.player(player).security.len() - 1 - idx,
+        );
         // Materialize before moving — the card's identity must be real to land
         // in the deck sensibly (it will later be drawn / revealed).
         self.game.ensure_security_materialized(player, idx);
@@ -381,6 +393,13 @@ impl<'a> EffectContext<'a> {
         }
 
         let owner = pending.card.owner;
+        // This method consumes the declared security effect's own card, not
+        // an arbitrary unrevealed security removal (guarded above).
+        self.game.learn_belief_card(
+            &pending.card,
+            crate::determinize::beliefs::KnowledgeZone::Hand,
+            None,
+        );
         self.game.player_mut(owner).put_in_hand(pending.card);
         self.game.fire_on_add_to_hand_by_effect(owner);
         true

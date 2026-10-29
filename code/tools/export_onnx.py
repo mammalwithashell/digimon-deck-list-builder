@@ -279,6 +279,12 @@ def export_mlp(sb3_zip_path: str, output_path: str, observation_layout=None) -> 
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
         meta["value_semantics"] = value_semantics
         meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    information = getattr(model, "digimon_information", None)
+    if information is not None:
+        meta_path = Path(f"{output_path}.meta.json")
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        meta["information"] = information
+        meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     _verify_mlp(policy, wrapper, output_path, tensor_size)
 
 

@@ -70,6 +70,9 @@ def _validate_result(directory: Path, start: int, count: int, seed: int) -> dict
     if sum(shard["rows"] for shard in manifest["shards"]) != manifest["rows"]:
         raise ValueError(f"Worker row counts disagree: {directory}")
     files = {"manifest.json": sha256(directory / "manifest.json")}
+    if manifest.get("information",{}).get("regime")=="closed_decklist":
+        for name in ("belief_predictions.jsonl","belief_scoring_truth.jsonl"):
+            files[name]=sha256(directory/name)
     for shard in manifest["shards"]:
         # Native shard names are flat, controlled names; reject path traversal.
         name = shard["dir"]

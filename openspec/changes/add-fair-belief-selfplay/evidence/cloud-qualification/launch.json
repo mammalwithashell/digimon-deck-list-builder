@@ -1,0 +1,71 @@
+{
+  "schema": "fair-belief-local-launch-v1",
+  "status_at_launch": "running",
+  "source_commit": "26bfc3f79851e708500ca0d132e2274841dd43b8",
+  "controller_pid": 69168,
+  "started_at_utc": "2026-10-29T18:42:11.4087687Z",
+  "executable": "D:/cargo-target-wt/closed-deck-belief-training/cloud-fix-runtime/Scripts/python.exe",
+  "arguments": [
+    "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/inputs/source-qualified/code/tools/run_belief_comparison.py",
+    "--experiment",
+    "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/experiment",
+    "--seed-model",
+    "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/inputs/seed/model.zip",
+    "--engine",
+    "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/inputs/runtime/digimon-engine-cli.exe",
+    "--out",
+    "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/comparison",
+    "--workers",
+    "8"
+  ],
+  "working_directory": "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/inputs/source-qualified",
+  "environment": {
+    "PYTHONPATH": "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/inputs/source-qualified/code",
+    "PYTHONUTF8": "1",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "DIGIMON_BACKEND": "rust",
+    "DIGIMON_TENSOR_PROFILE": "standard_lite_v2",
+    "DIGIMON_CARDS_JSON": "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/inputs/source-qualified/data/cards.json"
+  },
+  "input_sha256": {
+    "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/inputs/source-26bfc3f79.zip": "6859d2dab6e61ce7e7744716273a11add0cda2ed45d8c1d3f55e5ac8c03c3228",
+    "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/inputs/source-qualified-receipt.json": "ee6ead1e6259cf4d699938b5bbb2215cb2fc73b32df397c33ddd4d6b44ed1ab5",
+    "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/experiment/protocol.json": "53d2206bb0425c4dedac18af146633a07950da2ef2518f2b117ee5d1967b4a60",
+    "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/inputs/seed/model.zip": "4836d024b87806400287c8c09c0486243df0a5dc8d458ef73e5aef76e5517f1f",
+    "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/inputs/seed/model.onnx": "18bdb420b92220b7dee580bd15dfc8f09cbd486cd7c4468ecd56dc10d4e8921c",
+    "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/inputs/seed/model.onnx.meta.json": "e4ef928ef785ffe779de9d26bb2cfd1457becdfb1afd84425845ab0c6556860a",
+    "D:\\cargo-target-wt\\closed-deck-belief-training\\ex13-full-comparison-20261029\\inputs\\runtime\\digimon_engine-0.1.0-cp311-abi3-win_amd64.whl": "9a6fc6b36e8a790cf59480b0c1377c79121b56b4a63d5d62031428a8ef401aa7",
+    "D:\\cargo-target-wt\\closed-deck-belief-training\\ex13-full-comparison-20261029\\inputs\\runtime\\digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4",
+    "D:\\cargo-target-wt\\closed-deck-belief-training\\ex13-full-comparison-20261029\\inputs\\runtime\\digimon-engine-cli.exe": "2793f6366748c238653e5c973d64597f0171a993c2fb2158fed32c66a23521d6"
+  },
+  "loaded_native_binding_sha256": {
+    "digimon_engine.digimon_engine": "2086cacaea52c1ed5a396695592b1fcbbdb755f6a1442afca6b9e4a82d04a4f9"
+  },
+  "output_directory": "D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/comparison",
+  "seeds": [
+    11,
+    22,
+    33
+  ],
+  "expected_training_games": 19800,
+  "expected_evaluation_games": 70200,
+  "fresh_exploiters": 6,
+  "exploiter_timesteps_each": 131072,
+  "promotion_pending": true,
+  "note": "Launch receipt only; completion and promotion require comparison progress/results. Earlier narrow ST1 candidate remains rejected.",
+  "launch_verified_at_utc": "2026-10-29T18:43:24.605392+00:00",
+  "launch_observation": {
+    "status": "running",
+    "completed_jobs": [],
+    "active_job": "train/11/open_decklist"
+  },
+  "verified_source_files": 23020,
+  "native_game_completions_observed": 15,
+  "native_game_completion_examples": [
+    "game 0 complete: 132 decisions, winner Some(1), truncated false, elapsed 43.2s",
+    "game 1 complete: 58 decisions, winner Some(0), truncated false, elapsed 57.5s",
+    "game 4 complete: 138 decisions, winner Some(1), truncated false, elapsed 29.9s"
+  ]
+}

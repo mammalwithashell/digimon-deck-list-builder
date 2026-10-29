@@ -900,6 +900,11 @@ fn binding_play_cost(ctx: &EffectContext<'_>, name: &str, bindings: Option<&Bind
             .unwrap_or(0);
     }
     if let Some((player, index)) = bindings.get_hand_index_with_player(name) {
+        let index = match bindings.resolve_pinned_hand_index(name, &ctx.game.player(player).hand) {
+            Some(Some(i)) => i,
+            Some(None) => return 0,
+            None => index,
+        };
         return ctx
             .game
             .player(player)
@@ -961,6 +966,11 @@ fn binding_play_cost_read(
             .unwrap_or(0);
     }
     if let Some((player, index)) = bindings.get_hand_index_with_player(name) {
+        let index = match bindings.resolve_pinned_hand_index(name, &ctx.game.player(player).hand) {
+            Some(Some(i)) => i,
+            Some(None) => return 0,
+            None => index,
+        };
         return ctx
             .game
             .player(player)

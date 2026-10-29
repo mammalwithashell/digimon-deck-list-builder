@@ -1,0 +1,138 @@
+{
+  "models": [
+    {
+      "kind": "candidate checkpoint",
+      "key": "11/open_decklist",
+      "zip": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\11\\open_decklist\\gen1\\model.zip",
+        "sha256": "b76d0732ae9c9b090ae1df325055381e2ca3f0e19d22ed2ab6e3cb1ce3440799"
+      },
+      "onnx": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\11\\open_decklist\\gen1\\model.onnx",
+        "sha256": "dc201d0ccf202c4223fd1c50137a9f5004331ae42ebbc4d90d4884cc5deb5961"
+      }
+    },
+    {
+      "kind": "candidate checkpoint",
+      "key": "11/closed_decklist",
+      "zip": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\11\\closed_decklist\\gen1\\model.zip",
+        "sha256": "c51b2b82b3a120914f2c79b3e27170cc320bc03ad0289a46491137dcb13238db"
+      },
+      "onnx": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\11\\closed_decklist\\gen1\\model.onnx",
+        "sha256": "b4ac7329895446626a97fe9dcd05a8b28964c90080111d04db5a6d6c9cc1c7f7"
+      }
+    },
+    {
+      "kind": "candidate checkpoint",
+      "key": "22/open_decklist",
+      "zip": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\22\\open_decklist\\gen1\\model.zip",
+        "sha256": "74cd06083bbebe4882b70630f3ca22da28e353e17b21e670518fd0cd6f05834b"
+      },
+      "onnx": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\22\\open_decklist\\gen1\\model.onnx",
+        "sha256": "916b8090b0a400a268faa55d2288a4d6d132150447c887eca25f3095af8d4643"
+      }
+    },
+    {
+      "kind": "candidate checkpoint",
+      "key": "22/closed_decklist",
+      "zip": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\22\\closed_decklist\\gen1\\model.zip",
+        "sha256": "85bea2532b5fed6e2e8b6fa46d22102cba76a96815724e06ac7967681bd82568"
+      },
+      "onnx": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\22\\closed_decklist\\gen1\\model.onnx",
+        "sha256": "b2d3567efd6e1cd9bbe76c757ecb26dae18d5a7d89111577a3966513397991d0"
+      }
+    },
+    {
+      "kind": "candidate checkpoint",
+      "key": "33/open_decklist",
+      "zip": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\33\\open_decklist\\gen1\\model.zip",
+        "sha256": "df3c34ede6e46bef30569c00a01baa9ff086e914d76359ce0adc49b49b28383a"
+      },
+      "onnx": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\33\\open_decklist\\gen1\\model.onnx",
+        "sha256": "b0190fc93674fa8cf86c363d7872e1220ef5161f888b1757e08e318fe985869e"
+      }
+    },
+    {
+      "kind": "candidate checkpoint",
+      "key": "33/closed_decklist",
+      "zip": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\33\\closed_decklist\\gen1\\model.zip",
+        "sha256": "8436578b4da779e0aecc2ce7bab3470267a6d249fb663a00070d792f29e6de99"
+      },
+      "onnx": {
+        "path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\33\\closed_decklist\\gen1\\model.onnx",
+        "sha256": "665be1e7cb8428d281a50797ca309a9f2933417200f90b069c1e74fc6171d67a"
+      }
+    }
+  ],
+  "exploiters": [
+    {
+      "seed": 11,
+      "target": "baseline",
+      "fresh": true,
+      "target_sha256": "b76d0732ae9c9b090ae1df325055381e2ca3f0e19d22ed2ab6e3cb1ce3440799",
+      "timesteps": 2048,
+      "information_regime": "closed_decklist",
+      "model_path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\exploiters\\11\\baseline.zip",
+      "model_sha256": "806b284481afdafc1c4ed05474fe4c492441036ff214bef7bc93e90fe4daddc7"
+    },
+    {
+      "seed": 11,
+      "target": "candidate",
+      "fresh": true,
+      "target_sha256": "c51b2b82b3a120914f2c79b3e27170cc320bc03ad0289a46491137dcb13238db",
+      "timesteps": 2048,
+      "information_regime": "closed_decklist",
+      "model_path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\exploiters\\11\\candidate.zip",
+      "model_sha256": "420bbf785fc31c9a06b14c19817d4dbdf4393b068757f79d0d323f452855899a"
+    },
+    {
+      "seed": 22,
+      "target": "baseline",
+      "fresh": true,
+      "target_sha256": "74cd06083bbebe4882b70630f3ca22da28e353e17b21e670518fd0cd6f05834b",
+      "timesteps": 2048,
+      "information_regime": "closed_decklist",
+      "model_path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\exploiters\\22\\baseline.zip",
+      "model_sha256": "9dfd0e4d9a06f61db7774f1500fbdb9ca906d6e039958ea8d948a7c2e3975cd4"
+    },
+    {
+      "seed": 22,
+      "target": "candidate",
+      "fresh": true,
+      "target_sha256": "85bea2532b5fed6e2e8b6fa46d22102cba76a96815724e06ac7967681bd82568",
+      "timesteps": 2048,
+      "information_regime": "closed_decklist",
+      "model_path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\exploiters\\22\\candidate.zip",
+      "model_sha256": "fbc35198d831802d84b90b5246bb2d6a80194fa962ad37da692f4cbd8ed92001"
+    },
+    {
+      "seed": 33,
+      "target": "baseline",
+      "fresh": true,
+      "target_sha256": "df3c34ede6e46bef30569c00a01baa9ff086e914d76359ce0adc49b49b28383a",
+      "timesteps": 2048,
+      "information_regime": "closed_decklist",
+      "model_path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\exploiters\\33\\baseline.zip",
+      "model_sha256": "8077e10dfa2b64fc5a192788c9e55e1ee05a984cd82dee61bc4e78bbd736789e"
+    },
+    {
+      "seed": 33,
+      "target": "candidate",
+      "fresh": true,
+      "target_sha256": "8436578b4da779e0aecc2ce7bab3470267a6d249fb663a00070d792f29e6de99",
+      "timesteps": 2048,
+      "information_regime": "closed_decklist",
+      "model_path": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\exploiters\\33\\candidate.zip",
+      "model_sha256": "ae28e3fe0c218f3c6e08dd42817b6e669fd50e111b73309fb9167b1b988dac62"
+    }
+  ]
+}

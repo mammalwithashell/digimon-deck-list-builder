@@ -1,0 +1,116 @@
+{
+  "eligible": false,
+  "failures": [
+    "heldout_policy: criterion failed or inconclusive",
+    "anchors: criterion failed or inconclusive",
+    "exploiter: criterion failed or inconclusive",
+    "heldout_search: criterion failed or inconclusive"
+  ],
+  "panels": {
+    "heldout_policy": [
+      {
+        "seed": 11,
+        "delta_95_conservative": [
+          -0.1275291931964152,
+          0.1428534612487632
+        ],
+        "passed": false
+      },
+      {
+        "seed": 22,
+        "delta_95_conservative": [
+          -0.3483281722381459,
+          -0.1343862714108174
+        ],
+        "passed": false
+      },
+      {
+        "seed": 33,
+        "delta_95_conservative": [
+          -0.14856705056120567,
+          0.11025638043033548
+        ],
+        "passed": false
+      }
+    ],
+    "anchors": [
+      {
+        "seed": 11,
+        "delta_95_conservative": [
+          -0.26695100377100967,
+          -0.0012236871450810871
+        ],
+        "passed": false
+      },
+      {
+        "seed": 22,
+        "delta_95_conservative": [
+          -0.20002196550400403,
+          -0.037504189307390606
+        ],
+        "passed": false
+      },
+      {
+        "seed": 33,
+        "delta_95_conservative": [
+          -0.1610823087266105,
+          0.11510950456956648
+        ],
+        "passed": false
+      }
+    ],
+    "exploiter": [
+      {
+        "seed": 11,
+        "delta_95_conservative": [
+          -0.09260646400515588,
+          0.18455207231924403
+        ],
+        "passed": false
+      },
+      {
+        "seed": 22,
+        "delta_95_conservative": [
+          0.3659064099409066,
+          0.5612118072261496
+        ],
+        "passed": false
+      },
+      {
+        "seed": 33,
+        "delta_95_conservative": [
+          -0.16075305970720027,
+          0.1071181215239822
+        ],
+        "passed": false
+      }
+    ],
+    "heldout_search": [
+      {
+        "seed": 11,
+        "delta_95_conservative": [
+          -0.03672441879975863,
+          0.2359399034802832
+        ],
+        "passed": false
+      },
+      {
+        "seed": 22,
+        "delta_95_conservative": [
+          -0.10316623022242666,
+          0.17212543645799283
+        ],
+        "passed": false
+      },
+      {
+        "seed": 33,
+        "delta_95_conservative": [
+          -0.07683122313229168,
+          0.19942536755107598
+        ],
+        "passed": false
+      }
+    ]
+  },
+  "exploitability_scope": "fresh finite-budget best-response estimate; no equilibrium certificate"
+}

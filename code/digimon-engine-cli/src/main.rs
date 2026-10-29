@@ -20,6 +20,7 @@ mod admission;
 mod debug_repl;
 mod replay_view;
 mod selfplay;
+mod prepare_beliefs;
 mod winprob;
 
 #[cfg(windows)]
@@ -119,7 +120,18 @@ enum Command {
     /// Generate AlphaZero self-play training data: play search-driven
     /// games (determinized MCTS on both seats) and write `(obs, π, z)`
     /// shards + a manifest (add-determinized-search task 3.1).
+    PrepareBeliefPrior {
+        #[arg(long)] decks: PathBuf,
+        #[arg(long)] out: PathBuf,
+        #[arg(long, default_value="standard")] format_id: String,
+        #[arg(long)] provenance: String,
+    },
     Selfplay {
+        #[arg(long)] policy_only: bool,
+        #[arg(long, default_value="open_decklist", value_parser=["open_decklist","closed_decklist"])]
+        information_regime: String,
+        #[arg(long)]
+        belief_prior: Option<PathBuf>,
         /// Path to the policy+value .onnx export (task-0.2, inline `value`
         /// output). Mutually exclusive with --uniform.
         #[arg(long)]
@@ -279,7 +291,13 @@ fn run() -> ExitCode {
             };
             winprob::run(recording, model, out, batch, tensor_profile, card_data)
         }
+        Command::PrepareBeliefPrior {decks,out,format_id,provenance} => {
+            let data = match load_card_data(&cli.cards_json,&cli.pool) { Ok(data)=>data,Err(e)=>{eprintln!("{e}");return ExitCode::from(2)}};
+            let path=cli.cards_json.clone().or_else(default_cards_json_path).expect("card database resolved");
+            prepare_beliefs::run(decks,out,format_id,provenance,data,path.parent().unwrap().to_path_buf())
+        },
         Command::Selfplay {
+            policy_only, information_regime, belief_prior,
             model,
             opponent_pool,
             uniform,
@@ -308,6 +326,7 @@ fn run() -> ExitCode {
                 }
             };
             selfplay::run(
+                policy_only, information_regime, belief_prior,
                 model,
                 opponent_pool,
                 uniform,
