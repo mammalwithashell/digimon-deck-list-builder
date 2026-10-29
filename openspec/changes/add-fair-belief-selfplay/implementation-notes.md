@@ -1,0 +1,99 @@
+# Initial implementation evidence
+
+## Scope
+
+Worktree baseline: `3b6a2d8f4`, branch `feat/fair-belief-selfplay`.
+The first slice adds isolated belief/knowledge primitives and tests. It does
+not enable closed-list self-play, materialize hypothetical cards, promote a
+model, or provide evidence of improved playing strength.
+
+## Information audit
+
+- `observation/tensor_v2_lite_deck.rs::write_original_decklist` reads only
+  `game.player(player_id).original_deck`. The immediate leak being addressed
+  is in search supervision, not an opponent-list tensor field.
+- `observation/tensor_v2_lite.rs::write_known_zone_cards` allocates 45 trash
+  rows per seat. The player summary carries full trash length, but identities
+  beyond the row capacity are absent. A policy cannot be assumed to reconstruct
+  full long-game copy counts from one such observation. This change does not
+  expand the tensor contract.
+- Existing `Infoset::extract` and `materialize` use the actual opposing
+  hand/deck/security composition. Existing hidden-permutation tests do not
+  detect dependence on a different concealed composition.
+- `GameEvent` does not currently provide a complete, viewer-entitled stream of
+  peeks, hidden transfers, and knowledge invalidations. The new
+  `KnowledgeLedger` is an event-input primitive, not an automatically wired
+  tracker. Engine event coverage remains an explicit integration task.
+- A deck shuffle preserves knowledge that a seen card belongs somewhere in
+  that deck, while destroying its position. An unobserved transfer cannot be
+  resolved by asking which true physical instance moved; the primitive exposes
+  conservative invalidation for affected zones. Stronger lower-bound belief
+  tracking remains future lifecycle work.
+- Hypothetical-world work must rebuild hidden-dependent prompt indices,
+  continuations, original-list metadata and instance IDs. Closed search cannot
+  reuse the existing materializer merely by replacing mixture weights.
+
+## Prior primitives
+
+`WeightedDeckPrior` accepts a `BeliefEvidence` value, never a `Game`.
+Current public accounting extraction reads public opposing-owned cards across
+both players' public zones and hidden zone lengths only; unsupported opaque games and hidden digivolution sources
+fail explicitly. Physical instances already public are not counted twice
+when a ledger entry is stale.
+
+Snapshots canonicalize candidate order and card order, deduplicate repeated
+lists without increasing their weight, reject conflicting duplicate weights,
+and fingerprint the admitted population, weights, format, provenance and
+compiled legality data. Supplied populations are explicitly admitted inputs:
+production preparation still needs an implemented-card intersection, source
+snapshot and independent train/validation/test split.
+
+Candidate compatibility checks actual current card counts, known-hidden
+membership, zone sizes and egg counts. The unseen component retains positive
+mass even with compatible known lists. Fallback completions sample uniformly
+over eligible IDs per step and are accepted only by the shared complete-deck
+validator. Attempts are bounded; exhaustion is an error, never a request for
+the true opposing list. These are legal hypotheses, not claims of calibrated
+real-world deck likelihood.
+
+## Validation
+
+Completed 2026-10-22:
+
+- Determinization: **38 passed**, including **20 new belief tests**.
+- Existing search regressions: **10 passed** (PIMC, IS-MCTS, masks, profiles,
+  deterministic seeds, same-player value signs and hidden-permutation guards).
+- Existing self-play shard integration: **1 passed** (two complete starter
+  games, existing exact-list mode; this is not closed-list integration).
+- Repository verification tier 0: **all 13 checks passed**, including
+  **174 verification-tool tests**.
+- Both this change and the amended `add-determinized-search` pass strict
+  OpenSpec validation. Changed Rust files pass rustfmt; diff whitespace is clean.
+
+The public-owner accounting regression was observed failing before the fix.
+The security-pin fixture initially failed because security is dealt after
+mulligan; the fixture now advances legal masked mulligan decisions first.
+The final aggregate rerun includes both fixes.
+
+Rust verification used an isolated
+`CARGO_TARGET_DIR=D:\cargo-target-wt\closed-deck-belief-training`,
+`RUST_MIN_STACK=268435456`, normal default features, and per-package
+`profile.dev.package.digimon-engine` / `digimon-dsl` overrides
+`opt-level=0, debug=0`. These checks verify behavior, not throughput.
+The initial `--no-default-features` build failed in pre-existing unconditional
+DSL imports; that configuration is not claimed to pass. An initial optimized
+build was stopped in this worktree only before switching to the faster
+verification profile.
+
+Reproduction: `cargo test -p digimon-engine --test determinization --test search --test selfplay`
+with the isolation/stack/profile settings above; `python scripts/verify --tier 0 --continue-on-failure`.
+Raw logs are saved under the isolated target directory.
+
+## Remaining integration
+
+**5/29 tasks complete.** The remaining work includes production pool/split and
+experiment snapshots, full engine event coverage and knowledge persistence,
+hypothetical-world construction and continuation hygiene, both-seat fair search
+targets, run/shard/model/resume provenance, and independent policy-only and
+exploiter experiments. No model has been retrained or promoted. The full
+engine/card suite and cloud training have not been run for this first slice.

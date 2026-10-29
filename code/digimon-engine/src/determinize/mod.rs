@@ -28,6 +28,7 @@
 //! known, so the opponent's `DeckPrior` is exact. PvP priors land with the
 //! Phase-6 `opponent-deck-prior` capability.
 
+pub mod beliefs;
 mod infoset;
 mod invariants;
 mod materialize;
