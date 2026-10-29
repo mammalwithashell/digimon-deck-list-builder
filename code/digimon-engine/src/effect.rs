@@ -274,6 +274,9 @@ pub struct Effect {
     pub name: String,
     pub source_card: CardHandle,
     pub observation_metadata: EffectObservationMetadata,
+    /// Compiler-certified absence of event-card identity reads. Raw Rust and
+    /// unaudited DSL shapes retain strict context handling by default.
+    pub ignores_event_card_identity: bool,
 
     // Timing / kind flags
     pub on_play: bool,
@@ -953,6 +956,7 @@ impl EffectBuilder {
                 name: String::new(),
                 source_card: card,
                 observation_metadata: EffectObservationMetadata::default(),
+                ignores_event_card_identity: false,
                 on_play: false,
                 when_digivolving: false,
                 on_attack: false,

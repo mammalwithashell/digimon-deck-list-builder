@@ -54,6 +54,17 @@ def test_same_prior_across_generations_allowed():
     assert require_same_information([closed(), closed()])["regime"] == "closed_decklist"
 
 
+def test_field_knowledge_version_is_preserved_and_cannot_mix_with_old_shards():
+    old, new = closed(), closed()
+    new["information"]["knowledge_schema"] = 2
+    assert information_contract(new)["knowledge_schema"] == 2
+    with pytest.raises(ValueError, match="mixed"):
+        require_same_information([old, new])
+    new["information"]["knowledge_schema"] = 3
+    with pytest.raises(ValueError, match="schema"):
+        information_contract(new)
+
+
 def test_legacy_resume_requires_new_run(tmp_path):
     (tmp_path / "state.json").write_text(json.dumps({"next_gen": 1}))
     with pytest.raises(ValueError, match="legacy"):

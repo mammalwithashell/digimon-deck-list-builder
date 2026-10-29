@@ -455,7 +455,10 @@ pub fn lower_for_kind_with_clause_index(
             });
         }
 
-        out.push(builder.build());
+        let mut effect = builder.build();
+        effect.ignores_event_card_identity = option_use_requirement.is_none()
+            && super::context_liveness::ignores_event_card_identity(clause);
+        out.push(effect);
     }
     out
 }

@@ -92,6 +92,31 @@ pub(crate) struct EffectDigivolveCostChoiceState {
     pub outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
+impl EffectDigivolveCostChoiceState {
+    pub(crate) fn belief_safe(
+        &self,
+        viewer: PlayerId,
+        allowed: &std::collections::HashSet<CardHandle>,
+    ) -> bool {
+        self.acting_player == viewer
+            && allowed.contains(&self.result_card)
+            && allowed.contains(&self.target_top)
+            && self.source_carrier_top.is_none_or(|h| allowed.contains(&h))
+            && self.result_clause.is_none_or(|(h, _)| allowed.contains(&h))
+            && self
+                .trigger_context
+                .as_ref()
+                .is_none_or(|c| c.belief_safe(allowed))
+            && self.outer_conts.iter().all(|c| {
+                allowed.contains(&c.source_card)
+                    && c.bindings.belief_safe(viewer, allowed)
+                    && c.trigger_context
+                        .as_ref()
+                        .is_none_or(|t| t.belief_safe(allowed))
+            })
+    }
+}
+
 // Preserve the archival battle-only declaration projection. Breeding is a
 // new declaration kind and includes its zone in every current digest.
 impl std::fmt::Debug for EffectDigivolveCostChoiceState {
@@ -141,7 +166,10 @@ pub(crate) enum DigivolveReducerChoice {
     /// digivolved into (§16-10-1). Its optional processing condition is
     /// "by suspending 1 of your Digimon" (§16-10-3); every instance is its
     /// own entry (§16-10-4).
-    Digisorption { source_card: CardHandle, amount: i32 },
+    Digisorption {
+        source_card: CardHandle,
+        amount: i32,
+    },
 }
 
 impl DigivolveReducerChoice {
@@ -165,9 +193,9 @@ impl DigivolveReducerChoice {
 
     fn keyword(&self) -> Option<Keyword> {
         match self {
-            Self::Digisorption { amount, .. } => {
-                Some(Keyword::Digisorption((*amount).clamp(0, u8::MAX as i32) as u8))
-            }
+            Self::Digisorption { amount, .. } => Some(Keyword::Digisorption(
+                (*amount).clamp(0, u8::MAX as i32) as u8,
+            )),
             _ => None,
         }
     }
@@ -249,7 +277,27 @@ pub struct DnaDigivolveSecondMaterialState {
 }
 
 impl DigivolveReducerState {
-    pub(crate) fn result_card(&self) -> CardHandle { self.target.card }
+    pub(crate) fn belief_safe(
+        &self,
+        viewer: PlayerId,
+        allowed: &std::collections::HashSet<CardHandle>,
+    ) -> bool {
+        self.acting_player == viewer
+            && self.target.belief_safe(allowed)
+            && self
+                .current
+                .iter()
+                .chain(&self.remaining)
+                .all(|c| allowed.contains(&c.source_card()))
+            && self
+                .effect
+                .as_ref()
+                .is_none_or(|e| e.belief_safe(viewer, allowed))
+            && self.dna_effect.is_none()
+    }
+    pub(crate) fn result_card(&self) -> CardHandle {
+        self.target.card
+    }
 }
 
 impl Game {
@@ -264,25 +312,41 @@ impl Game {
             match stack.frames.last()? {
                 F::EffectDigivolveCostChoice(s) => Some(s.result_card),
                 F::EffectDnaHandRoute(s) => Some(s.result),
-                F::DigivolveReducerPrompt(s) | F::DigivolveReducerSuspend(s) => Some(s.result_card()),
-                F::ReplacementBody { inner, .. } | F::FieldTopSourceBatch { inner, .. }
-                | F::DelayCancelAfterSelection { inner, .. } | F::DelayHandDigivolveAfterSelection { inner, .. }
-                | F::DelayDnaAfterSelection { inner, .. } | F::DelayFieldDnaAfterPayment { inner, .. }
-                | F::DelayPlayFromHandAfterSelection { inner, .. } | F::DelayPlayFromUnionAfterSelection { inner, .. }
+                F::DigivolveReducerPrompt(s) | F::DigivolveReducerSuspend(s) => {
+                    Some(s.result_card())
+                }
+                F::ReplacementBody { inner, .. }
+                | F::FieldTopSourceBatch { inner, .. }
+                | F::DelayCancelAfterSelection { inner, .. }
+                | F::DelayHandDigivolveAfterSelection { inner, .. }
+                | F::DelayDnaAfterSelection { inner, .. }
+                | F::DelayFieldDnaAfterPayment { inner, .. }
+                | F::DelayPlayFromHandAfterSelection { inner, .. }
+                | F::DelayPlayFromUnionAfterSelection { inner, .. }
                 | F::DelayBodyAfterCost { inner, .. } => direct(inner),
                 _ => None,
             }
         }
         direct(stack)
             .or_else(|| crate::replacement::active_effect_digivolve_window_card(stack))
-            .or_else(|| self.effect_digivolve_scopes.last().map(|s| s.declaration.result_card))
+            .or_else(|| {
+                self.effect_digivolve_scopes
+                    .last()
+                    .map(|s| s.declaration.result_card)
+            })
             .or_else(|| self.pending_would_digivolve_resume.as_ref().map(|s| s.card))
-            .or_else(|| self.after_selection_resume_hooks.0.iter().rev().find_map(|hook| {
-                match hook {
-                    crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } => Some(state.result_card()),
-                    _ => None,
-                }
-            }))
+            .or_else(|| {
+                self.after_selection_resume_hooks
+                    .0
+                    .iter()
+                    .rev()
+                    .find_map(|hook| match hook {
+                        crate::resume::AfterSelectionHook::DigivolveReducerChain {
+                            state, ..
+                        } => Some(state.result_card()),
+                        _ => None,
+                    })
+            })
     }
 
     pub(crate) fn remove_effect_digivolve_scope(&mut self, card: CardHandle) {
@@ -451,14 +515,24 @@ impl Game {
             use crate::resume::ResumeFrame as F;
             for item in stack.frames.iter_mut().rev() {
                 let found = match item {
-                    F::EffectDigivolveCostChoice(s) if s.result_clause == Some((clause,player)) => Some(s),
-                    F::DigivolveReducerPrompt(s) | F::DigivolveReducerSuspend(s) =>
-                        s.effect.as_mut().filter(|s| s.result_clause == Some((clause,player))),
-                    F::ReplacementBody { inner, .. } | F::FieldTopSourceBatch { inner, .. }
-                    | F::DelayCancelAfterSelection { inner, .. } | F::DelayHandDigivolveAfterSelection { inner, .. }
-                    | F::DelayDnaAfterSelection { inner, .. } | F::DelayFieldDnaAfterPayment { inner, .. }
-                    | F::DelayPlayFromHandAfterSelection { inner, .. } | F::DelayPlayFromUnionAfterSelection { inner, .. }
-                    | F::DelayBodyAfterCost { inner, .. } => frame(inner,clause,player),
+                    F::EffectDigivolveCostChoice(s)
+                        if s.result_clause == Some((clause, player)) =>
+                    {
+                        Some(s)
+                    }
+                    F::DigivolveReducerPrompt(s) | F::DigivolveReducerSuspend(s) => s
+                        .effect
+                        .as_mut()
+                        .filter(|s| s.result_clause == Some((clause, player))),
+                    F::ReplacementBody { inner, .. }
+                    | F::FieldTopSourceBatch { inner, .. }
+                    | F::DelayCancelAfterSelection { inner, .. }
+                    | F::DelayHandDigivolveAfterSelection { inner, .. }
+                    | F::DelayDnaAfterSelection { inner, .. }
+                    | F::DelayFieldDnaAfterPayment { inner, .. }
+                    | F::DelayPlayFromHandAfterSelection { inner, .. }
+                    | F::DelayPlayFromUnionAfterSelection { inner, .. }
+                    | F::DelayBodyAfterCost { inner, .. } => frame(inner, clause, player),
                     _ => None,
                 };
                 if found.is_some() { return found; }
@@ -1536,20 +1610,35 @@ impl Game {
             is_digivolve: true, target_permanents: [Some(target), None],
         };
         let effective_delta = probe.effect_digivolve_cost_delta(acting_player, cost_delta);
-        routes.into_iter().any(|route| probe.effect_digivolve_route_is_affordable(
-            &declaration, cost_target, effective_delta.resolve(route.memory_cost), route,
-        ))
+        routes.into_iter().any(|route| {
+            probe.effect_digivolve_route_is_affordable(
+                &declaration,
+                cost_target,
+                effective_delta.resolve(route.memory_cost),
+                route,
+            )
+        })
     }
 
     /// The effect's explicit reduction is subject to the same prohibition
     /// whether checking a candidate or committing a selected route.
     fn effect_digivolve_cost_delta(&self, player: PlayerId, delta: CostDelta) -> CostDelta {
         match delta {
-            CostDelta::Reduce(n) if n > 0 && (
-                self.modifiers.player_has(player, ModifierType::CannotReduceCost)
-                || self.modifiers.player_has(player, ModifierType::CannotReduceDigivolveCost)
-                || self.modifiers.any_other_player_has(player, ModifierType::OpponentCannotReduceDigivolveCost)
-            ) => CostDelta::Reduce(0),
+            CostDelta::Reduce(n)
+                if n > 0
+                    && (self
+                        .modifiers
+                        .player_has(player, ModifierType::CannotReduceCost)
+                        || self
+                            .modifiers
+                            .player_has(player, ModifierType::CannotReduceDigivolveCost)
+                        || self.modifiers.any_other_player_has(
+                            player,
+                            ModifierType::OpponentCannotReduceDigivolveCost,
+                        )) =>
+            {
+                CostDelta::Reduce(0)
+            }
             other => other,
         }
     }
@@ -2100,6 +2189,7 @@ impl Game {
         }
 
         let turn = self.turn_count;
+        self.remember_belief_public_hand_departure(resume.player, hand_index);
         let removed = self.player_mut(resume.player).hand.remove(hand_index);
         self.player_mut(resume.player).battle_area[field_index].digivolve(removed, turn);
         // App Fusion: after stacking the App-Fusion card on top of the host
@@ -2144,7 +2234,7 @@ impl Game {
             memory_paid: resume.effective_cost as i16,
         });
 
-        self.player_mut(resume.player).draw();
+        let _ = self.draw_one_for_player(resume.player);
 
         self.fire_digivolve_event_triggers(resume.permanent, event_card, false, false);
 
@@ -3233,7 +3323,7 @@ impl Game {
             if let CardSourceRef::Material(source, _) = source_ref {
                 self.soft_remove_if_emptied(source);
             }
-            self.player_mut(player_id).draw();
+            let _ = self.draw_one_for_player(player_id);
             let seq = self.next_event_seq();
             self.events.push(crate::events::GameEvent::Digivolve {
                 seq, player: target.player, top_card_id, card_name,
@@ -3281,7 +3371,7 @@ impl Game {
         // WhenDigivolving fan-out, mirroring the player-action path above.
         // (§8-1-2-8 covers the empty-deck case: digivolution still happens,
         // just "without drawing a card" — which `draw()` already models.)
-        self.player_mut(player_id).draw();
+        let _ = self.draw_one_for_player(player_id);
 
         self.emit_eval_digivolve(target, effective_cost as i16, false, false);
 

@@ -14,11 +14,16 @@
 //!
 //! Run: RUST_MIN_STACK=268435456 cargo test --test determinization
 
+#[cfg(windows)]
+#[global_allocator]
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 mod support;
 
+mod beliefs;
+mod closed;
+mod closed_cloud;
 mod infoset_tests;
 mod invariants_tests;
 mod materialize_tests;
 mod sampling_tests;
-mod beliefs;
-mod closed;

@@ -609,10 +609,24 @@ fn return_cards_to_deck(
     };
     let mut moved = false;
     for &card in iter {
+        let Some(origin) = ctx.game.locate_card_source_ref(card) else { continue; };
         let Some(mut c) = ctx.game.take_card_by_handle(card) else {
             continue;
         };
         let owner = c.owner;
+        let zone = crate::determinize::beliefs::KnowledgeZone::Deck;
+        let pin = Some(if position == StackPosition::Top { 0 } else { ctx.game.player(owner).deck.len() });
+        match origin {
+            CardSourceRef::Hand(viewer, _) => ctx.game.learn_belief_private_card(&c, viewer, zone, pin),
+            CardSourceRef::Trash(..) | CardSourceRef::Reveal(..) => ctx.game.learn_belief_card(&c, zone, pin),
+            CardSourceRef::Material(..) | CardSourceRef::Link(..) => {
+                if c.face_down { ctx.game.learn_belief_private_card(&c, owner, zone, pin); }
+                else { ctx.game.learn_belief_card(&c, zone, pin); }
+            }
+            // Other source kinds have no identity entitlement here. Forget
+            // destination ordering conservatively rather than inspecting them.
+            _ => ctx.game.shuffle_belief_knowledge(owner, zone),
+        }
         let player = ctx.game.player_mut(owner);
         match position {
             StackPosition::Top => player.put_on_deck_top(c),

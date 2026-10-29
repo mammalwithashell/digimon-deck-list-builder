@@ -339,7 +339,7 @@ impl<'a> EffectContext<'a> {
                 continue;
             };
             let card = self.game.player_mut(player).trash.remove(pos);
-            self.move_card_to_deck(card, true);
+            self.move_public_card_to_deck(card, true);
             moved.push(handle);
         }
         moved.reverse();
@@ -373,7 +373,7 @@ impl<'a> EffectContext<'a> {
                 continue;
             };
             let card = self.game.player_mut(player).trash.remove(pos);
-            self.move_card_to_deck(card, false);
+            self.move_public_card_to_deck(card, false);
             moved.push(handle);
         }
         // `moved` was built in reverse; restore selection order for callers.
@@ -405,7 +405,7 @@ impl<'a> EffectContext<'a> {
         let removed = self.game.player_mut(player).trash.remove(pos);
         // Deck top = Vec end (drawn first) per engine convention; a Digi-Egg
         // routes to the digitama deck (G-RETURN-TRASH-DIGI-EGG-ROUTING).
-        self.move_card_to_deck(removed, false);
+        self.move_public_card_to_deck(removed, false);
         true
     }
 
@@ -434,6 +434,24 @@ impl<'a> EffectContext<'a> {
             return false;
         };
         let removed = self.game.player_mut(player).hand.remove(pos);
+        let zone = if removed.card_kind(&self.game.card_data) == crate::enums::CardKind::DigiEgg {
+            crate::determinize::beliefs::KnowledgeZone::Digitama
+        } else {
+            crate::determinize::beliefs::KnowledgeZone::Deck
+        };
+        let position = if to_bottom {
+            Some(
+                if zone == crate::determinize::beliefs::KnowledgeZone::Digitama {
+                    self.game.player(removed.owner).digitama_deck.len()
+                } else {
+                    self.game.player(removed.owner).deck.len()
+                },
+            )
+        } else {
+            Some(0)
+        };
+        self.game
+            .learn_belief_private_card(&removed, player, zone, position);
         self.move_card_to_deck(removed, to_bottom);
         true
     }

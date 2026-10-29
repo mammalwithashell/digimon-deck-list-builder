@@ -11,7 +11,31 @@ use std::collections::{BTreeMap, HashSet};
 
 /// Validate continuation support before producing training data. Unreviewed
 /// shapes fail explicitly instead of inheriting a true-hand candidate cache.
-fn audit(root: &Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), String> {
+fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), String> {
+    if super::beliefs::field_sources_with_controller(root)
+        .any(|(controller, c)| c.face_down && c.owner != controller)
+    {
+        return Err("closed-list foreign-owned concealed field sources require an ownership-aware allocator".into());
+    }
+    if root.pending_effect_security_removal.iter().any(|s| {
+        !matches!(
+            s.destination,
+            crate::selection::SecurityRemovalDestination::Trash
+        )
+    }) {
+        return Err("closed-list concealed security transit requires destination rebinding".into());
+    }
+    if memory.concealed_positions().iter().any(|c| {
+        !matches!(
+            c.zone,
+            KnowledgeZone::Deck
+                | KnowledgeZone::Security
+                | KnowledgeZone::Hand
+                | KnowledgeZone::Field
+        )
+    }) {
+        return Err("closed-list concealed security transit requires destination rebinding".into());
+    }
     if root.players.iter().any(|p| {
         p.hand
             .iter()
@@ -76,7 +100,7 @@ fn audit(root: &Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), String
         root.revealed_cards
             .iter()
             .chain(root.pending_option.iter().map(|p| &p.card))
-            .chain(root.pending_security.iter().map(|p| &p.card))
+            .chain(super::beliefs::public_pending_security(root))
             .map(|c| c.handle()),
     );
     allowed.extend(
@@ -85,11 +109,90 @@ fn audit(root: &Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), String
             .iter()
             .map(|c| CardHandle(c.0)),
     );
-    let outer_safe = |conts: &[crate::resume::OuterContinuation]| {
-        conts
+    allowed.extend(
+        memory
+            .hidden_instances(viewer)
             .iter()
-            .all(|c| allowed.contains(&c.source_card) && c.bindings.belief_safe(viewer, &allowed))
+            .map(|c| CardHandle(c.0)),
+    );
+    allowed.extend(
+        memory
+            .concealed_positions()
+            .iter()
+            .map(|c| CardHandle(c.instance)),
+    );
+    allowed.extend(memory.public_tokens().iter().copied().map(CardHandle));
+    allowed.extend(
+        root.digixros_leaving_limbo
+            .iter()
+            .flat_map(|(_, _, p)| p.card_sources.iter().chain(&p.linked_cards))
+            .map(|c| c.handle()),
+    );
+    let mut identities = allowed.clone();
+    let known_instances: HashSet<_> = memory
+        .hidden_instances(0)
+        .iter()
+        .chain(memory.hidden_instances(1).iter())
+        .map(|c| c.0)
+        .chain(
+            root.players[viewer as usize]
+                .hand
+                .iter()
+                .map(|c| c.card_index),
+        )
+        .chain(
+            super::beliefs::field_sources(root)
+                .filter(|c| c.owner == viewer)
+                .map(|c| c.card_index),
+        )
+        .collect();
+    for c in memory.concealed_positions() {
+        if !known_instances.contains(&c.instance) {
+            identities.remove(&CardHandle(c.instance));
+        }
+    }
+    let known_opponent = memory.hidden_instances(1 - viewer);
+    for c in super::beliefs::field_sources(root).filter(|c| c.face_down && c.owner != viewer) {
+        if !known_opponent.iter().any(|k| k.0 == c.card_index) {
+            identities.remove(&c.handle());
+        }
+    }
+    let context_safe = |c: &Option<crate::trigger_context::TriggerContext>| {
+        c.as_ref()
+            .is_none_or(|c| c.belief_safe(&allowed) && c.belief_snapshots_safe(&identities))
     };
+    let outer_safe = |conts: &[crate::resume::OuterContinuation]| {
+        conts.iter().all(|c| {
+            identities.contains(&c.source_card)
+                && c.bindings.belief_safe(viewer, &allowed)
+                && context_safe(&c.trigger_context)
+        })
+    };
+    if !context_safe(&root.current_trigger_context) {
+        return Err("closed-list active trigger context refers to concealed metadata".into());
+    }
+    if root
+        .effect_digivolve_scopes
+        .iter()
+        .any(|s| !s.declaration.belief_safe(viewer, &identities))
+    {
+        return Err("closed-list effect digivolution scope requires audit/rebinding".into());
+    }
+    if let Some(t) = &root.pending_digixros_transaction {
+        let played = identities.contains(&t.played_card);
+        let selected = t
+            .selected_materials
+            .iter()
+            .chain(&t.pre_attached_materials)
+            .all(|m| identities.contains(&m.origin.card()));
+        let wildcards = t
+            .wildcard_substitutions
+            .iter()
+            .all(|s| identities.contains(&s.material_card));
+        if !(played && selected && wildcards) {
+            return Err(format!("closed-list DigiXros transaction requires audit/rebinding (played={played}, selected={selected}, wildcards={wildcards})"));
+        }
+    }
     if !root.loop_watch.is_empty() {
         return Err("closed-list loop history requires hypothetical rebinding".into());
     }
@@ -103,38 +206,129 @@ fn audit(root: &Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), String
     {
         return Err("closed-list outer bindings refer to concealed cards".into());
     }
+    // A queued security observer may outlive anonymous hand membership. Only
+    // erase reference fields proven unused by its entire compiled clause;
+    // never infer their identity/location from the real concealed card.
+    for index in 0..root.effect_queue.len() {
+        let queued = &root.effect_queue[index];
+        let certified = queued.granted_effect_id.is_none() && queued.keyword_effect.is_none()
+            && root.effects_for_card(&queued.card_id, queued.source_card)
+                .and_then(|effects| effects.get(queued.effect_slot as usize)
+                    .map(|e| e.ignores_event_card_identity)).unwrap_or(false);
+        if certified {
+            if let Some(context) = &mut root.effect_queue[index].trigger_context {
+                if context.event_card.is_some_and(|h| !allowed.contains(&h)) { context.event_card = None; }
+                if context.target_card.is_some_and(|h| !allowed.contains(&h)) { context.target_card = None; }
+                if matches!(context.subject, Some(crate::trigger_context::EventSubject::Card { card, .. }) if !allowed.contains(&card)) {
+                    context.subject = None;
+                }
+            }
+        }
+    }
     if root.effect_queue.iter().any(|effect| {
-        !allowed.contains(&effect.source_card)
+        !identities.contains(&effect.source_card)
+            || !context_safe(&effect.trigger_context)
             || effect
                 .attribution_source_card
                 .is_some_and(|h| !allowed.contains(&h))
     }) {
-        return Err("closed-list effect queue refers to concealed cards".into());
+        let details: Vec<_> = root
+            .effect_queue
+            .iter()
+            .filter(|e| !identities.contains(&e.source_card) || !context_safe(&e.trigger_context))
+            .map(|e| {
+                (
+                    &e.card_id,
+                    identities.contains(&e.source_card),
+                    context_safe(&e.trigger_context),
+                    e.trigger_context.as_ref().map(|c| {
+                        c.belief_missing_handles(&allowed)
+                            .into_iter()
+                            .map(|h| {
+                                let location = root.players.iter().find_map(|p| {
+                                    [
+                                        ("hand", &p.hand),
+                                        ("deck", &p.deck),
+                                        ("security", &p.security),
+                                        ("trash", &p.trash),
+                                    ]
+                                    .into_iter()
+                                    .find_map(|(z, cards)| {
+                                        cards
+                                            .iter()
+                                            .position(|c| c.handle() == h)
+                                            .map(|i| (p.id, z, i))
+                                    })
+                                });
+                                (h, location)
+                            })
+                            .collect::<Vec<_>>()
+                    }),
+                )
+            })
+            .collect();
+        return Err(format!(
+            "closed-list effect queue refers to concealed cards: {details:?}"
+        ));
     }
-    if root
-        .pending_would_play_resume
-        .as_ref()
-        .is_some_and(|p| p.player != viewer)
-    {
+    if root.pending_would_play_resume.as_ref().is_some_and(|p| {
+        p.player != viewer
+            && !(allowed.contains(&p.card)
+                && matches!(p.origin, crate::game::PendingWouldPlayOrigin::Hand))
+    }) {
         return Err("closed-list foreign pending play requires declaration rebinding".into());
     }
-    if !root.after_selection_resume_hooks.0.is_empty() {
-        return Err("closed-list continuation audit: after-selection hooks unsupported".into());
+    for hook in &root.after_selection_resume_hooks.0 {
+        use crate::resume::AfterSelectionHook;
+        let safe = match hook {
+            AfterSelectionHook::InteractiveOptionUseReducer { player_id, .. } => {
+                *player_id == viewer
+            }
+            AfterSelectionHook::PlayCostContinuation {
+                target, processed, ..
+            } => {
+                target.belief_safe(&identities)
+                    && processed.iter().all(|k| k.belief_safe(&identities))
+            }
+            AfterSelectionHook::InteractiveDigivolveReducer { acting_player, .. } => {
+                *acting_player == viewer
+            }
+            AfterSelectionHook::DigivolveReducerChain { state, .. } => {
+                state.belief_safe(viewer, &identities)
+            }
+            AfterSelectionHook::PartitionSecondPlay {
+                source_card, card, ..
+            } => allowed.contains(source_card) && allowed.contains(card),
+            AfterSelectionHook::DigiXrosLeaveContinuation { cont } => cont.belief_safe(&identities),
+            _ => false,
+        };
+        if !safe {
+            return Err(format!(
+                "closed-list after-selection hook requires audit: {}",
+                format!("{hook:?}")
+                    .split([' ', '(', '{'])
+                    .next()
+                    .unwrap_or("unknown")
+            ));
+        }
     }
     if let Some(stack) = &root.pending_selection_resume {
         use crate::resume::ResumeFrame;
-        for frame in &stack.frames {
+        let mut frames: Vec<_> = stack.frames.iter().collect();
+        while let Some(frame) = frames.pop() {
             let safe = match frame {
                 ResumeFrame::RunTail {
                     prov,
                     bindings,
                     outer_conts,
                     select_kind,
+                    trigger_context,
                     ..
                 } => {
-                    allowed.contains(&prov.source_card)
+                    identities.contains(&prov.source_card)
                         && bindings.belief_safe(viewer, &allowed)
                         && outer_safe(outer_conts)
+                        && context_safe(trigger_context)
                         && !matches!(select_kind,
                         crate::resume::ResumeSelectKind::Hand {of_player} if *of_player != viewer)
                 }
@@ -143,6 +337,196 @@ fn audit(root: &Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), String
                     s.defender_player == viewer && outer_safe(&s.outer_conts)
                 }
                 ResumeFrame::RaidSelection(s) => outer_safe(&s.outer_conts),
+                ResumeFrame::AllianceSelection(s) => outer_safe(&s.outer_conts),
+                ResumeFrame::KeywordAscensionChoice(s) => {
+                    allowed.contains(&s.prov.source_card)
+                        && allowed.contains(&s.self_card)
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::MayDnaPartnerSelection(s) => {
+                    s.controller == viewer
+                        && allowed.contains(&s.prov.source_card)
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::MayDnaResultSelection(s) => {
+                    s.controller == viewer
+                        && allowed.contains(&s.prov.source_card)
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::InteractiveOptionUseCostReductionPrompt(s) => {
+                    s.belief_safe(viewer, &identities) && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::DelayPlayFromHandSelection(s) => {
+                    s.belief_safe(viewer, &identities) && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::DelayFieldDnaSelection(s) => {
+                    s.belief_safe(viewer, &identities) && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::PlayOrUseDualChoice(s) => {
+                    s.player == viewer
+                        && identities.contains(&s.prov.source_card)
+                        && s.source_ref.is_none_or(|s| identities.contains(&s.card))
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::DigiXrosMaterialSelection(s) => {
+                    s.player_id == viewer
+                        && allowed.contains(&s.target_card)
+                        && s.candidates.iter().all(|c| identities.contains(&c.card()))
+                        && s.selected_pins.iter().all(|p| {
+                            use crate::owned_card_choice::CardChoicePin;
+                            let h = match p {
+                                CardChoicePin::Source(p) => p.card(),
+                                CardChoicePin::Hand { card, .. }
+                                | CardChoicePin::Trash { card, .. }
+                                | CardChoicePin::Security { card, .. }
+                                | CardChoicePin::BattleTop { card, .. } => *card,
+                            };
+                            identities.contains(&h)
+                        })
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::TrashOptionFromStackSelection(s) => {
+                    allowed.contains(&s.prov.source_card)
+                        && s.cards.iter().all(|(h, _)| identities.contains(h))
+                        && s.bindings.belief_safe(viewer, &allowed)
+                        && context_safe(&s.trigger_context)
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::ReplacementBody { inner, outer_conts } => {
+                    frames.extend(inner.frames.iter());
+                    outer_safe(outer_conts)
+                }
+                ResumeFrame::DelayBodyAfterCost {
+                    inner,
+                    continuation,
+                    outer_conts,
+                } => {
+                    frames.extend(inner.frames.iter());
+                    continuation.belief_safe(&identities) && outer_safe(outer_conts)
+                }
+                ResumeFrame::DnaDigivolveFirstMaterial(s) => {
+                    s.player_id == viewer && allowed.contains(&s.source_card)
+                }
+                ResumeFrame::DnaDigivolveSecondMaterial(s) => s.player_id == viewer,
+                ResumeFrame::ArtsDigivolveSelection(s) => outer_safe(&s.outer_conts),
+                ResumeFrame::PlayFromHandCostReductionPrompt(s) => {
+                    s.belief_safe(viewer, &identities) && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::UseOptionFromHandStep(s) => {
+                    s.of_player == viewer
+                        && allowed.contains(&s.prov.source_card)
+                        && s.bindings.belief_safe(viewer, &allowed)
+                        && context_safe(&s.trigger_context)
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::UseOptionFromTrashStep(s) => {
+                    allowed.contains(&s.prov.source_card)
+                        && s.bindings.belief_safe(viewer, &allowed)
+                        && context_safe(&s.trigger_context)
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::SourceMultiStep(s) => {
+                    allowed.contains(&s.prov.source_card)
+                        && s.bindings.belief_safe(viewer, &allowed)
+                        && s.filter_bindings.belief_safe(viewer, &allowed)
+                        && s.picked_pins.iter().all(|p| allowed.contains(&p.card()))
+                        && context_safe(&s.trigger_context)
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::RefireEffectChoice(s) => {
+                    s.effects.iter().all(|e| {
+                        identities.contains(&e.source_card)
+                            && e.attribution_source_card
+                                .is_none_or(|h| allowed.contains(&h))
+                    }) && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::MultiPickStep(s) => {
+                    use crate::effect_context::selections::CountCappedZone;
+                    (!matches!(s.zone, CountCappedZone::Hand) || s.of_player == viewer)
+                        && allowed.contains(&s.prov.source_card)
+                        && s.bindings.belief_safe(viewer, &allowed)
+                        && context_safe(&s.trigger_context)
+                        && s.accum.iter().all(|h| allowed.contains(h))
+                        && s.source_pool
+                            .as_ref()
+                            .is_none_or(|p| p.iter().all(|p| allowed.contains(&p.card())))
+                        && s.named_groups
+                            .as_ref()
+                            .is_none_or(|g| g.members.iter().all(|(h, _)| identities.contains(h)))
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::NonDslCountCappedStep(s) => {
+                    use crate::{
+                        effect_context::selections::CountCappedZone,
+                        resume::NonDslCountCappedTerminal,
+                    };
+                    let terminal_safe = match &s.terminal {
+                        NonDslCountCappedTerminal::KeywordPartitionSlots {
+                            picked_so_far, ..
+                        } => picked_so_far.iter().all(|h| allowed.contains(h)),
+                        NonDslCountCappedTerminal::Assembly {
+                            player,
+                            target_card,
+                            picked_so_far,
+                            ..
+                        } => {
+                            *player == viewer
+                                && allowed.contains(target_card)
+                                && picked_so_far.iter().all(|h| allowed.contains(h))
+                        }
+                        _ => true,
+                    };
+                    terminal_safe
+                        && (!matches!(s.zone, CountCappedZone::Hand) || s.of_player == viewer)
+                        && allowed.contains(&s.prov.source_card)
+                        && s.accum.iter().all(|h| allowed.contains(h))
+                        && s.source_candidates
+                            .as_ref()
+                            .is_none_or(|p| p.iter().all(|p| allowed.contains(&p.card())))
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::CounterBlastDnaFieldMaterial(s) => {
+                    s.defender == viewer
+                        && allowed.contains(&s.source_card)
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::CounterBlastDnaHandMaterial(s) => {
+                    s.defender == viewer && outer_safe(&s.outer_conts)
+                }
+                // Route candidates depend on this seat's own hand and public
+                // host, which are preserved. A foreign hand is not entitled.
+                ResumeFrame::DigivolveCostChoice(s) => s.acting_player == viewer,
+                ResumeFrame::DigivolveReducerPrompt(s)
+                | ResumeFrame::DigivolveReducerSuspend(s) => s.belief_safe(viewer, &identities),
+                ResumeFrame::EffectDigivolveCostChoice(s) => s.belief_safe(viewer, &identities),
+                ResumeFrame::RevealBucketStep(s) => {
+                    allowed.contains(&s.prov.source_card)
+                        && s.bindings.belief_safe(viewer, &allowed)
+                        && context_safe(&s.trigger_context)
+                        && s.buckets
+                            .iter()
+                            .flat_map(|b| &b.candidates)
+                            .chain(s.picked_buckets.iter().flat_map(|(_, h)| h))
+                            .chain(&s.current_bucket_picks)
+                            .all(|h| allowed.contains(h))
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::ZoneCardPickStep(s) => {
+                    allowed.contains(&s.prov.source_card)
+                        && s.bindings.belief_safe(viewer, &allowed)
+                        && context_safe(&s.trigger_context)
+                        && s.candidates
+                            .iter()
+                            .chain(&s.picked)
+                            .all(|h| allowed.contains(h))
+                        && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::AttackDeclarationDecision(s) => {
+                    allowed.contains(&s.source_card) && outer_safe(&s.outer_conts)
+                }
+                ResumeFrame::OptionalReplacement(s) => {
+                    s.belief_safe(viewer, &allowed) && outer_safe(&s.outer_conts)
+                }
                 ResumeFrame::CountCappedPermanentsStep(s) => {
                     allowed.contains(&s.prov.source_card)
                         && s.bindings.belief_safe(viewer, &allowed)
@@ -158,18 +542,81 @@ fn audit(root: &Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), String
                         && outer_safe(&s.outer_conts)
                 }
                 ResumeFrame::OuterOptionalTrigger(s) => {
-                    allowed.contains(&s.queued_effect.source_card) && outer_safe(&s.outer_conts)
+                    identities.contains(&s.queued_effect.source_card)
+                        && context_safe(&s.queued_effect.trigger_context)
+                        && outer_safe(&s.outer_conts)
                 }
                 ResumeFrame::TriggerOrderSelection(s) => outer_safe(&s.outer_conts),
                 _ => false,
             };
             if !safe {
+                let detail = if let ResumeFrame::RunTail {
+                    prov,
+                    bindings,
+                    outer_conts,
+                    trigger_context,
+                    select_kind,
+                    ..
+                } = frame
+                {
+                    format!(
+                        " (source={}, bindings={}, outer={}, context={}, selection={:?}{})",
+                        allowed.contains(&prov.source_card),
+                        bindings.belief_safe(viewer, &allowed),
+                        outer_safe(outer_conts),
+                        context_safe(trigger_context),
+                        select_kind,
+                        if context_safe(trigger_context) {
+                            String::new()
+                        } else {
+                            let missing: Vec<_> = trigger_context
+                                .as_ref()
+                                .unwrap()
+                                .belief_missing_handles(&allowed)
+                                .into_iter()
+                                .map(|h| {
+                                    let location = root.players.iter().find_map(|p| {
+                                        [
+                                            ("hand", &p.hand),
+                                            ("deck", &p.deck),
+                                            ("security", &p.security),
+                                            ("trash", &p.trash),
+                                        ]
+                                        .into_iter()
+                                        .find_map(
+                                            |(z, cards)| {
+                                                cards
+                                                    .iter()
+                                                    .position(|c| c.handle() == h)
+                                                    .map(|i| (p.id, z, i))
+                                            },
+                                        )
+                                    });
+                                    (h, location)
+                                })
+                                .collect();
+                            format!(", missing={missing:?}, context_detail={trigger_context:?}")
+                        }
+                    )
+                } else if let ResumeFrame::OuterOptionalTrigger(s) = frame {
+                    format!(
+                        " (source={}, outer={}, card={}, source_handle={:?}, controller={})",
+                        allowed.contains(&s.queued_effect.source_card),
+                        outer_safe(&s.outer_conts),
+                        s.queued_effect.card_id,
+                        s.queued_effect.source_card,
+                        s.queued_effect.controller
+                    )
+                } else {
+                    String::new()
+                };
                 return Err(format!(
-                    "closed-list continuation requires audit: {}",
+                    "closed-list continuation requires audit: {}{}",
                     format!("{frame:?}")
                         .split([' ', '(', '{'])
                         .next()
-                        .unwrap_or("unknown")
+                        .unwrap_or("unknown"),
+                    detail
                 ));
             }
         }
@@ -187,6 +634,156 @@ pub fn materialize_closed(
     materialize_closed_with_diagnostics(root, viewer, memory, prior, seed).map(|(world, _)| world)
 }
 
+fn rebind_hand_indices(world: &mut Game, viewer: u8) {
+    use crate::{
+        dsl_cards::bindings::Bindings,
+        resume::{OuterContinuation, ResumeFrame, ResumeStack},
+    };
+    let positions: std::collections::HashMap<_, _> = world
+        .players
+        .iter()
+        .flat_map(|p| {
+            p.hand
+                .iter()
+                .enumerate()
+                .map(move |(i, c)| (c.handle(), (p.id, i as u16)))
+        })
+        .collect();
+    let bind = |b: &mut Bindings| b.rebind_belief_hand_indices(viewer, &positions);
+    fn outer(conts: &mut [OuterContinuation], bind: &impl Fn(&mut Bindings)) {
+        for c in conts {
+            bind(&mut c.bindings);
+        }
+    }
+    fn walk(resume: &mut ResumeStack, bind: &impl Fn(&mut Bindings)) {
+        for frame in &mut resume.frames {
+            macro_rules! bound {
+                ($s:expr) => {{
+                    bind(&mut $s.bindings);
+                    outer(&mut $s.outer_conts, bind);
+                }};
+            }
+            macro_rules! tails {
+                ($s:expr) => {
+                    outer(&mut $s.outer_conts, bind)
+                };
+            }
+            match frame {
+                ResumeFrame::RunTail {
+                    bindings,
+                    outer_conts,
+                    ..
+                } => {
+                    bind(bindings);
+                    outer(outer_conts, bind);
+                }
+                ResumeFrame::ReplacementBody { inner, outer_conts }
+                | ResumeFrame::DelayBodyAfterCost {
+                    inner, outer_conts, ..
+                } => {
+                    walk(inner, bind);
+                    outer(outer_conts, bind);
+                }
+                ResumeFrame::SourceMultiStep(s) => {
+                    bound!(s);
+                    bind(&mut s.filter_bindings);
+                }
+                ResumeFrame::MultiPickStep(s) => bound!(s),
+                ResumeFrame::RevealBucketStep(s) => bound!(s),
+                ResumeFrame::ZoneCardPickStep(s) => bound!(s),
+                ResumeFrame::CountCappedPermanentsStep(s) => bound!(s),
+                ResumeFrame::PermutationStep(s) => bound!(s),
+                ResumeFrame::UseOptionFromHandStep(s) => bound!(s),
+                ResumeFrame::UseOptionFromTrashStep(s) => bound!(s),
+                ResumeFrame::NonDslCountCappedStep(s) => tails!(s),
+                ResumeFrame::RefireEffectChoice(s) => tails!(s),
+                ResumeFrame::BlockSelection(s) => tails!(s),
+                ResumeFrame::CounterSelection(s) => tails!(s),
+                ResumeFrame::RaidSelection(s) => tails!(s),
+                ResumeFrame::AllianceSelection(s) => tails!(s),
+                ResumeFrame::KeywordAscensionChoice(s) => tails!(s),
+                ResumeFrame::MayDnaPartnerSelection(s) => tails!(s),
+                ResumeFrame::MayDnaResultSelection(s) => tails!(s),
+                ResumeFrame::InteractiveOptionUseCostReductionPrompt(s) => tails!(s),
+                ResumeFrame::DelayPlayFromHandSelection(s) => tails!(s),
+                ResumeFrame::DelayFieldDnaSelection(s) => tails!(s),
+                ResumeFrame::PlayOrUseDualChoice(s) => tails!(s),
+                ResumeFrame::DigiXrosMaterialSelection(s) => tails!(s),
+                ResumeFrame::TrashOptionFromStackSelection(s) => bound!(s),
+                ResumeFrame::CounterBlastDnaFieldMaterial(s) => tails!(s),
+                ResumeFrame::CounterBlastDnaHandMaterial(s) => tails!(s),
+                ResumeFrame::ArtsDigivolveSelection(s) => tails!(s),
+                ResumeFrame::PlayFromHandCostReductionPrompt(s) => tails!(s),
+                ResumeFrame::AttackDeclarationDecision(s) => tails!(s),
+                ResumeFrame::OuterOptionalTrigger(s) => tails!(s),
+                ResumeFrame::TriggerOrderSelection(s) => tails!(s),
+                ResumeFrame::OptionalReplacement(s) => tails!(s),
+                ResumeFrame::EffectDigivolveCostChoice(s) => tails!(s),
+                ResumeFrame::DigivolveReducerPrompt(s)
+                | ResumeFrame::DigivolveReducerSuspend(s) => {
+                    if let Some(e) = &mut s.effect {
+                        outer(&mut e.outer_conts, bind);
+                    }
+                }
+                _ => {} // Audit rejects other shapes before this pass.
+            }
+        }
+    }
+    if let Some(s) = &mut world.pending_selection_resume {
+        walk(s, &bind);
+    }
+    if let Some((_, b, _)) = &mut world.dsl_outer_tail {
+        bind(b);
+    }
+    for scope in &mut world.effect_digivolve_scopes {
+        outer(&mut scope.declaration.outer_conts, &bind);
+    }
+    for h in &mut world.after_selection_resume_hooks.0 {
+        if let crate::resume::AfterSelectionHook::PlayCostContinuation {
+            player_id,
+            hand_index,
+            target,
+            ..
+        } = h
+        {
+            if *player_id != viewer {
+                *hand_index = positions
+                    .get(&target.card_handle())
+                    .filter(|(p, _)| *p == *player_id)
+                    .map(|(_, i)| *i as usize)
+                    .unwrap_or(usize::MAX);
+            }
+        }
+        if let crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } = h {
+            if let Some(e) = &mut state.effect {
+                outer(&mut e.outer_conts, &bind);
+            }
+        }
+    }
+    if let Some(t) = &mut world.pending_digixros_transaction {
+        for m in t
+            .selected_materials
+            .iter_mut()
+            .chain(&mut t.pre_attached_materials)
+        {
+            if let crate::digixros::DigiXrosMaterialOrigin::Hand {
+                player,
+                index,
+                card,
+            } = &mut m.origin
+            {
+                if *player != viewer {
+                    *index = positions
+                        .get(card)
+                        .filter(|(p, _)| *p == *player)
+                        .map(|(_, i)| *i as usize)
+                        .unwrap_or(usize::MAX);
+                }
+            }
+        }
+    }
+}
+
 /// The diagnostic reports the selected mixture component, never true hidden data.
 pub fn materialize_closed_with_diagnostics(
     root: &Game,
@@ -196,9 +793,9 @@ pub fn materialize_closed_with_diagnostics(
     seed: u64,
 ) -> Result<(Game, bool), String> {
     let evidence = BeliefEvidence::extract(root, viewer, memory)?;
-    audit(root, viewer, memory)?;
-    let hypothesis = prior.sample(&evidence, seed)?;
     let mut world = root.clone();
+    audit(&mut world, viewer, memory)?;
+    let hypothesis = prior.sample(&evidence, seed)?;
     let opponent = 1 - viewer;
     let mut rng = StdRng::seed_from_u64(seed);
     let inspected = root
@@ -254,22 +851,27 @@ pub fn materialize_closed_with_diagnostics(
                 })
         })
         .chain(world.revealed_cards.iter())
+        .chain(
+            world
+                .digixros_leaving_limbo
+                .iter()
+                .flat_map(|(_, _, p)| p.card_sources.iter().chain(&p.linked_cards)),
+        )
         .chain(world.pending_option.iter().map(|p| &p.card))
-        .chain(world.pending_security.iter().map(|p| &p.card))
+        .chain(super::beliefs::physical_security_transits(&world))
         .map(|c| c.card_index)
         .chain(known.iter().map(|c| c.0))
         .max()
         .unwrap_or(0)
         .checked_add(1)
         .ok_or("hypothetical instance overflow")?;
-    // Preserve own instances but sample only their entitled joint composition.
-    resample_own(
-        &mut world,
-        viewer,
-        memory,
-        inspected == Some(viewer),
-        &mut rng,
-    )?;
+    if let Some(last_token) = memory.public_tokens().iter().next_back() {
+        next = next.max(
+            last_token
+                .checked_add(1)
+                .ok_or("public token instance overflow")?,
+        );
+    }
     // Reserve own hidden handles too; their composition is entitled, and no
     // foreign identity participates in the allocation bound.
     for c in world.players[viewer as usize]
@@ -280,6 +882,26 @@ pub fn materialize_closed_with_diagnostics(
     {
         next = next.max(c.card_index.checked_add(1).ok_or("instance overflow")?);
     }
+    for c in memory.concealed_positions() {
+        next = next.max(c.instance.checked_add(1).ok_or("concealed role overflow")?);
+    }
+    // Unobserved own deck/security identities are a joint multiset. Native
+    // aliases must not bind an unrevealed moved card to its true identity.
+    resample_own(
+        &mut world,
+        viewer,
+        memory,
+        inspected == Some(viewer),
+        &mut rng,
+        &mut next,
+    )?;
+    let mut opaque: Vec<_> = memory
+        .concealed_positions()
+        .iter()
+        .filter(|c| c.owner == opponent && !known.iter().any(|k| k.0 == c.instance))
+        .cloned()
+        .collect();
+    opaque.sort_by_key(|c| c.position.is_none());
     let mut make = |id: &str, instance: Option<u16>| -> Result<CardSource, String> {
         let data_index = *world
             .card_id_index
@@ -300,6 +922,7 @@ pub fn materialize_closed_with_diagnostics(
         count: usize,
         kind: KnowledgeZone,
         known: &[(u16, String, KnowledgeZone, Option<usize>)],
+        opaque: &[super::beliefs::ConcealedPosition],
         pool: &mut Vec<String>,
         make: &mut dyn FnMut(&str, Option<u16>) -> Result<CardSource, String>,
         rng: &mut StdRng,
@@ -329,6 +952,23 @@ pub fn materialize_closed_with_diagnostics(
                 unpositioned.push(c);
             }
         }
+        // The physical destination is known, the card's identity is not.
+        // Deal an arbitrary hypothesis card into each such role.
+        for role in opaque.iter().filter(|c| c.zone == kind) {
+            let slot = if let Some(p) = role.position {
+                count
+                    .checked_sub(p + 1)
+                    .ok_or("concealed role exceeds zone")?
+            } else {
+                let empty: Vec<_> = (0..count).filter(|i| slots[*i].is_none()).collect();
+                *empty.choose(rng).ok_or("concealed roles exceed zone")?
+            };
+            if slots[slot].is_some() {
+                return Err("conflicting concealed role positions".into());
+            }
+            let id = pool.pop().ok_or("concealed role pool exhausted")?;
+            slots[slot] = Some(make(&id, Some(role.instance))?);
+        }
         let mut empty: Vec<_> = (0..count).filter(|i| slots[*i].is_none()).collect();
         empty.shuffle(rng);
         for c in unpositioned {
@@ -355,7 +995,7 @@ pub fn materialize_closed_with_diagnostics(
             .ok_or("remembered card absent from sample")?;
         reserved.insert(*instance, p.swap_remove(i));
     }
-    let mut with_reserved = |kind: KnowledgeZone, p: &mut Vec<String>| {
+    let with_reserved = |kind: KnowledgeZone, p: &mut Vec<String>| {
         for (instance, _, _, _) in known.iter().filter(|c| c.2 == kind) {
             p.push(reserved[instance].clone());
         }
@@ -365,6 +1005,7 @@ pub fn materialize_closed_with_diagnostics(
         evidence.hand_count,
         KnowledgeZone::Hand,
         &known,
+        &opaque,
         &mut pool,
         &mut make,
         &mut rng,
@@ -383,6 +1024,7 @@ pub fn materialize_closed_with_diagnostics(
         root.players[opponent as usize].security.len(),
         KnowledgeZone::Security,
         &known,
+        &opaque,
         &mut pool,
         &mut make,
         &mut rng,
@@ -393,6 +1035,7 @@ pub fn materialize_closed_with_diagnostics(
         evidence.deck_count,
         KnowledgeZone::Deck,
         &known,
+        &opaque,
         &mut pool,
         &mut make,
         &mut rng,
@@ -403,11 +1046,45 @@ pub fn materialize_closed_with_diagnostics(
         evidence.digitama_count,
         KnowledgeZone::Digitama,
         &known,
+        &opaque,
         &mut eggs,
         &mut make,
         &mut rng,
         Vec::new(),
     )?;
+    // Hidden field locations (including physical handles) are public. Allocate
+    // only their identities from the hypothesis, never copy their real data.
+    for c in world
+        .players
+        .iter_mut()
+        .flat_map(|p| p.battle_area.iter_mut().chain(p.breeding_area.iter_mut()))
+        .flat_map(|p| p.card_sources.iter_mut().chain(&mut p.linked_cards))
+        .chain(
+            world
+                .digixros_leaving_limbo
+                .iter_mut()
+                .flat_map(|(_, _, p)| p.card_sources.iter_mut().chain(&mut p.linked_cards)),
+        )
+        .filter(|c| c.owner == opponent && c.face_down && !c.is_token)
+    {
+        let id = if let Some((_, id, _, _)) = known
+            .iter()
+            .find(|k| k.2 == KnowledgeZone::Field && k.0 == c.card_index)
+        {
+            // Kept out of the arbitrary pool from the initial reservation
+            // pass, so an earlier unknown field slot cannot consume this ID.
+            reserved
+                .get(&c.card_index)
+                .filter(|v| *v == id)
+                .ok_or("known field source absent from hypothesis")?
+                .clone()
+        } else {
+            pool.pop().ok_or("hypothesis field pool exhausted")?
+        };
+        let mut sampled = make(&id, Some(c.card_index))?;
+        sampled.face_down = true;
+        *c = sampled;
+    }
     if !pool.is_empty() || !eggs.is_empty() {
         return Err("hypothesis cards left undealt".into());
     }
@@ -435,6 +1112,7 @@ pub fn materialize_closed_with_diagnostics(
         }
         world.pending_selection = Some(selection);
     }
+    rebind_hand_indices(&mut world, viewer);
     world.reset_hypothetical_indices(next);
     world.rng = StdRng::seed_from_u64(seed ^ 0xB311_EF00);
     world.reveal_source = None;
@@ -482,6 +1160,12 @@ pub fn check_hypothesis(world: &Game) -> Result<(), String> {
                 .chain(p.commander_zone.iter())
         })
         .chain(&world.revealed_cards)
+        .chain(
+            world
+                .digixros_leaving_limbo
+                .iter()
+                .flat_map(|(_, _, p)| p.card_sources.iter().chain(&p.linked_cards)),
+        )
     {
         if c.is_token {
             continue;
@@ -503,7 +1187,7 @@ pub fn check_hypothesis(world: &Game) -> Result<(), String> {
         .pending_option
         .iter()
         .map(|p| &p.card)
-        .chain(world.pending_security.iter().map(|p| &p.card))
+        .chain(super::beliefs::physical_security_transits(world))
     {
         if !c.is_token {
             let expected = (c.owner, c.card_id(&world.card_data).to_string());
@@ -540,8 +1224,12 @@ fn resample_own(
     memory: &KnowledgeLedger,
     inspected: bool,
     rng: &mut StdRng,
+    next: &mut u16,
 ) -> Result<(), String> {
-    let known = memory.hidden_instances(viewer);
+    let mut known = memory.hidden_instances(viewer);
+    // Reserve exact positions before placing membership-only observations.
+    // Otherwise a randomly placed known card can occupy a later pinned slot.
+    known.sort_by_key(|(_, _, _, position)| position.is_none());
     let p = &mut world.players[viewer as usize];
     let mut pool = std::mem::take(&mut p.deck);
     let deck_count = pool.len();
@@ -560,6 +1248,12 @@ fn resample_own(
     // Canonicalize before shuffling; the true assignment/order is irrelevant.
     pool.sort_by_key(|c| (c.card_id(&world.card_data).to_string(), c.card_index));
     pool.shuffle(rng);
+    let identified: HashSet<_> = known.iter().map(|c| c.0).collect();
+    let reserved_roles: Vec<_> = memory
+        .concealed_positions()
+        .iter()
+        .filter(|c| c.owner == viewer && !identified.contains(&c.instance) && c.position.is_some())
+        .collect();
     for (instance, _, zone, position) in known {
         let slots = match zone {
             KnowledgeZone::Deck => &mut deck,
@@ -583,7 +1277,12 @@ fn resample_own(
             let empty: Vec<_> = slots
                 .iter()
                 .enumerate()
-                .filter(|(_, c)| c.is_none())
+                .filter(|(i, c)| {
+                    c.is_none()
+                        && !reserved_roles
+                            .iter()
+                            .any(|r| r.zone == zone && r.position == Some(slots.len() - 1 - *i))
+                })
                 .map(|(i, _)| i)
                 .collect();
             *empty
@@ -595,9 +1294,53 @@ fn resample_own(
         }
         slots[index] = Some(card);
     }
+    let known_instances: HashSet<_> = memory
+        .hidden_instances(viewer)
+        .iter()
+        .map(|c| c.0)
+        .chain(deck.iter().chain(&security).flatten().map(|c| c.card_index))
+        .collect();
+    let mut roles: Vec<_> = memory
+        .concealed_positions()
+        .iter()
+        .filter(|c| {
+            c.owner == viewer
+                && matches!(c.zone, KnowledgeZone::Deck | KnowledgeZone::Security)
+                && !known_instances.contains(&c.instance)
+        })
+        .collect();
+    roles.sort_by_key(|c| c.position.is_none());
+    for role in roles {
+        let slots = match role.zone {
+            KnowledgeZone::Deck => &mut deck,
+            KnowledgeZone::Security => &mut security,
+            _ => return Err("own concealed role zone is unsupported".into()),
+        };
+        let slot = if let Some(p) = role.position {
+            slots
+                .len()
+                .checked_sub(p + 1)
+                .ok_or("own concealed role exceeds zone")?
+        } else {
+            let empty: Vec<_> = (0..slots.len()).filter(|i| slots[*i].is_none()).collect();
+            *empty.choose(rng).ok_or("own concealed roles exceed zone")?
+        };
+        if slots[slot].is_some() {
+            return Err(format!("conflicting own concealed role positions: viewer={viewer}, role={role:?}, occupied={:?}, known={:?}, anonymous={:?}",
+                slots[slot].as_ref().map(|c| c.card_index), memory.hidden_instances(viewer), memory.concealed_positions()));
+        }
+        let mut card = pool.pop().ok_or("own concealed role pool exhausted")?;
+        card.card_index = role.instance;
+        slots[slot] = Some(card);
+    }
     for slot in deck.iter_mut().chain(&mut security) {
         if slot.is_none() {
-            *slot = Some(pool.pop().ok_or("own unseen pool exhausted")?);
+            let mut card = pool.pop().ok_or("own unseen pool exhausted")?;
+            card.card_index = *next;
+            *next = next
+                .checked_add(1)
+                .ok_or("own hypothetical instance overflow")?;
+            *slot = Some(card);
         }
     }
     if !pool.is_empty() {

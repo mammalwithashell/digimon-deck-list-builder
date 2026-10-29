@@ -221,6 +221,23 @@ fn snapshot_tampering_and_invalid_probability_are_rejected() {
 }
 
 #[test]
+fn a_public_declaration_does_not_reveal_whether_a_remembered_copy_was_chosen() {
+    for declared_instance in [10, 11] {
+        let mut k = KnowledgeLedger::new(0).unwrap();
+        k.observe(1, 10, "ST1-02", KnowledgeZone::Hand, None)
+            .unwrap();
+        k.observe_public_hand_declaration(1, declared_instance, "ST1-02")
+            .unwrap();
+        assert_eq!(
+            k.known_hidden(1),
+            vec![("ST1-02".into(), KnowledgeZone::Hand)]
+        );
+        let state = serde_json::to_value(&k).unwrap();
+        assert_eq!(state["history_minimum"]["1"]["ST1-02"], 1);
+    }
+}
+
+#[test]
 fn ledger_tracks_identity_without_counting_repeated_sightings() {
     let mut k = KnowledgeLedger::new(0).unwrap();
     k.observe(1, 10, "ST1-02", KnowledgeZone::Public, None)

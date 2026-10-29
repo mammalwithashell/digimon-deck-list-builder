@@ -16,7 +16,9 @@ def information_contract(manifest: dict) -> dict:
         "closed_decklist",
     }:
         raise ValueError("invalid information regime")
-    if type(value.get("knowledge_schema")) is not int or value["knowledge_schema"] != 1:
+    # Read historical schema-1 artifacts without relabelling them. A replay
+    # buffer still requires exact equality, including this version.
+    if type(value.get("knowledge_schema")) is not int or value["knowledge_schema"] not in {1, 2}:
         raise ValueError("unsupported knowledge schema")
     result = dict(value)
     if value["regime"] == "closed_decklist":

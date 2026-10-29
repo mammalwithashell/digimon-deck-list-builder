@@ -132,15 +132,51 @@ pub struct EffectResultLogCursor {
 }
 
 impl Bindings {
-    pub(crate) fn belief_safe(&self, viewer: PlayerId, allowed: &std::collections::HashSet<CardHandle>) -> bool {
-        self.slots.values().all(|v| match v {
-            BindingValue::Card(h) | BindingValue::UnionCard { card:h, .. } => allowed.contains(h),
+    pub(crate) fn belief_safe(
+        &self,
+        viewer: PlayerId,
+        allowed: &std::collections::HashSet<CardHandle>,
+    ) -> bool {
+        self.slots.iter().all(|(name, v)| match v {
+            BindingValue::Card(h) | BindingValue::UnionCard { card: h, .. } => allowed.contains(h),
             BindingValue::CardList(h) => h.iter().all(|h| allowed.contains(h)),
-            BindingValue::HandIndex(owner, _) => *owner == viewer,
+            BindingValue::HandIndex(owner, _) => {
+                *owner == viewer || self.hand_pin(name).is_some_and(|h| allowed.contains(&h))
+            }
             _ => true,
         }) && self.result_log.returned_cards.iter().chain(&self.result_log.returned_to_deck)
             .chain(&self.result_log.added_to_hand).chain(&self.result_log.trashed_from_hand)
             .all(|h| allowed.contains(h))
+    }
+    /// Rebuild foreign hand positions from an entitled physical pin. A departed
+    /// pin is invalid, never an index into an unrelated hypothetical hand card.
+    pub(crate) fn rebind_belief_hand_indices(
+        &mut self,
+        viewer: PlayerId,
+        positions: &HashMap<CardHandle, (PlayerId, u16)>,
+    ) {
+        let replacements: Vec<_> = self
+            .slots
+            .iter()
+            .filter_map(|(name, value)| {
+                let BindingValue::HandIndex(owner, _) = value else {
+                    return None;
+                };
+                if *owner == viewer {
+                    return None;
+                }
+                let index = self
+                    .hand_pin(name)
+                    .and_then(|h| positions.get(&h))
+                    .filter(|(p, _)| p == owner)
+                    .map(|(_, i)| *i)
+                    .unwrap_or(u16::MAX);
+                Some((name.clone(), BindingValue::HandIndex(*owner, index)))
+            })
+            .collect();
+        for (name, value) in replacements {
+            self.slots.insert(name, value);
+        }
     }
     /// Stable projection for new typed declarations; archival Debug stays unchanged.
     pub(crate) fn canonical_verification_debug(&self) -> String {

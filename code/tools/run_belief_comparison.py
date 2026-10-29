@@ -6,6 +6,7 @@ Artifacts are resumable and each completed job binds its exact input hashes.
 
 from __future__ import annotations
 import argparse
+from copy import deepcopy
 import hashlib
 import json
 import os
@@ -20,6 +21,45 @@ from digimon_gym.agents.belief_evaluation import promotion, fingerprint
 from tools.selfplay_scheduler import atomic_json, controller_lock, run_queue
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def training_flags(protocol):
+    """Freeze warm-start and fitting/search controls alongside game budgets."""
+    options = protocol.get("training", {})
+    flags = ["--epochs", options.get("epochs", 2),
+             "--batch-size", options.get("batch_size", 64),
+             "--lr", options.get("learning_rate", 1e-4),
+             "--window", options.get("replay_generations", 3),
+             "--train-device", options.get("device", "cpu")]
+    if options.get("uniform_initial", True):
+        flags += ["--uniform"]
+    if options.get("full_search", True):
+        flags += ["--full-search"]
+    else:
+        flags += ["--reduced-sims", options["reduced_simulations"],
+                  "--full-search-fraction", options["full_search_fraction"],
+                  "--cheap-sims", options["cheap_simulations"]]
+    if options.get("fail_on_truncation", False):
+        flags += ["--fail-on-truncation"]
+    if "decision_cap" in options:
+        flags += ["--decision-cap", options["decision_cap"]]
+    return flags
+
+
+def exploiter_parameters(protocol, target_policy_kwargs):
+    options = protocol.get("exploiter", {})
+    capacity = options.get("capacity", "legacy_small_mlp")
+    if capacity == "match_target":
+        policy_kwargs = deepcopy(target_policy_kwargs)
+    elif capacity == "legacy_small_mlp":
+        policy_kwargs = {"net_arch": {"pi": [32], "vf": [32]}}
+    else:
+        raise ValueError(f"unsupported exploiter capacity: {capacity}")
+    return {"n_steps": options.get("n_steps", 128),
+            "batch_size": options.get("batch_size", 64),
+            "n_epochs": options.get("n_epochs", 4),
+            "learning_rate": options.get("learning_rate", 3e-4),
+            "policy_kwargs": policy_kwargs}
 
 
 def sha(path):
@@ -87,6 +127,10 @@ def run(args):
         mechanics=sha(ROOT / "data/mechanics_readiness.json"),
         admission=sha(ROOT / "data/card_admissibility.json"),
     )
+    assets.update({f"native_library:{p.name}": sha(p) for p in args.engine.parent.glob("*.dll")})
+    if not protocol.get("training", {}).get("uniform_initial", True) or protocol.get("anchor") == "seed":
+        for path in (args.seed_model.with_suffix(".onnx"), Path(str(args.seed_model.with_suffix(".onnx")) + ".meta.json")):
+            assets[str(path)] = sha(path)
     for name in (
         "code/digimon_gym/agents/belief_contract.py",
         "code/digimon_gym/agents/belief_evaluation.py",
@@ -124,9 +168,13 @@ def run(args):
             shutil.copy2(dll, inputs / dll.name)
     if sha(engine) != assets["engine"]:
         raise ValueError("frozen engine changed")
+    for dll in args.engine.parent.glob("*.dll"):
+        if sha(inputs / dll.name) != assets[f"native_library:{dll.name}"]:
+            raise ValueError(f"frozen native library changed: {dll.name}")
     progress = {"status": "running", "completed_jobs": []}
     env = os.environ.copy()
-    env.update(PYTHONPATH=str(ROOT / "code"), OMP_NUM_THREADS="1", MKL_NUM_THREADS="1")
+    env.update(PYTHONPATH=str(ROOT / "code"), PYTHONUTF8="1", OMP_NUM_THREADS="1", MKL_NUM_THREADS="1",
+               DIGIMON_CARDS_JSON=str(ROOT / "data/cards.json"))
 
     def job(name, files, fn):
         dest = out / name
@@ -221,6 +269,8 @@ def run(args):
                         experiment / "train.json",
                         "--cli-bin",
                         engine,
+                        "--cards-json",
+                        ROOT / "data/cards.json",
                         "--information-regime",
                         regime,
                         "--games",
@@ -237,18 +287,10 @@ def run(args):
                         protocol["budgets"]["worlds"],
                         "--eval-batch-size",
                         protocol["budgets"]["worlds"],
-                        "--uniform",
-                        "--full-search",
                         "--skip-eval",
-                        "--epochs",
-                        2,
-                        "--batch-size",
-                        64,
-                        "--train-device",
-                        "cpu",
                         "--seed",
                         seed,
-                    ]
+                    ] + training_flags(protocol)
                     if regime == "closed_decklist":
                         cmd += ["--belief-prior", experiment / "prior.json"]
                     pending = dest / f"gen{state['next_gen']}"
@@ -278,7 +320,7 @@ def run(args):
 
     # One fixed champion for every seed/panel; never a moving self-play anchor.
     first = protocol["seeds"][0]
-    anchor_zip = out / f"train/{first}/open_decklist/gen0/model.zip"
+    anchor_zip = args.seed_model if protocol.get("anchor") == "seed" else out / f"train/{first}/open_decklist/gen0/model.zip"
     anchor_onnx = anchor_zip.with_suffix(".onnx")
 
     def native_eval(dest, model, decks, seed, games, policy_only):
@@ -302,6 +344,8 @@ def run(args):
         )
         cmd = [
             engine,
+            "--cards-json",
+            ROOT / "data/cards.json",
             "selfplay",
             "--model",
             model,
@@ -322,6 +366,8 @@ def run(args):
         ]
         if policy_only:
             cmd += ["--policy-only"]
+        if "decision_cap" in protocol["budgets"]:
+            cmd += ["--decision-cap", protocol["budgets"]["decision_cap"]]
         run_dir = dest / "games"
         directories = run_queue(
             command=[str(c) for c in cmd],
@@ -438,12 +484,9 @@ def run(args):
         model = MaskablePPO(
             "MlpPolicy",
             env,
-            n_steps=128,
-            batch_size=64,
-            n_epochs=4,
             seed=seed,
-            policy_kwargs={"net_arch": {"pi": [32], "vf": [32]}},
             device="cpu",
+            **exploiter_parameters(protocol, frozen.policy_kwargs),
         )
         model.digimon_contract = current_contract(profile)
         model.learn(total_timesteps=protocol["budgets"]["exploiter_steps"])
@@ -459,6 +502,7 @@ def run(args):
                 "seed": seed,
                 "target_sha256": sha(target),
                 "timesteps": model.num_timesteps,
+                "exploiter_configuration": protocol.get("exploiter", {"capacity": "legacy_small_mlp"}),
                 "information_regime": "closed_decklist",
             },
         )

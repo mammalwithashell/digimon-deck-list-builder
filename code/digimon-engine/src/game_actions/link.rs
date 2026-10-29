@@ -873,7 +873,10 @@ impl Game {
                     .hand
                     .iter()
                     .position(|c| c.handle() == card);
-                pos.map(|i| self.player_mut(owner).hand.remove(i))
+                pos.map(|i| {
+                    self.remember_belief_public_hand_departure(owner, i);
+                    self.player_mut(owner).hand.remove(i)
+                })
             }
             LinkCardSource::Trash(owner) => {
                 let pos = self

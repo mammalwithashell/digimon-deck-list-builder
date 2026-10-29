@@ -37,11 +37,11 @@ mod field_top_source_move;
 mod helpers; // facade-decomposition Tier-2 primitives (trash_source_and_fire, would_replacement_*, …)
 pub use helpers::DeDigivolveCountState;
 mod link; // DigiLink Shape-B (Digimon-link) — activate/begin/commit/absorb + facet-#9 chosen-card link
-pub(crate) use link::{LinkCardTrashChoiceState, LinkTrashPurpose};
 pub use link::LinkRuleTarget;
+pub(crate) use link::{LinkCardTrashChoiceState, LinkTrashPurpose};
+mod grouped_return;
 mod misc;
 mod movement;
-mod grouped_return;
 pub(crate) use grouped_return::ReturnedCard;
 pub(crate) mod options;
 mod play;
@@ -108,6 +108,9 @@ pub(crate) struct DigiXrosResumeContinuation {
 }
 
 impl DigiXrosResumeContinuation {
+    pub(crate) fn belief_safe(&self, allowed: &std::collections::HashSet<CardHandle>) -> bool {
+        allowed.contains(&self.target_card)
+    }
     pub(crate) fn pending_cost_payment(&self) -> Option<u64> {
         self.total_reduction.pending_payment
     }
@@ -208,6 +211,12 @@ pub(crate) struct CostReductionKey {
     is_under: bool,
 }
 
+impl CostReductionKey {
+    pub(crate) fn belief_safe(&self, allowed: &std::collections::HashSet<CardHandle>) -> bool {
+        allowed.contains(&self.source_card)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct CostReductionCandidate {
     assignment: Option<u16>,
@@ -300,6 +309,27 @@ pub(crate) struct PlayFromHandCostReductionPromptState {
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
+impl PlayFromHandCostReductionPromptState {
+    pub(crate) fn belief_safe(
+        &self,
+        viewer: PlayerId,
+        allowed: &std::collections::HashSet<CardHandle>,
+    ) -> bool {
+        self.player_id == viewer
+            && allowed.contains(&self.target.card)
+            && allowed.contains(&self.key.source_card)
+            && self
+                .processed
+                .iter()
+                .all(|k| allowed.contains(&k.source_card))
+            && self.order.as_ref().is_none_or(|o| {
+                o.choices
+                    .iter()
+                    .all(|c| allowed.contains(&c.key.source_card))
+            })
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct InteractiveDigivolveCostReductionPromptState {
     pub(crate) acting_player: PlayerId,
@@ -322,6 +352,18 @@ pub(crate) struct InteractiveOptionUseCostReductionPromptState {
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
+impl InteractiveOptionUseCostReductionPromptState {
+    pub(crate) fn belief_safe(
+        &self,
+        viewer: PlayerId,
+        allowed: &std::collections::HashSet<CardHandle>,
+    ) -> bool {
+        self.player_id == viewer
+            && allowed.contains(&self.cost_target.card)
+            && allowed.contains(&self.key.source_card)
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct CostTargetContext {
     card: crate::card_source::CardHandle,
@@ -341,6 +383,12 @@ pub(crate) struct CostTargetContext {
 }
 
 impl CostTargetContext {
+    pub(crate) fn card_handle(&self) -> CardHandle {
+        self.card
+    }
+    pub(crate) fn belief_safe(&self, allowed: &std::collections::HashSet<CardHandle>) -> bool {
+        allowed.contains(&self.card)
+    }
     fn target_permanents_vec(&self) -> Vec<crate::permanent::PermanentHandle> {
         self.target_permanents.iter().filter_map(|h| *h).collect()
     }
@@ -1301,7 +1349,7 @@ impl Game {
         self.player_mut(target.player).battle_area[target.index as usize]
             .digivolve(pending.card, turn);
         self.emit_eval_digivolve(target, 0, false, false);
-        self.player_mut(target.player).draw();
+        let _ = self.draw_one_for_player(target.player);
 
         // Arts digivolve runs the ≤0-DP rules-check immediately (before the
         // WhenDigivolving enqueue) because the next branch keys off whether the
@@ -1364,10 +1412,16 @@ impl Game {
         if let Some(breeding) = self.player_mut(owner).breeding_area.as_mut() {
             breeding.digivolve(pending.card, turn);
         }
-        self.emit_eval_digivolve(PermanentHandle {
-            player: owner, index: crate::action::space::BREEDING_TARGET as u8,
-        }, 0, false, false);
-        self.player_mut(owner).draw();
+        self.emit_eval_digivolve(
+            PermanentHandle {
+                player: owner,
+                index: crate::action::space::BREEDING_TARGET as u8,
+            },
+            0,
+            false,
+            false,
+        );
+        let _ = self.draw_one_for_player(owner);
         self.check_turn_end();
         true
     }
@@ -3665,24 +3719,27 @@ impl Game {
                 .battle_area
                 .get(h.index as usize)
                 .and_then(|p| p.battle_identity)
-                .and_then(|id| self.pending_security_moves.iter().rposition(|s|
-                    s.kind == crate::game::SecurityMoveKind::Permanent && s.donor == (h.player, id)
-                )),
-            ReplacementSubject::Card(card, _) => self
-                .pending_security_moves
-                .iter()
-                .rposition(|s| {
-                    s.card == card
-                        || (s.kind == crate::game::SecurityMoveKind::Permanent && self
-                            .resolve_digivolve_host_identity(s.donor.0, s.donor.1)
-                            .and_then(|h| {
-                                self.player(h.player)
-                                    .battle_area
-                                    .get(h.index as usize)
-                                    .map(|p| p.top_card().handle())
-                            })
-                            == Some(card))
+                .and_then(|id| {
+                    self.pending_security_moves.iter().rposition(|s| {
+                        s.kind == crate::game::SecurityMoveKind::Permanent
+                            && s.donor == (h.player, id)
+                    })
                 }),
+            ReplacementSubject::Card(card, _) => {
+                self.pending_security_moves.iter().rposition(|s| {
+                    s.card == card
+                        || (s.kind == crate::game::SecurityMoveKind::Permanent
+                            && self
+                                .resolve_digivolve_host_identity(s.donor.0, s.donor.1)
+                                .and_then(|h| {
+                                    self.player(h.player)
+                                        .battle_area
+                                        .get(h.index as usize)
+                                        .map(|p| p.top_card().handle())
+                                })
+                                == Some(card))
+                })
+            }
             _ => None,
         };
         let Some(i) = index else { return false };
@@ -3700,8 +3757,13 @@ impl Game {
                         state.player, h, state.card, state.position,
                         state.face_up, state.observer,
                     );
-                } else if self.player(h.player).battle_area.get(h.index as usize)
-                    .is_some_and(|p| p.card_sources.len() >= 2 && p.top_card().handle() == state.card)
+                } else if self
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+                    .is_some_and(|p| {
+                        p.card_sources.len() >= 2 && p.top_card().handle() == state.card
+                    })
                 {
                     self.place_top_stacked_on_security(
                         state.player,
@@ -3947,8 +4009,11 @@ impl Game {
             // 3-1-3-9-2: a Digi-Egg entering security goes to its owner's egg deck bottom.
             self.player_mut(top.owner).insert_in_digi_egg_deck(0, top);
         } else if !token {
+            self.remember_belief_public_security_placement(&top, position);
             match position {
-                crate::enums::StackPosition::Top => self.player_mut(player_id).put_on_security_top(top),
+                crate::enums::StackPosition::Top => {
+                    self.player_mut(player_id).put_on_security_top(top)
+                }
                 crate::enums::StackPosition::Bottom => {
                     self.player_mut(player_id).insert_in_security(0, top)
                 }
@@ -4164,6 +4229,7 @@ impl Game {
         match destination {
             Zone::Security if is_egg => self.player_mut(owner).insert_in_digi_egg_deck(0, card),
             Zone::Security => {
+                self.remember_belief_public_security_placement(&card, state.position);
                 match state.position {
                     crate::enums::StackPosition::Top => {
                         self.player_mut(state.player).put_on_security_top(card)
@@ -4222,6 +4288,10 @@ impl Game {
     ) -> bool {
         use crate::enums::{EffectTiming, Zone};
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Capture current owner inspection entitlements while the source is
+        // still on the field, before a resumable placement lifts it away.
+        let _ = self.refresh_belief_knowledge();
 
         // Snapshot the source card's handle before the take so we can build
         // a meaningful ReplacementSubject. Return false early if the source
@@ -4368,6 +4438,11 @@ impl Game {
             );
             return true;
         }
+        if let crate::enums::CardSourceRef::DeckTop(owner) = source {
+            if owner == player_id {
+                self.remember_belief_recovery(owner, position);
+            }
+        }
         let Some(taken) = self.take_card_source_ref(source) else {
             return false;
         };
@@ -4379,6 +4454,16 @@ impl Game {
 
         // face_up_security is HashSet<u16> keyed by card_index.
         let face_up_key = taken.card_index;
+
+        if matches!(
+            source,
+            crate::enums::CardSourceRef::Trash(..)
+                | crate::enums::CardSourceRef::Material(..)
+                | crate::enums::CardSourceRef::Link(..)
+                | crate::enums::CardSourceRef::Reveal(..)
+        ) {
+            self.remember_belief_public_security_placement(&taken, position);
+        }
 
         match position {
             crate::enums::StackPosition::Top => {

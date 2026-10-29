@@ -845,6 +845,12 @@ impl<'a> EffectContext<'a> {
         // Opaque-aware: opaque opponents materialize from RevealSource
         // tagged Effect (Training peeks at top and re-routes — not draw/mill/security).
         let owner = perm.player;
+        self.game.transfer_belief_position(
+            owner,
+            crate::determinize::beliefs::KnowledgeZone::Deck,
+            0,
+            crate::determinize::beliefs::KnowledgeZone::Field,
+        );
         let mut card = match self
             .game
             .take_from_deck_top_for_player(owner, crate::opaque_deck::RevealKind::Effect)

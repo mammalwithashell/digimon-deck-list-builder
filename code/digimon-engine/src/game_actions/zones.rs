@@ -80,13 +80,15 @@ impl Game {
         };
         // Opaque-aware: materialize before moving to hand so the
         // resulting hand card has a real identity.
-        self.transfer_belief_position(player_id,
-            crate::determinize::beliefs::KnowledgeZone::Security,
-            self.player(player_id).security.len()-1-idx,
-            crate::determinize::beliefs::KnowledgeZone::Hand);
+        self.remember_belief_security_departure(
+            player_id,
+            card.0,
+            self.player(player_id).security.len() - 1 - idx,
+        );
         self.ensure_security_materialized(player_id, idx);
         let removed = self.player_mut(player_id).security.remove(idx);
         let owner = removed.owner;
+        self.remember_belief_security_hand_return(owner, removed.card_index);
         self.player_mut(player_id)
             .face_up_security
             .remove(&removed.card_index);
@@ -111,6 +113,14 @@ impl Game {
     ) -> Vec<crate::card_source::CardHandle> {
         let mut handles = Vec::new();
         for _ in 0..n {
+            if !self.player(player_id).deck.is_empty() {
+                self.transfer_belief_position(
+                    player_id,
+                    crate::determinize::beliefs::KnowledgeZone::Deck,
+                    0,
+                    crate::determinize::beliefs::KnowledgeZone::Public,
+                );
+            }
             // Opaque-aware: opaque players' reveal-from-top consumes
             // RevealKind::Effect (peek effects, not draws/security/mill).
             // For standard players this is a plain `deck.pop()`.
@@ -151,6 +161,14 @@ impl Game {
     ) -> Vec<crate::card_source::CardHandle> {
         let mut handles = Vec::new();
         for _ in 0..n {
+            if !self.player(player_id).digitama_deck.is_empty() {
+                self.transfer_belief_position(
+                    player_id,
+                    crate::determinize::beliefs::KnowledgeZone::Digitama,
+                    0,
+                    crate::determinize::beliefs::KnowledgeZone::Public,
+                );
+            }
             let p = self.player_mut(player_id);
             let Some(card) = p.digitama_deck.pop() else {
                 break;
@@ -207,6 +225,10 @@ impl Game {
         player_id: PlayerId,
         hand_index: usize,
     ) -> Option<crate::card_source::CardHandle> {
+        if hand_index >= self.player(player_id).hand.len() {
+            return None;
+        }
+        self.remember_belief_public_hand_departure(player_id, hand_index);
         let player = self.player_mut(player_id);
         if hand_index >= player.hand.len() {
             return None;

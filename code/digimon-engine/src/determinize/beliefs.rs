@@ -17,7 +17,87 @@ use crate::enums::PlayerId;
 use crate::format::{self, FormatDescriptor};
 use crate::game::Game;
 
-pub const BELIEF_SCHEMA_VERSION: u32 = 1;
+/// Field identities stay public while a DigiXros leave window holds the
+/// physical stack in limbo; it has not disappeared from deck accounting.
+pub(crate) fn field_sources(game: &Game) -> impl Iterator<Item = &crate::card_source::CardSource> {
+    field_sources_with_controller(game).map(|(_, c)| c)
+}
+
+pub(crate) fn field_sources_with_controller(
+    game: &Game,
+) -> impl Iterator<Item = (PlayerId, &crate::card_source::CardSource)> {
+    game.players
+        .iter()
+        .flat_map(|p| {
+            p.battle_area
+                .iter()
+                .chain(p.breeding_area.iter())
+                .map(move |f| (p.id, f))
+        })
+        .chain(
+            game.digixros_leaving_limbo
+                .iter()
+                .map(|(controller, _, p)| (*controller, p)),
+        )
+        .flat_map(|(controller, p)| {
+            p.card_sources
+                .iter()
+                .chain(&p.linked_cards)
+                .map(move |c| (controller, c))
+        })
+}
+
+/// `pending_security` also carries unrevealed effect removals. It is not a
+/// blanket reveal entitlement: a hidden-to-hidden move stays concealed.
+pub(crate) fn public_pending_security(
+    game: &Game,
+) -> impl Iterator<Item = &crate::card_source::CardSource> {
+    let checked = |p: &crate::selection::PendingSecurity| {
+        game.security_resolution
+            .as_ref()
+            .is_some_and(|s| s.revealed_card == p.card.handle())
+    };
+    let trashed = |i: usize| {
+        matches!(
+            game.pending_effect_security_removal[i].destination,
+            crate::selection::SecurityRemovalDestination::Trash
+        )
+    };
+    let mut public = Vec::new();
+    if let Some(p) = &game.pending_security {
+        if !p.played
+            && (checked(p)
+                || (!game.pending_effect_security_removal.is_empty()
+                    && trashed(game.pending_effect_security_removal.len() - 1)))
+        {
+            public.push(&p.card);
+        }
+    }
+    for (i, scope) in game.pending_effect_security_removal.iter().enumerate() {
+        if let Some(p) = &scope.previous_pending_security {
+            if !p.played && (checked(p) || (i > 0 && trashed(i - 1))) {
+                public.push(&p.card);
+            }
+        }
+    }
+    public.into_iter()
+}
+
+pub(crate) fn physical_security_transits(
+    game: &Game,
+) -> impl Iterator<Item = &crate::card_source::CardSource> {
+    game.pending_security
+        .iter()
+        .chain(
+            game.pending_effect_security_removal
+                .iter()
+                .filter_map(|s| s.previous_pending_security.as_ref()),
+        )
+        .filter(|p| !p.played)
+        .map(|p| &p.card)
+}
+
+pub const BELIEF_SCHEMA_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -34,6 +114,19 @@ pub enum KnowledgeZone {
     Deck,
     Security,
     Digitama,
+    /// Publicly located face-down source; identity is owner-private (4-7-10).
+    Field,
+    /// A concealed security card between its removal and committed destination.
+    InFlight,
+}
+
+/// A publicly tracked physical move without any observed card identity.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ConcealedPosition {
+    pub owner: PlayerId,
+    pub instance: u16,
+    pub zone: KnowledgeZone,
+    pub position: Option<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -57,6 +150,12 @@ pub struct KnowledgeLedger {
     history_minimum: BTreeMap<PlayerId, CardMultiset>,
     #[serde(default)]
     last_counts: Option<[[usize; 4]; 2]>,
+    /// Public token provenance survives leave-field removal. Tokens never
+    /// enter deck-copy accounting, but queued effects may still name them.
+    #[serde(default)]
+    public_tokens: BTreeSet<u16>,
+    #[serde(default)]
+    concealed_positions: Vec<ConcealedPosition>,
 }
 
 impl KnowledgeLedger {
@@ -70,7 +169,117 @@ impl KnowledgeLedger {
             cards: Vec::new(),
             history_minimum: BTreeMap::new(),
             last_counts: None,
+            public_tokens: BTreeSet::new(),
+            concealed_positions: Vec::new(),
         })
+    }
+
+    pub(crate) fn observe_public_token(&mut self, instance: u16) {
+        self.public_tokens.insert(instance);
+    }
+    pub(crate) fn public_tokens(&self) -> &BTreeSet<u16> {
+        &self.public_tokens
+    }
+    pub(crate) fn concealed_positions(&self) -> &[ConcealedPosition] {
+        &self.concealed_positions
+    }
+    pub(crate) fn known_identity(&self, owner: PlayerId, instance: u16) -> Option<String> {
+        self.cards
+            .iter()
+            .find(|c| c.owner == owner && c.instance == instance)
+            .map(|c| c.id.clone())
+    }
+    pub(crate) fn remember_concealed_position(
+        &mut self,
+        owner: PlayerId,
+        instance: u16,
+        zone: KnowledgeZone,
+        position: Option<usize>,
+    ) {
+        self.concealed_positions
+            .retain(|c| c.owner != owner || c.instance != instance);
+        self.concealed_positions.push(ConcealedPosition {
+            owner,
+            instance,
+            zone,
+            position,
+        });
+    }
+
+    pub(crate) fn conceal_security_departure(
+        &mut self,
+        owner: PlayerId,
+        instance: u16,
+        position: usize,
+    ) {
+        // Face-up security is already identified publicly, even though its
+        // ordinary ledger zone is Public rather than Security.
+        if let Some(c) = self
+            .cards
+            .iter_mut()
+            .find(|c| c.owner == owner && c.instance == instance && c.zone == KnowledgeZone::Public)
+        {
+            c.zone = KnowledgeZone::Security;
+            c.position = Some(position);
+        }
+        self.transfer_position(
+            owner,
+            KnowledgeZone::Security,
+            position,
+            KnowledgeZone::InFlight,
+        );
+        self.concealed_positions
+            .retain(|c| c.owner != owner || c.instance != instance);
+        self.concealed_positions.push(ConcealedPosition {
+            owner,
+            instance,
+            zone: KnowledgeZone::InFlight,
+            position: None,
+        });
+    }
+
+    pub(crate) fn commit_concealed_return(
+        &mut self,
+        owner: PlayerId,
+        instance: u16,
+        position: usize,
+    ) {
+        if let Some(c) = self.cards.iter_mut().find(|c| {
+            c.owner == owner && c.instance == instance && c.zone == KnowledgeZone::InFlight
+        }) {
+            c.zone = KnowledgeZone::Deck;
+            c.position = Some(position);
+        }
+        if let Some(c) = self
+            .concealed_positions
+            .iter_mut()
+            .find(|c| c.owner == owner && c.instance == instance)
+        {
+            c.zone = KnowledgeZone::Deck;
+            c.position = Some(position);
+        }
+        if let Some(counts) = &mut self.last_counts {
+            counts[owner as usize][1] += 1;
+        }
+    }
+    pub(crate) fn commit_concealed_hand(&mut self, owner: PlayerId, instance: u16) {
+        if let Some(c) = self.cards.iter_mut().find(|c| {
+            c.owner == owner && c.instance == instance && c.zone == KnowledgeZone::InFlight
+        }) {
+            c.zone = KnowledgeZone::Hand;
+            c.position = None;
+        }
+        if let Some(c) = self
+            .concealed_positions
+            .iter_mut()
+            .find(|c| c.owner == owner && c.instance == instance)
+        {
+            c.zone = KnowledgeZone::Hand;
+            c.position = None;
+        }
+        if let Some(counts) = &mut self.last_counts {
+            counts[owner as usize][0] += 1;
+        }
     }
 
     pub fn observe(
@@ -104,8 +313,46 @@ impl KnowledgeLedger {
             });
         }
         self.cards.sort_by_key(|c| (c.owner, c.instance));
+        if zone != KnowledgeZone::InFlight {
+            self.concealed_positions
+                .retain(|c| c.owner != owner || c.instance != instance);
+        }
         self.remember_minimum();
         Ok(())
+    }
+
+    /// A revealed declaration is not proof that it is a second physical copy
+    /// of a card remembered somewhere in an opponent's unpositioned hand.
+    pub fn observe_public_hand_declaration(
+        &mut self,
+        owner: PlayerId,
+        instance: u16,
+        id: &str,
+    ) -> Result<(), String> {
+        if self.viewer != owner {
+            self.cards
+                .retain(|c| c.owner != owner || c.zone != KnowledgeZone::Hand || c.id != id);
+            self.concealed_positions
+                .retain(|c| c.owner != owner || c.zone != KnowledgeZone::Hand);
+        }
+        self.observe(owner, instance, id, KnowledgeZone::Hand, None)
+    }
+
+    pub(crate) fn public_hand_departure(&mut self, owner: PlayerId, instance: u16, id: &str) {
+        self.cards.retain(|c| {
+            c.owner != owner
+                || c.zone != KnowledgeZone::Hand
+                || if self.viewer == owner {
+                    c.instance != instance
+                } else {
+                    c.id != id
+                }
+        });
+        self.concealed_positions
+            .retain(|c| c.owner != owner || c.zone != KnowledgeZone::Hand);
+        if let Some(counts) = &mut self.last_counts {
+            counts[owner as usize][0] = counts[owner as usize][0].saturating_sub(1);
+        }
     }
 
     pub fn move_known(
@@ -135,31 +382,104 @@ impl KnowledgeLedger {
         {
             c.position = None;
         }
+        for c in self
+            .concealed_positions
+            .iter_mut()
+            .filter(|c| c.owner == owner && c.zone == zone)
+        {
+            c.position = None;
+        }
     }
     pub(crate) fn insert_known_top(&mut self, owner: PlayerId, zone: KnowledgeZone) {
-        for c in self.cards.iter_mut().filter(|c|c.owner==owner && c.zone==zone) {
-            if let Some(p)=&mut c.position { *p+=1; }
+        for c in self
+            .cards
+            .iter_mut()
+            .filter(|c| c.owner == owner && c.zone == zone)
+        {
+            if let Some(p) = &mut c.position {
+                *p += 1;
+            }
+        }
+        for c in self
+            .concealed_positions
+            .iter_mut()
+            .filter(|c| c.owner == owner && c.zone == zone)
+        {
+            if let Some(p) = &mut c.position {
+                *p += 1;
+            }
         }
     }
 
     /// A publicly identified position can be tracked without reading the hidden
     /// source's identity. Unpositioned cards cannot be matched by native handle.
-    pub(crate) fn transfer_position(&mut self, owner: PlayerId, from: KnowledgeZone,
-        position: usize, to: KnowledgeZone) {
-        let known = self.cards.iter().find(|c| c.owner==owner && c.zone==from &&
-            c.position==Some(position)).map(|c|c.instance);
-        self.cards.retain(|c| c.owner!=owner || c.zone!=from ||
-            c.position.is_some() || known.is_some());
-        for c in self.cards.iter_mut().filter(|c| c.owner==owner && c.zone==from) {
-            if Some(c.instance)==known { c.zone=to;c.position=None; }
-            else if let Some(p)=&mut c.position { if *p>position {*p-=1;} }
+    pub(crate) fn transfer_position(
+        &mut self,
+        owner: PlayerId,
+        from: KnowledgeZone,
+        position: usize,
+        to: KnowledgeZone,
+    ) -> Option<u16> {
+        let known = self
+            .cards
+            .iter()
+            .find(|c| c.owner == owner && c.zone == from && c.position == Some(position))
+            .map(|c| c.instance);
+        self.cards.retain(|c| {
+            c.owner != owner || c.zone != from || c.position.is_some() || known.is_some()
+        });
+        for c in self
+            .cards
+            .iter_mut()
+            .filter(|c| c.owner == owner && c.zone == from)
+        {
+            if Some(c.instance) == known {
+                c.zone = to;
+                c.position = None;
+            } else if let Some(p) = &mut c.position {
+                if *p > position {
+                    *p -= 1;
+                }
+            }
         }
-        let index=|z|match z {KnowledgeZone::Hand=>Some(0),KnowledgeZone::Deck=>Some(1),
-            KnowledgeZone::Security=>Some(2),KnowledgeZone::Digitama=>Some(3),_=>None};
-        if let Some(counts)=&mut self.last_counts {
-            if let Some(i)=index(from) {counts[owner as usize][i]=counts[owner as usize][i].saturating_sub(1);}
-            if let Some(i)=index(to) {counts[owner as usize][i]+=1;}
+        self.concealed_positions.retain_mut(|c| {
+            if c.owner != owner || c.zone != from {
+                return true;
+            }
+            match c.position {
+                Some(p) if p == position => {
+                    if matches!(to, KnowledgeZone::Hand | KnowledgeZone::Field) {
+                        c.zone = to;
+                        c.position = None;
+                        true
+                    } else {
+                        false
+                    } // Public reveals are learned on refresh.
+                }
+                Some(p) if p > position => {
+                    c.position = Some(p - 1);
+                    true
+                }
+                Some(_) => true,
+                None => false,
+            }
+        });
+        let index = |z| match z {
+            KnowledgeZone::Hand => Some(0),
+            KnowledgeZone::Deck => Some(1),
+            KnowledgeZone::Security => Some(2),
+            KnowledgeZone::Digitama => Some(3),
+            _ => None,
+        };
+        if let Some(counts) = &mut self.last_counts {
+            if let Some(i) = index(from) {
+                counts[owner as usize][i] = counts[owner as usize][i].saturating_sub(1);
+            }
+            if let Some(i) = index(to) {
+                counts[owner as usize][i] += 1;
+            }
         }
+        known
     }
 
     /// An unobserved transfer cannot be resolved using the true instance that
@@ -167,6 +487,8 @@ impl KnowledgeLedger {
     /// A future probabilistic ledger can preserve stronger lower bounds.
     pub fn forget_zone(&mut self, owner: PlayerId, zone: KnowledgeZone) {
         self.cards.retain(|c| c.owner != owner || c.zone != zone);
+        self.concealed_positions
+            .retain(|c| c.owner != owner || c.zone != zone);
     }
 
     pub fn known_positions(&self, owner: PlayerId) -> Vec<(String, KnowledgeZone, usize)> {
@@ -241,6 +563,44 @@ impl KnowledgeLedger {
                 }
             }
         }
+        // A field source has a public physical location even when its identity
+        // is hidden. Track only identities already learned, plus the owner's
+        // inspection entitlement; never learn an opponent's unknown identity.
+        let field: Vec<_> = field_sources(game).filter(|c| c.face_down).collect();
+        self.cards.retain(|c| {
+            c.zone != KnowledgeZone::Field
+                || field
+                    .iter()
+                    .any(|f| f.owner == c.owner && f.card_index == c.instance)
+        });
+        self.concealed_positions.retain(|c| {
+            c.zone != KnowledgeZone::Field
+                || field
+                    .iter()
+                    .any(|f| f.owner == c.owner && f.card_index == c.instance)
+        });
+        for c in &field {
+            if let Some(known) = self.cards.iter_mut().find(|k| {
+                k.owner == c.owner && k.instance == c.card_index && k.zone == KnowledgeZone::Public
+            }) {
+                known.zone = KnowledgeZone::Field;
+                known.position = None;
+            }
+            if c.owner == self.viewer
+                && !c.is_opaque_placeholder
+                && field_sources_with_controller(game).any(|(controller, source)| {
+                    source.card_index == c.card_index && controller == self.viewer
+                })
+            {
+                self.observe(
+                    c.owner,
+                    c.card_index,
+                    c.card_id(&game.card_data),
+                    KnowledgeZone::Field,
+                    None,
+                )?;
+            }
+        }
         let mut public = Vec::new();
         for p in &game.players {
             for c in p
@@ -276,9 +636,22 @@ impl KnowledgeLedger {
             .revealed_cards
             .iter()
             .chain(game.pending_option.iter().map(|p| &p.card))
-            .chain(game.pending_security.iter().map(|p| &p.card))
+            .chain(public_pending_security(game))
         {
             if !c.is_token && !c.is_opaque_placeholder {
+                public.push((
+                    c.owner,
+                    c.card_index,
+                    c.card_id(&game.card_data).to_string(),
+                ));
+            }
+        }
+        for c in game
+            .digixros_leaving_limbo
+            .iter()
+            .flat_map(|(_, _, p)| p.card_sources.iter().chain(&p.linked_cards))
+        {
+            if !c.is_token && !c.face_down && !c.is_opaque_placeholder {
                 public.push((
                     c.owner,
                     c.card_index,
@@ -307,6 +680,46 @@ impl KnowledgeLedger {
                 KnowledgeZone::Hand,
                 None,
             )?;
+        }
+        // A declared play/digivolution is face-up information while payment
+        // and replacement choices are pending, even before the card enters
+        // the field. Read only that explicitly declared physical card.
+        let mut declarations: Vec<_> = game
+            .pending_would_play_resume
+            .iter()
+            .filter(|p| matches!(p.origin, crate::game::PendingWouldPlayOrigin::Hand))
+            .map(|p| (p.player, p.card))
+            .chain(
+                game.pending_would_digivolve_resume
+                    .iter()
+                    .map(|p| (p.player, p.card)),
+            )
+            .collect();
+        if let Some(transaction) = &game.pending_digixros_transaction {
+            declarations.push((transaction.controller, transaction.played_card));
+            for m in transaction
+                .selected_materials
+                .iter()
+                .chain(&transaction.pre_attached_materials)
+            {
+                if let crate::digixros::DigiXrosMaterialOrigin::Hand { player, card, .. } = m.origin
+                {
+                    declarations.push((player, card));
+                }
+            }
+        }
+        for (owner, handle) in declarations {
+            if let Some(c) = game.players[owner as usize]
+                .hand
+                .iter()
+                .find(|c| c.handle() == handle)
+            {
+                self.observe_public_hand_declaration(
+                    c.owner,
+                    c.card_index,
+                    c.card_id(&game.card_data),
+                )?;
+            }
         }
         if let Some(owner) = game
             .pending_selection
@@ -344,6 +757,8 @@ pub struct BeliefEvidence {
     pub deck_count: usize,
     pub security_count: usize,
     pub digitama_count: usize,
+    #[serde(default)]
+    pub field_count: usize,
     pub accounted: CardMultiset,
     pub known_hidden: Vec<(String, KnowledgeZone)>,
     #[serde(default)]
@@ -370,15 +785,16 @@ impl BeliefEvidence {
             deck_count,
             security_count,
             digitama_count,
+            field_count: 0,
             accounted,
             known_hidden: Vec::new(),
             history_minimum: CardMultiset::new(),
         })
     }
 
-    /// Read CURRENT public zones only. Memory must come from entitled events.
-    /// Face-down sources and opaque games require additional knowledge plumbing;
-    /// fail closed rather than exposing their identities.
+    /// Read current public identities and hidden-zone counts only. Face-down
+    /// field locations are public; their identities come from entitled memory
+    /// or the prior. Opaque placeholder games still fail explicitly.
     pub fn extract(
         game: &Game,
         viewer: PlayerId,
@@ -407,10 +823,11 @@ impl BeliefEvidence {
             if c.is_token || c.owner != opponent {
                 return Ok(());
             }
-            if c.face_down || c.is_opaque_placeholder {
-                return Err(
-                    "public zone contains a hidden source; knowledge integration required".into(),
-                );
+            if c.is_opaque_placeholder {
+                return Err("opaque public source is unsupported".into());
+            }
+            if c.face_down {
+                return Ok(());
             }
             if !public_instances.insert(c.card_index) {
                 return Ok(()); // An in-flight public snapshot may reference the same instance.
@@ -449,7 +866,14 @@ impl BeliefEvidence {
             .revealed_cards
             .iter()
             .chain(game.pending_option.iter().map(|p| &p.card))
-            .chain(game.pending_security.iter().map(|p| &p.card))
+            .chain(public_pending_security(game))
+        {
+            add(c)?;
+        }
+        for c in game
+            .digixros_leaving_limbo
+            .iter()
+            .flat_map(|(_, _, p)| p.card_sources.iter().chain(&p.linked_cards))
         {
             add(c)?;
         }
@@ -467,6 +891,9 @@ impl BeliefEvidence {
             p.digitama_deck.len(),
             accounted,
         )?;
+        result.field_count = field_sources(game)
+            .filter(|c| c.owner == opponent && c.face_down && !c.is_token)
+            .count();
         // Do not subtract a ledger entry twice if its instance is now public.
         result.known_hidden = memory
             .cards
@@ -704,6 +1131,7 @@ impl WeightedDeckPrior {
             .checked_add(e.hand_count)
             .and_then(|n| n.checked_add(e.deck_count))
             .and_then(|n| n.checked_add(e.security_count))
+            .and_then(|n| n.checked_add(e.field_count))
             != Some(self.fmt.deck_size as usize)
             || public_eggs
                 .checked_add(e.digitama_count)
@@ -716,6 +1144,7 @@ impl WeightedDeckPrior {
             (KnowledgeZone::Deck, e.deck_count),
             (KnowledgeZone::Security, e.security_count),
             (KnowledgeZone::Digitama, e.digitama_count),
+            (KnowledgeZone::Field, e.field_count),
         ] {
             let facts: Vec<_> = e.known_hidden.iter().filter(|(_, z)| *z == zone).collect();
             if facts.len() > capacity

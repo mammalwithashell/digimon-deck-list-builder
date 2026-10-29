@@ -102,6 +102,7 @@ impl<'a> EffectContext<'a> {
         }
 
         let card_index = self.game.next_card_index();
+        self.game.remember_belief_token(card_index);
         let mut card = CardSource::new_token(data_index, controller, card_index);
         card.card_index = card_index;
         let turn = self.game.turn_count;
@@ -747,7 +748,12 @@ impl<'a> EffectContext<'a> {
         self.play_from_security_index_with_receipt(player, security_index, None)
     }
 
-    pub(crate) fn play_from_security_index_with_receipt(&mut self, player: PlayerId, security_index: usize, receipt: Option<u64>) -> Option<PermanentHandle> {
+    pub(crate) fn play_from_security_index_with_receipt(
+        &mut self,
+        player: PlayerId,
+        security_index: usize,
+        receipt: Option<u64>,
+    ) -> Option<PermanentHandle> {
         // Opaque-aware: materialize before play — a played card must
         // have a real data_index for cost/effect resolution to work.
         if security_index >= self.game.player(player).security.len() {
@@ -926,12 +932,29 @@ impl<'a> EffectContext<'a> {
         cost_delta: crate::enums::CostDelta, suppress_on_play: bool,
         suspended: bool, receipt: Option<u64>,
     ) -> Option<PermanentHandle> {
-        if let Some(receipt_id)=receipt.filter(|id|self.game.prepared_source_plays.iter().any(|(r,_)|r==id)) {
-            let card=crate::effect_context::material_carrier_permanent(self.game,target)
-                .and_then(|p|p.card_sources.get(source_index)).map(|c|c.handle())?;
-            let host_identity=self.game.capture_source_play_host_identity(target)?;
-            let origin=crate::game::PendingWouldPlayOrigin::Source{permanent:target,host_identity,source_index,suspended,receipt:Some(receipt_id)};
-            self.with_play_controller(|game|game.prepare_source_play_from_origin(target.player,card,origin,cost_delta,suppress_on_play));
+        if let Some(receipt_id) =
+            receipt.filter(|id| self.game.prepared_source_plays.iter().any(|(r, _)| r == id))
+        {
+            let card = crate::effect_context::material_carrier_permanent(self.game, target)
+                .and_then(|p| p.card_sources.get(source_index))
+                .map(|c| c.handle())?;
+            let host_identity = self.game.capture_source_play_host_identity(target)?;
+            let origin = crate::game::PendingWouldPlayOrigin::Source {
+                permanent: target,
+                host_identity,
+                source_index,
+                suspended,
+                receipt: Some(receipt_id),
+            };
+            self.with_play_controller(|game| {
+                game.prepare_source_play_from_origin(
+                    target.player,
+                    card,
+                    origin,
+                    cost_delta,
+                    suppress_on_play,
+                )
+            });
             return None;
         }
         if target.index == crate::action::space::BREEDING_TARGET as u8 {
