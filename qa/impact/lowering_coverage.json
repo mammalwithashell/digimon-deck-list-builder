@@ -78391,7 +78391,7 @@
     "used_untested": 7
    }
   },
-  "ex13_lists": 1554,
+  "ex13_lists": 1552,
   "parse_only_files": [
    "src/dsl_cards/binding_ref.rs",
    "src/dsl_cards/expiry_map.rs",
