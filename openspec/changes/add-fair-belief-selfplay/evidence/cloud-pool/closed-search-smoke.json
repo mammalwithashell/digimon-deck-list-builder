@@ -1,0 +1,320 @@
+{
+  "scope": "one 4-simulation/2-world mirror-game smoke per distinct cloud training list; not model-quality evaluation",
+  "lists": 21,
+  "archetypes": 13,
+  "passed": 1,
+  "results": [
+    {
+      "archetype": "Chronicle",
+      "deck_id": "sha256:d71143ca771fcac38e1ffce8a97d7bf9a3e9214a8d5ebd8a0e1d64c2bf9529cf",
+      "returncode": 1,
+      "elapsed_seconds": 1.9807939000893384,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 23 closed-list search: closed-list continuation requires audit: DigivolveCostChoice",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-00\\run.log"
+    },
+    {
+      "archetype": "Chronicle",
+      "deck_id": "sha256:94e9ba36ce836627f61c5d4a3a836a61521087fd840e7d84cacff247752f57ed",
+      "returncode": 1,
+      "elapsed_seconds": 1.8626896999776363,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 6 closed-list search: closed-list continuation requires audit: RevealBucketStep",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-01\\run.log"
+    },
+    {
+      "archetype": "Chronomon",
+      "deck_id": "sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343",
+      "returncode": 1,
+      "elapsed_seconds": 2.740617300150916,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 39 closed-list search: closed-list continuation requires audit: DigivolveCostChoice",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-02\\run.log"
+    },
+    {
+      "archetype": "Chronomon",
+      "deck_id": "sha256:28288911b84d2189223fac3d2d58033ae5a8a27892f67fc1d88d1ebc7e1bfa45",
+      "returncode": 1,
+      "elapsed_seconds": 2.3317890998441726,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 35 closed-list search: closed-list continuation requires audit: AttackDeclarationDecision",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-03\\run.log"
+    },
+    {
+      "archetype": "Examon",
+      "deck_id": "sha256:5ed9b0f13af8340b8ca4be78001d88100b29422939fc96bffa2fa61cf01b43c9",
+      "returncode": 1,
+      "elapsed_seconds": 1.6034076001960784,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 4 closed-list search: closed-list continuation requires audit: DigivolveCostChoice",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-04\\run.log"
+    },
+    {
+      "archetype": "Examon",
+      "deck_id": "sha256:d3dba1f3956ffdffc3f3165bbdf1773d26a893a6991fdecc666425c2ab699588",
+      "returncode": 1,
+      "elapsed_seconds": 1.7870113998651505,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 10 closed-list search: closed-list continuation requires audit: DigivolveCostChoice",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-05\\run.log"
+    },
+    {
+      "archetype": "Glowing Dawn",
+      "deck_id": "sha256:e03dbda2f8105ac6d3131c54a842e3000ff43fb52632910d242047399f34032d",
+      "returncode": 1,
+      "elapsed_seconds": 1.6707633999176323,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 4 closed-list search: closed-list continuation requires audit: RevealBucketStep",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-06\\run.log"
+    },
+    {
+      "archetype": "Glowing Dawn",
+      "deck_id": "sha256:6138b0f6817397f411eb4ee63bdb8621734654abc1985729222702abe51db9aa",
+      "returncode": 1,
+      "elapsed_seconds": 1.7906533000059426,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 11 closed-list search: closed-list continuation requires audit: RevealBucketStep",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-07\\run.log"
+    },
+    {
+      "archetype": "Light Hybrid",
+      "deck_id": "sha256:7178a2d3e597c4196ca0a365435df1c2a3d37b88a143a9f656a28d982ef00cbe",
+      "returncode": 1,
+      "elapsed_seconds": 1.6989626998547465,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 10 closed-list search: closed-list continuation requires audit: ZoneCardPickStep",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-08\\run.log"
+    },
+    {
+      "archetype": "Medusamon",
+      "deck_id": "sha256:cb7d6d3088e6156bcc9ae5a00e6f3e54adb7beeaaee0812d33602d918bab3df0",
+      "returncode": 0,
+      "elapsed_seconds": 3.1118346999865025,
+      "completed_games": 1,
+      "truncated_games": 0,
+      "decisions": 52,
+      "failure": null,
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-09\\run.log"
+    },
+    {
+      "archetype": "SW",
+      "deck_id": "sha256:4fd3d5327ae45a5bcf7841604b8b62f8d981be6011e407c342a9962d68b4dcd4",
+      "returncode": 1,
+      "elapsed_seconds": 1.546043299837038,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 5 closed-list search: closed-list continuation requires audit: RevealBucketStep",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-10\\run.log"
+    },
+    {
+      "archetype": "ShineGreymon Data Squad",
+      "deck_id": "sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6",
+      "returncode": 1,
+      "elapsed_seconds": 1.7696479000151157,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 8 closed-list search: public zone contains a hidden source; knowledge integration required",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-11\\run.log"
+    },
+    {
+      "archetype": "TS Jupitermon",
+      "deck_id": "sha256:2a78b2fe4030bb4baed1b258d645f9af3a489d68201159ae881028b870e6aa0f",
+      "returncode": 1,
+      "elapsed_seconds": 1.5675053000450134,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 8 closed-list search: closed-list continuation requires audit: RevealBucketStep",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-12\\run.log"
+    },
+    {
+      "archetype": "TS Jupitermon",
+      "deck_id": "sha256:c892e8fb0cad79ca55cf4ad4cdb77117c1b7afb515c78c6b9329fdc67a833666",
+      "returncode": 1,
+      "elapsed_seconds": 3.198943499941379,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 50 closed-list search: closed-list continuation requires audit: OptionalReplacement",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-13\\run.log"
+    },
+    {
+      "archetype": "TS Mervamon",
+      "deck_id": "sha256:4fbf648227d062f21d77520718dd434a401c42d89a0996d4680536c04af9a48d",
+      "returncode": 1,
+      "elapsed_seconds": 2.057876299833879,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 4 closed-list search: closed-list continuation requires audit: RevealBucketStep",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-14\\run.log"
+    },
+    {
+      "archetype": "TS Mervamon",
+      "deck_id": "sha256:12af572f1378c83a9010a30eb5bbfe815fe1a77f7e0bfab644fb8fcab30bf55c",
+      "returncode": 1,
+      "elapsed_seconds": 1.679797099903226,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 20 closed-list search: closed-list continuation requires audit: RevealBucketStep",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-15\\run.log"
+    },
+    {
+      "archetype": "Three Musketeers",
+      "deck_id": "sha256:49f05630a0a7034965984a1719f1a4264667603c5af2a7d961a655dcdb6322d7",
+      "returncode": 1,
+      "elapsed_seconds": 1.7542805999983102,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 6 closed-list search: closed-list continuation requires audit: RevealBucketStep",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-16\\run.log"
+    },
+    {
+      "archetype": "Three Musketeers",
+      "deck_id": "sha256:02cff1c487b31b11ec6ceaed86d8161385b240afcdcd14daaffbddf908b5d677",
+      "returncode": 1,
+      "elapsed_seconds": 1.7270970998797566,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 11 closed-list search: closed-list continuation requires audit: RunTail",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-17\\run.log"
+    },
+    {
+      "archetype": "Toho Braves",
+      "deck_id": "sha256:082033c391d87144638392d6be890a6e3d94793f92f0a9dc5e8749c1d947e965",
+      "returncode": 1,
+      "elapsed_seconds": 2.616332600126043,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 18 closed-list search: closed-list continuation requires audit: DigivolveCostChoice",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-18\\run.log"
+    },
+    {
+      "archetype": "Toho Braves",
+      "deck_id": "sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd",
+      "returncode": 1,
+      "elapsed_seconds": 1.719855299917981,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 11 closed-list search: closed-list continuation requires audit: DigivolveCostChoice",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-19\\run.log"
+    },
+    {
+      "archetype": "Virus Busters",
+      "deck_id": "sha256:c27a1321744c8c605b38ffdd8d2213c6b554b80e308c4b67bf8293343d18c4b1",
+      "returncode": 1,
+      "elapsed_seconds": 1.8998845000751317,
+      "completed_games": 0,
+      "truncated_games": 0,
+      "decisions": null,
+      "failure": {
+        "error": "game 0 decision 9 closed-list search: closed-list continuation requires audit: DigivolveCostChoice",
+        "information_regime": "closed_decklist",
+        "stage": "selfplay"
+      },
+      "log": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-20261029\\closed-smoke\\case-20\\run.log"
+    }
+  ],
+  "promoted": false
+}

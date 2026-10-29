@@ -142,3 +142,10 @@ Its public-count inputs have no game or actual opponent deck. It reports
 candidate conditioning, mixture sampling, all-candidates-eliminated sampling,
 bounded failures and fallback request success. It does not measure per-proposal
 rejection acceptance or extrapolate to larger candidate populations.
+
+
+## Reusing the existing EX13 cloud cohort
+
+Use `python code/tools/prepare_cloud_belief_pool.py --source data/training_pools/ex13-20261026 --out <fresh-directory> --cli <native-cli>` to preserve the existing cloud train/held-out/supplemental/pet partitions. It imports through shared snapshot admission, rejects content leakage, retains 26 native training slots for 21 distinct lists, and prepares the prior from training contents only. The 23 held-out lists cover 12 archetypes; same-list Light Hybrid pet results remain separate.
+
+The [cloud-pool adoption report](../openspec/changes/add-fair-belief-selfplay/cloud-pool-adoption.md) records current Python/native admission and 21 closed-search probes. All source partitions pass admission; 20 probes stop at unsupported closed-world continuation/knowledge forms. Broad closed-search qualification requires those audited forms and a new independent protocol. No cloud training was changed by the read-only inspection or local preparation.
