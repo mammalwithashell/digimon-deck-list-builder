@@ -1,0 +1,11 @@
+{
+  "compiled_binding_unchanged_since_observation": true,
+  "native_binding_sha256": {
+    "digimon_engine.digimon_engine": "184b5dfc9edb24e7d68ba29d08b6f3dd2d157c352c159e2350ba2a16edcc1465"
+  },
+  "note": "The original controller fingerprinted the package shim. The loaded pyd was separately recorded during the run and verified again after completion. Future controllers additionally bind the actual extension bytes. The study ran controller commit c8f3e8c7d; this metadata-only hardening changes no game, model or scoring behavior.",
+  "engine_unchanged": true,
+  "native_extension_last_write_precedes_run_identity": {
+    "digimon_engine.digimon_engine": true
+  }
+}

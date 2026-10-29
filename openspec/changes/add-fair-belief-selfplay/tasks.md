@@ -35,22 +35,25 @@
 - [x] 5.1 Add frozen held-out evaluation panels for seed, exact-prior-trained baseline and closed-prior-trained candidate; separate policy-only from equal-budget search-assisted play and balance seats/seeds.
 - [x] 5.2 Implement long-game exhaustion, recovery/recycling, rare-tech and restriction-sensitive scenario probes; identify observation/memory failures separately from sampler failures.
 - [x] 5.3 Add isolated post-game belief scoring for true-state support coverage and proper probability scores, fallback use and calibration summaries; test scorer truth cannot enter action selection.
-- [ ] 5.4 Run fresh budget-matched fair-information exploiters against frozen baselines/candidates; evaluate on held-out games and report uncertainty and lower-bound scope.
-- [ ] 5.5 Execute the preregistered multi-seed comparison and report exact deck/game denominators, truncated/failed games and all required metrics without dropping failures from aggregate evidence.
+- [x] 5.4 Run fresh budget-matched fair-information exploiters against frozen baselines/candidates; evaluate on held-out games and report uncertainty and lower-bound scope.
+- [x] 5.5 Execute the preregistered multi-seed comparison and report exact deck/game denominators, truncated/failed games and all required metrics without dropping failures from aggregate evidence.
 - [x] 5.6 Enforce promotion gates for held-out policy-only uplift, anchor non-regression and exploiter non-regression; test missing, skipped, failed and inconclusive evidence blocks promotion but preserves resumability.
 
 ## 6. Documentation and final validation
 
 - [x] 6.1 Update training runbook, model-evaluation guidance and model metadata documentation with regime selection, legacy-data treatment, prior snapshots, reproduction commands, limitations and rollback.
 - [x] 6.2 Run focused Rust determinization/search/self-play/knowledge and Python trainer/runner/exploiter checks with an isolated Cargo target, then the applicable repository verification ladder; preserve aggregate failures and state their scope.
-- [ ] 6.3 Run `openspec validate add-fair-belief-selfplay --strict` and verify coordinated active search specs are consistent; attach the final evidence report without claiming certified low exploitability.
+- [x] 6.3 Run `openspec validate add-fair-belief-selfplay --strict` and verify coordinated active search specs are consistent; attach the final evidence report without claiming certified low exploitability.
 
 ## Progress evidence
 
-The engine now wires closed-list hypotheses into both search modes and both
-self-play seats. Training, resume, export and independent gate provenance are
-implemented. The frozen first cohort and preregistered protocol are committed
-under `experiment/`; they cover 20 admitted ST1-derived variants (16/2/2), not
-all starter cards or the full meta. Current testing and comparison status is
-recorded in `implementation-notes.md`; empirical tasks remain open until their
-actual artifacts are complete. No champion has been promoted.
+All 29 implementation and evidence tasks are complete. See `evidence-report.md`
+and the committed `evidence/` JSON for the full local three-seed comparison,
+validation, uncertainty, artifact hashes and explicit population limits.
+
+The comparison completed 384 training games, 6,144 baseline/candidate panel
+games and 768 unchanged-initializer games, with no failed/truncated evaluation
+games. Six fresh 2048-step exploiters completed held-out evaluation. The
+candidate regressed in policy-only play and exploiter resistance; promotion
+failed and no champion was promoted. Completing this change does not certify
+stronger policies or low exploitability.

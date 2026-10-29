@@ -1,0 +1,26 @@
+{
+  "schema": "belief-comparison-v1",
+  "assets": {
+    "protocol": "127ac34cc391c3a158042969882aae6ca372340d8f4d3a61b2e52bb73bd7b435",
+    "population": "99ec016975f5be3f6d68433e4c65cc581c2faa356eb5e417889c76bb08d9256d",
+    "prior": "d16a3572f2c5cb4c4a5f4d03db675126d414aab574acdf8ac1f237e34be04a96",
+    "train": "f733b9745d373cb4b202ffc1ef902de0a9d2a57285779bf1af4145111ab8fc95",
+    "validation": "a942ea6f8b86a4376086b322d99d9d64faccef866b8c3df477d2f13adef7cbdf",
+    "test": "a4ffffe4548b18b0fd9bf915e6f36393e475492ae3217d1509290aef94386dc0",
+    "engine": "60704e9d17c5a2165b816dcef9cabf3187539194a1e1353d2b3aa0dead1ea073",
+    "seed_model": "e527949c54de03eef789dbbc4d88060fd6c9aa5c8df0e619f4154639d52e9384",
+    "binding": "48d397719416ff81104c6733f42ac26a8b814a0395cc9ebf9bff47a932db09e9",
+    "runner": "659c8f76da72a376ed1ac62fcb80cd924097fadddf0139ef367c7706dd2405e1",
+    "trainer": "79a1a3b20a7ef6910fdca7b6509bfbf76dc0d11dbb7d0fb1ba07ca793d63fd71",
+    "generation_runner": "889c4b9544e92146be8442ad74300b5ffae5d1a377265c2e37eb8e687060c89b",
+    "mechanics": "ea053dbc2ffdae82154421049e019f726ec6a3e737529f987a1353d2800cbd0b",
+    "admission": "f7c63e78e8e2d8458b9ff8fd7814cf2536f2aa405988396f732c357ab0b8b336",
+    "code/digimon_gym/agents/belief_contract.py": "d80c91be9d4fa3e17c8b32402d233bc2818f8f7664154a6fe609051f792336b2",
+    "code/digimon_gym/agents/belief_evaluation.py": "2e3457693ea34820be627e901ea529600d92ba4ec33a899de5b4a45055797752",
+    "code/tools/export_onnx.py": "cbb17ec3e2c09d8fa820b06139a2fe443fea6528c8411b0a9cd1e4ee9dd04b6e",
+    "code/tools/selfplay_scheduler.py": "bd797bad8349495f7e29ce97f60c8541dfe28cf6b6ed85d678425434fc336d3e",
+    "code/tools/belief_policy_panel.py": "c5db092b5173e5ca2b8c017066df5730538f79e03202d09bf27e796aec5efab7",
+    "data/cards.json": "8429575efbf63dc47fc244755bc4320333f355db4acff7878efec51646c06a98",
+    "data/deck_formats.json": "72ec1cc0060fdf0bc14c6a68fa9747039d9e49a1605b5623965bbaaafb17b673"
+  }
+}

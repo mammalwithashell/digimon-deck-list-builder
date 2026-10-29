@@ -1,0 +1,44 @@
+{
+  "focused_rust": {
+    "determinization_passed": 46,
+    "search_passed": 19,
+    "selfplay_passed": 6,
+    "extra_security_passed": 2,
+    "extra_security_failed": 1,
+    "failure": "game268 recorded PASS rejected at decision79 before search; reproduced with installed pre-change binding"
+  },
+  "rust_tier1": {
+    "dsl": 1596,
+    "infra": 42,
+    "judge_quiz": 44,
+    "keyword_semantics_matrix": 3,
+    "rules_conformance": 361,
+    "rules_faq": 31,
+    "ignored": 5
+  },
+  "repository_tier0": {
+    "checks_passed": 13,
+    "tooling_tests_passed": 183
+  },
+  "python_focused": {
+    "passed": 54,
+    "skipped": 1
+  },
+  "strict_openspec": [
+    "add-fair-belief-selfplay",
+    "add-determinized-search"
+  ],
+  "smoke": {
+    "generations": [
+      0,
+      1,
+      2
+    ],
+    "games": 6,
+    "truncated_games": 0,
+    "cold_resume": true,
+    "model_exports_complete": true
+  },
+  "rust_verification": "isolated CARGO_TARGET_DIR; RUST_MIN_STACK=268435456; default features; engine/DSL dev opt-level0 debug0; debug assertions retained",
+  "raw_log_root": "D:/cargo-target-wt/closed-deck-belief-training"
+}

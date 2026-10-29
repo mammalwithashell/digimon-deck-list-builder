@@ -1,0 +1,76 @@
+{
+  "training_games": 384,
+  "comparison_games": 6144,
+  "unchanged_seed_evaluation_games": 768,
+  "total_evaluation_games": 6912,
+  "failed_evaluation_games": 0,
+  "truncated_evaluation_games": 0,
+  "truncated_training_games": 0,
+  "fresh_exploiters": 6,
+  "exploiter_steps_each": 2048,
+  "promotion_eligible": false,
+  "scope": "20 ST1 admitted-subset variants, split 16/2/2; one named family",
+  "artifacts_root": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release",
+  "panels": {
+    "heldout_policy": {
+      "baseline": {
+        "wins": 420,
+        "games": 768,
+        "failed": 0,
+        "truncated": 0
+      },
+      "candidate": {
+        "wins": 354,
+        "games": 768,
+        "failed": 0,
+        "truncated": 0
+      },
+      "delta": -0.0859375
+    },
+    "anchors": {
+      "baseline": {
+        "wins": 274,
+        "games": 768,
+        "failed": 0,
+        "truncated": 0
+      },
+      "candidate": {
+        "wins": 202,
+        "games": 768,
+        "failed": 0,
+        "truncated": 0
+      },
+      "delta": -0.09375
+    },
+    "exploiter": {
+      "baseline": {
+        "wins": 346,
+        "games": 768,
+        "failed": 0,
+        "truncated": 0
+      },
+      "candidate": {
+        "wins": 472,
+        "games": 768,
+        "failed": 0,
+        "truncated": 0
+      },
+      "delta": 0.16406250000000006
+    },
+    "heldout_search": {
+      "baseline": {
+        "wins": 403,
+        "games": 768,
+        "failed": 0,
+        "truncated": 0
+      },
+      "candidate": {
+        "wins": 454,
+        "games": 768,
+        "failed": 0,
+        "truncated": 0
+      },
+      "delta": 0.06640625
+    }
+  }
+}

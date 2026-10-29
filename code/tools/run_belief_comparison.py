@@ -97,6 +97,17 @@ def run(args):
         "data/deck_formats.json",
     ):
         assets[name] = sha(ROOT / name)
+    from digimon_gym.agents.belief_runtime import native_binding_fingerprints
+
+    assets.update(
+        {
+            f"binding_native:{name}": digest
+            for name, digest in native_binding_fingerprints().items()
+        }
+    )
+    assets["binding_fingerprint_code"] = sha(
+        ROOT / "code/digimon_gym/agents/belief_runtime.py"
+    )
     identity = {"schema": "belief-comparison-v1", "assets": assets}
     identity_path = out / "identity.json"
     if identity_path.exists() and read(identity_path) != identity:

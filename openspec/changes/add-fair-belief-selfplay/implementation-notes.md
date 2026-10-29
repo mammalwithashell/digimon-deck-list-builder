@@ -1,6 +1,6 @@
 # Implementation and evidence
 
-## Current implementation (2026-10-28)
+## Current implementation (2026-10-28 / overnight completion)
 
 Preserved the original foundation as commit `879ce5147`, then merged fetched
 remote main `d0d052026` into `feat/fair-belief-selfplay`. The branch began 130
@@ -30,8 +30,8 @@ Stock ST1-09 failed the existing admission gate; it was excluded from this
 explicitly named cohort. Admission and mechanics gates remain intact.
 
 Completed validation so far: repository tier 0 passed all 13 checks including
-183 tooling tests; Python focused suites passed 52 tests with one existing skip.
-The final Rust aggregate and all empirical comparison tasks remain in progress.
+183 tooling tests; Python focused suites passed 54 tests with one existing skip.
+The Rust validation details follow below; the independent comparison is complete and failed promotion. See `evidence-report.md`.
 Development-build preflight attempts are preserved separately from final
 comparison evidence. Optimized executable hashes cannot be mixed into those
 attempts on resume. No model-strength or promotion claim follows from them.
@@ -59,7 +59,7 @@ attempts on resume. No model-strength or promotion claim follows from them.
 - First full seed's closed training used a sampled peak process-tree RSS of
   4,592,140,288 bytes at 0.5-second intervals and 92.67 s total wall time.
   These are local measurements for the declared cohort/budget, not scaling
-  guarantees. Final per-regime comparison metrics remain pending.
+  guarantees. Final per-regime outcomes are recorded in `evidence-report.md`; no candidate qualified.
 
 ## Historical foundation evidence (2026-10-22)
 
