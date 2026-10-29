@@ -80,6 +80,23 @@ def save_state(run_dir: Path, state: dict) -> None:
     atomic_json(run_dir / "state.json", state)
 
 
+def search_budget_flags(args) -> list[str]:
+    """Selfplay flags for the search budget. Default is the 2026-10-28 decision:
+    phase budget 64 + playout-cap randomization 0.25/64 (0.27x compute, no
+    measurable loss at equal games). `--full-search` turns both off; setting
+    `--reduced-sims 0` or `--full-search-fraction 1` turns one off."""
+    if getattr(args, "full_search", False):
+        return []
+    flags: list[str] = []
+    reduced = getattr(args, "reduced_sims", 0) or 0
+    if reduced > 0:
+        flags += ["--reduced-sims", str(reduced)]
+    fraction = getattr(args, "full_search_fraction", 1.0)
+    if fraction is not None and fraction < 1.0:
+        flags += ["--full-search-fraction", str(fraction), "--cheap-sims", str(getattr(args, "cheap_sims", 64))]
+    return flags
+
+
 def run_selfplay_stage(
     cli_bin: str,
     gen_dir: Path,
@@ -103,12 +120,22 @@ def run_selfplay_stage(
     resume: bool = False,
     max_retries: int = 1,
     worker_timeout_seconds: float = 3600,
+    budget_flags: list[str] | None = None,
+    opponent_pool: Path | None = None,
 ) -> list[Path]:
-    """Run bounded native workers; return only successful, published outputs."""
+    """Run bounded native workers; return only successful, published outputs.
+
+    ``budget_flags`` are the search-budget selfplay flags (phase budget and
+    playout-cap randomization, see ``search_budget_flags``); they are part of the
+    frozen identity a dynamic resume validates.
+    """
+    budget_flags = list(budget_flags or [])
     if eval_batch_size < 1:
         raise ValueError("eval_batch_size must be positive")
     if min(games, procs) < 1:
         raise ValueError("games and procs must be positive")
+    if opponent_pool and (uniform or scheduling != "dynamic"):
+        raise ValueError("Historical opponents require model-based dynamic scheduling")
     if scheduling == "dynamic":
         from tools.selfplay_scheduler import run_queue, sha256
         command = [cli_bin, "--pool", pool]
@@ -118,6 +145,7 @@ def run_selfplay_stage(
                     "--worlds", str(worlds), "--eval-batch-size", str(eval_batch_size),
                     "--mode", mode, "--temperature-decisions", str(temperature_decisions),
                     "--decision-cap", str(decision_cap), "--shard-rows", str(shard_rows)]
+        command += budget_flags
         command += ["--uniform"] if uniform else ["--model", str(model_onnx)]
         cards = cards_json or REPO_ROOT / "data/cards.json"
         assets = {"engine": Path(cli_bin), "decks": decks, "cards": cards,
@@ -129,12 +157,16 @@ def run_selfplay_stage(
             for index, candidate in enumerate((Path(str(model_onnx) + ".meta.json"),
                                                Path(model_onnx).with_suffix(".meta.json"))):
                 assets[f"model_meta_{index}"] = candidate
+        if opponent_pool:
+            from tools.search_opponents import pool_assets
+            assets.update(pool_assets(opponent_pool, Path(model_onnx)))
+            command += ["--opponent-pool", str(opponent_pool)]
         identity = {"assets": {key: sha256(path) if path.exists() else None
                                 for key, path in assets.items()},
                     "search": {"sims": sims, "worlds": worlds, "mode": mode,
                                "eval_batch_size": eval_batch_size, "temperature_decisions": temperature_decisions,
                                "decision_cap": decision_cap, "shard_rows": shard_rows, "pool": pool,
-                               "uniform": uniform},
+                               "uniform": uniform, "budget_flags": budget_flags},
                     "environment": {key: os.environ[key] for key in (
                         "DIGIMON_SEARCH_EVAL_CACHE_ENTRIES", "DIGIMON_SELFPLAY_TRACE_DECISIONS",
                         "DIGIMON_SEARCH_PROFILE", "DIGIMON_TENSOR_PROFILE", "DIGIMON_BACKEND",
@@ -185,7 +217,7 @@ def run_selfplay_stage(
             str(decision_cap),
             "--shard-rows",
             str(shard_rows),
-        ]
+        ] + budget_flags
         if uniform:
             cmd.append("--uniform")
         else:
@@ -298,6 +330,12 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
         str(resolve_seed_model_onnx(args.seed_model, args.seed_model_onnx)) if is_gen0 else prev["model_onnx"]
     )
     warm_start_zip = str(seed_model) if is_gen0 else prev["model_zip"]
+    from tools.search_opponents import freeze_pool, summarize_opponents
+    opponent_pool = freeze_pool(Path(args.run_dir), gen,
+        Path(model_onnx_for_selfplay) if model_onnx_for_selfplay else None,
+        checkpoints=args.opponent_checkpoint, source=Path(args.opponent_pool) if args.opponent_pool else None,
+        history_window=args.history_window, selfplay_probability=args.selfplay_probability,
+        resume=args.resume_selfplay)
 
     print(f"=== generation {gen} ===", flush=True)
     print(f"self-play: {args.games} games / {args.procs} procs, warm-start selfplay model = "
@@ -313,6 +351,7 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
         sims=args.sims,
         worlds=args.worlds,
         mode=args.mode,
+        budget_flags=search_budget_flags(args),
         seed_base=args.seed + gen * 100_000,
         temperature_decisions=args.temperature_decisions,
         decision_cap=args.decision_cap,
@@ -325,6 +364,7 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
         resume=args.resume_selfplay,
         max_retries=args.worker_retries,
         worker_timeout_seconds=args.worker_timeout_seconds,
+        opponent_pool=opponent_pool,
     )
     t_selfplay = time.time() - t0
 
@@ -333,6 +373,9 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
     # Optional provenance on older/test fixtures without game-deck metadata.
     if all('game_decks' in json.loads((p / 'manifest.json').read_text()) for p in proc_dirs):
         atomic_json(gen_dir / 'archetype_coverage.json', appearance_counts(proc_dirs))
+    opponent_coverage = summarize_opponents(proc_dirs) if opponent_pool else None
+    if opponent_coverage is not None:
+        atomic_json(gen_dir / 'opponent_coverage.json', opponent_coverage)
 
     if getattr(args, "fail_on_truncation", False):
         truncated = sum(json.loads((p / "manifest.json").read_text())["truncated_games"] for p in proc_dirs)
@@ -387,8 +430,11 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
 
     summary = {
         "generation": gen,
+        "opponent_coverage": opponent_coverage,
+        "opponent_pool": str(opponent_pool) if opponent_pool else None,
         "search": {"mode": args.mode, "simulations_total_per_decision": args.sims,
-            "worlds": args.worlds, "evaluation_batch_size_requested": args.eval_batch_size},
+            "worlds": args.worlds, "evaluation_batch_size_requested": args.eval_batch_size,
+            "budget_flags": search_budget_flags(args)},
         "scheduling": {"mode": args.scheduling, "workers": args.procs,
             "chunk_games": args.chunk_games if args.scheduling == "dynamic" else None,
             "seed_scheme": "global-game-v1" if args.scheduling == "dynamic" else "legacy-per-worker"},
@@ -438,6 +484,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--run-dir", required=True, help="root directory for this self-play run")
     p.add_argument("--seed-model", required=True, help="SB3 .zip to warm-start generation 0's TRAINING from")
     p.add_argument("--seed-model-onnx", default=None, help="policy+value ONNX for generation 0's SELF-PLAY (default: a same-stem .onnx sibling of --seed-model)")
+    p.add_argument("--opponent-pool", help="Hash-pinned search-opponent-pool-v1 JSON")
+    p.add_argument("--opponent-checkpoint", action="append", default=[], metavar="ID=PATH",
+                   help="Add a frozen historical ONNX checkpoint (repeatable, equal weights)")
+    p.add_argument("--history-window", type=int, default=0,
+                   help="Include N latest completed generations older than the current actor")
+    p.add_argument("--selfplay-probability", type=float, default=None,
+                   help="Current-current fraction; default 0.5 with pins/window, or pool's value")
     p.add_argument("--uniform", action="store_true", help="gen 0 self-plays with the uniform stub evaluator instead of an ONNX export")
     p.add_argument("--decks", required=True, help="deck-pool JSON for the selfplay driver")
     p.add_argument("--cli-bin", default=None, help="path to digimon-engine-cli (default: auto-detect target/{release,debug})")
@@ -455,6 +508,19 @@ def build_parser() -> argparse.ArgumentParser:
                    help="whole-chunk deadline, including startup; tune on the target Linux host")
     p.add_argument("--sims", type=int, default=320)
     p.add_argument("--worlds", type=int, default=4)
+    # Search budget (docs/superpowers/research/2026-10-27-search-budget-experiments.md,
+    # decided 2026-10-28): both levers on by default — ~0.27x the search seconds of
+    # 320/4 everywhere with no measurable strength loss at equal games.
+    p.add_argument("--reduced-sims", type=int, default=64,
+        help="phase budget: total sims at roots that are not an unconstrained Main-phase decision "
+             "(pending selections, mulligan, breeding, timing windows); 0 searches every root with --sims")
+    p.add_argument("--full-search-fraction", type=float, default=0.25,
+        help="playout-cap randomization: share of non-forced decisions that get the full --sims search and "
+             "become policy targets; the rest get a --cheap-sims value-only search (1.0 disables)")
+    p.add_argument("--cheap-sims", type=int, default=64,
+        help="total sims for the cheap value-only searches when --full-search-fraction < 1")
+    p.add_argument("--full-search", action="store_true",
+        help="disable both budget levers: 320/4-style full search at every root (the pre-2026-10-28 behaviour)")
     p.add_argument("--eval-batch-size", type=int, default=4,
         help="independent PIMC worlds per evaluation batch; 1 is the serial reference")
     p.add_argument("--mode", default="pimc")

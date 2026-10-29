@@ -1,0 +1,285 @@
+{
+  "schema": "raising-diagnostic-evidence-v1",
+  "date": "2026-10-28",
+  "status": "complete",
+  "engine": {
+    "base_commit": "7df645cfd8fa807ba012568dcf6640a0797207e8",
+    "local_engine_patch_sha256": "29ef9a7db988d2ac0cc05f71d0a6768564da3c92ef685d80d65ac256bbf0a64a",
+    "native_driver_sha256": "4fe5e755db852b4832d8bd39a4beff19db982467263d190711787f5e1f003e2f",
+    "executable_sha256": "2a63b61665c37f2fa4a2c9b6a61d9640bc48a3dc51a51fcdb202c16ab6d01435",
+    "token_fix_included": true,
+    "deployed_to_cloud": false
+  },
+  "models": [
+    {
+      "name": "checkpoint2",
+      "onnx_sha256": "594781ca99262bb3421ea36dd513ae6fc41267b4be6cd513fb47d250675cdff4",
+      "metadata_sha256": "2306052b0cdd08240db77a4ae7b734136e065ffe5cc26d45d9346e0ba631cc74"
+    },
+    {
+      "name": "checkpoint4",
+      "onnx_sha256": "790223c83ca6fc08bb1ffa39f59bd303deb7bfcf6d2e636bdbcccb72cc56d84b",
+      "metadata_sha256": "2306052b0cdd08240db77a4ae7b734136e065ffe5cc26d45d9346e0ba631cc74"
+    },
+    {
+      "name": "checkpoint5",
+      "onnx_sha256": "3967d9635f8d5630774e1006f8c88fe04000403c5f26aaa61605bcf11a4bc238",
+      "metadata_sha256": "2306052b0cdd08240db77a4ae7b734136e065ffe5cc26d45d9346e0ba631cc74"
+    },
+    {
+      "name": "checkpoint6",
+      "onnx_sha256": "d49290d5d7cfe2dc546b39d05e90166fd04c82b17e4ed02b7ea8581b969a18ce",
+      "metadata_sha256": "2306052b0cdd08240db77a4ae7b734136e065ffe5cc26d45d9346e0ba631cc74"
+    }
+  ],
+  "inputs": {
+    "cards.json": "8429575efbf63dc47fc244755bc4320333f355db4acff7878efec51646c06a98",
+    "combined_diagnostic_snapshot.json": "70c600bcbbf936a3d20d0ddc4b27c239af7c952407b13070ff8edc7cf783262f"
+  },
+  "sampling": "One reservoir-sampled legal promote/wait position per completed source game; four games per archetype, two per actor model, both seats and available list variants.",
+  "continuations": "Forced promote or wait, then deterministic policy-only choices; same cloned state and RNG, paired by position/model/opponent.",
+  "bootstrap": "4000 resamples of source-game roots within archetype; counterpart action outcomes stay paired",
+  "comparison": {
+    "older": "checkpoint2",
+    "newer": "checkpoint5",
+    "opponents": [
+      "checkpoint2",
+      "checkpoint4",
+      "checkpoint6"
+    ]
+  },
+  "coverage": {
+    "source_games": 52,
+    "roots": 44,
+    "archetypes": 13,
+    "exact_lists_with_roots": 23,
+    "pool_lists": 24,
+    "source_games_without_eligible_root": 8,
+    "policy_rollouts": 528,
+    "paired_action_comparisons": 264,
+    "incomplete_rollouts": 0,
+    "failed_jobs": 0
+  },
+  "search": {
+    "simulations_total_per_decision": 320,
+    "worlds": 4,
+    "leaf_batch": 4,
+    "exploration_noise": 0,
+    "mode": "open-decklist PIMC"
+  },
+  "root_decisions": {
+    "checkpoint2": {
+      "n": 44,
+      "policy_promote": 44,
+      "search_promote": 35,
+      "policy_wait_search_promote": 0,
+      "policy_promote_search_wait": 9,
+      "mean_promote_probability": 0.6357741897756403
+    },
+    "checkpoint5": {
+      "n": 44,
+      "policy_promote": 31,
+      "search_promote": 34,
+      "policy_wait_search_promote": 8,
+      "policy_promote_search_wait": 5,
+      "mean_promote_probability": 0.5705224194309928
+    }
+  },
+  "checkpoint5_wait_cases_across_three_opponents": {
+    "promotion_better": 5,
+    "unchanged": 32,
+    "wait_better": 2
+  },
+  "checkpoint5_always_promote_minus_policy": {
+    "n": 44,
+    "mean": 0.022727272727272728,
+    "ci95": [
+      -0.022727272727272728,
+      0.07575757575757575
+    ]
+  },
+  "opponent_diversity": {
+    "n": 44,
+    "mean": 0.0,
+    "ci95": [
+      -0.11363636363636363,
+      0.11363636363636363
+    ]
+  },
+  "per_archetype": {
+    "Chronicle": {
+      "positions": 2,
+      "checkpoint2_policy_promote": 2,
+      "checkpoint5_policy_promote": 2,
+      "checkpoint5_search_promote": 2
+    },
+    "Chronomon": {
+      "positions": 3,
+      "checkpoint2_policy_promote": 3,
+      "checkpoint5_policy_promote": 1,
+      "checkpoint5_search_promote": 2
+    },
+    "Examon": {
+      "positions": 4,
+      "checkpoint2_policy_promote": 4,
+      "checkpoint5_policy_promote": 4,
+      "checkpoint5_search_promote": 3
+    },
+    "Glowing Dawn": {
+      "positions": 4,
+      "checkpoint2_policy_promote": 4,
+      "checkpoint5_policy_promote": 3,
+      "checkpoint5_search_promote": 3
+    },
+    "Light Hybrid": {
+      "positions": 3,
+      "checkpoint2_policy_promote": 3,
+      "checkpoint5_policy_promote": 3,
+      "checkpoint5_search_promote": 3
+    },
+    "Medusamon": {
+      "positions": 4,
+      "checkpoint2_policy_promote": 4,
+      "checkpoint5_policy_promote": 3,
+      "checkpoint5_search_promote": 4
+    },
+    "SW": {
+      "positions": 4,
+      "checkpoint2_policy_promote": 4,
+      "checkpoint5_policy_promote": 3,
+      "checkpoint5_search_promote": 2
+    },
+    "ShineGreymon Data Squad": {
+      "positions": 4,
+      "checkpoint2_policy_promote": 4,
+      "checkpoint5_policy_promote": 2,
+      "checkpoint5_search_promote": 3
+    },
+    "TS Jupitermon": {
+      "positions": 3,
+      "checkpoint2_policy_promote": 3,
+      "checkpoint5_policy_promote": 0,
+      "checkpoint5_search_promote": 2
+    },
+    "TS Mervamon": {
+      "positions": 4,
+      "checkpoint2_policy_promote": 4,
+      "checkpoint5_policy_promote": 2,
+      "checkpoint5_search_promote": 3
+    },
+    "Three Musketeers": {
+      "positions": 2,
+      "checkpoint2_policy_promote": 2,
+      "checkpoint5_policy_promote": 2,
+      "checkpoint5_search_promote": 1
+    },
+    "Toho Braves": {
+      "positions": 4,
+      "checkpoint2_policy_promote": 4,
+      "checkpoint5_policy_promote": 3,
+      "checkpoint5_search_promote": 4
+    },
+    "Virus Busters": {
+      "positions": 3,
+      "checkpoint2_policy_promote": 3,
+      "checkpoint5_policy_promote": 3,
+      "checkpoint5_search_promote": 2
+    }
+  },
+  "sw_seed_sensitivity": [
+    {
+      "seed": 29261053,
+      "action": 62
+    },
+    {
+      "seed": 29271053,
+      "action": 62
+    },
+    {
+      "seed": 29281053,
+      "action": 62
+    },
+    {
+      "seed": 29291053,
+      "action": 62
+    },
+    {
+      "seed": 29301053,
+      "action": 62
+    }
+  ],
+  "sw_search_continuation": {
+    "root_id": "06-0-2",
+    "game_seed": 28267029,
+    "position": {
+      "actor": 1,
+      "digest": "14924771425776615158",
+      "memory": 3,
+      "opponent_board": 0,
+      "opponent_security": 5,
+      "own_board": 0,
+      "own_hand": 6,
+      "own_security": 5,
+      "raising_card": "EX12-043",
+      "raising_level": 4,
+      "raising_stack_size": 3,
+      "turn": 3
+    },
+    "actor": "checkpoint5",
+    "opponent": "checkpoint2",
+    "actor_uses_full_search": true,
+    "opponent_uses_policy_only": true,
+    "same_root_search_exactly_reproduced": true,
+    "seconds": 914.0689488,
+    "branches": [
+      {
+        "first_action": 61,
+        "search_actor": true,
+        "status": "complete",
+        "score": 1.0,
+        "searched_decisions": 38,
+        "executed_actions": 79,
+        "final_digest": "16269518027001164464"
+      },
+      {
+        "first_action": 62,
+        "search_actor": true,
+        "status": "complete",
+        "score": 0.0,
+        "searched_decisions": 31,
+        "executed_actions": 74,
+        "final_digest": "18183636322157575753"
+      }
+    ]
+  },
+  "interpretation": [
+    "Checkpoint5 promotes less often than checkpoint2 on identical states, but forcing all its waits to promotion does not improve net wins against checkpoint2 in this sample.",
+    "Eight checkpoint5 policy waits disagree with search promotion recommendations; one Chronomon root changes losses to wins against checkpoint2 and checkpoint4 under policy continuations.",
+    "The selected SW root is a candidate search/value failure: search waits under five seeds, and a full-search actor continuation wins after promotion but loses after waiting against checkpoint2. One true hidden realization does not prove an engine bug or establish an expected-value failure across hidden worlds.",
+    "No directional opponent-age effect was detected: the estimated change in wait advantage against checkpoint6 versus checkpoint2 is zero, with wide uncertainty.",
+    "Investigate the saved SW search/value counterexample and target-to-policy disagreements before making promotion a rule or changing the opponent pool."
+  ],
+  "limitations": [
+    "Exploratory fixed-pool screen; four roots per archetype do not establish per-deck strength.",
+    "Search is exact-composition open-decklist PIMC, not a closed-decklist test.",
+    "Policy continuation outcomes alone cannot prove a search/value defect: a searched choice may require searched follow-up play.",
+    "No incomplete continuation counts as a draw; source games without a completed result are not sampled.",
+    "One actual hidden-state realization per root; 4-world root search does not make the continuation four independent games.",
+    "Search seed sensitivity and searched continuations target one SW counterexample selected after inspecting the screen; they are exploratory, not independent population estimates.",
+    "These are counterfactual continuations from sampled midgame states, not full-game matchup win rates."
+  ],
+  "raw_artifacts": "runs/raising-counterfactual-20261028 (local, not committed); hashes and compact findings are preserved here.",
+  "model_contract": {
+    "action_schema_version": 2,
+    "action_space_size": 2192,
+    "card_registry_capacity": 20000,
+    "embedding_dim": 16,
+    "feature_schema_version": "standard_lite_v2.4",
+    "observation_profile": "standard_lite_v2",
+    "tensor_layout_hash": "sha256:b7916a3c03487daa53a7dffe87ce2ce44f8c43fa79e208726102f0f3811eee1a",
+    "tensor_size": 9434,
+    "tensor_version": 2,
+    "value_head": "inline",
+    "value_semantics": "terminal_outcome"
+  }
+}

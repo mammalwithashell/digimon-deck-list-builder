@@ -12,9 +12,9 @@
 //! Tests:
 //!   1. Structural: EX11-012 compiles with expected clauses
 //!   2. Clause (b): <Progress> keyword granted
-//!   3. Clause (c) end_of_attack: deletes <=12000 DP opponent; opponent
+//!   3. Clause (c) end_of_attack: deletes <= current DP opponent; opponent
 //!      trash-return + Petrification Token play
-//!   4. Clause (c): does NOT target opponent Digimon with DP > 12000
+//!   4. Clause (c): current-DP boundary with increases, reductions and queued changes
 //!   5. Clause (d): token-delete cancels leave
 //!   6. Clause (d): no token → leave proceeds
 
@@ -323,6 +323,105 @@ fn end_of_attack_does_not_offer_target_with_dp_above_12000() {
         strong_perm.is_some(),
         "STRONG should still be on P1's field"
     );
+}
+
+/// Card-text comparison at resolution (CR 4.3 15-8-3-7), including the
+/// availability gate and the player-visible target mask. No target is immune.
+fn current_dp_targets(end_of_attack: bool, initial_delta: i32, later_delta: i32) {
+    use digimon_engine::action::{build_action_mask, space::encode_attack};
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    use digimon_engine::serialization::to_ui_json;
+
+    let limit = 12000 + initial_delta + later_delta;
+    let mut below = make_test_card("DP-BELOW", "Below limit");
+    below.dp = Some(limit - 1000);
+    let mut equal = make_test_card("DP-EQUAL", "At limit");
+    equal.dp = Some(limit);
+    let mut above = make_test_card("DP-ABOVE", "Above limit");
+    above.dp = Some(limit + 1000);
+    let mut security = make_test_card("DP-SECURITY", "Security body");
+    security.dp = Some(1000);
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX11-012").unwrap()
+        .add_card(below).add_card(equal).add_card(above).add_card(security)
+        .security(1, &["DP-SECURITY"])
+        .memory(20)
+        .start();
+    let medusa = r.place_on_field(0, "EX11-012", None);
+    let low = r.place_on_field(1, "DP-BELOW", None);
+    let exact = r.place_on_field(1, "DP-EQUAL", None);
+    let high = r.place_on_field(1, "DP-ABOVE", None);
+    r.game.modifiers.add(medusa, ModifierEntry::simple(
+        ModifierType::ChangeDp, initial_delta, Expiry::Permanent, 0));
+    if end_of_attack {
+        r.attack_player(medusa, 1, false);
+    } else {
+        fire_when_digivolving_on(&mut r, medusa);
+    }
+    assert!(r.pending_selection().is_some(), "a deletable target must enable the effect");
+    // The effect is triggered, but its deletion body has not activated yet.
+    r.game.modifiers.add(medusa, ModifierEntry::simple(
+        ModifierType::ChangeDp, later_delta, Expiry::Permanent, 0));
+    assert_eq!(r.effective_dp(medusa), Some(limit));
+    r.accept_optional_trigger().expect("activate Medusamon deletion");
+    let selection = r.pending_selection().expect("choose a deletion target");
+    let player = selection.selecting_player;
+    let low_action = encode_attack(0, low.index as u16);
+    let exact_action = encode_attack(0, exact.index as u16);
+    let high_action = encode_attack(0, high.index as u16);
+    assert_eq!(selection.valid_action_ids, vec![low_action, exact_action]);
+    let mask = build_action_mask(&r.game, player);
+    assert_eq!(mask[low_action as usize], 1.0);
+    assert_eq!(mask[exact_action as usize], 1.0);
+    assert_eq!(mask[high_action as usize], 0.0);
+    let mut cloned = r.game.clone();
+    r.execute_action(player, exact_action).expect("delete equal-DP target");
+    cloned.resolve_selection(player, exact_action).expect("delete target in clone");
+    assert_eq!(to_ui_json(&r.game), to_ui_json(&cloned));
+    assert!(trash_has(&r, 1, "DP-EQUAL"));
+    assert!(field_has(&r, 1, "DP-BELOW"));
+    assert!(field_has(&r, 1, "DP-ABOVE"));
+}
+
+#[test]
+fn current_dp_increase_unlocks_targets_above_printed_dp_at_both_timings() {
+    for end_of_attack in [false, true] {
+        current_dp_targets(end_of_attack, 3000, 0);
+    }
+}
+
+#[test]
+fn current_dp_reduction_excludes_targets_below_printed_dp_at_both_timings() {
+    for end_of_attack in [false, true] {
+        current_dp_targets(end_of_attack, -4000, 0);
+    }
+}
+
+#[test]
+fn current_dp_is_read_when_processing_not_when_triggered_at_both_timings() {
+    for end_of_attack in [false, true] {
+        current_dp_targets(end_of_attack, 0, -4000);
+    }
+}
+
+#[test]
+fn current_dp_no_target_is_not_offered_without_any_followup() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    let mut above = make_test_card("DP-ABOVE", "Above current DP");
+    above.dp = Some(9000);
+    let mut r = DebugRunner::builder().dsl_card("EX11-012").unwrap()
+        .add_card(above).memory(20).start();
+    let medusa = r.place_on_field(0, "EX11-012", None);
+    r.place_on_field(1, "DP-ABOVE", None);
+    r.game.modifiers.add(medusa, ModifierEntry::simple(
+        ModifierType::ChangeDp, -4000, Expiry::Permanent, 0));
+    assert_eq!(r.effective_dp(medusa), Some(8000));
+    assert!(r.game.players[1].trash.is_empty());
+    fire_when_digivolving_on(&mut r, medusa);
+    assert!(r.pending_selection().is_none(), "no qualifying target or trash follow-up");
+    assert!(field_has(&r, 1, "DP-ABOVE"));
 }
 
 // ─── 5. Clause (d): token-delete cancels leave ───────────────────────────────

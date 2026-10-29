@@ -17,5 +17,6 @@
 
 pub mod driver;
 pub mod npy;
+pub mod opponents;
 
-pub use driver::{run_self_play, SelfPlayConfig, SelfPlayStats};
+pub use driver::{run_self_play, run_self_play_with_opponents, SelfPlayConfig, SelfPlayStats};

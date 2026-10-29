@@ -268,3 +268,54 @@ def test_loader_requires_terminal_semantics_and_completion_flags(tmp_path):
     path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="terminal_outcome"):
         load_shards([directory])
+
+
+def test_shards_without_policy_weight_are_full_searches(tmp_path):
+    directory = _write_shard_dir(tmp_path / "data", rows=4, seed=0)
+    ds = load_shards([directory])
+    assert ds.policy_weight.shape == (4,)
+    assert np.all(ds.policy_weight == 1.0)
+
+
+def test_policy_weight_is_loaded_filtered_and_validated(tmp_path):
+    a = _write_shard_dir(tmp_path / "a", rows=6, seed=0)
+    b = _write_shard_dir(tmp_path / "b", rows=4, seed=1)
+    np.save(a / "shard-000/policy_weight.npy", np.array([1, 0, 1, 0, 1, 0], np.float32))
+    # b keeps no policy_weight array: every row is a full search.
+    ds = load_shards([a, b])
+    assert ds.policy_weight.tolist() == [1, 0, 1, 0, 1, 0, 1, 1, 1, 1]
+
+    # Game exclusions (two rows per game) filter the weights alongside rows.
+    _exclude_games(a, [1])
+    ds = load_shards([a, b])
+    assert len(ds) == 8
+    assert ds.policy_weight.tolist() == [1, 0, 1, 0, 1, 1, 1, 1]
+
+    np.save(a / "shard-000/policy_weight.npy", np.array([1, 0, 1], np.float32))
+    with pytest.raises(ValueError, match="policy_weight"):
+        load_shards([a])
+    np.save(a / "shard-000/policy_weight.npy", np.array([1, -1, 1, 0, 1, 0], np.float32))
+    with pytest.raises(ValueError, match="policy_weight"):
+        load_shards([a])
+
+
+def test_cheap_rows_train_the_value_head_but_not_the_policy(tmp_path):
+    """Rows with policy_weight 0 must leave the actor untouched while the
+    critic still learns from them."""
+    shard_dir = _write_shard_dir(tmp_path / "gen0", rows=32, seed=2)
+    np.save(shard_dir / "shard-000/policy_weight.npy", np.zeros(32, np.float32))
+    model = MaskablePPO("MlpPolicy", _TinyEnv(), n_steps=8, batch_size=8, verbose=0, seed=0, device="cpu")
+    model.digimon_contract = _contract()
+    init = tmp_path / "init.zip"
+    model.save(str(init))
+    with pytest.raises(ValueError, match="policy-target rows"):
+        train(init, [shard_dir], tmp_path / "out.zip", epochs=1, batch_size=8, lr=1e-2, device="cpu")
+
+    # Half the rows are cheap: the policy still moves toward the targets on
+    # the weighted rows and the value head fits every row.
+    np.save(shard_dir / "shard-000/policy_weight.npy",
+            np.tile(np.array([1, 0], np.float32), 16))
+    summary = train(init, [shard_dir], tmp_path / "out.zip", epochs=6, batch_size=8, lr=1e-2, device="cpu")
+    history = summary["epochs"]
+    assert history[-1]["policy_loss"] < history[0]["policy_loss"]
+    assert history[-1]["value_loss"] < history[0]["value_loss"]

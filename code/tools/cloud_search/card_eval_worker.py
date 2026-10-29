@@ -101,6 +101,8 @@ def record_result(state, checkpoint, reason, result):
 
 
 def evaluate_window(root, out, checkpoint, window, reason, args):
+    from data_paths import CARDS_JSON
+
     folder = out / f"window-{window:06d}"
     folder.mkdir(parents=True, exist_ok=False)
     frozen = folder / "candidate.zip"
@@ -115,6 +117,7 @@ def evaluate_window(root, out, checkpoint, window, reason, args):
         trigger=reason, frozen_during_collection=True, training_algorithm="search_selfplay",
         comparison="fixed seeds and deck snapshots; repeated same-hash windows are not independent samples")
     context['engine_image'] = os.environ.get('DIGIMON_DEPLOYED_IMAGE') or read_json(root / 'deployment-plan.json').get('image')
+    context['runtime_cards_sha256'] = sha256(CARDS_JSON)
     atomic_json(folder / "context.json", context)
     failures = []
     for panel, snapshot in args.panels:

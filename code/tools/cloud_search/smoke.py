@@ -12,9 +12,32 @@ from digimon_gym.agents.gauntlet import require_mechanics_ready, validate_admiss
 from model_contract import current_contract
 
 
+def check_deletion_payment_replay(root):
+    """The shipping wheel must clear the exact failed payment boundary."""
+    fixture = root / "code/digimon-engine/tests/fixtures/training/medusamon-immune-token-payment.json"
+    recording = json.loads(fixture.read_text(encoding="utf-8"))
+    replay = digimon_engine.RustReplayRunner(json.dumps(recording), verify=True)
+    for row in recording["actions"]:
+        if row["phase"] == "Mulligan":
+            continue
+        result = replay.step()
+        if row["step"] == 93:
+            state = result["state"]
+            assert all(p["topCardId"] != "EX11-012" for p in state["player1"]["battleArea"]), \
+                "Unpayable token deletion must not protect Medusamon"
+            assert any(p["topCardId"] == "TOKEN_PETRIFICATION" for p in state["player2"]["battleArea"]), \
+                "The immune token must remain in play"
+            pending = state.get("pendingSelection") or {}
+            assert "Delete 1 Token" not in pending.get("prompt", ""), "Impossible payment prompt reappeared"
+            return
+        assert not result["divergences"], f"Replay diverged before payment boundary: {row['step']}"
+    raise AssertionError("Missing recorded payment boundary")
+
+
 def main():
     require_mechanics_ready()
     root = Path(__file__).resolve().parents[3]
+    check_deletion_payment_replay(root)
     cards = root / "data/cards.json"
     native = set(json.loads(subprocess.check_output([
         "digimon-engine-cli", "--cards-json", str(cards), "pool"], text=True)))
@@ -65,7 +88,7 @@ def main():
         manifest = json.loads((output / "manifest.json").read_text())
         assert manifest["games"] == 2 and manifest["rows"] > 0
         assert manifest["model_contract"] == contract
-    print("SEARCH_CPU_IMAGE_OK: imports, compiled registry parity, admission, native shards")
+    print("SEARCH_CPU_IMAGE_OK: imports, deletion-payment replay, compiled registry parity, admission, native shards")
 
 
 if __name__ == "__main__":

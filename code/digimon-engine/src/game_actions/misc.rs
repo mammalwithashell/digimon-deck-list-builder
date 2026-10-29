@@ -1560,6 +1560,11 @@ impl Game {
         card: CardSource,
         position: crate::enums::StackPosition,
     ) {
+        // A token's return is processed, but it is never added (§4-21-5,
+        // §15-1-10). Do not open an add-to-deck observer batch or consume RNG.
+        if card.is_token {
+            return;
+        }
         if card.card_kind(&self.card_data) == CardKind::DigiEgg {
             let owner = card.owner;
             self.insert_cards_into_egg_deck(owner, vec![card], position);
@@ -1597,6 +1602,7 @@ impl Game {
         // their physical owner's Digi-Egg deck at the specified position (3-1-3-9-1).
         let (eggs, stack): (Vec<_>, Vec<_>) = stack
             .into_iter()
+            .filter(|card| !card.is_token)
             .partition(|card| card.card_kind(&self.card_data) == CardKind::DigiEgg);
         for owner in 0..self.players.len() {
             let owned = eggs
@@ -1611,6 +1617,8 @@ impl Game {
         // G-ENGINE-ON-ADD-TO-DECK: an effect-driven deck add opens the batch.
         if !stack.is_empty() {
             self.note_effect_deck_add_if_resolving();
+        } else {
+            return;
         }
         match position {
             crate::enums::StackPosition::Top => {

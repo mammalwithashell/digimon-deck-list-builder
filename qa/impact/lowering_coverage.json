@@ -78346,7 +78346,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2141,
+  "behavioural_tests": 2150,
   "cards": {
    "behaviourally_covered": 1127,
    "lowering_covered": 1146,
@@ -78415,6 +78415,7 @@
    "src/dsl_cards/step/as_selecting_player.rs",
    "src/dsl_cards/step/combat.rs",
    "src/dsl_cards/step/control_flow.rs",
+   "src/dsl_cards/step/deletion_payment.rs",
    "src/dsl_cards/step/deletion_results.rs",
    "src/dsl_cards/step/digixros_transaction.rs",
    "src/dsl_cards/step/dna_digivolve.rs",
@@ -78504,8 +78505,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 390,
-  "scanned_tests": 2545,
+  "scanned_files": 392,
+  "scanned_tests": 2554,
   "top_untested": [
    {
     "cards_blocked": 3,

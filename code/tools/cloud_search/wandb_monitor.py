@@ -128,6 +128,15 @@ def collect(root, now):
     coverage = read_json(gen_dir / 'archetype_coverage.json') or {}
     for name, count in coverage.get('appearances', {}).items():
         metrics[f'selfplay/archetype_appearances/{name}'] = count
+    opponents = read_json(gen_dir / 'opponent_coverage.json') or {}
+    for name, count in opponents.get('games_by_opponent', {}).items():
+        metrics[f'selfplay/opponent_games/{name}'] = count
+    for name, count in opponents.get('learner_appearances', {}).items():
+        metrics[f'selfplay/learner_archetype_appearances/{name}'] = count
+    for order, count in opponents.get('historical_learner_opening_order', {}).items():
+        metrics[f'selfplay/historical_learner_{order}'] = count
+    if opponents:
+        metrics['selfplay/learner_training_rows'] = opponents['training_rows']
     replay = read_json(gen_dir / 'replay_selection.json') or {}
     for source in replay.get('generations', []):
         metrics[f'replay/generation_{source["generation"]}_games_before_quarantine'] = source['games_before_quarantine']
@@ -176,12 +185,28 @@ def epoch_events(root, log_path):
 def wandb_config(root):
     plan = read_json(root / "deployment-plan.json") or {}
     pool = read_json(root / "inputs/pool_report.json") or {}
-    return {"generation": plan.get("generation"), "archetypes": pool.get("archetypes"),
-        "distinct_training_lists": pool.get("distinct_training_lists"), "image": plan.get("image"),
-        "image_source_commit": plan.get("image_source_commit"), "controller_commit": plan.get("controller_commit"),
-        "input_hashes": plan.get("inputs"), "ci_run": plan.get("ci_run"),
+    denominators = plan.get("pool_denominators", {})
+    training = denominators.get("training", {})
+    return {"generation": plan.get("generation") or {
+            key: plan.get(key) for key in ("generations", "games", "workers")},
+        "archetypes": pool.get("archetypes") or sorted(training.get("slots_by_archetype", {})),
+        "distinct_training_lists": pool.get("distinct_training_lists", training.get("distinct_lists")),
+        "image": plan.get("image"),
+        "image_source_commit": plan.get("image_source_commit", plan.get("controller_commit")),
+        "controller_commit": plan.get("controller_commit"),
+        "input_hashes": plan.get("files", plan.get("inputs")), "ci_run": plan.get("ci_run"),
         "bootstrap_arm": plan.get("bootstrap_arm"), "seed_comparison": plan.get("comparison"),
-        "evaluation_scope": "meta budget-validation panel and same-list pet panel; no independent promotion",
+        "evaluation_scope": ("Versioned panels; consult pool_denominators for same-list and held-out coverage"
+            if denominators else "meta budget-validation panel and same-list pet panel; no independent promotion"),
+        "pool_denominators": denominators, "evaluation_panels": plan.get("evaluation_panels"),
+        "evaluation_protocol": plan.get("evaluation_protocol"), "games_per_evaluation": plan.get("games_per_evaluation"),
+        "parent_run": plan.get("parent_run"), "parent_checkpoint": plan.get("parent_checkpoint"),
+        "parent_checkpoint_sha256": plan.get("parent_checkpoint_sha256"),
+        "recovery": {key: plan.get(key) for key in (
+            "baseline_checkpoint", "first_generation", "final_generation", "remaining_generations",
+            "inherited_collection", "source_image", "source_plan_sha256")},
+        "fresh_replay": plan.get("fresh_replay"), "replay_window": plan.get("replay_window"),
+        "search": plan.get("search"),
         "throughput_scope": "saved training positions; diagnostics logged separately",
         "automatic_promotion": False}
 

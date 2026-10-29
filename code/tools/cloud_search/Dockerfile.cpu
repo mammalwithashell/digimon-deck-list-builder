@@ -8,8 +8,10 @@ COPY code/ code/
 COPY data/ data/
 ENV CARGO_BUILD_JOBS=4
 RUN cargo build --locked --release -p digimon-engine-cli
+RUN cargo build --locked --release -p digimon-engine --example search_quality
 RUN maturin build --locked --release --manifest-path code/digimon-engine-py/Cargo.toml --out /wheels
 RUN mkdir /native && cp target/release/digimon-engine-cli /native/ && find target/release -name 'libonnxruntime.so*' -exec cp -L {} /native/ \;
+RUN cp target/release/examples/search_quality /native/digimon-search-quality
 
 FROM python:3.11-slim AS runtime
 WORKDIR /app

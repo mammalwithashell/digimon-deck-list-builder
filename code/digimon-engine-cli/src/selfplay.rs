@@ -14,9 +14,11 @@ use std::process::ExitCode;
 use digimon_engine::card_data::CardData;
 use digimon_engine::inference::BatchedPolicyValueEvaluator;
 use digimon_engine::search::{
-    DeterminizationMode, DeterminizedConfig, MemoizedEvaluator, PolicyValueFn, UniformEvaluator,
+    DeterminizationMode, DeterminizedConfig, MemoizedEvaluator, PolicyValueFn,
+    UniformEvaluator,
 };
-use digimon_engine::selfplay::{run_self_play, SelfPlayConfig};
+use digimon_engine::selfplay::opponents::{HistoricalOpponents, OpponentManifest};
+use digimon_engine::selfplay::{run_self_play_with_opponents, SelfPlayConfig};
 
 use crate::winprob::resolve_profile;
 
@@ -78,6 +80,7 @@ fn load_deck_pool(path: &std::path::Path) -> Result<(Vec<Vec<String>>, Vec<Strin
 #[allow(clippy::too_many_arguments)]
 pub fn run(
     model: Option<PathBuf>,
+    opponent_pool: Option<PathBuf>,
     uniform: bool,
     decks_path: PathBuf,
     games: u32,
@@ -91,12 +94,27 @@ pub fn run(
     temperature_decisions: u32,
     decision_cap: u32,
     shard_rows: usize,
+    reduced_sims: Option<u32>,
+    full_search_fraction: f32,
+    cheap_sims: u32,
     tensor_profile: Option<String>,
     card_data: HashMap<String, CardData>,
     admission_dir: PathBuf,
 ) -> ExitCode {
     if eval_batch_size == 0 {
         eprintln!("--eval-batch-size must be positive");
+        return ExitCode::from(2);
+    }
+    if !(0.0..=1.0).contains(&full_search_fraction) {
+        eprintln!("--full-search-fraction must lie in [0, 1]");
+        return ExitCode::from(2);
+    }
+    if full_search_fraction < 1.0 && cheap_sims == 0 {
+        eprintln!("--cheap-sims must be positive when --full-search-fraction < 1");
+        return ExitCode::from(2);
+    }
+    if reduced_sims == Some(0) {
+        eprintln!("--reduced-sims must be positive");
         return ExitCode::from(2);
     }
     // Opt in for a frozen deterministic MLP only. This never caches engine
@@ -208,6 +226,9 @@ pub fn run(
         decision_cap,
         shard_rows,
         evaluation_batch_size: eval_batch_size,
+        reduced_simulations: reduced_sims,
+        full_search_fraction,
+        cheap_simulations: cheap_sims,
         search: DeterminizedConfig::default(),
     };
     config.search.mode = mode;
@@ -215,6 +236,60 @@ pub fn run(
     config.search.search.simulations = sims;
     config.search.search.observation_profile = profile;
     let active_cache_entries = if uniform { 0 } else { cache_entries };
+    let mut opponents = match opponent_pool {
+        None => None,
+        Some(path) => {
+            let loaded = (|| -> Result<HistoricalOpponents, String> {
+                let current = model.as_ref().ok_or("--opponent-pool requires --model")?;
+                let manifest = OpponentManifest::load(&path, current)?;
+                let expected = serde_json::to_value(
+                    digimon_engine::inference::contract::ModelContract::for_profile(
+                        &digimon_engine::observation::observation_layout(profile),
+                    ),
+                )
+                .unwrap();
+                let mut evaluators: Vec<Box<dyn PolicyValueFn>> = Vec::new();
+                for entry in &manifest.opponents {
+                    let meta: serde_json::Value = serde_json::from_slice(
+                        &std::fs::read(format!("{}.meta.json", entry.path.display()))
+                            .map_err(|e| e.to_string())?,
+                    )
+                    .map_err(|e| e.to_string())?;
+                    if expected
+                        .as_object()
+                        .unwrap()
+                        .iter()
+                        .any(|(k, v)| meta.get(k) != Some(v))
+                        || meta["value_semantics"] != "terminal_outcome"
+                    {
+                        return Err(format!(
+                            "opponent {} sidecar contract/value mismatch",
+                            entry.id
+                        ));
+                    }
+                    let e = BatchedPolicyValueEvaluator::load_for_profile(&entry.path, profile)
+                        .map_err(|e| format!("opponent {}: {e}", entry.id))?;
+                    e.require_terminal_value().map_err(|e| e.to_string())?;
+                    evaluators.push(if cache_entries == 0 {
+                        Box::new(e)
+                    } else {
+                        Box::new(MemoizedEvaluator::new(e, cache_entries))
+                    });
+                }
+                Ok(HistoricalOpponents {
+                    manifest,
+                    evaluators,
+                })
+            })();
+            match loaded {
+                Ok(pool) => Some(pool),
+                Err(e) => {
+                    eprintln!("historical opponent pool rejected: {e}");
+                    return ExitCode::from(2);
+                }
+            }
+        }
+    };
 
     eprintln!(
         "selfplay: {} games, {} decks, mode {:?}, {} worlds x {} total sims, profile {}, evaluator {}",
@@ -226,12 +301,22 @@ pub fn run(
         profile.as_str(),
         model_desc
     );
+    match reduced_sims {
+        Some(reduced) => eprintln!("phase budget: Main roots {sims} sims, other roots {reduced} sims"),
+        None => eprintln!("phase budget: every root {sims} sims"),
+    }
+    if full_search_fraction < 1.0 {
+        eprintln!(
+            "playout-cap randomization: full search with probability {full_search_fraction}, \
+             else {cheap_sims} noise-free sims recorded with policy_weight 0"
+        );
+    }
     eprintln!("exact-input evaluator cache: {active_cache_entries} entries");
     eprintln!(
         "independent-world evaluation batch size: {eval_batch_size} (IS-MCTS remains serial)"
     );
 
-    match run_self_play(
+    match run_self_play_with_opponents(
         &card_data,
         &decks,
         &deck_names,
@@ -239,6 +324,7 @@ pub fn run(
         &config,
         &out,
         &model_desc,
+        opponents.as_mut(),
     ) {
         Ok(stats) => {
             let path = out.join("manifest.json");

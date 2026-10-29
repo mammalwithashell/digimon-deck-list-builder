@@ -5642,6 +5642,7 @@ no dedicated clause test in `dna_result_new_card.rs`.
 
 ### An unpayable optional processing condition is still offered, and accepting it runs the effect for free  [G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED] — RESOLVED (2026-10-17, 82a2bf29c)
 
+- **Deletion-payment follow-up (2026-10-27):** selected `delete_permanent` followed by `cancel_replacement` now uses the existing exact physical deletion receipt before preventing the original departure. The shared selection/preflight path rejects effect immunity and passive deletion restrictions only for this payment shape; ordinary effect targets remain selectable. Printed extrema are computed first, so an immune lowest-DP Digimon does not make a higher-DP one payable. Optional prevention and redirection remain executable attempts, but neither an undeleted payer nor a deleted substitute pays the condition. Regressions in `tests/replacements/deletion_payment.rs` cover EX11-012 Medusamon, BT24-018 Styracomon, clone continuations, controller attribution, and the unchanged seed-44524201 diagnostic recording through action 93. This closes the observed zero-DP Medusamon/immune Petrification Token loop; non-deletion replacement costs keep their existing handling.
 - **Rule:** §15-7-4 (Ver. 4.3, **reversed** from 3.6) "If executing an optional processing condition's contents isn't possible, then the player can't choose to execute them. (Example: … "[When Attacking] By trashing your top security card, 1 of your opponent's Digimon gets -5000 DP for the turn," and the player doesn't have even 1 security card, then they can't choose to execute that condition's contents.)" §15-8-4-4-1: an activation-type effect with an optional processing condition can only be declared while the condition can be performed. §15-7-2: if the condition isn't executed, nothing after it is. Owner ruling 2026-10-10 #6: never offer a trigger whose condition can't be paid. Ver. 3.6 let the player choose the unpayable condition; the engine still behaves that way.
 - **Ours:** a printed "by X, Y" clause is `optional: true` with X as its leading steps; nothing marks X as the condition, so neither the prompt nor the mask asks whether X can be executed.
   - Trigger-type: `code/digimon-engine/src/effect_queue.rs` drain, single-trigger branch — `needs_pre_cost_prompt` (`:1577`) checks only `activation_cost_fn.is_some()` + the clause condition (not `ActivationCostKind::is_payable`), and the outer accept/decline prompt (`:1649` → `queued_effect_wants_outer_optional_prompt`, `:4692`) consults `outer_optional_guard`, which `dsl_cards/lower_triggered.rs::first_step_candidate_guard` (`:664`) builds only for a leading select step (`_ => None` at `:722` for `trash_top_security`, memory payment, `suspend`, …). Observed (`WA_TRASH_SEC_MINUS5000`, 0 security): the `Replacement` "You may activate …" prompt is parked; accepting trashes nothing, then the -5000 DP target pick follows and the payload resolves (the 7000 DP defender loses the battle it should have won).
@@ -6707,3 +6708,70 @@ digivolve-keyed `when_any_ally_digivolves_into` is unchanged). Every
 `when_any_ally_played` card in the pool prints a play/use reducer, so none relied
 on the old behaviour. Tests: `cards_behavioral` `st20_12_reduction_not_on_digivolve`
 (+ ST21-12 / ST20-13 copies).
+
+## Token returned to hand is offered as a play the engine refuses [G-ENGINE-TOKEN-RETURNED-TO-HAND] — OPEN (2026-10-27)
+
+Found by the seat-balanced head-to-head panels of the cap-randomization
+generation experiment (`code/tools/policy_head_to_head.py`, seed 54207751,
+Toho Braves (P1) vs SW (P2), both the parent and the `full` child as P2 hit it
+on turn 13). Repro: `qa/engine-faults/2026-10-27-token-in-hand/recording.json`
+(`DigimonEnv.get_recording()` format, 286 actions; `context.json` has decks and
+seed). View the state with
+`digimon-engine-cli --pool implemented --cards-json data/cards.json replay <rec> --step 278 --show hand --player 1`.
+
+Symptom: P2's hand holds `TOKEN_KOTENKEN` (Kotenken Token, play cost 0) at
+hand index 9; `--show actions --player 1` lists "Play Kotenken Token from hand
+9" as legal, and `Game::step` refuses it with no state change, so the policy
+re-picks it until the no-op tripwire (`NoOpLoopError`, 8 repeats) ends the
+game. Board at that point: P1 Kaguyamon (EX12-065, suspended, attacked this
+turn), MarineBullmon; P2 Kunlun (BT26-104), Saneiketsu Invitation (EX12-071)
+as a placed option.
+
+Two defects, either of which would close the loop:
+
+1. **A token reached a hand.** CR 4.3 4-21-5: when a token leaves the field it is removed from
+   the game; it never enters hand, deck, trash or security. Some return-to-hand/bounce path (candidates on this board:
+   Kaguyamon EX12-065, Saneiketsu Invitation EX12-071, MarineBullmon) moved the
+   token card object into P2's hand instead of discarding it. The zone-move
+   facade for bounce should drop tokens (`is_token`) rather than append them.
+2. **Mask/execution mismatch.** The action mask treated the hand entry as a
+   playable 0-cost Digimon while play execution refused it. Whatever rule
+   execution applies (token card data not playable from hand) must be applied
+   by the mask too; rule 3 forbids the agent side from papering over this.
+
+Not scored in the experiment (`--on-engine-error skip` records the game as
+`incomplete`). No other engine fault appeared in 19,000 panel games.
+
+## Medusamon's leave-replacement offers an unaffectable token and refuses the pick [G-ENGINE-REPLACEMENT-PICK-UNAFFECTABLE-TOKEN] — OPEN (2026-10-28)
+
+Found by the phase-budget generation panels (`policy_head_to_head.py`, seed
+54204079, Chronicle (P1) vs Medusamon (P2), turn 9). Repro:
+`qa/engine-faults/2026-10-28-attack-noop-pending-selection/recording.json`
+(300 actions; `context.json` has decks + seed). View with
+`digimon-engine-cli --pool implemented --cards-json data/cards.json replay <rec> --step 291 --show pending --player 1`.
+
+Symptom: Medusamon (EX11-012)'s `when_would_leave_battle_area` replacement
+("by deleting 1 Token, this Digimon doesn't leave") installs an optional
+`AnyField` selection for P2 with two options, action ids 102 and 104 — the
+two Petrification Tokens Medusamon had gifted to P1's field (P1s2 and P1s4).
+P1s2 carries a `CannotBeAffected` modifier (Chronicle board: Kota Domoto &
+Yuji Musya, Kota Domoto, Alphamon: Ouryuken). The policy picks 102; `Game`
+applies it with **no state change** — the selection stays pending with the same
+options — and after 8 repeats the no-op tripwire (`NoOpLoopError`) ends the
+game. The action list at that step still shows 102 as a legal `selection`.
+
+Reading: the `select_any_permanent` step builds its options from the
+`{ kind: token }` filter alone, while resolution (or the following
+`delete_permanent` / `cancel_replacement`) refuses the unaffectable token and
+leaves the prompt open instead of consuming the pick. Compare the per-colour
+delete terminal in `dsl_cards/step/selections.rs` (`run_per_color_delete_terminal`),
+which under CR 4.3 §15-15-5-1/-3 lets an unaffectable permanent be *picked*
+and then simply does not delete it. Either rule is acceptable, but mask and
+execution must agree: (a) exclude unaffectable permanents from the option set,
+or (b) accept the pick, apply no deletion, and resolve the selection (in which
+case the replacement cost was not paid, so Medusamon must still leave). (b)
+matches the §15-15-5 pattern already used for deletes. Rule 3 forbids an
+agent-side workaround.
+
+Not scored in the experiment (`incomplete`). Hypothesis on the cause is from
+the recording and the YAML, not yet confirmed in the resolver.

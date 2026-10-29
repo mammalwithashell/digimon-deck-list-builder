@@ -45,19 +45,27 @@ fn legal(mask: &[f32]) -> Vec<u16> {
         .collect()
 }
 fn choose(result: &SearchResult) -> u16 {
-    // First-max in original mask order, matching the native driver.
-    let mut best = (0, result.root_visits[0].0);
-    for &(a, v) in &result.root_visits {
-        if v > best.0 {
-            best = (v, a);
-        }
-    }
-    best.1
+    result.best_plan().expect("search must have a legal plan")[0]
 }
-fn config(v: &Value, seed: u64, noise: f32) -> DeterminizedConfig {
+/// Whether `game` sits at an unconstrained Main-phase root (the driver's
+/// phase-budget rule): no pending selection, no mulligan, Main phase.
+fn main_root(game: &Game) -> bool {
+    game.pending_selection.is_none()
+        && game.mulligan_current_player().is_none()
+        && game.current_phase == digimon_engine::enums::GamePhase::Main
+}
+/// Search settings from a request object. Beyond `simulations`/`worlds`,
+/// the search-budget experiments add optional `reduced_simulations` (the
+/// budget for non-Main roots, applied when `main_root` is false).
+fn config(v: &Value, seed: u64, noise: f32, main_root: bool) -> DeterminizedConfig {
     let mut c = DeterminizedConfig::default();
     c.worlds = number(v, "worlds") as u32;
     c.search.simulations = number(v, "simulations") as u32;
+    if !main_root {
+        if let Some(reduced) = v["reduced_simulations"].as_u64() {
+            c.search.simulations = c.search.simulations.min(reduced as u32);
+        }
+    }
     c.search.seed = seed;
     c.search.dirichlet_epsilon = noise;
     c.search.observation_profile = PROFILE;
@@ -211,11 +219,7 @@ fn run() {
             )
             .unwrap();
             let seed = number(&request, "seed");
-            let c = config(
-                &request["config"],
-                seed,
-                request["noise"].as_f64().unwrap_or(0.) as f32,
-            );
+            let noise = request["noise"].as_f64().unwrap_or(0.) as f32;
             let mut rows = Vec::new();
             for node in corpus["nodes"].as_array().unwrap() {
                 let game = replay(&data, &decks_for(&plan, node), node);
@@ -225,12 +229,30 @@ fn run() {
                     legal(&mask),
                     serde_json::from_value::<Vec<u16>>(node["legal_actions"].clone()).unwrap()
                 );
+                // Per node: a `reduced_simulations` setting applies to
+                // non-Main roots only, so the effective budget is root-specific.
+                let c = config(&request["config"], seed, noise, main_root(&game));
                 let before = Instant::now();
                 let result =
                     determinized_search_batched(&registry, &game, pid, &mut evaluator, &c, 4);
                 assert_eq!(result.simulations_run, c.search.simulations);
+                let selected_plan = result.best_plan().unwrap().to_vec();
+                let after_plan = if request["verify_plan"].as_bool().unwrap_or(false) {
+                    let mut copy = game.clone();
+                    for &action in &selected_plan {
+                        assert_eq!(decision_player(&copy), pid);
+                        assert!(build_action_mask(&copy, pid)[action as usize] > 0.5);
+                        copy.decode_action(action, pid);
+                    }
+                    Some(json!({"phase":format!("{:?}",copy.current_phase),
+                        "prompt":copy.pending_selection.as_ref().map(|s| &s.prompt),
+                        "card_prompt":copy.pending_selection.as_ref().and_then(|s| s.card_choice.as_ref()).map(|o| o.token().prompt_id)}))
+                } else {
+                    None
+                };
                 rows.push(json!({"node":node["id"],"archetype":node["archetype"],"action":choose(&result),
                     "visits":result.root_visits,"q":result.root_q,"value":result.root_value,
+                    "selected_plan":selected_plan,"plans":result.root_plans,"after_plan":after_plan,
                     "seconds":before.elapsed().as_secs_f64(),"simulations_run":result.simulations_run}));
                 write(
                     &out.with_extension("progress.json"),
@@ -263,6 +285,7 @@ fn run() {
                 if collect_metrics {
                     game.drain_events();
                 }
+                let mut pending_route = std::collections::VecDeque::<u16>::new();
                 while !game.game_over && decisions < number(&plan, "decision_cap") {
                     let pid = decision_player(&game);
                     let phase = format!("{:?}", game.current_phase);
@@ -276,6 +299,8 @@ fn run() {
                             .as_u64()
                             .expect("replay exhausted before terminal")
                             as u16
+                    } else if let Some(action) = pending_route.pop_front() {
+                        action
                     } else if valid.len() == 1 {
                         valid[0]
                     } else {
@@ -292,6 +317,7 @@ fn run() {
                                     settings,
                                     seed_for(number(&request, "search_seed"), decisions, pid),
                                     0.,
+                                    main_root(&game),
                                 );
                                 let result = determinized_search_batched(
                                     &registry,
@@ -302,7 +328,8 @@ fn run() {
                                     4,
                                 );
                                 searched += 1;
-                                choose(&result)
+                                pending_route.extend(result.best_plan().unwrap().iter().copied());
+                                pending_route.pop_front().unwrap()
                             }
                             other => panic!("unknown policy {other}"),
                         }

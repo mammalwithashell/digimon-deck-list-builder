@@ -179,9 +179,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         CompiledStep::ReturnToHand { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
-                if let Some(card) = ctx.return_to_hand(h) {
-                    bindings.record_returned_card(card);
-                    bindings.record_added_to_hand(card);
+                if let Some(result) = ctx.return_to_hand_with_receipt(h) {
+                    bindings.record_returned_card(result.card);
+                    if result.added_to_hand {
+                        bindings.record_added_to_hand(result.card);
+                    }
                 }
             }
             true

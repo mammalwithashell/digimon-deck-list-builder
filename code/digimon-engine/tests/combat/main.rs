@@ -13,6 +13,7 @@ mod effect_battle;
 mod effect_granted_attack;
 mod end_of_attack_drain;
 mod end_of_turn_keyword_pool;
+mod end_of_turn_target_kind;
 mod force_attack_mask;
 mod group6_keywords;
 mod group6_overclock;
