@@ -66,3 +66,7 @@ stronger policies or low exploitability.
 - [x] 7.3 Rerun all 21 distinct EX13 training-list probes across three seeds and the frozen held-out, validation and pet partitions; retain every failure/truncation and qualify observed continuation forms before broader training.
 - [ ] 7.4 Freeze a broader multi-seed protocol using the existing cloud partitions and runbook budgets, execute local comparison/exploiters, and report model promotion separately from software merge readiness.
 - [x] 7.5 Rerun applicable verification and update documentation/evidence with explicit merge and model-promotion status.
+
+The full comparison for 7.4 launched on existing local hardware at 2026-10-29
+18:42 UTC. See `cloud-search-qualification.md` and the portable launch receipt;
+the task stays open until results and promotion reporting are complete.

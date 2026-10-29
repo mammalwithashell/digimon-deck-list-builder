@@ -101,7 +101,11 @@ confidence certificate or a formal exploitability bound.
 The experiment directory is
 `D:/cargo-target-wt/closed-deck-belief-training/ex13-full-comparison-20261029/`.
 Its source archive and native runtime are frozen separately from the editable
-worktree. The launch receipt records the actual process and input identities.
+worktree. The [launch receipt](evidence/cloud-qualification/launch.json) records
+the actual process and input identities. The full comparison launched locally
+at 2026-10-29 18:42 UTC from source commit `26bfc3f79`, with eight workers.
+All 23,020 frozen source files and the copied runtime were hash-verified before
+launch. This is a multi-day run; its launch receipt is not a completion result.
 Broad comparison task 7.4 remains open until the run and its evidence reporting
 complete; merge qualification is held pending that evidence and CI. No held-out
 win rates were used to tune policies or budgets while correcting engine behavior.
