@@ -24,6 +24,8 @@ Introduce a viewer-scoped knowledge input: own list/hand, public zone state and 
 
 Track current locations of known cards and invalidate positional knowledge on shuffle or hidden randomization. Moving a public card back to hand preserves the identity fact when rules allow tracking it, but not an unknowable slot. Repeated observation of the same recycled card is not evidence of another physical copy. Distinguish current public accounting from historical sightings. Each seat owns its private knowledge; self-play driver omniscience is not shared between seats. Snapshot/resume retains knowledge deterministically. Legacy replays without sufficient history are marked degraded, never reconstructed using hidden truth.
 
+Knowledge schema 2 also separates anonymous physical movement references from observed identities. A concealed security-to-deck-bottom move has a public destination, but neither player learns its printed identity merely from the engine's native handle. Sample that identity at the retained destination; preserve the reference through subsequent determined movements. For the owner, sample from the entitled unseen deck/security joint multiset and replace unobserved native aliases. For the opponent, use the hypothesis pool. Reserve exact positions before membership-only observations. Cached printed-card metadata still requires an identified source; a sampleable anonymous event reference does not authorize copying identity-derived caches. Concealed in-flight security destinations without a complete allocator remain explicit unsupported states.
+
 ### 3. Start with a weighted legal candidate mixture and a constrained fallback
 
 Freeze a training prior snapshot with card population, candidate list hashes, weights, legality region/date/format, restriction revision, and source provenance. Initial weights describe the declared population, not inferred certainty. Deduplicate lists and avoid weighting one list repeatedly merely because several sources copied it. Filter candidates through existing deck legality, including default and card-specific copy limits, restrictions and combinations, eggs, deck size, and implemented-pool admission. An unsatisfiable format/pool is a configuration error, not permission to relax constraints.
@@ -68,6 +70,19 @@ Train fresh equal-budget exploiters against frozen candidates and baselines, usi
 5. Run the preregistered held-out and exploiter comparison; promote only if gates pass.
 
 Rollback selects explicit open mode and its compatible artifacts. Never reinterpret closed-mode shards as exact or vice versa. This proposal itself changes no runtime behavior.
+
+## Event-context liveness
+
+Broad-cohort continuation support also requires event-context liveness. A queued
+security-removal observer can outlive the membership of an anonymous card added
+to hand. The DSL compiler certifies a deliberately small set of clauses whose
+gates, selections and bodies do not read event-card identity; unaudited forms
+and raw Rust default to strict. Hypothetical worlds may omit only unused
+unresolved event-card references in queued and parked optional-trigger contexts,
+including unused attribution and moved-card payloads. They retain timing,
+owner/cause scalars and entitled references, preserve the source game and reject
+unresolved cached identity snapshots. Tests cover source-composition changes, actual continuation
+choices and rejection of identity-dependent gates/bindings.
 
 ## Open Questions
 

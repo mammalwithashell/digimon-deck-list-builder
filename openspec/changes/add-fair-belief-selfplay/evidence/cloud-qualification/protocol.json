@@ -1,0 +1,73 @@
+{
+  "schema": "fair-belief-protocol-v1",
+  "population_hash": "8229966198628fb9eae49f2a5b96ca3d2c669a2eda890cfd6b429e28dcc7a07c",
+  "prior_file_sha256": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+  "seeds": [
+    11,
+    22,
+    33
+  ],
+  "anchor": "seed",
+  "initializer": {
+    "file": "ex13-seed-cp12-20261029/model.zip",
+    "sha256": "4836d024b87806400287c8c09c0486243df0a5dc8d458ef73e5aef76e5517f1f",
+    "legacy_training_information_regime": "untracked; not relabelled fair"
+  },
+  "budgets": {
+    "exploiter_steps": 131072,
+    "training_games_per_seed": 1100,
+    "search_simulations": 320,
+    "worlds": 4,
+    "generations": 3,
+    "decision_cap": 1200
+  },
+  "training": {
+    "uniform_initial": false,
+    "full_search": false,
+    "reduced_simulations": 64,
+    "cheap_simulations": 64,
+    "full_search_fraction": 0.25,
+    "epochs": 2,
+    "batch_size": 512,
+    "learning_rate": 0.0001,
+    "replay_generations": 3,
+    "device": "cpu",
+    "fail_on_truncation": true,
+    "decision_cap": 1200
+  },
+  "exploiter": {
+    "capacity": "match_target",
+    "n_steps": 512,
+    "batch_size": 512,
+    "n_epochs": 4,
+    "learning_rate": 0.0001
+  },
+  "confidence_method": "difference of 97.5% Wilson component intervals; nominal 95% pairwise coverage; checked per seed; no joint confidence certificate",
+  "scope": "three-seed local comparison on unchanged cloud partitions: 21 distinct training lists/13 archetypes, 23 held-out lists/12 archetypes; Light Hybrid has no unseen-list test; validation/pet qualification is separate; no held-out policy tuning; inconclusive evidence blocks promotion",
+  "panels": {
+    "heldout_policy": {
+      "direction": "higher",
+      "margin": 0.02,
+      "minimum_games_per_seed": 2600,
+      "evaluation_mode": "policy_only"
+    },
+    "anchors": {
+      "direction": "higher",
+      "margin": -0.03,
+      "minimum_games_per_seed": 2600,
+      "evaluation_mode": "policy_only"
+    },
+    "exploiter": {
+      "direction": "lower",
+      "margin": 0.03,
+      "minimum_games_per_seed": 2600,
+      "evaluation_mode": "policy_only"
+    },
+    "heldout_search": {
+      "direction": "higher",
+      "margin": -0.03,
+      "minimum_games_per_seed": 2600,
+      "evaluation_mode": "search_assisted"
+    }
+  }
+}

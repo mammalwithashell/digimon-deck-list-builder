@@ -1,0 +1,1441 @@
+{
+  "schema": "closed-cloud-qualification-v1",
+  "scope": "software smoke qualification only; not strength or oracle certification",
+  "train_distinct_lists": 21,
+  "train_archetypes": 13,
+  "heldout_lists": 23,
+  "heldout_archetypes": 12,
+  "supplemental_validation_lists": 36,
+  "pet_regressions": 5,
+  "probe_games": 127,
+  "failed": 0,
+  "truncated": 0,
+  "reports": [
+    {
+      "role": "seed1",
+      "report_sha256": "e22660c3b826e9318a8821e480a952dc66e07d3cff4b95ba88f3a351546cb547",
+      "identity": {
+        "engine": "2793f6366748c238653e5c973d64597f0171a993c2fb2158fed32c66a23521d6",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20261029,
+        "decision_cap": 1200
+      },
+      "cases": [
+        {
+          "index": 0,
+          "archetype": "Chronicle:sha256:94e9ba36ce836627f61c5d4a3a836a61521087fd840e7d84cacff247752f57ed:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 15.849579500034451,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 1,
+          "archetype": "Chronicle:sha256:d71143ca771fcac38e1ffce8a97d7bf9a3e9214a8d5ebd8a0e1d64c2bf9529cf:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 16.731589399976656,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 2,
+          "archetype": "Chronomon:sha256:28288911b84d2189223fac3d2d58033ae5a8a27892f67fc1d88d1ebc7e1bfa45:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 11.370836599962786,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 3,
+          "archetype": "Chronomon:sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 4.12476749997586,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 4,
+          "archetype": "Examon:sha256:5ed9b0f13af8340b8ca4be78001d88100b29422939fc96bffa2fa61cf01b43c9:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 10.888482399983332,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 5,
+          "archetype": "Examon:sha256:d3dba1f3956ffdffc3f3165bbdf1773d26a893a6991fdecc666425c2ab699588:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 21.22183550009504,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 6,
+          "archetype": "Glowing Dawn:sha256:6138b0f6817397f411eb4ee63bdb8621734654abc1985729222702abe51db9aa:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 12.399970599915832,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 7,
+          "archetype": "Glowing Dawn:sha256:e03dbda2f8105ac6d3131c54a842e3000ff43fb52632910d242047399f34032d:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 11.66934289992787,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 8,
+          "archetype": "Light Hybrid:sha256:7178a2d3e597c4196ca0a365435df1c2a3d37b88a143a9f656a28d982ef00cbe:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 6.953504200093448,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 9,
+          "archetype": "Medusamon:sha256:cb7d6d3088e6156bcc9ae5a00e6f3e54adb7beeaaee0812d33602d918bab3df0:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 3.3422003001905978,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 10,
+          "archetype": "SW:sha256:4fd3d5327ae45a5bcf7841604b8b62f8d981be6011e407c342a9962d68b4dcd4:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 11.393628499936312,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 11,
+          "archetype": "ShineGreymon Data Squad:sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 16.044058499857783,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 12,
+          "archetype": "TS Jupitermon:sha256:2a78b2fe4030bb4baed1b258d645f9af3a489d68201159ae881028b870e6aa0f:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 10.78572929999791,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 13,
+          "archetype": "TS Jupitermon:sha256:c892e8fb0cad79ca55cf4ad4cdb77117c1b7afb515c78c6b9329fdc67a833666:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 3.3662650999613106,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 14,
+          "archetype": "TS Mervamon:sha256:12af572f1378c83a9010a30eb5bbfe815fe1a77f7e0bfab644fb8fcab30bf55c:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 25.059014900121838,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 15,
+          "archetype": "TS Mervamon:sha256:4fbf648227d062f21d77520718dd434a401c42d89a0996d4680536c04af9a48d:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 54.35277640004642,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 16,
+          "archetype": "Three Musketeers:sha256:02cff1c487b31b11ec6ceaed86d8161385b240afcdcd14daaffbddf908b5d677:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 7.500468200072646,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 17,
+          "archetype": "Three Musketeers:sha256:49f05630a0a7034965984a1719f1a4264667603c5af2a7d961a655dcdb6322d7:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 12.104238100117072,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 18,
+          "archetype": "Toho Braves:sha256:082033c391d87144638392d6be890a6e3d94793f92f0a9dc5e8749c1d947e965:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 18.018081999849528,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 19,
+          "archetype": "Toho Braves:sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 25.84481620020233,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 20,
+          "archetype": "Virus Busters:sha256:c27a1321744c8c605b38ffdd8d2213c6b554b80e308c4b67bf8293343d18c4b1:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 11.230475099990144,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        }
+      ],
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "engine_unchanged": true,
+      "probe_readiness_only": true
+    },
+    {
+      "role": "seed2",
+      "report_sha256": "21c55f5451b13aa274ddf9faf39a8e103864adcf9265637b2c957af60cf2d0ad",
+      "identity": {
+        "engine": "2793f6366748c238653e5c973d64597f0171a993c2fb2158fed32c66a23521d6",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "cases": [
+        {
+          "index": 0,
+          "archetype": "Chronicle:sha256:94e9ba36ce836627f61c5d4a3a836a61521087fd840e7d84cacff247752f57ed:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 14.077457299921662,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 1,
+          "archetype": "Chronicle:sha256:d71143ca771fcac38e1ffce8a97d7bf9a3e9214a8d5ebd8a0e1d64c2bf9529cf:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 11.28398589999415,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 2,
+          "archetype": "Chronomon:sha256:28288911b84d2189223fac3d2d58033ae5a8a27892f67fc1d88d1ebc7e1bfa45:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 37.810140300076455,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 3,
+          "archetype": "Chronomon:sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 19.504564099945128,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 4,
+          "archetype": "Examon:sha256:5ed9b0f13af8340b8ca4be78001d88100b29422939fc96bffa2fa61cf01b43c9:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 41.80354059999809,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 5,
+          "archetype": "Examon:sha256:d3dba1f3956ffdffc3f3165bbdf1773d26a893a6991fdecc666425c2ab699588:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 24.648839000146836,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 6,
+          "archetype": "Glowing Dawn:sha256:6138b0f6817397f411eb4ee63bdb8621734654abc1985729222702abe51db9aa:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 16.148985099978745,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 7,
+          "archetype": "Glowing Dawn:sha256:e03dbda2f8105ac6d3131c54a842e3000ff43fb52632910d242047399f34032d:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 13.203774299938232,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 8,
+          "archetype": "Light Hybrid:sha256:7178a2d3e597c4196ca0a365435df1c2a3d37b88a143a9f656a28d982ef00cbe:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 8.374660599976778,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 9,
+          "archetype": "Medusamon:sha256:cb7d6d3088e6156bcc9ae5a00e6f3e54adb7beeaaee0812d33602d918bab3df0:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 9.747760100057349,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 10,
+          "archetype": "SW:sha256:4fd3d5327ae45a5bcf7841604b8b62f8d981be6011e407c342a9962d68b4dcd4:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 19.887751899892464,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 11,
+          "archetype": "ShineGreymon Data Squad:sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 23.27685010014102,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 12,
+          "archetype": "TS Jupitermon:sha256:2a78b2fe4030bb4baed1b258d645f9af3a489d68201159ae881028b870e6aa0f:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 3.200979799963534,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 13,
+          "archetype": "TS Jupitermon:sha256:c892e8fb0cad79ca55cf4ad4cdb77117c1b7afb515c78c6b9329fdc67a833666:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 7.049161500064656,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 14,
+          "archetype": "TS Mervamon:sha256:12af572f1378c83a9010a30eb5bbfe815fe1a77f7e0bfab644fb8fcab30bf55c:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 11.344367200043052,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 15,
+          "archetype": "TS Mervamon:sha256:4fbf648227d062f21d77520718dd434a401c42d89a0996d4680536c04af9a48d:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 26.307499899994582,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 16,
+          "archetype": "Three Musketeers:sha256:02cff1c487b31b11ec6ceaed86d8161385b240afcdcd14daaffbddf908b5d677:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 19.009391699917614,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 17,
+          "archetype": "Three Musketeers:sha256:49f05630a0a7034965984a1719f1a4264667603c5af2a7d961a655dcdb6322d7:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 14.221749499905854,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 18,
+          "archetype": "Toho Braves:sha256:082033c391d87144638392d6be890a6e3d94793f92f0a9dc5e8749c1d947e965:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 9.068877399899065,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 19,
+          "archetype": "Toho Braves:sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 33.8384487000294,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 20,
+          "archetype": "Virus Busters:sha256:c27a1321744c8c605b38ffdd8d2213c6b554b80e308c4b67bf8293343d18c4b1:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 23.385454999981448,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        }
+      ],
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "engine_unchanged": true,
+      "probe_readiness_only": true
+    },
+    {
+      "role": "seed3",
+      "report_sha256": "35d8cdb73a1efc4e3b124d53fe0bd868bdf5862d955949be322d8f1732378c24",
+      "identity": {
+        "engine": "2793f6366748c238653e5c973d64597f0171a993c2fb2158fed32c66a23521d6",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20263029,
+        "decision_cap": 1200
+      },
+      "cases": [
+        {
+          "index": 0,
+          "archetype": "Chronicle:sha256:94e9ba36ce836627f61c5d4a3a836a61521087fd840e7d84cacff247752f57ed:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 11.604604500113055,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 1,
+          "archetype": "Chronicle:sha256:d71143ca771fcac38e1ffce8a97d7bf9a3e9214a8d5ebd8a0e1d64c2bf9529cf:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 10.022796100005507,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 2,
+          "archetype": "Chronomon:sha256:28288911b84d2189223fac3d2d58033ae5a8a27892f67fc1d88d1ebc7e1bfa45:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 29.49858139990829,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 3,
+          "archetype": "Chronomon:sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 20.87276880000718,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 4,
+          "archetype": "Examon:sha256:5ed9b0f13af8340b8ca4be78001d88100b29422939fc96bffa2fa61cf01b43c9:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 6.961950300028548,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 5,
+          "archetype": "Examon:sha256:d3dba1f3956ffdffc3f3165bbdf1773d26a893a6991fdecc666425c2ab699588:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 30.577636299887672,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 6,
+          "archetype": "Glowing Dawn:sha256:6138b0f6817397f411eb4ee63bdb8621734654abc1985729222702abe51db9aa:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 13.77191530005075,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 7,
+          "archetype": "Glowing Dawn:sha256:e03dbda2f8105ac6d3131c54a842e3000ff43fb52632910d242047399f34032d:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 7.953226399840787,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 8,
+          "archetype": "Light Hybrid:sha256:7178a2d3e597c4196ca0a365435df1c2a3d37b88a143a9f656a28d982ef00cbe:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 4.6624270000029355,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 9,
+          "archetype": "Medusamon:sha256:cb7d6d3088e6156bcc9ae5a00e6f3e54adb7beeaaee0812d33602d918bab3df0:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 12.77293279999867,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 10,
+          "archetype": "SW:sha256:4fd3d5327ae45a5bcf7841604b8b62f8d981be6011e407c342a9962d68b4dcd4:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 13.273681399878114,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 11,
+          "archetype": "ShineGreymon Data Squad:sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 14.784500099951401,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 12,
+          "archetype": "TS Jupitermon:sha256:2a78b2fe4030bb4baed1b258d645f9af3a489d68201159ae881028b870e6aa0f:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 10.074378400109708,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 13,
+          "archetype": "TS Jupitermon:sha256:c892e8fb0cad79ca55cf4ad4cdb77117c1b7afb515c78c6b9329fdc67a833666:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 4.838170300005004,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 14,
+          "archetype": "TS Mervamon:sha256:12af572f1378c83a9010a30eb5bbfe815fe1a77f7e0bfab644fb8fcab30bf55c:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 16.446071699960157,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 15,
+          "archetype": "TS Mervamon:sha256:4fbf648227d062f21d77520718dd434a401c42d89a0996d4680536c04af9a48d:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 35.33153690001927,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 16,
+          "archetype": "Three Musketeers:sha256:02cff1c487b31b11ec6ceaed86d8161385b240afcdcd14daaffbddf908b5d677:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 18.728857500012964,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 17,
+          "archetype": "Three Musketeers:sha256:49f05630a0a7034965984a1719f1a4264667603c5af2a7d961a655dcdb6322d7:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 14.216913300100714,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 18,
+          "archetype": "Toho Braves:sha256:082033c391d87144638392d6be890a6e3d94793f92f0a9dc5e8749c1d947e965:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 15.404356200015172,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 19,
+          "archetype": "Toho Braves:sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 18.99612329993397,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 20,
+          "archetype": "Virus Busters:sha256:c27a1321744c8c605b38ffdd8d2213c6b554b80e308c4b67bf8293343d18c4b1:slot1",
+          "deck_id": null,
+          "returncode": 0,
+          "seconds": 17.94364590011537,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        }
+      ],
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "engine_unchanged": true,
+      "probe_readiness_only": true
+    },
+    {
+      "role": "test",
+      "report_sha256": "250c51528d4ea8aad49b655c2c586bb6cfe182a74214687e22dddcced4785e3f",
+      "identity": {
+        "engine": "2793f6366748c238653e5c973d64597f0171a993c2fb2158fed32c66a23521d6",
+        "decks": "427ffc8f23f4cade3e2ef66eb00b646f88c720187cbcd101118b46582685706a",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20264029,
+        "decision_cap": 1200
+      },
+      "cases": [
+        {
+          "index": 0,
+          "archetype": "Chronicle",
+          "deck_id": "sha256:01c45fd33b358909dc58d4b73fa41a682a5f842e77e1a4981d7856864500e8ca",
+          "returncode": 0,
+          "seconds": 20.054519299883395,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 1,
+          "archetype": "Chronicle",
+          "deck_id": "sha256:41e5bc83d0afe734682a3b32500e69b639501c224dc2f25959f64791c9a1d5bb",
+          "returncode": 0,
+          "seconds": 13.173242999939248,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 2,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:43c02f804960bcf38269e61b46bf20f05fa0a7b60fe0c9cda2e2370edf6ec7be",
+          "returncode": 0,
+          "seconds": 14.848595899995416,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 3,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:c94c96b1e466cc69f640f2a8b9977d1339ff7c8913011fe386bbd08be007f19b",
+          "returncode": 0,
+          "seconds": 47.04972200002521,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 4,
+          "archetype": "Examon",
+          "deck_id": "sha256:11898ce6502f13e392e406d29fab874cb86c63f3cd0992dfa43c9f7e42fda285",
+          "returncode": 0,
+          "seconds": 20.763049899833277,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 5,
+          "archetype": "Examon",
+          "deck_id": "sha256:e0d5c7a6bba221741efda95033a16cfad99b718d4f0b562936bbddfe181f8929",
+          "returncode": 0,
+          "seconds": 25.206036600051448,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 6,
+          "archetype": "Glowing Dawn",
+          "deck_id": "sha256:25ceae8975ea1a564cc3e090f55c42c14900fad4610924eab1991d700231a49c",
+          "returncode": 0,
+          "seconds": 11.837115000002086,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 7,
+          "archetype": "Glowing Dawn",
+          "deck_id": "sha256:c701c45df210f7ad84d753ccb078848a1432b34c2854b24e953f6ac64adedfc3",
+          "returncode": 0,
+          "seconds": 10.660622300114483,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 8,
+          "archetype": "Medusamon",
+          "deck_id": "sha256:65763ed8983c88e29760d45c71547f4a136a7d5aaa4e1087eb9a00450b1ac82b",
+          "returncode": 0,
+          "seconds": 13.186200900003314,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 9,
+          "archetype": "SW",
+          "deck_id": "sha256:05de5422ae9d8edeb78f2f69075a47a209372b1b746bb73773a21f68dedbb208",
+          "returncode": 0,
+          "seconds": 19.21416089986451,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 10,
+          "archetype": "SW",
+          "deck_id": "sha256:6cc7dc941c57f6c1085a053425dfa76c2f2cc7a3014d88733cd8a57556ab041d",
+          "returncode": 0,
+          "seconds": 6.463808200089261,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 11,
+          "archetype": "ShineGreymon Data Squad",
+          "deck_id": "sha256:9076bcb0e42f290b3864a1c0f0bb5f9c87e86cd45cb2e959e0df880d0fef2c07",
+          "returncode": 0,
+          "seconds": 8.961106000002474,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 12,
+          "archetype": "ShineGreymon Data Squad",
+          "deck_id": "sha256:c3d8bfe21dfe66c5e791c215b8883a30f285baf13e1b399ec23907c67ab34c97",
+          "returncode": 0,
+          "seconds": 13.812114300206304,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 13,
+          "archetype": "TS Jupitermon",
+          "deck_id": "sha256:85fa4558f7841e5341b9846420fc9b1e548a4317c7622e1ef1c006b7f3baacde",
+          "returncode": 0,
+          "seconds": 5.946359599940479,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 14,
+          "archetype": "TS Jupitermon",
+          "deck_id": "sha256:d3895909066453170c724f9841c5948a3219cf0cf2765d002b4069dc89e85f59",
+          "returncode": 0,
+          "seconds": 10.896166200051084,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 15,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:1d8d610cd996ce9dc014f2f0fda0b92452f3d3db16112f834cae38d4f3dd9a50",
+          "returncode": 0,
+          "seconds": 32.325618100119755,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 16,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:da59193596c6830fa80ad6d3ca04ea42b66b41c38734b31448f2f2f2b883b170",
+          "returncode": 0,
+          "seconds": 43.42387040005997,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 17,
+          "archetype": "Three Musketeers",
+          "deck_id": "sha256:8a42a5bde20de30b0df20a9d77f1563d3e2607d48ead4cae29edecfbfbea0b32",
+          "returncode": 0,
+          "seconds": 14.48462720005773,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 18,
+          "archetype": "Three Musketeers",
+          "deck_id": "sha256:fdaa5ee2278f455ceabcbbba9db9a3998f5c28064d6961859a8eae5495f70942",
+          "returncode": 0,
+          "seconds": 13.836423000087962,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 19,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:aeb4f57bae89a5d09be7a286e27d6223481dc7bf88d9bcf0e0a1fbddf5b72789",
+          "returncode": 0,
+          "seconds": 25.622853999957442,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 20,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:ef69ee7322d296febc63ba10a49faaa8aa22cd23114b44920a0578f029959536",
+          "returncode": 0,
+          "seconds": 21.792773600202054,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 21,
+          "archetype": "Virus Busters",
+          "deck_id": "sha256:73159a51498946657b751d3b7d71e9d6d3af4f25154d90f579536caec273238c",
+          "returncode": 0,
+          "seconds": 12.73696959996596,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 22,
+          "archetype": "Virus Busters",
+          "deck_id": "sha256:b70c1b8ab3f95be2e1a610a6edc36c6b80df3cee4c9ace6641279a913aa74dfd",
+          "returncode": 0,
+          "seconds": 14.129520300077274,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        }
+      ],
+      "completed": 23,
+      "failed": 0,
+      "truncated": 0,
+      "engine_unchanged": true,
+      "probe_readiness_only": true
+    },
+    {
+      "role": "validation",
+      "report_sha256": "a5ce090c1f5d5ee35e9dfd59031ff768b8f999a7e1a4d07937177b0bab469820",
+      "identity": {
+        "engine": "2793f6366748c238653e5c973d64597f0171a993c2fb2158fed32c66a23521d6",
+        "decks": "9ec6bd0f50bcbcf7021f1f3dff47ff34f8ce11aea34bef3f73ae3f553cca3839",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20264029,
+        "decision_cap": 1200
+      },
+      "cases": [
+        {
+          "index": 0,
+          "archetype": "Chronicle",
+          "deck_id": "sha256:664f1a0f869cff62f2e9679a84266d9c3fe7bea74120ad26f8836ced0ae24013",
+          "returncode": 0,
+          "seconds": 19.776094700209796,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 1,
+          "archetype": "Chronicle",
+          "deck_id": "sha256:9233b6f1a6ad386653b72bb1840970336e29e14796e05e4c3260bf0d457164fd",
+          "returncode": 0,
+          "seconds": 24.036132199922577,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 2,
+          "archetype": "Chronicle",
+          "deck_id": "sha256:9917317528138ac17e4874691c1bf456fc898a6b7b94325f192c7322d106bba8",
+          "returncode": 0,
+          "seconds": 12.922424799995497,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 3,
+          "archetype": "Chronicle",
+          "deck_id": "sha256:ebde999392fde215e2e5a68f0bb5e2fed9954f86e4775de7f4ef0c06dceb233f",
+          "returncode": 0,
+          "seconds": 14.112240799935535,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 4,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:669dde3b66c2fd2413d68a2852e98451aea3cb965b1f05c8dcfa7d5e1dbd3b7c",
+          "returncode": 0,
+          "seconds": 22.12285970011726,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 5,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:6bfca74204b6f67f64da53c09a17c9974340f31e8816792f2da99dadf46c997b",
+          "returncode": 0,
+          "seconds": 14.793447600211948,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 6,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:cfa0e75d7f82b235e58979ceedc64c939c6801d0ec2da4e9d30ae698fdc104c7",
+          "returncode": 0,
+          "seconds": 12.460971299791709,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 7,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:e685a4179317c1cacab0c056bad08ee5a7e036ea7f8fee3d6e92185e20d000d0",
+          "returncode": 0,
+          "seconds": 17.34957080008462,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 8,
+          "archetype": "Examon",
+          "deck_id": "sha256:2b6a820b364e2c191924b4832c543036d89a60ff495d686ae447b36ea9970bd9",
+          "returncode": 0,
+          "seconds": 16.670317699899897,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 9,
+          "archetype": "Examon",
+          "deck_id": "sha256:33c9a0129c7aec44d5588d70c8b625ad4700bb9b00a2f2de4089554b7fb5af4a",
+          "returncode": 0,
+          "seconds": 5.637714199954644,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 10,
+          "archetype": "Examon",
+          "deck_id": "sha256:92a2107fa3076c03b009d303d97b1218f46ce936b5b506e344791e658d183b7f",
+          "returncode": 0,
+          "seconds": 5.547922799829394,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 11,
+          "archetype": "Examon",
+          "deck_id": "sha256:9b58105e80647416aaad054ce55bf48acc87994942c70b1a962a38b8cdf9ee5f",
+          "returncode": 0,
+          "seconds": 18.989046999951825,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 12,
+          "archetype": "Glowing Dawn",
+          "deck_id": "sha256:153f79c8bec0b66fc5db2d396238cd49a66e148a7a0c1f879ad122300cbd7bc3",
+          "returncode": 0,
+          "seconds": 6.833292399998754,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 13,
+          "archetype": "Glowing Dawn",
+          "deck_id": "sha256:2fa20196dbeb7e9591531fd8ac5c8f8b9ad557cc6fda6e20dee2cb152a05d0c6",
+          "returncode": 0,
+          "seconds": 6.120548099977896,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 14,
+          "archetype": "Glowing Dawn",
+          "deck_id": "sha256:47a1de98f4092816944bda3a17600d14b5643b30b2d07e035a59e9bd96efc69c",
+          "returncode": 0,
+          "seconds": 6.2968035999219865,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 15,
+          "archetype": "Glowing Dawn",
+          "deck_id": "sha256:49bcea361d1a6e716813051bc3c501daf9aa9a688dbbf700f436800b5e569c8a",
+          "returncode": 0,
+          "seconds": 5.239130700007081,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 16,
+          "archetype": "SW",
+          "deck_id": "sha256:1afbc52c1416f77db2e64a523340751d5922001830a166773704214feb2bf057",
+          "returncode": 0,
+          "seconds": 2.41933530010283,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 17,
+          "archetype": "SW",
+          "deck_id": "sha256:99844bdee90503722198a0e11fab61dc941c538e3101fc2e87183e04d2b3c74f",
+          "returncode": 0,
+          "seconds": 4.8977272000629455,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 18,
+          "archetype": "SW",
+          "deck_id": "sha256:fe375df98c9adbd7e2426788e3a9e5e54611c13f7e0bb0bab8ae27d8219e0327",
+          "returncode": 0,
+          "seconds": 15.412511700065807,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 19,
+          "archetype": "ShineGreymon Data Squad",
+          "deck_id": "sha256:b55bf49b6a80faa744305d47c54602c40f8bd35b628998c4d053c16d6bc11cc5",
+          "returncode": 0,
+          "seconds": 14.154634499922395,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 20,
+          "archetype": "TS Jupitermon",
+          "deck_id": "sha256:23d5d98a37a1d7a815acc6a9ea891af493e182c2fe856e11f08a6e1551b40cc8",
+          "returncode": 0,
+          "seconds": 1.6826404000166804,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 21,
+          "archetype": "TS Jupitermon",
+          "deck_id": "sha256:3075e71cc96099900b0e03e0786e7afac1347777d429dfc3fa3683b9a4986d17",
+          "returncode": 0,
+          "seconds": 2.282444499898702,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 22,
+          "archetype": "TS Jupitermon",
+          "deck_id": "sha256:a2bb6f720791362ed0e6c7fe64b2da02b98831bee32fd044c7345ce67fe738a5",
+          "returncode": 0,
+          "seconds": 5.154815499903634,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 23,
+          "archetype": "TS Jupitermon",
+          "deck_id": "sha256:a9861a60e0b88ad05b481f6883719925e9ea00efa7e585c3b9659e798716174e",
+          "returncode": 0,
+          "seconds": 5.725445199990645,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 24,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:72dba166f37e02499ddd8a4a9db09ae0c82568fc823725486cdc895847429d29",
+          "returncode": 0,
+          "seconds": 16.71304229996167,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 25,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:b540c9a6d7317e08591f8acb5676749a26ea20865bb49a29ad1d5cd506826efb",
+          "returncode": 0,
+          "seconds": 7.22856770013459,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 26,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:b55ac120d0ef3ef0a6c8a3e8c9fe640315d621a4fd887a151d3558d5528726bd",
+          "returncode": 0,
+          "seconds": 25.943325100000948,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 27,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:db1b53ddae3e76ccdc970fbf764cd72246745b0f0d836fa73aa0353cda5f872e",
+          "returncode": 0,
+          "seconds": 23.224513499997556,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 28,
+          "archetype": "Three Musketeers",
+          "deck_id": "sha256:10ef81f0f4cc07fd3ce2a61fb4d98ad1afc3e8c9b52b6dc7fd8835633521a10c",
+          "returncode": 0,
+          "seconds": 12.665443599922583,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 29,
+          "archetype": "Three Musketeers",
+          "deck_id": "sha256:4136ae8241d1f5ca4627c429ae1b721f9dca12f51e9a332e0e40f201bea545d8",
+          "returncode": 0,
+          "seconds": 4.455147600034252,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 30,
+          "archetype": "Three Musketeers",
+          "deck_id": "sha256:68561cf868740b38c9d03bcc2821780b57fe79dd4677898ef919856dd4135d0d",
+          "returncode": 0,
+          "seconds": 12.807410400127992,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 31,
+          "archetype": "Three Musketeers",
+          "deck_id": "sha256:cb29c7ced4b430fdb99359426a8c646c547a5cd4e55f01bf3deeb2de87dc22b0",
+          "returncode": 0,
+          "seconds": 2.5473895999602973,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 32,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:0a5812c6176c72fc641c5cadbd4bdb293a27b78271700cf9d36eb650891b1333",
+          "returncode": 0,
+          "seconds": 17.169743200065568,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 33,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:0cf8c16da349335c06188eb05ae264f169a4932c79db249158ccdd49f647589e",
+          "returncode": 0,
+          "seconds": 11.15447730012238,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 34,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:30e3eddf44cca069d2351aeb5eac1d102afecc4e040ef93b3e8ba2fdf4b5c95f",
+          "returncode": 0,
+          "seconds": 5.1031208001077175,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 35,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:5532055cce611affcd6d358471803e1a219ae8dcc46d96dd7bff7489ebc3e2d7",
+          "returncode": 0,
+          "seconds": 13.952314000111073,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        }
+      ],
+      "completed": 36,
+      "failed": 0,
+      "truncated": 0,
+      "engine_unchanged": true,
+      "probe_readiness_only": true
+    },
+    {
+      "role": "pet_regression",
+      "report_sha256": "4a347e5eea0524eaca79219a8bc7b6e0f1e5d600fab37e21376c78b288d81d29",
+      "identity": {
+        "engine": "2793f6366748c238653e5c973d64597f0171a993c2fb2158fed32c66a23521d6",
+        "decks": "84a63eb62047e29ddfa6e446aa418e9d7907a96062d60824a8e45f1822190fb1",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20264029,
+        "decision_cap": 1200
+      },
+      "cases": [
+        {
+          "index": 0,
+          "archetype": "Light Hybrid",
+          "deck_id": "sha256:7178a2d3e597c4196ca0a365435df1c2a3d37b88a143a9f656a28d982ef00cbe",
+          "returncode": 0,
+          "seconds": 8.99865680001676,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 1,
+          "archetype": "Medusamon",
+          "deck_id": "sha256:cb7d6d3088e6156bcc9ae5a00e6f3e54adb7beeaaee0812d33602d918bab3df0",
+          "returncode": 0,
+          "seconds": 6.7839603999163955,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 2,
+          "archetype": "SW",
+          "deck_id": "sha256:4fd3d5327ae45a5bcf7841604b8b62f8d981be6011e407c342a9962d68b4dcd4",
+          "returncode": 0,
+          "seconds": 14.539740500040352,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 3,
+          "archetype": "ShineGreymon Data Squad",
+          "deck_id": "sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6",
+          "returncode": 0,
+          "seconds": 16.98306840006262,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        },
+        {
+          "index": 4,
+          "archetype": "Virus Busters",
+          "deck_id": "sha256:5f47ea0fddfcd3b14ae2bedef0a557c9ff6b8c2ee9f72fe57bd892a5a99569c3",
+          "returncode": 0,
+          "seconds": 16.285926199983805,
+          "status": "completed",
+          "games": 1,
+          "truncated": 0
+        }
+      ],
+      "completed": 5,
+      "failed": 0,
+      "truncated": 0,
+      "engine_unchanged": true,
+      "probe_readiness_only": true
+    }
+  ]
+}

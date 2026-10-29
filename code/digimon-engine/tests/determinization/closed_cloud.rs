@@ -3,6 +3,300 @@
 use super::support::*;
 use digimon_engine::determinize::{beliefs::*, closed::materialize_closed};
 
+fn assert_same_actor_observation(a: &digimon_engine::Game, b: &digimon_engine::Game, viewer: u8) {
+    let registry = digimon_engine::card_registry::CardRegistry::from_cards(card_data());
+    let profile = digimon_engine::observation::ObservationProfileId::StandardLiteV2;
+    assert_eq!(digimon_engine::observation::build_observation_tensor(a, viewer, &registry, profile),
+        digimon_engine::observation::build_observation_tensor(b, viewer, &registry, profile));
+}
+
+#[test]
+fn printed_security_observers_have_a_complete_context_liveness_proof() {
+    with_big_stack(|| {
+        for (set, id) in [("ex12", "EX12-019"), ("bt26", "BT26-029")] {
+            let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("cards")
+                .join(set)
+                .join(format!("{id}.yaml"));
+            let compiled =
+                digimon_dsl::compile::compile(&digimon_dsl::loader::load_file(&file).unwrap())
+                    .unwrap();
+            let mut checked = 0;
+            for clause in &compiled.effects {
+                if let digimon_dsl::compiled::CompiledClause::Triggered(c) = clause {
+                    if c.when.iter().any(|t| {
+                        matches!(
+                            t,
+                            digimon_dsl::compiled::CompiledTiming::OnOwnSecurityRemoved
+                                | digimon_dsl::compiled::CompiledTiming::OnOpponentSecurityRemoved
+                        )
+                    }) {
+                        assert!(digimon_engine::dsl_cards::context_liveness::ignores_event_card_identity(c), "{id}: {c:?}");
+                        checked += 1;
+                    }
+                }
+            }
+            assert!(checked > 0);
+        }
+    });
+}
+
+#[test]
+fn queued_and_optional_security_observers_discard_only_unused_private_references() {
+    with_big_stack(|| {
+        let fixtures: serde_json::Value =
+            serde_json::from_str(include_str!("fixtures/security-observer-contexts.json")).unwrap();
+        for fixture in fixtures.as_array().unwrap() {
+            let cards: Vec<String> = serde_json::from_value(fixture["cards"].clone()).unwrap();
+            let refs: Vec<_> = cards.iter().map(String::as_str).collect();
+            let mut root = new_game_with(fixture["game_seed"].as_u64().unwrap(), &refs, &refs);
+            root.enable_belief_knowledge().unwrap();
+            root.turn_count = 1;
+            for step in fixture["actions"].as_array().unwrap() {
+                let p = step[0].as_u64().unwrap() as u8;
+                let a = step[1].as_u64().unwrap() as u16;
+                assert_eq!(decision_player(&root), p);
+                assert!(digimon_engine::build_action_mask(&root, p)[a as usize] > 0.5);
+                root.decode_action(a, p);
+            }
+            let viewer = decision_player(&root);
+            let memory = root.belief_knowledge(viewer).unwrap().clone();
+            let prior = WeightedDeckPrior::new(
+                PriorSnapshot::new(
+                    "standard",
+                    "security-observer-regression",
+                    cards.iter().cloned().collect(),
+                    vec![CandidateDeck { cards, weight: 1.0 }],
+                    0.1,
+                    128,
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            let a = materialize_closed(&root, viewer, &memory, &prior, 88).unwrap_or_else(|e| {
+                panic!(
+                    "{e}; queue={:?}; frames={:?}",
+                    root.effect_queue, root.pending_selection_resume
+                )
+            });
+            let known: std::collections::HashSet<_> = serde_json::to_value(&memory).unwrap()
+                ["cards"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|c| c["instance"].as_u64().unwrap() as u16)
+                .collect();
+            let mut changed = root.clone();
+            let replacement = changed
+                .card_data
+                .iter()
+                .position(|c| c.card_id == "ST1-02")
+                .unwrap();
+            let opp = &mut changed.players[(1 - viewer) as usize];
+            for c in opp
+                .hand
+                .iter_mut()
+                .chain(&mut opp.deck)
+                .chain(&mut opp.security)
+            {
+                if !known.contains(&c.card_index) {
+                    c.data_index = replacement;
+                }
+            }
+            opp.original_deck.clear();
+            assert_same_actor_observation(&root, &changed, viewer);
+            let b = materialize_closed(&changed, viewer, &memory, &prior, 88).unwrap();
+            assert_eq!(full_zone_dump(&a), full_zone_dump(&b));
+            let mask = digimon_engine::build_action_mask(&a, viewer);
+            assert_eq!(mask, digimon_engine::build_action_mask(&root, viewer));
+            let action = mask
+                .iter()
+                .enumerate()
+                .find(|(i, v)| **v > 0.5 && *i != digimon_engine::action::PASS as usize)
+                .unwrap()
+                .0 as u16;
+            let mut a = a;
+            let mut b = b;
+            a.decode_action(action, viewer);
+            b.decode_action(action, viewer);
+            assert_eq!(a.to_scenario(), b.to_scenario());
+        }
+    });
+}
+
+#[test]
+fn link_selection_continuations_are_composition_independent_and_resolve() {
+    with_big_stack(|| {
+        let fixtures: serde_json::Value =
+            serde_json::from_str(include_str!("fixtures/link-continuations.json")).unwrap();
+        for fixture in fixtures.as_array().unwrap() {
+            let cards: Vec<String> = serde_json::from_value(fixture["cards"].clone()).unwrap();
+            let refs: Vec<_> = cards.iter().map(String::as_str).collect();
+            let mut root = new_game_with(fixture["game_seed"].as_u64().unwrap(), &refs, &refs);
+            root.enable_belief_knowledge().unwrap();
+            root.turn_count = 1;
+            for step in fixture["actions"].as_array().unwrap() {
+                let p = step[0].as_u64().unwrap() as u8;
+                let a = step[1].as_u64().unwrap() as u16;
+                assert_eq!(decision_player(&root), p);
+                assert!(digimon_engine::build_action_mask(&root, p)[a as usize] > 0.5);
+                root.decode_action(a, p);
+            }
+            let viewer = decision_player(&root);
+            let memory = root.belief_knowledge(viewer).unwrap().clone();
+            let prior = WeightedDeckPrior::new(
+                PriorSnapshot::new(
+                    "standard",
+                    "link-continuation-regression",
+                    cards.iter().cloned().collect(),
+                    vec![CandidateDeck {
+                        cards: cards.clone(),
+                        weight: 1.0,
+                    }],
+                    0.1,
+                    128,
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            let a = materialize_closed(&root, viewer, &memory, &prior, 88).unwrap();
+            let known: std::collections::HashSet<_> = serde_json::to_value(&memory).unwrap()
+                ["cards"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|c| c["instance"].as_u64().unwrap() as u16)
+                .collect();
+            let mut changed = root.clone();
+            let replacement = changed
+                .card_data
+                .iter()
+                .position(|c| c.card_id == "ST1-02")
+                .unwrap();
+            let opp = &mut changed.players[(1 - viewer) as usize];
+            for c in opp
+                .hand
+                .iter_mut()
+                .chain(&mut opp.deck)
+                .chain(&mut opp.security)
+            {
+                if !known.contains(&c.card_index) {
+                    c.data_index = replacement;
+                }
+            }
+            opp.original_deck.clear();
+            assert_same_actor_observation(&root, &changed, viewer);
+            let b = materialize_closed(&changed, viewer, &memory, &prior, 88).unwrap();
+            assert_eq!(full_zone_dump(&a), full_zone_dump(&b));
+            let mask = digimon_engine::build_action_mask(&a, viewer);
+            assert_eq!(mask, digimon_engine::build_action_mask(&root, viewer));
+            let action = mask
+                .iter()
+                .enumerate()
+                .find(|(i, v)| **v > 0.5 && *i != digimon_engine::action::PASS as usize)
+                .unwrap()
+                .0 as u16;
+            let mut a = a;
+            let mut b = b;
+            a.decode_action(action, viewer);
+            b.decode_action(action, viewer);
+            assert_eq!(a.to_scenario(), b.to_scenario());
+        }
+    });
+}
+
+#[test]
+fn ordered_stack_return_routes_eggs_to_the_egg_deck_without_corrupting_counts() {
+    with_big_stack(|| {
+        use digimon_dsl::compiled::{
+            CompiledBindingRef, CompiledFormula, CompiledStackPosition, CompiledStep,
+        };
+        use digimon_engine::{
+            dsl_cards::{bindings::Bindings, step::run_steps},
+            effect_context::EffectContext,
+            permanent::{Permanent, PermanentHandle},
+        };
+        let mut g = new_game_with(91, D1, D1);
+        let egg = g.players[1].digitama_deck.pop().unwrap();
+        let egg_handle = egg.handle();
+        let top = g.players[1].hand.pop().unwrap();
+        // In a combined stack an egg can be above the retained base card.
+        let base = g.players[1].hand.pop().unwrap();
+        let mut stack = Permanent::new(base, 0);
+        stack.digivolve(egg, 0);
+        stack.digivolve(top, 0);
+        g.players[1].battle_area.push(stack);
+        let deck_count = g.players[1].deck.len();
+        let egg_count = g.players[1].digitama_deck.len();
+        g.enable_belief_knowledge().unwrap();
+        g.mulligan_pending.clear();
+        g.current_phase = digimon_engine::enums::GamePhase::Main;
+        let source = g.players[0].hand[0].handle();
+        let mut bindings = Bindings::new();
+        bindings.insert_permanent(
+            "target",
+            PermanentHandle {
+                player: 1,
+                index: 0,
+            },
+        );
+        run_steps(
+            &[CompiledStep::ReturnTopStackedToDeck {
+                targets: CompiledBindingRef::Named("target".into()),
+                count: CompiledFormula::Literal(2),
+                position: CompiledStackPosition::Top,
+                prompt: "Order both".into(),
+            }],
+            &mut EffectContext::new(&mut g, source, None, 0),
+            &mut bindings,
+        );
+        for _ in 0..4 {
+            if g.pending_selection.is_none() {
+                break;
+            }
+            let p = decision_player(&g);
+            let mask = digimon_engine::build_action_mask(&g, p);
+            let action = mask.iter().position(|v| *v > 0.5).unwrap() as u16;
+            g.decode_action(action, p);
+        }
+        assert_eq!(g.players[1].deck.len(), deck_count + 1);
+        assert_eq!(g.players[1].digitama_deck.len(), egg_count + 1);
+        assert!(g.players[1]
+            .deck
+            .iter()
+            .all(|c| c.card_kind(&g.card_data) != digimon_engine::enums::CardKind::DigiEgg));
+        let cards: Vec<_> = D1.iter().map(|c| c.to_string()).collect();
+        let prior = WeightedDeckPrior::new(
+            PriorSnapshot::new(
+                "standard",
+                "egg-route-regression",
+                cards.iter().cloned().collect(),
+                vec![CandidateDeck { cards, weight: 1.0 }],
+                0.1,
+                128,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        for viewer in 0..2 {
+            for seed in [1, 4, 7, 88] {
+                let world = materialize_closed(
+                    &g,
+                    viewer,
+                    g.belief_knowledge(viewer).unwrap(),
+                    &prior,
+                    seed,
+                )
+                .unwrap();
+                assert_eq!(
+                    world.players[1].digitama_deck.last().unwrap().handle(),
+                    egg_handle
+                );
+            }
+        }
+    });
+}
+
 #[test]
 fn native_chronomon_security_history_positions_remain_consistent() {
     with_big_stack(|| {
@@ -185,19 +479,21 @@ fn identity_independent_queued_observer_does_not_keep_a_concealed_event_card() {
         let index = g.players[0]
             .deck
             .iter()
-            .position(|c| c.card_id(&g.card_data) == "BT24-031")
+            .position(|c| c.card_id(&g.card_data) == "BT24-034")
             .unwrap();
         let base = g.players[0].deck.remove(index);
         g.players[0].battle_area.push(Permanent::new(base, 0));
         let index = g.players[0]
             .deck
             .iter()
-            .position(|c| c.card_id(&g.card_data) == "BT24-034")
+            .position(|c| c.card_id(&g.card_data) == "BT26-029")
             .unwrap();
         let evolution = g.players[0].deck.remove(index);
         g.players[0].hand.push(evolution);
         let hidden = g.players[1].hand[0].handle();
         g.enable_belief_knowledge().unwrap();
+        g.mulligan_pending.clear();
+        g.current_phase = digimon_engine::enums::GamePhase::Main;
         let mut context = TriggerContext::default();
         context.event_card = Some(hidden);
         context.target_card = Some(hidden);
@@ -216,6 +512,10 @@ fn identity_independent_queued_observer_does_not_keep_a_concealed_event_card() {
         assert!(!g.effect_queue.is_empty());
         g.effect_queue[0].trigger_context = Some(context);
         let memory = g.belief_knowledge(0).unwrap().clone();
+        let mut parked = g.clone();
+        parked.drain_effect_queue();
+        assert!(parked.pending_selection.is_some());
+        materialize_closed(&parked, 0, parked.belief_knowledge(0).unwrap(), &prior, 88).unwrap();
         let a = materialize_closed(&g, 0, &memory, &prior, 88).unwrap();
         let mut changed = g.clone();
         changed.players[1].hand[0].data_index = changed
@@ -244,12 +544,18 @@ fn identity_independent_queued_observer_does_not_keep_a_concealed_event_card() {
         let mut sampled = a;
         original.drain_effect_queue();
         sampled.drain_effect_queue();
-        for _ in 0..8 {
+        for _ in 0..16 {
             let player = decision_player(&original);
             let ma = digimon_engine::build_action_mask(&original, player);
             let mb = digimon_engine::build_action_mask(&sampled, player);
             assert_eq!(ma, mb);
-            let Some(action) = ma.iter().position(|v| *v > 0.5) else {
+            let Some(action) = ma
+                .iter()
+                .enumerate()
+                .find(|(a, v)| **v > 0.5 && *a != digimon_engine::action::PASS as usize)
+                .map(|(a, _)| a)
+                .or_else(|| ma.iter().position(|v| *v > 0.5))
+            else {
                 break;
             };
             if original.pending_selection.is_none() {

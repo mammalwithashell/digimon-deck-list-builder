@@ -21,9 +21,9 @@ python code/tools/prepare_cloud_belief_pool.py --source data/training_pools/ex13
 
 The prepared local bundle is `D:/cargo-target-wt/closed-deck-belief-training/cloud-ex13-20261029`. It contains `train.json`, `validation.json`, `test.json`, `pet_regression.json`, `prior.json`, immutable pre-prior provenance and a completed native admission report. The prior contains training lists only and uses the existing globally admitted fallback population. The five pet lists stay separate even where their contents also appear in training.
 
-## Closed-search smoke results
+## Initial closed-search smoke results
 
-Admission succeeds, but the new closed-world builder is not yet qualified for this full pool. One mirror-game probe was run for each of the 21 distinct training lists: uniform evaluator, four simulations, two worlds/batch two, `standard_lite_v2`, decision cap 1200, and seeds `20261029 + index` in the source `distinct_training_decks.json` order. These are interface/continuation probes, not policy evaluations or training runs.
+Admission succeeded, but the initial closed-world builder was not qualified for this full pool. One mirror-game probe was run for each of the 21 distinct training lists: uniform evaluator, four simulations, two worlds/batch two, `standard_lite_v2`, decision cap 1200, and seeds `20261029 + index` in the source `distinct_training_decks.json` order. These are interface/continuation probes, not policy evaluations or training runs.
 
 **1/21 completed:** the Medusamon list. **20/21 stopped explicitly** at the first unsupported closed-world state. Failed probes were preserved and were not counted as completed games, draws or card-admission failures. Later continuation coverage in each stopped game remains unmeasured.
 
@@ -46,3 +46,7 @@ No broad model-comparison result or promotion follows from these probes. A new b
 - Five focused tests cover retained pet/train overlap, cross-partition content leakage independent of card ordering, and duplicate-list rejection.
 - Shared snapshot loading verifies snapshot hashes, deck IDs, mechanics readiness, card admission and compiled/playable IDs; the existing engine validator checks legality. Native preparation/gate checks passed for all partitions.
 - Committed receipts in `evidence/cloud-pool/` preserve exact source/cloud hashes, per-partition admission counts, native/binding identities, prior digest and all 21 smoke outcomes. Raw probe decks/logs/failure files remain under the local bundle.
+
+## Follow-up qualification
+
+The [2026-10-29 software qualification](cloud-search-qualification.md) supersedes this initial readiness snapshot: 127 probes now complete without failure or truncation across three training-list seeds and every held-out, validation and pet entry. The original 1/21 evidence remains intact. Broader model comparison and promotion evidence remain separate and pending.

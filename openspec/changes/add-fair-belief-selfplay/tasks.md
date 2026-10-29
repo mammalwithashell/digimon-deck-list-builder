@@ -47,7 +47,8 @@
 
 ## Progress evidence
 
-All 29 implementation and evidence tasks are complete. See `evidence-report.md`
+The original 29 implementation and evidence tasks completed on the narrow
+ST1 cohort. Broad EX13 qualification remains incomplete. See `evidence-report.md`
 and the committed `evidence/` JSON for the full local three-seed comparison,
 validation, uncertainty, artifact hashes and explicit population limits.
 
@@ -57,3 +58,11 @@ games. Six fresh 2048-step exploiters completed held-out evaluation. The
 candidate regressed in policy-only play and exploiter resistance; promotion
 failed and no champion was promoted. Completing this change does not certify
 stronger policies or low exploitability.
+
+## 7. Broad cloud-pool merge qualification
+
+- [x] 7.1 Audit and support EX13 continuation states, including cached card references, with composition-changing paired-world and continuation-resolution tests.
+- [x] 7.2 Account for concealed field sources using entitled owner knowledge and sampled opponent identities; preserve counts, physical locations and legitimate remembered facts.
+- [x] 7.3 Rerun all 21 distinct EX13 training-list probes across three seeds and the frozen held-out, validation and pet partitions; retain every failure/truncation and qualify observed continuation forms before broader training.
+- [ ] 7.4 Freeze a broader multi-seed protocol using the existing cloud partitions and runbook budgets, execute local comparison/exploiters, and report model promotion separately from software merge readiness.
+- [x] 7.5 Rerun applicable verification and update documentation/evidence with explicit merge and model-promotion status.

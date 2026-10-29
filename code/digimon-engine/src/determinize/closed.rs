@@ -9,6 +9,33 @@ use crate::{
 use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
 use std::collections::{BTreeMap, HashSet};
 
+fn certified_context(root: &Game, queued: &crate::selection::QueuedEffect) -> bool {
+    queued.granted_effect_id.is_none() && queued.keyword_effect.is_none()
+        && root.effects_for_card(&queued.card_id, queued.source_card)
+            .and_then(|effects| effects.get(queued.effect_slot as usize)
+                .map(|e| e.ignores_event_card_identity)).unwrap_or(false)
+}
+
+fn project_context(queued: &mut crate::selection::QueuedEffect, allowed: &HashSet<CardHandle>) {
+    if let Some(context) = &mut queued.trigger_context {
+        if context.event_card.is_some_and(|h| !allowed.contains(&h)) { context.event_card = None; }
+        if context.target_card.is_some_and(|h| !allowed.contains(&h)) { context.target_card = None; }
+        if context.event_source_card.is_some_and(|h| !allowed.contains(&h)) { context.event_source_card = None; }
+        if context.event_host_card.is_some_and(|h| !allowed.contains(&h)) { context.event_host_card = None; }
+        if context.battle_opponent_card.is_some_and(|h| !allowed.contains(&h)) { context.battle_opponent_card = None; }
+        for attribution in context.source_effect.iter_mut().chain(context.event_cause_effect.iter_mut()) {
+            if attribution.source_card.is_some_and(|h| !allowed.contains(&h)) { attribution.source_card = None; }
+        }
+        for result in &mut context.selected_results {
+            if result.card.is_some_and(|h| !allowed.contains(&h)) { result.card = None; }
+        }
+        for batch in &mut context.moved_card_sets { batch.cards.retain(|h| allowed.contains(h)); }
+        if matches!(context.subject, Some(crate::trigger_context::EventSubject::Card { card, .. }) if !allowed.contains(&card)) {
+            context.subject = None;
+        }
+    }
+}
+
 /// Validate continuation support before producing training data. Unreviewed
 /// shapes fail explicitly instead of inheriting a true-hand candidate cache.
 fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), String> {
@@ -211,19 +238,18 @@ fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), St
     // never infer their identity/location from the real concealed card.
     for index in 0..root.effect_queue.len() {
         let queued = &root.effect_queue[index];
-        let certified = queued.granted_effect_id.is_none() && queued.keyword_effect.is_none()
-            && root.effects_for_card(&queued.card_id, queued.source_card)
-                .and_then(|effects| effects.get(queued.effect_slot as usize)
-                    .map(|e| e.ignores_event_card_identity)).unwrap_or(false);
+        let certified = certified_context(root, queued);
         if certified {
-            if let Some(context) = &mut root.effect_queue[index].trigger_context {
-                if context.event_card.is_some_and(|h| !allowed.contains(&h)) { context.event_card = None; }
-                if context.target_card.is_some_and(|h| !allowed.contains(&h)) { context.target_card = None; }
-                if matches!(context.subject, Some(crate::trigger_context::EventSubject::Card { card, .. }) if !allowed.contains(&card)) {
-                    context.subject = None;
-                }
+            project_context(&mut root.effect_queue[index], &allowed);
+        }
+    }
+    if let Some(mut stack) = root.pending_selection_resume.take() {
+        for frame in &mut stack.frames {
+            if let crate::resume::ResumeFrame::OuterOptionalTrigger(s) = frame {
+                if certified_context(root, &s.queued_effect) { project_context(&mut s.queued_effect, &allowed); }
             }
         }
+        root.pending_selection_resume = Some(stack);
     }
     if root.effect_queue.iter().any(|effect| {
         !identities.contains(&effect.source_card)
@@ -496,6 +522,20 @@ fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), St
                 // Route candidates depend on this seat's own hand and public
                 // host, which are preserved. A foreign hand is not entitled.
                 ResumeFrame::DigivolveCostChoice(s) => s.acting_player == viewer,
+                ResumeFrame::LinkOptionHostSelection(s) => s.owner == viewer
+                    && s.candidates.iter().all(|h| root.player(h.player).battle_area.get(h.index as usize).is_some())
+                    && outer_safe(&s.outer_conts),
+                ResumeFrame::OptionHandLinkHostSelection(s) => s.owner == viewer
+                    && identities.contains(&s.card)
+                    && root.player(s.owner).hand.get(s.hand_index).is_some_and(|c| c.handle() == s.card)
+                    && s.candidates.iter().all(|h| root.player(h.player).battle_area.get(h.index as usize).is_some()),
+                ResumeFrame::DigimonLinkHostSelection(s) => s.owner == viewer && identities.contains(&s.card)
+                    && match s.origin {
+                        crate::game::DigimonLinkOrigin::Hand(p) => p == viewer && root.player(p).hand.iter().any(|c| c.handle() == s.card),
+                        crate::game::DigimonLinkOrigin::Standing(h) => root.player(h.player).battle_area.get(h.index as usize)
+                            .is_some_and(|p| p.top_card().handle() == s.card),
+                    }
+                    && s.candidates.iter().all(|h| root.player(h.player).battle_area.get(h.index as usize).is_some()),
                 ResumeFrame::DigivolveReducerPrompt(s)
                 | ResumeFrame::DigivolveReducerSuspend(s) => s.belief_safe(viewer, &identities),
                 ResumeFrame::EffectDigivolveCostChoice(s) => s.belief_safe(viewer, &identities),
@@ -1348,8 +1388,32 @@ fn resample_own(
     }
     p.deck = deck.into_iter().map(Option::unwrap).collect();
     p.security = security.into_iter().map(Option::unwrap).collect();
-    p.digitama_deck
-        .sort_by_key(|c| (c.data_index, c.card_index));
-    p.digitama_deck.shuffle(rng);
+    let mut eggs = std::mem::take(&mut p.digitama_deck);
+    let mut egg_slots = vec![None; eggs.len()];
+    let mut known_eggs: Vec<_> = memory.hidden_instances(viewer).into_iter()
+        .filter(|c| c.2 == KnowledgeZone::Digitama).collect();
+    known_eggs.sort_by_key(|c| c.3.is_none());
+    for (instance, _, _, position) in known_eggs {
+        let i = eggs.iter().position(|c| c.card_index == instance)
+            .ok_or("own egg knowledge refers to a departed card")?;
+        let card = eggs.remove(i);
+        let slot = if let Some(from_top) = position {
+            egg_slots.len().checked_sub(from_top + 1).ok_or("own egg position exceeds zone")?
+        } else {
+            let empty: Vec<_> = (0..egg_slots.len()).filter(|i| egg_slots[*i].is_none()).collect();
+            *empty.choose(rng).ok_or("own egg memberships exceed zone")?
+        };
+        if egg_slots[slot].is_some() { return Err("conflicting own egg positions".into()); }
+        egg_slots[slot] = Some(card);
+    }
+    eggs.sort_by_key(|c| (c.data_index, c.card_index));
+    eggs.shuffle(rng);
+    for slot in egg_slots.iter_mut().filter(|s| s.is_none()) {
+        let mut card = eggs.pop().ok_or("own egg pool exhausted")?;
+        card.card_index = *next;
+        *next = next.checked_add(1).ok_or("own egg instance overflow")?;
+        *slot = Some(card);
+    }
+    p.digitama_deck = egg_slots.into_iter().map(Option::unwrap).collect();
     Ok(())
 }

@@ -37,6 +37,13 @@ without reconstructing knowledge from actual hidden cards. Mid-game legacy
 scenario imports cannot enable a complete ledger. `to_scenario()` is a debug
 projection, not a full continuation/knowledge checkpoint.
 
+Knowledge schema 2 includes face-down field sources. Their owner may inspect
+them (Comprehensive Rules 4.3, 4-7-10); the other seat receives only public
+locations/counts and legitimately remembered identities. Opposing unknown
+identities are fabricated from the sampled list. Known top-deck transfers to
+Training sources preserve entitled memory. Version 1 priors must be regenerated;
+existing experiments and shards retain their original provenance.
+
 Unsupported continuations fail with an explicit diagnostic before writing
 successful game data. Current audited forms cover standard decisions,
 RunTail with entitled bindings, block/counter/raid, public permanent count and
@@ -146,6 +153,33 @@ rejection acceptance or extrapolate to larger candidate populations.
 
 ## Reusing the existing EX13 cloud cohort
 
+Knowledge schema 2 distinguishes a remembered identity from an anonymous card
+movement. Returning an unrevealed security card to the deck bottom records its
+destination without looking at it. Hypothetical worlds assign that reference a
+sampled identity on both seats, including the owner's unseen deck/security pool.
+Drawing the tracked card preserves the reference without revealing it to the
+opponent. This also prevents native handles in queued event contexts from
+retaining the real hidden identity. Public reveals and owner inspection remain
+separate entitlements. The shared pending-security carrier is not itself a reveal.
+Concealed in-flight security removals without destination allocation stop explicitly.
+
+Public hand plays, uses, digivolutions and discards preserve remembered cards of
+different identities. Matching identities remain ambiguous: declaring a card
+does not reveal whether it is a remembered physical copy, and does not establish
+another copy. Unknown hand movements still invalidate anonymous membership.
+For queued security-removal observers, a conservative DSL analysis can prove
+that event-card identity is unused by the entire clause and its gates. Only
+then may a hypothetical queued or optional-trigger context omit unresolved
+event-card references, including unused attribution and moved-card payloads.
+Owner/cause scalars and entitled references remain intact. Unknown constructs,
+cached identity snapshots and raw Rust remain strict; the real game is
+unchanged. This is not permission to erase event-card-dependent conditions.
+
+Link host continuations retain declared/own-hand card identities, public host
+candidates and choosing-seat ownership. Ordered field returns route Digi-Eggs
+to the Digi-Egg deck in the player's chosen order; closed worlds preserve
+remembered positions there as well as in the main deck and security.
+
 Use `python code/tools/prepare_cloud_belief_pool.py --source data/training_pools/ex13-20261026 --out <fresh-directory> --cli <native-cli>` to preserve the existing cloud train/held-out/supplemental/pet partitions. It imports through shared snapshot admission, rejects content leakage, retains 26 native training slots for 21 distinct lists, and prepares the prior from training contents only. The 23 held-out lists cover 12 archetypes; same-list Light Hybrid pet results remain separate.
 
-The [cloud-pool adoption report](../openspec/changes/add-fair-belief-selfplay/cloud-pool-adoption.md) records current Python/native admission and 21 closed-search probes. All source partitions pass admission; 20 probes stop at unsupported closed-world continuation/knowledge forms. Broad closed-search qualification requires those audited forms and a new independent protocol. No cloud training was changed by the read-only inspection or local preparation.
+The [initial cloud-pool adoption report](../openspec/changes/add-fair-belief-selfplay/cloud-pool-adoption.md) retains the original 1/21 smoke outcome. The [follow-up software qualification](../openspec/changes/add-fair-belief-selfplay/cloud-search-qualification.md) records 127 completed probes with zero failures/truncations, local training/export checks and the separately frozen broader model comparison. Successful probes establish scoped software readiness; promotion still requires completed policy/search/exploiter evidence. No cloud training was changed.

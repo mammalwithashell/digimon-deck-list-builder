@@ -28,13 +28,46 @@ fn named(r: &CompiledBindingRef) -> bool {
     )
 }
 
+fn reference(r: &CompiledBindingRef) -> bool {
+    named(r)
+        || matches!(
+            r,
+            CompiledBindingRef::Source | CompiledBindingRef::Carrier | CompiledBindingRef::SelfRef
+        )
+}
+
 fn steps(body: &[CompiledStep]) -> bool {
     body.iter().all(|s| match s {
         CompiledStep::GainMemory(_) => true,
+        CompiledStep::Unsuspend { target } => reference(target),
+        CompiledStep::AddDpModifier {
+            target,
+            value: digimon_dsl::compiled::CompiledModifierValue::Literal(_),
+            ..
+        } => reference(target),
+        CompiledStep::DeDigivolve {
+            target,
+            amount_fn: None,
+            ..
+        } => reference(target),
+        CompiledStep::PerSelected { body, .. } => steps(body),
+        CompiledStep::SelectCountCappedMulti {
+            of: CompiledPlayerRef::You | CompiledPlayerRef::Opponent,
+            zone: digimon_dsl::compiled::CompiledZone::BattleArea,
+            max: digimon_dsl::compiled::CompiledCountBound::Literal(_),
+            filter,
+            ..
+        } => predicate(filter),
         CompiledStep::ActivationCost {
             kind: CompiledActivationCostKind::SuspendSelf,
         } => true,
         CompiledStep::SelectOwnPermanent {
+            filter,
+            selector: None,
+            then,
+            ..
+        } => predicate(filter) && steps(then),
+        CompiledStep::SelectOpponentPermanent {
             filter,
             selector: None,
             then,
@@ -65,10 +98,12 @@ fn steps(body: &[CompiledStep]) -> bool {
 /// can be erased from a hypothetical queued context. Raw Rust is never certified.
 pub fn ignores_event_card_identity(clause: &CompiledTriggeredClause) -> bool {
     !clause.when.is_empty()
-        && clause
-            .when
-            .iter()
-            .all(|t| matches!(t, CompiledTiming::OnOwnSecurityRemoved))
+        && clause.when.iter().all(|t| {
+            matches!(
+                t,
+                CompiledTiming::OnOwnSecurityRemoved | CompiledTiming::OnOpponentSecurityRemoved
+            )
+        })
         && clause
             .active_when
             .iter()
