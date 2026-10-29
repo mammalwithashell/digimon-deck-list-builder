@@ -69,6 +69,8 @@ fn run_test() {
     let _ = std::fs::remove_dir_all(&out_dir);
 
     let mut config = SelfPlayConfig {
+        policy_only: false,
+        belief_prior: None,
         games: 2,
         game_start: 0,
         seed: 7,
@@ -290,6 +292,8 @@ fn run_budget_test() {
     let _ = std::fs::remove_dir_all(&out_dir);
 
     let mut config = SelfPlayConfig {
+        policy_only: false,
+        belief_prior: None,
         games: 2,
         game_start: 0,
         seed: 11,

@@ -98,6 +98,8 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
     for d in dirs:
         manifest_path = d / "manifest.json"
         manifest = json.loads(manifest_path.read_text())
+        if manifest.get("evaluation_only"):
+            raise ValueError("policy-only evaluation cannot provide search training targets")
         quarantine_path = d / "training_exclusions.json"
         quarantine = None
         excluded_ids = set()
@@ -137,6 +139,8 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
                     f"{manifest_path}: observation_profile {manifest['observation_profile']!r} "
                     f"!= {profile!r} — refusing to mix profiles in one buffer"
                 )
+        from digimon_gym.agents.belief_contract import require_same_information
+        require_same_information(manifests + [manifest])
         manifests.append(manifest)
         max_game = -1
         for shard in manifest["shards"]:
@@ -359,6 +363,8 @@ def train(
     if value_coef > 0:
         model.digimon_value_semantics = "terminal_outcome"
     out.parent.mkdir(parents=True, exist_ok=True)
+    from digimon_gym.agents.belief_contract import require_same_information
+    model.digimon_information = require_same_information(ds.manifests)
     model.save(str(out))
     print(f"saved {out}", flush=True)
 
@@ -382,6 +388,7 @@ def train(
         print(f"exported {export_onnx}", flush=True)
 
     return {
+        "information": getattr(model,"digimon_information", {"regime":"legacy_exact"}),
         "rows": len(ds),
         "truncated_rows": truncated,
         "excluded_rows": sum(q["excluded_rows"] for q in ds.exclusions),

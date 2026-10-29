@@ -53,6 +53,10 @@ pub struct KnowledgeLedger {
     schema_version: u32,
     viewer: PlayerId,
     cards: Vec<KnownCard>,
+    #[serde(default)]
+    history_minimum: BTreeMap<PlayerId, CardMultiset>,
+    #[serde(default)]
+    last_counts: Option<[[usize; 4]; 2]>,
 }
 
 impl KnowledgeLedger {
@@ -64,6 +68,8 @@ impl KnowledgeLedger {
             schema_version: BELIEF_SCHEMA_VERSION,
             viewer,
             cards: Vec::new(),
+            history_minimum: BTreeMap::new(),
+            last_counts: None,
         })
     }
 
@@ -98,6 +104,7 @@ impl KnowledgeLedger {
             });
         }
         self.cards.sort_by_key(|c| (c.owner, c.instance));
+        self.remember_minimum();
         Ok(())
     }
 
@@ -129,6 +136,31 @@ impl KnowledgeLedger {
             c.position = None;
         }
     }
+    pub(crate) fn insert_known_top(&mut self, owner: PlayerId, zone: KnowledgeZone) {
+        for c in self.cards.iter_mut().filter(|c|c.owner==owner && c.zone==zone) {
+            if let Some(p)=&mut c.position { *p+=1; }
+        }
+    }
+
+    /// A publicly identified position can be tracked without reading the hidden
+    /// source's identity. Unpositioned cards cannot be matched by native handle.
+    pub(crate) fn transfer_position(&mut self, owner: PlayerId, from: KnowledgeZone,
+        position: usize, to: KnowledgeZone) {
+        let known = self.cards.iter().find(|c| c.owner==owner && c.zone==from &&
+            c.position==Some(position)).map(|c|c.instance);
+        self.cards.retain(|c| c.owner!=owner || c.zone!=from ||
+            c.position.is_some() || known.is_some());
+        for c in self.cards.iter_mut().filter(|c| c.owner==owner && c.zone==from) {
+            if Some(c.instance)==known { c.zone=to;c.position=None; }
+            else if let Some(p)=&mut c.position { if *p>position {*p-=1;} }
+        }
+        let index=|z|match z {KnowledgeZone::Hand=>Some(0),KnowledgeZone::Deck=>Some(1),
+            KnowledgeZone::Security=>Some(2),KnowledgeZone::Digitama=>Some(3),_=>None};
+        if let Some(counts)=&mut self.last_counts {
+            if let Some(i)=index(from) {counts[owner as usize][i]=counts[owner as usize][i].saturating_sub(1);}
+            if let Some(i)=index(to) {counts[owner as usize][i]+=1;}
+        }
+    }
 
     /// An unobserved transfer cannot be resolved using the true instance that
     /// moved. Conservatively invalidate membership facts in affected zones.
@@ -152,6 +184,154 @@ impl KnowledgeLedger {
             .map(|c| (c.id.clone(), c.zone))
             .collect()
     }
+    pub(crate) fn hidden_instances(
+        &self,
+        owner: PlayerId,
+    ) -> Vec<(u16, String, KnowledgeZone, Option<usize>)> {
+        self.cards
+            .iter()
+            .filter(|c| c.owner == owner && c.zone != KnowledgeZone::Public)
+            .map(|c| (c.instance, c.id.clone(), c.zone, c.position))
+            .collect()
+    }
+
+    fn remember_minimum(&mut self) {
+        for owner in 0..2 {
+            let mut current = CardMultiset::new();
+            for c in self.cards.iter().filter(|c| c.owner == owner) {
+                *current.entry(c.id.clone()).or_default() += 1;
+            }
+            let history = self.history_minimum.entry(owner).or_default();
+            for (id, n) in current {
+                let old = history.entry(id).or_default();
+                *old = (*old).max(n);
+            }
+        }
+    }
+
+    /// Refresh entitled state only. Unknown departures invalidate membership
+    /// conservatively; native hidden handles are never consulted to resolve them.
+    pub(crate) fn refresh(&mut self, game: &Game) -> Result<(), String> {
+        if game.players.len() != 2 {
+            return Err("knowledge is two-player only".into());
+        }
+        let counts: [[usize; 4]; 2] = std::array::from_fn(|i| {
+            let p = &game.players[i];
+            [
+                p.hand.len(),
+                p.deck.len(),
+                p.security.len(),
+                p.digitama_deck.len(),
+            ]
+        });
+        if let Some(previous) = self.last_counts {
+            for owner in 0..2 {
+                for (i, zone) in [
+                    KnowledgeZone::Hand,
+                    KnowledgeZone::Deck,
+                    KnowledgeZone::Security,
+                    KnowledgeZone::Digitama,
+                ]
+                .into_iter()
+                .enumerate()
+                {
+                    if counts[owner][i] < previous[owner][i] {
+                        self.forget_zone(owner as u8, zone);
+                    }
+                }
+            }
+        }
+        let mut public = Vec::new();
+        for p in &game.players {
+            for c in p
+                .trash
+                .iter()
+                .chain(
+                    p.battle_area
+                        .iter()
+                        .flat_map(|p| p.card_sources.iter().chain(&p.linked_cards)),
+                )
+                .chain(
+                    p.breeding_area
+                        .iter()
+                        .flat_map(|p| p.card_sources.iter().chain(&p.linked_cards)),
+                )
+                .chain(p.commander_zone.iter())
+                .chain(
+                    p.security
+                        .iter()
+                        .filter(|c| p.face_up_security.contains(&c.card_index)),
+                )
+            {
+                if !c.is_token && !c.face_down && !c.is_opaque_placeholder {
+                    public.push((
+                        c.owner,
+                        c.card_index,
+                        c.card_id(&game.card_data).to_string(),
+                    ));
+                }
+            }
+        }
+        for c in game
+            .revealed_cards
+            .iter()
+            .chain(game.pending_option.iter().map(|p| &p.card))
+            .chain(game.pending_security.iter().map(|p| &p.card))
+        {
+            if !c.is_token && !c.is_opaque_placeholder {
+                public.push((
+                    c.owner,
+                    c.card_index,
+                    c.card_id(&game.card_data).to_string(),
+                ));
+            }
+        }
+        let present: BTreeSet<_> = public
+            .iter()
+            .map(|(owner, instance, _)| (*owner, *instance))
+            .collect();
+        // Remove vanished public observations BEFORE observing new instances.
+        // This avoids counting recycled indistinguishable copies twice.
+        self.cards.retain(|c| {
+            c.zone != KnowledgeZone::Public || present.contains(&(c.owner, c.instance))
+        });
+        for (owner, instance, id) in public {
+            self.observe(owner, instance, &id, KnowledgeZone::Public, None)?;
+        }
+        self.forget_zone(self.viewer, KnowledgeZone::Hand);
+        for c in &game.players[self.viewer as usize].hand {
+            self.observe(
+                c.owner,
+                c.card_index,
+                c.card_id(&game.card_data),
+                KnowledgeZone::Hand,
+                None,
+            )?;
+        }
+        if let Some(owner) = game
+            .pending_selection
+            .as_ref()
+            .and_then(|s| s.card_choice.as_ref())
+            .and_then(|c| c.inspected_security_owner(self.viewer))
+        {
+            for (i, c) in game.players[owner as usize]
+                .security
+                .iter()
+                .rev()
+                .enumerate()
+            {
+                self.observe(
+                    c.owner,
+                    c.card_index,
+                    c.card_id(&game.card_data),
+                    KnowledgeZone::Security,
+                    Some(i),
+                )?;
+            }
+        }
+        self.last_counts = Some(counts);
+        Ok(())
+    }
 }
 
 /// Only counts and currently entitled identities. No exact opposing list,
@@ -166,6 +346,8 @@ pub struct BeliefEvidence {
     pub digitama_count: usize,
     pub accounted: CardMultiset,
     pub known_hidden: Vec<(String, KnowledgeZone)>,
+    #[serde(default)]
+    pub history_minimum: CardMultiset,
 }
 
 impl BeliefEvidence {
@@ -190,6 +372,7 @@ impl BeliefEvidence {
             digitama_count,
             accounted,
             known_hidden: Vec::new(),
+            history_minimum: CardMultiset::new(),
         })
     }
 
@@ -213,6 +396,11 @@ impl BeliefEvidence {
         }
         let opponent = 1 - viewer;
         let p = &game.players[opponent as usize];
+        let inspected = game
+            .pending_selection
+            .as_ref()
+            .and_then(|s| s.card_choice.as_ref())
+            .and_then(|c| c.inspected_security_owner(viewer));
         let mut accounted = CardMultiset::new();
         let mut public_instances = BTreeSet::new();
         let mut add = |c: &crate::card_source::CardSource| -> Result<(), String> {
@@ -225,7 +413,7 @@ impl BeliefEvidence {
                 );
             }
             if !public_instances.insert(c.card_index) {
-                return Err("physical card appears in two public zones".into());
+                return Ok(()); // An in-flight public snapshot may reference the same instance.
             }
             *accounted
                 .entry(c.card_id(&game.card_data).into())
@@ -250,15 +438,19 @@ impl BeliefEvidence {
             if let Some(c) = &public_player.commander_zone {
                 add(c)?;
             }
-            for c in public_player
-                .security
-                .iter()
-                .filter(|c| public_player.face_up_security.contains(&c.card_index))
-            {
+            for c in public_player.security.iter().filter(|c| {
+                inspected == Some(public_player.id)
+                    || public_player.face_up_security.contains(&c.card_index)
+            }) {
                 add(c)?;
             }
         }
-        for c in &game.revealed_cards {
+        for c in game
+            .revealed_cards
+            .iter()
+            .chain(game.pending_option.iter().map(|p| &p.card))
+            .chain(game.pending_security.iter().map(|p| &p.card))
+        {
             add(c)?;
         }
         let mut result = Self::from_counts(
@@ -268,7 +460,9 @@ impl BeliefEvidence {
             p.deck.len(),
             p.security
                 .iter()
-                .filter(|c| !p.face_up_security.contains(&c.card_index))
+                .filter(|c| {
+                    inspected != Some(opponent) && !p.face_up_security.contains(&c.card_index)
+                })
                 .count(),
             p.digitama_deck.len(),
             accounted,
@@ -284,6 +478,11 @@ impl BeliefEvidence {
             })
             .map(|c| (c.id.clone(), c.zone))
             .collect();
+        result.history_minimum = memory
+            .history_minimum
+            .get(&opponent)
+            .cloned()
+            .unwrap_or_default();
         Ok(result)
     }
 
@@ -291,6 +490,10 @@ impl BeliefEvidence {
         let mut required = self.accounted.clone();
         for (id, _) in &self.known_hidden {
             *required.entry(id.clone()).or_default() += 1;
+        }
+        for (id, n) in &self.history_minimum {
+            let current = required.entry(id.clone()).or_default();
+            *current = (*current).max(*n);
         }
         required
     }

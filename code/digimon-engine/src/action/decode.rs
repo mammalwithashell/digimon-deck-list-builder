@@ -30,6 +30,12 @@ impl Game {
     /// `resolve_selection`, which the engine drives via `PendingSelection`
     /// callbacks.
     pub fn decode_action(&mut self, action_id: u16, player_id: PlayerId) {
+        let _ = self.refresh_belief_knowledge();
+        self.decode_action_with_knowledge(action_id, player_id);
+        let _ = self.refresh_belief_knowledge();
+    }
+
+    fn decode_action_with_knowledge(&mut self, action_id: u16, player_id: PlayerId) {
         if action_id as usize >= ACTION_SPACE_SIZE {
             return;
         }

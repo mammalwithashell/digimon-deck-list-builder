@@ -132,6 +132,16 @@ pub struct EffectResultLogCursor {
 }
 
 impl Bindings {
+    pub(crate) fn belief_safe(&self, viewer: PlayerId, allowed: &std::collections::HashSet<CardHandle>) -> bool {
+        self.slots.values().all(|v| match v {
+            BindingValue::Card(h) | BindingValue::UnionCard { card:h, .. } => allowed.contains(h),
+            BindingValue::CardList(h) => h.iter().all(|h| allowed.contains(h)),
+            BindingValue::HandIndex(owner, _) => *owner == viewer,
+            _ => true,
+        }) && self.result_log.returned_cards.iter().chain(&self.result_log.returned_to_deck)
+            .chain(&self.result_log.added_to_hand).chain(&self.result_log.trashed_from_hand)
+            .all(|h| allowed.contains(h))
+    }
     /// Stable projection for new typed declarations; archival Debug stays unchanged.
     pub(crate) fn canonical_verification_debug(&self) -> String {
         let slots: std::collections::BTreeMap<_, _> = self.slots.iter().collect();

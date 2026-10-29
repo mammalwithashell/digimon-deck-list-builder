@@ -35,6 +35,8 @@ impl Game {
         };
         let mut taken = self.revealed_cards.remove(pos_idx);
         taken.clear_reveal_overlay();
+        let known_position = match position { crate::enums::StackPosition::Top => Some(0), _ => None };
+        self.learn_belief_card(&taken, crate::determinize::beliefs::KnowledgeZone::Deck, known_position);
         match position {
             crate::enums::StackPosition::Top => {
                 self.player_mut(player_id).put_on_deck_top(taken);
@@ -227,6 +229,7 @@ impl Game {
             // Rule 3-1-3-9-2: a Digi-Egg cannot enter hand.
             self.player_mut(top_owner).insert_in_digi_egg_deck(0, top);
         } else if !top_is_token {
+            self.learn_belief_card(&top, crate::determinize::beliefs::KnowledgeZone::Hand, None);
             self.player_mut(top_owner).put_in_hand(top);
         }
 

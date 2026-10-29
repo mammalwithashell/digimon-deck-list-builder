@@ -1,4 +1,67 @@
-# Initial implementation evidence
+# Implementation and evidence
+
+## Current implementation (2026-10-28)
+
+Preserved the original foundation as commit `879ce5147`, then merged fetched
+remote main `d0d052026` into `feat/fair-belief-selfplay`. The branch began 130
+commits behind; all implementation below uses the updated checkout.
+
+The native CLI, both-seat self-play, PIMC and IS-MCTS now support closed-list
+hypotheses from restricted viewer evidence. Policy/outcome shapes remain
+unchanged. The generation runner rejects regime/prior resume drift; shards,
+checkpoints and ONNX sidecars preserve information provenance. Untagged legacy
+data remains exact-prior data. No training-completion path promotes a champion.
+
+See `docs/FAIR_BELIEF_TRAINING.md` for API boundaries, conservative knowledge
+invalidation, supported continuation forms, explicit unsupported errors,
+observation limits and reproduction commands. The 45-trash-identity policy
+window remains unchanged; full public counts are available to search.
+
+`experiment/` freezes the repository standard/ENG restriction policy, globally
+admitted fallback population, equal distinct-list weights, 20 admitted
+ST1-derived variants with 16/2/2 disjoint list splits, seeds 11/22/33, two
+32-game search generations per regime/seed, 32 simulations and four worlds,
+2048-step fresh exploiters, and 256-game per-seed independent panels.
+The `training_games_per_seed` protocol field is the per-generation quota;
+two generations therefore request 64 games per training seed/regime.
+The seed checkpoint is an untrained compatible MLP initializer; it is evaluated
+separately. No compatible trained checkpoint was silently reshaped.
+Stock ST1-09 failed the existing admission gate; it was excluded from this
+explicitly named cohort. Admission and mechanics gates remain intact.
+
+Completed validation so far: repository tier 0 passed all 13 checks including
+183 tooling tests; Python focused suites passed 52 tests with one existing skip.
+The final Rust aggregate and all empirical comparison tasks remain in progress.
+Development-build preflight attempts are preserved separately from final
+comparison evidence. Optimized executable hashes cannot be mixed into those
+attempts on resume. No model-strength or promotion claim follows from them.
+
+## Current validation detail
+
+- 46 determinization and 19 search tests passed, including composition-changing
+  PIMC/IS-MCTS guards, private inspection transfer, full trash accounting,
+  transformed-hidden refusal and a legally resolved sampled card absent from
+  the actual list.
+- Tier 1's six Rust suites passed 2,077 tests with five existing ignores.
+- Extra security-selection suite: two passed; the recorded game-268 prefix
+  rejected PASS at decision 79 before reaching search. The independently
+  installed pre-change PyO3 binding rejects the same action. This fixture
+  failure is retained; it has not been relabelled as a successful aggregate.
+- Closed smoke: generations 0 and 1 completed, then a new Python process resumed
+  generation 2. Six games total, no truncated rows, SB3 + ONNX exports complete.
+  Chunk scoring sidecars recorded genuine fallback worlds; no scorer truth
+  enters actors, providers or trainers.
+- Prior microbenchmark: 16 candidates, 1066 admitted IDs, 1000 requests each.
+  Initial conditioning 0.129 s, mixture sampling 1.685 s (106 fallback worlds).
+  Unfamiliar evidence eliminated all candidates: conditioning 0.175 s,
+  sampling 14.039 s, all 1000 fallback requests succeeded, zero sample failures.
+  Attempt bound 128; this is request success, not per-proposal acceptance.
+- First full seed's closed training used a sampled peak process-tree RSS of
+  4,592,140,288 bytes at 0.5-second intervals and 92.67 s total wall time.
+  These are local measurements for the declared cohort/budget, not scaling
+  guarantees. Final per-regime comparison metrics remain pending.
+
+## Historical foundation evidence (2026-10-22)
 
 ## Scope
 

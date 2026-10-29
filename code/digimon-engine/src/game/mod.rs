@@ -512,6 +512,8 @@ impl EffectsCache {
 
 #[derive(Debug, Clone)]
 pub struct Game {
+    pub(crate) belief_knowledge: Option<[crate::determinize::beliefs::KnowledgeLedger; 2]>,
+    pub(crate) belief_knowledge_error: Option<String>,
     /// Exam-only recorder state; cloned but excluded from gameplay/digests.
     pub(crate) movement_observer:
         std::cell::RefCell<Option<crate::movement_observation::MovementObserver>>,
@@ -2799,6 +2801,8 @@ impl Game {
     }
 
     /// Allocate a new unique card index (for tokens, etc.).
+    pub(crate) fn reset_hypothetical_indices(&mut self, next:u16) { self.next_card_index=next; }
+
     pub fn next_card_index(&mut self) -> u16 {
         let idx = self.next_card_index;
         self.next_card_index += 1;

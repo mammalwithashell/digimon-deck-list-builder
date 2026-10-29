@@ -21,3 +21,4 @@ mod invariants_tests;
 mod materialize_tests;
 mod sampling_tests;
 mod beliefs;
+mod closed;
