@@ -1,0 +1,14 @@
+[
+  {
+    "path": "data/mechanics_readiness.json",
+    "generated_sha256": "f2f603f43d0e362dcd9a5c7732eca5ce73827bac5f66c229dc6c68acd51f510b",
+    "restored_sha256": "ea053dbc2ffdae82154421049e019f726ec6a3e737529f987a1353d2800cbd0b",
+    "json_equal": true
+  },
+  {
+    "path": "qa/impact/lowering_coverage.json",
+    "generated_sha256": "75d8dd61257677fdd6e942c576ad67e64cd210784113ebaa8aa18d761ac15cc2",
+    "restored_sha256": "a0d8491075b19924f6f1b99bdffa38f4f639b573990a6f152b37c345b2bd2ffe",
+    "json_equal": true
+  }
+]

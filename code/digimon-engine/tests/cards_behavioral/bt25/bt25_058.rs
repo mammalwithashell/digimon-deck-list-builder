@@ -317,7 +317,216 @@ fn bt25_058_locks_an_opponent_permanent_from_unsuspending() {
     );
 }
 
+/// Q1643's independent "Then" processing: declining the optional suspend
+/// must still offer a mandatory lock (DCGO BT25_058 Shared OP / WD / WA).
+#[test]
+fn bt25_058_declined_suspend_still_requires_lock() {
+    let mut runner = base().hand(0, &[CARD_ID]).memory(10).start();
+    let digimon = runner.place_on_field(1, "OPP-LV4", Some(0));
+    let tamer = runner.place_on_field(1, "OPP-TAMER", Some(1));
+    let play = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&runner.game, 0)[play as usize],
+        1.0
+    );
+    runner.game.decode_action(play, 0);
+    let pass = digimon_engine::action::space::PASS;
+    let selection = runner.pending_selection().expect("optional suspend");
+    assert!(selection.is_optional);
+    assert_eq!(selection.valid_action_ids.len(), 2);
+    assert!(digimon_engine::action::mask::build_action_mask(&runner.game, 0)[pass as usize] > 0.0);
+    runner.execute_action(0, pass).expect("decline suspend");
+    let selection = runner
+        .pending_selection()
+        .expect("mandatory Then lock after decline");
+    assert!(!selection.is_optional);
+    assert_eq!(selection.valid_action_ids.len(), 2);
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)[pass as usize],
+        0.0
+    );
+    let action = selection.valid_action_ids[1];
+    runner.execute_action(0, action).expect("lock tamer");
+    assert!(!runner.game.players[1].battle_area[0].is_suspended);
+    assert!(!runner.game.players[1].battle_area[1].is_suspended);
+    assert!(!runner
+        .modifiers()
+        .has(digimon, ModifierType::CannotUnsuspend));
+    assert!(runner.modifiers().has(tamer, ModifierType::CannotUnsuspend));
+}
+
 // ─── Section 4 — Behavior: [All Turns] effect-play observer ───────────────────
+
+fn decline_suspend_and_lock_first(runner: &mut DebugRunner) {
+    let pass = digimon_engine::action::space::PASS;
+    let pick = runner.pending_selection().expect("suspend choice");
+    assert!(pick.is_optional);
+    assert!(pick.prompt.contains("suspend"), "{:?}", pick);
+    runner.execute_action(0, pass).expect("decline suspend");
+    let pick = runner
+        .pending_selection()
+        .expect("independent mandatory lock");
+    assert!(!pick.is_optional);
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&runner.game, 0)[pass as usize],
+        0.0
+    );
+    let action = pick.valid_action_ids[0];
+    runner.execute_action(0, action).expect("choose lock");
+}
+
+#[test]
+fn bt25_058_selected_suspend_and_lock_can_choose_different_targets() {
+    let mut r = base().hand(0, &[CARD_ID]).memory(10).start();
+    let host = r.place_on_field(0, "TS-LV5", None);
+    let digimon = r.place_on_field(1, "OPP-LV4", None);
+    let tamer = r.place_on_field(1, "OPP-TAMER", None);
+    let evolve = digimon_engine::action::space::encode_digivolve(0, host.index as u16);
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[evolve as usize],
+        1.0
+    );
+    r.game.decode_action(evolve, 0);
+    let suspend = r.pending_selection().unwrap().valid_action_ids[0];
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[suspend as usize],
+        1.0
+    );
+    r.execute_action(0, suspend).unwrap();
+    let lock = r
+        .pending_selection()
+        .expect("lock after selected suspension");
+    assert!(!lock.is_optional);
+    let action = lock.valid_action_ids[1];
+    r.execute_action(0, action).unwrap();
+    assert!(r.game.players[1].battle_area[0].is_suspended);
+    assert!(!r.game.players[1].battle_area[1].is_suspended);
+    assert!(!r.modifiers().has(digimon, ModifierType::CannotUnsuspend));
+    assert!(r.modifiers().has(tamer, ModifierType::CannotUnsuspend));
+}
+
+#[test]
+fn bt25_058_decline_lock_survives_clone_and_expires_after_opponent_turn() {
+    let mut r = base().hand(0, &[CARD_ID]).memory(10).start();
+    let host = r.place_on_field(0, "TS-LV5", None);
+    let opp = r.place_on_field(1, "OPP-LV4", None);
+    r.game.players[1].battle_area[0].is_suspended = true;
+    let evolve = digimon_engine::action::space::encode_digivolve(0, host.index as u16);
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[evolve as usize],
+        1.0
+    );
+    r.game.decode_action(evolve, 0);
+    // Fork at the optional selection: the clone must own its continuation.
+    let mut fork = DebugRunner::wrap(r.game.clone());
+    decline_suspend_and_lock_first(&mut fork);
+    assert!(r.pending_selection().unwrap().is_optional);
+    assert!(!r.modifiers().has(opp, ModifierType::CannotUnsuspend));
+    assert!(fork.modifiers().has(opp, ModifierType::CannotUnsuspend));
+    fork.end_turn();
+    assert_eq!(fork.game.turn_player(), 1);
+    assert!(fork.game.players[1].battle_area[0].is_suspended);
+    assert!(fork.modifiers().has(opp, ModifierType::CannotUnsuspend));
+    fork.end_turn();
+    assert!(!fork.modifiers().has(opp, ModifierType::CannotUnsuspend));
+}
+
+#[test]
+fn bt25_058_already_suspended_pick_still_requires_lock() {
+    let mut r = base().hand(0, &[CARD_ID]).memory(13).start();
+    let opp = r.place_on_field(1, "OPP-LV4", None);
+    r.game.players[1].battle_area[0].is_suspended = true;
+    r.play(0, 0).unwrap();
+    let pick = r.pending_selection().expect("optional suspend");
+    assert!(pick.is_optional);
+    assert_eq!(pick.valid_action_ids.len(), 1);
+    let action = pick.valid_action_ids[0];
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[action as usize],
+        1.0
+    );
+    r.execute_action(0, action).unwrap();
+    let pick = r
+        .pending_selection()
+        .expect("mandatory lock despite no new suspension");
+    assert!(!pick.is_optional);
+    let action = pick.valid_action_ids[0];
+    r.execute_action(0, action).unwrap();
+    assert!(r.game.players[1].battle_area[0].is_suspended);
+    assert!(r.modifiers().has(opp, ModifierType::CannotUnsuspend));
+}
+
+#[test]
+fn bt25_058_when_digivolving_decline_still_locks() {
+    use digimon_engine::action::{build_action_mask, space::encode_digivolve};
+    let mut r = base().hand(0, &[CARD_ID]).memory(10).start();
+    let host = r.place_on_field(0, "TS-LV5", None);
+    let opp = r.place_on_field(1, "OPP-TAMER", None);
+    let action = encode_digivolve(0, host.index as u16);
+    assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
+    r.game.decode_action(action, 0);
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        CARD_ID
+    );
+    decline_suspend_and_lock_first(&mut r);
+    assert!(r.modifiers().has(opp, ModifierType::CannotUnsuspend));
+}
+
+#[test]
+fn bt25_058_when_attacking_decline_still_locks() {
+    use digimon_engine::action::{
+        build_action_mask,
+        space::{encode_attack, SECURITY_TARGET},
+    };
+    let mut r = base().security(1, &["DECK-PAD"]).memory(5).start();
+    let callismon = place_callismon(&mut r);
+    let opp = r.place_on_field(1, "OPP-TAMER", None);
+    r.game.players[0].battle_area[0].turn_played = 0;
+    r.set_turn(2);
+    let action = encode_attack(callismon.index as u16, SECURITY_TARGET);
+    assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
+    r.game.decode_action(action, 0);
+    decline_suspend_and_lock_first(&mut r);
+    assert!(r.modifiers().has(opp, ModifierType::CannotUnsuspend));
+}
+
+/// CR 4.3 §16-27: deletion with sources replays Callismon as a new card;
+/// its new On Play still has the mandatory lock after declining suspension.
+#[test]
+fn bt25_058_fortitude_replay_decline_still_locks() {
+    let mut r = base().memory(5).start();
+    let callismon = r.place_stack(0, &["TS-LV5", CARD_ID]);
+    let opp = r.place_on_field(1, "OPP-TAMER", None);
+    r.game.delete_permanent_with_effects(callismon);
+    r.game.drain_effect_queue();
+    assert_eq!(r.game.players[0].battle_area.len(), 1);
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        CARD_ID
+    );
+    let order = r.pending_selection().expect("replay trigger order");
+    assert_eq!(order.kind, SelectionKind::TriggerOrder);
+    let action = order
+        .effect_choices
+        .as_ref()
+        .expect("named simultaneous effects")
+        .iter()
+        .find(|choice| choice.timing == Some(digimon_engine::enums::EffectTiming::OnPlay))
+        .expect("choose the replay's On Play effect")
+        .action_id;
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[action as usize],
+        1.0
+    );
+    r.execute_action(0, action).unwrap();
+    decline_suspend_and_lock_first(&mut r);
+    assert!(r.modifiers().has(opp, ModifierType::CannotUnsuspend));
+}
 
 /// Positive: while Callismon is on the field, when a Digimon is played BY EFFECT,
 /// the [All Turns] clause installs the De-Digivolve prompt over opponent Digimon.

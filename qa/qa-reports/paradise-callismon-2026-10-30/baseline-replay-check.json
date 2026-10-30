@@ -1,0 +1,20 @@
+{
+  "baseline": "77f4702f9c786f95aabb4745593e358c6face855",
+  "fixed_yaml_sha256": "df3f14de193145d23d185df61796a4c91d41d73925c458ef0294ed098488a878",
+  "baseline_yaml_sha256": "e365875bee909e746094f54e20c2ad47b7cb52ea8bfa90d66496aaae9a36d9e1",
+  "final_replay_binary_sha256": "b7c2f66230c314b8e04c322255e04450987feb70751cf42f2ffa3b1971f7229e",
+  "note": "Only card production source changed by this task was temporarily restored to HEAD. Test additions and evidence files do not enter replay execution.",
+  "build_exit": 0,
+  "baseline_replay_binary_sha256": "6d3230936eee93178bb10eaf791c8585ac1717049a00bcf21d794a27c8945d1b",
+  "replay_exit": 1,
+  "fixed_yaml_restored": true,
+  "identical_failure_tuples": true,
+  "divergences": [
+    "divergence in refresh_v2_generated_greedy_000_digilab_00b5ea09afd9_vs_digilab_0286bd08d2eb_seed_40521416.replay.json at step 26 (Digest): recorded=16916382372867944159 replayed=5199309697073599048",
+    "divergence in refresh_v2_generated_greedy_001_digilab_0286bd08d2eb_vs_digilab_03052bcf3884_seed_40521419.replay.json at step 18 (Digest): recorded=7727334165344325627 replayed=3980596037229086645",
+    "divergence in refresh_v2_generated_greedy_002_digilab_03052bcf3884_vs_digilab_087db0caf1c2_seed_40521420.replay.json at step 35 (Digest): recorded=1841986688168341021 replayed=9837222199843890639",
+    "divergence in refresh_v2_generated_greedy_005_digilab_0f8f67c14f13_vs_digilab_10c793e6c4b4_seed_40521427.replay.json at step 16 (Digest): recorded=8078911757964659624 replayed=17186217613781853397",
+    "divergence in refresh_v2_generated_greedy_006_digilab_10c793e6c4b4_vs_digilab_14f6262f4fc0_seed_40521428.replay.json at step 44 (Digest): recorded=15012682948161528355 replayed=2179688109763297715",
+    "divergence in refresh_v2_generated_greedy_009_digilab_155d30601167_vs_digilab_1682f0098d48_seed_40521435.replay.json at step 16 (Digest): recorded=2351531839700531490 replayed=12322771405705590059"
+  ]
+}
