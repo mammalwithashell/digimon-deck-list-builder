@@ -47,9 +47,9 @@ fn candidates(
                 .count() as u64;
             (count >= minimum
                 && eval_predicate(filter, ctx, PredicateSubject::Permanent(h))
-                && !ctx
+                && ctx
                     .game
-                    .permanent_is_unaffected_by_effect(h, ctx.player, ctx.source_kind))
+                    .effect_can_affect_from(h, ctx.player, ctx.source_kind, ctx.source_identity))
             .then_some(h)
         })
         .collect()

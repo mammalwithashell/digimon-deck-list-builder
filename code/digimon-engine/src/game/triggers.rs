@@ -446,12 +446,18 @@ impl Game {
         if !self.floating_mass_modifiers.is_empty() {
             let floating = self.floating_mass_modifiers.clone();
             for fm in &floating {
-                let mut ctx = crate::effect_context::EffectContext::new(
+                let carrier = fm.source_identity.and_then(|identity| {
+                    self.resolve_source_move_anchor(identity, false)
+                        .or_else(|| self.resolve_source_move_anchor(identity, true))
+                });
+                let mut ctx = crate::effect_context::EffectContext::new_with_source_kind(
                     self,
                     fm.source_card,
-                    None,
+                    carrier,
+                    fm.source_kind,
                     fm.source_player,
                 );
+                ctx.source_identity = fm.source_identity;
                 let matches = crate::dsl_cards::step::permanent_scan::scan(&ctx, &fm.filter, None);
                 for h in matches {
                     // `Expiry::Permanent`: the per-permanent materialized entry is
@@ -465,7 +471,9 @@ impl Game {
                         if ctx.can_affect_permanent(h) {
                             let mut entry = crate::modifiers::ModifierEntry::materialized_declarative(
                                 fm.modifier, fm.value, Expiry::Permanent, None, fm.source_player,
-                            ).opponent_only();
+                            ).opponent_only()
+                                .with_affecting_source_kind(fm.source_kind)
+                                .with_affecting_source_identity(fm.source_identity);
                             if let Some(payload) = &fm.payload {
                                 entry = entry.with_payload(payload.clone());
                             }
@@ -651,19 +659,18 @@ impl Game {
         carrier: crate::permanent::PermanentHandle,
         timing: crate::enums::EffectTiming,
     ) {
-        let entries = self.modifiers.granted_triggered_for_timing(carrier, timing);
-        for (source_card, source_player, body) in entries {
+        let entries = self.modifiers.granted_triggered_entries_for_timing(carrier, timing);
+        for grant in entries {
+            let source_card=grant.source_card;let source_player=grant.source_player;
+            let body=grant.body;
             // Immunity gate (mirrors the queue dispatcher): skip when the
             // carrier is unaffected by the grantor's effects — `<Progress>` /
             // attack-scoped immunity (Q2) or a general `CannotBeAffected`
             // opponent-effect immunity (Q17). The opponent-effect immunity
-            // filter is source-kind-agnostic, so `Digimon` suffices on this
-            // fallback path.
+            // gate uses the actual grant-time category and original carrier.
             if self.progress_excludes(carrier, Some(source_player))
-                || self.permanent_is_unaffected_by_effect(
-                    carrier,
-                    source_player,
-                    crate::enums::EffectSourceKind::Digimon,
+                || self.modifiers.is_unaffected_by_from(
+                    carrier,source_player,grant.source_kind,grant.source_identity,
                 )
             {
                 continue;
@@ -672,11 +679,15 @@ impl Game {
             // (effect_source_player = carrier.player), so a deletion it causes
             // is the carrier-controller's OwnEffect (judge-quiz Q16). The
             // grantor (`source_player`) is used only for the immunity gate.
-            let mut ctx = crate::effect_context::EffectContext::new(
-                self,
-                source_card,
-                Some(carrier),
-                carrier.player,
+            let carrier_card = self.players.get(carrier.player as usize).and_then(|player| {
+                if carrier.index as u16 == crate::action::space::BREEDING_TARGET {
+                    player.breeding_area.as_ref()
+                } else { player.battle_area.get(carrier.index as usize) }
+            }).map(|permanent| permanent.top_card().handle());
+            let carrier_kind = carrier_card.map(|card| self.effect_source_kind_for_handle(card))
+                .unwrap_or(crate::enums::EffectSourceKind::Digimon);
+            let mut ctx = crate::effect_context::EffectContext::new_with_source_kind(
+                self, source_card, Some(carrier), carrier_kind, carrier.player,
             );
             body(&mut ctx);
         }

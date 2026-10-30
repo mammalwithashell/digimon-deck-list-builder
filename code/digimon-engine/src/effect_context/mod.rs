@@ -135,6 +135,7 @@ pub struct EffectReadContext<'a> {
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
     pub source_kind: EffectSourceKind,
+    pub source_identity: Option<(PlayerId, u64)>,
     pub player: PlayerId,
     replacement_cause: Option<ReplacementCause>,
     replacement_source_controller: Option<PlayerId>,
@@ -197,6 +198,7 @@ impl<'a> EffectReadContext<'a> {
             source_card,
             source_permanent,
             source_kind,
+            source_identity: source_permanent.and_then(|h| game.permanent_effect_identity(h)),
             player,
             replacement_cause: None,
             replacement_source_controller: None,
@@ -223,6 +225,7 @@ impl<'a> EffectReadContext<'a> {
             source_card,
             source_permanent,
             source_kind,
+            source_identity: source_permanent.and_then(|h| game.permanent_effect_identity(h)),
             player,
             replacement_cause: None,
             replacement_source_controller: None,
@@ -961,6 +964,7 @@ pub struct EffectContext<'a> {
     pub source_permanent: Option<PermanentHandle>,
     /// Rules-facing classification of the effect source.
     pub source_kind: EffectSourceKind,
+    pub source_identity: Option<(PlayerId, u64)>,
     /// Player who controls the source.
     pub player: PlayerId,
     /// Temporary override for `selecting_player` inside `as_selecting_player`
@@ -1017,11 +1021,13 @@ impl<'a> EffectContext<'a> {
         source_kind: EffectSourceKind,
         player: PlayerId,
     ) -> Self {
+        let source_identity = source_permanent.and_then(|h| game.source_move_anchor(h));
         Self {
             game,
             source_card,
             source_permanent,
             source_kind,
+            source_identity,
             player,
             override_selecting_player: None,
             cost_target_card: None,
@@ -1633,8 +1639,11 @@ impl<'a> EffectContext<'a> {
         EffectReadContext {
             game: self.game,
             source_card: self.source_card,
-            source_permanent: self.source_permanent,
+            source_permanent: self.source_identity.and_then(|identity|
+                self.game.resolve_source_move_anchor(identity, false)
+                    .or_else(|| self.game.resolve_source_move_anchor(identity, true))),
             source_kind: self.source_kind,
+            source_identity: self.source_identity,
             player: self.player,
             replacement_cause: None,
             replacement_source_controller: None,
@@ -1655,7 +1664,7 @@ impl<'a> EffectContext<'a> {
 
     pub fn can_affect_permanent(&self, target: PermanentHandle) -> bool {
         self.game
-            .effect_can_affect(target, self.player, self.source_kind)
+            .effect_can_affect_from(target, self.player, self.source_kind, self.source_identity)
     }
 
     /// Snapshot of the current reveal pool. Scripts inspect this to decide

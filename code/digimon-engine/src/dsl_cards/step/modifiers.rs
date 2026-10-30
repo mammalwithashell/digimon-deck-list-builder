@@ -124,6 +124,7 @@ pub(crate) fn lower_effect_source_kind(kind: CompiledEffectSourceKind) -> Effect
         CompiledEffectSourceKind::Tamer => EffectSourceKind::Tamer,
         CompiledEffectSourceKind::Option => EffectSourceKind::Option,
         CompiledEffectSourceKind::Rule => EffectSourceKind::Rule,
+        CompiledEffectSourceKind::DigiEgg => EffectSourceKind::DigiEgg,
     }
 }
 
@@ -231,8 +232,7 @@ pub fn try_run(
             let Some(expiry) = resolve_expiry("add_dp_modifier", expiry) else {
                 return true;
             };
-            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
-            {
+            if let Some(h) = resolve_permanent_target(target, ctx, bindings) {
                 let n = resolve_modifier_value(value, ctx, h, bindings, runtime);
                 ctx.add_dp_modifier(h, n, expiry);
             }
@@ -274,9 +274,7 @@ pub fn try_run(
             };
             match target {
                 CompiledModifierTarget::Binding(b) => {
-                    if let Some(ResolvedBinding::Permanent(h)) =
-                        resolve_binding_ref(b, ctx, bindings)
-                    {
+                    if let Some(h) = resolve_permanent_target(b, ctx, bindings) {
                         let n = resolve_modifier_value(value, ctx, h, bindings, runtime);
                         install(ctx, h, n);
                     }
@@ -295,7 +293,7 @@ pub fn try_run(
                             index: 0,
                         });
                         let n = resolve_modifier_value(value, ctx, dummy, bindings, runtime);
-                        ctx.game.add_floating_mass_modifier_scoped(
+                        ctx.game.add_floating_mass_modifier_scoped_from(
                             pred.clone(),
                             modifier_ty,
                             n,
@@ -308,6 +306,8 @@ pub fn try_run(
                             // G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH (BT25-104).
                             payload.clone(),
                             *opponent_only,
+                            ctx.source_kind,
+                            ctx.source_identity,
                         );
                     } else {
                         // Phase 2d Task 8: scan battle-area, apply modifier to every match.
@@ -373,12 +373,14 @@ pub fn try_run(
             let Some(kw) = crate::dsl_cards::modifier_map::lookup_keyword(keyword, *value) else {
                 return true;
             };
-            ctx.game.add_floating_mass_keyword(
+            ctx.game.add_floating_mass_keyword_from(
                 targets.clone(),
                 kw,
                 ctx.source_card,
                 ctx.player,
                 expiry,
+                ctx.source_kind,
+                ctx.source_identity,
             );
             true
         }
@@ -404,6 +406,7 @@ pub fn try_run(
             source_kind,
             source_controller,
             expiry,
+            exclude_self,
             continuous,
             targets,
         } => {
@@ -422,7 +425,7 @@ pub fn try_run(
                     source_kind: Some(lower_effect_source_kind(*source_kind)),
                     controller: lower_effect_controller(*source_controller),
                 };
-                ctx.game.add_floating_mass_modifier(
+                ctx.game.add_floating_mass_modifier_scoped_from(
                     filter.clone(),
                     crate::enums::ModifierType::CannotBeAffected,
                     0,
@@ -431,6 +434,9 @@ pub fn try_run(
                     expiry,
                     Some(immunity),
                     None,
+                    false,
+                    ctx.source_kind,
+                    ctx.source_identity,
                 );
                 return true;
             }
@@ -440,11 +446,12 @@ pub fn try_run(
             let Some(h) = resolve_permanent_target(target, ctx, bindings) else {
                 return true;
             };
-            ctx.add_effect_immunity_modifier(
+            ctx.add_effect_immunity_modifier_excluding_self(
                 h,
                 lower_effect_source_kind(*source_kind),
                 lower_effect_controller(*source_controller),
                 expiry,
+                *exclude_self,
             );
             true
         }

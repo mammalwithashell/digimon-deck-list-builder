@@ -721,18 +721,19 @@ impl KnowledgeLedger {
                 )?;
             }
         }
-        if let Some(owner) = game
+        let inspected = game
             .pending_selection
             .as_ref()
             .and_then(|s| s.card_choice.as_ref())
-            .and_then(|c| c.inspected_security_owner(self.viewer))
-        {
-            for (i, c) in game.players[owner as usize]
-                .security
-                .iter()
-                .rev()
-                .enumerate()
-            {
+            .and_then(|c| c.inspected_security_owner(self.viewer));
+        for player in &game.players {
+            for (i, c) in player.security.iter().rev().enumerate() {
+                if inspected != Some(player.id)
+                    && (player.face_up_security.contains(&c.card_index)
+                        || !game.security_card_is_public(player.id, c.handle()))
+                {
+                    continue;
+                }
                 self.observe(
                     c.owner,
                     c.card_index,

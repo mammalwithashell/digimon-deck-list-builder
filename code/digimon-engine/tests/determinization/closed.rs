@@ -20,6 +20,67 @@ fn prior() -> WeightedDeckPrior {
     .unwrap()
 }
 
+#[test]
+fn public_security_reveals_are_sampled_at_known_slots_until_shuffle() {
+    with_big_stack(|| {
+        let mut game = new_game_with(93, D1, D1);
+        game.enable_belief_knowledge().unwrap();
+        game.start_game();
+        game.mulligan_pending.clear();
+        game.current_phase = digimon_engine::enums::GamePhase::Main;
+        game.reveal_security(1);
+        let known: Vec<_> = game.players[1]
+            .security
+            .iter()
+            .enumerate()
+            .map(|(index, card)| {
+                (
+                    card.handle(),
+                    card.card_id(&game.card_data).to_string(),
+                    game.players[1].security.len() - index - 1,
+                )
+            })
+            .collect();
+
+        for viewer in 0..2 {
+            let memory = game.belief_knowledge(viewer).unwrap();
+            for (_, id, from_top) in &known {
+                assert!(memory.known_positions(1).contains(&(
+                    id.clone(),
+                    KnowledgeZone::Security,
+                    *from_top
+                )));
+            }
+            for seed in 0..8 {
+                let world = materialize_closed(&game, viewer, memory, &prior(), seed).unwrap();
+                for (handle, id, from_top) in &known {
+                    let index = world.players[1].security.len() - from_top - 1;
+                    let card = &world.players[1].security[index];
+                    assert_eq!(card.handle(), *handle);
+                    assert_eq!(card.card_id(&world.card_data), id);
+                }
+            }
+        }
+
+        game.shuffle_security(1);
+        assert!(game.players[1]
+            .security
+            .iter()
+            .all(|card| !game.security_card_is_public(1, card.handle())));
+        let memory = game.belief_knowledge(0).unwrap();
+        assert!(!memory
+            .known_positions(1)
+            .iter()
+            .any(|(_, zone, _)| { *zone == KnowledgeZone::Security }));
+
+        let mut alternate = game.clone();
+        alternate.players[1].security.swap(0, 1);
+        let original = materialize_closed(&game, 0, memory, &prior(), 117).unwrap();
+        let sampled_alternate = materialize_closed(&alternate, 0, memory, &prior(), 117).unwrap();
+        assert_eq!(original.to_scenario(), sampled_alternate.to_scenario());
+    });
+}
+
 fn nested_security_game(
     private_parent: bool,
 ) -> (

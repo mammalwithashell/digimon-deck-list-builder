@@ -41,6 +41,7 @@ from .sources.official import (
     OfficialSourceAdapter,
     gameplay_set_prefix,
 )
+from .cache import ContentAddressedResponseCache
 from .staging import ScopeKind, StagedSourceState, SyncScope, stage_source_observations
 from .sync_plan import (
     CompositeSyncPlan,
@@ -138,9 +139,10 @@ def _secondary_snapshot(
     acquisitions: Iterable[DigimonCardIOAcquisition],
     *,
     acquired_at: str,
+    discovery_url: str | None = None,
 ) -> OfficialScopeSnapshot:
     observations: dict[str, SourceObservation] = {}
-    locations: set[str] = set()
+    locations: set[str] = {discovery_url} if discovery_url else set()
     for acquisition in acquisitions:
         locations.add(acquisition.parsed.source_url)
         for observation in acquisition.observations:
@@ -187,8 +189,9 @@ def acquire_live_snapshots(
     repo_root: Path,
     *,
     acquired_at: str,
+    response_cache: ContentAddressedResponseCache | None = None,
 ) -> tuple[OfficialScopeSnapshot, OfficialScopeSnapshot]:
-    """Fetch complete official and secondary scopes without writing outputs."""
+    """Fetch complete scopes; optionally retain original secondary response bytes."""
 
     official_existing = _load_observations(repo_root, SourceName.OFFICIAL)
     official = OfficialSourceAdapter().acquire_catalog(
@@ -196,9 +199,10 @@ def acquire_live_snapshots(
         existing_observations=official_existing,
     )
     secondary_existing = _load_observations(repo_root, SourceName.DIGIMONCARD_IO)
-    adapter = DigimonCardIOAdapter(existing_observations=secondary_existing)
-    acquisitions = (adapter.acquire_catalog(),)
-    return official, _secondary_snapshot(acquisitions, acquired_at=acquired_at)
+    adapter = DigimonCardIOAdapter(existing_observations=secondary_existing, cache=response_cache)
+    catalog = adapter.acquire_catalog()
+    return official, _secondary_snapshot(catalog.acquisitions, acquired_at=acquired_at,
+                                         discovery_url=catalog.discovery_url)
 
 
 def _candidate(
@@ -518,7 +522,10 @@ def main(argv: list[str] | None = None) -> int:
     output = args.output_dir.resolve()
     try:
         acquired_at = _utc_now()
-        official, secondary = acquire_live_snapshots(root, acquired_at=acquired_at)
+        official, secondary = acquire_live_snapshots(
+            root, acquired_at=acquired_at,
+            response_cache=ContentAddressedResponseCache(output / "response-cache"),
+        )
         payload, candidates = build_reconciliation(
             root,
             official=official,

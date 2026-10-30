@@ -445,7 +445,7 @@
    "untested_constructs": []
   },
   "AD1-017": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 5,
    "constructs": [
     "verb:add_dp_modifier",
@@ -477,12 +477,10 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "verb:trash_bottom_security"
-   ]
+   "untested_constructs": []
   },
   "AD1-018": {
    "behaviourally_covered": false,
@@ -995,7 +993,7 @@
    ]
   },
   "BT10-085": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 2,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -1022,12 +1020,10 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:event_card_kind"
-   ]
+   "untested_constructs": []
   },
   "BT10-087": {
    "behaviourally_covered": false,
@@ -2073,7 +2069,7 @@
    "untested_constructs": []
   },
   "BT13-013": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -2092,12 +2088,10 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:event_card_kind"
-   ]
+   "untested_constructs": []
   },
   "BT13-015": {
    "behaviourally_covered": true,
@@ -2501,7 +2495,7 @@
    "untested_constructs": []
   },
   "BT13-096": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:if",
@@ -2536,12 +2530,10 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:event_card_kind"
-   ]
+   "untested_constructs": []
   },
   "BT13-101": {
    "behaviourally_covered": false,
@@ -2926,7 +2918,7 @@
    "untested_constructs": []
   },
   "BT15-003": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 1,
    "constructs": [
     "verb:gain_memory",
@@ -2940,12 +2932,10 @@
    ],
    "effect_clause_count": 1,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "verb:trash_bottom_security"
-   ]
+   "untested_constructs": []
   },
   "BT15-006": {
    "behaviourally_covered": true,
@@ -4257,6 +4247,71 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT18-030": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:add_to_hand_from_reveal",
+    "verb:place_remainder_on_deck",
+    "verb:reveal_top_deck",
+    "verb:select_reveal_buckets",
+    "verb:trash_top_security_and_cancel_replacement",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:is_source",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:replacement_cause",
+    "predicate:security_count_gte",
+    "predicate:trait_has",
+    "timing:on_play"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "clause:replacement",
+    "predicate:replacement_cause",
+    "trigger:when_would_leave_battle_area",
+    "verb:trash_top_security_and_cancel_replacement"
+   ],
+   "untested_constructs": []
+  },
+  "BT18-036": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:draw",
+    "verb:gain_memory",
+    "verb:if",
+    "verb:trash_top_security",
+    "verb:trash_top_security_and_cancel_replacement",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:equals",
+    "predicate:is_source",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:replacement_cause",
+    "predicate:security_count_gte",
+    "predicate:trait_has",
+    "timing:when_digivolving"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "clause:replacement",
+    "predicate:replacement_cause",
+    "trigger:when_would_leave_battle_area",
+    "verb:trash_top_security_and_cancel_replacement"
+   ],
+   "untested_constructs": []
+  },
   "BT18-037": {
    "behaviourally_covered": true,
    "clause_count": 6,
@@ -4286,6 +4341,37 @@
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT18-039": {
+   "behaviourally_covered": true,
+   "clause_count": 4,
+   "constructs": [
+    "verb:add_modifier",
+    "verb:if",
+    "verb:select_any_permanent",
+    "verb:trash_top_security",
+    "verb:unsuspend",
+    "predicate:all_of",
+    "predicate:all_turns",
+    "predicate:color_is",
+    "predicate:equals",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:security_count_gte",
+    "predicate:zone",
+    "timing:on_own_security_removed",
+    "timing:on_play",
+    "timing:when_digivolving",
+    "keyword:Barrier"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "keyword:Barrier"
+   ],
    "untested_constructs": []
   },
   "BT18-042": {
@@ -4793,6 +4879,40 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT18-098": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:add_dp_modifier",
+    "verb:delete_permanent",
+    "verb:if",
+    "verb:place_on_security",
+    "verb:recover",
+    "verb:select_opponent_permanent",
+    "verb:trash_top_security",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:any_permanent",
+    "predicate:color_is",
+    "predicate:dp_lte",
+    "predicate:equals",
+    "predicate:kind",
+    "predicate:owner",
+    "predicate:security_count_gte",
+    "predicate:security_count_lte",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:main_from_hand",
+    "timing:on_discard_security",
+    "timing:on_security"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "BT18-102": {
    "behaviourally_covered": true,
    "clause_count": 4,
@@ -4990,6 +5110,38 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT19-029": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:gain_memory",
+    "verb:if",
+    "verb:trash_top_security",
+    "verb:trash_top_security_and_cancel_replacement",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:equals",
+    "predicate:is_source",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:replacement_cause",
+    "predicate:security_count_gte",
+    "predicate:trait_has",
+    "timing:on_play"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "clause:replacement",
+    "predicate:replacement_cause",
+    "trigger:when_would_leave_battle_area",
+    "verb:trash_top_security_and_cancel_replacement"
+   ],
+   "untested_constructs": []
+  },
   "BT19-033": {
    "behaviourally_covered": true,
    "clause_count": 4,
@@ -5046,6 +5198,42 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT19-036": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "verb:add_top_security_to_hand",
+    "verb:if",
+    "verb:place_on_security",
+    "verb:select_union_zone",
+    "verb:trash_top_security_and_cancel_replacement",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:is_source",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:name_is",
+    "predicate:play_or_use_cost_lte",
+    "predicate:replacement_cause",
+    "predicate:security_count_gte",
+    "predicate:self_source_count",
+    "predicate:trait_has",
+    "timing:on_play",
+    "timing:when_digivolving"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "clause:replacement",
+    "predicate:replacement_cause",
+    "trigger:when_would_leave_battle_area",
+    "verb:trash_top_security_and_cancel_replacement"
+   ],
+   "untested_constructs": []
+  },
   "BT19-038": {
    "behaviourally_covered": true,
    "clause_count": 4,
@@ -5071,6 +5259,36 @@
     "keyword:Piercing"
    ],
    "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT19-042": {
+   "behaviourally_covered": true,
+   "clause_count": 7,
+   "constructs": [
+    "verb:add_dp_modifier",
+    "verb:if",
+    "verb:recover",
+    "verb:trash_top_security",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:equals",
+    "predicate:level_eq",
+    "predicate:name_is",
+    "predicate:security_count_gte",
+    "predicate:security_count_lte",
+    "predicate:self_source_count",
+    "timing:end_of_your_turn",
+    "timing:when_attacking",
+    "timing:when_digivolving",
+    "keyword:Blocker",
+    "keyword:Raid"
+   ],
+   "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -9134,7 +9352,7 @@
    "untested_constructs": []
   },
   "BT23-006": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:gain_memory",
@@ -9154,12 +9372,10 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:event_card_kind"
-   ]
+   "untested_constructs": []
   },
   "BT23-008": {
    "behaviourally_covered": true,
@@ -9189,7 +9405,7 @@
    "untested_constructs": []
   },
   "BT23-013": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 7,
    "constructs": [
     "verb:if",
@@ -9224,12 +9440,10 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:event_card_kind"
-   ]
+   "untested_constructs": []
   },
   "BT23-014": {
    "behaviourally_covered": true,
@@ -9377,22 +9591,20 @@
    "behaviourally_covered": true,
    "clause_count": 7,
    "constructs": [
-    "verb:add_dp_modifier",
-    "verb:for_each",
+    "verb:add_modifier",
     "verb:grant_keyword",
     "verb:if",
     "verb:recover",
     "verb:trash_top_security",
-    "predicate:all_of",
     "predicate:all_turns",
     "predicate:color_is",
+    "predicate:equals",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:owner",
     "predicate:security_count_gte",
     "predicate:security_count_lte",
     "predicate:trait_has",
-    "predicate:zone",
     "timing:on_own_security_removed",
     "timing:on_play",
     "timing:when_digivolving",
@@ -12954,7 +13166,7 @@
    "untested_constructs": []
   },
   "BT25-040": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
@@ -12983,12 +13195,10 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "verb:trash_bottom_security"
-   ]
+   "untested_constructs": []
   },
   "BT25-041": {
    "behaviourally_covered": true,
@@ -13021,7 +13231,7 @@
    "untested_constructs": []
   },
   "BT25-042": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:grant_effect_immunity",
@@ -13051,14 +13261,12 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "verb:grant_effect_immunity"
    ],
-   "untested_constructs": [
-    "verb:trash_bottom_security"
-   ]
+   "untested_constructs": []
   },
   "BT25-043": {
    "behaviourally_covered": true,
@@ -18381,6 +18589,36 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT6-089": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:activation_cost",
+    "verb:add_dp_modifier",
+    "verb:gain_memory",
+    "verb:play_from_security",
+    "verb:select_opponent_permanent",
+    "predicate:all_of",
+    "predicate:event_target_color_any_of",
+    "predicate:event_target_kind",
+    "predicate:event_target_owner",
+    "predicate:kind",
+    "predicate:owner",
+    "predicate:security_count_lte",
+    "predicate:source_is_unsuspended",
+    "predicate:your_turn",
+    "predicate:zone",
+    "timing:on_ally_attack",
+    "timing:on_security",
+    "timing:start_of_your_turn"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "BT6-102": {
    "behaviourally_covered": true,
    "clause_count": 1,
@@ -19055,6 +19293,34 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT9-084": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:activation_cost",
+    "verb:add_player_modifier",
+    "verb:gain_memory",
+    "verb:if",
+    "verb:play_from_security",
+    "predicate:all_of",
+    "predicate:event_target_color_any_of",
+    "predicate:event_target_kind",
+    "predicate:event_target_owner",
+    "predicate:opponent_security_count_lte",
+    "predicate:security_count_lte",
+    "predicate:source_is_unsuspended",
+    "predicate:your_turn",
+    "timing:on_ally_attack",
+    "timing:on_security",
+    "timing:start_of_your_turn"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "BT9-092": {
    "behaviourally_covered": true,
    "clause_count": 3,
@@ -19716,6 +19982,37 @@
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "EX10-041": {
+   "behaviourally_covered": true,
+   "clause_count": 7,
+   "constructs": [
+    "verb:add_modifier",
+    "verb:if",
+    "verb:select_opponent_permanent",
+    "verb:trash_from_top",
+    "verb:trash_top_security",
+    "predicate:color_is",
+    "predicate:equals",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:owner",
+    "predicate:security_count_gte",
+    "predicate:trait_has",
+    "timing:on_discard_deck",
+    "timing:on_discard_security",
+    "timing:on_play",
+    "timing:when_digivolving",
+    "keyword:Barrier"
+   ],
+   "effect_clause_count": 4,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "keyword:Barrier"
+   ],
    "untested_constructs": []
   },
   "EX10-044": {
@@ -23279,23 +23576,25 @@
    "untested_constructs": []
   },
   "EX13-025": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
-    "verb:cancel_replacement",
     "verb:draw",
     "verb:gain_memory",
     "verb:if",
     "verb:place_on_security",
     "verb:select_effect_choice",
-    "verb:select_hand",
+    "verb:select_union_zone",
     "verb:trash_bottom_security",
     "verb:trash_top_security",
+    "verb:trash_top_security_and_cancel_replacement",
     "predicate:all_of",
     "predicate:any_of",
     "predicate:color_is",
     "predicate:equals",
     "predicate:in_text_contains",
+    "predicate:is_source",
+    "predicate:kind",
     "predicate:level_eq",
     "predicate:replacement_cause",
     "predicate:security_count_gte",
@@ -23304,17 +23603,15 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:replacement",
     "predicate:replacement_cause",
     "trigger:when_would_leave_battle_area",
-    "verb:cancel_replacement"
+    "verb:trash_top_security_and_cancel_replacement"
    ],
-   "untested_constructs": [
-    "verb:trash_bottom_security"
-   ]
+   "untested_constructs": []
   },
   "EX13-026": {
    "behaviourally_covered": true,
@@ -25506,7 +25803,7 @@
    "untested_constructs": []
   },
   "EX3-065": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:gain_memory",
@@ -25533,12 +25830,10 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:event_card_kind"
-   ]
+   "untested_constructs": []
   },
   "EX3-074": {
    "behaviourally_covered": true,
@@ -26160,6 +26455,40 @@
    ],
    "untested_constructs": []
   },
+  "EX6-063": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:activation_cost",
+    "verb:gain_memory",
+    "verb:grant_keyword",
+    "verb:play_from_security",
+    "verb:select_own_permanent",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:event_card_kind",
+    "predicate:event_card_trait_has",
+    "predicate:event_target_owner",
+    "predicate:kind",
+    "predicate:source_is_unsuspended",
+    "predicate:your_turn",
+    "timing:on_digivolve",
+    "timing:on_enter_field_anyone",
+    "timing:on_play",
+    "timing:on_security",
+    "timing:start_of_your_main_phase",
+    "keyword:Barrier"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "keyword:Barrier"
+   ],
+   "untested_constructs": []
+  },
   "EX6-072": {
    "behaviourally_covered": true,
    "clause_count": 2,
@@ -26522,6 +26851,30 @@
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "EX7-026": {
+   "behaviourally_covered": true,
+   "clause_count": 4,
+   "constructs": [
+    "verb:add_dp_modifier",
+    "verb:select_opponent_permanent",
+    "predicate:all_of",
+    "predicate:color_is",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:trait_has",
+    "timing:on_play",
+    "timing:when_digivolving",
+    "keyword:Barrier"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "keyword:Barrier"
+   ],
    "untested_constructs": []
   },
   "EX7-027": {
@@ -27964,22 +28317,23 @@
    "untested_constructs": []
   },
   "LM-020": {
-   "behaviourally_covered": false,
-   "clause_count": 3,
+   "behaviourally_covered": true,
+   "clause_count": 4,
    "constructs": [
     "verb:grant_effect_immunity",
     "verb:if",
     "verb:place_on_security",
     "verb:return_selected_security_to_deck",
     "verb:return_to_deck_from_reveal",
+    "verb:reveal_security",
     "verb:reveal_top_deck",
+    "verb:select_any_permanent",
     "verb:select_effect_choice",
-    "verb:select_own_permanent",
     "verb:select_security",
     "verb:shuffle_security",
     "predicate:all_of",
-    "predicate:any_of",
     "predicate:binding_card_kind",
+    "predicate:binding_present",
     "predicate:color_is",
     "predicate:equals",
     "predicate:kind",
@@ -27989,15 +28343,12 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "verb:grant_effect_immunity"
    ],
-   "untested_constructs": [
-    "verb:return_selected_security_to_deck",
-    "timing:start_of_opponents_turn"
-   ]
+   "untested_constructs": []
   },
   "LM-021": {
    "behaviourally_covered": true,
@@ -28327,6 +28678,33 @@
     "predicate:color_is",
     "predicate:kind",
     "predicate:owner",
+    "timing:main_from_hand",
+    "timing:on_security"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "LM-045": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:add_to_hand_from_reveal",
+    "verb:gain_memory",
+    "verb:place_remainder_on_deck",
+    "verb:place_self_as_delay_option",
+    "verb:reveal_top_deck",
+    "verb:select_reveal",
+    "predicate:all_of",
+    "predicate:any_field_permanent",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:kind",
+    "predicate:owner",
+    "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
    ],
@@ -38445,6 +38823,36 @@
     "dsl::group7_predicate_batch.rs::binding_present_and_absent_predicates_read_current_bindings": [
      "variant"
     ],
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security": [
+     "yaml_key"
+    ],
     "rules_conformance::ch15_04_effect_states.rs::digivolving_mid_pending_cancels_sibling_when_attacking": [
      "fixture"
     ],
@@ -38516,6 +38924,16 @@
     "dsl::constructs/zone_moves.rs::field_option_pass_and_nonfield_source_do_not_move",
     "dsl::folded_may_opt_refund.rs::binding_present_branch_counts_as_dependent",
     "dsl::group7_predicate_batch.rs::binding_present_and_absent_predicates_read_current_bindings",
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay",
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation",
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot",
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent",
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move",
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once",
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts",
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security",
     "rules_conformance::ch15_04_effect_states.rs::digivolving_mid_pending_cancels_sibling_when_attacking",
     "rules_conformance::ch15_04_effect_states.rs::effect_digivolve_triggers_wait_for_the_digivolving_effect_and_pool",
     "rules_conformance::ch15_08_effect_categories.rs::battle_result_trigger_condition_false_at_the_battle_never_activates",
@@ -41512,14 +41930,17 @@
   "predicate:event_card_kind": {
    "kind": "predicate",
    "name": "event_card_kind",
-   "near_miss_files": [
-    "src/dsl_cards/predicate.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer"
+   ]
   },
   "predicate:event_card_level_eq": {
    "kind": "predicate",
@@ -44747,6 +45168,36 @@
     "dsl::parse_steps.rs::use_option_from_hand_step_parses_filter_and_cost_ceiling": [
      "yaml_key"
     ],
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security": [
+     "yaml_key"
+    ],
     "dsl::phase1c_lowering.rs::flood_gate_emits_declarative_with_process_closure": [
      "variant"
     ],
@@ -45871,6 +46322,16 @@
     "dsl::parse_predicates.rs::parse_nested_all_of",
     "dsl::parse_steps.rs::add_modifier_target_as_predicate_filter",
     "dsl::parse_steps.rs::use_option_from_hand_step_parses_filter_and_cost_ceiling",
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay",
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation",
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot",
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent",
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move",
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once",
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts",
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security",
     "dsl::phase1c_lowering.rs::flood_gate_emits_declarative_with_process_closure",
     "dsl::phase1c_predicate.rs::all_of_combinator_ands_children",
     "dsl::phase1c_predicate.rs::all_of_combinator_short_circuits_on_false",
@@ -50949,6 +51410,7 @@
     "tests/dsl/constructs/security_stack.rs",
     "tests/dsl/effect_battle.rs",
     "tests/dsl/option_security_disposition.rs",
+    "tests/dsl/permanent_security_receipt.rs",
     "tests/dsl/phase3b_replacement_process.rs",
     "tests/dsl/security_stack_steps.rs",
     "tests/dsl/unpayable_optional_condition.rs",
@@ -53744,6 +54206,18 @@
     "dsl::attack_history_predicate.rs::lowers_digimon_attack_history_predicate_into_active_when": [
      "yaml_key"
     ],
+    "dsl::original_dp_presence.rs::explicitly_granted_dp_can_change_and_dont_have_dp_remains_authoritative": [
+     "literal"
+    ],
+    "dsl::original_dp_presence.rs::original_dp_change_preserves_additive_dp_changes": [
+     "literal"
+    ],
+    "dsl::original_dp_presence.rs::original_dp_does_not_create_dp_on_a_card_without_dp": [
+     "literal"
+    ],
+    "dsl::original_dp_presence.rs::original_dp_stops_applying_after_de_digivolve_exposes_a_tamer": [
+     "literal"
+    ],
     "dsl::phase2a_steps.rs::add_player_modifier_step_installs_floodgate_on_referenced_player": [
      "literal"
     ],
@@ -53793,6 +54267,10 @@
     "dsl::attack_history_predicate.rs::attack_history_predicate_is_false_until_referenced_player_attacks",
     "dsl::attack_history_predicate.rs::attack_history_predicate_resets_on_next_turn",
     "dsl::attack_history_predicate.rs::lowers_digimon_attack_history_predicate_into_active_when",
+    "dsl::original_dp_presence.rs::explicitly_granted_dp_can_change_and_dont_have_dp_remains_authoritative",
+    "dsl::original_dp_presence.rs::original_dp_change_preserves_additive_dp_changes",
+    "dsl::original_dp_presence.rs::original_dp_does_not_create_dp_on_a_card_without_dp",
+    "dsl::original_dp_presence.rs::original_dp_stops_applying_after_de_digivolve_exposes_a_tamer",
     "dsl::phase2a_steps.rs::add_player_modifier_step_installs_floodgate_on_referenced_player",
     "dsl::phase3d_scheduled_generation.rs::end_of_opponents_turn_skips_controllers_own_turn_end",
     "dsl::security_boundary.rs::security_scope_end_of_opponents_turn_plays_this_security_card",
@@ -56368,6 +56846,57 @@
    "tested_behaviourally": false,
    "tests": []
   },
+  "timing:on_discard_deck": {
+   "kind": "timing",
+   "name": "on_discard_deck",
+   "parsed_only": false,
+   "signals": {
+    "dsl::deck_trash_event.rs::already_enqueued_deck_trash_source_cannot_revive_after_reentry": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::cloning_preserves_pending_card_identity_and_branch_specific_departure": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::multiple_physical_deck_copies_each_trigger_exactly_once": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::on_discard_deck_does_not_fire_for_an_unrelated_existing_trash_card": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::on_discard_deck_fires_for_the_milled_physical_card_of_either_owner": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::parked_deck_trash_source_leaving_then_reentering_is_a_new_card": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::revealed_cards_trashed_by_effect_are_not_trashed_from_deck": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::rollback_storage_insertion_preserves_the_pending_trash_incarnation": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::unrelated_trash_arrival_history_does_not_change_verification_state": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::verification_distinguishes_reentered_pending_source_with_identical_visible_zones": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::deck_trash_event.rs::already_enqueued_deck_trash_source_cannot_revive_after_reentry",
+    "dsl::deck_trash_event.rs::cloning_preserves_pending_card_identity_and_branch_specific_departure",
+    "dsl::deck_trash_event.rs::multiple_physical_deck_copies_each_trigger_exactly_once",
+    "dsl::deck_trash_event.rs::on_discard_deck_does_not_fire_for_an_unrelated_existing_trash_card",
+    "dsl::deck_trash_event.rs::on_discard_deck_fires_for_the_milled_physical_card_of_either_owner",
+    "dsl::deck_trash_event.rs::parked_deck_trash_source_leaving_then_reentering_is_a_new_card",
+    "dsl::deck_trash_event.rs::revealed_cards_trashed_by_effect_are_not_trashed_from_deck",
+    "dsl::deck_trash_event.rs::rollback_storage_insertion_preserves_the_pending_trash_incarnation",
+    "dsl::deck_trash_event.rs::unrelated_trash_arrival_history_does_not_change_verification_state",
+    "dsl::deck_trash_event.rs::verification_distinguishes_reentered_pending_source_with_identical_visible_zones"
+   ]
+  },
   "timing:on_discard_hand": {
    "kind": "timing",
    "name": "on_discard_hand",
@@ -56438,6 +56967,12 @@
     "dsl::phase3d_event_context.rs::on_discard_security_event_cause_predicate_matches_effect_trash": [
      "yaml_key"
     ],
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack": [
+     "yaml_key"
+    ],
+    "dsl::public_security_reveal.rs::revealing_does_not_activate_security_or_security_removal_effects": [
+     "yaml_key"
+    ],
     "dsl::security_icon_lint.rs::trashed_from_security_shape_is_exempt": [
      "yaml_key"
     ]
@@ -56455,6 +56990,8 @@
     "dsl::constructs/option_security_suppression.rs::security_precedes_check_observers_that_would_later_enable_suppression",
     "dsl::constructs/security_stack.rs::trash_selected_security_fires_on_discard_security_on_the_trashed_card_only",
     "dsl::phase3d_event_context.rs::on_discard_security_event_cause_predicate_matches_effect_trash",
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack",
+    "dsl::public_security_reveal.rs::revealing_does_not_activate_security_or_security_removal_effects",
     "dsl::security_icon_lint.rs::trashed_from_security_shape_is_exempt"
    ]
   },
@@ -56494,6 +57031,9 @@
    "name": "on_enter_field_anyone",
    "parsed_only": false,
    "signals": {
+    "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer": [
+     "yaml_key"
+    ],
     "dsl::phase3d_event_context.rs::event_is_effect_initiated_matches_effect_play_only": [
      "yaml_key"
     ],
@@ -56510,6 +57050,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer",
     "dsl::phase3d_event_context.rs::event_is_effect_initiated_matches_effect_play_only",
     "dsl::phase3d_event_context.rs::on_enter_field_anyone_event_card_trait_predicate_matches_entering_card",
     "dsl::phase3d_event_context.rs::on_enter_field_event_target_grant_keyword_marks_only_played_digimon",
@@ -56677,6 +57218,12 @@
     ],
     "dsl::constructs/security_stack.rs::return_top_security_to_deck_fires_on_lose_security_once_with_the_effect_bit": [
      "yaml_key"
+    ],
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack": [
+     "yaml_key"
+    ],
+    "dsl::public_security_reveal.rs::revealing_does_not_activate_security_or_security_removal_effects": [
+     "yaml_key"
     ]
    },
    "tested": true,
@@ -56694,7 +57241,9 @@
     "dsl::constructs/security_stack.rs::play_security_card_fires_on_lose_security_once",
     "dsl::constructs/security_stack.rs::play_security_card_rejected_commit_emits_no_removal",
     "dsl::constructs/security_stack.rs::play_security_card_resumed_commit_fires_each_removal_timing_once_and_not_the_new_body",
-    "dsl::constructs/security_stack.rs::return_top_security_to_deck_fires_on_lose_security_once_with_the_effect_bit"
+    "dsl::constructs/security_stack.rs::return_top_security_to_deck_fires_on_lose_security_once_with_the_effect_bit",
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack",
+    "dsl::public_security_reveal.rs::revealing_does_not_activate_security_or_security_removal_effects"
    ]
   },
   "timing:on_move": {
@@ -58018,6 +58567,36 @@
     "dsl::parse_clauses.rs::parse_triggered_clause_multiple_timings": [
      "yaml_key"
     ],
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security": [
+     "yaml_key"
+    ],
     "dsl::phase2a_end_to_end.rs::dsl_triggered_on_play_gain_memory_closure_mutates_memory": [
      "yaml_key"
     ],
@@ -58118,6 +58697,12 @@
      "yaml_key"
     ],
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_uses_max_of_both_dual_faces": [
+     "yaml_key"
+    ],
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack": [
+     "yaml_key"
+    ],
+    "dsl::quantumon_primitives.rs::return_selected_security_to_deck_moves_each_exact_legal_choice_to_the_top": [
      "yaml_key"
     ],
     "dsl::raw_rust_registry.rs::step_level_raw_rust_checked_against_registry": [
@@ -58753,6 +59338,16 @@
     "dsl::name_standardization.rs::explicit_static_and_runtime_aliases_rescue_excluded_base_names",
     "dsl::name_standardization.rs::permanent_effective_name_and_deleted_snapshot_apply_exclusions",
     "dsl::parse_clauses.rs::parse_triggered_clause_multiple_timings",
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay",
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation",
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot",
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent",
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move",
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once",
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts",
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security",
     "dsl::phase2a_end_to_end.rs::dsl_triggered_on_play_gain_memory_closure_mutates_memory",
     "dsl::phase2a_triggered.rs::compiled_timing_mapping_covers_common_triggered_timings",
     "dsl::phase2a_triggered.rs::triggered_clause_emits_one_effect_per_timing",
@@ -58787,6 +59382,8 @@
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_option_by_use_cost",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_uses_max_of_both_dual_faces",
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack",
+    "dsl::quantumon_primitives.rs::return_selected_security_to_deck_moves_each_exact_legal_choice_to_the_top",
     "dsl::raw_rust_registry.rs::step_level_raw_rust_checked_against_registry",
     "dsl::reveal_search.rs::reveal_search_adds_all_when_fewer_than_max_match",
     "dsl::reveal_search.rs::reveal_search_adds_two_matching_to_hand_rest_to_bottom",
@@ -59052,6 +59649,12 @@
     "dsl::phase2a_triggered.rs::compiled_timing_mapping_covers_common_triggered_timings": [
      "variant"
     ],
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack": [
+     "yaml_key"
+    ],
+    "dsl::public_security_reveal.rs::revealing_does_not_activate_security_or_security_removal_effects": [
+     "yaml_key"
+    ],
     "dsl::real_cards_json.rs::real_adapter_loads_cards_json": [
      "fixture"
     ],
@@ -59141,6 +59744,8 @@
     "dsl::phase1b_exit.rs::phase_1b_exit_criteria",
     "dsl::phase1c_lowering.rs::build_registry_contains_both_dsl_and_hand_written_cards",
     "dsl::phase2a_triggered.rs::compiled_timing_mapping_covers_common_triggered_timings",
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack",
+    "dsl::public_security_reveal.rs::revealing_does_not_activate_security_or_security_removal_effects",
     "dsl::real_cards_json.rs::real_adapter_loads_cards_json",
     "dsl::security_icon_lint.rs::older_bracket_spelling_of_the_pink_icon_is_recognised",
     "dsl::security_icon_lint.rs::pink_effect_authored_as_on_security_is_flagged",
@@ -59450,17 +60055,25 @@
   "timing:start_of_opponents_turn": {
    "kind": "timing",
    "name": "start_of_opponents_turn",
-   "near_miss_files": [
-    "src/dsl_cards/lower_triggered.rs",
-    "src/dsl_cards/step/grant_triggered.rs",
-    "src/dsl_cards/timing_map.rs",
-    "tests/timing_dispatch.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw": [
+     "yaml_key"
+    ],
+    "dsl::quantumon_primitives.rs::parked_opponent_start_choice_delays_unsuspend_and_draw_then_resumes_once": [
+     "yaml_key"
+    ],
+    "dsl::quantumon_primitives.rs::start_of_opponents_turn_fires_once_in_the_other_players_window_for_both_owners": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw",
+    "dsl::quantumon_primitives.rs::parked_opponent_start_choice_delays_unsuspend_and_draw_then_resumes_once",
+    "dsl::quantumon_primitives.rs::start_of_opponents_turn_fires_once_in_the_other_players_window_for_both_owners"
+   ]
   },
   "timing:start_of_your_main_phase": {
    "kind": "timing",
@@ -59608,6 +60221,9 @@
     "dsl::phase2a_triggered.rs::compiled_timing_mapping_covers_common_triggered_timings": [
      "variant"
     ],
+    "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw": [
+     "yaml_key"
+    ],
     "rules_conformance::ch17_rule_checks.rs::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers": [
      "fixture"
     ]
@@ -59617,6 +60233,7 @@
    "tests": [
     "dsl::delay.rs::delay_start_of_your_turn_maps_to_start_of_your_next_turn",
     "dsl::phase2a_triggered.rs::compiled_timing_mapping_covers_common_triggered_timings",
+    "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw",
     "rules_conformance::ch17_rule_checks.rs::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers"
    ]
   },
@@ -61560,6 +62177,18 @@
     "dsl::group7_predicate_batch.rs::result_bound_suspend_predicate_reads_current_effect_result_log": [
      "variant"
     ],
+    "dsl::original_dp_presence.rs::explicitly_granted_dp_can_change_and_dont_have_dp_remains_authoritative": [
+     "variant"
+    ],
+    "dsl::original_dp_presence.rs::original_dp_change_preserves_additive_dp_changes": [
+     "variant"
+    ],
+    "dsl::original_dp_presence.rs::original_dp_does_not_create_dp_on_a_card_without_dp": [
+     "variant"
+    ],
+    "dsl::original_dp_presence.rs::original_dp_stops_applying_after_de_digivolve_exposes_a_tamer": [
+     "variant"
+    ],
     "dsl::parse_steps.rs::add_modifier_target_as_binding_ref": [
      "spec",
      "yaml_key"
@@ -61620,6 +62249,10 @@
     "dsl::constructs/scoped_protection_security_tail.rs::unsupported_decline_and_cause_modes_fail_validation",
     "dsl::group7_predicate_batch.rs::add_modifier_filter_threads_bindings_for_not_in_binding",
     "dsl::group7_predicate_batch.rs::result_bound_suspend_predicate_reads_current_effect_result_log",
+    "dsl::original_dp_presence.rs::explicitly_granted_dp_can_change_and_dont_have_dp_remains_authoritative",
+    "dsl::original_dp_presence.rs::original_dp_change_preserves_additive_dp_changes",
+    "dsl::original_dp_presence.rs::original_dp_does_not_create_dp_on_a_card_without_dp",
+    "dsl::original_dp_presence.rs::original_dp_stops_applying_after_de_digivolve_exposes_a_tamer",
     "dsl::parse_steps.rs::add_modifier_target_as_binding_ref",
     "dsl::parse_steps.rs::add_modifier_target_as_predicate_filter",
     "dsl::phase2c_modifiers.rs::add_modifier_cannot_attack_blocks_attack_flag",
@@ -63917,6 +64550,15 @@
     "dsl::phase2f4_end_to_end.rs::delayed_draw_card_queues_draw_at_end_of_your_turn": [
      "yaml_key"
     ],
+    "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw": [
+     "yaml_key"
+    ],
+    "dsl::quantumon_primitives.rs::parked_opponent_start_choice_delays_unsuspend_and_draw_then_resumes_once": [
+     "yaml_key"
+    ],
+    "dsl::quantumon_primitives.rs::start_of_opponents_turn_fires_once_in_the_other_players_window_for_both_owners": [
+     "yaml_key"
+    ],
     "dsl::standalone_declaratives_exit.rs::combined_card_with_all_three_clauses_emits_three_effects": [
      "variant"
     ],
@@ -64144,6 +64786,9 @@
     "dsl::phase2d_end_to_end.rs::multi_pick_then_per_selected_then_for_each_round_trip",
     "dsl::phase2d_per_selected.rs::per_selected_drives_body_once_per_pick",
     "dsl::phase2f4_end_to_end.rs::delayed_draw_card_queues_draw_at_end_of_your_turn",
+    "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw",
+    "dsl::quantumon_primitives.rs::parked_opponent_start_choice_delays_unsuspend_and_draw_then_resumes_once",
+    "dsl::quantumon_primitives.rs::start_of_opponents_turn_fires_once_in_the_other_players_window_for_both_owners",
     "dsl::standalone_declaratives_exit.rs::combined_card_with_all_three_clauses_emits_three_effects",
     "dsl::standalone_declaratives_exit.rs::delay_clause_emits_delay_effect_with_end_of_this_turn_trigger",
     "dsl::store_champs_predicate_formula_leaves.rs::parse_compile_total_security_count",
@@ -65612,8 +66257,41 @@
     "dsl::cross_check.rs::cross_check_mismatched_name": [
      "fixture"
     ],
+    "dsl::deck_trash_event.rs::already_enqueued_deck_trash_source_cannot_revive_after_reentry": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::cloning_preserves_pending_card_identity_and_branch_specific_departure": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::multiple_physical_deck_copies_each_trigger_exactly_once": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::on_discard_deck_does_not_fire_for_an_unrelated_existing_trash_card": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::on_discard_deck_fires_for_the_milled_physical_card_of_either_owner": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::parked_deck_trash_source_leaving_then_reentering_is_a_new_card": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::revealed_cards_trashed_by_effect_are_not_trashed_from_deck": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::rollback_storage_insertion_preserves_the_pending_trash_incarnation": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::unrelated_trash_arrival_history_does_not_change_verification_state": [
+     "yaml_key"
+    ],
+    "dsl::deck_trash_event.rs::verification_distinguishes_reentered_pending_source_with_identical_visible_zones": [
+     "yaml_key"
+    ],
     "dsl::embedded_registry.rs::embedded_registry_loads_examples": [
      "fixture"
+    ],
+    "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer": [
+     "yaml_key"
     ],
     "dsl::event_context_bindings.rs::source_trashed_event_exposes_trashed_source_card_to_followup_predicate": [
      "yaml_key"
@@ -65713,6 +66391,36 @@
      "yaml_key"
     ],
     "dsl::parse_steps.rs::parse_if_then_else": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security": [
      "yaml_key"
     ],
     "dsl::phase1b_exit.rs::phase_1b_exit_criteria": [
@@ -66105,6 +66813,15 @@
     "dsl::pretty.rs::format_is_idempotent": [
      "yaml_key"
     ],
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack": [
+     "yaml_key"
+    ],
+    "dsl::public_security_reveal.rs::revealing_does_not_activate_security_or_security_removal_effects": [
+     "yaml_key"
+    ],
+    "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw": [
+     "yaml_key"
+    ],
     "dsl::real_cards_json.rs::real_adapter_loads_cards_json": [
      "fixture"
     ],
@@ -66274,6 +66991,9 @@
      "variant"
     ],
     "lib::src/dsl_cards/step/mod.rs::resume_without_pending_selection_preserves_enclosing_tail": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/security_placement_results.rs::abandoned_permanent_payment_consumes_only_its_correlated_receipt": [
      "variant"
     ],
     "lib::src/dsl_cards/step/security_placement_results.rs::abandoned_security_receipt_finalizer_consumes_only_its_own_lifo_receipt": [
@@ -66979,7 +67699,18 @@
     "dsl::cross_check.rs::cross_check_matches",
     "dsl::cross_check.rs::cross_check_mismatched_kind",
     "dsl::cross_check.rs::cross_check_mismatched_name",
+    "dsl::deck_trash_event.rs::already_enqueued_deck_trash_source_cannot_revive_after_reentry",
+    "dsl::deck_trash_event.rs::cloning_preserves_pending_card_identity_and_branch_specific_departure",
+    "dsl::deck_trash_event.rs::multiple_physical_deck_copies_each_trigger_exactly_once",
+    "dsl::deck_trash_event.rs::on_discard_deck_does_not_fire_for_an_unrelated_existing_trash_card",
+    "dsl::deck_trash_event.rs::on_discard_deck_fires_for_the_milled_physical_card_of_either_owner",
+    "dsl::deck_trash_event.rs::parked_deck_trash_source_leaving_then_reentering_is_a_new_card",
+    "dsl::deck_trash_event.rs::revealed_cards_trashed_by_effect_are_not_trashed_from_deck",
+    "dsl::deck_trash_event.rs::rollback_storage_insertion_preserves_the_pending_trash_incarnation",
+    "dsl::deck_trash_event.rs::unrelated_trash_arrival_history_does_not_change_verification_state",
+    "dsl::deck_trash_event.rs::verification_distinguishes_reentered_pending_source_with_identical_visible_zones",
     "dsl::embedded_registry.rs::embedded_registry_loads_examples",
+    "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer",
     "dsl::event_context_bindings.rs::source_trashed_event_exposes_trashed_source_card_to_followup_predicate",
     "dsl::face_up_security_lifecycle.rs::when_your_digimon_checks_face_up_security_fires_from_attacker_side",
     "dsl::group7_predicate_batch.rs::effect_suspended_any_opponent_digimon_compiles_from_yaml",
@@ -67013,6 +67744,16 @@
     "dsl::parse_minimal.rs::parse_minimal_option",
     "dsl::parse_steps.rs::parse_gain_memory",
     "dsl::parse_steps.rs::parse_if_then_else",
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay",
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation",
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot",
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent",
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move",
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once",
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts",
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security",
     "dsl::phase1b_exit.rs::phase_1b_exit_criteria",
     "dsl::phase1c_lowering.rs::build_registry_contains_both_dsl_and_hand_written_cards",
     "dsl::phase2a_end_to_end.rs::dsl_triggered_on_play_gain_memory_closure_mutates_memory",
@@ -67143,6 +67884,9 @@
     "dsl::predicate_leaves_ii.rs::event_target_source_count_leaves_compile_from_yaml",
     "dsl::predicate_leaves_ii.rs::event_target_trait_contains_compiles_from_yaml",
     "dsl::pretty.rs::format_is_idempotent",
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack",
+    "dsl::public_security_reveal.rs::revealing_does_not_activate_security_or_security_removal_effects",
+    "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw",
     "dsl::real_cards_json.rs::real_adapter_loads_cards_json",
     "dsl::reveal_buckets.rs::select_reveal_buckets_empty_nested_body_runs_tail_synchronously",
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up",
@@ -67200,6 +67944,7 @@
     "effect_context::schedule_delayed.rs::scheduled_effect_with_other_timing_does_not_fire",
     "lib::src/dsl_cards/lower_triggered.rs::resource_flow_catalog_ignores_non_hand_resource_steps",
     "lib::src/dsl_cards/step/mod.rs::resume_without_pending_selection_preserves_enclosing_tail",
+    "lib::src/dsl_cards/step/security_placement_results.rs::abandoned_permanent_payment_consumes_only_its_correlated_receipt",
     "lib::src/dsl_cards/step/security_placement_results.rs::abandoned_security_receipt_finalizer_consumes_only_its_own_lifo_receipt",
     "replacements::attack_cancel.rs::dsl_end_attack_step_cancels_pending_attack",
     "rules_conformance::ch03_areas.rs::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition",
@@ -68177,6 +68922,36 @@
      "spec",
      "yaml_key"
     ],
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security": [
+     "yaml_key"
+    ],
     "dsl::phase2c_control_flow.rs::if_false_runs_else_branch": [
      "variant"
     ],
@@ -68443,6 +69218,16 @@
     "dsl::kimeramon_color_mass_delete.rs::yaml_branch_gate_six_or_more_takes_per_color_mass_delete",
     "dsl::option_source_use_cluster.rs::dsl_use_option_from_revealed_mid_body_park_resolves_before_outer_tail",
     "dsl::parse_steps.rs::parse_if_then_else",
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay",
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation",
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot",
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent",
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move",
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once",
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts",
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security",
     "dsl::phase2c_control_flow.rs::if_false_runs_else_branch",
     "dsl::phase2c_control_flow.rs::if_true_runs_then_branch",
     "dsl::phase2c_control_flow.rs::if_with_empty_else_false_branch_is_noop",
@@ -69359,6 +70144,36 @@
     "dsl::constructs/protection.rs::stack_does_not_block_security_placement": [
      "yaml_key"
     ],
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security": [
+     "yaml_key"
+    ],
     "dsl::phase2f1_placement_steps.rs::place_on_security_choice_prompt_clones_faithfully": [
      "variant"
     ],
@@ -69391,6 +70206,16 @@
    "tested_behaviourally": true,
    "tests": [
     "dsl::constructs/protection.rs::stack_does_not_block_security_placement",
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay",
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation",
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot",
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent",
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move",
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once",
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts",
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security",
     "dsl::phase2f1_placement_steps.rs::place_on_security_choice_prompt_clones_faithfully",
     "dsl::phase2f1_placement_steps.rs::place_on_security_step_moves_hand_card_to_security_top",
     "dsl::phase2f1_placement_steps.rs::place_on_security_uses_bound_trash_owner",
@@ -70796,14 +71621,17 @@
     "code/digimon-engine/src/dsl_cards/step/play_digivolve.rs"
    ],
    "name": "return_selected_security_to_deck",
-   "near_miss_files": [
-    "src/dsl_cards/step/play_digivolve.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::quantumon_primitives.rs::return_selected_security_to_deck_moves_each_exact_legal_choice_to_the_top": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::quantumon_primitives.rs::return_selected_security_to_deck_moves_each_exact_legal_choice_to_the_top"
+   ]
   },
   "verb:return_selected_sources_to_deck": {
    "kind": "verb",
@@ -71307,6 +72135,28 @@
     "dsl::reveal_search.rs::reveal_search_remainder_choose_is_player_elected",
     "dsl::reveal_search.rs::reveal_search_short_pool_adds_nothing_returns_remainder",
     "dsl::reveal_search.rs::reveal_search_two_buckets_dedup_routes_distinctly"
+   ]
+  },
+  "verb:reveal_security": {
+   "kind": "verb",
+   "lowering_files": [
+    "code/digimon-engine/src/dsl_cards/step/zone_moves.rs"
+   ],
+   "name": "reveal_security",
+   "parsed_only": false,
+   "signals": {
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack": [
+     "yaml_key"
+    ],
+    "dsl::quantumon_primitives.rs::return_selected_security_to_deck_moves_each_exact_legal_choice_to_the_top": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::public_security_reveal.rs::reveal_security_lowering_from_masked_hand_play_reveals_only_the_opponent_stack",
+    "dsl::quantumon_primitives.rs::return_selected_security_to_deck_moves_each_exact_legal_choice_to_the_top"
    ]
   },
   "verb:reveal_top_deck": {
@@ -71845,6 +72695,36 @@
     "dsl::constructs/security_stack.rs::owner_can_add_security_true_without_restrictions": [
      "yaml_key"
     ],
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts": [
+     "yaml_key"
+    ],
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security": [
+     "yaml_key"
+    ],
     "dsl::phase3_reducer_selection.rs::select_any_permanent_and_select_dna_pair_compile": [
      "variant",
      "yaml_key"
@@ -71904,6 +72784,16 @@
     "dsl::constructs/security_stack.rs::owner_can_add_security_ignores_the_acting_player",
     "dsl::constructs/security_stack.rs::owner_can_add_security_reads_the_top_cards_owner_not_the_controller",
     "dsl::constructs/security_stack.rs::owner_can_add_security_true_without_restrictions",
+    "dsl::permanent_security_receipt.rs::canceled_and_redirected_costs_do_not_pay",
+    "dsl::permanent_security_receipt.rs::dedicated_handle_current_replacement_processing_pays_the_original_operation",
+    "dsl::permanent_security_receipt.rs::failed_reuse_clears_old_payment_and_cannot_retarget_a_compacted_slot",
+    "dsl::permanent_security_receipt.rs::inline_would_leave_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::inline_would_place_compaction_keeps_exact_selected_payer",
+    "dsl::permanent_security_receipt.rs::nested_independent_parked_placement_in_clones_never_credits_canceled_parent",
+    "dsl::permanent_security_receipt.rs::nested_other_effect_placing_same_physical_card_does_not_pay_canceled_original_move",
+    "dsl::permanent_security_receipt.rs::normal_owner_routing_both_sides_pays_once",
+    "dsl::permanent_security_receipt.rs::parked_payment_waits_and_cloned_accept_decline_have_separate_receipts",
+    "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security",
     "dsl::phase3_reducer_selection.rs::select_any_permanent_and_select_dna_pair_compile",
     "dsl::phase3_reducer_selection.rs::select_any_permanent_can_bind_either_players_field",
     "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection",
@@ -72045,6 +72935,9 @@
     "dsl::constructs/zone_moves.rs::inherited_loop_continuation_re_resolves_compacted_carrier_and_keeps_actor": [
      "yaml_key"
     ],
+    "dsl::deck_trash_event.rs::already_enqueued_deck_trash_source_cannot_revive_after_reentry": [
+     "yaml_key"
+    ],
     "dsl::phase2e_end_to_end.rs::select_reveal_then_effect_choice_then_gain_memory": [
      "variant"
     ],
@@ -72069,6 +72962,12 @@
     "dsl::phase3e_scheduled_reentry.rs::scheduled_drain_resumes_after_selection_and_continues_remaining_effects": [
      "variant"
     ],
+    "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw": [
+     "yaml_key"
+    ],
+    "dsl::quantumon_primitives.rs::parked_opponent_start_choice_delays_unsuspend_and_draw_then_resumes_once": [
+     "yaml_key"
+    ],
     "lib::src/dsl_cards/lower_replacement.rs::probe_reads_typed_nested_steps_and_ignores_identical_prompt_text": [
      "variant"
     ],
@@ -72088,6 +72987,7 @@
     "dsl::constructs/option_security_suppression.rs::suppressed_option_security_does_not_offer_its_choice_but_sibling_does",
     "dsl::constructs/zone_moves.rs::departed_inherited_source_keeps_controller_tail_without_retargeting_new_slot",
     "dsl::constructs/zone_moves.rs::inherited_loop_continuation_re_resolves_compacted_carrier_and_keeps_actor",
+    "dsl::deck_trash_event.rs::already_enqueued_deck_trash_source_cannot_revive_after_reentry",
     "dsl::phase2e_end_to_end.rs::select_reveal_then_effect_choice_then_gain_memory",
     "dsl::phase2e_select_effect_choice.rs::legal_when_masks_illegal_branches_out_of_the_prompt",
     "dsl::phase2e_select_effect_choice.rs::legal_when_no_legal_branch_binds_nothing_and_continues",
@@ -72096,6 +72996,8 @@
     "dsl::phase2e_select_effect_choice.rs::select_effect_choice_binds_picked_index",
     "dsl::phase3c_partition_delay_process.rs::delay_declarative_uses_continuation_aware_process_body",
     "dsl::phase3e_scheduled_reentry.rs::scheduled_drain_resumes_after_selection_and_continues_remaining_effects",
+    "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw",
+    "dsl::quantumon_primitives.rs::parked_opponent_start_choice_delays_unsuspend_and_draw_then_resumes_once",
     "lib::src/dsl_cards/lower_replacement.rs::probe_reads_typed_nested_steps_and_ignores_identical_prompt_text",
     "rules_conformance::ch18_pending_overwrite.rs::choose_one_loop_repeats_until_its_owner_stops_it",
     "rules_conformance::ch18_pending_overwrite.rs::optional_instead_lets_the_player_choose"
@@ -72862,6 +73764,9 @@
     "dsl::stack_pair_and_protection.rs::same_level_pair_unpayable_picks_nothing_and_skips_the_tail": [
      "variant"
     ],
+    "lib::src/dsl_cards/step/security_placement_results.rs::abandoned_permanent_payment_consumes_only_its_correlated_receipt": [
+     "variant"
+    ],
     "lib::src/dsl_cards/step/security_placement_results.rs::abandoned_security_receipt_finalizer_consumes_only_its_own_lifo_receipt": [
      "variant"
     ]
@@ -72881,6 +73786,7 @@
     "dsl::stack_pair_and_protection.rs::same_level_pair_offers_every_level_that_has_a_pair",
     "dsl::stack_pair_and_protection.rs::same_level_pair_resolves_on_a_cloned_game",
     "dsl::stack_pair_and_protection.rs::same_level_pair_unpayable_picks_nothing_and_skips_the_tail",
+    "lib::src/dsl_cards/step/security_placement_results.rs::abandoned_permanent_payment_consumes_only_its_correlated_receipt",
     "lib::src/dsl_cards/step/security_placement_results.rs::abandoned_security_receipt_finalizer_consumes_only_its_own_lifo_receipt"
    ]
   },
@@ -75027,6 +75933,9 @@
     "dsl::phase2e_select_security.rs::select_security_opponent_binds_picked_handle": [
      "variant"
     ],
+    "dsl::quantumon_primitives.rs::return_selected_security_to_deck_moves_each_exact_legal_choice_to_the_top": [
+     "yaml_key"
+    ],
     "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection": [
      "variant"
     ],
@@ -75061,6 +75970,7 @@
     "dsl::constructs/security_stack.rs::trash_selected_security_with_empty_stack_installs_no_selection",
     "dsl::group4_zone_movement.rs::security_stack_steps_parse_and_compile",
     "dsl::phase2e_select_security.rs::select_security_opponent_binds_picked_handle",
+    "dsl::quantumon_primitives.rs::return_selected_security_to_deck_moves_each_exact_legal_choice_to_the_top",
     "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection",
     "lib::src/dsl_cards/step/mod.rs::optional_security_accept_executes_bound_enclosing_tail_in_clones",
     "lib::src/dsl_cards/step/mod.rs::optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection"
@@ -76066,14 +76976,21 @@
     "code/digimon-engine/src/dsl_cards/step/draw.rs"
    ],
    "name": "trash_bottom_security",
-   "near_miss_files": [
-    "src/dsl_cards/step/draw.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::trash_bottom_security.rs::trash_bottom_security_empty_stack_does_not_move_another_zone": [
+     "variant"
+    ],
+    "dsl::trash_bottom_security.rs::trash_bottom_security_moves_only_bottom_physical_card_of_referenced_player": [
+     "variant"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::trash_bottom_security.rs::trash_bottom_security_empty_stack_does_not_move_another_zone",
+    "dsl::trash_bottom_security.rs::trash_bottom_security_moves_only_bottom_physical_card_of_referenced_player"
+   ]
   },
   "verb:trash_bottom_sources": {
    "kind": "verb",
@@ -77308,12 +78225,12 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2140,
+  "behavioural_tests": 2180,
   "cards": {
-   "behaviourally_covered": 1093,
-   "lowering_covered": 1112,
-   "not_covered": 71,
-   "total": 1183
+   "behaviourally_covered": 1118,
+   "lowering_covered": 1137,
+   "not_covered": 59,
+   "total": 1196
   },
   "constructs": {
    "keyword": {
@@ -77327,30 +78244,30 @@
    },
    "predicate": {
     "parsed_only": 8,
-    "tested": 189,
-    "tested_behaviourally": 181,
+    "tested": 190,
+    "tested_behaviourally": 182,
     "total": 221,
-    "untested": 32,
+    "untested": 31,
     "used_by_cards": 195,
-    "used_untested": 25
+    "used_untested": 24
    },
    "timing": {
     "parsed_only": 2,
-    "tested": 57,
-    "tested_behaviourally": 55,
-    "total": 65,
-    "untested": 8,
-    "used_by_cards": 56,
-    "used_untested": 6
+    "tested": 59,
+    "tested_behaviourally": 57,
+    "total": 66,
+    "untested": 7,
+    "used_by_cards": 57,
+    "used_untested": 5
    },
    "verb": {
     "parsed_only": 5,
-    "tested": 176,
-    "tested_behaviourally": 171,
-    "total": 183,
-    "untested": 7,
-    "used_by_cards": 171,
-    "used_untested": 7
+    "tested": 179,
+    "tested_behaviourally": 174,
+    "total": 184,
+    "untested": 5,
+    "used_by_cards": 172,
+    "used_untested": 5
    }
   },
   "ex13_lists": 568,
@@ -77397,6 +78314,7 @@
    "src/dsl_cards/step/replacement_outcome.rs",
    "src/dsl_cards/step/return_results.rs",
    "src/dsl_cards/step/schedule_delayed.rs",
+   "src/dsl_cards/step/security_trash_results.rs",
    "src/dsl_cards/step/selections.rs",
    "src/dsl_cards/step/simultaneous_play.rs",
    "src/dsl_cards/step/source_play_batch.rs",
@@ -77468,8 +78386,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 390,
-  "scanned_tests": 2540,
+  "scanned_files": 398,
+  "scanned_tests": 2580,
   "top_untested": [
    {
     "cards_blocked": 1,
@@ -77485,11 +78403,6 @@
     "cards_blocked": 6,
     "construct": "predicate:self_digivolution_sources_trait_has",
     "ex13_lists_blocked": 19
-   },
-   {
-    "cards_blocked": 5,
-    "construct": "verb:trash_bottom_security",
-    "ex13_lists_blocked": 15
    },
    {
     "cards_blocked": 2,
@@ -77510,11 +78423,6 @@
     "cards_blocked": 1,
     "construct": "predicate:in_event_discarded_cards",
     "ex13_lists_blocked": 10
-   },
-   {
-    "cards_blocked": 6,
-    "construct": "predicate:event_card_kind",
-    "ex13_lists_blocked": 8
    },
    {
     "cards_blocked": 5,
@@ -77619,16 +78527,6 @@
    {
     "cards_blocked": 1,
     "construct": "predicate:is_event_host",
-    "ex13_lists_blocked": 1
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "timing:start_of_opponents_turn",
-    "ex13_lists_blocked": 1
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "verb:return_selected_security_to_deck",
     "ex13_lists_blocked": 1
    },
    {

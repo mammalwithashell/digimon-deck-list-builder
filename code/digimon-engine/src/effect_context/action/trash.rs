@@ -203,7 +203,11 @@ impl<'a> EffectContext<'a> {
             // engine-event-emission "every card-to-trash emits Trash" rule). The
             // preceding `Reveal{TrashFromDeckTop}` is what the match log renders;
             // the frontend suppresses the paired `Trash` line to avoid a dup.
+            let handle = card.handle();
             self.game.trash_card(player, card);
+            self.game.record_effect_deck_trash(player, handle, crate::trigger_context::EffectAttribution {
+                controller: self.player, source_card: Some(self.source_card), source_permanent: self.source_permanent,
+            });
             trashed += 1;
         }
         trashed
@@ -215,96 +219,24 @@ impl<'a> EffectContext<'a> {
     /// Phase 7 Task 4: fires `WhenWouldBeTrashed` at entry. Subject carries
     /// the top security card's handle; cause inferred.
     pub fn trash_top_security(&mut self, player: PlayerId) -> bool {
-        use crate::enums::{EffectTiming, Zone};
-        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
-
-        // Opaque-aware: if top of security is a placeholder, materialize
-        // before the replacement window so the WhenWouldBeTrashed lookup
-        // sees real card identity (replacement effects are often keyed
-        // on color/type).
-        if let Some(top_idx) = self.game.player(player).security.len().checked_sub(1) {
-            self.game.ensure_security_materialized(player, top_idx);
-        }
-        // Snapshot the top-of-security card handle before any state change.
-        let top_handle = match self.game.player(player).security.last() {
-            Some(c) => c.handle(),
-            None => return false,
-        };
-        if !self.game.would_replacement_proceeds(
-            EffectTiming::WhenWouldBeTrashed,
-            ReplacementSubject::Card(top_handle, Zone::Security),
-            player,
-            Some(Zone::Trash),
-        ) {
+        let Some(index) = self.game.player(player).security.len().checked_sub(1) else {
             return false;
-        }
-
-        let Some(departing) = self.game.player(player).security.last().map(|c| c.handle()) else { return false; };
-        self.game.remember_belief_security_departure(player, departing.0, 0);
-        let p = self.game.player_mut(player);
-        if let Some(card) = p.security.pop() {
-            p.face_up_security.remove(&card.card_index);
-            self.game.fire_security_removed_observers(
-                player,
-                self.player,
-                card,
-                crate::selection::SecurityRemovalDestination::Trash,
-            );
-            self.game.mark_until_condition_dirty();
-            self.game.reevaluate_until_condition_modifiers_if_dirty();
-            true
-        } else {
-            false
-        }
+        };
+        self.game.ensure_security_materialized(player, index);
+        let card = self.game.player(player).security[index].handle();
+        self.game
+            .start_security_trash(player, card, self.player, false)
     }
 
-    /// Trash the bottom card of `player`'s security stack (index 0).
-    ///
-    /// Mirrors `trash_top_security` but removes `security[0]` instead of
-    /// the last element. Replacement effects and observers fire identically
-    /// to the top-trash path.
+    /// Trash the physically pinned bottom security card, owning any replacement continuation.
     pub fn trash_bottom_security(&mut self, player: PlayerId) -> bool {
-        use crate::enums::{EffectTiming, Zone};
-        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
-
-        // Opaque-aware: materialize the bottom security card if it's a
-        // placeholder, so subsequent WhenWouldBeTrashed lookups and
-        // observer firings see real card identity.
-        if !self.game.player(player).security.is_empty() {
-            self.game.ensure_security_materialized(player, 0);
-        }
-        // Snapshot the bottom-of-security card handle before any state change.
-        let bottom_handle = match self.game.player(player).security.first() {
-            Some(c) => c.handle(),
-            None => return false,
-        };
-        if !self.game.would_replacement_proceeds(
-            EffectTiming::WhenWouldBeTrashed,
-            ReplacementSubject::Card(bottom_handle, Zone::Security),
-            player,
-            Some(Zone::Trash),
-        ) {
-            return false;
-        }
-
         if self.game.player(player).security.is_empty() {
             return false;
         }
-        let from_top = self.game.player(player).security.len() - 1;
-        let departing = self.game.player(player).security[0].handle();
-        self.game.remember_belief_security_departure(player, departing.0, from_top);
-        let p = self.game.player_mut(player);
-        let card = p.security.remove(0);
-        p.face_up_security.remove(&card.card_index);
-        self.game.fire_security_removed_observers(
-            player,
-            self.player,
-            card,
-            crate::selection::SecurityRemovalDestination::Trash,
-        );
-        self.game.mark_until_condition_dirty();
-        self.game.reevaluate_until_condition_modifiers_if_dirty();
-        true
+        self.game.ensure_security_materialized(player, 0);
+        let card = self.game.player(player).security[0].handle();
+        self.game
+            .start_security_trash(player, card, self.player, false)
     }
 
     /// Trash a specific card — identified by the stable `handle` — from

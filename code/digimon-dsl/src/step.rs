@@ -119,6 +119,8 @@ pub enum StepSpec {
     ReturnToDeckFromReveal(ReturnToDeckArgs),
     ShuffleDeck(PlayerArg),
     ShuffleSecurity(PlayerArg),
+    /// Publicly reveal the complete security stack without moving or flipping its cards.
+    RevealSecurity(PlayerArg),
     RevealTopDeck(RevealArgs),
     PlaceRemainderOnDeck(PlaceRemainderArgs),
     /// collapse-dsl-step-idioms §2 — the reveal-search idiom as one composite
@@ -614,6 +616,7 @@ impl Serialize for StepSpec {
             StepSpec::ReturnToDeckFromReveal(v) => kv!(s, "return_to_deck_from_reveal", v),
             StepSpec::ShuffleDeck(v) => kv!(s, "shuffle_deck", v),
             StepSpec::ShuffleSecurity(v) => kv!(s, "shuffle_security", v),
+            StepSpec::RevealSecurity(v) => kv!(s, "reveal_security", v),
             StepSpec::RevealTopDeck(v) => kv!(s, "reveal_top_deck", v),
             StepSpec::PlaceRemainderOnDeck(v) => kv!(s, "place_remainder_on_deck", v),
             StepSpec::RevealSearch(v) => kv!(s, "reveal_search", v),
@@ -915,6 +918,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "return_to_deck_from_reveal" => StepSpec::ReturnToDeckFromReveal(map.next_value()?),
             "shuffle_deck" => StepSpec::ShuffleDeck(map.next_value()?),
             "shuffle_security" => StepSpec::ShuffleSecurity(map.next_value()?),
+            "reveal_security" => StepSpec::RevealSecurity(map.next_value()?),
             "reveal_top_deck" => StepSpec::RevealTopDeck(map.next_value()?),
             "place_remainder_on_deck" => StepSpec::PlaceRemainderOnDeck(map.next_value()?),
             "reveal_search" => StepSpec::RevealSearch(map.next_value()?),
@@ -3362,6 +3366,7 @@ pub enum EffectSourceKindSpec {
     Tamer,
     Option,
     Rule,
+    DigiEgg,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -3387,6 +3392,8 @@ pub struct GrantEffectImmunityArgs {
     pub source_kind: EffectSourceKindSpec,
     #[serde(default)]
     pub source_controller: EffectControllerSpec,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub exclude_self: bool,
     pub expiry: String,
     /// G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA (judge-quiz Q28 /
     /// BT20-059 Gankoomon (X Antibody)): when `true`, the immunity is a

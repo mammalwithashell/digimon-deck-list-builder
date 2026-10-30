@@ -1,0 +1,68 @@
+# Printed face + official bundle EX10-041; DCGO EX10_041.cs.
+card: EX10-041
+name: Wizardmon
+kind: digimon
+level: 4
+color: [purple, yellow]
+cost: 5
+dp: 5000
+traits: [Wizard, Witchelny]
+form: Champion
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: Evil }
+    cost: 2
+effects:
+  - when: on_discard_deck
+    scope: trash
+    summary: "When effects trash this card from deck, 1 opposing Digimon gets Security A. -1 until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Give 1 opposing Digimon Security A. -1 until their turn ends"
+      - add_modifier:
+          target: target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn
+  - when: on_discard_security
+    scope: security
+    summary: "When effects trash this card from security, 1 opposing Digimon gets Security A. -1 until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Give 1 opposing Digimon Security A. -1 until their turn ends"
+      - add_modifier:
+          target: target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn
+  - when: [on_play, when_digivolving]
+    optional: true
+    outer_prompt: true
+    condition: { security_count_gte: 1 }
+    summary: "[On Play][When Digivolving] By trashing top security, mill 2 and all opposing Digimon get -3000 DP for the turn"
+    process:
+      - trash_top_security: { of: you, bind_count_as: paid_security }
+      - if:
+          condition: { equals: [paid_security, 1] }
+          then:
+            - trash_from_top: { of: you, count: 2 }
+            - add_modifier:
+                continuous: true
+                target: { of: opponent, kind: digimon }
+                modifier: ChangeDp
+                value: -3000
+                expiry: end_of_turn
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Barrier

@@ -5078,22 +5078,42 @@
     },
     "BT23-035": {
       "card_name": "Dynasmon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-impl-2026-06-14",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "Royal Knights",
+      "archetype": "Dynasmon EX13",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-035.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_035.rs",
-      "test_count": 2,
-      "tests_passing": 1,
-      "tests_ignored": 1,
+      "test_count": 26,
+      "tests_passing": 26,
+      "tests_ignored": 0,
       "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
+        "DYNASMON-EX13"
       ],
-      "notes": "Added [All Turns][OPT] on_own_security_removed: Security A.+1 until your turn + Recovery+1(Deck) at <=3 security. Barrier + top-security-cost -6000 board debuff retained.",
-      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured.",
+      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale.",
+      "prior_verdicts": [
+        {
+          "card_name": "Dynasmon",
+          "validated_date": "2026-06-14",
+          "report": "royal-knights-audit-impl-2026-06-14",
+          "status": "IMPLEMENTED",
+          "gap_kind": null,
+          "archetype": "Royal Knights",
+          "yaml_path": "code/digimon-engine/cards/bt23/BT23-035.yaml",
+          "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_035.rs",
+          "test_count": 2,
+          "tests_passing": 1,
+          "tests_ignored": 1,
+          "patterns": [
+            "ROYAL-KNIGHTS-POOL-SLICE",
+            "GAP-STUB"
+          ],
+          "notes": "Added [All Turns][OPT] on_own_security_removed: Security A.+1 until your turn + Recovery+1(Deck) at <=3 security. Barrier + top-security-cost -6000 board debuff retained.",
+          "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+        }
+      ]
     },
     "BT23-047": {
       "card_name": "Examon",
@@ -7348,28 +7368,51 @@
     },
     "LM-020": {
       "card_name": "Quantumon",
-      "validated_date": "2026-06-05",
-      "report": "judge-quiz Q18",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "judge-quiz (Q18)",
+      "archetype": "Dynasmon EX13",
       "yaml_path": "code/digimon-engine/cards/lm/LM-020.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_020.rs",
-      "test_count": 4,
+      "test_count": 13,
       "patterns": [
-        "start-of-opp-turn",
-        "select-effect-choice",
-        "declare-category",
-        "reveal-deck-top",
-        "binding-card-kind",
-        "grant-effect-immunity",
-        "self-inclusive-immunity",
-        "when-digivolving-cost",
-        "place-permanent-on-security",
-        "return-selected-security-to-deck",
-        "shuffle-security"
+        "DYNASMON-EX13",
+        "OWN-CARRIER-IMMUNITY-EXCEPTION",
+        "OWNED-SECURITY-PLACEMENT-RECEIPT",
+        "PUBLIC-SECURITY-REVEAL"
       ],
-      "notes": "Both clauses faithful. Clause 2 declare-category conditional immunity (source_controller any → blocks own Blast Digivolve, judge Q18). Clause 1 place-Digimon-on-security cost + 1 opp security to deck top + shuffle. Closed G-DSL-RETURN-SELECTED-SECURITY-TO-DECK + added binding_card_kind predicate."
+      "notes": "Current official errata; both normal evolution colors; any-side Digimon payment to physical owner; correlated actual processing receipts including parked/redirected/canceled/rule-routed outcomes; public security reveal; exact category immunity excludes own/inherited carrier effects. Production-pack Rust card suite 13/13 passed after canonical opponent-start dispatcher repair; 4 independent real-turn/security primitives passed. Simulator evidence only; oracle unmeasured. Current-main integration remains unverified.",
+      "prior_verdicts": [
+        {
+          "card_name": "Quantumon",
+          "validated_date": "2026-06-05",
+          "report": "judge-quiz Q18",
+          "status": "IMPLEMENTED",
+          "gap_kind": null,
+          "archetype": "judge-quiz (Q18)",
+          "yaml_path": "code/digimon-engine/cards/lm/LM-020.yaml",
+          "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_020.rs",
+          "test_count": 4,
+          "patterns": [
+            "start-of-opp-turn",
+            "select-effect-choice",
+            "declare-category",
+            "reveal-deck-top",
+            "binding-card-kind",
+            "grant-effect-immunity",
+            "self-inclusive-immunity",
+            "when-digivolving-cost",
+            "place-permanent-on-security",
+            "return-selected-security-to-deck",
+            "shuffle-security"
+          ],
+          "notes": "Both clauses faithful. Clause 2 declare-category conditional immunity (source_controller any → blocks own Blast Digivolve, judge Q18). Clause 1 place-Digimon-on-security cost + 1 opp security to deck top + shuffle. Closed G-DSL-RETURN-SELECTED-SECURITY-TO-DECK + added binding_card_kind predicate."
+        }
+      ],
+      "tests_passing": 13,
+      "tests_ignored": 0,
+      "audit_note": "Prior record retained in prior_verdicts. No eligibility waiver; canonical lowering and runtime gate evidence are recorded separately in the report."
     },
     "BT20-059": {
       "card_name": "Gankoomon (X Antibody)",
@@ -13005,21 +13048,21 @@
     },
     "EX13-025": {
       "card_name": "Candlemon",
-      "validated_date": "2026-10-01",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Slice — Witchelny",
       "yaml_path": "code/digimon-engine/cards/ex13/EX13-025.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_025.rs",
-      "test_count": 20,
+      "test_count": 23,
       "patterns": [
         "start-of-main",
         "effect-choice",
         "hand-to-bottom-security",
         "F3"
       ],
-      "notes": "[Start of Your Main Phase] 3+ security: top/bottom security trash (EffectChoice) + Draw 1 + memory; then <=2 security: optional [Witchelny]-text hand card to bottom security. Inherited OPT opponent-effect leave save by trashing top security, gated on carrier [Dynasmon]/[Witchelny] in text (BT18-030 DCGO idiom)."
+      "notes": "[Start of Your Main Phase] 3+ security: top/bottom security trash (EffectChoice) + Draw 1 + memory; then <=2 security: optional [Witchelny]-text hand card to bottom security. Inherited OPT opponent-effect leave save by trashing top security, gated on carrier [Dynasmon]/[Witchelny] in text (BT18-030 DCGO idiom). 2026-10-29 audit: Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
     },
     "EX13-029": {
       "card_name": "FlameWizardmon",
@@ -15936,6 +15979,197 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_088.rs",
       "test_count": 10,
       "notes": "Ten behavioral tests pass after independent review: activation decline preserves OPT, accepted activation spends it even when processing is declined/impossible, and Q3046 permits activation without an illegal nested attack. Thirteen-source placement uses the repaired full count bound. Shared immediate-attack guard preserves deferred keyword activation; 33 focused controls pass. No active action/tensor contract change or new live DCGO parity."
+    },
+    "BT18-030": {
+      "card_name": "Candlemon",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-030.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_030.rs",
+      "test_count": 8,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
+    },
+    "BT18-036": {
+      "card_name": "Wizardmon",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-036.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_036.rs",
+      "test_count": 16,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
+    },
+    "BT18-098": {
+      "card_name": "Dragon's Roar",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_098.rs",
+      "test_count": 12,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
+    },
+    "BT19-036": {
+      "card_name": "Wizardmon (X Antibody)",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-036.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_036.rs",
+      "test_count": 14,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
+    },
+    "BT19-042": {
+      "card_name": "Dynasmon (X Antibody)",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-042.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_042.rs",
+      "test_count": 10,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
+    },
+    "EX6-063": {
+      "card_name": "T.K. Takaishi & Kari Kamiya",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "yaml_path": "code/digimon-engine/cards/ex6/EX6-063.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex6/ex6_063.rs",
+      "test_count": 11,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
+    },
+    "BT18-039": {
+      "card_name": "Mistymon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-039.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_039.rs",
+      "test_count": 12,
+      "tests_passing": 12,
+      "tests_ignored": 0,
+      "patterns": [
+        "DYNASMON-EX13"
+      ],
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
+    },
+    "BT19-029": {
+      "card_name": "Tapirmon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_029.rs",
+      "test_count": 21,
+      "tests_passing": 21,
+      "tests_ignored": 0,
+      "patterns": [
+        "DYNASMON-EX13"
+      ],
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
+    },
+    "BT6-089": {
+      "card_name": "T.K. Takaishi & Kari Kamiya",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-089.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_089.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
+      "patterns": [
+        "DYNASMON-EX13"
+      ],
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
+    },
+    "BT9-084": {
+      "card_name": "Tai Kamiya & Kari Kamiya",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_084.rs",
+      "test_count": 11,
+      "tests_passing": 11,
+      "tests_ignored": 0,
+      "patterns": [
+        "DYNASMON-EX13"
+      ],
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
+    },
+    "EX7-026": {
+      "card_name": "Starmon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-026.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_026.rs",
+      "test_count": 11,
+      "tests_passing": 11,
+      "tests_ignored": 0,
+      "patterns": [
+        "DYNASMON-EX13"
+      ],
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
+    },
+    "LM-045": {
+      "card_name": "Vermilion Memory Boost!",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-045.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_045.rs",
+      "test_count": 8,
+      "tests_passing": 8,
+      "tests_ignored": 0,
+      "patterns": [
+        "DYNASMON-EX13"
+      ],
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
+    },
+    "EX10-041": {
+      "card_name": "Wizardmon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-041.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_041.rs",
+      "test_count": 18,
+      "tests_passing": 18,
+      "tests_ignored": 0,
+      "patterns": [
+        "DYNASMON-EX13"
+      ],
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
     }
   }
 }

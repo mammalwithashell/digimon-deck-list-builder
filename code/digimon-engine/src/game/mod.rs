@@ -362,6 +362,8 @@ pub(crate) struct PendingSecurityMove {
     pub(crate) face_up: bool,
     pub(crate) observer: PlayerId,
     pub(crate) leave_complete: bool,
+    /// Exact optional-processing payment operation; independent nested moves have none.
+    pub(crate) result_receipt: Option<u64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -614,6 +616,9 @@ pub struct Game {
     pub pending_selection: Option<PendingSelection>,
     pub(crate) next_card_choice_id: u64,
     pub(crate) security_shuffle_generations: [u64; 2],
+    /// Temporary public knowledge: owner, physical card, arrival, shuffle epoch.
+    /// This never changes the card's rules-facing face-up state.
+    pub(crate) public_security_reveals: Vec<(PlayerId, crate::card_source::CardHandle, u64, u64)>,
     pub(crate) resolved_card_choice: Option<crate::owned_card_choice::ResolvedCardChoice>,
     /// Coexistence-phase data continuation paired with `pending_selection`
     /// (make-engine-cloneable Phase 2). When `Some`, `resolve_generic_selection`
@@ -853,6 +858,9 @@ pub struct Game {
     /// into security, or under Digi-Egg / token rules (§15-1-9) — and taken
     /// by `SecurityPlacementCancelFinalize` (BT24-040).
     pub(crate) security_placement_receipts: Vec<(u16, bool)>,
+    pub(crate) permanent_security_placement_receipts: Vec<(u64, bool)>,
+    pub(crate) security_trash_receipts: Vec<(u16, bool)>,
+    pub(crate) pending_security_trashes: Vec<crate::game_actions::security_trash::SecurityTrashMove>,
     /// The host chosen for a from-hand Plug-In Option's §6-5-1-4 link
     /// declaration, pinned between the host pick (§10-1-3-1) and the plug-in
     /// (§10-1-3-3) so `dispose_option`'s `Link` arm attaches to it instead of
@@ -1472,6 +1480,8 @@ pub struct Game {
     /// `None` outside a discard window. Mirrors DCGO `DiscardHands()` collecting
     /// the whole discard list before firing the trigger once.
     pub(crate) pending_hand_discard: Option<PendingHandDiscard>,
+    /// Exact effect-milled cards, released after the causing effect completes.
+    pub(crate) pending_deck_discards: Vec<(PlayerId, CardHandle, u64, crate::trigger_context::EffectAttribution)>,
 
     /// Open coalescing window for the `OnAddToDeck` batch trigger
     /// (G-ENGINE-ON-ADD-TO-DECK): the controller of the effect that added
@@ -3425,6 +3435,26 @@ impl Game {
         payload: Option<crate::modifiers::ModifierPayload>,
         opponent_only: bool,
     ) {
+        let source_kind = self.effect_source_kind_for_handle(source_card);
+        self.add_floating_mass_modifier_scoped_from(filter, modifier, value, source_card,
+            source_player, expiry, effect_immunity, payload, opponent_only, source_kind, None);
+    }
+
+    /// Install with the resolving effect's captured category and carrier.
+    pub fn add_floating_mass_modifier_scoped_from(
+        &mut self,
+        filter: digimon_dsl::compiled::CompiledPredicate,
+        modifier: ModifierType,
+        value: i32,
+        source_card: crate::card_source::CardHandle,
+        source_player: PlayerId,
+        expiry: Expiry,
+        effect_immunity: Option<crate::modifiers::EffectImmunityFilter>,
+        payload: Option<crate::modifiers::ModifierPayload>,
+        opponent_only: bool,
+        source_kind: crate::enums::EffectSourceKind,
+        source_identity: Option<(PlayerId, u64)>,
+    ) {
         let pending_skips =
             crate::modifiers::pending_skips_for_install(expiry, source_player, self.turn_player());
         self.floating_mass_modifiers
@@ -3435,6 +3465,8 @@ impl Game {
                 value,
                 source_card,
                 source_player,
+                source_kind,
+                source_identity,
                 expiry,
                 pending_skips,
                 effect_immunity,
@@ -3456,6 +3488,22 @@ impl Game {
         source_player: PlayerId,
         expiry: Expiry,
     ) {
+        let source_kind = self.effect_source_kind_for_handle(source_card);
+        self.add_floating_mass_keyword_from(filter, keyword, source_card, source_player,
+            expiry, source_kind, None);
+    }
+
+    /// Install with the resolving effect's captured category and carrier.
+    pub fn add_floating_mass_keyword_from(
+        &mut self,
+        filter: digimon_dsl::compiled::CompiledPredicate,
+        keyword: crate::enums::Keyword,
+        source_card: crate::card_source::CardHandle,
+        source_player: PlayerId,
+        expiry: Expiry,
+        source_kind: crate::enums::EffectSourceKind,
+        source_identity: Option<(PlayerId, u64)>,
+    ) {
         let pending_skips =
             crate::modifiers::pending_skips_for_install(expiry, source_player, self.turn_player());
         self.floating_mass_modifiers
@@ -3466,6 +3514,8 @@ impl Game {
                 value: 0,
                 source_card,
                 source_player,
+                source_kind,
+                source_identity,
                 expiry,
                 pending_skips,
                 effect_immunity: None,
@@ -3692,10 +3742,11 @@ impl Game {
         target: crate::permanent::PermanentHandle,
         controller: PlayerId,
         source_kind: EffectSourceKind,
+        source_identity: Option<(PlayerId, u64)>,
     ) -> bool {
         let shielded =
             self.modifiers.progress_shield() == Some(target) && controller != target.player;
-        !shielded && !self.modifiers.is_unaffected_by(target, controller, source_kind)
+        !shielded && !self.modifiers.is_unaffected_by_from(target, controller, source_kind, source_identity)
     }
 
     fn live_declarative_formula_sum(
@@ -3788,7 +3839,7 @@ impl Game {
             // shield through keyword reads that can read DP) -- the shield the
             // registry holds IS the read-time truth `Game` keeps refreshed.
             // G-ENGINE-PROGRESS-SHIELD-BYPASSED-BY-TIMING-DISABLE-AND-FORMULA-AURAS.
-            if !self.declarative_formula_can_affect(target, controller, source_kind) {
+            if !self.declarative_formula_can_affect(target, controller, source_kind, source_permanent.and_then(|h| self.permanent_effect_identity(h))) {
                 continue;
             }
             let Some(effects) = self.effects_for_card(&card_id, source_card) else {
@@ -3859,7 +3910,7 @@ impl Game {
         }
         for (card_id, source_card, host, controller) in linked_sources {
             // A link card's ESS is the host Digimon's effect (§4-3-5).
-            if !self.declarative_formula_can_affect(target, controller, EffectSourceKind::Digimon) {
+            if !self.declarative_formula_can_affect(target, controller, EffectSourceKind::Digimon, self.permanent_effect_identity(host)) {
                 continue;
             }
             let Some(effects) = self.effects_for_card(&card_id, source_card) else {

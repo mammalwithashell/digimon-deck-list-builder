@@ -123,9 +123,7 @@ pub fn build_tensor_standard_compact_v1(
         registry,
     );
 
-    // --- My security (face-down = 0.0; face-up cards written when
-    // `face_up_security` is populated by reveal effects). Matches Python's
-    // `_write_security_ids`.
+    // --- My security (face-up only under the active tensor contract).
     write_security_ids(
         &mut t,
         OFF_MY_SECURITY,
@@ -135,9 +133,7 @@ pub fn build_tensor_standard_compact_v1(
         registry,
     );
 
-    // --- Opp security (face-down = 0.0). Face-up reveals against the
-    // opponent populate `opp.face_up_security`, so mirror the my-security
-    // writer.
+    // --- Opp security (face-down identities remain zero, even during reveal).
     write_security_ids(
         &mut t,
         OFF_OPP_SECURITY,
@@ -314,10 +310,8 @@ fn write_field(
     }
 }
 
-/// Write a player's security stack into the tensor. Only face-up cards
-/// (those whose `card_index` is in `player.face_up_security`) emit their
-/// registry index; face-down slots stay 0.0. Mirrors Python's
-/// `_write_security_ids`.
+/// Write actual face-up security identities under the active tensor contract.
+/// Temporary public revelation does not change these fixed security slots.
 fn write_security_ids(
     tensor: &mut [f32],
     start: usize,

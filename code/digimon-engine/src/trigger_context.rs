@@ -186,6 +186,8 @@ pub struct TriggerContext {
     /// compaction; DNA and leaving/replaying create a different permanent.
     pub event_permanent_identity: Option<(PlayerId, u64)>,
     pub event_card: Option<CardHandle>,
+    /// Captured incarnation of an exact self deck-trash trigger. Not UI metadata.
+    pub(crate) deck_trash_generation: Option<u64>,
     pub event_source_card: Option<CardHandle>,
     pub event_host_card: Option<CardHandle>,
     pub event_host_permanent: Option<PermanentHandle>,
@@ -586,6 +588,7 @@ impl std::fmt::Debug for TriggerContext {
         if let Some(value)=&self.replacement_deletion_cause { d.field("replacement_deletion_cause", value); }
         if !self.simultaneous_play_members.is_empty() { d.field("simultaneous_play_members", &self.simultaneous_play_members); }
         if self.in_source_move_event { d.field("in_source_move_event", &self.in_source_move_event); }
+        if let Some(value) = self.deck_trash_generation { d.field("deck_trash_generation", &value); }
         d.finish()
     }
 }

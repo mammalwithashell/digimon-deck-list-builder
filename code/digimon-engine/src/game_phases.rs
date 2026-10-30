@@ -69,6 +69,17 @@ impl Game {
             EffectTiming::StartOfYourTurn,
             crate::selection::TriggerSource::PlayerBattleArea(tp),
         );
+        // These observe the same turn-start window, before unsuspend/draw.
+        // Collect both controllers before draining so turn-player priority
+        // and the existing parked start-turn continuation apply together.
+        for player in 0..self.players.len() {
+            if player as PlayerId != tp {
+                self.enqueue_triggered(
+                    EffectTiming::StartOfOpponentsTurn,
+                    crate::selection::TriggerSource::PlayerBattleArea(player as PlayerId),
+                );
+            }
+        }
         // CR 4.3 15-4-3: a printed [Start of Your Turn] <Delay> shares
         // this timing with ordinary triggers. Collect the entire window
         // before the player chooses the next effect (LM-027 + BT24-088).

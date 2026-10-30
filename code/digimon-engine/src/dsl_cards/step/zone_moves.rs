@@ -567,6 +567,11 @@ pub fn try_run(
             true
         }
 
+        CompiledStep::RevealSecurity { of } => {
+            let player = resolve_player(ctx, *of);
+            ctx.game.reveal_security(player);
+            true
+        }
         CompiledStep::RevealTopDeck {
             of,
             count,

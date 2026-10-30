@@ -27,85 +27,37 @@ effects:
   - kind: grant_keyword
     keyword: Barrier
 
-  # ─── [On Play][When Digivolving] security-trash cost -> board-wide -6000 ────
-  #
-  # "By trashing your top security card, all of your opponent's Digimon get
-  #  -6000 DP for the turn."
-  #
-  # §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
-  # — "BY TRASHING your top security card, ..." is precisely that shape (the
-  # manual's worked example: "[On Deletion] By trashing 1 card in the hand,
-  # gain 1 memory"). §15-7-4: "A player can choose whether or not to execute
-  # the content of optional processing conditions, regardless of whether or
-  # not the content of the conditions can be executed" — so trashing security
-  # is the player's call, never auto-paid (rule 17: no auto-selections).
-  # §15-7-2: if the condition's content isn't executed, "the processing after
-  # the conditions can't be executed" — declining leaves the security stack
-  # intact AND skips the -6000 DP debuff entirely.
-  #
-  # DCGO agrees: BT23_035.cs passes isOptional=TRUE to SetUpActivateClass at
-  # :77 ([On Play]) and :106 ([When Digivolving]) — both share
-  # SharedActivateCoroutine, which pays IDestroySecurity BEFORE the debuff.
-  # (Contrast the [All Turns][Once Per Turn] clause below: BT23_035.cs:135
-  # passes isOptional=FALSE, and its printed text carries no "by X, Y" — it
-  # stays mandatory.)
-  #
-  # `outer_prompt: true` because the body's FIRST step (`trash_top_security`)
-  # is a bare cost step with no PASS of its own, so the forced outer confirm
-  # is the only place the decline can surface.
-  #
-  # `condition: { security_count_gte: 1 }` mirrors DCGO's CanActivateCondition
-  # (`card.Owner.SecurityCards.Count >= 1`, BT23_035.cs:94 / :123) and the
-  # matching guard at the head of SharedActivateCoroutine (:48). It is what
-  # keeps the forced outer confirm from prompting in a state where DCGO never
-  # activates the clause at all — the standard pairing for an `outer_prompt`
-  # clause whose cost is a security trash (BT22-041 / BT14-084 idiom).
+  # The benefit requires committed trash, not merely a requested payment.
+  # Overall processing also covers later entrants (CR 4.3 15-11-2-1/2).
   - when: [on_play, when_digivolving]
     optional: true
     outer_prompt: true
-    summary: "[On Play][When Digivolving] MAY trash top security; if so, all opponent Digimon get -6000 DP"
     condition: { security_count_gte: 1 }
+    summary: "[On Play][When Digivolving] By trashing top security, all opposing Digimon get -6000 DP for the turn"
     process:
-      - trash_top_security: { of: you }
-      - for_each:
-          over:
-            all_of:
-              - kind: digimon
-              - of: opponent
-              - zone: [battle_area]
-          bind_as: victim
-          body:
-            - add_dp_modifier:
-                target: victim
+      - trash_top_security: { of: you, bind_count_as: paid_security }
+      - if:
+          condition: { equals: [paid_security, 1] }
+          then:
+            - add_modifier:
+                continuous: true
+                target: { of: opponent, kind: digimon }
+                modifier: ChangeDp
                 value: -6000
                 expiry: end_of_turn
 
-  # ─── [All Turns][Once Per Turn] security-removed → Sec A.+1, then recover ────
-  #
-  # "When your security stack is removed from, this Digimon gains
-  #  <Security A. +1> until your turn ends. Then, if you have 3 or fewer
-  #  security cards, <Recovery +1 (Deck)>."
-  #
-  # DCGO (BT23_035.cs, EffectTiming.OnLoseSecurity, max-per-turn 1, gated by
-  # IsYourSecurity): grant Security A. +1 to this permanent for
-  # EffectDuration.UntilOwnerTurnEnd, then `if (SecurityCards.Count <= 3)`
-  # Recovery +1.
-  #
-  # `on_own_security_removed` fires only when the controller's own security is
-  # removed from (BT4-097 precedent). The grant uses `end_of_your_next_turn`:
-  # this observer typically fires on the OPPONENT's turn (their attack removes
-  # your security), so "until your turn ends" resolves to the end of your NEXT
-  # turn. The Recovery is gated on `security_count_lte: 3`.
+  # Until your turn ends means this own turn, or the next own turn when
+  # installed during the opponent's turn; it is not an extra next-turn skip.
   - when: on_own_security_removed
     active_when: { all_turns: true }
     once_per_turn: true
-    summary: "[All Turns][OPT] When your security is removed, this Digimon gains Security A. +1; then if 3 or fewer security, Recovery +1"
+    summary: "[All Turns][OPT] Own security removed: Security A. +1 until your turn ends; then recover if at most 3 security"
     process:
       - grant_keyword:
           target: source
           keyword: SecurityAttackPlus
           value: 1
-          expiry: end_of_your_next_turn
+          expiry: end_of_your_turn
       - if:
           condition: { security_count_lte: 3 }
           then:

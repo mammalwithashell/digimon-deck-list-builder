@@ -366,6 +366,12 @@ Future tensor profiles must define their own profile id and version, and must in
 | `1360-1369` | 10 | Revealed card IDs (`10 × 1`) |
 | `1370-1374` | 5 | Selection context |
 
+Temporary public revelation does not flip security cards face-up. The base
+security ID slots above therefore remain zero for those face-down cards, even
+while public UI/events and search information sets know their identities.
+Existing owned pending-choice rows expose identities when the selection's
+visibility permits them. This preserves the active profile and layout contract.
+
 ## Global Data (`0-9`)
 
 | Index | Field | Notes |

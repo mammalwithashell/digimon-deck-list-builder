@@ -38,7 +38,7 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
     CompiledScope, CompiledTiming,
 };
-use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
@@ -88,7 +88,8 @@ fn builder() -> DebugRunnerBuilder {
 }
 
 fn fire(r: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
-    r.game.enqueue_triggered(timing, TriggerSource::Permanent(h));
+    r.game
+        .enqueue_triggered(timing, TriggerSource::Permanent(h));
     r.game.drain_effect_queue();
 }
 
@@ -154,25 +155,79 @@ fn main_phase_setup(security: &[&str], hand: &[&str]) -> (DebugRunner, Permanent
 fn choose(r: &mut DebugRunner, idx: usize) {
     let v = r.pending_selection_view().expect("effect choice pending");
     assert_eq!(v.kind, SelectionKind::EffectChoice, "{v:?}");
-    let opts: Vec<u16> = v.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect();
+    let opts: Vec<u16> = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .collect();
     assert_eq!(opts.len(), 2, "exactly top / bottom offered: {v:?}");
-    r.execute_action(v.selecting_player, opts[idx]).expect("choose");
+    let mask = digimon_engine::action::build_action_mask(&r.game, v.selecting_player);
+    assert_eq!(mask[PASS as usize], 0.0, "top/bottom choice is mandatory");
+    for action in &opts {
+        assert_eq!(mask[*action as usize], 1.0);
+    }
+    r.execute_action(v.selecting_player, opts[idx])
+        .expect("choose");
+}
+
+fn hand_rows(r: &DebugRunner) -> Vec<digimon_engine::owned_card_choice::CardChoiceRowView> {
+    let p = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("hand prompt pending");
+    p.card_choice
+        .as_ref()
+        .expect("owned physical hand choice")
+        .view(&r.game, p.selecting_player)
+        .rows
+}
+
+fn hand_decline_action(r: &DebugRunner) -> u16 {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    hand_rows(r)
+        .into_iter()
+        .find(|row| matches!(row.operation, CardChoiceOperation::Decline))
+        .expect("optional bottom placement has a decline row")
+        .action_id
+}
+
+fn assert_hand_optional(r: &DebugRunner) {
+    let p = r.pending_selection_view().expect("hand placement prompt");
+    let mask = digimon_engine::action::build_action_mask(&r.game, p.selecting_player);
+    assert_eq!(
+        mask[hand_decline_action(r) as usize],
+        1.0,
+        "bottom placement may be declined"
+    );
 }
 
 fn offered_hand_count(r: &DebugRunner) -> usize {
-    let v = r.pending_selection_view().expect("hand prompt pending");
-    v.valid_action_ids.iter().filter(|&&a| a != PASS).count()
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    hand_rows(r)
+        .iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .count()
 }
 
 fn pick_hand(r: &mut DebugRunner, id: &str) {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
     let v = r.pending_selection_view().expect("hand prompt");
-    assert_eq!(v.kind, SelectionKind::Hand, "{v:?}");
-    let idx = hand_ids(r).iter().position(|c| c == id).expect("in hand");
-    let a = [HAND_EFFECT_START + idx as u16, PLAY_HAND_START + idx as u16]
+    assert!(matches!(v.kind, SelectionKind::UnionZone { .. }), "{v:?}");
+    let a = hand_rows(r)
         .into_iter()
-        .find(|a| v.valid_action_ids.contains(a))
-        .unwrap_or_else(|| panic!("{id} selectable: {v:?}"));
-    r.execute_action(v.selecting_player, a).expect("pick hand");
+        .find(|row| {
+            matches!(row.operation, CardChoiceOperation::CommitCard)
+                && row.card_id.as_deref() == Some(id)
+        })
+        .unwrap_or_else(|| panic!("{id} selectable: {v:?}"))
+        .action_id;
+    let mask = digimon_engine::action::build_action_mask(&r.game, v.selecting_player);
+    assert_eq!(mask[a as usize], 1.0);
+    assert_hand_optional(r);
+    r.execute_action(v.selecting_player, a)
+        .expect("pick physical hand card");
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -251,7 +306,11 @@ fn ex13_025_five_security_trash_top_draws_and_gains_memory() {
     fire(&mut r, EffectTiming::StartOfYourMainPhase, me);
     choose(&mut r, 0);
     let _ = r.auto_resolve();
-    assert_eq!(security_ids(&r, 0), vec!["S1", "S2", "S3", "S4"], "top (S5) trashed");
+    assert_eq!(
+        security_ids(&r, 0),
+        vec!["S1", "S2", "S3", "S4"],
+        "top (S5) trashed"
+    );
     assert!(trash_ids(&r).contains(&"S5".to_string()));
     assert_eq!(r.game.players[0].hand.len(), hand + 1, "<Draw 1>");
     assert_eq!(r.game.memory, mem + 1, "gain 1 memory");
@@ -273,7 +332,11 @@ fn ex13_025_five_security_trash_bottom() {
     fire(&mut r, EffectTiming::StartOfYourMainPhase, me);
     choose(&mut r, 1);
     let _ = r.auto_resolve();
-    assert_eq!(security_ids(&r, 0), vec!["S2", "S3", "S4", "S5"], "bottom (S1) trashed");
+    assert_eq!(
+        security_ids(&r, 0),
+        vec!["S2", "S3", "S4", "S5"],
+        "bottom (S1) trashed"
+    );
     assert!(trash_ids(&r).contains(&"S1".to_string()));
 }
 
@@ -282,9 +345,11 @@ fn ex13_025_three_security_trash_then_offers_witchelny_bottom_placement() {
     let (mut r, me) = main_phase_setup(&["S1", "S2", "S3"], &["W-TRAIT", "W-TEXT", "PLAIN"]);
     fire(&mut r, EffectTiming::StartOfYourMainPhase, me);
     choose(&mut r, 0);
-    let v = r.pending_selection_view().expect("2 security → placement offer");
-    assert_eq!(v.kind, SelectionKind::Hand);
-    assert!(v.is_optional, "\"you may place\"");
+    let v = r
+        .pending_selection_view()
+        .expect("2 security → placement offer");
+    assert!(matches!(v.kind, SelectionKind::UnionZone { .. }));
+    assert_hand_optional(&r);
     assert_eq!(
         offered_hand_count(&r),
         2,
@@ -306,7 +371,9 @@ fn ex13_025_placement_may_be_declined() {
     fire(&mut r, EffectTiming::StartOfYourMainPhase, me);
     choose(&mut r, 0);
     let v = r.pending_selection_view().expect("placement offer");
-    r.execute_action(v.selecting_player, PASS).expect("decline");
+    assert_hand_optional(&r);
+    r.execute_action(v.selecting_player, hand_decline_action(&r))
+        .expect("decline");
     let _ = r.auto_resolve();
     assert_eq!(security_ids(&r, 0), vec!["S1", "S2"]);
     assert!(hand_ids(&r).contains(&"W-TRAIT".to_string()));
@@ -319,7 +386,10 @@ fn ex13_025_two_security_skips_trash_but_offers_placement() {
     let hand = r.game.players[0].hand.len();
     fire(&mut r, EffectTiming::StartOfYourMainPhase, me);
     let v = r.pending_selection_view().expect("placement offer");
-    assert_eq!(v.kind, SelectionKind::Hand, "no top/bottom choice under 3 security");
+    assert!(
+        matches!(v.kind, SelectionKind::UnionZone { .. }),
+        "no top/bottom choice under 3 security"
+    );
     assert_eq!(r.game.memory, mem, "no memory gain");
     assert_eq!(r.game.players[0].hand.len(), hand, "no draw");
     pick_hand(&mut r, "W-TRAIT");
@@ -354,7 +424,11 @@ fn ex13_025_fires_at_start_of_own_main_phase_integrated() {
     for _ in 0..4 {
         match r.pending_selection_view() {
             Some(v) => {
-                assert_ne!(v.kind, SelectionKind::EffectChoice, "not on the opponent's turn");
+                assert_ne!(
+                    v.kind,
+                    SelectionKind::EffectChoice,
+                    "not on the opponent's turn"
+                );
                 let a = v.valid_action_ids.first().copied().unwrap_or(PASS);
                 r.execute_action(v.selecting_player, a).unwrap();
             }
@@ -390,7 +464,9 @@ fn inherited_setup(carrier: &str, security: &[&str]) -> (DebugRunner, PermanentH
 }
 
 fn accept_save(r: &mut DebugRunner) {
-    let accept = r.pending_selection_view().expect("replacement accept prompt");
+    let accept = r
+        .pending_selection_view()
+        .expect("replacement accept prompt");
     assert_eq!(accept.kind, SelectionKind::Replacement);
     assert!(accept.is_optional, "\"by trashing…\" is a may-pay");
     r.accept_optional_trigger().expect("accept");
@@ -403,8 +479,15 @@ fn ex13_025_inherited_witchelny_carrier_trashes_top_security_and_stays() {
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
     accept_save(&mut r);
-    assert!(field_ids(&r).contains(&"CARRIER-W".to_string()), "it doesn't leave");
-    assert_eq!(security_ids(&r, 0), vec!["S1", "S2"], "top security trashed");
+    assert!(
+        field_ids(&r).contains(&"CARRIER-W".to_string()),
+        "it doesn't leave"
+    );
+    assert_eq!(
+        security_ids(&r, 0),
+        vec!["S1", "S2"],
+        "top security trashed"
+    );
     assert!(
         trash_ids(&r).contains(&"S3".to_string()),
         "the cost moved the top security card (S3) to the trash"
@@ -436,7 +519,10 @@ fn ex13_025_inherited_not_offered_for_own_effect() {
     let (mut r, carrier) = inherited_setup("CARRIER-W", &["S1", "S2"]);
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OwnEffect);
-    assert!(r.pending_selection_view().is_none(), "\"by your opponent's effects\" only");
+    assert!(
+        r.pending_selection_view().is_none(),
+        "\"by your opponent's effects\" only"
+    );
     assert!(!field_ids(&r).contains(&"CARRIER-W".to_string()));
 }
 
@@ -445,7 +531,10 @@ fn ex13_025_inherited_not_offered_in_battle() {
     let (mut r, carrier) = inherited_setup("CARRIER-W", &["S1", "S2"]);
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::Battle);
-    assert!(r.pending_selection_view().is_none(), "battle is not an effect");
+    assert!(
+        r.pending_selection_view().is_none(),
+        "battle is not an effect"
+    );
     assert!(!field_ids(&r).contains(&"CARRIER-W".to_string()));
 }
 
@@ -454,7 +543,10 @@ fn ex13_025_inherited_not_offered_without_security() {
     let (mut r, carrier) = inherited_setup("CARRIER-W", &[]);
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
-    assert!(r.pending_selection_view().is_none(), "unpayable cost → no offer");
+    assert!(
+        r.pending_selection_view().is_none(),
+        "unpayable cost → no offer"
+    );
     assert!(!field_ids(&r).contains(&"CARRIER-W".to_string()));
 }
 
@@ -509,4 +601,127 @@ fn ex13_025_inherited_lockout_clears_next_turn() {
         Some(SelectionKind::Replacement),
         "OPT resets on the next turn"
     );
+}
+
+struct RejectSecurityTrash;
+impl digimon_engine::effect::CardEffect for RejectSecurityTrash {
+    fn effects(
+        &self,
+        card: digimon_engine::card_source::CardHandle,
+    ) -> Vec<digimon_engine::effect::Effect> {
+        vec![digimon_engine::effect::Effect::when_would_be_trashed(card)
+            .replacement_condition(|_, subject| {
+                matches!(
+                    subject,
+                    digimon_engine::replacement::ReplacementSubject::Card(
+                        _,
+                        digimon_engine::enums::Zone::Security
+                    )
+                )
+            })
+            .replacement_process(|ctx| ctx.cancel())
+            .build()]
+    }
+}
+
+#[test]
+fn ex13_025_rejected_security_payment_does_not_prevent_departure() {
+    let (mut r, carrier) = inherited_setup("CARRIER-W", &["S1"]);
+    r.register_effect("PLAIN", std::sync::Arc::new(RejectSecurityTrash));
+    r.place_on_field(0, "PLAIN", Some(0));
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    r.accept_optional_trigger().unwrap();
+    r.auto_resolve().unwrap();
+    assert_eq!(r.game.players[0].security.len(), 1, "payment was rejected");
+    assert!(
+        !field_ids(&r).contains(&"CARRIER-W".to_string()),
+        "unpaid prevention cannot save the carrier"
+    );
+}
+
+#[test]
+fn ex13_025_inherited_cannot_protect_a_tamer_carrier_with_matching_text() {
+    let mut card = digimon("TAMER-W", "Witch Tamer", 4, &[], "Witchelny");
+    card.card_kind = CardKind::Tamer;
+    card.level = None;
+    card.dp = None;
+    let mut r = builder()
+        .add_card(card)
+        .security(0, &["S1"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .start();
+    r.skip_mulligan();
+    let carrier = r.place_stack(0, &[CARD_ID, "TAMER-W"]);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "printed this Digimon excludes a Tamer carrier"
+    );
+    assert!(!field_ids(&r).contains(&"TAMER-W".to_string()));
+    assert_eq!(security_ids(&r, 0), vec!["S1"]);
+}
+
+#[test]
+fn ex13_025_bottom_placement_pages_all_36_physical_hand_candidates() {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    let mut hand = vec!["W-TRAIT"; 35];
+    hand.push("W-TEXT");
+    let (mut r, carrier) = main_phase_setup(&["S1", "S2"], &hand);
+    let selected = r.game.players[0].hand.last().unwrap().handle();
+    fire(&mut r, EffectTiming::StartOfYourMainPhase, carrier);
+    let p = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("optional hand placement");
+    let rows = p
+        .card_choice
+        .as_ref()
+        .expect("owned hand choice pages every legal physical card")
+        .view(&r.game, p.selecting_player)
+        .rows;
+    let next = rows
+        .iter()
+        .find(|row| matches!(row.operation, CardChoiceOperation::NextPage))
+        .expect("36 legal cards need a second page")
+        .action_id;
+    let selecting = p.selecting_player;
+    let mask = digimon_engine::action::build_action_mask(&r.game, selecting);
+    assert_eq!(mask[next as usize], 1.0);
+    r.execute_action(selecting, next).unwrap();
+    assert_eq!(
+        r.game.players[0].hand.len(),
+        36,
+        "navigation spends no card"
+    );
+    assert_eq!(
+        security_ids(&r, 0),
+        vec!["S1", "S2"],
+        "navigation changes no security"
+    );
+    let p = r.game.pending_selection.as_ref().unwrap();
+    let rows = p
+        .card_choice
+        .as_ref()
+        .unwrap()
+        .view(&r.game, p.selecting_player)
+        .rows;
+    let commit = rows
+        .iter()
+        .find(|row| {
+            matches!(row.operation, CardChoiceOperation::CommitCard)
+                && row.card_id.as_deref() == Some("W-TEXT")
+        })
+        .expect("last physical hand card remains selectable")
+        .action_id;
+    let mask = digimon_engine::action::build_action_mask(&r.game, p.selecting_player);
+    assert_eq!(mask[commit as usize], 1.0);
+    r.execute_action(selecting, commit).unwrap();
+    r.auto_resolve().unwrap();
+    assert_eq!(r.game.players[0].hand.len(), 35);
+    assert_eq!(r.game.players[0].security[0].handle(), selected);
+    assert_eq!(security_ids(&r, 0), vec!["W-TEXT", "S1", "S2"]);
 }

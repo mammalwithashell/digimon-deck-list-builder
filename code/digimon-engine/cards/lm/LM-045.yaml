@@ -1,0 +1,44 @@
+card: LM-045
+name: "Vermilion Memory Boost!"
+kind: option
+color: [red]
+cost: 3
+# Yellow Digimon or Tamers, including breeding, also satisfy this card only.
+use_requirement:
+  any_field_permanent:
+    of: you
+    zone: [battle_area, breeding]
+    all_of:
+      - color_is: yellow
+      - any_of:
+          - kind: digimon
+          - kind: tamer
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal 3; add 1 red or yellow Digimon; bottom the rest; place in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3 }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - color_is: red
+                  - color_is: yellow
+          prompt: "Add 1 red or yellow Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+  - kind: delay
+    trigger: delayed
+    summary: "[Main] <Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+  - when: on_security
+    optional: false
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

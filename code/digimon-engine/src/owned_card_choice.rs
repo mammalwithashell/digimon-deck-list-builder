@@ -682,7 +682,7 @@ impl OwnedCardChoice {
                                 (
                                     card,
                                     self.inspection_player == Some(observer)
-                                        || game.player(owner).face_up_security.contains(&card.0),
+                                        || game.security_card_is_public(owner, card),
                                 )
                             }
                             _ => unreachable!(),

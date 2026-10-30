@@ -1,0 +1,969 @@
+{
+  "canonical_override_additions": 0,
+  "diagnostic": {
+    "card_id": null,
+    "category": "source_schema",
+    "code": "SOURCE_SCHEMA_ERROR",
+    "details": {
+      "condition_conflicts": [
+        {
+          "card_id": "BT8-012",
+          "details": {
+            "candidate_conditions": {
+              "0a265370ac470a7f35f3d62af91c8dc8c8654a2a539ed168d4389d441855ef0c": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+              "42c353faefb46d734c6c3b11dfc5890380923f6da7a9b92ee19b664eda904717": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+              "b06eadfca88e5804d79fe455f79632b051a8bc4ee2881b1dcd9cfaf762bcfeee": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 2",
+              "bafd27abeb13213a74f1b9716130825591399c8f460bdbc7b0d6aa4af401043c": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT8-038",
+          "details": {
+            "candidate_conditions": {
+              "4fb08f5b839eac97928907e408bbdca36ed399022231f5b45015434a8dd82203": "[Special Digivolution Condition] [Digivolve] 3 from [Veemon]",
+              "8d9161eacf1c6d8998c17ef2ba4130531782f0450237dbe161bcd01c988aae7d": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 3",
+              "94331eea8cf259a5342002976e18b5474c307a24f4e3cf4c113cc56c71792fee": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 3",
+              "bf133f5e8dba47ce80a6a79768e6566b2ed999078b2c5e48414f9e84f1dfb096": "[Special Digivolution Condition] [Digivolve] 3 from [Veemon]",
+              "daf0854e7da8936e906881d728f1b024c4719db4e4dbe66b4b14879d5b0e2b34": ""
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT8-039",
+          "details": {
+            "candidate_conditions": {
+              "169c5b8b18bf61879ad316ba50c07637851af83bed2a8545e9a80d177b6c3f93": "[Special Digivolution Condition] [Digivolve] 3 from [Terriermon]",
+              "4956feac629823ea8e91076e3f21a575a82ce2a286cafd0344c66f1ff90b0b2a": "[Special Digivolution Condition] [Digivolve] 3 from [Terriermon]",
+              "74e053f3d9d434029324e1cda57dfd021e32ad1367292a4336dfe06f6a10b52e": "[Special Digivolution Condition] [Digivolve] [Terriermon]: Cost 3"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT8-053",
+          "details": {
+            "candidate_conditions": {
+              "01ac4a40be6fed5f248f1a4243ae5249e167ce7f55b517ddec705b151026d6c7": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 2",
+              "3d1559ab7189385a51832a83a51c6659739477df4ba344e55d336c4e012df617": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+              "6a046ec5ebd410b9f1b7350fa3980cec8eb0ef0c43e73aa4956002af536c2607": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+              "7b2b97ee3a449c180833430f17372680f9fdb9508d420c5b986de998a5fdd4ef": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 2",
+              "f6f2a23510d4d0eaaa31500e9fb54666f370a394b30d6fda81b9db7e76db76a8": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+              "f891b33adee2da13f280ee142fd3ca5bc85db7ebae423fcda7c2fbf46747366f": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT8-082",
+          "details": {
+            "candidate_conditions": {
+              "023039bc9c3f62ec323e4b277fd84f4d2007923d151a422b45339d7c6255e6c6": "[Special Digivolution Condition] [Digivolve] 2 from [Ophanimon]",
+              "5cb8b8c51f41d7419bfa4197b0fbeb20f398fee35090d81b85f8d552b31a8afb": "[Special Digivolution Condition] [Digivolve] 2 from [Ophanimon]",
+              "8bc6dbe1b9b870115ef3ec1854a74c47e2db013eca7c67b52b7c4c175addc7dd": "[Special Digivolution Condition] [Digivolve] [Ophanimon]: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT9-016",
+          "details": {
+            "candidate_conditions": {
+              "20ce39c9cb4eb13ea6c79e83a02a2fe287f909978e5ae27824737c511dde3c3b": "[Special Digivolution Condition] [Digivolve] [WarGreymon]: Cost 1",
+              "531d04996cdfbd94c33252a04f549b4bd61cca4580d4e6aaaee5240f13206ebe": "[Special Digivolution Condition] [Digivolve] 1 from [WarGreymon]",
+              "9bfd1bfcbed48cb27dce3493060400673c22cb0d88528e1e276417e1922dc333": "[Special Digivolution Condition] [Digivolve] 1 from [WarGreymon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT9-020",
+          "details": {
+            "candidate_conditions": {
+              "1609ccc3a4aba371b0ad8657b30dee37e8a1d28d90d0f60a306eab3826d3d763": "[Special Digivolution Condition] [Digivolve] 0 from [Gabumon]",
+              "6a0fb96548b40f159e8ef44464b0777f0ec2aa996057e6e6b15f57a218fd92c4": "[Special Digivolution Condition] Digivolve: 0 from [Gabumon]",
+              "e2c18d886a7d29c69c681f8cafbfdcda5010b230d2dbeb2411471d5af0639c4b": "[Special Digivolution Condition] [Digivolve] 0 from [Gabumon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT9-023",
+          "details": {
+            "candidate_conditions": {
+              "3d230e581bc2206c1d6c432b9a869a8787fd92569ae7050706e05b2d892cab68": "[Special Digivolution Condition] [Digivolve] [Gammamon]: Cost 2",
+              "fce18b618c29c315ddefd9570501da11e3b718d8841e0183dd3f40e783c7b69c": "[Special Digivolution Condition] [Digivolve] 2 from [Gammamon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT9-028",
+          "details": {
+            "candidate_conditions": {
+              "0e0cca22c4dadf2ab91caa718516f59e6fa3bb8973e30e4a6427ec7239fe89e5": "[Special Digivolution Condition] [Digivolve] [WereGarurumon]: Cost 0",
+              "910669ca5113f7cae92dc048bac13fb713bc49a5340db12c3c5dbe37043c3eed": "[Special Digivolution Condition] [Digivolve] 0 from [WereGarurumon]",
+              "cf0a574ba4b25d32dd94f813b56e2c55f220c5f3732f6d6937e65c20b36f5a3f": "[Special Digivolution Condition] [Digivolve] [WereGarurumon]: Cost 0"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT9-041",
+          "details": {
+            "candidate_conditions": {
+              "46fab5b67192c81364028c8cee95816f6955271b1dc03e0062ebf02aee62d7ea": "[Special Digivolution Condition] [Digivolve] 1 from [RizeGreymon]",
+              "5b8be9bf81f24ac6d10b2f880dc57f20218cc8c951dc93c620854625d649f973": "[Special Digivolution Condition] [Digivolve] [RizeGreymon]: Cost 1",
+              "89c93dd16f74a3aa7d6878f6bedf9f39c9ec5232340b05bcddc186a1c532c7b2": "[Special Digivolution Condition] [Digivolve] 1 from [RizeGreymon]",
+              "ebfef3f3f0f61c7a737280760f1de687b57017d09334834988c58c576c38ecda": "[Special Digivolution Condition] [Digivolve] [RizeGreymon]: Cost 1"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT10-024",
+          "details": {
+            "candidate_conditions": {
+              "012adbe1a3d0e20a33399e01e66358cadb43b32cb5e09875cb0a07c9e21bb264": "[Special Play Condition] DigiXros -2: [Greymon] × [MailBirdramon]\nWhen this would be played, you may place specified cards from the hand/battle area under it. Each one reduces the play cost.",
+              "4b39b6a5c63509bb0a35b22f928c87e2f913d7e52160387be73df35f41cf42a7": "[Special Play Condition] DigiXros -2: [Greymon] × [MailBirdramon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+              "fa1d863ccbaf2b9386f844c74e0f2b4d4b37236e398ea4a1b10e805c929bfd10": "[Special Play Condition] DigiXros -2: [Greymon] × [MailBirdramon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT10-050",
+          "details": {
+            "candidate_conditions": {
+              "02d009558d5a8f5fb72ab080c1becdb3ff74d01ec4529b82152212b2aa74bdba": "[Special Digivolution Condition] [Digivolve] 2 from [Gammamon]",
+              "292bb433fa4814a85a0246599920753a76d57b974c78192d4c210a01695aa391": "[Special Digivolution Condition] [Digivolve] [Gammamon]: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT10-066",
+          "details": {
+            "candidate_conditions": {
+              "6ccf0200fa1521309d797ff2140cd75a328c6706c03f442bf4e08b3e5f0ddb74": "[Special Play Condition] DigiXros -2: [SkullKnightmon] × [DeadlyAxemon]",
+              "77107e869102c892aec3e627458973405c569930761a6294728295ba01cc0f05": "[Special Play Condition] DigiXros -2: [SkullKnightmon] × [DeadlyAxemon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT10-086",
+          "details": {
+            "candidate_conditions": {
+              "364e4cfb606f65a385f12c642b62584815a9b46dbc86b040a59fd2da95616d4a": "[Special Digivolution Condition] [Digivolve] [Omnimon]: Cost 3",
+              "b2e5f3958859c46ef524784b95f9464957d7442e76c3a7ac5fd6e281723ade78": "[Special Digivolution Condition] [Digivolve] 3 from [Omnimon]",
+              "c5de944d6497b6444c4c471bbbc99f641a95b357f4c63e6e96b34b6fdda5008b": "[Special Digivolution Condition] [Digivolve] 3 from [Omnimon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT10-112",
+          "details": {
+            "candidate_conditions": {
+              "08afc670f780a439d65726a97720f88b79a769917c46815d550a1433bfe35349": "[Special Digivolution Condition] [Digivolve] 5 from Lv.6 w/[Royal Knight] in traits",
+              "a59a16ce1810e71981e89e3b3c1278d3c3f70ad28860a4eeef04467ec634b2ef": "[Special Digivolution Condition] [Digivolve] 5 from Lv.6 w/[Royal Knight] in traits",
+              "e0f30633079ed44bc0aae70c16067331cbf6f98e790a58076984d1f94b6943c2": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[Royal Knight] trait: Cost 5"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT11-012",
+          "details": {
+            "candidate_conditions": {
+              "11127870aaf9778225133f5c1388c93d21101d824890f05954cdedcf947ec7d8": "[Special Play Condition] DigiXros -2: [Shoutmon] × [Ballistamon] × [Dorulumon]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+              "f3a53e7cc28f577ea18fb988e348d1c19096eb76d5941cc6a31b185979d39400": "[Special Digivolution Condition] [Digivolve] 1 from [BurningGreymon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT11-031",
+          "details": {
+            "candidate_conditions": {
+              "17dfaa2604e804bea394a1044347cc5382da976de50f4c043219bcde58b55d35": "[Special Digivolution Condition] [Digivolve] [MetalGreymon]: Cost 2",
+              "4c8bd9bd11c09724fbeb7cdfd8707b7083df470b21e0fb2cce08aeebfaf73239": "[Special Digivolution Condition] [Digivolve] [MetalGreymon]: Cost 2",
+              "a0bbdc919d51128c93ab4a5016651ec801ed318ffd8ecd286d89168a246af83c": "[Special Digivolution Condition] [Digivolve] 2 from [MetalGreymon]",
+              "cceb8b0e254f904e672162d3d9b83a73a666174d0d037af29a36cb495f51595e": "[Special Digivolution Condition] [Digivolve] [MetalGreymon]: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT11-064",
+          "details": {
+            "candidate_conditions": {
+              "02fe890d1d1092ca205b65aea0376577d34d4a764fa7a457a1a4d393cdbe0d23": "[Special Digivolution Condition] [Digivolve] [Greymon]: Cost 0",
+              "05df02871b3671f0fbd4463bbfc04b1eef5929a2b6a9a6dc99b65d0f22758039": "[Special Digivolution Condition] [Digivolve] 0 from [Greymon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT11-069",
+          "details": {
+            "candidate_conditions": {
+              "0f75e31fa520d9e0be0a070247b4a9833c0db8bcc550b58578cdba0a9bc1c5de": "[Special Digivolution Condition] [Digivolve] [MetalGreymon]: Cost 1",
+              "adbc3577916b1820fa97a16a22261a4277bff943b27fd3664601e5935cc29f22": "[Special Digivolution Condition] [Digivolve] 1 from [MetalGreymon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT11-086",
+          "details": {
+            "candidate_conditions": {
+              "4354453ab0b3f3cdcf80d44f29bf7343e23891a139303a234bb67c0230771753": "[Special Play Condition] DigiXros -3: 1 Digimon card w/[Xros Heart] in traits\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+              "87e5800b8eabc91910342fe033e1c7dd7ff760eea977353786ce950bdac285d0": "[Special Play Condition] DigiXros -3: 1 Digimon card w/[Xros Heart] trait\nWhen this would be played, you may place specified cards from the hand/battle area under it. Each one reduces the play cost.",
+              "d3e66a7fb740dc6776e2d80a83c93f03822d8dc8a44bb58c601f20fb0bdc9bb6": "[Special Play Condition] DigiXros -3: 1 Digimon card w/[Xros Heart] in traits\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-012",
+          "details": {
+            "candidate_conditions": {
+              "3c3842b96e2e206a39def31d1f845651384bc8b7b092ad30741a47308ea89565": "[Special Digivolution Condition] [Digivolve] 1 from [BurningGreymon]",
+              "57e7381cdb22a6c91128c5e966a0f0e202334b32cc9bba75bb931d1c8cd78d82": "[Special Digivolution Condition] [Digivolve] [BurningGreymon]: Cost 1\n[Special Play Condition] DigiXros -2: [Shoutmon] × [Ballistamon] × [Dorulumon]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+              "c88b44556d2b9f8ef903b921a416636169ce1dc2111c1cc592dfb46bd50908a4": "[Special Play Condition] DigiXros -2: [Shoutmon] × [Ballistamon] × [Dorulumon]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-013",
+          "details": {
+            "candidate_conditions": {
+              "1c2c5025e5d15c16747fd8d53e9e1f98df310e19bc02211c96eac5f9b6d0d989": "[Special Digivolution Condition] [Digivolve] [Agunimon]: Cost 1",
+              "af8f04ed74eb03e812cc7cdc852b103fb3fcc1817e85115e337a33e4e37b5042": "[Special Digivolution Condition] [Digivolve] 1 from [Agunimon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-030",
+          "details": {
+            "candidate_conditions": {
+              "a5d576e58e249d8feea4219f1fdde2e32ae2a587bc43c409b83bd036b921d128": "[Special Digivolution Condition] [Digivolve] 3 from [Paildramon] or [Dinobeemon]",
+              "cdfd657887efccda6c8fd6916bcf6c160de78a54f92a0f5896acb92da7bd5882": "[Special Digivolution Condition] [Digivolve] [Paildramon]/[Dinobeemon]: Cost 3"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-031",
+          "details": {
+            "candidate_conditions": {
+              "2ae68bfdcf51bae2ea68489d7465dd5901a633f84251172460218358e7db10b6": "[Special Digivolution Condition] [Digivolve] [Imperialdramon: Dragon Mode]: Cost 2",
+              "40acb38ac86d5c3ad3d772ccd83b48e08e05f2331895a0cd0a1a6f1525eb9d32": "[Special Digivolution Condition] [Digivolve] 2 from [Imperialdramon: Dragon Mode]",
+              "82dbf02ae8e9fffbaa9de6b696ae0653b350ff562237c6084d8ec8824441b635": "[Special Digivolution Condition] [Digivolve] [Imperialdramon: Dragon Mode]: Cost 2",
+              "a6d097807594c1a974c84f8da1ef2ea93d783af1edeb62273151725df7931c11": "[Special Digivolution Condition] [Digivolve] [Imperialdramon: Dragon Mode]: Cost 2",
+              "a8607f899b2676fa9b6a7df0e04ff1be10af7ff27f3a5d3c23353416c65c6ddf": "[Special Digivolution Condition] [Digivolve] 2 from [Imperialdramon: Dragon Mode]",
+              "d8af1745f03135dbd2ba9118cef58289b7c999d509119aa135de63af88b9df45": "[Special Digivolution Condition] [Digivolve] [Imperialdramon: Dragon Mode]: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-034",
+          "details": {
+            "candidate_conditions": {
+              "2e6372cac6ee47cf1a2ffb515d8b5139a74eecf7ff9a436deb9a7ea761e7d082": "[Special Digivolution Condition] [Digivolve] 0 from Koromon",
+              "5c58ec8e75bef3e6d3e6c715bc2306f9563597f452e8b59adf32d77f5c16d974": "[Special Digivolution Condition] [Digivolve] 0 from Koromon",
+              "5d8cb21016073ce89c75420d1ffbda7a14a198125d49fa81fb612fa96ae2172c": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0",
+              "8ee609d232d471830019e10eeb4ea9df68803d55a1611572cf1b9bc7bc759dd3": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-038",
+          "details": {
+            "candidate_conditions": {
+              "8a4ddd54f2e47de3cfaa4e6600764f90ff23bf43af899f3c7bb066c50f5dfe96": "[Special Digivolution Condition] [Digivolve] 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait",
+              "da23e920da5b9ca28bfdde6ab06ead5ac81b97a8a4e8dbdc78497d35fe661dff": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2",
+              "e2b717d835cabffa656fb5f1df5f282cf52bd77786fb3ad41fb40fc454528879": "[Special Digivolution Condition] [Digivolve] 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait",
+              "fc80bae170dee431e059ae5fdf9728cf6516d7344e009455662aa0ee7ba4f2e4": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-043",
+          "details": {
+            "candidate_conditions": {
+              "0c889c91487a5deb8c9ed8fdd5debfa1f0749055e6b6a9da9c63cfcf71dc1ecf": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[RizeGreymon] in name",
+              "39ff884da615056dab5540571145ee0614be318ae4eec26a39a27a50397c24cf": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+              "540417d42b713fd4dfa32939892b3659e3121dcac7dbe18f816f2300003322a1": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+              "a9d70f952edff5467aa54a27a856eb7635d74db2f0c751a7a7973f2eb67abc26": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+              "bb74f7bd848657dd4655a7e0ab178ccb16e593d71dee9aae2da5b8744e779e92": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+              "be31daa7b7803c515b1afa52dbe77c0bb8f1c4b6c1fa547b2c502bb5b1800bb0": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[RizeGreymon] in name",
+              "c8f75d6396de9dd3327f89a6fe8174e5d08a982dec54cb585b2f65c1354a2e9c": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-057",
+          "details": {
+            "candidate_conditions": {
+              "0c4d4b9571b4d3b48a84a0cbbc4f0a28729c4f300675ec24e181e60bfd20b323": "[Special Digivolution Condition] [Digivolve] 9 from Lv.5 w/＜Save＞ in text",
+              "49ecbf65b0964f99f80f0f8a850976060fd79a7c430ec4097df0bb8472546ddc": "[Special Digivolution Condition] [Digivolve] Lv.5 w/＜Save＞ in text: Cost 9",
+              "9477277ef3d2550f0685a3fbb15caf779f95ff8c944a126e57dd8b594730a89b": "[Special Digivolution Condition] [Digivolve] Lv.5 w/＜Save＞ in text: Cost 9",
+              "a323fec07cc807678c7cfd0f819b738da456b575395c539f16ce9fcd09a861ba": "[Special Digivolution Condition] [Digivolve] 9 from Lv.5 w/＜Save＞ in text"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-059",
+          "details": {
+            "candidate_conditions": {
+              "629832f97f64a377ddfe565a61fc28938612ef49f6e848a427aecf90ee8dd617": "",
+              "7d94bfdf6d3db9252b2d8e21aa2872871dbef45ab01295cc7d9e149a170c50d8": "[Special Digivolution Condition] [Digivolve] 0 from [Koromon]",
+              "bd816df26086a94e543c15d1e7dcc392c788e7a60704b64e44697335bc4379e5": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-062",
+          "details": {
+            "candidate_conditions": {
+              "01b2707ad1cea21c18cef1468494a74fdd24da1b5ab9aada92cfb7af54d1db18": "",
+              "86d146fd1a60f00be5ece6013f5782cc76f6003d56944c88c7d5333f8d7d7d98": "[Special Digivolution Condition] [Digivolve] 2 from Lv.3 w/[Agumon] in name"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-070",
+          "details": {
+            "candidate_conditions": {
+              "2d5fc3a1c2418d694e68568455d0c08714ffa558462c72ebc8599766c4a45be7": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[MetalGreymon] in name: Cost 3",
+              "383f1ccfda098aa71db25c03461e267ecff63f53a5ecdd48e661ea586777f9d2": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[MetalGreymon] in name",
+              "3c43c9956a1b0c9bf1e1125b60492873c1f27a67fd81372eb76cd10973a9362d": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[MetalGreymon] in name: Cost 3",
+              "e6711d42acef2b80f2c49c3d7795149923e3ac51ba9aa9520e7e2210f102ba79": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[MetalGreymon] in name: Cost 3",
+              "f633c9d37b1bf24a5dc82609e865740e37e7309a156989a8da62be712dea0fef": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[MetalGreymon] in name"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-072",
+          "details": {
+            "candidate_conditions": {
+              "7251979f7790100724bdaeaddcad8a854abee3f935a53d3de210ecb20f6d005b": "[Special Digivolution Condition] [Digivolve] [Machinedramon]/[Chaosdramon]: Cost 2",
+              "7c22dfdb1746b975d365a5f5a71f4d2c9c8f02a3d2c875ab1f97f142fe29c2b9": "[Special Digivolution Condition] [Digivolve] 2 from [Machinedramon] or [Chaosdramon]",
+              "ab3441fc9206afdd9d5d374d07bfb15fcdb71d349956c70b8a011e311ef71cc4": "[Special Digivolution Condition] [Digivolve] [Machinedramon]/[Chaosdramon]: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-074",
+          "details": {
+            "candidate_conditions": {
+              "4853fa593803ff30c462dd3e5cf153e1b8ad0f0971cbbf182e101e2b3e5cb148": "[Special Digivolution Condition] [Digivolve] 0 from Lv.2 w/＜Save＞ in text\n[Special Play Condition] DigiXros -2: 1 Digimon card w/＜Save＞ in text\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+              "a2f6c372cbea2b799f6e69ab278ccadea7145b9aa0b9638c7e17b8439f786ed8": "[Special Digivolution Condition] [Digivolve] Lv.2 w/＜Save＞ in text: Cost 0\n[Special Play Condition] DigiXros -2: 1 Digimon card w/＜Save＞ in text\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT12-085",
+          "details": {
+            "candidate_conditions": {
+              "3e90daf2711b466fdf936e96cf7eb5f0d1ca25dfd57402af922297412ccadb40": "[Special Digivolution Condition] [Digivolve] [Beelzemon]: Cost 1",
+              "47eca41ec9f0ef37b4b87679c5b83e043b34f5b6eb42d342c1302c9f643e81dd": "[Special Digivolution Condition] [Digivolve] [Beelzemon]: Cost 1",
+              "91fdfd0244cd19e9b88d63f85c7e7efefa851be2948128cc3692ea76592fab07": "[Special Digivolution Condition] [Digivolve] 1 from [Beelzemon]",
+              "af6f4b78d801f11eb53dac9e515f84587f2b28ddf43db4c17499fd32313c32c9": "[Special Digivolution Condition] [Digivolve] 1 from [Beelzemon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT13-008",
+          "details": {
+            "candidate_conditions": {
+              "01a8946bb8f77f350994f2abffa770c36d5d078b43c4bdff64ebeab14e2d5ba1": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0",
+              "a61a732d630cbcc65096bd107a43b9403819b03a4d5cdcc60138f5ec8e4b8aff": "[Special Digivolution Condition] [Digivolve] 0 from [Koromon]",
+              "fa42fbc427d08c57d1b2568528bef2c53ae7a69a8987a330b014b1d2a804cd90": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT13-012",
+          "details": {
+            "candidate_conditions": {
+              "245321f07b9c963d7e5733e003d5b74999425105007cb1eb7af8e927888bf589": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2",
+              "457dba2721bba90c16059fc989f5a11ecf564aae3e40891f4e96e721cf62cb70": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2",
+              "6601fc70d49bee2de2d2c9b5bbe34f0fa2d179527855b61145641c3b528aa845": "[Special Digivolution Condition] [Digivolve] 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT13-015",
+          "details": {
+            "candidate_conditions": {
+              "24498ff06bb1aae3fafed087be8e97b1246a73759bbe55d52c72fdff359d74f3": "[Special Digivolution Condition] [Digivolve] [GeoGreymon]: Cost 3",
+              "57ae9d6edebaeedef16829c7ca267112e8bea814e5a710374a46b0a689526d4f": "[Special Digivolution Condition] [Digivolve] [GeoGreymon]: Cost 3",
+              "6bd09b07b1f010c608ceb46917c5be4b17440a6aa3ed341cc3cddbaf2d433bba": "[Special Digivolution Condition] [Digivolve] [GeoGreymon]: Cost 3",
+              "cdcf4559a31d95ec54e1f1bec8adf10870232f80ce77a0fd1dd90a691d69be7b": "[Special Digivolution Condition] [Digivolve] 3 from [GeoGreymon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT13-018",
+          "details": {
+            "candidate_conditions": {
+              "39efa5917ec475cc57d73f9d6e097544b8feaa07a122a58e358004e9586a1e42": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+              "70989bf3a29ed277f85e062f244201fc7a017b288b26a8d4fe0fd858ae5f3cdb": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[RizeGreymon] in name",
+              "7106f9ee1b4a1825157add589b7479a2461da07333231b0c1b1ce50742f27f55": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+              "d790f1e4d91a73c92f2a80a39a99b20e9d96e59b94df47102e2a9e3b6cc76c8b": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT13-020",
+          "details": {
+            "candidate_conditions": {
+              "3ae7ca021b801544aa2c90d0def766d2905c0bea7a146e216eaf6584fe7d0351": "[Special Digivolution Condition] [Burst Digivolve] [ShineGreymon]: Cost 0 by returning 1 [Marcus Damon] to hand.\nAt the end of the burst digivolution turn, trash this Digimon’s top stacked card.",
+              "7eec14371d00319e088eff85220f3796383ee695e38682d68305135ee8bad2f6": "[Special Digivolution Condition] [Burst Digivolve] [ShineGreymon]: Cost 0 by returning 1 [Marcus Damon] to hand\nAt the end of the burst digivolution turn, trash this Digimon's top stacked card",
+              "807018b58141fcfbdd35cc4a75f74c56414665d0670ec6a6f67868ad45965263": "[Special Digivolution Condition] [Burst Digivolve] [ShineGreymon]: Cost 0 by returning 1 [Marcus Damon] to hand.\nAt the end of the burst digivolution turn, trash this Digimon’s top stacked card.",
+              "ae4736da125e813a65bd46251f558b2a320b76d6128143e23c9b4b30241ce994": "[Special Digivolution Condition] [Burst Digivolve] 0 from [ShineGreymon] by returning 1 [Marcus Damon] to hand\nAt the end of the burst digivolution turn, trash this Digimon’s top card",
+              "b2b48d2bbe8e563d467d7310efea04c0e3df84cf9c30cbbc37419ccaac750f01": "[Special Digivolution Condition] [Burst Digivolve] 0 from [ShineGreymon] by returning 1 [Marcus Damon] to hand\nAt the end of the burst digivolution turn, trash this Digimon’s top card",
+              "f6a8d2cd798bb47e52756df323cd3629dcb65371f8baf99696ac6cd0349daa26": "[Special Digivolution Condition] [Burst Digivolve] 0 from [ShineGreymon] by returning 1 [Marcus Damon] to hand\nAt the end of the burst digivolution turn, trash this Digimon’s top card"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT13-040",
+          "details": {
+            "candidate_conditions": {
+              "34a2918a3cb57d2f5489e4d9246ff6fd53b5c7fda6ca39714b015e1eeb933ec0": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 3",
+              "7c17474e8b9b26110db1073953d36d415bba0bf39af0467e4dd34309b99a05a7": "[Special Digivolution Condition] [Digivolve] 3 from [Veemon]",
+              "9617040afbef231c60817991eac07f14d3c3a56be823c7a1a2556281765a3d81": "[Special Digivolution Condition] [Digivolve] 3 from [Veemon]",
+              "f3f7f034cb3173caa80b68286c2ea0b40fa8ec8a1c3821453bb99e7b8dbe59d4": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 3",
+              "f4a9a0ffe0e563831543e38d33f59ea0ba3adc090ba49ccdcbc985d29cb46173": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 3"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT13-088",
+          "details": {
+            "candidate_conditions": {
+              "4c99d9348da2c67c3cbf92c95079c829926df7851f2d135b2f1239899bccfb2e": "[Special Digivolution Condition] [Digivolve] [Belphemon: Rage Mode]: Cost 1",
+              "a270522b390c07d71e31130236b5d18ebc840001e25d44eabfae1459ef85a9b0": "[Special Digivolution Condition] [Digivolve] 1 from [Belphemon: Rage Mode]",
+              "c44f6467fb109e12119cfcf15b7c89cea1306b260b2eef11f5a77803bdf98f19": "[Special Digivolution Condition] [Digivolve] [Belphemon: Rage Mode]: Cost 1",
+              "dd50cd483a634658b6b2d15d8c72a6909f315da6fecae0985d2bfda9fb8fc6d7": "[Special Digivolution Condition] [Digivolve] [Belphemon: Rage Mode]: Cost 1"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT14-081",
+          "details": {
+            "candidate_conditions": {
+              "0557830b31373c11e4228d4f3aa9393760384eda785c605084cb96635cac5769": "[Special Digivolution Condition] [Digivolve] [Seraphimon]: Cost 1",
+              "239124a90f8563a84a7c3da16bcf86525d25aecd5c642b57b5a25d921b33a483": "",
+              "2ef408b61f59f10735ad58c0518a697a7ab9697d287329456a66241fdc68e4d4": "",
+              "5dc6695a4423179d156a44335cf4affac2c7646c02d21799600d98ac42f42c88": "[Special Digivolution Condition] [Digivolve] [Seraphimon]: Cost 1",
+              "971baf19cd3d28d7e58ac85ab63505542a7a99f67f9221966d204e1736f736f7": "[Special Digivolution Condition] [Digivolve] [Seraphimon]: Cost 1",
+              "a9db11112cff2ab29aedd03e3aabf78353d5869e17f30a7ad52991d1ee31b2b5": ""
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT15-067",
+          "details": {
+            "candidate_conditions": {
+              "1fd4124730f083bd2199334c774d033f6739e9b04e013f7c23f716e7aaafde89": "",
+              "3bf789227faf6da93f3ea6591eea6ec16eaf770483062557cb63734bb5d74c48": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[X Antibody]/[DigiPolice] trait: Cost 4",
+              "3ee3a85b6fea64f652e2f80f4dfd4583beb560f80d9156cb44c34c7fe8d79850": "",
+              "bb647af5c86b3b4d7f3d257726c07747e68e055c682c5860e10fb6ece1fefe55": ""
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT15-101",
+          "details": {
+            "candidate_conditions": {
+              "2edd1a3366cb589369054a035d2c742c303b0394474691f95ed54c065c3c3b31": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Garurumon] in name: Cost 4",
+              "60a6f0bb4f842e38178de42a4912af3d6a930a04764f4377b0894ad32cc64668": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Garurumon] in name: Cost 4",
+              "a1d988df38c83e915394ff0eea0bf93b2678df09dca790141f7f993153761a69": "[Special Digivolution Condition] [Digivolve] Lv.5 w/Garurumon] in name: Cost 4",
+              "b1c7cde0d4bbb4929e140ddb956b6d3b5ac7ee328371f436f751e4310b6ec84e": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Garurumon] in name: Cost 4",
+              "ba4ac1991e4af513509493da6087615dbc2ccf397485b80fd85e3dc375d330dd": "[Special Digivolution Condition] [Digivolve] Lv.5 w/Garurumon] in name: Cost 4"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT16-025",
+          "details": {
+            "candidate_conditions": {
+              "771f4f35c08ea10812a9312fc8babecff5bfdf22ee62428efb2d5341b9ee5fa7": "[Special Digivolution Condition] [DNA Digivolution] Blue Lv.4 + green Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "bb6f103d1ccf8923bf7df0b0854ff6b1e0a615953aa64408284fde203ac481bb": "[Special Digivolution Condition] [DNA Digivolve] Blue Lv.4 + green Lv.4: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+              "c257fc2a7aaba3582a82323355cf690d046a542aaa20b5258c15a3b96a93a495": "[Special Digivolution Condition] [DNA Digivolution] Blue Lv.4 + green Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "c3753d9110d79dc8c1fb3844e90ff51e46e4db335d3df6f21113a0503f2efcdf": "[Special Digivolution Condition] [DNA Digivolve] Blue Lv.4 + green Lv.4: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT16-077",
+          "details": {
+            "candidate_conditions": {
+              "01d39d5088c69049aaaebfe418fcd897478d4adcc8afb865f34be080b38639a0": "[Special Digivolution Condition] [DNA Digivolution] Purple Lv.4 + red Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "b3d21515aabfbf624d53ce9473a4688ab387b7b26f59cbeadb15345a792c933f": "[Special Digivolution Condition] [DNA Digivolve] Purple Lv.4 + red Lv.4: Cost 0 Stack the 2 specified Digimon and digivolve unsuspended.",
+              "fb657fc0aa0b32975e5715648427aa546bdcda5269f1f80e66aa07763c6f0bd9": "[Special Digivolution Condition] [DNA Digivolution] Purple Lv.4 + red Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT17-078",
+          "details": {
+            "candidate_conditions": {
+              "2a9074706430b7297e69cd82b33f74057810e169d3c821b12e4ba2bfe376284d": "[Special Digivolution Condition] [DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+              "36ea2ed16d97c0e66b106ed3aa54e293b0634883c1837b45d549040a17af7665": "[Special Digivolution Condition] [DNA Digivolution] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+              "67321a4c8da7d5efb9511243d8f6ee37df8fa06c23828cde57164669b23c218c": "[Special Digivolution Condition] [DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+              "7a0afeb3ce60f5e5a02742871e008ec9b0ea411d3fe6c0393d229ae79e4771fe": "[Special Digivolution Condition] [DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+              "b7dbc3baa64de55755b0af2bab5168a7b1bc7fd3d72319b8488dc799e393e435": "[Special Digivolution Condition] [DNA Digivolution] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+              "e853f409934589d84700160099a1da636843b77418bb42617679005a2a2af6a5": "[Special Digivolution Condition] [DNA Digivolution] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT18-102",
+          "details": {
+            "candidate_conditions": {
+              "15fc8c5607823f31c041961c1f7eca9eac91dc22b0d02b45f42f9cf100cac0c0": "[Special Digivolution Condition] [Digivolve] [Takuya Kanbara]/[Koji Minamoto] w/10 or more [Hybrid] trait cards under: Cost 6",
+              "28be96ae656d9a43ff14869ed4669b2487f6d79bd048e63eeebb72655b1b2e3a": "[Special Digivolution Condition] [Digivolve] [Takuya Kanbara]/[Koji Minamoto] w/10 [Hybrid] trait cards under: Cost 6",
+              "5daacd8d954acdf84b85c282df186efb4feab1bf655caed44bd80442046a7a66": "[Special Digivolution Condition] [Digivolve] [Takuya Kanbara]/[Koji Minamoto] w/10 or more [Hybrid] trait cards under: Cost 6",
+              "bdd3384c70a2a6afa5adc69fe33cf24777ba4a5c55c9b73c0423da9ee4710d60": "[Special Digivolution Condition] [Digivolve] [Takuya Kanbara]/[Koji Minamoto] w/10 [Hybrid] trait cards under: Cost 6",
+              "dec4486251bf2c7c36692feab5b6596ebd6ba56bd435d84f26f32ac47642f951": "[Special Digivolution Condition] [Digivolve] [Takuya Kanbara]/[Koji Minamoto] w/10 [Hybrid] trait cards under: Cost 6"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT19-010",
+          "details": {
+            "candidate_conditions": {
+              "944e737bfd042ac15364a717c160c49c77f5d1061af94a563d892f33d24d6de1": "[Special Play Condition] DigiXros -2: [Shoutmon]×[Ballistamon]×[Dorulumon]×[Starmons] When this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+              "ce659fdb3c20347341a0c9f08d50850c20e7bb08c346ad851c07b8afe07886a7": "[Special Play Condition] DigiXros -2: [Shoutmon]×[Ballistamon]×[Dorulumon]×\n[Starmons] When this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT21-018",
+          "details": {
+            "candidate_conditions": {
+              "e19301ec373c45b15c9d2668ee331057db9f32a06c509f04f88bc4d859e8291a": "[Special Digivolution Condition] [App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+              "fc4448dd38c218097c6f24d2c02e384b4326ffbc464e27b437ecb66fc8face09": "[Special Digivolution Condition] [App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT21-023",
+          "details": {
+            "candidate_conditions": {
+              "4232017bc59be0a596f5447692b4cd7db6137caa9beb8933fb764194e058abd6": "[Special Digivolution Condition] [App Fusion] [DoGatchmon] & [Timemon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)",
+              "705df1f2345df04a0024ce714e4b8361248207990cb61465a6e577dedddb3c61": "[Special Digivolution Condition] [App Fusion] [DoGatchmon] & [Timemon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)",
+              "9495166a578ff994f2d1d402e0f0220631e3cdc7bbba926e70fe7f14c8f932bc": "[Special Digivolution Condition] [App Fusion] [DoGatchmon] & [Timemon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT22-013",
+          "details": {
+            "candidate_conditions": {
+              "7074689c06d5336ce1e2a3a2ccbbc774ef511b2404dd97b2a595bc63d65ed869": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Greymon] in name or w/[CS] trait: Cost 3",
+              "883a41100ea446e906d6145b40bffb3dba2350e338087551496ee3e4dc25c330": "[Special Digivolution Condition] 12000\n[Special Play Condition] {Hand} [Main] If you have [Nokia Shiramine], 1 of your [Agumon] digivolves into this card for a digivolution cost of 6, ignoring digivolution requirements.\n[When Digivolving] Activate 1 of the effects below:\n・1 of your [Gabumon] may digivolve into [MetalGarurumon] in the hand, ignoring digivolution requirements and without paying the cost.\n・Delete 1 of your opponent's Digimon with the lowest DP."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "BT22-026",
+          "details": {
+            "candidate_conditions": {
+              "52a02fef506f81d120634c6ae4438867c2a8c5fcf8c5e6925248da052f383554": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Garurumon] in name or w/[CS] trait: Cost 3",
+              "84c7a2556b536dbe4f8826e30fc7975b7661ccda6e63f8fac66e8ab063323b77": "[Special Digivolution Condition] 12000\n[Special Play Condition] {Hand} [Main] If you have [Nokia Shiramine], 1 of your [Gabumon] digivolves into this card for a digivolution cost of 6, ignoring digivolution requirements.\n[When Digivolving] Activate 1 of the effects below:\n・1 of your [Agumon] may digivolve into [WarGreymon] in the hand, ignoring digivolution requirements and without paying the cost.\n・Return 1 of your opponent's Digimon with the lowest level to the hand."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX3-010",
+          "details": {
+            "candidate_conditions": {
+              "0a41597f3e66bba820abecf8f572907edf6ddaecb875d58fcc3c8ea550da0aeb": "[Special Digivolution Condition] [DNA Digivolve]0 from red Lv.4 + purple Lv.4",
+              "72848178a43c20841c1dc7a59f07439df03e4cbbe598cf373cf6a0e43c471a2e": "[Special Digivolution Condition] [DNA Digivolve] red Lv.4 + purple Lv.4: Cost 0",
+              "e094e2253320845976f12fb9d86f6a963b919c94829cd7d17da2f886fd0598b7": "[Special Digivolution Condition] [DNA Digivolve] red Lv.4 + purple Lv.4: Cost 0",
+              "e74ff1f1cdca2a41815bb652167779f7b7201740b44ae6069c0a4790078e05eb": "[Special Digivolution Condition] [DNA Digivolve]0 from red Lv.4 + purple Lv.4"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX3-062",
+          "details": {
+            "candidate_conditions": {
+              "237a64723df900ffb0d753ad1166a2c4b6e9419303cb8d1274e1b4d39fc85cbc": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 if name contains [Growlmon]",
+              "6d3eb83872ed0b94fd89fa5f94abd81e2b814bc502f79895515dd889e4c0e914": "[Special Digivolution Condition] [Digivolve]3 from Lv.4 if name contains [Growlmon]",
+              "9f1f5554b7623aeee0b60637a2462da6ce464b64080f4c80efb50e94b411f4f9": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 if name contains [Growlmon]",
+              "ce226a6b9382ca5438fa26dff0085329ff8fcda8b74e1a80e865e4a074e8090c": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 if name contains [Growlmon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX3-074",
+          "details": {
+            "candidate_conditions": {
+              "54fce020b84c20f72f1eca32cfaf30ddcd903f0044eb3121a173a6c78ce720d6": "[Special Digivolution Condition] [DNA Digivolve]0 from green Lv.6 + blue Lv.6",
+              "6f9d8225776c731cdd774e814eb6085353edef32cb649b3ad4f6569cc87e3c44": "[Special Digivolution Condition] [DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+              "7b1f72848aa9ed7c6227449810d42fadf1e34d1aa7f53d448a8263fd7314d020": "[Special Digivolution Condition] [DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+              "b73407f0e136eb0a4ea25b18e7eed45a8a68e5c829bcd9393050f6ab5c70bb57": "[Special Digivolution Condition] [DNA Digivolve]0 from green Lv.6 + blue Lv.6"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX4-005",
+          "details": {
+            "candidate_conditions": {
+              "13953861de2151cff730a2bd670da410444cd465a97614ed07485b5fc3290239": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0",
+              "54d44a5e4c0a69ea4281554b75d5e862d4f094a621b79c8db1fc75014d01ee99": "[Special Digivolution Condition] [Digivolve] 0 from [Koromon]",
+              "654b85d81720c98eb9359878ec24bd865c18dd687c6768ef9a0686f69714e736": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX4-006",
+          "details": {
+            "candidate_conditions": {
+              "8aa13390db6cb969238e5122c1920d080e240c22562dab37970f817bfac26e45": "[Special Digivolution Condition] [Digivolve] [Gigimon]: Cost 0",
+              "e5059615260afae57e0c6a0122ea206ae2c7ad792b600eea354543b3040175e6": "[Special Digivolution Condition] [Digivolve] 0 from [Gigimon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX4-024",
+          "details": {
+            "candidate_conditions": {
+              "799bde03b40e91c2834acca474508190331921289fe738da55e7b6c2e86f150f": "[Special Digivolution Condition] [Digivolve] 0 from [Viximon]",
+              "921b4ce520c5790d8b1e81de5bfaa5e9cc5ed15b5c4aee9824b34499d6e0887b": "[Special Digivolution Condition] [Digivolve] [Viximon]: Cost 0",
+              "e34d35d2668ac68f90787bc89ecd1967149753d5488a32e0981786a42bb81dc6": "[Special Digivolution Condition] [Digivolve] [Viximon]: Cost 0"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX4-050",
+          "details": {
+            "candidate_conditions": {
+              "13591e27de5d5539ec9bf1a1da26d8b1972ec6c921eff5aa9a019cb0b28f2f8f": "[Special Digivolution Condition] [Digivolve] 1 from [Seraphimon]",
+              "29627109a09594b45ee423d4867c0e23d1492d601c8ca675db73897a73cb0531": "[Special Digivolution Condition] [Digivolve] 1 from [Seraphimon]",
+              "442548d72c0e48551897b465f141f47d3ef08d04df8b257d4c02c24b532d66fc": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[X Antibody]/[DigiPolice] trait: Cost 4",
+              "d17176e446700a43c833c4d16e6b7bba603eccc7708eae74212f79124f44a3d5": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[X Antibody]/[DigiPolice] trait: Cost 4",
+              "f7b40636ad2401d75b4dc79eb2a107f1b874e0b260452bc8dcf35b7c7024af5b": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[X Antibody]/[DigiPolice] trait: Cost 4"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX4-057",
+          "details": {
+            "candidate_conditions": {
+              "24a341921c6d06d33aae041ded721616e3488a2caa874c7b23c3eea50119adce": "[Special Digivolution Condition] [Digivolve] Lv.4 2-color w/green: Cost 3",
+              "fd7f062c53508765762851da388f9ae7b81c64334b28aaf3515ed2ed09114f4f": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 2-color w/green"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX4-073",
+          "details": {
+            "candidate_conditions": {
+              "8c773de42af70bea61bf61825c25721fc459310d00f87a72d26d3440c48346f5": "[Special Digivolution Condition] [Digivolve] Lv.7 w/[Omnimon] in name: Cost 2",
+              "f68a58fd41367224d752d22c1ea5da7a754c300a9d5209d399ec68aed6e598ee": "[Special Digivolution Condition] [Digivolve] 2 from Lv.7 w/[Omnimon] in name",
+              "f759d48e66f3d964d60f9af0857e5121cd4a009add6564c9012c8e394846df1a": "[Special Digivolution Condition] [Digivolve] 2 from Lv.7 w/[Omnimon] in name"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX4-074",
+          "details": {
+            "candidate_conditions": {
+              "05062ec79e711ccbcbc001321daba1e37417c3ff8b486aed27a42fd6265586af": "[Special Digivolution Condition] [Digivolve] 4 from [ShineGreymon]",
+              "0512fd7def45a869a40b674a0cb18c3751ec5953425b96a5ddf4c466e1232e2d": "[Special Digivolution Condition] [Digivolve] [ShineGreymon]: Cost 4",
+              "3529fb99f6e18a7a55a85d40689a9c16b04dfbec181cf5e6606946ce346ddd07": "[Special Digivolution Condition] [Digivolve] 4 from [ShineGreymon]",
+              "a586b11ddd3a37dc0300bdcb83bb2fbc5f318476aa7c9e86bdf73c1d6cbe814f": "[Special Digivolution Condition] [Digivolve] [ShineGreymon]: Cost 4",
+              "e07ee17155141ae0b3fd8e397490e81d1d51e4590631a07d3e0c7aec217be3f7": "[Special Digivolution Condition] [Digivolve] [ShineGreymon]: Cost 4"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX5-073",
+          "details": {
+            "candidate_conditions": {
+              "370e26067df3447edd2e332fd3be3830d754ca3b388254f2f797e119dd311774": "[Special Digivolution Condition] [DNA Digivolve] [Apollomon]+[Dianamon]: Cost 0\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "45a0ad42b70a6c982293a878a7ec9897babdd8e91d933813a651aecae7509b9d": "[Special Digivolution Condition] [DNA Digivolve] [Apollomon]+[Dianamon]: Cost 0\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "833daa1034863dade38247456a720c70b2c14f2a432ba1a9f6661ab06c5abcf4": "[Special Digivolution Condition] [DNA Digivolve] [Apollomon]+[Dianamon]: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+              "b87d0127146c4c8d6f83f8ce0a8a4ebfe0be27082d53a06002c800b037270df8": "[Special Digivolution Condition] [DNA Digivolve] [Apollomon] + [Dianamon]: Cost 0 Stack the 2 specified Digimon and digivolve unsuspended."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX6-029",
+          "details": {
+            "candidate_conditions": {
+              "1e978745ff866d67010b02d7687f36a5940db9c5e81b1d603bcb78b290456222": "[Special Digivolution Condition] [DNA Digivolution] Yellow Lv.5 + purple Lv.5: Cost 0",
+              "2277c5fa3aee58934009f270da07fc53fcddd93202eb440b7408b3b5032b47ec": "[Special Digivolution Condition] [DNA Digivolve] Yellow Lv.5 + purple Lv.5: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+              "912482a11c6a44b4f9b0f9f3c01c8456f1570d90246421bdfbc0af1abc577c31": "[Special Digivolution Condition] [DNA Digivolution] Yellow Lv.5 + purple Lv.5: Cost 0",
+              "de9353f2810a8af85627912eea0f5498899ef4655a57966fe4272e169cfb81c6": "[Special Digivolution Condition] [DNA Digivolution] Yellow Lv.5 + purple Lv.5: Cost 0"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX8-029",
+          "details": {
+            "candidate_conditions": {
+              "40b89c7bd89dcfa9e82397effbc5fe36c8ede2c1a16022df734b774ed0522c2d": "[Special Digivolution Condition] [DNA Digivolve] Blue/purple Lv.6 + black/yellow Lv.6: Cost 0",
+              "4ca1b00df0bb6147456e6ce299d7932d467aff30d89d6a74ca0c59feeeb31c87": "[Special Digivolution Condition] [DNA Digivolve] Blue/purple Lv.6 + black/yellow Lv.6: Cost 0\n[DNA Digivolve] [Plesiomon] + Lv.5 w/[Seadramon] in name: Cost 0",
+              "d5111b21a6a7f44fbc41bbbe4dd80c14ad2ecd71dca83bef26bdad8139bc0d77": "[Special Digivolution Condition] [DNA Digivolve] Blue/purple Lv.6 + black/yellow Lv.6: Cost 0\n[DNA Digivolve] [Plesiomon] + Lv.5 w/[Seadramon] in name: Cost 0"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX9-021",
+          "details": {
+            "candidate_conditions": {
+              "24e4acafb73fa2f5c237322ac720567512bfa6caa0f883bdb48366a88abc369d": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[DM] trait: Cost 5\n[DNA Digivolve] Blue Lv.6 + red Lv.6: Cost 0",
+              "7334841dd754e466b18adc9fb95de8ad9ceb4cf80e471e38e0cfa01871a077d6": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[DM] trait: Cost 5\n[DNA Digivolve] Blue Lv.6 + red Lv.6: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "b47bf17f438b644f3571e818d4feaa5ed5f7d2d20be91712a67753b0e60379e0": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[DM] trait: Cost 5\n[DNA Digivolve] Blue Lv.6 + red Lv.6: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX9-047",
+          "details": {
+            "candidate_conditions": {
+              "4f546cfe82ff22e72658b657e50d8e5d4c5f5af094ec936319c6600f4d176bda": "[Special Play Condition] Assembly -3: 4 [Eyesmon: Scatter Mode]\nWhen this would be played, by placing those cards from the trash under it, reduce the play cost.",
+              "5b0e07ad19fd77cbf28776c7dd4633b72ecc07d94dfaa89be31598657328fbe1": "[Special Digivolution Condition] [Digivolve] [Eyesmon: Scatter Mode]: Cost 1\n[Special Play Condition] Assembly -3: 4 [Eyesmon: Scatter Mode]\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX9-049",
+          "details": {
+            "candidate_conditions": {
+              "b626a01defa6956ccbc33b6e5345e1703f08e61dfbf26ffa00f0d681cb3ff4ac": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2",
+              "eeb136155c61cc49c2ece8ece19b0e9f32e10f68202892d739a2af8f9ad06cc1": ""
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX9-050",
+          "details": {
+            "candidate_conditions": {
+              "67dd7f14984d54ea2541cc5af4dd3f73e6b8cb301aa74e848eee67a6a11a0bb7": "",
+              "76f788bc31925c1156bf2572367281e823223588a9385510e8baaa086145e97a": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX9-051",
+          "details": {
+            "candidate_conditions": {
+              "d83c4614bdac5b0daf4f1e36b51851e69f954cd948a0a64f1e1d48b42cd37c15": "",
+              "f39cf34658586d25b272920cef89bb0793c2481623069cb44c7e14783050e399": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX9-052",
+          "details": {
+            "candidate_conditions": {
+              "15320216a43e08fe68993e20e3f67d818b6e3c51023486391433206397472ac6": "",
+              "ec4dd86af55f73b89d8dd7a088c565f07b01f1de32a7c3036232bd306c39c75c": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX9-058",
+          "details": {
+            "candidate_conditions": {
+              "04cbb78e50ea178e17d49f27c30ab7f48789be4e0949e6f5171e5c2fedc2b41b": "[Special Digivolution Condition] [Digivolve] Lv.2 w/[DM] trait: Cost 0",
+              "701906e294d7f24d367d6853a5fa90e87fcdf34336673522450425ce663dda58": ""
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX9-059",
+          "details": {
+            "candidate_conditions": {
+              "4763a54d64ccfcdff4b667982f8fb4f9be1eb96f27803ce0ac01d2c0f4f59f02": "",
+              "6a992385caeaca1c78462bd16708e9f5907266c0f91d50c8398bfa2b5abb8536": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX9-060",
+          "details": {
+            "candidate_conditions": {
+              "337bdf897c8648bd4a4b8aee48cb361b11cb0a97adcb65f019a8a516afacbade": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2",
+              "d2072fc4924cdfa8b46951419ae26eebcf6eaded057646030a5b84f68a237dfc": ""
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "EX9-061",
+          "details": {
+            "candidate_conditions": {
+              "35c3611c41fca51870ce9d94eb70c478734950b457c0cc4a7d9c483fdb670011": "",
+              "94fe1251d432fc7a0684446e3206afc596c63e19d227094d0236747c3e40eea2": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "P-092",
+          "details": {
+            "candidate_conditions": {
+              "41dc6cd9ec815bb42611be03af43e48e3bf1cb96abe88a040df9939fd06c4afe": "[Special Digivolution Condition] [Digivolve] 0 from [Bebydomon]",
+              "a7ed31f5ffdf13d4095753f0d0adb22beb4dbc7dd2e1404209d82f30b3132db5": "[Special Digivolution Condition] [Digivolve] [Bebydomon]: Cost 0"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "P-094",
+          "details": {
+            "candidate_conditions": {
+              "bdce5da9361ec7b7e36ca45220a363a6be409d4258aeed6bd623ae26e073a19d": "[Special Play Condition] DigiXros -1: [Snatchmon] × 4 [Vemmon]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the cost.",
+              "cdb71b53528999dbfa269a0d6a2131a606c3b72fe0abf5f4b4434b8410f6426b": "[Special Play Condition] DigiXros -1: [Snatchmon] × 4 [Vemmon]\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the cost."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "RB1-008",
+          "details": {
+            "candidate_conditions": {
+              "24080368e6314b7df083ce9d26a707a77b49c69d63882c57183ae94ad15d2759": "[Special Digivolution Condition] [Digivolve] [Gammamon]: Cost 2",
+              "cba247674aa4785a9bf4d5f3d44121b501ffe82698c519f02bcb8385d2bbcd98": "[Special Digivolution Condition] [Digivolve] 2 from [Gammamon]"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "RB1-009",
+          "details": {
+            "candidate_conditions": {
+              "2962cf38e2fea82a94c72b2573ee384f4d6679d930ef1eca4d0eb1ddc1b1badf": "[Special Digivolution Condition] [Digivolve] Lv.4 w/[Gammamon] in name: Cost 3",
+              "693c9aed92501955a4a01f225c85c80acd74a053713b1d35e3eb3f4a14874e03": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 w/[Gammamon] in name"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "RB1-018",
+          "details": {
+            "candidate_conditions": {
+              "631bc41b539b7217a7166affbd9707d145f390b72bda3c5536cb9fa565fc3b27": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 w/[Numemon] in name",
+              "f7358fc2d597587d5b953addb366d6ddfa835fe3a09bf696e3650f9b6a48cc50": "[Special Digivolution Condition] [Digivolve] Lv.4 w/[Numemon] in name: Cost 3"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "RB1-031",
+          "details": {
+            "candidate_conditions": {
+              "1ebf60c04d858210b4aeb361600ec2d062d81ae9a77ebb279b138b5f29e9814a": "[Special Digivolution Condition] [Digivolve] 4 from Lv.5 w/[Gammamon] in text",
+              "9a521cd34db6c9d0459b29fedb7141725dc7e7e9db5afdb6f79f113a9621f58e": "[Special Digivolution Condition] [Digivolve] 4 from Lv.5 w/[Gammamon] in text",
+              "fd06331d9c180fa6151ccbe5b873c2fd4a02ca26ab972cafbdbb4316e1ca77db": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Gammamon] in text: Cost 4"
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "ST9-05",
+          "details": {
+            "candidate_conditions": {
+              "321e9042435322938041395ac44352b5ab447cfca066abab93f78a93b1d8debb": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "366b716ef5abe5b1c9df266e9fcb01a26a847b11893c2e4bfcb94580de91bb6e": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "61ad4b24536a4df82af992f153045212e2c3b8f1c58a66d7aa2cf7d902939a44": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "7084696880568e91653244a5911ddf38f83698eacbeddd7e613e37af8437c8b8": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "bdd16096e7b2c07766e7d234a3d80ad8043ceedc66643955384338fe97b237ce": "[Special Digivolution Condition] [DNA Digivolve] Blue Lv.4 + green Lv.4: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+              "bf9ed288488a1ea228d9acfec87523a7c18e47a3d7cadf83ef0f70afec90b242": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "e4b5c14204f6550b75dd2920ba224c47ae81242ced23ce621ecf3b114b69cec6": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+            }
+          },
+          "message": "official condition sections disagree"
+        },
+        {
+          "card_id": "ST10-06",
+          "details": {
+            "candidate_conditions": {
+              "4e046b7ffffe95e865771fb73d9b8e863c992bce5bbf2365f5e5167644db11ab": "[Special Digivolution Condition] [DNA Digivolve] 0 from yellow Lv.5 + purple Lv.5\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "92d26514301b84125bd53ed01a74b917eeb139a0a74601107c227fa5020d1846": "[Special Digivolution Condition] [DNA Digivolution] 0 from yellow Lv.5 + purple Lv.5\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+              "bfa9f08786ea50ba442f57502dd640cb703247b344a521a9c4edf0f2bb315c47": "[Special Digivolution Condition] ＜DNA Digivolve＞yellow Lv.5 + purple Lv.5: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+              "caac4f94c9ada9214a574e41ceb94129e34ba27391ecc0f833373fdcb7689021": "[Special Digivolution Condition] [DNA Digivolve] 0 from yellow Lv.5 + purple Lv.5\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+            }
+          },
+          "message": "official condition sections disagree"
+        }
+      ]
+    },
+    "field_path": null,
+    "message": "official condition projection preflight failed",
+    "path": null,
+    "severity": "error",
+    "source": null
+  },
+  "fixed_prior_corrections_sha256": "b5bfc8a644790d3fe1df17bac867ae9dda52b8ac8d59856156d5e4b59f75e71a",
+  "staged_corrections_sha256": "b5bfc8a644790d3fe1df17bac867ae9dda52b8ac8d59856156d5e4b59f75e71a",
+  "status": "FINAL_INPUT_PREFLIGHT_BLOCKED"
+}

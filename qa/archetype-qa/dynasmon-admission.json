@@ -1,0 +1,865 @@
+{
+  "mechanics_ready": true,
+  "mechanics_blocking": [],
+  "primary": {
+    "list": "digilab_120647",
+    "source_url": "https://digimon.digilab.cards/decklist/120647",
+    "card_count": 54,
+    "unique_ids": 22,
+    "cards": {
+      "BT13-106": 3,
+      "BT15-084": 1,
+      "BT15-092": 2,
+      "BT18-030": 4,
+      "BT18-036": 4,
+      "BT18-098": 1,
+      "BT19-036": 4,
+      "BT19-042": 2,
+      "BT25-030": 3,
+      "EX13-004": 4,
+      "EX13-025": 4,
+      "EX13-029": 2,
+      "EX13-033": 4,
+      "EX13-034": 3,
+      "EX13-037": 4,
+      "EX6-063": 1,
+      "LM-029": 2,
+      "LM-054": 1,
+      "LM-059": 1,
+      "LM-062": 1,
+      "P-037": 1,
+      "P-105": 2
+    },
+    "same_counts_as_primary": true,
+    "admitted": true,
+    "failures": {},
+    "runtime_admitted": true,
+    "runtime_game_loaded": true
+  },
+  "repository_lists": [
+    {
+      "list": "digilab_a737387543bb",
+      "source_url": "https://play.limitlesstcg.com/tournament/6952d1e64500833d8701c24f/player/w32r/decklist",
+      "card_count": 54,
+      "unique_ids": 22,
+      "cards": {
+        "BT14-003": 4,
+        "BT14-033": 2,
+        "BT15-092": 2,
+        "BT18-030": 3,
+        "BT18-036": 2,
+        "BT18-039": 4,
+        "BT18-040": 1,
+        "BT18-098": 1,
+        "BT19-029": 2,
+        "BT19-036": 4,
+        "BT19-039": 2,
+        "BT19-042": 3,
+        "BT20-102": 1,
+        "BT23-035": 4,
+        "BT5-086": 1,
+        "BT6-032": 3,
+        "BT6-034": 4,
+        "BT8-090": 2,
+        "BT8-097": 1,
+        "LM-029": 2,
+        "P-037": 2,
+        "P-105": 4
+      },
+      "same_counts_as_primary": false,
+      "admitted": false,
+      "failures": {
+        "BT14-003": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {
+            "validated_cards.json": {
+              "status": "FIXED",
+              "notes": "Mastemon (Tribal) archetype faithfulness fix batch",
+              "report": "batch-fix-cards"
+            }
+          },
+          "runtime_playable": false
+        },
+        "BT18-040": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        },
+        "BT19-039": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {
+            "validated_cards.json": {
+              "status": "PASS",
+              "notes": "Fixed: Inherited unsuspend now targets this Digimon directly.",
+              "report": "2026-03-14-cs-mastemon-qa.md"
+            }
+          },
+          "runtime_playable": false
+        },
+        "BT5-086": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {
+            "validated_cards.json": {
+              "status": "PASS",
+              "notes": "Deletion prevention verified correct",
+              "report": "2026-03-14-jesmon-qa.md"
+            }
+          },
+          "runtime_playable": false
+        },
+        "BT6-032": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        },
+        "BT6-034": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        }
+      },
+      "event_date": "2026-01-03",
+      "format": null,
+      "player_name": null,
+      "source": "digilab",
+      "runtime_admitted": false,
+      "runtime_rejection": "digilab_a737387543bb contains unimplemented card IDs: BT14-003, BT18-040, BT19-039, BT5-086, BT6-032, BT6-034"
+    },
+    {
+      "list": "digilab_af2df43d57eb",
+      "source_url": "https://play.limitlesstcg.com/tournament/69446388e12a3ec47628a2d3/player/w32r/decklist",
+      "card_count": 54,
+      "unique_ids": 22,
+      "cards": {
+        "BT14-003": 4,
+        "BT14-033": 2,
+        "BT15-092": 2,
+        "BT18-030": 4,
+        "BT18-036": 4,
+        "BT18-039": 3,
+        "BT18-040": 1,
+        "BT18-098": 1,
+        "BT19-029": 3,
+        "BT19-036": 4,
+        "BT19-039": 3,
+        "BT19-042": 3,
+        "BT20-102": 1,
+        "BT23-035": 4,
+        "BT5-086": 1,
+        "BT6-034": 2,
+        "BT8-090": 2,
+        "BT8-097": 1,
+        "LM-029": 2,
+        "P-037": 2,
+        "P-105": 4,
+        "P-122": 1
+      },
+      "same_counts_as_primary": false,
+      "admitted": false,
+      "failures": {
+        "BT14-003": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {
+            "validated_cards.json": {
+              "status": "FIXED",
+              "notes": "Mastemon (Tribal) archetype faithfulness fix batch",
+              "report": "batch-fix-cards"
+            }
+          },
+          "runtime_playable": false
+        },
+        "BT18-040": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        },
+        "BT19-039": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {
+            "validated_cards.json": {
+              "status": "PASS",
+              "notes": "Fixed: Inherited unsuspend now targets this Digimon directly.",
+              "report": "2026-03-14-cs-mastemon-qa.md"
+            }
+          },
+          "runtime_playable": false
+        },
+        "BT5-086": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {
+            "validated_cards.json": {
+              "status": "PASS",
+              "notes": "Deletion prevention verified correct",
+              "report": "2026-03-14-jesmon-qa.md"
+            }
+          },
+          "runtime_playable": false
+        },
+        "BT6-034": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        },
+        "P-122": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        }
+      },
+      "event_date": "2025-12-20",
+      "format": null,
+      "player_name": null,
+      "source": "digilab",
+      "runtime_admitted": false,
+      "runtime_rejection": "digilab_af2df43d57eb contains unimplemented card IDs: BT14-003, BT18-040, BT19-039, BT5-086, BT6-034, P-122"
+    },
+    {
+      "list": "digilab_f4ea789db4bf",
+      "source_url": "https://play.limitlesstcg.com/tournament/690fa709b11d3f5498bb91a0/player/bakuryuarg/decklist",
+      "card_count": 54,
+      "unique_ids": 22,
+      "cards": {
+        "BT13-106": 3,
+        "BT14-003": 4,
+        "BT18-030": 4,
+        "BT18-036": 1,
+        "BT18-040": 3,
+        "BT18-098": 1,
+        "BT19-029": 2,
+        "BT19-036": 4,
+        "BT19-039": 4,
+        "BT19-042": 4,
+        "BT20-053": 2,
+        "BT20-102": 1,
+        "BT6-034": 4,
+        "BT8-090": 1,
+        "BT9-033": 2,
+        "BT9-092": 3,
+        "BT9-109": 3,
+        "EX8-074": 1,
+        "LM-029": 2,
+        "P-037": 2,
+        "P-105": 1,
+        "ST19-02": 2
+      },
+      "same_counts_as_primary": false,
+      "admitted": false,
+      "failures": {
+        "BT14-003": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {
+            "validated_cards.json": {
+              "status": "FIXED",
+              "notes": "Mastemon (Tribal) archetype faithfulness fix batch",
+              "report": "batch-fix-cards"
+            }
+          },
+          "runtime_playable": false
+        },
+        "BT18-040": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        },
+        "BT19-039": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {
+            "validated_cards.json": {
+              "status": "PASS",
+              "notes": "Fixed: Inherited unsuspend now targets this Digimon directly.",
+              "report": "2026-03-14-cs-mastemon-qa.md"
+            }
+          },
+          "runtime_playable": false
+        },
+        "BT6-034": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        },
+        "BT9-109": {
+          "reasons": [
+            "failed_verdict"
+          ],
+          "constructs": [],
+          "production_yaml_exists": true,
+          "has_card_test": true,
+          "ledger_verdicts": {
+            "validated_cards.json": {
+              "status": "PASS",
+              "notes": "Inherited effects verified correct",
+              "report": "2026-03-14-jesmon-qa.md"
+            },
+            "validated_cards_dsl.json": {
+              "status": "BLOCKED",
+              "gap_kind": "engine",
+              "notes": "Blocked by G-DSL-SOURCE-CARD-TRASH-PROTECTION. No readiness or training promotion; unsupported new candidate withdrawn.",
+              "report": "examon-2026-10-10"
+            }
+          },
+          "runtime_playable": true
+        },
+        "ST19-02": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        }
+      },
+      "event_date": "2025-11-09",
+      "format": null,
+      "player_name": null,
+      "source": "digilab",
+      "runtime_admitted": false,
+      "runtime_rejection": "digilab_f4ea789db4bf contains unimplemented card IDs: BT14-003, BT18-040, BT19-039, BT6-034, ST19-02"
+    },
+    {
+      "list": "digilab_f31700eaad7b",
+      "source_url": "https://play.limitlesstcg.com/tournament/68f96691dd7011c665c3dfde/player/yair99/decklist",
+      "card_count": 54,
+      "unique_ids": 18,
+      "cards": {
+        "BT14-003": 4,
+        "BT18-030": 4,
+        "BT18-036": 4,
+        "BT18-039": 4,
+        "BT18-040": 1,
+        "BT18-098": 4,
+        "BT19-036": 4,
+        "BT19-039": 4,
+        "BT19-042": 3,
+        "BT23-035": 3,
+        "BT6-032": 4,
+        "BT6-034": 2,
+        "BT9-033": 2,
+        "EX5-070": 2,
+        "EX8-030": 2,
+        "LM-029": 2,
+        "P-037": 2,
+        "P-105": 3
+      },
+      "same_counts_as_primary": false,
+      "admitted": false,
+      "failures": {
+        "BT14-003": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {
+            "validated_cards.json": {
+              "status": "FIXED",
+              "notes": "Mastemon (Tribal) archetype faithfulness fix batch",
+              "report": "batch-fix-cards"
+            }
+          },
+          "runtime_playable": false
+        },
+        "BT18-040": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        },
+        "BT19-039": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {
+            "validated_cards.json": {
+              "status": "PASS",
+              "notes": "Fixed: Inherited unsuspend now targets this Digimon directly.",
+              "report": "2026-03-14-cs-mastemon-qa.md"
+            }
+          },
+          "runtime_playable": false
+        },
+        "BT6-032": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        },
+        "BT6-034": {
+          "reasons": [
+            "untested_lowering"
+          ],
+          "constructs": [],
+          "production_yaml_exists": false,
+          "has_card_test": false,
+          "ledger_verdicts": {},
+          "runtime_playable": false
+        }
+      },
+      "event_date": "2025-10-24",
+      "format": null,
+      "player_name": null,
+      "source": "digilab",
+      "runtime_admitted": false,
+      "runtime_rejection": "digilab_f31700eaad7b contains unimplemented card IDs: BT14-003, BT18-040, BT19-039, BT6-032, BT6-034"
+    },
+    {
+      "list": "dcg_nexus_68400172033e",
+      "source_url": "https://dcg-nexus.com/decklist/4b5c5df5-aed3-441e-944f-43b6fb3fd00a",
+      "card_count": 54,
+      "unique_ids": 20,
+      "cards": {
+        "BT13-106": 3,
+        "BT15-084": 2,
+        "BT18-030": 4,
+        "BT18-036": 4,
+        "BT18-098": 3,
+        "BT19-036": 4,
+        "BT19-042": 2,
+        "BT23-035": 1,
+        "BT25-030": 3,
+        "EX10-041": 2,
+        "EX13-004": 4,
+        "EX13-025": 4,
+        "EX13-033": 4,
+        "EX13-034": 3,
+        "EX13-037": 4,
+        "LM-029": 2,
+        "LM-054": 1,
+        "LM-059": 1,
+        "LM-062": 1,
+        "P-105": 2
+      },
+      "same_counts_as_primary": false,
+      "admitted": true,
+      "failures": {},
+      "event_date": "2026-10-16",
+      "format": "EX13",
+      "player_name": "shogun2134",
+      "source": "dcg_nexus",
+      "runtime_admitted": true,
+      "runtime_game_loaded": true
+    },
+    {
+      "list": "dcg_nexus_14e373eaf549",
+      "source_url": "https://dcg-nexus.com/decklist/6b002dcc-62a7-4536-9a7d-d7444694a72c",
+      "card_count": 54,
+      "unique_ids": 22,
+      "cards": {
+        "BT13-106": 3,
+        "BT15-084": 1,
+        "BT15-092": 2,
+        "BT18-030": 4,
+        "BT18-036": 4,
+        "BT18-098": 1,
+        "BT19-036": 4,
+        "BT19-042": 2,
+        "BT25-030": 3,
+        "EX13-004": 4,
+        "EX13-025": 4,
+        "EX13-029": 2,
+        "EX13-033": 4,
+        "EX13-034": 3,
+        "EX13-037": 4,
+        "EX6-063": 1,
+        "LM-029": 2,
+        "LM-054": 1,
+        "LM-059": 1,
+        "LM-062": 1,
+        "P-037": 1,
+        "P-105": 2
+      },
+      "same_counts_as_primary": true,
+      "admitted": true,
+      "failures": {},
+      "event_date": "2026-10-12",
+      "format": "EX13",
+      "player_name": "tesero",
+      "source": "dcg_nexus",
+      "runtime_admitted": true,
+      "runtime_game_loaded": true
+    },
+    {
+      "list": "dcg_nexus_1c630c677d77",
+      "source_url": "https://dcg-nexus.com/decklist/438c3f8d-66af-44a5-8ac8-c342dfdad879",
+      "card_count": 54,
+      "unique_ids": 22,
+      "cards": {
+        "BT13-106": 1,
+        "BT15-084": 2,
+        "BT15-092": 4,
+        "BT18-030": 4,
+        "BT18-036": 4,
+        "BT18-098": 2,
+        "BT19-036": 3,
+        "BT19-042": 1,
+        "BT25-030": 3,
+        "BT26-033": 2,
+        "EX13-004": 4,
+        "EX13-025": 4,
+        "EX13-029": 3,
+        "EX13-033": 3,
+        "EX13-034": 4,
+        "EX13-037": 4,
+        "EX4-074": 1,
+        "LM-029": 1,
+        "LM-054": 1,
+        "LM-059": 1,
+        "LM-062": 1,
+        "P-105": 1
+      },
+      "same_counts_as_primary": false,
+      "admitted": true,
+      "failures": {},
+      "event_date": "2026-10-12",
+      "format": "EX13",
+      "player_name": "rukasu",
+      "source": "dcg_nexus",
+      "runtime_admitted": true,
+      "runtime_game_loaded": true
+    },
+    {
+      "list": "dcg_nexus_89c093e2fb71",
+      "source_url": "https://dcg-nexus.com/decklist/ae8bdd64-28de-4a37-bc6d-e6636d533a7c",
+      "card_count": 54,
+      "unique_ids": 22,
+      "cards": {
+        "AD1-017": 1,
+        "BT13-106": 1,
+        "BT18-030": 3,
+        "BT18-036": 4,
+        "BT18-039": 1,
+        "BT18-098": 4,
+        "BT19-029": 1,
+        "BT19-036": 4,
+        "BT4-104": 1,
+        "BT9-033": 2,
+        "BT9-084": 3,
+        "EX13-004": 4,
+        "EX13-025": 4,
+        "EX13-029": 4,
+        "EX13-033": 4,
+        "EX13-034": 3,
+        "EX13-037": 4,
+        "EX8-030": 2,
+        "LM-020": 1,
+        "LM-054": 1,
+        "LM-059": 1,
+        "LM-062": 1
+      },
+      "same_counts_as_primary": false,
+      "admitted": true,
+      "failures": {},
+      "event_date": "2026-10-12",
+      "format": "EX13",
+      "player_name": "malp",
+      "source": "dcg_nexus",
+      "runtime_admitted": true,
+      "runtime_game_loaded": true
+    },
+    {
+      "list": "dcg_nexus_1a7d2e005f29",
+      "source_url": "https://dcg-nexus.com/decklist/e9fc6f74-aa44-4f61-8411-61063054e348",
+      "card_count": 54,
+      "unique_ids": 20,
+      "cards": {
+        "AD1-017": 2,
+        "BT15-092": 1,
+        "BT18-030": 4,
+        "BT18-036": 4,
+        "BT18-039": 3,
+        "BT18-098": 2,
+        "BT19-036": 3,
+        "BT23-035": 2,
+        "BT25-030": 3,
+        "BT6-089": 2,
+        "BT8-090": 2,
+        "EX10-041": 2,
+        "EX13-004": 4,
+        "EX13-025": 4,
+        "EX13-029": 4,
+        "EX13-033": 3,
+        "EX13-034": 2,
+        "EX13-037": 4,
+        "LM-029": 2,
+        "P-105": 1
+      },
+      "same_counts_as_primary": false,
+      "admitted": true,
+      "failures": {},
+      "event_date": "2026-10-11",
+      "format": "EX13",
+      "player_name": "gamma24454",
+      "source": "dcg_nexus",
+      "runtime_admitted": true,
+      "runtime_game_loaded": true
+    },
+    {
+      "list": "dcg_nexus_3c85ce6ea42b",
+      "source_url": "https://dcg-nexus.com/decklist/8cdb6481-d01b-4da1-833c-4bd0c54519da",
+      "card_count": 54,
+      "unique_ids": 19,
+      "cards": {
+        "BT15-092": 4,
+        "BT18-030": 4,
+        "BT18-036": 4,
+        "BT18-098": 3,
+        "BT19-029": 3,
+        "BT19-036": 3,
+        "BT19-042": 2,
+        "BT23-035": 1,
+        "BT8-090": 3,
+        "EX13-004": 4,
+        "EX13-025": 4,
+        "EX13-029": 3,
+        "EX13-033": 4,
+        "EX13-034": 4,
+        "EX13-037": 4,
+        "EX13-077": 1,
+        "LM-054": 1,
+        "LM-059": 1,
+        "LM-062": 1
+      },
+      "same_counts_as_primary": false,
+      "admitted": true,
+      "failures": {},
+      "event_date": "2026-10-10",
+      "format": "EX13",
+      "player_name": "SebiasDM",
+      "source": "dcg_nexus",
+      "runtime_admitted": true,
+      "runtime_game_loaded": true
+    },
+    {
+      "list": "dcg_nexus_4400068f1b09",
+      "source_url": "https://dcg-nexus.com/decklist/d192c74d-ec2b-4ccb-a301-2911ccad6151",
+      "card_count": 54,
+      "unique_ids": 23,
+      "cards": {
+        "BT13-106": 1,
+        "BT18-030": 4,
+        "BT18-036": 4,
+        "BT18-039": 1,
+        "BT18-098": 1,
+        "BT19-036": 2,
+        "BT19-042": 2,
+        "BT20-102": 1,
+        "BT23-035": 2,
+        "BT25-030": 3,
+        "EX13-004": 4,
+        "EX13-025": 4,
+        "EX13-029": 2,
+        "EX13-033": 4,
+        "EX13-034": 3,
+        "EX13-037": 4,
+        "EX13-077": 1,
+        "EX5-070": 1,
+        "EX7-026": 2,
+        "LM-029": 3,
+        "LM-045": 2,
+        "LM-059": 2,
+        "LM-062": 1
+      },
+      "same_counts_as_primary": false,
+      "admitted": true,
+      "failures": {},
+      "event_date": "2026-10-05",
+      "format": "EX13",
+      "player_name": "tesero",
+      "source": "dcg_nexus",
+      "runtime_admitted": true,
+      "runtime_game_loaded": true
+    },
+    {
+      "list": "dcg_nexus_7e05941203f3",
+      "source_url": "https://dcg-nexus.com/decklist/0156435c-d535-4c70-9c8d-ff69892596eb",
+      "card_count": 54,
+      "unique_ids": 18,
+      "cards": {
+        "AD1-017": 3,
+        "BT13-106": 3,
+        "BT15-084": 2,
+        "BT15-092": 4,
+        "BT18-030": 4,
+        "BT18-098": 2,
+        "BT19-029": 3,
+        "BT19-036": 2,
+        "BT4-097": 3,
+        "BT4-104": 1,
+        "EX10-041": 3,
+        "EX13-004": 4,
+        "EX13-025": 4,
+        "EX13-029": 3,
+        "EX13-033": 4,
+        "EX13-034": 4,
+        "EX13-037": 4,
+        "EX13-077": 1
+      },
+      "same_counts_as_primary": false,
+      "admitted": true,
+      "failures": {},
+      "event_date": "2026-10-04",
+      "format": "EX13",
+      "player_name": "rixtonsnek",
+      "source": "dcg_nexus",
+      "runtime_admitted": true,
+      "runtime_game_loaded": true
+    },
+    {
+      "list": "digimonmeta_6eb3bde8bd2b",
+      "source_url": "deckinfo2?dn=Dynasmon&date=10/3/2026&cn=China&au=Ling Fan&pl=1st Place&tn=TB&hs=Cardshop(26)&dg=4nEX13-004a4nEX13-025a4nBT18-030a3nBT19-029a3nEX13-029a3nBT18-036a3nBT19-036a2nBT26-022a4nEX13-033a4nEX13-034a4nEX13-037a2nBT19-042a2nBT23-035a1nBT20-102a1nEX13-077a1nBT8-090a1nLM-054a1nLM-059a1nLM-062a1nEX5-070a1nBT13-106a1nBT15-092a3nBT18-098&cs=277",
+      "card_count": 54,
+      "unique_ids": 23,
+      "cards": {
+        "BT13-106": 1,
+        "BT15-092": 1,
+        "BT18-030": 4,
+        "BT18-036": 3,
+        "BT18-098": 3,
+        "BT19-029": 3,
+        "BT19-036": 3,
+        "BT19-042": 2,
+        "BT20-102": 1,
+        "BT23-035": 2,
+        "BT26-022": 2,
+        "BT8-090": 1,
+        "EX13-004": 4,
+        "EX13-025": 4,
+        "EX13-029": 3,
+        "EX13-033": 4,
+        "EX13-034": 4,
+        "EX13-037": 4,
+        "EX13-077": 1,
+        "EX5-070": 1,
+        "LM-054": 1,
+        "LM-059": 1,
+        "LM-062": 1
+      },
+      "same_counts_as_primary": false,
+      "admitted": true,
+      "failures": {},
+      "event_date": "10/3/2026",
+      "format": null,
+      "player_name": null,
+      "source": "digimonmeta",
+      "runtime_admitted": true,
+      "runtime_game_loaded": true
+    }
+  ],
+  "repository_list_count": 13,
+  "repository_admitted": 9,
+  "runtime_verified": true,
+  "ex13_list_count": 8,
+  "ex13_unique_ids": 42,
+  "ex13_admitted": 8,
+  "gauntlet_source_deck_ids": [
+    "dcg_nexus_14e373eaf549",
+    "dcg_nexus_1a7d2e005f29",
+    "dcg_nexus_1c630c677d77",
+    "dcg_nexus_3c85ce6ea42b",
+    "dcg_nexus_4400068f1b09",
+    "dcg_nexus_68400172033e",
+    "dcg_nexus_7e05941203f3",
+    "dcg_nexus_89c093e2fb71",
+    "digimonmeta_6eb3bde8bd2b"
+  ],
+  "runtime_game_loaded": true,
+  "runtime_repository_games_loaded": 9,
+  "runtime_contract": {
+    "profile": "standard_lite_v2",
+    "tensor_size": 9434,
+    "action_space_size": 2192
+  }
+}

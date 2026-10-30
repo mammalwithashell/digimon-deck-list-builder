@@ -857,12 +857,15 @@ pub fn materialize_closed_with_diagnostics(
     pool.shuffle(&mut rng);
     eggs.shuffle(&mut rng);
     let mut known = memory.hidden_instances(opponent);
+    let public_pins: HashSet<_> = root.players[opponent as usize]
+        .security
+        .iter()
+        .filter(|c| root.security_card_is_public(opponent, c.handle()))
+        .map(|c| c.card_index)
+        .collect();
     known.retain(|(instance, _, zone, _)| {
         *zone != KnowledgeZone::Security
-            || (inspected != Some(opponent)
-                && !root.players[opponent as usize]
-                    .face_up_security
-                    .contains(instance))
+            || (inspected != Some(opponent) && !public_pins.contains(instance))
     });
     let mut next = world
         .players
@@ -1051,7 +1054,6 @@ pub fn materialize_closed_with_diagnostics(
         &mut rng,
         Vec::new(),
     )?;
-    let public_pins = root.players[opponent as usize].face_up_security.clone();
     with_reserved(KnowledgeZone::Security, &mut pool);
     let fixed_security = root.players[opponent as usize]
         .security

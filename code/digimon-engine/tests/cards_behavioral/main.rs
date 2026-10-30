@@ -110,3 +110,5 @@ mod st6;
 mod st9;
 
 mod ulforce_exact_export;
+
+mod dynasmon_exact_fixture;

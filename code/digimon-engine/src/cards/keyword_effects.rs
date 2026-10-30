@@ -992,7 +992,13 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                         return;
                     }
                     let owner = subject.player;
-                    if rctx.effect.trash_top_security(owner) {
+                    rctx.effect.game.dsl_replacement_outcome = None;
+                    crate::dsl_cards::step::run_steps(
+                        &[digimon_dsl::compiled::CompiledStep::SecurityTrashOne {
+                            player: owner, bind_as: None, cancel: true,
+                        }], rctx.effect, &mut crate::dsl_cards::bindings::Bindings::new(),
+                    );
+                    if rctx.effect.game.dsl_replacement_outcome.take() == Some(crate::replacement::ReplacementOutcome::Cancelled) {
                         // Barrier prevents this deletion; the interrupted cause
                         // remains pending for other immediate effects (16-24-4 [3.6 numbering; deleted in 4.3 â€” see changelog-3.6-to-4.3.md]).
                         rctx.cancel();

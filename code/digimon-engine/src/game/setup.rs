@@ -211,6 +211,7 @@ impl Game {
             pending_selection: None,
             next_card_choice_id: 0,
             security_shuffle_generations: [0; 2],
+            public_security_reveals: Vec::new(),
             resolved_card_choice: None,
             pending_selection_resume: None,
             after_selection_resume_hooks: crate::resume::ResumeContinuationHooks::default(),
@@ -260,6 +261,9 @@ impl Game {
             pending_field_top_source_moves: Vec::new(),
             pending_security_moves: Vec::new(),
             security_placement_receipts: Vec::new(),
+            permanent_security_placement_receipts: Vec::new(),
+            security_trash_receipts: Vec::new(),
+            pending_security_trashes: Vec::new(),
             pending_option_link_host: None,
             pending_digimon_link: None,
             pending_link_host: None,
@@ -334,6 +338,7 @@ impl Game {
             on_play_suppressor: None,
             pending_play_effect_initiated: false,
             pending_hand_discard: None,
+            pending_deck_discards: Vec::new(),
             pending_deck_add: None,
             pending_added_sources: Vec::new(),
             pending_security_source_cause_card: None,
@@ -439,6 +444,7 @@ impl Game {
         self.loop_watch_steps = 0;
         self.optional_decision_mark = None;
         self.pending_hand_discard = None;
+        self.pending_deck_discards.clear();
         self.pending_deck_add = None;
         self.pending_added_sources.clear();
         // logger intentionally preserved (session owns the logger choice).
@@ -464,6 +470,9 @@ impl Game {
         self.field_source_receipts.clear();
         self.pending_security_moves.clear();
         self.security_placement_receipts.clear();
+        self.permanent_security_placement_receipts.clear();
+        self.security_trash_receipts.clear();
+        self.pending_security_trashes.clear();
         self.pending_option_link_host = None;
         self.pending_digimon_link = None;
         self.pending_link_host = None;

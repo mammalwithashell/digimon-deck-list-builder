@@ -1,0 +1,71 @@
+# Printed face and official Bandai bundle agree. DCGO's color-waiver boolean
+# expression lacks parentheses; follow the printed YELLOW AND (Data OR Witchelny).
+card: BT18-098
+name: "Dragon's Roar"
+kind: option
+color: [yellow, red]
+cost: 5
+
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    all_of:
+      - kind: digimon
+      - color_is: yellow
+      - any_of:
+          - trait_has: Data
+          - trait_has: Witchelny
+
+effects:
+  - when: main_from_hand
+    optional: true
+    condition: { security_count_gte: 1 }
+    summary: "[Main] By trashing your top security card, 1 opponent Digimon gets -6000 DP until the end of their turn. Then, if 2 or fewer security, place this card as bottom security"
+    process:
+      - trash_top_security: { of: you, bind_count_as: paid_security }
+      - if:
+          condition: { equals: [paid_security, 1] }
+          then:
+            - select_opponent_permanent:
+                bind_as: debuff_target
+                filter: { kind: digimon }
+                prompt: "Choose 1 opponent Digimon to get -6000 DP"
+            - add_dp_modifier:
+                target: debuff_target
+                value: -6000
+                expiry: end_of_opponents_turn
+            - if:
+                condition: { security_count_lte: 2 }
+                then:
+                  - place_on_security:
+                      source: self_option
+                      position: bottom
+                      face_up: false
+
+  - when: on_discard_security
+    scope: security
+    summary: "When this card is directly trashed from security, activate its Security effects"
+    process:
+      - select_opponent_permanent:
+          bind_as: deletion_target
+          filter: { kind: digimon, dp_lte: 6000 }
+          prompt: "Delete 1 opponent Digimon with 6000 DP or less"
+      - delete_permanent: { target: deletion_target }
+      - if:
+          condition: { security_count_lte: 0 }
+          then:
+            - recover: { of: you, count: 1 }
+
+  - when: on_security
+    summary: "[Security] Delete 1 opponent Digimon with 6000 DP or less. Then, if 0 security, Recovery +1 Deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: deletion_target
+          filter: { kind: digimon, dp_lte: 6000 }
+          prompt: "Delete 1 opponent Digimon with 6000 DP or less"
+      - delete_permanent: { target: deletion_target }
+      - if:
+          condition: { security_count_lte: 0 }
+          then:
+            - recover: { of: you, count: 1 }

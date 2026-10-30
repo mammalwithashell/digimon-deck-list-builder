@@ -7,6 +7,8 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod activation_cost;
+mod public_security_reveal;
+mod trash_bottom_security;
 mod name_standardization;
 mod add_modifier_typed_payload;
 mod also_treated_as;
@@ -30,6 +32,7 @@ mod effect_immunity_step;
 mod effect_refiring;
 mod embedded_registry;
 mod event_context_bindings;
+mod event_card_kind;
 mod face_up_security_lifecycle;
 mod grant_triggered_trigger_if;
 mod granted_effect_selection_body;
@@ -216,3 +219,11 @@ fn union_fixture_action(game: &digimon_engine::game::Game, fixture: u16) -> u16 
     assert_eq!(digimon_engine::action::build_action_mask(game, actor)[action as usize], 1.0);
     action
 }
+
+mod original_dp_presence;
+
+mod deck_trash_event;
+
+mod permanent_security_receipt;
+
+mod quantumon_primitives;
