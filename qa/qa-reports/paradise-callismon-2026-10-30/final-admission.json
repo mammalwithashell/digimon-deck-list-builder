@@ -1,0 +1,212 @@
+{
+  "mechanics_ready": true,
+  "exact_lists": [
+    {
+      "deck_id": "120649",
+      "url": "https://digimon.digilab.cards/decklist/120649",
+      "cards": 54,
+      "unique_ids": 21,
+      "admitted": true
+    },
+    {
+      "deck_id": "130284",
+      "url": "https://digimon.digilab.cards/decklist/130284",
+      "cards": 54,
+      "unique_ids": 21,
+      "admitted": true
+    }
+  ],
+  "unique_ids": 21,
+  "admissible_unique_ids": 21,
+  "cards": {
+    "BT24-034": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT24-043": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT24-083": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": false,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT24-085": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": false,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT24-088": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": false,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT24-100": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-001": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": false,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-009": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": false,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-012": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": false,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-016": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-020": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-048": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": false,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-050": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-051": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-054": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-058": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-064": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": false,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-095": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT25-100": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT6-102": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": false,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "BT8-097": {
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": false,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    }
+  }
+}
