@@ -233,6 +233,16 @@ pub(crate) struct DelayBodyContinuation {
     trigger_context: Option<TriggerContext>,
 }
 
+impl DelayBodyContinuation {
+    pub(crate) fn belief_safe(&self, allowed: &std::collections::HashSet<CardHandle>) -> bool {
+        allowed.contains(&self.source_card)
+            && self
+                .trigger_context
+                .as_ref()
+                .is_none_or(|c| c.belief_safe(allowed))
+    }
+}
+
 fn arm_pending_delay_body_continuation(game: &mut Game, continuation: DelayBodyContinuation) {
     let Some(mut selection) = game.pending_selection.take() else {
         continue_delay_body_after_selection(game, continuation);

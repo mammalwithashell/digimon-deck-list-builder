@@ -35,6 +35,8 @@ impl Game {
         };
         let mut taken = self.revealed_cards.remove(pos_idx);
         taken.clear_reveal_overlay();
+        let known_position = match position { crate::enums::StackPosition::Top => Some(0), _ => None };
+        self.learn_belief_card(&taken, crate::determinize::beliefs::KnowledgeZone::Deck, known_position);
         match position {
             crate::enums::StackPosition::Top => {
                 self.player_mut(player_id).put_on_deck_top(taken);
@@ -227,6 +229,7 @@ impl Game {
             // Rule 3-1-3-9-2: a Digi-Egg cannot enter hand.
             self.player_mut(top_owner).insert_in_digi_egg_deck(0, top);
         } else if !top_is_token {
+            self.learn_belief_card(&top, crate::determinize::beliefs::KnowledgeZone::Hand, None);
             self.player_mut(top_owner).put_in_hand(top);
         }
 
@@ -514,6 +517,19 @@ impl Game {
 
         if include_sources {
             perm.card_sources.push(top);
+            for card in &perm.card_sources {
+                if !card.face_down {
+                    let zone = if card.card_kind(&self.card_data) == CardKind::DigiEgg {
+                        crate::determinize::beliefs::KnowledgeZone::Digitama
+                    } else {
+                        crate::determinize::beliefs::KnowledgeZone::Deck
+                    };
+                    // Whole-stack placement retains membership conservatively;
+                    // it does not invent positions in a mixed-owner stack.
+                    self.shuffle_belief_knowledge(card.owner, zone);
+                    self.learn_belief_card(card, zone, None);
+                }
+            }
             self.insert_stack_into_owners_decks(perm.card_sources, position);
         } else {
             // Owner-routed: top card returns to its OWN owner's deck.
@@ -522,6 +538,25 @@ impl Game {
             // if a future control-transfer effect sets owner != controller.
             let top_owner = top.owner;
             let host_card = top.handle();
+            if !top.face_down {
+                let zone = if top.card_kind(&self.card_data) == CardKind::DigiEgg {
+                    crate::determinize::beliefs::KnowledgeZone::Digitama
+                } else {
+                    crate::determinize::beliefs::KnowledgeZone::Deck
+                };
+                let known_position = match position {
+                    StackPosition::Top => Some(0),
+                    StackPosition::Bottom => Some(
+                        if zone == crate::determinize::beliefs::KnowledgeZone::Digitama {
+                            self.player(top_owner).digitama_deck.len()
+                        } else {
+                            self.player(top_owner).deck.len()
+                        },
+                    ),
+                    _ => None,
+                };
+                self.learn_belief_card(&top, zone, known_position);
+            }
             self.insert_card_into_deck(top_owner, top, position);
 
             // Sources below the top → each source's OWN owner's trash, all

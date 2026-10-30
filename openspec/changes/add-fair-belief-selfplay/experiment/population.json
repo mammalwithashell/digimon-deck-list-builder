@@ -1,0 +1,37 @@
+{
+  "schema": "belief-experiment-population-v1",
+  "source_sha256": "b425a517cd95fb202a0c847076fa0e0813e3db8ecb8cefa0751cdd3c8127bbfb",
+  "format": "standard",
+  "region": "ENG",
+  "restriction_policy": "repository snapshot; not a claim of live tournament legality",
+  "split_seed": 1729,
+  "input_lists": 20,
+  "format_policy_sha256": "72ec1cc0060fdf0bc14c6a68fa9747039d9e49a1605b5623965bbaaafb17b673",
+  "accepted_lists": 20,
+  "excluded": [],
+  "splits": {
+    "train": {
+      "unique_lists": 16,
+      "archetypes": [
+        "ST1 admitted-subset variants"
+      ],
+      "sha256": "f733b9745d373cb4b202ffc1ef902de0a9d2a57285779bf1af4145111ab8fc95"
+    },
+    "validation": {
+      "unique_lists": 2,
+      "archetypes": [
+        "ST1 admitted-subset variants"
+      ],
+      "sha256": "a942ea6f8b86a4376086b322d99d9d64faccef866b8c3df477d2f13adef7cbdf"
+    },
+    "test": {
+      "unique_lists": 2,
+      "archetypes": [
+        "ST1 admitted-subset variants"
+      ],
+      "sha256": "a4ffffe4548b18b0fd9bf915e6f36393e475492ae3217d1509290aef94386dc0"
+    }
+  },
+  "candidate_weighting": "one equal weight per distinct training list; duplicate source sightings add no mass",
+  "hash": "daba03792ea4bfa6b12b90d42d8b6a81a456d1c253b0a274757300c356c22bc6"
+}

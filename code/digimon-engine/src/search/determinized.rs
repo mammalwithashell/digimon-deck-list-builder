@@ -134,14 +134,27 @@ pub fn determinized_search(
 /// PIMC evaluation batching across independent worlds. Batch size one is the
 /// serial reference; IS-MCTS remains serial. World seeds, individual tree
 /// order and world-order aggregation do not depend on the batch size.
+/// Existing exact-list/open-decklist entry point, retained unchanged.
 pub fn determinized_search_batched(
+    registry: &CardRegistry, root: &Game, viewer: PlayerId,
+    evaluator: &mut dyn PolicyValueFn, config: &DeterminizedConfig,
+    evaluation_batch_size: usize,
+) -> SearchResult {
+    let canon = measure("canonicalize", || canonicalize_hidden(root, viewer));
+    determinized_search_sampled(registry, &canon, viewer, evaluator, config,
+        evaluation_batch_size, &mut |seed| Ok(sample_world(&canon, viewer, seed)))
+        .expect("open-decklist world sampling failed")
+}
+
+pub fn determinized_search_sampled(
     registry: &CardRegistry,
     root: &Game,
     viewer: PlayerId,
     evaluator: &mut dyn PolicyValueFn,
     config: &DeterminizedConfig,
     evaluation_batch_size: usize,
-) -> SearchResult {
+    sampler: &mut dyn FnMut(u64) -> Result<Game, String>,
+) -> Result<SearchResult, String> {
     let _profile = span("determinized_search_batched");
     assert!(
         evaluation_batch_size > 0,
@@ -154,13 +167,13 @@ pub fn determinized_search_batched(
     );
     assert!((viewer as usize) < 2, "viewer out of range");
     if root.game_over {
-        return SearchResult {
+        return Ok(SearchResult {
             root_plans: Vec::new(),
             root_visits: Vec::new(),
             root_q: Vec::new(),
             root_value: terminal_value(root, viewer),
             simulations_run: 0,
-        };
+        });
     }
     assert_eq!(
         decision_player(root),
@@ -169,17 +182,17 @@ pub fn determinized_search_batched(
          (an opponent-owned pending selection references their re-dealt hand)"
     );
 
-    let canon = measure("canonicalize", || canonicalize_hidden(root, viewer));
     match config.mode {
         DeterminizationMode::Pimc => pimc_search(
             registry,
-            &canon,
+            root,
             viewer,
             evaluator,
             config,
             evaluation_batch_size,
+            sampler,
         ),
-        DeterminizationMode::IsMcts => ismcts_search(registry, &canon, viewer, evaluator, config),
+        DeterminizationMode::IsMcts => ismcts_search(registry, root, viewer, evaluator, config, sampler),
     }
 }
 
@@ -192,7 +205,8 @@ fn pimc_search(
     evaluator: &mut dyn PolicyValueFn,
     config: &DeterminizedConfig,
     evaluation_batch_size: usize,
-) -> SearchResult {
+    sampler: &mut dyn FnMut(u64) -> Result<Game, String>,
+) -> Result<SearchResult, String> {
     // Respect the TOTAL simulation budget. A naive `(sims / worlds).max(1)`
     // per-world floor would overshoot (sims=1, worlds=8 → 8 sims), so clamp
     // the world count to the available budget instead; the integer-division
@@ -221,7 +235,7 @@ fn pimc_search(
         let mut configs = Vec::with_capacity(end - first_world);
         for world_idx in first_world..end {
             let world_seed = derive_seed(config.search.seed, STREAM_WORLD, world_idx as u64);
-            let world = sample_world(canon, viewer, world_seed);
+            let world = sampler(world_seed)?;
             check_root_surface(&world, viewer, &mut ref_legal, world_idx as u32);
             roots.push(world);
             configs.push(SearchConfig {
@@ -272,7 +286,7 @@ fn pimc_search(
             )
         })
         .collect();
-    SearchResult::from_plans(plans, (value_sum / worlds as f64) as f32, sims_total)
+    Ok(SearchResult::from_plans(plans, (value_sum / worlds as f64) as f32, sims_total))
 }
 
 struct IsEdge {
@@ -299,7 +313,8 @@ fn ismcts_search(
     viewer: PlayerId,
     evaluator: &mut dyn PolicyValueFn,
     config: &DeterminizedConfig,
-) -> SearchResult {
+    sampler: &mut dyn FnMut(u64) -> Result<Game, String>,
+) -> Result<SearchResult, String> {
     let search = &config.search;
     let mut noise_rng = StdRng::seed_from_u64(derive_seed(search.seed, STREAM_NOISE, 0));
     let mut arena: Vec<IsNode> = vec![IsNode::default()];
@@ -307,7 +322,7 @@ fn ismcts_search(
 
     for iteration in 0..search.simulations {
         let world_seed = derive_seed(search.seed, STREAM_WORLD, iteration as u64);
-        let mut world = sample_world(canon, viewer, world_seed);
+        let mut world = sampler(world_seed)?;
         check_root_surface(&world, viewer, &mut ref_legal, iteration);
 
         // ── Descend on THIS world ────────────────────────────────────
@@ -457,7 +472,7 @@ fn ismcts_search(
             )
         })
         .collect();
-    SearchResult::from_plans(
+    Ok(SearchResult::from_plans(
         plans,
         if total_visits > 0 {
             total_w / total_visits as f32
@@ -465,7 +480,7 @@ fn ismcts_search(
             0.
         },
         search.simulations,
-    )
+    ))
 }
 
 const STREAM_WORLD: u64 = 0xD1B54A32D192ED03;

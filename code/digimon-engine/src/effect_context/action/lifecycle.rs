@@ -514,6 +514,31 @@ impl<'a> EffectContext<'a> {
     /// share the same Digi-Egg rule for any egg in a returned digivolution
     /// stack; those live on a different (game.rs) path and are out of scope for
     /// this trash→deck fix.
+    pub(crate) fn move_public_card_to_deck(
+        &mut self,
+        card: crate::card_source::CardSource,
+        to_bottom: bool,
+    ) {
+        let zone = if card.card_kind(&self.game.card_data) == CardKind::DigiEgg {
+            crate::determinize::beliefs::KnowledgeZone::Digitama
+        } else {
+            crate::determinize::beliefs::KnowledgeZone::Deck
+        };
+        let position = if to_bottom {
+            Some(
+                if zone == crate::determinize::beliefs::KnowledgeZone::Digitama {
+                    self.game.player(card.owner).digitama_deck.len()
+                } else {
+                    self.game.player(card.owner).deck.len()
+                },
+            )
+        } else {
+            Some(0)
+        };
+        self.game.learn_belief_card(&card, zone, position);
+        self.move_card_to_deck(card, to_bottom);
+    }
+
     pub(crate) fn move_card_to_deck(
         &mut self,
         card: crate::card_source::CardSource,
@@ -541,7 +566,7 @@ impl<'a> EffectContext<'a> {
         let mut handles = Vec::with_capacity(drained.len());
         for card in drained {
             handles.push(card.handle());
-            self.move_card_to_deck(card, true);
+            self.move_public_card_to_deck(card, true);
         }
         handles
     }

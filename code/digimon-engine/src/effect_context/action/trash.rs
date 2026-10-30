@@ -164,6 +164,14 @@ impl<'a> EffectContext<'a> {
     pub fn trash_from_top(&mut self, player: PlayerId, count: u8) -> u8 {
         let mut trashed = 0;
         for _ in 0..count {
+            if !self.game.player(player).deck.is_empty() {
+                self.game.transfer_belief_position(
+                    player,
+                    crate::determinize::beliefs::KnowledgeZone::Deck,
+                    0,
+                    crate::determinize::beliefs::KnowledgeZone::Public,
+                );
+            }
             // Opaque-aware: opaque opponents materialize from RevealSource
             // tagged Mill; standard players pop from their ordered deck.
             let card = match self
@@ -231,6 +239,8 @@ impl<'a> EffectContext<'a> {
             return false;
         }
 
+        let Some(departing) = self.game.player(player).security.last().map(|c| c.handle()) else { return false; };
+        self.game.remember_belief_security_departure(player, departing.0, 0);
         let p = self.game.player_mut(player);
         if let Some(card) = p.security.pop() {
             p.face_up_security.remove(&card.card_index);
@@ -277,10 +287,13 @@ impl<'a> EffectContext<'a> {
             return false;
         }
 
-        let p = self.game.player_mut(player);
-        if p.security.is_empty() {
+        if self.game.player(player).security.is_empty() {
             return false;
         }
+        let from_top = self.game.player(player).security.len() - 1;
+        let departing = self.game.player(player).security[0].handle();
+        self.game.remember_belief_security_departure(player, departing.0, from_top);
+        let p = self.game.player_mut(player);
         let card = p.security.remove(0);
         p.face_up_security.remove(&card.card_index);
         self.game.fire_security_removed_observers(
@@ -337,10 +350,12 @@ impl<'a> EffectContext<'a> {
 
         // Re-find the card by handle — the replacement window may have mutated
         // the security stack.
-        let p = self.game.player_mut(player);
-        let Some(pos) = p.security.iter().position(|c| c.handle() == handle) else {
+        let Some(pos) = self.game.player(player).security.iter().position(|c| c.handle() == handle) else {
             return false;
         };
+        let from_top = self.game.player(player).security.len() - 1 - pos;
+        self.game.remember_belief_security_departure(player, handle.0, from_top);
+        let p = self.game.player_mut(player);
         let card = p.security.remove(pos);
         p.face_up_security.remove(&card.card_index);
         self.game.fire_security_removed_observers(

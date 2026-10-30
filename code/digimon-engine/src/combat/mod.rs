@@ -2059,6 +2059,7 @@ impl Game {
         ) {
             return;
         }
+        self.remember_belief_public_hand_departure(defender, h_idx);
         let card = self.player_mut(defender).hand.remove(h_idx);
         let turn = self.turn_count;
         self.player_mut(defender).battle_area[f_idx].digivolve(card, turn);
@@ -2071,7 +2072,7 @@ impl Game {
         // stack mutation and BEFORE the WhenDigivolving fan-out, mirroring
         // `effect_initiated_digivolve`. Empty deck: 8-1-2-10, modelled by
         // `draw()`. Exam EX7-059#effect#1.
-        self.player_mut(defender).draw();
+        let _ = self.draw_one_for_player(defender);
 
         let handle = PermanentHandle {
             player: defender,
@@ -2274,7 +2275,9 @@ impl Game {
         } else {
             (material_hand_index, result_hand_index, false)
         };
+        self.remember_belief_public_hand_departure(defender, first_idx);
         let first = self.player_mut(defender).hand.remove(first_idx);
+        self.remember_belief_public_hand_departure(defender, second_idx);
         let second = self.player_mut(defender).hand.remove(second_idx);
         let (result_card, material_card) = if first_is_result {
             (first, second)
@@ -3350,6 +3353,14 @@ impl Game {
                 }
             }
         }
+        if !self.player(defender).security.is_empty() {
+            self.transfer_belief_position(
+                defender,
+                crate::determinize::beliefs::KnowledgeZone::Security,
+                0,
+                crate::determinize::beliefs::KnowledgeZone::Public,
+            );
+        }
         let sec_card = match self.player_mut(defender).security.pop() {
             Some(c) => c,
             None => {
@@ -3362,6 +3373,11 @@ impl Game {
             }
         };
 
+        self.learn_belief_card(
+            &sec_card,
+            crate::determinize::beliefs::KnowledgeZone::Public,
+            None,
+        );
         // §2.5k: remove from face_up_security on actual reveal so a future
         // return-to-security effect doesn't resurrect a stale face-up entry.
         let was_face_up = self
@@ -3967,6 +3983,10 @@ impl Game {
             return;
         };
         let card_index = pending.card.card_index;
+        self.remember_belief_public_security_placement(
+            &pending.card,
+            crate::enums::StackPosition::Top,
+        );
         self.player_mut(defender).put_on_security_top(pending.card);
         if was_face_up {
             self.player_mut(defender)
@@ -4450,7 +4470,9 @@ impl Game {
     pub(crate) fn live_attack_target(&self) -> Option<AttackTarget> {
         match self.pending_attack.as_ref()?.effective_target {
             AttackTarget::Player(player) => Some(AttackTarget::Player(player)),
-            AttackTarget::Digimon(_) => self.live_attack_target_digimon().map(AttackTarget::Digimon),
+            AttackTarget::Digimon(_) => {
+                self.live_attack_target_digimon().map(AttackTarget::Digimon)
+            }
         }
     }
 
@@ -4644,7 +4666,10 @@ impl Game {
         // `[When Attacking]` is carrier-scoped ("when THIS Digimon attacks"):
         // only the attacker's own stack (top card + inherited sources), never
         // a battle-area-wide scan — other Digimon observe via OnAllyAttack.
-        self.enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(handle));
+        self.enqueue_triggered(
+            EffectTiming::WhenAttacking,
+            TriggerSource::Permanent(handle),
+        );
 
         let attacker_card = self
             .player(handle.player)

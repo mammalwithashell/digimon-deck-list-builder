@@ -70,6 +70,27 @@ impl Game {
             let card = top.handle();
             let owner = top.owner;
             let token = top.is_token;
+            let returning = if position.is_some() && include_sources {
+                p.card_sources
+                    .iter()
+                    .chain(std::iter::once(&top))
+                    .collect::<Vec<_>>()
+            } else {
+                vec![&top]
+            };
+            for card in returning.into_iter().filter(|c| !c.face_down) {
+                let zone = if card.card_kind(&self.card_data) == CardKind::DigiEgg {
+                    crate::determinize::beliefs::KnowledgeZone::Digitama
+                } else if position.is_some() {
+                    crate::determinize::beliefs::KnowledgeZone::Deck
+                } else {
+                    crate::determinize::beliefs::KnowledgeZone::Hand
+                };
+                if position.is_some() {
+                    self.shuffle_belief_knowledge(card.owner, zone);
+                }
+                self.learn_belief_card(card, zone, None);
+            }
             overflow.extend(p.card_sources.iter().cloned());
             overflow.push(top.clone());
             snapshot.cause = if position == Some(StackPosition::Bottom) {

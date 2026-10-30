@@ -1,0 +1,45 @@
+{
+  "schema": "fair-belief-protocol-v1",
+  "population_hash": "daba03792ea4bfa6b12b90d42d8b6a81a456d1c253b0a274757300c356c22bc6",
+  "prior_file_sha256": "d16a3572f2c5cb4c4a5f4d03db675126d414aab574acdf8ac1f237e34be04a96",
+  "seeds": [
+    11,
+    22,
+    33
+  ],
+  "budgets": {
+    "exploiter_steps": 2048,
+    "training_games_per_seed": 32,
+    "search_simulations": 32,
+    "worlds": 4,
+    "generations": 2
+  },
+  "confidence_method": "difference of 97.5% Wilson component intervals; nominal 95% pairwise coverage; checked per seed",
+  "scope": "full comparison within the first frozen admitted cohort; no cross-archetype claim; inconclusive evidence blocks promotion",
+  "panels": {
+    "heldout_policy": {
+      "direction": "higher",
+      "margin": 0.02,
+      "minimum_games_per_seed": 256,
+      "evaluation_mode": "policy_only"
+    },
+    "anchors": {
+      "direction": "higher",
+      "margin": -0.03,
+      "minimum_games_per_seed": 256,
+      "evaluation_mode": "policy_only"
+    },
+    "exploiter": {
+      "direction": "lower",
+      "margin": 0.03,
+      "minimum_games_per_seed": 256,
+      "evaluation_mode": "policy_only"
+    },
+    "heldout_search": {
+      "direction": "higher",
+      "margin": -0.03,
+      "minimum_games_per_seed": 256,
+      "evaluation_mode": "search_assisted"
+    }
+  }
+}

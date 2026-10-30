@@ -100,7 +100,7 @@ pub fn materialize(game: &Game, viewer: PlayerId, seed: u64) -> Game {
 /// hand (if `resample_hand`) → face-down security slots → deck (remaining,
 /// in shuffled order). Face-up security cards stay pinned at their slots.
 /// The digitama deck is re-shuffled in place (order-only uncertainty).
-fn redeal_hidden(world: &mut Game, pid: PlayerId, resample_hand: bool, security_inspected: bool, rng: &mut StdRng) {
+pub(super) fn redeal_hidden(world: &mut Game, pid: PlayerId, resample_hand: bool, security_inspected: bool, rng: &mut StdRng) {
     let p = &mut world.players[pid as usize];
     let face_up = p.face_up_security.clone();
 

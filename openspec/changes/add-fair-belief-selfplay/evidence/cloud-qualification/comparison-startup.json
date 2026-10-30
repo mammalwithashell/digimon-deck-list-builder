@@ -1,0 +1,123 @@
+{
+  "schema": "belief-comparison-startup-v1",
+  "scope": "functional startup only; pet lists overlap training; not held-out quality or promotion evidence",
+  "training_games": 8,
+  "evaluation_games": 36,
+  "failed_evaluation_games": 0,
+  "truncated_evaluation_games": 0,
+  "fresh_exploiters": [
+    {
+      "fresh": true,
+      "seed": 11,
+      "target_sha256": "df7e66316b3648d02c2337a62450ed760e1d52fad0c160849346cf0a454e2fd1",
+      "timesteps": 512,
+      "exploiter_configuration": {
+        "capacity": "match_target",
+        "n_steps": 512,
+        "batch_size": 512,
+        "n_epochs": 4,
+        "learning_rate": 0.0001
+      },
+      "information_regime": "closed_decklist"
+    },
+    {
+      "fresh": true,
+      "seed": 11,
+      "target_sha256": "ad21ce590fb18524d00dac93d6f12a668361e55192a6d81810702d324e8113a1",
+      "timesteps": 512,
+      "exploiter_configuration": {
+        "capacity": "match_target",
+        "n_steps": 512,
+        "batch_size": 512,
+        "n_epochs": 4,
+        "learning_rate": 0.0001
+      },
+      "information_regime": "closed_decklist"
+    }
+  ],
+  "protocol_sha256": "059b248e40e0d6985d75d40b166211800673646e39b20416ed9664d0e2642518",
+  "results_sha256": "cfeaa99de8e12232acf4a3cf15d7f8e86021ecd544fac554180f6609a3ce9ff5",
+  "identity": {
+    "schema": "belief-comparison-v1",
+    "assets": {
+      "protocol": "059b248e40e0d6985d75d40b166211800673646e39b20416ed9664d0e2642518",
+      "population": "dc4ae4c10b7b6f5a1b38b25cfb31db1663b6c4c4c85d8d83b9e1169e0065d03b",
+      "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+      "train": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+      "validation": "9ec6bd0f50bcbcf7021f1f3dff47ff34f8ce11aea34bef3f73ae3f553cca3839",
+      "test": "84a63eb62047e29ddfa6e446aa418e9d7907a96062d60824a8e45f1822190fb1",
+      "engine": "2793f6366748c238653e5c973d64597f0171a993c2fb2158fed32c66a23521d6",
+      "seed_model": "4836d024b87806400287c8c09c0486243df0a5dc8d458ef73e5aef76e5517f1f",
+      "binding": "48d397719416ff81104c6733f42ac26a8b814a0395cc9ebf9bff47a932db09e9",
+      "runner": "fa1a5fb12fc5221c9eebe5fa4592bee1d2b0db330e8dfcd1ec780ae17e51ba05",
+      "trainer": "79a1a3b20a7ef6910fdca7b6509bfbf76dc0d11dbb7d0fb1ba07ca793d63fd71",
+      "generation_runner": "889c4b9544e92146be8442ad74300b5ffae5d1a377265c2e37eb8e687060c89b",
+      "mechanics": "ea053dbc2ffdae82154421049e019f726ec6a3e737529f987a1353d2800cbd0b",
+      "admission": "f7c63e78e8e2d8458b9ff8fd7814cf2536f2aa405988396f732c357ab0b8b336",
+      "native_library:digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4",
+      "D:\\cargo-target-wt\\closed-deck-belief-training\\ex13-seed-cp12-20261029\\model.onnx": "18bdb420b92220b7dee580bd15dfc8f09cbd486cd7c4468ecd56dc10d4e8921c",
+      "D:\\cargo-target-wt\\closed-deck-belief-training\\ex13-seed-cp12-20261029\\model.onnx.meta.json": "e4ef928ef785ffe779de9d26bb2cfd1457becdfb1afd84425845ab0c6556860a",
+      "code/digimon_gym/agents/belief_contract.py": "b50d73a28a8aee50830af9fe271788f6d238dbede9a09b47bff3dc7c27cf91cc",
+      "code/digimon_gym/agents/belief_evaluation.py": "2e3457693ea34820be627e901ea529600d92ba4ec33a899de5b4a45055797752",
+      "code/tools/export_onnx.py": "cbb17ec3e2c09d8fa820b06139a2fe443fea6528c8411b0a9cd1e4ee9dd04b6e",
+      "code/tools/selfplay_scheduler.py": "bd797bad8349495f7e29ce97f60c8541dfe28cf6b6ed85d678425434fc336d3e",
+      "code/tools/belief_policy_panel.py": "c5db092b5173e5ca2b8c017066df5730538f79e03202d09bf27e796aec5efab7",
+      "data/cards.json": "8429575efbf63dc47fc244755bc4320333f355db4acff7878efec51646c06a98",
+      "data/deck_formats.json": "72ec1cc0060fdf0bc14c6a68fa9747039d9e49a1605b5623965bbaaafb17b673",
+      "binding_native:digimon_engine.digimon_engine": "2086cacaea52c1ed5a396695592b1fcbbdb755f6a1442afca6b9e4a82d04a4f9",
+      "binding_fingerprint_code": "475d9437d53e287ce8bbb89958797fd208ba1f2187953027b4e6a64e54a978f0"
+    }
+  },
+  "promotion": {
+    "eligible": false,
+    "failures": [
+      "heldout_policy: criterion failed or inconclusive",
+      "anchors: criterion failed or inconclusive",
+      "exploiter: criterion failed or inconclusive",
+      "heldout_search: criterion failed or inconclusive"
+    ],
+    "panels": {
+      "heldout_policy": [
+        {
+          "seed": 11,
+          "delta_95_conservative": [
+            -0.7035883938491772,
+            0.7035883938491772
+          ],
+          "passed": false
+        }
+      ],
+      "anchors": [
+        {
+          "seed": 11,
+          "delta_95_conservative": [
+            -0.5193431954683452,
+            0.740977196439174
+          ],
+          "passed": false
+        }
+      ],
+      "exploiter": [
+        {
+          "seed": 11,
+          "delta_95_conservative": [
+            -0.556731998058342,
+            0.556731998058342
+          ],
+          "passed": false
+        }
+      ],
+      "heldout_search": [
+        {
+          "seed": 11,
+          "delta_95_conservative": [
+            -0.7035883938491772,
+            0.7035883938491772
+          ],
+          "passed": false
+        }
+      ]
+    },
+    "exploitability_scope": "fresh finite-budget best-response estimate; no equilibrium certificate"
+  }
+}

@@ -173,6 +173,8 @@ impl Game {
         let token_registry = crate::token_registry::build_registry();
 
         let mut game = Self {
+            belief_knowledge: None,
+            belief_knowledge_error: None,
             rules,
             effects_cache: super::EffectsCache::default(),
             players,
@@ -377,6 +379,8 @@ impl Game {
     /// `card_data`, `alt_path_registry`, `effect_registry`,
     /// `formula_extensions`, `token_registry`, `logger`.
     pub fn reset_for_replay(&mut self) {
+        self.belief_knowledge = None;
+        self.belief_knowledge_error = None;
         let player_count = self.rules.player_count as usize;
         // Fresh players — zones are re-laid by the replay relay step.
         self.players = (0..player_count)
@@ -704,7 +708,11 @@ impl Game {
             return Err(format!("invalid player id {}", pid));
         }
         if self.players[pid as usize].opaque_deck_state.is_none() {
-            // Standard path.
+            // Track only entitled top-position facts; never inspect the draw ID.
+            if !self.players[pid as usize].deck.is_empty() {
+                self.transfer_belief_position(pid, crate::determinize::beliefs::KnowledgeZone::Deck,
+                    0, crate::determinize::beliefs::KnowledgeZone::Hand);
+            }
             return Ok(self.players[pid as usize].draw());
         }
         self.reveal_into_hand(pid, crate::opaque_deck::RevealKind::Draw)

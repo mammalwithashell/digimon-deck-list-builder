@@ -359,3 +359,11 @@ Resolution order inside the sidecar (`resolve_model_path` in
 - `tests/engine/test_model_catalog_client.py` — pure-logic coverage of
   `merge_manifest`, `resolve_model`, sha256 integrity, and cached
   version deletion. Mocks `httpx.stream` so no network needed.
+
+
+## Closed-decklist belief training
+
+See [Fair belief training](FAIR_BELIEF_TRAINING.md) for regime selection, frozen
+priors, model/shard provenance, independent comparisons, resume/rollback and
+current observation/continuation limits. Completed search generations are
+resumable candidates; promotion requires the registered independent gates.

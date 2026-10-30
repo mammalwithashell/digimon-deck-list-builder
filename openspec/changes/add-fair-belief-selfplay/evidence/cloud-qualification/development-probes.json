@@ -1,0 +1,1486 @@
+{
+  "scope": "development probes, not model-strength evidence; inputs/order/seed assignments are preserved per report; none of these failures is silently replaced",
+  "reports": [
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-context-probes-seed1\\report.json",
+      "sha256": "61c4723d111ad86cc5248e003c4e0546e4135061f04afc479f1e867f703ec374",
+      "identity": {
+        "engine": "ad57c1ee3c6793cade0a57a3f3c5b7918e0505cbb25fe425bf01886cf432ee8c",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 3,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20261029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-context-probes-seed2\\report.json",
+      "sha256": "3d612366f0ba8a2e46d2b6f2356aa524d7618557682f4506d9999e6ad789b755",
+      "identity": {
+        "engine": "ad57c1ee3c6793cade0a57a3f3c5b7918e0505cbb25fe425bf01886cf432ee8c",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 3,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-context-probes-seed3\\report.json",
+      "sha256": "9e74f51325ac25a24ed5e6401df96ee3b6b0f344d3686a83444c6d728bd7b4fc",
+      "identity": {
+        "engine": "ad57c1ee3c6793cade0a57a3f3c5b7918e0505cbb25fe425bf01886cf432ee8c",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 3,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20263029,
+        "decision_cap": 1200
+      },
+      "completed": 20,
+      "failed": 1,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "Chronomon:sha256:28288911b84d2189223fac3d2d58033ae5a8a27892f67fc1d88d1ebc7e1bfa45:slot1",
+          "deck_id": null,
+          "returncode": 1,
+          "seconds": 41.19313959986903,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 326 closed-list search: conflicting own concealed role positions"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-fix-20261029-v2\\stage1-probes\\report.json",
+      "sha256": "5cf17dca30b07f03e0bd11dcf4ba1b81f4884196911cb6ced55e8f65421497c1",
+      "identity": {
+        "engine": "02581e9ce153af2988b23bd63ef992a8e4c316f4a3980bfb91dd0dd17bcf0069",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "8921ec78514ac3fd1fd6ed1872f5f7742a305acd20cc01f2d4a44e676f24eab9",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20261029,
+        "decision_cap": 1200
+      },
+      "completed": 4,
+      "failed": 17,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 1,
+          "archetype": "Chronicle",
+          "deck_id": "sha256:94e9ba36ce836627f61c5d4a3a836a61521087fd840e7d84cacff247752f57ed",
+          "returncode": 1,
+          "seconds": 5.618093400029466,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 43 closed-list search: closed-list continuation requires audit: DnaDigivolveFirstMaterial"
+          ]
+        },
+        {
+          "index": 2,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343",
+          "returncode": 1,
+          "seconds": 7.544433200033382,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 86 closed-list search: closed-list continuation requires audit: RunTail (source=true, bindings=false, outer=true, context=true, selection=Trash { of_player: 1 })"
+          ]
+        },
+        {
+          "index": 3,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:28288911b84d2189223fac3d2d58033ae5a8a27892f67fc1d88d1ebc7e1bfa45",
+          "returncode": 1,
+          "seconds": 6.550084399990737,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 59 closed-list search: closed-list continuation requires audit: OuterOptionalTrigger"
+          ]
+        },
+        {
+          "index": 4,
+          "archetype": "Examon",
+          "deck_id": "sha256:5ed9b0f13af8340b8ca4be78001d88100b29422939fc96bffa2fa61cf01b43c9",
+          "returncode": 1,
+          "seconds": 7.101689700037241,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 36 closed-list search: closed-list continuation requires audit: OptionalReplacement"
+          ]
+        },
+        {
+          "index": 5,
+          "archetype": "Examon",
+          "deck_id": "sha256:d3dba1f3956ffdffc3f3165bbdf1773d26a893a6991fdecc666425c2ab699588",
+          "returncode": 1,
+          "seconds": 14.52018089988269,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 177 closed-list search: closed-list continuation requires audit: SourceMultiStep"
+          ]
+        },
+        {
+          "index": 6,
+          "archetype": "Glowing Dawn",
+          "deck_id": "sha256:e03dbda2f8105ac6d3131c54a842e3000ff43fb52632910d242047399f34032d",
+          "returncode": 1,
+          "seconds": 4.562722200062126,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 36 closed-list search: closed-list continuation requires audit: ArtsDigivolveSelection"
+          ]
+        },
+        {
+          "index": 7,
+          "archetype": "Glowing Dawn",
+          "deck_id": "sha256:6138b0f6817397f411eb4ee63bdb8621734654abc1985729222702abe51db9aa",
+          "returncode": 1,
+          "seconds": 3.0634423000738025,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 25 closed-list search: closed-list continuation requires audit: ArtsDigivolveSelection"
+          ]
+        },
+        {
+          "index": 10,
+          "archetype": "SW",
+          "deck_id": "sha256:4fd3d5327ae45a5bcf7841604b8b62f8d981be6011e407c342a9962d68b4dcd4",
+          "returncode": 1,
+          "seconds": 4.450191699899733,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 46 closed-list search: closed-list continuation requires audit: ReplacementBody"
+          ]
+        },
+        {
+          "index": 11,
+          "archetype": "ShineGreymon Data Squad",
+          "deck_id": "sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6",
+          "returncode": 1,
+          "seconds": 5.411698000039905,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 53 closed-list search: known field source absent from hypothesis"
+          ]
+        },
+        {
+          "index": 12,
+          "archetype": "TS Jupitermon",
+          "deck_id": "sha256:2a78b2fe4030bb4baed1b258d645f9af3a489d68201159ae881028b870e6aa0f",
+          "returncode": 1,
+          "seconds": 7.20579420006834,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 86 closed-list search: closed-list continuation requires audit: ArtsDigivolveSelection"
+          ]
+        },
+        {
+          "index": 14,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:4fbf648227d062f21d77520718dd434a401c42d89a0996d4680536c04af9a48d",
+          "returncode": 1,
+          "seconds": 5.577505299821496,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 89 closed-list search: closed-list continuation requires audit: UseOptionFromHandStep"
+          ]
+        },
+        {
+          "index": 15,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:12af572f1378c83a9010a30eb5bbfe815fe1a77f7e0bfab644fb8fcab30bf55c",
+          "returncode": 1,
+          "seconds": 9.715588300023228,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 92 closed-list search: closed-list continuation requires audit: PlayFromHandCostReductionPrompt"
+          ]
+        },
+        {
+          "index": 16,
+          "archetype": "Three Musketeers",
+          "deck_id": "sha256:49f05630a0a7034965984a1719f1a4264667603c5af2a7d961a655dcdb6322d7",
+          "returncode": 1,
+          "seconds": 6.297522900160402,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 106 closed-list search: closed-list continuation requires audit: UseOptionFromTrashStep"
+          ]
+        },
+        {
+          "index": 17,
+          "archetype": "Three Musketeers",
+          "deck_id": "sha256:02cff1c487b31b11ec6ceaed86d8161385b240afcdcd14daaffbddf908b5d677",
+          "returncode": 1,
+          "seconds": 10.7399075999856,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 107 closed-list search: closed-list continuation requires audit: UseOptionFromTrashStep"
+          ]
+        },
+        {
+          "index": 18,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:082033c391d87144638392d6be890a6e3d94793f92f0a9dc5e8749c1d947e965",
+          "returncode": 1,
+          "seconds": 6.743482199963182,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 33 closed-list search: closed-list continuation requires audit: UseOptionFromHandStep"
+          ]
+        },
+        {
+          "index": 19,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd",
+          "returncode": 1,
+          "seconds": 4.454736300045624,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 21 closed-list search: closed-list continuation requires audit: UseOptionFromHandStep"
+          ]
+        },
+        {
+          "index": 20,
+          "archetype": "Virus Busters",
+          "deck_id": "sha256:c27a1321744c8c605b38ffdd8d2213c6b554b80e308c4b67bf8293343d18c4b1",
+          "returncode": 1,
+          "seconds": 3.9839477001223713,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 25 closed-list search: closed-list continuation requires audit: SourceMultiStep"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-fix-20261029-v2\\stage2-probes\\report.json",
+      "sha256": "4e7f7654e1ec6c91a0edbcc50b6303473ddd4090ff7f14d8355e3a0f5da944a0",
+      "identity": {
+        "engine": "16d1640d8a1e725e5c5b97a75cdde4fa7a96a9feddd5885094dd902c23097d57",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "8921ec78514ac3fd1fd6ed1872f5f7742a305acd20cc01f2d4a44e676f24eab9",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20261029,
+        "decision_cap": 1200
+      },
+      "completed": 10,
+      "failed": 11,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343",
+          "returncode": 1,
+          "seconds": 5.341158700175583,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 86 closed-list search: closed-list continuation requires audit: RunTail (source=true, bindings=false, outer=true, context=true, selection=Trash { of_player: 1 })"
+          ]
+        },
+        {
+          "index": 3,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:28288911b84d2189223fac3d2d58033ae5a8a27892f67fc1d88d1ebc7e1bfa45",
+          "returncode": 1,
+          "seconds": 4.895944999996573,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 59 closed-list search: closed-list continuation requires audit: OuterOptionalTrigger"
+          ]
+        },
+        {
+          "index": 6,
+          "archetype": "Glowing Dawn",
+          "deck_id": "sha256:e03dbda2f8105ac6d3131c54a842e3000ff43fb52632910d242047399f34032d",
+          "returncode": 1,
+          "seconds": 8.619820200139657,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 124 closed-list search: closed-list continuation requires audit: InteractiveOptionUseCostReductionPrompt"
+          ]
+        },
+        {
+          "index": 7,
+          "archetype": "Glowing Dawn",
+          "deck_id": "sha256:6138b0f6817397f411eb4ee63bdb8621734654abc1985729222702abe51db9aa",
+          "returncode": 1,
+          "seconds": 2.5156613998115063,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 48 closed-list search: closed-list continuation requires audit: InteractiveOptionUseCostReductionPrompt"
+          ]
+        },
+        {
+          "index": 10,
+          "archetype": "SW",
+          "deck_id": "sha256:4fd3d5327ae45a5bcf7841604b8b62f8d981be6011e407c342a9962d68b4dcd4",
+          "returncode": 1,
+          "seconds": 4.000195600092411,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 70 closed-list search: closed-list continuation requires audit: DigiXrosMaterialSelection"
+          ]
+        },
+        {
+          "index": 11,
+          "archetype": "ShineGreymon Data Squad",
+          "deck_id": "sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6",
+          "returncode": 1,
+          "seconds": 16.72253489983268,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 197 closed-list search: closed-list continuation requires audit: AllianceSelection"
+          ]
+        },
+        {
+          "index": 12,
+          "archetype": "TS Jupitermon",
+          "deck_id": "sha256:2a78b2fe4030bb4baed1b258d645f9af3a489d68201159ae881028b870e6aa0f",
+          "returncode": 1,
+          "seconds": 7.285003000171855,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 147 closed-list search: closed-list continuation requires audit: KeywordAscensionChoice"
+          ]
+        },
+        {
+          "index": 14,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:4fbf648227d062f21d77520718dd434a401c42d89a0996d4680536c04af9a48d",
+          "returncode": 1,
+          "seconds": 21.593372900038958,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 234 closed-list search: closed-list continuation requires audit: AllianceSelection"
+          ]
+        },
+        {
+          "index": 15,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:12af572f1378c83a9010a30eb5bbfe815fe1a77f7e0bfab644fb8fcab30bf55c",
+          "returncode": 1,
+          "seconds": 8.502567099872977,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 109 closed-list search: closed-list continuation requires audit: KeywordAscensionChoice"
+          ]
+        },
+        {
+          "index": 18,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:082033c391d87144638392d6be890a6e3d94793f92f0a9dc5e8749c1d947e965",
+          "returncode": 1,
+          "seconds": 7.023789400001988,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 51 closed-list search: closed-list continuation requires audit: KeywordAscensionChoice"
+          ]
+        },
+        {
+          "index": 19,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd",
+          "returncode": 1,
+          "seconds": 16.185621100012213,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 167 closed-list search: closed-list continuation requires audit: RunTail (source=true, bindings=false, outer=true, context=true, selection=FieldPermanent { of_player: 1, post: None })"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-fix-20261029-v2\\stage3-probes\\report.json",
+      "sha256": "1fce3932c02da603b24a669b352bcce5aa5e1db568c016d09878471f124a6cf9",
+      "identity": {
+        "engine": "e64717dc554265dbf07ec2d574b4d105cf18097c33ff5a899a282236a7d3b5f6",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "8921ec78514ac3fd1fd6ed1872f5f7742a305acd20cc01f2d4a44e676f24eab9",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20261029,
+        "decision_cap": 1200
+      },
+      "completed": 16,
+      "failed": 5,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 3,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:28288911b84d2189223fac3d2d58033ae5a8a27892f67fc1d88d1ebc7e1bfa45",
+          "returncode": 1,
+          "seconds": 3.874733099946752,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 59 closed-list search: closed-list continuation requires audit: OuterOptionalTrigger"
+          ]
+        },
+        {
+          "index": 12,
+          "archetype": "TS Jupitermon",
+          "deck_id": "sha256:2a78b2fe4030bb4baed1b258d645f9af3a489d68201159ae881028b870e6aa0f",
+          "returncode": 1,
+          "seconds": 8.70784950000234,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 182 closed-list search: conflicting own inspection positions"
+          ]
+        },
+        {
+          "index": 14,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:4fbf648227d062f21d77520718dd434a401c42d89a0996d4680536c04af9a48d",
+          "returncode": 1,
+          "seconds": 9.88048529997468,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 158 closed-list search: conflicting own inspection positions"
+          ]
+        },
+        {
+          "index": 15,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:12af572f1378c83a9010a30eb5bbfe815fe1a77f7e0bfab644fb8fcab30bf55c",
+          "returncode": 1,
+          "seconds": 5.564407600089908,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 98 closed-list search: own known position exceeds zone"
+          ]
+        },
+        {
+          "index": 18,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:082033c391d87144638392d6be890a6e3d94793f92f0a9dc5e8749c1d947e965",
+          "returncode": 1,
+          "seconds": 12.448496100027114,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 226 closed-list search: conflicting own inspection positions"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-fix-20261029-v2\\stage4-extra-seed\\report.json",
+      "sha256": "4408822a9edabcee0b5b2489421bd9a85ffd10f2e3bcd235e3ae0b0ee049ee37",
+      "identity": {
+        "engine": "e37bcebdf171a7c0a28e3ebd5937bfdf847df814972e292d66ff5574a48bac4a",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "8921ec78514ac3fd1fd6ed1872f5f7742a305acd20cc01f2d4a44e676f24eab9",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 18,
+      "failed": 3,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343",
+          "returncode": 1,
+          "seconds": 2.6275842001195997,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 55 closed-list search: closed-list continuation requires audit: RunTail (source=true, bindings=true, outer=true, context=false, selection=Hand { of_player: 1 })"
+          ]
+        },
+        {
+          "index": 5,
+          "archetype": "Examon",
+          "deck_id": "sha256:d3dba1f3956ffdffc3f3165bbdf1773d26a893a6991fdecc666425c2ab699588",
+          "returncode": 1,
+          "seconds": 16.05770010012202,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 229 closed-list search: closed-list continuation requires audit: DelayFieldDnaSelection"
+          ]
+        },
+        {
+          "index": 11,
+          "archetype": "ShineGreymon Data Squad",
+          "deck_id": "sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6",
+          "returncode": 1,
+          "seconds": 7.173489299835637,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 77 closed-list search: closed-list continuation requires audit: PlayOrUseDualChoice"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-fix-20261029-v2\\stage4-probes\\report.json",
+      "sha256": "0998f5c59aaa4408567e351d4c001367d67913d5dbf217f6c3d47fed34ade395",
+      "identity": {
+        "engine": "e37bcebdf171a7c0a28e3ebd5937bfdf847df814972e292d66ff5574a48bac4a",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "8921ec78514ac3fd1fd6ed1872f5f7742a305acd20cc01f2d4a44e676f24eab9",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20261029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-fix-20261029-v2\\stage5-probes\\report.json",
+      "sha256": "455a366710a0b9be5563b05cbaee4cf74c8a38f0feba23951bf1a5f2fa28d96f",
+      "identity": {
+        "engine": "507e3d26efd2f2081d672532602c226cfe6fc8290fc736e4ac802547a7aac2da",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "8921ec78514ac3fd1fd6ed1872f5f7742a305acd20cc01f2d4a44e676f24eab9",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 19,
+      "failed": 2,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343",
+          "returncode": 1,
+          "seconds": 4.951536300126463,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 55 closed-list search: closed-list continuation requires audit: RunTail (source=true, bindings=true, outer=true, context=false, selection=Hand { of_player: 1 }, context_detail=Some(TriggerContext { subject: Some(Card { card: CardHandle(69), zone: Security }), target_permanent: Some(PermanentHandle { player: 1, index: 2 }), target_card: Some(CardHandle(90)), event_permanent: None, event_permanent_identity: None, event_card: Some(CardHandle(69)), event_source_card: None, event_host_card: None, event_host_permanent: None, affected_player: Some(1), attack_target_change: None, source_player: Some(1), cause: Some(OwnEffect), source_effect: Some(EffectAttribution { controller: 1, source_card: Some(CardHandle(55)), source_permanent: None }), selected_results: [], moved_card_sets: [MovedCardSet { cards: [CardHandle(69)], from: Some(Security), to: None }], effect_initiated: false, dna_origin: false, deleted_object: None, old_attack_target: None, new_attack_target: None, provenance_token: None, was_security_skill: false, option_last_field_state: None, battle_winner: None, battle_deleters: [], battle_opponent_card: None, discard_hand_player: None, discard_cause_controller: None, event_cause_effect: None }))"
+          ]
+        },
+        {
+          "index": 11,
+          "archetype": "ShineGreymon Data Squad",
+          "deck_id": "sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6",
+          "returncode": 1,
+          "seconds": 16.629618600010872,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 248 closed-list search: closed-list continuation requires audit: DelayBodyAfterCost"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-fix-20261029-v2\\stage6-probes\\report.json",
+      "sha256": "83b4a58a59fc99dd13f7a7da1bd84b9ab563e80ea4f0efeaafdd13d9f8baf763",
+      "identity": {
+        "engine": "5e437f3c5af4df3187aacf6323f7cd5dc15b4cafb01ba179b543d5bab94f5f4e",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "8921ec78514ac3fd1fd6ed1872f5f7742a305acd20cc01f2d4a44e676f24eab9",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 20,
+      "failed": 1,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343",
+          "returncode": 1,
+          "seconds": 3.630540099926293,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 55 closed-list search: closed-list continuation requires audit: RunTail (source=true, bindings=true, outer=true, context=false, selection=Hand { of_player: 1 }, missing=[(CardHandle(69), Some((1, \"deck\", 0)))], context_detail=Some(TriggerContext { subject: Some(Card { card: CardHandle(69), zone: Security }), target_permanent: Some(PermanentHandle { player: 1, index: 2 }), target_card: Some(CardHandle(90)), event_permanent: None, event_permanent_identity: None, event_card: Some(CardHandle(69)), event_source_card: None, event_host_card: None, event_host_permanent: None, affected_player: Some(1), attack_target_change: None, source_player: Some(1), cause: Some(OwnEffect), source_effect: Some(EffectAttribution { controller: 1, source_card: Some(CardHandle(55)), source_permanent: None }), selected_results: [], moved_card_sets: [MovedCardSet { cards: [CardHandle(69)], from: Some(Security), to: None }], effect_initiated: false, dna_origin: false, deleted_object: None, old_attack_target: None, new_attack_target: None, provenance_token: None, was_security_skill: false, option_last_field_state: None, battle_winner: None, battle_deleters: [], battle_opponent_card: None, discard_hand_player: None, discard_cause_controller: None, event_cause_effect: None }))"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-fix-20261029-v2\\stage7-probes\\report.json",
+      "sha256": "d467b8d35423d68968e02ce51aa6f015d83ca253efb90b88be4ea804db4b4eb4",
+      "identity": {
+        "engine": "88bdbdb8351f67cb08a1cd771ffc38e46ba0a89777747f028ec7f0526b677142",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "8921ec78514ac3fd1fd6ed1872f5f7742a305acd20cc01f2d4a44e676f24eab9",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 18,
+      "failed": 3,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343",
+          "returncode": 1,
+          "seconds": 11.12553000007756,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 188 closed-list search: conflicting own concealed role positions"
+          ]
+        },
+        {
+          "index": 11,
+          "archetype": "ShineGreymon Data Squad",
+          "deck_id": "sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6",
+          "returncode": 1,
+          "seconds": 6.067225800128654,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 133 closed-list search: closed-list effect queue refers to concealed cards"
+          ]
+        },
+        {
+          "index": 12,
+          "archetype": "TS Jupitermon",
+          "deck_id": "sha256:2a78b2fe4030bb4baed1b258d645f9af3a489d68201159ae881028b870e6aa0f",
+          "returncode": 1,
+          "seconds": 1.5783468999434263,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 28 closed-list search: closed-list effect queue refers to concealed cards"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-fix-20261029-v2\\stage8-probes\\report.json",
+      "sha256": "375bb081cecb298dcd6a5accdf6cae01b6f3c706dd4dcd463151bea19b12514a",
+      "identity": {
+        "engine": "56a1c5f4c38ecd498552e5716a8480980c4f02703ea1537819c962440a60a269",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "8921ec78514ac3fd1fd6ed1872f5f7742a305acd20cc01f2d4a44e676f24eab9",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 17,
+      "failed": 4,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343",
+          "returncode": 1,
+          "seconds": 13.769255500053987,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 200 closed-list search: closed-list continuation requires audit: RunTail (source=false, bindings=true, outer=true, context=false, selection=Hand { of_player: 1 }, missing=[(CardHandle(87), Some((1, \"security\", 0)))], context_detail=Some(TriggerContext { subject: None, target_permanent: Some(PermanentHandle { player: 1, index: 7 }), target_card: Some(CardHandle(87)), event_permanent: None, event_permanent_identity: None, event_card: None, event_source_card: None, event_host_card: None, event_host_permanent: None, affected_player: None, attack_target_change: None, source_player: Some(1), cause: None, source_effect: None, selected_results: [], moved_card_sets: [], effect_initiated: false, dna_origin: false, deleted_object: None, old_attack_target: None, new_attack_target: None, provenance_token: None, was_security_skill: false, option_last_field_state: None, battle_winner: None, battle_deleters: [], battle_opponent_card: None, discard_hand_player: None, discard_cause_controller: None, event_cause_effect: None }))"
+          ]
+        },
+        {
+          "index": 11,
+          "archetype": "ShineGreymon Data Squad",
+          "deck_id": "sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6",
+          "returncode": 1,
+          "seconds": 7.559023699956015,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 133 closed-list search: closed-list effect queue refers to concealed cards: [(\"BT26-091\", true, false, Some([])), (\"BT26-091\", true, false, Some([]))]"
+          ]
+        },
+        {
+          "index": 12,
+          "archetype": "TS Jupitermon",
+          "deck_id": "sha256:2a78b2fe4030bb4baed1b258d645f9af3a489d68201159ae881028b870e6aa0f",
+          "returncode": 1,
+          "seconds": 1.9712604999076575,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 28 closed-list search: closed-list effect queue refers to concealed cards: [(\"BT24-084\", true, false, Some([CardHandle(102)]))]"
+          ]
+        },
+        {
+          "index": 20,
+          "archetype": "Virus Busters",
+          "deck_id": "sha256:c27a1321744c8c605b38ffdd8d2213c6b554b80e308c4b67bf8293343d18c4b1",
+          "returncode": 1,
+          "seconds": 11.874616399873048,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 122 closed-list search: conflicting concealed role positions"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-ex13-fix-20261029-v2\\stage9-probes\\report.json",
+      "sha256": "ad2e61de3af55b84cf044c0f3e613f312dce288d886f9647a350ab63eb183f5a",
+      "identity": {
+        "engine": "662d6c142a2520b06f71b425432d2cae29be3b2d484f14834fb4a4b5a79086b2",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "native_libraries": {
+          "digimon_engine.dll": "2d986381840d9595f51f39107b413dd60a1ae51dda49de57183a859f746f28ae"
+        },
+        "workers": 4,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-expanded-probes-pet_regression\\report.json",
+      "sha256": "8c12cc296bf88edc1e245a4c4e41cfe137f5cb4bb32cedfab742515dd9a2b990",
+      "identity": {
+        "engine": "b59ef47098ed8fb9411c49179ab912efe5f00d9b7510931e5a98be657d3af432",
+        "decks": "84a63eb62047e29ddfa6e446aa418e9d7907a96062d60824a8e45f1822190fb1",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20264029,
+        "decision_cap": 1200
+      },
+      "completed": 4,
+      "failed": 1,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "SW",
+          "deck_id": "sha256:4fd3d5327ae45a5bcf7841604b8b62f8d981be6011e407c342a9962d68b4dcd4",
+          "returncode": 1,
+          "seconds": 6.970984500134364,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 157 closed-list search: closed-list continuation requires audit: OuterOptionalTrigger (source=true, outer=true, card=EX12-019, source_handle=CardHandle(36), controller=0)"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-expanded-probes-seed1\\report.json",
+      "sha256": "ada2f123aff0a57a7777e8c59a3ecf16b9ce39433d30d4054e7f4f6215b538b3",
+      "identity": {
+        "engine": "b59ef47098ed8fb9411c49179ab912efe5f00d9b7510931e5a98be657d3af432",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20261029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-expanded-probes-seed2\\report.json",
+      "sha256": "0ea877c8c586a7c66c8381b78d87ec21c9f6e794cd78f56dd0d0386121b67c3e",
+      "identity": {
+        "engine": "b59ef47098ed8fb9411c49179ab912efe5f00d9b7510931e5a98be657d3af432",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-expanded-probes-seed3\\report.json",
+      "sha256": "b9edc93490866b9ffb8a19f9952989811db3ed6c548b6ba0725f0aea70b5d13b",
+      "identity": {
+        "engine": "b59ef47098ed8fb9411c49179ab912efe5f00d9b7510931e5a98be657d3af432",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20263029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-expanded-probes-test\\report.json",
+      "sha256": "4c26c5c31196690bbf35f50a7d02faf20564dcfd6bb9b1ff5aafe0b1de889f4d",
+      "identity": {
+        "engine": "b59ef47098ed8fb9411c49179ab912efe5f00d9b7510931e5a98be657d3af432",
+        "decks": "427ffc8f23f4cade3e2ef66eb00b646f88c720187cbcd101118b46582685706a",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20264029,
+        "decision_cap": 1200
+      },
+      "completed": 22,
+      "failed": 1,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 9,
+          "archetype": "SW",
+          "deck_id": "sha256:05de5422ae9d8edeb78f2f69075a47a209372b1b746bb73773a21f68dedbb208",
+          "returncode": 1,
+          "seconds": 6.8359480001963675,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 114 closed-list search: closed-list effect queue refers to concealed cards: [(\"EX12-019\", true, false, Some([(CardHandle(80), Some((1, \"hand\", 6)))])), (\"EX12-019\", true, false, Some([(CardHandle(80), Some((1, \"hand\", 6)))]))]"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-expanded-probes-validation\\report.json",
+      "sha256": "acd88cb9f2a490de2f670ef4d1414450b22b0a856f3f2bbc58287e7cd5d52e1b",
+      "identity": {
+        "engine": "b59ef47098ed8fb9411c49179ab912efe5f00d9b7510931e5a98be657d3af432",
+        "decks": "9ec6bd0f50bcbcf7021f1f3dff47ff34f8ce11aea34bef3f73ae3f553cca3839",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20264029,
+        "decision_cap": 1200
+      },
+      "completed": 35,
+      "failed": 1,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 26,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:b55ac120d0ef3ef0a6c8a3e8c9fe640315d621a4fd887a151d3558d5528726bd",
+          "returncode": 1,
+          "seconds": 5.686175800161436,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 154 closed-list search: closed-list effect queue refers to concealed cards: [(\"BT26-029\", true, false, Some([(CardHandle(101), Some((1, \"hand\", 4)))]))]"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-final-probes-seed1\\report.json",
+      "sha256": "417e8e13efb0c0a72a5e1d8dc21da4ad4e9267f40f078ae94567ae03387647a3",
+      "identity": {
+        "engine": "5ed784941a5c6823019bbdc31cdf92a3c3c1641fa4e5969705af6afdabe78d92",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "native_libraries": {
+          "digimon_engine.dll": "2d986381840d9595f51f39107b413dd60a1ae51dda49de57183a859f746f28ae"
+        },
+        "workers": 4,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20261029,
+        "decision_cap": 1200
+      },
+      "completed": 20,
+      "failed": 1,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 19,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd",
+          "returncode": 1,
+          "seconds": 24.723407599842176,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 205 closed-list search: closed-list effect queue refers to concealed cards: [(\"EX12-046\", true, false, Some([CardHandle(11)]))]"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-final-probes-seed2\\report.json",
+      "sha256": "cea6ea30fe65e06db948058015d59b9852ea60c5ca7d6f48a94e0e34d5e67762",
+      "identity": {
+        "engine": "5ed784941a5c6823019bbdc31cdf92a3c3c1641fa4e5969705af6afdabe78d92",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "native_libraries": {
+          "digimon_engine.dll": "2d986381840d9595f51f39107b413dd60a1ae51dda49de57183a859f746f28ae"
+        },
+        "workers": 4,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-final-probes-seed3\\report.json",
+      "sha256": "5238aa2a4aca90f0adadd014e614e5ea5fa577893658e3e5fa400d2b2771f823",
+      "identity": {
+        "engine": "5ed784941a5c6823019bbdc31cdf92a3c3c1641fa4e5969705af6afdabe78d92",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "native_libraries": {
+          "digimon_engine.dll": "2d986381840d9595f51f39107b413dd60a1ae51dda49de57183a859f746f28ae"
+        },
+        "workers": 4,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20263029,
+        "decision_cap": 1200
+      },
+      "completed": 20,
+      "failed": 1,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343",
+          "returncode": 1,
+          "seconds": 15.839308500057086,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 278 closed-list search: closed-list effect queue refers to concealed cards: [(\"BT24-084\", true, false, Some([CardHandle(72)]))]"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-hand-probes-seed1\\report.json",
+      "sha256": "c6863454689f90227ca1b0403a6c499caedbce7de3b7ba94cd848fcd65d955a8",
+      "identity": {
+        "engine": "6dcf644990324946abd4b592670864e5e070b41da317f1a3d587988ac5292fc1",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 3,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20261029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-hand-probes-seed2\\report.json",
+      "sha256": "0df26cea2386d98205dbd3729bca92e0e89748b7b3f629abcc6adc4df7a30a31",
+      "identity": {
+        "engine": "6dcf644990324946abd4b592670864e5e070b41da317f1a3d587988ac5292fc1",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 3,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-hand-probes-seed3\\report.json",
+      "sha256": "febd134b309e16bcabaa6736e8f53028b07dba92ada286c729c9bf6f8a4ee927",
+      "identity": {
+        "engine": "6dcf644990324946abd4b592670864e5e070b41da317f1a3d587988ac5292fc1",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 3,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20263029,
+        "decision_cap": 1200
+      },
+      "completed": 20,
+      "failed": 1,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "Chronomon:sha256:28288911b84d2189223fac3d2d58033ae5a8a27892f67fc1d88d1ebc7e1bfa45:slot1",
+          "deck_id": null,
+          "returncode": 1,
+          "seconds": 26.48777289991267,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 326 closed-list search: conflicting own concealed role positions"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-nested-probes-seed1\\report.json",
+      "sha256": "4637efce67b92fb16d4ee55fe19fee4794634950c3df67005637b1bfd988fe6f",
+      "identity": {
+        "engine": "c734e0ac5e4f340b1d8e30187fb80aed41b44e3a575cc6094ef3219d22cb4f29",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 4,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20261029,
+        "decision_cap": 1200
+      },
+      "completed": 20,
+      "failed": 1,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 19,
+          "archetype": "Toho Braves",
+          "deck_id": "sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd",
+          "returncode": 1,
+          "seconds": 17.630896900082007,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 205 closed-list search: closed-list effect queue refers to concealed cards: [(\"EX12-046\", true, false, Some([CardHandle(11)]))]"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-nested-probes-seed2\\report.json",
+      "sha256": "a1591f621f9f27fb16513a8b1a33aef2053933c04f763e36c94ef1705ed814ae",
+      "identity": {
+        "engine": "c734e0ac5e4f340b1d8e30187fb80aed41b44e3a575cc6094ef3219d22cb4f29",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 4,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-nested-probes-seed3\\report.json",
+      "sha256": "39fc3d95adc1ad3c322db5bdbfde7775ce525bb2c2c8e0845dbf0145d3f42768",
+      "identity": {
+        "engine": "c734e0ac5e4f340b1d8e30187fb80aed41b44e3a575cc6094ef3219d22cb4f29",
+        "decks": "c7f37e0e9eab041d97d7eb849d37eaa14210e9e31489b24feafc9a701fea7e0c",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 4,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20263029,
+        "decision_cap": 1200
+      },
+      "completed": 20,
+      "failed": 1,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:7d7f9a7524817d08482b88a7defef97ea22799ce87314090e5618cfb77567343",
+          "returncode": 1,
+          "seconds": 15.527936999918893,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 278 closed-list search: closed-list effect queue refers to concealed cards: [(\"BT24-084\", true, false, Some([CardHandle(72)]))]"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-release-probes-pet_regression\\report.json",
+      "sha256": "96dbf1235ad23776614f2293a377910cc858e4f7866af069507e9adbaa689a25",
+      "identity": {
+        "engine": "7709c65d1ecdacd55602e35b5ff625b86b224e6b832157b4c2a34dcf70d353e1",
+        "decks": "84a63eb62047e29ddfa6e446aa418e9d7907a96062d60824a8e45f1822190fb1",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20264029,
+        "decision_cap": 1200
+      },
+      "completed": 4,
+      "failed": 1,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "SW",
+          "deck_id": "sha256:4fd3d5327ae45a5bcf7841604b8b62f8d981be6011e407c342a9962d68b4dcd4",
+          "returncode": 1,
+          "seconds": 20.371302699903026,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 157 closed-list search: closed-list continuation requires audit: OuterOptionalTrigger (source=true, outer=true, card=EX12-019, source_handle=CardHandle(36), controller=0)"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-release-probes-seed1\\report.json",
+      "sha256": "9b478800a41ed8904500cfbc2bdff054fccd7a2df1e6f5abd01f0387b4ce55fd",
+      "identity": {
+        "engine": "7709c65d1ecdacd55602e35b5ff625b86b224e6b832157b4c2a34dcf70d353e1",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 3,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20261029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-release-probes-seed2\\report.json",
+      "sha256": "fc6ce019e80724b756d77f62d8a1638a78131cf171638113585f72b4a5e4c8e8",
+      "identity": {
+        "engine": "7709c65d1ecdacd55602e35b5ff625b86b224e6b832157b4c2a34dcf70d353e1",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 3,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20262029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-release-probes-seed3\\report.json",
+      "sha256": "4897906c92fea9b835208d7924efe923311461efe31fac966432ebf1f20476f5",
+      "identity": {
+        "engine": "7709c65d1ecdacd55602e35b5ff625b86b224e6b832157b4c2a34dcf70d353e1",
+        "decks": "7e7376abb9a8e5757d68ac3cad1fc401b19a7ce66c942d9ae32185cbab3ecbaa",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 3,
+        "prior": "9c74c583695ebd868542c0879002f5e3bd46e3ed45a683431b9727ae847c7b06",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20263029,
+        "decision_cap": 1200
+      },
+      "completed": 21,
+      "failed": 0,
+      "truncated": 0,
+      "unsuccessful_cases": []
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-release-probes-test\\report.json",
+      "sha256": "63cb085963f8cb8766dc1a63cba26d9363051458795b0d955722ab5fe4fa0677",
+      "identity": {
+        "engine": "7709c65d1ecdacd55602e35b5ff625b86b224e6b832157b4c2a34dcf70d353e1",
+        "decks": "427ffc8f23f4cade3e2ef66eb00b646f88c720187cbcd101118b46582685706a",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20264029,
+        "decision_cap": 1200
+      },
+      "completed": 20,
+      "failed": 3,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 2,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:43c02f804960bcf38269e61b46bf20f05fa0a7b60fe0c9cda2e2370edf6ec7be",
+          "returncode": 1,
+          "seconds": 6.020647400058806,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 56 closed-list search: closed-list continuation requires audit: LinkOptionHostSelection"
+          ]
+        },
+        {
+          "index": 3,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:c94c96b1e466cc69f640f2a8b9977d1339ff7c8913011fe386bbd08be007f19b",
+          "returncode": 1,
+          "seconds": 15.429993600118905,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 77 closed-list search: closed-list continuation requires audit: LinkOptionHostSelection"
+          ]
+        },
+        {
+          "index": 9,
+          "archetype": "SW",
+          "deck_id": "sha256:05de5422ae9d8edeb78f2f69075a47a209372b1b746bb73773a21f68dedbb208",
+          "returncode": 1,
+          "seconds": 5.87708709994331,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 114 closed-list search: closed-list effect queue refers to concealed cards: [(\"EX12-019\", true, false, Some([(CardHandle(80), Some((1, \"hand\", 6)))])), (\"EX12-019\", true, false, Some([(CardHandle(80), Some((1, \"hand\", 6)))]))]"
+          ]
+        }
+      ]
+    },
+    {
+      "report": "D:\\cargo-target-wt\\closed-deck-belief-training\\cloud-release-probes-validation\\report.json",
+      "sha256": "8ff41e64f1ed32f2db57515c81ae4d992de7a9efc4532229f9872cc9a0e72e11",
+      "identity": {
+        "engine": "7709c65d1ecdacd55602e35b5ff625b86b224e6b832157b4c2a34dcf70d353e1",
+        "decks": "9ec6bd0f50bcbcf7021f1f3dff47ff34f8ce11aea34bef3f73ae3f553cca3839",
+        "native_libraries": {
+          "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+        },
+        "workers": 2,
+        "prior": "89bf6f5947ca0a9495c174d304112e43583d2ee95fe061f1339a1f7f9d6dbf85",
+        "script": "6580ff3cd734876cdefe9d23a311adb09c7940b400cb6ea7149b4a1b0d858879",
+        "profile": "standard_lite_v2",
+        "simulations": 4,
+        "worlds": 2,
+        "seed": 20264029,
+        "decision_cap": 1200
+      },
+      "completed": 30,
+      "failed": 6,
+      "truncated": 0,
+      "unsuccessful_cases": [
+        {
+          "index": 4,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:669dde3b66c2fd2413d68a2852e98451aea3cb965b1f05c8dcfa7d5e1dbd3b7c",
+          "returncode": 1,
+          "seconds": 28.740744800074026,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 317 closed-list search: public and hidden counts do not reconcile with format"
+          ]
+        },
+        {
+          "index": 5,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:6bfca74204b6f67f64da53c09a17c9974340f31e8816792f2da99dadf46c997b",
+          "returncode": 1,
+          "seconds": 20.15055190003477,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 233 closed-list search: closed-list continuation requires audit: OptionHandLinkHostSelection"
+          ]
+        },
+        {
+          "index": 6,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:cfa0e75d7f82b235e58979ceedc64c939c6801d0ec2da4e9d30ae698fdc104c7",
+          "returncode": 1,
+          "seconds": 1.5435666998382658,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 23 closed-list search: closed-list continuation requires audit: LinkOptionHostSelection"
+          ]
+        },
+        {
+          "index": 7,
+          "archetype": "Chronomon",
+          "deck_id": "sha256:e685a4179317c1cacab0c056bad08ee5a7e036ea7f8fee3d6e92185e20d000d0",
+          "returncode": 1,
+          "seconds": 13.040872700046748,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 203 closed-list search: public and hidden counts do not reconcile with format"
+          ]
+        },
+        {
+          "index": 26,
+          "archetype": "TS Mervamon",
+          "deck_id": "sha256:b55ac120d0ef3ef0a6c8a3e8c9fe640315d621a4fd887a151d3558d5528726bd",
+          "returncode": 1,
+          "seconds": 6.045417399844155,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 154 closed-list search: closed-list effect queue refers to concealed cards: [(\"BT26-029\", true, false, Some([(CardHandle(101), Some((1, \"hand\", 4)))]))]"
+          ]
+        },
+        {
+          "index": 28,
+          "archetype": "Three Musketeers",
+          "deck_id": "sha256:10ef81f0f4cc07fd3ce2a61fb4d98ad1afc3e8c9b52b6dc7fd8835633521a10c",
+          "returncode": 1,
+          "seconds": 3.5810388000681996,
+          "status": "failed",
+          "error": [
+            "self-play run failed: game 0 decision 98 closed-list search: closed-list continuation requires audit: DigimonLinkHostSelection"
+          ]
+        }
+      ]
+    }
+  ]
+}

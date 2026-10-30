@@ -608,21 +608,39 @@ fn return_cards_to_deck(
         _ => Box::new(ordered.iter()),
     };
     let mut moved = false;
+    let mut added_to_main = false;
     for &card in iter {
+        let Some(origin) = ctx.game.locate_card_source_ref(card) else { continue; };
         let Some(mut c) = ctx.game.take_card_by_handle(card) else {
             continue;
         };
         let owner = c.owner;
-        let player = ctx.game.player_mut(owner);
-        match position {
-            StackPosition::Top => player.put_on_deck_top(c),
-            _ => player.insert_in_deck(0, c),
+        let is_egg = c.card_kind(&ctx.game.card_data) == crate::enums::CardKind::DigiEgg;
+        let zone = if is_egg { crate::determinize::beliefs::KnowledgeZone::Digitama }
+            else { crate::determinize::beliefs::KnowledgeZone::Deck };
+        let count = if is_egg { ctx.game.player(owner).digitama_deck.len() } else { ctx.game.player(owner).deck.len() };
+        let pin = Some(if position == StackPosition::Top { 0 } else { count });
+        match origin {
+            CardSourceRef::Hand(viewer, _) => ctx.game.learn_belief_private_card(&c, viewer, zone, pin),
+            CardSourceRef::Trash(..) | CardSourceRef::Reveal(..) => ctx.game.learn_belief_card(&c, zone, pin),
+            CardSourceRef::Material(..) | CardSourceRef::Link(..) => {
+                if c.face_down { ctx.game.learn_belief_private_card(&c, owner, zone, pin); }
+                else { ctx.game.learn_belief_card(&c, zone, pin); }
+            }
+            // Other source kinds have no identity entitlement here. Forget
+            // destination ordering conservatively rather than inspecting them.
+            _ => ctx.game.shuffle_belief_knowledge(owner, zone),
         }
+        let player = ctx.game.player_mut(owner);
+        // CR 3-1-3-9-1: returning an egg to "the deck" uses its owner's
+        // Digi-Egg deck in the specified order, never the main deck.
+        player.put_in_deck_or_digi_egg_deck(c, is_egg, position != StackPosition::Top);
         moved = true;
+        added_to_main |= !is_egg;
     }
     if moved {
         let controller = ctx.player;
-        ctx.game.note_effect_deck_add(controller);
+        if added_to_main { ctx.game.note_effect_deck_add(controller); }
         ctx.game.tick_declarative_effects();
     }
 }
