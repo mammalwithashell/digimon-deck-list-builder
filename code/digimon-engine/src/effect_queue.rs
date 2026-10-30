@@ -1426,7 +1426,9 @@ impl Game {
     pub(crate) fn run_after_selection_hook(&mut self, hook: crate::resume::AfterSelectionHook) {
         use crate::resume::AfterSelectionHook as Hook;
         match hook {
-            Hook::DeletionWindowContinue { window } => crate::replacement::resume_deletion_window(self, *window),
+            Hook::DeletionWindowContinue { window } => {
+                crate::replacement::resume_deletion_window(self, *window)
+            }
             Hook::DigivolveReducerChain {
                 state,
                 amount,
@@ -4593,10 +4595,13 @@ impl Game {
                 return self.effect_source_kind_for_handle(card);
             }
         }
-        let native = self.effects_for_queued(&qe)
-                .is_some_and(|effects| effects.get(qe.effect_slot as usize)
-                    .is_some_and(|effect| !effect.inherited && !effect.linked));
-        let current_top = qe.source_permanent
+        let native = self.effects_for_queued(&qe).is_some_and(|effects| {
+            effects
+                .get(qe.effect_slot as usize)
+                .is_some_and(|effect| !effect.inherited && !effect.linked)
+        });
+        let current_top = qe
+            .source_permanent
             .and_then(|h| self.player(h.player).battle_area.get(h.index as usize))
             .and_then(|p| p.card_sources.last())
             .is_some_and(|c| c.handle() == qe.source_card);
@@ -5664,12 +5669,18 @@ impl Game {
                         self.player_mut(owner).put_in_trash(security.card);
                     }
                     SecurityRemovalDestination::Hand(owner) => {
+                        self.remember_belief_security_hand_return(owner, security.card.card_index);
                         self.player_mut(owner).put_in_hand(security.card);
                         // An effect moved the removed security card to hand;
                         // hand-gain observers run after this removal resolves.
                         self.fire_on_add_to_hand_by_effect(owner);
                     }
                     SecurityRemovalDestination::Deck { owner, to_bottom } => {
+                        self.remember_belief_security_deck_return(
+                            owner,
+                            security.card.card_index,
+                            to_bottom,
+                        );
                         // Route to the owner's deck. Digi-Eggs go to the
                         // digitama deck. Deck top = Vec end (drawn first);
                         // deck bottom = index 0 — matching `move_card_to_deck`.
@@ -5784,7 +5795,7 @@ impl Game {
                             // CR 4.3 §8-1-3-3: the draw belongs to the
                             // digivolution procedure, including results from
                             // security, and precedes When Digivolving effects.
-                            self.player_mut(player).draw();
+                            let _ = self.draw_one_for_player(player);
                             completed_digivolve = Some((target, event_card));
                         } else {
                             let owner = security.card.owner;
@@ -6562,59 +6573,78 @@ impl Game {
     fn dispatch_selection_continuations(&mut self, payment_hooks_before: usize,
         payment_owner: Option<crate::card_source::CardHandle>,
         mut digivolve_scope_order: Vec<crate::card_source::CardHandle>,
-        declined: bool, payment_aborted: bool, recovery_abort: bool) {
-            for scope in &self.effect_digivolve_scopes {
-                if !digivolve_scope_order.contains(&scope.declaration.result_card) {
-                    digivolve_scope_order.push(scope.declaration.result_card);
-                }
+        declined: bool,
+        payment_aborted: bool,
+        recovery_abort: bool,
+    ) {
+        for scope in &self.effect_digivolve_scopes {
+            if !digivolve_scope_order.contains(&scope.declaration.result_card) {
+                digivolve_scope_order.push(scope.declaration.result_card);
             }
-            let hooks = std::mem::take(&mut self.after_selection_resume_hooks.0);
-            let mut indexed: Vec<_> = hooks.into_iter().enumerate().collect();
-            // Nested evolution payments finish before their enclosing payment.
-            // Preserve other continuation kinds and the original index used to
-            // attribute this selection's payment outcome. Scope depth is live
-            // typed ownership, not prompt text or a permanent's shifting index.
-            let chain_positions: Vec<_> = indexed.iter().enumerate().filter_map(|(slot, (_, hook))| {
-                matches!(hook, crate::resume::AfterSelectionHook::DigivolveReducerChain { .. }).then_some(slot)
-            }).collect();
-            let depth = |hook: &crate::resume::AfterSelectionHook| match hook {
-                crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } => state.effect.as_ref()
-                    .and_then(|effect| digivolve_scope_order.iter().rposition(|card| *card == effect.result_card))
-                    .map_or(0, |index| index + 1),
-                _ => 0,
-            };
-            // Stable insertion swaps only reducer slots; repeated parking
-            // therefore cannot invert nested ownership on the next decision.
-            for right in 1..chain_positions.len() {
-                let mut at = right;
-                while at > 0 && depth(&indexed[chain_positions[at]].1) > depth(&indexed[chain_positions[at - 1]].1) {
-                    indexed.swap(chain_positions[at], chain_positions[at - 1]);
-                    at -= 1;
-                }
+        }
+        let hooks = std::mem::take(&mut self.after_selection_resume_hooks.0);
+        let mut indexed: Vec<_> = hooks.into_iter().enumerate().collect();
+        // Nested evolution payments finish before their enclosing payment.
+        // Preserve other continuation kinds and the original index used to
+        // attribute this selection's payment outcome. Scope depth is live
+        // typed ownership, not prompt text or a permanent's shifting index.
+        let chain_positions: Vec<_> = indexed
+            .iter()
+            .enumerate()
+            .filter_map(|(slot, (_, hook))| {
+                matches!(
+                    hook,
+                    crate::resume::AfterSelectionHook::DigivolveReducerChain { .. }
+                )
+                .then_some(slot)
+            })
+            .collect();
+        let depth = |hook: &crate::resume::AfterSelectionHook| match hook {
+            crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } => state
+                .effect
+                .as_ref()
+                .and_then(|effect| {
+                    digivolve_scope_order
+                        .iter()
+                        .rposition(|card| *card == effect.result_card)
+                })
+                .map_or(0, |index| index + 1),
+            _ => 0,
+        };
+        // Stable insertion swaps only reducer slots; repeated parking
+        // therefore cannot invert nested ownership on the next decision.
+        for right in 1..chain_positions.len() {
+            let mut at = right;
+            while at > 0
+                && depth(&indexed[chain_positions[at]].1)
+                    > depth(&indexed[chain_positions[at - 1]].1)
+            {
+                indexed.swap(chain_positions[at], chain_positions[at - 1]);
+                at -= 1;
             }
-            crate::game_actions::effect_dna::order_nested_dna_payment_hooks(&mut indexed);
-            for (index, mut hook) in indexed {
-                if recovery_abort && index < payment_hooks_before {
-                    self.fail_owned_choice_payment_hook(&mut hook);
-                }
-                // Passing an immediate replacement declines that replacement,
-                // not the enclosing evolution used to pay this cost. Its
-                // declaration still commits after the remaining window closes.
-                if index < payment_hooks_before
-                    && (declined
-                        || payment_aborted)
+        }
+        crate::game_actions::effect_dna::order_nested_dna_payment_hooks(&mut indexed);
+        for (index, mut hook) in indexed {
+            if recovery_abort && index < payment_hooks_before {
+                self.fail_owned_choice_payment_hook(&mut hook);
+            }
+            // Passing an immediate replacement declines that replacement,
+            // not the enclosing evolution used to pay this cost. Its
+            // declaration still commits after the remaining window closes.
+            if index < payment_hooks_before && (declined || payment_aborted) {
+                if let crate::resume::AfterSelectionHook::DigivolveReducerChain {
+                    state,
+                    paid,
+                    ..
+                } = &mut hook
                 {
-                    if let crate::resume::AfterSelectionHook::DigivolveReducerChain {
-                        state, paid, ..
-                    } = &mut hook
-                    {
-                        if payment_owner.is_none() || payment_owner == Some(state.result_card()) {
-                            *paid = false;
-                        }
+                    if payment_owner.is_none() || payment_owner == Some(state.result_card()) {
+                        *paid = false;
                     }
                 }
-                self.run_after_selection_hook(hook);
             }
+            self.run_after_selection_hook(hook);
+        }
     }
 
     fn resolve_selection_with_lifecycle(
@@ -6633,8 +6663,9 @@ impl Game {
             return Err(SelectionError::WrongPlayer);
         }
         let is_pass = action_id == PASS;
-        let recovery_abort = sel.card_choice.as_ref().is_some_and(|owner|
-            owner.recovery(self) == crate::owned_card_choice::CardChoiceRecovery::Impossible);
+        let recovery_abort = sel.card_choice.as_ref().is_some_and(|owner| {
+            owner.recovery(self) == crate::owned_card_choice::CardChoiceRecovery::Impossible
+        });
         if let Some(owner) = &sel.card_choice {
             if !owner.valid_action_ids(self).contains(&action_id) { return Err(SelectionError::InvalidAction); }
         } else {

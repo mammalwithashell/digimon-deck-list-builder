@@ -101,9 +101,20 @@ pub fn materialize(game: &Game, viewer: PlayerId, seed: u64) -> Game {
 /// hand (if `resample_hand`) → face-down security slots → deck (remaining,
 /// in shuffled order). Public security identities stay pinned at their slots.
 /// The digitama deck is re-shuffled in place (order-only uncertainty).
-fn redeal_hidden(world: &mut Game, pid: PlayerId, resample_hand: bool, security_inspected: bool, rng: &mut StdRng) {
-    let public: std::collections::HashSet<_> = world.player(pid).security.iter()
-        .filter(|c| world.security_card_is_public(pid, c.handle())).map(|c| c.card_index).collect();
+pub(super) fn redeal_hidden(
+   world: &mut Game,
+   pid: PlayerId,
+   resample_hand: bool,
+   security_inspected: bool,
+   rng: &mut StdRng,
+) {
+   let public: std::collections::HashSet<_> = world
+       .player(pid)
+       .security
+       .iter()
+       .filter(|c| world.security_card_is_public(pid, c.handle()))
+       .map(|c| c.card_index)
+       .collect();
     let p = &mut world.players[pid as usize];
 
     let mut pool: Vec<CardSource> = std::mem::take(&mut p.deck);

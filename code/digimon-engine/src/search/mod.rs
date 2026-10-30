@@ -35,7 +35,7 @@ mod memoized;
 mod onnx_adapter;
 
 pub use determinized::{
-    determinized_search, determinized_search_batched, DeterminizationMode, DeterminizedConfig,
+    determinized_search, determinized_search_batched, determinized_search_sampled, DeterminizationMode, DeterminizedConfig,
 };
 pub use evaluator::{EvalRequest, Evaluation, PolicyValueFn, UniformEvaluator};
 pub use mcts::{decision_player, Mcts, SearchConfig, SearchResult};

@@ -157,3 +157,16 @@ def test_invalid_queue_settings_do_not_launch(tmp_path, kwargs):
                     chunk_games=2, seed=1, identity={}) | kwargs
     with pytest.raises(ValueError):
         run_queue(**settings)
+
+
+def test_closed_belief_scoring_files_are_part_of_the_immutable_chunk(tmp_path):
+    from tools.selfplay_scheduler import _validate_result, _read_commit, atomic_json
+    atomic_json(tmp_path / "manifest.json", {"game_start":0,"games":1,"seed":42,
+        "rows":0,"shards":[],"truncated_games":0,"decisions_total":2,
+        "information":{"regime":"closed_decklist"}})
+    for name in ("belief_predictions.jsonl","belief_scoring_truth.jsonl"):
+        (tmp_path/name).write_text('{}\n')
+    atomic_json(tmp_path/"chunk_commit.json",_validate_result(tmp_path,0,1,42))
+    (tmp_path/"belief_scoring_truth.jsonl").write_text('{"changed":true}\n')
+    with pytest.raises(ValueError,match="output changed"):
+        _read_commit(tmp_path,0,1,42)

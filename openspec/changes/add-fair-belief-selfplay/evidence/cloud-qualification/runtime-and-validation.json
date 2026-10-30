@@ -1,0 +1,82 @@
+{
+  "schema": "fair-belief-runtime-qualification-v1",
+  "engine_sha256": "2793f6366748c238653e5c973d64597f0171a993c2fb2158fed32c66a23521d6",
+  "native_libraries": {
+    "digimon_engine.dll": "6a800d8f34cc5779891e8246daec2639a88aee0b20af5e1232105d6c71479ca4"
+  },
+  "native_binding_fingerprints": {
+    "digimon_engine.digimon_engine": "2086cacaea52c1ed5a396695592b1fcbbdb755f6a1442afca6b9e4a82d04a4f9"
+  },
+  "wheel_sha256": "9a6fc6b36e8a790cf59480b0c1377c79121b56b4a63d5d62031428a8ef401aa7",
+  "python": "3.13.14 (tags/v3.13.14:fd17997, Jun 10 2026, 13:03:48) [MSC v.1944 64 bit (AMD64)]",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "packages": {
+    "torch": "2.11.0+cu128",
+    "stable-baselines3": "2.7.1",
+    "sb3-contrib": "2.7.1",
+    "numpy": "2.4.2",
+    "onnx": "1.21.0",
+    "onnxruntime": "1.24.4",
+    "gymnasium": "1.2.3",
+    "psutil": "7.2.2"
+  },
+  "contract": {
+    "observation_profile": "standard_lite_v2",
+    "tensor_version": 2,
+    "feature_schema_version": "standard_lite_v2.4",
+    "tensor_size": 9434,
+    "tensor_layout_hash": "sha256:b7916a3c03487daa53a7dffe87ce2ce44f8c43fa79e208726102f0f3811eee1a",
+    "action_space_size": 2192,
+    "action_schema_version": 2
+  },
+  "source_base_commit": "f184e7662242006ca9c81c0fe03ccf59c9213471",
+  "source_code_patch_sha256": "2922024dc2ec72b7124df9b712e9db4746066af0ed3e0e85a75a62caef104cc9",
+  "build_settings": {
+    "profile": "release",
+    "digimon-engine.opt-level": 1,
+    "digimon-dsl.opt-level": 1,
+    "RUST_MIN_STACK": 268435456,
+    "CARGO_TARGET_DIR": "D:\\cargo-target-wt\\closed-deck-belief-training"
+  },
+  "validation": {
+    "rust": {
+      "passed": 2174,
+      "ignored": 5,
+      "log_sha256": "d5c3009325563277ba13d9d86e08d501ec7615799d20bb9a35202ece6e9dcaa2"
+    },
+    "python": {
+      "passed": 148,
+      "skipped": 1,
+      "log_sha256": "318b1906328147bd179168a3f48014e4deedf836e00db9fba05a2dddff9b961c"
+    },
+    "tier0": {
+      "passed_checks": 13,
+      "tool_tests": 183,
+      "log_sha256": "aa4d6863d6835f0f89ca1c5c3f58853640a83ba6148640d2ad3d777741bc3fd5"
+    },
+    "native_probes": {
+      "completed": 127,
+      "failed": 0,
+      "truncated": 0
+    }
+  },
+  "runbook_smoke": {
+    "games": 32,
+    "generations": 1,
+    "simulations": 320,
+    "worlds": 4,
+    "evaluation_batch_size": 4,
+    "workers": 8,
+    "phase_simulations": 64,
+    "full_search_fraction": 0.25,
+    "cheap_simulations": 64,
+    "rows": 2688,
+    "value_only_rows": 2009,
+    "truncated_rows": 0,
+    "quarantined_rows": 0,
+    "sb3_sha256": "e263f63efa1938df6ef93296bb933dd6f2af0d6698758dd2326121abfd2d2886",
+    "onnx_sha256": "589f717b25997855a08f04c9e6a22fc692f9104479c788744dc6ff1e0459d3c8",
+    "log_sha256": "c7446ad484d01ea358c2841900b41223c7ecf9431c06f6c1a4d8acf582ea96d3",
+    "scope": "functional collection/fit/export check; its weights are not a comparison initializer or promoted model"
+  }
+}

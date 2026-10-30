@@ -875,9 +875,9 @@ fn replacement_process_has_payable_required_selection_without_subject(
     ctx: &EffectReadContext<'_>,
     bindings: &Bindings,
 ) -> bool {
-    process
-        .first()
-        .is_none_or(|step| required_selection_step_has_candidate(step, &process[1..], ctx, bindings))
+    process.first().is_none_or(|step| {
+        required_selection_step_has_candidate(step, &process[1..], ctx, bindings)
+    })
 }
 
 fn resolve_player_ref(ctx: &EffectReadContext<'_>, player: CompiledPlayerRef) -> PlayerId {
@@ -922,10 +922,10 @@ fn has_matching_permanent(
     }
 
     let selected = selected_field_extreme(ctx, &handles, selector);
-    handles
-        .into_iter()
-        .any(|handle| matches_selected_field(ctx, handle, selector, selected)
-            && (!deletion_payment || super::step::deletion_payment::can_pay(ctx, handle)))
+    handles.into_iter().any(|handle| {
+        matches_selected_field(ctx, handle, selector, selected)
+            && (!deletion_payment || super::step::deletion_payment::can_pay(ctx, handle))
+    })
 }
 
 /// Result of resolving a `CompiledFieldSelector` over a candidate set.
@@ -1198,16 +1198,12 @@ fn has_opponent_play_cost_budget_candidate(
     play_cost_budget: i32,
 ) -> bool {
     let opponent = ctx.game.next_clockwise(ctx.player);
-    ctx.game
-        .player(opponent)
-        .battle_area
-        .iter()
-        .any(|perm| {
-            // No play cost (a DUAL top) → never a candidate.
-            // G-ENGINE-PLAY-COST-BUDGET-DUAL-TOP.
-            perm.top_card().has_play_cost(ctx.card_data())
-                && i32::from(perm.top_card().play_cost(ctx.card_data())) <= play_cost_budget
-        })
+    ctx.game.player(opponent).battle_area.iter().any(|perm| {
+        // No play cost (a DUAL top) → never a candidate.
+        // G-ENGINE-PLAY-COST-BUDGET-DUAL-TOP.
+        perm.top_card().has_play_cost(ctx.card_data())
+            && i32::from(perm.top_card().play_cost(ctx.card_data())) <= play_cost_budget
+    })
 }
 
 fn replacement_subject_is_source(ctx: &EffectReadContext<'_>, subject: ReplacementSubject) -> bool {
@@ -1288,6 +1284,18 @@ pub(crate) struct DelayPlayFromHandSelectionState {
     source_kind: EffectSourceKind,
     candidates: Vec<CardHandle>,
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+impl DelayPlayFromHandSelectionState {
+    pub(crate) fn belief_safe(
+        &self,
+        viewer: PlayerId,
+        allowed: &std::collections::HashSet<CardHandle>,
+    ) -> bool {
+        self.player == viewer
+            && allowed.contains(&self.source_card)
+            && self.candidates.iter().all(|h| allowed.contains(h))
+    }
 }
 
 /// BT19-099 The Wicked God Descends! — Delay-cost self-trash then optionally
@@ -1624,6 +1632,27 @@ pub(crate) struct DelayFieldDnaSelectionState {
     stage: DelayFieldDnaStage,
     candidates: Vec<CardHandle>,
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+impl DelayFieldDnaSelectionState {
+    pub(crate) fn belief_safe(
+        &self,
+        viewer: PlayerId,
+        allowed: &std::collections::HashSet<CardHandle>,
+    ) -> bool {
+        let cont = &self.continuation;
+        cont.player == viewer
+            && allowed.contains(&cont.source_card)
+            && cont.subject_card.is_none_or(|(_, h)| allowed.contains(&h))
+            && self.candidates.iter().all(|h| allowed.contains(h))
+            && match self.stage {
+                DelayFieldDnaStage::Result => true,
+                DelayFieldDnaStage::First { result } => allowed.contains(&result),
+                DelayFieldDnaStage::Second { result, first } => {
+                    allowed.contains(&result) && allowed.contains(&first)
+                }
+            }
+    }
 }
 
 /// A field material's top-card snapshot follows index compaction, but never

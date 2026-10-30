@@ -289,6 +289,40 @@ pub struct OptionalReplacementState {
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
+impl OptionalReplacementState {
+    pub(crate) fn belief_safe(
+        &self,
+        viewer: PlayerId,
+        allowed: &std::collections::HashSet<CardHandle>,
+    ) -> bool {
+        let subject_safe = |s| match s {
+            ReplacementSubject::Card(h, _) => allowed.contains(&h),
+            _ => true,
+        };
+        allowed.contains(&self.source_card) && subject_safe(self.subject)
+            && self.source_identity.is_none_or(|(_, h, _)| allowed.contains(&h))
+            && self.stable_subject_card.is_none_or(|(_, h, _)| allowed.contains(&h))
+            && self.order.as_ref().is_none_or(|o| o.choices.iter().all(|c|
+                allowed.contains(&c.candidate.source_card)))
+            && self.window.as_ref().is_none_or(|w|
+                subject_safe(w.subject)
+                && w.stable_subject.is_none_or(|(_, h, _)| allowed.contains(&h))
+                && w.initiating_source_card.is_none_or(|h| allowed.contains(&h))
+                && w.effect_digivolve_card.is_none_or(|h| allowed.contains(&h))
+                && w.play_declaration.as_ref().is_none_or(|p| p.player == viewer ||
+                    (allowed.contains(&p.card) && matches!(p.origin, crate::game::PendingWouldPlayOrigin::Hand)))
+                && w.trigger_context.as_ref().is_none_or(|c| c.belief_safe(allowed))
+                && w.remaining.iter().all(|c| allowed.contains(&c.candidate.source_card))
+                // Departure bookkeeping is indices/flags only. Batch members
+                // and paid replacement sources retain public physical handles.
+                && w.deletion_batch.as_ref().is_none_or(|b|
+                    b.members.iter().all(|m| allowed.contains(&m.identity.1))
+                    && b.pending_subject.as_ref().is_none_or(|(c, _)| allowed.contains(&c.candidate.source_card))
+                    && b.active_paid_all.as_ref().is_none_or(|(_, members, source, _, _)|
+                        allowed.contains(source) && members.iter().all(|(_, h, _)| allowed.contains(&CardHandle(*h))))))
+    }
+}
+
 // ─── Dispatcher ────────────────────────────────────────────────────
 
 /// Controller of the subject for layering and optional-prompt ownership.
@@ -361,9 +395,16 @@ fn resolve_subject_card(
                     index: crate::digixros::LIMBO_INDEX_BASE + index as u8,
                 })
         })
-        .or_else(|| game.player(player).breeding_area.as_ref()
-            .filter(|p| p.battle_identity == Some(identity))
-            .map(|_| PermanentHandle { player, index: BREEDING_TARGET as u8 }))
+        .or_else(|| {
+            game.player(player)
+                .breeding_area
+                .as_ref()
+                .filter(|p| p.battle_identity == Some(identity))
+                .map(|_| PermanentHandle {
+                    player,
+                    index: BREEDING_TARGET as u8,
+                })
+        })
         .map(ReplacementSubject::Permanent);
     let Some(resolved) = resolved else {
         // A destroyed/recreated donor cannot finish its old source-placement intent.
@@ -1614,7 +1655,9 @@ fn run_commit_with_flag<F>(
     let prior = game.in_replacement_commit;
     let prior_fired = game.replacement_commit_fired;
     let prior_key = game.replacement_commit_key;
-    let key = key.and_then(|(timing, subject)| subject_identity(game, subject).map(|identity| (timing, identity)));
+    let key = key.and_then(|(timing, subject)| {
+        subject_identity(game, subject).map(|identity| (timing, identity))
+    });
     // An owned window is sufficient to reconstruct its already-offered stage
     // after parking. Do not borrow another event's ledger merely because it
     // happens to be the last one that ran before this callback.

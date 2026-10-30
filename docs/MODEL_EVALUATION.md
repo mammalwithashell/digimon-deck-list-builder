@@ -174,3 +174,11 @@ explicit infoset / public-belief structure, plus a tractable belief space (a
 
 See also: `docs/TRAINING_RUNBOOK.md`, `docs/TRAINING_MCP.md`, and the
 `add-model-evaluation-harness` OpenSpec change.
+
+
+## Closed-decklist belief training
+
+See [Fair belief training](FAIR_BELIEF_TRAINING.md) for regime selection, frozen
+priors, model/shard provenance, independent comparisons, resume/rollback and
+current observation/continuation limits. Completed search generations are
+resumable candidates; promotion requires the registered independent gates.

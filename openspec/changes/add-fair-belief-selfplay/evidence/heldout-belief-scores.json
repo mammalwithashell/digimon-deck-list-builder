@@ -1,0 +1,132 @@
+{
+  "baseline": {
+    "chunks": 48,
+    "completed_decisions": 41537,
+    "uncompleted_decisions": 0,
+    "cards": 179222,
+    "support_coverage": 0.7219816763566973,
+    "log_loss": 11.391285165530801,
+    "brier": 0.9769445455558732,
+    "sampled_worlds": 166148,
+    "fallback_worlds": 16687,
+    "sampling_seconds": 325.5003788,
+    "all_candidates_eliminated_decisions": 0,
+    "calibration_bins": [
+      {
+        "count": 271770,
+        "probability_sum": 15834.549675325155,
+        "frequency_sum": 14661.499603174512
+      },
+      {
+        "count": 148515,
+        "probability_sum": 19186.562923881862,
+        "frequency_sum": 11354.66861471854
+      },
+      {
+        "count": 23315,
+        "probability_sum": 5495.153472222228,
+        "frequency_sum": 1829.3980158730155
+      },
+      {
+        "count": 1884,
+        "probability_sum": 639.554761904762,
+        "frequency_sum": 159.93333333333334
+      },
+      {
+        "count": 68,
+        "probability_sum": 28.470833333333335,
+        "frequency_sum": 6.35
+      },
+      {
+        "count": 666,
+        "probability_sum": 333.0833333333333,
+        "frequency_sum": 64.0
+      },
+      {
+        "count": 5,
+        "probability_sum": 3.125,
+        "frequency_sum": 0.0
+      },
+      {
+        "count": 22,
+        "probability_sum": 16.5,
+        "frequency_sum": 2.0
+      },
+      {
+        "count": 0,
+        "probability_sum": 0.0,
+        "frequency_sum": 0.0
+      },
+      {
+        "count": 0,
+        "probability_sum": 0.0,
+        "frequency_sum": 0.0
+      }
+    ]
+  },
+  "candidate": {
+    "chunks": 48,
+    "completed_decisions": 40345,
+    "uncompleted_decisions": 0,
+    "cards": 171347,
+    "support_coverage": 0.7153787343811097,
+    "log_loss": 11.598214042359599,
+    "brier": 0.9779852591853239,
+    "sampled_worlds": 161380,
+    "fallback_worlds": 16299,
+    "sampling_seconds": 311.8087491,
+    "all_candidates_eliminated_decisions": 0,
+    "calibration_bins": [
+      {
+        "count": 259667,
+        "probability_sum": 15215.969787157786,
+        "frequency_sum": 14025.641774891687
+      },
+      {
+        "count": 144681,
+        "probability_sum": 18675.765088384003,
+        "frequency_sum": 10968.112662337599
+      },
+      {
+        "count": 23218,
+        "probability_sum": 5477.381791125547,
+        "frequency_sum": 1849.789502164502
+      },
+      {
+        "count": 1693,
+        "probability_sum": 573.6833333333334,
+        "frequency_sum": 140.23333333333335
+      },
+      {
+        "count": 61,
+        "probability_sum": 25.575000000000003,
+        "frequency_sum": 5.966666666666667
+      },
+      {
+        "count": 680,
+        "probability_sum": 340.0,
+        "frequency_sum": 55.0
+      },
+      {
+        "count": 7,
+        "probability_sum": 4.375,
+        "frequency_sum": 1.0
+      },
+      {
+        "count": 43,
+        "probability_sum": 32.25,
+        "frequency_sum": 7.0
+      },
+      {
+        "count": 0,
+        "probability_sum": 0.0,
+        "frequency_sum": 0.0
+      },
+      {
+        "count": 0,
+        "probability_sum": 0.0,
+        "frequency_sum": 0.0
+      }
+    ]
+  }
+}

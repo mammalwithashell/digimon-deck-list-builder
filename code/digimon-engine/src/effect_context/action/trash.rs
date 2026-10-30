@@ -164,6 +164,14 @@ impl<'a> EffectContext<'a> {
     pub fn trash_from_top(&mut self, player: PlayerId, count: u8) -> u8 {
         let mut trashed = 0;
         for _ in 0..count {
+            if !self.game.player(player).deck.is_empty() {
+                self.game.transfer_belief_position(
+                    player,
+                    crate::determinize::beliefs::KnowledgeZone::Deck,
+                    0,
+                    crate::determinize::beliefs::KnowledgeZone::Public,
+                );
+            }
             // Opaque-aware: opaque opponents materialize from RevealSource
             // tagged Mill; standard players pop from their ordered deck.
             let card = match self
@@ -211,18 +219,24 @@ impl<'a> EffectContext<'a> {
     /// Phase 7 Task 4: fires `WhenWouldBeTrashed` at entry. Subject carries
     /// the top security card's handle; cause inferred.
     pub fn trash_top_security(&mut self, player: PlayerId) -> bool {
-        let Some(index) = self.game.player(player).security.len().checked_sub(1) else { return false; };
+        let Some(index) = self.game.player(player).security.len().checked_sub(1) else {
+            return false;
+        };
         self.game.ensure_security_materialized(player, index);
         let card = self.game.player(player).security[index].handle();
-        self.game.start_security_trash(player, card, self.player, false)
+        self.game
+            .start_security_trash(player, card, self.player, false)
     }
 
     /// Trash the physically pinned bottom security card, owning any replacement continuation.
     pub fn trash_bottom_security(&mut self, player: PlayerId) -> bool {
-        if self.game.player(player).security.is_empty() { return false; }
+        if self.game.player(player).security.is_empty() {
+            return false;
+        }
         self.game.ensure_security_materialized(player, 0);
         let card = self.game.player(player).security[0].handle();
-        self.game.start_security_trash(player, card, self.player, false)
+        self.game
+            .start_security_trash(player, card, self.player, false)
     }
 
     /// Trash a specific card — identified by the stable `handle` — from
@@ -268,10 +282,12 @@ impl<'a> EffectContext<'a> {
 
         // Re-find the card by handle — the replacement window may have mutated
         // the security stack.
-        let p = self.game.player_mut(player);
-        let Some(pos) = p.security.iter().position(|c| c.handle() == handle) else {
+        let Some(pos) = self.game.player(player).security.iter().position(|c| c.handle() == handle) else {
             return false;
         };
+        let from_top = self.game.player(player).security.len() - 1 - pos;
+        self.game.remember_belief_security_departure(player, handle.0, from_top);
+        let p = self.game.player_mut(player);
         let card = p.security.remove(pos);
         p.face_up_security.remove(&card.card_index);
         self.game.fire_security_removed_observers(

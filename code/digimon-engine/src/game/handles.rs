@@ -113,6 +113,17 @@ impl Game {
                 return Some(&self.card_data[pending.card.data_index]);
             }
         }
+        for scope in &self.pending_effect_security_removal {
+            if let Some(pending) = scope
+                .previous_pending_security
+                .as_ref()
+                .filter(|p| !p.played)
+            {
+                if pending.card.card_index == target_index {
+                    return Some(&self.card_data[pending.card.data_index]);
+                }
+            }
+        }
         // DigiXros leave windows retain the same physical objects outside
         // ordinary zones until their immediate effects finish or extract them.
         for (_, _, permanent) in &self.digixros_leaving_limbo {
@@ -230,6 +241,17 @@ impl Game {
         if let Some(pending) = self.pending_security.as_ref() {
             if pending.card.card_index == target_index {
                 return Some(&pending.card);
+            }
+        }
+        for scope in &self.pending_effect_security_removal {
+            if let Some(pending) = scope
+                .previous_pending_security
+                .as_ref()
+                .filter(|p| !p.played)
+            {
+                if pending.card.card_index == target_index {
+                    return Some(&pending.card);
+                }
             }
         }
         // DigiXros leave windows retain the same physical objects outside

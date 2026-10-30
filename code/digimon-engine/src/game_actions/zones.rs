@@ -52,6 +52,7 @@ impl Game {
             return false;
         };
         let added_to_hand = removed.card_kind(&self.card_data) != CardKind::DigiEgg;
+        self.learn_belief_card(&removed, if added_to_hand {crate::determinize::beliefs::KnowledgeZone::Hand} else {crate::determinize::beliefs::KnowledgeZone::Digitama}, None);
         if added_to_hand {
             self.player_mut(player_id).add_to_hand(removed);
         } else {
@@ -79,9 +80,15 @@ impl Game {
         };
         // Opaque-aware: materialize before moving to hand so the
         // resulting hand card has a real identity.
+        self.remember_belief_security_departure(
+            player_id,
+            card.0,
+            self.player(player_id).security.len() - 1 - idx,
+        );
         self.ensure_security_materialized(player_id, idx);
         let removed = self.player_mut(player_id).security.remove(idx);
         let owner = removed.owner;
+        self.remember_belief_security_hand_return(owner, removed.card_index);
         self.player_mut(player_id)
             .face_up_security
             .remove(&removed.card_index);
@@ -106,6 +113,14 @@ impl Game {
     ) -> Vec<crate::card_source::CardHandle> {
         let mut handles = Vec::new();
         for _ in 0..n {
+            if !self.player(player_id).deck.is_empty() {
+                self.transfer_belief_position(
+                    player_id,
+                    crate::determinize::beliefs::KnowledgeZone::Deck,
+                    0,
+                    crate::determinize::beliefs::KnowledgeZone::Public,
+                );
+            }
             // Opaque-aware: opaque players' reveal-from-top consumes
             // RevealKind::Effect (peek effects, not draws/security/mill).
             // For standard players this is a plain `deck.pop()`.
@@ -133,6 +148,7 @@ impl Game {
                 card_name,
                 source_zone: crate::events::RevealZone::DeckTop,
             });
+            self.learn_belief_card(&card, crate::determinize::beliefs::KnowledgeZone::Public, None);
             self.revealed_cards.push(card);
         }
         handles
@@ -145,6 +161,14 @@ impl Game {
     ) -> Vec<crate::card_source::CardHandle> {
         let mut handles = Vec::new();
         for _ in 0..n {
+            if !self.player(player_id).digitama_deck.is_empty() {
+                self.transfer_belief_position(
+                    player_id,
+                    crate::determinize::beliefs::KnowledgeZone::Digitama,
+                    0,
+                    crate::determinize::beliefs::KnowledgeZone::Public,
+                );
+            }
             let p = self.player_mut(player_id);
             let Some(card) = p.digitama_deck.pop() else {
                 break;
@@ -160,6 +184,7 @@ impl Game {
                 card_name,
                 source_zone: crate::events::RevealZone::DeckTop,
             });
+            self.learn_belief_card(&card, crate::determinize::beliefs::KnowledgeZone::Public, None);
             self.revealed_cards.push(card);
         }
         handles
@@ -167,6 +192,7 @@ impl Game {
 
     /// Shuffle `player`'s deck.
     pub fn shuffle_deck(&mut self, player_id: PlayerId) {
+        self.shuffle_belief_knowledge(player_id, crate::determinize::beliefs::KnowledgeZone::Deck);
         // Split-borrow idiom: take deck out, shuffle, put back.
         let mut deck = std::mem::take(&mut self.player_mut(player_id).deck);
         deck.shuffle(&mut self.rng);
@@ -201,12 +227,14 @@ impl Game {
                 seq, player, card_id, card_name, source_zone: crate::events::RevealZone::SecurityStack,
             });
         }
+        let _ = self.refresh_belief_knowledge();
     }
 
     /// Turn every card in `player_id`'s security stack face down, then shuffle
     /// without changing its contents (qa:Q7121).
     pub fn shuffle_security(&mut self, player_id: PlayerId) {
         self.public_security_reveals.retain(|(owner, _, _, _)| *owner != player_id);
+        self.shuffle_belief_knowledge(player_id, crate::determinize::beliefs::KnowledgeZone::Security);
         self.security_shuffle_generations[player_id as usize] = self.security_shuffle_generations[player_id as usize].checked_add(1).expect("security shuffle generation exhausted");
         self.player_mut(player_id).face_up_security.clear();
         let mut security = std::mem::take(&mut self.player_mut(player_id).security);
@@ -229,6 +257,10 @@ impl Game {
         player_id: PlayerId,
         hand_index: usize,
     ) -> Option<crate::card_source::CardHandle> {
+        if hand_index >= self.player(player_id).hand.len() {
+            return None;
+        }
+        self.remember_belief_public_hand_departure(player_id, hand_index);
         let player = self.player_mut(player_id);
         if hand_index >= player.hand.len() {
             return None;
@@ -252,6 +284,7 @@ impl Game {
         };
         let mut taken = self.revealed_cards.remove(pos);
         taken.clear_reveal_overlay();
+        self.learn_belief_card(&taken, crate::determinize::beliefs::KnowledgeZone::Hand, None);
         self.player_mut(player_id).put_in_hand(taken);
         true
     }

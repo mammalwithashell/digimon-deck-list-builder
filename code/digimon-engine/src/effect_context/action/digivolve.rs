@@ -46,6 +46,8 @@ impl<'a> EffectContext<'a> {
             return false;
         };
 
+        self.game
+            .remember_belief_public_hand_departure(self.player, hand_index);
         let card = self.game.player_mut(self.player).hand.remove(hand_index);
         self.game.digivolve_permanent_in_place(target, card);
 

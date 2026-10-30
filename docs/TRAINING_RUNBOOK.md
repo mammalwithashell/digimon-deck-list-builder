@@ -1810,3 +1810,11 @@ A separate six-decision routing probe completed both opening orders at the
 same search budget, emitting four learner rows and no historical-actor rows.
 Its two truncations were intentional; these probe shards were not fitted or
 used to measure strength (`runs/history-opponent-routing-probe-20261028`).
+
+
+## Closed-decklist belief training
+
+See [Fair belief training](FAIR_BELIEF_TRAINING.md) for regime selection, frozen
+priors, model/shard provenance, independent comparisons, resume/rollback and
+current observation/continuation limits. Completed search generations are
+resumable candidates; promotion requires the registered independent gates.

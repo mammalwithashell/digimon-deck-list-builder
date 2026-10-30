@@ -1,0 +1,40 @@
+{
+  "cloud_root": "/opt/digimon-search/ex13-history-next-20261029",
+  "cloud_stage": "complete",
+  "cloud_generation": 12,
+  "cloud_image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:e550a7473f65a4d1a0ddd18b8d43b486cc64236cc58c935578a0169c4b07e33e",
+  "read_only_observation_unix": 1793249222.5408971,
+  "inputs": [
+    {
+      "input": "decks.json",
+      "sha256": "eebf5ef30aebff4236ca1f8adaf8978e19ff58873636d638b1f4604e80129384",
+      "lists_or_slots": 26,
+      "committed_local_pool_matches_cloud_bytes": true
+    },
+    {
+      "input": "train_snapshot.json",
+      "sha256": "13d6fd44a64c9725be77321015204862e34aafe77d63abc76eda34db6320b571",
+      "lists_or_slots": 21,
+      "committed_local_pool_matches_cloud_bytes": true
+    },
+    {
+      "input": "heldout_snapshot.json",
+      "sha256": "765c53e6250de416fd7caa966a060bed0aa893a42a1f009eca95b347e7c0987e",
+      "lists_or_slots": 23,
+      "committed_local_pool_matches_cloud_bytes": true
+    },
+    {
+      "input": "pet_regression_snapshot.json",
+      "sha256": "43b5d2f5d6a02dd04703e8533ab116c0e197d8f9b591e4fd4e6bca51802f605e",
+      "lists_or_slots": 5,
+      "committed_local_pool_matches_cloud_bytes": true
+    },
+    {
+      "input": "combined_diagnostic_snapshot.json",
+      "sha256": "70c600bcbbf936a3d20d0ddc4b27c239af7c952407b13070ff8edc7cf783262f",
+      "lists_or_slots": 24,
+      "committed_local_pool_matches_cloud_bytes": true
+    }
+  ],
+  "remote_mutations": []
+}

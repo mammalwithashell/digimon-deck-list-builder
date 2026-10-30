@@ -75,10 +75,18 @@ impl Game {
             let Some(slot) = self.prepared_source_plays.iter().position(|(id,_)| id == receipt) else { continue; };
             let (_, Some(play)) = self.prepared_source_plays.remove(slot) else { continue; };
             let declaration = &play.declaration;
-            let legal = self.source_preparation_card(declaration.origin, declaration.card)
-                .is_some_and(|card| !self.card_play_is_prohibited(declaration.play_controller, &card)
-                    && !self.effect_play_is_prohibited(declaration.player, card.card_kind(&self.card_data)));
-            if legal { prepared.push((*receipt, play)); }
+            let legal = self
+                .source_preparation_card(declaration.origin, declaration.card)
+                .is_some_and(|card| {
+                    !self.card_play_is_prohibited(declaration.play_controller, &card)
+                        && !self.effect_play_is_prohibited(
+                            declaration.player,
+                            card.card_kind(&self.card_data),
+                        )
+                });
+            if legal {
+                prepared.push((*receipt, play));
+            }
         }
         let mut entries = Vec::new();
         self.enter_deferred_drain();
@@ -87,8 +95,15 @@ impl Game {
             let PendingWouldPlayOrigin::Source { permanent, host_identity, .. } = declaration.origin else { continue; };
             let Some(host) = self.resolve_source_play_host_identity(permanent, host_identity) else { continue; };
             let Some(index) = crate::effect_context::material_carrier_permanent(self, host)
-                .and_then(|p| p.card_sources.iter().take(p.card_sources.len().saturating_sub(1))
-                    .position(|c| c.handle() == declaration.card)) else { continue; };
+                .and_then(|p| {
+                    p.card_sources
+                        .iter()
+                        .take(p.card_sources.len().saturating_sub(1))
+                        .position(|c| c.handle() == declaration.card)
+                })
+            else {
+                continue;
+            };
             let source = if host.index == crate::action::space::BREEDING_TARGET as u8 {
                 self.player_mut(host.player).breeding_area.as_mut().expect("resolved carrier").card_sources.remove(index)
             } else { self.remove_source_from_permanent(host, index) };
@@ -242,10 +257,18 @@ impl Game {
             EffectTiming::WhenPermanentWouldPlay,
             crate::replacement::ReplacementSubject::Card(target_card,
                 if source_preparation {
-                    match origin { PendingWouldPlayOrigin::Source{permanent,..}
-                        if permanent.index==crate::action::space::BREEDING_TARGET as u8 => Zone::BreedingArea,
-                        _=>Zone::BattleArea }
-                } else {Zone::Hand}),
+                    match origin {
+                        PendingWouldPlayOrigin::Source { permanent, .. }
+                            if permanent.index == crate::action::space::BREEDING_TARGET as u8 =>
+                        {
+                            Zone::BreedingArea
+                        }
+                        _ => Zone::BattleArea,
+                    }
+                } else {
+                    Zone::Hand
+                },
+            ),
             cause,
             Some(Zone::BattleArea),
         );
@@ -798,19 +821,40 @@ impl Game {
     ) {
         // Rebase selected prefix materials against original physical pins before
         // interpreting the next page alias or charging the transaction.
-        let live: Vec<_> = state.selected_pins.iter().filter_map(|pin|
-            crate::owned_card_choice::OwnedCardChoice::resolve_digixros_pin(self, *pin)).collect();
-        let pinned_cards: Vec<_> = state.selected_pins.iter().filter_map(|pin| match pin {
-            crate::owned_card_choice::CardChoicePin::Source(source) => Some(source.card()),
-            crate::owned_card_choice::CardChoicePin::Hand { card, .. }
-            | crate::owned_card_choice::CardChoicePin::Trash { card, .. }
-            | crate::owned_card_choice::CardChoicePin::BattleTop { card, .. } => Some(*card),
-            _ => None,
-        }).collect();
+        let live: Vec<_> = state
+            .selected_pins
+            .iter()
+            .filter_map(|pin| {
+                crate::owned_card_choice::OwnedCardChoice::resolve_digixros_pin(self, *pin)
+            })
+            .collect();
+        let pinned_cards: Vec<_> = state
+            .selected_pins
+            .iter()
+            .filter_map(|pin| match pin {
+                crate::owned_card_choice::CardChoicePin::Source(source) => Some(source.card()),
+                crate::owned_card_choice::CardChoicePin::Hand { card, .. }
+                | crate::owned_card_choice::CardChoicePin::Trash { card, .. }
+                | crate::owned_card_choice::CardChoicePin::BattleTop { card, .. } => Some(*card),
+                _ => None,
+            })
+            .collect();
         if let Some(transaction) = self.pending_digixros_transaction.as_mut() {
-            transaction.retain_materials(|origin| !pinned_cards.contains(&origin.card()) || live.iter().any(|current| current.card() == origin.card()));
-            for selected in transaction.selected_materials.iter_mut().chain(transaction.pre_attached_materials.iter_mut()) {
-                if let Some(origin) = live.iter().find(|origin| origin.card() == selected.origin.card()) { selected.origin = *origin; }
+            transaction.retain_materials(|origin| {
+                !pinned_cards.contains(&origin.card())
+                    || live.iter().any(|current| current.card() == origin.card())
+            });
+            for selected in transaction
+                .selected_materials
+                .iter_mut()
+                .chain(transaction.pre_attached_materials.iter_mut())
+            {
+                if let Some(origin) = live
+                    .iter()
+                    .find(|origin| origin.card() == selected.origin.card())
+                {
+                    selected.origin = *origin;
+                }
             }
         }
         if is_pass {
@@ -827,8 +871,18 @@ impl Game {
             return;
         }
 
-        let Some(material_origin) = self.resolved_card_choice.take().and_then(|choice| choice.digixros_origin()) else { return; };
-        if !state.candidates.iter().any(|candidate| candidate.card() == material_origin.card() && candidate.zone() == material_origin.zone()) { return; }
+        let Some(material_origin) = self
+            .resolved_card_choice
+            .take()
+            .and_then(|choice| choice.digixros_origin())
+        else {
+            return;
+        };
+        if !state.candidates.iter().any(|candidate| {
+            candidate.card() == material_origin.card() && candidate.zone() == material_origin.zone()
+        }) {
+            return;
+        }
         self.select_pending_digixros_material(material_origin);
         let _ = self.finish_play_from_hand_after_reductions(
             state.player_id,
@@ -883,12 +937,24 @@ impl Game {
         let can_stop = candidates.is_empty()
             || (self.memory as i32 - stop_cost) >= self.rules.memory_range.0 as i32;
 
-        let selected_origins: Vec<_> = transaction.selected_materials.iter().chain(transaction.pre_attached_materials.iter())
-            .map(|material| material.origin).collect();
-        let selected_pins = selected_origins.into_iter().filter_map(|origin|
-            crate::owned_card_choice::OwnedCardChoice::digixros_pin(self, origin)).collect();
-        let owner = crate::owned_card_choice::OwnedCardChoice::digixros(self, &candidates, can_stop);
-        let valid_action_ids = owner.as_ref().map(|owner| owner.valid_action_ids(self)).unwrap_or_default();
+        let selected_origins: Vec<_> = transaction
+            .selected_materials
+            .iter()
+            .chain(transaction.pre_attached_materials.iter())
+            .map(|material| material.origin)
+            .collect();
+        let selected_pins = selected_origins
+            .into_iter()
+            .filter_map(|origin| {
+                crate::owned_card_choice::OwnedCardChoice::digixros_pin(self, origin)
+            })
+            .collect();
+        let owner =
+            crate::owned_card_choice::OwnedCardChoice::digixros(self, &candidates, can_stop);
+        let valid_action_ids = owner
+            .as_ref()
+            .map(|owner| owner.valid_action_ids(self))
+            .unwrap_or_default();
         let resume_candidates = candidates;
         let effect_controller = self.effect_source_player;
         let previous_phase = self.current_phase;
@@ -906,8 +972,12 @@ impl Game {
             source_card: target_card,
             source_permanent: None,
             source_kind: EffectSourceKind::Digimon,
-            callback: Box::new(|_, _| panic!("DigiXros material selection must resolve through its typed resume frame")),
-            on_decline: Some(Box::new(|_| panic!("DigiXros material decline must resolve through its typed resume frame"))),
+            callback: Box::new(|_, _| {
+                panic!("DigiXros material selection must resolve through its typed resume frame")
+            }),
+            on_decline: Some(Box::new(|_| {
+                panic!("DigiXros material decline must resolve through its typed resume frame")
+            })),
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::DigiXrosMaterialSelection(
@@ -1197,6 +1267,7 @@ impl Game {
         }
 
         let turn = self.turn_count;
+        self.remember_belief_public_hand_departure(player_id, hand_index);
         let card = self.player_mut(player_id).hand.remove(hand_index);
         if from_security {
             // The hand transit was provisional. All refusal points have now
@@ -1237,9 +1308,21 @@ impl Game {
             }
         }
 
-        if from_security && self.security_play_receipts.iter().any(|r| Some(r.id) == source_play_receipt && r.player == player_id && r.card == target_card && r.committed.is_none()) {
+        if from_security
+            && self.security_play_receipts.iter().any(|r| {
+                Some(r.id) == source_play_receipt
+                    && r.player == player_id
+                    && r.card == target_card
+                    && r.committed.is_none()
+            })
+        {
             let identity = self.capture_digivolve_host_identity(entered);
-            if let Some(receipt) = self.security_play_receipts.iter_mut().rfind(|r| Some(r.id) == source_play_receipt && r.player == player_id && r.card == target_card && r.committed.is_none()) {
+            if let Some(receipt) = self.security_play_receipts.iter_mut().rfind(|r| {
+                Some(r.id) == source_play_receipt
+                    && r.player == player_id
+                    && r.card == target_card
+                    && r.committed.is_none()
+            }) {
                 receipt.committed = Some((entered, identity));
             }
         }
@@ -1329,6 +1412,7 @@ impl Game {
                     .hand
                     .iter()
                     .position(|candidate| candidate.handle() == card)?;
+                self.remember_belief_public_hand_departure(player, idx);
                 Some(self.player_mut(player).hand.remove(idx))
             }
             DigiXrosMaterialOrigin::Trash { player, card, .. } => {

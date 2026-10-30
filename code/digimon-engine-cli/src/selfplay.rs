@@ -24,7 +24,7 @@ use crate::winprob::resolve_profile;
 
 /// Deck-pool file: either `[["ST1-01", ...], ...]` or
 /// `[{"name": "...", "cards": ["ST1-01", ...]}, ...]`.
-fn load_deck_pool(path: &std::path::Path) -> Result<(Vec<Vec<String>>, Vec<String>), String> {
+pub(crate) fn load_deck_pool(path: &std::path::Path) -> Result<(Vec<Vec<String>>, Vec<String>), String> {
     let bytes = std::fs::read(path).map_err(|e| format!("reading {}: {e}", path.display()))?;
     let v: serde_json::Value =
         serde_json::from_slice(&bytes).map_err(|e| format!("parsing {}: {e}", path.display()))?;
@@ -79,6 +79,8 @@ fn load_deck_pool(path: &std::path::Path) -> Result<(Vec<Vec<String>>, Vec<Strin
 
 #[allow(clippy::too_many_arguments)]
 pub fn run(
+    policy_only: bool,
+    information_regime: String, belief_prior: Option<PathBuf>,
     model: Option<PathBuf>,
     opponent_pool: Option<PathBuf>,
     uniform: bool,
@@ -218,7 +220,22 @@ pub fn run(
             }
         };
 
+    let prior_snapshot = (|| -> Result<_,String> {
+        match (information_regime.as_str(), belief_prior) {
+            ("open_decklist", None) => Ok(None),
+            ("closed_decklist", Some(path)) => {
+                let snapshot: digimon_engine::determinize::beliefs::PriorSnapshot = serde_json::from_slice(
+                    &std::fs::read(path).map_err(|e|e.to_string())?).map_err(|e|e.to_string())?;
+                crate::admission::validate_population(&snapshot.population.iter().cloned().collect::<Vec<_>>(),&card_data,&admission_dir)?;
+                Ok(Some(digimon_engine::determinize::beliefs::WeightedDeckPrior::new(snapshot)?.snapshot().clone()))
+            },
+            _ => Err("closed_decklist requires --belief-prior; open_decklist forbids it".into()),
+        }
+    })();
+    let prior_snapshot = match prior_snapshot {Ok(p)=>p, Err(e)=>{eprintln!("belief configuration rejected: {e}");return ExitCode::from(2)}};
     let mut config = SelfPlayConfig {
+        policy_only,
+        belief_prior: prior_snapshot,
         games,
         game_start,
         seed,
@@ -356,6 +373,8 @@ pub fn run(
             ExitCode::SUCCESS
         }
         Err(e) => {
+            let _ = std::fs::create_dir_all(&out);
+            let _ = std::fs::write(out.join("failure.json"), serde_json::to_vec_pretty(&serde_json::json!({"stage":"selfplay","information_regime":information_regime,"error":e})).unwrap());
             eprintln!("self-play run failed: {e}");
             ExitCode::from(1)
         }

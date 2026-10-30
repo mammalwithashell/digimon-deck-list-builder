@@ -1,0 +1,400 @@
+{
+  "protocol_hash": "967d66eced43e3a658935a4a9fb9ccb22bb1b270c4a9aa1bb6ed287678968c20",
+  "evaluation_information_regime": "closed_decklist",
+  "seeds": [
+    11,
+    22,
+    33
+  ],
+  "budgets": {
+    "exploiter_steps": 2048,
+    "training_games_per_seed": 32,
+    "search_simulations": 32,
+    "worlds": 4,
+    "generations": 2
+  },
+  "panels": {
+    "heldout_policy": [
+      {
+        "seed": 11,
+        "status": "completed",
+        "evaluation_mode": "policy_only",
+        "candidate": {
+          "wins": 158,
+          "losses": 98,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        },
+        "baseline": {
+          "wins": 156,
+          "losses": 100,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        }
+      },
+      {
+        "seed": 22,
+        "status": "completed",
+        "evaluation_mode": "policy_only",
+        "candidate": {
+          "wins": 24,
+          "losses": 232,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        },
+        "baseline": {
+          "wins": 87,
+          "losses": 169,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        }
+      },
+      {
+        "seed": 33,
+        "status": "completed",
+        "evaluation_mode": "policy_only",
+        "candidate": {
+          "wins": 172,
+          "losses": 84,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        },
+        "baseline": {
+          "wins": 177,
+          "losses": 79,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        }
+      }
+    ],
+    "anchors": [
+      {
+        "seed": 11,
+        "status": "completed",
+        "evaluation_mode": "policy_only",
+        "candidate": {
+          "wins": 78,
+          "losses": 178,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        },
+        "baseline": {
+          "wins": 113,
+          "losses": 143,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        }
+      },
+      {
+        "seed": 22,
+        "status": "completed",
+        "evaluation_mode": "policy_only",
+        "candidate": {
+          "wins": 11,
+          "losses": 245,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        },
+        "baseline": {
+          "wins": 42,
+          "losses": 214,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        }
+      },
+      {
+        "seed": 33,
+        "status": "completed",
+        "evaluation_mode": "policy_only",
+        "candidate": {
+          "wins": 113,
+          "losses": 143,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        },
+        "baseline": {
+          "wins": 119,
+          "losses": 137,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        }
+      }
+    ],
+    "exploiter": [
+      {
+        "seed": 11,
+        "status": "completed",
+        "evaluation_mode": "policy_only",
+        "candidate": {
+          "wins": 135,
+          "losses": 121,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        },
+        "baseline": {
+          "wins": 123,
+          "losses": 133,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        }
+      },
+      {
+        "seed": 22,
+        "status": "completed",
+        "evaluation_mode": "policy_only",
+        "candidate": {
+          "wins": 246,
+          "losses": 10,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        },
+        "baseline": {
+          "wins": 125,
+          "losses": 131,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        }
+      },
+      {
+        "seed": 33,
+        "status": "completed",
+        "evaluation_mode": "policy_only",
+        "candidate": {
+          "wins": 91,
+          "losses": 165,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        },
+        "baseline": {
+          "wins": 98,
+          "losses": 158,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128,
+          "errors": []
+        }
+      }
+    ],
+    "heldout_search": [
+      {
+        "seed": 11,
+        "status": "completed",
+        "evaluation_mode": "search_assisted",
+        "candidate": {
+          "wins": 161,
+          "losses": 95,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        },
+        "baseline": {
+          "wins": 135,
+          "losses": 121,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        }
+      },
+      {
+        "seed": 22,
+        "status": "completed",
+        "evaluation_mode": "search_assisted",
+        "candidate": {
+          "wins": 148,
+          "losses": 108,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        },
+        "baseline": {
+          "wins": 139,
+          "losses": 117,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        }
+      },
+      {
+        "seed": 33,
+        "status": "completed",
+        "evaluation_mode": "search_assisted",
+        "candidate": {
+          "wins": 145,
+          "losses": 111,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        },
+        "baseline": {
+          "wins": 129,
+          "losses": 127,
+          "draws": 0,
+          "failed": 0,
+          "truncated": 0,
+          "games": 256,
+          "first_seat_games": 128,
+          "second_seat_games": 128
+        }
+      }
+    ]
+  },
+  "training_models": {
+    "11/open_decklist": {
+      "zip": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\11\\open_decklist\\gen1\\model.zip",
+      "onnx": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\11\\open_decklist\\gen1\\model.onnx"
+    },
+    "11/closed_decklist": {
+      "zip": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\11\\closed_decklist\\gen1\\model.zip",
+      "onnx": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\11\\closed_decklist\\gen1\\model.onnx"
+    },
+    "22/open_decklist": {
+      "zip": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\22\\open_decklist\\gen1\\model.zip",
+      "onnx": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\22\\open_decklist\\gen1\\model.onnx"
+    },
+    "22/closed_decklist": {
+      "zip": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\22\\closed_decklist\\gen1\\model.zip",
+      "onnx": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\22\\closed_decklist\\gen1\\model.onnx"
+    },
+    "33/open_decklist": {
+      "zip": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\33\\open_decklist\\gen1\\model.zip",
+      "onnx": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\33\\open_decklist\\gen1\\model.onnx"
+    },
+    "33/closed_decklist": {
+      "zip": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\33\\closed_decklist\\gen1\\model.zip",
+      "onnx": "D:\\cargo-target-wt\\closed-deck-belief-training\\full-20261028\\comparison-release\\train\\33\\closed_decklist\\gen1\\model.onnx"
+    }
+  },
+  "unchanged_seed": {
+    "11": {
+      "wins": 1,
+      "losses": 255,
+      "draws": 0,
+      "failed": 0,
+      "truncated": 0,
+      "games": 256,
+      "first_seat_games": 128,
+      "second_seat_games": 128,
+      "errors": []
+    },
+    "22": {
+      "wins": 0,
+      "losses": 256,
+      "draws": 0,
+      "failed": 0,
+      "truncated": 0,
+      "games": 256,
+      "first_seat_games": 128,
+      "second_seat_games": 128,
+      "errors": []
+    },
+    "33": {
+      "wins": 1,
+      "losses": 255,
+      "draws": 0,
+      "failed": 0,
+      "truncated": 0,
+      "games": 256,
+      "first_seat_games": 128,
+      "second_seat_games": 128,
+      "errors": []
+    }
+  },
+  "fixed_anchor_sha256": "5ad190ec3f10218265901c5ee244af4269c676d4d31eaab7e7c457317f98b149"
+}

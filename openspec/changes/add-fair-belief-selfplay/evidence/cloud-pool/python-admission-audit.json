@@ -1,0 +1,78 @@
+{
+  "train_snapshot": {
+    "lists": 21,
+    "admitted": 21,
+    "archetypes": {
+      "Chronicle": 2,
+      "Chronomon": 2,
+      "Examon": 2,
+      "Glowing Dawn": 2,
+      "Light Hybrid": 1,
+      "Medusamon": 1,
+      "SW": 1,
+      "ShineGreymon Data Squad": 1,
+      "TS Jupitermon": 2,
+      "TS Mervamon": 2,
+      "Three Musketeers": 2,
+      "Toho Braves": 2,
+      "Virus Busters": 1
+    },
+    "rejected": [],
+    "source_sha256": "13d6fd44a64c9725be77321015204862e34aafe77d63abc76eda34db6320b571",
+    "lf_sha256": "be7315fb7417c524f5a7a0b96b2c6a8c5810f7ff8156c9a11979a08753cde437"
+  },
+  "heldout_snapshot": {
+    "lists": 23,
+    "admitted": 23,
+    "archetypes": {
+      "Chronicle": 2,
+      "Chronomon": 2,
+      "Examon": 2,
+      "Glowing Dawn": 2,
+      "Medusamon": 1,
+      "SW": 2,
+      "ShineGreymon Data Squad": 2,
+      "TS Jupitermon": 2,
+      "TS Mervamon": 2,
+      "Three Musketeers": 2,
+      "Toho Braves": 2,
+      "Virus Busters": 2
+    },
+    "rejected": [],
+    "source_sha256": "765c53e6250de416fd7caa966a060bed0aa893a42a1f009eca95b347e7c0987e",
+    "lf_sha256": "7045fc79e85ff2a54799c7f1956691825dd41ce22e534d8cd80f2ed2ed640a9f"
+  },
+  "pet_regression_snapshot": {
+    "lists": 5,
+    "admitted": 5,
+    "archetypes": {
+      "Light Hybrid": 1,
+      "Medusamon": 1,
+      "SW": 1,
+      "ShineGreymon Data Squad": 1,
+      "Virus Busters": 1
+    },
+    "rejected": [],
+    "source_sha256": "43b5d2f5d6a02dd04703e8533ab116c0e197d8f9b591e4fd4e6bca51802f605e",
+    "lf_sha256": "476abd86b8de40e83ba3ef840a885753f027756e59a0443293522d0d852fc503"
+  },
+  "supplemental_snapshot": {
+    "lists": 36,
+    "admitted": 36,
+    "archetypes": {
+      "Chronicle": 4,
+      "Chronomon": 4,
+      "Examon": 4,
+      "Glowing Dawn": 4,
+      "SW": 3,
+      "ShineGreymon Data Squad": 1,
+      "TS Jupitermon": 4,
+      "TS Mervamon": 4,
+      "Three Musketeers": 4,
+      "Toho Braves": 4
+    },
+    "rejected": [],
+    "source_sha256": "98dc631956ce05778d832554fe2bd259912f8bcb58adbfb178049e35a3006d87",
+    "lf_sha256": "4bbd7365dcebd36a1e20acf4f09c3759ea284d98f870da646c37b2e12d569d71"
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "schema": "cloud-belief-cohort-v1",
+  "source": "C:\\Users\\james\\.codex\\worktrees\\closed-deck-belief-training\\digimon-deck-list-builder-1\\data\\training_pools\\ex13-20261026",
+  "sources": {
+    "train": {
+      "file": "C:\\Users\\james\\.codex\\worktrees\\closed-deck-belief-training\\digimon-deck-list-builder-1\\data\\training_pools\\ex13-20261026\\train_snapshot.json",
+      "sha256": "13d6fd44a64c9725be77321015204862e34aafe77d63abc76eda34db6320b571",
+      "snapshot_hash": "sha256:17e1e7b8205a1d2b100648e7e6ee6aee3b5303fddf908805cb2af01f70a28fcd"
+    },
+    "validation": {
+      "file": "C:\\Users\\james\\.codex\\worktrees\\closed-deck-belief-training\\digimon-deck-list-builder-1\\data\\training_pools\\ex13-20261026\\supplemental_snapshot.json",
+      "sha256": "98dc631956ce05778d832554fe2bd259912f8bcb58adbfb178049e35a3006d87",
+      "snapshot_hash": "sha256:20bef760e38322a3b8370f2a24fd6bdac035e662fa868cbcfd28a451efe08612"
+    },
+    "test": {
+      "file": "C:\\Users\\james\\.codex\\worktrees\\closed-deck-belief-training\\digimon-deck-list-builder-1\\data\\training_pools\\ex13-20261026\\heldout_snapshot.json",
+      "sha256": "765c53e6250de416fd7caa966a060bed0aa893a42a1f009eca95b347e7c0987e",
+      "snapshot_hash": "sha256:619f36dead2a70e0098baef86d0e5c4d2f706db0bd86b9695b88a57fc9dc5c38"
+    },
+    "pet_regression": {
+      "file": "C:\\Users\\james\\.codex\\worktrees\\closed-deck-belief-training\\digimon-deck-list-builder-1\\data\\training_pools\\ex13-20261026\\pet_regression_snapshot.json",
+      "sha256": "43b5d2f5d6a02dd04703e8533ab116c0e197d8f9b591e4fd4e6bca51802f605e",
+      "snapshot_hash": "sha256:fe84139e918deeea53d7fbc51106f8f99fa15395d43d56fccb98921b4675f26a"
+    }
+  },
+  "runtime_slots_sha256": "eebf5ef30aebff4236ca1f8adaf8978e19ff58873636d638b1f4604e80129384",
+  "source_policy": "exact frozen cloud partitions; no card substitutions or resplitting",
+  "prior_weighting": "equal per distinct training list; repeated native slots are sampling weights, not extra candidates",
+  "population_fallback": "globally admitted IDs, independent of held-out list contents",
+  "native_engine_sha256": "ad57c1ee3c6793cade0a57a3f3c5b7918e0505cbb25fe425bf01886cf432ee8c",
+  "native_binding_sha256": {
+    "digimon_engine.digimon_engine": "80c0e09dbc39195fea49503f538edb7efdbec8416104c02c9b63fe4d5961a4cf"
+  },
+  "gates": {
+    "cards.json": "8429575efbf63dc47fc244755bc4320333f355db4acff7878efec51646c06a98",
+    "card_admissibility.json": "f7c63e78e8e2d8458b9ff8fd7814cf2536f2aa405988396f732c357ab0b8b336",
+    "mechanics_readiness.json": "ea053dbc2ffdae82154421049e019f726ec6a3e737529f987a1353d2800cbd0b",
+    "deck_formats.json": "72ec1cc0060fdf0bc14c6a68fa9747039d9e49a1605b5623965bbaaafb17b673"
+  },
+  "coverage": {
+    "train": {
+      "distinct_lists": 21,
+      "runtime_slots": 26,
+      "archetypes": {
+        "Chronicle": 2,
+        "Chronomon": 2,
+        "Examon": 2,
+        "Glowing Dawn": 2,
+        "Light Hybrid": 1,
+        "Medusamon": 1,
+        "SW": 1,
+        "ShineGreymon Data Squad": 1,
+        "TS Jupitermon": 2,
+        "TS Mervamon": 2,
+        "Three Musketeers": 2,
+        "Toho Braves": 2,
+        "Virus Busters": 1
+      }
+    },
+    "validation": {
+      "distinct_lists": 36,
+      "runtime_slots": 36,
+      "archetypes": {
+        "Chronicle": 4,
+        "Chronomon": 4,
+        "Examon": 4,
+        "Glowing Dawn": 4,
+        "SW": 3,
+        "ShineGreymon Data Squad": 1,
+        "TS Jupitermon": 4,
+        "TS Mervamon": 4,
+        "Three Musketeers": 4,
+        "Toho Braves": 4
+      }
+    },
+    "test": {
+      "distinct_lists": 23,
+      "runtime_slots": 23,
+      "archetypes": {
+        "Chronicle": 2,
+        "Chronomon": 2,
+        "Examon": 2,
+        "Glowing Dawn": 2,
+        "Medusamon": 1,
+        "SW": 2,
+        "ShineGreymon Data Squad": 2,
+        "TS Jupitermon": 2,
+        "TS Mervamon": 2,
+        "Three Musketeers": 2,
+        "Toho Braves": 2,
+        "Virus Busters": 2
+      }
+    },
+    "pet_regression": {
+      "distinct_lists": 5,
+      "runtime_slots": 5,
+      "archetypes": {
+        "Light Hybrid": 1,
+        "Medusamon": 1,
+        "SW": 1,
+        "ShineGreymon Data Squad": 1,
+        "Virus Busters": 1
+      }
+    }
+  },
+  "admission_is_closed_search_coverage": false,
+  "heldout_scope": "23 source-held-out lists in 12 archetypes; Light Hybrid has same-list pet regression only",
+  "supplemental_scope": "validation only; source evidence is weaker/mixed; not new competitive qualification",
+  "promotion_eligible": false
+}

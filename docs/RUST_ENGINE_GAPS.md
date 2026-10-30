@@ -4893,6 +4893,13 @@ cards still on the field, encoded as SOURCE_SELECT ids with `zone_owner` = their
 the return in pick order (pick 1 drawn first) and an own-effect `OnAddToDeck`. BT26-060
 ships (with `<Succession>`). Tests: bt26_060_*.
 
+**Fair-belief follow-up (2026-10-29).** Ordered returns preserve public/private
+identity entitlements and shift remembered deck positions. Digi-Eggs among the
+returned cards route to their owner's Digi-Egg deck in the chosen order
+(CR 3-1-3-9-1); egg-only returns do not emit a main-deck addition. Closed-world
+sampling preserves remembered egg-deck positions. Regression:
+`determinization::closed_cloud::ordered_stack_return_routes_eggs_to_the_egg_deck_without_corrupting_counts`.
+
 ## G-ENGINE-LOSE-SECURITY-BY-EFFECT â€” RESOLVED (2026-10-03, BT26-089 Kyo Sawashiro)
 
 "When your security stack is removed from â€¦ if removed from by effects" (DCGO

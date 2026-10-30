@@ -283,6 +283,126 @@ pub struct TriggerContext {
 }
 
 impl TriggerContext {
+    /// Parked observer payloads must not retain unentitled concealed identities.
+    pub(crate) fn belief_safe(&self, allowed: &std::collections::HashSet<CardHandle>) -> bool {
+        let snapshot_safe = |s: &DeletedObjectSnapshot| {
+            (s.is_token || allowed.contains(&s.top_card))
+                && s.digisources_just_before
+                    .iter()
+                    .all(|h| allowed.contains(h))
+        };
+        self.simultaneous_play_members
+            .iter()
+            .all(|s| s.belief_safe(allowed))
+            && [
+                self.target_card,
+                self.event_card,
+                self.event_source_card,
+                self.event_host_card,
+                self.battle_opponent_card,
+                self.source_effect.and_then(|s| s.source_card),
+                self.event_cause_effect.and_then(|s| s.source_card),
+            ]
+            .into_iter()
+            .flatten()
+            .all(|h| allowed.contains(&h))
+            && self.subject.is_none_or(|s| match s {
+                EventSubject::Card { card, .. } => allowed.contains(&card),
+                _ => true,
+            })
+            && self
+                .selected_results
+                .iter()
+                .filter_map(|s| s.card)
+                .all(|h| allowed.contains(&h))
+            && self
+                .moved_card_sets
+                .iter()
+                .flat_map(|s| &s.cards)
+                .all(|h| allowed.contains(h))
+            && self.deleted_object.as_ref().is_none_or(snapshot_safe)
+            && self
+                .event_snapshot
+                .as_ref()
+                .is_none_or(|s| snapshot_safe(s))
+            && self
+                .battle_deleters
+                .iter()
+                .all(|s| allowed.contains(&s.top_card))
+    }
+
+    pub(crate) fn belief_missing_handles(
+        &self,
+        allowed: &std::collections::HashSet<CardHandle>,
+    ) -> Vec<CardHandle> {
+        let mut handles: Vec<_> = [
+            self.target_card,
+            self.event_card,
+            self.event_source_card,
+            self.event_host_card,
+            self.battle_opponent_card,
+            self.source_effect.and_then(|s| s.source_card),
+            self.event_cause_effect.and_then(|s| s.source_card),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        if let Some(EventSubject::Card { card, .. }) = self.subject {
+            handles.push(card);
+        }
+        handles.extend(self.selected_results.iter().filter_map(|s| s.card));
+        handles.extend(
+            self.moved_card_sets
+                .iter()
+                .flat_map(|s| s.cards.iter().copied()),
+        );
+        for s in self
+            .deleted_object
+            .iter()
+            .chain(self.event_snapshot.iter().map(|s| s.as_ref()))
+        {
+            if !s.is_token {
+                handles.push(s.top_card);
+            }
+            handles.extend(s.digisources_just_before.iter().copied());
+        }
+        handles.extend(self.battle_deleters.iter().map(|s| s.top_card));
+        handles.extend(
+            self.simultaneous_play_members
+                .iter()
+                .flat_map(|s| s.belief_missing_handles(allowed)),
+        );
+        handles.retain(|h| !allowed.contains(h));
+        handles.sort_by_key(|h| h.0);
+        handles.dedup();
+        handles
+    }
+
+    pub(crate) fn belief_snapshots_safe(
+        &self,
+        identities: &std::collections::HashSet<CardHandle>,
+    ) -> bool {
+        self.simultaneous_play_members
+            .iter()
+            .all(|c| c.belief_snapshots_safe(identities))
+            && self
+                .deleted_object
+                .iter()
+                .chain(self.event_snapshot.iter().map(|s| s.as_ref()))
+                .all(|s|
+                // Only the top has cached printed metadata. Source handles
+                // are references, audited separately and sampled in the world.
+                s.is_token || identities.contains(&s.top_card))
+            && self
+                .battle_deleters
+                .iter()
+                .all(|s| identities.contains(&s.top_card))
+            && self
+                .replacement_paid_prevention
+                .as_ref()
+                .is_none_or(|(h, _, _, _)| identities.contains(h))
+    }
+
     /// Resolve the captured event object, never a later occupant of its old slot.
     /// Legacy contexts without a captured token retain their compatibility handle.
     pub fn resolve_event_permanent(&self, game: &crate::game::Game) -> Option<PermanentHandle> {

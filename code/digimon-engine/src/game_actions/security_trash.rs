@@ -107,6 +107,8 @@ impl Game {
         else {
             return false;
         };
+        let from_top = self.player(state.player).security.len() - 1 - index;
+        self.remember_belief_security_departure(state.player, state.card.0, from_top);
         let card = self.player_mut(state.player).security.remove(index);
         self.player_mut(state.player)
             .face_up_security

@@ -48,6 +48,10 @@ use super::npy;
 /// game index, and the decision index.
 #[derive(Debug, Clone)]
 pub struct SelfPlayConfig {
+    /// Evaluation only: direct masked policy actions, no search targets.
+    pub policy_only: bool,
+    /// None is the explicit open-decklist compatibility regime.
+    pub belief_prior: Option<crate::determinize::beliefs::PriorSnapshot>,
     /// Games to play.
     pub games: u32,
     /// Global first game index, independent of worker assignment.
@@ -88,6 +92,8 @@ pub struct SelfPlayConfig {
 impl Default for SelfPlayConfig {
     fn default() -> Self {
         Self {
+            policy_only: false,
+            belief_prior: None,
             games: 16,
             game_start: 0,
             seed: 0,
@@ -263,6 +269,13 @@ pub fn run_self_play_with_opponents(
     if let Some(pool) = &opponents {
         pool.validate()?;
     }
+    let belief_prior = config.belief_prior.clone()
+        .map(crate::determinize::beliefs::WeightedDeckPrior::new).transpose()?;
+    if let Some(prior) = &belief_prior {
+        if prior.snapshot().population.iter().any(|id| !card_data.contains_key(id)) {
+            return Err("belief population contains unloaded/unimplemented cards".into());
+        }
+    }
     crate::search::profiling::reset(std::env::var("DIGIMON_SEARCH_PROFILE").as_deref() == Ok("1"));
     let game_end = config
         .game_start
@@ -301,6 +314,9 @@ pub fn run_self_play_with_opponents(
         next_shard: 0,
         written: Vec::new(),
     };
+    use std::io::Write;
+    let mut belief_predictions = if belief_prior.is_some() { Some(std::fs::File::create(out_dir.join("belief_predictions.jsonl")).map_err(|e|e.to_string())?) } else {None};
+    let mut belief_truth = if belief_prior.is_some() { Some(std::fs::File::create(out_dir.join("belief_scoring_truth.jsonl")).map_err(|e|e.to_string())?) } else {None};
     let mut game_decks: Vec<(usize, usize)> = Vec::with_capacity(config.games as usize);
     let mut phase_stats: BTreeMap<String, PhaseStat> = BTreeMap::new();
     let mut opponent_games = Vec::new();
@@ -322,6 +338,7 @@ pub fn run_self_play_with_opponents(
         eprintln!("game {game_idx} start: seed {game_seed}, decks {di} vs {dj}");
         let mut game = Game::new(&deck_lists, card_data, Rules::standard(), Some(game_seed))
             .map_err(|e| format!("game {game_idx} ({di} vs {dj}): {e}"))?;
+        if belief_prior.is_some() && !config.policy_only { game.enable_belief_knowledge()?; }
         // Same contract as HeadlessRunner: turn 1 is exposed during the
         // mulligan window.
         game.turn_count = 1;
@@ -340,6 +357,7 @@ pub fn run_self_play_with_opponents(
         // reference configuration's randomness is untouched.
         let mut cap_rng =
             StdRng::seed_from_u64(derive_seed(config.seed, 2, (game_idx as u64) | (1 << 63)));
+        let mut belief_records:Vec<(serde_json::Value,serde_json::Value)>=Vec::new();
         let mut decisions = 0u32;
         let mut non_forced = 0u32;
         let game_first_record = buffer.records.len();
@@ -430,15 +448,54 @@ pub fn run_self_play_with_opponents(
                 }
                 _ => &mut *evaluator,
             };
+            if config.policy_only {
+                let obs=build_observation_tensor_with_mask(&game,pid,&registry,profile,&mask);
+                let eval=acting_evaluator.evaluate_batch(&[crate::search::EvalRequest{obs,mask:mask.clone()}]);
+                if eval.len()!=1 || eval[0].policy.len()!=mask.len() ||
+                    eval[0].policy.iter().any(|v|!v.is_finite()) {
+                    return Err("invalid policy-only evaluator output".into());
+                }
+                let action=legal.iter().copied().fold(legal[0],|best,a|if eval[0].policy[a as usize]>eval[0].policy[best as usize]{a}else{best});
+                game.decode_action(action,pid);decisions+=1;
+                continue;
+            }
             searched_by_seat[pid as usize] += 1;
-            let result = determinized_search_batched(
+            let mut sample_counts:BTreeMap<String,usize>=BTreeMap::new();
+            let mut sampled_worlds=0usize;let mut fallback_worlds=0usize;let mut sampling_seconds=0.;
+            let result = if let Some(prior) = &belief_prior {
+                let memory = game.belief_knowledge(pid)?;
+                crate::search::determinized_search_sampled(
+                    &registry,&game,pid,acting_evaluator,&search_cfg,config.evaluation_batch_size,
+                    &mut |seed| {
+                        let started=std::time::Instant::now();
+                        let (world,fallback)=crate::determinize::closed::materialize_closed_with_diagnostics(&game,pid,memory,prior,seed)?;
+                        sampling_seconds+=started.elapsed().as_secs_f64();sampled_worlds+=1;fallback_worlds+=usize::from(fallback);
+                        for card in &world.players[(1-pid) as usize].hand { *sample_counts.entry(card.card_id(&world.card_data).into()).or_default()+=1; }
+                        Ok(world)
+                    })
+                    .map_err(|e|format!("game {game_idx} decision {decisions} closed-list search: {e}"))?
+            } else { determinized_search_batched(
                 &registry,
                 &game,
                 pid,
                 acting_evaluator,
                 &search_cfg,
                 config.evaluation_batch_size,
-            );
+            ) };
+            if let Some(prior)=&belief_prior {
+                if !sample_counts.is_empty() {
+                    let total:usize=sample_counts.values().sum();
+                    let probabilities:BTreeMap<_,_>=sample_counts.iter().map(|(id,n)|(id.clone(),*n as f64/total as f64)).collect();
+                    let evidence=crate::determinize::beliefs::BeliefEvidence::extract(&game,pid,game.belief_knowledge(pid)?)?;
+                    let posterior=prior.posterior(&evidence)?;
+                    let actual:Vec<_>=game.players[(1-pid) as usize].hand.iter().map(|c|c.card_id(&game.card_data).to_string()).collect();
+                    belief_records.push((serde_json::json!({"game":game_idx,"decision":decisions,"viewer":pid,
+                        "search_seed":search_cfg.search.seed,"probabilities":probabilities,"compatible_candidates":posterior.candidates.len(),
+                        "fallback_mass":posterior.fallback_mass,"sampled_worlds":sampled_worlds,
+                        "fallback_worlds":fallback_worlds,"sampling_seconds":sampling_seconds}),
+                        serde_json::json!({"game":game_idx,"decision":decisions,"viewer":pid,"actual_hand":actual})));
+                }
+            }
             {
                 let stat = phase_stats
                     .entry(format!("{:?}", game.current_phase))
@@ -542,6 +599,13 @@ pub fn run_self_play_with_opponents(
                         | crate::game::TerminalOutcomeReason::Crash
                 )
             );
+        // Truth is exported only after the game ends, to an isolated scorer
+        // sidecar that no policy, sampler or trainer reads.
+        for (mut prediction,mut truth) in belief_records {
+            prediction["completed"]=(!truncated).into();truth["completed"]=(!truncated).into();
+            writeln!(belief_predictions.as_mut().unwrap(),"{}",prediction).map_err(|e|e.to_string())?;
+            writeln!(belief_truth.as_mut().unwrap(),"{}",truth).map_err(|e|e.to_string())?;
+        }
         for r in &mut buffer.records[game_first_record..] {
             r.terminated = !truncated;
         }
@@ -585,6 +649,15 @@ pub fn run_self_play_with_opponents(
     stats.shards = buffer.written.len();
 
     let mut manifest = serde_json::json!({
+        "elapsed_seconds": started.elapsed().as_secs_f64(),
+        "evaluation_only": config.policy_only,
+        "information": {
+            "regime": if belief_prior.is_some() { "closed_decklist" } else { "open_decklist" },
+            "knowledge_schema": crate::determinize::beliefs::BELIEF_SCHEMA_VERSION,
+            "prior_hash": belief_prior.as_ref().map(|p|p.snapshot_hash()),
+            "legality_hash": config.belief_prior.as_ref().map(|p|p.legality_hash.as_str()),
+            "prior_provenance": config.belief_prior.as_ref().map(|p|p.provenance.as_str())
+        },
         "schema": "selfplay-shards-v1",
         "model": model_desc,
         "obs_dim": buffer.obs_dim,
