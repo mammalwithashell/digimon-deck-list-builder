@@ -6701,6 +6701,21 @@ CR 4.3 section 1-3-11-4 requires completing as much Assembly processing as neede
 
 Evidence: the new required-payment Rust regression fails on the old engine; 36 `dsl::assembly_play` tests and 28 policy/cast-time/assignment controls pass after repair. Controls cover exact memory boundary, explicit legal material actions, cloned states, full-cost decline, effect reductions and assigned costs. Logs and original replay trace are under `runs/2026-10-23-assembly-payment-fix/` and `runs/2026-10-23-english-search/assembly-loop-trace.json`. This is simulator evidence, with no new DCGO confirmation or action/tensor contract expansion. The partial v2 search check is invalidated and preserved; full-run replay/restart evidence is recorded in the English search pilot report.
 
+## "Would be played" cost reducer offered on a digivolve [G-COST-REDUCTION-ALLY-PLAYED-ON-DIGIVOLVE] - RESOLVED (2026-10-27, EX13 Adventure lane D)
+
+`kind: cost_reduction` + `when_any_ally_played` ("When any ... would be played
+..., reduce the play cost") was evaluated by every BeforePayCost scan, including
+the digivolve scan, so digivolving into a matching card from hand surfaced the
+"Use Cost reduction (-1) to reduce digivolution cost?" prompt (ST20-12 / ST21-12 /
+ST20-13 / ST21-13: suspend the Tamer, -1 digivolution cost). DCGO gates these on
+`CanTriggerWhenPermanentWouldPlay`, which a digivolution never satisfies. Fix:
+`lower_cost_reduction.rs` rejects `rctx.cost_is_digivolve` for
+`when_any_ally_played` in both the offer condition and the amount fn (the
+digivolve-keyed `when_any_ally_digivolves_into` is unchanged). Every
+`when_any_ally_played` card in the pool prints a play/use reducer, so none relied
+on the old behaviour. Tests: `cards_behavioral` `st20_12_reduction_not_on_digivolve`
+(+ ST21-12 / ST20-13 copies).
+
 ## Token returned to hand is offered as a play the engine refuses [G-ENGINE-TOKEN-RETURNED-TO-HAND] — OPEN (2026-10-27)
 
 Found by the seat-balanced head-to-head panels of the cap-randomization

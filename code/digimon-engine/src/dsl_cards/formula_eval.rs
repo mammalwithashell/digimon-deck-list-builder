@@ -1176,7 +1176,7 @@ fn count_zone_read(
     count as i32
 }
 
-fn distinct_colors_in_zone(
+pub(crate) fn distinct_colors_in_zone(
     zone: CompiledZone,
     player: PlayerId,
     ctx: &EffectReadContext<'_>,

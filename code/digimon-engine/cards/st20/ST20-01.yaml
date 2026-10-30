@@ -1,0 +1,37 @@
+# ST20-01 Koromon — Digi-Egg, Lv.2, Black. Traits: Lesser, ADVENTURE.
+# Form: In-Training.
+#
+# Printed text (official Bandai DB, data/card_bundles/ST20-01.md):
+#   Inherited Effect: [All Turns] This Digimon with the [ADVENTURE] trait gets
+#   +1000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Black/ST20_01.cs —
+#   ChangeSelfDPStaticEffect(+1000, isInheritedEffect: true), condition
+#   `card.PermanentOfThisCard().TopCard.HasAdventureTraits` (the carrier's top
+#   card), no turn gate.
+#
+# Inherited conditional self-aura (BT16-002 / EX11-016 idiom): `target: {}`
+# is the carrier; `trait_has` in `active_when` is evaluated against the
+# carrier permanent ("This Digimon with the [ADVENTURE] trait").
+#
+# Verdict: IMPLEMENTED.
+
+card: ST20-01
+name: Koromon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+traits: [Lesser, ADVENTURE]
+form: In-Training
+
+effects:
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - trait_has: ADVENTURE
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon with the [ADVENTURE] trait gets +1000 DP"

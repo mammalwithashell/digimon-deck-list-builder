@@ -1145,6 +1145,18 @@ fn compile_predicate(
                 n: d.n,
             }
         }),
+        distinct_colors_gte: p.distinct_colors_gte.as_ref().map(|d| {
+            crate::compiled::CompiledDistinctColorsCount {
+                of: compile_player_ref(d.of),
+                filter: Box::new(compile_predicate(
+                    &d.filter,
+                    &format!("{prefix}.distinct_colors_gte.filter"),
+                    card_id,
+                    errors,
+                )),
+                n: d.n,
+            }
+        }),
         face_down_sources_under_tamers_gte: p.face_down_sources_under_tamers_gte,
         battle_opponent_no_sources: p.battle_opponent_no_sources,
         self_source_count: p.self_source_count.as_ref().map(|s| {

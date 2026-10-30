@@ -1,0 +1,74 @@
+# ST21-07 Palmon — Lv3, Green, Vegetation / ADVENTURE, Rookie / Data,
+# DP 1000, Cost 3.
+#
+# Printed card text (official bundle data/card_bundles/ST21-07.md):
+#
+#   Digivolve: Green Lv.2 / cost 0.
+#   [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0
+#
+#   [On Play] By trashing 1 card with the [ADVENTURE] trait in your hand,
+#   <Draw 2> (Draw 2 cards from your deck.)
+#
+#   Inherited: [All Turns] This Digimon gets +1000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Green/ST21_07.cs
+#   - Alt requirement: Lv2 && HasAdventureTraits, cost 0.
+#   - [On Play] optional (activateClass optional=true), CanActivate requires an
+#     ADVENTURE card in hand; SelectHandEffect(Discard, canNoSelect: true,
+#     maxCount 1) and <Draw 2> only if a card was discarded.
+#   - Inherited ChangeSelfDPStaticEffect(+1000, condition: null) — [All Turns].
+#
+# "By trashing X, Y" = optional cost → mandatory draw. Same shape as EX13-018
+# Coredramon: `select_hand { optional, cost: true }` (declining aborts the
+# clause, so nothing is drawn), then trash + <Draw 2>.
+#
+# Verdict: IMPLEMENTED.
+
+card: ST21-07
+name: Palmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Vegetation, ADVENTURE]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: ADVENTURE }
+    cost: 0
+
+effects:
+  - when: on_play
+    optional: true
+    summary: "[On Play] By trashing 1 [ADVENTURE] card from hand, <Draw 2>"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: ADVENTURE
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            trait_has: ADVENTURE
+          prompt: "Trash 1 [ADVENTURE] card from your hand to <Draw 2>"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - draw: { of: you, count: 2 }
+
+  - scope: inherited
+    kind: aura
+    active_when: { all_turns: true }
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

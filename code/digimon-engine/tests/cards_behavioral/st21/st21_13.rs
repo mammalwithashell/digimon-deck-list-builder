@@ -688,6 +688,20 @@ fn st21_13_cost_reduction_can_be_declined() {
     );
 }
 
+/// "would be played FROM YOUR HAND" (DCGO `IsExistOnHand`): a cost-paying
+/// effect play from the trash is not reduced. Shared suite in `st20::st20_12`.
+#[test]
+fn st21_13_cost_reduction_does_not_fire_on_cost_paying_trash_play() {
+    crate::st20::st20_12::reduction_not_on_cost_paying_trash_play(CARD_ID);
+}
+
+/// "would be PLAYED": digivolving into an ADVENTURE Digimon is not reduced
+/// (G-COST-REDUCTION-ALLY-PLAYED-ON-DIGIVOLVE).
+#[test]
+fn st21_13_cost_reduction_does_not_fire_on_digivolve() {
+    crate::st20::st20_12::reduction_not_on_digivolve(CARD_ID);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 3 — Behavioral: Clause 2 [Your Turn] aura — own Lv5+ ADVENTURE
 //                          Digimon gain Rush

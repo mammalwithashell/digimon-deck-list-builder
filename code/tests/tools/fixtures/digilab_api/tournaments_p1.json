@@ -1,0 +1,48 @@
+{
+  "data": [
+    {
+      "tournament_id": 6301,
+      "event_date": "2026-09-14",
+      "event_type": "locals",
+      "format": "EX13",
+      "player_count": 18,
+      "store_name": "Card Masters",
+      "store_slug": "card-masters-austin",
+      "city": "Austin",
+      "state_region": "TX",
+      "country": "US",
+      "winner_name": "Alice",
+      "winner_slug": "alice",
+      "winning_deck": "Blue Flare",
+      "winning_deck_slug": "blue-flare",
+      "winning_deck_color": "Blue",
+      "winning_deck_secondary_color": null
+    },
+    {
+      "tournament_id": 6290,
+      "event_date": "2026-09-07",
+      "event_type": "locals",
+      "format": "EX13",
+      "player_count": 12,
+      "store_name": "Evolution Gaming",
+      "store_slug": "evolution-gaming",
+      "city": "Butler",
+      "state_region": "WI",
+      "country": "US",
+      "winner_name": "Carol",
+      "winner_slug": "carol",
+      "winning_deck": "Imperialdramon",
+      "winning_deck_slug": "imperialdramon",
+      "winning_deck_color": "Blue",
+      "winning_deck_secondary_color": "Green"
+    }
+  ],
+  "pagination": { "page": 1, "per_page": 100, "total": 2, "total_pages": 1 },
+  "stats": { "tournaments": 2, "players": 30 },
+  "monthly": [{ "month": "2026-09", "count": 2 }],
+  "formats": [
+    { "format_id": "EX13", "set_name": "Sacred Guardians", "display_name": "EX13", "release_date": "2026-08-29" },
+    { "format_id": "EX12", "set_name": "Infernal Ascension", "display_name": "EX12", "release_date": "2026-05-22" }
+  ],
+  "event_types": [{ "event_type": "locals", "count": 2 }]
+}
