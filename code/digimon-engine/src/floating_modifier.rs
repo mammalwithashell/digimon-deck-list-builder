@@ -28,11 +28,11 @@
 use digimon_dsl::compiled::CompiledPredicate;
 
 use crate::card_source::CardHandle;
-use crate::enums::{Expiry, ModifierType, PlayerId};
+use crate::enums::{EffectSourceKind, Expiry, ModifierType, PlayerId};
 
 /// A source-independent continuous modifier applied to a live, predicate-matched
 /// candidate set every declarative tick until its `expiry` fires.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FloatingMassModifier {
     /// Restrict replacement-backed protections to opponent effects on every tick.
     pub opponent_only: bool,
@@ -52,6 +52,10 @@ pub struct FloatingMassModifier {
     /// The controller of the installing effect — fixes "opponent"/"your"
     /// relativity for the whole lifetime.
     pub source_player: PlayerId,
+    /// Category captured when the window is installed, including inherited effects.
+    pub source_kind: EffectSourceKind,
+    /// Original carrier; never adopted from a later instance of the physical card.
+    pub source_identity: Option<(PlayerId, u64)>,
     /// Window end. Turn-relative expiries (`EndOfOpponentsNextTurn`,
     /// `EndOfYourTurn`, …) are honored at turn-end; `pending_skips` carries the
     /// `*NextTurn` skip count.
@@ -77,4 +81,24 @@ pub struct FloatingMassModifier {
     /// tick grants this keyword declaratively to every match and `modifier` /
     /// `value` are unused. G-DSL-CONTINUOUS-MASS-KEYWORD-GRANT (BT26-101).
     pub keyword: Option<crate::enums::Keyword>,
+}
+
+impl std::fmt::Debug for FloatingMassModifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("FloatingMassModifier");
+        d.field("opponent_only", &self.opponent_only)
+            .field("filter", &self.filter).field("modifier", &self.modifier)
+            .field("value", &self.value).field("source_card", &self.source_card)
+            .field("source_player", &self.source_player).field("expiry", &self.expiry)
+            .field("pending_skips", &self.pending_skips)
+            .field("effect_immunity", &self.effect_immunity).field("payload", &self.payload)
+            .field("keyword", &self.keyword);
+        if self.source_kind != EffectSourceKind::Digimon {
+            d.field("source_kind", &self.source_kind);
+        }
+        if self.source_identity.is_some() {
+            d.field("source_identity", &self.source_identity);
+        }
+        d.finish()
+    }
 }

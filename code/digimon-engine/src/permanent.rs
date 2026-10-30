@@ -371,12 +371,16 @@ impl Permanent {
                 }
             }
         }
-        for modifier in [ModifierType::ChangeCardDP, ModifierType::ChangeOriginDP] {
-            for entry in modifiers.get(handle, modifier) {
-                match &entry.payload {
-                    ModifierPayload::Dp { value, .. } => identity.dp = Some(*value),
-                    ModifierPayload::None => identity.dp = Some(entry.value),
-                    _ => {}
+        // A change cannot introduce DP where the rules identity has none.
+        // TreatAsDigimon above may explicitly grant DP, which remains changeable.
+        if identity.dp.is_some() {
+            for modifier in [ModifierType::ChangeCardDP, ModifierType::ChangeOriginDP] {
+                for entry in modifiers.get(handle, modifier) {
+                    match &entry.payload {
+                        ModifierPayload::Dp { value, .. } => identity.dp = Some(*value),
+                        ModifierPayload::None => identity.dp = Some(entry.value),
+                        _ => {}
+                    }
                 }
             }
         }

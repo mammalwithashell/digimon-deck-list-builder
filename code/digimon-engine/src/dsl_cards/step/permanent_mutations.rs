@@ -246,6 +246,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             face_up,
             to_owner,
             bind_placed_as,
+            result_receipt,
         } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
@@ -261,10 +262,10 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     _ => crate::dsl_cards::step::resolve_player(ctx, *of),
                 };
                 let position = super::map_stack_position(*position);
-                let placed = ctx.place_permanent_on_security(player, h, position, *face_up);
-                if let (true, Some(name), Some((_, card))) = (placed, bind_placed_as.as_ref(), top) {
-                    bindings.insert_card(name, card);
-                }
+                // A bound payment is expanded into a correlated receipt and
+                // finalizer before reaching this synchronous operation.
+                debug_assert!(bind_placed_as.is_none());
+                ctx.place_permanent_on_security_with_receipt(player, h, position, *face_up, *result_receipt);
             }
             true
         }

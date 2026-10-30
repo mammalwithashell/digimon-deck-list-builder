@@ -38,7 +38,7 @@ pub(crate) fn can_pay(ctx: &EffectReadContext<'_>, payer: PermanentHandle) -> bo
         .is_some()
         && ctx
             .game
-            .effect_can_affect(payer, ctx.player, ctx.source_kind)
+            .effect_can_affect_from(payer, ctx.player, ctx.source_kind, ctx.source_identity)
         && !crate::replacement::deletion_passively_prevented_by(
             ctx.game,
             payer,

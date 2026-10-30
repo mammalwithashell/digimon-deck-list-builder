@@ -80,7 +80,8 @@ impl<'a> EffectContext<'a> {
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player)
                 .with_pending_skips(pending_skips)
-                .with_affecting_source_kind(self.source_kind),
+                .with_affecting_source_kind(self.source_kind)
+                .with_affecting_source_identity(self.source_identity),
         );
         self.game.mark_until_condition_dirty();
         self.after_recorded_install();
@@ -128,7 +129,8 @@ impl<'a> EffectContext<'a> {
         let mut entry = ModifierEntry::simple(modifier, value, expiry, self.player)
             .with_payload(payload)
             .with_pending_skips(pending_skips)
-            .with_affecting_source_kind(self.source_kind);
+            .with_affecting_source_kind(self.source_kind)
+                .with_affecting_source_identity(self.source_identity);
         if opponent_only {
             entry = entry.opponent_only();
         }
@@ -155,7 +157,9 @@ impl<'a> EffectContext<'a> {
                 expiry,
                 self.source_permanent,
                 self.player,
-            ),
+            )
+            .with_affecting_source_kind(self.source_kind)
+            .with_affecting_source_identity(self.source_identity),
         );
         self.game.mark_until_condition_dirty();
     }
@@ -184,6 +188,8 @@ impl<'a> EffectContext<'a> {
                 self.source_permanent,
                 self.player,
             )
+            .with_affecting_source_kind(self.source_kind)
+            .with_affecting_source_identity(self.source_identity)
             .with_effect_immunity_filter(immunity),
         );
         self.game.mark_until_condition_dirty();
@@ -209,6 +215,8 @@ impl<'a> EffectContext<'a> {
                 self.source_permanent,
                 self.player,
             )
+            .with_affecting_source_kind(self.source_kind)
+            .with_affecting_source_identity(self.source_identity)
             .with_payload(payload),
         );
         self.game.mark_until_condition_dirty();
@@ -234,7 +242,8 @@ impl<'a> EffectContext<'a> {
             target,
             ModifierEntry::simple(modifier, value, Expiry::UntilCondition, self.player)
                 .with_until_condition(predicate)
-                .with_affecting_source_kind(self.source_kind),
+                .with_affecting_source_kind(self.source_kind)
+                .with_affecting_source_identity(self.source_identity),
         );
         self.game.mark_until_condition_dirty();
         self.after_recorded_install();
@@ -256,12 +265,13 @@ impl<'a> EffectContext<'a> {
         // §15-15-5-2 / §15-15-5-4 record-and-suppress (as `add_modifier`): the
         // grant is recorded even on an immune or `<Progress>`-shielded target
         // and is not had until it can be affected again.
-        self.game.modifiers.grant_keyword_with_until_condition_from_effect(
+        self.game.modifiers.grant_keyword_with_until_condition_from_effect_identity(
             target,
             keyword,
             predicate,
             self.player,
             self.source_kind,
+            self.source_identity,
         );
         self.game.mark_until_condition_dirty();
         // §16-39-2: a `<Progress>` gained mid-attack shields at once.
@@ -344,6 +354,8 @@ impl<'a> EffectContext<'a> {
                 timing,
                 source_card: self.source_card,
                 source_player: self.player,
+                source_kind: self.source_kind,
+                source_identity: self.source_identity,
                 expiry,
                 body_id,
                 body: body_arc,
@@ -389,6 +401,8 @@ impl<'a> EffectContext<'a> {
                     timing,
                     source_card: self.source_card,
                     source_player: self.player,
+                source_kind: self.source_kind,
+                source_identity: self.source_identity,
                     expiry,
                     body_id,
                     body,
@@ -425,6 +439,8 @@ impl<'a> EffectContext<'a> {
                 self.source_permanent,
                 self.player,
             )
+            .with_affecting_source_kind(self.source_kind)
+            .with_affecting_source_identity(self.source_identity)
             .with_effect_immunity_filter(EffectImmunityFilter {
                 source_kind,
                 controller,
@@ -440,17 +456,20 @@ impl<'a> EffectContext<'a> {
         controller: EffectControllerFilter,
         expiry: Expiry,
     ) -> bool {
+        self.add_effect_immunity_modifier_excluding_self(target, source_kind, controller, expiry, false)
+    }
+
+    pub fn add_effect_immunity_modifier_excluding_self(
+        &mut self, target: PermanentHandle, source_kind: EffectSourceKind,
+        controller: EffectControllerFilter, expiry: Expiry, exclude_self: bool,
+    ) -> bool {
         if !self.can_affect_permanent(target) {
             return false;
         }
-        self.game.modifiers.add(
-            target,
-            ModifierEntry::simple(ModifierType::CannotBeAffected, 0, expiry, self.player)
-                .with_effect_immunity_filter(EffectImmunityFilter {
-                    source_kind: Some(source_kind),
-                    controller,
-                }),
-        );
+        let mut entry = ModifierEntry::simple(ModifierType::CannotBeAffected, 0, expiry, self.player)
+            .with_effect_immunity_filter(EffectImmunityFilter {source_kind: Some(source_kind),controller});
+        if exclude_self { entry.immunity_excluded_source = self.source_identity; }
+        self.game.modifiers.add(target, entry);
         self.game.mark_until_condition_dirty();
         true
     }
@@ -662,12 +681,13 @@ impl<'a> EffectContext<'a> {
         // one gained BEFORE an immunity stops being had while it lasts
         // (Q6178). The granted TRIGGERED bodies below are fire-time gated.
         // G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP.
-        self.game.modifiers.grant_keyword_from_effect(
+        self.game.modifiers.grant_keyword_from_effect_identity(
             target,
             keyword,
             expiry,
             self.player,
             self.source_kind,
+            self.source_identity,
         );
         self.grant_keyword_triggered_auto_effects(target, keyword, expiry);
         self.game.mark_until_condition_dirty();
@@ -761,12 +781,14 @@ impl<'a> EffectContext<'a> {
         if !self.can_affect_permanent(target) {
             return;
         }
-        self.game.modifiers.grant_declarative_keyword(
+        self.game.modifiers.grant_declarative_keyword_from_effect_identity(
             target,
             keyword,
             expiry,
             self.source_permanent,
             self.player,
+            Some(self.source_kind),
+            self.source_identity,
         );
         self.game.mark_until_condition_dirty();
     }

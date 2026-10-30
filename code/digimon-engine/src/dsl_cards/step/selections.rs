@@ -2570,6 +2570,7 @@ fn run_may_dna_result_selection_step(
                 && continuation.player == state.prov.controller
             {
                 continuation.bindings.record_digivolved(result);
+                super::pin_evolved_source_carrier(ctx.game, state.prov.source_card, result, &mut continuation.bindings);
             }
         }
     }
@@ -3043,7 +3044,7 @@ fn run_per_color_delete_terminal(
         .iter()
         .copied()
         .filter(|h| {
-            game.effect_can_affect(*h, state.prov.controller, state.prov.source_kind)
+            game.effect_can_affect_from(*h, state.prov.controller, state.prov.source_kind, state.runtime.source_identity())
         })
         .collect();
     if !deletable.is_empty() {

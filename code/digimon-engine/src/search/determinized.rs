@@ -567,16 +567,21 @@ fn canonicalize_hidden(root: &Game, viewer: PlayerId) -> Game {
         .and_then(|choice| choice.inspected_security_owner(viewer));
     // Viewer: own hand is known (untouched); deck ∪ face-down security is
     // the hidden pool.
+    let public_security: Vec<std::collections::HashSet<u16>> = root.players.iter().map(|p|
+        p.security.iter().filter(|c| root.security_card_is_public(p.id, c.handle())).map(|c| c.card_index).collect()
+    ).collect();
     canonicalize_player_hidden(
         &mut canon.players[viewer as usize],
         false,
         inspected == Some(viewer),
+        &public_security[viewer as usize],
     );
     // Opponent: hand is hidden too.
     canonicalize_player_hidden(
         &mut canon.players[(1 - viewer) as usize],
         true,
         inspected == Some(1 - viewer),
+        &public_security[(1 - viewer) as usize],
     );
     if let Some(mut selection) = canon.pending_selection.take() {
         if let Some(choice) = &mut selection.card_choice {
@@ -597,17 +602,16 @@ fn card_key(c: &CardSource) -> (usize, u16) {
 /// security), sort by [`card_key`], and redistribute deterministically
 /// (hand → face-down security slots → deck). Pinned (face-up) security
 /// cards keep their slots. The digitama deck is sorted in place.
-fn canonicalize_player_hidden(p: &mut Player, include_hand: bool, security_inspected: bool) {
+fn canonicalize_player_hidden(p: &mut Player, include_hand: bool, security_inspected: bool, public_security: &std::collections::HashSet<u16>) {
     let mut pool: Vec<CardSource> = std::mem::take(&mut p.deck);
     let hand_count = p.hand.len();
     if include_hand {
         pool.append(&mut p.hand);
     }
-    let face_up = p.face_up_security.clone();
     let old_security = std::mem::take(&mut p.security);
     let mut slots: Vec<Option<CardSource>> = Vec::with_capacity(old_security.len());
     for c in old_security {
-        if security_inspected || face_up.contains(&c.card_index) {
+        if security_inspected || public_security.contains(&c.card_index) {
             slots.push(Some(c));
         } else {
             pool.push(c);

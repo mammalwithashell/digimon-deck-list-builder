@@ -18,7 +18,7 @@ Public zones (visible to everyone):
 
 Hidden zones:
     hand card IDs      – only visible to the hand's owner
-    security card IDs  – never revealed (face-down stack)
+    security card IDs  – hidden unless the engine explicitly marks identity public
 """
 
 from __future__ import annotations
@@ -27,12 +27,48 @@ import copy
 from typing import Any, Dict, List
 
 
+def _security_public_mask(player_data: dict) -> list[bool]:
+    """Only the engine's explicit, complete public mask may disclose identities."""
+    ids = player_data.get("securityIds")
+    mask = player_data.get("securityIdentityPublic")
+    if (not isinstance(ids, list) or not isinstance(mask, list)
+            or len(ids) != len(mask) or any(type(bit) is not bool for bit in mask)):
+        return []
+    return mask
+
+
+def _public_security_ids(player_data: dict) -> list:
+    mask = _security_public_mask(player_data)
+    if not any(mask):
+        return []
+    return [card if public else None for card, public in zip(player_data["securityIds"], mask)]
+
+
+def _security_row_is_public(row: dict, full_state: dict) -> bool:
+    owner, position = row.get("owner"), row.get("position")
+    # Owned-card rows serialize positions as decimal strings.
+    if isinstance(position, str):
+        if not position.isascii() or not position.isdecimal():
+            return False
+        try:
+            position = int(position)
+        except ValueError:
+            return False
+    if type(owner) is not int or owner not in (0, 1) or type(position) is not int or position < 0:
+        return False
+    player = full_state.get("player1" if owner == 0 else "player2", {})
+    mask = _security_public_mask(player)
+    return (position < len(mask) and mask[position]
+            and row.get("card_id") is not None
+            and row["card_id"] == player["securityIds"][position])
+
+
 def _redact_player(player_data: dict) -> dict:
     """Replace hand/security card IDs/metadata with empty lists, preserving counts."""
     out = dict(player_data)
     out["handIds"] = []
     out["handCards"] = []
-    out["securityIds"] = []
+    out["securityIds"] = _public_security_ids(player_data)
     return out
 
 
@@ -57,7 +93,9 @@ def _filter_card_choice(state: dict, full_state: dict, player_id: int | None) ->
     rows = []
     for original in choice.get("rows", []):
         row = dict(original)
-        hidden_security = row.get("zone") == "security" and player_id != pending.get("selectingPlayer")
+        hidden_security = (row.get("zone") == "security"
+                           and (player_id is None or player_id != pending.get("selectingPlayer"))
+                           and not _security_row_is_public(row, full_state))
         hidden_hand = row.get("zone") == "hand" and (
             player_id is None or row.get("owner") != player_id - 1
         )
@@ -104,7 +142,7 @@ def filter_state_for_player(full_state: Dict[str, Any], player_id: int) -> Dict[
 
     # My data: keep hand IDs, redact security IDs. Opponent: redact both.
     my_data = dict(full_state[my_key])
-    my_data["securityIds"] = []
+    my_data["securityIds"] = _public_security_ids(full_state[my_key])
     opp_data = _redact_player(full_state[opp_key])
 
     if player_id == 1:

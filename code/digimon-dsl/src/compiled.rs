@@ -1549,6 +1549,9 @@ pub enum CompiledTiming {
     /// `your_turn`). G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED.
     OnAnyLink,
     OnLinkCardTrashed,
+    /// This physical card was trashed from the deck by an effect.
+    OnDiscardDeck,
+
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1563,6 +1566,7 @@ pub enum CompiledEffectSourceKind {
     Tamer,
     Option,
     Rule,
+    DigiEgg,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -2294,6 +2298,8 @@ pub enum CompiledStep {
         to_owner: bool,
         /// Bind the placed card under this name on a successful placement.
         bind_placed_as: Option<String>,
+        /// Internal exact movement payment, assigned by the receipt expander.
+        result_receipt: Option<u64>,
     },
     PlacePermanentOnSecurityAndHandleReplacement {
         of: CompiledPlayerRef,
@@ -2458,6 +2464,8 @@ pub enum CompiledStep {
         target: Option<CompiledBindingRef>,
         source_kind: CompiledEffectSourceKind,
         source_controller: CompiledEffectController,
+        #[serde(default)]
+        exclude_self: bool,
         expiry: String,
         /// G-DSL-CONTINUOUS-CONTROLLED-IMMUNITY-AURA (Q28 / BT20-059): a
         /// source-independent continuous immunity over `targets`, re-scanned
@@ -3217,6 +3225,20 @@ pub enum CompiledStep {
     /// Runtime-only security play and correlated completion; appended to preserve pack tags.
     SecurityPlayCaptured { receipt: u64, player: u8, card: u16 },
     SecurityPlayFinalize { receipt: u64, player: u8, card: u16 },
+    /// Engine-only security payment, serialized in parked DSL continuations.
+    SecurityTrashOne { player: u8, bind_as: Option<String>, cancel: bool },
+    SecurityTrashFinalize { card: u16, bind_as: Option<String>, cancel: bool },
+    /// Internal continuation: bind actual permanent security-placement payment.
+    SecurityPermanentPlacementFinalize {
+        receipt: u64,
+        card: u16,
+        bind_as: String,
+        source_anchor: Option<(u8, u64)>,
+        source_breeding: bool,
+        rebind: Vec<(String, (u8, u64))>,
+    },
+    /// Public reveal only; the cards stay in their original security stack.
+    RevealSecurity { of: CompiledPlayerRef },
 }
 
 /// Compiled per-zone filter overrides for `select_union_zone`. Each `Some`

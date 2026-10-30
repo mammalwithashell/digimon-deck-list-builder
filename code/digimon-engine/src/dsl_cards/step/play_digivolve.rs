@@ -1242,6 +1242,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 ctx.effect_initiated_dna_digivolve(a, b, from_card, dna_cost, *ignore_requirements);
             if let Some(played) = success {
                 bindings.record_digivolved(played);
+                super::pin_evolved_source_carrier(ctx.game, ctx.source_card, played, bindings);
             }
             true
         }
@@ -1289,6 +1290,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             );
             if let Some(played) = success {
                 bindings.record_digivolved(played);
+                super::pin_evolved_source_carrier(ctx.game, ctx.source_card, played, bindings);
             } else if ctx.game.pending_selection.is_some() {
                 ctx.game.bind_effect_dna_clause_owner(result_card, ctx.source_card, ctx.player);
             }
@@ -1347,6 +1349,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             );
             if let Some(played) = success {
                 bindings.record_digivolved(played);
+                super::pin_evolved_source_carrier(ctx.game, ctx.source_card, played, bindings);
             }
             true
         }

@@ -1,0 +1,46 @@
+# Printed image + official bundle BT18-036; CR4.3 15-7-1..4 optional by-costs.
+# DCGO BT18_036.cs confirms optional payment, yellow carrier gate and inherited OPT.
+card: BT18-036
+name: Wizardmon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+traits: [Wizard, Witchelny]
+form: Champion
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+effects:
+  - when: when_digivolving
+    optional: true
+    active_when: { security_count_gte: 1 }
+    summary: "[When Digivolving] By trashing your top security card, Draw 1 and gain 1 memory"
+    process:
+      - trash_top_security: { of: you, bind_count_as: paid_security }
+      - if:
+          condition: { equals: [paid_security, 1] }
+          then:
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - is_source: true
+        - kind: digimon
+        - color_is: yellow
+        - any_of:
+            - trait_has: Data
+            - trait_has: Witchelny
+        - replacement_cause: opponent_effect
+        - security_count_gte: 1
+    summary: "Inherited [All Turns][OPT] By trashing top security, this yellow Data/Witchelny Digimon doesn't leave by opponent effects"
+    process:
+      - trash_top_security_and_cancel_replacement: { of: you }

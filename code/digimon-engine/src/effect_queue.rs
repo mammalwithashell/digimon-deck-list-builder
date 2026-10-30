@@ -247,18 +247,10 @@ impl Game {
         &self,
         handle: PermanentHandle,
         timing: EffectTiming,
-    ) -> Vec<(u64, CardHandle, PlayerId, crate::enums::EffectSourceKind)> {
-        let mut entries: Vec<_> = self
-            .modifiers
-            .granted_triggered_for_timing_with_ids(handle, timing)
-            .into_iter()
-            .map(|(id, card, player)| {
-                let kind = self
-                    .card_data_for_handle(card)
-                    .map(|d| source_kind_for_card_kind(d.card_kind))
-                    .unwrap_or(crate::enums::EffectSourceKind::Digimon);
-                (id, card, player, kind)
-            })
+    ) -> Vec<(u64, CardHandle, PlayerId, crate::enums::EffectSourceKind, Option<(PlayerId,u64)>)> {
+        let mut entries: Vec<_> = self.modifiers
+            .granted_triggered_entries_for_timing(handle,timing).into_iter()
+            .map(|entry|(entry.body_id,entry.source_card,entry.source_player,entry.source_kind,entry.source_identity))
             .collect();
         for entry in &self.modifiers.dynamic_triggered {
             let grant = &entry.grant;
@@ -267,20 +259,9 @@ impl Game {
             }
             // Resolve the original card by identity, never retain a mutable
             // battle-area index which could later refer to another permanent.
-            let source_permanent = self.players.iter().enumerate().find_map(|(player, p)| {
-                p.battle_area
-                    .iter()
-                    .position(|perm| {
-                        perm.card_sources
-                            .iter()
-                            .chain(perm.linked_cards.iter())
-                            .any(|c| c.handle() == grant.source_card)
-                    })
-                    .map(|index| PermanentHandle {
-                        player: player as PlayerId,
-                        index: index as u8,
-                    })
-            });
+            let source_permanent = grant.source_identity.and_then(|identity|
+                self.resolve_source_move_anchor(identity, false)
+                    .or_else(|| self.resolve_source_move_anchor(identity, true)));
             let rctx = crate::effect_context::EffectReadContext::new_with_source_kind(
                 self,
                 grant.source_card,
@@ -294,6 +275,7 @@ impl Game {
                     grant.source_card,
                     grant.source_player,
                     entry.source_kind,
+                    grant.source_identity,
                 ));
             }
         }
@@ -341,7 +323,8 @@ impl Game {
             })
             .unwrap_or(false);
         QueuedEffect {
-            source_card: effect.source_card,
+                source_identity: None,
+                source_card: effect.source_card,
             source_permanent: Some(effect.source),
             source_kind: effect.source_kind,
             attribution_source_card: effect.attribution_source_card,
@@ -1140,7 +1123,8 @@ impl Game {
             if !timing_flag_matches(effect, timing) {
                 continue;
             }
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card,
                 source_permanent: None,
                 source_kind,
@@ -1213,7 +1197,8 @@ impl Game {
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
-                self.effect_queue.push_back(QueuedEffect {
+                self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                     source_card,
                     source_permanent: None,
                     source_kind,
@@ -1286,7 +1271,8 @@ impl Game {
             if !timing_flag_matches(effect, timing) {
                 continue;
             }
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card: card,
                 source_permanent: None,
                 source_kind,
@@ -1307,6 +1293,57 @@ impl Game {
                 trigger_batch: 0,
                 pending_processing: None,
             });
+        }
+    }
+
+    pub(crate) fn record_effect_deck_trash(
+        &mut self, owner: PlayerId, card: CardHandle,
+        cause: crate::trigger_context::EffectAttribution,
+    ) {
+        let Some(card_id) = self.players[owner as usize].trash.iter()
+            .find(|c| c.handle() == card).map(|c| c.card_id(&self.card_data).to_owned()) else { return; };
+        // Nothing is pending for unrelated cards. This also keeps ordinary mill
+        // windows unchanged in archival verification states.
+        if !self.effects_for_card(&card_id, card).is_some_and(|effects| effects.iter().any(|effect|
+            effect.trash_zone && !effect.inherited && !effect.linked
+                && timing_flag_matches(effect, EffectTiming::OnDiscardDeck))) { return; }
+        let generation = self.players[owner as usize].trash_entry_generations[&card];
+        self.pending_deck_discards.push((owner, card, generation, cause));
+    }
+
+    pub(crate) fn flush_pending_deck_discards(&mut self) {
+        use crate::trigger_context::{EventSubject, MovedCardSet};
+        for (owner, card, generation, cause) in std::mem::take(&mut self.pending_deck_discards) {
+            if self.players[owner as usize].trash_entry_generations.get(&card).copied() != Some(generation) { continue; }
+            let Some((card_id, source_kind)) = self.players[owner as usize].trash.iter()
+                .find(|c| c.handle() == card)
+                .map(|c| (c.card_id(&self.card_data).to_owned(), source_kind_for_card_kind(c.card_kind(&self.card_data)))) else { continue; };
+            let Some(effects) = self.effects_for_card(&card_id, card) else { continue; };
+            let context = TriggerContext {
+                subject: Some(EventSubject::Card { card, zone: crate::enums::Zone::Trash }),
+                event_card: Some(card), target_card: Some(card), deck_trash_generation: Some(generation),
+                affected_player: Some(owner), source_player: Some(cause.controller),
+                source_effect: Some(cause), event_cause_effect: Some(cause),
+                cause: Some(if owner == cause.controller { crate::trigger_context::EventCause::OwnEffect }
+                    else { crate::trigger_context::EventCause::OpponentEffect }),
+                moved_card_sets: vec![MovedCardSet { cards: vec![card], from: Some(crate::enums::Zone::Deck), to: Some(crate::enums::Zone::Trash) }],
+                effect_initiated: true, ..Default::default()
+            };
+            for (slot, effect) in effects.iter().enumerate() {
+                if effect.inherited || effect.linked || !effect.trash_zone
+                    || !timing_flag_matches(effect, EffectTiming::OnDiscardDeck) { continue; }
+                self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
+                source_card: card, source_permanent: None, source_kind,
+                    attribution_source_card: None, attribution_source_kind: None,
+                    bypass_once_per_turn: false, controller: owner,
+                    timing: EffectTiming::OnDiscardDeck, trigger_context: Some(context.clone()),
+                    effect_slot: slot as u8, is_optional: effect.optional,
+                    is_turn_player: owner == self.turn_player(), card_id: card_id.clone(),
+                    allow_below_top_liveness: false, dna_origin_context: self.current_dna_origin,
+                    granted_effect_id: None, keyword_effect: None, trigger_batch: 0, pending_processing: None,
+                });
+            }
         }
     }
 
@@ -1480,7 +1517,28 @@ impl Game {
     /// ≤0-DP Digimon left when the queue emptied. A parked selection means
     /// resolution is NOT finished; the check defers to the drain that resumes when
     /// the selection resolves.
+    pub(crate) fn push_effect_with_identity(&mut self, mut effect: QueuedEffect) {
+        if effect.source_identity.is_none() {
+            effect.source_identity = Some(effect.source_permanent.and_then(|h| self.source_move_anchor(h)));
+        }
+        self.effect_queue.push_back(effect);
+    }
+
+    fn capture_queued_effect_identities(&mut self) {
+        let pending: Vec<_> = self.effect_queue.iter().map(|q| {
+            (q.source_identity.is_none(), q.source_permanent)
+        }).collect();
+        let captured: Vec<_> = pending.iter().map(|(needed, source)| {
+            if *needed { Some(source.and_then(|h| self.source_move_anchor(h))) } else { None }
+        }).collect();
+        for (q, identity) in self.effect_queue.iter_mut().zip(captured) {
+            if let Some(identity) = identity { q.source_identity = Some(identity); }
+        }
+    }
+
     pub fn drain_effect_queue(&mut self) {
+        self.capture_queued_effect_identities();
+
         self.effect_drain_depth = self.effect_drain_depth.saturating_add(1);
         // §9-1-5: a used Option whose `[Main]` body has just finished (its
         // last selection resolved, and the resolving callback's deferred-drain
@@ -1525,11 +1583,12 @@ impl Game {
             // observer can itself trash a hand (a nested batch).
             if self.pending_selection.is_none() && !self.game_over && self.draining_deferred == 0 {
                 let mut discard_guard: u16 = 0;
-                while self.pending_hand_discard.is_some()
+                while (self.pending_hand_discard.is_some() || !self.pending_deck_discards.is_empty())
                     && self.pending_selection.is_none()
                     && !self.game_over
                 {
                     self.flush_pending_hand_discard();
+                    self.flush_pending_deck_discards();
                     if !self.effect_queue.is_empty() {
                         self.drain_effect_queue_inner();
                     }
@@ -1594,6 +1653,7 @@ impl Game {
             }
             let mut guard: u16 = 0;
             loop {
+            self.capture_queued_effect_identities();
                 if self.pending_selection.is_some() || self.game_over {
                     break;
                 }
@@ -1697,6 +1757,7 @@ impl Game {
             return;
         }
         self.flush_pending_hand_discard();
+        self.flush_pending_deck_discards();
         self.flush_pending_deck_add();
         self.flush_pending_added_sources();
     }
@@ -2975,7 +3036,8 @@ impl Game {
             ) {
                 continue;
             }
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card,
                 source_permanent: Some(handle),
                 source_kind,
@@ -3086,7 +3148,8 @@ impl Game {
             {
                 continue;
             }
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card,
                 source_permanent: None,
                 source_kind,
@@ -3159,7 +3222,8 @@ impl Game {
             if !effect.security {
                 continue;
             }
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card: card,
                 source_permanent: None,
                 source_kind,
@@ -3238,7 +3302,7 @@ impl Game {
         // entries but kept as a fallback via `pending_granted_fires`.
         let granted_entries = self.granted_entries_for_carrier(handle, timing);
         let tp_for_granted = self.turn_player();
-        for (body_id, source_card, source_player, grantor_kind) in granted_entries {
+        for (body_id, source_card, source_player, grantor_kind, grantor_identity) in granted_entries {
             // Cause attribution: a granted triggered effect is the GRANTOR's
             // effect from the carrier's perspective. If the carrier is
             // unaffected by that player's effects, the granted clause does NOT
@@ -3254,7 +3318,7 @@ impl Game {
             //     effect-source kind.
             // No-op for same-controller grants.
             if self.progress_excludes(handle, Some(source_player))
-                || self.permanent_is_unaffected_by_effect(handle, source_player, grantor_kind)
+                || self.modifiers.is_unaffected_by_from(handle, source_player, grantor_kind, grantor_identity)
             {
                 continue;
             }
@@ -3266,7 +3330,8 @@ impl Game {
             // judge-quiz Q16). The grantor (`source_player`) is used only for
             // the immunity gate above, never for body attribution.
             let carrier_controller = handle.player;
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card,
                 source_permanent: Some(handle),
                 source_kind: top_source_kind,
@@ -3316,7 +3381,8 @@ impl Game {
                 if effect.inherited {
                     continue;
                 }
-                self.effect_queue.push_back(QueuedEffect {
+                self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                     source_card,
                     source_permanent: Some(handle),
                     source_kind: top_source_kind,
@@ -3409,7 +3475,8 @@ impl Game {
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
-                self.effect_queue.push_back(QueuedEffect {
+                self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                     source_card,
                     source_permanent: Some(handle),
                     source_kind: top_source_kind,
@@ -3480,8 +3547,9 @@ impl Game {
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
-                self.effect_queue.push_back(QueuedEffect {
-                    source_card: linked_source,
+                self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
+                source_card: linked_source,
                     source_permanent: Some(handle),
                     source_kind: linked_source_kind,
                     attribution_source_card: None,
@@ -3573,8 +3641,9 @@ impl Game {
                     if !timing_flag_matches(effect, timing) {
                         continue;
                     }
-                    self.effect_queue.push_back(QueuedEffect {
-                        source_card: training_source,
+                    self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
+                source_card: training_source,
                         source_permanent: Some(handle),
                         source_kind: training_source_kind,
                         attribution_source_card: None,
@@ -3651,8 +3720,9 @@ impl Game {
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
-                self.effect_queue.push_back(QueuedEffect {
-                    source_card: inherited_source,
+                self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
+                source_card: inherited_source,
                     source_permanent: Some(handle),
                     source_kind: inherited_source_kind,
                     attribution_source_card: None,
@@ -3685,7 +3755,7 @@ impl Game {
         let Some(perm) = self
             .players
             .get(handle.player as usize)
-            .and_then(|p| p.breeding_area.as_ref())
+            .and_then(|p| p.breeding_area.as_ref()).cloned()
         else {
             return;
         };
@@ -3704,12 +3774,12 @@ impl Game {
         // grant targets via the breeding permanent's handle.
         let granted_entries = self.granted_entries_for_carrier(handle, timing);
         let tp_for_granted = self.turn_player();
-        for (body_id, source_card, source_player, grantor_kind) in granted_entries {
+        for (body_id, source_card, source_player, grantor_kind, grantor_identity) in granted_entries {
             // D4 / DCGO: granted body runs as the carrier's own effect (see the
             // battle-area dispatch above). `source_player` (grantor) gates only
             // the opponent-effect immunity check (Q17) — a breeding carrier
             // can't be the current attacker, so the Progress branch is moot.
-            if self.permanent_is_unaffected_by_effect(handle, source_player, grantor_kind) {
+            if self.modifiers.is_unaffected_by_from(handle, source_player, grantor_kind, grantor_identity) {
                 continue;
             }
             let carrier_controller = handle.player;
@@ -3719,7 +3789,8 @@ impl Game {
                 .as_ref()
                 .map(|p| source_kind_for_card_kind(p.top_card().card_kind(&self.card_data)))
                 .unwrap_or(crate::enums::EffectSourceKind::Digimon);
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card,
                 source_permanent: Some(handle),
                 source_kind,
@@ -3758,7 +3829,8 @@ impl Game {
                 if effect.inherited || !effect.breeding_zone {
                     continue;
                 }
-                self.effect_queue.push_back(QueuedEffect {
+                self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                     source_card,
                     source_permanent: Some(handle),
                     source_kind,
@@ -3809,8 +3881,9 @@ impl Game {
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
-                self.effect_queue.push_back(QueuedEffect {
-                    source_card: inherited_source,
+                self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
+                source_card: inherited_source,
                     source_permanent: Some(handle),
                     source_kind: inherited_source_kind,
                     attribution_source_card: None,
@@ -4624,6 +4697,7 @@ impl Game {
                 qe.source_kind,
                 qe.controller,
             );
+            ctx.source_identity = qe.source_identity.flatten();
             body(&mut ctx);
             if !self.modifiers.contains_granted_triggered_body_id(body_id) {
                 self.granted_effect_bodies.remove(body_id);
@@ -4762,6 +4836,7 @@ impl Game {
                 qe.attribution_source_kind.unwrap_or(qe.source_kind),
                 qe.controller,
             );
+            ctx.source_identity = qe.source_identity.flatten();
             if !pay_cost(&mut ctx) {
                 return; // cost not paid; skip process (silent abort, mirrors failed condition)
             }
@@ -4819,6 +4894,7 @@ impl Game {
                     qe.attribution_source_kind.unwrap_or(qe.source_kind),
                     qe.controller,
                 );
+            ctx.source_identity = qe.source_identity.flatten();
                 activation_cost(&mut ctx)
             };
             if !cost_outcome {
@@ -4878,6 +4954,7 @@ impl Game {
                             qe.attribution_source_kind.unwrap_or(qe.source_kind),
                             qe.controller,
                         );
+            ctx.source_identity = qe.source_identity.flatten();
                         process(&mut ctx);
                     }
                     return;
@@ -4897,6 +4974,7 @@ impl Game {
                 qe.attribution_source_kind.unwrap_or(qe.source_kind),
                 qe.controller,
             );
+            ctx.source_identity = qe.source_identity.flatten();
             process(&mut ctx);
         }
     }
@@ -4947,6 +5025,7 @@ impl Game {
                 qe.attribution_source_kind.unwrap_or(qe.source_kind),
                 qe.controller,
             );
+            ctx.source_identity = qe.source_identity.flatten();
             process(&mut ctx);
         }
     }
@@ -5159,6 +5238,12 @@ impl Game {
         qe: &QueuedEffect,
         effect: &crate::effect::Effect,
     ) -> bool {
+        if qe.timing == EffectTiming::OnDiscardDeck {
+            let player = &self.players[qe.controller as usize];
+            return qe.trigger_context.as_ref().and_then(|ctx| ctx.deck_trash_generation)
+                .is_some_and(|generation| player.trash_entry_generations.get(&qe.source_card).copied() == Some(generation))
+                && player.trash.iter().any(|c| c.handle() == qe.source_card);
+        }
         if qe
             .trigger_context
             .as_ref()

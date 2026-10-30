@@ -342,6 +342,9 @@ pub enum Timing {
     /// `host_filter: { is_event_host: true }` (EX10-070).
     /// G-DSL-ON-LINK-CARD-TRASHED-DELAY.
     OnLinkCardTrashed,
+    /// This physical card was trashed from the deck by an effect.
+    OnDiscardDeck,
+
 }
 
 #[derive(

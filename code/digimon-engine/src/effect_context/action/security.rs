@@ -34,6 +34,8 @@ impl<'a> EffectContext<'a> {
         position: crate::enums::StackPosition,
         face_up: bool,
     ) -> bool {
+        if !self.can_affect_permanent(target) { return false; }
+
         if self
             .game
             .modifiers
@@ -592,6 +594,14 @@ impl<'a> EffectContext<'a> {
         position: crate::enums::StackPosition,
         face_up: bool,
     ) -> bool {
+        self.place_permanent_on_security_with_receipt(player, target, position, face_up, None)
+    }
+    pub(crate) fn place_permanent_on_security_with_receipt(
+        &mut self, player: PlayerId, target: PermanentHandle,
+        position: crate::enums::StackPosition, face_up: bool, receipt: Option<u64>,
+    ) -> bool {
+        if !self.can_affect_permanent(target) { return false; }
+
         if self
             .game
             .modifiers
@@ -600,6 +610,6 @@ impl<'a> EffectContext<'a> {
             return false;
         }
         self.game
-            .place_permanent_on_security(player, target, position, face_up, self.player)
+            .place_permanent_on_security_with_receipt(player, target, position, face_up, self.player, receipt)
     }
 }

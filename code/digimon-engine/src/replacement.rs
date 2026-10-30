@@ -1996,6 +1996,10 @@ fn commit_deferred_outcome(
     original_destination: Option<Zone>,
     outcome: ReplacementOutcome,
 ) {
+    if original_destination == Some(Zone::Trash) && game.resume_security_trash(subject, outcome) {
+        game.replacement_pending_outcome = None;
+        return;
+    }
     if original_destination == Some(Zone::Security)
         && game.resume_security_move(subject, cause, outcome)
     {

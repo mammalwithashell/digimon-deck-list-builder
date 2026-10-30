@@ -92,13 +92,13 @@ fn player_ui_data(player: &Player, data: &[CardData], game: &Game) -> Value {
         })
         .collect();
 
-    // Security IDs: null for face-down cards, card_id string for face-up.
-    // `face_up_security` contains `card_index` values (u16) of revealed cards.
+    // Security identity is public for actual face-up cards or a live reveal
+    // overlay. The separate face-state array continues to drive card rules.
     let security_ids: Vec<Value> = player
         .security
         .iter()
         .map(|cs| {
-            if player.face_up_security.contains(&cs.card_index) {
+            if game.security_card_is_public(player.id, cs.handle()) {
                 json!(cs.card_id(data))
             } else {
                 Value::Null
@@ -111,6 +111,8 @@ fn player_ui_data(player: &Player, data: &[CardData], game: &Game) -> Value {
         .iter()
         .map(|cs| player.face_up_security.contains(&cs.card_index))
         .collect();
+    let security_identity_public: Vec<bool> = player.security.iter()
+        .map(|cs| game.security_card_is_public(player.id, cs.handle())).collect();
 
     let battle_area: Vec<Value> = player
         .battle_area
@@ -153,6 +155,7 @@ fn player_ui_data(player: &Player, data: &[CardData], game: &Game) -> Value {
         "securityCount": player.security.len(),
         "securityIds": security_ids,
         "securityFaceUp": security_face_up,
+        "securityIdentityPublic": security_identity_public,
         "deckCount": player.deck.len(),
         "eggDeckCount": player.digitama_deck.len(),
         "battleAreaCount": player.battle_area.len(),

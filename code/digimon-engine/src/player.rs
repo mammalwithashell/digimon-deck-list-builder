@@ -27,6 +27,10 @@ pub struct Player {
     pub digitama_deck: Vec<CardSource>,
     pub security: Vec<CardSource>,
     pub trash: Vec<CardSource>,
+    /// Genuine trash arrivals; rollback insertion deliberately preserves this identity.
+    pub(crate) trash_entry_generations: HashMap<CardHandle, u64>,
+    /// Genuine security arrivals distinguish a returned copy from a revealed one.
+    pub(crate) security_entry_generations: HashMap<CardHandle, u64>,
     pub battle_area: Vec<Permanent>,
     pub breeding_area: Option<Permanent>,
     pub original_deck: Vec<OriginalDeckCardCount>,
@@ -84,6 +88,8 @@ impl Player {
             digitama_deck: Vec::new(),
             security: Vec::new(),
             trash: Vec::new(),
+            trash_entry_generations: HashMap::new(),
+            security_entry_generations: HashMap::new(),
             battle_area: Vec::new(),
             breeding_area: None,
             original_deck: Vec::new(),
@@ -203,6 +209,8 @@ impl Player {
             return;
         }
         card.face_down = false;
+        let generation = self.trash_entry_generations.entry(card.handle()).or_default();
+        *generation = generation.checked_add(1).expect("trash entry generation overflow");
         self.trash.push(card);
     }
 
@@ -276,7 +284,20 @@ impl Player {
         // {Security} [X Per Turn] uses start over (§15-14-1-5-2).
         let handle = card.handle();
         self.security_effect_activations.retain(|(c, _), _| *c != handle);
+        let generation = self.security_entry_generations.entry(handle).or_default();
+        *generation = generation.checked_add(1).expect("security entry generation exhausted");
         self.security.insert(index, card);
+    }
+
+    /// Restore a failed tentative extraction without creating a new arrival.
+    pub(crate) fn restore_in_security(&mut self, index: usize, card: CardSource) {
+        let handle = card.handle();
+        let arrival = self.security_entry_generations.get(&handle).copied();
+        self.insert_in_security(index, card);
+        match arrival {
+            Some(generation) => { self.security_entry_generations.insert(handle, generation); }
+            None => { self.security_entry_generations.remove(&handle); }
+        }
     }
 
     /// Put `card` on top of the deck (the end drawn first). The deck is a

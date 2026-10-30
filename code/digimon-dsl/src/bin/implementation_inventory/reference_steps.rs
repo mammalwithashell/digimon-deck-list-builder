@@ -198,6 +198,10 @@ impl Walk for digimon_dsl::step::StepSpec {
                 );
                 f0.walk(c, &format!("{}@ShuffleSecurity.0", path), role);
             }
+            digimon_dsl::step::StepSpec::RevealSecurity(f0) => {
+                c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("RevealSecurity"));
+                f0.walk(c, &format!("{}@RevealSecurity.0", path), role);
+            }
             digimon_dsl::step::StepSpec::RevealTopDeck(f0) => {
                 c.node(
                     path,
@@ -4203,6 +4207,10 @@ impl Walk for digimon_dsl::step::EffectSourceKindSpec {
                 "ENUM_SCALAR",
                 serde_json::json!("Rule"),
             ),
+            digimon_dsl::step::EffectSourceKindSpec::DigiEgg => c.node(
+                path, "digimon_dsl::step::EffectSourceKindSpec", "ENUM_SCALAR",
+                serde_json::json!("DigiEgg"),
+            ),
         }
     }
 }
@@ -4248,6 +4256,7 @@ impl Walk for digimon_dsl::step::GrantEffectImmunityArgs {
             target,
             source_kind,
             source_controller,
+            exclude_self,
             expiry,
             continuous,
             targets,
@@ -4259,6 +4268,7 @@ impl Walk for digimon_dsl::step::GrantEffectImmunityArgs {
             &format!("{}.source_controller", path),
             "UNCLASSIFIED_STRING",
         );
+        exclude_self.walk(c, &format!("{}.exclude_self", path), "UNCLASSIFIED_STRING");
         expiry.walk(c, &format!("{}.expiry", path), "ENGINE_EXPIRY_NAME");
         continuous.walk(c, &format!("{}.continuous", path), "UNCLASSIFIED_STRING");
         targets.walk(c, &format!("{}.targets", path), "UNCLASSIFIED_STRING");
@@ -5528,6 +5538,8 @@ digimon_dsl::compiled::CompiledStep::TrashFromReveal{of,card} => { c.node(path,"
 digimon_dsl::compiled::CompiledStep::ReturnToDeckFromReveal{of,card,position} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnToDeckFromReveal"));of.walk(c, &format!("{}.of", &format!("{}@ReturnToDeckFromReveal",path)), "UNCLASSIFIED_STRING");card.walk(c, &format!("{}.card", &format!("{}@ReturnToDeckFromReveal",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@ReturnToDeckFromReveal",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::ShuffleDeck{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ShuffleDeck"));of.walk(c, &format!("{}.of", &format!("{}@ShuffleDeck",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::ShuffleSecurity{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ShuffleSecurity"));of.walk(c, &format!("{}.of", &format!("{}@ShuffleSecurity",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::RevealSecurity{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RevealSecurity"));of.walk(c, &format!("{}@RevealSecurity.of",path), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::SecurityPermanentPlacementFinalize{receipt,card,bind_as,source_anchor,source_breeding,rebind} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SecurityPermanentPlacementFinalize"));receipt.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.receipt",path),"EXISTING_INSTANCE_BINDING");card.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.card",path),"EXISTING_INSTANCE_BINDING");bind_as.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.bind_as",path),"EXISTING_INSTANCE_BINDING");source_anchor.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.source_anchor",path),"EXISTING_INSTANCE_BINDING");source_breeding.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.source_breeding",path),"UNCLASSIFIED_STRING");rebind.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.rebind",path),"EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::RevealTopDeck{of,count,zone,bind_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RevealTopDeck"));of.walk(c, &format!("{}.of", &format!("{}@RevealTopDeck",path)), "UNCLASSIFIED_STRING");count.walk(c, &format!("{}.count", &format!("{}@RevealTopDeck",path)), "UNCLASSIFIED_STRING");zone.walk(c, &format!("{}.zone", &format!("{}@RevealTopDeck",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@RevealTopDeck",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::PlaceRemainderOnDeck{of,position} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlaceRemainderOnDeck"));of.walk(c, &format!("{}.of", &format!("{}@PlaceRemainderOnDeck",path)), "UNCLASSIFIED_STRING");position.walk(c, &format!("{}.position", &format!("{}@PlaceRemainderOnDeck",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::RevealSearch{of,count,buckets,remainder} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RevealSearch"));of.walk(c, &format!("{}.of", &format!("{}@RevealSearch",path)), "UNCLASSIFIED_STRING");count.walk(c, &format!("{}.count", &format!("{}@RevealSearch",path)), "UNCLASSIFIED_STRING");buckets.walk(c, &format!("{}.buckets", &format!("{}@RevealSearch",path)), "UNCLASSIFIED_STRING");remainder.walk(c, &format!("{}.remainder", &format!("{}@RevealSearch",path)), "UNCLASSIFIED_STRING");},
@@ -5605,7 +5617,7 @@ digimon_dsl::compiled::CompiledStep::PlacePermanentBottomSecurityAndCancelReplac
             to_owner,
         } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentBottomSecurityAndCancelReplacement"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "EXISTING_INSTANCE_BINDING");to_owner.walk(c, &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement.to_owner", path), "UNCLASSIFIED_STRING");
 },
-digimon_dsl::compiled::CompiledStep::PlacePermanentOnSecurity{of,target,position,face_up,to_owner,bind_placed_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentOnSecurity"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentOnSecurity",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");to_owner.walk(c, &format!("{}.to_owner", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");bind_placed_as.walk(c, &format!("{}.bind_placed_as", &format!("{}@PlacePermanentOnSecurity",path)), "BINDING_DEFINITION");},
+digimon_dsl::compiled::CompiledStep::PlacePermanentOnSecurity{of,target,position,face_up,to_owner,bind_placed_as,result_receipt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentOnSecurity"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentOnSecurity",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");to_owner.walk(c, &format!("{}.to_owner", &format!("{}@PlacePermanentOnSecurity",path)), "UNCLASSIFIED_STRING");bind_placed_as.walk(c, &format!("{}.bind_placed_as", &format!("{}@PlacePermanentOnSecurity",path)), "BINDING_DEFINITION");result_receipt.walk(c,&format!("{}@PlacePermanentOnSecurity.result_receipt",path),"EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::PlacePermanentOnSecurityAndHandleReplacement{of,target,position,face_up} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentOnSecurityAndHandleReplacement"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentOnSecurityAndHandleReplacement",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentOnSecurityAndHandleReplacement",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@PlacePermanentOnSecurityAndHandleReplacement",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@PlacePermanentOnSecurityAndHandleReplacement",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::PlacePermanentOnSecurityObserved{of,target,position,face_up,include_sources} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentOnSecurityObserved"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentOnSecurityObserved",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentOnSecurityObserved",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@PlacePermanentOnSecurityObserved",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@PlacePermanentOnSecurityObserved",path)), "UNCLASSIFIED_STRING");include_sources.walk(c, &format!("{}.include_sources", &format!("{}@PlacePermanentOnSecurityObserved",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SecurityPlaceStackedCard{bind_success_as,to_owner,carrier,source,source_index_from_top,of,position,face_up} => { bind_success_as.walk(c, &format!("{}.bind_success_as", path), "BINDING_DEFINITION");to_owner.walk(c, &format!("{}.to_owner", path), "UNCLASSIFIED_STRING"); c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SecurityPlaceStackedCard"));carrier.walk(c, &format!("{}.carrier", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");source.walk(c, &format!("{}.source", &format!("{}@SecurityPlaceStackedCard",path)), "EXISTING_INSTANCE_BINDING");source_index_from_top.walk(c, &format!("{}.source_index_from_top", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");of.walk(c, &format!("{}.of", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");position.walk(c, &format!("{}.position", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@SecurityPlaceStackedCard",path)), "UNCLASSIFIED_STRING");},

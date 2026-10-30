@@ -1,5 +1,56 @@
 # Rust Engine Gaps
 
+## Cross-source immunity-grant suppression [G-ENGINE-CROSS-SOURCE-IMMUNITY-GRANT-SUPPRESSION] — open outside the scoped pool
+
+The existing registry does not suppress `CannotBeAffected` entries themselves
+and some immunity installs lack affecting-source provenance. A Digimon effect
+that grants another Digimon Tamer-effect immunity can therefore remain active
+when the recipient later becomes unaffected by that granting Digimon effect.
+CR 4.3 sections 15-15-5-2 and 15-15-5-4 require faithful treatment of suppressed
+and gained effects. General immunity-layer interactions still need dedicated
+rule qualification and behavioral coverage; this work does not certify them.
+
+Only LM-020 in the explicitly EX13 Dynasmon 42-ID pool grants category immunity,
+and its printed grant targets itself. No cross-permanent category-immunity
+provider occurs in that pool. The source-identity repair qualifies that scoped
+self-excluding behavior, not arbitrary immunity-grant graphs. No admission
+policy or mechanics readiness flag was relaxed for this separate limitation.
+
+## Exact self-card deck-trash timing — focused qualification (2026-10-29)
+
+`on_discard_deck` with trash scope now captures the exact physical card only
+when an effect commits deck-to-trash movement. Revealed cards subsequently
+trashed are excluded. The causing effect finishes before these derived triggers
+resolve. A per-card trash-entry generation keeps a pending trigger from reviving
+when the card leaves and re-enters trash; rollback storage insertion preserves
+its existing incarnation. Clones retain independent continuation state and the
+verification digest distinguishes relevant entry incarnations.
+
+Ten focused mechanics checks cover both owners, multiple physical copies,
+unrelated trash copies, reveal negatives, parent choices, departure/re-entry,
+rollback, cloning, queued-sibling invalidation, stored causing attribution and digest discrimination. Wizardmon adds card-level timing
+and target qualification. This does not certify arbitrary trash-scope OPT effects;
+EX10-041 has no printed OPT. No action or observation contract changed.
+
+## Owned security-trash payments — focused qualification (2026-10-29)
+
+Effect-driven top/bottom security trash now owns the selected physical card
+before opening `WhenWouldBeTrashed`. Optional replacements resume that same
+movement after acceptance or decline, including in cloned games, instead of
+falling through the permanent-only deferred commit path. Resumption retains
+the initiating controller and cause. Payment receipts record committed trash,
+so payments canceled or redirected away from trash do not award benefits and security recovery
+does not erase a successful payment. Bound multi-card trash counts use those
+receipts. Native Barrier and DSL inherited prevention share the finalizer.
+
+The Dynasmon focused suite passes 98 tests, including canceled/parked payments,
+both cloned outcomes, inherited prevention, granted Barrier and security-trash
+recovery. This is scoped evidence, not universal replacement certification.
+Hand/deck/trash destinations and cancel/custom outcomes have an owned route;
+other redirections and substituted security-trash subjects remain an explicit
+unsupported-outcome invariant, rather than silently succeeding or canceling.
+No action or observation contract changed.
+
 ## Shared start-turn ordering and usage reset [G-ENGINE-START-TURN-CAPTURE-RESET] — resolved, focused verification (2026-10-26)
 
 Due start-turn Delay effects were collected after ordinary start-turn effects

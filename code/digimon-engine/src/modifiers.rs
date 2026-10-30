@@ -137,6 +137,8 @@ pub struct ModifierEntry {
     /// its own duration (DCGO `ChangeDP.cs` `CanUseCondition`, re-evaluated at
     /// read time).
     pub affecting_source_kind: Option<EffectSourceKind>,
+    pub affecting_source_identity: Option<(PlayerId, u64)>,
+    pub immunity_excluded_source: Option<(PlayerId, u64)>,
     /// For `ModifierType::DisableEffect` entries — the specific
     /// `EffectTiming` that is suppressed on this permanent. None for
     /// every other variant. Read by the observer dispatch hook before
@@ -198,7 +200,8 @@ pub fn immunity_filter_covers(
 
 impl std::fmt::Debug for ModifierEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ModifierEntry")
+        let mut debug = f.debug_struct("ModifierEntry");
+        debug
             .field("modifier", &self.modifier)
             .field("value", &self.value)
             .field("payload", &self.payload)
@@ -212,7 +215,10 @@ impl std::fmt::Debug for ModifierEntry {
             .field("affecting_source_kind", &self.affecting_source_kind)
             .field("disable_effect_timing", &self.disable_effect_timing)
             .field("install_order", &self.install_order)
-            .finish_non_exhaustive()
+            ;
+        if let Some(identity) = self.affecting_source_identity { debug.field("affecting_source_identity", &identity); }
+        if let Some(identity) = self.immunity_excluded_source { debug.field("immunity_excluded_source", &identity); }
+        debug.finish_non_exhaustive()
     }
 }
 
@@ -254,6 +260,8 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
+            affecting_source_identity: None,
+            immunity_excluded_source: None,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -280,6 +288,8 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
+            affecting_source_identity: None,
+            immunity_excluded_source: None,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -305,6 +315,8 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
+            affecting_source_identity: None,
+            immunity_excluded_source: None,
             disable_effect_timing: Some(timing),
             pending_skips: 0,
             install_order: 0,
@@ -332,6 +344,8 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             affecting_source_kind: None,
+            affecting_source_identity: None,
+            immunity_excluded_source: None,
             disable_effect_timing: None,
             pending_skips: 0,
             install_order: 0,
@@ -368,6 +382,11 @@ impl ModifierEntry {
 
     /// Tag the entry with the category of the effect installing it, so an
     /// immunity on the target suppresses it at read time (§15-15-5-2).
+    pub fn with_affecting_source_identity(mut self, identity: Option<(PlayerId, u64)>) -> Self {
+        self.affecting_source_identity = identity;
+        self
+    }
+
     pub fn with_affecting_source_kind(mut self, kind: EffectSourceKind) -> Self {
         self.affecting_source_kind = Some(kind);
         self
@@ -697,6 +716,7 @@ struct KeywordEntry {
     /// the grant's own duration (`ModifierRegistry::keyword_entry_applies`;
     /// G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP).
     affecting_source_kind: Option<EffectSourceKind>,
+    affecting_source_identity: Option<(PlayerId, u64)>,
     /// Track H §4 — install-once continuous gate for keyword grants.
     /// When `Expiry::UntilCondition`, the controller evaluates this
     /// predicate after mutation events and evicts the entry on
@@ -711,7 +731,8 @@ struct KeywordEntry {
 
 impl std::fmt::Debug for KeywordEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("KeywordEntry")
+        let mut debug = f.debug_struct("KeywordEntry");
+        debug
             .field("keyword", &self.keyword)
             .field("expiry", &self.expiry)
             .field("source_player", &self.source_player)
@@ -720,7 +741,9 @@ impl std::fmt::Debug for KeywordEntry {
             .field("has_until_condition", &self.until_condition.is_some())
             .field("affecting_source_kind", &self.affecting_source_kind)
             .field("install_order", &self.install_order)
-            .finish()
+            ;
+        if let Some(identity) = self.affecting_source_identity { debug.field("affecting_source_identity", &identity); }
+        debug.finish()
     }
 }
 
@@ -734,6 +757,7 @@ impl KeywordEntry {
             materialized_declarative: false,
             until_condition: None,
             affecting_source_kind: None,
+            affecting_source_identity: None,
             install_order: 0,
         }
     }
@@ -752,6 +776,7 @@ impl KeywordEntry {
             materialized_declarative: true,
             until_condition: None,
             affecting_source_kind: None,
+            affecting_source_identity: None,
             install_order: 0,
         }
     }
@@ -828,6 +853,8 @@ pub struct GrantedTriggeredEffect {
     /// Player who installed the grant — controls expiry behavior and
     /// shows up as `EffectContext::player`.
     pub source_player: PlayerId,
+    pub source_kind: EffectSourceKind,
+    pub source_identity: Option<(PlayerId,u64)>,
     pub expiry: crate::enums::Expiry,
     /// Phase 4i — body id into `Game::granted_effect_bodies`. v1 keeps
     /// the body `Arc` here as well (for direct inline-fire compat)
@@ -841,13 +868,19 @@ pub struct GrantedTriggeredEffect {
 
 impl std::fmt::Debug for GrantedTriggeredEffect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("GrantedTriggeredEffect")
+        let mut debug = f.debug_struct("GrantedTriggeredEffect");
+        debug
             .field("timing", &self.timing)
             .field("source_card", &self.source_card)
             .field("source_player", &self.source_player)
             .field("expiry", &self.expiry)
             .field("body_id", &self.body_id)
-            .finish_non_exhaustive()
+            ;
+        if self.source_identity.is_some() || self.source_kind != EffectSourceKind::Digimon {
+            debug.field("source_kind", &self.source_kind);
+            debug.field("source_identity", &self.source_identity);
+        }
+        debug.finish_non_exhaustive()
     }
 }
 
@@ -969,6 +1002,8 @@ impl ModifierRegistry {
                 e.source_player.hash(&mut h);
                 format!("{:?}", e.effect_immunity_filter).hash(&mut h);
                 format!("{:?}", e.disable_effect_timing).hash(&mut h);
+                if e.affecting_source_identity.is_some() { e.affecting_source_identity.hash(&mut h); }
+                if e.immunity_excluded_source.is_some() { e.immunity_excluded_source.hash(&mut h); }
                 e.install_order.hash(&mut h);
                 sum = sum.wrapping_add(h.finish());
             }
@@ -985,6 +1020,7 @@ impl ModifierRegistry {
                 e.source_permanent.hash(&mut h);
                 e.source_player.hash(&mut h);
                 format!("{:?}", e.affecting_source_kind).hash(&mut h);
+                if e.affecting_source_identity.is_some() { e.affecting_source_identity.hash(&mut h); }
                 e.install_order.hash(&mut h);
                 sum = sum.wrapping_add(h.finish());
             }
@@ -1215,8 +1251,17 @@ impl ModifierRegistry {
         source_player: u8,
         source_kind: EffectSourceKind,
     ) {
+        self.grant_keyword_from_effect_identity(target, keyword, expiry, source_player, source_kind, None);
+    }
+
+    pub fn grant_keyword_from_effect_identity(
+        &mut self, target: PermanentHandle, keyword: Keyword, expiry: Expiry,
+        source_player: u8, source_kind: EffectSourceKind,
+        source_identity: Option<(PlayerId, u64)>,
+    ) {
         let mut entry = KeywordEntry::simple(keyword, expiry, source_player);
         entry.affecting_source_kind = Some(source_kind);
+        entry.affecting_source_identity = source_identity;
         self.grant_keyword_entry(target, entry);
     }
 
@@ -1257,9 +1302,17 @@ impl ModifierRegistry {
         source_player: u8,
         source_kind: EffectSourceKind,
     ) {
+        self.grant_keyword_with_until_condition_from_effect_identity(target,keyword,predicate,source_player,source_kind,None);
+    }
+
+    pub fn grant_keyword_with_until_condition_from_effect_identity(
+        &mut self,target: PermanentHandle,keyword: Keyword,predicate: UntilConditionFn,
+        source_player: u8,source_kind: EffectSourceKind,source_identity: Option<(PlayerId,u64)>,
+    ) {
         let mut entry = KeywordEntry::simple(keyword, Expiry::UntilCondition, source_player);
         entry.until_condition = Some(predicate);
         entry.affecting_source_kind = Some(source_kind);
+        entry.affecting_source_identity = source_identity;
         self.grant_keyword_entry(target, entry);
     }
 
@@ -1271,14 +1324,17 @@ impl ModifierRegistry {
         source_permanent: Option<PermanentHandle>,
         source_player: u8,
     ) {
-        self.permanent_keywords.entry(target).or_default().push(
-            KeywordEntry::materialized_declarative(
-                keyword,
-                expiry,
-                source_permanent,
-                source_player,
-            ),
-        );
+        self.grant_declarative_keyword_from_effect_identity(target,keyword,expiry,source_permanent,source_player,None,None);
+    }
+
+    pub fn grant_declarative_keyword_from_effect_identity(
+        &mut self,target: PermanentHandle,keyword: Keyword,expiry: Expiry,source_permanent: Option<PermanentHandle>,
+        source_player: u8,source_kind: Option<EffectSourceKind>,source_identity: Option<(PlayerId,u64)>,
+    ) {
+        let mut entry = KeywordEntry::materialized_declarative(keyword,expiry,source_permanent,source_player);
+        entry.affecting_source_kind = source_kind;
+        entry.affecting_source_identity = source_identity;
+        self.permanent_keywords.entry(target).or_default().push(entry);
     }
 
     /// Get all modifiers of a given type on a permanent that currently
@@ -1366,6 +1422,7 @@ impl ModifierRegistry {
         entry.modifier != ModifierType::CannotBeAffected
             && entries.iter().any(|imm| {
                 imm.modifier == ModifierType::CannotBeAffected
+                    && !(imm.immunity_excluded_source.is_some() && imm.immunity_excluded_source == entry.affecting_source_identity)
                     && immunity_filter_covers(
                         imm.effect_immunity_filter.as_ref(),
                         target.player,
@@ -1384,9 +1441,17 @@ impl ModifierRegistry {
         effect_controller: PlayerId,
         source_kind: EffectSourceKind,
     ) -> bool {
+        self.is_unaffected_by_from(target, effect_controller, source_kind, None)
+    }
+
+    pub fn is_unaffected_by_from(
+        &self, target: PermanentHandle, effect_controller: PlayerId,
+        source_kind: EffectSourceKind, source_identity: Option<(PlayerId, u64)>,
+    ) -> bool {
         self.permanent_modifiers.get(&target).is_some_and(|entries| {
             entries.iter().any(|imm| {
                 imm.modifier == ModifierType::CannotBeAffected
+                    && !(imm.immunity_excluded_source.is_some() && imm.immunity_excluded_source == source_identity)
                     && immunity_filter_covers(
                         imm.effect_immunity_filter.as_ref(),
                         target.player,
@@ -1503,7 +1568,7 @@ impl ModifierRegistry {
         let Some(kind) = entry.affecting_source_kind else {
             return true;
         };
-        !self.is_unaffected_by(target, entry.source_player, kind)
+        !self.is_unaffected_by_from(target, entry.source_player, kind, entry.affecting_source_identity)
     }
 
     /// The granted keyword entries on `target` that are currently had
@@ -1755,6 +1820,14 @@ impl ModifierRegistry {
     /// the queue-based dispatcher to construct a `QueuedEffect` with
     /// `granted_effect_id` set so the drainer fetches the body from
     /// `Game::granted_effect_bodies` at fire time.
+    pub fn granted_triggered_entries_for_timing(
+        &self, carrier: PermanentHandle, timing: crate::enums::EffectTiming,
+    ) -> Vec<GrantedTriggeredEffect> {
+        self.granted_triggered.get(&carrier).map(|entries|
+            entries.iter().filter(|entry|entry.timing==timing).cloned().collect())
+            .unwrap_or_default()
+    }
+
     pub fn granted_triggered_for_timing_with_ids(
         &self,
         carrier: PermanentHandle,

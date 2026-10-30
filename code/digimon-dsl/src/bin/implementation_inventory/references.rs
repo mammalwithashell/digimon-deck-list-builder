@@ -1210,6 +1210,12 @@ impl Walk for digimon_dsl::clause::Timing {
                 "ENUM_SCALAR",
                 serde_json::json!("OnDiscardSecurity"),
             ),
+            digimon_dsl::clause::Timing::OnDiscardDeck => c.node(
+                path,
+                "digimon_dsl::clause::Timing",
+                "ENUM_SCALAR",
+                serde_json::json!("OnDiscardDeck"),
+            ),
             digimon_dsl::clause::Timing::OnSecurity => c.node(
                 path,
                 "digimon_dsl::clause::Timing",
@@ -4806,6 +4812,12 @@ impl Walk for digimon_dsl::compiled::CompiledTiming {
                 "digimon_dsl::compiled::CompiledTiming",
                 "ENUM_SCALAR",
                 serde_json::json!("OnDiscardSecurity"),
+            ),
+            digimon_dsl::compiled::CompiledTiming::OnDiscardDeck => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledTiming",
+                "ENUM_SCALAR",
+                serde_json::json!("OnDiscardDeck"),
             ),
             digimon_dsl::compiled::CompiledTiming::OnSecurity => c.node(
                 path,

@@ -1,0 +1,12 @@
+{
+  "all_same_card_observation_digests_verified": true,
+  "bt18_optional_unsuspend_preserved": true,
+  "canonical_overrides_added": 0,
+  "ex10_evil_special_digivolve_preserved_in_face_and_xros_req": true,
+  "ex10_no_invented_reminder": true,
+  "previous_eight_override_proofs": "REJECTED_AND_SUPERSEDED",
+  "prior_ledger_preserved_byte_for_byte": true,
+  "staged_ledger_sha256": "b5bfc8a644790d3fe1df17bac867ae9dda52b8ac8d59856156d5e4b59f75e71a",
+  "status": "PASSED_FRESH_SOURCE_PROJECTION_CHECKS_PENDING_SECOND_REVIEW",
+  "three_security_effects_correctly_classified": true
+}

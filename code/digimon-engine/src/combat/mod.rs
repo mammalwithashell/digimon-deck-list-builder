@@ -73,7 +73,8 @@ mod queue_handle_rekey_tests {
                     let mut game = DebugRunner::builder().build().game;
                     game.current_trigger_context = Some(context.clone());
                     let queued = QueuedEffect {
-                        source_card: CardHandle(0),
+                source_identity: None,
+                source_card: CardHandle(0),
                         source_permanent: Some(handle),
                         source_kind: EffectSourceKind::Digimon,
                         attribution_source_card: None,
@@ -93,7 +94,7 @@ mod queue_handle_rekey_tests {
                         trigger_batch: 0,
                         pending_processing: None,
                     };
-                    game.effect_queue.push_back(queued.clone());
+                    game.push_effect_with_identity(queued.clone());
                     // A surviving carrier still observes the captured handle
                     // even when that target was the removed source. This pins
                     // context rekeying independently of source invalidation.
@@ -102,7 +103,7 @@ mod queue_handle_rekey_tests {
                     witness.source_permanent = Some(witness_source);
                     witness.controller = witness_source.player;
                     witness.card_id = "SURVIVING-OBSERVER".into();
-                    game.effect_queue.push_back(witness);
+                    game.push_effect_with_identity(witness);
                     game.shift_effect_queue_after_battle_area_remove(player, 0);
                     let expected_source = Some(PermanentHandle {
                         index: if owner == player && index > 0 && index < 14 {

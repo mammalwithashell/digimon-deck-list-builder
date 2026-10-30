@@ -1,0 +1,75 @@
+# Printed image / official bundle BT19-036; DCGO BT19_036.cs cross-check.
+card: BT19-036
+name: Wizardmon (X Antibody)
+kind: digimon
+level: 4
+color: [yellow, purple]
+cost: 6
+dp: 6000
+traits: [Wizard, X Antibody, Witchelny]
+form: Champion
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from: { name_is: Wizardmon }
+    cost: 0
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "Add top security to hand; with Wizardmon/X Antibody source, may place a yellow/purple Option costing 5 or less as bottom security"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - if:
+          condition:
+            self_source_count:
+              filter:
+                any_of:
+                  - name_is: Wizardmon
+                  - name_is: X Antibody
+              op: gte
+              value: 1
+          then:
+            - select_union_zone:
+                of: you
+                zones: [hand]
+                bind_as: option
+                optional: true
+                filter:
+                  all_of:
+                    - kind: option
+                    - play_or_use_cost_lte: 5
+                    - any_of:
+                        - color_is: yellow
+                        - color_is: purple
+                prompt: "You may place 1 yellow or purple Option card with use cost 5 or less as your bottom security card"
+            - place_on_security:
+                of: you
+                source: { card: { binding: option, zone: hand } }
+                position: bottom
+                face_up: false
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - is_source: true
+        - kind: digimon
+        - color_is: yellow
+        - any_of:
+            - trait_has: Data
+            - trait_has: Witchelny
+        - replacement_cause: opponent_effect
+        - security_count_gte: 1
+    summary: "Inherited [All Turns][OPT] When this yellow Data/Witchelny Digimon would leave by opponent effect, trash top security so it does not leave"
+    process:
+      - trash_top_security_and_cancel_replacement: { of: you }
+

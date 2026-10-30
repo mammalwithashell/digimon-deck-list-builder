@@ -31,6 +31,26 @@ use crate::selection::{
     SourceSelectionRef,
 };
 
+/// Rebuild a native callback from the activated carrier, never a mutable slot.
+/// Captured `None` remains no carrier; it must not adopt a later occupant.
+fn native_carrier(game: &Game, identity: Option<(PlayerId, u64)>) -> Option<PermanentHandle> {
+    identity.and_then(|identity| game.resolve_source_move_anchor(identity, false)
+        .or_else(|| game.resolve_source_move_anchor(identity, true)))
+}
+
+fn native_callback_context<'a>(
+    game: &'a mut Game, source_card: CardHandle,
+    source_identity: Option<(PlayerId, u64)>, source_kind: EffectSourceKind,
+    controller: PlayerId, override_pin: Option<PlayerId>,
+) -> EffectContext<'a> {
+    let source_permanent = native_carrier(game, source_identity);
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game, source_card, source_permanent, source_kind, controller, override_pin,
+    );
+    ctx.source_identity = source_identity;
+    ctx
+}
+
 /// Emit a `GameEvent::EffectTarget` for a committed target selection, naming
 /// the effect's source card and the chosen target card. Resolves the source
 /// identity from `source_card`; if it can't be resolved the event is skipped
@@ -425,8 +445,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 
@@ -452,14 +473,7 @@ impl<'a> EffectContext<'a> {
                     let tname = card.card_name(&game.card_data).to_string();
                     push_effect_target(game, controller, source_card, tid, tname);
                 }
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 user_callback(&mut ctx, hand_index);
             }),
             on_decline: None,
@@ -498,8 +512,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 
@@ -525,14 +540,7 @@ impl<'a> EffectContext<'a> {
                     let tname = card.card_name(&game.card_data).to_string();
                     push_effect_target(game, controller, source_card, tid, tname);
                 }
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 user_callback(&mut ctx, trash_index);
             }),
             on_decline: None,
@@ -577,8 +585,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 
@@ -607,14 +616,7 @@ impl<'a> EffectContext<'a> {
                 let source_permanent = if source_permanent == Some(of_permanent) {
                     Some(host)
                 } else { source_permanent };
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 user_callback(&mut ctx, source_idx);
             }),
             on_decline: None,
@@ -639,8 +641,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let previous_phase = self.game.current_phase;
         install_source_multi_selection(
             self.game,
@@ -657,14 +660,7 @@ impl<'a> EffectContext<'a> {
             source_kind,
             previous_phase,
             Box::new(move |game, picked| {
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 callback(&mut ctx, picked);
             }),
         );
@@ -744,8 +740,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let previous_phase = self.game.current_phase;
         install_source_multi_selection(
             self.game,
@@ -762,14 +759,7 @@ impl<'a> EffectContext<'a> {
             source_kind,
             previous_phase,
             Box::new(move |game, picked| {
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 callback(&mut ctx, picked);
             }),
         );
@@ -800,8 +790,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let previous_phase = self.game.current_phase;
         install_partition_source_selection(
             self.game,
@@ -817,14 +808,7 @@ impl<'a> EffectContext<'a> {
             source_kind,
             previous_phase,
             Box::new(move |game, selected| {
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 callback(&mut ctx, selected);
             }),
         );
@@ -846,8 +830,9 @@ impl<'a> EffectContext<'a> {
         let opponent = self.game.next_clockwise(self.player);
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let previous_phase = self.game.current_phase;
 
         install_dp_budget_selection(
@@ -868,14 +853,7 @@ impl<'a> EffectContext<'a> {
             Box::new(move |game, picked| {
                 let refs = permanents_to_refs(game, &picked);
                 push_effect_target_multi(game, controller, source_card, refs);
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 callback(&mut ctx, picked);
             }),
         );
@@ -902,8 +880,9 @@ impl<'a> EffectContext<'a> {
         let opponent = self.game.next_clockwise(self.player);
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let previous_phase = self.game.current_phase;
 
         install_play_cost_budget_selection(
@@ -924,14 +903,7 @@ impl<'a> EffectContext<'a> {
             Box::new(move |game, picked| {
                 let refs = permanents_to_refs(game, &picked);
                 push_effect_target_multi(game, controller, source_card, refs);
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 callback(&mut ctx, picked);
             }),
         );
@@ -971,8 +943,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let previous_phase = self.game.current_phase;
 
         self.game.current_phase = GamePhase::SelectBreedingPermanent;
@@ -994,14 +967,7 @@ impl<'a> EffectContext<'a> {
                     let (tid, tname) = (cd.card_id.clone(), cd.card_name.clone());
                     push_effect_target(game, controller, source_card, tid, tname);
                 }
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 callback(&mut ctx, selection_ref);
             }),
             on_decline: None,
@@ -1026,8 +992,9 @@ impl<'a> EffectContext<'a> {
         let cap = labels.len().min(HAND_MAIN_LIMIT);
 
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
         let mut choices: Vec<EffectChoiceEntry> = Vec::with_capacity(cap);
         for (i, label) in labels.iter().take(cap).enumerate() {
@@ -1069,14 +1036,7 @@ impl<'a> EffectContext<'a> {
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let choice_index = action_id.saturating_sub(HAND_EFFECT_START) as usize;
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 user_callback(&mut ctx, choice_index);
             }),
             on_decline: None,
@@ -1119,8 +1079,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 
@@ -1146,14 +1107,7 @@ impl<'a> EffectContext<'a> {
                     let tname = card.card_name(&game.card_data).to_string();
                     push_effect_target(game, controller, source_card, tid, tname);
                 }
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 user_callback(&mut ctx, index);
             }),
             on_decline: None,
@@ -1175,21 +1129,15 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let previous_phase = self.game.current_phase;
 
         let final_callback: RevealBucketCallback =
             std::sync::Arc::new(std::sync::Mutex::new(Some(Box::new(
                 move |game: &mut Game, picked: Vec<(String, Vec<CardHandle>)>| {
-                    let mut ctx = EffectContext::new_with_source_kind_and_override(
-                        game,
-                        source_card,
-                        source_permanent,
-                        source_kind,
-                        controller,
-                        override_pin,
-                    );
+                    let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                     callback(&mut ctx, picked);
                 },
             ))));
@@ -1245,8 +1193,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let user_callback: Box<dyn FnOnce(&mut EffectContext<'_>, usize) + Send + Sync> =
             Box::new(callback);
 
@@ -1280,14 +1229,7 @@ impl<'a> EffectContext<'a> {
                     let tname = card.card_name(&game.card_data).to_string();
                     push_effect_target(game, controller, source_card, tid, tname);
                 }
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 user_callback(&mut ctx, index);
             }),
             on_decline: None,
@@ -1368,8 +1310,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let user_callback: Box<
             dyn FnOnce(
                     &mut EffectContext<'_>,
@@ -1401,14 +1344,7 @@ impl<'a> EffectContext<'a> {
                     let (tid, tname) = (cd.card_id.clone(), cd.card_name.clone());
                     push_effect_target(game, controller, source_card, tid, tname);
                 }
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 user_callback(&mut ctx, handle, origin);
             }),
             on_decline: None,
@@ -1461,8 +1397,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let previous_phase = self.game.current_phase;
         let prompt_owned = prompt.to_string();
 
@@ -1470,14 +1407,7 @@ impl<'a> EffectContext<'a> {
             dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
         > = Box::new(
             move |game: &mut Game, ordered: Vec<crate::card_source::CardHandle>| {
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 callback(&mut ctx, ordered);
             },
         );
@@ -1680,8 +1610,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
         let previous_phase = self.game.current_phase;
         let prompt_owned = prompt.to_string();
 
@@ -1700,14 +1631,7 @@ impl<'a> EffectContext<'a> {
                     })
                     .collect();
                 push_effect_target_multi(game, controller, source_card, refs);
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 callback(&mut ctx, picks);
             },
         );
@@ -1934,8 +1858,9 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let override_pin = self.override_selecting_player;
         let source_card = self.source_card;
-        let source_permanent = self.source_permanent;
+        let source_permanent = native_carrier(self.game, self.source_identity);
         let source_kind = self.source_kind;
+        let source_identity = self.source_identity;
 
         // Wrap the user callback: at resolution time we need to build a
         // fresh EffectContext, decode the action ID to a PermanentHandle,
@@ -1984,14 +1909,7 @@ impl<'a> EffectContext<'a> {
                 }
                 let previous_effect_source = game.effect_source_player;
                 game.effect_source_player = Some(controller);
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller,
-                    override_pin,
-                );
+                let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
                 user_callback(&mut ctx, h);
                 ctx.game.effect_source_player = previous_effect_source;
             }),

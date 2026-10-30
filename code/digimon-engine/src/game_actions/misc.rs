@@ -1125,7 +1125,7 @@ impl Game {
                 let card_index = card.card_index;
                 let original_index = match resume.origin { PendingWouldPlayOrigin::SecurityRecorded { index, .. } | PendingWouldPlayOrigin::SecurityAt { index, .. } => index, _ => self.player(resume.player).security.len() };
                 let restore_at = original_index.min(self.player(resume.player).security.len());
-                self.player_mut(resume.player).insert_in_security(restore_at, card);
+                self.player_mut(resume.player).restore_in_security(restore_at, card);
                 if was_face_up {
                     self.player_mut(resume.player)
                         .face_up_security
@@ -1404,7 +1404,8 @@ impl Game {
             if effect.timing != EffectTiming::WhenDigivolving {
                 continue;
             }
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card: card_handle,
                 source_permanent: None,
                 source_kind: EffectSourceKind::Digimon,
@@ -1451,7 +1452,8 @@ impl Game {
             if !effect.counter {
                 continue;
             }
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card: card_handle,
                 source_permanent: None,
                 source_kind: EffectSourceKind::Option,

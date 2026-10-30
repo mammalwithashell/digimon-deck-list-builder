@@ -26,7 +26,7 @@ pub struct EventCardRef {
     pub card_name: String,
 }
 
-/// Which non-security reveal site produced a [`GameEvent::Reveal`]. Mirrors
+/// Which effect-driven reveal site produced a [`GameEvent::Reveal`]. Mirrors
 /// the DCGO recorder reveal chokepoints (CLAUDE.md rule 27); `SecurityReveal`
 /// remains a distinct variant for the security-check path.
 #[derive(Debug, Clone, Copy, serde::Serialize)]
@@ -35,6 +35,8 @@ pub enum RevealZone {
     DeckTop,
     /// Card revealed as it is trashed from the top of the deck (mill).
     TrashFromDeckTop,
+    /// Security publicly revealed by an effect, without a security check.
+    SecurityStack,
     // NOTE: a `Hand` reveal zone is intentionally absent — the engine has no
     // reveal-from-hand primitive and no card in the pool reveals from hand.
     // Re-add a variant (+ emission site) if such a card is ever implemented.
