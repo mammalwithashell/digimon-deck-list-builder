@@ -498,5 +498,13 @@
     "code/tools/card_data/sources/digimoncard_io.py": "f9fc846cf75495a8b17c7c7e9e82ed999dd24b4b7c73d3bed13cbedead7a4b34",
     "code/tools/dynasmon_admission_report.py": "1d2be0936f170802fdb606597646b29f89d217e32ddae9dd74041b4e1d608188",
     "code/digimon-engine/src/dsl_cards/step/play_digivolve.rs": "933a5205f59a4f56c1c09fa313572ef19ab1d5a3d702400e0e4229f3cd293809"
-  }
+  },
+  "post_validation_format_only_changes": [
+    {
+      "path": "code/digimon-engine/cards/bt19/BT19-036.yaml",
+      "tested_sha256": "4f0a956d818151dc1f70a03cee13e31e8c4ad93a479ce2fee50d295f0c083f54",
+      "current_sha256": "9aa4f34e0c01fb6c39abbd3a8847a1332b949839da2efbd6329ad99dbcb45566",
+      "change": "Remove extra blank line at EOF; YAML content and behavior unchanged"
+    }
+  ]
 }

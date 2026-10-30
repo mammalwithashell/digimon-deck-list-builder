@@ -72,4 +72,3 @@ effects:
     summary: "Inherited [All Turns][OPT] When this yellow Data/Witchelny Digimon would leave by opponent effect, trash top security so it does not leave"
     process:
       - trash_top_security_and_cancel_replacement: { of: you }
-

@@ -5,10 +5,12 @@ Read-only review after [PR #757](https://github.com/mammalwithashell/digimon-dec
 - Validated task source base: `d0d0520262c6d8a4df0216ca6b5743052fe24789`.
 - Fetched main: `77f4702f9c786f95aabb4745593e358c6face855`.
 - Overlapping changed paths: 17.
-- No rebase, merge, integration edit or publication was performed.
+- This review did not rebase, merge or edit integration logic.
 - Current-main build/behavior compatibility is **not validated** by the task's base-qualified runs.
 
 ## Integration requirements
+
+PR packaging check (2026-10-30): fetched main remains `77f4702f9c786f95aabb4745593e358c6face855`. A read-only `git merge-tree` reports conflicts in `determinize/materialize.rs`, `effect_context/action/trash.rs`, `game_actions/zones.rs`, and generated `qa/impact/lowering_coverage.json`. The PR is therefore a draft pending integration and revalidation. No merge was applied to this checkout.
 
 Main adds a belief knowledge ledger and a separate closed-belief sampler. Temporary
 public security reveals must feed that sampler's knowledge acquisition, allowed
