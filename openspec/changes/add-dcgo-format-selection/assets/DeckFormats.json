@@ -1,0 +1,293 @@
+{
+  "_comment": "GENERATED from data/deck_formats.json by gen_deck_formats.py -- do not hand-edit. Flattened for Unity JsonUtility (no dicts, no nested generic collections). official_eng is intentionally absent: it still comes from the existing online fetch.",
+  "formats": [
+    {
+      "id": "standard",
+      "displayName": "Standard",
+      "rarityPolicy": "all",
+      "banlistId": "official_eng",
+      "maxCopies": 4,
+      "roomToken": "True",
+      "randomMatchKey": "randomMatchRoom",
+      "enforceDeckValidation": false
+    },
+    {
+      "id": "no_restriction",
+      "displayName": "No Banlist",
+      "rarityPolicy": "all",
+      "banlistId": "",
+      "maxCopies": 4,
+      "roomToken": "False",
+      "randomMatchKey": "randomMatchRoom",
+      "enforceDeckValidation": false
+    },
+    {
+      "id": "singleton",
+      "displayName": "Singleton",
+      "rarityPolicy": "all",
+      "banlistId": "",
+      "maxCopies": 1,
+      "roomToken": "singleton",
+      "randomMatchKey": "singletonMatchRoom",
+      "enforceDeckValidation": true
+    },
+    {
+      "id": "eden",
+      "displayName": "EDEN",
+      "rarityPolicy": "eden_anomaly",
+      "banlistId": "eden",
+      "maxCopies": 4,
+      "roomToken": "eden",
+      "randomMatchKey": "edenMatchRoom",
+      "enforceDeckValidation": true
+    }
+  ],
+  "banlists": [
+    {
+      "id": "eden",
+      "restrictions": [
+        {
+          "id": "BT1-107",
+          "limit": 1
+        },
+        {
+          "id": "BT1-112",
+          "limit": 1
+        },
+        {
+          "id": "BT11-064",
+          "limit": 1
+        },
+        {
+          "id": "BT12-092",
+          "limit": 0
+        },
+        {
+          "id": "BT13-012",
+          "limit": 1
+        },
+        {
+          "id": "BT14-002",
+          "limit": 1
+        },
+        {
+          "id": "BT14-060",
+          "limit": 1
+        },
+        {
+          "id": "BT14-093",
+          "limit": 1
+        },
+        {
+          "id": "BT15-082",
+          "limit": 0
+        },
+        {
+          "id": "BT16-011",
+          "limit": 0
+        },
+        {
+          "id": "BT16-024",
+          "limit": 1
+        },
+        {
+          "id": "BT17-023",
+          "limit": 1
+        },
+        {
+          "id": "BT17-065",
+          "limit": 1
+        },
+        {
+          "id": "BT17-067",
+          "limit": 1
+        },
+        {
+          "id": "BT17-075",
+          "limit": 1
+        },
+        {
+          "id": "BT17-092",
+          "limit": 1
+        },
+        {
+          "id": "BT18-087",
+          "limit": 1
+        },
+        {
+          "id": "BT19-070",
+          "limit": 1
+        },
+        {
+          "id": "BT2-039",
+          "limit": 1
+        },
+        {
+          "id": "BT2-047",
+          "limit": 1
+        },
+        {
+          "id": "BT2-069",
+          "limit": 1
+        },
+        {
+          "id": "BT3-054",
+          "limit": 1
+        },
+        {
+          "id": "BT3-058",
+          "limit": 1
+        },
+        {
+          "id": "BT3-097",
+          "limit": 0
+        },
+        {
+          "id": "BT3-103",
+          "limit": 1
+        },
+        {
+          "id": "BT4-098",
+          "limit": 1
+        },
+        {
+          "id": "BT4-109",
+          "limit": 1
+        },
+        {
+          "id": "BT5-062",
+          "limit": 1
+        },
+        {
+          "id": "BT6-079",
+          "limit": 1
+        },
+        {
+          "id": "BT6-085",
+          "limit": 4
+        },
+        {
+          "id": "BT6-100",
+          "limit": 1
+        },
+        {
+          "id": "BT7-014",
+          "limit": 1
+        },
+        {
+          "id": "BT7-021",
+          "limit": 1
+        },
+        {
+          "id": "BT7-025",
+          "limit": 1
+        },
+        {
+          "id": "BT7-038",
+          "limit": 1
+        },
+        {
+          "id": "BT7-064",
+          "limit": 1
+        },
+        {
+          "id": "BT7-072",
+          "limit": 1
+        },
+        {
+          "id": "BT7-075",
+          "limit": 1
+        },
+        {
+          "id": "BT7-107",
+          "limit": 1
+        },
+        {
+          "id": "BT8-095",
+          "limit": 1
+        },
+        {
+          "id": "BT8-097",
+          "limit": 1
+        },
+        {
+          "id": "BT9-103",
+          "limit": 0
+        },
+        {
+          "id": "BT9-109",
+          "limit": 1
+        },
+        {
+          "id": "EX2-007",
+          "limit": 0
+        },
+        {
+          "id": "EX3-067",
+          "limit": 1
+        },
+        {
+          "id": "EX4-008",
+          "limit": 0
+        },
+        {
+          "id": "EX5-048",
+          "limit": 1
+        },
+        {
+          "id": "EX6-042",
+          "limit": 0
+        },
+        {
+          "id": "ST1-09",
+          "limit": 1
+        }
+      ],
+      "bannedPair": [
+        {
+          "id": "EX4-015",
+          "pairs": [
+            "EX5-065"
+          ]
+        }
+      ]
+    }
+  ],
+  "anomalyProtocol": {
+    "maxTotal": 4,
+    "categories": [
+      {
+        "cardKind": "Tamer",
+        "nameContains": "",
+        "rarities": [
+          "R",
+          "P"
+        ]
+      },
+      {
+        "cardKind": "Option",
+        "nameContains": "memory boost",
+        "rarities": [
+          "R",
+          "SR",
+          "P"
+        ]
+      },
+      {
+        "cardKind": "Option",
+        "nameContains": "training",
+        "rarities": [
+          "P"
+        ]
+      },
+      {
+        "cardKind": "Option",
+        "nameContains": "scramble",
+        "rarities": [
+          "P"
+        ]
+      }
+    ],
+    "extraCardIds": []
+  }
+}
