@@ -1,0 +1,14 @@
+divergence in refresh_v2_generated_greedy_000_digilab_00b5ea09afd9_vs_digilab_0286bd08d2eb_seed_40521416.replay.json at step 26 (Digest): recorded=16916382372867944159 replayed=5199309697073599048
+divergence in refresh_v2_generated_greedy_001_digilab_0286bd08d2eb_vs_digilab_03052bcf3884_seed_40521419.replay.json at step 18 (Digest): recorded=7727334165344325627 replayed=3980596037229086645
+divergence in refresh_v2_generated_greedy_002_digilab_03052bcf3884_vs_digilab_087db0caf1c2_seed_40521420.replay.json at step 35 (Digest): recorded=1841986688168341021 replayed=9837222199843890639
+divergence in refresh_v2_generated_greedy_005_digilab_0f8f67c14f13_vs_digilab_10c793e6c4b4_seed_40521427.replay.json at step 16 (Digest): recorded=8078911757964659624 replayed=17186217613781853397
+divergence in refresh_v2_generated_greedy_006_digilab_10c793e6c4b4_vs_digilab_14f6262f4fc0_seed_40521428.replay.json at step 44 (Digest): recorded=15012682948161528355 replayed=2179688109763297715
+divergence in refresh_v2_generated_greedy_009_digilab_155d30601167_vs_digilab_1682f0098d48_seed_40521435.replay.json at step 16 (Digest): recorded=2351531839700531490 replayed=12322771405705590059
+error: 6 of 10 replay(s) diverged
+
+usage:
+  replay_corpus generate --deck-library data/deck_library.json --cards data/cards.json --out qa/replay-goldens [--games N] [--max-steps N] [--seed N]
+  replay_corpus verify --goldens qa/replay-goldens --cards data/cards.json
+  replay_corpus bless --goldens qa/replay-goldens --cards data/cards.json [--retired qa/replay-goldens/retired]
+  replay_corpus regenerate --goldens qa/replay-goldens --cards data/cards.json --id <file-name substring> [--max-steps N]
+  replay_corpus convert-runs --runs runs --cards data/cards.json --out qa/replay-goldens [--limit N]

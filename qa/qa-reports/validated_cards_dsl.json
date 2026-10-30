@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-29",
+  "last_updated": "2026-10-30",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -6152,15 +6152,15 @@
       "archetype": "Callismon / dark animal",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-058.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_058.rs",
-      "test_count": 9,
+      "test_count": 18,
       "patterns": [
         "H5",
         "H7",
         "E3",
         "F7"
       ],
-      "notes": "Reboot/Blocker/Fortitude; Lv5 TS cost4 ignore alt-digivolve; OP/WD/WA OPT suspend+cant-unsuspend; All-Turns effect-init de-digivolve + may battle",
-      "validated_date": "2026-06-06",
+      "notes": "Reboot/Blocker/Fortitude; Lv5 TS cost4 ignore alt-digivolve; OP/WD/WA OPT suspend+cant-unsuspend; All-Turns effect-init de-digivolve + may battle | 2026-10-30: fixed optional suspend decline dropping the independent Then lock with continue_on_decline. Seven regressions cover legal On Play/digivolve/attack, selected distinct targets, already-suspended target, clone and opponent-turn expiry, Fortitude replay; 18 card tests plus 2 printed-form checks pass. See qa/qa-reports/paradise-callismon-2026-10-30/; saved-recording and admission results are reported separately.",
+      "validated_date": "2026-10-30",
       "report": "batch-implement-cards-rust-dsl",
       "gap_kind": null
     },

@@ -1,0 +1,177 @@
+{
+  "exit_code": 1,
+  "suites": [
+    {
+      "tier": 0,
+      "suite": "impact_index_check",
+      "status": "ok",
+      "seconds": 9.4
+    },
+    {
+      "tier": 0,
+      "suite": "impact_lowering_map_check",
+      "status": "ok",
+      "seconds": 0.2
+    },
+    {
+      "tier": 0,
+      "suite": "keyword_semantics_matrix_check",
+      "status": "ok",
+      "seconds": 0.1
+    },
+    {
+      "tier": 0,
+      "suite": "rules_coverage_check",
+      "status": "ok",
+      "seconds": 0.2
+    },
+    {
+      "tier": 0,
+      "suite": "rules_obligations_check",
+      "status": "ok",
+      "seconds": 0.4
+    },
+    {
+      "tier": 0,
+      "suite": "rules_coverage_report",
+      "status": "ok",
+      "seconds": 0.1
+    },
+    {
+      "tier": 0,
+      "suite": "faq_conformance_check",
+      "status": "ok",
+      "seconds": 0.1
+    },
+    {
+      "tier": 0,
+      "suite": "authoring_guide_check",
+      "status": "ok",
+      "seconds": 0.1
+    },
+    {
+      "tier": 0,
+      "suite": "oracle_readiness_check",
+      "status": "ok",
+      "seconds": 3.8
+    },
+    {
+      "tier": 0,
+      "suite": "mechanics_readiness_check",
+      "status": "ok",
+      "seconds": 0.1
+    },
+    {
+      "tier": 0,
+      "suite": "lowering_coverage_check",
+      "status": "ok",
+      "seconds": 22.0
+    },
+    {
+      "tier": 0,
+      "suite": "card_admissibility_check",
+      "status": "ok",
+      "seconds": 19.7
+    },
+    {
+      "tier": 0,
+      "suite": "verification_tool_tests",
+      "status": "ok",
+      "seconds": 29.9
+    },
+    {
+      "tier": 1,
+      "suite": "dsl",
+      "status": "ok",
+      "seconds": 545.7
+    },
+    {
+      "tier": 1,
+      "suite": "judge_quiz",
+      "status": "ok",
+      "seconds": 29.3
+    },
+    {
+      "tier": 1,
+      "suite": "rules_conformance",
+      "status": "ok",
+      "seconds": 161.8
+    },
+    {
+      "tier": 1,
+      "suite": "rules_faq",
+      "status": "ok",
+      "seconds": 14.5
+    },
+    {
+      "tier": 1,
+      "suite": "keyword_semantics_matrix",
+      "status": "ok",
+      "seconds": 10.7
+    },
+    {
+      "tier": 1,
+      "suite": "determinism_guard",
+      "status": "ok",
+      "seconds": 13.0
+    },
+    {
+      "tier": 2,
+      "suite": "impact_scope",
+      "status": "ok",
+      "seconds": 0.2
+    },
+    {
+      "tier": 2,
+      "suite": "cards_behavioral_bt25_058",
+      "status": "ok",
+      "seconds": 5.1
+    },
+    {
+      "tier": 2,
+      "suite": "side_cards_behavioral",
+      "status": "ok",
+      "seconds": 2563.5
+    },
+    {
+      "tier": 2,
+      "suite": "side_dsl",
+      "status": "ok",
+      "seconds": 256.4
+    },
+    {
+      "tier": 2,
+      "suite": "replay_goldens_verify",
+      "status": "failed",
+      "seconds": 27.8
+    },
+    {
+      "tier": 2,
+      "suite": "invariant_fuzz",
+      "status": "ok",
+      "seconds": 110.7
+    }
+  ],
+  "passed_suites": 24,
+  "failed_suites": 1,
+  "test_result_lines": [
+    "test result: ok. 1596 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 270.07s",
+    "test result: ok. 44 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 13.67s",
+    "test result: ok. 361 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 137.16s",
+    "test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.77s",
+    "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.94s",
+    "test result: ok. 2 passed; 0 failed; 1 ignored; 0 measured; 41 filtered out; finished in 0.95s",
+    "test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 12764 filtered out; finished in 4.31s",
+    "test result: ok. 12749 passed; 0 failed; 35 ignored; 0 measured; 0 filtered out; finished in 2562.67s",
+    "test result: ok. 1596 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 252.22s",
+    "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 95.10s"
+  ],
+  "replay_divergences": [
+    "divergence in refresh_v2_generated_greedy_000_digilab_00b5ea09afd9_vs_digilab_0286bd08d2eb_seed_40521416.replay.json at step 26 (Digest): recorded=16916382372867944159 replayed=5199309697073599048",
+    "divergence in refresh_v2_generated_greedy_001_digilab_0286bd08d2eb_vs_digilab_03052bcf3884_seed_40521419.replay.json at step 18 (Digest): recorded=7727334165344325627 replayed=3980596037229086645",
+    "divergence in refresh_v2_generated_greedy_002_digilab_03052bcf3884_vs_digilab_087db0caf1c2_seed_40521420.replay.json at step 35 (Digest): recorded=1841986688168341021 replayed=9837222199843890639",
+    "divergence in refresh_v2_generated_greedy_005_digilab_0f8f67c14f13_vs_digilab_10c793e6c4b4_seed_40521427.replay.json at step 16 (Digest): recorded=8078911757964659624 replayed=17186217613781853397",
+    "divergence in refresh_v2_generated_greedy_006_digilab_10c793e6c4b4_vs_digilab_14f6262f4fc0_seed_40521428.replay.json at step 44 (Digest): recorded=15012682948161528355 replayed=2179688109763297715",
+    "divergence in refresh_v2_generated_greedy_009_digilab_155d30601167_vs_digilab_1682f0098d48_seed_40521435.replay.json at step 16 (Digest): recorded=2351531839700531490 replayed=12322771405705590059"
+  ]
+}

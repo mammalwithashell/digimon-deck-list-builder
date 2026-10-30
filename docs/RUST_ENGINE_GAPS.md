@@ -6531,16 +6531,19 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
 - **Historical 2026-10-21 hold (closed by the 2026-10-22 followup below):** `qa/qa-reports/validated_cards_dsl.json` row is set to `PARTIAL`, `gap_kind: engine`, naming this residual, so card admissibility rejects it as `failed_verdict` until the app-fuse result signal exists.
 - **Followup:** the BT25-089 result/refund residual is closed below. The unread per-card list above still needs separate review; this does not close the whole audit.
 
-### Declining Callismon's "You may suspend" skips the "Then, ... can't unsuspend" lock  [G-CARD-BT25-058-DECLINED-SUSPEND-SKIPS-THEN-LOCK] — OPEN (2026-10-21, Plan 2 Task 5b exam triage)
+### Declining Callismon's "You may suspend" skips the "Then, ... can't unsuspend" lock  [G-CARD-BT25-058-DECLINED-SUSPEND-SKIPS-THEN-LOCK] — RESOLVED (2026-10-30, card-local continuation repair)
 
 - **Card:** BT25-058 Callismon "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
 - **Rule:** everything after "Then," still activates when the optional part before it is not performed (official Q&A Q1643). DCGO `BT25_058.cs` runs the mandatory lock pick (`canNoSelect: false`) whether or not the suspend pick was declined.
-- **Ours:** `BT25-058.yaml` authors an optional `select_opponent_permanent` (suspend), then `suspend`, then a mandatory `select_opponent_permanent` (lock) + `add_modifier CannotUnsuspend`. When the first pick is declined, no lock prompt follows and the effect ends.
+- **Before repair:** `BT25-058.yaml` authors an optional `select_opponent_permanent` (suspend), then `suspend`, then a mandatory `select_opponent_permanent` (lock) + `add_modifier CannotUnsuspend`. When the first pick is declined, no lock prompt follows and the effect ends.
   - `BT25-058-effect4-optional-decline.yaml`: the turn passes at row 12, while DCGO still asks the lock.
   - `BT25-058-effect3-leave-play.yaml`: Dracomon unsuspends on T8, while DCGO keeps it locked.
   - When the suspend is accepted, the lock is asked (`BT25-058-qa-Q6345.yaml`). That points at the decline path of the optional select, which `compiled.rs` documents as "decline runs tail" for non-cost picks.
 - **Fix shape:** reproduce in a cards_behavioral test (decline the suspend, expect the lock prompt over the opponent's Digimon/Tamers), then fix the decline path (or the unbound `suspend_target` step aborting the body) so the tail runs.
-- **Blocks training:** BT25-058 only, through the per-card gate. Two diverged probe rows are `ours_wrong`.
+- **Original training block:** BT25-058 only, through two `ours_wrong` probe rows. The measured resolution below removes this block.
+
+- **Resolution (2026-10-30):** the optional pick omitted the existing `continue_on_decline: true` contract, whose default intentionally drops the tail. Added it in BT25-058 YAML; no shared-engine change. A legal On Play regression failed before the fix. All 18 Callismon behavioral tests plus 2 printed-form checks now pass, including seven new regressions for decline, selected/no-op suspension, legal activation routes, clone/expiry, and Fortitude.
+- **Saved oracle evidence:** the original optional-decline trace re-diffs CLEAN 14/14 steps and Fortitude leave-play CLEAN 33/33. Harness-recorded confirmed interaction rows replace the two ours_wrong findings; original rows and recording hashes are preserved under `qa/qa-reports/paradise-callismon-2026-10-30/`. No new live oracle run; other clauses/interactions remain outside this repair.
 
 ### A used Option still fires its own "when trashed from digivolution cards" trigger after it was used from the trash  [G-ENGINE-USED-OPTION-FIRES-ITS-TRASHED-FROM-SOURCES-TRIGGER] — RESOLVED (2026-10-21, a6a265cdf; filed by Plan 2 Task 5b exam triage)
 

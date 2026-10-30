@@ -1,0 +1,18 @@
+{
+  "code/digimon-engine/cards/bt25/BT25-058.yaml": "df3f14de193145d23d185df61796a4c91d41d73925c458ef0294ed098488a878",
+  "code/digimon-engine/tests/cards_behavioral/bt25/bt25_058.rs": "9cee7d6d11ff91e8e00610b5a91c69112522b63835c8f54919e273b205a2ef5c",
+  "qa/qa-reports/exam-verdicts/BT25-058.json": "4f403430630732103dfb91f600fbae86842e54348a1097c10a1019effe109ee6",
+  "qa/qa-reports/validated_cards_dsl.json": "f77f356ebf6c9fa4e358109cecf0886e582c86c31d704b995ca678ee4c9b7290",
+  "data/card_admissibility.json": "f06734aea8d4339b3be1d3732a0a8ca0f73398bf09ab56206878dd60c7c2db80",
+  "data/mechanics_readiness.json": "ea053dbc2ffdae82154421049e019f726ec6a3e737529f987a1353d2800cbd0b",
+  "qa/impact/lowering_coverage.json": "a0d8491075b19924f6f1b99bdffa38f4f639b573990a6f152b37c345b2bd2ffe",
+  "qa/impact/dsl_impact_index.json": "e142b09be76235df18a68118d14f3266d587708baaf958e0826d6ac094e46ddd",
+  "qa/dcgo-exams/BT25/BT25-058-effect4-optional-decline.yaml": "86b2fbbd1ddca94a6827d8df0409222b4421e17b452de4147e9a04de636b8948",
+  "qa/dcgo-exams/BT25/BT25-058-effect3-leave-play.yaml": "a44afef43a35b6225a3adf97cfd0a9258743595ac0238c7b0140fd764597474b",
+  "target-callismon/debug/dcgo-harness.exe": "fb9fe1ffd2ab8cdd3bd6ddf3a2f6a9f3e220b17438504935c2d4049ea53b7181",
+  "docs/RUST_ENGINE_GAPS.md": "cc55e73db25a5ca1db9d0a40b6e69fc1a0cae182f0af6df80156934dd3dea90e",
+  "target-callismon/runtime_smoke.py": "39eb4b6fd9d8b0aec30b1d660f6ad3bde95a3fe9ea9b61e16895fb1f06db1595",
+  "target-callismon/check_baseline_replays.py": "e6b11505f340bc41b0f457586b48376e2b9998710dcb10b6165f624b79028491",
+  "qa\\qa-reports\\paradise-callismon-2026-10-30\\clause-text.json": "d0859c654beef82d7b57339caabb32f9a0c3a5eed32a1cc7be14405b0f0ee4bf",
+  "qa\\qa-reports\\paradise-callismon-2026-10-30\\interaction-denominator.json": "894b847245aac7f72b71d6335a23b27888fe641efe4afffac280d1851f5f6189"
+}
