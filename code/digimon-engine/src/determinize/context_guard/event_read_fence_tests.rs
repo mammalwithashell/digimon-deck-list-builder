@@ -753,7 +753,7 @@ fn compiled_security_filter_keeps_bindings_physical_reorder_and_cloned_tails() {
         let of = if opponent { CompiledPlayerRef::Opponent } else { CompiledPlayerRef::You };
         let cards = (0..2).map(|_| game.players[owner as usize].deck.pop().unwrap()).collect::<Vec<_>>();
         let excluded = cards[0].handle(); let selected = cards[1].handle();
-        game.players[owner as usize].security = cards;
+        for card in cards { game.players[owner as usize].put_on_security_top(card); }
         let mut bindings = Bindings::new(); bindings.insert_card_list("excluded", vec![excluded]);
         if fenced { unavailable(&mut game); }
         let selection = CompiledStep::SelectSecurity {
@@ -846,7 +846,7 @@ fn compiled_security_and_choose_reveal_reject_actual_unavailable_event_reads() {
     use digimon_dsl::compiled::{CompiledPlayerRef, CompiledPredicate, CompiledRevealDestination};
     for seat in [0, 1] { for cloned in [false, true] { for security in [false, true] {
         let (mut game, source) = revealed_fence_fixture(seat);
-        let card = game.players[seat as usize].deck.pop().unwrap(); game.players[seat as usize].security.push(card);
+        let card = game.players[seat as usize].deck.pop().unwrap(); game.players[seat as usize].put_on_security_top(card);
         unavailable(&mut game); let mut game = if cloned { game.clone() } else { game };
         let phase = game.current_phase;
         let filter = CompiledPredicate { event_card_name_contains: Some("Fence".into()), ..Default::default() };
@@ -873,7 +873,7 @@ fn compiled_security_and_choose_reveal_reject_actual_unavailable_event_reads() {
 fn compiled_security_route_does_not_authorize_public_opaque_filters() {
     for seat in [0, 1] { for cloned in [false, true] { for fenced in [false, true] {
         let (mut game, source) = fixture(seat);
-        let card = game.players[seat as usize].deck.pop().unwrap(); game.players[seat as usize].security.push(card);
+        let card = game.players[seat as usize].deck.pop().unwrap(); game.players[seat as usize].put_on_security_top(card);
         if fenced { unavailable(&mut game); }
         let mut game = if cloned { game.clone() } else { game };
         let calls = Arc::new(AtomicUsize::new(0)); let counter = calls.clone();
