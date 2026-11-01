@@ -10152,7 +10152,7 @@
    "untested_constructs": []
   },
   "BT24-007": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 1,
    "constructs": [
     "verb:if",
@@ -10173,13 +10173,10 @@
    ],
    "effect_clause_count": 1,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:event_discarded_card_any",
-    "predicate:in_event_discarded_cards"
-   ]
+   "untested_constructs": []
   },
   "BT24-008": {
    "behaviourally_covered": true,
@@ -10573,7 +10570,7 @@
    "untested_constructs": []
   },
   "BT24-023": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 7,
    "constructs": [
     "verb:add_modifier",
@@ -10601,9 +10598,7 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "predicate:played_by_effect"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:replacement",
     "keyword:Jamming",
@@ -11365,7 +11360,7 @@
    "untested_constructs": []
   },
   "BT24-074": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 6,
    "constructs": [
     "verb:delete_permanent",
@@ -11400,9 +11395,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "predicate:played_by_effect"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -17068,7 +17061,7 @@
    "untested_constructs": []
   },
   "BT26-079": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 9,
    "constructs": [
     "verb:delete_permanent",
@@ -17107,16 +17100,14 @@
    ],
    "effect_clause_count": 6,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:replacement",
     "predicate:replacement_cause",
     "trigger:when_would_leave_battle_area"
    ],
-   "untested_constructs": [
-    "timing:main_from_trash"
-   ]
+   "untested_constructs": []
   },
   "BT26-080": {
    "behaviourally_covered": true,
@@ -37183,6 +37174,18 @@
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event": [
      "yaml_key"
     ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition": [
+     "yaml_key"
+    ],
     "dsl::predicate_face_down_stack_position.rs::select_own_sources_face_down_and_bottom_all_of_offers_only_that_source": [
      "variant"
     ],
@@ -37668,6 +37671,10 @@
     "dsl::phase3d_event_context.rs::source_trash_event_target_owner_uses_trashed_stack_host_owner_not_observer",
     "dsl::phase3d_event_context.rs::source_trash_host_and_trashed_source_predicates_compile",
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition",
     "dsl::predicate_face_down_stack_position.rs::select_own_sources_face_down_and_bottom_all_of_offers_only_that_source",
     "dsl::predicate_face_down_stack_position.rs::select_own_sources_host_kind_is_inside_all_of_combinator",
     "dsl::predicate_face_down_stack_position.rs::select_own_sources_is_face_down_inside_all_of_combinator",
@@ -40944,6 +40951,18 @@
     "dsl::parse_predicates.rs::parse_count_aggregate": [
      "yaml_key"
     ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition": [
+     "yaml_key"
+    ],
     "rules_conformance::ch15_08_effect_categories.rs::processing_condition_in_active_when_read_at_processing": [
      "fixture"
     ]
@@ -40952,6 +40971,10 @@
    "tested_behaviourally": true,
    "tests": [
     "dsl::parse_predicates.rs::parse_count_aggregate",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition",
     "rules_conformance::ch15_08_effect_categories.rs::processing_condition_in_active_when_read_at_processing"
    ]
   },
@@ -42158,14 +42181,25 @@
   "predicate:event_discarded_card_any": {
    "kind": "predicate",
    "name": "event_discarded_card_any",
-   "near_miss_files": [
-    "src/dsl_cards/predicate.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card",
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy"
+   ]
   },
   "predicate:event_host_is_own_digimon": {
    "kind": "predicate",
@@ -44005,14 +44039,25 @@
   "predicate:in_event_discarded_cards": {
    "kind": "predicate",
    "name": "in_event_discarded_cards",
-   "near_miss_files": [
-    "src/dsl_cards/predicate.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card",
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy"
+   ]
   },
   "predicate:in_text_contains": {
    "kind": "predicate",
@@ -45288,6 +45333,9 @@
     "dsl::play_cost_budget.rs::play_cost_budget_filter_excludes_non_matching_kind": [
      "variant"
     ],
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
+     "yaml_key"
+    ],
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources": [
      "variant"
     ],
@@ -46362,6 +46410,7 @@
     "dsl::phase3_reducer_selection.rs::select_any_permanent_and_select_dna_pair_compile",
     "dsl::phase3b_replacement_process.rs::replacement_cancels_only_when_other_sourceless_digimon_is_placed_in_security",
     "dsl::play_cost_budget.rs::play_cost_budget_filter_excludes_non_matching_kind",
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_false_offers_only_tamer_without_stash",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_offers_only_tamer_with_face_down_stash",
@@ -50279,6 +50328,18 @@
      "variant",
      "yaml_key"
     ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition": [
+     "yaml_key"
+    ],
     "dsl::predicate_leaves_ii.rs::distinct_named_count_gte_compiles_from_yaml": [
      "yaml_key"
     ],
@@ -50573,6 +50634,10 @@
     "dsl::phase2d_end_to_end.rs::multi_pick_then_per_selected_then_for_each_round_trip",
     "dsl::phase2d_for_each.rs::bind_permanent_level_filters_for_each_same_level_permanents",
     "dsl::phase2d_for_each.rs::for_each_owner_you_only_matches_self_permanents",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition",
     "dsl::predicate_leaves_ii.rs::distinct_named_count_gte_compiles_from_yaml",
     "dsl::predicate_leaves_ii.rs::not_in_binding_excludes_only_the_chosen_binding_from_a_field_scan",
     "dsl::residual_formula_predicate_vocab.rs::source_stack_dp_sum_source_target_reads_effect_source_stack",
@@ -50842,16 +50907,24 @@
   "predicate:played_by_effect": {
    "kind": "predicate",
    "name": "played_by_effect",
-   "parsed_only": true,
+   "parsed_only": false,
    "signals": {
     "dsl::parse_predicates.rs::parse_battle_winner_and_discard_hand_predicate_leaves": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
      "yaml_key"
     ]
    },
    "tested": true,
-   "tested_behaviourally": false,
+   "tested_behaviourally": true,
    "tests": [
-    "dsl::parse_predicates.rs::parse_battle_winner_and_discard_hand_predicate_leaves"
+    "dsl::parse_predicates.rs::parse_battle_winner_and_discard_hand_predicate_leaves",
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play",
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance"
    ]
   },
   "predicate:printed_keyword": {
@@ -52688,6 +52761,15 @@
     "dsl::phase3b_replacement_process.rs::replacement_once_per_turn_skips_second_matching_subject": [
      "yaml_key"
     ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy": [
+     "yaml_key"
+    ],
     "dsl::predicate_leaves_ii.rs::distinct_named_count_gte_compiles_from_yaml": [
      "yaml_key"
     ],
@@ -53123,6 +53205,9 @@
     "dsl::phase3b_replacement_process.rs::replacement_cancels_only_when_other_sourceless_digimon_is_placed_in_security",
     "dsl::phase3b_replacement_process.rs::replacement_cancels_only_when_top_security_cost_is_paid",
     "dsl::phase3b_replacement_process.rs::replacement_once_per_turn_skips_second_matching_subject",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card",
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy",
     "dsl::predicate_leaves_ii.rs::distinct_named_count_gte_compiles_from_yaml",
     "dsl::predicate_leaves_ii.rs::distinct_named_count_gte_counts_distinct_filtered_names",
     "dsl::predicate_leaves_ii.rs::distinct_named_count_gte_dedupes_same_named_permanents",
@@ -53427,6 +53512,18 @@
     "dsl::phase3d_event_context.rs::ally_attack_event_target_in_text_contains_matches_attacking_digimon_text": [
      "yaml_key"
     ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition": [
+     "yaml_key"
+    ],
     "dsl::validator.rs::validate_unknown_aura_grant_keyword_fails": [
      "yaml_key"
     ],
@@ -53534,6 +53631,10 @@
     "dsl::phase3_reducer_partition.rs::partition_active_when_false_does_not_grant_keyword",
     "dsl::phase3_reducer_replacement.rs::replacement_active_when_false_suppresses_candidate",
     "dsl::phase3d_event_context.rs::ally_attack_event_target_in_text_contains_matches_attacking_digimon_text",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition",
     "dsl::validator.rs::validate_unknown_aura_grant_keyword_fails",
     "dsl::validator.rs::validate_unknown_modifier_name_fails",
     "rules_conformance::ch03_areas.rs::breeding_area_effects_without_a_breeding_reference_do_not_trigger",
@@ -53781,6 +53882,18 @@
     "dsl::phase2e_select_reveal.rs::revealed_card_overlay_affects_reveal_predicates_only": [
      "variant"
     ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition": [
+     "yaml_key"
+    ],
     "dsl::validator.rs::validate_noop_aura_fails": [
      "yaml_key"
     ],
@@ -53915,6 +54028,10 @@
     "dsl::parse_steps.rs::add_modifier_target_as_predicate_filter",
     "dsl::phase2e_select_reveal.rs::reveal_overlay_survives_select_reveal_until_destination_move",
     "dsl::phase2e_select_reveal.rs::revealed_card_overlay_affects_reveal_predicates_only",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition",
     "dsl::validator.rs::validate_noop_aura_fails",
     "dsl::validator.rs::validate_unknown_aura_grant_keyword_fails",
     "dsl::validator.rs::validate_unknown_modifier_name_fails",
@@ -55325,15 +55442,29 @@
   "timing:main_from_trash": {
    "kind": "timing",
    "name": "main_from_trash",
-   "near_miss_files": [
-    "src/dsl_cards/lower_triggered.rs",
-    "src/dsl_cards/timing_map.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition"
+   ]
   },
   "timing:main_on_field": {
    "kind": "timing",
@@ -56911,6 +57042,15 @@
     "dsl::parse_clauses.rs::parse_new_trigger_timings_battle_winner_and_discard_hand": [
      "yaml_key"
     ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy": [
+     "yaml_key"
+    ],
     "rules_conformance::ch15_04_effect_states.rs::rule_check_triggers_pend_with_the_finished_effects_triggers": [
      "fixture"
     ],
@@ -56927,6 +57067,9 @@
     "dsl::constructs/zone_moves.rs::sequential_union_picks_define_top_order",
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards",
     "dsl::parse_clauses.rs::parse_new_trigger_timings_battle_winner_and_discard_hand",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card",
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy",
     "rules_conformance::ch15_04_effect_states.rs::rule_check_triggers_pend_with_the_finished_effects_triggers",
     "rules_conformance::ch15_04_effect_states.rs::triggers_from_two_events_of_one_effect_pend_in_one_pool",
     "rules_conformance::ch15_04_effect_states.rs::triggers_raised_by_a_pooled_effect_pend_as_a_new_pool"
@@ -58690,6 +58833,21 @@
     "dsl::play_or_use_from_sources.rs::play_or_use_from_sources_uses_selected_option_source_free": [
      "yaml_key"
     ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
+     "yaml_key"
+    ],
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling": [
      "yaml_key"
     ],
@@ -59379,6 +59537,11 @@
     "dsl::play_or_use_from_sources.rs::play_or_use_from_sources_plays_selected_digimon_source_free",
     "dsl::play_or_use_from_sources.rs::play_or_use_from_sources_plays_selected_digimon_source_with_reduced_cost",
     "dsl::play_or_use_from_sources.rs::play_or_use_from_sources_uses_selected_option_source_free",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card",
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy",
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play",
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_option_by_use_cost",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_uses_max_of_both_dual_faces",
@@ -66768,6 +66931,12 @@
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event": [
      "yaml_key"
     ],
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
+     "yaml_key"
+    ],
     "dsl::predicate_face_down_stack_position.rs::select_own_sources_face_down_and_bottom_all_of_offers_only_that_source": [
      "variant"
     ],
@@ -67869,6 +68038,8 @@
     "dsl::phase3e_scheduled_reentry.rs::scheduled_drain_resumes_after_selection_and_continues_remaining_effects",
     "dsl::phase3e_scheduled_reentry.rs::scheduled_during_the_pool_waits_for_the_next_boundary",
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event",
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play",
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
     "dsl::predicate_face_down_stack_position.rs::select_own_sources_face_down_and_bottom_all_of_offers_only_that_source",
     "dsl::predicate_face_down_stack_position.rs::select_own_sources_host_kind_is_digimon_offers_only_digimon_hosted_source",
     "dsl::predicate_face_down_stack_position.rs::select_own_sources_host_kind_is_inside_all_of_combinator",
@@ -68985,6 +69156,12 @@
     "dsl::phase3_dna_digivolve_triggers.rs::optional_when_digivolving_accepted_after_dna_still_sees_dna_origin": [
      "yaml_key"
     ],
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
+     "yaml_key"
+    ],
     "dsl::predicate_leaves_ii.rs::binding_card_color_compiles_from_yaml": [
      "variant",
      "yaml_key"
@@ -69239,6 +69416,8 @@
     "dsl::phase2e_select_effect_choice.rs::legal_when_single_legal_branch_runs_without_a_prompt",
     "dsl::phase2e_select_effect_choice.rs::repeat_effect_choice_repeats_count_and_resumes_after_nested_selection",
     "dsl::phase3_dna_digivolve_triggers.rs::optional_when_digivolving_accepted_after_dna_still_sees_dna_origin",
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play",
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
     "dsl::predicate_leaves_ii.rs::binding_card_color_compiles_from_yaml",
     "dsl::predicate_leaves_ii.rs::binding_card_name_is_compiles_from_yaml",
     "dsl::reveal_buckets.rs::select_reveal_buckets_empty_nested_body_runs_tail_synchronously",
@@ -70521,6 +70700,9 @@
     "dsl::play_from_hand_free_suspended.rs::suspended_true_lowers_to_the_compiled_flag": [
      "variant"
     ],
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
+     "yaml_key"
+    ],
     "rules_conformance::ch15_04_effect_states.rs::pending_on_play_lost_when_card_leaves_before_activation": [
      "fixture"
     ],
@@ -70559,6 +70741,7 @@
     "dsl::phase2f1_play_steps.rs::play_from_hand_free_step_uses_bound_hand_owner",
     "dsl::play_from_hand_free_suspended.rs::suspended_defaults_to_false",
     "dsl::play_from_hand_free_suspended.rs::suspended_true_lowers_to_the_compiled_flag",
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
     "rules_conformance::ch15_04_effect_states.rs::pending_on_play_lost_when_card_leaves_before_activation",
     "rules_conformance::ch15_04_effect_states.rs::piercing_triggers_with_the_battle_deletion_pool",
     "rules_conformance::ch15_08_effect_categories.rs::trigger_reference_tied_to_condition_uses_trigger_time_state",
@@ -70720,6 +70903,18 @@
     ],
     "dsl::phase2f1_play_steps.rs::suppress_on_play_on_play_from_trash_is_rejected_at_compile_time": [
      "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition": [
+     "yaml_key"
     ]
    },
    "tested": true,
@@ -70727,7 +70922,11 @@
    "tests": [
     "dsl::phase2f1_end_to_end.rs::revival_card_pulls_from_trash_into_battle_area",
     "dsl::phase2f1_play_steps.rs::play_from_trash_step_with_free_cost_delta_consumes_trash_and_keeps_memory",
-    "dsl::phase2f1_play_steps.rs::suppress_on_play_on_play_from_trash_is_rejected_at_compile_time"
+    "dsl::phase2f1_play_steps.rs::suppress_on_play_on_play_from_trash_is_rejected_at_compile_time",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_does_not_fire_on_hand_play_or_field_on_play",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_is_offered_and_pays_its_reduced_cost",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_opponents_turn",
+    "dsl::plutomon_admission_constructs.rs::main_from_trash_rejects_unsatisfied_hand_condition"
    ]
   },
   "verb:play_from_trash_free": {
@@ -71050,6 +71249,15 @@
     "dsl::delay_union_play_flow.rs::delay_union_flow_plays_reward_on_field_and_subject_completes_leave": [
      "yaml_key"
     ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy": [
+     "yaml_key"
+    ],
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up": [
      "yaml_key"
     ],
@@ -71076,6 +71284,9 @@
     "dsl::delay_union_play_flow.rs::delay_union_flow_comparator_uses_pre_leave_subject_cost_snapshot",
     "dsl::delay_union_play_flow.rs::delay_union_flow_offer_installs_with_zero_candidates",
     "dsl::delay_union_play_flow.rs::delay_union_flow_plays_reward_on_field_and_subject_completes_leave",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card",
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy",
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up",
     "dsl::royal_knights_union_source_flows.rs::select_union_zone_can_offer_trash_or_breeding_sources_in_one_prompt",
     "dsl::union_zone_origin_play.rs::union_zone_origin_play_decline_runs_mandatory_tail",
@@ -73347,6 +73558,9 @@
     "dsl::phase3a_binding_player_id.rs::hand_selection_binding_carries_selected_player_into_tail_steps": [
      "yaml_key"
     ],
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
+     "yaml_key"
+    ],
     "dsl::predicate_leaves_ii.rs::play_cost_eq_binding_compiles_from_yaml": [
      "variant",
      "yaml_key"
@@ -73564,6 +73778,7 @@
     "dsl::phase2b_zone_moves.rs::select_hand_parks_selection_and_fires_callback",
     "dsl::phase2f3_as_selecting_player.rs::as_selecting_player_chained_selects_all_route_to_override",
     "dsl::phase3a_binding_player_id.rs::hand_selection_binding_carries_selected_player_into_tail_steps",
+    "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
     "dsl::predicate_leaves_ii.rs::play_cost_eq_binding_compiles_from_yaml",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_option_by_use_cost",
@@ -76213,6 +76428,15 @@
     "dsl::phase2e_select_union_zone.rs::select_union_zone_picks_from_hand_or_trash": [
      "variant"
     ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy": [
+     "yaml_key"
+    ],
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up": [
      "yaml_key"
     ],
@@ -76304,6 +76528,9 @@
     "dsl::group7_predicate_batch.rs::name_not_shared_by_field_digimon_compiles_in_select_union_zone_filter",
     "dsl::option_source_use_cluster.rs::dsl_use_option_bound_uses_union_picked_option_free_from_trash",
     "dsl::phase2e_select_union_zone.rs::select_union_zone_picks_from_hand_or_trash",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card",
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy",
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up",
     "dsl::royal_knights_union_source_flows.rs::hand_or_trash_source_cost_places_card_before_success_body",
     "dsl::royal_knights_union_source_flows.rs::optional_hand_or_trash_source_cost_decline_skips_success_body",
@@ -77267,6 +77494,15 @@
    "name": "trash_opponent_hand_to_count",
    "parsed_only": false,
    "signals": {
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card": [
+     "yaml_key"
+    ],
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy": [
+     "yaml_key"
+    ],
     "dsl::zone_movement_verbs.rs::bulk_trash_and_hand_reduction_verbs_call_helpers": [
      "yaml_key"
     ]
@@ -77274,6 +77510,9 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::plutomon_admission_constructs.rs::discarded_any_checks_later_batch_members_and_membership_is_not_a_trait_filter",
+    "dsl::plutomon_admission_constructs.rs::discarded_any_does_not_match_an_old_qualifying_trash_card",
+    "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy",
     "dsl::zone_movement_verbs.rs::bulk_trash_and_hand_reduction_verbs_call_helpers"
    ]
   },
@@ -78225,11 +78464,11 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2180,
+  "behavioural_tests": 2189,
   "cards": {
-   "behaviourally_covered": 1118,
-   "lowering_covered": 1137,
-   "not_covered": 59,
+   "behaviourally_covered": 1122,
+   "lowering_covered": 1139,
+   "not_covered": 57,
    "total": 1196
   },
   "constructs": {
@@ -78243,22 +78482,22 @@
     "used_untested": 0
    },
    "predicate": {
-    "parsed_only": 8,
-    "tested": 190,
-    "tested_behaviourally": 182,
+    "parsed_only": 7,
+    "tested": 192,
+    "tested_behaviourally": 185,
     "total": 221,
-    "untested": 31,
+    "untested": 29,
     "used_by_cards": 195,
-    "used_untested": 24
+    "used_untested": 22
    },
    "timing": {
     "parsed_only": 2,
-    "tested": 59,
-    "tested_behaviourally": 57,
+    "tested": 60,
+    "tested_behaviourally": 58,
     "total": 66,
-    "untested": 7,
+    "untested": 6,
     "used_by_cards": 57,
-    "used_untested": 5
+    "used_untested": 4
    },
    "verb": {
     "parsed_only": 5,
@@ -78386,14 +78625,9 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 398,
-  "scanned_tests": 2580,
+  "scanned_files": 399,
+  "scanned_tests": 2589,
   "top_untested": [
-   {
-    "cards_blocked": 1,
-    "construct": "timing:main_from_trash",
-    "ex13_lists_blocked": 26
-   },
    {
     "cards_blocked": 3,
     "construct": "predicate:can_unsuspend",
@@ -78412,16 +78646,6 @@
    {
     "cards_blocked": 3,
     "construct": "verb:substitute_replacement",
-    "ex13_lists_blocked": 10
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:event_discarded_card_any",
-    "ex13_lists_blocked": 10
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:in_event_discarded_cards",
     "ex13_lists_blocked": 10
    },
    {

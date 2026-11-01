@@ -1,0 +1,54 @@
+{
+  "source_url": "https://digimon.digilab.cards/decklist/131677",
+  "cards": {
+    "BT24-007": 4,
+    "BT24-013": 3,
+    "BT24-021": 4,
+    "BT24-023": 2,
+    "BT24-026": 2,
+    "BT24-042": 3,
+    "BT24-045": 3,
+    "BT24-075": 4,
+    "BT24-081": 3,
+    "BT24-088": 2,
+    "BT24-098": 1,
+    "BT25-084": 3,
+    "BT26-059": 4,
+    "BT26-066": 3,
+    "BT26-074": 3,
+    "BT26-079": 2,
+    "BT26-092": 2,
+    "BT26-100": 4,
+    "BT4-086": 2
+  },
+  "revision": "751ebca2bd93909765c5e95718074a15d331baf9",
+  "mechanics_test_sha256": "7b891b2a156ed4746d4e5cc3c1f3bf819c78a161057e29cd6c1c9ee23233523f",
+  "main_count": 50,
+  "egg_count": 4,
+  "unique_ids": 19,
+  "mechanics_ready": true,
+  "mechanics_blocking": [],
+  "admitted": true,
+  "failures": {},
+  "runtime_verified": true,
+  "dcgo_verified": false,
+  "gauntlet_source_deck_id": "digilab_131677",
+  "smokes": [
+    {
+      "seed": 131677,
+      "legal_steps": 94,
+      "game_over": true
+    },
+    {
+      "seed": 131678,
+      "legal_steps": 100,
+      "game_over": false
+    }
+  ],
+  "binding_file": "C:\\Users\\james\\Documents\\Codex\\2026-10-31\\task\\plutomon\\.venv\\Lib\\site-packages\\digimon_engine\\__init__.py",
+  "runtime_contract": {
+    "profile": "standard_lite_v2",
+    "tensor_size": 9434,
+    "action_space_size": 2192
+  }
+}
