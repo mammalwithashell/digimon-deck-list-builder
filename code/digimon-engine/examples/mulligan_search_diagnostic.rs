@@ -83,7 +83,7 @@ fn main() {
             assert_eq!(Some(observation_sha256.as_str()), node["observation_sha256"].as_str(),
                 "reconstructed observation differs from the frozen replay binding");
         }
-        let raw = evaluator.evaluate_batch(&[EvalRequest { obs, mask }]).pop().unwrap();
+        let raw = PolicyValueFn::evaluate_batch(&mut evaluator, &[EvalRequest { obs, mask }]).pop().unwrap();
         let before = Instant::now();
         let mut sampled = Vec::new();
         let mut probe = Probe { inner: &mut evaluator, values: Vec::new() };
