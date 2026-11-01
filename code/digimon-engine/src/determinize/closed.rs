@@ -285,7 +285,7 @@ fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), St
     if root
         .effect_digivolve_scopes
         .iter()
-        .any(|s| !s.declaration.belief_safe(viewer, &identities))
+        .any(|s| !s.declaration.belief_safe(viewer, &identities, &allowed, &context_safe))
     {
         return Err("closed-list effect digivolution scope requires audit/rebinding".into());
     }
@@ -412,7 +412,7 @@ fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), St
                 *acting_player == viewer
             }
             AfterSelectionHook::DigivolveReducerChain { state, .. } => {
-                state.belief_safe(viewer, &identities)
+                state.belief_safe(viewer, &identities, &allowed, &context_safe)
             }
             AfterSelectionHook::PartitionSecondPlay {
                 source_card, card, ..
@@ -629,8 +629,8 @@ fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), St
                     }
                     && s.candidates.iter().all(|h| root.player(h.player).battle_area.get(h.index as usize).is_some()),
                 ResumeFrame::DigivolveReducerPrompt(s)
-                | ResumeFrame::DigivolveReducerSuspend(s) => s.belief_safe(viewer, &identities),
-                ResumeFrame::EffectDigivolveCostChoice(s) => s.belief_safe(viewer, &identities),
+                | ResumeFrame::DigivolveReducerSuspend(s) => s.belief_safe(viewer, &identities, &allowed, &context_safe),
+                ResumeFrame::EffectDigivolveCostChoice(s) => s.belief_safe(viewer, &identities, &allowed, &context_safe),
                 ResumeFrame::RevealBucketStep(s) => {
                     allowed.contains(&s.prov.source_card)
                         && s.bindings.belief_safe(viewer, &allowed)

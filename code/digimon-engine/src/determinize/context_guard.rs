@@ -379,3 +379,6 @@ mod count_capped_fence_tests;
 
 #[cfg(test)]
 mod union_fence_tests;
+
+#[cfg(test)]
+mod cost_choice_reference_tests;
