@@ -1,0 +1,117 @@
+{
+  "schema": "frozen-evaluation-pr-validation-v1",
+  "created_at": "2026-11-01T01:37:39.363988+00:00",
+  "base_commit": "751ebca2bd93909765c5e95718074a15d331baf9",
+  "code_commit": "8883b946b8a33e040801bd6d85ee6d6f7f303b30",
+  "checks": [
+    {
+      "name": "Python selected evaluation and baseline tests",
+      "platform": "Windows Python 3.13.14",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "code/tests/rl/test_tamer_first_opponents.py",
+        "code/tests/test_search_opportunity_report.py",
+        "code/tests/tools/test_audit_frozen_training_lineage.py",
+        "code/tests/tools/test_audit_frozen_training_links.py",
+        "code/tests/tools/test_compare_mulligan_continuations.py",
+        "code/tests/tools/test_freeze_closed_prior.py",
+        "code/tests/tools/test_frozen_mode_allocation.py",
+        "code/tests/tools/test_frozen_mode_campaign.py",
+        "code/tests/tools/test_frozen_mode_parity_encoding.py",
+        "code/tests/tools/test_frozen_mode_preflight.py",
+        "code/tests/tools/test_frozen_mode_queue.py",
+        "code/tests/tools/test_frozen_mode_receipts.py",
+        "code/tests/tools/test_frozen_queue_memory_floor.py",
+        "code/tests/tools/test_local_checkpoint_duel.py",
+        "code/tests/tools/test_local_checkpoint_matrix.py",
+        "code/tests/tools/test_local_checkpoint_search.py",
+        "code/tests/tools/test_local_policy_matrix.py",
+        "code/tests/tools/test_local_search_lift.py",
+        "code/tests/tools/test_monitor_frozen_receipts.py",
+        "code/tests/tools/test_mulligan_continuation_controller.py",
+        "code/tests/tools/test_mulligan_continuation_full_gate.py",
+        "code/tests/tools/test_mulligan_diagnostic_controller.py",
+        "code/tests/tools/test_native_pair_abort_boundary.py",
+        "code/tests/tools/test_native_reference_abort_boundary.py",
+        "code/tests/tools/test_native_reference_controller_drain.py",
+        "code/tests/tools/test_native_startup_receipt_boundary.py",
+        "code/tests/tools/test_prepare_frozen_mode_campaign.py",
+        "code/tests/tools/test_profile_frozen_mode_preflight.py",
+        "code/tests/tools/test_report_frozen_mode_campaign.py",
+        "code/tests/tools/test_report_mulligan_continuations.py",
+        "code/tests/tools/test_report_mulligan_diagnostic.py"
+      ],
+      "environment": {
+        "PYTHONPATH": "code"
+      },
+      "passed": 277,
+      "skipped": 24,
+      "failed": 0,
+      "skips": "Opt-in native subprocess boundary tests require supplied binaries; not enabled here",
+      "log_sha256": "12818b9a4880ae6b9e1f2accfd82ae3d61d55f5e605eb4afa1099b71299df525"
+    },
+    {
+      "name": "Rust compile integration",
+      "platform": "Linux x86_64",
+      "command": [
+        "cargo",
+        "check",
+        "--keep-going",
+        "--locked",
+        "--release",
+        "-p",
+        "digimon-engine",
+        "--features",
+        "portable-policy-math",
+        "--lib",
+        "--tests",
+        "--examples",
+        "-j",
+        "3"
+      ],
+      "exit_code": 0,
+      "warnings_present": true,
+      "tests_executed": false,
+      "log_sha256": "736095c009eba532855112a748bfc9c599898377c983e61a3c82367b32cf0899",
+      "source_manifest_sha256": "45dd116b4cd38723ce003fdcff677c61516a0a481b615fddcbc503c876c0c5b3",
+      "source_files": 10571,
+      "scope": "Compilation snapshot, not full runtime qualification; changed compiled Rust files match PR working-tree bytes"
+    },
+    {
+      "name": "OpenSpec strict validation",
+      "command": [
+        "openspec",
+        "validate",
+        "evaluate-frozen-checkpoints-closed-deck-search",
+        "--strict"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "Patch whitespace",
+      "command": [
+        "git",
+        "diff",
+        "--check",
+        "origin/main"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "limitations": [
+    "Rust behavioral tests were not rerun on the integrated PR tree",
+    "No fresh Windows native/PyO3 build or cross-platform runtime parity",
+    "No model/scored evaluation was launched for PR validation",
+    "Historical qualification does not qualify this integrated tree",
+    "Linux scored selection_filter failure remains unresolved"
+  ],
+  "historical_failures_preserved": [
+    "Initial pytest collection missing opening_hand_review dependency",
+    "Rust integration type and fixture compile failures",
+    "Temporary compilation bundle missing existing include_str data files"
+  ],
+  "evidence_location": "Local operational workspace: runs/ex13-evaluation-pr-20261101; raw logs and runtime artifacts are not included in this Git PR"
+}
