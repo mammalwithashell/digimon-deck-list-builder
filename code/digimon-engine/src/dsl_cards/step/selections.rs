@@ -7944,7 +7944,7 @@ fn install_select_count_capped_multi(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_count_capped_multi_min(
+    ctx.select_count_capped_multi_min_compiled_with_bindings(
         target_player,
         engine_zone,
         min,
@@ -7952,21 +7952,8 @@ fn install_select_count_capped_multi(
         &prompt,
         optional_zero,
         distinct_by,
-        move |game, card| {
-            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::Card(card.handle()),
-                Some(&filter_bindings),
-            )
-        },
+        filter,
+        filter_bindings,
         move |cb_ctx, picks| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -8714,17 +8701,13 @@ pub(super) fn install_select_security(
     let decline_tail = Arc::new(decline_tail);
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
-    // Snapshot the source identity so the per-index filter closure can build
-    // an `EffectReadContext` to evaluate the `CompiledPredicate` (mirrors
-    // `install_select_material`). Without this the `filter` field on
-    // `SelectSecurity` was silently ignored â€” every security card matched.
+    // Preserve source provenance for the structured predicate and resume.
+    // Without this the `filter` field on `SelectSecurity` was silently ignored â€” every security card matched.
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
-    let recovery_filter = filter.clone();
-    let recovery_bindings = bindings.clone();
     // Resumable-VM (make-engine-cloneable Batch 1): capture for the data frame
     // before the success closure consumes them. Decline is opt-in and runs
     // only the unconditional dispatcher tail, never the accepted pick's `then`.
@@ -8734,28 +8717,12 @@ pub(super) fn install_select_security(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_security(
+    ctx.select_security_compiled(
         target_player,
         &prompt,
         optional,
-        move |game, idx| {
-            let Some(card) = game.player(target_player).security.get(idx) else {
-                return false;
-            };
-            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::Card(card.handle()),
-                Some(&filter_bindings),
-            )
-        },
+        filter,
+        filter_bindings,
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -8766,11 +8733,6 @@ pub(super) fn install_select_security(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
-    if let Some(owner) = ctx.game.pending_selection.as_mut().and_then(|pending| pending.card_choice.as_mut()) {
-        owner.set_security_dsl_filter(recovery_filter, recovery_bindings, crate::resume::ResumeProvenance {
-            source_card, source_permanent, source_kind, controller: player, override_pin,
-        });
-    }
     // No candidates: continue with the cleared binding, exactly once. The
     // caller returns TailAlreadyRan so it cannot replay the original tail.
     if continue_on_decline && ctx.game.pending_selection.is_none() {
@@ -8955,7 +8917,7 @@ fn install_select_materials(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_count_capped_multi_min(
+    ctx.select_count_capped_multi_min_compiled_with_bindings(
         // The carrier's owner â€” `Material` candidates come from
         // `perm.player`'s battle area regardless of `of_player`.
         perm.player,
@@ -8965,21 +8927,8 @@ fn install_select_materials(
         &prompt,
         optional_zero,
         uniqueness,
-        move |game, card| {
-            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::Card(card.handle()),
-                Some(&filter_bindings),
-            )
-        },
+        filter,
+        filter_bindings,
         move |cb_ctx, picks| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -9982,14 +9931,6 @@ fn install_select_union_zone(
 // printed-text 'may'") added by `fix-qa-bugs-aura-tick-reveal-picks`.
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-fn revealed_owner_matches_for_choose(
-    of: CompiledPlayerRef,
-    owner: u8,
-    player: u8,
-    game: &crate::game::Game,
-) -> bool {
-    revealed_owner_matches(of, owner, player, game)
-}
 
 /// Install a `select_reveal`-style pick that routes the chosen revealed card
 /// to a typed destination on success.
@@ -10046,30 +9987,12 @@ fn install_choose_from_reveal(
         target_player,
         target_permanent,
     };
-    let parked = ctx.select_reveal(
+    let parked = ctx.select_reveal_compiled(
         &prompt,
         optional,
-        move |game, idx| {
-            let Some(card) = game.revealed_cards.get(idx) else {
-                return false;
-            };
-            if !revealed_owner_matches_for_choose(of, card.owner, player, game) {
-                return false;
-            }
-            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::RevealedCard(card.handle()),
-                Some(&filter_bindings),
-            )
-        },
+        of,
+        filter,
+        filter_bindings,
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             // Resolve the picked reveal index to a stable CardHandle and

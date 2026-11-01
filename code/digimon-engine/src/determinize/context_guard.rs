@@ -371,3 +371,8 @@ mod outer_continuations_context_tests;
 
 #[cfg(test)]
 mod step_runner_context_tests;
+
+#[cfg(test)]
+mod petrification_fence_tests;
+#[cfg(test)]
+mod count_capped_fence_tests;

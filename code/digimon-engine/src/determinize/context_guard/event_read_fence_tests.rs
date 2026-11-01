@@ -741,3 +741,153 @@ fn assembly_fence_compiled_predicates_check_actual_event_reads_and_keep_legacy_g
         assert_eq!(game.current_phase, phase); assert_eq!(game.memory, 10);
     } }
 }
+
+
+#[test]
+fn compiled_security_filter_keeps_bindings_physical_reorder_and_cloned_tails() {
+    use digimon_dsl::compiled::{CompiledBindingRef, CompiledPlayerRef, CompiledPredicate, CompiledStackPosition};
+    for seat in [0, 1] { for opponent in [false, true] { for fenced in [false, true] {
+      for cloned in [false, true] { for decline in [false, true] {
+        let (mut game, source) = fixture(seat);
+        let owner = if opponent { 1 - seat } else { seat };
+        let of = if opponent { CompiledPlayerRef::Opponent } else { CompiledPlayerRef::You };
+        let cards = (0..2).map(|_| game.players[owner as usize].deck.pop().unwrap()).collect::<Vec<_>>();
+        let excluded = cards[0].handle(); let selected = cards[1].handle();
+        game.players[owner as usize].security = cards;
+        let mut bindings = Bindings::new(); bindings.insert_card_list("excluded", vec![excluded]);
+        if fenced { unavailable(&mut game); }
+        let selection = CompiledStep::SelectSecurity {
+            continue_on_decline: true, of,
+            filter: CompiledPredicate { not_in_binding: Some("excluded".into()), ..Default::default() },
+            bind_as: Some("picked".into()), prompt: "Bound security".into(), prompt_key: None,
+            optional: decline, then: vec![CompiledStep::ReturnSelectedSecurityToDeck {
+                of, card: CompiledBindingRef::Named("picked".into()), position: CompiledStackPosition::Top,
+            }, CompiledStep::GainMemory(1)],
+        };
+        run_steps(&[selection, CompiledStep::GainMemory(2)],
+            &mut EffectContext::new(&mut game, source, None, seat), &mut bindings);
+        assert!(game.pending_selection_resume.is_some());
+        assert_eq!(game.memory, 3);
+        // Retain the real owned selection and DSL filter across a Game clone;
+        // reorder physical cards before resolution to exercise live eligibility.
+        let mut game = if cloned { game.clone() } else { game };
+        let actions = game.pending_selection.as_ref().unwrap().card_choice.as_ref().unwrap().valid_action_ids(&game);
+        let mut commits: Vec<_> = actions.into_iter().filter(|&a| a != crate::action::PASS).collect();
+        assert_eq!(commits.len(), 1, "the excluded physical card must remain ineligible");
+        game.players[owner as usize].security.swap(0, 1);
+        if decline {
+            // Optional menus deliberately offer only decline after invalidation.
+            assert_eq!(game.pending_selection.as_ref().unwrap().card_choice.as_ref().unwrap().valid_action_ids(&game), vec![crate::action::PASS]);
+        } else {
+            // A mandatory menu refreshes through a real legal navigation action.
+            let refresh = crate::card_choice_page::CARD_CHOICE_NEXT;
+            assert!(crate::build_action_mask(&game, seat)[refresh as usize] > 0.5);
+            game.resolve_selection(seat, refresh).unwrap();
+            commits = game.pending_selection.as_ref().unwrap().card_choice.as_ref().unwrap().valid_action_ids(&game);
+            assert_eq!(commits.len(), 1, "refresh preserves the captured exclusion binding");
+        }
+        let action = if decline { crate::action::PASS } else { commits[0] };
+        assert!(crate::build_action_mask(&game, seat)[action as usize] > 0.5);
+        game.resolve_selection(seat, action).unwrap();
+        assert!(game.pending_selection.is_none()); assert!(game.pending_selection_resume.is_none());
+        assert_eq!(game.memory, if decline { 5 } else { 6 });
+        assert_eq!(game.players[owner as usize].security.iter().map(|c| c.handle()).collect::<Vec<_>>(),
+            if decline { vec![selected, excluded] } else { vec![excluded] });
+        if !decline { assert_eq!(game.players[owner as usize].deck.last().unwrap().handle(), selected); }
+        assert_eq!(game.projected_event_card_read_fence(), fenced);
+      } }
+    } } }
+}
+
+#[test]
+fn compiled_choose_reveal_keeps_owner_binding_routes_and_cloned_declines() {
+    use digimon_dsl::compiled::{CompiledPlayerRef, CompiledPredicate, CompiledRevealDestination};
+    use crate::action::space::SEL_REVEAL_START;
+    for seat in [0, 1] { for fenced in [false, true] { for cloned in [false, true] {
+      for decline in [false, true] { for owner in 0..4 { for to_deck in [false, true] {
+        let (mut game, source) = revealed_fence_fixture(seat);
+        if fenced { unavailable(&mut game); }
+        let before: Vec<_> = game.revealed_cards.iter().map(|c| c.handle()).collect();
+        let mut bindings = Bindings::new(); bindings.insert_card_list("excluded", vec![before[0]]);
+        let of = match owner { 0 => CompiledPlayerRef::You, 1 => CompiledPlayerRef::Opponent,
+            2 => CompiledPlayerRef::Active, _ => CompiledPlayerRef::Any };
+        let expected = if owner == 1 { vec![SEL_REVEAL_START + 1] }
+            else if owner == 3 { vec![SEL_REVEAL_START + 1, SEL_REVEAL_START + 2] }
+            else { vec![SEL_REVEAL_START + 2] };
+        let selection = CompiledStep::ChooseFromReveal {
+            of, filter: CompiledPredicate { name_contains: Some("Fence".into()),
+                not_in_binding: Some("excluded".into()), ..Default::default() },
+            destination: if to_deck { CompiledRevealDestination::DeckBottom } else { CompiledRevealDestination::Hand },
+            bind_as: Some("picked".into()), prompt: "Choose revealed".into(), prompt_key: None, optional: true,
+        };
+        run_steps(&[selection, CompiledStep::GainMemory(2)],
+            &mut EffectContext::new(&mut game, source, None, seat), &mut bindings);
+        assert_eq!(game.pending_selection.as_ref().unwrap().valid_action_ids, expected);
+        let selected = before[(expected.last().unwrap() - SEL_REVEAL_START) as usize];
+        let mut game = if cloned { game.clone() } else { game };
+        let action = if decline { crate::action::PASS } else { *expected.last().unwrap() };
+        assert!(crate::build_action_mask(&game, seat)[action as usize] > 0.5);
+        game.resolve_selection(seat, action).unwrap();
+        assert_eq!(game.memory, 5); assert!(game.pending_selection.is_none());
+        let remaining = before.into_iter().filter(|&c| decline || c != selected).collect::<Vec<_>>();
+        assert_eq!(game.revealed_cards.iter().map(|c| c.handle()).collect::<Vec<_>>(), remaining);
+        if !decline {
+            let target = if owner == 1 { 1 - seat } else { seat };
+            if to_deck { assert_eq!(game.players[target as usize].deck.first().unwrap().handle(), selected); }
+            else { assert!(game.players[target as usize].hand.iter().any(|c| c.handle() == selected)); }
+        }
+        assert_eq!(game.projected_event_card_read_fence(), fenced);
+      } } }
+    } } }
+}
+
+#[test]
+fn compiled_security_and_choose_reveal_reject_actual_unavailable_event_reads() {
+    use digimon_dsl::compiled::{CompiledPlayerRef, CompiledPredicate, CompiledRevealDestination};
+    for seat in [0, 1] { for cloned in [false, true] { for security in [false, true] {
+        let (mut game, source) = revealed_fence_fixture(seat);
+        let card = game.players[seat as usize].deck.pop().unwrap(); game.players[seat as usize].security.push(card);
+        unavailable(&mut game); let mut game = if cloned { game.clone() } else { game };
+        let phase = game.current_phase;
+        let filter = CompiledPredicate { event_card_name_contains: Some("Fence".into()), ..Default::default() };
+        let step = if security { CompiledStep::SelectSecurity {
+            continue_on_decline: false, of: CompiledPlayerRef::You, filter, bind_as: None,
+            prompt: "Read event".into(), prompt_key: None, optional: false, then: vec![],
+        } } else { CompiledStep::ChooseFromReveal {
+            of: CompiledPlayerRef::You, filter, destination: CompiledRevealDestination::Hand,
+            bind_as: None, prompt: "Read event".into(), prompt_key: None, optional: false,
+        } };
+        let result = catch_unwind(AssertUnwindSafe(|| run_steps(&[step],
+            &mut EffectContext::new(&mut game, source, None, seat), &mut Bindings::new())));
+        let error = result.expect_err("actual unavailable identity read must reject");
+        let message = error.downcast_ref::<String>().map(String::as_str)
+            .or_else(|| error.downcast_ref::<&str>().copied()).unwrap_or("");
+        assert_eq!(message, "closed-list unavailable event-card reference read");
+        assert_eq!(game.memory, 3); assert_eq!(game.current_phase, phase);
+        assert!(game.pending_selection.is_none()); assert!(game.pending_selection_resume.is_none());
+        assert_eq!(game.revealed_cards.len(), 3); assert_eq!(game.players[seat as usize].security.len(), 1);
+    } } }
+}
+
+#[test]
+fn compiled_security_route_does_not_authorize_public_opaque_filters() {
+    for seat in [0, 1] { for cloned in [false, true] { for fenced in [false, true] {
+        let (mut game, source) = fixture(seat);
+        let card = game.players[seat as usize].deck.pop().unwrap(); game.players[seat as usize].security.push(card);
+        if fenced { unavailable(&mut game); }
+        let mut game = if cloned { game.clone() } else { game };
+        let calls = Arc::new(AtomicUsize::new(0)); let counter = calls.clone();
+        let phase = game.current_phase;
+        let result = catch_unwind(AssertUnwindSafe(|| EffectContext::new(&mut game, source, None, seat)
+            .select_security(seat, "Opaque security", false,
+                move |_, _| { counter.fetch_add(1, Ordering::SeqCst); true }, |_, _| {})));
+        if fenced {
+            assert!(result.is_err()); assert_eq!(calls.load(Ordering::SeqCst), 0);
+            assert!(game.pending_selection.is_none()); assert_eq!(game.current_phase, phase);
+        } else {
+            result.unwrap(); assert!(calls.load(Ordering::SeqCst) > 0);
+            assert!(game.pending_selection.is_some());
+        }
+        assert_eq!(game.memory, 3);
+    } } }
+}

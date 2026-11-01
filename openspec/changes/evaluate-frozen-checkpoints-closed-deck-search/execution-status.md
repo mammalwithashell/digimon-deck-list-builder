@@ -33,21 +33,39 @@ opt-in Tamer-first baselines are separate protocols.
 
 ## Current blocker
 
-The latest Linux closed CP12-versus-CP8 attempt failed at request `match-117-1`,
-second game / decision 44, with
-`closed-list projected context reached unproven callback: selection_filter`.
-The native process exited 101; the container was not OOM-killed. Its 237 committed
-receipts / 474 partial games were retained and individually validated. The panel
-is failed, not complete; partial win rates are not reported. Its 15 successor
-panels did not start. The independent Windows CP16-versus-CP12 queue remains a
-separate attempt and was not modified while preparing this PR.
+Both latest scored attempts are terminal failures. Linux CP12-versus-CP8 stopped
+at `match-117-1`, second game / decision 44, with a `selection_filter` guard
+failure; 237 receipts / 474 partial games remain preserved. Windows
+CP16-versus-CP12 stopped at `match-083-1`, second game / decision 26, when the
+Petrification token factory was treated as opaque; 167 receipts / 334 partial
+games remain preserved. Neither panel is complete, and partial win rates are
+not reported. Old controllers remain stopped.
 
-A subsequent diagnostic binary built successfully but rejected its prior binding
-before reaching the failed decision (`unsupported prior schema or changed
-compiled legality snapshot`). It did not produce a new root-cause trace. The
-selection failure is unresolved, and this PR must remain draft. Any repair needs
-new qualification and a new attempt identity; old controllers and partial
-receipts must not be resumed or pooled.
+Exact original inputs now reproduce both failures after 44 and 26 legal actions.
+The earlier diagnostic prior rejection came from an empty embedded card pack:
+the build script retained a previous compile-time mount path. It now resolves
+the manifest directory at execution time, preserving the prior-binding checks.
+
+Repairs bind the fixed Petrification constructor to its exact registry entry
+and preserve compiled predicate data through count-capped/material picks,
+security selection and choose-from-reveal. Opaque replacement factories and
+callbacks still reject before their bodies. Actual unavailable event-card reads
+still reject. Security recovery retains its existing mandatory-refresh and
+optional-decline contracts.
+
+Both original saved roots now complete 320 simulations / four worlds / batch
+four with the original model, prior, request and search-seed bindings, on fresh
+Windows and Linux diagnostic binaries. Each completes 81 evaluator calls / 324
+rows and legally executes its selected root plan. Both platforms produce exact
+non-timing search parity at these two roots. These are root diagnostics, not
+complete games, pair replays, full qualification or scored panel results. Their
+original legal prefixes retain identical inspected non-Debug state; queue/resume
+Debug strings also reflect current-main source-identity metadata and unordered
+binding-map display, so whole-history byte identity is not claimed.
+
+The PR remains draft while full integrated qualification, profiles and the scored
+study remain unfinished. Automation is paused; work proceeds directly. Fresh
+attempt identities are required before scoring resumes.
 
 ## Validation and provenance
 
@@ -58,15 +76,28 @@ its unrelated training, frontend, dated launch/archive scripts, models and run
 artifacts are excluded. Source line endings were normalized in this PR copy;
 this tree is not byte-identical to any qualified historical runtime.
 
-Fresh PR checks: 277 Python tests passed; 24 native subprocess tests were skipped
-because they require explicitly supplied native binaries. An initial collection
-failure identified the omitted `opening_hand_review` dependency; including that
-existing helper resolved it without changing test assertions. OpenSpec strict
-validation passed. Linux `cargo check --keep-going --locked --release -p
-digimon-engine --features portable-policy-math --lib --tests --examples -j 3`
-passed for the final integrated Rust sources (warnings remain). No Rust behavioral
-tests, PyO3 rebuild, model inference or new scored games were executed for this
-PR. Machine-readable commands and scope are in [validation.json](validation.json).
+Fresh PR checks include 277 Python tests passed / 24 opt-in native tests skipped,
+OpenSpec strict validation, and Linux compilation of the integrated Rust targets.
+After CI reported failures, the CI repair commit passed all 73 determinization
+tests, seven targeted unit regressions, Tier 0 (including facade placement),
+and the regenerated lowering-coverage check. The source-identity fixture update
+preserves its 28 assertion lines, and the relocated partition fixture is byte
+identical.
+
+Eight new runtime regression tests have passing evidence. The first batch was
+35 Windows tests passed, including four new tests. The later batch initially
+produced 11 Windows passes and one new-fixture failure: an optional invalidated
+security menu correctly offered only decline, contrary to the fixture's assumed
+commit. The fixture now exercises legal mandatory refresh and optional decline;
+all its original assertions remain. The corrected test passed separately on Linux;
+the other 11 tests were not repeated and no fresh 12-test aggregate is claimed.
+The final repaired Windows runtime also passed all 73 determinization tests.
+Production code was unchanged after the successful saved-root replays. Initial
+failures, binaries, sources and logs are retained.
+
+Windows native diagnostic builds and exact-root model inference have executed;
+no fresh scored games, PyO3 qualification or full integrated qualification have
+run. Machine-readable scope is in [validation.json](validation.json).
 
 Integration checks exposed current-main event-reference conversions, two synthetic
 queue fixtures missing the new source-identity field, a legacy diagnostic trait
@@ -85,7 +116,8 @@ SHA256 `b81c76226c21a783befbf35f5c8becb7b83e2b15b1814c66f2c40dd326c859ef`.
 Preserved failed-panel evidence:
 `runs/ex13-assembly-scored-failure-20261101/failure-preserved.json`.
 PR packaging/check evidence:
-`runs/ex13-evaluation-pr-20261101/`.
+`runs/ex13-evaluation-pr-20261101/`. Repair and two-root parity evidence:
+`runs/ex13-new-failure-repair-20261101/`.
 
 These local paths are evidence indexes, not artifacts available in a fresh clone.
 The 21/35 task count is retained as historical program progress; checked

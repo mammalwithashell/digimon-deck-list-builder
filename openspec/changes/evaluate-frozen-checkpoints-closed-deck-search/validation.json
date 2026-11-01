@@ -2,7 +2,6 @@
   "schema": "frozen-evaluation-pr-validation-v1",
   "created_at": "2026-11-01T01:37:39.363988+00:00",
   "base_commit": "751ebca2bd93909765c5e95718074a15d331baf9",
-  "code_commit": "8883b946b8a33e040801bd6d85ee6d6f7f303b30",
   "checks": [
     {
       "name": "Python selected evaluation and baseline tests",
@@ -99,19 +98,126 @@
         "origin/main"
       ],
       "exit_code": 0
+    },
+    {
+      "name": "CI unit regressions",
+      "platform": "Windows x86_64 release portable-policy-math",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "log_sha256": "c26767c962fe2f986dd750e6aa38422d2925e1416c43bc6c863d2caa27090dfd",
+      "evidence": "runs/ex13-new-failure-repair-20261101/ci-unit.log"
+    },
+    {
+      "name": "Entire determinization integration binary",
+      "platform": "Windows x86_64 release portable-policy-math",
+      "passed": 73,
+      "failed": 0,
+      "ignored": 0,
+      "log_sha256": "cfe37fd8ca85b29acef56c5ee6f8b929beba00496ec5ec9dfe0cb9967962a996",
+      "evidence": "runs/ex13-new-failure-repair-20261101/ci-determinization.log"
+    },
+    {
+      "name": "Runtime fence regressions including four new tests",
+      "platform": "Windows x86_64 release portable-policy-math",
+      "passed": 35,
+      "failed": 0,
+      "ignored": 0,
+      "log_sha256": "c98e55dbafe2ff41daf86ee50f32ea46c755499a1c08c3220af661144b3b25cb",
+      "evidence": "runs/ex13-new-failure-repair-20261101/repair-tests.log"
+    },
+    {
+      "name": "Tier 0 and lowering coverage check",
+      "exit_code": 0,
+      "tier0_log_sha256": "99482da82e5194a68148d7d09427c5abb66a0c986c18a34deb75ffaaefe9e2c8",
+      "lowering_log_sha256": "13d7a3aa3c96fbf484a270a7a3a99473fe9f3fcb6e7f8f21ea603458437a70f6"
+    },
+    {
+      "name": "Later filter regression batch",
+      "platform": "Windows x86_64",
+      "profile": "release portable-policy-math",
+      "passed": 11,
+      "failed": 1,
+      "ignored": 0,
+      "log_sha256": "737660164dbcc0dd65004c582e93f24d00931a5549d6ab5a364774181c049a09",
+      "scope": "Initial fixture failure retained; corrected fixture adds legal refresh/decline setup, preserving original assertions. No production changes or repeated 11-test aggregate."
+    },
+    {
+      "name": "Corrected security fixture only",
+      "platform": "Linux x86_64",
+      "profile": "release portable-policy-math",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "log_sha256": "dc59b8c62bcd85c763abc309867290508a92ec7fc6f5dfde0da455af73ec4341",
+      "scope": "Initial fixture failure retained; corrected fixture adds legal refresh/decline setup, preserving original assertions. No production changes or repeated 11-test aggregate."
+    },
+    {
+      "name": "Original failure root searches and cross-platform search parity",
+      "platforms": [
+        "Windows x86_64",
+        "Linux x86_64"
+      ],
+      "saved_roots": 2,
+      "executions": 4,
+      "completed": 4,
+      "simulations_per_execution": 320,
+      "worlds_per_execution": 4,
+      "batch": 4,
+      "original_inputs_bound": true,
+      "selected_plans_legally_replayed": true,
+      "non_timing_search_differences": 0,
+      "proof_sha256": "159084811463e4f49df75c4d0e3f2eca7f6c8962a4a27e71e2959a71224a5677",
+      "scope": "Exact-root learned-model diagnostics only; not complete games/pairs or full qualification"
+    },
+    {
+      "name": "Final repaired runtime determinization regression",
+      "platform": "Windows x86_64 release portable-policy-math",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--release",
+        "-p",
+        "digimon-engine",
+        "--features",
+        "portable-policy-math",
+        "--test",
+        "determinization",
+        "-j",
+        "3",
+        "--",
+        "--test-threads=1"
+      ],
+      "passed": 73,
+      "failed": 0,
+      "ignored": 0,
+      "log_sha256": "761303ce334d868f56c50507c84c1a179e237315518ccdf839adcd694f7edadb"
     }
   ],
   "limitations": [
-    "Rust behavioral tests were not rerun on the integrated PR tree",
-    "No fresh Windows native/PyO3 build or cross-platform runtime parity",
-    "No model/scored evaluation was launched for PR validation",
+    "Full fresh integrated Windows/Linux reference qualification, final profiles and PyO3 validation remain pending",
+    "Exact-root learned-model diagnostics are not scored games or complete-pair replays",
     "Historical qualification does not qualify this integrated tree",
-    "Linux scored selection_filter failure remains unresolved"
+    "Original-to-current-main queue/resume Debug representations include additional source identity metadata and binding-map ordering; only inspected non-Debug history fields are asserted identical"
   ],
   "historical_failures_preserved": [
     "Initial pytest collection missing opening_hand_review dependency",
     "Rust integration type and fixture compile failures",
-    "Temporary compilation bundle missing existing include_str data files"
+    "Temporary compilation bundle missing existing include_str data files",
+    "Four initial PR CI failures with raw logs",
+    "Both terminal scored attempts and their original failing prefixes",
+    "Diagnostic build with empty cards.pack rejected original prior; runtime build-script path resolution repaired",
+    "Reused Linux target produced YAML parse errors despite matching bounded source hashes; fresh isolated target is being built",
+    "Later security fixture initially assumed optional invalidation allowed commit; corrected to legal mandatory refresh and optional decline, with original assertions retained"
   ],
-  "evidence_location": "Local operational workspace: runs/ex13-evaluation-pr-20261101; raw logs and runtime artifacts are not included in this Git PR"
+  "evidence_location": "Local operational workspace: runs/ex13-evaluation-pr-20261101; raw logs and runtime artifacts are not included in this Git PR",
+  "updated_at": "2026-11-01T05:24:16.136841+00:00",
+  "repair_code_commit": "f3cc586ad99b887f1cc8302b77939484180f2cae",
+  "additional_runtime_repairs": "Eight new tests have passing evidence; both original saved-root searches complete on Windows and Linux; full qualification remains pending",
+  "repair_evidence_location": "Local operational workspace: runs/ex13-new-failure-repair-20261101; raw runtime/source artifacts are excluded from Git",
+  "repair_proof_sha256": "d570c9c6185c86bc4a107815bb0e4d013646133a798744b64d0b83bf88d6750a",
+  "initial_pr_code_commit": "8883b946b8a33e040801bd6d85ee6d6f7f303b30",
+  "runtime_repair_source_manifest_sha256": "d40d68016a641223eea8e53edd83a0829645ddda4d273826d95345e9daa1c267",
+  "runtime_source_scope": "Bounded source snapshot; final documentation subsequently records final test results; not a full qualification bundle"
 }

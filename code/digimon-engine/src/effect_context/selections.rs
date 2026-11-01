@@ -1393,13 +1393,54 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, usize) -> bool + Send + Sync + 'static,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
     {
+        self.select_security_impl(of_player, prompt, is_optional, filter, None, callback);
+    }
+
+    /// Structured DSL filters retain bindings for initial selection and live
+    /// physical-card recovery. Public callback filters remain opaque.
+    pub(crate) fn select_security_compiled<C>(
+        &mut self, of_player: PlayerId, prompt: &str, is_optional: bool,
+        predicate: digimon_dsl::compiled::CompiledPredicate,
+        bindings: crate::dsl_cards::bindings::Bindings, callback: C,
+    ) where C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static {
+        self.select_security_impl(of_player, prompt, is_optional,
+            |_, _| unreachable!("compiled security filter has no opaque body"),
+            Some((predicate, bindings)), callback);
+    }
+
+    fn select_security_impl<F, C>(
+        &mut self, of_player: PlayerId, prompt: &str, is_optional: bool,
+        filter: F,
+        compiled: Option<(digimon_dsl::compiled::CompiledPredicate, crate::dsl_cards::bindings::Bindings)>,
+        callback: C,
+    ) where
+        F: Fn(&Game, usize) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
         let security_len = self.game.player(of_player).security.len();
         let filter = std::sync::Arc::new(filter);
-        let indices = (0..security_len).filter(|&i|checked_selection_filter(self.game, || filter(self.game, i))).collect();
+        let indices = (0..security_len).filter(|&i| {
+            if let Some((predicate, bindings)) = &compiled {
+                crate::determinize::context_guard::check_compiled(self.game, "compiled_security_filter");
+                let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+                    self.game, self.source_card, self.source_permanent, self.source_kind, self.player);
+                crate::dsl_cards::predicate::eval_predicate_with_bindings(predicate, &read,
+                    crate::dsl_cards::predicate::PredicateSubject::Card(self.game.player(of_player).security[i].handle()),
+                    Some(bindings))
+            } else { checked_selection_filter(self.game, || filter(self.game, i)) }
+        }).collect();
         let Some(mut owner) = crate::owned_card_choice::OwnedCardChoice::security(
             self.game, of_player, indices, is_optional,
         ) else { return; };
-        owner.set_security_filter(move |game, index| checked_selection_filter(game, || filter(game, index)));
+        if let Some((predicate, bindings)) = compiled {
+            owner.set_security_dsl_filter(predicate, bindings, crate::resume::ResumeProvenance {
+                source_card: self.source_card, source_permanent: self.source_permanent,
+                source_kind: self.source_kind, controller: self.player,
+                override_pin: self.override_selecting_player,
+            });
+        } else {
+            owner.set_security_filter(move |game, index| checked_selection_filter(game, || filter(game, index)));
+        }
         let valid_action_ids = owner.valid_action_ids(self.game);
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
@@ -1734,7 +1775,22 @@ impl<'a> EffectContext<'a> {
         self.select_count_capped_multi_min_inner(of_player, zone, min, max, prompt,
             is_optional_zero, distinct_by,
             |_, _| unreachable!("compiled count-capped filter has no opaque body"),
-            Some((predicate, excluded)), callback);
+            Some((predicate, excluded, None)), callback);
+    }
+
+    /// DSL multi-picks retain their predicate bindings and explicit source kind.
+    /// Only structured data reaches this route; public closure filters stay opaque.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn select_count_capped_multi_min_compiled_with_bindings<C>(
+        &mut self, of_player: PlayerId, zone: CountCappedZone, min: u8, max: u8,
+        prompt: &str, is_optional_zero: bool, distinct_by: Option<DistinctByMode>,
+        predicate: digimon_dsl::compiled::CompiledPredicate,
+        bindings: crate::dsl_cards::bindings::Bindings, callback: C,
+    ) where C: FnOnce(&mut EffectContext<'_>, Vec<CardHandle>) + Send + Sync + 'static {
+        self.select_count_capped_multi_min_inner(of_player, zone, min, max, prompt,
+            is_optional_zero, distinct_by,
+            |_, _| unreachable!("compiled count-capped filter has no opaque body"),
+            Some((predicate, Vec::new(), Some(bindings))), callback);
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1748,7 +1804,7 @@ impl<'a> EffectContext<'a> {
         is_optional_zero: bool,
         distinct_by: Option<DistinctByMode>,
         filter: F,
-        compiled: Option<(digimon_dsl::compiled::CompiledPredicate, Vec<CardHandle>)>,
+        compiled: Option<(digimon_dsl::compiled::CompiledPredicate, Vec<CardHandle>, Option<crate::dsl_cards::bindings::Bindings>)>,
         callback: C,
     ) where
         F: Fn(&Game, &CardSource) -> bool + Send + Sync + 'static,
@@ -1813,17 +1869,23 @@ impl<'a> EffectContext<'a> {
             // pairwise modes (an empty pick set admits every card).
             let admissible = distinct_by
                 .is_none_or(|mode| mode.admits(&[], &self.game.card_data[card_clone.data_index]));
-            let matches = admissible && if let Some((predicate, excluded)) = &compiled {
+            let matches = admissible && if let Some((predicate, excluded, bindings)) = &compiled {
                 crate::determinize::context_guard::check_compiled(
                     self.game, "compiled_count_capped_filter");
                 if excluded.contains(&card_clone.handle()) {
                     false
                 } else {
-                    let read = crate::effect_context::EffectReadContext::new(
-                        self.game, self.source_card, self.source_permanent, self.player);
-                    crate::dsl_cards::predicate::eval_predicate(
+                    let read = if bindings.is_some() {
+                        crate::effect_context::EffectReadContext::new_with_source_kind(
+                            self.game, self.source_card, self.source_permanent, self.source_kind, self.player)
+                    } else {
+                        crate::effect_context::EffectReadContext::new(
+                            self.game, self.source_card, self.source_permanent, self.player)
+                    };
+                    crate::dsl_cards::predicate::eval_predicate_with_bindings(
                         predicate, &read,
-                        crate::dsl_cards::predicate::PredicateSubject::Card(card_clone.handle()))
+                        crate::dsl_cards::predicate::PredicateSubject::Card(card_clone.handle()),
+                        bindings.as_ref())
                 }
             } else {
                 checked_selection_filter(self.game, || filter(self.game, &card_clone))

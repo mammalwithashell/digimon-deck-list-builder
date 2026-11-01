@@ -158,8 +158,9 @@ impl CardEffectRegistry {
         self.generation = Arc::new(());
     }
 
-    /// Only fixed compiler constructors without raw declarative calls may run
-    /// under the event-reference read fence. Runtime reads still remain guarded.
+    /// Fixed compiler constructors without raw declarative calls and explicitly
+    /// registered fixed native constructors may run under the event-reference
+    /// read fence. Runtime reads still remain guarded.
     /// An absent entry executes no factory; keyword synthesis is separate.
     pub(crate) fn read_fence_constructible(&self, card_id: &str) -> bool {
         self.effects.get(card_id).is_none_or(|entry| entry.read_fence_constructible)
