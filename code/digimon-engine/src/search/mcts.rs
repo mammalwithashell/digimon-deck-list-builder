@@ -97,6 +97,8 @@ impl Default for SearchConfig {
 /// Outcome of one search from a root state.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SearchResult {
+    /// Complete-plan priors before and after root noise. PIMC averages over worlds.
+    pub root_priors: Vec<(Vec<u16>, f32, f32)>,
     /// Complete routes to a game decision. Choose one route before navigating;
     /// root_visits projects these onto the first legal transport action.
     pub root_plans: Vec<(Vec<u16>, u32, f32)>,
@@ -116,6 +118,10 @@ pub struct SearchResult {
 }
 
 impl SearchResult {
+    pub(crate) fn with_priors(mut self, priors: Vec<(Vec<u16>, f32, f32)>) -> Self {
+        self.root_priors = priors;
+        self
+    }
     pub(crate) fn from_plans(
         root_plans: Vec<(Vec<u16>, u32, f32)>,
         root_value: f32,
@@ -128,6 +134,7 @@ impl SearchResult {
             entry.1 += *visits as f64 * *q as f64;
         }
         Self {
+            root_priors: Vec::new(),
             root_visits: projected.iter().map(|(&a, &(v, _))| (a, v)).collect(),
             root_q: projected
                 .iter()
@@ -216,6 +223,7 @@ pub(super) fn terminal_value(game: &Game, perspective: PlayerId) -> f32 {
 struct Edge {
     plan: Vec<u16>,
     prior: f32,
+    raw_prior: f32,
     child: Option<usize>,
     visits: u32,
     /// Total backed-up value from the perspective of THIS node's mover
@@ -274,6 +282,7 @@ impl<'a> Mcts<'a> {
             self.make_node(measure("clone", || root.clone()), false, evaluator, config);
         if root_node.terminal_value.is_some() || root_node.edges.is_empty() {
             return SearchResult {
+                root_priors: Vec::new(),
                 root_plans: Vec::new(),
                 root_visits: Vec::new(),
                 root_q: Vec::new(),
@@ -381,7 +390,7 @@ impl<'a> Mcts<'a> {
                 0.
             },
             config.simulations,
-        )
+        ).with_priors(root.edges.iter().map(|e| (e.plan.clone(), e.raw_prior, e.prior)).collect())
     }
 
     /// Materialize a node from a game state, optionally auto-advancing
@@ -499,6 +508,7 @@ impl<'a> Mcts<'a> {
             .map(|(plan, prior)| Edge {
                 plan,
                 prior,
+                raw_prior: prior,
                 child: None,
                 visits: 0,
                 w: 0.,

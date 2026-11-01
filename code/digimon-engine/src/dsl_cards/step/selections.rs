@@ -211,6 +211,26 @@ fn select_field_extreme(
     }
 }
 
+/// Exact data captured by the compiler's own/opponent field filter.
+/// Private fields prevent callers from substituting an opaque predicate.
+pub(crate) struct CompiledFieldFilter {
+    predicate: CompiledPredicate,
+    bindings: Bindings,
+    selector: Option<CompiledFieldSelector>,
+    selected: SelectedField,
+    deletion_payment: bool,
+}
+impl CompiledFieldFilter {
+    pub(crate) fn matches(&self, ctx: &EffectContext<'_>, handle: PermanentHandle) -> bool {
+        crate::determinize::context_guard::check_compiled(ctx.game, "compiled_field_filter");
+        let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+            ctx.game, ctx.source_card, ctx.source_permanent, ctx.source_kind, ctx.player);
+        eval_predicate_with_bindings(&self.predicate, &read, PredicateSubject::Permanent(handle), Some(&self.bindings))
+            && matches_selected_field(ctx.game, handle, self.selector, self.selected)
+            && (!self.deletion_payment || super::deletion_payment::can_pay(&read, handle))
+    }
+}
+
 fn matches_selected_field(
     game: &crate::game::Game,
     handle: PermanentHandle,
@@ -233,6 +253,8 @@ pub(crate) fn run_tail_preserving_trigger_context(
     bindings: &mut Bindings,
     runtime: &StepRuntime,
 ) {
+    crate::determinize::context_guard::check_world_continuation(cb_ctx.game, "run_tail_preserving_trigger_context");
+    crate::determinize::context_guard::check_continuation_context(cb_ctx.game, trigger_context.as_ref(), "run_tail_preserving_trigger_context");
     let previous = cb_ctx.game.current_trigger_context.clone();
     let previous_source = (
         cb_ctx.game.effect_source_player,
@@ -290,6 +312,7 @@ pub(crate) fn run_tail_preserving_trigger_context(
 /// Abandon a failed physical choice without invoking any paid action/tail.
 /// Only typed finalizers already present in this continuation release receipts.
 pub(crate) fn abandon_owned_choice(game: &mut crate::game::Game, stack: crate::resume::ResumeStack) {
+    crate::determinize::context_guard::check_world_continuation(game, "abandon_owned_choice");
     use crate::resume::ResumeFrame;
     fn outer(game: &mut crate::game::Game, conts: Vec<crate::resume::OuterContinuation>) {
         for cont in conts { super::cleanup_aborted_steps(game, &cont.tail); }
@@ -334,6 +357,7 @@ pub(crate) fn run_resume(
     action_id: u16,
     is_pass: bool,
 ) {
+    crate::determinize::context_guard::check_world_continuation(game, "run_resume");
     use crate::resume::{ResumeFrame, ResumeSelectKind};
     let Some(frame) = stack.frames.pop() else {
         return;
@@ -3695,6 +3719,13 @@ pub(crate) fn run_outer_conts(
     game: &mut crate::game::Game,
     conts: Vec<crate::resume::OuterContinuation>,
 ) {
+    crate::determinize::context_guard::check_world_continuation(game, "run_outer_conts");
+    crate::determinize::context_guard::check_continuation_context(game, None, "run_outer_conts");
+    for cont in &conts {
+        crate::determinize::context_guard::check_continuation_context(
+            game, cont.trigger_context.as_ref(), "run_outer_conts",
+        );
+    }
     // Every enclosing continuation was captured before this selection resolved.
     // Retain its new bindings for the whole chain, not just its first sibling.
     let mut fresh: Option<Bindings> = None;
@@ -5663,28 +5694,12 @@ fn install_select_hand(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_hand(
+    ctx.select_hand_compiled(
         target_player,
         &prompt,
         optional,
-        move |game, idx| {
-            let Some(card) = game.player(target_player).hand.get(idx).map(|c| c.handle()) else {
-                return false;
-            };
-            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::Card(card),
-                Some(&filter_bindings),
-            )
-        },
+        filter,
+        filter_bindings,
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -6231,33 +6246,12 @@ fn install_select_trash(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_trash(
+    ctx.select_trash_compiled(
         target_player,
         &prompt,
         optional,
-        move |game, idx| {
-            let Some(card) = game
-                .player(target_player)
-                .trash
-                .get(idx)
-                .map(|c| c.handle())
-            else {
-                return false;
-            };
-            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::Card(card),
-                Some(&filter_bindings),
-            )
-        },
+        filter,
+        filter_bindings,
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -6384,25 +6378,12 @@ fn install_select_own_permanent(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_own_permanent(
+    ctx.select_field_compiled(
+        target_player,
         &prompt,
         optional,
-        move |game, handle| {
-            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::Permanent(handle),
-                Some(&filter_bindings),
-            ) && matches_selected_field(game, handle, selector, selected_field)
-                && (!deletion_payment || super::deletion_payment::can_pay(&read_ctx, handle))
-        },
+        CompiledFieldFilter { predicate: filter, bindings: filter_bindings, selector,
+            selected: selected_field, deletion_payment },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -7441,25 +7422,12 @@ fn install_select_opponent_permanent(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_opponent_permanent(
+    ctx.select_field_compiled(
+        opponent,
         &prompt,
         optional,
-        move |game, handle| {
-            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::Permanent(handle),
-                Some(&filter_bindings),
-            ) && matches_selected_field(game, handle, selector, selected_field)
-                && (!deletion_payment || super::deletion_payment::can_pay(&read_ctx, handle))
-        },
+        CompiledFieldFilter { predicate: filter, bindings: filter_bindings, selector,
+            selected: selected_field, deletion_payment },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -8545,30 +8513,12 @@ fn install_select_reveal(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
-    let parked = ctx.select_reveal(
+    let parked = ctx.select_reveal_compiled(
         &prompt,
         optional,
-        move |game, idx| {
-            let Some(card) = game.revealed_cards.get(idx) else {
-                return false;
-            };
-            if !revealed_owner_matches(of, card.owner, player, game) {
-                return false;
-            }
-            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::RevealedCard(card.handle()),
-                Some(&filter_bindings),
-            )
-        },
+        of,
+        filter,
+        filter_bindings,
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -8899,31 +8849,12 @@ fn install_select_material(
     let override_pin = ctx.override_selecting_player();
     // Top-card exclusion is enforced by EffectContext::select_material itself
     // (matches CountCappedZone::Material).
-    ctx.select_material(
+    ctx.select_material_compiled(
         perm,
         &prompt,
         optional,
-        move |game, src_idx| {
-            // material_carrier_permanent branches battle vs. breeding carrier.
-            let Some(card) = crate::effect_context::material_carrier_permanent(game, perm)
-                .and_then(|p| p.card_sources.get(src_idx))
-            else {
-                return false;
-            };
-            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::Card(card.handle()),
-                Some(&filter_bindings),
-            )
-        },
+        filter,
+        filter_bindings,
         move |cb_ctx, src_idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -9143,9 +9074,6 @@ fn install_select_own_sources(
                 _ => None,
             });
     let target_resolution_failed = target.is_some() && target_permanent.is_none();
-    let source_card = ctx.source_card;
-    let source_permanent = ctx.source_permanent;
-    let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
     // Resumable-VM (Batch 4): capture for the SourceMultiStep frame (own â†’ eval
@@ -9159,34 +9087,16 @@ fn install_select_own_sources(
     let trigger_for_resume = trigger_context.clone();
     let prompt_for_resume = prompt.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_own_sources(
+    ctx.select_sources_compiled(
+        player,
         &prompt,
         min,
         max,
-        move |game, source| {
-            if target_resolution_failed {
-                return false;
-            }
-            if target_permanent.is_some_and(|handle| source.permanent != handle) {
-                return false;
-            }
-            if trash_cost && game.source_card_trash_blocked(source.permanent, source.card, player) {
-                return false;
-            }
-            let read = EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read,
-                PredicateSubject::Source(source),
-                Some(&filter_bindings),
-            )
-        },
+        filter,
+        filter_bindings,
+        target_permanent,
+        target_resolution_failed,
+        trash_cost,
         move |cb_ctx, source_refs| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -9330,9 +9240,6 @@ fn install_select_opponent_sources(
                 _ => None,
             });
     let target_resolution_failed = target.is_some() && target_permanent.is_none();
-    let source_card = ctx.source_card;
-    let source_permanent = ctx.source_permanent;
-    let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
     // Resumable-VM (Batch 4): capture for the SourceMultiStep frame (opponent â†’
@@ -9347,33 +9254,16 @@ fn install_select_opponent_sources(
     let trigger_for_resume = trigger_context.clone();
     let prompt_for_resume = prompt.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_opponent_sources(
+    ctx.select_sources_compiled(
+        opponent,
         &prompt,
         min,
         max,
-        move |game, source| {
-            if target_resolution_failed {
-                return false;
-            }
-            if target_permanent.is_some_and(|handle| source.permanent != handle) {
-                return false;
-            }
-            let read = EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            // Source subject (not Card) so `host_kind_is` / face-down leaves
-            // work on opponent stacks. G-ENGINE-OPP-SOURCES-HOST-KIND.
-            eval_predicate_with_bindings(
-                &filter,
-                &read,
-                PredicateSubject::Source(source),
-                Some(&filter_bindings),
-            )
-        },
+        filter,
+        filter_bindings,
+        target_permanent,
+        target_resolution_failed,
+        false,
         move |cb_ctx, source_refs| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {

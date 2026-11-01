@@ -319,7 +319,7 @@ fn unrevealed_security_return_tracks_position_without_learning_identity() {
             zone_owner: None,
         });
         let mut event_context = TriggerContext::default();
-        event_context.event_card = Some(card.handle());
+        event_context.event_card = (Some(card.handle())).into();
         g.pending_selection_resume = Some(ResumeStack {
             frames: vec![ResumeFrame::RunTail {
                 prov: ResumeProvenance {

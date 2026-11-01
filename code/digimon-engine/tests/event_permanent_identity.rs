@@ -39,7 +39,7 @@ effects:
 }
 
 fn resolve(game: &mut Game, context: TriggerContext) -> Option<ResolvedBinding> {
-    let source = context.event_card.unwrap();
+    let source = context.event_card.read().unwrap();
     game.current_trigger_context = Some(context);
     let ctx = EffectContext::new(game, source, None, 0);
     let resolved = resolve_binding_ref(&CompiledBindingRef::EventTarget, &ctx, &Bindings::new());
@@ -96,7 +96,7 @@ fn event_subject_does_not_rebind_after_dna() {
 
 fn matches_event(game: &mut Game, context: TriggerContext, pred: digimon_dsl::compiled::CompiledPredicate) -> bool {
     use digimon_engine::dsl_cards::predicate::{eval_predicate, PredicateSubject};
-    let card = context.event_card.unwrap();
+    let card = context.event_card.read().unwrap();
     game.current_trigger_context = Some(context);
     let ctx = EffectContext::new(game, card, None, 0);
     eval_predicate(&pred, &ctx.as_read(), PredicateSubject::None)
@@ -127,7 +127,7 @@ fn live_event_predicates_follow_compaction() {
 #[test]
 fn live_event_predicates_reject_departed_replayed_subject() {
     let (mut r, subject, context) = setup();
-    let card = context.event_card.unwrap();
+    let card = context.event_card.read().unwrap();
     r.game.delete_permanent_with_cause(subject, digimon_engine::replacement::ReplacementCause::OwnEffect);
     assert!(r.game.players[0].trash.iter().any(|c| c.handle() == card));
     let mut ctx = EffectContext::new(&mut r.game, card, None, 0);
@@ -174,7 +174,7 @@ fn event_self_comparisons_follow_compaction() {
     let (mut r, _, context) = setup();
     r.game.players[0].battle_area.remove(0);
     let moved = PermanentHandle { player: 0, index: 0 };
-    let card = context.event_card.unwrap();
+    let card = context.event_card.read().unwrap();
     r.game.current_trigger_context = Some(context);
     let ctx = EffectContext::new(&mut r.game, card, Some(moved), 0);
     for pred in [

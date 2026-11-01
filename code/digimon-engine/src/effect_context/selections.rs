@@ -23,6 +23,12 @@
 
 use crate::card_source::{CardHandle, CardSource};
 use crate::effect_context::{EffectContext, PartitionRequirement};
+#[cfg(test)]
+#[path = "selections/context_guard_tests.rs"]
+mod context_guard_tests;
+#[cfg(test)]
+#[path = "selections/filter_guard_tests.rs"]
+mod filter_guard_tests;
 use crate::enums::{CardKind, EffectSourceKind, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
@@ -30,6 +36,14 @@ use crate::selection::{
     BreedingPermanentSelectionRef, EffectChoiceEntry, PendingSelection, SelectionKind,
     SourceSelectionRef,
 };
+
+
+/// Invocation-time check only; this does not certify opaque captures or admit
+/// projected worlds. Keep the check before any user filter body executes.
+fn checked_selection_filter(game: &Game, body: impl FnOnce() -> bool) -> bool {
+    crate::determinize::context_guard::check(game, "selection_filter");
+    body()
+}
 
 /// Rebuild a native callback from the activated carrier, never a mutable slot.
 /// Captured `None` remains no carrier; it must not adopt a later occupant.
@@ -344,7 +358,7 @@ impl<'a> EffectContext<'a> {
         // one-shot processing, a modifier is held until the attack ends).
         // DCGO `SelectPermanentEffect` has no `CanNotBeAffected` candidacy
         // filter either.
-        let composed = move |game: &Game, h: PermanentHandle| -> bool { filter(game, h) };
+        let composed = move |game: &Game, h: PermanentHandle| -> bool { checked_selection_filter(game, || filter(game, h)) };
         self.install_field_selection(
             SelectionKind::OppField,
             GamePhase::SelectTarget,
@@ -427,13 +441,46 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, usize) -> bool,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
     {
+        self.select_hand_impl(of_player, prompt, is_optional, filter, None, callback);
+    }
+
+    /// The compiler supplies structured predicate/binding data, never an opaque
+    /// filter closure. All transitive predicate callbacks retain their guards.
+    pub(crate) fn select_hand_compiled<C>(
+        &mut self, of_player: PlayerId, prompt: &str, is_optional: bool,
+        predicate: digimon_dsl::compiled::CompiledPredicate,
+        bindings: crate::dsl_cards::bindings::Bindings, callback: C,
+    ) where C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static {
+        self.select_hand_impl(of_player, prompt, is_optional,
+            |_: &Game, _: usize| unreachable!("compiled predicate branch"),
+            Some((predicate, bindings)), callback);
+    }
+
+    fn select_hand_impl<F, C>(
+        &mut self, of_player: PlayerId, prompt: &str, is_optional: bool,
+        filter: F,
+        compiled_filter: Option<(digimon_dsl::compiled::CompiledPredicate, crate::dsl_cards::bindings::Bindings)>,
+        callback: C,
+    ) where F: Fn(&Game, usize) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
         use crate::action::space::{HAND_MAIN_LIMIT, PLAY_HAND_START};
 
         let hand_len = self.game.player(of_player).hand.len();
         let cap = hand_len.min(HAND_MAIN_LIMIT);
         let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
         for i in 0..cap {
-            if filter(self.game, i) {
+            let matches = if let Some((predicate, bindings)) = &compiled_filter {
+                crate::determinize::context_guard::check_compiled(self.game, "compiled_hand_filter");
+                let card = self.game.player(of_player).hand[i].handle();
+                let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+                    self.game, self.source_card, self.source_permanent, self.source_kind, self.player);
+                crate::dsl_cards::predicate::eval_predicate_with_bindings(predicate, &read,
+                    crate::dsl_cards::predicate::PredicateSubject::Card(card), Some(bindings))
+            } else {
+                checked_selection_filter(self.game, || filter(self.game, i))
+            };
+            if matches {
                 valid_action_ids.push(PLAY_HAND_START + i as u16);
             }
         }
@@ -494,13 +541,40 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, usize) -> bool,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
     {
+        self.select_trash_impl(of_player, prompt, is_optional, filter, None, callback);
+    }
+
+    /// Compiler-owned predicate data; arbitrary filters retain the strict route.
+    pub(crate) fn select_trash_compiled<C>(
+        &mut self, of_player: PlayerId, prompt: &str, is_optional: bool,
+        predicate: digimon_dsl::compiled::CompiledPredicate,
+        bindings: crate::dsl_cards::bindings::Bindings, callback: C,
+    ) where C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static {
+        self.select_trash_impl(of_player, prompt, is_optional,
+            |_: &Game, _: usize| unreachable!("compiled predicate branch"),
+            Some((predicate, bindings)), callback);
+    }
+
+    fn select_trash_impl<F, C>(
+        &mut self, of_player: PlayerId, prompt: &str, is_optional: bool, filter: F,
+        compiled_filter: Option<(digimon_dsl::compiled::CompiledPredicate, crate::dsl_cards::bindings::Bindings)>,
+        callback: C,
+    ) where F: Fn(&Game, usize) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
         use crate::action::space::{TRASH_EFFECT_START, TRASH_MAIN_LIMIT};
 
         let trash_len = self.game.player(of_player).trash.len();
         let cap = trash_len.min(TRASH_MAIN_LIMIT);
         let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
         for i in 0..cap {
-            if filter(self.game, i) {
+            if if let Some((predicate, bindings)) = &compiled_filter {
+                crate::determinize::context_guard::check_compiled(self.game, "compiled_trash_filter");
+                let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+                    self.game, self.source_card, self.source_permanent, self.source_kind, self.player);
+                crate::dsl_cards::predicate::eval_predicate_with_bindings(predicate, &read,
+                    crate::dsl_cards::predicate::PredicateSubject::Card(self.game.player(of_player).trash[i].handle()), Some(bindings))
+            } else { checked_selection_filter(self.game, || filter(self.game, i)) } {
                 valid_action_ids.push(TRASH_EFFECT_START + i as u16);
             }
         }
@@ -570,9 +644,36 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, usize) -> bool,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
     {
+        self.select_material_impl(of_permanent, prompt, is_optional, filter, None, callback);
+    }
+
+    /// Compiler-owned predicate data; arbitrary filters retain the strict route.
+    pub(crate) fn select_material_compiled<C>(
+        &mut self, of_permanent: PermanentHandle, prompt: &str, is_optional: bool,
+        predicate: digimon_dsl::compiled::CompiledPredicate,
+        bindings: crate::dsl_cards::bindings::Bindings, callback: C,
+    ) where C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static {
+        self.select_material_impl(of_permanent, prompt, is_optional,
+            |_: &Game, _: usize| unreachable!("compiled predicate branch"),
+            Some((predicate, bindings)), callback);
+    }
+
+    fn select_material_impl<F, C>(
+        &mut self, of_permanent: PermanentHandle, prompt: &str, is_optional: bool, filter: F,
+        compiled_filter: Option<(digimon_dsl::compiled::CompiledPredicate, crate::dsl_cards::bindings::Bindings)>,
+        callback: C,
+    ) where F: Fn(&Game, usize) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
         let Some(stack) = material_zone_slice(self.game, of_permanent) else { return; };
         let source_count = stack.len().saturating_sub(1);
-        let cards: Vec<_> = (0..source_count).filter(|&i| filter(self.game, i))
+        let cards: Vec<_> = (0..source_count).filter(|&i| if let Some((predicate, bindings)) = &compiled_filter {
+                crate::determinize::context_guard::check_compiled(self.game, "compiled_material_filter");
+                let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+                    self.game, self.source_card, self.source_permanent, self.source_kind, self.player);
+                crate::dsl_cards::predicate::eval_predicate_with_bindings(predicate, &read,
+                    crate::dsl_cards::predicate::PredicateSubject::Card(stack[i].handle()), Some(bindings))
+            } else { checked_selection_filter(self.game, || filter(self.game, i)) })
             .map(|i| stack[i].handle()).collect();
         let pins = cards.into_iter().filter_map(|card|
             crate::card_choice_page::SourceChoicePin::capture(self.game, of_permanent, card)
@@ -655,12 +756,58 @@ impl<'a> EffectContext<'a> {
             max,
             Vec::new(),
             std::sync::Arc::new(filter),
+            None,
             source_card,
             source_permanent,
             source_kind,
             previous_phase,
             Box::new(move |game, picked| {
                 let mut ctx = native_callback_context(game, source_card, source_identity, source_kind, controller, override_pin);
+                callback(&mut ctx, picked);
+            }),
+        );
+    }
+
+    /// Structured compiler route sharing the ordinary physical-source picker.
+    /// Opaque APIs keep their invocation guard; only predicate data uses the
+    /// checked-reference interpreter.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn select_sources_compiled<C>(
+        &mut self,
+        of_player: PlayerId,
+        prompt: &str,
+        min: u8,
+        max: u8,
+        predicate: digimon_dsl::compiled::CompiledPredicate,
+        bindings: crate::dsl_cards::bindings::Bindings,
+        target: Option<PermanentHandle>,
+        target_resolution_failed: bool,
+        trash_cost: bool,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, Vec<SourceSelectionRef>) + Send + Sync + 'static,
+    {
+        assert!(min <= max, "compiled source min must be <= max");
+        assert!(max > 0, "compiled source max must be > 0");
+        let controller = self.player;
+        let selecting_player = self.override_selecting_player.unwrap_or(controller);
+        let override_pin = self.override_selecting_player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
+        let previous_phase = self.game.current_phase;
+        let data = CompiledSourceFilter { predicate, bindings, target, target_resolution_failed,
+            trash_cost, source_card, source_permanent, source_kind, controller };
+        install_source_multi_selection(
+            self.game, of_player, selecting_player, override_pin, prompt.to_string(),
+            min, max, Vec::new(),
+            std::sync::Arc::new(|_, _| unreachable!("compiled source filter has no opaque body")),
+            Some(std::sync::Arc::new(data)),
+            source_card, source_permanent, source_kind, previous_phase,
+            Box::new(move |game, picked| {
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
+                    game, source_card, source_permanent, source_kind, controller, override_pin,
+                );
                 callback(&mut ctx, picked);
             }),
         );
@@ -684,7 +831,7 @@ impl<'a> EffectContext<'a> {
             max,
             move |game, source_ref| {
                 own_tamer_source_carrier(game, controller, source_ref.permanent)
-                    && filter(game, source_ref)
+                    && checked_selection_filter(game, || filter(game, source_ref))
             },
             callback,
         );
@@ -710,7 +857,7 @@ impl<'a> EffectContext<'a> {
             move |game, source_ref| {
                 source_ref.permanent == tamer
                     && own_tamer_source_carrier(game, controller, tamer)
-                    && filter(game, source_ref)
+                    && checked_selection_filter(game, || filter(game, source_ref))
             },
             callback,
         );
@@ -754,6 +901,7 @@ impl<'a> EffectContext<'a> {
             max,
             Vec::new(),
             std::sync::Arc::new(filter),
+            None,
             source_card,
             source_permanent,
             source_kind,
@@ -932,7 +1080,7 @@ impl<'a> EffectContext<'a> {
             player: self.player,
             card,
         };
-        if !filter(self.game, selection_ref) {
+        if !checked_selection_filter(self.game, || filter(self.game, selection_ref)) {
             return;
         }
         let Some(action_id) = crate::action::space::encode_breeding_select(self.player) else {
@@ -1061,13 +1209,78 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, usize) -> bool,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
     {
+        self.select_reveal_impl(prompt, is_optional, filter, None, callback)
+    }
+
+    /// Compiler-owned predicate data; arbitrary filters retain the strict route.
+    pub(crate) fn select_reveal_compiled<C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        of: digimon_dsl::compiled::CompiledPlayerRef,
+        predicate: digimon_dsl::compiled::CompiledPredicate,
+        bindings: crate::dsl_cards::bindings::Bindings,
+        callback: C,
+    ) -> bool
+    where
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
+        self.select_reveal_impl(
+            prompt,
+            is_optional,
+            |_: &Game, _: usize| unreachable!("compiled predicate branch"),
+            Some((of, predicate, bindings)),
+            callback,
+        )
+    }
+
+    fn select_reveal_impl<F, C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        compiled_filter: Option<(
+            digimon_dsl::compiled::CompiledPlayerRef,
+            digimon_dsl::compiled::CompiledPredicate,
+            crate::dsl_cards::bindings::Bindings,
+        )>,
+        callback: C,
+    ) -> bool
+    where
+        F: Fn(&Game, usize) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
         use crate::action::space::{MAX_REVEALED, SEL_REVEAL_START};
 
         let revealed_len = self.game.revealed_cards.len();
         let cap = revealed_len.min(MAX_REVEALED);
         let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
         for i in 0..cap {
-            if filter(self.game, i) {
+            let matches = if let Some((of, predicate, bindings)) = &compiled_filter {
+                crate::determinize::context_guard::check_compiled(self.game, "compiled_reveal_filter");
+                let card = &self.game.revealed_cards[i];
+                let owner_matches = match of {
+                    digimon_dsl::compiled::CompiledPlayerRef::You => card.owner == self.player,
+                    digimon_dsl::compiled::CompiledPlayerRef::Opponent =>
+                        card.owner == self.game.next_clockwise(self.player),
+                    digimon_dsl::compiled::CompiledPlayerRef::Active =>
+                        card.owner == self.game.turn_player(),
+                    digimon_dsl::compiled::CompiledPlayerRef::Any => true,
+                };
+                owner_matches && {
+                    let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+                        self.game, self.source_card, self.source_permanent, self.source_kind, self.player,
+                    );
+                    crate::dsl_cards::predicate::eval_predicate_with_bindings(
+                        predicate, &read,
+                        crate::dsl_cards::predicate::PredicateSubject::RevealedCard(card.handle()),
+                        Some(bindings),
+                    )
+                }
+            } else {
+                checked_selection_filter(self.game, || filter(self.game, i))
+            };
+            if matches {
                 valid_action_ids.push(SEL_REVEAL_START + i as u16);
             }
         }
@@ -1182,11 +1395,11 @@ impl<'a> EffectContext<'a> {
     {
         let security_len = self.game.player(of_player).security.len();
         let filter = std::sync::Arc::new(filter);
-        let indices = (0..security_len).filter(|&i|filter(self.game, i)).collect();
+        let indices = (0..security_len).filter(|&i|checked_selection_filter(self.game, || filter(self.game, i))).collect();
         let Some(mut owner) = crate::owned_card_choice::OwnedCardChoice::security(
             self.game, of_player, indices, is_optional,
         ) else { return; };
-        owner.set_security_filter(move |game, index| filter(game, index));
+        owner.set_security_filter(move |game, index| checked_selection_filter(game, || filter(game, index)));
         let valid_action_ids = owner.valid_action_ids(self.game);
 
         let selecting_player = self.override_selecting_player.unwrap_or(self.player);
@@ -1502,6 +1715,48 @@ impl<'a> EffectContext<'a> {
             + Sync
             + 'static,
     {
+        self.select_count_capped_multi_min_inner(of_player, zone, min, max, prompt,
+            is_optional_zero, distinct_by, filter, None, callback);
+    }
+
+    /// Fixed predicate-data route for native Assembly. The public closure route
+    /// remains opaque; event references are checked by the predicate interpreter.
+    #[cfg(feature = "dsl-yaml-loader")]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn select_count_capped_multi_min_compiled<C>(
+        &mut self, of_player: PlayerId, zone: CountCappedZone, min: u8, max: u8,
+        prompt: &str, is_optional_zero: bool, distinct_by: Option<DistinctByMode>,
+        predicate: digimon_dsl::compiled::CompiledPredicate, excluded: Vec<CardHandle>,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, Vec<CardHandle>) + Send + Sync + 'static,
+    {
+        self.select_count_capped_multi_min_inner(of_player, zone, min, max, prompt,
+            is_optional_zero, distinct_by,
+            |_, _| unreachable!("compiled count-capped filter has no opaque body"),
+            Some((predicate, excluded)), callback);
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn select_count_capped_multi_min_inner<F, C>(
+        &mut self,
+        of_player: PlayerId,
+        zone: CountCappedZone,
+        min: u8,
+        max: u8,
+        prompt: &str,
+        is_optional_zero: bool,
+        distinct_by: Option<DistinctByMode>,
+        filter: F,
+        compiled: Option<(digimon_dsl::compiled::CompiledPredicate, Vec<CardHandle>)>,
+        callback: C,
+    ) where
+        F: Fn(&Game, &CardSource) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<crate::card_source::CardHandle>)
+            + Send
+            + Sync
+            + 'static,
+    {
         debug_assert!(min <= max, "select_count_capped_multi: min must be <= max");
 
         use crate::action::space::{
@@ -1558,7 +1813,22 @@ impl<'a> EffectContext<'a> {
             // pairwise modes (an empty pick set admits every card).
             let admissible = distinct_by
                 .is_none_or(|mode| mode.admits(&[], &self.game.card_data[card_clone.data_index]));
-            if admissible && filter(self.game, &card_clone) {
+            let matches = admissible && if let Some((predicate, excluded)) = &compiled {
+                crate::determinize::context_guard::check_compiled(
+                    self.game, "compiled_count_capped_filter");
+                if excluded.contains(&card_clone.handle()) {
+                    false
+                } else {
+                    let read = crate::effect_context::EffectReadContext::new(
+                        self.game, self.source_card, self.source_permanent, self.player);
+                    crate::dsl_cards::predicate::eval_predicate(
+                        predicate, &read,
+                        crate::dsl_cards::predicate::PredicateSubject::Card(card_clone.handle()))
+                }
+            } else {
+                checked_selection_filter(self.game, || filter(self.game, &card_clone))
+            };
+            if matches {
                 candidate_indices.push(i);
             }
         }
@@ -1694,7 +1964,7 @@ impl<'a> EffectContext<'a> {
             game.player(player)
                 .security
                 .get(idx)
-                .map(|c| filter(game, c))
+                .map(|c| checked_selection_filter(game, || filter(game, c)))
                 .unwrap_or(false)
         });
         let eligible: Vec<_> = (0..self.game.player(player).security.len())
@@ -1824,6 +2094,26 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, PermanentHandle) -> bool,
         C: FnOnce(&mut EffectContext<'_>, PermanentHandle) + Send + Sync + 'static,
     {
+        self.install_field_selection_impl(kind, phase, target_player, prompt, is_optional, filter, None, callback);
+    }
+
+    /// Compiled field selection carries data, not an arbitrary filter closure.
+    pub(crate) fn select_field_compiled<C>(
+        &mut self, target_player: PlayerId, prompt: &str, is_optional: bool,
+        filter: crate::dsl_cards::step::selections::CompiledFieldFilter, callback: C,
+    ) where C: FnOnce(&mut EffectContext<'_>, PermanentHandle) + Send + Sync + 'static {
+        let kind = if target_player == self.player { SelectionKind::OwnField } else { SelectionKind::OppField };
+        self.install_field_selection_impl(kind, GamePhase::SelectTarget, target_player, prompt, is_optional,
+            |_: &Game, _: PermanentHandle| unreachable!("compiled predicate branch"), Some(filter), callback);
+    }
+
+    fn install_field_selection_impl<F, C>(
+        &mut self, kind: SelectionKind, phase: GamePhase, target_player: PlayerId,
+        prompt: &str, is_optional: bool, filter: F,
+        compiled_filter: Option<crate::dsl_cards::step::selections::CompiledFieldFilter>, callback: C,
+    ) where F: Fn(&Game, PermanentHandle) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, PermanentHandle) + Send + Sync + 'static,
+    {
         use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
 
         let target_count = self.game.player(target_player).battle_area.len();
@@ -1833,7 +2123,10 @@ impl<'a> EffectContext<'a> {
                 player: target_player,
                 index: i as u8,
             };
-            if filter(self.game, h) {
+            let matches = if let Some(compiled) = &compiled_filter {
+                compiled.matches(self, h)
+            } else { checked_selection_filter(self.game, || filter(self.game, h)) };
+            if matches {
                 valid_action_ids.push(encode_attack(0, i as u16));
             }
         }
@@ -2446,6 +2739,49 @@ fn install_permutation_step(
 // ── cross-permanent source multi-select trampoline ───────────────────────────
 
 type SourceFilter = std::sync::Arc<dyn Fn(&Game, SourceSelectionRef) -> bool + Send + Sync>;
+
+/// Compiler-owned source predicate data; no caller-supplied function can enter
+/// this branch. Event references remain checked at the actual read.
+struct CompiledSourceFilter {
+    predicate: digimon_dsl::compiled::CompiledPredicate,
+    bindings: crate::dsl_cards::bindings::Bindings,
+    target: Option<PermanentHandle>,
+    target_resolution_failed: bool,
+    trash_cost: bool,
+    source_card: CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    source_kind: EffectSourceKind,
+    controller: PlayerId,
+}
+
+fn matches_source_filter(
+    game: &Game,
+    source: SourceSelectionRef,
+    opaque: &SourceFilter,
+    compiled: Option<&CompiledSourceFilter>,
+) -> bool {
+    let Some(data) = compiled else {
+        return checked_selection_filter(game, || opaque(game, source));
+    };
+    crate::determinize::context_guard::check_compiled(game, "compiled_source_filter");
+    if data.target_resolution_failed
+        || data.target.is_some_and(|host| source.permanent != host)
+    {
+        return false;
+    }
+    if data.trash_cost
+        && game.source_card_trash_blocked(source.permanent, source.card, data.controller)
+    {
+        return false;
+    }
+    let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+        game, data.source_card, data.source_permanent, data.source_kind, data.controller,
+    );
+    crate::dsl_cards::predicate::eval_predicate_with_bindings(
+        &data.predicate, &read,
+        crate::dsl_cards::predicate::PredicateSubject::Source(source), Some(&data.bindings),
+    )
+}
 type SourceFinalCallback =
     Box<dyn FnOnce(&mut Game, Vec<SourceSelectionRef>) + Send + Sync + 'static>;
 
@@ -2472,7 +2808,7 @@ fn partition_source_refs(
         };
         if requirements
             .iter()
-            .any(|requirement| (requirement.matches)(game, source_ref))
+            .any(|requirement| requirement.matches_source(game, source_ref))
         {
             out.push(source_ref);
         }
@@ -2562,7 +2898,7 @@ fn partition_match_from(
         if used[source_index] {
             continue;
         }
-        if !(requirements[requirement_index].matches)(game, selected[source_index]) {
+        if !requirements[requirement_index].matches_source(game, selected[source_index]) {
             continue;
         }
         used[source_index] = true;
@@ -2712,6 +3048,16 @@ fn source_multi_candidates(
     picked: &[SourceSelectionRef],
     filter: &SourceFilter,
 ) -> Vec<SourceSelectionRef> {
+    source_multi_candidates_with_filter(game, of_player, picked, filter, None)
+}
+
+fn source_multi_candidates_with_filter(
+    game: &Game,
+    of_player: PlayerId,
+    picked: &[SourceSelectionRef],
+    filter: &SourceFilter,
+    compiled_filter: Option<&CompiledSourceFilter>,
+) -> Vec<SourceSelectionRef> {
 
     let mut out = Vec::new();
     for (field_index, perm) in game.player(of_player).battle_area.iter().enumerate() {
@@ -2733,7 +3079,7 @@ fn source_multi_candidates(
             if picked.iter().any(|p| p.card == card) {
                 continue;
             }
-            if !(filter)(game, source_ref) {
+            if !matches_source_filter(game, source_ref, filter, compiled_filter) {
                 continue;
             }
             out.push(source_ref);
@@ -2753,6 +3099,7 @@ fn install_source_multi_selection(
     max: u8,
     mut picked_pins: Vec<crate::card_choice_page::SourceChoicePin>,
     filter: SourceFilter,
+    compiled_filter: Option<std::sync::Arc<CompiledSourceFilter>>,
     source_card: crate::card_source::CardHandle,
     source_permanent: Option<PermanentHandle>,
     source_kind: crate::enums::EffectSourceKind,
@@ -2762,9 +3109,9 @@ fn install_source_multi_selection(
     use std::sync::{Arc, Mutex};
 
     // A selected prefix belongs to original physical carriers, not their old slots.
-    picked_pins.retain(|pin| pin.resolve_ref(game).is_some_and(|source| filter(game, source)));
+    picked_pins.retain(|pin| pin.resolve_ref(game).is_some_and(|source| matches_source_filter(game, source, &filter, compiled_filter.as_deref())));
     let picked: Vec<_> = picked_pins.iter().filter_map(|pin| pin.resolve_ref(game)).collect();
-    let candidates = source_multi_candidates(game, of_player, &picked, &filter);
+    let candidates = source_multi_candidates_with_filter(game, of_player, &picked, &filter, compiled_filter.as_deref());
     if picked.len() + candidates.len() < usize::from(min) {
         return;
     }
@@ -2789,6 +3136,7 @@ fn install_source_multi_selection(
     let shared_cb_decline = Arc::clone(&shared_cb);
     let prompt_for_next = prompt.clone();
     let filter_for_next = Arc::clone(&filter);
+    let compiled_for_next = compiled_filter.clone();
     let picked_for_pick = picked_pins.clone();
     let picked_for_decline = picked_pins;
 
@@ -2828,7 +3176,7 @@ fn install_source_multi_selection(
             // preserves prior valid picks while presenting the agent a
             // truthful menu. See change `fix-trash-card-source-stale-handle`
             // and family `G-DSL-TRASH-SOURCES-STALE-HANDLE`.
-            let still_present = filter_for_next(game, source_ref);
+            let still_present = matches_source_filter(game, source_ref, &filter_for_next, compiled_for_next.as_deref());
             if still_present {
                 if let Some(pin) = crate::card_choice_page::SourceChoicePin::capture(game, source_ref.permanent, source_ref.card) {
                     next_picked.push(pin);
@@ -2860,6 +3208,7 @@ fn install_source_multi_selection(
                 max,
                 next_picked,
                 filter_for_next,
+                compiled_for_next,
                 source_card,
                 source_permanent,
                 source_kind,
@@ -2902,7 +3251,7 @@ fn dp_budget_candidates(
         if picked.contains(&handle) {
             continue;
         }
-        if !(filter)(game, handle) {
+        if !checked_selection_filter(game, || (filter)(game, handle)) {
             continue;
         }
         let dp = game.effective_dp(handle).unwrap_or(0);
@@ -3076,7 +3425,7 @@ pub(crate) fn union_zone_candidates_physical(
 
     if zones.contains(UnionZoneSet::HAND) {
         for card in &player.hand {
-            if filter(game, card, UnionZoneSet::HAND) {
+            if checked_selection_filter(game, || filter(game, card, UnionZoneSet::HAND)) {
                 candidates.push((card.handle(), UnionZoneOrigin::Hand));
             }
         }
@@ -3084,7 +3433,7 @@ pub(crate) fn union_zone_candidates_physical(
 
     if zones.contains(UnionZoneSet::TRASH) {
         for card in &player.trash {
-            if filter(game, card, UnionZoneSet::TRASH) {
+            if checked_selection_filter(game, || filter(game, card, UnionZoneSet::TRASH)) {
                 candidates.push((card.handle(), UnionZoneOrigin::Trash));
             }
         }
@@ -3109,7 +3458,7 @@ pub(crate) fn union_zone_candidates_physical(
                 // carriers matching `material_carrier_filter` (e.g. a [King
                 // Drasil_7D6] top card). Only applies to the broad
                 // `material_of: None` scan; a pinned carrier above bypasses this.
-                .filter(|handle| material_carrier_filter.is_none_or(|f| f(game, *handle)))
+                .filter(|handle| material_carrier_filter.is_none_or(|f| checked_selection_filter(game, || f(game, *handle))))
                 .collect()
         };
         for carrier in material_carriers {
@@ -3118,7 +3467,7 @@ pub(crate) fn union_zone_candidates_physical(
             };
             let below_top = perm.card_sources.len().saturating_sub(1);
             for (source_index, card) in perm.card_sources.iter().take(below_top).enumerate() {
-                if !filter(game, card, UnionZoneSet::MATERIAL) {
+                if !checked_selection_filter(game, || filter(game, card, UnionZoneSet::MATERIAL)) {
                     continue;
                 }
                 candidates.push((card.handle(), UnionZoneOrigin::Material { carrier, source_index }));
@@ -3194,7 +3543,7 @@ fn play_cost_budget_candidates(
         if picked.contains(&handle) {
             continue;
         }
-        if !(filter)(game, handle) {
+        if !checked_selection_filter(game, || (filter)(game, handle)) {
             continue;
         }
         // A DUAL-topped permanent has no play cost (DCGO HasPlayCost) and

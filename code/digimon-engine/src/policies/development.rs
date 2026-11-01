@@ -86,6 +86,17 @@ pub struct DevelopmentPolicy {
 
 impl DevelopmentPolicy {
     pub fn decide(&mut self, game: &Game, mask: &[f32]) -> Result<DevelopmentDecision, String> {
+        self.decide_with_tamer_priority(game, mask, false)
+    }
+
+    /// Separately versioned strict-priority baseline. Preserve scoring and
+    /// repeated-state safeguards; do not rewrite the original teacher.
+    pub fn decide_tamer_first(&mut self, game: &Game, mask: &[f32]) -> Result<DevelopmentDecision, String> {
+        self.decide_with_tamer_priority(game, mask, true)
+    }
+
+    fn decide_with_tamer_priority(&mut self, game: &Game, mask: &[f32], tamer_first: bool) -> Result<DevelopmentDecision, String> {
+        let tamer_routes = if tamer_first {super::tamer_first::legal_tamer_digivolutions(game,mask)} else {Vec::new()};
         let player = current_decision_player(game);
         let turn = game.turn_count as u32;
         if self.turn != Some(turn) {
@@ -161,6 +172,7 @@ impl DevelopmentPolicy {
         let tried = self.tried.entry(signature).or_default();
         let chosen = candidates
             .iter()
+            .filter(|c| tamer_routes.is_empty() || tamer_routes.contains(&c.action))
             .filter(|c| !tried.contains(&c.action))
             .max_by(|a, b| {
                 a.score
@@ -191,7 +203,7 @@ impl DevelopmentPolicy {
             }
         }
         Ok(DevelopmentDecision {
-            version: DEVELOPMENT_VERSION,
+            version: if tamer_first {"development_tamer_first_v1"} else {DEVELOPMENT_VERSION},
             player,
             action,
             candidates,

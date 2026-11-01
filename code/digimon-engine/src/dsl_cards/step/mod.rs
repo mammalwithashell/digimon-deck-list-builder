@@ -200,7 +200,11 @@ fn park_outer_tail(
     // representation (including recorded pending-state digests). Frames with
     // existing composed work, and nested controls with an occupied legacy
     // slot, need the typed sequence to retain inner-before-outer ordering.
-    let plain_tail = matches!(
+    // A simultaneous subject scope restores its enclosing group before this
+    // tail is parked. The ambient slot has no context field, so draining it
+    // inside the selected member's RunTail would use the wrong subject.
+    // Keep that scope boundary explicit in a typed OuterContinuation.
+    let plain_tail = !matches!(steps.get(i), Some(CompiledStep::WithSimultaneousPlaySubject { .. })) && matches!(
         ctx.game.pending_selection_resume.as_ref().and_then(|s| s.frames.last()),
         Some(crate::resume::ResumeFrame::RunTail { outer_conts, decline, .. })
             if outer_conts.is_empty()
@@ -283,6 +287,8 @@ pub(crate) fn drain_or_rewrap_pending_tail_with_bindings(
     runtime: StepRuntime,
     tail_trigger_context: Option<crate::trigger_context::TriggerContext>,
 ) -> Option<Bindings> {
+    crate::determinize::context_guard::check_world_continuation(game, "drain_or_rewrap_pending_tail_with_bindings");
+    crate::determinize::context_guard::check_continuation_context(game, tail_trigger_context.as_ref(), "drain_or_rewrap_pending_tail_with_bindings");
     if game.pending_selection.is_some() {
         wrap_pending_selection_with_tail(
             game,
@@ -630,6 +636,8 @@ pub(crate) fn drain_dsl_outer_tail_with_bindings(
     cb_ctx: &mut EffectContext<'_>,
     inner_bindings: Option<&Bindings>,
 ) {
+    crate::determinize::context_guard::check_world_continuation(cb_ctx.game, "drain_dsl_outer_tail_with_bindings");
+    crate::determinize::context_guard::check_continuation_context(cb_ctx.game, None, "drain_dsl_outer_tail_with_bindings");
     if let Some((outer_tail, mut outer_b, runtime)) = cb_ctx.game.dsl_outer_tail.take() {
         if let Some(inner) = inner_bindings {
             outer_b.merge_slots_from(inner);
@@ -666,6 +674,7 @@ pub(crate) fn drain_dsl_outer_tail_with_bindings(
 
 /// Release only receipts already armed for abandoned continuation finalizers.
 pub(crate) fn cleanup_aborted_steps(game: &mut crate::game::Game, steps: &[CompiledStep]) {
+    crate::determinize::context_guard::check_world_continuation(game, "cleanup_aborted_steps");
     for step in steps {
         match step {
             CompiledStep::SecurityTrashFinalize { card, .. } => {
@@ -723,6 +732,8 @@ pub fn run_steps_with_runtime(
     bindings: &mut Bindings,
     runtime: &StepRuntime,
 ) -> RunOutcome {
+    crate::determinize::context_guard::check_world_continuation(ctx.game, "run_steps_with_runtime");
+    crate::determinize::context_guard::check_continuation_context(ctx.game, None, "run_steps_with_runtime");
     let mut captured_runtime = runtime.clone();
     if captured_runtime.source_identity.is_none() {
         captured_runtime.source_identity = Some(ctx.source_identity);

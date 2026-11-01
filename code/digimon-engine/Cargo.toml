@@ -11,6 +11,7 @@ rand = "0.8"
 sha2 = "0.10"
 ort = { version = "2.0.0-rc.10", default-features = false, features = ["ndarray", "std", "download-binaries", "tls-rustls"] }
 ndarray = "0.17"
+libm = { version = "=0.2.15", default-features = false, features = ["force-soft-floats"], optional = true }
 
 # DSL lives in a separate leaf crate so build.rs can depend on it.
 digimon-dsl = { path = "../digimon-dsl", optional = true }
@@ -23,6 +24,8 @@ dsl-yaml-loader = ["dep:digimon-dsl", "dep:serde_yml"]
 # flag. On by default so integration tests can use them without an explicit
 # `--features` flag; production callers who care can `default-features = false`.
 test-helpers = []
+# Explicit new evaluation runtime; historical/default inference stays unchanged.
+portable-policy-math = ["dep:libm"]
 
 [build-dependencies]
 digimon-dsl = { path = "../digimon-dsl" }

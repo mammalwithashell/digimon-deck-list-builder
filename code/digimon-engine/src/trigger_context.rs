@@ -1,4 +1,6 @@
 use crate::card_source::CardHandle;
+mod event_card;
+pub use event_card::{EventCardReference, EventSubjectReference, MovedCardSets};
 use crate::enums::{CardKind, PlayerId, Zone};
 use crate::permanent::PermanentHandle;
 use crate::selection::AttackTarget;
@@ -162,6 +164,11 @@ pub struct BattleCombatantSnapshot {
 
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct TriggerContext {
+    /// Prototype provenance for hypothetical reference projection. No production
+    /// projector sets this yet: admission remains unchanged until every reader
+    /// and context-copy boundary has been audited. Cloning a parked context
+    /// must retain this obligation.
+    pub(crate) projected_reference_reads_guarded: bool,
     /// This entry was captured at an actual security check, before Security
     /// processing. Leaving its source area permanently cancels activation.
     pub captured_security_check: bool,
@@ -178,14 +185,14 @@ pub struct TriggerContext {
     /// Immutable effect lookup retained while its physical payer leaves.
     pub(crate) replacement_paid_prevention: Option<(CardHandle, String, u8, Option<crate::enums::Keyword>)>,
     pub(crate) replacement_deletion_cause: Option<(crate::replacement::ReplacementCause, Option<PlayerId>)>,
-    pub subject: Option<EventSubject>,
+    pub subject: EventSubjectReference,
     pub target_permanent: Option<PermanentHandle>,
-    pub target_card: Option<CardHandle>,
+    pub target_card: EventCardReference,
     pub event_permanent: Option<PermanentHandle>,
     /// Identity of the event Digimon, retained across ordinary evolution and
     /// compaction; DNA and leaving/replaying create a different permanent.
     pub event_permanent_identity: Option<(PlayerId, u64)>,
-    pub event_card: Option<CardHandle>,
+    pub event_card: EventCardReference,
     /// Captured incarnation of an exact self deck-trash trigger. Not UI metadata.
     pub(crate) deck_trash_generation: Option<u64>,
     pub event_source_card: Option<CardHandle>,
@@ -197,7 +204,7 @@ pub struct TriggerContext {
     pub cause: Option<EventCause>,
     pub source_effect: Option<EffectAttribution>,
     pub selected_results: Vec<ResultBinding>,
-    pub moved_card_sets: Vec<MovedCardSet>,
+    pub moved_card_sets: MovedCardSets,
     pub effect_initiated: bool,
     pub dna_origin: bool,
     pub deleted_object: Option<DeletedObjectSnapshot>,
@@ -283,6 +290,25 @@ pub struct TriggerContext {
 }
 
 impl TriggerContext {
+    /// Remove only the four checked event aliases, based solely on entitlement.
+    /// Other handles and snapshots retain their existing strict audit obligations.
+    pub(crate) fn project_checked_event_references(&mut self, allowed: &std::collections::HashSet<CardHandle>) -> bool {
+        let mut guarded = self.event_card.project_if_unentitled(allowed);
+        guarded |= self.target_card.project_if_unentitled(allowed);
+        guarded |= self.subject.project_if_unentitled(allowed);
+        guarded |= self.moved_card_sets.project_if_unentitled(allowed);
+        for member in &mut self.simultaneous_play_members {
+            guarded |= member.project_checked_event_references(allowed);
+        }
+        guarded
+    }
+
+    pub(crate) fn has_unavailable_event_references(&self) -> bool {
+        self.event_card.is_unavailable() || self.target_card.is_unavailable() || self.subject.is_unavailable()
+            || self.moved_card_sets.is_unavailable()
+            || self.simultaneous_play_members.iter().any(Self::has_unavailable_event_references)
+    }
+
     /// Parked observer payloads must not retain unentitled concealed identities.
     pub(crate) fn belief_safe(&self, allowed: &std::collections::HashSet<CardHandle>) -> bool {
         let snapshot_safe = |s: &DeletedObjectSnapshot| {
@@ -295,8 +321,8 @@ impl TriggerContext {
             .iter()
             .all(|s| s.belief_safe(allowed))
             && [
-                self.target_card,
-                self.event_card,
+                self.target_card.retained_handle_for_audit(),
+                self.event_card.retained_handle_for_audit(),
                 self.event_source_card,
                 self.event_host_card,
                 self.battle_opponent_card,
@@ -306,7 +332,7 @@ impl TriggerContext {
             .into_iter()
             .flatten()
             .all(|h| allowed.contains(&h))
-            && self.subject.is_none_or(|s| match s {
+            && self.subject.value_for_audit().is_none_or(|s| match s {
                 EventSubject::Card { card, .. } => allowed.contains(&card),
                 _ => true,
             })
@@ -316,7 +342,7 @@ impl TriggerContext {
                 .filter_map(|s| s.card)
                 .all(|h| allowed.contains(&h))
             && self
-                .moved_card_sets
+                .moved_card_sets.value_for_audit()
                 .iter()
                 .flat_map(|s| &s.cards)
                 .all(|h| allowed.contains(h))
@@ -336,8 +362,8 @@ impl TriggerContext {
         allowed: &std::collections::HashSet<CardHandle>,
     ) -> Vec<CardHandle> {
         let mut handles: Vec<_> = [
-            self.target_card,
-            self.event_card,
+            self.target_card.retained_handle_for_audit(),
+            self.event_card.retained_handle_for_audit(),
             self.event_source_card,
             self.event_host_card,
             self.battle_opponent_card,
@@ -347,12 +373,12 @@ impl TriggerContext {
         .into_iter()
         .flatten()
         .collect();
-        if let Some(EventSubject::Card { card, .. }) = self.subject {
+        if let Some(EventSubject::Card { card, .. }) = *self.subject.value_for_audit() {
             handles.push(card);
         }
         handles.extend(self.selected_results.iter().filter_map(|s| s.card));
         handles.extend(
-            self.moved_card_sets
+            self.moved_card_sets.value_for_audit()
                 .iter()
                 .flat_map(|s| s.cards.iter().copied()),
         );
@@ -588,6 +614,7 @@ impl std::fmt::Debug for TriggerContext {
         if let Some(value)=&self.replacement_deletion_cause { d.field("replacement_deletion_cause", value); }
         if !self.simultaneous_play_members.is_empty() { d.field("simultaneous_play_members", &self.simultaneous_play_members); }
         if self.in_source_move_event { d.field("in_source_move_event", &self.in_source_move_event); }
+        if self.projected_reference_reads_guarded { d.field("projected_reference_reads_guarded", &true); }
         if let Some(value) = self.deck_trash_generation { d.field("deck_trash_generation", &value); }
         d.finish()
     }
@@ -600,8 +627,8 @@ impl std::fmt::Debug for TriggerContext {
  }
  #[test] fn grouped_event_debug_retains_all_physical_members() {
   let mut group=TriggerContext::default();
-  group.simultaneous_play_members=vec![TriggerContext{event_card:Some(CardHandle(11)),..Default::default()},TriggerContext{event_card:Some(CardHandle(12)),..Default::default()}];
+  group.simultaneous_play_members=vec![TriggerContext{event_card:Some(CardHandle(11)).into(),..Default::default()},TriggerContext{event_card:Some(CardHandle(12)).into(),..Default::default()}];
   let before=format!("{group:?}");assert_eq!(before,format!("{:?}",group.clone()));
-  group.simultaneous_play_members[1].event_card=Some(CardHandle(13));assert_ne!(before,format!("{group:?}"));
+  group.simultaneous_play_members[1].event_card=(Some(CardHandle(13))).into();assert_ne!(before,format!("{group:?}"));
  }
 }

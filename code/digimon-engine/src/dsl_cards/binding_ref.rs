@@ -138,7 +138,7 @@ pub fn resolve_binding_ref(
                     // and only try the Link fallback when that identity exists.
                     // Contexts with neither identity retain the legacy live-slot
                     // behavior; they cannot override a supplied card identity.
-                    if live_event_permanent(ctx, handle, t.event_card.or(t.event_host_card))
+                    if live_event_permanent(ctx, handle, t.event_card.read().or(t.event_host_card))
                         .or_else(|| {
                             t.event_host_card
                                 .and_then(|card| live_event_permanent(ctx, handle, Some(card)))
@@ -147,12 +147,12 @@ pub fn resolve_binding_ref(
                     {
                         return Some(ResolvedBinding::Permanent(handle));
                     }
-                    return t.event_card.map(ResolvedBinding::Card);
+                    return t.event_card.read().map(ResolvedBinding::Card);
                 }
 
                 t.target_permanent
                     .map(ResolvedBinding::Permanent)
-                    .or_else(|| t.target_card.or(t.event_card).map(ResolvedBinding::Card))
+                    .or_else(|| t.target_card.read().or(t.event_card.read()).map(ResolvedBinding::Card))
             })
         }
         CompiledBindingRef::EventCard => ctx
@@ -163,8 +163,8 @@ pub fn resolve_binding_ref(
                 t.deleted_object
                     .as_ref()
                     .map(|snapshot| snapshot.top_card)
-                    .or(t.event_card)
-                    .or(t.target_card)
+                    .or(t.event_card.read())
+                    .or(t.target_card.read())
             })
             .map(ResolvedBinding::Card),
         // `DeckTop` is a card-source-only binding: it has no `ResolvedBinding`

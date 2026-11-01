@@ -9,6 +9,8 @@ use crate::{
     permanent::PermanentHandle,
 };
 use serde::Serialize;
+#[cfg(test)]
+mod context_guard_tests;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CardChoicePin {
@@ -356,7 +358,10 @@ impl OwnedCardChoice {
     pub(crate) fn set_security_filter<F>(&mut self, filter: F)
     where F: Fn(&Game, usize) -> bool + Send + Sync + 'static {
         self.security_eligibility = Some(SecurityEligibility(std::sync::Arc::new(
-            SecurityEligibilityData::Raw(RawSecurityFilter(std::sync::Arc::new(filter))))));
+            SecurityEligibilityData::Raw(RawSecurityFilter(std::sync::Arc::new(move |game, index| {
+                crate::determinize::context_guard::check(game, "owned_security_filter");
+                filter(game, index)
+            }))))));
     }
 
     pub(crate) fn set_security_dsl_filter(&mut self,
@@ -379,7 +384,12 @@ impl OwnedCardChoice {
 
     pub(crate) fn set_source_completion_filter<F>(&mut self, filter: F)
     where F: Fn(&Game, Option<CardChoicePin>) -> bool + Send + Sync + 'static {
-        self.source_completion_filter = Some(SourceCompletionFilter(std::sync::Arc::new(filter)));
+        // Guard the stored Arc so both recovery (None) and row eligibility
+        // (Some), including cloned choices, check before entering the body.
+        self.source_completion_filter = Some(SourceCompletionFilter(std::sync::Arc::new(move |game, candidate| {
+            crate::determinize::context_guard::check(game, "owned_source_completion_filter");
+            filter(game, candidate)
+        })));
     }
 
     fn live_security_pins(&self, game: &Game) -> Vec<CardChoicePin> {

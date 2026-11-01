@@ -378,6 +378,7 @@ fn card_has_resource_flow(game: &Game, card: &crate::card_source::CardSource) ->
         return true;
     }
 
+    crate::determinize::context_guard::check_registry_factory(game, &data.card_id, "greedy_resource_flow");
     if let Some(effect) = game.effect_registry.get(&data.card_id) {
         if effect
             .effects(card.handle())
@@ -556,3 +557,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "../determinize/context_guard/greedy_factory_tests.rs"]
+mod greedy_factory_tests;

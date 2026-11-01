@@ -140,9 +140,25 @@ pub fn determinized_search_batched(
     evaluator: &mut dyn PolicyValueFn, config: &DeterminizedConfig,
     evaluation_batch_size: usize,
 ) -> SearchResult {
+    determinized_search_batched_observed(registry, root, viewer, evaluator, config,
+        evaluation_batch_size, &mut |_, _| {})
+}
+
+/// Read-only diagnostics for the exact sampled worlds supplied to search.
+/// Observers receive an immutable world; probing a cloned branch cannot change
+/// the search world or consume its RNG. The default entry point uses a no-op.
+pub fn determinized_search_batched_observed(
+    registry: &CardRegistry, root: &Game, viewer: PlayerId,
+    evaluator: &mut dyn PolicyValueFn, config: &DeterminizedConfig,
+    evaluation_batch_size: usize, observer: &mut dyn FnMut(&Game, u64),
+) -> SearchResult {
     let canon = measure("canonicalize", || canonicalize_hidden(root, viewer));
     determinized_search_sampled(registry, &canon, viewer, evaluator, config,
-        evaluation_batch_size, &mut |seed| Ok(sample_world(&canon, viewer, seed)))
+        evaluation_batch_size, &mut |seed| {
+            let world = sample_world(&canon, viewer, seed);
+            observer(&world, seed);
+            Ok(world)
+        })
         .expect("open-decklist world sampling failed")
 }
 
@@ -168,6 +184,7 @@ pub fn determinized_search_sampled(
     assert!((viewer as usize) < 2, "viewer out of range");
     if root.game_over {
         return Ok(SearchResult {
+            root_priors: Vec::new(),
             root_plans: Vec::new(),
             root_visits: Vec::new(),
             root_q: Vec::new(),
@@ -223,6 +240,7 @@ fn pimc_search(
 
     let mut ref_legal: Option<Vec<u16>> = None;
     let mut visits: BTreeMap<Vec<u16>, u32> = BTreeMap::new();
+    let mut prior_sums: BTreeMap<Vec<u16>, (f64, f64)> = BTreeMap::new();
     let mut weighted_q: BTreeMap<Vec<u16>, f64> = BTreeMap::new();
     let mut ref_plans: Option<Vec<Vec<u16>>> = None;
     let mut value_sum = 0.0f64;
@@ -265,6 +283,10 @@ fn pimc_search(
             }
             sims_total += result.simulations_run;
             value_sum += result.root_value as f64;
+            for (route, raw, effective) in result.root_priors {
+                let sums = prior_sums.entry(route).or_default();
+                sums.0 += raw as f64; sums.1 += effective as f64;
+            }
             for (route, v, q) in result.root_plans {
                 *visits.entry(route.clone()).or_insert(0) += v;
                 *weighted_q.entry(route).or_insert(0.0) += q as f64 * v as f64;
@@ -286,10 +308,12 @@ fn pimc_search(
             )
         })
         .collect();
-    Ok(SearchResult::from_plans(plans, (value_sum / worlds as f64) as f32, sims_total))
+    Ok(SearchResult::from_plans(plans, (value_sum / worlds as f64) as f32, sims_total)
+        .with_priors(prior_sums.into_iter().map(|(r,(a,b))| (r,(a/worlds as f64) as f32,(b/worlds as f64) as f32)).collect()))
 }
 
 struct IsEdge {
+    raw_prior: f32,
     prior: f32,
     visits: u32,
     /// Total backed-up value in `perspective`'s frame.
@@ -356,6 +380,7 @@ fn ismcts_search(
                     node.edges.insert(
                         a.clone(),
                         IsEdge {
+                            raw_prior: prior,
                             prior,
                             visits: 0,
                             w: 0.0,
@@ -394,6 +419,7 @@ fn ismcts_search(
                 let node = &mut arena[cur];
                 for a in legal {
                     node.edges.entry(a.clone()).or_insert(IsEdge {
+                        raw_prior: uniform,
                         prior: uniform,
                         visits: 0,
                         w: 0.0,
@@ -480,7 +506,7 @@ fn ismcts_search(
             0.
         },
         search.simulations,
-    ))
+    ).with_priors(root.edges.iter().map(|(route,e)| (route.clone(),e.raw_prior,e.prior)).collect()))
 }
 
 const STREAM_WORLD: u64 = 0xD1B54A32D192ED03;
