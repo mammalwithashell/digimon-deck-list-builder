@@ -227,3 +227,4 @@ mod deck_trash_event;
 mod permanent_security_receipt;
 
 mod quantumon_primitives;
+mod plutomon_admission_constructs;

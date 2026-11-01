@@ -1,0 +1,14 @@
+{
+  "source_url": "https://digimon.digilab.cards/decklist/131677",
+  "event_url": "https://digimon.digilab.cards/tournament/11546",
+  "player": "NewGuy",
+  "event_date": "2026-10-30",
+  "main": {
+    "BT24-042": 3, "BT26-066": 3, "BT24-021": 4, "BT24-023": 2,
+    "BT24-013": 3, "BT24-026": 2, "BT24-045": 3, "BT26-074": 3,
+    "BT4-086": 2, "BT24-075": 4, "BT26-059": 4, "BT25-084": 3,
+    "BT26-079": 2, "BT24-081": 3, "BT24-088": 2, "BT26-092": 2,
+    "BT26-100": 4, "BT24-098": 1
+  },
+  "eggs": { "BT24-007": 4 }
+}
