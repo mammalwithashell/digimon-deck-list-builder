@@ -5788,14 +5788,6 @@ fn install_select_hand(
     }
 }
 
-fn player_visible_memory(game: &crate::game::Game, player: PlayerId) -> i16 {
-    if game.turn_player() == player {
-        game.memory.max(0)
-    } else {
-        (-game.memory).max(0)
-    }
-}
-
 fn install_use_option_from_hand(
     ctx: &mut EffectContext<'_>,
     of: CompiledPlayerRef,
@@ -5839,45 +5831,13 @@ fn install_use_option_from_hand(
     let player = ctx.player;
     let filter_bindings = bindings.clone();
 
-    ctx.select_hand(
+    ctx.select_option_hand_compiled(
         target_player,
         &prompt,
         optional,
-        move |game, idx| {
-            let Some(card) = game.player(target_player).hand.get(idx) else {
-                return false;
-            };
-            let kind = card.card_kind(&game.card_data);
-            if !matches!(kind, CardKind::Option | CardKind::Dual) {
-                return false;
-            }
-            // G-ENGINE-CANNOT-USE-OPTION-CARDS: no dead candidates while the
-            // user can't use Option cards (the use would be `Invalid`).
-            if game.option_use_blocked(target_player) {
-                return false;
-            }
-            if use_cost_lte_opponent_memory {
-                let opponent = game.next_clockwise(player);
-                let ceiling = player_visible_memory(game, opponent);
-                let use_cost = game.option_use_cost(card, target_player) as i16;
-                if use_cost > ceiling {
-                    return false;
-                }
-            }
-            let read_ctx = EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::Card(card.handle()),
-                Some(&filter_bindings),
-            )
-        },
+        filter,
+        filter_bindings,
+        use_cost_lte_opponent_memory,
         move |cb_ctx, idx| {
             let previous = cb_ctx.game.current_trigger_context.clone();
             cb_ctx.game.current_trigger_context = trigger_for_accept.clone();

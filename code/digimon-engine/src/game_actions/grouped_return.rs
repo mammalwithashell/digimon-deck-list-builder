@@ -1,4 +1,8 @@
 //! Commit an already processed simultaneous departure, then enqueue its events.
+#[cfg(test)]
+#[path = "grouped_return_knowledge_tests.rs"]
+mod knowledge_tests;
+
 use crate::{
     card_source::CardHandle,
     enums::{CardKind, EffectTiming, StackPosition},
@@ -86,10 +90,23 @@ impl Game {
                 } else {
                     crate::determinize::beliefs::KnowledgeZone::Hand
                 };
-                if position.is_some() {
-                    self.shuffle_belief_knowledge(card.owner, zone);
-                }
-                self.learn_belief_card(card, zone, None);
+                let known_position = if position == Some(StackPosition::Bottom) && !include_sources {
+                    // This public single-card return has an explicit position.
+                    // Bottom insertion leaves all existing from-top pins intact.
+                    Some(if zone == crate::determinize::beliefs::KnowledgeZone::Digitama {
+                        self.player(card.owner).digitama_deck.len()
+                    } else {
+                        self.player(card.owner).deck.len()
+                    })
+                } else {
+                    // Preserve the existing conservative contract for other
+                    // positions and whole-stack returns, including mixed owners.
+                    if position.is_some() {
+                        self.shuffle_belief_knowledge(card.owner, zone);
+                    }
+                    None
+                };
+                self.learn_belief_card(card, zone, known_position);
             }
             overflow.extend(p.card_sources.iter().cloned());
             overflow.push(top.clone());

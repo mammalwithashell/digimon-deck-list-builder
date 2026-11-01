@@ -38,6 +38,50 @@ use crate::selection::{
 };
 
 
+/// Fixed compiler-owned candidate data; never an arbitrary filter callback.
+enum CompiledHandFilter {
+    Predicate(digimon_dsl::compiled::CompiledPredicate, crate::dsl_cards::bindings::Bindings),
+    UseOption {
+        predicate: digimon_dsl::compiled::CompiledPredicate,
+        bindings: crate::dsl_cards::bindings::Bindings,
+        use_cost_lte_opponent_memory: bool,
+    },
+}
+
+impl CompiledHandFilter {
+    fn matches(&self, ctx: &EffectContext<'_>, owner: PlayerId, index: usize) -> bool {
+        crate::determinize::context_guard::check_compiled(ctx.game, "compiled_hand_filter");
+        let card = &ctx.game.player(owner).hand[index];
+        let (predicate, bindings) = match self {
+            Self::Predicate(predicate, bindings) => (predicate, bindings),
+            Self::UseOption { predicate, bindings, use_cost_lte_opponent_memory } => {
+                if !matches!(card.card_kind(&ctx.game.card_data), CardKind::Option | CardKind::Dual) {
+                    return false;
+                }
+                if ctx.game.option_use_blocked(owner) {
+                    return false;
+                }
+                if *use_cost_lte_opponent_memory {
+                    let opponent = ctx.game.next_clockwise(ctx.player);
+                    let ceiling = if ctx.game.turn_player() == opponent {
+                        ctx.game.memory.max(0)
+                    } else {
+                        (-ctx.game.memory).max(0)
+                    };
+                    if ctx.game.option_use_cost(card, owner) as i16 > ceiling {
+                        return false;
+                    }
+                }
+                (predicate, bindings)
+            }
+        };
+        let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+            ctx.game, ctx.source_card, ctx.source_permanent, ctx.source_kind, ctx.player);
+        crate::dsl_cards::predicate::eval_predicate_with_bindings(predicate, &read,
+            crate::dsl_cards::predicate::PredicateSubject::Card(card.handle()), Some(bindings))
+    }
+}
+
 /// Invocation-time check only; this does not certify opaque captures or admit
 /// projected worlds. Keep the check before any user filter body executes.
 fn checked_selection_filter(game: &Game, body: impl FnOnce() -> bool) -> bool {
@@ -453,13 +497,27 @@ impl<'a> EffectContext<'a> {
     ) where C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static {
         self.select_hand_impl(of_player, prompt, is_optional,
             |_: &Game, _: usize| unreachable!("compiled predicate branch"),
-            Some((predicate, bindings)), callback);
+            Some(CompiledHandFilter::Predicate(predicate, bindings)), callback);
+    }
+
+    /// Structured Option-use rules preserve the ordinary hand prompt and
+    /// continuation while keeping opaque predicates on their stricter path.
+    pub(crate) fn select_option_hand_compiled<C>(
+        &mut self, of_player: PlayerId, prompt: &str, is_optional: bool,
+        predicate: digimon_dsl::compiled::CompiledPredicate,
+        bindings: crate::dsl_cards::bindings::Bindings,
+        use_cost_lte_opponent_memory: bool, callback: C,
+    ) where C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static {
+        self.select_hand_impl(of_player, prompt, is_optional,
+            |_: &Game, _: usize| unreachable!("compiled Option filter has no opaque body"),
+            Some(CompiledHandFilter::UseOption { predicate, bindings, use_cost_lte_opponent_memory }),
+            callback);
     }
 
     fn select_hand_impl<F, C>(
         &mut self, of_player: PlayerId, prompt: &str, is_optional: bool,
         filter: F,
-        compiled_filter: Option<(digimon_dsl::compiled::CompiledPredicate, crate::dsl_cards::bindings::Bindings)>,
+        compiled_filter: Option<CompiledHandFilter>,
         callback: C,
     ) where F: Fn(&Game, usize) -> bool,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
@@ -470,13 +528,8 @@ impl<'a> EffectContext<'a> {
         let cap = hand_len.min(HAND_MAIN_LIMIT);
         let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
         for i in 0..cap {
-            let matches = if let Some((predicate, bindings)) = &compiled_filter {
-                crate::determinize::context_guard::check_compiled(self.game, "compiled_hand_filter");
-                let card = self.game.player(of_player).hand[i].handle();
-                let read = crate::effect_context::EffectReadContext::new_with_source_kind(
-                    self.game, self.source_card, self.source_permanent, self.source_kind, self.player);
-                crate::dsl_cards::predicate::eval_predicate_with_bindings(predicate, &read,
-                    crate::dsl_cards::predicate::PredicateSubject::Card(card), Some(bindings))
+            let matches = if let Some(compiled) = &compiled_filter {
+                compiled.matches(self, of_player, i)
             } else {
                 checked_selection_filter(self.game, || filter(self.game, i))
             };

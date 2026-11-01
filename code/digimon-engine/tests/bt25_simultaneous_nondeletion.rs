@@ -460,10 +460,15 @@ fn plural_group_waits_for_parked_payment_and_keeps_causing_tail_before_on_deleti
     }
 }
 
-struct WholeGroupLeaveWitness(Vec<CardHandle>);
+struct WholeGroupLeaveWitness(
+    Vec<CardHandle>,
+    std::sync::Arc<std::sync::atomic::AtomicUsize>,
+);
 impl digimon_engine::effect::CardEffect for WholeGroupLeaveWitness {
     fn effects(&self, c: CardHandle) -> Vec<digimon_engine::effect::Effect> {
         let expected = self.0.clone();
+        let expected_process = self.0.clone();
+        let activations = self.1.clone();
         vec![digimon_engine::effect::EffectBuilder::new(
             c,
             digimon_engine::enums::EffectTiming::OnLeaveField,
@@ -481,7 +486,19 @@ impl digimon_engine::effect::CardEffect for WholeGroupLeaveWitness {
                 .all(|p| !expected.contains(&p.top_card().handle())));
             true
         })
-        .process(|ctx| {
+        .process(move |ctx| {
+            assert_eq!(
+                activations.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
+                0,
+                "CR 15-5-2: this observer activates once for one simultaneous return"
+            );
+            let context = ctx.game.current_trigger_context.as_ref().expect("leave context");
+            let members: Vec<_> = context.simultaneous_play_members.iter().map(|member| {
+                member.deleted_object.as_ref().expect("departed member snapshot").top_card
+            }).collect();
+            assert_eq!(members.len(), expected_process.len(), "retain both departure snapshots");
+            assert!(expected_process.iter().all(|card| members.contains(card)),
+                "the single activation retains every exact departed card identity");
             ctx.draw(1, 1);
         })
         .build()]
@@ -491,9 +508,10 @@ impl digimon_engine::effect::CardEffect for WholeGroupLeaveWitness {
 fn grouped_return_commits_all_members_before_each_leave_observer_condition() {
     let mut r = base("BT24-091");
     let (group, _, _) = threatened(&mut r, "BT25-033", false);
+    let activations = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     r.register_effect(
         "GROUP-G",
-        std::sync::Arc::new(WholeGroupLeaveWitness(group.clone())),
+        std::sync::Arc::new(WholeGroupLeaveWitness(group.clone(), activations.clone())),
     );
     r.place_on_field(1, "GROUP-G", None);
     tidal(&mut r);
@@ -510,9 +528,11 @@ fn grouped_return_commits_all_members_before_each_leave_observer_condition() {
         .all(|h| r.game.players[1].hand.iter().any(|c| c.handle() == *h)));
     assert_eq!(
         r.game.players[1].hand.len(),
-        hand + 4,
-        "two actual returned cards and one observer activation per departure"
+        hand + 3,
+        "CR 15-5-2: two returned cards and one draw for the simultaneous event"
     );
+    assert_eq!(activations.load(std::sync::atomic::Ordering::SeqCst), 1,
+        "the complete simultaneous event must activate this observer exactly once");
 }
 
 
