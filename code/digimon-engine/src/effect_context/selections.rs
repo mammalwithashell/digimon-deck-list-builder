@@ -24,7 +24,7 @@
 use crate::card_source::{CardHandle, CardSource};
 use crate::effect_context::{EffectContext, PartitionRequirement};
 #[cfg(test)]
-#[path = "selections/context_guard_tests.rs"]
+#[path = "../determinize/context_guard/partition_selection_tests.rs"]
 mod context_guard_tests;
 #[cfg(test)]
 #[path = "selections/filter_guard_tests.rs"]

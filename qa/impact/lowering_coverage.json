@@ -71149,6 +71149,15 @@
     ],
     "lib::src/dsl_cards/step/mod.rs::two_typed_outer_continuations_both_receive_inner_binding_and_clone": [
      "variant"
+    ],
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_invalid_binding_preserves_context_and_binding_without_body": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_parked_clones_reject_late_saved_markers_from_unmarked_caller_before_raw_tail": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_rejects_raw_reader_before_body_for_every_marker_position": [
+     "variant"
     ]
    },
    "tested": true,
@@ -71167,7 +71176,10 @@
     "lib::src/dsl_cards/step/mod.rs::optional_security_accept_executes_bound_enclosing_tail_in_clones",
     "lib::src/dsl_cards/step/mod.rs::optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection",
     "lib::src/dsl_cards/step/mod.rs::resume_without_pending_selection_preserves_enclosing_tail",
-    "lib::src/dsl_cards/step/mod.rs::two_typed_outer_continuations_both_receive_inner_binding_and_clone"
+    "lib::src/dsl_cards/step/mod.rs::two_typed_outer_continuations_both_receive_inner_binding_and_clone",
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_invalid_binding_preserves_context_and_binding_without_body",
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_parked_clones_reject_late_saved_markers_from_unmarked_caller_before_raw_tail",
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_rejects_raw_reader_before_body_for_every_marker_position"
    ]
   },
   "verb:recover": {
@@ -72971,6 +72983,15 @@
     "lib::src/dsl_cards/lower_replacement.rs::probe_reads_typed_nested_steps_and_ignores_identical_prompt_text": [
      "variant"
     ],
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_invalid_binding_preserves_context_and_binding_without_body": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_parked_clones_reject_late_saved_markers_from_unmarked_caller_before_raw_tail": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_rejects_raw_reader_before_body_for_every_marker_position": [
+     "variant"
+    ],
     "rules_conformance::ch18_pending_overwrite.rs::choose_one_loop_repeats_until_its_owner_stops_it": [
      "fixture"
     ],
@@ -72999,6 +73020,9 @@
     "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw",
     "dsl::quantumon_primitives.rs::parked_opponent_start_choice_delays_unsuspend_and_draw_then_resumes_once",
     "lib::src/dsl_cards/lower_replacement.rs::probe_reads_typed_nested_steps_and_ignores_identical_prompt_text",
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_invalid_binding_preserves_context_and_binding_without_body",
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_parked_clones_reject_late_saved_markers_from_unmarked_caller_before_raw_tail",
+    "lib::src/dsl_cards/step/simultaneous_guard_tests.rs::subject_transfer_rejects_raw_reader_before_body_for_every_marker_position",
     "rules_conformance::ch18_pending_overwrite.rs::choose_one_loop_repeats_until_its_owner_stops_it",
     "rules_conformance::ch18_pending_overwrite.rs::optional_instead_lets_the_player_choose"
    ]
@@ -78225,7 +78249,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2180,
+  "behavioural_tests": 2185,
   "cards": {
    "behaviourally_covered": 1118,
    "lowering_covered": 1137,
@@ -78273,6 +78297,7 @@
   "ex13_lists": 568,
   "parse_only_files": [
    "src/dsl_cards/binding_ref.rs",
+   "src/dsl_cards/construction_facts.rs",
    "src/dsl_cards/context_liveness.rs",
    "src/dsl_cards/expiry_map.rs",
    "src/dsl_cards/formula_eval.rs",
@@ -78386,8 +78411,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 398,
-  "scanned_tests": 2580,
+  "scanned_files": 401,
+  "scanned_tests": 2586,
   "top_untested": [
    {
     "cards_blocked": 1,

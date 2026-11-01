@@ -977,7 +977,7 @@ pub fn materialize_closed_with_diagnostics(
                 )
                 .chain(p.commander_zone.iter())
                 .chain(p.security.iter().filter(|c| {
-                    (inspected == Some(p.id) || p.face_up_security.contains(&c.card_index))
+                    inspected == Some(p.id) || root.security_card_is_public(p.id, c.handle())
                 }))
                 .chain(if p.id == viewer {
                     p.hand.iter()

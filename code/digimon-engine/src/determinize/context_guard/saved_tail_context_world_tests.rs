@@ -5,11 +5,13 @@ use crate::{
 };
 use digimon_dsl::compiled::CompiledStep;
 use std::{panic::{catch_unwind,AssertUnwindSafe},sync::{Arc,atomic::{AtomicUsize,Ordering}}};
-fn fixture(seat:u8,mode:u8,source:u8)->(Game,CardHandle,Option<PermanentHandle>,Option<PermanentHandle>) {
+fn fixture(seat:u8,mode:u8,source:u8)->(Game,CardHandle,Option<PermanentHandle>,Option<PermanentHandle>,Option<(u8,u64)>) {
  let mut r=DebugRunner::builder().add_card(make_test_card("CTX","Context"))
   .deck(0,&["CTX";20]).deck(1,&["CTX";20]).hand(seat,&["CTX"]).memory(3).start();
  r.skip_mulligan();r.set_first_player(seat);r.set_phase(GamePhase::Main);
  r.place_stack(seat,&["CTX"]);let host=r.place_stack(seat,&["CTX"]);
+ // Capture the activation carrier before the fixture compacts or removes it.
+ let identity=(source!=0).then(||r.game.source_move_anchor(host).unwrap());
  let (card,previous,live)=match source {
   0=>(r.game.players[seat as usize].hand[0].handle(),None,None),
   1=>(r.game.players[seat as usize].battle_area[1].card_sources[0].handle(),Some(host),Some(host)),
@@ -32,7 +34,7 @@ fn fixture(seat:u8,mode:u8,source:u8)->(Game,CardHandle,Option<PermanentHandle>,
  r.game.current_trigger_context=(mode!=0).then_some(c);r.game.current_dna_origin=Some(false);
  r.game.effect_source_player=Some(1-seat);r.game.effect_source_card=None;r.game.effect_source_permanent=None;
  let mut published=Bindings::new();published.insert_literal("old",99);r.game.dsl_resolved_tail_bindings=Some(published);
- (r.game,card,previous,live)
+ (r.game,card,previous,live,identity)
 }
 fn snapshot(g:&Game)->String {
  format!("{:?}|{:?}",(g.memory,g.current_phase,g.current_dna_origin,&g.current_trigger_context,
@@ -47,7 +49,7 @@ fn panic_at(error:Box<dyn std::any::Any+Send>) {
 fn matrix(kind:u8)->usize {
  let mut cases=0;let mut rejects=0;let mut observations=0;let mut resolutions=0;
  for seat in [0,1] {for mode in 0..3 {for cloned in [false,true] {for source in 0..5 {for fail_cost in 0..if kind==1 {2}else{1} {for marked in [false,true] {
-  let (mut original,card,previous,live)=fixture(seat,mode,source);
+  let (mut original,card,previous,live,identity)=fixture(seat,mode,source);
   let calls=Arc::new(AtomicUsize::new(0));let seen=calls.clone();let mut raw=EngineRawRustRegistry::new();
   raw.register_step("observe",move |ctx,b|{
    assert_eq!(ctx.source_permanent,live);assert_eq!(ctx.game.effect_source_permanent,live);
@@ -70,6 +72,7 @@ fn matrix(kind:u8)->usize {
   let before=snapshot(&g);let caller=format!("{:?}",g.current_trigger_context);
   let attribution=(g.effect_source_player,g.effect_source_card,g.effect_source_permanent);
   let mut ctx=EffectContext::new_with_source_kind(&mut g,card,previous,EffectSourceKind::Digimon,seat);
+  ctx.source_identity=identity;
   let outcome=catch_unwind(AssertUnwindSafe(||run_tail_preserving_trigger_context(&mut ctx,Some(captured.clone()),&tail,&mut bindings,&runtime)));
   if marked {
    panic_at(outcome.expect_err("WORLD saved-context entry must reject"));

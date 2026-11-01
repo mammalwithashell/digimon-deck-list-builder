@@ -603,7 +603,7 @@ fn assembly_fence_fixture(seat: u8) -> (Game, CardHandle, Vec<CardHandle>) {
         let index = r.game.next_card_index();
         let card = crate::card_source::CardSource::new(data_index, seat, index);
         materials.push(card.handle());
-        r.game.players[seat as usize].trash.push(card);
+        r.game.players[seat as usize].put_in_trash(card);
     }
     (r.game, source, materials)
 }
