@@ -31,7 +31,7 @@ fn setup(option: bool) -> DebugRunner {
         .unwrap()
         .from_dsl_yaml(include_str!("../cards/st1/ST1-03.yaml"))
         .unwrap()
-        .from_dsl_yaml(include_str!("../cards/LM/LM-027.yaml"))
+        .from_dsl_yaml(include_str!("../cards/lm/LM-027.yaml"))
         .unwrap()
         .from_dsl_yaml(GATE)
         .unwrap()
