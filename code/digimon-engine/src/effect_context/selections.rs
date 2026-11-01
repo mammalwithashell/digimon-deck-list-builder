@@ -1556,6 +1556,37 @@ impl<'a> EffectContext<'a> {
                 .map(|f| &**f as &dyn Fn(&Game, crate::permanent::PermanentHandle) -> bool),
             &filter,
         );
+        self.install_union_zone_candidates(of_player, zones, candidates, prompt, is_optional, callback);
+    }
+
+    /// Compiler-owned predicates and bindings stay structured through enumeration.
+    /// Raw predicate extensions and unavailable event reads retain their own guards.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn select_union_zone_compiled<C>(
+        &mut self, of_player: PlayerId, zones: crate::selection::UnionZoneSet,
+        material_of: Option<PermanentHandle>,
+        predicate: digimon_dsl::compiled::CompiledPredicate,
+        zone_filters: digimon_dsl::compiled::CompiledUnionZoneFilters,
+        material_carrier_filter: Option<digimon_dsl::compiled::CompiledPredicate>,
+        bindings: crate::dsl_cards::bindings::Bindings,
+        prompt: &str, is_optional: bool, callback: C,
+    ) where C: FnOnce(&mut EffectContext<'_>, CardHandle, crate::selection::UnionZoneOrigin)
+        + Send + Sync + 'static,
+    {
+        let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+            self.game, self.source_card, self.source_permanent, self.source_kind, self.player);
+        let candidates = union_zone_candidates_compiled(&read, of_player, zones,
+            material_of, &predicate, &zone_filters, material_carrier_filter.as_ref(), Some(&bindings));
+        self.install_union_zone_candidates(of_player, zones, candidates, prompt, is_optional, callback);
+    }
+
+    fn install_union_zone_candidates<C>(
+        &mut self, of_player: PlayerId, zones: crate::selection::UnionZoneSet,
+        candidates: Vec<(CardHandle, crate::selection::UnionZoneOrigin)>,
+        prompt: &str, is_optional: bool, callback: C,
+    ) where C: FnOnce(&mut EffectContext<'_>, CardHandle, crate::selection::UnionZoneOrigin)
+        + Send + Sync + 'static,
+    {
         let Some(owner) = crate::owned_card_choice::OwnedCardChoice::union(
             self.game, of_player, &candidates, is_optional) else { return; };
         let valid_action_ids = owner.valid_action_ids(self.game);
@@ -3479,6 +3510,68 @@ pub(crate) fn union_zone_candidates_physical(
     material_carrier_filter: Option<&dyn Fn(&Game, PermanentHandle) -> bool>,
     filter: &dyn Fn(&Game, &CardSource, crate::selection::UnionZoneSet) -> bool,
 ) -> Vec<(crate::card_source::CardHandle, crate::selection::UnionZoneOrigin)> {
+    union_zone_candidates_impl(game, of_player, zones, material_of,
+        UnionZoneFilters::Opaque { card: filter, carrier: material_carrier_filter })
+}
+
+/// Shared physical enumeration with compiler-owned filter data. This entry
+/// accepts no caller-provided predicate closures and grants no raw-callback exemption.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn union_zone_candidates_compiled(
+    read: &crate::effect_context::EffectReadContext<'_>,
+    of_player: PlayerId, zones: crate::selection::UnionZoneSet,
+    material_of: Option<PermanentHandle>,
+    predicate: &digimon_dsl::compiled::CompiledPredicate,
+    zone_filters: &digimon_dsl::compiled::CompiledUnionZoneFilters,
+    material_carrier_filter: Option<&digimon_dsl::compiled::CompiledPredicate>,
+    bindings: Option<&crate::dsl_cards::bindings::Bindings>,
+) -> Vec<(CardHandle, crate::selection::UnionZoneOrigin)> {
+    crate::determinize::context_guard::check_compiled(read.game, "compiled_union_filter");
+    union_zone_candidates_impl(read.game, of_player, zones, material_of,
+        UnionZoneFilters::Compiled { read, predicate, zone_filters,
+            carrier: material_carrier_filter, bindings })
+}
+
+enum UnionZoneFilters<'a> {
+    Opaque {
+        card: &'a dyn Fn(&Game, &CardSource, crate::selection::UnionZoneSet) -> bool,
+        carrier: Option<&'a dyn Fn(&Game, PermanentHandle) -> bool>,
+    },
+    Compiled {
+        read: &'a crate::effect_context::EffectReadContext<'a>,
+        predicate: &'a digimon_dsl::compiled::CompiledPredicate,
+        zone_filters: &'a digimon_dsl::compiled::CompiledUnionZoneFilters,
+        carrier: Option<&'a digimon_dsl::compiled::CompiledPredicate>,
+        bindings: Option<&'a crate::dsl_cards::bindings::Bindings>,
+    },
+}
+
+impl UnionZoneFilters<'_> {
+    fn card_matches(&self, game: &Game, card: &CardSource, zone: crate::selection::UnionZoneSet) -> bool {
+        match self {
+            Self::Opaque { card: filter, .. } => checked_selection_filter(game, || filter(game, card, zone)),
+            Self::Compiled { read, predicate, zone_filters, bindings, .. } => {
+                crate::dsl_cards::step::selections::union_zone_card_matches(
+                    read, predicate, zone_filters, card.handle(), zone, *bindings)
+            }
+        }
+    }
+
+    fn carrier_matches(&self, game: &Game, handle: PermanentHandle) -> bool {
+        match self {
+            Self::Opaque { carrier, .. } => carrier.is_none_or(|filter|
+                checked_selection_filter(game, || filter(game, handle))),
+            Self::Compiled { read, carrier, bindings, .. } => carrier.is_none_or(|predicate|
+                crate::dsl_cards::predicate::eval_predicate_with_bindings(predicate, read,
+                    crate::dsl_cards::predicate::PredicateSubject::Permanent(handle), *bindings)),
+        }
+    }
+}
+
+fn union_zone_candidates_impl(
+    game: &Game, of_player: PlayerId, zones: crate::selection::UnionZoneSet,
+    material_of: Option<PermanentHandle>, filters: UnionZoneFilters<'_>,
+) -> Vec<(CardHandle, crate::selection::UnionZoneOrigin)> {
     use crate::selection::UnionZoneOrigin;
     use crate::selection::UnionZoneSet;
 
@@ -3487,7 +3580,7 @@ pub(crate) fn union_zone_candidates_physical(
 
     if zones.contains(UnionZoneSet::HAND) {
         for card in &player.hand {
-            if checked_selection_filter(game, || filter(game, card, UnionZoneSet::HAND)) {
+            if filters.card_matches(game, card, UnionZoneSet::HAND) {
                 candidates.push((card.handle(), UnionZoneOrigin::Hand));
             }
         }
@@ -3495,7 +3588,7 @@ pub(crate) fn union_zone_candidates_physical(
 
     if zones.contains(UnionZoneSet::TRASH) {
         for card in &player.trash {
-            if checked_selection_filter(game, || filter(game, card, UnionZoneSet::TRASH)) {
+            if filters.card_matches(game, card, UnionZoneSet::TRASH) {
                 candidates.push((card.handle(), UnionZoneOrigin::Trash));
             }
         }
@@ -3520,7 +3613,7 @@ pub(crate) fn union_zone_candidates_physical(
                 // carriers matching `material_carrier_filter` (e.g. a [King
                 // Drasil_7D6] top card). Only applies to the broad
                 // `material_of: None` scan; a pinned carrier above bypasses this.
-                .filter(|handle| material_carrier_filter.is_none_or(|f| checked_selection_filter(game, || f(game, *handle))))
+                .filter(|handle| filters.carrier_matches(game, *handle))
                 .collect()
         };
         for carrier in material_carriers {
@@ -3529,7 +3622,7 @@ pub(crate) fn union_zone_candidates_physical(
             };
             let below_top = perm.card_sources.len().saturating_sub(1);
             for (source_index, card) in perm.card_sources.iter().take(below_top).enumerate() {
-                if !checked_selection_filter(game, || filter(game, card, UnionZoneSet::MATERIAL)) {
+                if !filters.card_matches(game, card, UnionZoneSet::MATERIAL) {
                     continue;
                 }
                 candidates.push((card.handle(), UnionZoneOrigin::Material { carrier, source_index }));

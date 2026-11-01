@@ -1293,3 +1293,6 @@ fn concealed_transforms_fail_explicitly_and_replay_reset_drops_old_knowledge() {
         assert!(g.belief_knowledge(0).is_err());
     });
 }
+
+#[path = "reveal_return.rs"]
+mod reveal_return;

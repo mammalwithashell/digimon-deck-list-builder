@@ -1429,35 +1429,11 @@ impl CostGuard {
                 } else {
                     None
                 };
-                // The candidate builder hands back `game` (== `rctx.game`); the
-                // predicates read through the effect's own context.
-                let carrier_filter =
-                    |_: &crate::game::Game, handle: crate::permanent::PermanentHandle| {
-                        material_carrier_filter.as_ref().is_none_or(|pred| {
-                            eval_predicate(pred, rctx, PredicateSubject::Permanent(handle))
-                        })
-                    };
-                // The pick's own card matcher (no clause bindings exist before
-                // the clause activates; the guard reads a leading step).
-                let card_filter = |_: &crate::game::Game,
-                                   card: &crate::card_source::CardSource,
-                                   zone: crate::selection::UnionZoneSet| {
-                    crate::dsl_cards::step::selections::union_zone_card_matches(
-                        rctx,
-                        filter,
-                        zone_filters,
-                        card.handle(),
-                        zone,
-                        None,
-                    )
-                };
-                let offered = crate::effect_context::selections::union_zone_candidates_physical(
-                    game,
-                    rctx.player,
-                    *zones,
-                    material_of,
-                    Some(&carrier_filter),
-                    &card_filter,
+                // Use the same structured predicate route as the installed pick.
+                // No clause bindings exist before this leading cost activates.
+                let offered = crate::effect_context::selections::union_zone_candidates_compiled(
+                    rctx, rctx.player, *zones, material_of, filter, zone_filters,
+                    material_carrier_filter.as_ref(), None,
                 );
                 // A digivolution card whose trash is prohibited can't pay
                 // "by trashing" (§15-7-4); a hand card can always be trashed.

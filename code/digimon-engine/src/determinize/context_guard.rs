@@ -376,3 +376,6 @@ mod step_runner_context_tests;
 mod petrification_fence_tests;
 #[cfg(test)]
 mod count_capped_fence_tests;
+
+#[cfg(test)]
+mod union_fence_tests;
