@@ -39,7 +39,7 @@ fn fixture(seat:u8,known:bool)->(Game,CardHandle,WeightedDeckPrior) {
     g.turn_order=vec![seat,1-seat];g.turn_player_idx=0;g.turn_count=1;g.memory=4;
     let host=take(&mut g,seat,"ST1-04");let source=host.handle();
     g.players[seat as usize].battle_area.push(Permanent::new(host,0));
-    let result=take(&mut g,seat,"ST1-07");g.players[seat as usize].hand.push(result);
+    let result=take(&mut g,seat,"ST1-07");g.players[seat as usize].put_in_hand(result);
     g.enable_belief_knowledge().unwrap();
     let event=g.players[seat as usize].security.last().unwrap().handle();
     if known { g.reveal_security(seat); }
