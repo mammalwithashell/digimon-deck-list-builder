@@ -1089,12 +1089,18 @@ pub(crate) fn run_resume(
                             // do NOT run inner_tail here â€” it becomes the
                             // permutation's tail. Mirrors install_order_remainder's
                             // select_effect_choice callback, including the
-                            // post-install trigger-context restore. outer_conts
+                            // scoped trigger context. outer_conts
                             // thread onto the permutation frame via the shared
                             // run_outer_conts below.
                             let Some(position) = positions.get(choice_index).copied() else {
                                 return;
                             };
+                            // The newly parked permutation must capture the authored
+                            // event, while this choice restores its caller's scope.
+                            let previous = std::mem::replace(
+                                &mut ctx.game.current_trigger_context,
+                                trigger_context,
+                            );
                             let _ = install_remainder_permutation_with_tail(
                                 &mut ctx,
                                 player,
@@ -1103,7 +1109,7 @@ pub(crate) fn run_resume(
                                 b,
                                 runtime,
                             );
-                            ctx.game.current_trigger_context = trigger_context;
+                            ctx.game.current_trigger_context = previous;
                         }
                         Some(crate::resume::EffectChoicePostAction::RunTailBranch { branches }) => {
                             let Some(branch) = branches.get(choice_index) else {
@@ -10095,6 +10101,10 @@ fn install_order_remainder(
         // The select_effect_choice callback runs in a fresh selection scope
         // (pending_selection is now None). Install the ordered permutation
         // with the tail, exactly as the single-destination path does.
+        let previous = std::mem::replace(
+            &mut cb_ctx.game.current_trigger_context,
+            trigger_context.clone(),
+        );
         let _ = install_remainder_permutation_with_tail(
             cb_ctx,
             target_player,
@@ -10103,8 +10113,8 @@ fn install_order_remainder(
             bindings.clone(),
             runtime.clone(),
         );
-        // Preserve trigger context across the inner install + tail.
-        cb_ctx.game.current_trigger_context = trigger_context.clone();
+        // The permutation owns its event context; do not leave it active.
+        cb_ctx.game.current_trigger_context = previous;
     });
     if ctx.game.pending_selection.is_some() {
         // Park the data frame (coexistence): driven by run_resume's

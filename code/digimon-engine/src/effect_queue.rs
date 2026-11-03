@@ -6725,6 +6725,10 @@ impl Game {
         {
             crate::determinize::context_guard::check(self, "selection_result");
         }
+        // Publication is a callback-to-enclosing-tail channel, not ambient
+        // game state. Start a fresh channel for this resolution and preserve
+        // a nested caller's publication until control returns to that caller.
+        let enclosing_tail_publication = self.dsl_resolved_tail_bindings.take();
         let was_attack_pending = self.pending_attack.is_some();
 
         // §18-3 / gap G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED: a player
@@ -6841,6 +6845,11 @@ impl Game {
             self.dispatch_selection_continuations(raw_hooks_before, None, raw_scope_order,
                 raw_declined, raw_aborted, recovery_abort);
         }
+        // All typed/callback tails and selection-owned hooks have consumed
+        // their publication. Restore the caller before lifecycle drains can
+        // start another activation and accidentally merge this selection's
+        // private bindings into that activation's continuation.
+        self.dsl_resolved_tail_bindings = enclosing_tail_publication;
         if !resume_lifecycle {
             // The caller is searching payment branches on a clone. Preserve
             // queued siblings and enclosing attack/security/Option/turn state;
