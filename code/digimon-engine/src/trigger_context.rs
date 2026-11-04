@@ -81,7 +81,11 @@ pub enum EventSubject {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EffectAttribution {
     pub controller: PlayerId,
-    pub source_card: Option<CardHandle>,
+    /// Historical attribution does not entitle a concealed current identity.
+    /// Controller/permanent facts remain readable; an unavailable card read
+    /// rejects the hypothetical request through the same checked reference
+    /// used by event-card aliases.
+    pub source_card: EventCardReference,
     pub source_permanent: Option<PermanentHandle>,
 }
 
@@ -290,13 +294,16 @@ pub struct TriggerContext {
 }
 
 impl TriggerContext {
-    /// Remove only the four checked event aliases, based solely on entitlement.
+    /// Project checked event aliases and attribution handles based solely on entitlement.
     /// Other handles and snapshots retain their existing strict audit obligations.
     pub(crate) fn project_checked_event_references(&mut self, allowed: &std::collections::HashSet<CardHandle>) -> bool {
         let mut guarded = self.event_card.project_if_unentitled(allowed);
         guarded |= self.target_card.project_if_unentitled(allowed);
         guarded |= self.subject.project_if_unentitled(allowed);
         guarded |= self.moved_card_sets.project_if_unentitled(allowed);
+        for attribution in self.source_effect.iter_mut().chain(self.event_cause_effect.iter_mut()) {
+            guarded |= attribution.source_card.project_if_unentitled(allowed);
+        }
         for member in &mut self.simultaneous_play_members {
             guarded |= member.project_checked_event_references(allowed);
         }
@@ -306,6 +313,8 @@ impl TriggerContext {
     pub(crate) fn has_unavailable_event_references(&self) -> bool {
         self.event_card.is_unavailable() || self.target_card.is_unavailable() || self.subject.is_unavailable()
             || self.moved_card_sets.is_unavailable()
+            || self.source_effect.iter().chain(self.event_cause_effect.iter())
+                .any(|attribution| attribution.source_card.is_unavailable())
             || self.simultaneous_play_members.iter().any(Self::has_unavailable_event_references)
     }
 
@@ -326,8 +335,8 @@ impl TriggerContext {
                 self.event_source_card,
                 self.event_host_card,
                 self.battle_opponent_card,
-                self.source_effect.and_then(|s| s.source_card),
-                self.event_cause_effect.and_then(|s| s.source_card),
+                self.source_effect.and_then(|s| s.source_card.retained_handle_for_audit()),
+                self.event_cause_effect.and_then(|s| s.source_card.retained_handle_for_audit()),
             ]
             .into_iter()
             .flatten()
@@ -367,8 +376,8 @@ impl TriggerContext {
             self.event_source_card,
             self.event_host_card,
             self.battle_opponent_card,
-            self.source_effect.and_then(|s| s.source_card),
-            self.event_cause_effect.and_then(|s| s.source_card),
+            self.source_effect.and_then(|s| s.source_card.retained_handle_for_audit()),
+            self.event_cause_effect.and_then(|s| s.source_card.retained_handle_for_audit()),
         ]
         .into_iter()
         .flatten()

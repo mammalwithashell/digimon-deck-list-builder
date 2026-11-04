@@ -94,7 +94,7 @@ fn queued_host_only_source_added_context_rejects_reused_slot() {
                     cards: vec![old_card],
                     cause: EffectAttribution {
                         controller: seat,
-                        source_card: None,
+                        source_card: None.into(),
                         source_permanent: None,
                     },
                 },

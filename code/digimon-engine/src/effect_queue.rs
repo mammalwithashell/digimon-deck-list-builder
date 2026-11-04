@@ -2815,7 +2815,7 @@ impl Game {
                 source_player: Some(cause_controller),
                 event_cause_effect: Some(crate::trigger_context::EffectAttribution {
                     controller: cause_controller,
-                    source_card: None,
+                    source_card: None.into(),
                     source_permanent: None,
                 }),
                 effect_initiated: true,
@@ -2931,7 +2931,7 @@ impl Game {
     fn current_effect_attribution(&self) -> Option<crate::trigger_context::EffectAttribution> {
         Some(crate::trigger_context::EffectAttribution {
             controller: self.effect_source_player?,
-            source_card: self.effect_source_card,
+            source_card: self.effect_source_card.into(),
             source_permanent: self.effect_source_permanent,
         })
     }
@@ -5747,7 +5747,7 @@ impl Game {
                                 vec![placed],
                                 crate::trigger_context::EffectAttribution {
                                     controller: pending.source_player,
-                                    source_card: cause_card,
+                                    source_card: cause_card.into(),
                                     source_permanent: None,
                                 },
                             );
@@ -5791,7 +5791,7 @@ impl Game {
                                 vec![placed],
                                 crate::trigger_context::EffectAttribution {
                                     controller: pending.source_player,
-                                    source_card: cause_card,
+                                    source_card: cause_card.into(),
                                     source_permanent: None,
                                 },
                             );

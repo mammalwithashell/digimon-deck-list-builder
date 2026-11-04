@@ -56,7 +56,7 @@ fn project_trigger_context(context: &mut Option<crate::trigger_context::TriggerC
         if context.event_host_card.is_some_and(|h| !allowed.contains(&h)) { context.event_host_card = None; }
         if context.battle_opponent_card.is_some_and(|h| !allowed.contains(&h)) { context.battle_opponent_card = None; }
         for attribution in context.source_effect.iter_mut().chain(context.event_cause_effect.iter_mut()) {
-            if attribution.source_card.is_some_and(|h| !allowed.contains(&h)) { attribution.source_card = None; }
+            if attribution.source_card.is_some_and(|h| !allowed.contains(&h)) { attribution.source_card = None.into(); }
         }
         for result in &mut context.selected_results {
             if result.card.is_some_and(|h| !allowed.contains(&h)) { result.card = None; }

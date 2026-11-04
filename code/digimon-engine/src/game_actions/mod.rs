@@ -2906,7 +2906,7 @@ impl Game {
                 vec![placed],
                 crate::trigger_context::EffectAttribution {
                     controller: observer_player,
-                    source_card: effect_source_card,
+                    source_card: effect_source_card.into(),
                     source_permanent: None,
                 },
             );
@@ -2934,7 +2934,7 @@ impl Game {
             vec![placed],
             crate::trigger_context::EffectAttribution {
                 controller: observer_player,
-                source_card: effect_source_card,
+                source_card: effect_source_card.into(),
                 source_permanent: None,
             },
         );
