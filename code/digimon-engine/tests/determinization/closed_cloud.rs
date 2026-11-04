@@ -695,7 +695,7 @@ fn cloud_pool_continuations_are_composition_independent_and_resolve() {
                                 .and_then(|s| s.frames.last())
                             {
                                 for h in [
-                                    c.source_effect.and_then(|e| e.source_card),
+                                    c.source_effect.and_then(|e| e.source_card.read()),
                                     c.target_card.read(),
                                     c.event_card.read(),
                                     c.event_source_card,

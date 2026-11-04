@@ -2810,7 +2810,7 @@ impl CardEffect for PlaceSecurityPayloadObs {
                     ctx.event_cause(),
                     ctx.event_card(),
                     ctx.event_source_effect()
-                        .and_then(|effect| effect.source_card),
+                        .and_then(|effect| effect.source_card.read()),
                     ctx.event_selected_results().len(),
                     ctx.event_moved_card_sets()
                         .first()

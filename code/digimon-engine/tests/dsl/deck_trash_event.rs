@@ -172,8 +172,8 @@ fn already_enqueued_deck_trash_source_cannot_revive_after_reentry() {
     let event = sibling.trigger_context.as_ref().unwrap();
     let cause = event.event_cause_effect.unwrap();
     assert_eq!(cause.controller, 0);
-    assert_eq!(cause.source_card, Some(causing_card), "retain the miller attribution while a sibling resolves");
-    assert_eq!(event.source_effect.unwrap().source_card, Some(causing_card));
+    assert_eq!(cause.source_card.read(), Some(causing_card), "retain the miller attribution while a sibling resolves");
+    assert_eq!(event.source_effect.unwrap().source_card.read(), Some(causing_card));
     assert_eq!(event.event_card.read(), Some(queued));
     assert!(r.pending_selection_view().is_some());
     assert_eq!(r.game.memory, 5);
