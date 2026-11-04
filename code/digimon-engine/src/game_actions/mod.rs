@@ -2876,6 +2876,24 @@ impl Game {
             return true;
         }
 
+        // A face-up hand departure is a public declaration of that card's
+        // identity. Account for it before removing the card so a later
+        // knowledge refresh does not treat the hand shrink as anonymous and
+        // discard unrelated remembered recoveries. Concealed placements keep
+        // the conservative anonymous-departure path. Do not commit knowledge
+        // for a destination that would restore the source without moving it.
+        if !face_down {
+            let destination_exists = if target.index == crate::action::space::BREEDING_TARGET as u8 {
+                self.player(target.player).breeding_area.is_some()
+            } else {
+                self.player(target.player).battle_area.get(target.index as usize).is_some()
+            };
+            if destination_exists {
+                if let crate::enums::CardSourceRef::Hand(owner, index) = source {
+                    self.remember_belief_public_hand_departure(owner, index);
+                }
+            }
+        }
         let Some(taken) = self.take_card_source_ref(source) else {
             return false;
         };
