@@ -67,6 +67,66 @@ initial_test!(breeding_filter_checks_before_body, 7);
 initial_test!(count_capped_filter_checks_before_body, 8);
 
 #[test]
+fn compiled_breeding_filter_preserves_optional_choice_under_event_read_fence() {
+    use crate::dsl_cards::{bindings::Bindings, step::run_steps};
+    use digimon_dsl::compiled::{CompiledPredicate, CompiledStep};
+
+    let (mut game, host) = fixture(false, false);
+    game.require_event_card_read_fence_for_test();
+    let source = game.players[0].battle_area[host.index as usize].top_card().handle();
+    let steps = [
+        CompiledStep::SelectOwnBreedingPermanent {
+            bind_as: Some("breeding".into()),
+            prompt: "Choose the breeding Digimon".into(),
+            filter: CompiledPredicate {
+                name_contains: Some("Top".into()),
+                ..Default::default()
+            },
+            optional: true,
+            then: vec![CompiledStep::GainMemory(1)],
+        },
+        CompiledStep::GainMemory(2),
+    ];
+    run_steps(
+        &steps,
+        &mut EffectContext::new(&mut game, source, Some(host), 0),
+        &mut Bindings::new(),
+    );
+
+    let action = crate::action::space::encode_breeding_select(0).unwrap();
+    assert_eq!(game.pending_selection.as_ref().unwrap().valid_action_ids, vec![action]);
+    let memory = game.memory;
+    for (choice, gained) in [(action, 3), (crate::action::PASS, 2)] {
+        let mut cloned = game.clone();
+        assert!(crate::build_action_mask(&cloned, 0)[choice as usize] > 0.5);
+        cloned.resolve_selection(0, choice).unwrap();
+        assert_eq!(cloned.memory, memory + gained);
+        assert!(cloned.pending_selection.is_none());
+        assert!(cloned.projected_event_card_read_fence());
+    }
+    assert_eq!(game.memory, memory);
+    assert!(game.pending_selection.is_some());
+}
+
+#[test]
+fn opaque_breeding_filter_remains_blocked_under_event_read_fence() {
+    let (mut game, host) = fixture(false, false);
+    game.require_event_card_read_fence_for_test();
+    let source = game.players[0].battle_area[host.index as usize].top_card().handle();
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        let mut ctx = EffectContext::new(&mut game, source, Some(host), 0);
+        ctx.select_own_breeding_permanent(
+            "Opaque", false, |_, _| panic!("opaque filter body was reached"), |_, _| {},
+        );
+    }));
+    let error = result.expect_err("opaque filter must be blocked");
+    let message = error.downcast_ref::<String>().map(String::as_str)
+        .or_else(|| error.downcast_ref::<&str>().copied());
+    assert_eq!(message, Some("closed-list projected context reached unproven callback: selection_filter"));
+    assert!(game.pending_selection.is_none());
+}
+
+#[test]
 fn deferred_candidate_filters_check_current_context_at_invocation() {
     for path in 0..3 { for nested in [false, true] { for marked in [false, true] { for allowed in [false, true] {
         let (game, _) = fixture(marked, nested);

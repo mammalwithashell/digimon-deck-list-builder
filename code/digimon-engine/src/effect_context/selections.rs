@@ -1120,22 +1120,59 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, BreedingPermanentSelectionRef) -> bool + Send + Sync + 'static,
         C: FnOnce(&mut EffectContext<'_>, BreedingPermanentSelectionRef) + Send + Sync + 'static,
     {
-        let Some(card) = self
-            .game
-            .player(self.player)
-            .breeding_area
-            .as_ref()
-            .map(|p| p.top_card().handle())
-        else {
+        let Some(selection_ref) = self.own_breeding_selection_ref() else {
             return;
-        };
-        let selection_ref = BreedingPermanentSelectionRef {
-            player: self.player,
-            card,
         };
         if !checked_selection_filter(self.game, || filter(self.game, selection_ref)) {
             return;
         }
+        self.install_own_breeding_selection(prompt, is_optional, selection_ref, callback);
+    }
+
+    pub(crate) fn select_own_breeding_permanent_compiled<C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        predicate: &digimon_dsl::compiled::CompiledPredicate,
+        bindings: &crate::dsl_cards::bindings::Bindings,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, BreedingPermanentSelectionRef) + Send + Sync + 'static,
+    {
+        let Some(selection_ref) = self.own_breeding_selection_ref() else {
+            return;
+        };
+        crate::determinize::context_guard::check_compiled(self.game, "compiled_breeding_filter");
+        let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+            self.game, self.source_card, self.source_permanent, self.source_kind, self.player,
+        );
+        if crate::dsl_cards::predicate::eval_predicate_with_bindings(
+            predicate,
+            &read,
+            crate::dsl_cards::predicate::PredicateSubject::BreedingPermanent(selection_ref.player),
+            Some(bindings),
+        ) {
+            self.install_own_breeding_selection(prompt, is_optional, selection_ref, callback);
+        }
+    }
+
+    fn own_breeding_selection_ref(&self) -> Option<BreedingPermanentSelectionRef> {
+        let permanent = self.game.player(self.player).breeding_area.as_ref()?;
+        Some(BreedingPermanentSelectionRef {
+            player: self.player,
+            card: permanent.top_card().handle(),
+        })
+    }
+
+    fn install_own_breeding_selection<C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        selection_ref: BreedingPermanentSelectionRef,
+        callback: C,
+    ) where
+        C: FnOnce(&mut EffectContext<'_>, BreedingPermanentSelectionRef) + Send + Sync + 'static,
+    {
         let Some(action_id) = crate::action::space::encode_breeding_select(self.player) else {
             return;
         };

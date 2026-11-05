@@ -9456,24 +9456,11 @@ fn install_select_own_breeding_permanent(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
-    ctx.select_own_breeding_permanent(
+    ctx.select_own_breeding_permanent_compiled(
         &prompt,
         optional,
-        move |game, target| {
-            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
-                game,
-                source_card,
-                source_permanent,
-                source_kind,
-                player,
-            );
-            eval_predicate_with_bindings(
-                &filter,
-                &read_ctx,
-                PredicateSubject::BreedingPermanent(target.player),
-                Some(&filter_bindings),
-            )
-        },
+        &filter,
+        &filter_bindings,
         move |cb_ctx, target| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
