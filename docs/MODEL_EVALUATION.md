@@ -91,6 +91,17 @@ L0/L1 are already emitted (`runs/<name>/evals.jsonl`,
   layout-compatible champion, seat-balanced. Use
   `--deck-pool-snapshot <run>/deck_pool_snapshot.json` for the exact training
   decks and an adequate `--n`.
+- **Search exams** — `qa/search-exams/` (see its README). Real recorded
+  positions where a model's search makes a specific mistake, saved with
+  `code/tools/search_exam/make_exam.py` and graded with
+  `cargo run --release -p digimon-engine --example search_exam -- <exam> --model <onnx>`
+  ("passed k of N seeds", plus the value head along named lines). A
+  microscope for *why* search plays badly, not a strength measurement.
+- **Watch queue** — `code/tools/build_watch_queue.py --panel <panel> --name <queue> --verify N`
+  turns a completed frozen-evaluation panel into a queue the UI replays at
+  `/watch` ("Watch AI" in the menu): recorded searched games move by move,
+  with each move's top plans (visit share, prior, Q), step back/forward and a
+  move slider. Output goes to the gitignored `code/frontend/public/watch/`.
 - **Champion registry** — `code/digimon_gym/agents/champion_registry.py`,
   `models/champions/registry.json`. Frozen, versioned model snapshots with
   provenance + layout-hash compatibility. Promote with
