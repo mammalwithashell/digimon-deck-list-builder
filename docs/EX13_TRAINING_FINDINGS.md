@@ -1,10 +1,10 @@
 # EX13 training runs and evaluation findings
 
-Updated October 30, 2026. Execution status is a snapshot from **7:42 a.m. CDT (12:42 UTC)**; the [evaluation dashboard](../runs/ex13-evaluation-program-20261029/index.html) and [program ledger](../runs/ex13-evaluation-program-20261029/program.json) carry subsequent progress.
+Updated November 7, 2026. The latest evaluation evidence completed on November 6. The [review summary](../openspec/changes/evaluate-frozen-checkpoints-closed-deck-search/execution-status.md) and [machine-readable evidence index](../openspec/changes/evaluate-frozen-checkpoints-closed-deck-search/validation.json) record the qualified source, separate runtime cohorts and remaining study gaps.
 
-The fresh EX13 learner completed 20 training generations and improved substantially against fixed policy-only opponents. Those gains did **not** produce a consistent ordering when the checkpoints played with search: CP8 beat later checkpoints in several completed known-decklist tests. The next evaluation program measures performance when the opponent's exact decklist is unknown. Its runtime qualification passed, but it has no complete scored panel in this snapshot.
+The fresh EX13 learner completed 20 training generations and improved substantially against fixed policy-only opponents. CP8 subsequently beat later checkpoints in several completed known-decklist search tests. In the latest held-out closed-list search panels, CP20 scored 48.125% against CP12 and 52.708% against CP16 across 480 games each. Both four-game-block 95% intervals include 50%, leaving their ordering uncertain.
 
-The practical lesson is to select models for the way they will actually play. A policy-only score, a search-assisted score, a continuation test and a software qualification answer different questions. None of these results establishes human or tournament strength, and no model has been promoted by this program.
+Model selection depends on the intended play setting. The sections below retain the policy-only, search, mulligan and runtime findings with their own populations and provenance. The held-out lists had prior evaluation exposure, and Light Hybrid held-out-list coverage remains unmeasured.
 
 ## What was trained
 
@@ -132,7 +132,9 @@ The reported priors are normalized **complete-plan priors**, not raw network act
 
 Evidence: [candidate opportunity summary](../runs/ex13-mulligan-continuations-report-20261030/candidate-opportunity-summary.json), [telemetry contract](../openspec/changes/evaluate-frozen-checkpoints-closed-deck-search/search-opportunity-telemetry.md), [Tamer baseline plan](../openspec/changes/evaluate-frozen-checkpoints-closed-deck-search/tamer-first-baselines.md).
 
-## Closed-decklist qualification and the two scored failures
+## Historical closed-decklist qualification and the first scored failures
+
+This section records the October 30 runtime and failures. The November 6 qualification and scored completion are recorded in the following section.
 
 Closed-decklist search may use public facts, the acting seat's entitled knowledge and a frozen training-only deck prior. It must not consume the true hidden opponent composition. Known-list controls answer a different question and remain explicitly labeled.
 
@@ -155,32 +157,41 @@ An earlier parity failure traced to platform `f32.exp` after matching raw ONNX o
 
 Evidence: [failure diagnosis](../runs/ex13-closed-continuation-failure-audit-20261030/diagnosis.md), [candidate review](../runs/ex13-closed-residual-certificate-20261030/candidate-review.md), [candidate qualification proof](../runs/ex13-closed-candidate-qualification-report-20261030/completion-verified.json), [numeric diagnosis](../runs/ex13-mulligan-numeric-probe-20261030/completion-verified.json).
 
+## Latest held-out closed-list evaluation
+
+The November 6 Windows attempt used runtime source 82c2877f88ac071e97506c6eb7419c25624d3566, with the compiled breeding-selection repair. Both checkpoints used 320 total simulations, four worlds, batch size four and zero root noise. Each panel had 120 four-game blocks with balanced seats and opening order.
+
+| CP20 opponent | Wins | Losses | Games | Win rate | Four-game-block 95% interval |
+|---|---:|---:|---:|---:|---:|
+| CP12 | 231 | 249 | 480 | 48.125% | 43.958% to 52.292% |
+| CP16 | 253 | 227 | 480 | 52.708% | 48.958% to 56.458% |
+
+CP20 was competitive against both checkpoints in this setting. Both intervals include 50%, so the ordering remains uncertain. Both sides used search, leaving search lift relative to policy-only play unresolved.
+
+Deck-specific slices varied. CP20 scored 65.0% with Chronomon against CP12 and 67.5% against CP16, compared with 25.0% and 30.0% with Medusamon. Each slice has 40 games per opponent. These exploratory comparisons require uncertainty and multiple-comparison context.
+
+Source-specific Windows/Linux qualification passed all 134 excluded reference requests / 268 games per platform with exact non-timing parity. The Linux evidence retains separate 71-request and 63-request cohorts. The scored Windows attempt completed 480 paired requests / 960 games with zero rejections. Both panels were independently reviewed and archived, all 480 native exits were recorded as zero, and terminal evidence confirmed host-lock release. Monitoring was removed after terminal verification.
+
+Evidence for the two scored panels and their exact hashes is indexed in [validation.json](../openspec/changes/evaluate-frozen-checkpoints-closed-deck-search/validation.json). Its current evaluation section binds qualification proof e2739b63dafdd13d17fd5e62bb0037b06e65ceb42dfa1ffbbe2796dfda383759 and terminal proof 576983d709b10bb38a30074f643b3e1c1a7229f642855c0560ca79d45afe1c6b. The underlying archives remain in the operational workspace.
+
 ## Remaining evaluation work
 
-The user subsequently authorized **one fresh local attempt of the OOM-failed CP12–CP8 panel**, plus continuation of the 20 previously unattempted panels. This supersedes the earlier awaiting-approval status. The original failures remain unchanged; the safety-failed CP16–CP12 closed panel stays excluded.
+The planned study covers 22 panels / 11,200 games. OpenSpec remains ACTIVE at 21/35. The latest authorized two-panel dispatch is complete and has no further scored scope.
 
-| Stage | Question | Current authorized panels | Games |
-|---|---|---:|---:|
-| A | Which checkpoints perform better with closed decklists? | 5 | 2,600 |
-| B | How do the same checkpoint pairs perform with known lists in the same runtime? | 6 | 3,120 |
-| C | For each checkpoint, how does known-list play compare with closed-list play? | 4 | 2,080 |
-| D | How do closed-list checkpoint comparisons behave on weight-training-held-out lists? | 6 | 2,880 |
-| Total | | **21** | **10,680** |
+CP20 vs CP8 retains its independently verified 480-game panel from a separate prior runtime. Fourteen historical complete panels / 7,280 games await corrected-rules eligibility, and five previously claimed incomplete panels remain unresolved. The earlier known-list search results above retain their historical runtime and population labels.
 
-All are assigned to the new local queue. The first panel uses one worker; subsequent panels are configured for three, admitted sequentially after fresh capacity checks. At the timestamp above, the first panel was progressing and no panel was complete. There are five potential complete A/B paired comparisons; the CP16–CP12 B control remains standalone because its corresponding A panel is excluded. Old partial receipts are not reused, and the expressly authorized repeated OOM schedule is not independent of its historical attempt.
+The next reporting task is to reconcile those cached proofs against the planned matrix. A complete held-out round robin also needs the three checkpoint pairs among CP8, CP12 and CP16, subject to runtime compatibility and separately authorized scope. Matched information-regime comparisons, final resource analysis and the next-experiment decision remain open.
 
-The next scientific decisions depend on complete panel results and paired mode comparisons. More training is not automatically the next step. Preserve checkpoint identities, compare like-for-like runtimes and cohorts, and keep any explanation of the regression separate from the measured score differences.
-
-Evidence: [authorization](../runs/ex13-approved-local-continuation-20261030/authorization.json), [new assignment](../runs/ex13-approved-local-continuation-20261030/assignment.json), [execution ledger](../runs/ex13-evaluation-program-20261029/program.json). This section records the program's state; it does not authorize another launch or retry.
+The [review summary](../openspec/changes/evaluate-frozen-checkpoints-closed-deck-search/execution-status.md) records current completion and limitations. Earlier launch authorizations, partial outcomes and failed attempts remain in their original evidence roots.
 
 ## Operational practices worth retaining
 
 1. **Freeze inputs before execution.** Bind source, binary, models, priors, decks, seeds and request schedules. A source overlay is not a complete build-input manifest; changed code needs a new runtime and qualification.
 2. **Count committed outputs.** Receipt timestamps show progress. Process existence and heartbeat timestamps alone do not. Verify complete cohorts before reporting scores; rejected or truncated evaluations do not become draws.
 3. **Separate failure classes.** Packaging/compile failures before inference are setup failures. OOM and native safety rejections during evaluation remain failed attempts. Preserve both kinds without silently replacing them.
-4. **Reserve resources from live capacity.** The local machine has roughly 64 GiB installed, but only about 34 GiB was available at launch. The new queue reserves 8 GiB plus sampled-worker headroom; the first OOM retry runs one worker. Qualification peaks are samples, not guarantees.
+4. **Reserve resources from live capacity.** The October 30 local host had roughly 64 GiB installed and about 34 GiB available at launch. That queue reserved 8 GiB plus sampled-worker headroom and assigned one worker to the first OOM retry. The November 6 scored owner also used one worker. Qualification peaks are samples, not guarantees.
 5. **Archive before reclaiming storage.** Thirty-three completed Hetzner artifact directories were copied into verified local archives. Every regular file was hash-checked and the remote inventory rechecked before removal. This reclaimed 11.39 GiB and left about 14.72 GiB free at cleanup. Training-generation roots and shared runtime/claims remain on Hetzner.
 
 The [archive catalog](../runs/hetzner-artifact-archive-20261030/index.html) includes restore instructions, file manifests, per-archive hashes and retained terminal-container records. Archived remote paths describe historical execution; their absence is not a new failure and must not trigger a restart. Existing local reports remain readable.
 
-For ongoing operations, use the [training runbook](TRAINING_RUNBOOK.md), [model evaluation guide](MODEL_EVALUATION.md), and [finite-program tasks](../openspec/changes/evaluate-frozen-checkpoints-closed-deck-search/tasks.md). This write-up adds no training, promotion or evaluation result.
+For ongoing operations, use the [training runbook](TRAINING_RUNBOOK.md), [model evaluation guide](MODEL_EVALUATION.md), and [finite-program tasks](../openspec/changes/evaluate-frozen-checkpoints-closed-deck-search/tasks.md). The current evaluation additions above summarize the independently reviewed November 6 evidence.

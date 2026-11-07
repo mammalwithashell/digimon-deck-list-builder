@@ -196,10 +196,13 @@
     }
   ],
   "limitations": [
-    "Full fresh integrated Windows/Linux reference qualification, final profiles and PyO3 validation remain pending",
-    "Exact-root learned-model diagnostics are not scored games or complete-pair replays",
-    "Historical qualification does not qualify this integrated tree",
-    "Original-to-current-main queue/resume Debug representations include additional source identity metadata and binding-map ordering; only inspected non-Debug history fields are asserted identical"
+    "The 22-panel study remains incomplete. OpenSpec stays ACTIVE at 21/35.",
+    "Fourteen historical complete panels covering 7280 games await corrected-rules eligibility. Five previously claimed incomplete panels remain unresolved.",
+    "CP20 vs CP8 retains 480 verified games from a separate prior runtime and is reported separately.",
+    "Held-out lists were excluded from the retained weight-training provenance but had prior evaluation exposure. Light Hybrid held-out-list coverage remains unmeasured.",
+    "The two new panels compare closed-list search on both sides. Both four-game-block intervals include 0.5; checkpoint ordering and search lift remain unresolved.",
+    "Cached qualification applies to runtime source 82c2877f88ac071e97506c6eb7419c25624d3566 and its bound source manifest. The documentation refresh has no new gameplay or PyO3 validation.",
+    "Evidence paths refer to the operational workspace runs directory. Raw receipts, models, binaries and archives are outside Git."
   ],
   "historical_failures_preserved": [
     "Initial pytest collection missing opening_hand_review dependency",
@@ -212,12 +215,124 @@
     "Later security fixture initially assumed optional invalidation allowed commit; corrected to legal mandatory refresh and optional decline, with original assertions retained"
   ],
   "evidence_location": "Local operational workspace: runs/ex13-evaluation-pr-20261101; raw logs and runtime artifacts are not included in this Git PR",
-  "updated_at": "2026-11-01T05:24:16.136841+00:00",
+  "updated_at": "2026-11-07",
   "repair_code_commit": "f3cc586ad99b887f1cc8302b77939484180f2cae",
-  "additional_runtime_repairs": "Eight new tests have passing evidence; both original saved-root searches complete on Windows and Linux; full qualification remains pending",
+  "additional_runtime_repairs": "Compiled breeding selection now has a structured predicate path. Source-specific Windows/Linux qualification and the two dispatched Windows scored panels completed.",
   "repair_evidence_location": "Local operational workspace: runs/ex13-new-failure-repair-20261101; raw runtime/source artifacts are excluded from Git",
   "repair_proof_sha256": "d570c9c6185c86bc4a107815bb0e4d013646133a798744b64d0b83bf88d6750a",
   "initial_pr_code_commit": "8883b946b8a33e040801bd6d85ee6d6f7f303b30",
   "runtime_repair_source_manifest_sha256": "d40d68016a641223eea8e53edd83a0829645ddda4d273826d95345e9daa1c267",
-  "runtime_source_scope": "Bounded source snapshot; final documentation subsequently records final test results; not a full qualification bundle"
+  "runtime_source_scope": "Current qualification binds source commit 82c2877f88ac071e97506c6eb7419c25624d3566 and source manifest 274065fdc85509cd0b33886cb84abd031514abde9c86baeb33eb1cddfefd01c1. Earlier source records remain historical.",
+  "historical_validation_snapshot": {
+    "updated_at": "2026-11-01T05:24:16.136841+00:00",
+    "limitations": [
+      "Full fresh integrated Windows/Linux reference qualification, final profiles and PyO3 validation remain pending",
+      "Exact-root learned-model diagnostics are not scored games or complete-pair replays",
+      "Historical qualification does not qualify this integrated tree",
+      "Original-to-current-main queue/resume Debug representations include additional source identity metadata and binding-map ordering; only inspected non-Debug history fields are asserted identical"
+    ],
+    "additional_runtime_repairs": "Eight new tests have passing evidence; both original saved-root searches complete on Windows and Linux; full qualification remains pending",
+    "runtime_source_scope": "Bounded source snapshot; final documentation subsequently records final test results; not a full qualification bundle"
+  },
+  "current_evaluation": {
+    "as_of": "2026-11-06T18:03:43.060681+00:00",
+    "source_commit": "82c2877f88ac071e97506c6eb7419c25624d3566",
+    "source_manifest_sha256": "274065fdc85509cd0b33886cb84abd031514abde9c86baeb33eb1cddfefd01c1",
+    "runtime_sha256": "44eb7aa3cde0cb9300c5d57a6cd1fcbe7fa889250867270bd6f160b04cc68014",
+    "attempt": "marcus-breeding-filter-scored-two-panel-windows-v1-20261106",
+    "qualification": {
+      "path": "ex13-option-grouped-host-allocation-20261102/marcus-compiled-breeding-filter-cross-platform-qualification-v1-20261106/verified.json",
+      "sha256": "e2739b63dafdd13d17fd5e62bb0037b06e65ceb42dfa1ffbbe2796dfda383759",
+      "references_per_platform": 134,
+      "excluded_games_per_platform": 268,
+      "exact_non_timing_parity": true,
+      "linux_cohorts": [
+        71,
+        63
+      ],
+      "required_checks_passed_at_launch": [
+        "Tier 1 fast semantic canaries",
+        "clone-safety-and-both-path",
+        "exam-sim",
+        "facade-placement-lint",
+        "rules-conformance-and-core-binaries"
+      ]
+    },
+    "terminal": {
+      "path": "ex13-option-grouped-host-allocation-20261102/marcus-breeding-filter-two-panel-scored-terminal-review-v1-20261106/verified.json",
+      "sha256": "576983d709b10bb38a30074f643b3e1c1a7229f642855c0560ca79d45afe1c6b",
+      "active": false,
+      "lock_released": true,
+      "matched_zero_exits": 480,
+      "paired_requests": 480,
+      "verified_games": 960,
+      "rejected": 0
+    },
+    "panels": {
+      "d-cp20-vs-cp12": {
+        "requests": 240,
+        "games": 480,
+        "wins": 231,
+        "losses": 249,
+        "draws": 0,
+        "score": 0.48125,
+        "ci95": [
+          0.4395833333333333,
+          0.5229166666666667
+        ],
+        "method": "four-game source-block percentile bootstrap; subset blocks retained",
+        "proof": {
+          "path": "ex13-option-grouped-host-allocation-20261102/marcus-breeding-filter-two-panel-scored-panel-d-cp20-vs-cp12-review-v1-20261106/verified.json",
+          "sha256": "1af3424d4495fa0c4d3cf279773c4c51db882189a00fda5e592b749d1f54d9ac"
+        },
+        "score_proof": {
+          "path": "ex13-option-grouped-host-allocation-20261102/marcus-breeding-filter-two-panel-scored-panel-d-cp20-vs-cp12-review-v1-20261106/panel-score-verified.json",
+          "sha256": "14821ac545ba64bd4930bbcc03b3a39a6751675ce1b6044fb7e919615baf0642"
+        }
+      },
+      "d-cp20-vs-cp16": {
+        "requests": 240,
+        "games": 480,
+        "wins": 253,
+        "losses": 227,
+        "draws": 0,
+        "score": 0.5270833333333333,
+        "ci95": [
+          0.4895833333333333,
+          0.5645833333333333
+        ],
+        "method": "four-game source-block percentile bootstrap; subset blocks retained",
+        "proof": {
+          "path": "ex13-option-grouped-host-allocation-20261102/marcus-breeding-filter-two-panel-scored-panel-d-cp20-vs-cp16-review-v1-20261106/verified.json",
+          "sha256": "0fb68b1acecb57caffe7ba57e0be6d6b6382d41816f69506aafb70dcaa66dc72"
+        },
+        "score_proof": {
+          "path": "ex13-option-grouped-host-allocation-20261102/marcus-breeding-filter-two-panel-scored-panel-d-cp20-vs-cp16-review-v1-20261106/panel-score-verified.json",
+          "sha256": "da5302ffca174f1f0cdc676f8d96a3f08e76033c50eaac2acb86789bf2be8e4f"
+        }
+      }
+    },
+    "separate_prior_runtime_panel": {
+      "panel": "d-cp20-vs-cp8",
+      "games": 480,
+      "path": "ex13-option-grouped-host-allocation-20261102/marcus-scored-windows-only-panel-d-cp20-vs-cp8-review-v1-20261105/verified.json",
+      "sha256": "3b88e2c8205594953efa9f88605cf1e7876919eb82c8a5ec63b2c88c85c49d86"
+    },
+    "historical_eligibility": {
+      "complete_panels": 14,
+      "games": 7280,
+      "corrected_rules_certified": 0,
+      "path": "ex13-option-grouped-host-allocation-20261102/marcus-retained-panel-rules-exposure-v1-20261105/verified.json",
+      "sha256": "89b803af9d5d9df4a32c40d5c16ecd6e4792fce8a1063408437f6804480dc6b4"
+    },
+    "claimed_incomplete_panels": 5,
+    "additional_scored_scope_authorized": false,
+    "monitoring_automation": "removed after verified terminal completion",
+    "openspec": {
+      "complete": 21,
+      "total": 35,
+      "status": "ACTIVE"
+    },
+    "evidence_source": "Cached independently reviewed proofs only"
+  }
 }

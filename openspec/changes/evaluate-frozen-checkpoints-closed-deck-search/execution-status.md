@@ -1,126 +1,93 @@
-# Frozen checkpoint evaluation: review snapshot
+# Frozen checkpoint evaluation review
 
-Snapshot prepared for the draft PR on 2026-11-01 UTC. This is a review summary,
-not the live host ledger. The full operational history and immutable binaries,
-requests, partial receipts and archives remain under the original workspace's
-`runs/` directory and are not included in Git.
+Updated November 7, 2026 from independently reviewed evidence completed on
+November 6. Runtime source is 82c2877f88ac071e97506c6eb7419c25624d3566.
+This documentation update follows that qualified source. The evidence index
+and exact hashes are in [validation.json](validation.json).
 
-The finite program compares frozen CP8, CP12, CP16 and CP20 before choosing the
-next training experiment. It adds no training or model promotion. The scheduled
-strength study contains 22 panels / 11,200 games: six closed-search panels
-(3,120), six aligned known-list controls (3,120), four within-checkpoint mode
-comparisons (2,080), and six held-out panels (2,880). Search uses 320 simulations,
-four worlds, batch size four and no root noise. Mulligan diagnostics and the
-opt-in Tamer-first baselines are separate protocols.
+The two dispatched Windows held-out panels completed and were independently
+reviewed and archived. The owner recorded 480 paired requests / 960 games,
+zero rejected requests and 480 matched zero native exits. Saved terminal
+evidence confirms the Windows host lock was released. The monitoring automation
+was removed after completion. OpenSpec remains ACTIVE at 21/35 tasks.
 
-## Review order
+## Verified held-out results
 
-1. `examples/search_quality/frozen_modes.rs` and `request_driver.rs` under
-   `code/digimon-engine/`: actor modes, frozen requests, exact legal plans,
-   telemetry and whole-pair failure propagation.
-2. `code/tools/cloud_search/frozen_mode_{campaign,receipts,allocation,queue}.py`:
-   immutable attempts, strict receipt validation, host claims and failure drain.
-   Preparation, parity, profiling and reporting modules enforce the same inputs.
-3. `code/digimon-engine/src/trigger_context/event_card.rs`,
-   `src/determinize/{closed,context_guard}.rs`, registry and selection changes:
-   unavailable event references discard hidden handles and reject reads;
-   compiler-owned structured filters have a distinct path; opaque callbacks
-   remain guarded. Factory/output identity is construction provenance, not a
-   transitive safety certificate. The prototype context/world markers do not
-   supply production permission.
-4. Search-opportunity, mulligan and Tamer-first modules and their tests. The
-   existing heuristic policies retain their behavior; new baselines are opt-in.
+Both actors used closed-list search with 320 total simulations, four worlds,
+batch size four and zero root noise. Each panel contains 120 four-game blocks,
+with balanced seats and opening order. Results below are from CP20's perspective.
 
-## Current blocker
+| Opponent | Wins | Losses | Games | Win rate | Four-game-block 95% interval |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| CP12 | 231 | 249 | 480 | 48.125% | 43.958% to 52.292% |
+| CP16 | 253 | 227 | 480 | 52.708% | 48.958% to 56.458% |
 
-Both latest scored attempts are terminal failures. Linux CP12-versus-CP8 stopped
-at `match-117-1`, second game / decision 44, with a `selection_filter` guard
-failure; 237 receipts / 474 partial games remain preserved. Windows
-CP16-versus-CP12 stopped at `match-083-1`, second game / decision 26, when the
-Petrification token factory was treated as opaque; 167 receipts / 334 partial
-games remain preserved. Neither panel is complete, and partial win rates are
-not reported. Old controllers remain stopped.
+Both intervals include 50%, so the ordering among these checkpoints remains
+uncertain. The panels compare checkpoints while both use search. A controlled
+comparison against policy-only play is still needed to estimate search lift.
 
-Exact original inputs now reproduce both failures after 44 and 26 legal actions.
-The earlier diagnostic prior rejection came from an empty embedded card pack:
-the build script retained a previous compile-time mount path. It now resolves
-the manifest directory at execution time, preserving the prior-binding checks.
+The 23 held-out lists span 12 archetypes and were excluded from the retained
+weight-training provenance. They had prior evaluation exposure. Light Hybrid
+has no measured held-out-list coverage in this source.
 
-Repairs bind the fixed Petrification constructor to its exact registry entry
-and preserve compiled predicate data through count-capped/material picks,
-security selection and choose-from-reveal. Opaque replacement factories and
-callbacks still reject before their bodies. Actual unavailable event-card reads
-still reject. Security recovery retains its existing mandatory-refresh and
-optional-decline contracts.
+CP20 vs CP8 retains its independently complete 480-game panel from a separate
+prior runtime. Its evidence is indexed separately. Fourteen earlier complete
+panels / 7,280 games await corrected-rules eligibility. Five previously claimed
+incomplete panels remain unresolved. These limitations prevent a complete
+four-checkpoint ranking or a finished 22-panel study.
 
-Both original saved roots now complete 320 simulations / four worlds / batch
-four with the original model, prior, request and search-seed bindings, on fresh
-Windows and Linux diagnostic binaries. Each completes 81 evaluator calls / 324
-rows and legally executes its selected root plan. Both platforms produce exact
-non-timing search parity at these two roots. These are root diagnostics, not
-complete games, pair replays, full qualification or scored panel results. Their
-original legal prefixes retain identical inspected non-Debug state; queue/resume
-Debug strings also reflect current-main source-identity metadata and unordered
-binding-map display, so whole-history byte identity is not claimed.
+## Qualification and implementation
 
-The PR remains draft while full integrated qualification, profiles and the scored
-study remain unfinished. Automation is paused; work proceeds directly. Fresh
-attempt identities are required before scoring resumes.
+The latest production repair preserves a compiled predicate path for breeding
+permanent selection in closed-list search. Opaque callbacks retain their
+information-safety guards. The scoped runtime commit changes two production
+files and one regression-test file.
 
-## Validation and provenance
+The source-specific Windows/Linux qualification passed all 134 excluded
+reference requests / 268 games per platform with exact non-timing parity.
+The Linux evidence retains separate 71-request and 63-request cohorts.
+Independent software, original prior and saved-root proofs are bound by the
+qualification record. These reference games are excluded from strength scores.
+All five required CI checks passed for the runtime source at launch.
 
-The PR is based on `origin/main` at
-`751ebca2bd93909765c5e95718074a15d331baf9`. Current-main source-identity and
-security-publicity changes are retained. The operational workspace is unchanged;
-its unrelated training, frontend, dated launch/archive scripts, models and run
-artifacts are excluded. Source line endings were normalized in this PR copy;
-this tree is not byte-identical to any qualified historical runtime.
+The scored Windows runtime is SHA256
+44eb7aa3cde0cb9300c5d57a6cd1fcbe7fa889250867270bd6f160b04cc68014.
+The qualification source manifest is SHA256
+274065fdc85509cd0b33886cb84abd031514abde9c86baeb33eb1cddfefd01c1.
 
-Fresh PR checks include 277 Python tests passed / 24 opt-in native tests skipped,
-OpenSpec strict validation, and Linux compilation of the integrated Rust targets.
-After CI reported failures, the CI repair commit passed all 73 determinization
-tests, seven targeted unit regressions, Tier 0 (including facade placement),
-and the regenerated lowering-coverage check. The source-identity fixture update
-preserves its 28 assertion lines, and the relocated partition fixture is byte
-identical.
+## Remaining study work
 
-Eight new runtime regression tests have passing evidence. The first batch was
-35 Windows tests passed, including four new tests. The later batch initially
-produced 11 Windows passes and one new-fixture failure: an optional invalidated
-security menu correctly offered only decline, contrary to the fixture's assumed
-commit. The fixture now exercises legal mandatory refresh and optional decline;
-all its original assertions remain. The corrected test passed separately on Linux;
-the other 11 tests were not repeated and no fresh 12-test aggregate is claimed.
-The final repaired Windows runtime also passed all 73 determinization tests.
-Production code was unchanged after the successful saved-root replays. Initial
-failures, binaries, sources and logs are retained.
+The planned study contains 22 panels / 11,200 games, covering closed-list
+rankings, matched known-list controls, within-checkpoint information-regime
+comparisons and held-out comparisons. Mulligan diagnostics, search-opportunity
+telemetry and opt-in Tamer-first baselines have separate protocols.
 
-Windows native diagnostic builds and exact-root model inference have executed;
-no fresh scored games, PyO3 qualification or full integrated qualification have
-run. Machine-readable scope is in [validation.json](validation.json).
+Next, reconcile historical corrected-rules eligibility and the incomplete
+panels against the planned matrix using their cached proofs. Any further scored
+attempt needs an explicit scope and fresh qualification/capacity assessment.
+The completed Windows dispatch has exhausted its authorized scope.
 
-Integration checks exposed current-main event-reference conversions, two synthetic
-queue fixtures missing the new source-identity field, a legacy diagnostic trait
-method collision, existing Linux-sensitive card fixture paths, and an existing
-source-index fixture type mismatch. The fixes preserve assertions and use the
-checked read API. Earlier failed checks and the temporary bundle's missing-data
-failure remain recorded in the local packaging evidence. The original workspace's
-195 selected source files are byte-unchanged.
+The PR remains draft. The open task list includes full-study reporting, matched
+mode comparisons, checkpoint ranking, final runtime analysis and the
+next-experiment decision. Source-specific qualification and two completed panels
+supply evidence for this portion of the study.
 
-The pre-integration Assembly runtime had 112 software checks per OS, 134 reference
-requests / 268 excluded games per OS, and exact parity across 268 games with no
-non-timing differences. Those results do not qualify this PR's integrated tree.
-Local qualification proof:
-`runs/ex13-assembly-qualification-report-20261031/qualification-verified.json`,
-SHA256 `b81c76226c21a783befbf35f5c8becb7b83e2b15b1814c66f2c40dd326c859ef`.
-Preserved failed-panel evidence:
-`runs/ex13-assembly-scored-failure-20261101/failure-preserved.json`.
-PR packaging/check evidence:
-`runs/ex13-evaluation-pr-20261101/`. Repair and two-root parity evidence:
-`runs/ex13-new-failure-repair-20261101/`.
+## Evidence and validation
 
-These local paths are evidence indexes, not artifacts available in a fresh clone.
-The 21/35 task count is retained as historical program progress; checked
-qualification tasks refer to the recorded runtime, not automatic qualification of
-future code changes. Full scored outcomes, fresh integrated Windows/Linux
-qualification, final profiles and the next-experiment decision remain unfinished.
+The validation index retains the earlier packaging/test records and a current
+evaluation section with exact proof hashes, result denominators and limitations.
+Evidence paths are relative to the operational workspace's runs directory.
+A fresh Git clone contains the summaries and indexes. The original workspace
+retains models, binary/source bundles, claims, receipts, failures and archives.
+
+The terminal proof is
+runs/ex13-option-grouped-host-allocation-20261102/marcus-breeding-filter-two-panel-scored-terminal-review-v1-20261106/verified.json,
+SHA256 576983d709b10bb38a30074f643b3e1c1a7229f642855c0560ca79d45afe1c6b.
+Qualification is
+runs/ex13-option-grouped-host-allocation-20261102/marcus-compiled-breeding-filter-cross-platform-qualification-v1-20261106/verified.json,
+SHA256 e2739b63dafdd13d17fd5e62bb0037b06e65ceb42dfa1ffbbe2796dfda383759.
+
+Earlier compile, fixture, native and strict-audit failures remain preserved in
+their original evidence directories and the historical validation records.
+The November 1 review snapshot is retained in Git history. The current scored
+summaries above use the independently reviewed November 6 proof caches.
