@@ -69,7 +69,7 @@ fn card_permanent_source_and_event_name_predicates_share_language_semantics() {
             index: 0,
         };
         let card = r.game.players[0].battle_area[0].top_card().handle();
-        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = Some(card); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context });
+        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = (Some(card)).into(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context });
         let ctx = EffectReadContext::new(&r.game, card, Some(h), 0);
         let want = name == "Wingdramon";
         let pred = CompiledPredicate {
@@ -138,7 +138,7 @@ fn event_and_source_name_queries_keep_static_runtime_and_effect_names() {
             );
         }
         let card = r.game.players[0].battle_area[0].top_card().handle();
-        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = Some(card); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context });
+        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = (Some(card)).into(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context });
         let ctx = EffectReadContext::new(&r.game, card, Some(h), 0);
         for pred in [
             CompiledPredicate {
@@ -183,7 +183,7 @@ fn replaced_permanent_names_do_not_fall_back_to_printed_names() {
                 }),
         );
         let card = r.game.players[0].battle_area[0].top_card().handle();
-        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = Some(card); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context });
+        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = (Some(card)).into(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context });
         let ctx = EffectReadContext::new(&r.game, card, Some(h), 0);
         for pred in [
             CompiledPredicate {
@@ -291,7 +291,7 @@ fn name_overlay_is_scoped_to_exact_physical_top_card() {
         .top_card()
         .handle();
     for (card, permanent, want) in [(renamed, h, true), (unrenamed, other, false)] {
-        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = Some(card); __fixture_trigger_context });
+        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = (Some(card)).into(); __fixture_trigger_context });
         let ctx = EffectReadContext::new(&r.game, card, Some(permanent), 0);
         for pred in [
             CompiledPredicate {
@@ -340,7 +340,7 @@ fn event_exact_name_uses_runtime_alias_and_replaced_name() {
                 .push("Wingdramon".into());
         }
         let card = r.game.players[0].battle_area[0].top_card().handle();
-        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = Some(card); __fixture_trigger_context });
+        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = (Some(card)).into(); __fixture_trigger_context });
         let ctx = EffectReadContext::new(&r.game, card, Some(h), 0);
         for (name, want) in [("Wingdramon", true), ("Plain", !renamed)] {
             let pred = CompiledPredicate {
@@ -375,7 +375,7 @@ fn deleted_event_card_uses_its_own_snapshot_without_borrowing_another_card() {
         .top_card()
         .handle();
     for event_card in [card, other_card] {
-        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = Some(event_card); __fixture_trigger_context.deleted_object = Some(DeletedObjectSnapshot {
+        r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = (Some(event_card)).into(); __fixture_trigger_context.deleted_object = Some(DeletedObjectSnapshot {
                 former_controller: 0,
                 top_card: card,
                 card_kind: CardKind::Digimon,

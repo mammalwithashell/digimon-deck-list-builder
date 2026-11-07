@@ -93,10 +93,11 @@ fn steps(body: &[CompiledStep]) -> bool {
     })
 }
 
-/// A deliberately small, extensible proof surface, independent of card IDs.
-/// Timing/owner/cause information stays intact; only unused card references
-/// can be erased from a hypothetical queued context. Raw Rust is never certified.
-pub fn ignores_event_card_identity(clause: &CompiledTriggeredClause) -> bool {
+/// Conservative direct-reference facts, independent of card IDs.
+/// This is NOT permission to erase a captured context: even literal memory or
+/// named-target evolution can invoke readers outside this compiled clause.
+/// Raw Rust and unrecognized syntax remain unsupported.
+pub fn direct_references_unused(clause: &CompiledTriggeredClause) -> bool {
     !clause.when.is_empty()
         && clause.when.iter().all(|t| {
             matches!(
@@ -115,4 +116,13 @@ pub fn ignores_event_card_identity(clause: &CompiledTriggeredClause) -> bool {
             .iter()
             .all(|c| predicate(&c.condition))
         && steps(&clause.process)
+}
+
+/// Unconditional projection certificate. Nonempty bodies require transitive
+/// reader proof spanning execution and parked work, which is not yet admitted.
+/// A direct-reference whitelist cannot grant that proof. Keep the public
+/// admission predicate strict while invocation guards remain an inactive
+/// prototype; only a context-independent empty body is certified here.
+pub fn ignores_event_card_identity(clause: &CompiledTriggeredClause) -> bool {
+    clause.process.is_empty() && direct_references_unused(clause)
 }

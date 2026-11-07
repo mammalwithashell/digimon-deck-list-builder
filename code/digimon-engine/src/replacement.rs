@@ -8,6 +8,9 @@
 
 use std::sync::Arc;
 
+#[cfg(test)]
+mod modifier_context_dispatch_tests;
+
 use crate::action::space::{BREEDING_TARGET, REPLACEMENT_ACCEPT};
 use crate::card_source::CardHandle;
 use crate::effect_context::{EffectContext, EffectReadContext};
@@ -1121,6 +1124,7 @@ fn passive_modifier_candidates(
                             source_controller,
                             subject.controller(game),
                         );
+                crate::determinize::context_guard::check(game, "passive_replacement_condition");
                 if !cond(&read_ctx, &subject) {
                     continue;
                 }
@@ -1163,6 +1167,7 @@ fn passive_modifier_candidates(
                     source_controller,
                     subject.controller(game),
                 );
+            crate::determinize::context_guard::check(game, "passive_replacement_condition");
             if !cond(&read_ctx, &subject) {
                 continue;
             }

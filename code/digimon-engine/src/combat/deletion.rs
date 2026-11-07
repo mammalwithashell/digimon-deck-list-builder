@@ -853,7 +853,7 @@ impl Game {
                     trigger.cause = Some(snapshot.cause);
                     trigger.affected_player = Some(snapshot.former_controller);
                     trigger.subject =
-                        Some(crate::trigger_context::EventSubject::Permanent(*handle));
+                        (Some(crate::trigger_context::EventSubject::Permanent(*handle))).into();
                     trigger.battle_opponent_card = battle_opponent_card;
                 },
             );
@@ -954,7 +954,7 @@ impl Game {
                         trigger.cause = Some(snapshot.cause);
                         trigger.affected_player = Some(snapshot.former_controller);
                         trigger.subject =
-                            Some(crate::trigger_context::EventSubject::Permanent(*handle));
+                            (Some(crate::trigger_context::EventSubject::Permanent(*handle))).into();
                     },
                 );
 
@@ -973,7 +973,7 @@ impl Game {
                         trigger.cause = Some(snapshot.cause);
                         trigger.affected_player = Some(snapshot.former_controller);
                         trigger.subject =
-                            Some(crate::trigger_context::EventSubject::Permanent(*handle));
+                            (Some(crate::trigger_context::EventSubject::Permanent(*handle))).into();
                     },
                 );
             }

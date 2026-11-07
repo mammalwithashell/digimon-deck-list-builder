@@ -8,13 +8,16 @@ use crate::effect_context::EffectContext;
 use super::{StepRuntime,RunOutcome,run_steps_with_runtime};
 
 const SUBJECT_CHOICE_KEY:&str="__simultaneous_play_subject";
+#[cfg(test)]
+#[path = "simultaneous_guard_tests.rs"]
+mod context_transfer_tests;
 pub(super) fn expand_body(steps:&[CompiledStep],ctx:&mut EffectContext<'_>,bindings:&Bindings)->Option<Vec<CompiledStep>> {
     if matches!(steps.first(),Some(CompiledStep::WithSimultaneousPlaySubject{..}))
         || matches!((steps.first(),steps.get(1)),(Some(CompiledStep::SelectEffectChoice{bind_as:Some(selected),prompt_key:Some(key),..}),Some(CompiledStep::WithSimultaneousPlaySubject{binding,..})) if key==SUBJECT_CHOICE_KEY && selected==binding) { return None; }
     let members=&ctx.game.current_trigger_context.as_ref()?.simultaneous_play_members;
     if members.len()<2 || !uses_singular_event_subject(steps) { return None; }
     let labels=members.iter().enumerate().map(|(i,m)| {
-        let name=m.event_card.and_then(|h|ctx.game.card_data_for_handle(h)).map(|d|d.card_name.as_str()).unwrap_or("event card");
+        let name=m.event_card.read().and_then(|h|ctx.game.card_data_for_handle(h)).map(|d|d.card_name.as_str()).unwrap_or("event card");
         format!("Use simultaneous event subject {}: {}",i+1,name)
     }).collect();
     let mut n=0;
@@ -26,7 +29,11 @@ pub(super) fn expand_body(steps:&[CompiledStep],ctx:&mut EffectContext<'_>,bindi
 pub(super) fn try_run(step:&CompiledStep,ctx:&mut EffectContext<'_>,bindings:&mut Bindings,runtime:&StepRuntime)->Option<RunOutcome> {
     let CompiledStep::WithSimultaneousPlaySubject{binding,body}=step else{return None;};
     let Some(BindingValue::Literal(index))=bindings.get_ref(binding) else{return Some(RunOutcome::Synchronous);};
-    let selected=usize::try_from(*index).ok().and_then(|i|ctx.game.current_trigger_context.as_ref()?.simultaneous_play_members.get(i).cloned());
+    let selected=usize::try_from(*index).ok().and_then(|i| {
+        let group=ctx.game.current_trigger_context.as_ref()?;
+        let member=group.simultaneous_play_members.get(i)?;
+        Some(crate::determinize::context_guard::inherited_member_context(group,member))
+    });
     let Some(selected)=selected else{return Some(RunOutcome::Synchronous);};
     bindings.remove(binding);
     let previous=ctx.game.current_trigger_context.replace(selected);
@@ -116,7 +123,7 @@ pub(super) fn annotate_selection(step:&CompiledStep,ctx:&mut EffectContext<'_>) 
  let CompiledStep::SelectEffectChoice{prompt_key:Some(key),..}=step else{return;};
  if key!=SUBJECT_CHOICE_KEY{return;}
  let members:Vec<_>=ctx.game.current_trigger_context.as_ref().map(|c|c.simultaneous_play_members.iter()
-  .map(|m|(m.event_card,m.event_card.map(|h|ctx.game.effect_source_kind_for_handle(h)))).collect()).unwrap_or_default();
+  .map(|m|(m.event_card.read(),m.event_card.read().map(|h|ctx.game.effect_source_kind_for_handle(h)))).collect()).unwrap_or_default();
  if let Some(choices)=ctx.game.pending_selection.as_mut().and_then(|s|s.effect_choices.as_mut()) {
   for (row,(card,kind)) in choices.iter_mut().zip(members){row.source_card=card;row.source_kind=kind;}
  }

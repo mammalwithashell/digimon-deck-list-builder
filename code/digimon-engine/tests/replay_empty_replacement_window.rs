@@ -147,7 +147,7 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
                 assert_eq!(context.cause, Some(EventCause::OpponentEffect), "P0's effect removes P1 security");
                 let source = context.source_effect.expect("resumed body retains effect provenance");
                 assert_eq!(source.controller, 0);
-                assert_eq!(source.source_card, Some(digimon_engine::card_source::CardHandle(27)));
+                assert_eq!(source.source_card.read(), Some(digimon_engine::card_source::CardHandle(27)));
                 assert_eq!(source.source_permanent, Some(digimon_engine::permanent::PermanentHandle {player:0,index:0}));
             }
         }

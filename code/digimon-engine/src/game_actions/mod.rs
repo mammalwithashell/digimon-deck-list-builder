@@ -2324,7 +2324,7 @@ impl Game {
                 trigger.deleted_object = Some(snapshot.clone());
                 trigger.cause = Some(snapshot.cause);
                 trigger.affected_player = Some(snapshot.former_controller);
-                trigger.subject = Some(crate::trigger_context::EventSubject::Permanent(handle));
+                trigger.subject = (Some(crate::trigger_context::EventSubject::Permanent(handle))).into();
             },
         );
         // G-DSL-OUTER-TAIL-NESTED-PARK: maybe_drain defers when inside
@@ -2876,6 +2876,24 @@ impl Game {
             return true;
         }
 
+        // A face-up hand departure is a public declaration of that card's
+        // identity. Account for it before removing the card so a later
+        // knowledge refresh does not treat the hand shrink as anonymous and
+        // discard unrelated remembered recoveries. Concealed placements keep
+        // the conservative anonymous-departure path. Do not commit knowledge
+        // for a destination that would restore the source without moving it.
+        if !face_down {
+            let destination_exists = if target.index == crate::action::space::BREEDING_TARGET as u8 {
+                self.player(target.player).breeding_area.is_some()
+            } else {
+                self.player(target.player).battle_area.get(target.index as usize).is_some()
+            };
+            if destination_exists {
+                if let crate::enums::CardSourceRef::Hand(owner, index) = source {
+                    self.remember_belief_public_hand_departure(owner, index);
+                }
+            }
+        }
         let Some(taken) = self.take_card_source_ref(source) else {
             return false;
         };
@@ -2906,7 +2924,7 @@ impl Game {
                 vec![placed],
                 crate::trigger_context::EffectAttribution {
                     controller: observer_player,
-                    source_card: effect_source_card,
+                    source_card: effect_source_card.into(),
                     source_permanent: None,
                 },
             );
@@ -2934,7 +2952,7 @@ impl Game {
             vec![placed],
             crate::trigger_context::EffectAttribution {
                 controller: observer_player,
-                source_card: effect_source_card,
+                source_card: effect_source_card.into(),
                 source_permanent: None,
             },
         );
@@ -4620,7 +4638,6 @@ fn install_assembly_element(
     element_idx: usize,
     picked_so_far: Vec<CardHandle>,
 ) {
-    use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
     use crate::effect_context::CountCappedZone;
 
     let (filter_pred, count) = elements[element_idx].clone();
@@ -4639,16 +4656,6 @@ fn install_assembly_element(
             );
             game.can_pay_memory_for(player, cost)
         });
-
-    // Distinctness across elements: exclude handles already picked.
-    let exclude = picked_so_far.clone();
-    let filter = move |g: &Game, cs: &CardSource| -> bool {
-        if exclude.contains(&cs.handle()) {
-            return false;
-        }
-        let rctx = EffectReadContext::new(g, source_card, None, player);
-        eval_predicate(&filter_pred, &rctx, PredicateSubject::Card(cs.handle()))
-    };
 
     // Every element requires its exact printed count. An affordable first
     // element may decline at zero; after a pick it cannot end
@@ -4671,7 +4678,7 @@ fn install_assembly_element(
         controller: ctx.player,
         override_pin: ctx.override_selecting_player(),
     };
-    ctx.select_count_capped_multi_min(
+    ctx.select_count_capped_multi_min_compiled(
         player,
         CountCappedZone::Trash,
         min,
@@ -4679,7 +4686,8 @@ fn install_assembly_element(
         &prompt,
         can_decline,
         distinct_by,
-        filter,
+        filter_pred,
+        picked_so_far.clone(),
         move |cctx, picks| {
             let game: &mut Game = cctx.game;
             // Decline at the gate → play at full cost (no assembly used).
@@ -4964,3 +4972,7 @@ mod physical_effect_origin_tests {
     #[test] fn inherited_tamer_physical_origin_for_cost_and_replacement_is_digimon() { source_kind(false); }
     #[test] fn linked_tamer_physical_origin_for_cost_and_replacement_is_digimon() { source_kind(true); }
 }
+
+#[cfg(test)]
+#[path = "../determinize/context_guard/after_selection_world_tests.rs"]
+mod after_selection_world_tests;

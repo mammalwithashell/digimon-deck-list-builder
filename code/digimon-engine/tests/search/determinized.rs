@@ -30,6 +30,55 @@ fn owned(deck: &[&str]) -> Vec<String> {
     deck.iter().map(|s| s.to_string()).collect()
 }
 
+#[test]
+fn observed_worlds_preserve_mulligan_search_and_ignore_real_future_rng() {
+    run_big_stack(|| {
+        use rand::{RngCore, SeedableRng};
+        use digimon_engine::search::{determinized_search_batched, determinized_search_batched_observed};
+        let cards = load_card_data();
+        let registry = CardRegistry::from_cards(&cards);
+        let root = Game::new(&[owned(ST1_DECK), owned(ST5_DECK)], &cards,
+            digimon_engine::rules::Rules::standard(), Some(8341)).unwrap();
+        let viewer = root.mulligan_current_player().expect("mulligan root");
+        let config = pimc_config(32, 4, 723);
+        let fingerprint = |g: &Game| {
+            let hand: Vec<_> = g.players[viewer as usize].hand.iter()
+                .map(|c| c.card_id(&g.card_data).to_string()).collect();
+            (hand, g.rng.clone().next_u64())
+        };
+        let original = fingerprint(&root);
+        let reference = determinized_search_batched(&registry, &root, viewer,
+            &mut UniformEvaluator, &config, 4);
+        let mut sampled = Vec::new();
+        let observed = determinized_search_batched_observed(&registry, &root, viewer,
+            &mut UniformEvaluator, &config, 4, &mut |world, seed| {
+                assert_eq!(fingerprint(world).0, original.0);
+                let mut branch = world.clone();
+                branch.decode_action(1, viewer);
+                sampled.push((seed, fingerprint(&branch)));
+            });
+        assert_eq!(reference.root_plans, observed.root_plans);
+        assert_eq!(reference.root_visits, observed.root_visits);
+        assert_eq!(reference.root_q, observed.root_q);
+        assert_eq!(reference.root_value, observed.root_value);
+        assert_eq!(sampled.len(), 4);
+        assert_eq!(fingerprint(&root), original);
+        let mut changed = root.clone();
+        changed.rng = rand::rngs::StdRng::seed_from_u64(999999);
+        changed.players[(1-viewer) as usize].deck.reverse();
+        let mut resampled = Vec::new();
+        let again = determinized_search_batched_observed(&registry, &changed, viewer,
+            &mut UniformEvaluator, &config, 4, &mut |world, seed| {
+                let mut branch = world.clone();
+                branch.decode_action(1, viewer);
+                resampled.push((seed, fingerprint(&branch)));
+            });
+        assert_eq!(sampled, resampled);
+        assert_eq!(observed.root_plans, again.root_plans);
+        assert_eq!(observed.root_value, again.root_value);
+    });
+}
+
 /// Real-deck mid-game state rooted at a viewer decision (the materialization
 /// contract: never root at an opponent-owned pending selection).
 fn midgame_state(

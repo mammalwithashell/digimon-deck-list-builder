@@ -28,7 +28,7 @@ fn real_main() {
     println!("cargo:rerun-if-changed=build.rs");
 
     let manifest_path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("windows-test-as-invoker.manifest");
+        PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR set by cargo")).join("windows-test-as-invoker.manifest");
     println!("cargo:rerun-if-changed={}", manifest_path.display());
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows")
         && std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc")
@@ -44,7 +44,7 @@ fn real_main() {
         );
     }
 
-    let cards_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("cards");
+    let cards_root = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR set by cargo")).join("cards");
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR set by cargo"));
     let pack_path = out_dir.join("cards.pack");
 
@@ -85,7 +85,7 @@ fn real_main() {
     }
 
     // Authored runtime rules cite portable official observation bytes.
-    let evidence_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    let evidence_root = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR set by cargo"))
         .join("../../data/card_sources/observations/official");
     for spec in &all_specs {
         if let Some(rule) = &spec.deck_rule {

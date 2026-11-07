@@ -33,9 +33,11 @@ mod evaluator;
 mod mcts;
 mod memoized;
 mod onnx_adapter;
+pub mod opportunity;
 
 pub use determinized::{
-    determinized_search, determinized_search_batched, determinized_search_sampled, DeterminizationMode, DeterminizedConfig,
+    determinized_search, determinized_search_batched, determinized_search_batched_observed,
+    determinized_search_sampled, DeterminizationMode, DeterminizedConfig,
 };
 pub use evaluator::{EvalRequest, Evaluation, PolicyValueFn, UniformEvaluator};
 pub use mcts::{decision_player, Mcts, SearchConfig, SearchResult};
@@ -43,3 +45,6 @@ pub use memoized::MemoizedEvaluator;
 
 /// Opt-in native search timing diagnostics.
 pub mod profiling;
+
+#[cfg(test)]
+mod abort_boundary_tests;

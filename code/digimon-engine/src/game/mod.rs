@@ -456,19 +456,20 @@ pub(crate) struct PendingWouldDigivolveResume {
 ///   `digivolve_from_hand`, `move_from_breeding`, `activate_*_main`,
 ///   `initiate_dna_digivolve`.
 /// Per-game memo of `effects_for_card` results, keyed by
-/// `(data_index, card_handle, under_top)`. The registry effect list a card
-/// derives is a pure function of those inputs (`CardEffect::effects(handle)`
-/// reads no game state; `under_top` is the only state input and is in the key),
-/// so entries are **never invalidated** for a game's lifetime. Stored behind a
-/// `RefCell` so the lazy fill works on the `&self` `effects_for_card` path;
+/// `(data_index, card_handle, under_top)` within one registry generation.
+/// Both memos expire when registry entries are inserted or replaced, including
+/// assignment of an independently constructed registry. This does not detect
+/// mutation inside opaque factory captures or card data, and is not a purity
+/// or projection-safety certificate. Stored behind a `RefCell` so lazy fill
+/// works on the `&self` `effects_for_card` path;
 /// values are `Arc` so `Game` stays `Send` (`RustHeadlessGame` is a
 /// non-`unsendable` `#[pyclass]`) and a cache hit is a refcount bump — no vec or
 /// closure clone. See the `cache-effects-for-card` change.
 ///
-/// `Clone` (make-engine-cloneable): the memo is pure derived data keyed by pure
-/// inputs, valid for a cloned `Game` (same Arc-shared registry/card_data), so a
-/// forked search node may inherit it. Cloning deep-copies the map structure;
-/// the `Arc` values are refcount bumps. The clone's `RefCell` is independent.
+/// `Clone` shares the generation identity and cached effect Arcs while copying
+/// the maps. A registry mutation in one fork invalidates only that fork's memo.
+/// Previously returned Arcs keep their original callbacks; no current-registry
+/// construction fact or permission is attached to those retained outputs.
 #[derive(Default, Clone)]
 pub struct EffectsCache(
     std::cell::RefCell<
@@ -477,14 +478,15 @@ pub struct EffectsCache(
             Option<std::sync::Arc<Vec<crate::effect::Effect>>>,
         >,
     >,
-    /// Registry-only memo for [`Game::registry_effects`]: `CardEffect::effects`
-    /// is a pure function of `(card, handle)`, so no invalidation is needed.
+    /// Registry-only memo for [`Game::registry_effects`], under the same
+    /// generation identity as the full effect-list memo.
     std::cell::RefCell<
         std::collections::HashMap<
             (usize, crate::card_source::CardHandle),
-            Option<std::sync::Arc<Vec<crate::effect::Effect>>>,
+            Option<crate::cards::RegistryEffects>,
         >,
     >,
+    std::cell::RefCell<Option<std::sync::Arc<()>>>,
 );
 
 impl std::fmt::Debug for EffectsCache {
@@ -496,6 +498,17 @@ impl std::fmt::Debug for EffectsCache {
 }
 
 impl EffectsCache {
+    fn ensure_registry_generation(&self, generation: &std::sync::Arc<()>) {
+        let mut current = self.2.borrow_mut();
+        if current.as_ref().is_some_and(|old| std::sync::Arc::ptr_eq(old, generation)) {
+            return;
+        }
+        self.0.borrow_mut().clear();
+        self.1.borrow_mut().clear();
+        // Retaining the identity prevents pointer reuse while entries are live.
+        *current = Some(generation.clone());
+    }
+
     fn get(
         &self,
         key: &(usize, crate::card_source::CardHandle, bool),
@@ -514,6 +527,12 @@ impl EffectsCache {
 
 #[derive(Debug, Clone)]
 pub struct Game {
+    /// Inactive world-level obligation. Independent of replaceable trigger contexts.
+    /// Only tests can originate it until projection admission is proved.
+    projected_world_reads_guarded: bool,
+    /// Independent obligation for typed unavailable event references.
+    /// Opaque factories and callbacks remain forbidden while this is set.
+    projected_event_card_read_fence: bool,
     pub(crate) belief_knowledge: Option<[crate::determinize::beliefs::KnowledgeLedger; 2]>,
     pub(crate) belief_knowledge_error: Option<String>,
     /// Exam-only recorder state; cloned but excluded from gameplay/digests.
@@ -1567,6 +1586,31 @@ mod until_condition;
 mod verification;
 
 impl Game {
+    pub(crate) fn projected_event_card_read_fence(&self) -> bool {
+        self.projected_event_card_read_fence
+    }
+
+    /// Only the closed-world projector originates this persistent obligation.
+    /// Clearing/replacing a current context cannot discharge it; clones retain it.
+    pub(crate) fn require_event_card_read_fence(&mut self) {
+        self.projected_event_card_read_fence = true;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn require_event_card_read_fence_for_test(&mut self) {
+        self.require_event_card_read_fence();
+    }
+
+    pub(crate) fn projected_world_reads_guarded(&self) -> bool {
+        self.projected_world_reads_guarded
+    }
+
+    /// No production setter: this is a bounded rejection prototype, not admission.
+    #[cfg(test)]
+    pub(crate) fn require_projected_world_read_guard_for_test(&mut self) {
+        self.projected_world_reads_guarded = true;
+    }
+
     /// Internal: request one reveal for `pid` and append the materialized
     /// CardSource to that player's hand. Used by `draw_one_for_player`
     /// in opaque mode.
@@ -3975,8 +4019,8 @@ impl Game {
     /// trait shape. The helper does not add an extra empty-case allocation.
     /// Memoized per-card effect derivation — the engine's hottest call
     /// (56–72% of bare-engine runtime; ~742–1715 calls/step). The registry
-    /// effect list is a pure function of `(card_id, handle, under_top)`, so it
-    /// is cached on `Game` for the game's lifetime (see `EffectsCache`) and a
+    /// effect list is memoized by `(card_id, handle, under_top)` within the
+    /// current registry generation (see `EffectsCache`) and a
     /// repeat query is a refcount bump rather than a fresh `impl_.effects(handle)`
     /// closure re-box. Returns a shared `Arc<Vec<Effect>>`; callers that must
     /// mutate the vec use `effects_for_card_owned`.
@@ -3985,6 +4029,7 @@ impl Game {
         card_id: &str,
         handle: crate::card_source::CardHandle,
     ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
+        crate::determinize::context_guard::check_registry_factory(self, card_id, "effects_for_card");
         let under_top = self.card_handle_is_under_top(handle);
         // Key on the canonical data_index (Copy, no per-call String alloc) rather
         // than the &str card_id. A handle maps 1:1 to a card instance, so this is
@@ -3995,12 +4040,12 @@ impl Game {
                 .build_effects_for_card(card_id, handle, under_top)
                 .map(std::sync::Arc::new);
         };
+        self.effects_cache.ensure_registry_generation(self.effect_registry.generation());
         let key = (data_index, handle, under_top);
 
         if let Some(cached) = self.effects_cache.get(&key) {
-            // Differential oracle (debug/test only): the cache is provably pure
-            // in (card_id, handle, under_top), so a hit must equal a fresh build;
-            // this catches a caller passing a card_id that doesn't match `handle`.
+            // Debug consistency check within the current registry generation.
+            // Debug output equality does not prove callback purity or safety.
             #[cfg(debug_assertions)]
             {
                 let fresh = self.build_effects_for_card(card_id, handle, under_top);
@@ -4032,14 +4077,24 @@ impl Game {
         card_id: &str,
         handle: crate::card_source::CardHandle,
     ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
-        let build = || {
-            self.effect_registry
-                .get(card_id)
-                .map(|impl_| std::sync::Arc::new(impl_.effects(handle)))
-        };
+        self.registry_effects_record(card_id, handle)
+            .map(|record| record.shared_effects())
+    }
+
+    /// Preserve the original registry-only output's construction relation.
+    /// The record grants no execution permission; the world check precedes
+    /// cache invalidation, cache lookup and all factory work.
+    pub(crate) fn registry_effects_record(
+        &self,
+        card_id: &str,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<crate::cards::RegistryEffects> {
+        crate::determinize::context_guard::check_registry_factory(self, card_id, "registry_effects");
+        let build = || self.effect_registry.derive_effects(card_id, handle);
         let Some(&data_index) = self.card_id_index.get(card_id) else {
             return build();
         };
+        self.effects_cache.ensure_registry_generation(self.effect_registry.generation());
         let key = (data_index, handle);
         if let Some(cached) = self.effects_cache.1.borrow().get(&key) {
             return cached.clone();
@@ -4058,6 +4113,7 @@ impl Game {
         card_id: &str,
         handle: crate::card_source::CardHandle,
     ) -> Option<Vec<crate::effect::Effect>> {
+        crate::determinize::context_guard::check_registry_factory(self, card_id, "effects_for_card_owned");
         let under_top = self.card_handle_is_under_top(handle);
         self.build_effects_for_card(card_id, handle, under_top)
     }

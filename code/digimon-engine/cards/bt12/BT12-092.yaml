@@ -49,21 +49,11 @@
 #   HasGreymonName). ActivateCoroutine: SelectPermanentEffect (canNoSelect:
 #   true — "may") over the eligible own Digimon, then
 #   DigivolveIntoHandOrTrashCard(cardCondition: yellow + Greymon-name,
-#   payCost: false, isHand: true) — free, and (per BT21-013/BT22-013 idiom)
-#   effectively ignoring the target's own printed digivolution requirements
-#   since DCGO installs the digivolve unconditionally once both picks are
-#   made (no separate cost/requirement gate on the *target* base).
-#   → `when: on_suspend`, `active_when: { your_turn: true }` ([Your Turn]),
-#   `condition: event_permanent_is_source: true` (self-scope — the AD1-021 /
-#   BT22-041 idiom), body: `select_own_permanent` (mandatory pick — DCGO's
-#   inner canNoSelect:true is folded into this being the FIRST step of an
-#   `optional: true` clause, so the clause's own accept/decline covers "may");
-#   `select_hand` (yellow + Greymon-name filter, optional: true so an empty
-#   hand pool cleanly resolves as "no digivolve"); `effect_initiated_digivolve`
-#   with `cost: 0, ignore_requirements: true` targeting the selected
-#   permanent (the resolved gap G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-
-#   PERMANENT-TARGET — see docs/RUST_ENGINE_GAPS.md "Track F", BT22-013 /
-#   BT21-013 exemplars).
+#   payCost: false, isHand: true). CanPlayCardTargetFrame validates the base
+#   and result requirements before offering either selection. Only payment is
+#   waived: official Q1740 distinguishes this from ignoring requirements.
+#   Use has_digivolve_candidate and can_digivolve_onto so every offered host
+#   and hand card agrees with the requirement-preserving commit.
 #
 # Clause 3 (Security) — EffectTiming.SecuritySkill:
 #   CardEffectFactory.PlaySelfTamerSecurityEffect(card). Standard
@@ -131,10 +121,9 @@ effects:
   # subsequent `select_hand` is itself `optional: true` so an empty-hand-pool
   # case resolves cleanly as "nothing to digivolve into" without a forced
   # prompt. `effect_initiated_digivolve` targets the selected permanent
-  # (`target: base`) with `cost: 0, ignore_requirements: true` — free,
-  # ignoring the target's own printed digivolution requirements (BT21-013 /
-  # BT22-013 idiom; G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-
-  # TARGET is RESOLVED, docs/RUST_ENGINE_GAPS.md "Track F").
+  # (`target: base`) with cost0 and requirements preserved. Both menus use
+  # the same legal route probe as the commit, including alternate routes and
+  # CannotDigivolve restrictions; no unsuitable host/result is offered.
   - when: on_suspend
     active_when: { your_turn: true }
     optional: true
@@ -144,7 +133,17 @@ effects:
     process:
       - select_own_permanent:
           bind_as: base
-          filter: { kind: digimon }
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - color_is: yellow
+                      - name_contains: "Greymon"
           prompt: "Select 1 of your Digimon to digivolve"
       - select_hand:
           of: you
@@ -153,6 +152,7 @@ effects:
           filter:
             all_of:
               - kind: digimon
+              - can_digivolve_onto: base
               - color_is: yellow
               - name_contains: "Greymon"
           prompt: "Digivolve into a yellow card with [Greymon] in its name from your hand, free"
@@ -160,7 +160,7 @@ effects:
           target: base
           from_hand: evo
           cost: 0
-          ignore_requirements: true
+          ignore_requirements: false
 
   # ─── Clause 3: [Security] play self without paying the cost ─────────────────
   - when: on_security

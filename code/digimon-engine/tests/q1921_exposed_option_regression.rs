@@ -20,7 +20,7 @@ effects:
   - when: on_any_deletion
     process:
       - gain_memory: 1
-"#).unwrap().from_dsl_yaml(include_str!("../cards/BT9/BT9-109.yaml")).unwrap();
+"#).unwrap().from_dsl_yaml(include_str!("../cards/bt9/BT9-109.yaml")).unwrap();
     for id in ["BT9-109", "BT9-062", "ST5-15", "ST1-03", "BT1-085", "P-035", "BT20-045"] {
         builder = builder.add_card(metadata.remove(id).unwrap());
     }

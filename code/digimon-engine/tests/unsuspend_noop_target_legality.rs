@@ -22,11 +22,11 @@ fn setup() -> DebugRunner {
     // Allows RED replay against an archived pre-fix YAML without editing production.
     let yaml = std::env::var("UNSUSPEND_NOOP_BASELINE_YAML")
         .map(|path| std::fs::read_to_string(path).unwrap())
-        .unwrap_or_else(|_| include_str!("../cards/BT20/BT20-027.yaml").to_owned());
+        .unwrap_or_else(|_| include_str!("../cards/bt20/BT20-027.yaml").to_owned());
     let mut r = DebugRunner::builder()
         .from_dsl_yaml(&yaml).unwrap()
-        .from_dsl_yaml(include_str!("../cards/EX3/EX3-018.yaml")).unwrap()
-        .from_dsl_yaml(include_str!("../cards/ST1/ST1-10.yaml")).unwrap()
+        .from_dsl_yaml(include_str!("../cards/ex3/EX3-018.yaml")).unwrap()
+        .from_dsl_yaml(include_str!("../cards/st1/ST1-10.yaml")).unwrap()
         .add_card(slayer).add_card(wing).add_card(phoenix)
         .add_card(make_test_card("NOOP-FILL", "Filler"))
         .deck(0, &["NOOP-FILL"; 12]).deck(1, &["NOOP-FILL"; 12])

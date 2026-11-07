@@ -180,7 +180,7 @@ pub fn evaluate_with_bindings(
             .game
             .current_trigger_context
             .as_ref()
-            .and_then(|t| t.event_card)
+            .and_then(|t| t.event_card.read())
             .and_then(|h| ctx.game.card_data_for_handle(h))
             .and_then(|cd| cd.level)
             .map(|l| l as i32)
@@ -362,7 +362,7 @@ fn evaluate_read_with_raw_and_bindings(
             .game
             .current_trigger_context
             .as_ref()
-            .and_then(|t| t.event_card)
+            .and_then(|t| t.event_card.read())
             .and_then(|h| ctx.game.card_data_for_handle(h))
             .and_then(|cd| cd.level)
             .map(|l| l as i32)
