@@ -412,11 +412,15 @@ impl Game {
     /// with no battle-area-only gate.
     pub(crate) fn digivolve_base_permanent(&self, handle: PermanentHandle) -> Option<&Permanent> {
         let player = self.players.get(handle.player as usize)?;
-        if handle.index == crate::action::space::BREEDING_TARGET as u8 {
+        let permanent = if handle.index == crate::action::space::BREEDING_TARGET as u8 {
             player.breeding_area.as_ref()
         } else {
             player.battle_area.get(handle.index as usize)
-        }
+        }?;
+        // CR 4-21-3 prohibits stacking with a token. This is not a printed
+        // digivolution requirement, so effect waivers cannot bypass it. Keep
+        // route enumeration, candidate probes and post-choice commits aligned.
+        (!permanent.top_card().is_token).then_some(permanent)
     }
 
     pub(crate) fn normal_digivolve_route_for_hand_card(

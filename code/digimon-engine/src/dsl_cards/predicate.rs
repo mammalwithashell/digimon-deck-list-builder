@@ -2486,7 +2486,7 @@ fn eval_event_fields(
             .game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.event_card)
+            .and_then(|trigger| trigger.event_card.read())
         else {
             return false;
         };
@@ -2536,7 +2536,7 @@ fn eval_event_fields(
             .game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.event_card)
+            .and_then(|trigger| trigger.event_card.read())
             .and_then(|card| rctx.game.card_data_for_handle(card))
             .is_some_and(|data| card_in_text_contains(data, needle));
         if !matched {
@@ -2566,7 +2566,7 @@ fn eval_event_fields(
             .game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.event_card)
+            .and_then(|trigger| trigger.event_card.read())
         else {
             return false;
         };
@@ -2589,7 +2589,7 @@ fn eval_event_fields(
             .game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.event_card)
+            .and_then(|trigger| trigger.event_card.read())
         else {
             return false;
         };
@@ -2610,7 +2610,7 @@ fn eval_event_fields(
             .game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.event_card)
+            .and_then(|trigger| trigger.event_card.read())
         else {
             return false;
         };
@@ -3026,7 +3026,7 @@ fn event_target_owner(rctx: &EffectReadContext<'_>) -> Option<PlayerId> {
     if let Some(handle) = trigger.target_permanent {
         return Some(handle.player);
     }
-    for card in [trigger.event_card, trigger.target_card]
+    for card in [trigger.event_card.read(), trigger.target_card.read()]
         .into_iter()
         .flatten()
     {
@@ -3074,10 +3074,10 @@ fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {
             .map(|card| card.handle());
     }
     if let Some(handle) = trigger.event_permanent {
-        if let Some(card) = live_event_permanent_card(rctx, handle, trigger.event_card) {
+        if let Some(card) = live_event_permanent_card(rctx, handle, trigger.event_card.read()) {
             return Some(card);
         }
-        return trigger.event_card;
+        return trigger.event_card.read();
     }
     if let Some(handle) = trigger.target_permanent {
         if let Some(card) = rctx
@@ -3090,10 +3090,10 @@ fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {
             return Some(card);
         }
     }
-    if let Some(card) = trigger.target_card {
+    if let Some(card) = trigger.target_card.read() {
         return Some(card);
     }
-    trigger.event_card
+    trigger.event_card.read()
 }
 
 fn live_event_permanent_card(
@@ -3125,7 +3125,7 @@ fn event_card_level(rctx: &EffectReadContext<'_>) -> Option<u8> {
                 .deleted_object
                 .as_ref()
                 .map(|snapshot| snapshot.top_card)
-                .or(trigger.event_card)
+                .or(trigger.event_card.read())
         })
         .or_else(|| event_target_card(rctx))?;
     rctx.game

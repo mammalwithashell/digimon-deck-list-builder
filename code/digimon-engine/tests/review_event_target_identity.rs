@@ -94,7 +94,7 @@ fn queued_host_only_source_added_context_rejects_reused_slot() {
                     cards: vec![old_card],
                     cause: EffectAttribution {
                         controller: seat,
-                        source_card: None,
+                        source_card: None.into(),
                         source_permanent: None,
                     },
                 },
@@ -193,7 +193,7 @@ fn deleted_snapshot_precedence_and_absent_event_slot_are_unchanged() {
     r.game.current_trigger_context = Some({
         let mut context = TriggerContext::default();
         context.event_permanent = Some(live);
-        context.event_card = Some(card(&r, live));
+        context.event_card = (Some(card(&r, live))).into();
         context.deleted_object = Some(DeletedObjectSnapshot {
             retained_kind: None,
             former_controller: 1,
@@ -227,7 +227,7 @@ fn deleted_snapshot_precedence_and_absent_event_slot_are_unchanged() {
             player: 1,
             index: 254,
         });
-        context.event_card = Some(deleted);
+        context.event_card = (Some(deleted)).into();
         context
     });
     let ctx = EffectContext::new(&mut r.game, source, Some(observer), 0);

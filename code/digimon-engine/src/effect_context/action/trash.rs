@@ -206,7 +206,7 @@ impl<'a> EffectContext<'a> {
             let handle = card.handle();
             self.game.trash_card(player, card);
             self.game.record_effect_deck_trash(player, handle, crate::trigger_context::EffectAttribution {
-                controller: self.player, source_card: Some(self.source_card), source_permanent: self.source_permanent,
+                controller: self.player, source_card: Some(self.source_card).into(), source_permanent: self.source_permanent,
             });
             trashed += 1;
         }

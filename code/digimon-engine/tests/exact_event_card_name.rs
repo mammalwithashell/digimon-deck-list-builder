@@ -45,7 +45,7 @@ fn exact_event_name_accepts_any_printing_and_rule_alias_but_rejects_substrings()
         .build();
     let source = runner.game.players[0].hand[0].handle();
     for (index, expected) in [(1, true), (2, true), (3, false), (4, true)] {
-        runner.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = Some(runner.game.players[0].hand[index].handle()); __fixture_trigger_context });
+        runner.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = (Some(runner.game.players[0].hand[index].handle())).into(); __fixture_trigger_context });
         let ctx = EffectReadContext::new(&runner.game, source, None, 0);
         assert_eq!(
             eval_predicate_with_bindings(&pred, &ctx, PredicateSubject::None, None),
@@ -76,7 +76,7 @@ fn captured_event_name_survives_new_top_and_departed_permanent() {
     let event_card = runner.game.players[0].battle_area[event_perm.index as usize]
         .top_card()
         .handle();
-    runner.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = Some(event_card); __fixture_trigger_context.event_permanent = Some(event_perm); __fixture_trigger_context });
+    runner.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = (Some(event_card)).into(); __fixture_trigger_context.event_permanent = Some(event_perm); __fixture_trigger_context });
     // Ordinary evolution changes only the visible top; captured identity remains.
     let evolved = runner.game.players[0].hand.pop().unwrap();
     runner.game.players[0].battle_area[event_perm.index as usize]

@@ -29,6 +29,15 @@ use crate::action::space::{
     BREEDING_TARGET, HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS, REPLACEMENT_ACCEPT,
 };
 use crate::card_source::CardHandle;
+#[cfg(test)]
+#[path = "effect_queue/selection_result_guard_tests.rs"]
+mod selection_result_guard_tests;
+#[cfg(test)]
+#[path = "effect_queue/granted_dispatch_guard_tests.rs"]
+mod granted_dispatch_guard_tests;
+#[cfg(test)]
+#[path = "effect_queue/simultaneous_guard_tests.rs"]
+mod simultaneous_guard_tests;
 use crate::effect::ReFireableEffect;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{
@@ -269,6 +278,7 @@ impl Game {
                 entry.source_kind,
                 grant.source_player,
             );
+            crate::determinize::context_guard::check(self, "dynamic_grant_predicate");
             if (entry.predicate)(&rctx, handle) {
                 entries.push((
                     grant.body_id,
@@ -1255,7 +1265,7 @@ impl Game {
             return;
         };
         let trigger_context = TriggerContext {
-            event_card: Some(card),
+            event_card: (Some(card)).into(),
             discard_hand_player: Some(owner),
             discard_cause_controller: Some(cause_controller),
             affected_player: Some(owner),
@@ -1320,13 +1330,13 @@ impl Game {
                 .map(|c| (c.card_id(&self.card_data).to_owned(), source_kind_for_card_kind(c.card_kind(&self.card_data)))) else { continue; };
             let Some(effects) = self.effects_for_card(&card_id, card) else { continue; };
             let context = TriggerContext {
-                subject: Some(EventSubject::Card { card, zone: crate::enums::Zone::Trash }),
-                event_card: Some(card), target_card: Some(card), deck_trash_generation: Some(generation),
+                subject: Some(EventSubject::Card { card, zone: crate::enums::Zone::Trash }).into(),
+                event_card: Some(card).into(), target_card: Some(card).into(), deck_trash_generation: Some(generation),
                 affected_player: Some(owner), source_player: Some(cause.controller),
                 source_effect: Some(cause), event_cause_effect: Some(cause),
                 cause: Some(if owner == cause.controller { crate::trigger_context::EventCause::OwnEffect }
                     else { crate::trigger_context::EventCause::OpponentEffect }),
-                moved_card_sets: vec![MovedCardSet { cards: vec![card], from: Some(crate::enums::Zone::Deck), to: Some(crate::enums::Zone::Trash) }],
+                moved_card_sets: vec![MovedCardSet { cards: vec![card], from: Some(crate::enums::Zone::Deck), to: Some(crate::enums::Zone::Trash) }].into(),
                 effect_initiated: true, ..Default::default()
             };
             for (slot, effect) in effects.iter().enumerate() {
@@ -1424,6 +1434,7 @@ impl Game {
     /// resume-driven resolution (the data analog of the retired
     /// closure-composition wrappers).
     pub(crate) fn run_after_selection_hook(&mut self, hook: crate::resume::AfterSelectionHook) {
+        crate::determinize::context_guard::check_world_continuation(self, "after_selection_hook");
         use crate::resume::AfterSelectionHook as Hook;
         match hook {
             Hook::DeletionWindowContinue { window } => {
@@ -2288,7 +2299,7 @@ impl Game {
         let mut context = match *source {
             TriggerSource::Permanent(handle) => TriggerContext {
                 target_permanent: Some(handle),
-                target_card: self.top_card_handle(handle),
+                target_card: (self.top_card_handle(handle)).into(),
                 source_player: Some(handle.player),
                 // `cause` is only meaningful for the OnDeletion timing: it
                 // forwards the active deletion cause (set by
@@ -2312,7 +2323,7 @@ impl Game {
             },
             TriggerSource::PlayerBattleArea(player) => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
@@ -2322,21 +2333,21 @@ impl Game {
                 card,
             } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 event_permanent: Some(attacker),
-                event_card: Some(card),
+                event_card: (Some(card)).into(),
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
             TriggerSource::PlayerBreedingArea(player) => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
             TriggerSource::SecurityRevealed { defender, card } => TriggerContext {
-                target_card: Some(card),
-                event_card: Some(card),
+                target_card: (Some(card)).into(),
+                event_card: (Some(card)).into(),
                 source_player: Some(defender),
                 was_security_skill: true,
                 // "if removed from by effects" (BT26-089) — see
@@ -2346,8 +2357,8 @@ impl Game {
                 ..TriggerContext::default()
             },
             TriggerSource::SecurityStackCard { player, card } => TriggerContext {
-                target_card: Some(card),
-                event_card: Some(card),
+                target_card: (Some(card)).into(),
+                event_card: (Some(card)).into(),
                 source_player: Some(player),
                 was_security_skill: false,
                 ..TriggerContext::default()
@@ -2359,8 +2370,8 @@ impl Game {
                 ..
             } => TriggerContext {
                 target_permanent: Some(attacker),
-                target_card: Some(revealed_card),
-                event_card: Some(revealed_card),
+                target_card: (Some(revealed_card)).into(),
+                event_card: (Some(revealed_card)).into(),
                 event_host_permanent: Some(attacker),
                 event_host_card: self.top_card_handle(attacker),
                 source_player: Some(defender),
@@ -2373,8 +2384,8 @@ impl Game {
                 revealed_card,
             } => TriggerContext {
                 target_permanent: Some(attacker),
-                target_card: Some(revealed_card),
-                event_card: Some(revealed_card),
+                target_card: (Some(revealed_card)).into(),
+                event_card: (Some(revealed_card)).into(),
                 event_host_permanent: Some(attacker),
                 event_host_card: self.top_card_handle(attacker),
                 source_player: Some(defender),
@@ -2387,9 +2398,9 @@ impl Game {
                 card,
             } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 event_permanent: Some(permanent),
-                event_card: Some(card),
+                event_card: (Some(card)).into(),
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
@@ -2401,9 +2412,9 @@ impl Game {
                 dna_origin,
             } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 event_permanent: Some(permanent),
-                event_card: Some(card),
+                event_card: (Some(card)).into(),
                 source_player: Some(player),
                 effect_initiated,
                 dna_origin,
@@ -2414,7 +2425,7 @@ impl Game {
                 effect_initiated,
             } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 // The player whose hand gained cards. `event_add_to_hand_player`
                 // predicates compare this against the observer's controller.
                 affected_player: Some(player),
@@ -2429,18 +2440,18 @@ impl Game {
                 effect_initiated,
             } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 event_permanent: Some(permanent),
-                event_card: Some(card),
+                event_card: (Some(card)).into(),
                 source_player: Some(player),
                 effect_initiated,
                 ..TriggerContext::default()
             },
             TriggerSource::Linked { player, host, card } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 event_permanent: Some(host),
-                event_card: Some(card),
+                event_card: (Some(card)).into(),
                 event_source_card: Some(card),
                 event_host_card: self.top_card_handle(host),
                 event_host_permanent: Some(host),
@@ -2454,9 +2465,9 @@ impl Game {
                 card,
             } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 event_permanent: permanent,
-                event_card: Some(card),
+                event_card: (Some(card)).into(),
                 event_source_card: Some(card),
                 event_host_card: linked_host.and_then(|h| self.top_card_handle(h)),
                 event_host_permanent: linked_host,
@@ -2472,7 +2483,7 @@ impl Game {
             // is DCGO's `cardSource.Owner == card.Owner`
             // (WhenUseOption.cs:13).
             TriggerSource::OptionUsed { player, card } => TriggerContext {
-                event_card: Some(card),
+                event_card: (Some(card)).into(),
                 event_source_card: Some(card),
                 source_player: Some(player),
                 ..TriggerContext::default()
@@ -2483,22 +2494,22 @@ impl Game {
                 cause,
                 last_state,
             } => TriggerContext {
-                subject: Some(crate::trigger_context::EventSubject::Card {
+                subject: (Some(crate::trigger_context::EventSubject::Card {
                     card,
                     zone: crate::enums::Zone::BattleArea,
-                }),
+                })).into(),
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
-                event_card: Some(card),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
+                event_card: (Some(card)).into(),
                 affected_player: Some(player),
                 source_player: Some(player),
                 cause: Some(crate::trigger_context::EventCause::from(cause)),
                 option_last_field_state: Some(last_state),
-                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                moved_card_sets: (vec![crate::trigger_context::MovedCardSet {
                     cards: vec![card],
                     from: Some(crate::enums::Zone::BattleArea),
                     to: Some(crate::enums::Zone::Trash),
-                }],
+                }]).into(),
                 ..TriggerContext::default()
             },
             TriggerSource::EventObserved {
@@ -2508,9 +2519,9 @@ impl Game {
                 effect_initiated,
             } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 event_permanent: Some(permanent),
-                event_card: Some(card),
+                event_card: (Some(card)).into(),
                 source_player: Some(player),
                 effect_initiated,
                 ..TriggerContext::default()
@@ -2524,9 +2535,9 @@ impl Game {
                 reason,
             } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 event_permanent: Some(attacker),
-                event_card: Some(card),
+                event_card: (Some(card)).into(),
                 attack_target_change: Some(crate::trigger_context::AttackTargetChange {
                     attacker,
                     old_target,
@@ -2543,9 +2554,9 @@ impl Game {
                 card,
             } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 event_permanent: Some(attacker),
-                event_card: Some(card),
+                event_card: (Some(card)).into(),
                 event_host_permanent: Some(blocker),
                 event_host_card: self.top_card_handle(blocker),
                 source_player: Some(attacker.player),
@@ -2558,24 +2569,24 @@ impl Game {
                 card,
                 cause,
             } => TriggerContext {
-                subject: Some(crate::trigger_context::EventSubject::Card {
+                subject: (Some(crate::trigger_context::EventSubject::Card {
                     card,
                     zone: crate::enums::Zone::BattleArea,
-                }),
+                })).into(),
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
-                event_card: Some(card),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
+                event_card: (Some(card)).into(),
                 event_source_card: Some(card),
                 event_host_card: Some(host_card),
                 event_host_permanent: Some(host),
                 affected_player: Some(player),
                 source_player: Some(player),
                 cause: Some(cause),
-                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                moved_card_sets: (vec![crate::trigger_context::MovedCardSet {
                     cards: vec![card],
                     from: Some(crate::enums::Zone::BattleArea),
                     to: Some(crate::enums::Zone::Trash),
-                }],
+                }]).into(),
                 ..TriggerContext::default()
             },
             TriggerSource::TopCardsTrashed {
@@ -2585,15 +2596,15 @@ impl Game {
                 ref cards,
                 cause,
             } => TriggerContext {
-                subject: Some(crate::trigger_context::EventSubject::Permanent(host)),
+                subject: (Some(crate::trigger_context::EventSubject::Permanent(host))).into(),
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 // The host whose top card(s) were trashed (`event_host_*`
                 // leaves). The trashed batch rides in `moved_card_sets`; the
                 // single-card `event_card` is set only for a one-card batch
                 // (<Armor Purge>, <De-Digivolve> trashing 1) so a multi-card
                 // instance is never mis-gated by a one-card alias.
-                event_card: if cards.len() == 1 { Some(cards[0]) } else { None },
+                event_card: (if cards.len() == 1 { Some(cards[0]) } else { None }).into(),
                 event_host_card: Some(host_card),
                 event_host_permanent: Some(host),
                 event_permanent: Some(host),
@@ -2605,11 +2616,11 @@ impl Game {
                     crate::trigger_context::EventCause::Rule
                         | crate::trigger_context::EventCause::BattleDeletion
                 ),
-                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                moved_card_sets: (vec![crate::trigger_context::MovedCardSet {
                     cards: cards.clone(),
                     from: Some(crate::enums::Zone::BattleArea),
                     to: Some(crate::enums::Zone::Trash),
-                }],
+                }]).into(),
                 ..TriggerContext::default()
             },
             TriggerSource::LinkCardTrashed {
@@ -2619,13 +2630,13 @@ impl Game {
                 card,
                 cause,
             } => TriggerContext {
-                subject: Some(crate::trigger_context::EventSubject::Card {
+                subject: (Some(crate::trigger_context::EventSubject::Card {
                     card,
                     zone: crate::enums::Zone::BattleArea,
-                }),
+                })).into(),
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
-                event_card: Some(card),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
+                event_card: (Some(card)).into(),
                 event_host_card: Some(host_card),
                 event_host_permanent: Some(host),
                 affected_player: Some(player),
@@ -2636,11 +2647,11 @@ impl Game {
                     crate::trigger_context::EventCause::Rule
                         | crate::trigger_context::EventCause::BattleDeletion
                 ),
-                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                moved_card_sets: (vec![crate::trigger_context::MovedCardSet {
                     cards: vec![card],
                     from: Some(crate::enums::Zone::BattleArea),
                     to: Some(crate::enums::Zone::Trash),
-                }],
+                }]).into(),
                 ..TriggerContext::default()
             },
             // Sibling of SourceTrashedFromStack; the returned card moved to the
@@ -2655,24 +2666,24 @@ impl Game {
                 card,
                 cause,
             } => TriggerContext {
-                subject: Some(crate::trigger_context::EventSubject::Card {
+                subject: (Some(crate::trigger_context::EventSubject::Card {
                     card,
                     zone: crate::enums::Zone::Deck,
-                }),
+                })).into(),
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
-                event_card: Some(card),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
+                event_card: (Some(card)).into(),
                 event_source_card: Some(card),
                 event_host_card: Some(host_card),
                 event_host_permanent: Some(host),
                 affected_player: Some(player),
                 source_player: Some(player),
                 cause: Some(cause),
-                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                moved_card_sets: (vec![crate::trigger_context::MovedCardSet {
                     cards: vec![card],
                     from: Some(crate::enums::Zone::BattleArea),
                     to: Some(crate::enums::Zone::Deck),
-                }],
+                }]).into(),
                 ..TriggerContext::default()
             },
             TriggerSource::SecurityRemoved {
@@ -2682,21 +2693,21 @@ impl Game {
                 cause,
                 ..
             } => TriggerContext {
-                subject: Some(crate::trigger_context::EventSubject::Card {
+                subject: (Some(crate::trigger_context::EventSubject::Card {
                     card,
                     zone: crate::enums::Zone::Security,
-                }),
+                })).into(),
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
-                event_card: Some(card),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
+                event_card: (Some(card)).into(),
                 affected_player: Some(affected_player),
                 source_player: Some(source_player),
                 cause: Some(cause),
-                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                moved_card_sets: (vec![crate::trigger_context::MovedCardSet {
                     cards: vec![card],
                     from: Some(crate::enums::Zone::Security),
                     to: None,
-                }],
+                }]).into(),
                 ..TriggerContext::default()
             },
             TriggerSource::SecurityPlaced {
@@ -2705,21 +2716,21 @@ impl Game {
                 card,
                 cause,
             } => TriggerContext {
-                subject: Some(crate::trigger_context::EventSubject::Card {
+                subject: (Some(crate::trigger_context::EventSubject::Card {
                     card,
                     zone: crate::enums::Zone::Security,
-                }),
+                })).into(),
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
-                event_card: Some(card),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
+                event_card: (Some(card)).into(),
                 affected_player: Some(affected_player),
                 source_player: Some(source_player),
                 cause: Some(cause),
-                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                moved_card_sets: (vec![crate::trigger_context::MovedCardSet {
                     cards: vec![card],
                     from: None,
                     to: Some(crate::enums::Zone::Security),
-                }],
+                }]).into(),
                 ..TriggerContext::default()
             },
             TriggerSource::SecurityDiscarded {
@@ -2728,19 +2739,19 @@ impl Game {
                 card,
                 cause,
             } => TriggerContext {
-                subject: Some(crate::trigger_context::EventSubject::Card {
+                subject: (Some(crate::trigger_context::EventSubject::Card {
                     card,
                     zone: crate::enums::Zone::Security,
-                }),
-                event_card: Some(card),
+                })).into(),
+                event_card: (Some(card)).into(),
                 affected_player: Some(affected_player),
                 source_player: Some(source_player),
                 cause: Some(cause),
-                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                moved_card_sets: (vec![crate::trigger_context::MovedCardSet {
                     cards: vec![card],
                     from: Some(crate::enums::Zone::Security),
                     to: Some(crate::enums::Zone::Trash),
-                }],
+                }]).into(),
                 ..TriggerContext::default()
             },
             TriggerSource::BattleResolved {
@@ -2750,7 +2761,7 @@ impl Game {
                 ref winner_snapshot,
             } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 // The battle winner (owner + trait read by the observer's
                 // `event_winner_*` predicates). `None` on a tie — no winner —
                 // and when the winner left the field before this event.
@@ -2777,7 +2788,7 @@ impl Game {
                 ref cards,
             } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 // The player whose hand lost cards ("your hand is trashed
                 // from") and the controller of the causing effect ("one of YOUR
                 // effects"). `source_player` mirrors the trashing player for
@@ -2789,22 +2800,22 @@ impl Game {
                 effect_initiated: true,
                 // The trashed batch itself — "you may play 1 of them"
                 // (BT24-007). G-ENGINE-DISCARDED-HAND-CARDS.
-                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                moved_card_sets: (vec![crate::trigger_context::MovedCardSet {
                     cards: cards.clone(),
                     from: Some(crate::enums::Zone::Hand),
                     to: Some(crate::enums::Zone::Trash),
-                }],
+                }]).into(),
                 ..TriggerContext::default()
             },
             TriggerSource::DeckGained { cause_controller } => TriggerContext {
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 // The causing effect's controller ("when YOUR effects add to
                 // decks" -> `event_caused_by_own_effect`). G-ENGINE-ON-ADD-TO-DECK.
                 source_player: Some(cause_controller),
                 event_cause_effect: Some(crate::trigger_context::EffectAttribution {
                     controller: cause_controller,
-                    source_card: None,
+                    source_card: None.into(),
                     source_permanent: None,
                 }),
                 effect_initiated: true,
@@ -2816,9 +2827,9 @@ impl Game {
                 ref cards,
                 cause,
             } => TriggerContext {
-                subject: Some(crate::trigger_context::EventSubject::Permanent(host)),
+                subject: (Some(crate::trigger_context::EventSubject::Permanent(host))).into(),
                 target_permanent: source_permanent,
-                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                target_card: (source_permanent.and_then(|h| self.top_card_handle(h))).into(),
                 // The host whose digivolution cards grew ("under THIS
                 // Digimon" -> `event_host_permanent_is_source`) and the placing
                 // effect ("one of YOUR effects" -> `event_caused_by_own_effect`).
@@ -2840,11 +2851,11 @@ impl Game {
                 source_effect: Some(cause),
                 event_cause_effect: Some(cause),
                 effect_initiated: true,
-                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                moved_card_sets: (vec![crate::trigger_context::MovedCardSet {
                     cards: cards.clone(),
                     from: None,
                     to: Some(crate::enums::Zone::BattleArea),
-                }],
+                }]).into(),
                 ..TriggerContext::default()
             },
         };
@@ -2873,7 +2884,7 @@ impl Game {
                 None
             };
             context.event_permanent = attacker;
-            context.event_card = attacker.and_then(|handle| self.top_card_handle(handle));
+            context.event_card = (attacker.and_then(|handle| self.top_card_handle(handle))).into();
         }
         // Capture before any observer resolves. The existing stack identity is
         // shared with battle/replacement tracking: it survives ordinary stack
@@ -2920,7 +2931,7 @@ impl Game {
     fn current_effect_attribution(&self) -> Option<crate::trigger_context::EffectAttribution> {
         Some(crate::trigger_context::EffectAttribution {
             controller: self.effect_source_player?,
-            source_card: self.effect_source_card,
+            source_card: self.effect_source_card.into(),
             source_permanent: self.effect_source_permanent,
         })
     }
@@ -4117,7 +4128,9 @@ impl Game {
             // Defensive: simultaneous-play groups are formed after the
             // enqueue-time qualifier check (`collapse_event_batch`), so this
             // arm is not reached by `discard_entries_not_triggered` today.
-            let members = group.simultaneous_play_members.clone();
+            let members: Vec<_> = group.simultaneous_play_members.iter()
+                .map(|member| crate::determinize::context_guard::inherited_member_context(group, member))
+                .collect();
             return members.into_iter().any(|member| {
                 let mut probe = qe.clone();
                 probe.trigger_context = Some(member);
@@ -4129,11 +4142,13 @@ impl Game {
 
     fn matching_simultaneous_play_contexts(&mut self, qe: &QueuedEffect) -> Vec<TriggerContext> {
         let Some(group) = qe.trigger_context.as_ref() else { return Vec::new(); };
-        group.simultaneous_play_members.iter().filter(|member| {
+        group.simultaneous_play_members.iter()
+            .map(|member| crate::determinize::context_guard::inherited_member_context(group, member))
+            .filter(|member| {
             let mut probe = qe.clone();
-            probe.trigger_context = Some((*member).clone());
+            probe.trigger_context = Some(member.clone());
             self.queued_single_effect_condition_passes(&probe)
-        }).cloned().collect()
+        }).collect()
     }
 
     fn queued_single_effect_condition_passes(&mut self, qe: &QueuedEffect) -> bool {
@@ -4180,6 +4195,7 @@ impl Game {
                 source_kind,
                 qe.controller,
             );
+            crate::determinize::context_guard::check(ctx.game, "granted_trigger_qualifier");
             return qualifier(&ctx.as_read());
         }
         if qe.granted_effect_id.is_some() || qe.pending_processing.is_some() {
@@ -4702,6 +4718,7 @@ impl Game {
                 qe.source_kind,
                 qe.controller,
             );
+            crate::determinize::context_guard::check(ctx.game, "granted_effect_body");
             ctx.source_identity = qe.source_identity.flatten();
             body(&mut ctx);
             if !self.modifiers.contains_granted_triggered_body_id(body_id) {
@@ -5040,7 +5057,7 @@ impl Game {
             || !qe
                 .trigger_context
                 .as_ref()
-                .is_some_and(|ctx| ctx.event_card.is_some())
+                .is_some_and(|ctx| ctx.event_card.read().is_some())
         {
             return None;
         }
@@ -5730,7 +5747,7 @@ impl Game {
                                 vec![placed],
                                 crate::trigger_context::EffectAttribution {
                                     controller: pending.source_player,
-                                    source_card: cause_card,
+                                    source_card: cause_card.into(),
                                     source_permanent: None,
                                 },
                             );
@@ -5774,7 +5791,7 @@ impl Game {
                                 vec![placed],
                                 crate::trigger_context::EffectAttribution {
                                     controller: pending.source_player,
-                                    source_card: cause_card,
+                                    source_card: cause_card.into(),
                                     source_permanent: None,
                                 },
                             );
@@ -6672,6 +6689,11 @@ impl Game {
             if is_pass && !sel.is_optional { return Err(SelectionError::InvalidAction); }
             if !is_pass && !sel.valid_action_ids.contains(&action_id) { return Err(SelectionError::InvalidAction); }
         }
+        // Impossible owned choices finish through cleanup instead of a result
+        // callback. Reject before prepare_resolution clears the resolved pin.
+        if recovery_abort {
+            crate::determinize::context_guard::check_world_continuation(self, "owned_choice_recovery");
+        }
         // Page navigation is presentation state only. Do not run payment hooks,
         // triggers, turn checks, or any other post-selection lifecycle.
         if crate::owned_card_choice::prepare_resolution(self, action_id)? {
@@ -6685,6 +6707,28 @@ impl Game {
         {
             return Ok(());
         }
+        // The structured executor bypasses raw result callbacks. Reject an
+        // existing world obligation before consuming its prompt or entering
+        // resolution scopes, including when the stored stack is cloned.
+        // Legality and presentation navigation retain their contract above.
+        if self.pending_selection_resume.is_some() {
+            crate::determinize::context_guard::check_world_continuation(self, "selection_resume");
+        }
+        // Raw result closures have no audited context-read facts. Check the
+        // current context before consuming the prompt or entering deferred
+        // scopes. Navigation above never invokes a result body. Structured
+        // resume contexts and opaque captures require their own proof; this
+        // invocation boundary alone does not authorize any projection.
+        if self.pending_selection_resume.is_none()
+            && !recovery_abort
+            && (!is_pass || self.pending_selection.as_ref().is_some_and(|sel| sel.on_decline.is_some()))
+        {
+            crate::determinize::context_guard::check(self, "selection_result");
+        }
+        // Publication is a callback-to-enclosing-tail channel, not ambient
+        // game state. Start a fresh channel for this resolution and preserve
+        // a nested caller's publication until control returns to that caller.
+        let enclosing_tail_publication = self.dsl_resolved_tail_bindings.take();
         let was_attack_pending = self.pending_attack.is_some();
 
         // §18-3 / gap G-ENGINE-INFINITE-LOOP-SILENTLY-CLEARED: a player
@@ -6801,6 +6845,11 @@ impl Game {
             self.dispatch_selection_continuations(raw_hooks_before, None, raw_scope_order,
                 raw_declined, raw_aborted, recovery_abort);
         }
+        // All typed/callback tails and selection-owned hooks have consumed
+        // their publication. Restore the caller before lifecycle drains can
+        // start another activation and accidentally merge this selection's
+        // private bindings into that activation's continuation.
+        self.dsl_resolved_tail_bindings = enclosing_tail_publication;
         if !resume_lifecycle {
             // The caller is searching payment branches on a clone. Preserve
             // queued siblings and enclosing attack/security/Option/turn state;

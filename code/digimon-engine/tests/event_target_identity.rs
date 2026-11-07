@@ -57,7 +57,7 @@ fn stale_event_card_cannot_grant_keyword_to_reused_slot() {
         r.game.current_trigger_context = Some({
             let mut context = TriggerContext::default();
             context.event_permanent = Some(replacement);
-            context.event_card = Some(old);
+            context.event_card = (Some(old)).into();
             context
         });
         let outcome = {
@@ -112,7 +112,7 @@ fn known_primary_or_link_host_identity_still_resolves_live_permanent() {
             r.game.current_trigger_context = Some({
                 let mut context = TriggerContext::default();
                 context.event_permanent = Some(replacement);
-                context.event_card = primary;
+                context.event_card = (primary).into();
                 context.event_host_card = host;
                 context
             });
@@ -131,7 +131,7 @@ fn two_stale_identities_do_not_resolve_a_replacement() {
         r.game.current_trigger_context = Some({
             let mut context = TriggerContext::default();
             context.event_permanent = Some(replacement);
-            context.event_card = Some(old);
+            context.event_card = (Some(old)).into();
             context.event_host_card = Some(source);
             context
         });
@@ -153,7 +153,7 @@ fn unidentified_legacy_and_card_only_contexts_keep_existing_contract() {
     );
     r.game.current_trigger_context = Some({
         let mut context = TriggerContext::default();
-        context.event_card = Some(old);
+        context.event_card = (Some(old)).into();
         context
     });
     assert_eq!(resolve(&mut r, source), Some(ResolvedBinding::Card(old)));

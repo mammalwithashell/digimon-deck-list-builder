@@ -11,29 +11,96 @@ use std::collections::{BTreeMap, HashSet};
 
 fn certified_context(root: &Game, queued: &crate::selection::QueuedEffect) -> bool {
     queued.granted_effect_id.is_none() && queued.keyword_effect.is_none()
+        && root.effect_registry.read_fence_constructible(&queued.card_id)
         && root.effects_for_card(&queued.card_id, queued.source_card)
             .and_then(|effects| effects.get(queued.effect_slot as usize)
                 .map(|e| e.ignores_event_card_identity)).unwrap_or(false)
 }
 
+fn project_checked_context(context: &mut Option<crate::trigger_context::TriggerContext>, allowed: &HashSet<CardHandle>) -> bool {
+    context.as_mut().is_some_and(|c| c.project_checked_event_references(allowed))
+}
+
+fn project_checked_frame(frame: &mut crate::resume::ResumeFrame, allowed: &HashSet<CardHandle>) -> bool {
+    use crate::resume::ResumeFrame;
+    let mut guarded = false;
+    let outer = match frame {
+        ResumeFrame::RunTail { trigger_context, outer_conts, .. } => {
+            guarded |= project_checked_context(trigger_context, allowed); outer_conts
+        }
+        ResumeFrame::OuterOptionalTrigger(s) => {
+            guarded |= project_checked_context(&mut s.queued_effect.trigger_context, allowed); &mut s.outer_conts
+        }
+        ResumeFrame::ReplacementBody { inner, outer_conts }
+        | ResumeFrame::DelayBodyAfterCost { inner, outer_conts, .. } => {
+            for frame in &mut inner.frames { guarded |= project_checked_frame(frame, allowed); }
+            outer_conts
+        }
+        _ => return false,
+    };
+    for continuation in outer { guarded |= project_checked_context(&mut continuation.trigger_context, allowed); }
+    guarded
+}
+
 fn project_context(queued: &mut crate::selection::QueuedEffect, allowed: &HashSet<CardHandle>) {
-    if let Some(context) = &mut queued.trigger_context {
-        if context.event_card.is_some_and(|h| !allowed.contains(&h)) { context.event_card = None; }
-        if context.target_card.is_some_and(|h| !allowed.contains(&h)) { context.target_card = None; }
+    project_trigger_context(&mut queued.trigger_context, allowed);
+}
+
+fn project_trigger_context(context: &mut Option<crate::trigger_context::TriggerContext>, allowed: &HashSet<CardHandle>) {
+    if let Some(context) = context {
+        // A checked value is never downgraded to an ordinary absent value.
+        if context.has_unavailable_event_references() { return; }
+        if context.event_card.read().is_some_and(|h| !allowed.contains(&h)) { context.event_card = (None).into(); }
+        if context.target_card.is_some_and(|h| !allowed.contains(&h)) { context.target_card = None.into(); }
         if context.event_source_card.is_some_and(|h| !allowed.contains(&h)) { context.event_source_card = None; }
         if context.event_host_card.is_some_and(|h| !allowed.contains(&h)) { context.event_host_card = None; }
         if context.battle_opponent_card.is_some_and(|h| !allowed.contains(&h)) { context.battle_opponent_card = None; }
         for attribution in context.source_effect.iter_mut().chain(context.event_cause_effect.iter_mut()) {
-            if attribution.source_card.is_some_and(|h| !allowed.contains(&h)) { attribution.source_card = None; }
+            if attribution.source_card.is_some_and(|h| !allowed.contains(&h)) { attribution.source_card = None.into(); }
         }
         for result in &mut context.selected_results {
             if result.card.is_some_and(|h| !allowed.contains(&h)) { result.card = None; }
         }
-        for batch in &mut context.moved_card_sets { batch.cards.retain(|h| allowed.contains(h)); }
-        if matches!(context.subject, Some(crate::trigger_context::EventSubject::Card { card, .. }) if !allowed.contains(&card)) {
-            context.subject = None;
+        for batch in context.moved_card_sets.iter_mut() { batch.cards.retain(|h| allowed.contains(h)); }
+        if matches!(context.subject.read(), Some(crate::trigger_context::EventSubject::Card { card, .. }) if !allowed.contains(&card)) {
+            context.subject = (None).into();
         }
     }
+}
+
+/// A deliberately narrow residual proof, independent of the queued clause's
+/// certificate. Literal memory and DP changes read source/controller and an
+/// explicit public target, not captured event-card references. The caller also
+/// excludes deferred tails, UntilCondition readers and attack/Progress readers.
+/// Unknown steps (including formulas and raw Rust) remain uncertified. Check
+/// BOTH selection branches and every outer tail with its own captured context.
+fn project_literal_resume_context(frame: &mut crate::resume::ResumeFrame, allowed: &HashSet<CardHandle>) {
+    use crate::resume::{ResumeDecline, ResumeFrame, ResumeSelectKind};
+    use digimon_dsl::compiled::{CompiledBindingRef, CompiledModifierValue, CompiledStep};
+    let literal = |steps: &[CompiledStep]| steps.iter().all(|s| match s {
+        CompiledStep::GainMemory(_) => true,
+        // Named bindings are independently audited below. Source/carrier and
+        // event-derived targets are deliberately excluded from this residual
+        // extension; the observed failure binds a selected public permanent.
+        CompiledStep::AddDpModifier {
+            target: CompiledBindingRef::Named(_) | CompiledBindingRef::Binding(_),
+            value: CompiledModifierValue::Literal(_), ..
+        } => true,
+        _ => false,
+    });
+    let ResumeFrame::RunTail { select_kind, inner_tail, outer_conts, trigger_context, decline, .. } = frame else { return; };
+    // These arms only bind a public field target / choice index before the
+    // tail. Post-actions can dispatch additional work and need separate proof.
+    if !matches!(select_kind, ResumeSelectKind::FieldPermanent { post: None, .. } | ResumeSelectKind::EffectChoice { post: None })
+        || !literal(inner_tail)
+        || !match decline { ResumeDecline::None => true, ResumeDecline::RunTail { tail, .. } => literal(tail) }
+        || !outer_conts.iter().all(|c| literal(&c.tail))
+    { return; }
+    // Called on the hypothetical clone only. Keep all non-reference metadata,
+    // entitled handles and snapshots; the existing audit below still validates
+    // provenance, bindings, snapshots, hooks and each context after projection.
+    project_trigger_context(trigger_context, allowed);
+    for cont in outer_conts { project_trigger_context(&mut cont.trigger_context, allowed); }
 }
 
 /// Validate continuation support before producing training data. Unreviewed
@@ -184,9 +251,26 @@ fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), St
             identities.remove(&c.handle());
         }
     }
+    // Operate only on the hypothetical clone. No factory or callback runs to
+    // choose these projections, and no true concealed identity is consulted.
+    // Unknown factories/readers remain forbidden by the persistent world fence.
+    let mut guarded = project_checked_context(&mut root.current_trigger_context, &allowed);
+    for queued in &mut root.effect_queue {
+        // Opaque queued producers keep strict root rejection. Compiler-origin
+        // construction facts do not grant an unconditional liveness certificate.
+        if root.effect_registry.read_fence_constructible(&queued.card_id) {
+            guarded |= project_checked_context(&mut queued.trigger_context, &allowed);
+        }
+    }
+    if let Some(stack) = &mut root.pending_selection_resume {
+        for frame in &mut stack.frames { guarded |= project_checked_frame(frame, &allowed); }
+    }
+    if guarded { root.require_event_card_read_fence(); }
+    let fenced = root.projected_event_card_read_fence();
     let context_safe = |c: &Option<crate::trigger_context::TriggerContext>| {
-        c.as_ref()
-            .is_none_or(|c| c.belief_safe(&allowed) && c.belief_snapshots_safe(&identities))
+        c.as_ref().is_none_or(|c| c.belief_safe(&allowed)
+            && c.belief_snapshots_safe(&identities)
+            && (fenced || !c.has_unavailable_event_references()))
     };
     let outer_safe = |conts: &[crate::resume::OuterContinuation]| {
         conts.iter().all(|c| {
@@ -201,7 +285,7 @@ fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), St
     if root
         .effect_digivolve_scopes
         .iter()
-        .any(|s| !s.declaration.belief_safe(viewer, &identities))
+        .any(|s| !s.declaration.belief_safe(viewer, &identities, &allowed, &context_safe))
     {
         return Err("closed-list effect digivolution scope requires audit/rebinding".into());
     }
@@ -243,8 +327,16 @@ fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), St
             project_context(&mut root.effect_queue[index], &allowed);
         }
     }
+    // Literal memory changes can drain a deferred DSL tail or reevaluate
+    // opaque UntilCondition callbacks. During an attack, that reevaluation
+    // also queries dynamic Progress keyword conditions. None of those readers
+    // are covered by the residual step whitelist, so do not project here.
+    let literal_residual_environment = root.dsl_outer_tail.is_none()
+        && root.modifiers.until_condition_candidates().is_empty()
+        && root.pending_attack.is_none();
     if let Some(mut stack) = root.pending_selection_resume.take() {
         for frame in &mut stack.frames {
+            if literal_residual_environment { project_literal_resume_context(frame, &allowed); }
             if let crate::resume::ResumeFrame::OuterOptionalTrigger(s) = frame {
                 if certified_context(root, &s.queued_effect) { project_context(&mut s.queued_effect, &allowed); }
             }
@@ -320,7 +412,7 @@ fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), St
                 *acting_player == viewer
             }
             AfterSelectionHook::DigivolveReducerChain { state, .. } => {
-                state.belief_safe(viewer, &identities)
+                state.belief_safe(viewer, &identities, &allowed, &context_safe)
             }
             AfterSelectionHook::PartitionSecondPlay {
                 source_card, card, ..
@@ -537,8 +629,8 @@ fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), St
                     }
                     && s.candidates.iter().all(|h| root.player(h.player).battle_area.get(h.index as usize).is_some()),
                 ResumeFrame::DigivolveReducerPrompt(s)
-                | ResumeFrame::DigivolveReducerSuspend(s) => s.belief_safe(viewer, &identities),
-                ResumeFrame::EffectDigivolveCostChoice(s) => s.belief_safe(viewer, &identities),
+                | ResumeFrame::DigivolveReducerSuspend(s) => s.belief_safe(viewer, &identities, &allowed, &context_safe),
+                ResumeFrame::EffectDigivolveCostChoice(s) => s.belief_safe(viewer, &identities, &allowed, &context_safe),
                 ResumeFrame::RevealBucketStep(s) => {
                     allowed.contains(&s.prov.source_card)
                         && s.bindings.belief_safe(viewer, &allowed)
@@ -885,7 +977,7 @@ pub fn materialize_closed_with_diagnostics(
                 )
                 .chain(p.commander_zone.iter())
                 .chain(p.security.iter().filter(|c| {
-                    (inspected == Some(p.id) || p.face_up_security.contains(&c.card_index))
+                    inspected == Some(p.id) || root.security_card_is_public(p.id, c.handle())
                 }))
                 .chain(if p.id == viewer {
                     p.hand.iter()

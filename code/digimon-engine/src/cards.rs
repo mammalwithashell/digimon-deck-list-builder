@@ -6,7 +6,7 @@
 //! abilities, keyword auto-effects, and raw-rust escape-hatch functions.
 
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use crate::effect::CardEffect;
 
@@ -14,6 +14,10 @@ pub mod keyword_effects;
 pub mod raw_rust;
 pub mod test;
 pub mod tokens;
+
+#[cfg(test)]
+#[path = "determinize/context_guard/effect_factory_tests.rs"]
+mod context_dispatch_tests;
 
 /// Registry of card_id -> CardEffect implementation.
 ///
@@ -24,8 +28,85 @@ pub mod tokens;
 /// clone (see that fn).
 #[derive(Default, Clone)]
 pub struct CardEffectRegistry {
-    effects: HashMap<String, Arc<dyn CardEffect>>,
+    effects: HashMap<String, RegisteredCardEffect>,
+    // Identity only, never authority to execute. Clones share it until insertion.
+    generation: Arc<()>,
 }
+
+/// Factory and its optional construction record move together on replacement.
+#[derive(Clone)]
+struct RegisteredCardEffect {
+    factory: Arc<dyn CardEffect>,
+    compiled_origin: Option<CompiledFactoryOrigin>,
+    read_fence_constructible: bool,
+}
+
+/// An immutable registry-only output and the identity of its producing factory.
+/// This is a construction relation, not a safety certificate. The weak reference
+/// does not keep factory-owned captures alive. Holding this record keeps the
+/// original vector shared; mutating a copied vector cannot change this record.
+/// Individual moved callbacks and combined keyword/owned lists are not labeled.
+#[derive(Clone)]
+pub(crate) struct RegistryEffects {
+    effects: Arc<Vec<crate::effect::Effect>>,
+    factory: Weak<dyn CardEffect>,
+}
+
+impl RegistryEffects {
+    pub(crate) fn shared_effects(&self) -> Arc<Vec<crate::effect::Effect>> {
+        self.effects.clone()
+    }
+}
+
+/// Guard callbacks returned by registered implementations, including native and
+/// compiled DSL effects. Keeping this on the stored implementation also covers
+/// cloned registries and callers that retain a factory Arc before projection.
+/// Factory execution and opaque captures are separate, unproved obligations:
+/// this wrapper does not authorize projection or inspect factory-owned data.
+struct GuardedCardEffect(Arc<dyn CardEffect>, bool);
+
+impl CardEffect for GuardedCardEffect {
+    fn effects(&self, card: crate::card_source::CardHandle) -> Vec<crate::effect::Effect> {
+        let mut effects = self.0.effects(card);
+        for effect in &mut effects {
+            if self.1 {
+                crate::determinize::context_guard::guard_compiled_effect(effect);
+            } else {
+                crate::determinize::context_guard::guard_effect(effect);
+            }
+        }
+        effects
+    }
+
+    fn partition_slots(
+        &self,
+        inherited: bool,
+    ) -> Option<Arc<Vec<digimon_dsl::compiled::CompiledPredicate>>> {
+        self.0.partition_slots(inherited)
+    }
+}
+
+
+/// Construction origin only. Neither compiled data nor a raw-registry label
+/// establishes safe projected execution. The raw registry can hold captures.
+#[derive(Clone)]
+pub(crate) struct CompiledFactoryOrigin {
+    pub(crate) compiled: Arc<digimon_dsl::compiled::CompiledCard>,
+    pub(crate) raw: Arc<crate::dsl_cards::raw_rust::EngineRawRustRegistry>,
+}
+
+impl CompiledFactoryOrigin {
+    /// Direct construction requests only: an empty result is NOT runtime safety.
+    pub(crate) fn direct_raw_factory_requests(
+        &self,
+    ) -> Vec<crate::dsl_cards::construction_facts::RawFactoryRequest> {
+        crate::dsl_cards::construction_facts::direct_raw_factory_requests(&self.compiled, &self.raw)
+    }
+}
+
+#[cfg(test)]
+#[path = "determinize/context_guard/compiler_origin_tests.rs"]
+mod compiler_origin_tests;
 
 impl std::fmt::Debug for CardEffectRegistry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -40,14 +121,120 @@ impl CardEffectRegistry {
         Self::default()
     }
 
+    pub(crate) fn generation(&self) -> &Arc<()> {
+        &self.generation
+    }
+
     /// Register a card's effect implementation.
     pub fn insert(&mut self, card_id: &str, effect: Arc<dyn CardEffect>) {
-        self.effects.insert(card_id.to_string(), effect);
+        self.effects.insert(card_id.to_string(), RegisteredCardEffect {
+            factory: Arc::new(GuardedCardEffect(effect, false)),
+            compiled_origin: None,
+            read_fence_constructible: false,
+        });
+        self.generation = Arc::new(());
+    }
+
+
+    /// Construct the actual factory here; callers cannot attach provenance to
+    /// an arbitrary CardEffect object.
+    pub(crate) fn insert_compiled(
+        &mut self,
+        card_id: &str,
+        compiled: Arc<digimon_dsl::compiled::CompiledCard>,
+        raw: Arc<crate::dsl_cards::raw_rust::EngineRawRustRegistry>,
+    ) {
+        let origin = CompiledFactoryOrigin {
+            compiled: compiled.clone(),
+            raw: raw.clone(),
+        };
+        let read_fence_constructible = origin.direct_raw_factory_requests().is_empty();
+        let factory = Arc::new(crate::dsl_cards::DslCardEffect::new_with_raw(compiled, raw));
+        self.effects.insert(card_id.to_string(), RegisteredCardEffect {
+            factory: Arc::new(GuardedCardEffect(factory, read_fence_constructible)),
+            compiled_origin: Some(origin),
+            read_fence_constructible,
+        });
+        self.generation = Arc::new(());
+    }
+
+    /// Fixed compiler constructors without raw declarative calls and explicitly
+    /// registered fixed native constructors may run under the event-reference
+    /// read fence. Runtime reads still remain guarded.
+    /// An absent entry executes no factory; keyword synthesis is separate.
+    pub(crate) fn read_fence_constructible(&self, card_id: &str) -> bool {
+        self.effects.get(card_id).is_none_or(|entry| entry.read_fence_constructible)
+    }
+
+    /// Current-key construction facts only; do not use this to label a retained
+    /// factory. Use the identity-checked query below for an existing factory Arc.
+    pub(crate) fn compiled_origin(&self, card_id: &str) -> Option<&CompiledFactoryOrigin> {
+        self.effects.get(card_id).and_then(|entry| entry.compiled_origin.as_ref())
+    }
+
+    /// Return construction facts only for the exact stored factory Arc.
+    /// Identical compiled inputs or an equal card ID do not establish identity.
+    /// Registry clones retain identity; replacement makes old Arcs ineligible
+    /// in this registry. This does not certify factory purity, derived outputs,
+    /// callback captures or projected execution.
+    pub(crate) fn compiled_origin_for_factory(
+        &self,
+        card_id: &str,
+        factory: &Arc<dyn CardEffect>,
+    ) -> Option<&CompiledFactoryOrigin> {
+        let entry = self.effects.get(card_id)?;
+        if !Arc::ptr_eq(&entry.factory, factory) {
+            return None;
+        }
+        entry.compiled_origin.as_ref()
+    }
+
+    /// Construct registry-only effects and bind the exact returned vector.
+    /// Like get().effects(), this has no Game parameter or world check.
+    /// Game callers must enter through the guarded registry_effects_record.
+    pub(crate) fn derive_effects(
+        &self,
+        card_id: &str,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<RegistryEffects> {
+        let entry = self.effects.get(card_id)?;
+        let effects = Arc::new(entry.factory.effects(handle));
+        Some(RegistryEffects {
+            effects,
+            factory: Arc::downgrade(&entry.factory),
+        })
+    }
+
+    /// Construction facts for this exact original vector and its producer.
+    /// Replacement cannot relabel retained outputs, even with identical inputs.
+    /// No fact grants execution permission or describes mutable callback captures.
+    pub(crate) fn compiled_origin_for_derived(
+        &self,
+        card_id: &str,
+        derived: &RegistryEffects,
+    ) -> Option<&CompiledFactoryOrigin> {
+        let factory = derived.factory.upgrade()?;
+        self.compiled_origin_for_factory(card_id, &factory)
+    }
+
+    /// Facts for a candidate only when it is the record's exact shared vector.
+    /// Equal metadata, copied callbacks and full/owned/keyword lists do not
+    /// inherit this construction relation. This grants no execution permission.
+    pub(crate) fn compiled_origin_for_output(
+        &self,
+        card_id: &str,
+        derived: &RegistryEffects,
+        output: &Arc<Vec<crate::effect::Effect>>,
+    ) -> Option<&CompiledFactoryOrigin> {
+        if !Arc::ptr_eq(&derived.effects, output) {
+            return None;
+        }
+        self.compiled_origin_for_derived(card_id, derived)
     }
 
     /// Look up a card's effect implementation.
     pub fn get(&self, card_id: &str) -> Option<Arc<dyn CardEffect>> {
-        self.effects.get(card_id).cloned()
+        self.effects.get(card_id).map(|entry| entry.factory.clone())
     }
 
     /// Return all card IDs that have a registered effect implementation.
@@ -194,3 +381,15 @@ mod substrate_integrity_tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "determinize/context_guard/factory_binding_tests.rs"]
+mod factory_binding_tests;
+
+#[cfg(test)]
+#[path = "determinize/context_guard/derived_output_tests.rs"]
+mod derived_output_tests;
+
+#[cfg(test)]
+#[path = "determinize/context_guard/exact_output_tests.rs"]
+mod exact_output_tests;

@@ -31,6 +31,7 @@
 pub mod beliefs;
 mod knowledge;
 pub mod closed;
+pub(crate) mod context_guard;
 mod infoset;
 mod invariants;
 mod materialize;

@@ -44,7 +44,7 @@
 //! | Clause | Timing | Effect |
 //! |--------|--------|--------|
 //! | 1 | [Start of Your Main Phase] | If own Agumon/Greymon-named Digimon in play, you may pay 1 memory: for the turn, treat this Tamer as a 3000 DP Digimon that can't digivolve |
-//! | 2 | [Your Turn] on self-suspend | 1 of your Digimon may digivolve into a yellow [Greymon]-named hand card, free, ignoring requirements |
+//! | 2 | [Your Turn] on self-suspend | 1 of your Digimon may digivolve into a yellow [Greymon]-named hand card, free, preserving requirements |
 //! | 3 | [Security] | play self without paying the cost |
 //!
 //! # Patterns this test covers (docs/RUST_DSL_TEST_API.md §4.3)
@@ -66,7 +66,7 @@ use digimon_dsl::compiled::{
     CompiledClause, CompiledPredicate, CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::action::space::PASS;
-use digimon_engine::card_data::CardData;
+use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, ModifierType};
 use digimon_engine::permanent::PermanentHandle;
@@ -117,6 +117,7 @@ fn make_yellow_greymon(id: &str) -> CardData {
     c.dp = Some(9000);
     c.play_cost = 8;
     c.colors = vec![CardColor::Yellow];
+    c.evo_costs = vec![EvoCost { card_color: 2, level: 4, memory_cost: 3 }];
     c
 }
 
@@ -527,7 +528,7 @@ fn bt12_092_self_suspend_offers_digivolve_selection() {
 }
 
 /// ACCEPT: driving the chain to completion digivolves the base into the
-/// yellow [Greymon] hand card, free (no memory spent), ignoring requirements.
+/// yellow [Greymon] hand card, free (no memory spent), preserving requirements.
 #[test]
 fn bt12_092_self_suspend_digivolve_into_yellow_greymon_free() {
     let mut runner = builder()

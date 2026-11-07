@@ -245,7 +245,7 @@ fn event_target_trait_contains_tolerates_plural_and_compound_traits() {
     ] {
         let event_card = runner.game.players[0].hand[idx as usize].handle();
         let mut game = runner.game.clone();
-        game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = Some(event_card); __fixture_trigger_context.event_permanent = None; __fixture_trigger_context.target_card = Some(event_card); __fixture_trigger_context });
+        game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = (Some(event_card)).into(); __fixture_trigger_context.event_permanent = None; __fixture_trigger_context.target_card = (Some(event_card)).into(); __fixture_trigger_context });
         let rctx = EffectReadContext::new(&game, source_card, None, 0);
         assert_eq!(
             eval_predicate_with_bindings(&pred, &rctx, PredicateSubject::None, None),

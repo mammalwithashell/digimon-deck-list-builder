@@ -83,7 +83,7 @@ fn living_field_egg_is_digimon_event_target_in_clones() {
     let mut r = base();
     let h = r.place_on_field(0, "EX2-007", None);
     let top = r.top_card(h);
-    r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = Some(top); __fixture_trigger_context });
+    r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = (Some(top)).into(); __fixture_trigger_context });
     let saved = r.game.clone();
     for _ in 0..2 {
         r.game = saved.clone();
@@ -113,14 +113,14 @@ fn source_card_event_and_tamer_permanent_are_not_digimon_targets() {
     let mut r = base();
     let host = r.place_on_field(0, "EX3-074", None);
     let egg = r.push_source(host, "EX2-007");
-    r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = Some(egg); __fixture_trigger_context });
+    r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_card = (Some(egg)).into(); __fixture_trigger_context });
     let p = CompiledPredicate {
         event_target_kind: Some(CompiledCardKind::Digimon),
         ..Default::default()
     };
     assert!(!check(&r, &p, None));
     let t = r.place_on_field(0, "ST1-12", None);
-    r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(t); __fixture_trigger_context.event_card = Some(r.top_card(t)); __fixture_trigger_context });
+    r.game.current_trigger_context = Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(t); __fixture_trigger_context.event_card = (Some(r.top_card(t))).into(); __fixture_trigger_context });
     assert!(!check(&r, &p, None));
 }
 #[test]
@@ -193,7 +193,7 @@ fn bind_kind(r:&DebugRunner,card:CardHandle,kind:CompiledCardKind)->bool {
 #[test]
 fn live_treated_tamer_and_expiry_use_effective_event_identity_but_printed_card_kind() {
     let mut r=base();let h=r.place_on_field(0,"ST1-12",Some(0));let card=r.top_card(h);treat(&mut r,h);
-    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = Some(card); __fixture_trigger_context });
+    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = (Some(card)).into(); __fixture_trigger_context });
     let saved=r.game.clone();
     for _ in 0..2 {
         r.game=saved.clone();assert!(event_kind(&r,CompiledCardKind::Digimon));
@@ -249,7 +249,7 @@ fn deleted_mother_remains_field_digimon() {assert_deleted_kind("EX2-007",false,f
 #[test]
 fn digimon_token_is_field_subject_but_not_printed_digimon_card() {
     let mut r=base();let h=r.place_on_field(0,"CONTEXT-TOKEN",Some(0));let c=r.top_card(h);
-    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = Some(c); __fixture_trigger_context });
+    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = (Some(c)).into(); __fixture_trigger_context });
     assert!(event_kind(&r,CompiledCardKind::Digimon));assert!(bind_kind(&r,c,CompiledCardKind::Token));
     assert!(!bind_kind(&r,c,CompiledCardKind::Digimon));
 }
@@ -261,7 +261,7 @@ fn option_and_tamer_cards_are_excluded_from_digimon_card_bindings() {
 #[test]
 fn captured_source_card_does_not_inherit_current_host_treated_identity() {
     let mut r=base();let h=r.place_on_field(0,"ST1-12",Some(0));let source=r.push_source(h,"ST1-12");treat(&mut r,h);
-    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = Some(source); __fixture_trigger_context });
+    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = (Some(source)).into(); __fixture_trigger_context });
     assert!(!event_kind(&r,CompiledCardKind::Digimon));assert!(event_kind(&r,CompiledCardKind::Tamer));
 }
 
@@ -298,7 +298,7 @@ fn activate_real_marcus(r:&mut DebugRunner)->PermanentHandle {
 #[test]
 fn official_q2228_live_marcus_remains_both_digimon_and_tamer() {
     let mut r=base();let h=activate_real_marcus(&mut r);let card=r.top_card(h);
-    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = Some(card); __fixture_trigger_context });
+    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = (Some(card)).into(); __fixture_trigger_context });
     assert!(event_kind(&r,CompiledCardKind::Digimon));
     assert!(event_kind(&r,CompiledCardKind::Tamer),"Q2228: also treated means BOTH categories");
     let saved=r.game.clone();
@@ -333,7 +333,7 @@ fn official_q2228_source_host_queries_see_both_marcus_categories() {
 #[test]
 fn replacement_identity_does_not_retain_printed_tamer_membership() {
     let mut r=base();let h=r.place_on_field(0,"ST1-12",Some(0));treat(&mut r,h);
-    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = Some(r.top_card(h)); __fixture_trigger_context });
+    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = (Some(r.top_card(h))).into(); __fixture_trigger_context });
     assert!(event_kind(&r,CompiledCardKind::Digimon));assert!(!event_kind(&r,CompiledCardKind::Tamer));
     assert!(r.game.players[0].battle_area[h.index as usize].synth_identity(&r.game.card_data,&r.game.modifiers,h).retained_kind.is_none());
 }
@@ -366,7 +366,7 @@ fn actual_marcus_is_an_effective_field_color_match_then_expires() {
 fn additive_and_replacement_memberships_require_different_game_digests() {
     use digimon_engine::{enums::{CardKind,CardColor,ModifierType,Expiry},modifiers::{ModifierPayload,ModifierEntry}};
     let mut r=base();let h=r.place_on_field(0,"BT12-092",Some(0));
-    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = Some(r.top_card(h)); __fixture_trigger_context });
+    r.game.current_trigger_context=Some({ let mut __fixture_trigger_context = TriggerContext::default(); __fixture_trigger_context.event_permanent = Some(h); __fixture_trigger_context.event_card = (Some(r.top_card(h))).into(); __fixture_trigger_context });
     let mut replacement=r.game.clone();
     let make=|additive| if additive {ModifierPayload::AdditiveSynthIdentity{kind:CardKind::Digimon,level:0,colors:vec![CardColor::Yellow,CardColor::Red],traits:vec![],dp:3000}}
         else {ModifierPayload::SynthIdentity{kind:CardKind::Digimon,level:0,colors:vec![CardColor::Yellow,CardColor::Red],traits:vec![],dp:3000}};

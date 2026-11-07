@@ -11,7 +11,7 @@ fn assert_same_actor_observation(a: &digimon_engine::Game, b: &digimon_engine::G
 }
 
 #[test]
-fn printed_security_observers_have_a_complete_context_liveness_proof() {
+fn printed_security_observers_have_direct_facts_and_require_runtime_reference_checks() {
     with_big_stack(|| {
         for (set, id) in [("ex12", "EX12-019"), ("bt26", "BT26-029")] {
             let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -31,7 +31,10 @@ fn printed_security_observers_have_a_complete_context_liveness_proof() {
                                 | digimon_dsl::compiled::CompiledTiming::OnOpponentSecurityRemoved
                         )
                     }) {
-                        assert!(digimon_engine::dsl_cards::context_liveness::ignores_event_card_identity(c), "{id}: {c:?}");
+                        // Syntax facts do not certify transitive callbacks. Checked worlds
+                        // preserve a read obligation instead of silently returning None.
+                        assert!(digimon_engine::dsl_cards::context_liveness::direct_references_unused(c), "{id}: {c:?}");
+                        assert!(!digimon_engine::dsl_cards::context_liveness::ignores_event_card_identity(c), "{id}: {c:?}");
                         checked += 1;
                     }
                 }
@@ -390,7 +393,11 @@ fn event_card_liveness_proof_rejects_context_reads_and_unaudited_shapes() {
         summary: None,
         summary_key: None,
     };
-    assert!(safe(&clause));
+    assert!(digimon_engine::dsl_cards::context_liveness::direct_references_unused(&clause));
+    assert!(!safe(&clause), "memory changes can invoke opaque UntilCondition readers");
+    clause.process.clear();
+    assert!(safe(&clause), "the empty context-independent clause retains its certificate");
+    clause.process = vec![CompiledStep::GainMemory(1)];
     clause.condition = Some(CompiledPredicate {
         event_card_name_contains: Some("Greymon".into()),
         ..Default::default()
@@ -495,12 +502,12 @@ fn identity_independent_queued_observer_does_not_keep_a_concealed_event_card() {
         g.mulligan_pending.clear();
         g.current_phase = digimon_engine::enums::GamePhase::Main;
         let mut context = TriggerContext::default();
-        context.event_card = Some(hidden);
-        context.target_card = Some(hidden);
-        context.subject = Some(EventSubject::Card {
+        context.event_card = (Some(hidden)).into();
+        context.target_card = (Some(hidden)).into();
+        context.subject = (Some(EventSubject::Card {
             card: hidden,
             zone: Zone::Hand,
-        });
+        })).into();
         context.affected_player = Some(0);
         g.enqueue_triggered(
             EffectTiming::OnOwnSecurityRemoved,
@@ -530,14 +537,15 @@ fn identity_independent_queued_observer_does_not_keep_a_concealed_event_card() {
             .trigger_context
             .as_ref()
             .unwrap()
-            .event_card
+            .event_card.read()
             .is_some());
-        assert!(a.effect_queue[0]
-            .trigger_context
-            .as_ref()
-            .unwrap()
-            .event_card
-            .is_none());
+        // Projection removes the handle, but an actual read must fail; None
+        // would silently alter event-presence and target fallback semantics.
+        let projected = a.effect_queue[0].trigger_context.as_ref().unwrap();
+        assert!(std::panic::catch_unwind(|| projected.event_card.read()).is_err());
+        assert!(std::panic::catch_unwind(|| projected.target_card.read()).is_err());
+        assert!(std::panic::catch_unwind(|| projected.subject.read()).is_err());
+        assert!(!format!("{projected:?}").contains(&format!("{hidden:?}")));
         // Hold the hypothetical physical state fixed so a draw is not a confounder.
         let mut original = a.clone();
         original.effect_queue[0].trigger_context = g.effect_queue[0].trigger_context.clone();
@@ -687,9 +695,9 @@ fn cloud_pool_continuations_are_composition_independent_and_resolve() {
                                 .and_then(|s| s.frames.last())
                             {
                                 for h in [
-                                    c.source_effect.and_then(|e| e.source_card),
-                                    c.target_card,
-                                    c.event_card,
+                                    c.source_effect.and_then(|e| e.source_card.read()),
+                                    c.target_card.read(),
+                                    c.event_card.read(),
                                     c.event_source_card,
                                     c.event_host_card,
                                 ]

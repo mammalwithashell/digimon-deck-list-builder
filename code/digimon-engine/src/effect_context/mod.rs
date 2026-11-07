@@ -78,6 +78,13 @@ pub enum AttackTargetRestriction {
 }
 
 impl PartitionRequirement {
+    /// All engine matching paths use this invocation boundary, including
+    /// requirements constructed directly through the public callback field.
+    pub(crate) fn matches_source(&self, game: &Game, source: SourceSelectionRef) -> bool {
+        crate::determinize::context_guard::check(game, "partition_requirement");
+        (self.matches)(game, source)
+    }
+
     pub fn new<F>(label: &'static str, matches: F) -> Self
     where
         F: Fn(&Game, SourceSelectionRef) -> bool + Send + Sync + 'static,
@@ -414,7 +421,7 @@ impl<'a> EffectReadContext<'a> {
         self.game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.event_card)
+            .and_then(|trigger| trigger.event_card.read())
     }
 
     pub fn event_card_name_contains(&self, needle: &str) -> bool {
@@ -1259,7 +1266,7 @@ impl<'a> EffectContext<'a> {
         self.game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.event_card)
+            .and_then(|trigger| trigger.event_card.read())
     }
 
     pub fn event_card_name_contains(&self, needle: &str) -> bool {

@@ -324,7 +324,7 @@ fn may_dna_outer_optional_mandatory_step_guard() {
 }
 
 mod app_fuse_port {
-    // Effect-initiated App Fuse primitive — behavioral coverage.
+    // Effect-initiated App Fuse primitive â€” behavioral coverage.
     //
     // Drives the `app_fuse` DSL step through minimal `from_dsl_yaml` fixture cards
     // whose `[On Play]` clause carries a single `app_fuse` step. The result card is
@@ -434,7 +434,7 @@ effects:
         DebugRunner::builder()
             .from_dsl_yaml(SRC_HAND)
             .expect("SRC_HAND compiles")
-            // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+            // Linked cards carry [Link] (Q4533; Â§17-1-3-2-6 / -7).
             .link_requirement("TEST-GOMIMON", 0)
             .from_dsl_yaml(SRC_TRASH)
             .expect("SRC_TRASH compiles")
@@ -787,6 +787,23 @@ effects:
     #[test]
     fn app_fuse_callback_publishes_receipt_without_typed_tail() {
         use digimon_engine::dsl_cards::bindings::BindingValue;
+        use std::sync::{Arc, Mutex};
+        fn observe_callback(r: &mut DebugRunner, seen: Arc<Mutex<Vec<Option<BindingValue>>>>) {
+            let selection = r.game.pending_selection.as_mut().expect("App Fuse prompt");
+            let callback = std::mem::replace(&mut selection.callback, Box::new(|_, _| unreachable!()));
+            let accepted = seen.clone();
+            selection.callback = Box::new(move |game, action| {
+                callback(game, action);
+                accepted.lock().unwrap().push(game.dsl_resolved_tail_bindings.as_ref()
+                    .and_then(|b| b.get("fused")));
+            });
+            let decline = selection.on_decline.take().expect("optional App Fuse decline");
+            selection.on_decline = Some(Box::new(move |game| {
+                decline(game);
+                seen.lock().unwrap().push(game.dsl_resolved_tail_bindings.as_ref()
+                    .and_then(|b| b.get("fused")));
+            }));
+        }
         for stop in [0, 1, 2] {
             let mut r = builder().from_dsl_yaml(SRC_RECEIPT).unwrap()
                 .hand(0, &["DSL-APPFUSE-RECEIPT", "TEST-APPFUSE"]).start();
@@ -794,20 +811,25 @@ effects:
             r.play(0, 0);
             let result = r.game.players[0].hand[0].handle();
             // Exercise the compatibility callbacks directly. Removing the typed
-            // frame deliberately removes its DSL tail; inspect its publication
-            // channel, rather than expecting that discarded tail to execute.
+            // frame deliberately removes its DSL tail. Observe the receipt at
+            // callback completion, while its owning resolution is still active.
+            // The channel must then close before later activations can consume it.
+            let seen = Arc::new(Mutex::new(Vec::new()));
             r.game.pending_selection_resume = None;
+            if stop == 0 { observe_callback(&mut r, seen.clone()); }
             let first = if stop == 0 { PASS } else { encode_attack(0, host.index as u16) };
             assert_eq!(digimon_engine::action::build_action_mask(&r.game, 0)[first as usize], 1.0);
             r.execute_action(0, first).unwrap();
+            assert!(r.game.dsl_resolved_tail_bindings.is_none(), "host choice leaked publication");
             if stop != 0 {
                 r.game.pending_selection_resume = None;
+                observe_callback(&mut r, seen.clone());
                 let second = if stop == 1 { PASS } else { HAND_EFFECT_START };
                 assert_eq!(digimon_engine::action::build_action_mask(&r.game, 0)[second as usize], 1.0);
                 r.execute_action(0, second).unwrap();
             }
-            let receipt = r.game.dsl_resolved_tail_bindings.as_ref().and_then(|b| b.get("fused"));
-            assert_eq!(receipt, if stop == 2 { Some(BindingValue::Card(result)) } else { None });
+            assert_eq!(*seen.lock().unwrap(), vec![if stop == 2 { Some(BindingValue::Card(result)) } else { None }]);
+            assert!(r.game.dsl_resolved_tail_bindings.is_none(), "completed App Fuse leaked publication");
             assert!(r.game.pending_selection.is_none());
         }
     }
@@ -869,7 +891,7 @@ effects:
         assert_eq!(r.game.memory, before + 3, "unbound success must not consume an earlier receipt's stale publication");
     }
 
-    // ── 1. Hand happy path ────────────────────────────────────────────────────────
+    // â”€â”€ 1. Hand happy path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     #[test]
     fn app_fuse_hand_happy_path_stacks_result_and_consumes_link() {
@@ -986,7 +1008,7 @@ effects:
         );
     }
 
-    // ── 2. Trash happy path ─────────────────────────────────────────────────────
+    // â”€â”€ 2. Trash happy path â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     #[test]
     fn app_fuse_trash_happy_path() {
@@ -1016,7 +1038,7 @@ effects:
         assert_eq!(r.trash_size(0), trash_before - 1, "result card left trash");
     }
 
-    // ── 3. Result filter ────────────────────────────────────────────────────────
+    // â”€â”€ 3. Result filter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     #[test]
     fn app_fuse_result_filter_excludes_nonmatching_trash_card() {
@@ -1063,7 +1085,7 @@ effects:
         super::no_prompt(&r);
     }
 
-    // ── 4. Ineligible permanent not offered ─────────────────────────────────────
+    // â”€â”€ 4. Ineligible permanent not offered â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     #[test]
     fn app_fuse_ineligible_permanent_not_offered() {
@@ -1100,7 +1122,7 @@ effects:
         super::no_prompt(&r);
     }
 
-    // ── 5. No eligible permanent → silent no-op ─────────────────────────────────
+    // â”€â”€ 5. No eligible permanent â†’ silent no-op â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     #[test]
     fn app_fuse_no_eligible_permanent_is_silent_noop() {
@@ -1116,7 +1138,7 @@ effects:
         );
     }
 
-    // ── 6. Decline at permanent pick ────────────────────────────────────────────
+    // â”€â”€ 6. Decline at permanent pick â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     #[test]
     fn app_fuse_decline_at_permanent_pick_does_nothing() {
@@ -1137,7 +1159,7 @@ effects:
         assert!(r.pending_selection_view().is_none(), "no further selection");
     }
 
-    // ── 7. Decline at card pick ─────────────────────────────────────────────────
+    // â”€â”€ 7. Decline at card pick â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     #[test]
     fn app_fuse_decline_at_card_pick_does_nothing() {
@@ -1159,7 +1181,7 @@ effects:
         );
     }
 
-    // ── 8. Requires two distinct named materials ────────────────────────────────
+    // â”€â”€ 8. Requires two distinct named materials â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     #[test]
     fn app_fuse_two_candidates_and_pass_at_either_pick_preserves_state() {
@@ -1253,7 +1275,7 @@ effects:
         let mut r = builder()
             .hand(0, &["DSL-APPFUSE-HAND", "TEST-APPFUSE"])
             .start();
-        // Host: Kabemon top + Kabemon linked = SAME name twice → not eligible
+        // Host: Kabemon top + Kabemon linked = SAME name twice â†’ not eligible
         // (App Fusion needs two DISTINCT named conditions).
         let host = r.place_on_field(0, "TEST-KABEMON", Some(0));
         r.push_linked_owned(host, "TEST-KABEMON", 0);
