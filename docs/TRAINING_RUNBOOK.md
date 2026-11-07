@@ -1342,6 +1342,27 @@ container. A local source edit alone does not change a running cloud job.
 
 ## Matched development-teacher seed comparison
 
+### Optional Tamer-first evaluation baselines
+
+New native bindings expose `teacher_decision("greedy_tamer_first_v1")` and
+`teacher_decision("development_tamer_first_v1")`. These are separately versioned
+experimental policies: whenever a direct Main-phase digivolution over the acting
+player's Tamer is mask-legal, they choose such a route, even when it passes memory.
+Otherwise they retain the original greedy/development behavior. Effect-driven
+multi-step routes remain outside this preference. The development variant keeps
+its repeated-state safeguards and independent per-seat memory.
+
+`digimon_gym.agents.tamer_first.TamerFirstOpponent` adapts either version for
+`OpponentWrapper`; `evaluate_against_anchors(..., include_tamer_first=True)` adds
+both as explicit anchors. The flag defaults to false, old bindings fail clearly,
+and the existing bootstrap teacher schedule is unchanged. Freeze and qualify a
+new runtime and schedule before scoring; these variants do not change trained
+weights or the `development-fixed` learned checkpoint. See
+`openspec/changes/evaluate-frozen-checkpoints-closed-deck-search/tamer-first-baselines.md`
+for exact ties, telemetry and validation boundaries.
+
+### Original matched seed experiment
+
 `tools.cloud_search.run_seed_comparison` is an opt-in, isolated fresh-seed path.
 It collects greedy-only, `development_v1`-only and 50/50 player-game mixtures
 using the same frozen 13-archetype snapshots, seeds and list schedule. Each arm

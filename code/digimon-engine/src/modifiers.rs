@@ -2222,7 +2222,10 @@ impl ModifierRegistry {
                         return entry
                             .until_condition
                             .as_ref()
-                            .map(|pred| pred(game, subject));
+                            .map(|pred| {
+                                crate::determinize::context_guard::check(game, "until_condition");
+                                pred(game, subject)
+                            });
                     }
                 }
                 // Track H §4 — keyword-grant fallback.
@@ -2231,7 +2234,10 @@ impl ModifierRegistry {
                         return entry
                             .until_condition
                             .as_ref()
-                            .map(|pred| pred(game, subject));
+                            .map(|pred| {
+                                crate::determinize::context_guard::check(game, "until_condition");
+                                pred(game, subject)
+                            });
                     }
                 }
                 None
@@ -2242,7 +2248,10 @@ impl ModifierRegistry {
                 .iter()
                 .find(|entry| entry.install_order == install_order)
                 .and_then(|entry| entry.until_condition.as_ref())
-                .map(|pred| pred(game, subject)),
+                .map(|pred| {
+                    crate::determinize::context_guard::check(game, "until_condition");
+                    pred(game, subject)
+                }),
         }
     }
 

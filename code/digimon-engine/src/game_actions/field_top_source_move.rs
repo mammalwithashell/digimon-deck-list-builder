@@ -300,7 +300,7 @@ impl Game {
                 vec![top_card],
                 EffectAttribution {
                     controller: state.observer,
-                    source_card: state.effect_source_card,
+                    source_card: state.effect_source_card.into(),
                     source_permanent: None,
                 },
             );

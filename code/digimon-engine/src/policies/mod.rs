@@ -23,6 +23,7 @@
 pub mod greedy;
 pub mod development;
 pub mod random;
+pub mod tamer_first;
 
 use crate::enums::PlayerId;
 use crate::game::Game;

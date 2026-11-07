@@ -689,6 +689,7 @@ impl Game {
             let mut ctx = crate::effect_context::EffectContext::new_with_source_kind(
                 self, source_card, Some(carrier), carrier_kind, carrier.player,
             );
+            crate::determinize::context_guard::check(ctx.game, "inline_granted_effect_body");
             body(&mut ctx);
         }
     }

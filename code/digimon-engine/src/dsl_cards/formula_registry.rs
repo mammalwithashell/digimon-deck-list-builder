@@ -40,6 +40,9 @@ impl FormulaExtensionRegistry {
         ctx: &EffectContext<'_>,
         target: PermanentHandle,
     ) -> Option<i32> {
-        self.entries.get(name).map(|f| f(ctx, target))
+        self.entries.get(name).map(|f| {
+            crate::determinize::context_guard::check(ctx.game, "formula_extension");
+            f(ctx, target)
+        })
     }
 }

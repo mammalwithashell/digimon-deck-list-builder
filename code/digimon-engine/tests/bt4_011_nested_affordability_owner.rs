@@ -35,7 +35,7 @@ fn setup_probe_owner(option: bool, observer: &str) -> DebugRunner {
         .from_dsl_yaml(include_str!("../cards/st1/ST1-12.yaml")).unwrap()
         .from_dsl_yaml(include_str!("../cards/st2/ST2-12.yaml")).unwrap()
         .from_dsl_yaml(include_str!("../cards/st1/ST1-03.yaml")).unwrap()
-        .from_dsl_yaml(include_str!("../cards/LM/LM-027.yaml")).unwrap()
+        .from_dsl_yaml(include_str!("../cards/lm/LM-027.yaml")).unwrap()
         .from_dsl_yaml(PROBE_COST).unwrap().from_dsl_yaml(observer).unwrap().from_dsl_yaml(&format!("{}{}",INNER,EXTRA_ROUTE)).unwrap().from_dsl_yaml(INNER_WOULD).unwrap()
         .hand(0, if option { &["LM-027", "BT4-011"][..] } else { &["BT4-011"][..] })
         .deck(0, &["ST1-03"; 12]).deck(1, &["ST1-03";12])

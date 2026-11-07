@@ -818,6 +818,7 @@ impl CardDatabase {
 pub struct RustHeadlessGame {
     inner: HeadlessRunner,
     development_teachers: [::digimon_engine::policies::DevelopmentPolicy; 2],
+    development_tamer_teachers: [::digimon_engine::policies::DevelopmentPolicy; 2],
 }
 
 #[pymethods]
@@ -857,7 +858,7 @@ impl RustHeadlessGame {
             profile,
         )
         .map_err(PyValueError::new_err)?;
-        Ok(Self { inner: runner, development_teachers: Default::default() })
+        Ok(Self { inner: runner, development_teachers: Default::default(), development_tamer_teachers: Default::default() })
     }
 
     /// Execute a single action for the current decision player. No-op after
@@ -962,6 +963,20 @@ impl RustHeadlessGame {
                 let decision = self.development_teachers[player as usize].decide(&self.inner.game, &mask)
                     .map_err(PyValueError::new_err)?;
                 serde_json::to_string(&decision).map_err(|e| PyValueError::new_err(e.to_string()))
+            }
+            "greedy_tamer_first_v1" => {
+                let routes=::digimon_engine::policies::tamer_first::legal_tamer_digivolutions(&self.inner.game,&mask);
+                Ok(serde_json::json!({"version":teacher,"player":player,
+                    "action": ::digimon_engine::policies::tamer_first::greedy_tamer_first_action(&self.inner.game,&mask),
+                    "direct_tamer_routes":routes,"tamer_priority_applied":!routes.is_empty()}).to_string())
+            }
+            "development_tamer_first_v1" => {
+                let routes=::digimon_engine::policies::tamer_first::legal_tamer_digivolutions(&self.inner.game,&mask);
+                let decision=self.development_tamer_teachers[player as usize].decide_tamer_first(&self.inner.game,&mask)
+                    .map_err(PyValueError::new_err)?;
+                let mut value=serde_json::to_value(decision).map_err(|e|PyValueError::new_err(e.to_string()))?;
+                value["tamer_priority_applied"]=(!routes.is_empty()).into();value["direct_tamer_routes"]=serde_json::json!(routes);
+                Ok(value.to_string())
             }
             _ => Err(PyValueError::new_err(format!("unknown bootstrap teacher: {teacher}"))),
         }

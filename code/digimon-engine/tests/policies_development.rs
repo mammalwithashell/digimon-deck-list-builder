@@ -37,9 +37,12 @@ fn replay_teacher_regression(fixture: &str) {
     for (index, row) in case["prefix"].as_array().unwrap().iter().enumerate() {
         let player = decision_player(&runner.game);
         let mask = build_action_mask(&runner.game, player);
+        let recorded_action = row["action"].as_u64().unwrap() as u16;
+        assert!(mask.get(recorded_action as usize).is_some_and(|v| *v > 0.5),
+            "stale replay fixture at prefix {index}: recorded action {recorded_action} is illegal; do not interpret subsequent no-progress as a teacher failure");
         teachers[player as usize].decide(&runner.game, &mask)
             .unwrap_or_else(|e| panic!("prefix {index}: {e}"));
-        runner.step(row["action"].as_u64().unwrap() as u16);
+        runner.step(recorded_action);
     }
     let player = decision_player(&runner.game);
     let mask = build_action_mask(&runner.game, player);

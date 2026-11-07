@@ -7,6 +7,7 @@
 pub mod binding_ref;
 pub mod bindings;
 pub mod context_liveness;
+pub(crate) mod construction_facts;
 pub mod expiry_map;
 pub mod formula_eval;
 pub mod formula_registry;
@@ -745,10 +746,6 @@ pub fn register_dsl_cards_with_raw(
     raw: Arc<EngineRawRustRegistry>,
 ) {
     for (card_id, compiled) in dsl_registry.iter() {
-        let dsl_effect = Arc::new(DslCardEffect::new_with_raw(
-            Arc::new(compiled.clone()),
-            raw.clone(),
-        ));
-        effect_registry.insert(card_id, dsl_effect);
+        effect_registry.insert_compiled(card_id, Arc::new(compiled.clone()), raw.clone());
     }
 }

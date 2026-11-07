@@ -194,7 +194,7 @@ impl Tree {
                 }
             }),
             self.completed,
-        )
+        ).with_priors(root.edges.iter().map(|e| (e.plan.clone(), e.raw_prior, e.prior)).collect())
     }
 }
 

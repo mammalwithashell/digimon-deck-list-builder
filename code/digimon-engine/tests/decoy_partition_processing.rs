@@ -300,7 +300,7 @@ impl digimon_engine::effect::CardEffect for DeletionSourceWitness{
  fn effects(&self,c:digimon_engine::card_source::CardHandle)->Vec<digimon_engine::effect::Effect>{
   let source=self.0;
   vec![digimon_engine::effect::Effect::on_deletion(c).process(move |ctx|{
-   assert_eq!(ctx.event_source_effect().and_then(|e|e.source_card),Some(source),"causing effect survives synchronous and parked group commit");
+   assert_eq!(ctx.event_source_effect().and_then(|e|e.source_card.read()),Some(source),"causing effect survives synchronous and parked group commit");
    assert_eq!(ctx.event_source_effect().and_then(|e|e.source_permanent),Some(PermanentHandle{player:1,index:0}));
    assert_eq!(ctx.deletion_cause(),Some(digimon_engine::replacement::ReplacementCause::OpponentEffect));
    ctx.draw(0,1);
@@ -494,7 +494,7 @@ impl digimon_engine::effect::CardEffect for Review28SourceWitness {
  fn effects(&self,c:digimon_engine::card_source::CardHandle)->Vec<digimon_engine::effect::Effect>{let source=self.0;
   vec![digimon_engine::effect::Effect::on_deletion(c).process(move|ctx|{
    let current=ctx.game.players[0].battle_area.iter().position(|p|p.top_card().handle()==source).unwrap();
-   let event=ctx.event_source_effect().unwrap();assert_eq!(event.source_card,Some(source));
+   let event=ctx.event_source_effect().unwrap();assert_eq!(event.source_card.read(),Some(source));
    assert_eq!(event.source_permanent,Some(PermanentHandle{player:0,index:current as u8}),"attribution resolves the causing source after same-controller payer compaction");
    ctx.draw(0,1);
   }).build()]
