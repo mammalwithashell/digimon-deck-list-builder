@@ -618,3 +618,43 @@ fn st24_06_inherited_save_offered_for_name_match_without_trait() {
     assert!(offered, "a [ShineGreymon]-named carrier is offered the inherited save");
     assert!(stayed, "accepting the save keeps the [ShineGreymon]-named carrier");
 }
+
+/// NEGATIVE (self-only): the inherited effect reads "When THIS Digimon ... would
+/// leave" (DCGO `CanTriggerWhenRemoveField` = `permanent.cardSources.Contains(card)`,
+/// i.e. only the carrier's own permanent). Another of the controller's
+/// permanents leaving - here a Tamer returned/deleted while a qualifying
+/// [ShineGreymon] carrier sits on the field - must NOT be offered the save. It
+/// was, because `replacement_subject_is_mine` switches the replacement into
+/// cross-permanent mode; this surfaced replaying a recorded game where a Burst
+/// Digivolve returned a Tamer.
+#[test]
+fn st24_06_inherited_save_not_offered_when_another_permanent_leaves() {
+    let mut runner = base_builder()
+        .add_card(gate_top("NAME-TOP", "ShineGreymon Ruin Mode X"))
+        .start();
+    runner.set_first_player(0);
+    // A qualifying carrier (ShineGreymon in its name) holding ST24-06 inherited.
+    let _carrier = runner.place_stack(0, &[CARD_ID, "NAME-TOP"]);
+    // A different permanent that pays nothing and carries no save of its own.
+    let t = runner.place_stack(0, &["FILLER", "TAMER"]);
+    runner.game.players[0].battle_area[t.index as usize].card_sources[0].face_down = true;
+
+    runner
+        .game
+        .delete_permanent_with_cause(t, ReplacementCause::OpponentEffect);
+
+    let mut offered = false;
+    let mut guard = 0;
+    while let Some(p) = runner.pending_selection() {
+        guard += 1;
+        assert!(guard < 32);
+        if matches!(p.kind, SelectionKind::Replacement) {
+            offered = true;
+        }
+        let _ = runner.execute_action(0, PASS);
+    }
+    assert!(
+        !offered,
+        "the carrier's inherited save must not be offered for a DIFFERENT permanent leaving"
+    );
+}

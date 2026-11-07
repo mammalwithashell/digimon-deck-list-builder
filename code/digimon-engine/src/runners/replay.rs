@@ -1855,6 +1855,61 @@ impl ReplayDriver {
             game,
         );
 
+        // DCGO asks "from where?" (Hand / Trash / Don't play) as a bare
+        // `SetIntSelection`, THEN asks for the card in a second prompt. Our
+        // engine models the same question as ONE optional `UnionZone` prompt
+        // (every legal card in every zone, plus a decline). The int row is
+        // therefore not an answer to the engine's prompt at all:
+        //  - followed by this actor's card pick -> it only narrowed the zone,
+        //    and the card row carries the whole decision, so consume it
+        //    without touching the engine;
+        //  - not followed by a card pick -> no card was chosen, i.e. "Don't
+        //    play", which is the engine's decline.
+        // Driver: AD1-016 ShineGreymon's [When Digivolving], and every
+        // `Hand/Trash/Don't-play` card of the same shape (ST24-15 DNA Charge).
+        let zone_choice_int = payload.prompt == "generic_int"
+            && payload.int_value.is_some()
+            && payload.card_ids.is_none()
+            && payload.targets.is_none()
+            && payload.count.is_none()
+            && game.pending_selection.as_ref().is_some_and(|p| {
+                p.is_optional && matches!(p.kind, crate::selection::SelectionKind::UnionZone { .. })
+            });
+        let declined_zone_choice;
+        let payload = if zone_choice_int {
+            let next_names_card = self
+                .source
+                .steps()
+                .get(self.cursor as usize + 1)
+                .and_then(|s| s.selection.as_ref())
+                .is_some_and(|n| {
+                    n.actor == actor && n.card_ids.as_ref().is_some_and(|c| !c.is_empty())
+                });
+            if next_names_card {
+                self.cursor += 1;
+                return ReplayStepResult {
+                    step_number: self.cursor,
+                    player_id: actor,
+                    action_id: 0,
+                    phase_before,
+                    phase_after: game.current_phase.py_name().to_string(),
+                    memory_before,
+                    memory_after: game.memory,
+                    turn_number,
+                    is_game_over: game.game_over,
+                    winner_id: game.winner,
+                    divergences: Vec::new(),
+                };
+            }
+            let mut p = payload.clone();
+            p.int_value = None;
+            p.cancel = Some(true);
+            declined_zone_choice = p;
+            &declined_zone_choice
+        } else {
+            payload
+        };
+
         let mut picks_done = 0usize;
         let mut last_action: u16 = 0;
         loop {
@@ -1894,6 +1949,102 @@ impl ReplayDriver {
             step_number: self.cursor,
             player_id: actor,
             action_id: last_action,
+            phase_before,
+            phase_after: game.current_phase.py_name().to_string(),
+            memory_before,
+            memory_after: game.memory,
+            turn_number,
+            is_game_over: game.game_over,
+            winner_id: game.winner,
+            divergences: Vec::new(),
+        }
+    }
+
+    /// Apply a DCGO `play_card_extra` row that names a Burst Digivolve's
+    /// returned Tamer (`ActionEncoder.DecomposePlayCardExtras`, an
+    /// `EncodeSourceSelect(burstFrame, 0)` id).
+    ///
+    /// Our engine presents the Tamer as one of the "Choose which digivolution
+    /// cost to pay" options (one `Burst Digivolve` option per eligible Tamer),
+    /// or - when the burst is the only route - resolves straight through with
+    /// no prompt at all. So: with a cost prompt parked, answer it with the burst
+    /// option; with none parked, the row is already satisfied.
+    ///
+    /// DCGO emits the Tamer's RAW frame id here (`ActionEncoder.cs:356-359`,
+    /// no compact-slot conversion), which cannot be mapped to an engine slot.
+    /// It is therefore only used when exactly one burst option is on offer; two
+    /// or more eligible Tamers is reported as an honest divergence rather than
+    /// guessed.
+    fn apply_burst_tamer_extra(
+        &mut self,
+        game: &mut Game,
+        actor: PlayerId,
+        action_id: u16,
+        phase: String,
+    ) -> ReplayStepResult {
+        let phase_before = game.current_phase.py_name().to_string();
+        let memory_before = game.memory;
+        let turn_number = game.turn_count;
+
+        let mut chosen: Option<u16> = None;
+        let mut failure: Option<String> = None;
+        if let Some(pending) = game.pending_selection.as_ref() {
+            let routes = game.pending_selection_resume.as_ref().and_then(|stack| {
+                stack.frames.iter().rev().find_map(|frame| match frame {
+                    crate::resume::ResumeFrame::DigivolveCostChoice(state) => {
+                        Some(state.routes.clone())
+                    }
+                    _ => None,
+                })
+            });
+            match routes {
+                Some(routes) => {
+                    let burst: Vec<usize> = routes
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, route)| route.burst.is_some())
+                        .map(|(i, _)| i)
+                        .collect();
+                    match burst.as_slice() {
+                        [one] => chosen = pending.valid_action_ids.get(*one).copied(),
+                        [] => failure = Some("recorded Burst Digivolve Tamer, but the engine offers no burst route".to_string()),
+                        many => {
+                            let (field, _) = crate::action::space::decode_source_select(action_id);
+                            failure = Some(format!(
+                                "recorded Burst Digivolve Tamer at raw DCGO frame {field}, but the engine offers {} eligible Tamers and the raw frame cannot name one",
+                                many.len()
+                            ));
+                        }
+                    }
+                }
+                None => {
+                    failure = Some(
+                        "recorded Burst Digivolve Tamer, but the parked prompt is not the digivolution cost choice"
+                            .to_string(),
+                    );
+                }
+            }
+        }
+        if let Some(reason) = failure {
+            self.divergences.push(Divergence {
+                step: self.cursor,
+                action_id,
+                actor,
+                phase,
+                kind: DivergenceKind::SelectionResolution { reason },
+                board: describe_board(game),
+            });
+            self.paused = true;
+            return self.no_progress_result(game);
+        }
+        if let Some(id) = chosen {
+            game.decode_action(id, actor);
+        }
+        self.cursor += 1;
+        ReplayStepResult {
+            step_number: self.cursor,
+            player_id: actor,
+            action_id: chosen.unwrap_or(0),
             phase_before,
             phase_after: game.current_phase.py_name().to_string(),
             memory_before,
@@ -1951,6 +2102,17 @@ impl ReplayDriver {
             });
             self.paused = true;
             return self.no_progress_result(game);
+        }
+
+        // DCGO records a Burst Digivolve (rule 8-3) as the digivolve action
+        // followed by a `play_card_extra` row naming the Tamer that was
+        // returned to hand. The engine models that choice as one of its cost
+        // options, so this row is not a standalone engine action.
+        if self.source.steps()[cur].source == "play_card_extra"
+            && (crate::action::space::SOURCE_SELECT_START..crate::action::space::SOURCE_SELECT_END)
+                .contains(&action_id)
+        {
+            return self.apply_burst_tamer_extra(game, actor, action_id, phase_rec);
         }
 
         // DCGO indexes the battle area by on-screen frame order; the engine

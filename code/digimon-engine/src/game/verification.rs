@@ -643,6 +643,9 @@ fn write_effect_queue(hasher: &mut Sha256, queue: &std::collections::VecDeque<Qu
                     "queued.provenance_deletion.controller",
                     entry.controller,
                 );
+                if entry.burst_trash {
+                    token(hasher, "queued.provenance_deletion.burst_trash");
+                }
             }
         }
     }

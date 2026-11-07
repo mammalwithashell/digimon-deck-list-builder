@@ -770,6 +770,27 @@ pub fn resolve_next(
                 return Ok(Some(cand));
             }
         }
+        // A mid-turn "attack now" prompt (`SelectionKind::Target`) parks the
+        // full `encode_attack(attacker, target)` ids for ONE already-chosen
+        // attacker, which is rarely slot 0 (AD1-021's [End of Your Turn]
+        // "1 of your Digimon may attack" attacked with slot 2). DCGO's
+        // `SelectAttackEffect` row carries only the TARGET - the attacker was
+        // fixed by the preceding "may attack" pick - so the candidates above,
+        // which assume the attacker is the prompt's side-implicit slot 0,
+        // miss. Resolve by target when exactly one parked id names it.
+        if pending.kind == SelectionKind::Target && t.player != pending.selecting_player {
+            let by_target: Vec<u16> = valid
+                .iter()
+                .copied()
+                .filter(|v| {
+                    (ATTACK_START..crate::action::space::ATTACK_END).contains(v)
+                        && (*v - ATTACK_START) % TARGETS_PER_ATTACKER == slot
+                })
+                .collect();
+            if let [only] = by_target.as_slice() {
+                return Ok(Some(*only));
+            }
+        }
         return Err(format!(
             "frame target (player {}, slot {}) matches none of {:?} (kind {:?})",
             t.player, slot, valid, pending.kind

@@ -129,7 +129,11 @@ impl PendingProcessing {
                     .card_data_for_handle(CardHandle(entry.token.0 as u16))
                     .map(|data| data.card_id.clone())
                     .unwrap_or_default();
-                format!("pending processing: delete {target}")
+                if entry.burst_trash {
+                    format!("pending processing: trash top card of {target}")
+                } else {
+                    format!("pending processing: delete {target}")
+                }
             }
         }
     }
@@ -142,8 +146,8 @@ impl PendingProcessing {
             PendingProcessing::Scheduled(effect) => {
                 add_step_categories(&mut metadata.categories, &effect.body);
             }
-            PendingProcessing::ProvenanceDeletion(_) => {
-                metadata.categories.delete = true;
+            PendingProcessing::ProvenanceDeletion(entry) => {
+                metadata.categories.delete = !entry.burst_trash;
             }
         }
         metadata
@@ -372,6 +376,17 @@ fn run_provenance_deletion(game: &mut Game, entry: ScheduledProvenanceDeletion) 
     let Some(EventSubject::Permanent(handle)) = game.resolve_provenance_token(entry.token) else {
         return;
     };
+    if entry.burst_trash {
+        let mut ctx = EffectContext::new_with_source_kind(
+            game,
+            entry.source_card,
+            Some(handle),
+            entry.source_kind,
+            entry.controller,
+        );
+        ctx.trash_top_source(handle);
+        return;
+    }
     game.delete_permanent_with_cause(handle, ReplacementCause::OwnEffect);
 }
 
@@ -402,4 +417,10 @@ pub struct ScheduledProvenanceDeletion {
     pub source_card: CardHandle,
     /// Rules-facing source classification of that effect.
     pub source_kind: EffectSourceKind,
+    /// `true` for a Burst Digivolve's end-of-turn processing (rule 8-3-2-1):
+    /// instead of deleting the permanent the token names, trash the top card
+    /// of its stack (a no-op when the stack has nothing under that card, or the
+    /// top card is not a Digimon). The token still resolves the permanent that
+    /// holds the burst card, wherever it now sits in the battle area.
+    pub burst_trash: bool,
 }

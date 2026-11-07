@@ -118,6 +118,7 @@ impl<'a> EffectContext<'a> {
             controller: self.player,
             source_card: self.source_card,
             source_kind: self.source_kind,
+            burst_trash: false,
         };
         if opponents_turn {
             self.game.scheduled_provenance_deletions_opp.push(entry);

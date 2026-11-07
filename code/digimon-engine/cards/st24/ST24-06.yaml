@@ -134,8 +134,10 @@ effects:
     optional: true
     once_per_turn: true
     active_when:
+      # Self-only: DCGO CanTriggerWhenRemoveField(hashtable, card) is
+      # `permanent.cardSources.Contains(card)`. `replacement_subject_is_mine` would
+      # make this a cross-permanent trigger (any of my permanents leaving).
       all_of:
-        - replacement_subject_is_mine: true
         - any_of:
             - source_name_contains: "ShineGreymon"
             - source_permanent_trait_has: "DATA SQUAD"

@@ -162,10 +162,13 @@ impl CardEffect for DslCardEffect {
             }
         }
         for path in &self.compiled.alt_paths {
-            if matches!(
-                path.kind,
-                CompiledAltPathKind::BurstDigivolve | CompiledAltPathKind::BlastDnaDigivolve
-            ) {
+            // `burst_digivolve` is overloaded in YAML: `marker: true` is the
+            // counter-timing <Blast Digivolve> marker, an unmarked path is a
+            // real Burst Digivolve (rule 8-3), a Main-phase action that must
+            // NOT open a counter window (6-5-1-2-3, 8-3-2-2).
+            if matches!(path.kind, CompiledAltPathKind::BurstDigivolve) && path.marker
+                || matches!(path.kind, CompiledAltPathKind::BlastDnaDigivolve)
+            {
                 out.push(
                     Effect::declarative(card)
                         .name("Blast digivolve marker")

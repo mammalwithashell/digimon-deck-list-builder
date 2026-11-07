@@ -6,9 +6,10 @@ cost: 5
 traits: [TS]
 
 use_requirement:
-  any_permanent:
+  # DCGO CardEffectFactory.UseRequirements: battle area OR breeding area
+  # (HasMatchConditionOwnersPermanent || ...OwnersBreedingPermanent), rule 16-42-3.
+  any_field_permanent:
     of: you
-    zone: [battle_area]
     any_of:
       - all_of:
           - kind: digimon

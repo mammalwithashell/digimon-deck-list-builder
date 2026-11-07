@@ -441,6 +441,11 @@ pub(crate) struct PendingWouldDigivolveResume {
     /// Threaded from the chosen route so the commit honors the player's pick
     /// (`pending_digivolve_route_choice`) rather than re-deriving the min route.
     pub(crate) app_fusion: bool,
+    /// Whether the player's chosen route is a Burst Digivolve (rule 8-3). Its
+    /// Tamer has already been returned to hand by the time this resume exists
+    /// (8-3-3-2), so the commit must not re-derive a route (none remains), and
+    /// it schedules the burst's end-of-turn top-card trash (8-3-2-1).
+    pub(crate) burst: bool,
 }
 
 /// The core game state. Drives the turn state machine.
