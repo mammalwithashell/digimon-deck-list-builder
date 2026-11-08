@@ -1,0 +1,59 @@
+# Printed face / official data/card_bundles/BT18-030.md; DCGO BT18_030.cs.
+card: BT18-030
+name: Candlemon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+form: Rookie
+attribute: Data
+traits: [Flame]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: Reveal 3; add 1 yellow Data card and 1 Witchelny card
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: data_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - color_is: yellow
+                  - trait_has: Data
+            - bind_as: witch_pick
+              min: 1
+              max: 1
+              filter: { trait_has: Witchelny }
+          prompt: Select 1 yellow Data card and 1 Witchelny card
+      - add_to_hand_from_reveal: { of: you, card: data_pick }
+      - add_to_hand_from_reveal: { of: you, card: witch_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - is_source: true
+        - kind: digimon
+        - replacement_cause: opponent_effect
+        - color_is: yellow
+        - security_count_gte: 1
+        - any_of:
+            - trait_has: Data
+            - trait_has: Witchelny
+    summary: Inherited OPT; trash top security to prevent this yellow Data or Witchelny Digimon leaving by an opponent effect
+    process:
+      - trash_top_security_and_cancel_replacement: { of: you }

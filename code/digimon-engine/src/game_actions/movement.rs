@@ -35,7 +35,11 @@ impl Game {
         };
         let mut taken = self.revealed_cards.remove(pos_idx);
         taken.clear_reveal_overlay();
-        let known_position = match position { crate::enums::StackPosition::Top => Some(0), _ => None };
+        let known_position = match position {
+            crate::enums::StackPosition::Top => Some(0),
+            crate::enums::StackPosition::Bottom => Some(self.player(player_id).deck.len()),
+            crate::enums::StackPosition::Random => None,
+        };
         self.learn_belief_card(&taken, crate::determinize::beliefs::KnowledgeZone::Deck, known_position);
         match position {
             crate::enums::StackPosition::Top => {

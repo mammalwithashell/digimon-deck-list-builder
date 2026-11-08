@@ -14,6 +14,10 @@ use crate::effect::Effect;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::permanent::PermanentHandle;
 
+#[cfg(test)]
+#[path = "raw_declarative_guard_tests.rs"]
+mod declarative_guard_tests;
+
 pub type RawStepFn = dyn Fn(&mut EffectContext<'_>, &mut Bindings) + Send + Sync + 'static;
 pub type RawDeclarativeFn = dyn Fn(CardHandle) -> Vec<Effect> + Send + Sync + 'static;
 pub type RawFormulaFn =
@@ -45,21 +49,38 @@ impl EngineRawRustRegistry {
     where
         F: Fn(&mut EffectContext<'_>, &mut Bindings) + Send + Sync + 'static,
     {
-        self.steps.insert(name.into(), Arc::new(f));
+        // Guard the stored callback rather than lookup: a caller can retain it
+        // before a projected context is restored or the registry is cloned.
+        self.steps.insert(name.into(), Arc::new(move |ctx, bindings| {
+            crate::determinize::context_guard::check(ctx.game, "raw_dsl_step");
+            f(ctx, bindings)
+        }));
     }
 
     pub fn register_declarative<F>(&mut self, name: impl Into<String>, f: F)
     where
         F: Fn(CardHandle) -> Vec<Effect> + Send + Sync + 'static,
     {
-        self.declaratives.insert(name.into(), Arc::new(f));
+        // Keep guards on returned callbacks even for prefetched factories,
+        // cloned registries and direct DslCardEffect users. The factory itself
+        // has no Game parameter: its execution/captures need a separate proof.
+        self.declaratives.insert(name.into(), Arc::new(move |card| {
+            let mut effects = f(card);
+            for effect in &mut effects {
+                crate::determinize::context_guard::guard_effect(effect);
+            }
+            effects
+        }));
     }
 
     pub fn register_formula<F>(&mut self, name: impl Into<String>, f: F)
     where
         F: Fn(&EffectReadContext<'_>, PermanentHandle) -> i32 + Send + Sync + 'static,
     {
-        self.formulas.insert(name.into(), Arc::new(f));
+        self.formulas.insert(name.into(), Arc::new(move |ctx, target| {
+            crate::determinize::context_guard::check(ctx.game, "raw_dsl_formula");
+            f(ctx, target)
+        }));
     }
 
     pub fn step_fn(&self, name: &str) -> Option<Arc<RawStepFn>> {

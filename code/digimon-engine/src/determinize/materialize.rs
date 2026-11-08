@@ -32,8 +32,9 @@
 //!
 //! **Scope (v1, self-play regime only — task 1.6):**
 //! - 2-player, non-opaque games only (asserted).
-//! - Pins = face-up security only; the engine tracks no other per-card
-//!   revelation state (no "seen top of deck", no "revealed hand card"), so
+//! - Pins include face-up security and live public security reveals; other
+//!   per-card revelation state remains untracked
+//!   (no "seen top of deck", no "revealed hand card"), so
 //!   knowledge from past peeks/reveals is not preserved — the documented
 //!   PIMC belief-staleness limitation.
 //! - Materializing is defined at any state (including mid-selection: the
@@ -98,11 +99,23 @@ pub fn materialize(game: &Game, viewer: PlayerId, seed: u64) -> Game {
 
 /// Pool `pid`'s hidden collections, shuffle, and re-deal:
 /// hand (if `resample_hand`) → face-down security slots → deck (remaining,
-/// in shuffled order). Face-up security cards stay pinned at their slots.
+/// in shuffled order). Public security identities stay pinned at their slots.
 /// The digitama deck is re-shuffled in place (order-only uncertainty).
-pub(super) fn redeal_hidden(world: &mut Game, pid: PlayerId, resample_hand: bool, security_inspected: bool, rng: &mut StdRng) {
+pub(super) fn redeal_hidden(
+   world: &mut Game,
+   pid: PlayerId,
+   resample_hand: bool,
+   security_inspected: bool,
+   rng: &mut StdRng,
+) {
+   let public: std::collections::HashSet<_> = world
+       .player(pid)
+       .security
+       .iter()
+       .filter(|c| world.security_card_is_public(pid, c.handle()))
+       .map(|c| c.card_index)
+       .collect();
     let p = &mut world.players[pid as usize];
-    let face_up = p.face_up_security.clone();
 
     let mut pool: Vec<CardSource> = std::mem::take(&mut p.deck);
     let hand_count = p.hand.len();
@@ -115,7 +128,7 @@ pub(super) fn redeal_hidden(world: &mut Game, pid: PlayerId, resample_hand: bool
     let old_security = std::mem::take(&mut p.security);
     let mut slots: Vec<Option<CardSource>> = Vec::with_capacity(old_security.len());
     for c in old_security {
-        if security_inspected || face_up.contains(&c.card_index) {
+        if security_inspected || public.contains(&c.card_index) {
             slots.push(Some(c));
         } else {
             pool.push(c);

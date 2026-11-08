@@ -410,7 +410,7 @@ fn source_kind_bucket(source_kind: EffectSourceKind) -> Option<usize> {
         EffectSourceKind::Rule => Some(3),
         // Existing single-bucket metadata cannot encode compound membership.
         // Unknown/zero metadata preserves the profile; legality uses the typed origin.
-        EffectSourceKind::DigimonAndTamer => None,
+        EffectSourceKind::DigimonAndTamer | EffectSourceKind::DigiEgg => None,
     }
 }
 

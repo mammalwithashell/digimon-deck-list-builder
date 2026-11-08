@@ -392,6 +392,7 @@ fn partition_slots_for(
         perm.top_card().handle() != source_card
     };
     let card_id = game.card_data_for_handle(source_card)?.card_id.clone();
+    crate::determinize::context_guard::check_registry_factory(game, &card_id, "partition_slots");
     game.effect_registry
         .get(&card_id)?
         .partition_slots(inherited)
@@ -939,6 +940,10 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         .into_iter()
         .map(|mut effect| {
             effect.keyword_source = Some(keyword);
+            // Direct queue, replacement and refire consumers also use this
+            // factory, outside Game's per-card cache. Guard the stored callbacks
+            // so a later marked invocation cannot reuse an unguarded body.
+            crate::determinize::context_guard::guard_compiled_effect(&mut effect);
             effect
         })
         .collect()
@@ -992,7 +997,13 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                         return;
                     }
                     let owner = subject.player;
-                    if rctx.effect.trash_top_security(owner) {
+                    rctx.effect.game.dsl_replacement_outcome = None;
+                    crate::dsl_cards::step::run_steps(
+                        &[digimon_dsl::compiled::CompiledStep::SecurityTrashOne {
+                            player: owner, bind_as: None, cancel: true,
+                        }], rctx.effect, &mut crate::dsl_cards::bindings::Bindings::new(),
+                    );
+                    if rctx.effect.game.dsl_replacement_outcome.take() == Some(crate::replacement::ReplacementOutcome::Cancelled) {
                         // Barrier prevents this deletion; the interrupted cause
                         // remains pending for other immediate effects (16-24-4 [3.6 numbering; deleted in 4.3 â€” see changelog-3.6-to-4.3.md]).
                         rctx.cancel();
@@ -2720,6 +2731,23 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         Keyword::Digisorption(_) => Vec::new(),
 
         // Non-replacement keywords â€” handled elsewhere (combat, mask, etc.).
-        _ => Vec::new(),
+        // Explicit non-synthesized variants: additions require constructor
+        // review. Empty here is NOT a runtime safety certificate.
+        Keyword::Blocker
+        | Keyword::SecurityAttackPlus(_)
+        | Keyword::SecurityAttackMinus(_)
+        | Keyword::Rush
+        | Keyword::Jamming
+        | Keyword::Reboot
+        | Keyword::DeDigivolve(_)
+        | Keyword::DrawX(_)
+        | Keyword::Collision
+        | Keyword::Progress
+        | Keyword::Iceclad
+        | Keyword::ArtsDigivolve => Vec::new(),
     }
 }
+
+#[cfg(test)]
+#[path = "../determinize/context_guard/keyword_construction_tests.rs"]
+mod construction_audit_tests;

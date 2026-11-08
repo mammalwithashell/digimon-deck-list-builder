@@ -78,9 +78,12 @@ fn ex4_074_metadata_alt_paths_and_supported_clause_match_printed_text() {
                 && path
                     .from
                     .as_ref()
-                    .is_some_and(|from| from.name_contains.as_deref() == Some("ShineGreymon"))
+                    .is_some_and(|from| {
+                        from.name_is.as_deref() == Some("ShineGreymon")
+                            && from.name_contains.is_none()
+                    })
         }),
-        "printed [ShineGreymon] alternate digivolution path must cost 4; paths={digivolve_paths:?}"
+        "printed exact [ShineGreymon] alternate digivolution path must cost 4; paths={digivolve_paths:?}"
     );
 
     assert!(

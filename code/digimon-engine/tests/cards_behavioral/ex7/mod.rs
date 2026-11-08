@@ -27,3 +27,5 @@ mod ex7_066;
 mod ex7_070;
 
 mod ex7_002;
+
+mod ex7_026;

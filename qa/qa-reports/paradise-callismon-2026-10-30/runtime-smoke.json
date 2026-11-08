@@ -1,0 +1,29 @@
+{
+  "binding": "C:\\Users\\james\\.codex\\worktrees\\0a17\\digimon-deck-list-builder-1\\target-callismon\\python\\digimon_engine.pyd",
+  "binding_sha256": "fa6e5fd38652065c66eeef43cf6b669a28b6e277f8ce99fc1a5e82badb216a28",
+  "production_loader_admitted": 2,
+  "games": [
+    {
+      "deck_id": "120649",
+      "seed": 1,
+      "steps": 20,
+      "tensor_profile": "standard_lite_v2",
+      "observation_size": 9434,
+      "action_mask_size": 2192
+    },
+    {
+      "deck_id": "130284",
+      "seed": 2,
+      "steps": 20,
+      "tensor_profile": "standard_lite_v2",
+      "observation_size": 9434,
+      "action_mask_size": 2192
+    }
+  ],
+  "status": "passed",
+  "thread_stack_bytes": 268369920,
+  "production_gate_paths": {
+    "_CARD_ADMISSIBILITY_PATH": "C:\\Users\\james\\.codex\\worktrees\\0a17\\digimon-deck-list-builder-1\\data\\card_admissibility.json",
+    "_MECHANICS_READINESS_PATH": "C:\\Users\\james\\.codex\\worktrees\\0a17\\digimon-deck-list-builder-1\\data\\mechanics_readiness.json"
+  }
+}

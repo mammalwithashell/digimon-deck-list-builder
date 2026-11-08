@@ -1106,7 +1106,8 @@ impl Game {
             if effect.link_cost.is_some() != link_mode {
                 continue;
             }
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card: card_handle,
                 source_permanent: None,
                 source_kind: EffectSourceKind::Option,

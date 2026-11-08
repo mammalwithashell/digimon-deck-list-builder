@@ -356,14 +356,29 @@ impl Game {
     /// `EffectContext::can_affect_permanent` is this with the context's
     /// controller and kind, and resume terminals that run outside an
     /// `EffectContext` (e.g. the per-color batch delete) call it directly.
+    pub fn permanent_effect_identity(&self, handle: PermanentHandle) -> Option<(crate::enums::PlayerId, u64)> {
+        let player = self.players.get(handle.player as usize)?;
+        let permanent = if handle.index as u16 == crate::action::space::BREEDING_TARGET {
+            player.breeding_area.as_ref()?
+        } else { player.battle_area.get(handle.index as usize)? };
+        permanent.battle_identity.map(|id| (handle.player, id))
+    }
+
     pub fn effect_can_affect(
         &self,
         target: PermanentHandle,
         effect_controller: crate::enums::PlayerId,
         source_kind: crate::enums::EffectSourceKind,
     ) -> bool {
+        self.effect_can_affect_from(target, effect_controller, source_kind, None)
+    }
+
+    pub fn effect_can_affect_from(
+        &self, target: PermanentHandle, effect_controller: crate::enums::PlayerId,
+        source_kind: crate::enums::EffectSourceKind, source_identity: Option<(crate::enums::PlayerId, u64)>,
+    ) -> bool {
         !self.progress_excludes(target, Some(effect_controller))
-            && !self.permanent_is_unaffected_by_effect(target, effect_controller, source_kind)
+            && !self.modifiers.is_unaffected_by_from(target, effect_controller, source_kind, source_identity)
     }
 
     /// §15-15-5-1: whether `target` is unaffected by an effect of category

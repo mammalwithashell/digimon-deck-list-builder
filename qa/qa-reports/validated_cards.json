@@ -1674,10 +1674,19 @@
     },
     "BT23-035": {
       "card_name": "Dynasmon",
-      "status": "FAIL",
-      "validated_date": "2026-03-22",
-      "report": "2026-03-22-royal-knights-vs-medusamon.md",
-      "notes": "CRITICAL: On Play by-trashing-security cost auto-accepted without choice. Systemic by-cost issue."
+      "status": "AUDITED-OK",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "notes": "Rust simulator re-audit: explicit optional security payment; benefits require committed trash receipt; canceled, redirected and parked payments, later entrants, duration and security observer covered by 26 passing production-pack tests. Independent spec and quality reviews passed. DCGO/oracle confirmation unmeasured.",
+      "prior_verdicts": [
+        {
+          "card_name": "Dynasmon",
+          "status": "FAIL",
+          "validated_date": "2026-03-22",
+          "report": "2026-03-22-royal-knights-vs-medusamon.md",
+          "notes": "CRITICAL: On Play by-trashing-security cost auto-accepted without choice. Systemic by-cost issue."
+        }
+      ]
     },
     "BT23-037": {
       "card_name": "Tentomon",

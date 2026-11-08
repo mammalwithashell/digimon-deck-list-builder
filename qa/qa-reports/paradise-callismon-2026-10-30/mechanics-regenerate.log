@@ -1,0 +1,3 @@
+wrote C:\Users\james\.codex\worktrees\0a17\digimon-deck-list-builder-1\data\mechanics_readiness.json
+715 obligations in the mechanics set: 248 proven / 152 not-testable / 0 gap(blocking) / 315 gap(non-blocking) => ready: true
+  ready = no mechanics obligation is flagged outcome-changing (`blocks_training`); 315 open mechanics gaps are unflagged and listed in `qa/rules/cr_obligations.json`

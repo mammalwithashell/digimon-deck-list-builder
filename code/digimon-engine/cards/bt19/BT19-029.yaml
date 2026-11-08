@@ -1,0 +1,46 @@
+# Printed image + official bundle BT19-029; CR4.3 15-7-1..5 optional by-costs.
+# DCGO BT19_029.cs confirms yellow carrier gate and inherited OPT.
+# CR4.3 15-7-5 allows security payment even when memory gain is prohibited.
+card: BT19-029
+name: Tapirmon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Holy Beast]
+form: Rookie
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+effects:
+  - when: on_play
+    optional: true
+    active_when: { security_count_gte: 1 }
+    summary: "[On Play] By trashing your top security card, gain 1 memory"
+    process:
+      - trash_top_security: { of: you, bind_count_as: paid_security }
+      - if:
+          condition: { equals: [paid_security, 1] }
+          then:
+            - gain_memory: 1
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - is_source: true
+        - kind: digimon
+        - color_is: yellow
+        - any_of:
+            - trait_has: Data
+            - trait_has: Witchelny
+        - replacement_cause: opponent_effect
+        - security_count_gte: 1
+    summary: "Inherited [All Turns][OPT] By trashing top security, this yellow Data/Witchelny Digimon doesn't leave by opponent effects"
+    process:
+      - trash_top_security_and_cancel_replacement: { of: you }

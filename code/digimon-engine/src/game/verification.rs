@@ -128,12 +128,42 @@ impl Game {
                 &self.pending_security_moves,
             );
         }
+        if !self.permanent_security_placement_receipts.is_empty() {
+            debug_field(&mut h, "permanent_security_placement_receipts", &self.permanent_security_placement_receipts);
+        }
         if !self.security_placement_receipts.is_empty() {
             debug_field(
                 &mut h,
                 "security_placement_receipts",
                 &self.security_placement_receipts,
             );
+        }
+        let mut deck_sources: Vec<_> = self.pending_deck_discards.iter()
+            .map(|(owner, card, _, _)| (*owner, *card))
+            .chain(self.effect_queue.iter().filter(|q| q.timing == crate::enums::EffectTiming::OnDiscardDeck)
+                .map(|q| (q.controller, q.source_card))).collect();
+        deck_sources.sort_by_key(|(owner, card)| (*owner, card.0));
+        deck_sources.dedup();
+        if !deck_sources.is_empty() {
+            debug_field(&mut h, "pending_deck_discards", &self.pending_deck_discards);
+            let arrivals: Vec<_> = deck_sources.iter().map(|(owner, card)| {
+                let player = &self.players[*owner as usize];
+                (*owner, card.0, player.trash_entry_generations.get(card).copied(),
+                    player.trash.iter().any(|c| c.handle() == *card))
+            }).collect();
+            debug_field(&mut h, "live_deck_trash_incarnations", &arrivals);
+        }
+        if !self.security_trash_receipts.is_empty() || !self.pending_security_trashes.is_empty() {
+            debug_field(&mut h, "security_trash_receipts", &self.security_trash_receipts);
+            debug_field(&mut h, "pending_security_trashes", &self.pending_security_trashes);
+        }
+        let public_security: Vec<_> = self.players.iter().flat_map(|player|
+            player.security.iter().enumerate().filter_map(|(index, card)|
+                (!player.face_up_security.contains(&card.card_index)
+                    && self.security_card_is_public(player.id, card.handle()))
+                    .then_some((player.id, index, card.handle())))).collect();
+        if !public_security.is_empty() {
+            debug_field(&mut h, "public_security_knowledge", &public_security);
         }
         if !self.field_source_receipts.is_empty() {
             debug_field(&mut h, "field_source_receipts", &self.field_source_receipts);

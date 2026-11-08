@@ -24,15 +24,13 @@
 #     2 or fewer to begin with only the placement half runs — 15-6-2).
 #   - "top or bottom" is the player's choice → `select_effect_choice` (both
 #     options always payable here since the stack has >= 3 cards).
-#   - Placement: optional `select_hand` filtered by `in_text_contains:
+#   - Placement: optional hand-only `select_union_zone` filtered by `in_text_contains:
 #     Witchelny` (official Q&A: name, traits, effects, …) → `place_on_security`
 #     bottom, face down.
-#   - Inherited save: EX13-027 idiom. `active_when` reads only
-#     `replacement_cause` + `in_text_contains` + `security_count_gte` — none of
-#     which flips the replacement to cross-permanent subject matching — so it
-#     stays self-scoped ("this Digimon"); `in_text_contains` is evaluated on
-#     the leaving subject (= the carrier, its top card). Security >= 1 gate:
-#     an unpayable "by" cost is not offered (15-7-2; DCGO CanActivateCondition).
+#   - Inherited save is Digimon-only and self-scoped. The atomic security-trash
+#     payment cancels departure only after the physical payment commits, including
+#     nested replacement selections; an unpayable cost is not offered.
+
 
 card: EX13-025
 name: Candlemon
@@ -76,8 +74,9 @@ effects:
       - if:
           condition: { security_count_lte: 2 }
           then:
-            - select_hand:
+            - select_union_zone:
                 of: you
+                zones: [hand]
                 bind_as: witch_card
                 optional: true
                 filter: { in_text_contains: Witchelny }
@@ -95,6 +94,8 @@ effects:
     once_per_turn: true
     active_when:
       all_of:
+        - is_source: true
+        - kind: digimon
         - replacement_cause: opponent_effect
         - security_count_gte: 1
         - any_of:
@@ -102,5 +103,4 @@ effects:
             - in_text_contains: Witchelny
     summary: "Inherited [All Turns][OPT] When this [Dynasmon]/[Witchelny]-text Digimon would leave by opponent's effects, trash your top security card so it doesn't leave"
     process:
-      - trash_top_security: { of: you }
-      - cancel_replacement: {}
+      - trash_top_security_and_cancel_replacement: { of: you }

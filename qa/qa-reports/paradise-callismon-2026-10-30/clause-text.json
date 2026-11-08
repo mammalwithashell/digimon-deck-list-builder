@@ -1,0 +1,493 @@
+{
+  "semantic_fingerprint_version": 1,
+  "extraction_revision": "1037a91a408e415c60e4c67f63c265e2f2b11bacb47456eb40a85f209bcf0de5",
+  "generated_at": "2026-10-30T16:57:11.248681+00:00",
+  "source": "--card-ids (1 explicit ids)",
+  "cards": [
+    "BT25-058"
+  ],
+  "clauses": [
+    {
+      "id": "BT25-058#effect#0",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.5 w/[TS] trait: Cost 4",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "3c7bbdb9e552db9ce88f122c547e9b004a549b5514f73757f332e4f65e5f5b9a",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "BT25-058",
+        "effect",
+        0,
+        [
+          "timing",
+          [
+            "Digivolve"
+          ],
+          null,
+          "Lv.5 w/[TS] trait: Cost 4"
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.5 w/[TS] trait: Cost 4"
+          ],
+          [
+            "keyword",
+            [],
+            "Reboot",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Fortitude",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving",
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "All Turns",
+              "Once Per Turn"
+            ],
+            null,
+            "When effects play or digivolve any Digimon, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, this Digimon may battle 1 of your opponent's Digimon."
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "BT25-058#effect#1",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Reboot",
+      "text": "",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "c32d287df3e2a6e36047f7628ece7bf9b48695f9ab8cecda6ba697c562e70d8e",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "BT25-058",
+        "effect",
+        1,
+        [
+          "keyword",
+          [],
+          "Reboot",
+          ""
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.5 w/[TS] trait: Cost 4"
+          ],
+          [
+            "keyword",
+            [],
+            "Reboot",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Fortitude",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving",
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "All Turns",
+              "Once Per Turn"
+            ],
+            null,
+            "When effects play or digivolve any Digimon, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, this Digimon may battle 1 of your opponent's Digimon."
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "BT25-058#effect#2",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "9e70d474ab4611e73a34261d49604058f06792b451c85098b701de9aefe9f20a",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "BT25-058",
+        "effect",
+        2,
+        [
+          "keyword",
+          [],
+          "Blocker",
+          ""
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.5 w/[TS] trait: Cost 4"
+          ],
+          [
+            "keyword",
+            [],
+            "Reboot",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Fortitude",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving",
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "All Turns",
+              "Once Per Turn"
+            ],
+            null,
+            "When effects play or digivolve any Digimon, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, this Digimon may battle 1 of your opponent's Digimon."
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "BT25-058#effect#3",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Fortitude",
+      "text": "",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "0a6cbcbde8f8cf62ab158eb64d6276fd162ed2cb33de3decef85aa59b6435a0a",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "BT25-058",
+        "effect",
+        3,
+        [
+          "keyword",
+          [],
+          "Fortitude",
+          ""
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.5 w/[TS] trait: Cost 4"
+          ],
+          [
+            "keyword",
+            [],
+            "Reboot",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Fortitude",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving",
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "All Turns",
+              "Once Per Turn"
+            ],
+            null,
+            "When effects play or digivolve any Digimon, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, this Digimon may battle 1 of your opponent's Digimon."
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "BT25-058#effect#4",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving",
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "4e848b0f8a9ec15de52597604074cbd21608063e70aeeace42cb5de51dd34270",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "BT25-058",
+        "effect",
+        4,
+        [
+          "timing",
+          [
+            "On Play",
+            "When Digivolving",
+            "When Attacking",
+            "Once Per Turn"
+          ],
+          null,
+          "You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.5 w/[TS] trait: Cost 4"
+          ],
+          [
+            "keyword",
+            [],
+            "Reboot",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Fortitude",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving",
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "All Turns",
+              "Once Per Turn"
+            ],
+            null,
+            "When effects play or digivolve any Digimon, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, this Digimon may battle 1 of your opponent's Digimon."
+          ]
+        ]
+      ]
+    },
+    {
+      "id": "BT25-058#effect#5",
+      "card_id": "BT25-058",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When effects play or digivolve any Digimon, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, this Digimon may battle 1 of your opponent's Digimon.",
+      "source": "bundle",
+      "image_path": null,
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "b9c8b0a3fafa54cf019059658ffe3d67c3a43e7fc6b66f4cc89b401354be1c45",
+      "semantic_payload": [
+        "digimon-clause-semantics",
+        1,
+        "BT25-058",
+        "effect",
+        5,
+        [
+          "timing",
+          [
+            "All Turns",
+            "Once Per Turn"
+          ],
+          null,
+          "When effects play or digivolve any Digimon, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, this Digimon may battle 1 of your opponent's Digimon."
+        ],
+        [
+          [
+            "timing",
+            [
+              "Digivolve"
+            ],
+            null,
+            "Lv.5 w/[TS] trait: Cost 4"
+          ],
+          [
+            "keyword",
+            [],
+            "Reboot",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Blocker",
+            ""
+          ],
+          [
+            "keyword",
+            [],
+            "Fortitude",
+            ""
+          ],
+          [
+            "timing",
+            [
+              "On Play",
+              "When Digivolving",
+              "When Attacking",
+              "Once Per Turn"
+            ],
+            null,
+            "You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+          ],
+          [
+            "timing",
+            [
+              "All Turns",
+              "Once Per Turn"
+            ],
+            null,
+            "When effects play or digivolve any Digimon, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, this Digimon may battle 1 of your opponent's Digimon."
+          ]
+        ]
+      ]
+    }
+  ],
+  "denominator": {
+    "total_clauses": 6,
+    "total_cards": 1,
+    "by_zone": {
+      "effect": 6
+    },
+    "by_source": {
+      "bundle": 6
+    },
+    "image_required_count": 0,
+    "image_required_clause_ids": []
+  }
+}

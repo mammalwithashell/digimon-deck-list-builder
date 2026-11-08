@@ -285,7 +285,8 @@ impl Game {
             .map(|data| data.card_id.clone())
             .unwrap_or_default();
         let is_turn_player = controller == self.turn_player();
-        self.effect_queue.push_back(QueuedEffect {
+        self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
             source_card,
             source_permanent,
             source_kind,

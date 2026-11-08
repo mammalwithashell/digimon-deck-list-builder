@@ -15,6 +15,7 @@ pub mod draw;
 pub mod effects;
 mod field_source_results;
 mod security_placement_results;
+mod security_trash_results;
 pub mod grant_triggered;
 pub mod iteration;
 pub mod link_cards;
@@ -111,6 +112,8 @@ pub struct StepRuntime {
     /// and can no longer be looked up. `None` = infer from the zones.
     /// G-ENGINE-DEPARTED-TOKEN-CONTEXT-FALLS-BACK-TO-RULE.
     source_kind: Option<crate::enums::EffectSourceKind>,
+    source_identity: Option<Option<(PlayerId, u64)>>,
+    source_requires_membership: Option<bool>,
 }
 
 impl Default for StepRuntime {
@@ -127,6 +130,8 @@ impl StepRuntime {
             opt_key: None,
             opt_key_inherited: false,
             source_kind: None,
+            source_identity: None,
+            source_requires_membership: None,
         }
     }
 
@@ -137,6 +142,10 @@ impl StepRuntime {
     }
 
     /// The effect category the clause started under, if captured.
+    pub fn source_identity(&self) -> Option<(PlayerId, u64)> {
+        self.source_identity.flatten()
+    }
+
     pub fn source_kind(&self) -> Option<crate::enums::EffectSourceKind> {
         self.source_kind
     }
@@ -191,7 +200,11 @@ fn park_outer_tail(
     // representation (including recorded pending-state digests). Frames with
     // existing composed work, and nested controls with an occupied legacy
     // slot, need the typed sequence to retain inner-before-outer ordering.
-    let plain_tail = matches!(
+    // A simultaneous subject scope restores its enclosing group before this
+    // tail is parked. The ambient slot has no context field, so draining it
+    // inside the selected member's RunTail would use the wrong subject.
+    // Keep that scope boundary explicit in a typed OuterContinuation.
+    let plain_tail = !matches!(steps.get(i), Some(CompiledStep::WithSimultaneousPlaySubject { .. })) && matches!(
         ctx.game.pending_selection_resume.as_ref().and_then(|s| s.frames.last()),
         Some(crate::resume::ResumeFrame::RunTail { outer_conts, decline, .. })
             if outer_conts.is_empty()
@@ -274,6 +287,8 @@ pub(crate) fn drain_or_rewrap_pending_tail_with_bindings(
     runtime: StepRuntime,
     tail_trigger_context: Option<crate::trigger_context::TriggerContext>,
 ) -> Option<Bindings> {
+    crate::determinize::context_guard::check_world_continuation(game, "drain_or_rewrap_pending_tail_with_bindings");
+    crate::determinize::context_guard::check_continuation_context(game, tail_trigger_context.as_ref(), "drain_or_rewrap_pending_tail_with_bindings");
     if game.pending_selection.is_some() {
         wrap_pending_selection_with_tail(
             game,
@@ -621,6 +636,8 @@ pub(crate) fn drain_dsl_outer_tail_with_bindings(
     cb_ctx: &mut EffectContext<'_>,
     inner_bindings: Option<&Bindings>,
 ) {
+    crate::determinize::context_guard::check_world_continuation(cb_ctx.game, "drain_dsl_outer_tail_with_bindings");
+    crate::determinize::context_guard::check_continuation_context(cb_ctx.game, None, "drain_dsl_outer_tail_with_bindings");
     if let Some((outer_tail, mut outer_b, runtime)) = cb_ctx.game.dsl_outer_tail.take() {
         if let Some(inner) = inner_bindings {
             outer_b.merge_slots_from(inner);
@@ -657,9 +674,19 @@ pub(crate) fn drain_dsl_outer_tail_with_bindings(
 
 /// Release only receipts already armed for abandoned continuation finalizers.
 pub(crate) fn cleanup_aborted_steps(game: &mut crate::game::Game, steps: &[CompiledStep]) {
+    crate::determinize::context_guard::check_world_continuation(game, "cleanup_aborted_steps");
     for step in steps {
         match step {
+            CompiledStep::SecurityTrashFinalize { card, .. } => {
+                if let Some(index) = game.security_trash_receipts.iter().rposition(|(id,_)| id == card) {
+                    game.security_trash_receipts.remove(index);
+                }
+            }
             CompiledStep::ReturnReceiptFinalize { receipt } => game.return_receipts.retain(|(id, _)| id != receipt),
+            CompiledStep::SecurityPermanentPlacementFinalize { receipt, .. } => {
+                game.permanent_security_placement_receipts.retain(|(id,_)|id != receipt);
+                game.pending_security_moves.retain(|s|s.result_receipt != Some(*receipt));
+            }
             CompiledStep::SecurityPlacementCancelFinalize { card }
             | CompiledStep::SecurityPlacementSuccessFinalize { card, .. } => {
                 if let Some(index) = game.security_placement_receipts.iter().rposition(|(id, _)| id == card) {
@@ -705,6 +732,20 @@ pub fn run_steps_with_runtime(
     bindings: &mut Bindings,
     runtime: &StepRuntime,
 ) -> RunOutcome {
+    crate::determinize::context_guard::check_world_continuation(ctx.game, "run_steps_with_runtime");
+    crate::determinize::context_guard::check_continuation_context(ctx.game, None, "run_steps_with_runtime");
+    let mut captured_runtime = runtime.clone();
+    if captured_runtime.source_identity.is_none() {
+        captured_runtime.source_identity = Some(ctx.source_identity);
+    }
+    if captured_runtime.source_requires_membership.is_none() {
+        captured_runtime.source_requires_membership = Some(
+            ctx.source_permanent.is_some_and(|handle| carrier_contains_source(ctx, handle)),
+        );
+    }
+    ctx.source_identity = captured_runtime.source_identity.flatten();
+    let runtime = &captured_runtime;
+    rebind_activation_carrier(ctx, bindings, runtime);
     if let Some(dna_origin) = runtime.dna_origin {
         let prev = ctx.game.current_dna_origin;
         ctx.game.current_dna_origin = Some(dna_origin);
@@ -713,6 +754,59 @@ pub fn run_steps_with_runtime(
         return outcome;
     }
     run_steps_with_runtime_inner(steps, ctx, bindings, runtime)
+}
+
+fn rebind_activation_carrier(ctx: &mut EffectContext<'_>, bindings: &Bindings, runtime: &StepRuntime) {
+    if let Some(identity) = runtime.source_identity {
+        let link_key = crate::dsl_cards::binding_ref::link_source_carrier_pin_key(ctx.source_card);
+        let key = if bindings.selected_identity_pin(&link_key).is_some() { link_key }
+            else { crate::dsl_cards::binding_ref::source_carrier_pin_key(ctx.source_card) };
+        ctx.source_permanent = if bindings.selected_identity_pin(&key).is_some() {
+            bindings.resolve_selected_identity(ctx.game, &key)
+        } else {
+            identity.and_then(|identity|
+                ctx.game.resolve_source_move_anchor(identity, false)
+                    .or_else(|| ctx.game.resolve_source_move_anchor(identity, true)))
+        }
+            .filter(|handle| {
+                // Attribution survives departure, but a live `source` binding
+                // for an attached card still requires physical membership.
+                // Granted bodies can originate from an external grantor.
+                runtime.source_requires_membership != Some(true)
+                    || carrier_contains_source(ctx, *handle)
+            });
+    }
+}
+
+pub(super) fn pin_evolved_source_carrier(
+    game: &mut Game, source_card: crate::card_source::CardHandle,
+    result: PermanentHandle, bindings: &mut Bindings,
+) {
+    let Some(permanent) = game.players[result.player as usize].battle_area.get(result.index as usize) else { return; };
+    if permanent.card_sources.iter().any(|card| card.handle() == source_card) {
+        if let Some(identity) = game.capture_source_play_host_identity(result) {
+            let link_key = crate::dsl_cards::binding_ref::link_source_carrier_pin_key(source_card);
+            if bindings.selected_identity_pin(&link_key).is_some() {
+                bindings.pin_private_link_identity(&link_key, result.player, identity);
+            }
+            bindings.insert_selected_permanent_with_identity(
+                &crate::dsl_cards::binding_ref::source_carrier_pin_key(source_card), result, identity,
+            );
+        }
+    }
+}
+
+fn carrier_contains_source(ctx: &EffectContext<'_>, handle: PermanentHandle) -> bool {
+    let player = &ctx.game.players[handle.player as usize];
+    let carrier = if handle.index == crate::action::space::BREEDING_TARGET as u8 {
+        player.breeding_area.as_ref()
+    } else {
+        player.battle_area.get(handle.index as usize)
+    };
+    carrier.is_some_and(|permanent| {
+        permanent.card_sources.iter().any(|card| card.handle() == ctx.source_card)
+            || permanent.linked_cards.iter().any(|card| card.handle() == ctx.source_card)
+    })
 }
 
 fn run_steps_with_runtime_inner(
@@ -751,6 +845,7 @@ fn run_steps_with_runtime_inner(
     }
     let mut i = 0;
     while i < steps.len() {
+        rebind_activation_carrier(ctx, bindings, runtime);
         // Cost-pay abort short-circuit (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE).
         // When the player PASSes on an optional cost-pay prompt
         // (`select_hand`/`select_trash`/`select_union_zone` with
@@ -765,6 +860,10 @@ fn run_steps_with_runtime_inner(
             return RunOutcome::Synchronous;
         }
         let step = &steps[i];
+        if let Some(mut expanded) = security_trash_results::expand(step, ctx, bindings) {
+            expanded.extend_from_slice(&steps[i+1..]);
+            return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        }
         if let CompiledStep::DeleteReceiptFinalize { receipt, .. } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = step {
             ctx.game
                 .resume_deletion_batch_rest_for_receipt(Some(*receipt));
@@ -926,6 +1025,11 @@ pub fn run_step_with_runtime(
         }
         return;
     }
+    if let Some(expanded) = security_trash_results::expand(step, ctx, bindings) {
+        run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        return;
+    }
+    if security_trash_results::try_run(step, ctx, bindings) { return; }
     if let Some(expanded) = security_placement_results::expand(step, ctx, bindings) {
         run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         return;

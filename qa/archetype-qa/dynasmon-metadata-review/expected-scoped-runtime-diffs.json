@@ -1,0 +1,236 @@
+{
+  "complete_candidate_runtime_diff_count": null,
+  "cutover_approval_added": false,
+  "differences": [
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "BT6-089",
+      "field_path": "inherited_effect_description_eng",
+      "new_digest": "bd85bcdb8d4e613a79cb62d0903946ad10c83e63dc75f67614c159c0dbf4d184",
+      "new_value": "",
+      "old_digest": "474b333897bd10735370977a998f9acca373c4e55b037d9215357a7ef873475e",
+      "old_value": "Security Effect [Security] Play this card without paying the cost.",
+      "provenance_observation_ids": [
+        "1f538cab3c788e57d988e86884f3417ec39715df280d610ce08c6e1cf3bbdd16",
+        "694849ec2995b29657afbb6178d5fb771027ff36fb2d1c4a5404d64e838efa3d"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "BT6-089",
+      "field_path": "security_effect_description_eng",
+      "new_digest": "a821603e1a847dc13c53adb1d91a07425adcf596f50cde5fdd0530c325621fbd",
+      "new_value": "[Security] Play this card without paying its memory cost.",
+      "old_digest": "bd85bcdb8d4e613a79cb62d0903946ad10c83e63dc75f67614c159c0dbf4d184",
+      "old_value": "",
+      "provenance_observation_ids": [
+        "1f538cab3c788e57d988e86884f3417ec39715df280d610ce08c6e1cf3bbdd16",
+        "694849ec2995b29657afbb6178d5fb771027ff36fb2d1c4a5404d64e838efa3d"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "BT9-084",
+      "field_path": "effect_description_eng",
+      "new_digest": "b2e17eae9e5151e8f9ac50575b1797fb222ee5d3f5b8c1f7753a74b253b3be64",
+      "new_value": "[Start of Your Turn] If you have 3 or fewer security cards, gain 1 memory. If your opponent has 3 or fewer security cards, gain 1 memory.\r\n[Your Turn] When one of your red or yellow Digimon attacks, you may suspend this Tamer to have all of your opponent’s Security Digimon get -2000 DP for the turn.",
+      "old_digest": "238992b63f9011a46d679527c6fa47502042f83414ea8481efdf8f8d432d62e8",
+      "old_value": "[Start of Your Turn] If you have 3 or fewer security cards, gain 1 memory. If your opponent has 3 or fewer security cards, gain 1 memory.\r\n [Your Turn] When one of your red or yellow Digimon attacks, you may suspend this Tamer to have all of your opponent's Security Digimon get -2000 DP for the turn.",
+      "provenance_observation_ids": [
+        "217f8766565e70305f28240c545aae5fcfaf6f2a8ab918382017662e4664b67c"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "BT9-084",
+      "field_path": "inherited_effect_description_eng",
+      "new_digest": "bd85bcdb8d4e613a79cb62d0903946ad10c83e63dc75f67614c159c0dbf4d184",
+      "new_value": "",
+      "old_digest": "474b333897bd10735370977a998f9acca373c4e55b037d9215357a7ef873475e",
+      "old_value": "Security Effect [Security] Play this card without paying the cost.",
+      "provenance_observation_ids": [
+        "217f8766565e70305f28240c545aae5fcfaf6f2a8ab918382017662e4664b67c"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "BT9-084",
+      "field_path": "security_effect_description_eng",
+      "new_digest": "a821603e1a847dc13c53adb1d91a07425adcf596f50cde5fdd0530c325621fbd",
+      "new_value": "[Security] Play this card without paying its memory cost.",
+      "old_digest": "bd85bcdb8d4e613a79cb62d0903946ad10c83e63dc75f67614c159c0dbf4d184",
+      "old_value": "",
+      "provenance_observation_ids": [
+        "217f8766565e70305f28240c545aae5fcfaf6f2a8ab918382017662e4664b67c"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "BT18-039",
+      "field_path": "form_eng",
+      "new_digest": "8cbc5fe167dd6dcb42fcc074188cbf2992a3733508c4b8b0456661ed649cf038",
+      "new_value": [
+        "Ultimate"
+      ],
+      "old_digest": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "old_value": [],
+      "provenance_observation_ids": [
+        "d9916e3b25b143711b701316af79f1ca89c6191b9d8022eb3c7e4c317d40e50a"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "BT18-039",
+      "field_path": "effect_description_eng",
+      "new_digest": "ef542a6a0f903695441d0d0482428062d0c4139753805f93919d900f669bd004",
+      "new_value": "＜Barrier＞\r\n[On Play] [When Digivolving] By trashing your top security card, change 1 Digimon's original DP to 6000 until the end of of your opponent's turn.",
+      "old_digest": "01ef041664df22033a547358bc50cf8db632f28c67a8a00c41afbaa9e34df12f",
+      "old_value": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)\r\n[On Play] [When Digivolving] By trashing the top card of your security stack, change the original DP of 1 Digimon to 6000 until the end of your opponent's turn.",
+      "provenance_observation_ids": [
+        "d9916e3b25b143711b701316af79f1ca89c6191b9d8022eb3c7e4c317d40e50a"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "BT18-039",
+      "field_path": "inherited_effect_description_eng",
+      "new_digest": "6b2ee0b1472b62cbe139e36fd6c3ce859520ba0e0dfb42ccc82b32c04dfe7c14",
+      "new_value": "[All Turns] [Once Per Turn] When your security stack is removed from, this Digimon may unsuspend.",
+      "old_digest": "a488595792d9aa00a846bca995dd321c08c0fb04786d4d20cfc6ab69f4dae600",
+      "old_value": "[All Turns] [Once Per Turn] When a card is removed from your security stack, unsuspend this Digimon.",
+      "provenance_observation_ids": [
+        "d9916e3b25b143711b701316af79f1ca89c6191b9d8022eb3c7e4c317d40e50a"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "EX10-041",
+      "field_path": "xros_req",
+      "new_digest": "ade2fa2bbd735775a084788202020d895f0fe60fb92b980417bba8f2d4ffdde4",
+      "new_value": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[Evil] trait: Cost 2",
+      "old_digest": "d3b9380286e54de3947322ac3d090ad7a4643cebbbd205059fa031a30d2af9b8",
+      "old_value": "[Digivolve] Lv.3 w/[Evil] trait: Cost 2",
+      "provenance_observation_ids": [
+        "62bca7c1ab6525621707f94292b1b4c6c2f10d9b26905d0c73447c353ae609a8",
+        "d9f92026097af168dbd31b05e7759ac3d79a05740b0c64aca2b9ca31cfff0835"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "EX10-041",
+      "field_path": "form_eng",
+      "new_digest": "c4ec1c9810982da8be41b280f965dddf81fc8719eef3141f9b3c6a8fc0505f3d",
+      "new_value": [
+        "Champion"
+      ],
+      "old_digest": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "old_value": [],
+      "provenance_observation_ids": [
+        "62bca7c1ab6525621707f94292b1b4c6c2f10d9b26905d0c73447c353ae609a8",
+        "d9f92026097af168dbd31b05e7759ac3d79a05740b0c64aca2b9ca31cfff0835"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "EX10-041",
+      "field_path": "effect_description_eng",
+      "new_digest": "306f02efa2effd1788cf3c2e95131763c07ed51b14d7fd89034495a414946743",
+      "new_value": "When effects trash this card from the deck or security stack, give 1 of your opponent's Digimon ＜Security A. -1＞ until their turn ends.\r\n[On Play] [When Digivolving] By trashing your top security card, trash the top 2 cards of your deck and all of your opponent's Digimon get -3000 DP for the turn.",
+      "old_digest": "d655acae2ab09e1336053cbad85bbe9bfd9963d051411460f18cd5f23aae76a0",
+      "old_value": "When effects trash this card from the deck or security stack, give 1 of your opponent's Digimon ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until their turn ends.\r\n[On Play] [When Digivolving] By trashing your top security card, trash the top 2 cards of your deck and all of your opponent's Digimon get -3000 DP for the turn.",
+      "provenance_observation_ids": [
+        "62bca7c1ab6525621707f94292b1b4c6c2f10d9b26905d0c73447c353ae609a8",
+        "d9f92026097af168dbd31b05e7759ac3d79a05740b0c64aca2b9ca31cfff0835"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "EX10-041",
+      "field_path": "inherited_effect_description_eng",
+      "new_digest": "dc84e4be8ab6bef413cc1985fa4fa1ac856be33db925ad93f16911fbafbedaa9",
+      "new_value": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)",
+      "old_digest": "fcf0bb9cc10e9d49cb80c3d7baca78535b2a196809b2051d17f4a4c966bed3fa",
+      "old_value": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+      "provenance_observation_ids": [
+        "62bca7c1ab6525621707f94292b1b4c6c2f10d9b26905d0c73447c353ae609a8",
+        "d9f92026097af168dbd31b05e7759ac3d79a05740b0c64aca2b9ca31cfff0835"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "LM-045",
+      "field_path": "effect_description_eng",
+      "new_digest": "837448cc825fd22caae35757b5c354911524e15b601f674dec80b5df39fe22d8",
+      "new_value": "Yellow also meets this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 red or yellow Digimon card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞\r\n・Gain 2 memory.",
+      "old_digest": "3f9256c4bb1f416bca4d03dd0341cea944bac27281b40e24ca88e955697b4c77",
+      "old_value": "Yellow also meets this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 red or yellow Digimon card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+      "provenance_observation_ids": [
+        "f50c4c6c69695f354d12ecb940d8d0a18c1db810fd50b202b444463b737627b5"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "LM-045",
+      "field_path": "inherited_effect_description_eng",
+      "new_digest": "bd85bcdb8d4e613a79cb62d0903946ad10c83e63dc75f67614c159c0dbf4d184",
+      "new_value": "",
+      "old_digest": "9c7a9313382ca49ba7e6295fe1f8bab302072c2e64ea64f1b3b3a9bd894f060a",
+      "old_value": "Security Effect [Security] Place this card in the battle area.",
+      "provenance_observation_ids": [
+        "f50c4c6c69695f354d12ecb940d8d0a18c1db810fd50b202b444463b737627b5"
+      ]
+    },
+    {
+      "approval_id": null,
+      "approval_kind": null,
+      "approved": false,
+      "card_id": "LM-045",
+      "field_path": "security_effect_description_eng",
+      "new_digest": "139b7c2ef1dce694776b422d51f9e40ef02594afbea6b2db6d55e3fa517a02a9",
+      "new_value": "[Security] Place this card in the battle area.",
+      "old_digest": "bd85bcdb8d4e613a79cb62d0903946ad10c83e63dc75f67614c159c0dbf4d184",
+      "old_value": "",
+      "provenance_observation_ids": [
+        "f50c4c6c69695f354d12ecb940d8d0a18c1db810fd50b202b444463b737627b5"
+      ]
+    }
+  ],
+  "scope_card_ids": [
+    "BT18-039",
+    "BT6-089",
+    "BT9-084",
+    "LM-045",
+    "EX10-041"
+  ],
+  "scoped_preview_diff_count": 15,
+  "source_of_values": "Whole fresh publisher-normalized projection with official condition projection; no invented reminder or legacy paraphrase.",
+  "status": "SCOPED_SOURCE_ONLY_PREVIEW_NOT_COMPLETE_CANDIDATE"
+}

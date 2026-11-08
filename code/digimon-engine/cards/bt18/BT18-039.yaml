@@ -1,0 +1,46 @@
+# Printed card image + official bundle; API inherited text omits "may".
+card: BT18-039
+name: Mistymon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Magic Warrior, Witchelny]
+form: Ultimate
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "Barrier"
+  - when: [on_play, when_digivolving]
+    optional: true
+    active_when: { security_count_gte: 1 }
+    summary: "By trashing your top security card, change 1 Digimon's original DP to 6000 until the end of your opponent's turn"
+    process:
+      - trash_top_security: { of: you, bind_count_as: paid_security }
+      - if:
+          condition: { equals: [paid_security, 1] }
+          then:
+            - select_any_permanent:
+                bind_as: target
+                filter: { all_of: [{ kind: digimon }, { zone: [battle_area] }] }
+                prompt: "Change 1 Digimon's original DP to 6000"
+            - add_modifier:
+                target: target
+                modifier: ChangeOriginDP
+                value: 0
+                payload: { dp: 6000 }
+                expiry: end_of_opponents_turn
+  - when: on_own_security_removed
+    scope: inherited
+    once_per_turn: true
+    optional: true
+    active_when: { all_of: [{ all_turns: true }, { kind: digimon }] }
+    summary: "Inherited [All Turns][OPT] When your security stack is removed from, this Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }

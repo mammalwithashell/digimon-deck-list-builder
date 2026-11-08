@@ -11,6 +11,8 @@ from __future__ import annotations
 import dataclasses
 import json
 import re
+import time
+import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping
@@ -25,6 +27,7 @@ from ..cache import (
     fetch_with_retry,
 )
 from ..errors import (
+    CompletenessError,
     ParseError,
     SourceSchemaError,
     UnsupportedLayoutError,
@@ -36,6 +39,10 @@ from ..serialization import observation_digest, sha256_hex
 
 API_BASE_URL = "https://digimoncard.io/api-public/search"
 FULL_POOL_SCOPE = "full-pool:digimon-card-game"
+# https://digimoncard.io/api-documentation: search cap and public rate limit.
+CATALOG_BATCH_SIZE = 100
+SEARCH_RESPONSE_LIMIT = 1000
+CATALOG_REQUEST_INTERVAL_SECONDS = 0.75
 PARSER_VERSION = "digimoncard-io-json-v1"
 SOURCE_SCHEMA_VERSION = "digimoncard-io-public-api-v1"
 CARD_ID_PATTERN = re.compile(r"^[A-Z]+\d*-\d+[A-Z]*$")
@@ -72,6 +79,17 @@ class DigimonCardIOAcquisition:
     observations: tuple[SourceObservation, ...]
     last_checked: str
     fetch_attempts: int
+
+
+@dataclass(frozen=True, slots=True)
+class DigimonCardIOCatalogAcquisition:
+    """Coverage-checked catalog with original response provenance per batch."""
+
+    discovery_url: str
+    discovery_payload_digest: str
+    card_ids: tuple[str, ...]
+    acquisitions: tuple[DigimonCardIOAcquisition, ...]
+
 
 
 def _card_id(record: Mapping[str, Any], *, row_number: int) -> str:
@@ -575,26 +593,32 @@ class DigimonCardIOAdapter:
         return f"{API_BASE_URL}?{urlencode({'card': scope.strip().upper()})}"
 
     def build_catalog_url(self) -> str:
-        """Build the documented one-request full-record catalog query."""
+        """Discover complete identities; search responses are capped at 1,000."""
+        return "https://digimoncard.io/api-public/getAllCards?" + urlencode({
+            "series": "Digimon Card Game", "sort": "card_number", "sortdirection": "asc",
+        })
 
-        return f"{API_BASE_URL}?{urlencode({
-            'series': 'Digimon Card Game',
-            'sort': 'code',
-            'sortdirection': 'asc',
-            'limit': 10000,
-        })}"
-
-    def _acquire(self, *, source_url: str, scope: str) -> DigimonCardIOAcquisition:
+    def _fetch(self, source_url: str, *, throttled: bool = False) -> FetchedPayload:
         options: dict[str, Any] = {
-            "cache": self.cache,
-            "policy": self.retry_policy,
-            "timeout": self.timeout,
+            "cache": self.cache, "policy": self.retry_policy, "timeout": self.timeout,
         }
-        if self.opener is not None:
+        opener = self.opener or urllib.request.urlopen
+        pause = self.sleep or time.sleep
+        if throttled:
+            def spaced_opener(request, **kwargs):
+                # Every attempt, including retries, is below 15 requests/10s.
+                pause(CATALOG_REQUEST_INTERVAL_SECONDS)
+                return opener(request, **kwargs)
+            options["opener"] = spaced_opener
+        elif self.opener is not None:
             options["opener"] = self.opener
         if self.sleep is not None:
             options["sleep"] = self.sleep
-        fetched: FetchedPayload = fetch_with_retry(source_url, **options)
+        return fetch_with_retry(source_url, **options)
+
+    def _acquire(self, *, source_url: str, scope: str,
+                 throttled: bool = False) -> DigimonCardIOAcquisition:
+        fetched = self._fetch(source_url, throttled=throttled)
         checked_at = self.clock()
         parsed = parse_scope_payload(
             fetched.body,
@@ -621,10 +645,61 @@ class DigimonCardIOAdapter:
             scope=scope,
         )
 
-    def acquire_catalog(self) -> DigimonCardIOAcquisition:
-        """Acquire the complete secondary game catalog independently of Bandai IDs."""
+    def acquire_catalog(self) -> DigimonCardIOCatalogAcquisition:
+        """Discover every identity, then acquire bounded full-record responses.
 
-        return self._acquire(
-            source_url=self.build_catalog_url(),
-            scope=FULL_POOL_SCOPE,
+        Never concatenate response bodies into synthetic raw provenance. A
+        saturated batch is split and re-fetched; a saturated singleton refuses
+        completeness because this public API has no documented pagination.
+        """
+        discovery_url = self.build_catalog_url()
+        fetched = self._fetch(discovery_url, throttled=True)
+        try:
+            discovered = json.loads(fetched.body.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ParseError("secondary catalog discovery is not UTF-8 JSON") from exc
+        if not isinstance(discovered, list) or not discovered:
+            raise CompletenessError("secondary catalog discovery must be a nonempty array")
+        ids: list[str] = []
+        for index, record in enumerate(discovered):
+            if not isinstance(record, Mapping):
+                raise SourceSchemaError("secondary catalog discovery row is not an object")
+            ids.append(_card_id({"id": record.get("cardnumber")}, row_number=index))
+        if len(ids) != len(set(ids)):
+            raise CompletenessError("secondary catalog discovery contains duplicate identities")
+        ids.sort()
+        batches: list[DigimonCardIOAcquisition] = []
+
+        def acquire_batch(requested: list[str]) -> None:
+            url = f"{API_BASE_URL}?" + urlencode({
+                "series": "Digimon Card Game", "card": ",".join(requested),
+                "sort": "code", "sortdirection": "asc", "limit": SEARCH_RESPONSE_LIMIT,
+            })
+            batch = self._acquire(source_url=url, scope=FULL_POOL_SCOPE, throttled=True)
+            # Count raw rows, before parser deduplication: even duplicate rows
+            # can occupy the response cap and conceal additional printings.
+            raw_count = len(json.loads(batch.parsed.raw_payload.decode("utf-8")))
+            actual = set(batch.parsed.card_ids)
+            if actual - set(requested):
+                raise CompletenessError("secondary catalog batch contains unexpected identities",
+                                        details={"unexpected_ids": sorted(actual - set(requested))})
+            if raw_count >= SEARCH_RESPONSE_LIMIT:
+                if len(requested) == 1:
+                    raise CompletenessError("secondary catalog singleton response is saturated")
+                midpoint = len(requested) // 2
+                acquire_batch(requested[:midpoint])
+                acquire_batch(requested[midpoint:])
+                return
+            if actual != set(requested):
+                raise CompletenessError("secondary catalog batch is missing discovered identities",
+                                        details={"missing_ids": sorted(set(requested) - actual)})
+            batches.append(batch)
+
+        for offset in range(0, len(ids), CATALOG_BATCH_SIZE):
+            acquire_batch(ids[offset:offset + CATALOG_BATCH_SIZE])
+        covered = {cid for batch in batches for cid in batch.parsed.card_ids}
+        if covered != set(ids):
+            raise CompletenessError("secondary catalog acquisition has incomplete discovery coverage")
+        return DigimonCardIOCatalogAcquisition(
+            discovery_url, fetched.payload_digest, tuple(ids), tuple(batches),
         )

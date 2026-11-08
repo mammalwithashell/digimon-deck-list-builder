@@ -26,9 +26,9 @@
 //!   decklist); no concealed identity-to-position assignment is stored, and
 //!   the type system has nowhere to put one.
 //!
-//! **Pins (v1):** the only per-card revelation state the engine tracks is
-//! `Player::face_up_security`, so v1 pins = face-up security cards (slot
-//! index + id). The engine does NOT track "opponent revealed this hand card
+//! **Pins:** actual face-up security and live public security reveals retain
+//! their slot index + id. Public reveals do not turn cards face up for rules.
+//! The engine does NOT track "opponent revealed this hand card
 //! earlier" or "player X peeked at the top 3 of their deck and returned
 //! them" — that knowledge is lost at extraction (documented belief-staleness
 //! gap; feeds the deck-prior work, Phase 6). Cards mid-reveal live in
@@ -89,8 +89,8 @@ pub struct PublicPlayerView {
     /// Total security count (face-up pins + face-down).
     pub security_count: usize,
     pub digitama_count: usize,
-    /// Face-up security cards: (slot index in the security stack, card_id).
-    /// Face-up security is public knowledge — these are the v1 "pins".
+    /// Public security identities: (slot index in the security stack, card_id).
+    /// Includes temporary public reveals independently of rules-facing face state.
     pub security_pins: Vec<(usize, String)>,
 }
 
@@ -100,11 +100,11 @@ pub struct PublicPlayerView {
 pub struct OwnHiddenModel {
     /// Exact hand card ids, in hand order (fully visible to the owner).
     pub hand: Vec<String>,
-    /// Joint unseen pool: own deck ∪ own face-down security.
+    /// Joint unseen pool: own deck ∪ own security without a public identity.
     pub unseen_pool: CardMultiset,
     /// Count partition of `unseen_pool`: how many sit in the deck…
     pub deck_count: usize,
-    /// …and how many sit face-down in security.
+    /// …and how many security identities remain unknown (legacy field name).
     pub face_down_security_count: usize,
     /// Remaining digitama (egg) deck composition; order unknown.
     pub digitama_pool: CardMultiset,
@@ -192,12 +192,13 @@ fn permanent_view(perm: &Permanent, game: &Game) -> PermanentView {
     }
 }
 
-/// Face-up security entries of `p`: (slot index, card_id).
+/// Public security identities of `p`: (slot index, card_id), including
+/// temporary reveals that do not change the cards' face state.
 pub(crate) fn security_pins(p: &Player, game: &Game) -> Vec<(usize, String)> {
     p.security
         .iter()
         .enumerate()
-        .filter(|(_, c)| p.face_up_security.contains(&c.card_index))
+        .filter(|(_, c)| game.security_card_is_public(p.id, c.handle()))
         .map(|(i, c)| (i, c.card_id(&game.card_data).to_string()))
         .collect()
 }
@@ -248,7 +249,7 @@ impl Infoset {
         let mut own_pool = zone_multiset(&me.deck, game);
         let mut own_face_down = 0usize;
         for c in &me.security {
-            if !me.face_up_security.contains(&c.card_index) {
+            if !game.security_card_is_public(me.id, c.handle()) {
                 multiset_insert(&mut own_pool, c.card_id(&game.card_data));
                 own_face_down += 1;
             }
@@ -263,7 +264,7 @@ impl Infoset {
         }
         let mut opp_face_down = 0usize;
         for c in &opp.security {
-            if !opp.face_up_security.contains(&c.card_index) {
+            if !game.security_card_is_public(opp.id, c.handle()) {
                 multiset_insert(&mut opp_pool, c.card_id(&game.card_data));
                 opp_face_down += 1;
             }

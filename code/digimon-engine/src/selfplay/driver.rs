@@ -322,6 +322,10 @@ pub fn run_self_play_with_opponents(
     let mut opponent_games = Vec::new();
     let started = std::time::Instant::now();
     let trace_decisions = std::env::var_os("DIGIMON_SELFPLAY_TRACE_DECISIONS").is_some();
+    let mut opportunity_log = if std::env::var("DIGIMON_SEARCH_OPPORTUNITY_TELEMETRY").as_deref() == Ok("1") {
+        Some(std::fs::OpenOptions::new().write(true).create_new(true)
+            .open(out_dir.join("search_opportunities.jsonl")).map_err(|e|e.to_string())?)
+    } else { None };
 
     // Preserve the original sequential deck-sampling stream exactly.
     for _ in 0..config.game_start {
@@ -529,6 +533,22 @@ pub fn run_self_play_with_opponents(
                     .expect("search must return a legal plan")
                     .to_vec()
             };
+            let mut opportunity = if opportunity_log.is_some() {
+                let sampling = if total_visits == 0 { "uniform_zero_visits" }
+                    else if non_forced < config.temperature_decisions { "visit_sample_tau1" } else { "argmax_tau0" };
+                let mut row = crate::search::opportunity::describe(&game, pid, &result, &route, sampling)?;
+                row["context"] = serde_json::json!({"game":game_idx,"game_seed":game_seed,
+                    "decision":decisions,"non_forced_index":non_forced,"temperature_decisions":config.temperature_decisions,
+                    "model":model_desc,"decks":[deck_names[di],deck_names[dj]],"learner_seat":learner,
+                    "historical_opponent":historical.map(|i|opponents.as_ref().unwrap().manifest.opponents[i].id.as_str()),
+                    "policy_training_actor":learner.is_none_or(|current|current==pid),
+                    "full_search":full_search,"policy_weight":if full_search {1.} else {0.},
+                    "worlds":search_cfg.worlds,"search_seed":search_cfg.search.seed,
+                    "simulations_requested":search_cfg.search.simulations,
+                    "dirichlet_epsilon":search_cfg.search.dirichlet_epsilon,"dirichlet_alpha":search_cfg.search.dirichlet_alpha});
+                Some(row)
+            } else { None };
+            let mut executed_route = Vec::new();
             for (index, &action) in route.iter().enumerate() {
                 if decisions >= config.decision_cap {
                     break;
@@ -586,7 +606,12 @@ pub fn run_self_play_with_opponents(
                     eprintln!("game {game_idx} decision {decisions}: search action {action}");
                 }
                 game.decode_action(action, pid);
+                executed_route.push(action);
                 decisions += 1;
+            }
+            if let Some(row) = &mut opportunity {
+                crate::search::opportunity::record_execution(row, &executed_route)?;
+                writeln!(opportunity_log.as_mut().unwrap(), "{}", row).map_err(|e|e.to_string())?;
             }
         }
 
@@ -681,6 +706,7 @@ pub fn run_self_play_with_opponents(
             "cheap_simulations": config.cheap_simulations,
         },
         "temperature_decisions": config.temperature_decisions,
+        "search_opportunity_telemetry": if opportunity_log.is_some() {serde_json::json!({"schema":"search-opportunities-v1","path":"search_opportunities.jsonl","scope":"nonforced searched roots; direct routes only; effect-sequence opportunities unmeasured"})} else {serde_json::Value::Null},
         "decision_cap": config.decision_cap,
         "profiling": crate::search::profiling::snapshot(),
         "phase_stats": phase_stats

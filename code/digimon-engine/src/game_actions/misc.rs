@@ -130,6 +130,7 @@ impl Game {
     }
 
     pub(crate) fn cancel_prepared_source_play(&mut self, receipt:u64) {
+        crate::determinize::context_guard::check_world_continuation(self, "cancel_prepared_source_play");
         let Some(slot)=self.prepared_source_plays.iter().position(|(id,_)| *id==receipt) else{return;};
         if let (_,Some(prepared))=self.prepared_source_plays.remove(slot) {
             self.restore_pending_would_play_origin(prepared.declaration);
@@ -137,6 +138,7 @@ impl Game {
     }
 
     pub(crate) fn cancel_all_prepared_source_plays(&mut self) {
+        crate::determinize::context_guard::check_world_continuation(self, "cancel_all_prepared_source_plays");
         while let Some((receipt,_))=self.prepared_source_plays.last() {
             self.cancel_prepared_source_play(*receipt);
         }
@@ -1138,6 +1140,7 @@ impl Game {
         identity: u64,
         source_index: usize,
     ) {
+        crate::determinize::context_guard::check_world_continuation(self, "restore_source_play_card");
         if host.player != player {
             return;
         }
@@ -1170,6 +1173,7 @@ impl Game {
     }
 
     pub(crate) fn restore_pending_would_play_origin(&mut self, resume: PendingWouldPlayResume) {
+        crate::determinize::context_guard::check_world_continuation(self, "restore_pending_would_play_origin");
         // Refusal has no commit result, even when optional payment aborts its tail.
         if let PendingWouldPlayOrigin::Source { receipt: Some(receipt), .. } = resume.origin {
             self.source_play_receipts
@@ -1195,7 +1199,7 @@ impl Game {
                 let card_index = card.card_index;
                 let original_index = match resume.origin { PendingWouldPlayOrigin::SecurityRecorded { index, .. } | PendingWouldPlayOrigin::SecurityAt { index, .. } => index, _ => self.player(resume.player).security.len() };
                 let restore_at = original_index.min(self.player(resume.player).security.len());
-                self.player_mut(resume.player).insert_in_security(restore_at, card);
+                self.player_mut(resume.player).restore_in_security(restore_at, card);
                 if was_face_up {
                     self.player_mut(resume.player)
                         .face_up_security
@@ -1488,7 +1492,8 @@ impl Game {
             if effect.timing != EffectTiming::WhenDigivolving {
                 continue;
             }
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card: card_handle,
                 source_permanent: None,
                 source_kind: EffectSourceKind::Digimon,
@@ -1535,7 +1540,8 @@ impl Game {
             if !effect.counter {
                 continue;
             }
-            self.effect_queue.push_back(QueuedEffect {
+            self.push_effect_with_identity(QueuedEffect {
+                source_identity: None,
                 source_card: card_handle,
                 source_permanent: None,
                 source_kind: EffectSourceKind::Option,

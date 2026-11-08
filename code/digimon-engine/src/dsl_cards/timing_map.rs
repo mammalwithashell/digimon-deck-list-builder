@@ -58,6 +58,7 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnCheckFaceUpSecurity => EffectTiming::OnCheckFaceUpSecurity,
         CompiledTiming::OnLoseSecurity => EffectTiming::OnLoseSecurity,
         CompiledTiming::OnDiscardSecurity => EffectTiming::OnDiscardSecurity,
+        CompiledTiming::OnDiscardDeck => EffectTiming::OnDiscardDeck,
         CompiledTiming::OnSecurity => EffectTiming::SecuritySkill,
         CompiledTiming::StartOfYourTurn => EffectTiming::StartOfYourTurn,
         CompiledTiming::StartOfOpponentsTurn => EffectTiming::StartOfOpponentsTurn,

@@ -199,9 +199,41 @@ impl Game {
         self.player_mut(player_id).deck = deck;
     }
 
+    /// Is this live security card currently known to both players? Public
+    /// revelation is knowledge only, not a face-up security rules state.
+    pub fn security_card_is_public(&self, owner: PlayerId, card: crate::card_source::CardHandle) -> bool {
+        let player = self.player(owner);
+        player.security.iter().any(|c| c.handle() == card && !c.is_opaque_placeholder) &&
+            (player.face_up_security.contains(&card.0) || self.public_security_reveals.iter().any(|&(p, c, arrival, shuffle)|
+                p == owner && c == card && shuffle == self.security_shuffle_generations[owner as usize]
+                    && player.security_entry_generations.get(&card).copied().unwrap_or(0) == arrival))
+    }
+
+    /// Reveal the current security stack to both players while leaving every
+    /// card in place and face down. Pins expire on departure/reentry or shuffle.
+    pub fn reveal_security(&mut self, player: PlayerId) {
+        let count = self.player(player).security.len();
+        for index in 0..count { self.ensure_security_materialized(player, index); }
+        let cards: Vec<_> = self.player(player).security.iter().filter(|card| !card.is_opaque_placeholder).map(|card| (
+            card.handle(), card.card_id(&self.card_data).to_owned(), card.card_name(&self.card_data).to_owned(),
+            self.player(player).security_entry_generations.get(&card.handle()).copied().unwrap_or(0),
+        )).collect();
+        self.public_security_reveals.retain(|(owner, _, _, _)| *owner != player);
+        let shuffle = self.security_shuffle_generations[player as usize];
+        for (card, card_id, card_name, arrival) in cards {
+            self.public_security_reveals.push((player, card, arrival, shuffle));
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Reveal {
+                seq, player, card_id, card_name, source_zone: crate::events::RevealZone::SecurityStack,
+            });
+        }
+        let _ = self.refresh_belief_knowledge();
+    }
+
     /// Turn every card in `player_id`'s security stack face down, then shuffle
     /// without changing its contents (qa:Q7121).
     pub fn shuffle_security(&mut self, player_id: PlayerId) {
+        self.public_security_reveals.retain(|(owner, _, _, _)| *owner != player_id);
         self.shuffle_belief_knowledge(player_id, crate::determinize::beliefs::KnowledgeZone::Security);
         self.security_shuffle_generations[player_id as usize] = self.security_shuffle_generations[player_id as usize].checked_add(1).expect("security shuffle generation exhausted");
         self.player_mut(player_id).face_up_security.clear();

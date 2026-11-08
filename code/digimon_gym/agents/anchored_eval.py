@@ -213,11 +213,20 @@ def evaluate_against_anchors(
     collector=None,
     games_per_archetype=None,
     on_progress=None,
+    include_tamer_first: bool = False,
 ) -> Dict[str, MatchRecord]:
     """Score ``candidate_model`` against greedy plus every layout-compatible
     champion in ``registry``, seat-balanced. Returns ``{anchor_name: record}``.
-    Champion opponents are loaded via ``make_agent_opponent_fn``."""
+    Champion opponents are loaded via ``make_agent_opponent_fn``. The optional
+    Tamer-first flag adds separately named native heuristic baselines; it never
+    replaces the frozen development champion or changes default anchors."""
     results: Dict[str, MatchRecord] = {}
+    tamer_champions = None
+    if include_tamer_first:
+        from digimon_gym.agents.tamer_first import VERSIONS
+        tamer_champions = list(registry.compatible(candidate_layout_hash))
+        if any(champ.name in VERSIONS for champ in tamer_champions):
+            raise ValueError("Champion name collides with a reserved Tamer-first baseline")
     def collect_for(name):
         extra = {"collector": collector, "anchor_name": name} if collector is not None else {}
         if games_per_archetype is not None:
@@ -229,7 +238,13 @@ def evaluate_against_anchors(
         results["greedy"] = play_matchup(
             candidate_model, greedy_policy, deck_pool, n, base_seed, tensor_profile, **collect_for("greedy"))
 
-    for champ in registry.compatible(candidate_layout_hash):
+    if include_tamer_first:
+        from digimon_gym.agents.tamer_first import TamerFirstOpponent, VERSIONS
+        for name in VERSIONS:
+            results[name] = play_matchup(candidate_model, TamerFirstOpponent(name), deck_pool,
+                n, base_seed, tensor_profile, **collect_for(name))
+
+    for champ in tamer_champions if tamer_champions is not None else registry.compatible(candidate_layout_hash):
         opponent_fn = make_agent_opponent_fn(champ.weights_path, algorithm=champ.algorithm)
         results[champ.name] = play_matchup(
             candidate_model, opponent_fn, deck_pool, n, base_seed, tensor_profile, **collect_for(champ.name))

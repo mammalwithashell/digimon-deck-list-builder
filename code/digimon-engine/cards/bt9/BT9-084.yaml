@@ -1,0 +1,39 @@
+card: BT9-084
+name: Tai Kamiya & Kari Kamiya
+kind: tamer
+color: [red, yellow]
+cost: 4
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] Gain 1 memory independently for each player with 3 or fewer security cards"
+    process:
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - gain_memory: 1
+      - if:
+          condition: { opponent_security_count_lte: 3 }
+          then:
+            - gain_memory: 1
+  - when: on_ally_attack
+    active_when: { your_turn: true }
+    optional: true
+    condition: { source_is_unsuspended: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [red, yellow]
+    summary: "[Your Turn] When your red or yellow Digimon attacks, may suspend this Tamer to give all opponent Security Digimon -2000 DP for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - add_player_modifier:
+          target_player: opponent
+          modifier: SecurityDpChange
+          value: -2000
+          expiry: end_of_turn
+  - when: on_security
+    summary: "[Security] Play this card without paying its memory cost"
+    process:
+      - play_from_security: {}

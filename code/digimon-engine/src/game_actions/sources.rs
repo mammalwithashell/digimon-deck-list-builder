@@ -284,7 +284,7 @@ impl Game {
             CardSourceRef::Security(p, i) => {
                 let player = self.player_mut(p);
                 let idx = i.min(player.security.len());
-                player.insert_in_security(idx, taken.card);
+                player.restore_in_security(idx, taken.card);
                 true
             }
             CardSourceRef::PendingSecurity => {

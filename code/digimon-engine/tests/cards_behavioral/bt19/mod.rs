@@ -24,3 +24,9 @@ mod bt19_093;
 mod bt19_099;
 mod bt19_101;
 mod bt19_001;
+
+mod bt19_036;
+
+mod bt19_042;
+
+mod bt19_029;

@@ -29,6 +29,7 @@ pub enum EffectSourceKind {
     Rule,
     /// Q2229: native effect of a Tamer also treated as a Digimon.
     DigimonAndTamer,
+    DigiEgg,
 }
 impl EffectSourceKind {
     /// The §15-2-1 category of an effect activated by a card of `kind` (its
@@ -47,9 +48,10 @@ impl EffectSourceKind {
     /// non-Digimon token needs its own kind, not this arm.
     pub fn for_card_kind(kind: CardKind) -> Self {
         match kind {
-            CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual | CardKind::Token => {
+            CardKind::Digimon | CardKind::Dual | CardKind::Token => {
                 Self::Digimon
             }
+            CardKind::DigiEgg => Self::DigiEgg,
             CardKind::Tamer => Self::Tamer,
             CardKind::Option => Self::Option,
         }
@@ -506,6 +508,9 @@ pub enum EffectTiming {
 
     // Special
     None,
+    /// This physical card was trashed from the deck by an effect.
+    OnDiscardDeck,
+
 }
 
 /// When a Delay Option's body fires relative to the play.

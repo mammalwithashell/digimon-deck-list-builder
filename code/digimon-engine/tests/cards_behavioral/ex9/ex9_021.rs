@@ -270,6 +270,7 @@ fn ex9_021_when_digivolving_dna_immunity_clause_shape() {
                 target,
                 source_kind,
                 source_controller,
+                exclude_self,
                 expiry,
                 continuous,
                 targets,
@@ -277,6 +278,7 @@ fn ex9_021_when_digivolving_dna_immunity_clause_shape() {
                 assert_eq!(target.as_ref(), Some(&CompiledBindingRef::SelfRef));
                 assert_eq!(source_kind, &expected_kind);
                 assert_eq!(source_controller, &CompiledEffectController::Opponent);
+                assert!(!exclude_self, "existing opponent-only grants retain their default");
                 assert_eq!(expiry, "end_of_turn");
                 assert!(!continuous, "per-permanent grant (not continuous)");
                 assert!(targets.is_none());

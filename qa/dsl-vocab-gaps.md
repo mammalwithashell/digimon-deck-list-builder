@@ -1,5 +1,35 @@
 # DSL Vocabulary Gaps Tracker
 
+## Mandatory reveal overlap and security-payment results - audit correction (2026-10-29)
+
+Q2953 requires available category picks; it does not justify globally optimizing
+which physical card fills each category. Official Q4704 expressly permits
+choosing an overlapping card for the first category even when this leaves only
+one card added. Every currently eligible, unchosen physical card must remain
+selectable; an available mandatory category has no decline, and a physical card
+cannot fill two categories. The initial maximum-assignment restriction violated
+this contract and failed five unchanged existing card regressions. It has been
+removed; the expanded focused verification is pending. Named-material matching
+has different semantics and is unchanged.
+
+`trash_top_security` count bindings and paid prevention now use physical movement
+receipts and internal continuation finalizers. This closes canceled/parked
+payment failures without changing the authored vocabulary. See the scoped
+security-trash entry in `docs/RUST_ENGINE_GAPS.md` for remaining outcome shapes.
+The existing `event_card_kind` predicate now has a separate runtime mechanics
+test distinguishing Digimon and Tamer play events; no gate rule was changed.
+
+## Bottom-security trash lowering — behavioral coverage added (2026-10-29)
+
+`trash_bottom_security` already lowers to the shared security-removal path;
+no new vocabulary or runtime behavior was needed. Two mechanics regressions
+in `tests/dsl/trash_bottom_security.rs` exercise `CompiledStep::TrashBottomSecurity`
+for either player, pin the removed physical bottom card and surviving top card,
+preserve the other player's stack, and cover the empty-stack case. Both pass.
+This supplies the previously missing mechanics attribution for EX13-025 and
+other users of this step. Per-card behavior, admission artifact freshness and
+oracle evidence remain separate checks.
+
 ## Selected-source security payment and saved card level — focused repair verified (2026-10-24)
 
 `security_place_stacked_card` supports opt-in `bind_success_as` and `to_owner`

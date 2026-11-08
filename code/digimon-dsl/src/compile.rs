@@ -339,6 +339,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnCheckFaceUpSecurity => CompiledTiming::OnCheckFaceUpSecurity,
         S::OnLoseSecurity => CompiledTiming::OnLoseSecurity,
         S::OnDiscardSecurity => CompiledTiming::OnDiscardSecurity,
+        S::OnDiscardDeck => CompiledTiming::OnDiscardDeck,
         S::OnSecurity => CompiledTiming::OnSecurity,
         S::OnOptionPlaced => CompiledTiming::OnOptionPlaced,
         S::OnOptionTrashed => CompiledTiming::OnOptionTrashed,
@@ -2762,6 +2763,7 @@ fn compile_effect_source_kind(kind: crate::step::EffectSourceKindSpec) -> Compil
         crate::step::EffectSourceKindSpec::Tamer => CompiledEffectSourceKind::Tamer,
         crate::step::EffectSourceKindSpec::Option => CompiledEffectSourceKind::Option,
         crate::step::EffectSourceKindSpec::Rule => CompiledEffectSourceKind::Rule,
+        crate::step::EffectSourceKindSpec::DigiEgg => CompiledEffectSourceKind::DigiEgg,
     }
 }
 
@@ -2976,6 +2978,7 @@ fn compile_step(
         S::ShuffleSecurity(a) => CompiledStep::ShuffleSecurity {
             of: compile_player_ref(a.of),
         },
+        S::RevealSecurity(a) => CompiledStep::RevealSecurity { of: compile_player_ref(a.of) },
         S::RevealTopDeck(a) => CompiledStep::RevealTopDeck {
             of: compile_player_ref(a.of),
             count: a.count,
@@ -3219,6 +3222,7 @@ fn compile_step(
                             face_up: a.face_up,
                             to_owner: a.to_owner,
                             bind_placed_as: a.bind_placed_as.clone(),
+                            result_receipt: None,
                         },
                         D::Handle => CompiledStep::PlacePermanentOnSecurityAndHandleReplacement {
                             of,
@@ -3903,6 +3907,12 @@ fn compile_step(
             }
         }
         S::GrantEffectImmunity(a) => {
+            if a.continuous && a.exclude_self {
+                errors.push(ValidationError { card_id: card_id.to_string(),
+                    path: format!("{prefix}.grant_effect_immunity"),
+                    message: "exclude_self requires a per-permanent immunity grant".to_string() });
+            }
+
             // Continuous form requires `targets` and no `target`; the
             // per-permanent form requires `target` (Q28 / BT20-059).
             if a.continuous {
@@ -3924,6 +3934,7 @@ fn compile_step(
                 target: a.target.as_ref().map(compile_binding_ref),
                 source_kind: compile_effect_source_kind(a.source_kind),
                 source_controller: compile_effect_controller(a.source_controller),
+                exclude_self: a.exclude_self,
                 expiry: a.expiry.clone(),
                 continuous: a.continuous,
                 targets: a.targets.as_ref().map(|p| {

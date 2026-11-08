@@ -1,112 +1,7 @@
 {
   "version": 1,
-  "last_updated": "2026-10-27",
+  "last_updated": "2026-10-30",
   "cards": {
-    "ST20-04": {
-      "card_name": "Garudamon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-a",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st20/ST20-04.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_04.rs",
-      "test_count": 15,
-      "patterns": [
-        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
-      ],
-      "notes": "Shared ADVENTURE Lv.5 observer clause authored + exhaustively tested here (OPT, your-turn gate, own/other/opponent scope, non-ADVENTURE ignored without consuming OPT, digivolve trigger, mandatory chosen Alliance, optional attack decline + accept through normal attack flow). OP/WD S.A.+1 + multiply(floor_div(tamer colours,2),2000) DP for the turn."
-    },
-    "ST20-06": {
-      "card_name": "Angewomon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-a",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st20/ST20-06.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_06.rs",
-      "test_count": 5,
-      "patterns": [
-        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
-      ],
-      "notes": "OP/WD optional free digivolve of another Digimon into an [ADVENTURE] hand card (has_digivolve_candidate + can_digivolve_onto, cost free; normal requirements). Shared ADVENTURE observer (ST20-04 idiom)."
-    },
-    "ST20-09": {
-      "card_name": "MegaKabuterimon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-a",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st20/ST20-09.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_09.rs",
-      "test_count": 6,
-      "patterns": [
-        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
-      ],
-      "notes": "OP/WD mandatory unsuspend; then clamp_to_available suspend pick sized floor_div(distinct colours of [ADVENTURE] Tamers, 2). Shared ADVENTURE observer."
-    },
-    "ST21-04": {
-      "card_name": "Zudomon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-a",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st21/ST21-04.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_04.rs",
-      "test_count": 5,
-      "patterns": [
-        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
-      ],
-      "notes": "OP/WD: trash floor(tamer colours/2) sources from ONE opp Digimon (printed card + DCGO isFromOnly1Permanent; official DB bundle wording drifts — see YAML header), clamp_to_available; then mandatory bounce of opp Digimon with <=1 sources. Shared ADVENTURE observer."
-    },
-    "ST21-09": {
-      "card_name": "Lillymon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-a",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st21/ST21-09.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_09.rs",
-      "test_count": 4,
-      "patterns": [
-        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
-      ],
-      "notes": "OP/WD suspend all opp <=5000 DP Digimon (for_each), then clamp_to_available bottom-deck pick over suspended opp Digimon sized floor(tamer colours/2). Shared ADVENTURE observer."
-    },
-    "BT21-061": {
-      "card_name": "MetalGreymon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-a",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/bt21/BT21-061.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_061.rs",
-      "test_count": 5,
-      "patterns": [
-        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
-      ],
-      "notes": "OP/WD formula de_digivolve = floor(tamer colours/2) separate <De-Digivolve 1> on 1 opp Digimon (gated on >=2 colours). Alt box Lv.4 [Greymon]-name or [ADVENTURE]. Shared ADVENTURE observer."
-    },
-    "BT21-078": {
-      "card_name": "WereGarurumon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-a",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/bt21/BT21-078.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_078.rs",
-      "test_count": 5,
-      "patterns": [
-        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
-      ],
-      "notes": "OP/WD mandatory delete of opp Lv.4- Digimon, Lv.5- with >=2 Tamer colours (if/else). Alt box Lv.4 [Garurumon]-name or [ADVENTURE]. Shared ADVENTURE observer."
-    },
     "ST2-01": {
       "card_name": "Tsunomon",
       "validated_date": "2026-06-14",
@@ -5183,22 +5078,42 @@
     },
     "BT23-035": {
       "card_name": "Dynasmon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-impl-2026-06-14",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "Royal Knights",
+      "archetype": "Dynasmon EX13",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-035.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_035.rs",
-      "test_count": 2,
-      "tests_passing": 1,
-      "tests_ignored": 1,
+      "test_count": 26,
+      "tests_passing": 26,
+      "tests_ignored": 0,
       "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
+        "DYNASMON-EX13"
       ],
-      "notes": "Added [All Turns][OPT] on_own_security_removed: Security A.+1 until your turn + Recovery+1(Deck) at <=3 security. Barrier + top-security-cost -6000 board debuff retained.",
-      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured.",
+      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale.",
+      "prior_verdicts": [
+        {
+          "card_name": "Dynasmon",
+          "validated_date": "2026-06-14",
+          "report": "royal-knights-audit-impl-2026-06-14",
+          "status": "IMPLEMENTED",
+          "gap_kind": null,
+          "archetype": "Royal Knights",
+          "yaml_path": "code/digimon-engine/cards/bt23/BT23-035.yaml",
+          "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_035.rs",
+          "test_count": 2,
+          "tests_passing": 1,
+          "tests_ignored": 1,
+          "patterns": [
+            "ROYAL-KNIGHTS-POOL-SLICE",
+            "GAP-STUB"
+          ],
+          "notes": "Added [All Turns][OPT] on_own_security_removed: Security A.+1 until your turn + Recovery+1(Deck) at <=3 security. Barrier + top-security-cost -6000 board debuff retained.",
+          "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+        }
+      ]
     },
     "BT23-047": {
       "card_name": "Examon",
@@ -6237,15 +6152,15 @@
       "archetype": "Callismon / dark animal",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-058.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_058.rs",
-      "test_count": 9,
+      "test_count": 18,
       "patterns": [
         "H5",
         "H7",
         "E3",
         "F7"
       ],
-      "notes": "Reboot/Blocker/Fortitude; Lv5 TS cost4 ignore alt-digivolve; OP/WD/WA OPT suspend+cant-unsuspend; All-Turns effect-init de-digivolve + may battle",
-      "validated_date": "2026-06-06",
+      "notes": "Reboot/Blocker/Fortitude; Lv5 TS cost4 ignore alt-digivolve; OP/WD/WA OPT suspend+cant-unsuspend; All-Turns effect-init de-digivolve + may battle | 2026-10-30: fixed optional suspend decline dropping the independent Then lock with continue_on_decline. Seven regressions cover legal On Play/digivolve/attack, selected distinct targets, already-suspended target, clone and opponent-turn expiry, Fortitude replay; 18 card tests plus 2 printed-form checks pass. See qa/qa-reports/paradise-callismon-2026-10-30/; saved-recording and admission results are reported separately.",
+      "validated_date": "2026-10-30",
       "report": "batch-implement-cards-rust-dsl",
       "gap_kind": null
     },
@@ -7453,28 +7368,51 @@
     },
     "LM-020": {
       "card_name": "Quantumon",
-      "validated_date": "2026-06-05",
-      "report": "judge-quiz Q18",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "judge-quiz (Q18)",
+      "archetype": "Dynasmon EX13",
       "yaml_path": "code/digimon-engine/cards/lm/LM-020.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_020.rs",
-      "test_count": 4,
+      "test_count": 13,
       "patterns": [
-        "start-of-opp-turn",
-        "select-effect-choice",
-        "declare-category",
-        "reveal-deck-top",
-        "binding-card-kind",
-        "grant-effect-immunity",
-        "self-inclusive-immunity",
-        "when-digivolving-cost",
-        "place-permanent-on-security",
-        "return-selected-security-to-deck",
-        "shuffle-security"
+        "DYNASMON-EX13",
+        "OWN-CARRIER-IMMUNITY-EXCEPTION",
+        "OWNED-SECURITY-PLACEMENT-RECEIPT",
+        "PUBLIC-SECURITY-REVEAL"
       ],
-      "notes": "Both clauses faithful. Clause 2 declare-category conditional immunity (source_controller any → blocks own Blast Digivolve, judge Q18). Clause 1 place-Digimon-on-security cost + 1 opp security to deck top + shuffle. Closed G-DSL-RETURN-SELECTED-SECURITY-TO-DECK + added binding_card_kind predicate."
+      "notes": "Current official errata; both normal evolution colors; any-side Digimon payment to physical owner; correlated actual processing receipts including parked/redirected/canceled/rule-routed outcomes; public security reveal; exact category immunity excludes own/inherited carrier effects. Production-pack Rust card suite 13/13 passed after canonical opponent-start dispatcher repair; 4 independent real-turn/security primitives passed. Simulator evidence only; oracle unmeasured. Current-main integration remains unverified.",
+      "prior_verdicts": [
+        {
+          "card_name": "Quantumon",
+          "validated_date": "2026-06-05",
+          "report": "judge-quiz Q18",
+          "status": "IMPLEMENTED",
+          "gap_kind": null,
+          "archetype": "judge-quiz (Q18)",
+          "yaml_path": "code/digimon-engine/cards/lm/LM-020.yaml",
+          "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_020.rs",
+          "test_count": 4,
+          "patterns": [
+            "start-of-opp-turn",
+            "select-effect-choice",
+            "declare-category",
+            "reveal-deck-top",
+            "binding-card-kind",
+            "grant-effect-immunity",
+            "self-inclusive-immunity",
+            "when-digivolving-cost",
+            "place-permanent-on-security",
+            "return-selected-security-to-deck",
+            "shuffle-security"
+          ],
+          "notes": "Both clauses faithful. Clause 2 declare-category conditional immunity (source_controller any → blocks own Blast Digivolve, judge Q18). Clause 1 place-Digimon-on-security cost + 1 opp security to deck top + shuffle. Closed G-DSL-RETURN-SELECTED-SECURITY-TO-DECK + added binding_card_kind predicate."
+        }
+      ],
+      "tests_passing": 13,
+      "tests_ignored": 0,
+      "audit_note": "Prior record retained in prior_verdicts. No eligibility waiver; canonical lowering and runtime gate evidence are recorded separately in the report."
     },
     "BT20-059": {
       "card_name": "Gankoomon (X Antibody)",
@@ -13110,21 +13048,21 @@
     },
     "EX13-025": {
       "card_name": "Candlemon",
-      "validated_date": "2026-10-01",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Slice — Witchelny",
       "yaml_path": "code/digimon-engine/cards/ex13/EX13-025.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_025.rs",
-      "test_count": 20,
+      "test_count": 23,
       "patterns": [
         "start-of-main",
         "effect-choice",
         "hand-to-bottom-security",
         "F3"
       ],
-      "notes": "[Start of Your Main Phase] 3+ security: top/bottom security trash (EffectChoice) + Draw 1 + memory; then <=2 security: optional [Witchelny]-text hand card to bottom security. Inherited OPT opponent-effect leave save by trashing top security, gated on carrier [Dynasmon]/[Witchelny] in text (BT18-030 DCGO idiom)."
+      "notes": "[Start of Your Main Phase] 3+ security: top/bottom security trash (EffectChoice) + Draw 1 + memory; then <=2 security: optional [Witchelny]-text hand card to bottom security. Inherited OPT opponent-effect leave save by trashing top security, gated on carrier [Dynasmon]/[Witchelny] in text (BT18-030 DCGO idiom). 2026-10-29 audit: Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
     },
     "EX13-029": {
       "card_name": "FlameWizardmon",
@@ -16042,89 +15980,196 @@
       "test_count": 10,
       "notes": "Ten behavioral tests pass after independent review: activation decline preserves OPT, accepted activation spends it even when processing is declined/impossible, and Q3046 permits activation without an illegal nested attack. Thirteen-source placement uses the repaired full count bound. Shared immediate-attack guard preserves deferred keyword activation; 33 focused controls pass. No active action/tensor contract change or new live DCGO parity."
     },
-    "ST20-02": {
-      "card_name": "Biyomon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-b",
+    "BT18-030": {
+      "card_name": "Candlemon",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st20/ST20-02.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_02.rs",
-      "test_count": 10,
-      "patterns": [
-        "REVEAL-BUCKETS",
-        "INHERITED-DP-AURA",
-        "ALT-PATH-TRAIT"
-      ],
-      "notes": "Reveal 3 → 1 ADVENTURE Digimon + 1 ADVENTURE Tamer/Option (disjoint buckets), rest bottom; Lv.2 w/[ADVENTURE] box; inherited [Your Turn] +2000."
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-030.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_030.rs",
+      "test_count": 8,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
     },
-    "ST20-03": {
-      "card_name": "Birdramon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-b",
+    "BT18-036": {
+      "card_name": "Wizardmon",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st20/ST20-03.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_03.rs",
-      "test_count": 10,
-      "patterns": [
-        "CONDITIONAL-SELF-DIGIVOLVE",
-        "DISTINCT-FILTERED-COLORS",
-        "INHERITED-DP-AURA"
-      ],
-      "notes": "[OP][WD] free requirement-respecting self-digivolve into ADVENTURE hand card gated on ADVENTURE-Tamer colours >= 3 via new `distinct_colors_gte` leaf (G-DSL-DISTINCT-FILTERED-COLORS). Colour count reads rules colours (gained colours count) via the shared distinct_colors_in_zone helper."
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-036.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_036.rs",
+      "test_count": 16,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
     },
-    "ST21-05": {
-      "card_name": "Angemon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-b",
+    "BT18-098": {
+      "card_name": "Dragon's Roar",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st21/ST21-05.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_05.rs",
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_098.rs",
+      "test_count": 12,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
+    },
+    "BT19-036": {
+      "card_name": "Wizardmon (X Antibody)",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-036.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_036.rs",
+      "test_count": 14,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
+    },
+    "BT19-042": {
+      "card_name": "Dynasmon (X Antibody)",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-042.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_042.rs",
+      "test_count": 10,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
+    },
+    "EX6-063": {
+      "card_name": "T.K. Takaishi & Kari Kamiya",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "yaml_path": "code/digimon-engine/cards/ex6/EX6-063.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex6/ex6_063.rs",
+      "test_count": 11,
+      "archetype": "Dynasmon exact 120647",
+      "notes": "Focused Dynasmon suite: 98/98 pass, including exact 22-ID loadability and shared mechanics. Physical hand paging, optional paid security costs, strict carrier/target filters and applicable turn limits tested. Scoped simulator evidence only; no new oracle confirmation."
+    },
+    "BT18-039": {
+      "card_name": "Mistymon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-039.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_039.rs",
+      "test_count": 12,
+      "tests_passing": 12,
+      "tests_ignored": 0,
+      "patterns": [
+        "DYNASMON-EX13"
+      ],
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
+    },
+    "BT19-029": {
+      "card_name": "Tapirmon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_029.rs",
+      "test_count": 21,
+      "tests_passing": 21,
+      "tests_ignored": 0,
+      "patterns": [
+        "DYNASMON-EX13"
+      ],
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
+    },
+    "BT6-089": {
+      "card_name": "T.K. Takaishi & Kari Kamiya",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-089.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_089.rs",
       "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
       "patterns": [
-        "FREE-PLAY-FROM-HAND",
-        "INHERITED-WHEN-ATTACKING-OPT",
-        "DP-DEBUFF"
+        "DYNASMON-EX13"
       ],
-      "notes": "[WD] <=1 Tamer → may play ADVENTURE Tamer free; inherited [WA][OPT] -2000 for the turn."
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
     },
-    "ST21-07": {
-      "card_name": "Palmon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-b",
+    "BT9-084": {
+      "card_name": "Tai Kamiya & Kari Kamiya",
       "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
       "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st21/ST21-07.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_07.rs",
-      "test_count": 7,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_084.rs",
+      "test_count": 11,
+      "tests_passing": 11,
+      "tests_ignored": 0,
       "patterns": [
-        "OPTIONAL-HAND-TRASH-COST",
-        "INHERITED-DP-AURA"
+        "DYNASMON-EX13"
       ],
-      "notes": "[OP] by trashing 1 ADVENTURE card from hand, <Draw 2> (EX13-018 cost idiom); inherited [All Turns] +1000."
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
     },
-    "ST21-08": {
-      "card_name": "Togemon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-b",
+    "EX7-026": {
+      "card_name": "Starmon",
       "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
       "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st21/ST21-08.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_08.rs",
-      "test_count": 10,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-026.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_026.rs",
+      "test_count": 11,
+      "tests_passing": 11,
+      "tests_ignored": 0,
       "patterns": [
-        "CONDITIONAL-SELF-DIGIVOLVE",
-        "DISTINCT-FILTERED-COLORS",
-        "INHERITED-DP-AURA"
+        "DYNASMON-EX13"
       ],
-      "notes": "Same body as ST20-03; inherited [All Turns] +1000. Colour count reads rules colours (gained colours count) via the shared distinct_colors_in_zone helper."
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
+    },
+    "LM-045": {
+      "card_name": "Vermilion Memory Boost!",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-045.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_045.rs",
+      "test_count": 8,
+      "tests_passing": 8,
+      "tests_ignored": 0,
+      "patterns": [
+        "DYNASMON-EX13"
+      ],
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
+    },
+    "EX10-041": {
+      "card_name": "Wizardmon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-29",
+      "report": "qa/archetype-qa/dynasmon-admission.md",
+      "gap_kind": null,
+      "archetype": "Dynasmon EX13",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-041.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_041.rs",
+      "test_count": 18,
+      "tests_passing": 18,
+      "tests_ignored": 0,
+      "patterns": [
+        "DYNASMON-EX13"
+      ],
+      "notes": "Focused Rust behavioral evidence; final integrated production-pack verification recorded in report. Simulator evidence only; oracle unmeasured."
     },
     "ST21-10": {
       "card_name": "Gabumon",
@@ -16141,6 +16186,64 @@
         "INHERITED-WHEN-ATTACKING-OPT"
       ],
       "notes": "ST20-10 warp shape into [MetalGarurumon]; Purple+Blue Lv.2 circles (per-card JSON drops Blue — data drift); inherited [WA][OPT] draw 1 then mandatory trash 1. DCGO's extra [Hero] alt-req not authored (print governs)."
+    },
+    "ST20-08": {
+      "card_name": "Kabuterimon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-e",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_08.rs",
+      "test_count": 9,
+      "patterns": [
+        "FREE-PLAY-FROM-HAND",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "[WD] <=1 Tamer -> may play ADVENTURE Tamer free; inherited <Piercing>; green Lv3 circle + Lv3 [ADVENTURE] box cost 2."
+    },
+    "ST20-13": {
+      "card_name": "Tai Kamiya & Izzy Izumi",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-d",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-13.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_13.rs",
+      "test_count": 13,
+      "notes": "TDD RED->GREEN. Official bundle + image + DCGO ST20_13.cs. Shared reducer suite + [Opponent's Turn] ADVENTURE-Digimon Blocker aura (own Digimon only, opp turn only, clears when source leaves) + Security play."
+    },
+    "ST21-02": {
+      "card_name": "Gomamon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-02.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_02.rs",
+      "test_count": 2,
+      "patterns": [
+        "FLOOD-GATE"
+      ],
+      "notes": "EX13 Adventure lane C: [All Turns] CannotGainMemoryExceptFromTamers on opponent (EX8-030 hook); ADVENTURE Lv.2 alt-digivolve cost 0."
+    },
+    "BT21-061": {
+      "card_name": "MetalGreymon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-061.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_061.rs",
+      "test_count": 5,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "OP/WD formula de_digivolve = floor(tamer colours/2) separate <De-Digivolve 1> on 1 opp Digimon (gated on >=2 colours). Alt box Lv.4 [Greymon]-name or [ADVENTURE]. Shared ADVENTURE observer."
     },
     "ST21-14": {
       "card_name": "Believe in Our Friendship",
@@ -16159,6 +16262,252 @@
         "SECURITY-PLACE-SELF"
       ],
       "notes": "ADVENTURE Digimon/Tamer on field (incl. breeding, per official Q&A) bypasses colour via use_requirement (no flood_gate: it had no observable effect); [Main] reveal 3 add 1 ADVENTURE, bottom rest, auto-seat as Delay; <Delay> gain 2; [Security] place self."
+    },
+    "ST20-09": {
+      "card_name": "MegaKabuterimon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_09.rs",
+      "test_count": 6,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "OP/WD mandatory unsuspend; then clamp_to_available suspend pick sized floor_div(distinct colours of [ADVENTURE] Tamers, 2). Shared ADVENTURE observer."
+    },
+    "ST21-08": {
+      "card_name": "Togemon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_08.rs",
+      "test_count": 10,
+      "patterns": [
+        "CONDITIONAL-SELF-DIGIVOLVE",
+        "DISTINCT-FILTERED-COLORS",
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "Same body as ST20-03; inherited [All Turns] +1000. Colour count reads rules colours (gained colours count) via the shared distinct_colors_in_zone helper."
+    },
+    "ST21-11": {
+      "card_name": "MetalGarurumon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_11.rs",
+      "test_count": 9,
+      "patterns": [
+        "BLAST-DIGIVOLVE",
+        "TAMER-COLOR-FORMULA",
+        "RETURN-TO-DECK-BOTTOM",
+        "PLAY-FROM-TRASH"
+      ],
+      "notes": "EX13 Adventure lane C: Blast Digivolve marker; ace_overflow -4; [OP][WD] bottom-deck opp Digimon level <= 4 + floor(tamer colors/2) (floor_div((8+c),2)); [WA][OPT] may play Lv.4- Digimon from trash free. Standard Purple/Blue Lv.5/4 circles come from cards.json. Blast Digivolve counter-window behaviour tested."
+    },
+    "ST20-02": {
+      "card_name": "Biyomon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-02.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_02.rs",
+      "test_count": 10,
+      "patterns": [
+        "REVEAL-BUCKETS",
+        "INHERITED-DP-AURA",
+        "ALT-PATH-TRAIT"
+      ],
+      "notes": "Reveal 3 → 1 ADVENTURE Digimon + 1 ADVENTURE Tamer/Option (disjoint buckets), rest bottom; Lv.2 w/[ADVENTURE] box; inherited [Your Turn] +2000."
+    },
+    "ST20-06": {
+      "card_name": "Angewomon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_06.rs",
+      "test_count": 5,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "OP/WD optional free digivolve of another Digimon into an [ADVENTURE] hand card (has_digivolve_candidate + can_digivolve_onto, cost free; normal requirements). Shared ADVENTURE observer (ST20-04 idiom)."
+    },
+    "ST20-07": {
+      "card_name": "Tentomon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_07.rs",
+      "test_count": 4,
+      "patterns": [
+        "FLOOD-GATE"
+      ],
+      "notes": "EX13 Adventure lane C: [Opponent's Turn] CannotReduceDigivolveCost flood gate on opponent (BT5-033 hook); ADVENTURE Lv.2 alt-digivolve cost 0."
+    },
+    "AD1-020": {
+      "card_name": "Tommy, Takuya, & Zoe",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-d",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Hybrid",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_020.rs",
+      "test_count": 12,
+      "notes": "TDD RED->GREEN. Official bundle + image + DCGO AD1_020.cs. OP/SoMP up-to-2 different-colour Hybrid placement from hand/trash (AD1-023 shape), draw iff placed, independent 4+ Hybrid -> +2 memory; name aliases; inherited [End of Your Turn][OPT] 'by attacking' with Security A.+1 for the attack (may_attack_now cost_upgrade; not offered when carrier can't attack; attack mandatory once activated); Security play. cards.json mislabels the inherited box as Security Effect."
+    },
+    "ST21-07": {
+      "card_name": "Palmon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_07.rs",
+      "test_count": 7,
+      "patterns": [
+        "OPTIONAL-HAND-TRASH-COST",
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "[OP] by trashing 1 ADVENTURE card from hand, <Draw 2> (EX13-018 cost idiom); inherited [All Turns] +1000."
+    },
+    "ST20-01": {
+      "card_name": "Koromon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-e",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_01.rs",
+      "test_count": 4,
+      "patterns": [
+        "INHERITED-CONDITIONAL-SELF-AURA"
+      ],
+      "notes": "Inherited [All Turns] +1000 DP while the carrier has [ADVENTURE]."
+    },
+    "ST20-04": {
+      "card_name": "Garudamon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_04.rs",
+      "test_count": 15,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "Shared ADVENTURE Lv.5 observer clause authored + exhaustively tested here (OPT, your-turn gate, own/other/opponent scope, non-ADVENTURE ignored without consuming OPT, digivolve trigger, mandatory chosen Alliance, optional attack decline + accept through normal attack flow). OP/WD S.A.+1 + multiply(floor_div(tamer colours,2),2000) DP for the turn."
+    },
+    "ST20-05": {
+      "card_name": "Gatomon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_05.rs",
+      "test_count": 9,
+      "patterns": [
+        "SECURITY-PLAY-SELF",
+        "SELECT-COUNT-CAPPED-CLAMP",
+        "INHERITED-WA-OPT"
+      ],
+      "notes": "EX13 Adventure lane C: [Security] play self after battle; [OP][WD] 2 opp Digimon <Security A. -1> until their turn ends (select_count_capped_multi max 2 clamp_to_available, DCGO min(2,n) canEndNotMax false); ADVENTURE Lv.3 alt-digivolve cost 2; inherited [WA][OPT] -2000 DP for the turn."
+    },
+    "ST20-12": {
+      "card_name": "Sora Takenouchi & Kari Kamiya",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-d",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_12.rs",
+      "test_count": 13,
+      "notes": "TDD RED->GREEN. Official bundle + image + DCGO ST20_12.cs. Optional suspend-self play-cost reducer (decline, ADVENTURE Digimon only, your turn, unsuspended only, stacks per Q&A, not on digivolve), SoMP memory, Security play. Shared suite reused by ST21-12/ST20-13. Fixed G-COST-REDUCTION-ALLY-PLAYED-ON-DIGIVOLVE."
+    },
+    "ST20-03": {
+      "card_name": "Birdramon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-03.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_03.rs",
+      "test_count": 10,
+      "patterns": [
+        "CONDITIONAL-SELF-DIGIVOLVE",
+        "DISTINCT-FILTERED-COLORS",
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "[OP][WD] free requirement-respecting self-digivolve into ADVENTURE hand card gated on ADVENTURE-Tamer colours >= 3 via new `distinct_colors_gte` leaf (G-DSL-DISTINCT-FILTERED-COLORS). Colour count reads rules colours (gained colours count) via the shared distinct_colors_in_zone helper."
+    },
+    "ST21-04": {
+      "card_name": "Zudomon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_04.rs",
+      "test_count": 5,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "OP/WD: trash floor(tamer colours/2) sources from ONE opp Digimon (printed card + DCGO isFromOnly1Permanent; official DB bundle wording drifts — see YAML header), clamp_to_available; then mandatory bounce of opp Digimon with <=1 sources. Shared ADVENTURE observer."
+    },
+    "ST21-06": {
+      "card_name": "MagnaAngemon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-e",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_06.rs",
+      "test_count": 10,
+      "patterns": [
+        "PLACE-PERMANENT-IN-SECURITY",
+        "FORMULA-DP-CAP",
+        "ADVENTURE-ALLIANCE-OBSERVER",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "[OP][WD] place opp Digimon DP<=6000+2000*floor(tamer colours/2) as top security (mandatory); shared ADVENTURE Alliance observer; inherited <Alliance>."
+    },
+    "ST21-12": {
+      "card_name": "Joe Kido & Mimi Tachikawa",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-d",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_12.rs",
+      "test_count": 13,
+      "notes": "TDD RED->GREEN. Same text as ST20-12 (DCGO ST21_12.cs is a copy); runs the st20_12 shared suite incl. ST21-12+ST20-12 Q&A stacking."
     },
     "AD1-022": {
       "card_name": "Izzy Izumi & Tai Kamiya",
@@ -16179,68 +16528,55 @@
       ],
       "notes": "[Your Turn] other ADVENTURE Digimon/Tamer played → optional suspend-self → may pick own Digimon with payable ADVENTURE hand candidate → digivolve with cost -floor(Tamer colours/2)."
     },
-    "ST20-05": {
-      "card_name": "Gatomon",
+    "ST21-15": {
+      "card_name": "Gennai's House",
       "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-c",
+      "report": "ex13-adventure-lane-e",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st20/ST20-05.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_05.rs",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-15.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_15.rs",
       "test_count": 9,
       "patterns": [
-        "SECURITY-PLAY-SELF",
-        "SELECT-COUNT-CAPPED-CLAMP",
-        "INHERITED-WA-OPT"
+        "USE-REQUIREMENT-COLOR-WAIVER",
+        "SECURITY-ZONE-AURA",
+        "OPTION-SELF-TO-SECURITY",
+        "SECURITY-PLAY-FROM-TRASH"
       ],
-      "notes": "EX13 Adventure lane C: [Security] play self after battle; [OP][WD] 2 opp Digimon <Security A. -1> until their turn ends (select_count_capped_multi max 2 clamp_to_available, DCGO min(2,n) canEndNotMax false); ADVENTURE Lv.3 alt-digivolve cost 2; inherited [WA][OPT] -2000 DP for the turn."
+      "notes": "use_requirement no_face_up_security_named(name_is); [Security][Your Turn] +3000 to own Lv3+; [Main] bottom security to hand + self face-up bottom; [Security] may play Lv3 from trash free."
     },
-    "ST20-07": {
-      "card_name": "Tentomon",
+    "ST21-09": {
+      "card_name": "Lillymon",
       "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-c",
+      "report": "ex13-adventure-lane-a",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st20/ST20-07.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_07.rs",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_09.rs",
       "test_count": 4,
       "patterns": [
-        "FLOOD-GATE"
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
       ],
-      "notes": "EX13 Adventure lane C: [Opponent's Turn] CannotReduceDigivolveCost flood gate on opponent (BT5-033 hook); ADVENTURE Lv.2 alt-digivolve cost 0."
+      "notes": "OP/WD suspend all opp <=5000 DP Digimon (for_each), then clamp_to_available bottom-deck pick over suspended opp Digimon sized floor(tamer colours/2). Shared ADVENTURE observer."
     },
-    "ST21-01": {
-      "card_name": "Tsunomon",
+    "BT21-075": {
+      "card_name": "SkullGreymon",
       "validated_date": "2026-10-27",
       "report": "ex13-adventure-lane-c",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st21/ST21-01.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_01.rs",
-      "test_count": 5,
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-075.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_075.rs",
+      "test_count": 8,
       "patterns": [
-        "INHERITED-ON-DELETION",
-        "TRASH-TO-HAND"
+        "GRANT-KEYWORD-EXPIRY",
+        "PLAY-FROM-TRASH",
+        "INHERITED-ON-DELETION"
       ],
-      "notes": "EX13 Adventure lane C: inherited [On Deletion] optional return 1 ADVENTURE Digimon card trash->hand (decline tested). cards.json files the text under effect_description_eng (compat layout drift; official = Inherited Effect)."
-    },
-    "ST21-02": {
-      "card_name": "Gomamon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-c",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st21/ST21-02.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_02.rs",
-      "test_count": 2,
-      "patterns": [
-        "FLOOD-GATE"
-      ],
-      "notes": "EX13 Adventure lane C: [All Turns] CannotGainMemoryExceptFromTamers on opponent (EX8-030 hook); ADVENTURE Lv.2 alt-digivolve cost 0."
+      "notes": "EX13 Adventure lane C: [OP][WD] 1 own Digimon gains Raid+Retaliation until opp turn ends; face-up + inherited [On Deletion] may play ADVENTURE Digimon/Tamer cost<=4 from trash free; Greymon-name/ADVENTURE Lv.4 alt cost 3. Standard Purple/Red Lv.4/4 circles come from cards.json."
     },
     "ST21-03": {
       "card_name": "Ikkakumon",
@@ -16260,23 +16596,37 @@
       ],
       "notes": "EX13 Adventure lane C: [Security] play self; [OP][WD] trash top 2 sources of any opp Digimon then lock 1 sourceless opp Digimon (CannotAttack+CannotBlock until their turn ends); inherited [WA][OPT] hand<=7 Draw 1."
     },
-    "ST21-11": {
-      "card_name": "MetalGarurumon",
+    "BT21-078": {
+      "card_name": "WereGarurumon",
       "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-c",
+      "report": "ex13-adventure-lane-a",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st21/ST21-11.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_11.rs",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-078.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_078.rs",
+      "test_count": 5,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "OP/WD mandatory delete of opp Lv.4- Digimon, Lv.5- with >=2 Tamer colours (if/else). Alt box Lv.4 [Garurumon]-name or [ADVENTURE]. Shared ADVENTURE observer."
+    },
+    "ST21-05": {
+      "card_name": "Angemon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_05.rs",
       "test_count": 9,
       "patterns": [
-        "BLAST-DIGIVOLVE",
-        "TAMER-COLOR-FORMULA",
-        "RETURN-TO-DECK-BOTTOM",
-        "PLAY-FROM-TRASH"
+        "FREE-PLAY-FROM-HAND",
+        "INHERITED-WHEN-ATTACKING-OPT",
+        "DP-DEBUFF"
       ],
-      "notes": "EX13 Adventure lane C: Blast Digivolve marker; ace_overflow -4; [OP][WD] bottom-deck opp Digimon level <= 4 + floor(tamer colors/2) (floor_div((8+c),2)); [WA][OPT] may play Lv.4- Digimon from trash free. Standard Purple/Blue Lv.5/4 circles come from cards.json. Blast Digivolve counter-window behaviour tested."
+      "notes": "[WD] <=1 Tamer → may play ADVENTURE Tamer free; inherited [WA][OPT] -2000 for the turn."
     },
     "BT21-067": {
       "card_name": "Garurumon",
@@ -16295,137 +16645,21 @@
       ],
       "notes": "EX13 Adventure lane C: [Security] play self; [OP][WD] may return ADVENTURE Digimon trash->hand; Gabumon-name/ADVENTURE Lv.3 alt cost 2; inherited [WA][OPT] Draw 1 + trash 1. OPEN DATA DRIFT: data/card_overrides.json -> data/cards.json carries an extra Purple Lv.3 cost-3 circle (official: cost 2 only) => production offers an illegal 2-vs-3 cost choice. Needs a card_corrections.json evo_costs entry; blocked on a committed official observation (base-only untracked a8a8f98c...). Regression test bt21_067_production_purple_lv3_route_costs_exactly_2_with_no_choice is #[ignore]d BLOCKED."
     },
-    "BT21-075": {
-      "card_name": "SkullGreymon",
+    "ST21-01": {
+      "card_name": "Tsunomon",
       "validated_date": "2026-10-27",
       "report": "ex13-adventure-lane-c",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/bt21/BT21-075.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_075.rs",
-      "test_count": 8,
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_01.rs",
+      "test_count": 5,
       "patterns": [
-        "GRANT-KEYWORD-EXPIRY",
-        "PLAY-FROM-TRASH",
-        "INHERITED-ON-DELETION"
+        "INHERITED-ON-DELETION",
+        "TRASH-TO-HAND"
       ],
-      "notes": "EX13 Adventure lane C: [OP][WD] 1 own Digimon gains Raid+Retaliation until opp turn ends; face-up + inherited [On Deletion] may play ADVENTURE Digimon/Tamer cost<=4 from trash free; Greymon-name/ADVENTURE Lv.4 alt cost 3. Standard Purple/Red Lv.4/4 circles come from cards.json."
-    },
-    "ST20-12": {
-      "card_name": "Sora Takenouchi & Kari Kamiya",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-d",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st20/ST20-12.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_12.rs",
-      "test_count": 13,
-      "notes": "TDD RED->GREEN. Official bundle + image + DCGO ST20_12.cs. Optional suspend-self play-cost reducer (decline, ADVENTURE Digimon only, your turn, unsuspended only, stacks per Q&A, not on digivolve), SoMP memory, Security play. Shared suite reused by ST21-12/ST20-13. Fixed G-COST-REDUCTION-ALLY-PLAYED-ON-DIGIVOLVE."
-    },
-    "ST21-12": {
-      "card_name": "Joe Kido & Mimi Tachikawa",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-d",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st21/ST21-12.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_12.rs",
-      "test_count": 13,
-      "notes": "TDD RED->GREEN. Same text as ST20-12 (DCGO ST21_12.cs is a copy); runs the st20_12 shared suite incl. ST21-12+ST20-12 Q&A stacking."
-    },
-    "ST20-13": {
-      "card_name": "Tai Kamiya & Izzy Izumi",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-d",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st20/ST20-13.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_13.rs",
-      "test_count": 13,
-      "notes": "TDD RED->GREEN. Official bundle + image + DCGO ST20_13.cs. Shared reducer suite + [Opponent's Turn] ADVENTURE-Digimon Blocker aura (own Digimon only, opp turn only, clears when source leaves) + Security play."
-    },
-    "AD1-020": {
-      "card_name": "Tommy, Takuya, & Zoe",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-d",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Hybrid",
-      "yaml_path": "code/digimon-engine/cards/ad1/AD1-020.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_020.rs",
-      "test_count": 12,
-      "notes": "TDD RED->GREEN. Official bundle + image + DCGO AD1_020.cs. OP/SoMP up-to-2 different-colour Hybrid placement from hand/trash (AD1-023 shape), draw iff placed, independent 4+ Hybrid -> +2 memory; name aliases; inherited [End of Your Turn][OPT] 'by attacking' with Security A.+1 for the attack (may_attack_now cost_upgrade; not offered when carrier can't attack; attack mandatory once activated); Security play. cards.json mislabels the inherited box as Security Effect."
-    },
-    "ST20-01": {
-      "card_name": "Koromon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-e",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st20/ST20-01.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_01.rs",
-      "test_count": 4,
-      "patterns": [
-        "INHERITED-CONDITIONAL-SELF-AURA"
-      ],
-      "notes": "Inherited [All Turns] +1000 DP while the carrier has [ADVENTURE]."
-    },
-    "ST20-08": {
-      "card_name": "Kabuterimon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-e",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st20/ST20-08.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_08.rs",
-      "test_count": 9,
-      "patterns": [
-        "FREE-PLAY-FROM-HAND",
-        "INHERITED-KEYWORD"
-      ],
-      "notes": "[WD] <=1 Tamer -> may play ADVENTURE Tamer free; inherited <Piercing>; green Lv3 circle + Lv3 [ADVENTURE] box cost 2."
-    },
-    "ST21-06": {
-      "card_name": "MagnaAngemon",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-e",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st21/ST21-06.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_06.rs",
-      "test_count": 10,
-      "patterns": [
-        "PLACE-PERMANENT-IN-SECURITY",
-        "FORMULA-DP-CAP",
-        "ADVENTURE-ALLIANCE-OBSERVER",
-        "INHERITED-KEYWORD"
-      ],
-      "notes": "[OP][WD] place opp Digimon DP<=6000+2000*floor(tamer colours/2) as top security (mandatory); shared ADVENTURE Alliance observer; inherited <Alliance>."
-    },
-    "ST21-15": {
-      "card_name": "Gennai's House",
-      "validated_date": "2026-10-27",
-      "report": "ex13-adventure-lane-e",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Adventure",
-      "yaml_path": "code/digimon-engine/cards/st21/ST21-15.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_15.rs",
-      "test_count": 9,
-      "patterns": [
-        "USE-REQUIREMENT-COLOR-WAIVER",
-        "SECURITY-ZONE-AURA",
-        "OPTION-SELF-TO-SECURITY",
-        "SECURITY-PLAY-FROM-TRASH"
-      ],
-      "notes": "use_requirement no_face_up_security_named(name_is); [Security][Your Turn] +3000 to own Lv3+; [Main] bottom security to hand + self face-up bottom; [Security] may play Lv3 from trash free."
+      "notes": "EX13 Adventure lane C: inherited [On Deletion] optional return 1 ADVENTURE Digimon card trash->hand (decline tested). cards.json files the text under effect_description_eng (compat layout drift; official = Inherited Effect)."
     }
   }
 }

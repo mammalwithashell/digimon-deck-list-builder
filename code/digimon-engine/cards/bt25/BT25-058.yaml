@@ -124,6 +124,8 @@ effects:
       - select_opponent_permanent:
           bind_as: suspend_target
           optional: true
+          # "Then" is independent of the optional suspension (Q1643).
+          continue_on_decline: true
           filter:
             any_of:
               - kind: digimon

@@ -1,0 +1,6 @@
+{
+  "wheel": "C:\\Users\\james\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\digimon_engine\\__init__.py",
+  "wheel_provenance": "existing installed wheel; not built from this branch",
+  "error": "EmptyTrainingPoolError",
+  "message": "No training decklist is admissible. Cards blocking the most decklists: BT25-058 Callismon (2 decklists, diverged_no_quirk). Fix the cards or their verdicts, then regenerate data/card_admissibility.json with `PYTHONPATH=code python -m digimon_gym.agents.card_admissibility` (and data/mechanics_readiness.json with `PYTHONPATH=code python -m tools.rules.mechanics_readiness`)."
+}

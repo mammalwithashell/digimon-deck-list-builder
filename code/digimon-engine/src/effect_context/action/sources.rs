@@ -142,7 +142,7 @@ impl<'a> EffectContext<'a> {
     pub(crate) fn placing_effect_attribution(&self) -> crate::trigger_context::EffectAttribution {
         crate::trigger_context::EffectAttribution {
             controller: self.player,
-            source_card: Some(self.source_card),
+            source_card: Some(self.source_card).into(),
             source_permanent: self.source_permanent,
         }
     }

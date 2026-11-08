@@ -812,7 +812,7 @@ impl<'a> EffectContext<'a> {
                 // Rejection restores the original physical position and visibility.
                 let player_state = self.game.player_mut(player);
                 let restore_at = security_index.min(player_state.security.len());
-                player_state.insert_in_security(restore_at, card);
+                player_state.restore_in_security(restore_at, card);
                 if was_face_up { player_state.face_up_security.insert(card_index); }
                 None
             }

@@ -447,6 +447,8 @@ pub struct QueuedEffect {
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
     pub source_kind: EffectSourceKind,
+    /// None until queued provenance is captured; Some(None) means no field carrier.
+    pub source_identity: Option<Option<(PlayerId, u64)>>,
     pub attribution_source_card: Option<CardHandle>,
     pub attribution_source_kind: Option<EffectSourceKind>,
     pub bypass_once_per_turn: bool,

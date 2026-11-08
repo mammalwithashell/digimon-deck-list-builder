@@ -1,0 +1,26 @@
+{
+  "branch": "codex/paradise-callismon-admission",
+  "base": "77f4702f9c786f95aabb4745593e358c6face855",
+  "worktree": "C:\\Users\\james\\.codex\\worktrees\\0a17\\digimon-deck-list-builder-1",
+  "scope": [
+    "BT25-058 optional suspension and independent mandatory lock",
+    "exact-list admission for DigiLab 120649 and 130284"
+  ],
+  "source_verified": "2026-10-30",
+  "oracle_evidence": "Saved October 10 recordings only; no new DCGO player run",
+  "baseline_counts": {
+    "exact_lists": 2,
+    "distinct_compositions": 1,
+    "cards_per_list": 54,
+    "unique_ids": 21,
+    "admissible_unique_ids": 20,
+    "rejected_unique_ids": 1
+  },
+  "baseline_blocker": "BT25-058 diverged_no_quirk",
+  "restrictions": [
+    "No shared-engine changes",
+    "No training, remote publication, merge or deployment",
+    "No changes to other worktrees, player or comparison process"
+  ],
+  "runtime_baseline": "Existing wheel is not certified against branch source; fresh branch binding required for final runtime smoke"
+}

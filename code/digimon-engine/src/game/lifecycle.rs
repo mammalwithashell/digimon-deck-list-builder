@@ -284,6 +284,8 @@ impl Game {
         self.effect_dna_would_scopes.clear();
         self.pending_security_moves.clear();
         self.security_placement_receipts.clear();
+        self.security_trash_receipts.clear();
+        self.pending_security_trashes.clear();
         self.current_deletion_receipt = None;
         self.winner = winner;
         self.terminal_outcome_reason = Some(reason);

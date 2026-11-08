@@ -1,5 +1,56 @@
 # Rust Engine Gaps
 
+## Cross-source immunity-grant suppression [G-ENGINE-CROSS-SOURCE-IMMUNITY-GRANT-SUPPRESSION] — open outside the scoped pool
+
+The existing registry does not suppress `CannotBeAffected` entries themselves
+and some immunity installs lack affecting-source provenance. A Digimon effect
+that grants another Digimon Tamer-effect immunity can therefore remain active
+when the recipient later becomes unaffected by that granting Digimon effect.
+CR 4.3 sections 15-15-5-2 and 15-15-5-4 require faithful treatment of suppressed
+and gained effects. General immunity-layer interactions still need dedicated
+rule qualification and behavioral coverage; this work does not certify them.
+
+Only LM-020 in the explicitly EX13 Dynasmon 42-ID pool grants category immunity,
+and its printed grant targets itself. No cross-permanent category-immunity
+provider occurs in that pool. The source-identity repair qualifies that scoped
+self-excluding behavior, not arbitrary immunity-grant graphs. No admission
+policy or mechanics readiness flag was relaxed for this separate limitation.
+
+## Exact self-card deck-trash timing — focused qualification (2026-10-29)
+
+`on_discard_deck` with trash scope now captures the exact physical card only
+when an effect commits deck-to-trash movement. Revealed cards subsequently
+trashed are excluded. The causing effect finishes before these derived triggers
+resolve. A per-card trash-entry generation keeps a pending trigger from reviving
+when the card leaves and re-enters trash; rollback storage insertion preserves
+its existing incarnation. Clones retain independent continuation state and the
+verification digest distinguishes relevant entry incarnations.
+
+Ten focused mechanics checks cover both owners, multiple physical copies,
+unrelated trash copies, reveal negatives, parent choices, departure/re-entry,
+rollback, cloning, queued-sibling invalidation, stored causing attribution and digest discrimination. Wizardmon adds card-level timing
+and target qualification. This does not certify arbitrary trash-scope OPT effects;
+EX10-041 has no printed OPT. No action or observation contract changed.
+
+## Owned security-trash payments — focused qualification (2026-10-29)
+
+Effect-driven top/bottom security trash now owns the selected physical card
+before opening `WhenWouldBeTrashed`. Optional replacements resume that same
+movement after acceptance or decline, including in cloned games, instead of
+falling through the permanent-only deferred commit path. Resumption retains
+the initiating controller and cause. Payment receipts record committed trash,
+so payments canceled or redirected away from trash do not award benefits and security recovery
+does not erase a successful payment. Bound multi-card trash counts use those
+receipts. Native Barrier and DSL inherited prevention share the finalizer.
+
+The Dynasmon focused suite passes 98 tests, including canceled/parked payments,
+both cloned outcomes, inherited prevention, granted Barrier and security-trash
+recovery. This is scoped evidence, not universal replacement certification.
+Hand/deck/trash destinations and cancel/custom outcomes have an owned route;
+other redirections and substituted security-trash subjects remain an explicit
+unsupported-outcome invariant, rather than silently succeeding or canceling.
+No action or observation contract changed.
+
 ## Shared start-turn ordering and usage reset [G-ENGINE-START-TURN-CAPTURE-RESET] — resolved, focused verification (2026-10-26)
 
 Due start-turn Delay effects were collected after ordinary start-turn effects
@@ -6480,16 +6531,19 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
 - **Historical 2026-10-21 hold (closed by the 2026-10-22 followup below):** `qa/qa-reports/validated_cards_dsl.json` row is set to `PARTIAL`, `gap_kind: engine`, naming this residual, so card admissibility rejects it as `failed_verdict` until the app-fuse result signal exists.
 - **Followup:** the BT25-089 result/refund residual is closed below. The unread per-card list above still needs separate review; this does not close the whole audit.
 
-### Declining Callismon's "You may suspend" skips the "Then, ... can't unsuspend" lock  [G-CARD-BT25-058-DECLINED-SUSPEND-SKIPS-THEN-LOCK] — OPEN (2026-10-21, Plan 2 Task 5b exam triage)
+### Declining Callismon's "You may suspend" skips the "Then, ... can't unsuspend" lock  [G-CARD-BT25-058-DECLINED-SUSPEND-SKIPS-THEN-LOCK] — RESOLVED (2026-10-30, card-local continuation repair)
 
 - **Card:** BT25-058 Callismon "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
 - **Rule:** everything after "Then," still activates when the optional part before it is not performed (official Q&A Q1643). DCGO `BT25_058.cs` runs the mandatory lock pick (`canNoSelect: false`) whether or not the suspend pick was declined.
-- **Ours:** `BT25-058.yaml` authors an optional `select_opponent_permanent` (suspend), then `suspend`, then a mandatory `select_opponent_permanent` (lock) + `add_modifier CannotUnsuspend`. When the first pick is declined, no lock prompt follows and the effect ends.
+- **Before repair:** `BT25-058.yaml` authors an optional `select_opponent_permanent` (suspend), then `suspend`, then a mandatory `select_opponent_permanent` (lock) + `add_modifier CannotUnsuspend`. When the first pick is declined, no lock prompt follows and the effect ends.
   - `BT25-058-effect4-optional-decline.yaml`: the turn passes at row 12, while DCGO still asks the lock.
   - `BT25-058-effect3-leave-play.yaml`: Dracomon unsuspends on T8, while DCGO keeps it locked.
   - When the suspend is accepted, the lock is asked (`BT25-058-qa-Q6345.yaml`). That points at the decline path of the optional select, which `compiled.rs` documents as "decline runs tail" for non-cost picks.
 - **Fix shape:** reproduce in a cards_behavioral test (decline the suspend, expect the lock prompt over the opponent's Digimon/Tamers), then fix the decline path (or the unbound `suspend_target` step aborting the body) so the tail runs.
-- **Blocks training:** BT25-058 only, through the per-card gate. Two diverged probe rows are `ours_wrong`.
+- **Original training block:** BT25-058 only, through two `ours_wrong` probe rows. The measured resolution below removes this block.
+
+- **Resolution (2026-10-30):** the optional pick omitted the existing `continue_on_decline: true` contract, whose default intentionally drops the tail. Added it in BT25-058 YAML; no shared-engine change. A legal On Play regression failed before the fix. All 18 Callismon behavioral tests plus 2 printed-form checks now pass, including seven new regressions for decline, selected/no-op suspension, legal activation routes, clone/expiry, and Fortitude.
+- **Saved oracle evidence:** the original optional-decline trace re-diffs CLEAN 14/14 steps and Fortitude leave-play CLEAN 33/33. Harness-recorded confirmed interaction rows replace the two ours_wrong findings; original rows and recording hashes are preserved under `qa/qa-reports/paradise-callismon-2026-10-30/`. No new live oracle run; other clauses/interactions remain outside this repair.
 
 ### A used Option still fires its own "when trashed from digivolution cards" trigger after it was used from the trash  [G-ENGINE-USED-OPTION-FIRES-ITS-TRASHED-FROM-SOURCES-TRIGGER] — RESOLVED (2026-10-21, a6a265cdf; filed by Plan 2 Task 5b exam triage)
 

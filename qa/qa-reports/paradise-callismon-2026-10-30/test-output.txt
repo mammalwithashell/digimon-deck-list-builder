@@ -1,0 +1,126 @@
+=== red-decline.log (final 20 lines) ===
+
+warning: `digimon-engine` (test "cards_behavioral") generated 303 warnings (84 duplicates) (run `cargo fix --test "cards_behavioral" -p digimon-engine` to apply 77 suggestions)
+    Finished `test` profile [optimized + debuginfo] target(s) in 16m 02s
+     Running tests\cards_behavioral\main.rs (target-callismon\debug\deps\cards_behavioral-e28172df48a371fd.exe)
+
+running 1 test
+
+thread 'bt25::bt25_058::bt25_058_declined_suspend_still_requires_lock' (35592) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_058.rs:341:10:
+mandatory Then lock after decline
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bt25::bt25_058::bt25_058_declined_suspend_still_requires_lock ... FAILED
+
+failures:
+
+failures:
+    bt25::bt25_058::bt25_058_declined_suspend_still_requires_lock
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12783 filtered out; finished in 0.62s
+
+error: test failed, to rerun pass `-p digimon-engine --test cards_behavioral`
+
+=== red-all-callismon.log (final 45 lines) ===
+test bt25::bt25_058::bt25_058_decline_lock_survives_clone_and_expires_after_opponent_turn ... FAILED
+
+thread 'bt25::bt25_058::bt25_058_declined_suspend_still_requires_lock' (17700) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_058.rs:341:10:
+mandatory Then lock after decline
+test bt25::bt25_058::bt25_058_declined_suspend_still_requires_lock ... FAILED
+
+thread 'bt25::bt25_058::bt25_058_fortitude_replay_decline_still_locks' (67844) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_058.rs:363:5:
+assertion failed: pick.is_optional
+test bt25::bt25_058::bt25_058_fortitude_replay_decline_still_locks ... FAILED
+test bt25::bt25_058::bt25_058_grants_reboot_blocker_fortitude ... ok
+test bt25::bt25_058::bt25_058_has_all_turns_dedigivolve_battle_clause ... ok
+test bt25::bt25_058::bt25_058_has_blocker_and_reboot_keywords_on_field ... ok
+test bt25::bt25_058::bt25_058_has_ts_lv5_cost4_ignore_alt_path ... ok
+test bt25::bt25_058::bt25_058_locks_an_opponent_permanent_from_unsuspending ... ok
+test bt25::bt25_058::bt25_058_on_play_installs_prompt ... ok
+test bt25::bt25_058::bt25_058_on_play_no_prompt_without_opponent_permanent ... ok
+
+thread 'bt25::bt25_058::bt25_058_selected_suspend_and_lock_can_choose_different_targets' (38532) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_058.rs:396:5:
+assertion failed: r.game.players[1].battle_area[0].is_suspended
+test bt25::bt25_058::bt25_058_selected_suspend_and_lock_can_choose_different_targets ... FAILED
+test bt25::bt25_058::bt25_058_shared_clause_covers_op_wd_wa_and_is_opt ... ok
+
+thread 'bt25::bt25_058::bt25_058_when_attacking_decline_still_locks' (69140) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_058.rs:368:10:
+independent mandatory lock
+test bt25::bt25_058::bt25_058_when_attacking_decline_still_locks ... FAILED
+
+thread 'bt25::bt25_058::bt25_058_when_digivolving_decline_still_locks' (72512) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_058.rs:368:10:
+independent mandatory lock
+test bt25::bt25_058::bt25_058_when_digivolving_decline_still_locks ... FAILED
+test bt25::bt25_058::bt25_058_yaml_has_printed_metadata ... ok
+test printed_form_filters::batch4::bt25_058_json ... ok
+test printed_form_filters::batch4::bt25_058_yaml ... ok
+
+failures:
+
+failures:
+    bt25::bt25_058::bt25_058_decline_lock_survives_clone_and_expires_after_opponent_turn
+    bt25::bt25_058::bt25_058_declined_suspend_still_requires_lock
+    bt25::bt25_058::bt25_058_fortitude_replay_decline_still_locks
+    bt25::bt25_058::bt25_058_selected_suspend_and_lock_can_choose_different_targets
+    bt25::bt25_058::bt25_058_when_attacking_decline_still_locks
+    bt25::bt25_058::bt25_058_when_digivolving_decline_still_locks
+
+test result: FAILED. 14 passed; 6 failed; 0 ignored; 0 measured; 12764 filtered out; finished in 4.17s
+
+
+=== green-callismon.log (final 27 lines) ===
+    Finished `test` profile [optimized + debuginfo] target(s) in 5m 07s
+     Running tests\cards_behavioral\main.rs (target-callismon\debug\deps\cards_behavioral-e28172df48a371fd.exe)
+
+running 20 tests
+test bt25::bt25_058::bt25_058_all_turns_fires_on_effect_play_of_a_digimon ... ok
+test bt25::bt25_058::bt25_058_all_turns_no_fire_on_normal_hand_play ... ok
+test bt25::bt25_058::bt25_058_already_suspended_pick_still_requires_lock ... ok
+test bt25::bt25_058::bt25_058_decline_lock_survives_clone_and_expires_after_opponent_turn ... ok
+test bt25::bt25_058::bt25_058_declined_suspend_still_requires_lock ... ok
+test bt25::bt25_058::bt25_058_fortitude_replay_decline_still_locks ... ok
+test bt25::bt25_058::bt25_058_grants_reboot_blocker_fortitude ... ok
+test bt25::bt25_058::bt25_058_has_all_turns_dedigivolve_battle_clause ... ok
+test bt25::bt25_058::bt25_058_has_blocker_and_reboot_keywords_on_field ... ok
+test bt25::bt25_058::bt25_058_has_ts_lv5_cost4_ignore_alt_path ... ok
+test bt25::bt25_058::bt25_058_locks_an_opponent_permanent_from_unsuspending ... ok
+test bt25::bt25_058::bt25_058_on_play_installs_prompt ... ok
+test bt25::bt25_058::bt25_058_on_play_no_prompt_without_opponent_permanent ... ok
+test bt25::bt25_058::bt25_058_selected_suspend_and_lock_can_choose_different_targets ... ok
+test bt25::bt25_058::bt25_058_shared_clause_covers_op_wd_wa_and_is_opt ... ok
+test bt25::bt25_058::bt25_058_when_attacking_decline_still_locks ... ok
+test bt25::bt25_058::bt25_058_when_digivolving_decline_still_locks ... ok
+test bt25::bt25_058::bt25_058_yaml_has_printed_metadata ... ok
+test printed_form_filters::batch4::bt25_058_json ... ok
+test printed_form_filters::batch4::bt25_058_yaml ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 12764 filtered out; finished in 11.97s
+
+
+=== verify-tier2.log (final 27 lines) ===
+
+Verification summary
+- tier 0 impact_index_check: ok (9.4s)
+- tier 0 impact_lowering_map_check: ok (0.2s)
+- tier 0 keyword_semantics_matrix_check: ok (0.1s)
+- tier 0 rules_coverage_check: ok (0.2s)
+- tier 0 rules_obligations_check: ok (0.4s)
+- tier 0 rules_coverage_report: ok (0.1s)
+- tier 0 faq_conformance_check: ok (0.1s)
+- tier 0 authoring_guide_check: ok (0.1s)
+- tier 0 oracle_readiness_check: ok (3.8s)
+- tier 0 mechanics_readiness_check: ok (0.1s)
+- tier 0 lowering_coverage_check: ok (22.0s)
+- tier 0 card_admissibility_check: ok (19.7s)
+- tier 0 verification_tool_tests: ok (29.9s)
+- tier 1 dsl: ok (545.7s)
+- tier 1 judge_quiz: ok (29.3s)
+- tier 1 rules_conformance: ok (161.8s)
+- tier 1 rules_faq: ok (14.5s)
+- tier 1 keyword_semantics_matrix: ok (10.7s)
+- tier 1 determinism_guard: ok (13.0s)
+- tier 2 impact_scope: ok (0.2s)
+- tier 2 cards_behavioral_bt25_058: ok (5.1s)
+- tier 2 side_cards_behavioral: ok (2563.5s)
+- tier 2 side_dsl: ok (256.4s)
+- tier 2 replay_goldens_verify: failed (27.8s)
+- tier 2 invariant_fuzz: ok (110.7s)

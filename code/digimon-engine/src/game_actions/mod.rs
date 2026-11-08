@@ -6,6 +6,7 @@
 //! by the action decoder and the Tauri/PyO3 bindings; none of them move here.
 
 pub(crate) mod play_cost_assignment;
+pub(crate) mod security_trash;
 pub(crate) use play_cost_assignment::{CostPaymentReceipt, PlayCostAdjustments};
 
 use crate::card_source::{CardHandle, CardSource};
@@ -2323,7 +2324,7 @@ impl Game {
                 trigger.deleted_object = Some(snapshot.clone());
                 trigger.cause = Some(snapshot.cause);
                 trigger.affected_player = Some(snapshot.former_controller);
-                trigger.subject = Some(crate::trigger_context::EventSubject::Permanent(handle));
+                trigger.subject = (Some(crate::trigger_context::EventSubject::Permanent(handle))).into();
             },
         );
         // G-DSL-OUTER-TAIL-NESTED-PARK: maybe_drain defers when inside
@@ -2875,6 +2876,24 @@ impl Game {
             return true;
         }
 
+        // A face-up hand departure is a public declaration of that card's
+        // identity. Account for it before removing the card so a later
+        // knowledge refresh does not treat the hand shrink as anonymous and
+        // discard unrelated remembered recoveries. Concealed placements keep
+        // the conservative anonymous-departure path. Do not commit knowledge
+        // for a destination that would restore the source without moving it.
+        if !face_down {
+            let destination_exists = if target.index == crate::action::space::BREEDING_TARGET as u8 {
+                self.player(target.player).breeding_area.is_some()
+            } else {
+                self.player(target.player).battle_area.get(target.index as usize).is_some()
+            };
+            if destination_exists {
+                if let crate::enums::CardSourceRef::Hand(owner, index) = source {
+                    self.remember_belief_public_hand_departure(owner, index);
+                }
+            }
+        }
         let Some(taken) = self.take_card_source_ref(source) else {
             return false;
         };
@@ -2905,7 +2924,7 @@ impl Game {
                 vec![placed],
                 crate::trigger_context::EffectAttribution {
                     controller: observer_player,
-                    source_card: effect_source_card,
+                    source_card: effect_source_card.into(),
                     source_permanent: None,
                 },
             );
@@ -2933,7 +2952,7 @@ impl Game {
             vec![placed],
             crate::trigger_context::EffectAttribution {
                 controller: observer_player,
-                source_card: effect_source_card,
+                source_card: effect_source_card.into(),
                 source_permanent: None,
             },
         );
@@ -3598,111 +3617,73 @@ impl Game {
     }
 
     fn remember_security_move(
-        &mut self,
-        target: PermanentHandle,
-        player: PlayerId,
-        position: crate::enums::StackPosition,
-        face_up: bool,
-        observer: PlayerId,
-        leave_complete: bool,
-    ) -> Option<(
-        PlayerId,
-        u64,
-        PlayerId,
-        crate::enums::StackPosition,
-        bool,
-        PlayerId,
-    )> {
+        &mut self, target: PermanentHandle, player: PlayerId,
+        position: crate::enums::StackPosition, face_up: bool, observer: PlayerId,
+        leave_complete: bool, result_receipt: Option<u64>,
+    ) -> Option<(PlayerId, u64, PlayerId, crate::enums::StackPosition, bool, PlayerId, Option<u64>)> {
         let id = self.capture_source_play_host_identity(target)?;
         let donor = (target.player, id);
-        let key = (target.player, id, player, position, face_up, observer);
+        let key = (target.player, id, player, position, face_up, observer, result_receipt);
         if let Some(state) = self.pending_security_moves.iter_mut().rfind(|s| {
-            s.kind == crate::game::SecurityMoveKind::Permanent
-                && s.donor == donor
-                && s.player == player
-                && s.position == position
-                && s.face_up == face_up
-                && s.observer == observer
-        }) {
-            state.leave_complete |= leave_complete;
-        } else {
-            let card = self
-                .player(target.player)
-                .battle_area
-                .get(target.index as usize)?
-                .top_card()
-                .handle();
-            self.pending_security_moves
-                .push(crate::game::PendingSecurityMove {
-                    kind: crate::game::SecurityMoveKind::Permanent,
-                    donor,
-                    card,
-                    player,
-                    position,
-                    face_up,
-                    observer,
-                    leave_complete,
-                });
+            s.kind == crate::game::SecurityMoveKind::Permanent && s.donor == donor
+                && s.player == player && s.position == position && s.face_up == face_up
+                && s.observer == observer && s.result_receipt == result_receipt
+        }) { state.leave_complete |= leave_complete; }
+        else {
+            let card = self.player(target.player).battle_area.get(target.index as usize)?.top_card().handle();
+            self.pending_security_moves.push(crate::game::PendingSecurityMove {
+                kind: crate::game::SecurityMoveKind::Permanent, donor, card, player,
+                position, face_up, observer, leave_complete, result_receipt,
+            });
         }
         Some(key)
     }
     fn finish_security_move_if_settled(
         &mut self,
-        key: (
-            PlayerId,
-            u64,
-            PlayerId,
-            crate::enums::StackPosition,
-            bool,
-            PlayerId,
-        ),
+        key: (PlayerId, u64, PlayerId, crate::enums::StackPosition, bool, PlayerId, Option<u64>),
     ) {
-        if self.pending_selection.is_none()
-            || self.resolve_digivolve_host_identity(key.0, key.1).is_none()
-        {
-            self.pending_security_moves.retain(|s| {
-                !(s.kind == crate::game::SecurityMoveKind::Permanent
-                    && s.donor == (key.0, key.1)
-                    && s.player == key.2
-                    && s.position == key.3
-                    && s.face_up == key.4
-                    && s.observer == key.5)
-            });
+        if self.pending_selection.is_none() || self.resolve_digivolve_host_identity(key.0, key.1).is_none() {
+            self.pending_security_moves.retain(|s| !(s.kind == crate::game::SecurityMoveKind::Permanent
+                && s.donor == (key.0,key.1) && s.player == key.2 && s.position == key.3
+                && s.face_up == key.4 && s.observer == key.5 && s.result_receipt == key.6));
         }
     }
     pub(crate) fn place_permanent_on_security(
-        &mut self,
-        player: PlayerId,
-        target: PermanentHandle,
-        position: crate::enums::StackPosition,
-        face_up: bool,
-        observer: PlayerId,
+        &mut self, player: PlayerId, target: PermanentHandle,
+        position: crate::enums::StackPosition, face_up: bool, observer: PlayerId,
     ) -> bool {
-        let Some(key) =
-            self.remember_security_move(target, player, position, face_up, observer, false)
-        else {
-            return false;
-        };
-        let result = self.run_permanent_on_security(player, target, position, face_up, observer);
+        self.place_permanent_on_security_with_receipt(player,target,position,face_up,observer,None)
+    }
+    pub(crate) fn place_permanent_on_security_with_receipt(
+        &mut self, player: PlayerId, target: PermanentHandle,
+        position: crate::enums::StackPosition, face_up: bool, observer: PlayerId,
+        receipt: Option<u64>,
+    ) -> bool {
+        let Some(key) = self.remember_security_move(target,player,position,face_up,observer,false,receipt) else { return false; };
+        let result = self.run_permanent_on_security(player,target,position,face_up,observer,receipt);
         self.finish_security_move_if_settled(key);
         result
     }
     pub(crate) fn place_permanent_on_security_without_leave_replacement(
-        &mut self,
-        player: PlayerId,
-        target: PermanentHandle,
-        position: crate::enums::StackPosition,
-        face_up: bool,
-        observer: PlayerId,
+        &mut self, player: PlayerId, target: PermanentHandle,
+        position: crate::enums::StackPosition, face_up: bool, observer: PlayerId,
     ) -> bool {
-        let Some(key) =
-            self.remember_security_move(target, player, position, face_up, observer, true)
-        else {
-            return false;
-        };
-        let result = self.run_permanent_on_security_without_leave_replacement(
-            player, target, position, face_up, observer,
-        );
+        // This dedicated handle-current helper intentionally completes the
+        // enclosing movement. Ordinary independent placements pass None instead.
+        let receipt = self.player(target.player).battle_area.get(target.index as usize)
+            .and_then(|p|p.battle_identity).and_then(|identity|self.pending_security_moves.iter().rfind(|s|
+                s.kind == crate::game::SecurityMoveKind::Permanent && s.donor == (target.player,identity)
+                && s.player == player && s.position == position && s.face_up == face_up)
+                .and_then(|s|s.result_receipt));
+        self.place_permanent_on_security_without_leave_with_receipt(player,target,position,face_up,observer,receipt)
+    }
+    fn place_permanent_on_security_without_leave_with_receipt(
+        &mut self, player: PlayerId, target: PermanentHandle,
+        position: crate::enums::StackPosition, face_up: bool, observer: PlayerId,
+        receipt: Option<u64>,
+    ) -> bool {
+        let Some(key) = self.remember_security_move(target,player,position,face_up,observer,true,receipt) else { return false; };
+        let result = self.run_permanent_on_security_without_leave_replacement(player,target,position,face_up,observer,receipt);
         self.finish_security_move_if_settled(key);
         result
     }
@@ -3781,20 +3762,22 @@ impl Game {
         match outcome {
             ReplacementOutcome::None => {
                 if state.leave_complete {
-                    self.place_permanent_on_security_without_leave_replacement(
+                    self.place_permanent_on_security_without_leave_with_receipt(
                         state.player,
                         h,
                         state.position,
                         state.face_up,
                         state.observer,
+                        state.result_receipt,
                     );
                 } else {
-                    self.place_permanent_on_security(
+                    self.place_permanent_on_security_with_receipt(
                         state.player,
                         h,
                         state.position,
                         state.face_up,
                         state.observer,
+                        state.result_receipt,
                     );
                 }
             }
@@ -3809,21 +3792,23 @@ impl Game {
                 self.delete_permanent_with_cause(h, cause);
             }
             ReplacementOutcome::Redirected(Zone::Security) => {
-                self.place_permanent_on_security_without_leave_replacement(
+                self.place_permanent_on_security_without_leave_with_receipt(
                     state.player,
                     h,
                     state.position,
                     state.face_up,
                     state.observer,
+                    state.result_receipt,
                 );
             }
             ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => {
-                self.place_permanent_on_security(
+                self.place_permanent_on_security_with_receipt(
                     state.player,
                     other,
                     state.position,
                     state.face_up,
                     state.observer,
+                    None,
                 );
             }
             _ => {}
@@ -3838,6 +3823,7 @@ impl Game {
         position: crate::enums::StackPosition,
         face_up: bool,
         observer_player: PlayerId,
+        result_receipt: Option<u64>,
     ) -> bool {
         use crate::enums::{EffectTiming, StackPosition, Zone};
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
@@ -3849,14 +3835,7 @@ impl Game {
             return false;
         }
 
-        if self
-            .player(target.player)
-            .battle_area
-            .get(target.index as usize)
-            .is_none()
-        {
-            return false;
-        }
+        let Some(donor) = self.source_move_anchor(target) else { return false; };
 
         let cause = self.infer_effect_cause(target.player);
         let leave_outcome = self.try_replace(
@@ -3868,6 +3847,9 @@ impl Game {
         if self.pending_selection.is_some() {
             return false;
         }
+        // An inline replacement may remove a lower slot without replacing this
+        // move. Keep the original Digimon, never its former numeric slot.
+        let Some(target) = self.resolve_source_move_anchor(donor, false) else { return false; };
         match leave_outcome {
             ReplacementOutcome::None => {}
             ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => return false,
@@ -3906,12 +3888,8 @@ impl Game {
             }
         }
 
-        self.place_permanent_on_security_without_leave_replacement(
-            player_id,
-            target,
-            position,
-            face_up,
-            observer_player,
+        self.place_permanent_on_security_without_leave_with_receipt(
+            player_id, target, position, face_up, observer_player, result_receipt,
         )
     }
 
@@ -3922,6 +3900,7 @@ impl Game {
         position: crate::enums::StackPosition,
         face_up: bool,
         observer_player: PlayerId,
+        result_receipt: Option<u64>,
     ) -> bool {
         use crate::enums::{EffectTiming, Zone};
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
@@ -3941,6 +3920,7 @@ impl Game {
             return false;
         };
         let source_card = permanent.top_card().handle();
+        let Some(donor) = self.source_move_anchor(target) else { return false; };
         let cause = self.infer_effect_cause(player_id);
         let place_subject = ReplacementSubject::Card(source_card, Zone::BattleArea);
         let place_outcome = self.try_replace(
@@ -3953,6 +3933,9 @@ impl Game {
             return false;
         }
 
+        // The placement window can itself compact the field. Re-resolve the
+        // same carrier again before snapshotting and physically removing it.
+        let Some(target) = self.resolve_source_move_anchor(donor, false) else { return false; };
         // Capture event identity before removal; source disposal is a rule consequence.
         let permanent = &self.player(target.player).battle_area[target.index as usize];
         let data = self
@@ -4063,6 +4046,9 @@ impl Game {
             }
         }
         self.fire_on_leave_field(target, snapshot);
+        if let Some(id) = result_receipt {
+            if let Some((_, paid)) = self.permanent_security_placement_receipts.iter_mut().find(|(r,_)|*r==id) { *paid = true; }
+        }
         // The placement was processed — into security, or under Digi-Egg /
         // token rules — which meets a "by placing it" condition (§15-1-9).
         if let Some(receipt) = self
@@ -4150,6 +4136,7 @@ impl Game {
             face_up,
             observer,
             leave_complete: true,
+            result_receipt: None,
         };
         // Remember before opening replacement so nested requests and clones
         // retain exact physical donor/top card and destination metadata.
@@ -4651,7 +4638,6 @@ fn install_assembly_element(
     element_idx: usize,
     picked_so_far: Vec<CardHandle>,
 ) {
-    use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
     use crate::effect_context::CountCappedZone;
 
     let (filter_pred, count) = elements[element_idx].clone();
@@ -4670,16 +4656,6 @@ fn install_assembly_element(
             );
             game.can_pay_memory_for(player, cost)
         });
-
-    // Distinctness across elements: exclude handles already picked.
-    let exclude = picked_so_far.clone();
-    let filter = move |g: &Game, cs: &CardSource| -> bool {
-        if exclude.contains(&cs.handle()) {
-            return false;
-        }
-        let rctx = EffectReadContext::new(g, source_card, None, player);
-        eval_predicate(&filter_pred, &rctx, PredicateSubject::Card(cs.handle()))
-    };
 
     // Every element requires its exact printed count. An affordable first
     // element may decline at zero; after a pick it cannot end
@@ -4702,7 +4678,7 @@ fn install_assembly_element(
         controller: ctx.player,
         override_pin: ctx.override_selecting_player(),
     };
-    ctx.select_count_capped_multi_min(
+    ctx.select_count_capped_multi_min_compiled(
         player,
         CountCappedZone::Trash,
         min,
@@ -4710,7 +4686,8 @@ fn install_assembly_element(
         &prompt,
         can_decline,
         distinct_by,
-        filter,
+        filter_pred,
+        picked_so_far.clone(),
         move |cctx, picks| {
             let game: &mut Game = cctx.game;
             // Decline at the gate → play at full cost (no assembly used).
@@ -4995,3 +4972,7 @@ mod physical_effect_origin_tests {
     #[test] fn inherited_tamer_physical_origin_for_cost_and_replacement_is_digimon() { source_kind(false); }
     #[test] fn linked_tamer_physical_origin_for_cost_and_replacement_is_digimon() { source_kind(true); }
 }
+
+#[cfg(test)]
+#[path = "../determinize/context_guard/after_selection_world_tests.rs"]
+mod after_selection_world_tests;

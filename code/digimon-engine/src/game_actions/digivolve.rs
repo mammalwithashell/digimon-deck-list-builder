@@ -93,26 +93,27 @@ pub(crate) struct EffectDigivolveCostChoiceState {
 }
 
 impl EffectDigivolveCostChoiceState {
+    /// Cached route/result metadata needs known identities. Captured references
+    /// and bindings may instead name an entitled opaque position; their identity
+    /// is supplied by the sampled world. The shared context audit also checks
+    /// cached snapshots and requires the world fence for unavailable values.
     pub(crate) fn belief_safe(
         &self,
         viewer: PlayerId,
-        allowed: &std::collections::HashSet<CardHandle>,
+        identities: &std::collections::HashSet<CardHandle>,
+        references: &std::collections::HashSet<CardHandle>,
+        context_safe: &impl Fn(&Option<TriggerContext>) -> bool,
     ) -> bool {
         self.acting_player == viewer
-            && allowed.contains(&self.result_card)
-            && allowed.contains(&self.target_top)
-            && self.source_carrier_top.is_none_or(|h| allowed.contains(&h))
-            && self.result_clause.is_none_or(|(h, _)| allowed.contains(&h))
-            && self
-                .trigger_context
-                .as_ref()
-                .is_none_or(|c| c.belief_safe(allowed))
+            && identities.contains(&self.result_card)
+            && identities.contains(&self.target_top)
+            && self.source_carrier_top.is_none_or(|h| identities.contains(&h))
+            && self.result_clause.is_none_or(|(h, _)| identities.contains(&h))
+            && context_safe(&self.trigger_context)
             && self.outer_conts.iter().all(|c| {
-                allowed.contains(&c.source_card)
-                    && c.bindings.belief_safe(viewer, allowed)
-                    && c.trigger_context
-                        .as_ref()
-                        .is_none_or(|t| t.belief_safe(allowed))
+                identities.contains(&c.source_card)
+                    && c.bindings.belief_safe(viewer, references)
+                    && context_safe(&c.trigger_context)
             })
     }
 }
@@ -280,19 +281,21 @@ impl DigivolveReducerState {
     pub(crate) fn belief_safe(
         &self,
         viewer: PlayerId,
-        allowed: &std::collections::HashSet<CardHandle>,
+        identities: &std::collections::HashSet<CardHandle>,
+        references: &std::collections::HashSet<CardHandle>,
+        context_safe: &impl Fn(&Option<TriggerContext>) -> bool,
     ) -> bool {
         self.acting_player == viewer
-            && self.target.belief_safe(allowed)
+            && self.target.belief_safe(identities)
             && self
                 .current
                 .iter()
                 .chain(&self.remaining)
-                .all(|c| allowed.contains(&c.source_card()))
+                .all(|c| identities.contains(&c.source_card()))
             && self
                 .effect
                 .as_ref()
-                .is_none_or(|e| e.belief_safe(viewer, allowed))
+                .is_none_or(|e| e.belief_safe(viewer, identities, references, context_safe))
             && self.dna_effect.is_none()
     }
     pub(crate) fn result_card(&self) -> CardHandle {
