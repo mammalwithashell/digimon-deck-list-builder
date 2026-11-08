@@ -12,12 +12,12 @@ use digimon_engine::selection::TriggerSource;
 fn setup(actor: u8) -> (DebugRunner, PermanentHandle) {
     let mut data = CardData::load_from_str(include_str!("../../../data/cards.json")).unwrap();
     let mut b = DebugRunner::builder()
-        .from_dsl_yaml(include_str!("../cards/EX5/EX5-060.yaml")).unwrap()
-        .from_dsl_yaml(include_str!("../cards/BT8/BT8-097.yaml")).unwrap()
-        .from_dsl_yaml(include_str!("../cards/ST1/ST1-06.yaml")).unwrap()
-        .from_dsl_yaml(include_str!("../cards/ST1/ST1-09.yaml")).unwrap()
-        .from_dsl_yaml(include_str!("../cards/ST1/ST1-11.yaml")).unwrap()
-        .from_dsl_yaml(include_str!("../cards/ST1/ST1-02.yaml")).unwrap();
+        .from_dsl_yaml(include_str!("../cards/ex5/EX5-060.yaml")).unwrap()
+        .from_dsl_yaml(include_str!("../cards/bt8/BT8-097.yaml")).unwrap()
+        .from_dsl_yaml(include_str!("../cards/st1/ST1-06.yaml")).unwrap()
+        .from_dsl_yaml(include_str!("../cards/st1/ST1-09.yaml")).unwrap()
+        .from_dsl_yaml(include_str!("../cards/st1/ST1-11.yaml")).unwrap()
+        .from_dsl_yaml(include_str!("../cards/st1/ST1-02.yaml")).unwrap();
     for id in ["EX5-060", "BT8-097", "ST1-06", "ST1-09", "ST1-11", "ST1-02"] {
         b = b.add_card(data.remove(id).unwrap());
     }

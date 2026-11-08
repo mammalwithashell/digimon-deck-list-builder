@@ -173,6 +173,8 @@ impl Game {
         let token_registry = crate::token_registry::build_registry();
 
         let mut game = Self {
+            projected_world_reads_guarded: false,
+            projected_event_card_read_fence: false,
             belief_knowledge: None,
             belief_knowledge_error: None,
             rules,

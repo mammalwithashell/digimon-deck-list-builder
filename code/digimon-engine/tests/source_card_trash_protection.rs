@@ -312,7 +312,7 @@ fn explicit_source_cost_requires_actual_payment_but_ordinary_effect_continues() 
             .map(|(i, c)| SourceSelectionRef {
                 permanent: h,
                 field_index: 0,
-                source_index: i as u8,
+                source_index: i,
                 card: c.handle(),
             })
             .collect();

@@ -124,6 +124,21 @@ fn suspended(r: &DebugRunner, h: PermanentHandle) -> bool {
 
 fn hand_action(r: &DebugRunner, view: &PendingSelectionView, p: u8, id: &str) -> Option<u16> {
     let slot = hand_ids(r, p).iter().position(|h| h == id)? as u16;
+    if let Some(choice) = &view.card_choice {
+        use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+        let position = slot.to_string();
+        let row = choice.rows.iter().find(|row| {
+            matches!(row.operation, CardChoiceOperation::CommitCard)
+                && matches!(row.zone, Some(CardChoiceZone::Hand))
+                && row.owner == Some(p)
+                && row.position.as_deref() == Some(position.as_str())
+                && row.card_id.as_deref() == Some(id)
+        }).unwrap_or_else(|| panic!("{id} must be an eligible physical hand choice: {view:?}"));
+        assert!(view.valid_action_ids.contains(&row.action_id));
+        let mask = digimon_engine::action::build_action_mask(&r.game, view.selecting_player);
+        assert_eq!(mask[row.action_id as usize], 1.0);
+        return Some(row.action_id);
+    }
     [PLAY_HAND_START + slot, HAND_EFFECT_START + slot]
         .into_iter()
         .find(|a| view.valid_action_ids.contains(a))
@@ -518,7 +533,7 @@ fn c5_candlemon_main_phase_trash_triggers_mistymon_and_recycles_flamewizardmon()
     fire(&mut r, EffectTiming::StartOfYourMainPhase, candle);
     let mut picks = OppPicks::new(&[MAGNADRAMON, MAGNADRAMON]);
     drive(&mut r, |r, v| match v.kind {
-        SelectionKind::Hand => hand_action(r, v, 0, FLAMEWIZ),
+        SelectionKind::Hand | SelectionKind::UnionZone { .. } => hand_action(r, v, 0, FLAMEWIZ),
         SelectionKind::OppField => picks.pick(r, v),
         SelectionKind::EffectChoice if v.prompt.contains("top or bottom") => {
             v.effect_choices.as_ref().map(|c| c[0].action_id)

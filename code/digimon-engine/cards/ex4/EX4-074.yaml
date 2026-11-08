@@ -13,7 +13,7 @@ alt_paths:
     from: { level_eq: 6, color_is: purple }
     cost: 5
   - kind: digivolve
-    from: { name_contains: "ShineGreymon" }
+    from: { name_is: "ShineGreymon" }
     cost: 4
 
 # ─── Clause 1 — [When Digivolving] [On Deletion] mass opponent DP debuff ─────

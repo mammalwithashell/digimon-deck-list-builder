@@ -59,6 +59,11 @@ pub fn masked_softmax(logits: &[f32], mask: &[f32]) -> Result<Vec<f32>, Inferenc
     let mut denom = 0.0f32;
     for (i, (&l, &m)) in logits.iter().zip(mask.iter()).enumerate() {
         if m >= 0.5 {
+            // Opt-in evaluation provenance: avoid platform CRT expf rounding.
+            // Existing binaries and default builds retain their original math.
+            #[cfg(feature = "portable-policy-math")]
+            let e = libm::expf(l - max_legal);
+            #[cfg(not(feature = "portable-policy-math"))]
             let e = (l - max_legal).exp();
             out[i] = e;
             denom += e;

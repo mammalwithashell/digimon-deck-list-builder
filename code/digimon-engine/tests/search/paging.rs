@@ -173,6 +173,14 @@ fn all_pages_remain_reachable_from_a_middle_page_and_batching_is_exact() {
         }
         assert_eq!(selected.len(), 65);
         assert!(result.best_plan().unwrap().starts_with(&[59]));
+        let before = r.game.verification_digest();
+        let selected = result.best_plan().unwrap();
+        let mut record = digimon_engine::search::opportunity::describe(&r.game,0,&result,selected,"argmax_tau0").unwrap();
+        digimon_engine::search::opportunity::record_execution(&mut record,&selected[..1]).unwrap();
+        assert_eq!(record["commitment_executed"],false,"navigation alone is not commitment");
+        digimon_engine::search::opportunity::record_execution(&mut record,selected).unwrap();
+        assert_eq!(record["commitment_executed"],true);
+        assert_eq!(before,r.game.verification_digest(),"observer altered real paged state");
         assert_eq!(result.visits_after(&[59]).len(), 9);
         let mut next = r.game.clone();
         next.decode_action(59, 0);

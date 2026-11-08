@@ -858,7 +858,7 @@ impl BeliefEvidence {
             }
             for c in public_player.security.iter().filter(|c| {
                 inspected == Some(public_player.id)
-                    || public_player.face_up_security.contains(&c.card_index)
+                    || game.security_card_is_public(public_player.id, c.handle())
             }) {
                 add(c)?;
             }
@@ -886,7 +886,7 @@ impl BeliefEvidence {
             p.security
                 .iter()
                 .filter(|c| {
-                    inspected != Some(opponent) && !p.face_up_security.contains(&c.card_index)
+                    inspected != Some(opponent) && !game.security_card_is_public(opponent, c.handle())
                 })
                 .count(),
             p.digitama_deck.len(),
