@@ -168,6 +168,11 @@ pub fn lower_with_formula(
             }
         }
         if let Some(wap) = &condition_when_any {
+            // "would be PLAYED" — a digivolve cost is not a play.
+            // G-COST-REDUCTION-ALLY-PLAYED-ON-DIGIVOLVE (ST20-12).
+            if rctx.cost_is_digivolve {
+                return false;
+            }
             let Some(target) = rctx.cost_target_card else {
                 return false;
             };
@@ -215,6 +220,9 @@ pub fn lower_with_formula(
             }
         }
         if let Some(wap) = &when_any_ally_played {
+            if rctx.cost_is_digivolve {
+                return 0;
+            }
             let Some(target) = rctx.cost_target_card else {
                 return 0;
             };

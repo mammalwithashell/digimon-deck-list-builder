@@ -282,14 +282,15 @@ Exits non-zero if any expected namespace is empty or spot-check queries return n
 
 **Script:** `code/tools/meta_loader.py`
 
-Scrapes tournament decklists from multiple sources and builds `data/deck_library.json`. Sources include DCG Nexus, DigimonMeta.com, Egman Events, DigimonCard.io, and a DigiLab PostgreSQL database. Computes meta share and conversion rate from placement data.
+Scrapes tournament decklists from multiple sources and builds `data/deck_library.json`. Sources include the DigiLab public API, DCG Nexus, DigimonMeta.com, Egman Events, DigimonCard.io, and (historically) a DigiLab PostgreSQL mirror. Computes meta share and conversion rate from placement data.
 
 ```bash
+python code/tools/meta_loader.py --scrape-digilab-api --digilab-api-format EX13 --digilab-api-since 2026-08-01  # DigiLab API (needs DIGILAB_API_KEY)
 python code/tools/meta_loader.py --scrape-dcg-nexus --dcg-nexus-format EX12
 python code/tools/meta_loader.py --scrape-digimonmeta URL   # Scrape BT24/EX11 decks
 python code/tools/meta_loader.py --scrape-egman URL          # Scrape Egman tournament decks
 python code/tools/meta_loader.py --scrape-digimoncard-io URL # Scrape DigimonCard.io tournament
-python code/tools/meta_loader.py --scrape-digilab            # Scrape decklists from DigiLab DB
+python code/tools/meta_loader.py --scrape-digilab            # Historical DigiLab DB mirror (stopped 2026-03-12)
 python code/tools/meta_loader.py --import-file FILE          # Import a local deck file
 python code/tools/meta_loader.py --fetch-meta                # Fetch DigiLab stats (optional)
 python code/tools/meta_loader.py --build                     # Resolve + dedup + compute stats + write
@@ -313,8 +314,9 @@ below the classifier's 2% meta threshold, so the unscoped number tiered the
 format's best deck as "rogue". Half the format tiered as unranked.
 
 `format_stats` is keyed on each deck's `format` field, so it only covers sources
-that record one (currently DCG Nexus). Untagged decks are excluded rather than
-pooled into an "unknown" bucket, so a format's shares always sum to 1.
+that record one (the DigiLab API and DCG Nexus). Untagged decks are excluded
+rather than pooled into an "unknown" bucket, so a format's shares always sum
+to 1.
 
 `server/classifier/meta_tier.py` takes a matching `format_scope` argument, which
 scopes both the share and the staple fingerprint:
@@ -326,8 +328,50 @@ load_library_from_path()                       # all-time, unchanged default
 
 #### Source notes
 
-**DCG Nexus** (`dcg-nexus.com`) is the only source that tags each event with its
-legal format, so it is the one to reach for when scoping to the current format:
+**DigiLab public API** (`https://digilab.cards/docs`) is the primary
+current-format source. It is read-only, keyed, and tags every tournament and
+decklist with its format id, placement, record, field size and archetype:
+
+```bash
+export DIGILAB_API_KEY=dl_k_...          # never commit it; it is read from the env only
+python code/tools/meta_loader.py --scrape-digilab-api \
+    --digilab-api-format EX13 --digilab-api-since 2026-08-01
+```
+
+Flags: `--digilab-api-format TAGS` (comma-separated format ids; omit to walk
+every format), `--digilab-api-since YYYY-MM-DD` (server-side `date_from`),
+`--digilab-api-max-tournaments N`, and `--digilab-api-delay SECONDS` (extra
+sleep before each request). The usual `--build` steps (resolve → dedup →
+stats → write) run automatically afterwards, so `format_stats["EX13"]` is
+populated in the same invocation.
+
+How it walks: `GET /api/tournaments?format=&date_from=` (newest first; page 1's
+`formats` list is used to warn about unknown ids) → `GET /api/decklists?format=&date_from=`
+for the `result_id` of every submitted list in those tournaments (the standings
+endpoint exposes only an opaque `decklist_url`, so the listing is the
+documented route to a parsed list) → `GET /api/decklist/{result_id}` for the
+cards. Results whose `decklist` is `null` (DigiLab's parser has not handled the
+submission) are skipped, and results already in the library (same
+`source_url`) are not refetched. Budget roughly one request per decklist plus
+one per 100 tournaments; at the default pace a 600-list format takes ~12 min.
+
+Rate limits and auth: the key goes in the `X-API-Key` header and is never
+logged or written to disk; the run fails fast with a clear message if
+`DIGILAB_API_KEY` is unset. DigiLab allows 60 req/min per IP and 300 req/min
+per key, so the client paces with a token bucket at 55 req/min, honours
+`Retry-After` on 429, and otherwise backs off exponentially (2s, 4s, 8s, …
+capped at 60s, up to 5 retries). Keys are issued by DigiLab admins in the
+`#api` channel of their Discord; the API is free for non-commercial use.
+
+**Attribution (required by DigiLab's terms):** any public display of this
+data must carry a visible link back to DigiLab. The library's top-level
+`sources_attribution` field records the string for each DigiLab-derived
+source, and this doc repeats it:
+
+> Data provided by DigiLab (digilab.cards) — https://digilab.cards
+
+**DCG Nexus** (`dcg-nexus.com`) also tags each event with its legal format and
+is the fallback when a list is not on DigiLab:
 
 ```bash
 python code/tools/meta_loader.py --scrape-dcg-nexus \
@@ -346,8 +390,11 @@ rather than `/Deck/Decklist/ExportCSV`, which the site's `robots.txt` disallows.
 Note that `robots.txt` also sets `ai-train=no` and blocks named AI crawlers —
 see the ingestion caveat before using this data for model training.
 
-**DigiLab** stopped ingesting on 2026-03-12 (newest format EX11). It remains
-useful as a historical corpus but contributes nothing to current-format meta.
+**DigiLab PostgreSQL mirror** (`--scrape-digilab`, source `digilab`) stopped
+ingesting on 2026-03-12 (newest format EX11). It is historical: it remains
+useful as a corpus but contributes nothing to current-format meta. Use
+`--scrape-digilab-api` (source `digilab_api`) instead; both sources carry the
+same DigiLab attribution.
 
 **Placement caveat:** `_is_top_cut` treats the top 25% of a field as a top cut,
 which is right for a 16-player local but flags 94th place at a 398-player

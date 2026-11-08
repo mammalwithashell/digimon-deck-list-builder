@@ -1,0 +1,53 @@
+# ST20-12 Sora Takenouchi & Kari Kamiya — Tamer, Red+Yellow, Cost 3. Traits: ADVENTURE.
+# Text: official bundle data/card_bundles/ST20-12.md (image checked); Q&A: two
+# such Tamers reduce the play cost by a total of 2.
+# DCGO: ST20/Red/ST20_12.cs — OnStartMainPhase (mandatory; own Digimon whose top
+# card HasAdventureTraits); BeforePayCost (isOptional, IsOwnerTurn,
+# CanActivateSuspendCostEffect, PlayCardCondition = IsExistOnHand && IsDigimon
+# && HasAdventureTraits && own) → suspend self, cost -1; PlaySelfTamerSecurityEffect.
+# Reducer shape = ST21-13 clause 1. The suspend-self pay_cost lowers to
+# `suspend_self_as_cost` + the SuspendSource optional-condition guard, so an
+# already-suspended copy is never offered (no card_number_is self-check needed).
+card: ST20-12
+name: "Sora Takenouchi & Kari Kamiya"
+kind: tamer
+color: [red, yellow]
+cost: 3
+traits: [ADVENTURE]
+
+effects:
+  # [Start of Your Main Phase] If you have a Digimon with the [ADVENTURE] trait, gain 1 memory.
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If you have an [ADVENTURE] Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        trait_has: ADVENTURE
+    process:
+      - gain_memory: 1
+
+  # [Your Turn] When any Digimon cards with the [ADVENTURE] trait would be played
+  # from your hand, by suspending this Tamer, reduce the play cost by 1.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when: { your_turn: true }
+    optional: true
+    when_any_ally_played:
+      all_of:
+        - kind: digimon
+        - trait_has: ADVENTURE
+    # "from your hand" (DCGO PlayCardCondition IsExistOnHand): not a cost-paying
+    # effect play from trash/reveal (BT14-046 / EX2-007 idiom).
+    condition: { cost_target_from_hand: true }
+    amount: 1
+    summary: "[Your Turn] Suspend this Tamer: -1 play cost on your [ADVENTURE] Digimon"
+    pay_cost:
+      - suspend: { target: source }
+
+  # [Security] Play this card without paying the cost.
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

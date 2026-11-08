@@ -1,0 +1,41 @@
+# ST21-01 Tsunomon — Digi-Egg, Lv.2, Purple. Traits: Lesser, ADVENTURE.
+
+#
+# Printed text (official observation, data/card_official.json):
+#   Inherited Effect: [On Deletion] You may return 1 Digimon card with the
+#   [ADVENTURE] trait from your trash to the hand.
+# (cards.json files this under effect_description_eng with an "Inherited
+#  Effect" prefix — compat-view layout drift only; the text is inherited.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Purple/ST21_01.cs —
+#   OnDestroyedAnyone, SetIsInheritedEffect(true), isOptional true;
+#   SelectCardEffect Root.Trash Mode.AddHand canNoSelect true, filter
+#   IsDigimon && HasAdventureTraits; CanActivate requires a match in trash.
+#
+# Same shape as BT19-006 Pagumon (inherited on_deletion + select_trash +
+# add_to_hand_from_trash) with "you may" → optional pick.
+
+card: ST21-01
+name: Tsunomon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Lesser, ADVENTURE]
+
+effects:
+  - scope: inherited
+    when: on_deletion
+    optional: true
+    summary: "[Inherited][On Deletion] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: ADVENTURE
+          prompt: "You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: pick }

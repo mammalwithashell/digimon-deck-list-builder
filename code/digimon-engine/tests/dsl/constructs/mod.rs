@@ -4,6 +4,7 @@ mod light_hybrid_predicates;
 pub mod security_stack;
 pub mod play_digivolve_link;
 pub mod cost_target_event;
+pub mod ally_played_reducer_scope;
 pub mod identity_state;
 pub mod zone_moves;
 pub mod protection;
@@ -38,3 +39,7 @@ mod selected_source_security_receipt;
 mod bound_card_property;
 mod controller_security_add_eligibility;
 mod effect_play_results;
+
+mod tamer_color_predicates;
+
+mod face_up_security_named;

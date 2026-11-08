@@ -1,0 +1,81 @@
+# ST20-02 Biyomon — Lv3, Red, Bird / ADVENTURE, Rookie / Vaccine, DP 1000, Cost 3.
+#
+# Printed card text (official bundle data/card_bundles/ST20-02.md):
+#
+#   Digivolve: Red Lv.2 / cost 0.
+#   [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0
+#
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the
+#   [ADVENTURE] trait and 1 such Tamer card or Option card among them to the
+#   hand. Return the rest to the bottom of the deck.
+#
+#   Inherited: [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Red/ST20_02.cs
+#   - AddSelfDigivolutionRequirementStaticEffect(Lv2 && HasAdventureTraits, 0).
+#   - [On Play] SimplifiedRevealDeckTopCardsAndSelect(3, [ADVENTURE Digimon
+#     AddHand max 1, ADVENTURE Option-or-Tamer AddHand max 1], DeckBottom).
+#     Not optional (activateClass optional=false).
+#   - Inherited ChangeSelfDPStaticEffect(+2000) gated on IsOwnerTurn.
+#
+# Two disjoint reveal buckets; `min: 1` makes each "Add 1" mandatory when a
+# matching card is revealed (no "up to"), and `no_duplicate_cards` keeps one
+# revealed card from filling both categories.
+#
+# Verdict: IMPLEMENTED.
+
+card: ST20-02
+name: Biyomon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Bird, ADVENTURE]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: ADVENTURE }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [ADVENTURE] Digimon and 1 [ADVENTURE] Tamer/Option; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: adv_digimon
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - trait_has: ADVENTURE
+            - bind_as: adv_tamer_or_option
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - trait_has: ADVENTURE
+                  - any_of:
+                      - kind: tamer
+                      - kind: option
+          prompt: "Add 1 [ADVENTURE] Digimon card and 1 [ADVENTURE] Tamer or Option card to the hand"
+      - add_to_hand_from_reveal: { of: you, card: adv_digimon }
+      - add_to_hand_from_reveal: { of: you, card: adv_tamer_or_option }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

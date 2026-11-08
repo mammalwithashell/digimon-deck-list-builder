@@ -973,6 +973,15 @@ fn validate_predicate(
             errors,
         );
     }
+    if let Some(d) = &pred.distinct_colors_gte {
+        validate_predicate(
+            &d.filter,
+            &format!("{prefix}.distinct_colors_gte.filter"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
 }
 
 /// Context-free mode checks also required by the direct compiler/inline loader.

@@ -484,6 +484,9 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
     if let Some(distinct) = &predicate.distinct_named_count_gte {
         collect_predicate_raw_rust_fns(&distinct.filter, names);
     }
+    if let Some(distinct) = &predicate.distinct_colors_gte {
+        collect_predicate_raw_rust_fns(&distinct.filter, names);
+    }
     for aggregate in [
         &predicate.count_lte,
         &predicate.count_gte,
