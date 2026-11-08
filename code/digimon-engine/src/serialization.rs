@@ -562,6 +562,11 @@ fn pending_selection_data(v: &PendingSelectionView, game: &Game) -> Value {
     );
     m.insert("isOptional".into(), Value::from(v.is_optional));
     m.insert("prompt".into(), Value::String(v.prompt.clone()));
+    let trigger_choices = game.trigger_choices();
+    if !trigger_choices.is_empty() {
+        m.insert("triggerChoices".into(), json!(trigger_choices));
+        m.insert("waitingTriggers".into(), json!(game.waiting_trigger_choices()));
+    }
     if let Some(choices) = v.effect_choices.as_ref() {
         m.insert(
             "effectChoices".into(),

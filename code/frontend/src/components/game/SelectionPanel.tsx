@@ -1,6 +1,7 @@
 import type { CountChoice } from '@/types/countChoice';
 import { Card } from '@/components/shared/Card';
-import { GamePhase, type PendingSelection, type PermanentInfo } from '@/types/game';
+import { GamePhase, type PendingSelection, type PermanentInfo, type TriggerPlan } from '@/types/game';
+import { TriggerOrderPicker } from './TriggerOrderPicker';
 import { SELECTION } from '@/utils/constants';
 import { isSourceSelectAction, sourceSelectionCards } from '@/utils/sourceSelection';
 import { usePeekStore } from '@/stores/peekStore';
@@ -32,6 +33,9 @@ interface SelectionPanelProps {
   localPlayer: number;
   /** Right-click a card in the panel to open the enlarged card detail. */
   onInspectCard?: (cardId: string) => void;
+  onTriggerPlan?: (plan: TriggerPlan) => void;
+  triggerPlanActive?: boolean;
+  onCancelTriggerPlan?: () => void;
 }
 
 /** Phases where this panel should auto-open. Trash selections (single AND
@@ -48,6 +52,7 @@ interface CardEntry {
   actionId: number;
   isValid: boolean;
   label?: string;
+  cardName?: string;
   /** Render a face-down card back (used for hidden security positions). */
   faceDown?: boolean;
 }
@@ -66,6 +71,9 @@ export function SelectionPanel({
   onAction,
   localPlayer,
   onInspectCard,
+  onTriggerPlan,
+  triggerPlanActive,
+  onCancelTriggerPlan,
 }: SelectionPanelProps) {
   const peeking = usePeekStore((s) => s.peeking);
   // Only show for specific selection phases where the local player is selecting
@@ -102,6 +110,8 @@ export function SelectionPanel({
 
   const isEffectChoice = currentPhase === GamePhase.SelectEffectChoice;
   const validActionIds = new Set(pendingSelection.validIndices);
+  const isTriggerOrder = isEffectChoice && pendingSelection.kind === 'TriggerOrder';
+  const hasOrderPicker = isTriggerOrder && !pendingSelection.triggerChoices?.some((choice) => choice.activationPrompt) && !!pendingSelection.triggerChoices?.length && !!onTriggerPlan;
   let title = pendingSelection.prompt || (isEffectChoice
     ? 'Multiple effects are triggered. Choose which effect to process.'
     : 'Select a card');
@@ -147,7 +157,15 @@ export function SelectionPanel({
     // scanned the wrong range and rendered nothing. Prefer the enriched
     // `effectChoices` from the engine (it carries the actual action_id);
     // fall back to scanning `pendingSelection.validIndices` if no labels.
-    if (pendingSelection.effectChoices && pendingSelection.effectChoices.length > 0) {
+    if (pendingSelection.triggerChoices?.some((choice) => choice.activationPrompt)) {
+      cards = pendingSelection.triggerChoices.map((choice) => ({
+        cardId: choice.cardId,
+        cardName: choice.cardName,
+        actionId: choice.actionId,
+        isValid: pendingSelection.validIndices.includes(choice.actionId) && actionMask[choice.actionId] === 1,
+        label: `Activate: ${choice.effectText}`,
+      }));
+    } else if (pendingSelection.effectChoices && pendingSelection.effectChoices.length > 0) {
       cards = pendingSelection.effectChoices.map((choice) => {
         const actionId =
           choice.actionId ?? SELECTION.EFFECT_CHOICE_START + choice.index;
@@ -157,6 +175,7 @@ export function SelectionPanel({
           isValid: actionMask[actionId] === 1,
           label: choice.label,
           countChoice: choice.countChoice,
+          cardName: choice.cardName,
         };
       });
     } else {
@@ -208,25 +227,31 @@ export function SelectionPanel({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Modal */}
-      <div className="relative bg-[var(--ib-graphite)] rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[85vh] flex flex-col border border-[var(--ib-line)]">
+      <div role="dialog" aria-modal="true" aria-label={isTriggerOrder ? 'Choose trigger resolution order' : title}
+        className="relative bg-[var(--ib-graphite)] rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[85vh] flex flex-col border border-[var(--ib-line)]">
         {/* Header with gradient */}
         <div className="bg-gradient-to-b from-[var(--ib-panel-2)] to-transparent px-5 py-4 border-b border-[var(--ib-line)]">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-[var(--ib-bone)]">{title}</h2>
+              <h2 className="text-base font-semibold text-[var(--ib-bone)]">{isTriggerOrder ? 'Choose trigger resolution order' : title}</h2>
+              {isTriggerOrder && (
+                <p className="text-sm text-[var(--ib-bone-d)] mt-1">
+                  {validCount} pending. {hasOrderPicker ? 'Arrange effects, then confirm your plan.' : 'Choose one effect to resolve next, then choose again after it resolves.'}
+                </p>
+              )}
               {!isEffectChoice && validCount > 0 && (
                 <span className="text-xs text-[var(--ib-bone-dd)] mt-0.5">
                   {validCount} of {cards.length} selectable
                 </span>
               )}
             </div>
-            {canDecline && (
+            {canDecline && !hasOrderPicker && (
               <button
                 data-testid="selection-decline"
                 onClick={() => onAction(SELECTION.DECLINE)}
                 className="px-4 py-2 bg-[var(--ib-panel-2)] hover:opacity-90 text-[var(--ib-bone)] text-sm font-medium rounded-lg border border-[var(--ib-line)] transition-colors"
               >
-                {cardChoice?.inspection_only || cardChoice?.rows.some((row) => row.operation === 'finish_impossible') ? 'Done' : 'Decline'}
+                {isTriggerOrder ? 'Decline remaining optional effects' : (cardChoice?.inspection_only || cardChoice?.rows.some((row) => row.operation === 'finish_impossible') ? 'Done' : 'Decline')}
               </button>
             )}
           </div>
@@ -246,7 +271,25 @@ export function SelectionPanel({
               <span>Page {(BigInt(cardChoice.page_index) + 1n).toString()} of {cardChoice.page_count}</span>
             </div>
           )}
-          {isEffectChoice && !cardChoice ? (
+          {hasOrderPicker ? (
+            triggerPlanActive ? (
+              <div className="flex items-center justify-between text-[var(--ib-bone)]">
+                <span>Resolving your trigger plan…</span>
+                <button className="px-3 py-2 border rounded-lg" onClick={onCancelTriggerPlan}>Cancel remaining plan</button>
+              </div>
+            ) : (
+              <TriggerOrderPicker
+                key={pendingSelection.triggerChoices!.map((choice) => choice.triggerId).join(',')}
+                choices={pendingSelection.triggerChoices!}
+                waitingTriggers={pendingSelection.waitingTriggers}
+                validIndices={pendingSelection.validIndices}
+                actionMask={actionMask}
+                onSubmit={onTriggerPlan!}
+                onInspectCard={onInspectCard}
+                onDecline={canDecline ? () => onAction(SELECTION.DECLINE) : undefined}
+              />
+            )
+          ) : isEffectChoice && !cardChoice ? (
             /* Effect choice: show cards with labels */
             <div className="flex flex-wrap gap-4 justify-center">
               {cards.map((entry) => (
@@ -254,6 +297,7 @@ export function SelectionPanel({
                   key={entry.actionId}
                   type="button"
                   disabled={!entry.isValid}
+                  aria-label={isTriggerOrder ? `Resolve next: ${entry.cardName || entry.cardId} — ${entry.label || 'Triggered effect'}` : undefined}
                   onClick={() => entry.isValid ? onAction(entry.actionId) : undefined}
                   className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${
                     entry.isValid
@@ -270,10 +314,18 @@ export function SelectionPanel({
                   ) : (
                     <Card cardId={entry.cardId} size="md" onContextMenu={inspectOnRightClick(entry.cardId)} />
                   )}
+                  {isTriggerOrder && (
+                    <span className="text-sm font-semibold text-[var(--ib-bone)]">
+                      {entry.cardName || entry.cardId}
+                    </span>
+                  )}
                   {entry.label && !entry.countChoice && (
                     <span className="text-xs text-[var(--ib-bone-d)] text-center max-w-[120px] leading-tight">
                       {entry.label}
                     </span>
+                  )}
+                  {isTriggerOrder && (
+                    <span className="text-xs font-semibold text-[var(--ib-opp)]">Resolve next</span>
                   )}
                 </button>
               ))}

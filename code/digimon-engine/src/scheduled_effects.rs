@@ -286,6 +286,7 @@ impl Game {
             .unwrap_or_default();
         let is_turn_player = controller == self.turn_player();
         self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
             source_card,
             source_permanent,

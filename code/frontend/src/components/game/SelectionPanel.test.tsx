@@ -241,6 +241,40 @@ describe('SelectionPanel security selection zone owner', () => {
 });
 
 describe('SelectionPanel effect choice (trigger-order chooser)', () => {
+  it('lets the player resolve the second trigger first using its engine action', () => {
+    const onAction = vi.fn();
+    renderPanel({
+      pendingSelection: { ...makeEffectChoiceSelection(), kind: 'TriggerOrder' },
+      onAction,
+    });
+    expect(screen.getByText('Choose trigger resolution order')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Resolve next: Garurumon/ }));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith(31);
+  });
+
+  it('disables triggers excluded by the current legal action mask', () => {
+    const mask = new Array(2192).fill(0);
+    mask[30] = 1;
+    const onAction = vi.fn();
+    renderPanel({
+      pendingSelection: { ...makeEffectChoiceSelection(), kind: 'TriggerOrder' },
+      actionMask: mask,
+      onAction,
+    });
+    const blocked = screen.getByRole('button', { name: /Resolve next: Garurumon/ });
+    expect(blocked).toBeDisabled();
+    fireEvent.click(blocked);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it('does not offer another player\'s trigger choices', () => {
+    const { container } = renderPanel({
+      pendingSelection: { ...makeEffectChoiceSelection(), kind: 'TriggerOrder', selectingPlayer: 2 },
+    });
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it('renders the real source card for each effect choice', () => {
     renderPanel();
     expect(screen.getByTitle('ST6-03')).toBeInTheDocument();

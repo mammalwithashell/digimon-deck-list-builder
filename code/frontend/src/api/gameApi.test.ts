@@ -94,6 +94,19 @@ describe('engine trace types', () => {
 });
 
 describe('dtoToGameState', () => {
+  it('preserves trigger activation metadata on the desktop wire', () => {
+    const choice = { triggerId: '17', actionId: 31, cardId: 'TEST-006', cardName: 'TestSix', effectText: 'Gain 5 memory', timing: 'EndOfYourTurn', sourceLabel: 'Effect · battle area 1', isOptional: false, isInherited: false, activationPrompt: false };
+    const player = (id: number) => ({ id, hand: [], battle_area: [], breeding: null, deck_count: 40, trash_count: 0, security_count: 5, is_eliminated: false });
+    const state = dtoToGameState({
+      turn_count: 1, turn_player: 0, first_player: 0, current_phase: 'EffectChoice', memory: 0,
+      game_over: false, winner: null, mulligan_current_player: null, mulligan_used: [false, false], players: [player(0), player(1)],
+      pending_selection: { phase: 'EffectChoice', selecting_player: 0, valid_action_ids: [31], is_optional: false, prompt: 'Choose next', kind: 'TriggerOrder', trigger_choices: [choice], waiting_triggers: [choice] },
+    });
+    expect(state.pendingSelection?.triggerChoices).toEqual([choice]);
+    expect(state.pendingSelection?.waitingTriggers).toEqual([choice]);
+    expect(state.pendingSelection?.selectingPlayer).toBe(1);
+  });
+
   it('maps dual cards to the option-compatible card kind', () => {
     const state = dtoToGameState({
       turn_count: 1,

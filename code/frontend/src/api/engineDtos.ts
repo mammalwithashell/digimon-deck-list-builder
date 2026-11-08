@@ -125,6 +125,8 @@ export interface PendingSelectionDto {
    *  the selecting player's own zone. */
   zone_owner?: number | null;
   effect_choices?: EffectChoiceDto[];
+  trigger_choices?: import('@/types/game').TriggerChoice[];
+  waiting_triggers?: import('@/types/game').TriggerChoice[];
 }
 
 export interface RevealedCardDto {

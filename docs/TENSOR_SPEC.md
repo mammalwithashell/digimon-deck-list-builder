@@ -550,3 +550,14 @@ stamping a legacy checkpoint with current metadata is not a migration.
 ### Model action semantic compatibility
 
 Model training contracts require `action_schema_version` in addition to the six observation/action shape fields. Its sole authority is Rust `action::space::SCHEMA_VERSION`, exported by PyO3 as `ACTION_SCHEMA_VERSION`. Equal shapes do not imply compatible actions. Missing, malformed, or mismatched action semantics reject inference, checkpoint resume/export, publication, download and loading. Upload parsers preserve declared artifact values; they never stamp current semantics onto old weights. Legacy database rows remain null and incompatible. New training and newly initialized random exports may capture the current contract; re-export requires the authentic compatible training tuple. SCHEMA_VERSION is now 2 for owned physical card pages; old action semantics are incompatible even when ACTION_SPACE_SIZE remains 2192. Full selector and runtime qualification is still required before admitting the blocked cards.
+
+
+### Human trigger-plan presentation metadata
+
+`pendingSelection.triggerChoices` and `waitingTriggers` are gameplay UI fields.
+Their stable activation IDs, enqueue generation, descriptions and optional
+activation-preset availability are not tensor features and do not change an
+observation profile or action schema. A human resolution plan sends ordinary
+engine actions in sequence; each action is still validated against the current
+mask. Agents continue to observe and choose one installed engine decision at a
+time through the existing pending-row layout.

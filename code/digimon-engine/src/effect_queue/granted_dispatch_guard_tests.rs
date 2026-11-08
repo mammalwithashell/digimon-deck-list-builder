@@ -17,6 +17,7 @@ fn context(marked: bool, nested: bool) -> TriggerContext {
 
 fn queued(player: u8, source: CardHandle, host: PermanentHandle, context: TriggerContext) -> QueuedEffect {
     QueuedEffect {
+        activation_id: 0,
         source_card: source, source_permanent: Some(host), source_kind: EffectSourceKind::Digimon,
         source_identity: None, // Provenance has not been captured in this synthetic queue entry.
         attribution_source_card: None, attribution_source_kind: None, bypass_once_per_turn: false,

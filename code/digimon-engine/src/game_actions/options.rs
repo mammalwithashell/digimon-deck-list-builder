@@ -1107,6 +1107,7 @@ impl Game {
                 continue;
             }
             self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card: card_handle,
                 source_permanent: None,

@@ -26,6 +26,7 @@ fn fixture(player: u8, context: TriggerContext) -> (DebugRunner, QueuedEffect) {
     let host = r.place_on_field(player, "SG", Some(0));
     let source = r.game.players[player as usize].battle_area[host.index as usize].top_card().handle();
     let qe = QueuedEffect {
+        activation_id: 0,
         source_card: source, source_permanent: Some(host), source_kind: EffectSourceKind::Digimon,
         source_identity: None, // Provenance has not been captured in this synthetic queue entry.
         attribution_source_card: None, attribution_source_kind: None, bypass_once_per_turn: false,

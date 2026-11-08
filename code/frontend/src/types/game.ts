@@ -133,6 +133,28 @@ export interface KeywordPrompt {
   cardName: string;
 }
 
+export interface TriggerChoice {
+  triggerId: string;
+  generation?: string;
+  actionId: number;
+  cardId: string;
+  cardName: string;
+  effectText: string;
+  timing: string;
+  sourceLabel: string;
+  isOptional: boolean;
+  isInherited: boolean;
+  activationPrompt: boolean;
+  activationPresetAvailable?: boolean;
+}
+
+export interface TriggerPlan {
+  order: string[];
+  generation?: string;
+  optionalAnswers: Record<string, boolean>;
+  offered: string[];
+}
+
 export interface PendingSelection {
   cardChoice?: CardChoice | null;
   phase: GamePhase;
@@ -156,6 +178,8 @@ export interface PendingSelection {
    */
   zoneOwner?: number;
   effectChoices?: EffectChoice[];
+  triggerChoices?: TriggerChoice[];
+  waitingTriggers?: TriggerChoice[];
   keywordPrompt?: KeywordPrompt;
 }
 

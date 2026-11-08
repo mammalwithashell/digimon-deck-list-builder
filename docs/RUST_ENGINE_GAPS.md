@@ -6836,3 +6836,24 @@ agent-side workaround.
 
 Not scored in the experiment (`incomplete`). Hypothesis on the cause is from
 the recording and the YAML, not yet confirmed in the resolver.
+
+
+## Human trigger-resolution plan metadata [G-TRIGGER-RESOLUTION-PLAN-METADATA]
+
+Implemented and locally checked on 2026-11-08. TriggerOrder and outer optional
+activation gates expose stable per-activation IDs, current legal action IDs,
+source/timing descriptions and an enqueue generation. These are UI metadata;
+they do not add actions or tensor features. Duplicate occurrences of the same
+physical card remain distinct and cloning preserves their identities.
+
+The UI can confirm a full or partial order and then submit each choice through
+the existing action transport. New activations cancel the remaining plan, even
+when they auto-resolved between responses. Other public field effects appear
+in a read-only waiting list. Ask/Yes/No presets are offered only for effects
+whose engine metadata advertises a separate activation gate; later optional
+processing and target selections remain interactive. Existing trigger batches,
+source liveness, optionality checks and action-mask validation govern execution.
+
+Regression coverage lives in `tests/effects/trigger_plan_metadata.rs`, frontend
+picker/transport tests, and the mocked-transport browser scenario
+`e2e/trigger-resolution-plan.spec.ts`. This is not a DCGO equivalence claim.

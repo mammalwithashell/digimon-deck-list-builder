@@ -218,6 +218,7 @@ impl Game {
             pending_selection_resume: None,
             after_selection_resume_hooks: crate::resume::ResumeContinuationHooks::default(),
             effect_queue: EffectQueue::new(),
+            next_trigger_activation_id: 1,
             pending_granted_fires: Vec::new(),
             granted_effect_bodies: crate::modifiers::GrantedEffectBodyRegistry::default(),
             next_granted_effect_id: 0,
