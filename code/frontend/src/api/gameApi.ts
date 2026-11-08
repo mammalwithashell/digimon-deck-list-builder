@@ -464,6 +464,8 @@ export function dtoToGameState(dto: GameStateDto): GameState {
             actionId: c.action_id,
             countChoice: c.count_choice,
           })),
+          triggerChoices: dto.pending_selection.trigger_choices,
+          waitingTriggers: dto.pending_selection.waiting_triggers,
         }
       : null,
     pendingAttack: null,

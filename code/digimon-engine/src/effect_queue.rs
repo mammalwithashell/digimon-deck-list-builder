@@ -91,6 +91,24 @@ enum QueuedGate {
     TriggerQualifier,
 }
 
+/// Presentation metadata. Rules and legality remain in the pending selection.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TriggerChoice {
+    pub trigger_id: String,
+    pub generation: String,
+    pub action_id: u16,
+    pub card_id: String,
+    pub card_name: String,
+    pub effect_text: String,
+    pub timing: String,
+    pub source_label: String,
+    pub is_optional: bool,
+    pub activation_preset_available: bool,
+    pub is_inherited: bool,
+    pub activation_prompt: bool,
+}
+
 /// RAII guard that installs a `TriggerContext` onto `Game.current_trigger_context`
 /// for the lifetime of the guard and restores the previous value on drop —
 /// including on panic. Used to evaluate a triggered effect's condition with the
@@ -206,6 +224,117 @@ fn permanent_activation_blocked_for_timing(
 }
 
 impl Game {
+    /// Public field sources outside the offered bundle, shown without controls.
+    pub fn waiting_trigger_choices(&self) -> Vec<TriggerChoice> {
+        if !self
+            .pending_selection
+            .as_ref()
+            .is_some_and(|selection| selection.kind == SelectionKind::TriggerOrder)
+        {
+            return Vec::new();
+        }
+        let offered = self.trigger_choices();
+        self.effect_queue
+            .iter()
+            .filter(|qe| {
+                let public_source =
+                    qe.source_permanent
+                        .and_then(|source| {
+                            self.players
+                                .get(source.player as usize)?
+                                .battle_area
+                                .get(source.index as usize)
+                        })
+                        .is_some_and(|permanent| {
+                            permanent.card_sources.iter().any(|source| {
+                                source.handle() == qe.source_card && !source.face_down
+                            })
+                        });
+                public_source
+                    && !offered
+                        .iter()
+                        .any(|choice| choice.trigger_id == qe.activation_id.to_string())
+            })
+            .map(|qe| self.trigger_choice(qe, 0, false))
+            .collect()
+    }
+
+    pub fn trigger_choices(&self) -> Vec<TriggerChoice> {
+        let Some(stack) = self.pending_selection_resume.as_ref() else {
+            return Vec::new();
+        };
+        for frame in &stack.frames {
+            match frame {
+                crate::resume::ResumeFrame::TriggerOrderSelection(state) => {
+                    let activation = state.bundle.len() == 1 && self.pending_selection.as_ref().is_some_and(|selection| selection.is_optional);
+                    return state.bundle.iter().enumerate().filter_map(|(position, index)| {
+                        self.effect_queue.get(*index).map(|qe| self.trigger_choice(qe, HAND_EFFECT_START + position as u16, activation))
+                    }).collect();
+                }
+                crate::resume::ResumeFrame::OuterOptionalTrigger(state) => {
+                    return vec![self.trigger_choice(
+                        &state.queued_effect,
+                        REPLACEMENT_ACCEPT,
+                        true,
+                    )];
+                }
+                _ => {}
+            }
+        }
+        Vec::new()
+    }
+
+    fn trigger_choice(
+        &self,
+        qe: &QueuedEffect,
+        action_id: u16,
+        activation_prompt: bool,
+    ) -> TriggerChoice {
+        let card = self.card(qe.source_card);
+        let effects = self.effects_for_queued(qe);
+        let effect = effects
+            .as_ref()
+            .and_then(|effects| effects.get(qe.effect_slot as usize));
+        let inherited = effect.is_some_and(|effect| effect.inherited);
+        let text = effect
+            .map(|effect| effect.name.clone())
+            .filter(|name| !name.is_empty())
+            .unwrap_or_else(|| {
+                if inherited {
+                    card.inherited_text.clone()
+                } else {
+                    card.effect_text.clone()
+                }
+            });
+        TriggerChoice {
+            trigger_id: qe.activation_id.to_string(),
+            generation: self.next_trigger_activation_id.to_string(),
+            action_id,
+            card_id: card.card_id.clone(),
+            card_name: card.card_name.clone(),
+            effect_text: qe.pending_processing.as_ref().map(|payload| payload.describe(self)).unwrap_or(text),
+            timing: format!("{:?}", qe.timing),
+            source_label: qe
+                .source_permanent
+                .map(|source| {
+                    format!(
+                        "{} · {}",
+                        if inherited { "Inherited" } else { "Effect" },
+                        if u16::from(source.index) == BREEDING_TARGET {
+                            "breeding area".to_string()
+                        } else {
+                            format!("battle area {}", source.index + 1)
+                        }
+                    )
+                })
+                .unwrap_or_else(|| format!("{:?}", qe.source_kind)),
+            is_optional: qe.is_optional,
+            activation_preset_available: activation_prompt || effect.is_some_and(|effect| effect.needs_outer_optional_prompt || effect.activation_cost_fn.is_some()),
+            is_inherited: inherited,
+            activation_prompt,
+        }
+    }
+
     /// Stamp before entering Security: otherwise its derived events would be
     /// incorrectly merged with the older reveal/removal occurrence.
     pub(crate) fn stamp_unstamped_trigger_batch(&mut self) {
@@ -333,6 +462,7 @@ impl Game {
             })
             .unwrap_or(false);
         QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card: effect.source_card,
             source_permanent: Some(effect.source),
@@ -1134,6 +1264,7 @@ impl Game {
                 continue;
             }
             self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card,
                 source_permanent: None,
@@ -1208,6 +1339,7 @@ impl Game {
                     continue;
                 }
                 self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                     source_card,
                     source_permanent: None,
@@ -1282,6 +1414,7 @@ impl Game {
                 continue;
             }
             self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card: card,
                 source_permanent: None,
@@ -1343,6 +1476,7 @@ impl Game {
                 if effect.inherited || effect.linked || !effect.trash_zone
                     || !timing_flag_matches(effect, EffectTiming::OnDiscardDeck) { continue; }
                 self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card: card, source_permanent: None, source_kind,
                     attribution_source_card: None, attribution_source_kind: None,
@@ -1531,13 +1665,27 @@ impl Game {
     /// resolution is NOT finished; the check defers to the drain that resumes when
     /// the selection resolves.
     pub(crate) fn push_effect_with_identity(&mut self, mut effect: QueuedEffect) {
+        self.assign_trigger_activation_id(&mut effect);
         if effect.source_identity.is_none() {
             effect.source_identity = Some(effect.source_permanent.and_then(|h| self.source_move_anchor(h)));
         }
         self.effect_queue.push_back(effect);
     }
 
+    fn assign_trigger_activation_id(&mut self, effect: &mut QueuedEffect) {
+        if effect.activation_id == 0 {
+            effect.activation_id = self.next_trigger_activation_id;
+            self.next_trigger_activation_id += 1;
+        }
+    }
+
     fn capture_queued_effect_identities(&mut self) {
+        for effect in &mut self.effect_queue {
+            if effect.activation_id == 0 {
+                effect.activation_id = self.next_trigger_activation_id;
+                self.next_trigger_activation_id += 1;
+            }
+        }
         let pending: Vec<_> = self.effect_queue.iter().map(|q| {
             (q.source_identity.is_none(), q.source_permanent)
         }).collect();
@@ -3050,6 +3198,7 @@ impl Game {
                 continue;
             }
             self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card,
                 source_permanent: Some(handle),
@@ -3162,6 +3311,7 @@ impl Game {
                 continue;
             }
             self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card,
                 source_permanent: None,
@@ -3236,6 +3386,7 @@ impl Game {
                 continue;
             }
             self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card: card,
                 source_permanent: None,
@@ -3344,6 +3495,7 @@ impl Game {
             // the immunity gate above, never for body attribution.
             let carrier_controller = handle.player;
             self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card,
                 source_permanent: Some(handle),
@@ -3395,6 +3547,7 @@ impl Game {
                     continue;
                 }
                 self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                     source_card,
                     source_permanent: Some(handle),
@@ -3489,6 +3642,7 @@ impl Game {
                     continue;
                 }
                 self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                     source_card,
                     source_permanent: Some(handle),
@@ -3561,6 +3715,7 @@ impl Game {
                     continue;
                 }
                 self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card: linked_source,
                     source_permanent: Some(handle),
@@ -3655,6 +3810,7 @@ impl Game {
                         continue;
                     }
                     self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card: training_source,
                         source_permanent: Some(handle),
@@ -3734,6 +3890,7 @@ impl Game {
                     continue;
                 }
                 self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card: inherited_source,
                     source_permanent: Some(handle),
@@ -3803,6 +3960,7 @@ impl Game {
                 .map(|p| source_kind_for_card_kind(p.top_card().card_kind(&self.card_data)))
                 .unwrap_or(crate::enums::EffectSourceKind::Digimon);
             self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card,
                 source_permanent: Some(handle),
@@ -3843,6 +4001,7 @@ impl Game {
                     continue;
                 }
                 self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                     source_card,
                     source_permanent: Some(handle),
@@ -3895,6 +4054,7 @@ impl Game {
                     continue;
                 }
                 self.push_effect_with_identity(QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card: inherited_source,
                     source_permanent: Some(handle),
@@ -6108,6 +6268,7 @@ impl Game {
     /// OPTIONAL triggered effect. ACCEPT runs the queued effect's body;
     /// PASS/decline skips it cleanly. `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     fn install_outer_optional_trigger_selection(&mut self, mut qe: QueuedEffect) {
+        self.assign_trigger_activation_id(&mut qe);
         // The prompt outlives a DNA digivolve's drain scope; carry its DNA
         // bit onto the parked effect, as `install_trigger_order_selection`
         // does, so "if DNA digivolving" still holds after ACCEPT (BT16-077).

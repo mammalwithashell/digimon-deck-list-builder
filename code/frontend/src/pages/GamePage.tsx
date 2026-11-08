@@ -12,6 +12,7 @@ import {
 import { useGameStore } from '@/stores/gameStore';
 import { cardChoiceToken } from '@/types/cardChoice';
 import { useActionMask } from '@/hooks/useActionMask';
+import { useTriggerPlan } from '@/hooks/useTriggerPlan';
 import { useEffectHighlight } from '@/hooks/useEffectHighlight';
 import { useDropZone, type DragData } from '@/hooks/useDropZone';
 import { GameBoard } from '@/components/board/GameBoard';
@@ -521,7 +522,18 @@ export function GamePage() {
     [sendAction],
   );
 
+  const triggerPlan = useTriggerPlan({
+    gameId: store.gameId,
+    pending: store.pendingSelection,
+    mask: store.actionMask,
+    sendAction,
+    localPlayer: 1,
+    gameOver: store.isGameOver,
+    transportError: useWebSocket ? (ws.status === 'connected' ? ws.error : 'Connection interrupted') : null,
+  });
+
   const handleUndo = useCallback(async () => {
+    triggerPlan.cancel();
     if (!store.gameId) return;
     try {
       const res = await gameApi.undoGame(store.gameId);
@@ -540,7 +552,7 @@ export function GamePage() {
     } catch (err) {
       console.error('Undo failed:', err);
     }
-  }, [store]);
+  }, [store, triggerPlan.cancel]);
 
   const handleSurrender = useCallback(async () => {
     if (!store.gameId || store.isGameOver) return;
@@ -1505,6 +1517,10 @@ export function GamePage() {
       />
 
       {/* Selection panel modal for hand/security/effect-choice selections */}
+      {triggerPlan.active && store.pendingSelection?.kind !== 'TriggerOrder' && (
+        <button className="fixed bottom-24 right-4 z-50 rounded-lg border border-[var(--ib-line)] bg-[var(--ib-graphite)] px-3 py-2 text-sm text-[var(--ib-bone)]"
+          onClick={triggerPlan.cancel}>Cancel remaining trigger plan</button>
+      )}
       <SelectionPanel
         currentPhase={store.currentPhase}
         pendingSelection={store.pendingSelection}
@@ -1519,6 +1535,9 @@ export function GamePage() {
         onAction={handleAction}
         localPlayer={1}
         onInspectCard={setInspectedCardId}
+        onTriggerPlan={triggerPlan.submit}
+        triggerPlanActive={triggerPlan.active}
+        onCancelTriggerPlan={triggerPlan.cancel}
       />
 
       {/* Interactive trash-selection modal — single + capped multi-select,

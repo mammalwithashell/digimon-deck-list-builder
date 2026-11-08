@@ -659,6 +659,7 @@ pub struct Game {
     /// Populated by `enqueue_triggered` and drained by `drain_effect_queue`.
     /// Empty until the drainer lands (PR2).
     pub effect_queue: EffectQueue,
+    pub(crate) next_trigger_activation_id: u64,
     /// Track H §3 — pending granted-triggered-effect fires queued by
     /// `enqueue_from_permanent` and `enqueue_from_breeding_permanent`.
     /// `drain_effect_queue` flushes this queue AFTER its main loop

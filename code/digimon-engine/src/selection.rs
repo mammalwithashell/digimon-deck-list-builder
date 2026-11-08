@@ -438,6 +438,8 @@ impl PendingSelection {
 /// alongside so re-lookup doesn't have to scan zones for a handle.
 #[derive(Debug, Clone)]
 pub struct QueuedEffect {
+    /// Stable per-activation identity for human resolution plans.
+    pub activation_id: u64,
     /// Card handle used to look up the effect body and its OPT slot.
     ///
     /// For ordinary queued effects this is also the effect attribution card.

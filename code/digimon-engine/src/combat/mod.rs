@@ -73,6 +73,7 @@ mod queue_handle_rekey_tests {
                     let mut game = DebugRunner::builder().build().game;
                     game.current_trigger_context = Some(context.clone());
                     let queued = QueuedEffect {
+                activation_id: 0,
                 source_identity: None,
                 source_card: CardHandle(0),
                         source_permanent: Some(handle),

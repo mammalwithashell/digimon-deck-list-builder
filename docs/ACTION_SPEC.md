@@ -173,6 +173,36 @@ Entered between games of a best-of-three match by `Game::request_play_order_sele
 - `SelectBreedingPermanent`: uses phase-scoped breeding selection IDs (`14` for player 0, `15` for player 1) for breeding-area permanent choices.
 - Optional selections allow decline with `62`.
 
+#### Trigger resolution plans in the gameplay UI
+
+`TriggerOrder` uses the current selection's `30..59` actions. Its UI metadata
+(`pendingSelection.triggerChoices`) includes a per-activation `triggerId`, current
+`actionId`, source, timing, description and optionality. IDs survive queue removal
+and game clones; repeated events from the same physical card have different IDs.
+They are presentation metadata, not additional action IDs or observation features.
+
+The UI may remember a full or partial order, then submit each choice through the
+normal action transport, rebinding stable IDs to the current legal mask after
+each response. A newly offered activation cancels the remaining plan and reopens
+the chooser. Target selections pause execution; they are never auto-selected.
+Plans are local to the current human session and are cleared on undo, game end,
+transport error or switching games. Each executed choice remains an ordinary
+recorded engine action for replay and training compatibility.
+
+Derived triggers form a newer resolution window and take precedence over older
+pending effects (CR 15-4-5), even when controlled by the non-turn player. Ordering
+actions and decline-all apply to the offered window. Older public field effects
+appear separately in the waiting list. A generation marker also invalidates a
+plan if new effects were generated and auto-resolved between UI responses.
+
+Optional effects expose Ask/Yes/No presets only when the engine advertises a
+separate activation gate. These reuse the existing pre-cost `TriggerOrder` gate
+or the outer `Replacement` gate, with their current accept action and `62`.
+The preset answers only that activation gate. Later optional processing
+and target choices remain interactive. Decline-all is available only when the
+engine marks the entire ordering selection optional. No action-space or tensor
+layout dimensions change.
+
 ### Selection Primitive Reuse
 
 Group 2 selection primitives reuse existing action ranges.

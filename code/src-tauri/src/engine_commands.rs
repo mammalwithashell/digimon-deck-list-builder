@@ -342,6 +342,10 @@ pub struct PendingSelectionDto {
     /// across reveal/effect-choice phases.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub effect_choices: Vec<EffectChoiceDto>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub trigger_choices: Vec<digimon_engine::effect_queue::TriggerChoice>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub waiting_triggers: Vec<digimon_engine::effect_queue::TriggerChoice>,
 }
 
 /// One branch of an `EffectChoice` prompt.
@@ -792,6 +796,8 @@ fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
         kind: format!("{:?}", sel.kind),
         zone_owner: sel.zone_owner,
         effect_choices,
+        trigger_choices: game.trigger_choices(),
+        waiting_triggers: game.waiting_trigger_choices(),
     })
 }
 
