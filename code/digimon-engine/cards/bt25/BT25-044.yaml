@@ -76,6 +76,8 @@ effects:
   # own_count + opp_count <= 6  ⟺  own_count <= 6 - opp_count, encoded as
   # security_count_lte (own) <= (6 - card_count_in_zone(opponent, security)).
   - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
     amount: 5
     condition:
       security_count_lte:

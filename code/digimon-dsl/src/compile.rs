@@ -2463,6 +2463,29 @@ fn compile_declarative(
             }
         }
         B::CostReduction(c) => {
+            // A reducer with a `condition` but no trigger flag and no
+            // `active_when` lowers to an UNSCOPED field reducer: every play /
+            // use by either player gets cheaper while the condition holds.
+            // "When this card would be played, if X, reduce the cost by N"
+            // needs `when_playing_this: true`. BT25-044 Junomon shipped this
+            // way and let the opposing seat use a cost-3 Option for free
+            // forever (specialist-league game 245, 2026-11-08).
+            if c.condition.is_some()
+                && active_when.is_none()
+                && !c.when_playing_this
+                && !c.when_digivolving_this
+                && c.when_any_ally_played.is_none()
+                && c.when_any_ally_digivolves_into.is_none()
+            {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: prefix.into(),
+                    message: "cost_reduction with only a `condition` reduces every card's cost; \
+                              set `when_playing_this: true` for \"when this card would be played\", \
+                              or scope it with `active_when` / a `when_any_*` trigger"
+                        .into(),
+                });
+            }
             if c.when_playing_this && c.when_digivolving_this {
                 errors.push(ValidationError { card_id: card_id.into(), path: prefix.into(),
                     message: "when_playing_this and when_digivolving_this are mutually exclusive".into() });
@@ -4985,3 +5008,7 @@ effects:
         );
     }
 }
+
+#[cfg(test)]
+#[path = "compile_cost_reduction_scope_tests.rs"]
+mod cost_reduction_scope_tests;
