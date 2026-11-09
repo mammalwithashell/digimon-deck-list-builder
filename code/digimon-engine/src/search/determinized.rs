@@ -440,7 +440,7 @@ fn ismcts_search(
                         let q = if e.visits > 0 {
                             signed_value(e.w / e.visits as f32, e.perspective, pid)
                         } else {
-                            0.0
+                            search.unvisited_q
                         };
                         (e.prior, e.visits, q)
                     })

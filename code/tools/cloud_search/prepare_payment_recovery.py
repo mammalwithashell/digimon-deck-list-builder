@@ -184,6 +184,8 @@ def prepare(args):
     gen1 = root / 'generation/gen1'
     atomic_json(root / 'generation/state.json', dict(next_gen=2, prev=dict(
         model_zip=str(gen1 / 'model.zip'), model_onnx=str(gen1 / 'model.onnx'))))
+    from digimon_gym.agents.belief_contract import bind_prepared_run
+    bind_prepared_run(root / 'generation')
     (root / 'corpora/pilot').mkdir(parents=True)
     (root / 'validation').mkdir()
     atomic_json(root / 'corpora/pilot/provenance.json', dict(cards_sha256=sha256(args.cards_json),

@@ -133,8 +133,13 @@ def build(onnx_path: Path, out: Path, verify_games: int, seed: int) -> dict:
     value_semantics = props.get("digimon_value_semantics")
     if value_semantics:
         model.digimon_value_semantics = value_semantics
+    # The activation lives in the ONNX graph, not the weights: carry it back so
+    # a reconstructed checkpoint keeps producing the same values.
+    activation = props.get("digimon_value_activation")
+    if activation:
+        model.digimon_value_activation = activation
 
-    report = verify(policy, onnx_path, env, verify_games, seed)
+    report = verify(policy, onnx_path, env, verify_games, seed, activation or "identity")
     out.parent.mkdir(parents=True, exist_ok=True)
     model.save(str(out))
     reloaded = MaskablePPO.load(str(out), device="cpu")
@@ -144,7 +149,7 @@ def build(onnx_path: Path, out: Path, verify_games: int, seed: int) -> dict:
             "value_semantics": value_semantics, "verification": report}
 
 
-def verify(policy, onnx_path: Path, env, games: int, seed: int) -> dict:
+def verify(policy, onnx_path: Path, env, games: int, seed: int, activation: str = "identity") -> dict:
     import onnxruntime as ort
     import torch
 
@@ -178,7 +183,10 @@ def verify(policy, onnx_path: Path, env, games: int, seed: int) -> dict:
             feats = policy.extract_features(obs_t)
             latent_pi, latent_vf = policy.mlp_extractor(feats)
             logits = policy.action_net(latent_pi).numpy()
-            value = policy.value_net(latent_vf).numpy()
+            value = policy.value_net(latent_vf)
+            if activation == "tanh":
+                value = torch.tanh(value)
+            value = value.numpy()
         report[name] = {
             "rows": int(len(obs)),
             "max_abs_logit_diff": float(np.max(np.abs(logits - onnx_logits))),

@@ -59,6 +59,26 @@ def run_information(regime: str, prior: Path | None) -> dict:
     }
 
 
+def bind_prepared_run(run_dir: Path, regime: str = "open_decklist", prior: Path | None = None) -> dict:
+    """Record the information identity of a run folder a preparer just wrote.
+
+    Campaign preparers write ``state.json`` (the parent checkpoint) before the
+    first generation runs, and ``freeze_run_information`` refuses a run folder
+    that has ``state.json`` but no identity, treating it as a pre-provenance
+    legacy run. Preparers call this right after writing ``state.json``; an
+    existing identity must match.
+    """
+    value = run_information(regime, prior)
+    path = run_dir / "information.json"
+    if path.exists():
+        if json.loads(path.read_text()) != value:
+            raise ValueError("prepared run already has a different information identity")
+    else:
+        run_dir.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(value, indent=2), encoding="utf-8")
+    return value
+
+
 def freeze_run_information(run_dir: Path, regime: str, prior: Path | None) -> dict:
     """Bind full-run resume, not only each scheduler's unfinished chunks."""
     value = run_information(regime, prior)

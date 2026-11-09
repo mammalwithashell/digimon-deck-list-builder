@@ -249,3 +249,55 @@ def test_campaign_refuses_drift(campaign, monkeypatch, change):
         plan['files']['inputs/decks.json'] = sha256(path)
     with pytest.raises(ValueError):
         validate(root, plan)
+
+
+def test_training_options_reach_the_generation_command(campaign):
+    from tools.cloud_search.run_small_generations import generation_command
+    root, plan = campaign
+    plan.update(seed=3, training=dict(epochs=4, lr=0.0001, value_holdout_fraction=0.2, value_activation='tanh'))
+    assert len(validate(root, plan)) == 12
+    command = generation_command(root, plan, 1)
+    assert command[command.index('--epochs') + 1] == '4'
+    assert command[command.index('--value-holdout-fraction') + 1] == '0.2'
+    assert command[command.index('--value-activation') + 1] == 'tanh'
+    legacy = generation_command(root, dict(plan, training={}), 1)
+    assert legacy[legacy.index('--epochs') + 1] == '2'
+    assert '--value-holdout-fraction' not in legacy and '--value-activation' not in legacy
+    for bad in (dict(epochs=0), dict(value_activation='relu'), dict(unknown=1)):
+        with pytest.raises(ValueError, match='training options'):
+            validate(root, dict(plan, training=bad))
+
+
+def test_per_generation_overrides_phase_in_a_pinned_opponent(campaign):
+    from tools.cloud_search.run_small_generations import generation_command
+    root, plan = historical_campaign(campaign)
+    base = plan.pop('historical_opponents')
+    plan.update(games=1200, generations=4, historical_opponents_by_generation={
+        '1': None, '2': None,
+        '3': dict(base, history_window=2, selfplay_probability=0.6),
+        '4': dict(base, history_window=2, selfplay_probability=0.5)})
+    assert len(validate(root, plan)) == 12
+    assert '--opponent-pool' not in generation_command(root, plan, 1)
+    command = generation_command(root, plan, 3)
+    assert command[command.index('--opponent-pool') + 1] == str(root / 'inputs/opponents.json')
+    assert command[command.index('--history-window') + 1] == '2'
+    assert command[command.index('--selfplay-probability') + 1] == '0.6'
+    plan['historical_opponents_by_generation']['4']['selfplay_probability'] = 0.4
+    with pytest.raises(ValueError, match='learner appearances'):
+        validate(root, plan)
+    plan['historical_opponents_by_generation']['4']['selfplay_probability'] = 0.5
+    plan['historical_opponents_by_generation']['9'] = None
+    with pytest.raises(ValueError, match='overrides'):
+        validate(root, plan)
+
+
+def test_long_campaign_requires_explicit_opt_in(campaign):
+    root, plan = campaign
+    plan['generations'] = 12
+    with pytest.raises(ValueError, match='scope'):
+        validate(root, plan)
+    plan['long_campaign'] = True
+    assert len(validate(root, plan)) == 12
+    plan['generations'] = 13
+    with pytest.raises(ValueError, match='scope'):
+        validate(root, plan)

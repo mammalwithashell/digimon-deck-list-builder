@@ -39,7 +39,10 @@ def validate(root, plan):
     last = plan['generations']
     if type(first) is not int or type(last) is not int or not 1 <= first <= last:
         raise ValueError('Invalid first generation')
-    if last - first + 1 not in range(1, 5) or plan['games'] < 1000 or plan['workers'] not in range(1, 9):
+    # Campaigns are bounded at four generations unless the plan explicitly
+    # opts into a longer, still bounded, run (at most twelve).
+    limit = 12 if plan.get('long_campaign') is True else 4
+    if last - first + 1 not in range(1, limit + 1) or plan['games'] < 1000 or plan['workers'] not in range(1, 9):
         raise ValueError('Unexpected campaign scope')
     if os.environ.get('DIGIMON_DEPLOYED_IMAGE') != plan['image']:
         raise ValueError('Image differs from approved engine')
@@ -84,35 +87,79 @@ def validate(root, plan):
            for p in (root / 'generation').glob('gen*')):
         raise ValueError('Existing campaign output; explicit recovery required')
     evaluation_options(plan)
-    if plan.get('historical_opponents') is not None:
-        from tools.search_opponents import resolve_pool, metadata_path
-        options = historical_options(root, plan)
-        current = root / f'generation/gen{parent}/model.onnx'
-        pool = resolve_pool(root / 'generation', first, current, **options)
-        required_assets = [current, metadata_path(current)]
-        if options['source']:
-            required_assets.append(options['source'])
-        for entry in pool['opponents']:
-            model = Path(entry['path'])
-            required_assets.extend([model, metadata_path(model)])
-            if (model.parent.parent == (root / 'generation').resolve()
-                    and model.parent.name.startswith('gen') and model.parent.name[3:].isdigit()
-                    and entry['id'] == f'generation-{int(model.parent.name[3:])}'):
-                required_assets.extend([model.with_suffix('.zip'), model.with_name('summary.json')])
-        for path in required_assets:
-            resolved = path.resolve()
-            if not resolved.is_relative_to(root.resolve()):
-                raise ValueError('Historical opponents must be contained in the campaign root')
-            name = resolved.relative_to(root.resolve()).as_posix()
-            if plan['files'].get(name) != sha256(resolved):
-                raise ValueError(f'Missing historical opponent input hash: {name}')
-        if plan['games'] * (1 + pool['selfplay_probability']) / len(slots) < 150:
-            raise ValueError('Historical mixture needs >=150 expected learner appearances per archetype')
+    training_options(plan)
+    overrides = plan.get('historical_opponents_by_generation', {})
+    if not isinstance(overrides, dict) or any(
+            not key.isdigit() or not first <= int(key) <= last for key in overrides):
+        raise ValueError('Per-generation opponent overrides must name campaign generations')
+    for key, config in sorted(overrides.items()):
+        if config is not None:
+            validate_historical(root, plan, slots, config, int(key), parent, resolve_history=False)
+    config = generation_config(plan, first)
+    if config is not None:
+        validate_historical(root, plan, slots, config, first, parent, resolve_history=True)
     return slots
 
 
-def historical_options(root, plan):
-    config = plan['historical_opponents']
+def generation_config(plan, index):
+    """Opponent config for one generation: a per-generation override wins
+    (``None`` there means pure self-play), else the campaign-wide config."""
+    overrides = plan.get('historical_opponents_by_generation', {})
+    if str(index) in overrides:
+        return overrides[str(index)]
+    return plan.get('historical_opponents')
+
+
+def training_options(plan):
+    """Fitter settings; the defaults are the historical hard-coded recipe."""
+    config = plan.get('training', {})
+    allowed = {'epochs', 'lr', 'batch_size', 'value_holdout_fraction', 'value_activation'}
+    if not isinstance(config, dict) or set(config) - allowed:
+        raise ValueError('Invalid training options')
+    options = dict(epochs=2, lr=0.0001, batch_size=512, value_holdout_fraction=0.0, value_activation=None)
+    options.update(config)
+    if (type(options['epochs']) is not int or options['epochs'] < 1
+            or not 0.0 <= options['value_holdout_fraction'] < 1.0
+            or options['value_activation'] not in (None, 'identity', 'tanh')):
+        raise ValueError('Invalid training options')
+    return options
+
+
+def validate_historical(root, plan, slots, config, index, parent, resolve_history):
+    from tools.search_opponents import resolve_pool, metadata_path
+    options = historical_options(root, config)
+    current = root / f'generation/gen{parent}/model.onnx'
+    if not resolve_history:
+        # Later generations' history does not exist yet; validate the
+        # pinned pool and mixture now, history entries at freeze time.
+        options = dict(options, history_window=0)
+        if options['source'] is None:
+            if plan['games'] * (1 + (options['selfplay_probability'] or 0.5)) / len(slots) < 150:
+                raise ValueError('Historical mixture needs >=150 expected learner appearances per archetype')
+            return
+    pool = resolve_pool(root / 'generation', index, current, **options)
+    required_assets = [current, metadata_path(current)]
+    if options['source']:
+        required_assets.append(options['source'])
+    for entry in pool['opponents']:
+        model = Path(entry['path'])
+        required_assets.extend([model, metadata_path(model)])
+        if (model.parent.parent == (root / 'generation').resolve()
+                and model.parent.name.startswith('gen') and model.parent.name[3:].isdigit()
+                and entry['id'] == f'generation-{int(model.parent.name[3:])}'):
+            required_assets.extend([model.with_suffix('.zip'), model.with_name('summary.json')])
+    for path in required_assets:
+        resolved = path.resolve()
+        if not resolved.is_relative_to(root.resolve()):
+            raise ValueError('Historical opponents must be contained in the campaign root')
+        name = resolved.relative_to(root.resolve()).as_posix()
+        if plan['files'].get(name) != sha256(resolved):
+            raise ValueError(f'Missing historical opponent input hash: {name}')
+    if plan['games'] * (1 + pool['selfplay_probability']) / len(slots) < 150:
+        raise ValueError('Historical mixture needs >=150 expected learner appearances per archetype')
+
+
+def historical_options(root, config):
     if not isinstance(config, dict) or set(config) - {'pool', 'history_window', 'selfplay_probability'}:
         raise ValueError('Invalid historical_opponents plan options')
     source = root / config['pool'] if config.get('pool') else None
@@ -124,7 +171,8 @@ def historical_options(root, plan):
                 selfplay_probability=config.get('selfplay_probability'))
 
 
-def generation_command(root, plan):
+def generation_command(root, plan, index=None):
+    training = training_options(plan)
     command = [sys.executable, '-m', 'tools.run_selfplay_generation',
         '--run-dir', str(root / 'generation'), '--seed-model', str(root / 'inputs/seed.zip'),
         '--seed-model-onnx', str(root / 'inputs/seed.onnx'), '--decks', str(root / 'inputs/decks.json'),
@@ -133,10 +181,16 @@ def generation_command(root, plan):
         '--chunk-games', '4', '--worker-timeout-seconds', '7200', '--sims', '320',
         '--worlds', '4', '--eval-batch-size', '4', '--decision-cap', '1200',
         '--fail-on-truncation', '--window', '3', '--replay-games-per-generation', str(plan['games']),
-        '--epochs', '2', '--batch-size', '512', '--lr', '0.0001', '--train-device', 'cpu',
+        '--epochs', str(training['epochs']), '--batch-size', str(training['batch_size']),
+        '--lr', str(training['lr']), '--train-device', 'cpu',
         '--seed', str(plan['seed']), '--skip-eval']
-    if plan.get('historical_opponents') is not None:
-        options = historical_options(root, plan)
+    if training['value_holdout_fraction']:
+        command += ['--value-holdout-fraction', str(training['value_holdout_fraction'])]
+    if training['value_activation'] is not None:
+        command += ['--value-activation', training['value_activation']]
+    config = generation_config(plan, plan.get('first_generation', 1) if index is None else index)
+    if config is not None:
+        options = historical_options(root, config)
         if options['source']:
             command += ['--opponent-pool', str(options['source'])]
         command += ['--history-window', str(options['history_window'])]
@@ -192,7 +246,7 @@ def main():
             for index in range(first, plan['generations'] + 1):
                 stage('generation', index, games=plan['games'], workers=plan['workers'])
                 print(f'=== GENERATION_MONITOR_INDEX={index} ===', flush=True)
-                subprocess.run(generation_command(root, plan), check=True)
+                subprocess.run(generation_command(root, plan, index), check=True)
                 stage('checkpoint_evaluation', index)
                 evaluate(index)
             stage('complete', index)
