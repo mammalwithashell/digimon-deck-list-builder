@@ -332,13 +332,33 @@ pub fn run_self_play_with_opponents(
         let _ = deck_rng.gen_range(0..decks.len());
         let _ = deck_rng.gen_range(0..decks.len());
     }
+    let specialist = match &opponents {
+        Some(pool) => pool.manifest.specialist_decks(deck_names)?,
+        None => None,
+    };
     for game_idx in config.game_start..game_end {
-        let di = deck_rng.gen_range(0..decks.len());
-        let dj = deck_rng.gen_range(0..decks.len());
+        let game_seed = derive_seed(config.seed, 1, game_idx as u64);
+        let historical = opponents
+            .as_ref()
+            .and_then(|pool| pool.manifest.assignment(config.seed, game_idx));
+        // Seeded 2-player games open with player `seed % 2` (game/setup.rs),
+        // independent of the decks, so the learner seat is known up front.
+        let expected_first = (game_seed % 2) as u8;
+        let (di, dj) = match &specialist {
+            None => (deck_rng.gen_range(0..decks.len()), deck_rng.gen_range(0..decks.len())),
+            Some(sp) => {
+                // Paired games (same opponent, opposite opening) share decks.
+                let mut pair_rng = StdRng::seed_from_u64(derive_seed(
+                    config.seed, 3, (game_idx / 2) as u64));
+                let l = sp.learner[pair_rng.gen_range(0..sp.learner.len())];
+                let pool = historical.map_or(&sp.selfplay, |i| &sp.per_opponent[i]);
+                let o = pool[pair_rng.gen_range(0..pool.len())];
+                if expected_first ^ (game_idx % 2) as u8 == 0 { (l, o) } else { (o, l) }
+            }
+        };
         game_decks.push((di, dj));
 
         let deck_lists = vec![decks[di].clone(), decks[dj].clone()];
-        let game_seed = derive_seed(config.seed, 1, game_idx as u64);
         eprintln!("game {game_idx} start: seed {game_seed}, decks {di} vs {dj}");
         let mut game = Game::new(&deck_lists, card_data, Rules::standard(), Some(game_seed))
             .map_err(|e| format!("game {game_idx} ({di} vs {dj}): {e}"))?;
@@ -347,10 +367,14 @@ pub fn run_self_play_with_opponents(
         // mulligan window.
         game.turn_count = 1;
         let first_player = game.turn_order[0];
-        let historical = opponents
-            .as_ref()
-            .and_then(|pool| pool.manifest.assignment(config.seed, game_idx));
-        let learner = historical.map(|_| first_player ^ (game_idx % 2) as u8);
+        if specialist.is_some() && first_player != expected_first {
+            return Err(format!("game {game_idx}: first player is not seed % 2"));
+        }
+        let learner = if specialist.is_some() || historical.is_some() {
+            Some(first_player ^ (game_idx % 2) as u8)
+        } else {
+            None
+        };
         let mut searched_by_seat = [0u32; 2];
         let mut rows_by_seat = [0usize; 2];
 

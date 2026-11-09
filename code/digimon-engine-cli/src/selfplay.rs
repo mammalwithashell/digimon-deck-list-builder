@@ -99,6 +99,7 @@ pub fn run(
     reduced_sims: Option<u32>,
     full_search_fraction: f32,
     cheap_sims: u32,
+    root_noise_epsilon: Option<f32>,
     tensor_profile: Option<String>,
     card_data: HashMap<String, CardData>,
     admission_dir: PathBuf,
@@ -113,6 +114,10 @@ pub fn run(
     }
     if full_search_fraction < 1.0 && cheap_sims == 0 {
         eprintln!("--cheap-sims must be positive when --full-search-fraction < 1");
+        return ExitCode::from(2);
+    }
+    if root_noise_epsilon.is_some_and(|e| !(0.0..1.0).contains(&e)) {
+        eprintln!("--root-noise-epsilon must lie in [0, 1)");
         return ExitCode::from(2);
     }
     if reduced_sims == Some(0) {
@@ -251,6 +256,9 @@ pub fn run(
     config.search.mode = mode;
     config.search.worlds = worlds;
     config.search.search.simulations = sims;
+    if let Some(epsilon) = root_noise_epsilon {
+        config.search.search.dirichlet_epsilon = epsilon;
+    }
     config.search.search.observation_profile = profile;
     let active_cache_entries = if uniform { 0 } else { cache_entries };
     let mut opponents = match opponent_pool {

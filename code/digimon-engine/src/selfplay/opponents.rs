@@ -18,6 +18,10 @@ pub struct OpponentEntry {
     /// Canonical sidecar is `<model>.onnx.meta.json`.
     pub metadata_sha256: String,
     pub weight: f64,
+    /// Archetypes this opponent pilots (deck-name prefix before `:sha256:`).
+    /// Only meaningful with `learner_decks`; None = any non-learner archetype.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decks: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,6 +30,16 @@ pub struct OpponentManifest {
     pub schema: String,
     pub selfplay_probability: f64,
     pub opponents: Vec<OpponentEntry>,
+    /// Specialist mode: the learner seat always pilots one of these archetypes
+    /// and the other seat never does (no mirrors). Self-play games then put the
+    /// current model on both seats but train only on the learner seat.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub learner_decks: Option<Vec<String>>,
+}
+
+/// Archetype of a deck-pool name: the part before `:sha256:`.
+pub fn deck_archetype(name: &str) -> &str {
+    name.split(":sha256:").next().unwrap_or(name)
 }
 
 pub fn file_sha256(path: &Path) -> Result<String, String> {
@@ -69,6 +83,23 @@ impl OpponentManifest {
             if !entry.weight.is_finite() || entry.weight <= 0.0 {
                 return Err("opponent weights must be finite and positive".into());
             }
+        }
+        if let Some(learner) = &self.learner_decks {
+            if learner.is_empty() || learner.iter().any(|a| a.trim().is_empty()) {
+                return Err("learner_decks must name nonempty archetypes".into());
+            }
+            for entry in &self.opponents {
+                if let Some(decks) = &entry.decks {
+                    if decks.is_empty() || decks.iter().any(|a| learner.contains(a)) {
+                        return Err(format!(
+                            "opponent {} decks must be nonempty and exclude the learner archetypes",
+                            entry.id
+                        ));
+                    }
+                }
+            }
+        } else if self.opponents.iter().any(|e| e.decks.is_some()) {
+            return Err("opponent deck restrictions require learner_decks".into());
         }
         if !self
             .opponents
@@ -123,6 +154,45 @@ impl OpponentManifest {
         }
         Some(self.opponents.len() - 1)
     }
+
+    /// Specialist deck indices: (learner candidates, per-opponent candidates,
+    /// self-play opponent candidates). None when not in specialist mode.
+    pub fn specialist_decks(
+        &self,
+        deck_names: &[String],
+    ) -> Result<Option<SpecialistDecks>, String> {
+        let Some(learner) = &self.learner_decks else {
+            return Ok(None);
+        };
+        let pick = |keep: &dyn Fn(&str) -> bool| -> Vec<usize> {
+            (0..deck_names.len()).filter(|&i| keep(deck_archetype(&deck_names[i]))).collect()
+        };
+        let learner_idx = pick(&|a| learner.iter().any(|l| l == a));
+        let others = pick(&|a| !learner.iter().any(|l| l == a));
+        if learner_idx.is_empty() || others.is_empty() {
+            return Err("specialist mode needs learner and non-learner decks in the pool".into());
+        }
+        let mut per_opponent = Vec::new();
+        for entry in &self.opponents {
+            let idx = match &entry.decks {
+                None => others.clone(),
+                Some(decks) => pick(&|a| decks.iter().any(|d| d == a)),
+            };
+            if idx.is_empty() {
+                return Err(format!("opponent {} has no decks in the pool", entry.id));
+            }
+            per_opponent.push(idx);
+        }
+        Ok(Some(SpecialistDecks { learner: learner_idx, per_opponent, selfplay: others }))
+    }
+}
+
+/// Deck-pool indices each seat may pilot in specialist mode.
+#[derive(Debug, Clone)]
+pub struct SpecialistDecks {
+    pub learner: Vec<usize>,
+    pub per_opponent: Vec<Vec<usize>>,
+    pub selfplay: Vec<usize>,
 }
 
 pub struct HistoricalOpponents {
