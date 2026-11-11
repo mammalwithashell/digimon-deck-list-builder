@@ -370,3 +370,12 @@ Digimon effects). DCGO blocks it because a DUAL card `IsOption`. Unchanged.
 - The `digimon-dsl` crate's own test targets don't build on main (the
   implementation inventory lags `exclude_self`, `DigiEgg`,
   `SecurityTrashOne/Finalize` and `source_card_trash_protection`).
+- Two `determinization` fixture replays fail
+  (`closed_cloud::queued_and_optional_security_observers_*`,
+  `closed_cloud::link_selection_continuations_*`). They replay recorded SW
+  (Gokuumon EX12-015) and TS-link games whose plays are no longer legal after
+  these fixes, and need re-recording. No generator is committed
+  (26bfc3f79). This suite is in the PR gate.
+- `test_alt_path_authoring_parity` fails the same way on main: Ceresmon
+  (BT26-032) and Bacchusmon (BT26-080) have no alt_path for "[Digivolve]
+  Play cost 12 [X]: Cost 2".
