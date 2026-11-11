@@ -609,6 +609,13 @@ fn validate_triggered(
     if let Some(cond) = &t.condition {
         validate_predicate(cond, &format!("{prefix}.condition"), card_id, ctx, errors);
     }
+    if t.opt_group.is_some() && !t.once_per_turn && !matches!(t.max_per_turn, Some(n) if n > 0) {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: format!("{prefix}.opt_group"),
+            message: "opt_group requires once_per_turn or max_per_turn".into(),
+        });
+    }
     if let Some(aw) = &t.active_when {
         validate_predicate(aw, &format!("{prefix}.active_when"), card_id, ctx, errors);
     }

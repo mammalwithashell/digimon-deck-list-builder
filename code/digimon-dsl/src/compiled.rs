@@ -1243,6 +1243,10 @@ pub struct CompiledTriggeredClause {
     pub outer_prompt: bool,
     pub once_per_turn: bool,
     pub max_per_turn: Option<u8>,
+    /// See `TriggeredClause::opt_group`: clauses on one card face with the
+    /// same label share one per-turn counter.
+    #[serde(default)]
+    pub opt_group: Option<String>,
     pub process: Vec<CompiledStep>,
     pub summary: Option<String>,
     pub summary_key: Option<String>,
@@ -3470,6 +3474,7 @@ mod tests {
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
+                opt_group: None,
                 once_per_turn: false,
                 max_per_turn: None,
                 process: vec![CompiledStep::GainMemory(1)],
@@ -3532,6 +3537,7 @@ mod tests {
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
+                opt_group: None,
                 once_per_turn: false,
                 max_per_turn: None,
                 process: vec![],

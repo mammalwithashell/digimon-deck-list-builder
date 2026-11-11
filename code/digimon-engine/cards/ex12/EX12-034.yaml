@@ -59,6 +59,10 @@ effects:
     # only when its sources do, plus "Don't play"; if nothing is played the
     # [Once Per Turn] use is refunded (RemoveUse). Deck audit 2026-11-10: both
     # zones were always offered and the OPT was spent on an empty pick.
+    # The card pick inside a zone is mandatory: DCGO lets you decline it
+    # (PlayByEffect canNoSelect) and then refunds, which is the same outcome
+    # as "Don't play"; an optional pick here ended the clause before the
+    # refund ran.
     process:
       - select_effect_choice:
           bind_as: play_zone
@@ -90,7 +94,6 @@ effects:
             - select_hand:
                 of: you
                 bind_as: sw_hand
-                optional: true
                 filter:
                   all_of:
                     - kind: digimon
@@ -104,7 +107,6 @@ effects:
             - select_material:
                 of_permanent: source
                 bind_as: sw_source
-                optional: true
                 filter:
                   all_of:
                     - kind: digimon

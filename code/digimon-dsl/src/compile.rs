@@ -2032,6 +2032,7 @@ fn compile_triggered(
         outer_prompt: t.outer_prompt,
         once_per_turn: t.once_per_turn,
         max_per_turn: t.max_per_turn,
+        opt_group: t.opt_group.clone(),
         process: t
             .process
             .iter()

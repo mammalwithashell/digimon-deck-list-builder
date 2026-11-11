@@ -153,6 +153,20 @@ fn ex12_034_leave_playing_nothing_refunds_once_per_turn() {
     );
 }
 
+/// After choosing "Hand" the card pick can't be passed: declining there would
+/// spend the [Once Per Turn] without the refund. "Don't play" is the opt-out
+/// (DCGO's decline-then-RemoveUse has the same outcome).
+#[test]
+fn ex12_034_leave_hand_pick_after_choosing_hand_is_mandatory() {
+    let (mut runner, _) = leave_setup(&["SW-5"]);
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    runner.execute_branch(0).expect("choose Hand");
+    let sel = runner.pending_selection().expect("hand pick pending");
+    assert_eq!(sel.kind, digimon_engine::selection::SelectionKind::Hand);
+    assert!(!sel.is_optional, "the hand pick has no PASS");
+}
+
 /// With nothing playable anywhere, the choice is only "Don't play" (it
 /// auto-binds, no prompt) and the [Once Per Turn] is refunded.
 #[test]

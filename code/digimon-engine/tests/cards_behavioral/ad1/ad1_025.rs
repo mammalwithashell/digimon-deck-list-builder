@@ -244,17 +244,17 @@ fn ad1_025_has_partition_with_wargreymon_and_metalgarurumon() {
 
     let has_wargrey = sources
         .iter()
-        .any(|p| pred_any(p, |q| q.name_contains.as_deref() == Some("WarGreymon")));
+        .any(|p| pred_any(p, |q| q.name_is.as_deref() == Some("WarGreymon")));
     let has_metalgaru = sources
         .iter()
-        .any(|p| pred_any(p, |q| q.name_contains.as_deref() == Some("MetalGarurumon")));
+        .any(|p| pred_any(p, |q| q.name_is.as_deref() == Some("MetalGarurumon")));
     assert!(
         has_wargrey,
-        "Partition sources must include name_contains: WarGreymon"
+        "Partition sources must be exactly [WarGreymon] (CR 2-3-1-2)"
     );
     assert!(
         has_metalgaru,
-        "Partition sources must include name_contains: MetalGarurumon"
+        "Partition sources must be exactly [MetalGarurumon] (CR 2-3-1-2)"
     );
 }
 

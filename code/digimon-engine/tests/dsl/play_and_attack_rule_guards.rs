@@ -139,3 +139,26 @@ fn an_effect_cannot_make_the_non_turn_player_attack() {
     assert_eq!(result, AttackResult::Invalid, "CR 11-1-2: only the turn player can attack");
     assert!(r.game.pending_attack.is_none());
 }
+
+/// An Option's [Main] body must not also be an [On Play]. `timing_flag_matches`
+/// dispatches OnPlay on the `on_play` flag, and Option bodies used to be built
+/// from `Effect::on_play(..)`, so a played DUAL card also ran its Option
+/// [Main] as an [On Play] (game audit 2026-11-11). Checks every lowered card.
+#[test]
+fn no_lowered_option_main_body_carries_the_on_play_flag() {
+    use digimon_engine::{card_source::CardHandle, dsl_cards::DslCardEffect, effect::CardEffect};
+    let pack = digimon_engine::dsl_registry::from_embedded_cached().expect("embedded pack loads");
+    let mut checked = 0;
+    let mut offenders = Vec::new();
+    for (id, card) in pack.iter() {
+        let effects = DslCardEffect::new(std::sync::Arc::new(card.clone())).effects(CardHandle(0));
+        for e in effects.iter().filter(|e| e.timing == EffectTiming::OptionMain) {
+            checked += 1;
+            if e.on_play {
+                offenders.push(id.clone());
+            }
+        }
+    }
+    assert!(checked > 100, "expected many Option [Main] bodies, saw {checked}");
+    assert!(offenders.is_empty(), "Option [Main] bodies flagged on_play: {offenders:?}");
+}

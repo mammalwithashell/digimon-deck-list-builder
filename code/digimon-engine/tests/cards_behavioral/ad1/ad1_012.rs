@@ -636,6 +636,92 @@ fn ad1_012_opponents_turn_dna_into_omnimon_alters_then_redirects() {
     );
 }
 
+/// game-audit 2026-11-11 / DCGO `CanPlayJogress(true)`: the defender-side
+/// hand pick lists only an Omnimon Alter-S whose DNA requirement P0's field
+/// meets. OMNI-FAR needs two Lv.7 Digimon (none on field) and must not be
+/// offered; OMNI-OK (Lv.6 + Lv.6) is.
+#[test]
+fn ad1_012_opponents_turn_hand_pick_excludes_card_without_a_legal_field_pair() {
+    use digimon_engine::action::space::{HAND_EFFECT_START, PLAY_HAND_START};
+    use digimon_engine::card_data::{DnaCost, DnaRequirement};
+    use digimon_engine::selection::SelectionKind;
+
+    let omni = |id: &str, level: u8| {
+        let mut c = make_test_card(id, "Omnimon Alter-S");
+        c.level = Some(7);
+        c.dp = Some(13000);
+        c.card_kind = digimon_engine::enums::CardKind::Digimon;
+        let req = || DnaRequirement {
+            level,
+            card_colors: Vec::new(),
+            name_contains: String::new(),
+            text_contains: String::new(),
+        };
+        c.dna_costs = vec![DnaCost {
+            requirement1: req(),
+            requirement2: req(),
+            memory_cost: 0,
+        }];
+        c
+    };
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-012")
+        .expect("AD1-012 found in embedded DSL pack")
+        .add_card(digimon("AD1-012-DNA-A", 6000))
+        .add_card(digimon("AD1-012-DNA-B", 6000))
+        .add_card(digimon("AD1-012-OPP-ATK", 5000))
+        .add_card(omni("AD1-012-OMNI-FAR", 7))
+        .add_card(omni("AD1-012-OMNI-OK", 6))
+        .add_card(make_test_card("AD1-012-SEC", "SecCard"))
+        .hand(0, &["AD1-012-OMNI-FAR", "AD1-012-OMNI-OK"])
+        .security(0, &["AD1-012-SEC", "AD1-012-SEC"])
+        .memory(12)
+        .deck(0, &["AD1-012-SEC"; 8])
+        .deck(1, &["AD1-012-SEC"; 8])
+        .start();
+
+    runner.place_on_field(0, "AD1-012", None);
+    runner.place_on_field(0, "AD1-012-DNA-A", Some(0));
+    runner.place_on_field(0, "AD1-012-DNA-B", Some(0));
+    let opp_attacker = runner.place_on_field(1, "AD1-012-OPP-ATK", Some(0));
+    runner.end_turn();
+    assert_eq!(runner.turn_player(), 1, "must be P1's turn");
+    let _ = runner.attack_player(opp_attacker, 0, false);
+
+    // Walk to AD1-012's own hand pick (accepting any gate in front of it).
+    let mut view = None;
+    for _ in 0..8 {
+        let Some(v) = runner.pending_selection_view() else { break };
+        if v.kind == SelectionKind::Hand && v.prompt.contains("Omnimon Alter-S") {
+            view = Some(v);
+            break;
+        }
+        let action = v
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .expect("an accept action");
+        runner.execute_action(v.selecting_player, action).expect("accept");
+    }
+    let view = view.expect("AD1-012's [Omnimon Alter-S] hand pick is offered");
+    let slot_actions = |id: &str| {
+        let slot = runner.game.players[0]
+            .hand
+            .iter()
+            .position(|c| c.card_id(&runner.game.card_data) == id)
+            .unwrap_or_else(|| panic!("{id} in hand")) as u16;
+        [PLAY_HAND_START + slot, HAND_EFFECT_START + slot]
+    };
+    let offered = |id: &str| slot_actions(id).iter().any(|a| view.valid_action_ids.contains(a));
+    assert!(offered("AD1-012-OMNI-OK"), "Lv.6 + Lv.6 pair on field: offered");
+    assert!(
+        !offered("AD1-012-OMNI-FAR"),
+        "no Lv.7 + Lv.7 pair on field: DCGO CanPlayJogress excludes it"
+    );
+}
+
 /// Inherited [Your Turn] — "This Digimon's attack target can't change."
 #[test]
 fn ad1_012_inherited_blocks_attack_target_change_during_your_turn() {

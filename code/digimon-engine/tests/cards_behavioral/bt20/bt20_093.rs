@@ -275,6 +275,90 @@ fn delay_rejects_battle_unrelated_and_opponent_subjects() {
         assert!(top_ids(&r.game).contains(&"BT20-093".into()));
     }
 }
+/// game-audit 2026-11-11 / DCGO `CanPlayJogress(true)`: the Delay DNA result
+/// pick lists only an [Examon] whose DNA requirement the field meets. FAR
+/// needs Lv.6 Yellow + Lv.6 Purple (field: Blue, Green, Red) and must not be
+/// offered; RESULT (Lv.6 Blue + Lv.6 Green) is, and still DNA digivolves.
+#[test]
+fn delay_field_dna_result_pick_excludes_examon_without_a_legal_field_pair() {
+    let req = |color| DnaRequirement {
+        level: 6,
+        card_colors: vec![color],
+        name_contains: String::new(),
+        text_contains: String::new(),
+    };
+    let examon = |id: &str, a: CardColor, b: CardColor| {
+        let mut c = material(id, CardColor::Blue);
+        c.card_name = "Examon".into();
+        c.level = Some(7);
+        c.dna_costs = vec![DnaCost {
+            requirement1: req(a),
+            requirement2: req(b),
+            memory_cost: 2,
+        }];
+        c
+    };
+    // Same board as `setup(false)`, with FAR in hand ahead of RESULT.
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(
+            &std::fs::read_to_string(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/cards/bt20/BT20-093.yaml"
+            ))
+            .expect("production YAML"),
+        )
+        .unwrap()
+        .add_card(examon("RESULT", CardColor::Blue, CardColor::Green))
+        .add_card(examon("FAR", CardColor::Yellow, CardColor::Purple))
+        .add_card(material("BLUE", CardColor::Blue))
+        .add_card(material("GREEN", CardColor::Green))
+        .add_card(material("RED", CardColor::Red))
+        .add_card(material("FILL", CardColor::Red))
+        .memory(10)
+        .hand(0, &["FAR", "RESULT"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    runner.game.turn_count = 3;
+    let option = runner.place_on_field(0, "BT20-093", None);
+    runner.game.players[0].battle_area[option.index as usize].option_state = OptionState::Delayed {
+        owner: 0,
+        placed_on_turn: 2,
+        trash_on_turn: 100,
+        trigger: DelayTrigger::EndOfYourNextTurn,
+    };
+    runner.place_on_field(0, "BLUE", None);
+    runner.place_on_field(0, "GREEN", None);
+    runner.place_on_field(0, "RED", None);
+
+    trigger(&mut runner, 3);
+    pick(&mut runner.game, None);
+    let labels: Vec<String> = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("result pick")
+        .effect_choices
+        .as_ref()
+        .expect("result pick labels")
+        .iter()
+        .map(|c| c.label.clone())
+        .collect();
+    assert_eq!(
+        labels.iter().filter(|l| l.as_str() == "Examon").count(),
+        1,
+        "only the Examon with a legal field pair is offered: {labels:?}"
+    );
+    for choice in [Some("Examon"), Some("BLUE"), Some("GREEN")] {
+        pick(&mut runner.game, choice);
+    }
+    assert!(top_ids(&runner.game).contains(&"RESULT".into()));
+    assert!(runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "FAR"));
+}
+
 #[test]
 fn delay_decline_before_payment_preserves_option() {
     let mut r = setup(false);

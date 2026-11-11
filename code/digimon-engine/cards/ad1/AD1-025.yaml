@@ -24,10 +24,13 @@ alt_paths:
   # surfaced per element (RL-visible, no auto-select) and placed at the
   # digivolution-stack bottom. `cost:` here is the REDUCTION amount (D5),
   # distinct from `dna_digivolve`'s absolute cost above. G-ASSEMBLY-PLAY-EXECUTION.
+  # A bracketed name alone is that exact name (CR 4.3 2-3-1-2; DCGO
+  # EqualsCardName), so BlackWarGreymon / the (X Antibody) cards don't qualify.
+  # Only the DNA line prints "w/[X] in name" (2-3-1-3).
   - kind: assembly
     materials:
-      - { name_contains: "WarGreymon", zones: [trash], stack_under: true }
-      - { name_contains: "MetalGarurumon", zones: [trash], stack_under: true }
+      - { name_is: "WarGreymon", zones: [trash], stack_under: true }
+      - { name_is: "MetalGarurumon", zones: [trash], stack_under: true }
     cost: 6
 
 effects:
@@ -39,8 +42,8 @@ effects:
 
   - kind: partition
     sources:
-      - { name_contains: "WarGreymon" }
-      - { name_contains: "MetalGarurumon" }
+      - { name_is: "WarGreymon" }
+      - { name_is: "MetalGarurumon" }
     exclude_cause: [own_effect, battle]
 
   # ─── [On Play][When Digivolving] body ────────────────────────────────────────

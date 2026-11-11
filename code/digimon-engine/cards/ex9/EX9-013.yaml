@@ -89,26 +89,23 @@ effects:
   - when: end_of_your_turn
     optional: true
     summary: "[End of Your Turn] 2 Digimon may DNA digivolve into Omnimon Alter-S in hand"
+    # DCGO EX9_013.cs: the effect activates whenever this Digimon is on the
+    # field on your turn; with no Omnimon Alter-S to DNA into, the "Then, 1 of
+    # your Digimon may attack" still happens. The hand/pair picks below carry
+    # the "may" (game audit follow-up 2026-11-11: the old condition also
+    # required an Alter-S in hand and 2 Digimon, which skipped the attack).
     condition:
-      all_of:
-        - count_gte:
-            filter:
-              of: you
-              zone: [battle_area]
-              kind: digimon
-            n: 2
-        - count_gte:
-            filter:
-              of: you
-              zone: [hand]
-              kind: digimon
-              name_contains: "Omnimon Alter-S"
-            n: 1
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            kind: digimon
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
     process:
+      # game-audit 2026-11-11 / DCGO CanPlayJogress: the hand pick offers only
+      # an Omnimon Alter-S that can DNA digivolve right now (DCGO
+      # `CanPlayJogress(true)`), the pair picks offer only Digimon that meet
+      # that card's DNA requirement (`dna_field_pair`), and the pair pick is
+      # skipped when the hand pick was declined. The "may attack" tail below
+      # stays outside these guards (DCGO runs it whether or not a DNA happened).
       # Step 1: select Omnimon Alter-S from hand
       - select_hand:
           of: you
@@ -117,29 +114,38 @@ effects:
             all_of:
               - kind: digimon
               - name_contains: "Omnimon Alter-S"
+              - dna_field_pair: { role: result }
           prompt: "Select Omnimon Alter-S from hand to DNA digivolve into"
           optional: true
-      # Step 2: select 2 own Digimon as DNA sources
-      - select_dna_pair:
-          left_filter:
-            all_of:
-              - kind: digimon
-              - of: you
-          right_filter:
-            all_of:
-              - kind: digimon
-              - of: you
-          bind_left_as: dna_src_a
-          bind_right_as: dna_src_b
-          prompt: "Select 2 Digimon to DNA digivolve"
-          optional: true
-      # Step 3: execute the DNA digivolve (cost paid normally per card)
-      - effect_initiated_dna_digivolve:
-          target_a: dna_src_a
-          target_b: dna_src_b
-          from_hand: dna_card
-          cost: 0
-          ignore_requirements: false
+      - if:
+          condition: { binding_present: dna_card }
+          then:
+            # Step 2: select 2 own Digimon as DNA sources
+            - select_dna_pair:
+                left_filter:
+                  all_of:
+                    - kind: digimon
+                    - of: you
+                    - dna_field_pair: { role: first, result: dna_card }
+                right_filter:
+                  all_of:
+                    - kind: digimon
+                    - of: you
+                    - dna_field_pair: { role: second, result: dna_card, first: dna_src_a }
+                bind_left_as: dna_src_a
+                bind_right_as: dna_src_b
+                prompt: "Select 2 Digimon to DNA digivolve"
+                optional: true
+            # Step 3: execute the DNA digivolve (cost paid normally per card)
+            - if:
+                condition: { binding_present: dna_src_a }
+                then:
+                  - effect_initiated_dna_digivolve:
+                      target_a: dna_src_a
+                      target_b: dna_src_b
+                      from_hand: dna_card
+                      cost: 0
+                      ignore_requirements: false
       # Step 4: "Then, 1 of your Digimon may attack."
       - optional:
           - select_own_permanent:

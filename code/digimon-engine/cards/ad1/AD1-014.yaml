@@ -2,7 +2,7 @@ card: AD1-014
 name: MetalGarurumon
 kind: digimon
 level: 6
-color: [blue]
+color: [blue, purple]
 cost: 12
 dp: 12000
 traits: [Cyborg, ADVENTURE, Hero]

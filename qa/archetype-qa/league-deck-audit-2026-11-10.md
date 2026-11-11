@@ -324,3 +324,49 @@ Checked and clean:
 
 Not checked: Once Per Turn overuse and mandatory effects that never fire. The
 logs carry no clause ids, so these can't be checked from them.
+
+# Part 4: suspicions checked (2026-11-11)
+
+Each suspicion above was checked against the card face or official bundle, CR
+4.3 and DCGO. This branch was merged with main first, so the ADVENTURE cards
+are the current ones from PR #756.
+
+**Fixed:**
+
+| Card / area | Finding | Fix |
+|---|---|---|
+| Medusamon (BT21-029) | One printed [Once Per Turn] effect with two triggers was split into two clauses with separate counters, so it could play 2 Tokens a turn. Official Q1550 and CR 15-14-1: it is one effect whichever trigger fires. DCGO also plays 2; the manual governs. | New DSL clause key `opt_group`: clauses with the same label share one counter. Both arms use `opt_group: petrify`. |
+| Alphamon (EX13-060) | The [End of Your Turn] play offered cards that can't be paid after -6 (memory would pass -10), and spent the [Once Per Turn] on nothing. | `affordable_with_cost_reduce: 6` on the pick (DCGO `CanPlayAsNewPermanent(fixedCost: cost - 6)`; CR 1-3-11-1). |
+| Omnimon (AD1-025) | Assembly and Partition matched names by "contains", so BlackWarGreymon and the (X Antibody) cards qualified. A bracketed name alone is the exact name (CR 2-3-1-2; DCGO `EqualsCardName`). | `name_is` (the DNA line keeps "in name"). |
+| DNA from hand: AD1-009, AD1-012, BT20-016, BT24-035, EX13-070, EX9-013 | Offered hand cards and field pairs that can't DNA digivolve (DCGO `CanPlayJogress(true)`). BT24-035 hard-coded one Silphymon's colours. AD1-009 and BT20-016 hand picks could not be declined. | `dna_field_pair` filters plus `binding_present` guards (WarGreymon EX12-017 pattern). BT20-093 already filters through its Delay flow. |
+| EX9-013 [End of Your Turn] | Required an Omnimon Alter-S in hand and 2 Digimon, which skipped "Then, 1 of your Digimon may attack". | Condition is now only this Digimon on the field (DCGO). |
+| Erlangmon (EX12-034) | Choosing "Hand"/"Sources" and then passing spent the [Once Per Turn] without the refund. | The pick inside a zone is mandatory; "Don't play" is the opt-out and refunds (same outcomes as DCGO). |
+| Option [Main] bodies | Built with the `on_play` flag, so a played Option-face card also ran its [Main] as an [On Play]. | Built without it; a test checks every lowered card. |
+| Takutoumon (EX12-057) | Attribute was Data; the card face reads Vaccine. | YAML and `card_overrides.json`. |
+| MetalGarurumon (AD1-014) | YAML header colour missed purple (runtime data was right). | `color: [blue, purple]`. |
+
+**Not bugs:**
+- Ceresmon (BT26-032): "all of your opponent's suspended Digimon get -5000" is
+  continuous overall processing (CR 15-11-2-2/3), so later-suspended Digimon
+  are affected. DCGO agrees.
+- Takutoumon (EX12-057) [Counter]: offered on the field to the defender, one
+  [Counter] per attack across all sources (CR 11-3-2).
+- BT24-017's +2000 under the "returned 2" branch matches official Q5591.
+- Matt & T.K. (AD1-019)'s hand pick is filtered by [ADVENTURE].
+- Tomoro & Kyo (ST23-13) and Reina & Makoto (ST23-14) print no name rule
+  (Part 2 was wrong to list them with ST24-13).
+
+**Needs a ruling:** a DUAL card checked from security against "doesn't
+activate [Security] effects on Option cards" (BT20-015 and others). The only
+DUAL card in the pool with a [Security] effect, ScourgeChiropmon (BT26-075),
+prints it above the trait line, which is Digimon information (CR 4-6-5-3:
+Digimon effects). DCGO blocks it because a DUAL card `IsOption`. Unchanged.
+
+**Open, not fixed:**
+- BT12-112's "All of your opponent's [Security] effects on Option cards don't
+  activate" puts the modifier on Option permanents, so it never applies. It
+  needs a player-level modifier that checks the checked card's kind.
+- BT17-014, BT20-071, BT20-074, BT7-014, ST13-05 and BT3-097 have no YAML.
+- The `digimon-dsl` crate's own test targets don't build on main (the
+  implementation inventory lags `exclude_self`, `DigiEgg`,
+  `SecurityTrashOne/Finalize` and `source_card_trash_protection`).

@@ -39,7 +39,7 @@
 //! | (c) OPT lockout | G-OPT-TRIGGERED | #[ignore] |
 //! | (d) security-removed arm | none | PASS |
 //! | (d) deletion arm | event_target_owner + event_target_kind | PASS |
-//! | (d) OPT lockout | G-OPT-TRIGGERED | #[ignore] |
+//! | (d) OPT lockout | `opt_group: petrify` (Q1550, one OPT across both arms) | tested |
 
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
@@ -569,12 +569,63 @@ fn bt21_029_clause_d_security_arm_no_token_without_security_removal() {
     );
 }
 
-/// Clause (d) OPT lockout: second trigger in the same turn is blocked.
-/// Skipped pending G-OPT-TRIGGERED engine gap.
+/// Clause (d) is ONE printed effect with one [Once Per Turn] and two
+/// triggers ("deleted or their security stack is removed from"). Official
+/// Q1550 / CR 4.3 §15-14-1: whichever trigger fires first, the effect can't
+/// activate again that turn. Checked in both orders. (DCGO gives each arm its
+/// own counter and plays 2 Tokens; the manual governs.)
+fn clause_d_tokens_after_both_arms(security_first: bool) -> usize {
+    let mut a = make_test_card("OPP-DELETE-A", "Opp Delete A");
+    a.card_kind = CardKind::Digimon;
+    a.dp = Some(3000);
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-029")
+        .expect("BT21-029 in embedded DSL pack")
+        .add_card(a)
+        .memory(10)
+        .start();
+    let medusa = runner.place_on_field(0, "BT21-029", Some(0));
+    let victim = runner.place_on_field(1, "OPP-DELETE-A", Some(0));
+    let security = |runner: &mut DebugRunner| {
+        runner.game.enqueue_triggered(
+            EffectTiming::OnOpponentSecurityRemoved,
+            TriggerSource::Permanent(medusa),
+        );
+        runner.game.drain_effect_queue();
+    };
+    let delete = |runner: &mut DebugRunner| {
+        let handle = runner.game.players[1]
+            .battle_area
+            .iter()
+            .position(|p| p.top_card().card_id(&runner.game.card_data) == "OPP-DELETE-A")
+            .map(|i| digimon_engine::permanent::PermanentHandle { player: 1, index: i as u8 })
+            .expect("victim on field");
+        let mut ctx = EffectContext::new(&mut runner.game, CardHandle(0), None, 0);
+        ctx.delete_permanent(handle);
+        drop(ctx);
+        runner.game.drain_effect_queue();
+    };
+    let _ = victim;
+    if security_first {
+        security(&mut runner);
+        delete(&mut runner);
+    } else {
+        delete(&mut runner);
+        security(&mut runner);
+    }
+    runner
+        .game
+        .player(1)
+        .battle_area
+        .iter()
+        .filter(|p| p.top_card().card_kind(&runner.game.card_data) == CardKind::Token)
+        .count()
+}
+
 #[test]
-#[ignore = "pending: card-local OPT body not authored — G-OPT-TRIGGERED closed by Phase 2 Track C; sibling cards cover lockout dispatch"]
 fn bt21_029_clause_d_opt_blocks_second_activation_same_turn() {
-    // Body deferred — substrate ready; sibling regression coverage exists.
+    assert_eq!(clause_d_tokens_after_both_arms(true), 1, "security arm, then deletion arm");
+    assert_eq!(clause_d_tokens_after_both_arms(false), 1, "deletion arm, then security arm");
 }
 
 #[test]
