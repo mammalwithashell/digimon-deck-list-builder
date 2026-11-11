@@ -1,0 +1,140 @@
+# ST20-04 Garudamon — Lv.5, Red, DP 7000, Cost 7.
+# Traits: Birdkin, ADVENTURE. Form: Ultimate. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB, data/card_bundles/ST20-04.md; matches the
+# card image and data/cards.json):
+#   Digivolve: Red Lv.4 / Cost 3
+#   [Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3
+#   [On Play] [When Digivolving] For the turn, 1 of your Digimon gains
+#     <Security A. +1>, and for every 2 colors your Tamers have, gets +2000 DP.
+#   [Your Turn] [Once Per Turn] When your other Digimon are played or
+#     digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
+#     gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
+#   Inherited: <Alliance>
+#   Official Q&A: the Alliance grant cannot be skipped ("You must give to 1 of
+#   your Digimon").
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/ST20/Red/ST20_04.cs
+#   - Alt requirement: HasAdventureTraits && Level == 4, cost 3, no colour.
+#   - OP / WD: mandatory own-Digimon pick (canNoSelect false) →
+#     ChangeDigimonSAttack(+1) + ChangeDigimonDP(2000 * colours/2), both
+#     UntilEachTurnEnd. colours = distinct colours over your battle-area
+#     Tamers (Combinations.GetDifferenetColorCardCount).
+#   - [Your Turn][OPT] (hash "alliance-attack-ST20_04"): OnEnterFieldAnyone,
+#     owner turn, own OTHER battle-area Digimon played (CanTriggerOnPermanent
+#     Play) or digivolving (CanTriggerWhenPermanentDigivolving);
+#     IsSkippable unless one of the event batch's permanents has [ADVENTURE]
+#     (top card). Body: mandatory Alliance pick over ALL own Digimon (self
+#     included) → GainAlliance UntilEachTurnEnd; then optional attacker pick
+#     (CanAttack, canNoSelect true) → SelectAttackEffect (normal attack,
+#     player or any Digimon target).
+#   - Inherited <Alliance>: AllianceSelfEffect(isInheritedEffect: true).
+#
+# Authoring notes (shared ADVENTURE Lv.5 idiom — ST20-06/09, ST21-04/09,
+# BT21-061/078 reuse the observer clause verbatim):
+#   - Observer: `when: [on_ally_played, on_digivolve]` + `active_when:
+#     your_turn` + `once_per_turn` (BT16-017 idiom). The [ADVENTURE] "if" is
+#     a TRIGGER qualifier (`trigger_if: event_target_trait_has`) so a non-
+#     [ADVENTURE] play neither triggers nor spends the once-per-turn — matching
+#     DCGO's IsSkippable. "other" = `event_permanent_is_source: false`
+#     (EX11-017 / BT22-002 self-exclusion idiom). Several Digimon played by
+#     one effect raise one event each in this engine; [Once Per Turn] limits
+#     the resolution to one, which is DCGO's single batched activation.
+#   - "Then, 1 of your Digimon may attack": optional `select_own_permanent`
+#     filtered by `can_attack` (DCGO Permanent.CanAttack) followed by an
+#     optional `may_attack_now` (EX12-015 / BT21-044 idiom) — the centralized
+#     attack flow (Alliance, security checks, counters) runs as normal.
+#   - OP/WD DP: `multiply(floor_div(distinct tamer colours, 2), 2000)`
+#     (EX13-020 multiply idiom; ST20-11 floor_div idiom). <Security A. +1> is a
+#     timed keyword grant (BT20-015 idiom).
+#
+# | Clause                                              | Status      |
+# | Red Lv.4 / Cost 3 circle                            | IMPLEMENTED |
+# | Lv.4 [ADVENTURE] / Cost 3 box                       | IMPLEMENTED |
+# | [OP][WD] S.A.+1 and +2000/2 Tamer colours, for turn | IMPLEMENTED |
+# | [Your Turn][OPT] ADVENTURE observer → Alliance; may attack | IMPLEMENTED |
+# | Inherited <Alliance>                                | IMPLEMENTED |
+
+card: ST20-04
+name: Garudamon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+traits: [Birdkin, ADVENTURE]
+attribute: Vaccine
+form: Ultimate
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: ADVENTURE }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] For the turn, 1 of your Digimon gains <Security A. +1> and +2000 DP for every 2 colors your Tamers have"
+    process:
+      - select_own_permanent:
+          bind_as: boosted
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Security A. +1> and +2000 DP for every 2 colors your Tamers have, for the turn"
+      - grant_keyword:
+          target: boosted
+          keyword: SecurityAttackPlus
+          value: 1
+          expiry: end_of_turn
+      - add_dp_modifier:
+          target: boosted
+          value:
+            formula:
+              multiply:
+                - floor_div:
+                    - base: 0
+                      per:
+                        distinct_colors_count:
+                          of: you
+                          zone: battle_area
+                          filter: { kind: tamer }
+                      delta: 1
+                    - 2
+                - 2000
+          expiry: end_of_turn
+
+  - when: [on_ally_played, on_digivolve]
+    active_when: { your_turn: true }
+    once_per_turn: true
+    summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack"
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+        - event_target_trait_has: ADVENTURE
+    process:
+      - select_own_permanent:
+          bind_as: alliance_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"
+      - grant_keyword:
+          target: alliance_target
+          keyword: Alliance
+          expiry: end_of_turn
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          filter: { kind: digimon, can_attack: { targets: any } }
+          prompt: "Choose 1 of your Digimon that may attack"
+      - may_attack_now:
+          attacker: attacker
+          targets: any
+          optional: true
+          prompt: "Attack with the selected Digimon?"
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Alliance
+    summary: "Inherited <Alliance>"

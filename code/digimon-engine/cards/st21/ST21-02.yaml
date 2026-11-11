@@ -1,0 +1,38 @@
+# ST21-02 Gomamon — Digimon, Lv.3, Blue, DP 2000, Cost 3.
+# Traits: Sea Beast, ADVENTURE. Attribute: Vaccine.
+#
+# Printed text (official observation, data/card_official.json):
+#   Standard digivolve: Blue Lv.2 / Cost 0 (cards.json evo_costs).
+#   [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0
+#   [All Turns] Your opponent can't gain memory other than by Tamer effects.
+# Official Q&A: "your opponent's memory will no longer increase by any effects
+#   except Tamer effects. This effect affects the opponent player."
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Blue/ST21_02.cs —
+#   static effect applying to `card.Owner.Enemy`.
+#
+# Engine hook: identical to EX8-030 Tapirmon / BT3-077 Gazimon —
+# `CannotGainMemoryExceptFromTamers` flood gate on the opponent, all turns.
+
+card: ST21-02
+name: Gomamon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+traits: [Sea Beast, ADVENTURE]
+attribute: Vaccine
+
+alt_paths:
+  # [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0.
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: ADVENTURE }
+    cost: 0
+
+effects:
+  - kind: flood_gate
+    summary: "[All Turns] Your opponent can't gain memory other than by Tamer effects"
+    active_when: { all_turns: true }
+    target_player: opponent
+    modifier: CannotGainMemoryExceptFromTamers

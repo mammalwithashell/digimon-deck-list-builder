@@ -1,0 +1,87 @@
+# ST20-05 Gatomon — Digimon, Lv.4, Yellow, DP 4000, Cost 4.
+# Traits: Holy Beast, ADVENTURE. Attribute: Vaccine.
+#
+# Printed text (official observation, data/card_official.json):
+#   Standard digivolve: Yellow Lv.3 / Cost 2 (cards.json evo_costs — engine
+#     reads it directly; no alt_paths entry needed, BT21-070 convention).
+#   [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2
+#   [Security] At the end of the battle, play this card without paying the cost.
+#   [On Play] [When Digivolving] Give 2 of your opponent's Digimon
+#     <Security A. -1> until their turn ends.
+#   Inherited: [When Attacking] [Once Per Turn] 1 of your opponent's Digimon
+#     gets -2000 DP for the turn.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Yellow/ST20_05.cs
+#   - Alt digivolve: HasAdventureTraits && Level == 3, cost 2.
+#   - SecuritySkill: PlaySelfDigimonAfterBattleSecurityEffect (BT21-043 /
+#     BT21-070 idiom: on_security → play_from_security).
+#   - OP / WD: SelectPermanentEffect over opponent Digimon, maxCount =
+#     min(2, n), canNoSelect false, canEndNotMax false →
+#     `select_count_capped_multi { max: 2, clamp_to_available: true,
+#     optional_zero: false }` (BT23-047 "N of your opponent's" idiom), then
+#     ChangeDigimonSAttack(-1, UntilOpponentTurnEnd) → `SecurityAttackChange
+#     -1, expiry: end_of_opponents_turn` (AD1-017 / BT19-035 idiom).
+#   - ESS OnAllyAttack, maxUsableCount 1, canNoSelect false, ChangeDigimonDP
+#     (-2000, UntilEachTurnEnd) → inherited when_attacking once_per_turn +
+#     add_dp_modifier expiry end_of_turn ("for the turn").
+
+card: ST20-05
+name: Gatomon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+traits: [Holy Beast, ADVENTURE]
+attribute: Vaccine
+
+alt_paths:
+  # [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2 (no colour gate).
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: ADVENTURE }
+    cost: 2
+
+effects:
+  # ─── [Security] At the end of the battle, play this card for free ─────────
+  - when: on_security
+    summary: "[Security] At the end of the battle, play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # ─── [On Play][When Digivolving] 2 opponent Digimon get Security A. -1 ────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Give 2 of your opponent's Digimon <Security A. -1> until their turn ends"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          clamp_to_available: true
+          optional_zero: false
+          filter: { kind: digimon }
+          bind_as: sa_targets
+          prompt: "Give 2 of your opponent's Digimon <Security A. -1> until their turn ends"
+      - per_selected:
+          selection: sa_targets
+          bind_as: sa_target
+          body:
+            - add_modifier:
+                target: sa_target
+                modifier: SecurityAttackChange
+                value: -1
+                expiry: end_of_opponents_turn
+
+  # ─── Inherited [When Attacking][Once Per Turn] -2000 DP for the turn ──────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -2000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -2000
+          expiry: end_of_turn

@@ -1,0 +1,69 @@
+# ST20-08 Kabuterimon — Lv4, Green, Insectoid / ADVENTURE, Champion / Vaccine,
+# DP 4000, Cost 4.
+#
+# Printed card text (official bundle data/card_bundles/ST20-08.md):
+#
+#   Digivolve: Green Lv.3 / cost 2.
+#   [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2
+#
+#   [When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer
+#   card with the [ADVENTURE] trait from your hand without paying the cost.
+#
+#   Inherited: <Piercing>
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Green/ST20_08.cs
+#   - Alt requirement: Lv3 && HasAdventureTraits, cost 2.
+#   - [When Digivolving] optional; CanActivate: an ADVENTURE Tamer in hand and
+#     own battle-area Tamer count <= 1; SelectHandEffect(canNoSelect: true,
+#     maxCount 1) → PlayPermanentCards(payCost: false).
+#   - Inherited PierceSelfEffect(isInheritedEffect: true).
+#
+# The [When Digivolving] clause is ST21-05 Angemon's, verbatim.
+#
+# Verdict: IMPLEMENTED.
+
+card: ST20-08
+name: Kabuterimon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 4000
+traits: [Insectoid, ADVENTURE]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: ADVENTURE }
+    cost: 2
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] If you have 1 or fewer Tamers, may play 1 [ADVENTURE] Tamer from hand for free"
+    condition:
+      count_lte:
+        filter:
+          of: you
+          zone: [battle_area]
+          kind: tamer
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: adv_tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: ADVENTURE
+          prompt: "Play 1 [ADVENTURE] Tamer card from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: adv_tamer }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "Inherited <Piercing>"

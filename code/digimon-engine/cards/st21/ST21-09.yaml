@@ -1,0 +1,132 @@
+# ST21-09 Lillymon — Lv.5, Green, DP 7000, Cost 7.
+# Traits: Fairy, ADVENTURE. Form: Ultimate. Attribute: Data.
+#
+# Printed text (official Bandai DB, data/card_bundles/ST21-09.md; matches
+# data/cards.json):
+#   Digivolve: Green Lv.4 / Cost 3
+#   [Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3
+#   [On Play] [When Digivolving] Suspend all of your opponent's 5000 DP or
+#     lower Digimon. Then, for every 2 colors your Tamers have, return 1 of
+#     their suspended Digimon to the bottom of the deck.
+#   [Your Turn] [Once Per Turn] When your other Digimon are played or
+#     digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
+#     gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
+#   Inherited: <Alliance>
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/ST21/Green/ST21_09.cs
+#   - OP / WD: SuspendPermanentsClass over the opponent's battle-area Digimon
+#     with DP <= 5000; then, if colours/2 > 0, a mandatory pick of exactly
+#     min(suspended opponent Digimon, floor(colours/2)) (canNoSelect false,
+#     canEndNotMax false) → PutLibraryBottom. ANY suspended opponent Digimon
+#     qualifies (not only those this effect suspended).
+#   - Your Turn OPT observer + inherited <Alliance>: identical to ST20-04
+#     (hash "alliance-attack-ST21_09").
+#
+# Authoring: "suspend all" = `for_each` + `suspend` (BT6-103 idiom); the
+# return count is `select_count_capped_multi` (`floor_div` max,
+# `clamp_to_available`) over suspended opponent Digimon, then `per_selected`
+# `return_to_deck` bottom — the player's pick order is the bottom-placement
+# order. The observer clause is the shared ADVENTURE Lv.5 idiom documented in
+# ST20-04.yaml.
+#
+# | Clause                                              | Status      |
+# | Green Lv.4 / Cost 3 circle                          | IMPLEMENTED |
+# | Lv.4 [ADVENTURE] / Cost 3 box                       | IMPLEMENTED |
+# | [OP][WD] suspend all <=5000 DP; bottom-deck N suspended | IMPLEMENTED |
+# | [Your Turn][OPT] ADVENTURE observer → Alliance; may attack | IMPLEMENTED |
+# | Inherited <Alliance>                                | IMPLEMENTED |
+
+card: ST21-09
+name: Lillymon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+traits: [Fairy, ADVENTURE]
+attribute: Data
+form: Ultimate
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: ADVENTURE }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Suspend all of your opponent's 5000 DP or lower Digimon. Then, for every 2 colors your Tamers have, return 1 of their suspended Digimon to the bottom of the deck"
+    process:
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - dp_lte: 5000
+          bind_as: low_dp
+          body:
+            - suspend: { target: low_dp }
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              floor_div:
+                - base: 0
+                  per:
+                    distinct_colors_count:
+                      of: you
+                      zone: battle_area
+                      filter: { kind: tamer }
+                  delta: 1
+                - 2
+          clamp_to_available: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          bind_as: bottom_picks
+          prompt: "Return 1 of your opponent's suspended Digimon to the bottom of the deck for every 2 colors your Tamers have"
+      - per_selected:
+          selection: bottom_picks
+          bind_as: bottom_one
+          body:
+            - return_to_deck: { target: bottom_one, position: bottom }
+
+  - when: [on_ally_played, on_digivolve]
+    active_when: { your_turn: true }
+    once_per_turn: true
+    summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack"
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+        - event_target_trait_has: ADVENTURE
+    process:
+      - select_own_permanent:
+          bind_as: alliance_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"
+      - grant_keyword:
+          target: alliance_target
+          keyword: Alliance
+          expiry: end_of_turn
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          filter: { kind: digimon, can_attack: { targets: any } }
+          prompt: "Choose 1 of your Digimon that may attack"
+      - may_attack_now:
+          attacker: attacker
+          targets: any
+          optional: true
+          prompt: "Attack with the selected Digimon?"
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Alliance
+    summary: "Inherited <Alliance>"

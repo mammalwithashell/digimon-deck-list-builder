@@ -1,0 +1,80 @@
+# ST21-15 Gennai's House — Option, White, Cost 2. Traits: ADVENTURE.
+#
+# Printed text (official Bandai DB, data/card_bundles/ST21-15.md):
+#   While you have no face-up [Gennai's House] security cards, you can ignore
+#     this card's color requirements.
+#   [Security] [Your Turn] All of your level 3 or higher Digimon get +3000 DP.
+#   [Main] Add your bottom security card to the hand. Then, place this card
+#     face up as the bottom security card.
+#   Security Effect: [Security] You may play 1 level 3 Digimon card from your
+#     trash without paying the cost.
+#   Official Q&A: they become face-up security cards that remain revealed;
+#     otherwise the standard security rules apply.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/White/ST21_15.cs
+#   - IgnoreColorConditionClass (cardCondition: cardSource == card) while
+#     `!card.Owner.SecurityCards.Any(c => c.EqualsCardName("Gennai's House")
+#     && !c.IsFlipped)`.
+#   - ChangeDPStaticEffect(+3000) over own battle-area Digimon with Level >= 3,
+#     condition IsExistInSecurity(card, false) && IsOwnerTurn(card).
+#   - OptionSkill: ReplaceBottomSecurityWithFaceUpOptionMainEffect.
+#   - SecuritySkill: optional (canNoSelect true) trash pick, IsDigimon &&
+#     Level == 3 → PlayPermanentCards(payCost: false, root: Trash).
+#
+# Twin of ST20-15 Island of Adventure (top → bottom; [All Turns] +2000 →
+# [Your Turn] +3000; Tamer from hand → Lv.3 Digimon from trash) and of
+# BT24-090 (bottom-security [Main] body). The colour waiver is a top-level
+# `use_requirement:` (the hand colour check reads it — ST21-14 / BT24-090);
+# no `flood_gate IgnoreColorRequirement` clause is authored (it does not relax
+# the from-hand check). `name_is` mirrors DCGO EqualsCardName.
+#
+# Verdict: IMPLEMENTED.
+
+card: ST21-15
+name: "Gennai's House"
+kind: option
+color: [white]
+cost: 2
+traits: [ADVENTURE]
+
+use_requirement:
+  no_face_up_security_named:
+    of: you
+    name_is: "Gennai's House"
+
+effects:
+  - kind: aura
+    scope: security
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      kind: digimon
+      level_gte: 3
+    dp_modifier: 3000
+    summary: "[Security][Your Turn] All of your level 3 or higher Digimon get +3000 DP"
+
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Add your bottom security card to the hand; then place this card face up as the bottom security card"
+    process:
+      - add_bottom_security_to_hand: { of: you }
+      - place_on_security:
+          source: self_option
+          position: bottom
+          face_up: true
+
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security] You may play 1 level 3 Digimon card from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: lv3_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+          prompt: "You may play 1 level 3 Digimon card from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: lv3_pick }

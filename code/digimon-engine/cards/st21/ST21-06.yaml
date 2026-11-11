@@ -1,0 +1,124 @@
+# ST21-06 MagnaAngemon — Lv.5, Yellow, DP 7000, Cost 7.
+# Traits: Archangel, ADVENTURE. Form: Ultimate. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB, data/card_bundles/ST21-06.md):
+#   Digivolve: Yellow Lv.4 / Cost 3
+#   [Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3
+#   [On Play] [When Digivolving] Place 1 of your opponent's 6000 DP or lower
+#     Digimon as the top security card. For every 2 colors your Tamers have,
+#     add 2000 to this effect's DP maximum.
+#   [Your Turn] [Once Per Turn] When your other Digimon are played or
+#     digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
+#     gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
+#   Inherited: <Alliance>
+#   Official Q&A: the Alliance grant cannot be skipped.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/ST21/Yellow/ST21_06.cs
+#   - Alt requirement: HasAdventureTraits && Level == 4, cost 3.
+#   - OP / WD: mandatory pick (canNoSelect false) of an opponent battle-area
+#     Digimon with DP <= 6000 + 2000 * (GetDifferenetColorCardCount(own
+#     battle-area Tamers) / 2) → IPutSecurityPermanent(toTop: true), i.e. into
+#     the opponent's own security stack, face down. CanActivate requires a
+#     candidate (no prompt otherwise).
+#   - [Your Turn][OPT] observer (hash "alliance-attack-ST21_06") — identical
+#     to ST20-04 Garudamon; see cards/st20/ST20-04.yaml for the authoring notes.
+#   - Inherited <Alliance>: AllianceSelfEffect(isInheritedEffect: true).
+#
+# Authoring notes:
+#   - DP maximum = 6000 + 2000 * floor(tamer colours / 2), written as
+#     `subtract: [6000, multiply(floor_div(colours, 2), -2000)]` (the formula
+#     vocabulary has no `add`; floor_div/multiply are the ST20-04 idiom).
+#     Evaluated when the candidate filter is checked, i.e. at resolution.
+#   - `place_on_security { permanent, of: opponent, top }` — EX11-016 idiom;
+#     face down by default (DCGO isFaceup false).
+#
+# | Clause                                                     | Status      |
+# | Yellow Lv.4 / Cost 3 circle                                | IMPLEMENTED |
+# | Lv.4 [ADVENTURE] / Cost 3 box                              | IMPLEMENTED |
+# | [OP][WD] place opp <=6000 (+2000 / 2 colours) DP as top sec | IMPLEMENTED |
+# | [Your Turn][OPT] ADVENTURE observer → Alliance; may attack | IMPLEMENTED |
+# | Inherited <Alliance>                                       | IMPLEMENTED |
+
+card: ST21-06
+name: MagnaAngemon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Archangel, ADVENTURE]
+attribute: Vaccine
+form: Ultimate
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: ADVENTURE }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Place 1 of your opponent's 6000 DP or lower Digimon as the top security card; +2000 to the DP maximum for every 2 colors your Tamers have"
+    process:
+      - select_opponent_permanent:
+          bind_as: to_security
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte:
+                  formula:
+                    subtract:
+                      - 6000
+                      - multiply:
+                          - floor_div:
+                              - base: 0
+                                per:
+                                  distinct_colors_count:
+                                    of: you
+                                    zone: battle_area
+                                    filter: { kind: tamer }
+                                delta: 1
+                              - 2
+                          - -2000
+          prompt: "Place 1 of your opponent's Digimon (6000 DP or lower, +2000 for every 2 colors your Tamers have) as the top security card"
+      - place_on_security:
+          source: { permanent: to_security }
+          of: opponent
+          position: top
+
+  - when: [on_ally_played, on_digivolve]
+    active_when: { your_turn: true }
+    once_per_turn: true
+    summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack"
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+        - event_target_trait_has: ADVENTURE
+    process:
+      - select_own_permanent:
+          bind_as: alliance_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"
+      - grant_keyword:
+          target: alliance_target
+          keyword: Alliance
+          expiry: end_of_turn
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          filter: { kind: digimon, can_attack: { targets: any } }
+          prompt: "Choose 1 of your Digimon that may attack"
+      - may_attack_now:
+          attacker: attacker
+          targets: any
+          optional: true
+          prompt: "Attack with the selected Digimon?"
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Alliance
+    summary: "Inherited <Alliance>"

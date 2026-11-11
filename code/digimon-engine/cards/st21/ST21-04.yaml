@@ -1,0 +1,150 @@
+# ST21-04 Zudomon — Lv.5, Blue, DP 7000, Cost 7.
+# Traits: Sea Beast, ADVENTURE. Form: Ultimate. Attribute: Vaccine.
+#
+# Printed text (card image ST21-04.webp + data/cards.json):
+#   Digivolve: Blue Lv.4 / Cost 3
+#   [Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3
+#   [On Play] [When Digivolving] From 1 of your opponent's Digimon, trash any
+#     1 digivolution card for every 2 colors your Tamers have. Then, return 1
+#     of their Digimon with 1 or fewer digivolution cards to the hand.
+#   [Your Turn] [Once Per Turn] When your other Digimon are played or
+#     digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
+#     gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
+#   Inherited: <Alliance>
+#
+# DATA DRIFT: the official Bandai DB bundle (data/card_bundles/ST21-04.md)
+# words the first sentence "For every 2 colors your Tamers have, trash any 1
+# of your opponent's Digimon's digivolution cards." — no explicit "From 1 of
+# your opponent's Digimon". The printed card image and DCGO
+# (SelectTrashDigivolutionCards isFromOnly1Permanent: true) both restrict the
+# trash to ONE Digimon; that reading is implemented. Flagged for review.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/ST21/Blue/ST21_04.cs
+#   - OP / WD: if colours/2 > 0 and an opponent Digimon exists:
+#     SelectTrashDigivolutionCards(opp Digimon, maxCount floor(colours/2),
+#     canNoTrash false, isFromOnly1Permanent true) — pick 1 opponent Digimon
+#     with trashable digivolution cards, trash min(N, its cards). Then, if any
+#     opponent Digimon has <= 1 digivolution cards: mandatory pick → Bounce.
+#   - Your Turn OPT observer + inherited <Alliance>: identical to ST20-04
+#     (hash "alliance-attack-ST21_04").
+#
+# Authoring: `select_opponent_permanent` (materials_count_gte 1) binds the
+# host, then `select_opponent_sources` with `target:` the host, formula
+# min = max = floor_div(distinct tamer colours, 2) and `clamp_to_available`
+# (DCGO min(N, available)). The whole strip is gated on
+# `distinct_tamer_colors_gte: 2` (N >= 1). The bounce runs regardless. The
+# observer clause is the shared ADVENTURE Lv.5 idiom documented in
+# ST20-04.yaml.
+#
+# | Clause                                              | Status      |
+# | Blue Lv.4 / Cost 3 circle                           | IMPLEMENTED |
+# | Lv.4 [ADVENTURE] / Cost 3 box                       | IMPLEMENTED |
+# | [OP][WD] trash N sources from 1 opp Digimon; bounce <=1-source Digimon | IMPLEMENTED |
+# | [Your Turn][OPT] ADVENTURE observer → Alliance; may attack | IMPLEMENTED |
+# | Inherited <Alliance>                                | IMPLEMENTED |
+
+card: ST21-04
+name: Zudomon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+traits: [Sea Beast, ADVENTURE]
+attribute: Vaccine
+form: Ultimate
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: ADVENTURE }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] From 1 of your opponent's Digimon, trash 1 digivolution card for every 2 colors your Tamers have. Then, return 1 of their Digimon with 1 or fewer digivolution cards to the hand"
+    process:
+      - if:
+          condition: { distinct_tamer_colors_gte: 2 }
+          then:
+            - select_opponent_permanent:
+                bind_as: strip_host
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - materials_count_gte: 1
+                prompt: "Choose 1 of your opponent's Digimon to trash digivolution cards from"
+            - select_opponent_sources:
+                target: strip_host
+                min:
+                  formula:
+                    floor_div:
+                      - base: 0
+                        per:
+                          distinct_colors_count:
+                            of: you
+                            zone: battle_area
+                            filter: { kind: tamer }
+                        delta: 1
+                      - 2
+                max:
+                  formula:
+                    floor_div:
+                      - base: 0
+                        per:
+                          distinct_colors_count:
+                            of: you
+                            zone: battle_area
+                            filter: { kind: tamer }
+                        delta: 1
+                      - 2
+                clamp_to_available: true
+                bind_as: stripped
+                prompt: "Trash 1 of this Digimon's digivolution cards for every 2 colors your Tamers have"
+                then:
+                  - trash_selected_sources: { source_refs: stripped }
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 1
+          prompt: "Return 1 of your opponent's Digimon with 1 or fewer digivolution cards to the hand"
+      - return_to_hand: { target: bounce_target }
+
+  - when: [on_ally_played, on_digivolve]
+    active_when: { your_turn: true }
+    once_per_turn: true
+    summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack"
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+        - event_target_trait_has: ADVENTURE
+    process:
+      - select_own_permanent:
+          bind_as: alliance_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"
+      - grant_keyword:
+          target: alliance_target
+          keyword: Alliance
+          expiry: end_of_turn
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          filter: { kind: digimon, can_attack: { targets: any } }
+          prompt: "Choose 1 of your Digimon that may attack"
+      - may_attack_now:
+          attacker: attacker
+          targets: any
+          optional: true
+          prompt: "Attack with the selected Digimon?"
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Alliance
+    summary: "Inherited <Alliance>"
