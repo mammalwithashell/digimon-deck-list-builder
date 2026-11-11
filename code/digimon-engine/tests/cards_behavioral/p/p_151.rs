@@ -428,13 +428,19 @@ fn p_151_play_removes_option_from_hand() {
         .from_dsl_yaml(YAML)
         .expect("parses")
         .add_card(filler("FILL"))
+        .add_card(make_liberator_digimon("LIB"))
         .hand(0, &["P-151"])
         .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL", "FILL"])
         .memory(10)
         .start();
+    // Use it the way a player does (an Option is used, never played to the
+    // field); a [LIBERATOR] Digimon meets the use requirement.
+    runner.place_on_field(0, "LIB", None);
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
 
     let hand_before = runner.hand_size(0);
-    runner.play(0, 0);
+    assert!(build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize] > 0.0);
+    runner.game.decode_action(PLAY_HAND_START, 0);
     let hand_mid = runner.hand_size(0);
 
     assert!(

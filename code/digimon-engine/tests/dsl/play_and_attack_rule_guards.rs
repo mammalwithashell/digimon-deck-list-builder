@@ -119,6 +119,50 @@ fn a_dual_card_cannot_be_played_to_the_field() {
     assert!(r.game.players[0].battle_area.is_empty());
 }
 
+/// CR 7-1-1: playing places "a new card with a play cost" onto the field.
+/// A Digi-Egg and an Option have none (DCGO `HasPlayCost`), so no effect can
+/// play them. Rose Rave audit 2026-11-11 (Rosemon BT26-049, Crowmon BT26-076,
+/// Pinamon BT26-005 offered them).
+#[test]
+fn digi_eggs_and_options_cannot_be_played_by_effects() {
+    let mut egg = make_test_card("EGG", "Egg");
+    egg.card_kind = CardKind::DigiEgg;
+    egg.level = Some(2);
+    egg.play_cost = 0;
+    let mut opt = make_test_card("OPT", "Opt");
+    opt.card_kind = CardKind::Option;
+    opt.level = None;
+    opt.dp = None;
+    opt.play_cost = 2;
+    let mut source = make_test_card("PLAY-PICKER", "Play picker");
+    source.card_kind = CardKind::Tamer;
+    source.level = None;
+    source.dp = None;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(PLAYER_YAML)
+        .unwrap()
+        .add_card(source)
+        .add_card(egg)
+        .add_card(opt)
+        .add_card(plain("PLAIN"))
+        .hand(0, &["EGG", "OPT", "PLAIN"])
+        .deck(0, &["PLAIN"; 8])
+        .deck(1, &["PLAIN"; 8])
+        .memory(5)
+        .start();
+    r.skip_mulligan();
+    r.game.enter_main_phase();
+    for i in 0..2 {
+        let card = r.game.players[0].hand[i].handle();
+        assert!(
+            !r.game.can_play_card_from_effect_without_cost(0, card, 1),
+            "hand slot {i} has no play cost"
+        );
+    }
+    let plain_card = r.game.players[0].hand[2].handle();
+    assert!(r.game.can_play_card_from_effect_without_cost(0, plain_card, 1));
+}
+
 #[test]
 fn an_effect_cannot_make_the_non_turn_player_attack() {
     use digimon_engine::combat::{AttackInitiator, AttackOpen, AttackResult, TargetConstraint};
@@ -161,4 +205,25 @@ fn no_lowered_option_main_body_carries_the_on_play_flag() {
     }
     assert!(checked > 100, "expected many Option [Main] bodies, saw {checked}");
     assert!(offenders.is_empty(), "Option [Main] bodies flagged on_play: {offenders:?}");
+}
+
+/// A printed [Burst Digivolve] is a Main-phase digivolve, not <Blast Digivolve>
+/// ([Hand] [Counter]), so it must not carry the counter-window marker. Rose
+/// Rave audit 2026-11-11: Rosemon: Burst Mode (BT26-050) was digivolved into
+/// for free during the opponent's attack 13 times in 68 games.
+#[test]
+fn burst_digivolve_cards_are_not_blast_digivolve_counters() {
+    use digimon_engine::{card_source::CardHandle, dsl_cards::DslCardEffect, effect::CardEffect};
+    let pack = digimon_engine::dsl_registry::from_embedded_cached().expect("embedded pack loads");
+    let has_marker = |id: &str| {
+        let card = pack.lookup(id).unwrap_or_else(|| panic!("{id} in pack"));
+        DslCardEffect::new(std::sync::Arc::new(card.clone()))
+            .effects(CardHandle(0))
+            .iter()
+            .any(|e| e.blast_digivolve)
+    };
+    for id in ["BT13-020", "BT13-060", "BT25-104", "BT26-050"] {
+        assert!(!has_marker(id), "{id} prints [Burst Digivolve], not a [Counter]");
+    }
+    assert!(has_marker("AD1-005"), "AD1-005 prints <Blast Digivolve>");
 }

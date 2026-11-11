@@ -418,6 +418,49 @@ fn p_235_main_places_self_in_battle_area() {
     );
 }
 
+/// "Add 1 card with the [DATA SQUAD] trait among them to the hand" has no
+/// "may": with [DATA SQUAD] cards among the revealed 3 the pick is mandatory
+/// (no PASS).
+#[test]
+fn p_235_main_reveal_pick_is_mandatory_rose_rave_audit() {
+    // Rose Rave audit 2026-11-11: DCGO SimplifiedRevealDeckTopCardsAndSelect canNoSelect false -- no "may" in the text.
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_data_squad("DS1"))
+        .add_card(make_data_squad("DS2"))
+        .add_card(make_non_ds("NDS1"))
+        .add_card(make_filler("FILL"))
+        .hand(0, &["P-235"])
+        .hand(1, &["FILL"])
+        // Top 3 (end of the Vec): DS1, DS2, NDS1 — two legal picks, so the
+        // prompt is a real choice.
+        .deck(0, &["FILL", "FILL", "NDS1", "DS2", "DS1"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    assert!(runner.game.activate_hand_main(0, 0));
+    let v = runner
+        .pending_selection_view()
+        .expect("the [DATA SQUAD] reveal pick is prompted");
+    assert!(!v.is_optional, "the add is mandatory (no \"may\")");
+    assert!(
+        !v.valid_action_ids
+            .contains(&digimon_engine::action::space::PASS),
+        "PASS must not be offered (valid {:?})",
+        v.valid_action_ids
+    );
+    drain_selections(&mut runner);
+    assert!(
+        runner.game.players[0].hand.iter().any(|cs| {
+            let id = cs.card_id(&runner.game.card_data);
+            id == "DS1" || id == "DS2"
+        }),
+        "a [DATA SQUAD] card was added to hand"
+    );
+}
+
 /// Edge: empty deck → reveal is a no-op, no panic.
 #[test]
 fn p_235_main_empty_deck_no_panic() {

@@ -384,6 +384,90 @@ fn ad1_021_self_suspend_no_greymon_in_hand_no_digivolve() {
     );
 }
 
+/// The base pick offers only an own Digimon with a legal yellow [Greymon]
+/// digivolve target in hand, and the hand pick offers only targets that can
+/// digivolve onto the chosen base. Field: YGREY (Lv.4 yellow — METAL's circle
+/// fits) and REDDIGI (Lv.4 red — no yellow circle fits). Hand: METAL (Lv.5,
+/// from yellow Lv.4) and WARG (Lv.6 yellow Greymon, from yellow Lv.5 only).
+#[test]
+fn ad1_021_digivolve_offers_only_legal_base_and_target_rose_rave_audit() {
+    // Rose Rave audit 2026-11-11: DCGO CanPlayCardTargetFrame -- only bases with a legal target, only targets legal on the base.
+    let mut warg = make_test_card("WARG", "WarGreymon");
+    warg.card_kind = CardKind::Digimon;
+    warg.level = Some(6);
+    warg.dp = Some(12000);
+    warg.play_cost = 12;
+    warg.colors = vec![CardColor::Yellow];
+    warg.evo_costs = vec![EvoCost {
+        card_color: 2, // Yellow
+        level: 5,
+        memory_cost: 4,
+    }];
+
+    let mut runner = builder()
+        .add_card(warg)
+        .hand(0, &["METAL", "WARG"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    let tamer = runner.place_on_field(0, "AD1-021", Some(0));
+    let base = runner.place_on_field(0, "YGREY", Some(0));
+    let red = runner.place_on_field(0, "REDDIGI", Some(0));
+
+    fire_self_suspend(&mut runner, tamer);
+
+    let non_pass = |r: &DebugRunner| -> Vec<u16> {
+        r.pending_selection_view()
+            .map(|v| v.valid_action_ids.into_iter().filter(|&a| a != PASS).collect())
+            .unwrap_or_default()
+    };
+
+    // Base pick: YGREY only (REDDIGI has no legal yellow [Greymon] target).
+    let v = runner
+        .pending_selection_view()
+        .expect("the optional base pick is prompted");
+    assert!(v.is_optional, "\"may digivolve\"");
+    let bases = non_pass(&runner);
+    assert_eq!(
+        bases.len(),
+        1,
+        "only the Digimon with a legal target is selectable (valid {:?}; base {base:?}, red {red:?})",
+        v.valid_action_ids
+    );
+    runner.execute_action(0, bases[0]).unwrap();
+
+    // Target pick: METAL only (WARG can't digivolve onto a Lv.4).
+    let v = runner
+        .pending_selection_view()
+        .expect("the hand target pick is prompted");
+    let targets = non_pass(&runner);
+    assert_eq!(
+        targets.len(),
+        1,
+        "only the target that can digivolve onto the base is offered (valid {:?})",
+        v.valid_action_ids
+    );
+    runner.execute_action(0, targets[0]).unwrap();
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.game.players[0].battle_area[base.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "METAL",
+        "METAL digivolved onto the YGREY base"
+    );
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|cs| cs.card_id(&runner.game.card_data) == "WARG"),
+        "WARG stays in hand"
+    );
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // Section 3 — Clause 2 [End of Your Turn] behavioral
 // ════════════════════════════════════════════════════════════════════════════

@@ -214,3 +214,70 @@ fn bt26_049_two_suspends_in_one_action_trigger_once() {
     );
     assert_eq!(r.hand_size(0), 1);
 }
+
+/// A [DATA SQUAD] Digi-Egg has no play cost (its cost 0 is a missing value), so
+/// it is never a play-or-use candidate: alone in hand it does not trigger the
+/// [All Turns] clause, and beside a legal card it is not offered.
+#[test]
+fn bt26_049_digi_egg_not_offered_rose_rave_audit() {
+    // Rose Rave audit 2026-11-11: CR 7-1-1 / DCGO HasPlayCost -- a Digi-Egg can't be played.
+    fn runner() -> DebugRunner {
+        let mut r = DebugRunner::builder()
+            .dsl_card(CARD_ID)
+            .expect("BT26-049")
+            .add_card(filler("FILLER"))
+            .add_card(digimon("OPP", "Opp", CardColor::Red, 4, 5, &[]))
+            .add_card({
+                let mut c = digimon("DSEGG", "DS Egg", CardColor::Green, 2, 0, &["DATA SQUAD"]);
+                c.card_kind = digimon_engine::enums::CardKind::DigiEgg;
+                c.dp = None;
+                c
+            })
+            .add_card(digimon(
+                "DS3",
+                "DS three",
+                CardColor::Green,
+                3,
+                3,
+                &["DATA SQUAD"],
+            ))
+            .deck(0, &["FILLER"; 6])
+            .deck(1, &["FILLER"; 6])
+            .memory(3)
+            .start();
+        r.set_first_player(0);
+        r
+    }
+
+    // Egg alone: the suspend does not trigger the reactive.
+    let mut r = runner();
+    let rose = r.place_on_field(0, CARD_ID, Some(0));
+    r.place_on_field(1, "OPP", Some(0));
+    push_hand(&mut r, 0, "DSEGG");
+    fire(&mut r, EffectTiming::WhenDigivolving, rose);
+    assert!(
+        !drive_until(&mut r, "play or use"),
+        "a Digi-Egg alone must not trigger the play-or-use clause"
+    );
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(hand_ids(&r, 0), vec!["DSEGG".to_string()]);
+
+    // Egg beside a legal [DATA SQUAD] card: only the legal card is offered.
+    let mut r = runner();
+    let rose = r.place_on_field(0, CARD_ID, Some(0));
+    r.place_on_field(1, "OPP", Some(0));
+    push_hand(&mut r, 0, "DSEGG");
+    push_hand(&mut r, 0, "DS3");
+    fire(&mut r, EffectTiming::WhenDigivolving, rose);
+    assert!(drive_until(&mut r, "play or use"), "reactive offered for DS3");
+    assert_eq!(
+        non_pass(&r).len(),
+        1,
+        "the Digi-Egg is not offered (valid {:?})",
+        r.pending_selection_view().unwrap().valid_action_ids
+    );
+    pick_hand(&mut r, 0, "DS3");
+    let _ = r.auto_resolve();
+    assert!(field_ids(&r, 0).contains(&"DS3".to_string()));
+    assert_eq!(hand_ids(&r, 0), vec!["DSEGG".to_string()]);
+}

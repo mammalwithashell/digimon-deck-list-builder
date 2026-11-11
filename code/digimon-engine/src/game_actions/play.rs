@@ -36,6 +36,15 @@ impl Game {
         if data.card_kind == CardKind::Dual {
             return true;
         }
+        // CR 7-1-1: playing places "a new card with a play cost" onto the
+        // field. A Digi-Egg (hatched, never played) and an Option (used with
+        // its use cost) have none. DCGO `CanPlayAsNewPermanent` requires
+        // `HasPlayCost`. Rose Rave audit 2026-11-11: Rosemon BT26-049 could
+        // play a Digi-Egg from hand, Crowmon BT26-076 / Pinamon BT26-005
+        // offered Options and Eggs as "play from trash" picks.
+        if matches!(data.card_kind, CardKind::DigiEgg | CardKind::Option) {
+            return true;
+        }
         if !matches!(data.card_kind, CardKind::Digimon | CardKind::Dual | CardKind::Token | CardKind::DigiEgg) {
             return false;
         }

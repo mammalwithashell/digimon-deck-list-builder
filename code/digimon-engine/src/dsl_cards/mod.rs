@@ -163,10 +163,15 @@ impl CardEffect for DslCardEffect {
             }
         }
         for path in &self.compiled.alt_paths {
-            if matches!(
-                path.kind,
-                CompiledAltPathKind::BurstDigivolve | CompiledAltPathKind::BlastDnaDigivolve
-            ) {
+            // Only <Blast Digivolve> ([Hand] [Counter]) gets the counter-window
+            // marker: the `marker: true` form of `burst_digivolve`, and Blast DNA.
+            // A printed [Burst Digivolve] (BT13-020/060, BT25-104, BT26-050) is
+            // a Main-phase digivolve. Rose Rave audit 2026-11-11: the marker let
+            // Rosemon: Burst Mode be digivolved into for free during the
+            // opponent's attack (13 times in 68 games).
+            if (matches!(path.kind, CompiledAltPathKind::BurstDigivolve) && path.marker)
+                || matches!(path.kind, CompiledAltPathKind::BlastDnaDigivolve)
+            {
                 out.push(
                     Effect::declarative(card)
                         .name("Blast digivolve marker")

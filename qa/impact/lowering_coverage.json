@@ -46354,6 +46354,9 @@
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack": [
      "yaml_key"
     ],
+    "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects": [
+     "yaml_key"
+    ],
     "dsl::play_cost_budget.rs::play_cost_budget_filter_excludes_non_matching_kind": [
      "variant"
     ],
@@ -47451,6 +47454,7 @@
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_cannot_be_played_to_the_field",
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_is_not_a_play_cost_candidate_for_an_effect_play",
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack",
+    "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects",
     "dsl::play_cost_budget.rs::play_cost_budget_filter_excludes_non_matching_kind",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources",
@@ -51956,6 +51960,9 @@
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack": [
      "yaml_key"
     ],
+    "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects": [
+     "yaml_key"
+    ],
     "rules_conformance::ch15_08_effect_categories.rs::play_from_trash_of_card_just_trashed_while_source_trash_trigger_pends": [
      "fixture"
     ]
@@ -51974,6 +51981,7 @@
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_cannot_be_played_to_the_field",
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_is_not_a_play_cost_candidate_for_an_effect_play",
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack",
+    "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects",
     "rules_conformance::ch15_08_effect_categories.rs::play_from_trash_of_card_just_trashed_while_source_trash_trigger_pends"
    ]
   },
@@ -56712,6 +56720,9 @@
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack": [
      "yaml_key"
     ],
+    "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects": [
+     "yaml_key"
+    ],
     "dsl::stack_pair_and_protection.rs::same_by_level_compiles_from_yaml_and_rejects_uniqueness": [
      "yaml_key"
     ],
@@ -56773,6 +56784,7 @@
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_cannot_be_played_to_the_field",
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_is_not_a_play_cost_candidate_for_an_effect_play",
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack",
+    "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects",
     "dsl::stack_pair_and_protection.rs::same_by_level_compiles_from_yaml_and_rejects_uniqueness",
     "dsl::unpayable_optional_condition.rs::unpayable_main_does_not_consume_its_once_per_turn",
     "rules_conformance::ch03_areas.rs::own_breeding_area_digimon_does_not_meet_a_main_activation_condition",
@@ -71958,6 +71970,9 @@
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack": [
      "yaml_key"
     ],
+    "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects": [
+     "yaml_key"
+    ],
     "dsl::play_from_hand_free_suspended.rs::suspended_defaults_to_false": [
      "variant"
     ],
@@ -72006,6 +72021,7 @@
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_cannot_be_played_to_the_field",
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_is_not_a_play_cost_candidate_for_an_effect_play",
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack",
+    "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects",
     "dsl::play_from_hand_free_suspended.rs::suspended_defaults_to_false",
     "dsl::play_from_hand_free_suspended.rs::suspended_true_lowers_to_the_compiled_flag",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
@@ -74879,6 +74895,9 @@
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack": [
      "yaml_key"
     ],
+    "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects": [
+     "yaml_key"
+    ],
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
      "yaml_key"
     ],
@@ -75105,6 +75124,7 @@
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_cannot_be_played_to_the_field",
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_is_not_a_play_cost_candidate_for_an_effect_play",
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack",
+    "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
     "dsl::predicate_leaves_ii.rs::play_cost_eq_binding_compiles_from_yaml",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling",
@@ -79791,7 +79811,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2213,
+  "behavioural_tests": 2214,
   "cards": {
    "behaviourally_covered": 1156,
    "lowering_covered": 1173,
@@ -79954,7 +79974,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 408,
-  "scanned_tests": 2619,
+  "scanned_tests": 2621,
   "top_untested": [
    {
     "cards_blocked": 3,

@@ -128,3 +128,7 @@ effects:
               - play_cost_lte: 4
           prompt: "You may play 1 [DATA SQUAD] cost 4 or less card from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: ds_pick_sec }
+      # The [Main] ends "Then, place this card in the battle area"; DCGO
+      # AddActivateMainOptionSecurityEffect runs it whole (e-Pulse ST23-15
+      # idiom). Rose Rave audit 2026-11-11: it was trashed.
+      - place_self_as_delay_option: {}

@@ -82,9 +82,22 @@ effects:
       event_permanent_is_source: true
     process:
       - draw: { of: you, count: 1 }
+      # Only a Digimon with a legal yellow [Greymon] target in hand, and only
+      # targets that can digivolve onto it (DCGO CanPlayCardTargetFrame).
+      # Rose Rave audit 2026-11-11: any pair was offered.
       - select_own_permanent:
           bind_as: base
-          filter: { kind: digimon }
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - color_is: yellow
+                      - name_contains: "Greymon"
           optional: true
           prompt: "Select 1 of your Digimon to digivolve"
       - select_hand:
@@ -96,6 +109,7 @@ effects:
               - kind: digimon
               - color_is: yellow
               - name_contains: "Greymon"
+              - can_digivolve_onto: base
           prompt: "Digivolve into a yellow Digimon with [Greymon] in its name for the cost reduced by 3"
       - effect_initiated_digivolve:
           target: base
@@ -138,14 +152,14 @@ effects:
               of: you
               zone: [battle_area]
               kind: tamer
-              name_contains: "Marcus Damon"
+              name_is: "Marcus Damon"
           then:
             - select_own_permanent:
                 bind_as: marcus
                 filter:
                   all_of:
                     - kind: tamer
-                    - name_contains: "Marcus Damon"
+                    - name_is: "Marcus Damon"
                 prompt: "Select 1 of your [Marcus Damon]s to treat as a 6000 DP Digimon"
             - add_modifier:
                 target: marcus

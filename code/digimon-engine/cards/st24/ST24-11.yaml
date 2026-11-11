@@ -55,7 +55,7 @@ attribute: Data
 alt_paths:
   # [Digivolve] from [Lilamon] (any level): cost 3.
   - kind: digivolve
-    from: { name_contains: "Lilamon" }
+    from: { name_is: "Lilamon" }
     cost: 3
   # [Digivolve] Lv.5 with the [DATA SQUAD] trait: cost 3.
   - kind: digivolve

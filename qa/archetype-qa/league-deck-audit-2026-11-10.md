@@ -379,3 +379,36 @@ Digimon effects). DCGO blocks it because a DUAL card `IsOption`. Unchanged.
 - `test_alt_path_authoring_parity` fails the same way on main: Ceresmon
   (BT26-032) and Bacchusmon (BT26-080) have no alt_path for "[Digivolve]
   Play cost 12 [X]: Cost 2".
+
+# Part 5: Rose Rave (DATA SQUAD Ravemon) games and cards (2026-11-11)
+
+The 68 gen 5 matrix games with per-step records (`metrics-gen5/`) and all 24
+cards in the four lists, checked against the card faces, CR 4.3 and DCGO.
+
+**Fixed:**
+
+| Card / area | Finding | Fix |
+|---|---|---|
+| Rosemon: Burst Mode (BT26-050), ShineGreymon: Burst Mode (BT25-104), BT13-020, BT13-060 | Every `burst_digivolve` alt path got the `<Blast Digivolve>` counter marker, so a printed [Burst Digivolve] (a Main-phase digivolve) was offered free in the counter window on the opponent's turn: 13 times in 68 Rose Rave games, once for ShineGreymon Data Squad. | The marker is emitted only for `marker: true` paths and Blast DNA. |
+| Play from any zone | A Digi-Egg or Option could be played by an effect (no play cost; CR 7-1-1, DCGO `HasPlayCost`). Crowmon and Pinamon played DNA Charge and P-235 from trash in the games (put out and trashed at once). | `card_data_play_is_prohibited` refuses Digi-Eggs and Options. |
+| Crowmon (BT26-076), Pinamon (BT26-005), Rosemon (BT26-049) | Their play picks offered Options / Digi-Eggs. | Filters exclude them. |
+| DNA Charge (ST24-15) | Its [Security] ("activate this card's [Main]") never placed the card: 15 of 15 reveals ended in the trash. | Ends with `place_self_as_delay_option`. |
+| Lilamon (ST24-10) | Its inherited "this Digimon would leave" protected any of your permanents; the trash-2 digivolve offered illegal targets (23 of 33 picks digivolved nothing) and refused to pay without a [DATA SQUAD] card in hand. | `is_source: true`; the trash-2 is now its own choice (paying alone is legal, per the earlier ruling), then only cards that can digivolve onto it. |
+| Digital Accident Tactics Squad (P-235) | The add had a PASS; the card has no "may". | Mandatory (no candidates still skips). |
+| Marcus Damon & Agumon (AD1-021) | The digivolve offered any own Digimon and any yellow Greymon. | `has_digivolve_candidate` / `can_digivolve_onto`; `[Marcus Damon]` matched by exact name. |
+| Agumon (ST24-04), Rosemon (ST24-11) | Alt digivolve from "[Koromon]" / "[Lilamon]" matched by "contains". | `name_is` (no gameplay change today). |
+
+**Checked and clean:** Ukkomon (BT16-082), ShineGreymon: Burst Mode
+(BT25-104) effects, Rosemon: Burst Mode (BT26-050) effects, Falcomon
+(BT26-065), Peckmon (BT26-072), Ravemon (BT26-082), Yoshino Fujieda
+(BT26-091), Keenan Crier (BT26-094), Kudamon (EX13-026), Shadow Training
+(LM-060), GeoGreymon (ST24-05), Lalamon (ST24-08), Sunflowmon (ST24-09),
+Falcomon (ST24-12), Yoshino & Keenan (ST24-14). In the games: Crowmon and
+Peckmon deletions, Ravemon targets, Tamer memory gains, Your-Turn timings and
+effect digivolve costs were all right.
+
+**Open:**
+- The real [Burst Digivolve] is never offered (all 16 Rosemon: Burst Mode
+  digivolves paid 5), gap G-BURST-ON-TURN-END-NOT-EXECUTED.
+- Hero Tactics (AD1-023) and BT25-035 have the same patterns as Lilamon
+  (`kind: digimon` without `is_source`; unchecked digivolve picks). Not checked.
