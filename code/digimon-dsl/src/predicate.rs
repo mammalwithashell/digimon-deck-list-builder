@@ -376,6 +376,14 @@ pub struct PredicateSpec {
     /// names". G-DSL-DISTINCT-NAMED-PERMANENT-COUNT.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distinct_named_count_gte: Option<DistinctNamedCountPredicate>,
+    /// True when the DISTINCT colors across the observer's battle-area permanents matching `filter` number at
+    /// least `n` (each permanent contributes the printed colors of its top card). A no-subject global
+    /// predicate - does not inspect the candidate. Same `{of, filter, n}` payload as `distinct_named_count_gte`;
+    /// the unfiltered Tamer-only sibling is `distinct_tamer_colors_gte`. Drivers: ST20-03 / ST21-08 -
+    /// "your [ADVENTURE] trait Tamers have 3 or more total colors".
+    /// G-DSL-DISTINCT-COLORS-FILTERED-GTE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub distinct_colors_gte: Option<DistinctNamedCountPredicate>,
     /// True when the observer's battle-area Tamer permanents collectively
     /// carry at least N face-down digivolution sources. A no-subject global
     /// predicate â€” does not inspect the candidate. Gates the `[Then]` clause of
@@ -1525,7 +1533,9 @@ pub struct DigivolveCandidatePredicate {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DigivolveCostPredicate {
-    /// Named permanent binding, or `source` for the effect's live carrier.
+    /// Named permanent binding, `source` for the effect's live carrier, or
+    /// `event_target` for the permanent the trigger is about (an attack
+    /// trigger's attacker, a digivolving Digimon).
     pub target: String,
     /// Must match the consuming effect_initiated_digivolve step. This predicate
     /// cannot occur inside cost_reduction/cost_assignment clauses, including

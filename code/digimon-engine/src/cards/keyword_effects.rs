@@ -567,6 +567,72 @@ fn partition_gate_satisfied(
     partition_matching_exists(game, prov, subject, &sources, slots, &[], 0, &mut used)
 }
 
+/// The action id DCGO's `PartitionClass.Partition` would have taken for the
+/// parked `<Partition>` pick, when DCGO never prompts for it.
+///
+/// DCGO draws pick k from the pool of slot k only and skips the prompt for a
+/// pool holding one card (`CardEffectCommons/KeyWordEffects/Partition.cs:89,117`),
+/// so a recording has no row for such a pick. general_rule.pdf 16-29-4 does not
+/// fix an order (the cards are played "simultaneously", judge-quiz Q30), so the
+/// engine deliberately lets the controller pick in any order and does NOT
+/// narrow itself to DCGO's slot order. A replay adapter that must follow the
+/// recording uses this instead: it returns `Some(action)` only when slot
+/// `picked.len()` has exactly ONE card on offer - the case DCGO answers
+/// silently. With two or more candidates for that slot DCGO prompts and records
+/// the choice, so this returns `None` and the recorded row decides.
+pub fn partition_dcgo_silent_pick(game: &crate::game::Game) -> Option<u16> {
+    use crate::card_choice_page::CardChoiceResult;
+    use crate::owned_card_choice::ResolvedCardChoice;
+    use crate::resume::{NonDslCountCappedTerminal, ResumeFrame};
+    fn find(
+        stack: &crate::resume::ResumeStack,
+    ) -> Option<(
+        ResumeProvenance,
+        crate::permanent::PermanentHandle,
+        std::sync::Arc<Vec<digimon_dsl::compiled::CompiledPredicate>>,
+        Vec<CardHandle>,
+    )> {
+        stack.frames.iter().find_map(|frame| match frame {
+            ResumeFrame::NonDslCountCappedStep(state) => match &state.terminal {
+                NonDslCountCappedTerminal::KeywordPartitionSlots {
+                    subject,
+                    slots,
+                    picked_so_far,
+                } => Some((state.prov, *subject, slots.clone(), picked_so_far.clone())),
+                _ => None,
+            },
+            // The pick is parked inside the replacement window's body.
+            ResumeFrame::ReplacementBody { inner, .. } => find(inner),
+            _ => None,
+        })
+    }
+    let (prov, subject, slots, picked) = find(game.pending_selection_resume.as_ref()?)?;
+    let slot = picked.len();
+    let slot_pred = slots.get(slot)?;
+    let pending = game.pending_selection.as_ref()?;
+    let owner = pending.card_choice.as_ref()?;
+    let sources = partition_stack_sources(game, subject);
+    let mut fitting: Vec<u16> = Vec::new();
+    for action in owner.valid_action_ids(game) {
+        let mut probe = owner.clone();
+        let Ok(CardChoiceResult::Selected(ResolvedCardChoice::Source { card, .. })) =
+            probe.resolve(game, action)
+        else {
+            continue;
+        };
+        let Some(&(source_index, _)) = sources.iter().find(|(_, c)| *c == card) else {
+            continue;
+        };
+        if partition_source_matches(game, prov, subject, slot_pred, source_index, card) {
+            fitting.push(action);
+        }
+    }
+    match fitting.as_slice() {
+        [one] => Some(*one),
+        _ => None,
+    }
+}
+
 /// Take the next `<Partition>` pick and chain: a single remaining candidate is
 /// taken silently (DCGO `Partition.cs:89,117` â€” a slot with one candidate is
 /// never prompted, because there is no choice to expose), more than one parks
@@ -1683,6 +1749,15 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // OnDeletion drain runs post-trash.
         Keyword::Fortitude => vec![Effect::on_deletion(card)
             .name("<Fortitude>")
+            // DCGO's `CanActivateFortitude` requires `CardSources.Count >= 1`, so
+            // a deleted stack with nothing under its top never lists Fortitude
+            // among the simultaneous effects. Gating it here (not only in
+            // `.process`) keeps it out of the trigger-order prompt: a branch that
+            // can do nothing is a phantom choice and an extra action for the agent.
+            .condition(|ctx| {
+                ctx.deleted_object_snapshot()
+                    .is_some_and(|snap| snap.source_count_just_before >= 1)
+            })
             .process(|ctx| {
                 let Some(snap) = ctx.deleted_object_snapshot().cloned() else {
                     return;

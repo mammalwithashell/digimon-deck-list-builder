@@ -43,6 +43,12 @@ effects:
   # ─── WD/WA: bounce opp lvl<=4, then trash face-down → unsuspend self ──────
   - when: [when_digivolving, when_attacking]
     optional: true
+    # DCGO always shows the initial Yes/No (`OptionalSkill`); declining it does
+    # nothing. Without this the first body step's own PASS doubles as the decline,
+    # but that step has no prompt when the opponent has no level<=4 Digimon, so
+    # the clause silently became mandatory and went straight to the Tamer-trash
+    # cost (recorded game: a declined activation still trashed a face-down card).
+    outer_prompt: true
     once_per_turn: true
     summary: "[WD][WA][OPT] May bounce opp lvl<=4; then trash FD under a Tamer to unsuspend self"
     process:
@@ -66,9 +72,6 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
-    active_when:
-      all_of:
-        - replacement_subject_is_mine: true
     summary: "[All Turns][OPT] Trash FD under a Tamer so this Digimon doesn't leave"
     process:
       - trash_bottom_face_down_source_under_tamer: { of: you }
@@ -81,11 +84,13 @@ effects:
     optional: true
     once_per_turn: true
     active_when:
-      all_of:
-        - replacement_subject_is_mine: true
-        - any_of:
-            - source_name_contains: Gaogamon
-            - source_permanent_trait_has: DATA SQUAD
+      # Self-only: DCGO CanTriggerWhenRemoveField(hashtable, card) is
+      # `permanent.cardSources.Contains(card)`. Leaves that read the replacement
+      # subject (replacement_subject_is_mine, kind, name_is...) make the clause
+      # cross-permanent, so none may appear here.
+      any_of:
+        - source_name_contains: Gaogamon
+        - source_permanent_trait_has: DATA SQUAD
     summary: "Inherited [All Turns][OPT] Gaogamon-name/DATA SQUAD carrier doesn't leave by trashing FD"
     process:
       - trash_bottom_face_down_source_under_tamer: { of: you }

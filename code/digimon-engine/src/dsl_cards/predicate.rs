@@ -588,6 +588,40 @@ fn eval_predicate_ref_known(
             return false;
         }
     }
+    if let Some(spec) = &pred.distinct_colors_gte {
+        // G-DSL-DISTINCT-COLORS-FILTERED-GTE - count the DISTINCT printed colors of the top cards of `of`'s
+        // battle-area permanents matching `filter`, then require >= `n`. ST20-03 / ST21-08: "your [ADVENTURE]
+        // trait Tamers have 3 or more total colors". No-subject global leaf.
+        let mut colors: Vec<CardColor> = Vec::new();
+        for player in resolve_predicate_players(spec.of, rctx) {
+            let battle_len = rctx.game.player(player).battle_area.len();
+            for index in 0..battle_len {
+                let handle = PermanentHandle {
+                    player,
+                    index: index as u8,
+                };
+                if !eval_predicate_with_bindings(
+                    &spec.filter,
+                    rctx,
+                    PredicateSubject::Permanent(handle),
+                    bindings,
+                ) {
+                    continue;
+                }
+                let Some(perm) = permanent_for_handle(rctx, handle) else {
+                    continue;
+                };
+                for c in perm.top_card().colors(rctx.card_data()) {
+                    if !colors.contains(c) {
+                        colors.push(*c);
+                    }
+                }
+            }
+        }
+        if colors.len() < usize::from(spec.n) {
+            return false;
+        }
+    }
     if let Some(floor) = pred.face_down_sources_under_tamers_gte {
         // G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER: face-down digivolution
         // cards under the observer's battle-area Tamers.
@@ -3872,6 +3906,8 @@ fn eval_card_fields(
             bindings.and_then(|b| b.get_permanent(binding)).or_else(|| {
                 if binding == "source" {
                     rctx.source_permanent
+                } else if binding == "event_target" {
+                    resolve_cost_probe_target(rctx, bindings, binding)
                 } else {
                     None
                 }
@@ -3994,6 +4030,17 @@ fn resolve_cost_probe_target(
         if bindings.get_ref(name).is_some() {
             return bindings.get_permanent(name);
         }
+    }
+    // `event_target`: the permanent the trigger is about (an attack trigger's
+    // attacker, a digivolving Digimon, ...), resolved by identity exactly as the
+    // `event_target` binding reference is, so a departed subject is gone rather
+    // than replaced by whatever slid into its slot.
+    if name == "event_target" {
+        return rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.resolve_event_permanent(rctx.game));
     }
     if name != "source" || rctx.source_permanent.is_none() {
         return None;

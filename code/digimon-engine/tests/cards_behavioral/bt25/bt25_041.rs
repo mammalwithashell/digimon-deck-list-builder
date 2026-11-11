@@ -248,7 +248,10 @@ fn bt25_041_main_clause_is_present() {
         })
         .expect("the main [WD][WA] play/use-reduced clause must be present");
     assert!(main.once_per_turn, "[Once Per Turn]");
-    assert!(main.optional, "'you may play or use' ⇒ optional engagement");
+    assert!(
+        !main.optional,
+        "DCGO runs this non-optional; the decline is the menu's 'Don't pay'"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -348,13 +351,6 @@ fn bt25_041_trash_face_down_then_play_glowing_dawn_digimon() {
 
     fire_when_digivolving(&mut runner, murasame);
 
-    // 1) Optional engagement gate.
-    let v = runner.pending_selection_view().expect("engagement gate");
-    assert!(v.is_optional, "'you may play or use' ⇒ optional");
-    runner
-        .execute_action(v.selecting_player, v.valid_action_ids[0])
-        .unwrap();
-
     // 2) 2-way pay-cost choice. With no security, only the trash-FD branch (idx 1)
     //    + "don't pay" are meaningful; pick the trash-FD branch.
     let v = runner.pending_selection_view().expect("pay-cost choice");
@@ -417,12 +413,6 @@ fn bt25_041_add_security_then_use_glowing_dawn_option() {
 
     fire_when_digivolving(&mut runner, murasame);
 
-    // Engagement gate.
-    let v = runner.pending_selection_view().expect("engagement gate");
-    runner
-        .execute_action(v.selecting_player, v.valid_action_ids[0])
-        .unwrap();
-
     // Pay-cost choice → branch 0 "Add your top security card to the hand".
     let v = runner.pending_selection_view().expect("pay-cost choice");
     runner.execute_branch(0).expect("choose add-top-security");
@@ -470,12 +460,9 @@ fn bt25_041_main_clause_is_declinable() {
 
     fire_when_digivolving(&mut runner, murasame);
 
-    // Decline at the engagement gate.
-    let v = runner.pending_selection_view().expect("engagement gate");
-    assert!(v.is_optional);
-    runner
-        .execute_action(v.selecting_player, digimon_engine::action::space::PASS)
-        .unwrap();
+    // Decline = "Don't pay the cost" (DCGO value 3) on the one pay-cost menu.
+    let _ = runner.pending_selection_view().expect("pay-cost choice");
+    runner.execute_branch(2).expect("choose don't pay");
     let _ = runner.auto_resolve();
 
     assert_eq!(runner.trash_size(0), trash_before, "no trash on decline");
@@ -503,10 +490,6 @@ fn bt25_041_no_glowing_dawn_card_in_hand_no_play() {
 
     fire_when_digivolving(&mut runner, murasame);
 
-    let v = runner.pending_selection_view().expect("engagement gate");
-    runner
-        .execute_action(v.selecting_player, v.valid_action_ids[0])
-        .unwrap();
     let v = runner.pending_selection_view().expect("pay-cost choice");
     runner.execute_branch(1).expect("choose trash-FD");
     let v = runner.pending_selection_view().expect("Tamer pick");

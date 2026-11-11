@@ -1,0 +1,115 @@
+# ST21-12 Joe Kido & Mimi Tachikawa — Tamer, Blue+Green, Cost 3.
+# Traits: ADVENTURE.
+#
+# Printed card text (cards.json / official Bandai DB bundle
+# data/card_bundles/ST21-12.md):
+#
+#   [Start of Your Main Phase] If you have a Digimon with the [ADVENTURE]
+#     trait, gain 1 memory.
+#   [Your Turn] When any Digimon cards with the [ADVENTURE] trait would be
+#     played from your hand, by suspending this Tamer, reduce the play cost
+#     by 1.
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Blue/ST21_12.cs
+# (its header notes "Every line of code copied from ST20_12 sora & kari").
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartMainPhase`.
+#   `SetUpActivateClass(CanActivateCondition, ActivateCoroutine, -1,
+#   isOptional=false, ...)`: mandatory.
+#   `CanUseCondition` → `IsExistOnBattleArea(card) && IsOwnerTurn(card)`.
+#   `CanActivateCondition` → on battle area && `Owner.CanAddMemory` &&
+#   `HasMatchConditionOwnersPermanent(card, p => p.IsDigimon &&
+#   p.TopCard.HasAdventureTraits)` — the OWNER's BATTLE-AREA Digimon (the
+#   breeding area is not scanned by this helper; the printed text says "if you
+#   have a Digimon", with no "on the field" qualifier). → `when:
+#   start_of_your_main_phase` + an `any_permanent { of: you, zone:
+#   [battle_area], kind: digimon, trait_has: ADVENTURE }` condition (the
+#   AD1-019 / ST20-12 sibling idiom) + `gain_memory: 1`.
+#
+# Clause 2 — `EffectTiming.BeforePayCost`.
+#   `SetUpActivateClass(..., -1, isOptional=true, ...)` — the "by suspending
+#   this Tamer" cost is opt-in.
+#   `PlayCardCondition` = `IsExistOnHand && IsDigimon && HasAdventureTraits &&
+#   Owner == card.Owner`; `CanUseCondition` = `IsExistOnBattleArea(card) &&
+#   CanTriggerWhenPermanentWouldPlay(.., PlayCardCondition)`;
+#   `CanActivateCondition` = `IsOwnerTurn && IsExistOnBattleArea &&
+#   CanActivateSuspendCostEffect(card)` (the Tamer must be unsuspended).
+#   Coroutine: suspend this Tamer, then (only if it is now suspended) install
+#   a -1 `ChangeCostClass` for the owner's next cost calculation.
+#   → identical shape to the sibling ST21-13 (Matt & T.K.) cost_reduction:
+#   `kind: cost_reduction` + `optional: true` + `when_any_ally_played`
+#   (Digimon + ADVENTURE) + `pay_cost: [suspend: { target: source }]` + an
+#   `is_unsuspended` self guard. No [Once Per Turn] is printed: the suspend
+#   cost is the natural limiter (a suspended Tamer fails the guard).
+#   `when_any_ally_played` is only evaluated for PLAY costs (never digivolve
+#   costs), and is owner-scoped to this reducer's controller, matching
+#   `Owner == card.Owner`.
+#
+# Clause 3 — `EffectTiming.SecuritySkill` →
+#   `CardEffectFactory.PlaySelfTamerSecurityEffect(card)` → `when:
+#   on_security` + `play_from_security: {}` (sister cards: ST21-13, AD1-019,
+#   BT17-093, BT22-084, EX11-054).
+#
+# ─── Implementation status ────────────────────────────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | [Start of Your Main Phase] ADVENTURE Digimon → gain 1 memory   | IMPLEMENTED |
+# | [Your Turn] suspend self → -1 play cost on ADVENTURE Digimon   | IMPLEMENTED |
+# | [Security] play this card without paying the cost              | IMPLEMENTED |
+#
+# Known residual: the cost-reduction predicate does not carry a "from your
+# hand" zone qualifier (DCGO's `IsExistOnHand`). Digimon cards are paid-for
+# plays only from hand in practice; effect plays "without paying the cost"
+# never reach the BeforePayCost scan. Same residual as ST21-13.
+
+card: ST21-12
+name: "Joe Kido & Mimi Tachikawa"
+kind: tamer
+color: [blue, green]
+cost: 3
+traits: [ADVENTURE]
+
+effects:
+  # ─── Clause 1: [Start of Your Main Phase] ADVENTURE Digimon → gain 1 memory ─
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If you have a Digimon with the [ADVENTURE] trait, gain 1 memory"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        trait_has: ADVENTURE
+    process:
+      - gain_memory: 1
+
+  # ─── Clause 2: [Your Turn] suspend self → -1 cost on ADVENTURE Digimon play ─
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when: { your_turn: true }
+    optional: true
+    when_any_ally_played:
+      all_of:
+        - kind: digimon
+        - trait_has: ADVENTURE
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: "ST21-12"
+        is_unsuspended: true
+    amount: 1
+    summary: "[Your Turn] Suspend self: -1 cost on ally ADVENTURE Digimon play"
+    pay_cost:
+      - suspend: { target: source }
+
+  # ─── Clause 3: [Security] Play this card without paying the cost ───────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -33,9 +33,9 @@ fn ex12_018_is_dual_with_digimon_and_option_face_effects() {
             CompiledClause::Triggered(t)
                 if t.when.contains(&CompiledTiming::WhenDigivolving)
                     && t.when.contains(&CompiledTiming::WhenAttacking)
-                    && t.process.iter().any(|step| matches!(step, CompiledStep::SelectUnionZone { .. }))
+                    && t.process.iter().any(|step| matches!(step, CompiledStep::SelectEffectChoice { .. }))
         )),
-        "Digimon face must place source cards from hand/trash"
+        "Digimon face must place source cards from hand/trash (zone menu first, as DCGO)"
     );
     assert!(
         dual.option.keywords.iter().any(|k| k == "ArtsDigivolve"),
@@ -65,11 +65,20 @@ fn ex12_018_when_digivolving_places_source_then_debuffs_per_source() {
     let opp = runner.place_on_field(1, "OPP", Some(0));
 
     fire_when_digivolving(&mut runner, sirius);
-    let pick = runner
+    // DCGO EX12_018.cs: first "where from?" - only zones holding a candidate are offered (hand here, no trash
+    // candidate), plus "Don't place any"; then up to 2 cards from that ONE zone; then top/bottom once for all.
+    let zone = runner
         .pending_selection_view()
-        .expect("source placement prompt");
-    assert!(matches!(pick.kind, SelectionKind::UnionZone { .. }));
+        .expect("zone menu");
+    assert_eq!(zone.kind, SelectionKind::EffectChoice);
+    let labels: Vec<String> = zone.effect_choices.as_ref().unwrap().iter().map(|c| c.label.clone()).collect();
+    assert_eq!(labels, vec!["From Hand".to_string(), "Don't place any".to_string()], "no trash candidate, no trash option");
+    runner.execute_branch(0).expect("from hand");
     select_first_non_pass(&mut runner);
+    if runner.pending_selection_view().is_some_and(|p| p.kind != SelectionKind::EffectChoice) {
+        // up to 2: end the pick after the only candidate
+        runner.game.decode_action(digimon_engine::action::space::PASS, 0);
+    }
     runner.execute_branch(0).expect("place as top source");
 
     let dp_prompt = runner
@@ -83,4 +92,28 @@ fn ex12_018_when_digivolving_places_source_then_debuffs_per_source() {
         Some(5000),
         "BASE plus the placed source means 2 sources, so the target gets -4000 DP"
     );
+}
+
+/// CR 4.3 13-1-7 / 4-6-1: a DUAL card checked from security is a Digimon card, so it is a Security Digimon and
+/// battles the checking Digimon (13-1-8-3), then goes to the trash (13-1-8-4). Found by playing a sim game back in
+/// DCGO, which battles it: our engine revealed Siriusmon and skipped the battle, so the 2000 DP attacker survived.
+#[test]
+fn ex12_018_checked_from_security_battles_as_a_security_digimon() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-018 YAML loads")
+        .add_card(plain_digimon("ATTACKER", CardColor::Blue, 3, 2000))
+        .security(1, &[CARD_ID])
+        .memory(3)
+        .start();
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    runner.attack_player(attacker, 1, false);
+    let _ = runner.auto_resolve();
+
+    assert!(
+        !super::support::field_contains(&runner, 0, "ATTACKER"),
+        "2000 DP attacker loses the battle against the 12000 DP Security Digimon"
+    );
+    assert!(super::support::trash_contains(&runner, 0, "ATTACKER"));
+    assert!(super::support::trash_contains(&runner, 1, CARD_ID), "the checked card is trashed (13-1-8-4)");
 }

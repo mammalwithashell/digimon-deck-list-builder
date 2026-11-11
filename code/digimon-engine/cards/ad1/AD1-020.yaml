@@ -1,0 +1,112 @@
+# AD1-020 Tommy, Takuya, & Zoe — Tamer, Blue/Red/Green, Cost 5.
+#
+# Printed text (card image + official Bandai DB bundle data/card_bundles/AD1-020.md):
+#
+#   [Security] Play this card without paying the cost.
+#   [Start of Your Main Phase] [On Play] You may place up to 2 [Hybrid] trait
+#     cards with different colors from your hand or trash under this Tamer. If
+#     this effect placed, ＜Draw 1＞. Then, if there are 4 or more [Hybrid]
+#     trait cards under this Tamer, gain 2 memory.
+#   (Rule) Name: Also treated as [Tommy Himi]/[Takuya Kanbara]/[Zoe Orimoto].
+#   Inherited: [End of Your Turn] [Once Per Turn] By attacking with this
+#     Digimon with the [Hybrid] or [Ten Warriors] trait, it gains
+#     ＜Security A. +1＞ for the attack.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/AD1/Blue/AD1_020.cs
+#   - NameIsAlso(Tommy Himi, Takuya Kanbara, Zoe Orimoto).
+#   - Shared OP / SOMP (maxCount -1, isOptional false): loop of at most 2 picks
+#     (hand / trash / "Do not place"), each later pick must differ in colour
+#     from the first; AddDigivolutionCardsBottom; if anything was placed →
+#     DrawClass(1); THEN, independently, if >= 4 [Hybrid] cards are under this
+#     Tamer → AddMemory(2).
+#   - Inherited [End of Your Turn] (maxCount 1, isOptional TRUE, inherited):
+#     CanActivateCondition = carrier on the battle area, TopCard has the Hybrid
+#     or Ten Warriors trait AND CanAttack; the body is a SelectAttackEffect with
+#     SetCanNotSelectNotAttack() (once activated, the attack is mandatory —
+#     "by attacking"), then ChangeDigimonSAttack(+1, UntilEndAttack).
+#   - Security: PlaySelfTamerSecurityEffect.
+#
+# Official Q&A: Q6099 — "with different colors" may use different combinations
+# of a multicolour card's colours (an injective card→colour assignment); Q6100 —
+# the "Then" memory half runs even when nothing was placed.
+#
+# The [Start of Your Main Phase] [On Play] clause is the same body as its sister
+# Tamer AD1-023 (`select_zone_cards` with `distinct_by: color`, min 0 / max 2,
+# then `place_cards_as_bottom_sources`, `if` placed → Draw 1, independent
+# threshold `source_count` → gain 2 memory). Q6099's injective colour matching is
+# the engine's `distinct_by: color` mode.
+#
+# Inherited [End of Your Turn]: "By attacking" is a PROCESSING CONDITION, so
+# per CR 4.3 §15-7-4 it can't be chosen when the attack can't be made — the
+# clause condition requires the carrier to be a [Hybrid]/[Ten Warriors] Digimon
+# that `can_attack` (DCGO CanActivateCondition). The outer prompt is the "you
+# may" (declining preserves the once-per-turn use); once accepted the attack is
+# mandatory (`optional: false`, DCGO SetCanNotSelectNotAttack). The
+# ＜Security A. +1＞ for the attack is `cost_upgrade: { security_attack: 1 }`
+# on `may_attack_now`: a SecurityAttackChange modifier that expires at the end
+# of that attack (DCGO UntilEndAttack).
+
+card: AD1-020
+name: "Tommy, Takuya, & Zoe"
+kind: tamer
+color: [blue, red, green]
+cost: 5
+also_treated_as: [Tommy Himi, Takuya Kanbara, Zoe Orimoto]
+
+effects:
+  # ─── [Start of Your Main Phase] [On Play] place up to 2 Hybrid; Draw 1; 4+ → 2 memory ──
+  - when: [on_play, start_of_your_main_phase]
+    summary: "[Start of Your Main Phase][On Play] You may place up to 2 [Hybrid] trait cards with different colors from your hand or trash under this Tamer. If this effect placed, <Draw 1>. Then, if there are 4 or more [Hybrid] trait cards under this Tamer, gain 2 memory"
+    process:
+      - select_zone_cards:
+          zones: [hand, trash]
+          filter: { trait_has: Hybrid }
+          min: 0
+          max: 2
+          distinct_by: color
+          bind_as: hybrids
+          prompt: You may place up to 2 Hybrid cards with different colors under this Tamer
+      - if:
+          condition: { binding_present: hybrids }
+          then:
+            - place_cards_as_bottom_sources: { cards: hybrids, target: source }
+            - draw: { of: you, count: 1 }
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              is_source: true
+              source_count: { filter: { trait_has: Hybrid }, at_least: 4 }
+          then:
+            - gain_memory: 2
+
+  # ─── Inherited [End of Your Turn][OPT] by attacking, Security A. +1 for the attack ──
+  - scope: inherited
+    when: end_of_your_turn
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    summary: "[Inherited][End of Your Turn][Once Per Turn] By attacking with this Digimon with the [Hybrid] or [Ten Warriors] trait, it gains <Security A. +1> for the attack"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        is_source: true
+        any_of:
+          - trait_has: Hybrid
+          - trait_has: Ten Warriors
+        can_attack: { targets: any }
+    process:
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: false
+          cost_upgrade: { security_attack: 1 }
+          prompt: "Attack with this Digimon (it gains <Security A. +1> for the attack)"
+
+  # ─── [Security] Play this card without paying the cost ───────────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

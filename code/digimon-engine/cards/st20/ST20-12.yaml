@@ -1,0 +1,74 @@
+# ST20-12 Sora Takenouchi & Kari Kamiya — Tamer, Red/Yellow, Cost 3, [ADVENTURE].
+#
+# Printed text (data/card_bundles/ST20-12.md, official Bandai DB):
+#
+#   [Start of Your Main Phase] If you have a Digimon with the [ADVENTURE]
+#   trait, gain 1 memory.
+#   [Your Turn] When any Digimon cards with the [ADVENTURE] trait would be
+#   played from your hand, by suspending this Tamer, reduce the play cost by 1.
+#   Security Effect: [Security] Play this card without paying the cost.
+#
+# DCGO reference: DCGO/Assets/Scripts/CardEffect/ST20/Red/ST20_12.cs
+#
+#   - OnStartMainPhase: CanUseCondition = on battle area && owner's turn;
+#     CanActivateCondition = on battle area && CanAddMemory && owner has a
+#     Digimon whose TopCard HasAdventureTraits. Mandatory (isOptional false).
+#   - BeforePayCost: PlayCardCondition = card in HAND && IsDigimon &&
+#     HasAdventureTraits && Owner == card.Owner; CanActivateCondition = owner
+#     turn && on battle area && CanActivateSuspendCostEffect; optional
+#     (isOptional true); body suspends the Tamer and installs a -1 play-cost
+#     ChangeCostClass.
+#   - SecuritySkill: PlaySelfTamerSecurityEffect.
+#
+# DSL mapping (sibling: ST21-13, the same cost-reduction printing):
+#   - Clause 1 `when: start_of_your_main_phase` with the "you have a Digimon
+#     with [ADVENTURE]" gate as a `condition`; `gain_memory: 1`.
+#   - Clause 2 `kind: cost_reduction` (reduction_timing: before_pay_cost,
+#     active_when your_turn, optional, when_any_ally_played = ADVENTURE Digimon,
+#     amount 1, pay_cost = suspend this Tamer). The official Q&A confirms two
+#     such Tamers stack ("reduced by a total of 2"): each reducer is its own
+#     candidate and each suspends its own Tamer.
+#   - Clause 3 `when: on_security` + `play_from_security`.
+
+card: ST20-12
+name: "Sora Takenouchi & Kari Kamiya"
+kind: tamer
+color: [red, yellow]
+cost: 3
+traits: [ADVENTURE]
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If you have a Digimon with the [ADVENTURE] trait, gain 1 memory"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        trait_has: ADVENTURE
+    process:
+      - gain_memory: 1
+
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when: { your_turn: true }
+    optional: true
+    when_any_ally_played:
+      all_of:
+        - kind: digimon
+        - trait_has: ADVENTURE
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: "ST20-12"
+        is_unsuspended: true
+    amount: 1
+    summary: "[Your Turn] When any [ADVENTURE] Digimon cards would be played from your hand, by suspending this Tamer, reduce the play cost by 1"
+    pay_cost:
+      - suspend: { target: source }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

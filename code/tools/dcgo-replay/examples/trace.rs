@@ -30,14 +30,68 @@ fn main() {
         };
         if view.is_complete || view.paused {
             println!("STOP cursor={} complete={} paused={} divergences={:#?}", view.cursor, view.is_complete, view.paused, view.divergences);
+            {
+                let g = &game.game;
+                println!(
+                    "FINAL game_over={} winner={:?} phase={:?} turn={} memory={} pending={:?}",
+                    g.game_over, g.winner, g.current_phase, g.turn_count, g.memory,
+                    game.pending_selection()
+                );
+                for pid in 0..2usize {
+                    println!(
+                        "FINAL P{} security={} hand={} deck={} battle_area={}",
+                        pid,
+                        g.players[pid].security.len(),
+                        g.players[pid].hand.len(),
+                        g.players[pid].deck.len(),
+                        g.players[pid].battle_area.len()
+                    );
+                }
+                println!("FINAL attack_in_progress={:?}", g.pending_attack.is_some());
+            }
             break;
         }
         if view.cursor >= from && view.cursor <= to {
             println!("--- cursor {} recorded={:?}", view.cursor, view.recorded);
             if let Some(p) = game.pending_selection() {
                 println!("    pending: {p:?}");
+                if let Some(r) = game.game.pending_selection_resume.as_ref() {
+                    let kinds: Vec<String> = r
+                        .frames
+                        .iter()
+                        .map(|f| format!("{f:?}").chars().take(40).collect())
+                        .collect();
+                    println!("    resume frames: {kinds:?}");
+                }
             }
             println!("    in play: {:?}", view.card_ids_in_play);
+            for pid in 0..2u8 {
+                let g = &game.game;
+                let entries: Vec<String> = g.players[pid as usize]
+                    .battle_area
+                    .iter()
+                    .enumerate()
+                    .map(|(i, perm)| {
+                        let h = digimon_engine::permanent::PermanentHandle { player: pid, index: i as u8 };
+                        format!(
+                            "{}:{} dp={:?}",
+                            i,
+                            perm.top_card().card_id(&g.card_data),
+                            g.effective_dp(h)
+                        )
+                    })
+                    .collect();
+                println!("    P{} field: [{}] memory={}", pid, entries.join(", "), g.memory);
+                let deck = &g.players[pid as usize].deck;
+                let top: Vec<String> = deck
+                    .iter()
+                    .rev()
+                    .take(8)
+                    .map(|c| c.card_id(&g.card_data).to_string())
+                    .collect();
+                println!("    P{} deck top->: {:?} (len {})  hand: {:?}", pid, top, deck.len(),
+                    g.players[pid as usize].hand.iter().map(|c| c.card_id(&g.card_data).to_string()).collect::<Vec<_>>());
+            }
         }
         if view.cursor > to {
             break;

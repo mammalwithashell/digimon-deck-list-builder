@@ -103,7 +103,9 @@ impl Audit<'_, '_> {
                         serde_json::from_value::<DigivolveCostPredicate>(value.clone())
                     {
                         let leaf = field_path(path, "can_digivolve_onto_with_cost");
-                        if probe.target != "source" {
+                        // `source` (the effect's carrier) and `event_target` (the
+                        // permanent the trigger is about) are magic names, never `bind_as`.
+                        if probe.target != "source" && probe.target != "event_target" {
                             report_if_undeclared_binding(
                                 &probe.target,
                                 &format!("{leaf}.target"),

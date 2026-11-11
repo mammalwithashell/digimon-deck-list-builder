@@ -161,7 +161,13 @@ pub fn evaluate_with_bindings(
             .unwrap_or(0),
         CompiledFormula::BindingPlayCost(name) => binding_play_cost(ctx, name, bindings),
         CompiledFormula::BindingValue(name) => {
-            bindings.and_then(|b| b.get_literal(name)).unwrap_or(0) as i32
+            // Bindings hold an exact i64 (a committed count can be as large as
+            // `i64::MAX`); formulas are i32. Saturate, never wrap: a bare `as i32`
+            // turns `i64::MAX` into -1.
+            bindings
+                .and_then(|b| b.get_literal(name))
+                .unwrap_or(0)
+                .clamp(i64::from(i32::MIN), i64::from(i32::MAX)) as i32
         }
         CompiledFormula::SourceDp => ctx
             .source_permanent
@@ -346,7 +352,13 @@ fn evaluate_read_with_raw_and_bindings(
             .unwrap_or(0),
         CompiledFormula::BindingPlayCost(name) => binding_play_cost_read(ctx, name, bindings),
         CompiledFormula::BindingValue(name) => {
-            bindings.and_then(|b| b.get_literal(name)).unwrap_or(0) as i32
+            // Bindings hold an exact i64 (a committed count can be as large as
+            // `i64::MAX`); formulas are i32. Saturate, never wrap: a bare `as i32`
+            // turns `i64::MAX` into -1.
+            bindings
+                .and_then(|b| b.get_literal(name))
+                .unwrap_or(0)
+                .clamp(i64::from(i32::MIN), i64::from(i32::MAX)) as i32
         }
         CompiledFormula::SourceDp => ctx
             .source_permanent

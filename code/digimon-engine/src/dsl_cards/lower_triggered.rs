@@ -208,6 +208,9 @@ pub fn lower_for_kind_with_clause_index(
         if let Some(s) = summary {
             builder = builder.name(&s);
         }
+        if clause.as_option_effect {
+            builder = builder.acts_as_option();
+        }
         if once_per_turn {
             builder = builder.once_per_turn();
         } else if let Some(n) = max_per_turn {
@@ -854,6 +857,12 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
             min, optional_zero, ..
         } => *min == 0 || *optional_zero,
         CompiledStep::SelectOwnSources { min, .. } => *min == 0,
+        // Opponent-side mirror: a literal minimum of zero lets the player take
+        // nothing (PASS), so no outer accept/decline is needed (BT25-028; DCGO
+        // asks only the `canNoTrash` pick, never a separate "activate?").
+        CompiledStep::SelectOpponentSources { min, .. } => {
+            matches!(min, digimon_dsl::compiled::CompiledCountBound::Literal(0))
+        }
         // `link_cards` with `up_to` exposes PASS on its first card pick, so the
         // clause's first decision point is already declinable; `exactly` is a
         // mandatory link, so it needs the outer accept/decline prompt.

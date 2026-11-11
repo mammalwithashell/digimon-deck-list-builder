@@ -245,7 +245,11 @@ pub fn pending_skips_for_install(expiry: Expiry, source_player: u8, turn_player:
 }
 
 impl ModifierEntry {
-    /// Back-compat constructor: no cause filter, no replacement condition.
+    /// Back-compat constructor: no replacement condition, and no cause filter except the one a modifier carries
+    /// by definition: `CannotBeDestroyedByBattle` only ever cancels a BATTLE deletion (CR 4.3: deletion by an
+    /// effect is not deletion in battle). Without it, "can't be deleted in battle" installed through
+    /// `EffectContext::add_modifier` (AD1-011 Paildramon) also stopped effect deletions (Omnimon EX12-037's
+    /// "Delete 1"; found by the DCGO playback of a sim game, 2026-11-11).
     pub fn simple(modifier: ModifierType, value: i32, expiry: Expiry, source_player: u8) -> Self {
         Self {
             modifier,
@@ -255,7 +259,7 @@ impl ModifierEntry {
             source_permanent: None,
             source_player,
             materialized_declarative: false,
-            cause_filter: None,
+            cause_filter: intrinsic_cause_filter(modifier),
             replacement_condition: None,
             until_condition: None,
             effect_immunity_filter: None,
@@ -601,6 +605,16 @@ impl PlayerModifierEntry {
 /// - `CannotBeDestroyed` / `CannotBeDestroyedByEffect` → `None`
 ///   (cause-agnostic: applies to all causes / all effect causes).
 /// - Everything else → `None`.
+/// The cause filter a modifier carries by definition, whatever installed it.
+pub(crate) fn intrinsic_cause_filter(
+    modifier: ModifierType,
+) -> Option<crate::replacement::ReplacementCause> {
+    match modifier {
+        ModifierType::CannotBeDestroyedByBattle => Some(crate::replacement::ReplacementCause::Battle),
+        _ => None,
+    }
+}
+
 pub(crate) fn default_passive_cause_filter(
     modifier: ModifierType,
 ) -> Option<crate::replacement::ReplacementCause> {

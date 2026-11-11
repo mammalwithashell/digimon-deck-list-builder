@@ -15,6 +15,7 @@ use serde::Serialize;
 
 use crate::recording::RecordingV1;
 use crate::replay::{ReplayFail, ReplayOutcome};
+use crate::triage::Triage;
 
 /// One entry in the per-card section.
 #[derive(Debug, Clone, Serialize)]
@@ -32,6 +33,14 @@ pub struct FirstFailureRef {
     pub kind: String,
 }
 
+/// One triaged game: which DCGO bug, and the rows that proved it.
+#[derive(Debug, Clone, Serialize)]
+pub struct QuirkGame {
+    pub game_id: String,
+    pub quirk_id: String,
+    pub evidence: String,
+}
+
 /// Aggregated report.
 ///
 /// Fields in declaration order = JSON-output key order so a reader can
@@ -42,6 +51,14 @@ pub struct ParityReport {
     pub pass: u32,
     pub partial_pass: u32,
     pub fail: u32,
+    /// Replays that stopped on a documented DCGO bug (see [`crate::triage`]),
+    /// NOT counted in `pass` and NOT in `fail`: the recorded move was one the
+    /// rules forbid, so there is nothing on the engine side to fix.
+    pub quirk: u32,
+    /// Triaged games keyed by `Q-DCGO-*` id (`qa/rules/dcgo_quirks.md`).
+    pub by_quirk: BTreeMap<String, u32>,
+    /// Triaged game_ids with the proof that matched, sorted by game_id.
+    pub quirk_games: Vec<QuirkGame>,
     /// Failure count keyed by kind name: "illegal_action", "actor_mismatch",
     /// "winner_mismatch", "engine_error".
     pub by_kind: BTreeMap<String, u32>,
@@ -65,11 +82,23 @@ pub struct ParityReport {
 /// observed action stream from it for card attribution) alongside its
 /// replay outcome.
 pub fn aggregate(entries: &[(&RecordingV1, &ReplayOutcome)]) -> ParityReport {
+    aggregate_triaged(entries, &|_, _| None)
+}
+
+/// [`aggregate`], with a triage hook: a `Fail` for which `triage` returns a
+/// [`Triage`] is counted under `quirk` instead of `fail`.
+pub fn aggregate_triaged(
+    entries: &[(&RecordingV1, &ReplayOutcome)],
+    triage: &dyn Fn(&RecordingV1, &ReplayFail) -> Option<Triage>,
+) -> ParityReport {
     let mut report = ParityReport {
         total_recordings: entries.len() as u32,
         pass: 0,
         partial_pass: 0,
         fail: 0,
+        quirk: 0,
+        by_quirk: BTreeMap::new(),
+        quirk_games: Vec::new(),
         by_kind: BTreeMap::new(),
         per_card: BTreeMap::new(),
         failed_games: Vec::new(),
@@ -87,6 +116,16 @@ pub fn aggregate(entries: &[(&RecordingV1, &ReplayOutcome)]) -> ParityReport {
                 report.skipped_actions += skipped_actions;
             }
             ReplayOutcome::Fail(fail) => {
+                if let Some(t) = triage(recording, fail) {
+                    report.quirk += 1;
+                    *report.by_quirk.entry(t.quirk_id.to_string()).or_insert(0) += 1;
+                    report.quirk_games.push(QuirkGame {
+                        game_id: recording.start.game_id.clone(),
+                        quirk_id: t.quirk_id.to_string(),
+                        evidence: t.evidence,
+                    });
+                    continue;
+                }
                 report.fail += 1;
                 report.failed_games.push(recording.start.game_id.clone());
 
@@ -118,6 +157,7 @@ pub fn aggregate(entries: &[(&RecordingV1, &ReplayOutcome)]) -> ParityReport {
         }
     }
     report.failed_games.sort();
+    report.quirk_games.sort_by(|a, b| a.game_id.cmp(&b.game_id));
     report
 }
 

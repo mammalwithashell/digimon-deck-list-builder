@@ -468,3 +468,59 @@ fn bt25_049_option_use_reducer_inactive_on_non_glowing_dawn_option() {
         "non-[Glowing Dawn] Option pays the full use cost 3 (no reduction)"
     );
 }
+
+/// "When you would play ..." is a PLAY trigger. BT25-049's -3 reduction for a
+/// [Glowing Dawn] Option must not apply to DIGIVOLVING a DUAL card whose Option
+/// face carries that trait (DCGO `CanTriggerWhenPermanentWouldPlay` is
+/// `if (!IsEvolution) { .. }`): no reduction prompt is offered and the printed
+/// digivolution cost is paid in full.
+#[test]
+fn bt25_049_option_use_reducer_does_not_apply_to_digivolving_a_dual_card() {
+    // A DUAL card: a Lv.5 Digimon (Green, [Glowing Dawn]) that is also an Option.
+    let mut dual = make_test_card("GD-DUAL", "GD-DUAL");
+    dual.card_kind = CardKind::Dual;
+    dual.colors = vec![CardColor::Green];
+    dual.level = Some(5);
+    dual.dp = Some(7000);
+    dual.play_cost = 6;
+    dual.traits = vec!["Glowing Dawn".to_string()];
+    dual.evo_costs = vec![digimon_engine::card_data::EvoCost {
+        card_color: 3, // Green
+        level: 4,
+        memory_cost: 3,
+    }];
+    let mut runner = DebugRunner::builder()
+        .add_card(armalizamon())
+        .add_card(dual)
+        .add_card(make_tamer("TAMER"))
+        .add_card(make_filler("STASH"))
+        .add_card(make_filler("FILLER-DECK"))
+        .hand(0, &["GD-DUAL"])
+        .deck(0, &["FILLER-DECK"; 5])
+        .deck(1, &["FILLER-DECK"; 5])
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+    let host = runner.place_on_field(0, CARD_ID, Some(0));
+    // The reducer's payable cost exists: a face-down source under a Tamer.
+    let tamer_perm = runner.place_stack(0, &["STASH", "TAMER"]);
+    runner.game.players[0].battle_area[tamer_perm.index as usize].card_sources[0].face_down = true;
+
+    let mem_before = runner.memory();
+    assert!(
+        runner
+            .game
+            .digivolve_from_hand(0, 0, host.index as usize, digimon_engine::enums::PlaySource::ByHand),
+        "the DUAL card digivolves onto BT25-049 (Green Lv.4)"
+    );
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no cost-reduction prompt for a digivolve: {:?}",
+        runner.game.pending_selection.as_ref().map(|p| p.prompt.clone())
+    );
+    assert_eq!(
+        mem_before - runner.memory(),
+        3,
+        "the printed digivolution cost 3 is paid in full"
+    );
+}

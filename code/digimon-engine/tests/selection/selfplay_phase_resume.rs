@@ -315,6 +315,20 @@ fn capped_game_340_cannot_reopen_manekimon_after_declining() {
         .take(94)
         .enumerate()
     {
+        // Decisions that answered a prompt the engine no longer parks, each a
+        // no-op whose omission reaches the same position:
+        //   * 62: a two-entry trigger-order pick between EX12-065 Kaguyamon's
+        //     [On Deletion] and its <Fortitude>. That Kaguyamon was deleted with no
+        //     digivolution cards under it and <Fortitude> cannot activate without
+        //     one (DCGO `CanActivateFortitude`: `CardSources.Count >= 1`).
+        //   * 46, 84, 87: P1's PASS on EX12-074's [Security] "digivolve the
+        //     attacking [Shambala] Digimon" offer. DCGO offers only hand cards that
+        //     can actually digivolve the attacker (`CanPlayCardTargetFrame`) and
+        //     opens no pick when none can, so with no legal candidate the offer is
+        //     no longer made.
+        if matches!(i, 46 | 62 | 84 | 87) {
+            continue;
+        }
         let player = step["player"].as_u64().unwrap() as u8;
         let action = step["action"].as_u64().unwrap() as u16;
         assert!(

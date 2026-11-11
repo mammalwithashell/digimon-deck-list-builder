@@ -65,14 +65,7 @@ effects:
   #
   # Modelled as a self-aura evaluated via source_dp_contribution.
   # The active_when predicate `any_permanent: { of: opponent, kind: digimon, dp_gte: 13000 }`
-  # encodes the correct intent, but:
-  #
-  # KNOWN GAP G-PRED-DP-LTE (engine-gaps.md):
-  #   `dp_gte` / `dp_lte` are parsed but NOT evaluated in eval_permanent_fields
-  #   (code/digimon-engine/src/dsl_cards/predicate.rs). The condition therefore
-  #   fires whenever ANY opponent Digimon is present (ignores the 13000 DP threshold).
-  #   Tests for the correct gating behavior are #[ignore]d in ex10_010.rs until
-  #   eval_permanent_fields is extended to evaluate dp predicates.
+  # is evaluated against the opponent Digimon's current DP (DCGO `permanent.DP >= 13000`).
   #
   # `all_turns: true` encodes the [All Turns] scope (fires on both players' turns).
   - kind: aura
@@ -83,7 +76,6 @@ effects:
             of: opponent
             zone: [battle_area]
             kind: digimon
-            # G-PRED-DP-LTE: dp_gte: 13000 is parsed but not evaluated by the engine
             dp_gte: 13000
     target: {}
     dp_modifier: 3000
@@ -93,23 +85,18 @@ effects:
   # "[All Turns] While your opponent has a Digimon with 13000 DP or more,
   #  your opponent's Digimon's effects don't affect this Digimon."
   #
-  # Modelled as a flood_gate with modifier: CannotBeAffected sharing the same
-  # active_when condition as Clause 5.
-  #
-  # KNOWN GAP 1 — lower_aura.rs modifier field not wired:
-  #   `modifier: CannotBeAffected` compiles into CompiledDeclarativeClause::Aura.modifier
-  #   but lower_aura::lower() does NOT accept or thread the modifier field; it is
-  #   silently ignored in mod.rs with `..`. The CannotBeAffected modifier is never
-  #   installed in the modifier registry.
-  #
-  # KNOWN GAP 2 — CannotBeAffected not enforced:
-  #   Even if ModifierType::CannotBeAffected were installed, it is not checked in the
-  #   engine's effect execution path (effect_context.rs / game.rs). Immunity cannot
-  #   be enforced until the engine checks this modifier before applying opponent effects.
-  #
-  # Tests for this clause are #[ignore = "pending: lower_aura.rs modifier not wired..."]
-  # in ex10_010.rs.
-  - kind: flood_gate
+  # DCGO EX10_010.cs (CanNotAffectedClass): SkillCondition = IsOpponentEffect AND
+  # ((!source.IsDualCard && (source.IsDigimon || effect.IsDigimonEffect))
+  #  || (source.IsDualCard && !effect.IsOptionEffect)). So it stops the
+  # opponent's DIGIMON effects only: NOT their Option or Tamer effects, and NOT
+  # a DUAL card's Option-side effect (official Q&A Q6496/Q6498, BT25-104).
+  # Modelled with the EX8-073 idiom: a self-aura carrying
+  # `effect_immunity { source_kind: digimon, source_controller: opponent }`,
+  # gated by the same active_when as the +3000 DP clause above. (This clause
+  # used to be an unfiltered `flood_gate` + `modifier: CannotBeAffected`, which
+  # made it immune to EVERY effect from EITHER player - Option effects too.)
+  - kind: aura
+    target: {}
     active_when:
       all_of:
         - all_turns: true
@@ -117,9 +104,8 @@ effects:
             of: opponent
             zone: [battle_area]
             kind: digimon
-            # G-PRED-DP-LTE: dp_gte: 13000 not evaluated by engine
             dp_gte: 13000
-    modifier: CannotBeAffected
-    # Self-target: only affects this permanent (the carrier)
-    target: { card_number_is: "EX10-010" }
+    effect_immunity:
+      source_kind: digimon
+      source_controller: opponent
     summary: "[All Turns] Immunity from opponent Digimon effects while opp has ≥13000 DP Digimon"

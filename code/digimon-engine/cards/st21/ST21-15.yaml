@@ -1,0 +1,126 @@
+# ST21-15 Gennai's House — Option, White, Cost 2.
+# Traits: ADVENTURE.
+#
+# Printed card text (official Bandai DB bundle data/card_bundles/ST21-15.md /
+# cards.json — verbatim):
+#
+#   While you have no face-up [Gennai's House] security cards, you can ignore
+#   this card's color requirements.
+#   [Security] [Your Turn] All of your level 3 or higher Digimon get +3000 DP.
+#   [Main] Add your bottom security card to the hand. Then, place this card
+#   face up as the bottom security card.
+#
+# Inherited (Security) effect:
+#   Security Effect [Security] You may play 1 level 3 Digimon card from your
+#   trash without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/White/ST21_15.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Ignore Color Requirement" (EffectTiming.None): `IgnoreColorCondition
+#   Class`, `cardCondition: cardSource == card`, gated on
+#   `!card.Owner.SecurityCards.Any(c => c.EqualsCardName("Gennai's House") &&
+#   !c.IsFlipped)` (no FACE-UP [Gennai's House] in own security).
+#   → card-level `use_requirement` (the mechanism the Option-use mask consults;
+#   a `flood_gate` carried by a card in HAND never registers — BT21-091 /
+#   BT24-094) + `kind: flood_gate` IgnoreColorRequirement mirroring DCGO. Both
+#   use `no_face_up_security_named { of: you, name_is: "Gennai's House" }`
+#   (NAME match, as DCGO's `EqualsCardName`; sibling ST20-15 uses the card id).
+#
+# Region "Your Turn - Security" (EffectTiming.None): `ChangeDPStaticEffect(
+#   +3000)` over `IsPermanentExistsOnOwnerBattleAreaDigimon && Level >= 3`,
+#   gated on `IsExistInSecurity(card, false)` (this card is in the security
+#   stack FACE UP — the pink {Security} icon, rule 15-14-5) && `IsOwnerTurn`.
+#   → `kind: aura`, `scope: security` (engine only ticks face-up security
+#   sources), `active_when: { your_turn: true }`, `dp_modifier: 3000`, target
+#   own battle-area Digimon level >= 3.
+#
+# Region "Main Effect" (OptionSkill): `ReplaceBottomSecurityWithFaceUpOption
+#   MainEffect(card)` = if security non-empty, add the bottom security card to
+#   hand; then (if the owner can add security) place this card face up at the
+#   bottom. Mandatory. → `when: main_from_hand` + `add_bottom_security_to_hand`
+#   + `place_on_security { source: self_option, position: bottom, face_up:
+#   true }` (BT24-094 / BT25-095 idiom).
+#
+# Region "Security Effect" (SecuritySkill): optional (`canNoSelect: true`)
+#   SelectCard from trash: `IsDigimon && HasLevel && Level == 3 &&
+#   CanPlayAsNewPermanent(payCost: false)`, then `PlayPermanentCards(payCost:
+#   false)`. → `scope: inherited`, `when: on_security`, `optional: true`,
+#   `select_trash` (kind digimon, level_eq 3, can_play_from_effect_without_
+#   cost) + `play_from_trash_free`.
+#
+# ─── Implementation status ────────────────────────────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | Ignore colour reqs while no face-up [Gennai's House] security  | IMPLEMENTED (use_requirement + flood_gate) |
+# | [Security][Your Turn] own Lv3+ Digimon +3000 DP                | IMPLEMENTED (security aura) |
+# | [Main] add bottom security, place self face up as bottom       | IMPLEMENTED |
+# | [Security] may play 1 Lv3 Digimon from trash free              | IMPLEMENTED |
+
+card: ST21-15
+name: "Gennai's House"
+kind: option
+color: [white]
+cost: 2
+traits: [ADVENTURE]
+
+use_requirement:
+  no_face_up_security_named:
+    of: you
+    name_is: "Gennai's House"
+
+effects:
+  # ─── Clause 0: colour bypass while no face-up [Gennai's House] in security ──
+  - kind: flood_gate
+    active_when:
+      no_face_up_security_named:
+        of: you
+        name_is: "Gennai's House"
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "ST21-15" }
+    summary: "While you have no face-up [Gennai's House] security cards, ignore color requirements for this card"
+
+  # ─── Clause 1: [Security][Your Turn] own Lv3+ Digimon get +3000 DP ──────────
+  - kind: aura
+    scope: security
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      level_gte: 3
+    dp_modifier: 3000
+    summary: "[Security][Your Turn] All of your level 3 or higher Digimon get +3000 DP"
+
+  # ─── Clause 2: [Main] add bottom security to hand, place self face up bottom ─
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Add your bottom security card to the hand. Then, place this card face up as the bottom security card"
+    process:
+      - add_bottom_security_to_hand: { of: you }
+      - place_on_security:
+          source: self_option
+          position: bottom
+          face_up: true
+
+  # ─── Clause 3: [Security] (inherited) may play 1 Lv3 Digimon from trash free ─
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security] You may play 1 level 3 Digimon card from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 level 3 Digimon card from your trash without paying the cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: revived

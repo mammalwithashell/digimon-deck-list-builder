@@ -464,6 +464,9 @@ impl ScenarioAdapter {
                             selection: Some(row.clone()),
                             board_p0: None,
                             board_p1: None,
+                            card_id: None,
+                            dna_materials: None,
+                         inferred: false,
                         });
                         spec_owner.push(i);
                         lowered.push(if n == 0 {
@@ -506,6 +509,9 @@ impl ScenarioAdapter {
                         selection: Some(row.clone()),
                         board_p0: None,
                         board_p1: None,
+                        card_id: None,
+                        dna_materials: None,
+                     inferred: false,
                     });
                     spec_owner.push(i);
                     lowered.push(LoweredStep::Select(wire));
@@ -550,6 +556,9 @@ impl ScenarioAdapter {
                         selection: Some(row.clone()),
                         board_p0: None,
                         board_p1: None,
+                        card_id: None,
+                        dna_materials: None,
+                     inferred: false,
                     });
                     spec_owner.push(i);
                     lowered.push(LoweredStep::SimOnlySelect);
@@ -596,6 +605,9 @@ impl ScenarioAdapter {
                         selection: None,
                         board_p0: None,
                         board_p1: None,
+                        card_id: None,
+                        dna_materials: None,
+                     inferred: false,
                     });
                     spec_owner.push(i);
                     lowered.push(LoweredStep::DnaDeclaration {
@@ -635,6 +647,9 @@ impl ScenarioAdapter {
                         selection: Some(row.clone()),
                         board_p0: None,
                         board_p1: None,
+                        card_id: None,
+                        dna_materials: None,
+                     inferred: false,
                     });
                     spec_owner.push(i);
                     lowered.push(LoweredStep::SimOnlySelect);
@@ -705,6 +720,9 @@ impl ScenarioAdapter {
                         selection: None,
                         board_p0: None,
                         board_p1: None,
+                        card_id: None,
+                        dna_materials: None,
+                     inferred: false,
                     });
                     spec_owner.push(i);
                     let mut classified=classify_scenario_action(&game, i, actor, &step.act, action_id)?;
@@ -2245,7 +2263,7 @@ fn build_selection_row(
         count: None,
         candidates: None,
         int_value: None,
-        bool_value: None,
+        chosen_effect_card: None, chosen_effect_name: None, bool_value: None, engine_action: None,
         cancel: None,
         board_p0: None,
         board_p1: None,

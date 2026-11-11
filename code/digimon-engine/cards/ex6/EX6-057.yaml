@@ -65,8 +65,11 @@ effects:
     trigger: when_would_leave_battle_area
     once_per_turn: true
     active_when:
+      # Self-only: DCGO CanTriggerWhenRemoveField(hashtable, card) is
+      # `permanent.cardSources.Contains(card)`. Leaves that read the replacement
+      # subject (replacement_subject_is_mine, kind, name_is...) make the clause
+      # cross-permanent, so none may appear here.
       all_of:
-        - replacement_subject_is_mine: true
         - none_of:
             - replacement_cause: battle
     summary: "[All Turns][OPT] Delete 1 level 5 or lower Digimon so this Digimon doesn't leave"

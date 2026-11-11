@@ -119,6 +119,13 @@
 #   gated-tail shape, though EX4-073's ladder is up-to-N with a `then:`-based
 #   per-trash loop rather than a flat 2-for-2 cost).
 #
+# Clauses 2 and 3 carry DCGO's `CanActivateCondition` as a clause `condition`
+# (EX7_073.cs: `DigivolutionCards.Count(CanSelectCardCondition) >= 1`, i.e. at
+# least one [Three Musketeers]-trait digivolution card). With none, the trigger
+# is never queued, so it offers no phantom entry in the `TriggerOrder` prompt
+# against clause 1. They stay mandatory at clause level: the "by trashing 2"
+# decline is the `min: 0` pick inside, as before.
+#
 # ─── Implementation status ────────────────────────────────────────────────────
 #
 # | Card-text element                                                    | Status      |
@@ -228,6 +235,11 @@ effects:
   # (`select_opponent_permanent`'s empty-candidate short-circuit drops any
   # composed tail).
   - when: when_digivolving
+    condition:
+      self_source_count:
+        filter: { trait_has: "Three Musketeers" }
+        op: gte
+        value: 1
     summary: "[When Digivolving] By trashing 2 [Three Musketeers]-trait own digivolution sources, delete 1 opp Digimon with the highest level (if any) and trash opp top security"
     process:
       - select_own_sources:
@@ -273,6 +285,11 @@ effects:
   # own triggered clause rather than `when: [when_digivolving,
   # when_attacking]` on one process.
   - when: when_attacking
+    condition:
+      self_source_count:
+        filter: { trait_has: "Three Musketeers" }
+        op: gte
+        value: 1
     summary: "[When Attacking] By trashing 2 [Three Musketeers]-trait own digivolution sources, delete 1 opp Digimon with the highest level (if any) and trash opp top security"
     process:
       - select_own_sources:

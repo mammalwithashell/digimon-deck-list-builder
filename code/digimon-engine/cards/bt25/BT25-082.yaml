@@ -124,13 +124,13 @@ effects:
   # "If you have 1 or fewer Tamers, you may play 1 Tamer card with [Three
   # Musketeers] in its text from your hand without paying the cost."
   #
-  # `optional: true` installs the outer accept/decline ("you may"). The
-  # `count_lte` gate counts the controller's battle-area Tamers (<= 1). The
+  # The "may" is the inner `select_hand`'s own `optional: true` (DCGO registers
+  # the effect non-optional and folds the "may" into `canNoSelect`, so there is
+  # no separate accept prompt to record). The `count_lte` gate counts the controller's battle-area Tamers (<= 1). The
   # inner `select_hand` picks a TM-text Tamer; `play_from_hand_free` plays it
   # without paying the cost. `effect_text_contains` scans the card's printed
   # text (sibling idiom: BT24-088 Asuna).
   - when: [on_play, when_digivolving]
-    optional: true
     summary: "[On Play][When Digivolving] If <=1 Tamer, may free-play 1 [Three Musketeers]-text Tamer from hand"
     condition:
       count_lte:
@@ -140,12 +140,16 @@ effects:
       - select_hand:
           of: you
           bind_as: tamer_pick
+          optional: true
           filter:
             all_of:
               - kind: tamer
               - effect_text_contains: "Three Musketeers"
           prompt: "Play 1 Tamer with [Three Musketeers] in its text from your hand without paying the cost"
-      - play_from_hand_free: { of: you, hand_index: tamer_pick }
+      - if:
+          condition: { binding_exists: tamer_pick }
+          then:
+            - play_from_hand_free: { of: you, hand_index: tamer_pick }
 
   # ─── Clause 2: Inherited [When Attacking][OPT] place TM source → Draw 1 ─────
   #

@@ -1292,7 +1292,7 @@ effects:
         let identity=r.game.capture_digivolve_host_identity(host);
         r.game.effect_digivolve_scopes.push(EffectDigivolveScope{
             declaration:EffectDigivolveCostChoiceState{acting_player:0,source_ref:CardSourceRef::Hand(0,0),result_card:card,source_carrier_top:None,source_carrier_identity:None,target_player:0,target_zone:crate::enums::Zone::BattleArea,target_top:top,target_identity:identity,dna_origin:None,cost_delta:CostDelta::Free,waiver:DigivolveRequirementWaiver::None,source:PlaySource::ByEffect,printed_costs:vec![],effect_source_player:Some(0),trigger_context:None,result_clause:None,outer_conts:vec![cont]},
-            identity:crate::game::PendingWouldDigivolveResume{window_started:true,host_identity:identity,treated_identity_orders:None,player:0,permanent:host,card,effective_cost:0,app_fusion:false}});
+            identity:crate::game::PendingWouldDigivolveResume{window_started:true,host_identity:identity,treated_identity_orders:None,player:0,permanent:host,card,effective_cost:0,app_fusion:false,burst:false}});
         r
     }
     fn rewrite_scope_marker(g:&mut Game,new:u64){

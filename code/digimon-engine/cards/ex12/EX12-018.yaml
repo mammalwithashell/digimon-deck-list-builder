@@ -46,106 +46,89 @@ dual:
       - when: [when_digivolving, when_attacking]
         once_per_turn: true
         summary: "[When Digivolving][When Attacking][OPT] Place up to 2 [Gammamon-text]/[VB] Digimon cards from hand/trash as top/bottom sources; if placed, -2000 DP per source"
+        # DCGO EX12_018.cs (behaviour authority, no official ruling on the shape): ask WHERE from first (only zones
+        # holding a candidate are offered, plus "Don't place any"), take up to 2 cards from that ONE zone in one
+        # selection, then choose top or bottom once for all of them.
         process:
-          - select_union_zone:
-              of: you
-              zones: [hand, trash]
-              optional: true
-              bind_as: placed_first
-              filter:
-                all_of:
-                  - kind: digimon
-                  - any_of:
-                      - in_text_contains: Gammamon
-                      - trait_has: VB
-              prompt: "You may place a [Gammamon]-text or [VB] Digimon from hand or trash as this Digimon's source"
+          - select_effect_choice:
+              bind_as: zone_choice
+              labels: ["From Hand", "From Trash", "Don't place any"]
+              legal_when:
+                - count_gte:
+                    filter:
+                      owner: you
+                      zone: [hand]
+                      all_of:
+                      - kind: digimon
+                      - any_of:
+                          - in_text_contains: Gammamon
+                          - trait_has: VB
+                    n: 1
+                - count_gte:
+                    filter:
+                      owner: you
+                      zone: [trash]
+                      all_of:
+                      - kind: digimon
+                      - any_of:
+                          - in_text_contains: Gammamon
+                          - trait_has: VB
+                    n: 1
+                - {}
+              prompt: "Where will you select cards from to place under this Digimon as digivolution sources?"
           - if:
-              condition:
-                binding_count_eq:
-                  binding: placed_first
-                  n: 1
+              condition: { equals: [zone_choice, 0] }
               then:
-                - select_effect_choice:
-                    bind_as: first_position
-                    labels: ["Top", "Bottom"]
-                    prompt: "Place the selected card as a top or bottom digivolution card?"
-          - if:
-              condition:
-                all_of:
-                  - binding_count_eq:
-                      binding: placed_first
-                      n: 1
-                  - equals: [first_position, 0]
-              then:
-                - place_as_top_source:
-                    source: placed_first
-                    target: source
-          - if:
-              condition:
-                all_of:
-                  - binding_count_eq:
-                      binding: placed_first
-                      n: 1
-                  - equals: [first_position, 1]
-              then:
-                - place_as_bottom_source:
-                    source: placed_first
-                    target: source
-          - if:
-              condition:
-                binding_count_eq:
-                  binding: placed_first
-                  n: 1
-              then:
-                - select_union_zone:
-                    of: you
-                    zones: [hand, trash]
-                    optional: true
-                    bind_as: placed_second
+                - select_zone_cards:
+                    zones: [hand]
                     filter:
                       all_of:
-                        - kind: digimon
-                        - any_of:
-                            - in_text_contains: Gammamon
-                            - trait_has: VB
-                    prompt: "You may place another [Gammamon]-text or [VB] Digimon from hand or trash as this Digimon's source"
+                      - kind: digimon
+                      - any_of:
+                          - in_text_contains: Gammamon
+                          - trait_has: VB
+                    min: 0
+                    max: 2
+                    bind_as: placed
+                    prompt: "Select up to 2 Digimon cards with [Gammamon] in their text or the [VB] trait from your hand"
           - if:
-              condition:
-                binding_count_eq:
-                  binding: placed_second
-                  n: 1
+              condition: { equals: [zone_choice, 1] }
+              then:
+                - select_zone_cards:
+                    zones: [trash]
+                    filter:
+                      all_of:
+                      - kind: digimon
+                      - any_of:
+                          - in_text_contains: Gammamon
+                          - trait_has: VB
+                    min: 0
+                    max: 2
+                    bind_as: placed
+                    prompt: "Select up to 2 Digimon cards with [Gammamon] in their text or the [VB] trait from your trash"
+          - if:
+              condition: { binding_present: placed }
               then:
                 - select_effect_choice:
-                    bind_as: second_position
-                    labels: ["Top", "Bottom"]
-                    prompt: "Place the selected card as a top or bottom digivolution card?"
+                    bind_as: position
+                    labels: ["Top of digivolution sources", "Bottom of digivolution sources"]
+                    prompt: "Place the selected cards as this Digimon's top or bottom digivolution cards?"
+                - if:
+                    condition: { equals: [position, 0] }
+                    then:
+                      - per_selected:
+                          selection: placed
+                          bind_as: placed_card
+                          body:
+                            - place_as_top_source:
+                                source: placed_card
+                                target: source
+                    else:
+                      - place_cards_as_bottom_sources:
+                          cards: placed
+                          target: source
           - if:
-              condition:
-                all_of:
-                  - binding_count_eq:
-                      binding: placed_second
-                      n: 1
-                  - equals: [second_position, 0]
-              then:
-                - place_as_top_source:
-                    source: placed_second
-                    target: source
-          - if:
-              condition:
-                all_of:
-                  - binding_count_eq:
-                      binding: placed_second
-                      n: 1
-                  - equals: [second_position, 1]
-              then:
-                - place_as_bottom_source:
-                    source: placed_second
-                    target: source
-          - if:
-              condition:
-                binding_count_eq:
-                  binding: placed_first
-                  n: 1
+              condition: { binding_present: placed }
               then:
                 - select_opponent_permanent:
                     bind_as: dp_target

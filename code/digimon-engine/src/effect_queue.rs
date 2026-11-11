@@ -3398,7 +3398,13 @@ impl Game {
                 source_identity: None,
                     source_card,
                     source_permanent: Some(handle),
-                    source_kind: top_source_kind,
+                    // An Option-side effect activated from a Digimon face is an
+                    // Option effect, not a Digimon effect (Q6496/Q6498).
+                    source_kind: if effect.acts_as_option {
+                        EffectSourceKind::Option
+                    } else {
+                        top_source_kind
+                    },
                     attribution_source_card: None,
                     attribution_source_kind: None,
                     bypass_once_per_turn: false,

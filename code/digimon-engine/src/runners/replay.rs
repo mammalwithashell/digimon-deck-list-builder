@@ -236,6 +236,42 @@ pub enum DivergenceKind {
     SelectionResolution { reason: String },
 }
 
+/// Does the parked flat source-card prompt (`SelectionKind::SourceMulti`) offer
+/// a legal card held by the Digimon a carrier-only row names?
+///
+/// DCGO's `SelectTrashDigivolutionCards` asks for the Digimon that holds the
+/// cards first (`SelectPermanentEffect`, a targets-only row) and the cards second
+/// (`SelectCardEffect`). The engine parks ONE prompt over every legal source
+/// card, so the carrier row only narrows. The fold is proved by the engine's own
+/// legality: it applies only when the named Digimon really holds a legal
+/// candidate, otherwise the row falls through and surfaces as a divergence.
+fn source_multi_carrier_has_candidate(
+    game: &Game,
+    target: &crate::dcgo_recording::FrameTarget,
+) -> bool {
+    let Some(pending) = game.pending_selection.as_ref() else {
+        return false;
+    };
+    if !matches!(pending.kind, crate::selection::SelectionKind::SourceMulti { .. }) {
+        return false;
+    }
+    let Some(owner) = pending.card_choice.as_ref() else {
+        return false;
+    };
+    let Ok(slot) = u8::try_from(target.frame) else {
+        return false;
+    };
+    owner
+        .view(game, pending.selecting_player)
+        .rows
+        .iter()
+        .any(|row| {
+            row.owner == Some(target.player)
+                && row.carrier_slot == Some(slot)
+                && pending.valid_action_ids.contains(&row.action_id)
+        })
+}
+
 /// A differential divergence recorded by `CheckThenApply` — the engine
 /// disagreed with the recording about what was legal / who acted / the
 /// outcome. Recorded into the session's divergence log; pausing variants
@@ -714,6 +750,17 @@ pub struct StepSpec {
     /// for native recordings and pre-0.4 DCGO ones.
     pub board_p0: Option<Vec<String>>,
     pub board_p1: Option<Vec<String>>,
+    /// The printed card id the recorded action references (DCGO's diagnostic
+    /// `card_id`): lets the driver re-resolve an operand the recorder encoded
+    /// by a different index space than the engine's hand slot.
+    pub card_id: Option<String>,
+    /// The two partner Digimon of a DNA digivolution, from the correlated
+    /// `action_detail` (`alt_path == "dna_digivolve"`). DCGO's recorder encodes the
+    /// action as a plain digivolve id and carries the pair nowhere else.
+    pub dna_materials: Option<Vec<String>>,
+    /// Row synthesised by a converter (see `ActionRow::inferred`): skipped, and counted, when the engine is
+    /// already waiting on a different seat. Never skipped when the engine accepts the actor.
+    pub inferred: bool,
 }
 
 /// A pluggable replay source. Knows how to build the initial post-mulligan
@@ -921,6 +968,9 @@ impl NativeAdapter {
                     selection: None,
                     board_p0: None,
                     board_p1: None,
+                    card_id: None,
+                    dna_materials: None,
+                    inferred: false,
                 });
             }
         }
@@ -1124,6 +1174,20 @@ impl DcgoAdapter {
             })
             .collect();
 
+        let dna_by_step: std::collections::HashMap<(u32, u8), Vec<String>> = recording
+            .rows
+            .iter()
+            .filter_map(|row| match row {
+                Row::ActionDetail(d)
+                    if d.alt_path.as_deref() == Some("dna_digivolve")
+                        && d.materials.as_ref().is_some_and(|m| m.len() == 2) =>
+                {
+                    Some(((d.step, d.actor), d.materials.clone().unwrap()))
+                }
+                _ => None,
+            })
+            .collect();
+
         let mut steps = Vec::new();
         let mut skipped_incomplete_plays: u32 = 0;
         for row in &recording.rows {
@@ -1159,6 +1223,9 @@ impl DcgoAdapter {
                         selection: None,
                         board_p0: a.board_p0.clone(),
                         board_p1: a.board_p1.clone(),
+                        card_id: a.card_id.clone(),
+                        dna_materials: dna_by_step.get(&(a.step, a.actor)).cloned(),
+                        inferred: a.inferred,
                     })
                 }
                 // Semantic selection payload (task 3.5) — resolved against
@@ -1176,6 +1243,9 @@ impl DcgoAdapter {
                     selection: Some(s.clone()),
                     board_p0: s.board_p0.clone(),
                     board_p1: s.board_p1.clone(),
+                    card_id: None,
+                    dna_materials: None,
+                    inferred: false,
                 }),
                 // Can't fabricate an unencoded selection — the replayable
                 // prefix ends here (matches the batch harness's PartialPass).
@@ -1544,6 +1614,9 @@ impl VerificationReplayAdapter {
                 selection: None,
                 board_p0: None,
                 board_p1: None,
+                card_id: None,
+                dna_materials: None,
+                inferred: false,
             })
             .collect();
 
@@ -1723,6 +1796,18 @@ pub(crate) struct ReplayDriver {
     /// Differential divergences recorded under `CheckThenApply`. Accumulates
     /// across forward stepping; cleared on a backward reset.
     divergences: Vec<Divergence>,
+    /// Card ids of DIGIVOLVE actions whose board-remapped operand was ILLEGAL
+    /// while the recorded one was legal, so the recorded operand was used (see
+    /// the operand fallback in `step`). Diagnostic only: it lets a report tell a
+    /// digivolve onto a target the engine rejected (a DCGO phantom digivolve)
+    /// from an ordinary memory divergence. Cleared on a backward reset.
+    digivolve_operand_fallbacks: Vec<String>,
+    /// Steps of converter-`inferred` rows the engine had already moved past (skipped, never silently passed).
+    inferred_skipped: Vec<u32>,
+    /// Opponent battle slot a recorded attack named while the engine only offered
+    /// the security attack: the attacker has <Raid>, so the recorded target is the
+    /// Raid switch (see `raid_declared_target`). Consumed right after the attack.
+    raid_retarget: Option<u16>,
     /// Set when a pausing `CheckThenApply` divergence (`MaskMiss` / `Actor`)
     /// halts the cursor. `step()` is a no-op while paused; cleared by a
     /// backward `seek` (reset) or `set_policy`.
@@ -1747,6 +1832,9 @@ impl ReplayDriver {
                 verify,
                 policy,
                 divergences: Vec::new(),
+                digivolve_operand_fallbacks: Vec::new(),
+                inferred_skipped: Vec::new(),
+                raid_retarget: None,
                 paused: false,
             },
         ))
@@ -1775,6 +1863,15 @@ impl ReplayDriver {
 
     pub(crate) fn skipped_incomplete_plays(&self) -> u32 {
         self.source.skipped_incomplete_plays()
+    }
+
+    /// Recorded steps of converter-inferred rows that were skipped because the engine had already advanced.
+    pub(crate) fn inferred_skipped(&self) -> &[u32] {
+        &self.inferred_skipped
+    }
+
+    pub(crate) fn digivolve_operand_fallbacks(&self) -> &[String] {
+        &self.digivolve_operand_fallbacks
     }
 
     pub(crate) fn cursor(&self) -> u32 {
@@ -1832,11 +1929,172 @@ impl ReplayDriver {
             None => payload,
         };
 
+        let actor = payload.actor;
+
+        // DCGO folds a "you may" gate into the pick itself (`canNoSelect`): the
+        // effect is registered non-optional, so there is no `OptionalSkill` row -
+        // an affirmative pick row IS the acceptance. Our engine models the same
+        // "may" as a clause-level outer accept/decline prompt
+        // (`ResumeFrame::OuterOptionalTrigger`, single accept id). A recorded
+        // pick that names cards/targets against that prompt therefore means
+        // "accept, then pick": accept first so the row meets the body's own
+        // prompt. A cancel row (decline) is left to resolve as the PASS.
+        if payload.cancel != Some(true)
+            && payload.bool_value.is_none()
+            && payload.int_value.is_none()
+            && (payload.card_ids.as_ref().is_some_and(|c| !c.is_empty())
+                || payload.targets.as_ref().is_some_and(|t| !t.is_empty()))
+        {
+            let is_outer_gate = game.pending_selection.as_ref().is_some_and(|p| {
+                p.is_optional
+                    && p.valid_action_ids == [crate::action::space::REPLACEMENT_ACCEPT]
+                    && game.pending_selection_resume.as_ref().is_some_and(|r| {
+                        matches!(
+                            r.frames.first(),
+                            Some(crate::resume::ResumeFrame::OuterOptionalTrigger(_))
+                        )
+                    })
+            });
+            if is_outer_gate {
+                let who = game.pending_selection.as_ref().unwrap().selecting_player;
+                game.decode_action(crate::action::space::REPLACEMENT_ACCEPT, who);
+            }
+        }
+
+        // A zone menu ahead of a multi-zone pick. DCGO asks "from where?" as an int
+        // menu (EX12-018: "From Hand" / "From Trash") and then a pick inside that
+        // one zone; the engine asks one UnionZone pick over hand and trash. The int
+        // only narrows where the following recorded pick comes from, so it is
+        // consumed and the pick that follows answers the engine's prompt. (A sim
+        // that mixed zones cannot be reproduced in DCGO and still diverges there.)
+        if payload.prompt == "generic_int"
+            && payload.int_value.is_some()
+            && payload.card_ids.is_none()
+            && payload.targets.is_none()
+            && payload.cancel != Some(true)
+            && game.pending_selection.as_ref().is_some_and(|p| {
+                matches!(p.kind, crate::selection::SelectionKind::UnionZone { .. })
+                    && p.effect_choices.is_none()
+                    && p.selecting_player == actor
+            })
+        {
+            self.cursor += 1;
+            return ReplayStepResult {
+                step_number: self.cursor,
+                player_id: actor,
+                action_id: 0,
+                phase_before: game.current_phase.py_name().to_string(),
+                phase_after: game.current_phase.py_name().to_string(),
+                memory_before: game.memory,
+                memory_after: game.memory,
+                turn_number: game.turn_count,
+                is_game_over: game.game_over,
+                winner_id: game.winner,
+                divergences: Vec::new(),
+            };
+        }
+
+        // A `MultipleSkills` ordering int against a prompt that is not a trigger
+        // order. DCGO lists the simultaneous effects it can activate right now and
+        // asks the player to order them; when the engine queued only ONE trigger
+        // (the other's cost is unpayable) it parked that trigger's own "you may"
+        // gate instead, and an ordering index can never answer an accept/decline.
+        // The row is therefore consumed: the engine already ran the only order
+        // there was, and the decision that follows (the recorded pick or cancel)
+        // meets the gate as usual.
+        if payload.prompt == "MultipleSkills"
+            && payload.int_value.is_some_and(|v| v >= 0)
+            && payload.card_ids.is_none()
+            && payload.targets.is_none()
+            && payload.cancel != Some(true)
+            // ... or the engine queued no ordering decision at all and has nothing parked (it resolved the
+            // effects DCGO asks to order - e.g. one whose condition was already false - without a decision)
+            && game.pending_selection.as_ref().map_or(true, |p| {
+                !matches!(p.kind, crate::selection::SelectionKind::TriggerOrder)
+                    && p.selecting_player == actor
+            })
+        {
+            self.cursor += 1;
+            return ReplayStepResult {
+                step_number: self.cursor,
+                player_id: actor,
+                action_id: 0,
+                phase_before: game.current_phase.py_name().to_string(),
+                phase_after: game.current_phase.py_name().to_string(),
+                memory_before: game.memory,
+                memory_after: game.memory,
+                turn_number: game.turn_count,
+                is_game_over: game.game_over,
+                winner_id: game.winner,
+                divergences: Vec::new(),
+            };
+        }
+
+        // A mandatory ONE-option prompt the recorded row does not answer.
+        //
+        // Our engine installs a pick even when only one candidate exists (e.g.
+        // ST24-01's "by trashing the bottom face-down card from under any of your
+        // Tamers" with a single Tamer); DCGO asks only when it is a real choice
+        // (`MatchConditionPermanentCount(..) > 1`), so the recording has no row
+        // for it. When this row cannot be resolved against that prompt, the
+        // forced answer is applied first so the row meets the prompt it was
+        // recorded against - and before the memory check below, which DCGO read
+        // AFTER the forced step. With a single option there is no choice a row
+        // could have made differently, so no divergence can hide here.
+        for _ in 0..4 {
+            let Some(pending) = game.pending_selection.as_ref() else {
+                break;
+            };
+            // An OPTIONAL one-candidate pick qualifies too (its decline is the
+            // PASS, not a second accept id), but only when the recorded row cannot
+            // resolve against it at all - the row then belongs to a LATER prompt,
+            // which proves the effect went on, i.e. DCGO took its lone candidate
+            // without asking. A `Replacement` accept/decline is a real question and
+            // is never auto-answered here.
+            let optional_lone_pick = pending.is_optional
+                && !matches!(pending.kind, crate::selection::SelectionKind::Replacement);
+            if (pending.is_optional && !optional_lone_pick) || pending.valid_action_ids.len() != 1 {
+                break;
+            }
+            // DCGO's first half of a two-step digivolution-source pick: a
+            // carrier-only row (targets, no cards) against our single MATERIAL
+            // `UnionZone` prompt, followed by this actor's card row. It is folded by
+            // `material_carrier_row` below, so the lone candidate must NOT be
+            // auto-answered here (that would pay the following cost and move memory
+            // before the DCGO memory check, and orphan the card rows).
+            let carrier_only_row = payload.card_ids.is_none()
+                && payload.cancel != Some(true)
+                && payload.bool_value.is_none()
+                && payload.int_value.is_none()
+                && payload.targets.as_ref().is_some_and(|t| !t.is_empty());
+            if carrier_only_row
+                && (matches!(&pending.kind, crate::selection::SelectionKind::UnionZone { zones }
+                    if zones.contains(crate::selection::UnionZoneSet::MATERIAL))
+                    || payload.targets.as_ref().and_then(|t| t.first()).is_some_and(|t| {
+                        source_multi_carrier_has_candidate(game, t)
+                    }))
+                && self
+                    .source
+                    .steps()
+                    .get(self.cursor as usize + 1)
+                    .and_then(|s| s.selection.as_ref())
+                    .is_some_and(|n| {
+                        n.actor == actor && n.card_ids.as_ref().is_some_and(|c| !c.is_empty())
+                    })
+            {
+                break;
+            }
+            if super::selection_resolve::resolve_next(game, payload, 0).is_ok() {
+                break;
+            }
+            let (forced_actor, forced) = (pending.selecting_player, pending.valid_action_ids[0]);
+            game.decode_action(forced, forced_actor);
+        }
+
         let phase_before = game.current_phase.py_name().to_string();
         let memory_before = game.memory;
         let memory_pair_before = game.memory_pair;
         let turn_number = game.turn_count;
-        let actor = payload.actor;
 
         // DCGO memory-gauge check (see `check_dcgo_memory` doc comment):
         // compare BEFORE applying the picks, matching when DCGO's own
@@ -1875,6 +2133,126 @@ impl ReplayDriver {
             && game.pending_selection.as_ref().is_some_and(|p| {
                 p.is_optional && matches!(p.kind, crate::selection::SelectionKind::UnionZone { .. })
             });
+        // The same shape for DCGO's "activate this optional effect?" gate: it
+        // asks a Yes/No (`OptionalSkill`, recorded as `bool_value`) and, on Yes,
+        // THEN asks for the card/target. Our engine parks only the pick, with
+        // decline as its PASS exit. A recorded `yes` against such a prompt
+        // (more than one accept id, not an effect-choice branch list) just means
+        // "proceed to the pick", so it is consumed when this actor's pick row
+        // follows. A `no` still resolves as the decline (the PASS) as before.
+        // A ONE-candidate optional pick folds too, but only when the next row
+        // actually names a card/target (a bare yes against a single-candidate
+        // prompt otherwise still resolves as that one accept id).
+        let next_row_names_pick = self
+            .source
+            .steps()
+            .get(self.cursor as usize + 1)
+            .and_then(|s| s.selection.as_ref())
+            .is_some_and(|n| {
+                n.actor == actor
+                    && (n.card_ids.as_ref().is_some_and(|c| !c.is_empty())
+                        || n.targets.as_ref().is_some_and(|c| !c.is_empty()))
+            });
+        let optional_yes_gate = payload.bool_value == Some(true)
+            && payload.card_ids.is_none()
+            && payload.targets.is_none()
+            && game.pending_selection.as_ref().is_some_and(|p| {
+                p.is_optional
+                    && p.effect_choices.is_none()
+                    && (p.valid_action_ids.len() > 1
+                        // A lone ACCEPT of a `Replacement` prompt is the real answer
+                        // to the recorded yes, not a gate in front of a pick.
+                        || (p.valid_action_ids.len() == 1
+                            && next_row_names_pick
+                            && !matches!(p.kind, crate::selection::SelectionKind::Replacement)))
+            })
+            && self
+                .source
+                .steps()
+                .get(self.cursor as usize + 1)
+                .and_then(|s| s.selection.as_ref())
+                .is_some_and(|n| n.actor == actor);
+        // DCGO picks a digivolution-source card in two steps: the Digimon that
+        // holds it (`SelectPermanentEffect`, targets only), THEN the card
+        // (`SelectCardEffect`, zone DigivolutionCards). Our engine parks ONE
+        // `UnionZone` prompt over every legal source card, so the Digimon row
+        // only narrowed the carrier: consume it when this actor's card row
+        // follows, and let that row (which names the card) carry the decision.
+        let material_carrier_row = payload.card_ids.is_none()
+            && payload.cancel != Some(true)
+            && payload.bool_value.is_none()
+            && payload.int_value.is_none()
+            && payload.targets.as_ref().is_some_and(|t| !t.is_empty())
+            && (game.pending_selection.as_ref().is_some_and(|p| {
+                matches!(&p.kind, crate::selection::SelectionKind::UnionZone { zones }
+                    if zones.contains(crate::selection::UnionZoneSet::MATERIAL))
+            }) || payload.targets.as_ref().and_then(|t| t.first()).is_some_and(|t| {
+                source_multi_carrier_has_candidate(game, t)
+            }))
+            && next_row_names_pick
+            && self
+                .source
+                .steps()
+                .get(self.cursor as usize + 1)
+                .and_then(|s| s.selection.as_ref())
+                .is_some_and(|n| n.card_ids.as_ref().is_some_and(|c| !c.is_empty()));
+        // DCGO asks a <Link> declaration's "Link (Cost: N)" as an OptionalSkill
+        // Yes/No and THEN the host (cost paid after the host pick). Our engine
+        // parks only the mandatory host pick, so a recorded yes in front of the host
+        // row is just the gate and is consumed without touching the engine.
+        let link_host_yes_gate = payload.bool_value == Some(true)
+            && payload.card_ids.is_none()
+            && payload.targets.is_none()
+            && next_row_names_pick
+            && game.pending_selection_resume.as_ref().is_some_and(|r| {
+                matches!(
+                    r.frames.first(),
+                    Some(crate::resume::ResumeFrame::DigimonLinkHostSelection(_))
+                        | Some(crate::resume::ResumeFrame::OptionHandLinkHostSelection(_))
+                )
+            });
+        // A generic_int ZONE choice over a hand/trash union is only followed by a
+        // CARD pick (card_ids). A bare targets row after it belongs to a later,
+        // unrelated permanent prompt, so it must not make the int look like a
+        // narrowing step (BT25-085 Option: "Do not place a card" = 3).
+        let generic_zone_int = zone_choice_int;
+        // DCGO's "From hand / From trash" question (`SetBoolSelection`, true =
+        // hand, false = trash) in front of a card pick is ONE optional union
+        // prompt over both zones in the engine. A recorded `false` there is the
+        // zone, not a decline: it is consumed when the next row picks a TRASH
+        // card that the engine's own union prompt accepts (BT25-092 Asuna).
+        let zone_choice_bool_trash = payload.prompt == "generic_bool"
+            && payload.bool_value == Some(false)
+            && payload.card_ids.is_none()
+            && payload.targets.is_none()
+            && payload.count.is_none()
+            && payload.int_value.is_none()
+            && payload.cancel != Some(true)
+            && game.pending_selection.as_ref().is_some_and(|p| {
+                p.is_optional
+                    && matches!(&p.kind, crate::selection::SelectionKind::UnionZone { zones }
+                        if zones.contains(crate::selection::UnionZoneSet::HAND)
+                            && zones.contains(crate::selection::UnionZoneSet::TRASH))
+            })
+            && self
+                .source
+                .steps()
+                .get(self.cursor as usize + 1)
+                .and_then(|s| s.selection.as_ref())
+                .is_some_and(|n| {
+                    n.actor == actor
+                        && n.zone.as_deref() == Some("Trash")
+                        && n.card_ids.as_ref().is_some_and(|c| !c.is_empty())
+                        && matches!(
+                            super::selection_resolve::resolve_next(game, n, 0),
+                            Ok(Some(id)) if id != crate::action::space::PASS
+                        )
+                });
+        let zone_choice_int = zone_choice_int
+            || optional_yes_gate
+            || link_host_yes_gate
+            || material_carrier_row
+            || zone_choice_bool_trash;
         let declined_zone_choice;
         let payload = if zone_choice_int {
             let next_names_card = self
@@ -1883,7 +2261,13 @@ impl ReplayDriver {
                 .get(self.cursor as usize + 1)
                 .and_then(|s| s.selection.as_ref())
                 .is_some_and(|n| {
-                    n.actor == actor && n.card_ids.as_ref().is_some_and(|c| !c.is_empty())
+                    n.actor == actor
+                        && (n.card_ids.as_ref().is_some_and(|c| !c.is_empty())
+                            || (n.targets.as_ref().is_some_and(|c| !c.is_empty())
+                                && !(generic_zone_int
+                                    && !optional_yes_gate
+                                    && !link_host_yes_gate
+                                    && !material_carrier_row)))
                 });
             if next_names_card {
                 self.cursor += 1;
@@ -1909,6 +2293,126 @@ impl ReplayDriver {
         } else {
             payload
         };
+
+        // `MultipleSkills` -1 is DCGO's "Don't activate these effects": every
+        // remaining simultaneous effect is declined. Our engine resolves them one
+        // at a time - pick the next entry of the trigger-order list, then decline
+        // the optional prompt that effect opens - so decline-all is that loop.
+        // Stops at the first prompt that is neither (a mandatory effect cannot be
+        // declined, and is left for the following rows).
+        if payload.prompt == "MultipleSkills"
+            && payload.int_value == Some(-1)
+            && game.pending_selection.as_ref().is_some_and(|p| {
+                matches!(p.kind, crate::selection::SelectionKind::TriggerOrder)
+            })
+        {
+            let mut last_action = 0u16;
+            for _ in 0..16 {
+                let Some(p) = game.pending_selection.as_ref() else {
+                    break;
+                };
+                let (who, action) = if matches!(p.kind, crate::selection::SelectionKind::TriggerOrder) {
+                    (p.selecting_player, p.valid_action_ids[0])
+                } else if p.is_optional {
+                    (p.selecting_player, crate::action::space::PASS)
+                } else {
+                    break;
+                };
+                game.decode_action(action, who);
+                last_action = action;
+            }
+            self.cursor += 1;
+            return ReplayStepResult {
+                step_number: self.cursor,
+                player_id: actor,
+                action_id: last_action,
+                phase_before,
+                phase_after: game.current_phase.py_name().to_string(),
+                memory_before,
+                memory_after: game.memory,
+                turn_number,
+                is_game_over: game.game_over,
+                winner_id: game.winner,
+                divergences: Vec::new(),
+            };
+        }
+
+        // The inverse fold: the engine models a "by returning N cards, ..." cost as
+        // a leading accept/decline `EffectChoice` that DCGO never asks - it asks
+        // only the `canNoSelect` card pick. A recorded card/target pick that names
+        // no branch of such a gate is therefore the acceptance AND the pick:
+        // accept first, then resolve the row against the pick the branch opens.
+        // A gate whose entries DO belong to the picked card (a genuine card
+        // choice) keeps the ordinary path.
+        if payload.cancel != Some(true)
+            && payload.bool_value.is_none()
+            && payload.int_value.is_none()
+        {
+            let first_card = payload
+                .card_ids
+                .as_ref()
+                .and_then(|c| c.first().cloned());
+            let named_pick = first_card.is_some()
+                || payload.targets.as_ref().is_some_and(|t| !t.is_empty());
+            let gate = game.pending_selection.as_ref().and_then(|p| {
+                if !named_pick
+                    || !matches!(p.kind, crate::selection::SelectionKind::EffectChoice)
+                    || p.selecting_player != actor
+                {
+                    return None;
+                }
+                let (yes, _) = super::selection_resolve::yes_no_branches(p)?;
+                let belongs_to_pick = first_card.as_deref().is_some_and(|want| {
+                    p.effect_choices.iter().flatten().any(|e| {
+                        e.source_card
+                            .and_then(|c| game.card_data_for_handle(c))
+                            .is_some_and(|d| d.card_id == want)
+                    })
+                });
+                (!belongs_to_pick).then_some(yes)
+            });
+            if let Some(yes) = gate {
+                game.decode_action(yes, actor);
+            }
+        }
+
+        // Branch-then-pick: the engine leads with a branch `EffectChoice` that
+        // DCGO derives from the card it asks for (BT25-078 Gazimon: DCGO picks
+        // the revealed card first, then asks hand-vs-source only when the card
+        // has the trait; the engine asks the branch first). The row therefore
+        // answers a prompt it was not recorded against. Each branch is PROBED on
+        // a clone of the game: the branch whose follow-up prompt accepts the row
+        // (or, for a cancel, can be declined) is the one DCGO took. Applied only
+        // when exactly one branch qualifies; two qualifying branches need DCGO's
+        // trailing true/false row to name one; none leaves the row to diverge.
+        if let Some((branch, row_consumed)) = self.probe_branch_for_row(game, payload, actor) {
+            let was_trigger_order = game
+                .pending_selection
+                .as_ref()
+                .is_some_and(|p| matches!(p.kind, crate::selection::SelectionKind::TriggerOrder));
+            game.decode_action(branch, actor);
+            if was_trigger_order && Self::is_outer_optional_gate(game) {
+                game.decode_action(crate::action::space::REPLACEMENT_ACCEPT, actor);
+            }
+            // A cancel whose chosen branch left nothing to decline (the effect
+            // fizzled) has been fully answered by the branch itself.
+            if row_consumed {
+                self.cursor += 1;
+                return ReplayStepResult {
+                    step_number: self.cursor,
+                    player_id: actor,
+                    action_id: branch,
+                    phase_before,
+                    phase_after: game.current_phase.py_name().to_string(),
+                    memory_before,
+                    memory_after: game.memory,
+                    turn_number,
+                    is_game_over: game.game_over,
+                    winner_id: game.winner,
+                    divergences: Vec::new(),
+                };
+            }
+        }
 
         let mut picks_done = 0usize;
         let mut last_action: u16 = 0;
@@ -1958,6 +2462,417 @@ impl ReplayDriver {
             winner_id: game.winner,
             divergences: Vec::new(),
         }
+    }
+
+    /// Answer a parked, mandatory, ONE-option card-ordering prompt that DCGO
+    /// never asked.
+    ///
+    /// The engine deliberately surfaces even a trivial ordering decision to the
+    /// agent (`EffectContext::place_remainder_on_deck`: "1 card -> still
+    /// installs a 1-choice `OrderedPermutation`", no-approximations policy), but
+    /// DCGO places a lone remaining card without a prompt, so the recording has
+    /// no row for it. It is the mirror image of `resolve_next` skipping a
+    /// recorded prompt the engine never parked: the forced answer is applied
+    /// before the next recorded row so that row meets the prompt it was recorded
+    /// against. Only `remaining: 1` qualifies; with two or more cards the order
+    /// is a real choice and DCGO records it.
+    fn answer_forced_single_ordering_prompt(&mut self, game: &mut Game) {
+        use crate::selection::SelectionKind;
+        let mut guard = 0;
+        while let Some(pending) = game.pending_selection.as_ref() {
+            guard += 1;
+            if guard > 8
+                || !matches!(pending.kind, SelectionKind::OrderedPermutation { remaining: 1 })
+                || pending.is_optional
+                || pending.valid_action_ids.len() != 1
+            {
+                break;
+            }
+            let (actor, action) = (pending.selecting_player, pending.valid_action_ids[0]);
+            game.decode_action(action, actor);
+        }
+    }
+
+    /// Answer a parked `<Partition>` source pick that DCGO never prompted.
+    ///
+    /// DCGO offers pick k only from slot k's pool and skips a one-card pool
+    /// (see `keyword_effects::partition_dcgo_silent_pick`); the engine lets the
+    /// controller order the plays (16-29-4 fixes no order), so it parks a pick
+    /// for which the recording has no row. Only under the DCGO-oracle policy:
+    /// a native recording logs every engine action, this one included.
+    fn answer_dcgo_silent_partition_pick(&mut self, game: &mut Game) {
+        if self.policy != StepPolicy::CheckThenApply {
+            return;
+        }
+        for _ in 0..4 {
+            let Some(actor) = game.pending_selection.as_ref().map(|p| p.selecting_player) else {
+                return;
+            };
+            let Some(action) = crate::cards::keyword_effects::partition_dcgo_silent_pick(game)
+            else {
+                return;
+            };
+            game.decode_action(action, actor);
+        }
+    }
+
+    /// Is the parked prompt a clause-level "you may" accept/decline gate
+    /// (`ResumeFrame::OuterOptionalTrigger`, single accept id)?
+    fn is_outer_optional_gate(game: &Game) -> bool {
+        game.pending_selection.as_ref().is_some_and(|p| {
+            p.is_optional
+                && p.valid_action_ids == [crate::action::space::REPLACEMENT_ACCEPT]
+                && game.pending_selection_resume.as_ref().is_some_and(|r| {
+                    matches!(
+                        r.frames.first(),
+                        Some(crate::resume::ResumeFrame::OuterOptionalTrigger(_))
+                    )
+                })
+        })
+    }
+
+    /// The branch of a parked (non-yes/no) `EffectChoice` that the recorded row
+    /// proves, or `None` when the row belongs to the prompt itself or no branch
+    /// (or no single branch) is proved. See the call site for the policy.
+    fn probe_branch_for_row(
+        &self,
+        game: &Game,
+        payload: &crate::dcgo_recording::SelectionRow,
+        actor: PlayerId,
+    ) -> Option<(u16, bool)> {
+        use crate::selection::SelectionKind;
+        let pending = game.pending_selection.as_ref()?;
+        // A trigger-ordering prompt too: DCGO's `MultipleSkills` lists only the
+        // effects whose `CanActivate` holds RIGHT NOW and skips the question
+        // (recording no row) when one is left, while the engine orders every
+        // queued trigger. A recorded `MultipleSkills` row is handled by
+        // `resolve_next`; any other pick row names the trigger that ran.
+        let is_trigger_order = matches!(pending.kind, SelectionKind::TriggerOrder)
+            && payload.prompt != "MultipleSkills";
+        if !(matches!(pending.kind, SelectionKind::EffectChoice) || is_trigger_order)
+            || pending.selecting_player != actor
+            || super::selection_resolve::yes_no_branches(pending).is_some()
+            || payload.bool_value.is_some()
+            || payload.int_value.is_some()
+            || payload.count.is_some()
+        {
+            return None;
+        }
+        let entries = pending.effect_choices.as_ref()?;
+        if entries.len() < 2 {
+            return None;
+        }
+        let named_card = payload.card_ids.as_ref().and_then(|c| c.first().cloned());
+        let is_cancel = payload.cancel == Some(true)
+            && named_card.is_none()
+            && payload.targets.as_ref().is_none_or(|t| t.is_empty());
+        let is_named_pick = named_card.is_some()
+            || payload.targets.as_ref().is_some_and(|t| !t.is_empty());
+        if !is_cancel && !is_named_pick {
+            return None;
+        }
+        // The row already resolves against the branch list itself: not ours.
+        if !is_cancel && super::selection_resolve::resolve_next(game, payload, 0).is_ok() {
+            return None;
+        }
+        if let Some(want) = named_card.as_deref() {
+            let belongs = entries.iter().any(|e| {
+                e.source_card
+                    .and_then(|c| game.card_data_for_handle(c))
+                    .is_some_and(|d| d.card_id == want)
+            });
+            if belongs {
+                return None;
+            }
+        }
+        // (branch action, the recorded row is fully answered by the branch,
+        // digest of the game after the row is applied under that branch)
+        let mut passing: Vec<(u16, bool, u64)> = Vec::new();
+        // The prompt each qualifying branch leaves parked BEFORE the row is
+        // applied: (kind, prompt text, offered ids).
+        let mut shown: Vec<(String, String, Vec<u16>)> = Vec::new();
+        for entry in entries {
+            let mut probe = game.clone();
+            probe.decode_action(entry.action_id, actor);
+            // A chosen "you may" trigger parks its own accept/decline first; the
+            // row is the acceptance AND the pick (see the implied-accept fold).
+            if is_trigger_order && Self::is_outer_optional_gate(&probe) {
+                probe.decode_action(crate::action::space::REPLACEMENT_ACCEPT, actor);
+            }
+            let qualifies = if is_cancel {
+                // The decline is legal when the follow-up prompt is optional, or
+                // the effect fizzled (nothing mandatory left to pick).
+                match probe.pending_selection.as_ref() {
+                    None => true,
+                    Some(p) => {
+                        p.is_optional
+                            || p.selecting_player != actor
+                            || matches!(p.kind, SelectionKind::OrderedPermutation { .. })
+                    }
+                }
+            } else {
+                // A card pick is answered by a PICK prompt. An ordering prompt
+                // (what an unfillable branch leaves behind) also "accepts" a card
+                // id positionally, which proves nothing.
+                !matches!(
+                    probe.pending_selection.as_ref().map(|p| &p.kind),
+                    Some(SelectionKind::OrderedPermutation { .. })
+                ) && matches!(super::selection_resolve::resolve_next(&probe, payload, 0), Ok(Some(_)))
+            };
+            if qualifies {
+                let fizzled = is_cancel
+                    && probe.pending_selection.as_ref().is_none_or(|p| !p.is_optional);
+                // Apply the row under this branch and fingerprint the result, so
+                // branches that lead to the SAME game can be told apart from
+                // branches that do not (see the selection below).
+                let mut applied = probe.clone();
+                if !is_cancel {
+                    if let Ok(Some(id)) = super::selection_resolve::resolve_next(&applied, payload, 0) {
+                        applied.decode_action(id, actor);
+                    }
+                }
+                passing.push((entry.action_id, fizzled, applied.verification_digest()));
+                shown.push(match probe.pending_selection.as_ref() {
+                    Some(p) => (format!("{:?}", p.kind), p.prompt.clone(), p.valid_action_ids.clone()),
+                    None => (String::new(), String::new(), Vec::new()),
+                });
+            }
+        }
+        // Several branches that all lead to the SAME game once the row is applied
+        // (e.g. a second clause whose cost cannot be paid fizzles and leaves the
+        // first to run) make the order unobservable: any of them is faithful.
+        // DCGO only lists effects it can activate right now, so it never asked.
+        if passing.len() > 1 && passing.iter().all(|(_, _, d)| *d == passing[0].2) {
+            return Some((passing[0].0, passing[0].1));
+        }
+        // Branches that all park the SAME prompt for the row (an effect with no
+        // legal target fizzles silently and leaves the other trigger's prompt)
+        // are likewise unobservable as an order: had the skipped trigger done
+        // anything, its own prompt would be the one showing. DCGO lists only the
+        // effects it can activate, so it never asked.
+        if !is_cancel && passing.len() > 1 && !shown.is_empty() && shown.iter().all(|x| *x == shown[0]) {
+            return Some((passing[0].0, passing[0].1));
+        }
+        let passing: Vec<(u16, bool)> = passing.iter().map(|(a, f, _)| (*a, *f)).collect();
+        match passing.as_slice() {
+            [only] => Some(*only),
+            [first, second] if !is_cancel => {
+                // DCGO's trailing `generic_bool` names the branch: true = the
+                // first-listed ("Add to hand"), false = the second ("Place").
+                let flag = (1..=3).find_map(|offset| {
+                    let n = self.source.steps().get(self.cursor as usize + offset)?;
+                    let sel = n.selection.as_ref()?;
+                    (sel.actor == actor && sel.prompt == "generic_bool")
+                        .then_some(sel.bool_value)
+                        .flatten()
+                })?;
+                Some(if flag { *first } else { *second })
+            }
+            _ => None,
+        }
+    }
+
+    /// Answer a mandatory ONE-candidate field pick that DCGO never asked, ahead
+    /// of a recorded ACTION row.
+    ///
+    /// DCGO skips a pick with a single candidate (EX12-026's "1 of their Digimon
+    /// with 1 or fewer digivolution cards can't attack or block" against one
+    /// eligible Digimon), so the recording has no row for it, while the engine
+    /// parks the pick. `apply_selection_step` already answers such a prompt when
+    /// a SELECTION row arrives; this covers the case where the next row is an
+    /// action. Applied only when that action is not currently legal: the field-
+    /// pick ids (100..) overlap the attack ids, so a legal action means the
+    /// prompt is not what the row is about. The single candidate leaves no
+    /// choice, so legality proves the answer.
+    fn answer_dcgo_silent_lone_target_pick(&mut self, game: &mut Game) {
+        use crate::selection::SelectionKind;
+        if self.policy != StepPolicy::CheckThenApply {
+            return;
+        }
+        for _ in 0..4 {
+            let cur = self.cursor as usize;
+            let Some(step) = self.source.steps().get(cur) else {
+                return;
+            };
+            if step.selection.is_some() || step.source == "play_card_extra" {
+                return;
+            }
+            let Some(pending) = game.pending_selection.as_ref() else {
+                return;
+            };
+            if pending.is_optional
+                || pending.valid_action_ids.len() != 1
+                || !matches!(
+                    pending.kind,
+                    SelectionKind::OppField | SelectionKind::OwnField | SelectionKind::AnyField
+                )
+            {
+                return;
+            }
+            // Would the recorded action be legal as it stands? Then the row is
+            // an answer to something else, not a prompt DCGO skipped.
+            let mask = crate::action::build_action_mask(game, step.actor);
+            let remapped = remap_board_slots(
+                game,
+                step.action_id,
+                step.actor,
+                step.board_p0.as_ref(),
+                step.board_p1.as_ref(),
+            );
+            let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
+            if legal(step.action_id) || legal(remapped) {
+                return;
+            }
+            let (actor, action) = (pending.selecting_player, pending.valid_action_ids[0]);
+            game.decode_action(action, actor);
+        }
+    }
+
+    /// Answer the engine's "which card goes to the deck bottom/top next" ordering
+    /// prompt when the recording carries no row for it.
+    ///
+    /// Cards returned to a deck TOGETHER (BT20-045's "return all of your
+    /// opponent's highest-DP Digimon to the bottom of the deck") have an
+    /// order the owner of the effect chooses; the engine exposes it (an
+    /// `AnyField` pick over the remaining members, from `replacement_departure_
+    /// batch`). DCGO places them in an order of its own and records nothing, so
+    /// the true order is UNKNOWN. Taking the lowest board slot (DCGO's frame
+    /// order) is an assumption, made only when the next recorded row is not a
+    /// selection that could answer the prompt; it affects only which of the
+    /// returned cards would be drawn first from that deck, which the recording
+    /// cannot confirm either way. Documented as R-RECORDER-UNRECORDED-STACK-ORDER
+    /// in qa/rules/dcgo_quirks.md.
+    fn answer_dcgo_unrecorded_stack_order(&mut self, game: &mut Game) {
+        use crate::selection::SelectionKind;
+        if self.policy != StepPolicy::CheckThenApply {
+            return;
+        }
+        for _ in 0..8 {
+            let cur = self.cursor as usize;
+            let Some(step) = self.source.steps().get(cur) else {
+                return;
+            };
+            let Some(pending) = game.pending_selection.as_ref() else {
+                return;
+            };
+            if pending.is_optional
+                || pending.kind != SelectionKind::AnyField
+                || pending.valid_action_ids.len() < 2
+                || !(pending.prompt == "Choose the bottommost remaining card"
+                    || pending.prompt == "Choose the topmost remaining card")
+            {
+                return;
+            }
+            // A recorded selection that resolves here is the real answer.
+            if let Some(payload) = step.selection.as_ref() {
+                if super::selection_resolve::resolve_next(game, payload, 0).is_ok() {
+                    return;
+                }
+            }
+            let (actor, action) = (pending.selecting_player, pending.valid_action_ids[0]);
+            game.decode_action(action, actor);
+        }
+    }
+
+    /// After the declared security attack, take the <Raid> trigger and switch the
+    /// attack to the opponent slot DCGO recorded. Every step is taken only from
+    /// the prompts the engine itself presents; if the switch is not offered the
+    /// state is left as it is and the following recorded rows diverge honestly.
+    fn apply_raid_switch(&mut self, game: &mut Game, target: u16) {
+        use crate::selection::SelectionKind;
+        for _ in 0..8 {
+            let Some(p) = game.pending_selection.as_ref() else {
+                return;
+            };
+            let who = p.selecting_player;
+            if p.prompt == "Raid - switch attack target" {
+                let want = crate::action::space::encode_attack(0, target);
+                if p.valid_action_ids.contains(&want) {
+                    game.decode_action(want, who);
+                }
+                return;
+            }
+            if matches!(p.kind, SelectionKind::TriggerOrder) {
+                let raid = p
+                    .effect_choices
+                    .iter()
+                    .flatten()
+                    .find(|e| matches!(e.keyword, Some(crate::enums::Keyword::Raid)))
+                    .map(|e| e.action_id);
+                match raid {
+                    Some(id) => {
+                        game.decode_action(id, who);
+                        continue;
+                    }
+                    None => return,
+                }
+            }
+            if Self::is_outer_optional_gate(game) && p.prompt.contains("Raid") {
+                game.decode_action(crate::action::space::REPLACEMENT_ACCEPT, who);
+                continue;
+            }
+            return;
+        }
+    }
+
+    /// Answer a parked digivolution COST choice that DCGO never asked, taking the
+    /// ordinary (non-burst) route.
+    ///
+    /// DCGO records a Burst Digivolve as the digivolve action followed by a
+    /// `play_card_extra` row naming the returned Tamer. When a Tamer is on the
+    /// field the engine offers the burst route as a second cost option; if the
+    /// row after the digivolve is NOT that `play_card_extra`, DCGO paid the
+    /// printed cost (its `action_detail.cost_paid` agrees), so the engine's
+    /// non-burst route is the faithful answer. Folded only when the engine's own
+    /// route list has exactly one non-burst route and at least one burst route,
+    /// and only against an action row (a recorded selection row would carry the
+    /// choice itself). The exact inverse of `apply_burst_tamer_extra`.
+    fn answer_dcgo_ordinary_cost_route(&mut self, game: &mut Game) {
+        if self.policy != StepPolicy::CheckThenApply {
+            return;
+        }
+        let cur = self.cursor as usize;
+        let Some(step) = self.source.steps().get(cur) else {
+            return;
+        };
+        if step.source == "play_card_extra" {
+            return;
+        }
+        let Some(pending) = game.pending_selection.as_ref() else {
+            return;
+        };
+        // A recorded selection row that resolves against the cost prompt is
+        // that prompt's own answer; only a row that cannot belongs to a LATER
+        // prompt, which proves the cost was settled without being asked.
+        if let Some(payload) = step.selection.as_ref() {
+            if super::selection_resolve::resolve_next(game, payload, 0).is_ok() {
+                return;
+            }
+        }
+        let Some(routes) = game.pending_selection_resume.as_ref().and_then(|stack| {
+            stack.frames.iter().rev().find_map(|frame| match frame {
+                crate::resume::ResumeFrame::DigivolveCostChoice(state) => Some(state.routes.clone()),
+                _ => None,
+            })
+        }) else {
+            return;
+        };
+        if routes.len() != pending.valid_action_ids.len()
+            || !routes.iter().any(|route| route.burst.is_some())
+        {
+            return;
+        }
+        let ordinary: Vec<usize> = routes
+            .iter()
+            .enumerate()
+            .filter(|(_, route)| route.burst.is_none())
+            .map(|(i, _)| i)
+            .collect();
+        let [only] = ordinary.as_slice() else {
+            return;
+        };
+        let (actor, action) = (pending.selecting_player, pending.valid_action_ids[*only]);
+        game.decode_action(action, actor);
     }
 
     /// Apply a DCGO `play_card_extra` row that names a Burst Digivolve's
@@ -2066,6 +2981,13 @@ impl ReplayDriver {
             return self.no_progress_result(game);
         }
 
+        // A forced one-card ordering prompt DCGO never asked (see the helper).
+        self.answer_forced_single_ordering_prompt(game);
+        self.answer_dcgo_silent_partition_pick(game);
+        self.answer_dcgo_silent_lone_target_pick(game);
+        self.answer_dcgo_unrecorded_stack_order(game);
+        self.answer_dcgo_ordinary_cost_route(game);
+
         let cur = self.cursor as usize;
 
         // Semantic selection step (task 3.5): resolve the DCGO payload
@@ -2118,6 +3040,22 @@ impl ReplayDriver {
         // DCGO indexes the battle area by on-screen frame order; the engine
         // indexes it by play order. Rewrite the recorded action's board
         // operands into the engine's index space before anything inspects it.
+        // DCGO's recorder encodes a DNA digivolve as the plain digivolve id and
+        // keeps the partner pair only in the correlated `action_detail`. The
+        // engine's own DNA action is `DNA_DIGIVOLVE_START + hand slot`, followed by
+        // two material picks answered below from that pair.
+        let dna_materials = self.source.steps()[cur].dna_materials.clone();
+        let action_id = if dna_materials.is_some()
+            && (crate::action::space::DIGIVOLVE_START..crate::action::space::DIGIVOLVE_END)
+                .contains(&action_id)
+        {
+            let (hand, _) = crate::action::space::decode_digivolve(action_id);
+            crate::action::space::DNA_DIGIVOLVE_START + hand
+        } else {
+            action_id
+        };
+
+        let raw_action_id = action_id;
         let action_id = {
             let s = &self.source.steps()[cur];
             remap_board_slots(
@@ -2129,10 +3067,222 @@ impl ReplayDriver {
             )
         };
 
+        let action_id = resolve_duplicate_attacker(game, actor, action_id);
+
+        // The frame-order remap trusts the row's board snapshot, which lists
+        // permanents in DCGO's own order (Digimon before Tamers/Options) while a
+        // recorded operand can already be in play order. When the remapped id is
+        // not legal but the recorded one is, the recorded operand was right -
+        // the engine's own legality decides, so a genuine mismatch (neither
+        // legal) still surfaces unchanged.
+        // The recorder (before the fix in `EncodeActivateCard`) wrote an
+        // activated HAND card as `HAND_EFFECT_START + <deck-order card index>`
+        // rather than its current hand slot, so the id lands on the wrong slot or
+        // outside the hand. The row's own `card_id` names the card: if the id is
+        // not legal, re-resolve it to the legal hand-effect bit whose hand card
+        // has that id (lowest slot first), else leave it to surface.
+        let action_id = {
+            use crate::action::space::{HAND_EFFECT_END, HAND_EFFECT_START};
+            let named = self.source.steps()[cur].card_id.clone();
+            match named {
+                Some(want) if (HAND_EFFECT_START..HAND_EFFECT_END).contains(&raw_action_id) => {
+                    let mask = crate::action::build_action_mask(game, actor);
+                    let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
+                    let hand_ids: Vec<String> = game
+                        .player(actor)
+                        .hand
+                        .iter()
+                        .map(|c| c.card_id(&game.card_data).to_string())
+                        .collect();
+                    let at_slot = |id: u16| hand_ids.get((id - HAND_EFFECT_START) as usize);
+                    if legal(raw_action_id) && at_slot(raw_action_id) == Some(&want) {
+                        raw_action_id
+                    } else {
+                        (HAND_EFFECT_START..HAND_EFFECT_END)
+                            .find(|id| legal(*id) && at_slot(*id) == Some(&want))
+                            .unwrap_or(action_id)
+                    }
+                }
+                _ => action_id,
+            }
+        };
+
+        // The recorder encodes every activated permanent skill as the [Main]
+        // sub-slot, but a <Link> declaration has its own sub-slot in the engine's
+        // action space (`FIELD_EFFECT_SLOT_FOR_LINK`). When the [Main] id is not
+        // legal and the same permanent's link id is, the recorded activation was
+        // the link declaration.
+        let action_id = {
+            use crate::action::space::{
+                decode_field_effect, FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_LINK,
+                FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
+            };
+            if (FIELD_EFFECT_START..FIELD_EFFECT_END).contains(&action_id) {
+                let (perm, effect) = decode_field_effect(action_id);
+                if effect == FIELD_EFFECT_SLOT_FOR_MAIN {
+                    let mask = crate::action::build_action_mask(game, actor);
+                    let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
+                    let link_id = FIELD_EFFECT_START
+                        + perm * crate::action::space::EFFECTS_PER_PERMANENT
+                        + FIELD_EFFECT_SLOT_FOR_LINK;
+                    if !legal(action_id) && legal(link_id) {
+                        link_id
+                    } else {
+                        action_id
+                    }
+                } else {
+                    action_id
+                }
+            } else {
+                action_id
+            }
+        };
+
+        // A recorded play / digivolve names a HAND SLOT, which is a position in
+        // DCGO's hand ordering. A hand is an unordered set (CR 4.3), and when a
+        // hand-pick selection names a card with several identical copies, DCGO
+        // removes one at random (`SelectHandEffect`'s AI path `GetRandom`) while
+        // the engine removes the first, so the two orders drift apart and every
+        // later slot-indexed hand action is misaddressed. The row's own `card_id`
+        // names the card: when the recorded slot does not hold it, use the legal
+        // slot that does (lowest first). Only when the recorded slot is wrong AND
+        // a legal slot holding the named card exists; otherwise the id is left to
+        // surface as it is.
+        let action_id = {
+            use crate::action::space::{
+                decode_digivolve, encode_digivolve, DIGIVOLVE_END, DIGIVOLVE_START,
+                DNA_DIGIVOLVE_END, DNA_DIGIVOLVE_START, PLAY_HAND_END, PLAY_HAND_START,
+            };
+            match self.source.steps()[cur].card_id.clone() {
+                Some(want)
+                    if (PLAY_HAND_START..PLAY_HAND_END).contains(&action_id)
+                        || (DIGIVOLVE_START..DIGIVOLVE_END).contains(&action_id)
+                        || (DNA_DIGIVOLVE_START..DNA_DIGIVOLVE_END).contains(&action_id) =>
+                {
+                    let mask = crate::action::build_action_mask(game, actor);
+                    let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
+                    let hand_ids: Vec<String> = game
+                        .player(actor)
+                        .hand
+                        .iter()
+                        .map(|c| c.card_id(&game.card_data).to_string())
+                        .collect();
+                    // (recorded hand slot, rebuild the id for another slot)
+                    let (slot, rebuild): (u16, Box<dyn Fn(u16) -> u16>) =
+                        if (PLAY_HAND_START..PLAY_HAND_END).contains(&action_id) {
+                            (action_id - PLAY_HAND_START, Box::new(|h| PLAY_HAND_START + h))
+                        } else if (DIGIVOLVE_START..DIGIVOLVE_END).contains(&action_id) {
+                            let (hand, field) = decode_digivolve(action_id);
+                            (hand, Box::new(move |h| encode_digivolve(h, field)))
+                        } else {
+                            (
+                                action_id - DNA_DIGIVOLVE_START,
+                                Box::new(|h| DNA_DIGIVOLVE_START + h),
+                            )
+                        };
+                    let holds_named = hand_ids.get(slot as usize) == Some(&want);
+                    if holds_named {
+                        action_id
+                    } else {
+                        (0..hand_ids.len() as u16)
+                            .filter(|h| hand_ids[*h as usize] == want)
+                            .map(|h| rebuild(h))
+                            .find(|id| legal(*id))
+                            .unwrap_or(action_id)
+                    }
+                }
+                _ => action_id,
+            }
+        };
+
+        let action_id = if action_id != raw_action_id {
+            let mask = crate::action::build_action_mask(game, actor);
+            let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
+            if !legal(action_id) && legal(raw_action_id) {
+                if (crate::action::space::DIGIVOLVE_START..crate::action::space::DIGIVOLVE_END)
+                    .contains(&raw_action_id)
+                {
+                    if let Some(card) = self.source.steps()[cur].card_id.clone() {
+                        self.digivolve_operand_fallbacks.push(card);
+                    }
+                }
+                raw_action_id
+            } else {
+                action_id
+            }
+        } else {
+            action_id
+        };
+
+        // A recorded attack on an UNSUSPENDED opponent Digimon by a <Raid>
+        // attacker. DCGO's action space names the switched target directly; the
+        // engine declares the attack on security and then offers the Raid switch
+        // (16-23-2, a trigger). Rewritten only when the engine's own mask has the
+        // security attack and not the recorded one, and the attacker really has
+        // <Raid>.
+        self.raid_retarget = None;
+        let action_id = match raid_declared_target(game, actor, action_id) {
+            Some((security_attack, target)) => {
+                self.raid_retarget = Some(target);
+                security_attack
+            }
+            None => action_id,
+        };
+
         if self.policy == StepPolicy::CheckThenApply {
+            // DCGO ends a turn WITHOUT a Pass row when the turn player has nothing
+            // to do (`TurnStateMachine.MainPhase`: `if (!CanSelect()) yield return
+            // EndTurnProcess()`), so the recording jumps straight to the other
+            // seat. When the engine still waits on the other seat's Main-phase
+            // decision, that decision has exactly one legal action (PASS), and the
+            // next recorded row belongs to the opponent, the silent end-turn is
+            // what happened: apply it so the row meets the decision it was
+            // recorded against. With any other legal action the engine's choice
+            // is real, so nothing is skipped and the mismatch still surfaces.
+            if game.pending_selection.is_none()
+                && game.current_phase == GamePhase::Main
+                && current_decision_player(game) != actor
+            {
+                let who = current_decision_player(game);
+                let mask = crate::action::build_action_mask(game, who);
+                let legal: Vec<usize> = mask
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, v)| **v > 0.5)
+                    .map(|(i, _)| i)
+                    .collect();
+                if legal == [crate::action::space::PASS as usize] {
+                    game.decode_action(crate::action::space::PASS, who);
+                }
+            }
             // Differential pre-check: does the engine agree the recorded actor
             // is on decision, and is the recorded action legal here?
-            let expected = current_decision_player(game);
+            // A surrender is available to either seat at any moment (DCGO's Surrender button is not tied to whose
+            // decision it is), so CONCEDE_GAME is exempt from the on-decision-player check.
+            let expected = if action_id == crate::action::space::CONCEDE_GAME {
+                actor
+            } else {
+                current_decision_player(game)
+            };
+            if expected != actor && self.source.steps()[cur].inferred {
+                // A row the converter had to guess: the engine is already waiting on another seat (e.g. the turn
+                // ended by the memory gauge crossing), so the guess was unnecessary. Skip it, and count it.
+                self.inferred_skipped.push(self.cursor);
+                self.cursor += 1;
+                return ReplayStepResult {
+                    step_number: self.cursor,
+                    player_id: actor,
+                    action_id,
+                    phase_before: game.current_phase.py_name().to_string(),
+                    phase_after: game.current_phase.py_name().to_string(),
+                    memory_before: game.memory,
+                    memory_after: game.memory,
+                    turn_number: game.turn_count,
+                    is_game_over: game.game_over,
+                    winner_id: game.winner,
+                    divergences: Vec::new(),
+                };
+            }
             if expected != actor {
                 self.divergences.push(Divergence {
                     step: self.cursor,
@@ -2193,6 +3343,35 @@ impl ReplayDriver {
         );
 
         game.decode_action(action_id, actor);
+        if let Some(target) = self.raid_retarget.take() {
+            self.apply_raid_switch(game, target);
+        }
+        if let Some(materials) = dna_materials.as_ref().filter(|_| {
+            (crate::action::space::DNA_DIGIVOLVE_START..crate::action::space::DNA_DIGIVOLVE_END)
+                .contains(&action_id)
+        }) {
+            for want in materials {
+                let Some(p) = game.pending_selection.as_ref() else {
+                    break;
+                };
+                if p.kind != crate::selection::SelectionKind::Material
+                    || !crate::selection::is_dna_material_prompt(&p.prompt)
+                {
+                    break;
+                }
+                let board = engine_board_ids(game, p.selecting_player);
+                let pick = p
+                    .valid_action_ids
+                    .iter()
+                    .copied()
+                    .find(|id| board.get(*id as usize) == Some(want));
+                let who = p.selecting_player;
+                match pick {
+                    Some(id) => game.decode_action(id, who),
+                    None => break,
+                };
+            }
+        }
         self.cursor += 1;
 
         let phase_after = game.current_phase.py_name().to_string();
@@ -2279,6 +3458,7 @@ impl ReplayDriver {
             self.source.relay_initial_state(game)?;
             self.cursor = 0;
             self.divergences.clear();
+            self.digivolve_operand_fallbacks.clear();
             self.paused = false;
         }
         while self.cursor < target && !game.game_over && !self.paused {
@@ -2422,7 +3602,15 @@ impl ReplaySession {
     /// never completed". Always `0` for non-DCGO sources and for DCGO
     /// recordings that carry no `action_detail` rows at all.
     pub fn skipped_incomplete_plays(&self) -> u32 {
-        self.driver.skipped_incomplete_plays()
+        // Converter-inferred rows the engine had already moved past count as skipped too: a PASS that quietly
+        // dropped a guessed decision must still show it.
+        self.driver.skipped_incomplete_plays() + self.driver.inferred_skipped().len() as u32
+    }
+
+    /// Card ids of digivolve actions that only replayed because the recorded
+    /// operand was legal where the board-remapped one was not.
+    pub fn digivolve_operand_fallbacks(&self) -> &[String] {
+        self.driver.digivolve_operand_fallbacks()
     }
 
     pub fn current_step(&self) -> u32 {
@@ -2639,6 +3827,35 @@ fn remap_selection_targets(
 /// when the action carries no board operand, or when any operand fails to map
 /// — an unmapped operand means the boards genuinely disagree, which is a
 /// divergence to report rather than paper over.
+/// If `action_id` is an attack on an UNSUSPENDED opponent Digimon that the
+/// engine does not offer, while the same attacker's security attack IS offered
+/// and the attacker has <Raid>, return `(security_attack_id, opponent_slot)`.
+///
+/// DCGO's recorder names the Raid-switched target as the attack's target; the
+/// engine declares the attack on security first and switches in the trigger.
+fn raid_declared_target(game: &Game, actor: PlayerId, action_id: u16) -> Option<(u16, u16)> {
+    use crate::action::space::{decode_attack, encode_attack, ATTACK_END, ATTACK_START, SECURITY_TARGET};
+    if !(ATTACK_START..ATTACK_END).contains(&action_id) {
+        return None;
+    }
+    let (attacker, target) = decode_attack(action_id);
+    if target == SECURITY_TARGET {
+        return None;
+    }
+    let mask = crate::action::build_action_mask(game, actor);
+    let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
+    let security_attack = encode_attack(attacker, SECURITY_TARGET);
+    if legal(action_id) || !legal(security_attack) {
+        return None;
+    }
+    let handle = crate::permanent::PermanentHandle { player: actor, index: attacker as u8 };
+    if !game.has_keyword(handle, crate::enums::Keyword::Raid) {
+        return None;
+    }
+    let victim = game.players.get(1 - actor as usize)?.battle_area.get(target as usize)?;
+    (!victim.is_suspended).then_some((security_attack, target))
+}
+
 fn remap_board_slots(
     game: &Game,
     action_id: u16,
@@ -2710,6 +3927,46 @@ fn remap_board_slots(
     }
 
     action_id
+}
+
+/// Resolve a recorded attack whose attacker is ambiguous between duplicate
+/// permanents.
+///
+/// A recording's board is card ids in DCGO frame order, so two copies of one
+/// card (two [ST24-05]) cannot be told apart, and `build_slot_map` pairs them in
+/// occurrence order. When that pairing makes the attack illegal but exactly one
+/// OTHER copy of the same card can legally make the same attack on the same
+/// target, that copy is the permanent DCGO meant: the engine's own legality
+/// (summoning sickness, suspension) is what separates them. Anything else -
+/// already legal, not an attack, no legal sibling, or more than one - is returned
+/// unchanged so a genuine mismatch still surfaces as a divergence.
+fn resolve_duplicate_attacker(game: &Game, actor: PlayerId, action_id: u16) -> u16 {
+    use crate::action::space::{ATTACK_END, ATTACK_START, TARGETS_PER_ATTACKER};
+    if !(ATTACK_START..ATTACK_END).contains(&action_id) {
+        return action_id;
+    }
+    let mask = crate::action::build_action_mask(game, actor);
+    let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
+    if legal(action_id) {
+        return action_id;
+    }
+    let offset = action_id - ATTACK_START;
+    let (attacker, target) = (offset / TARGETS_PER_ATTACKER, offset % TARGETS_PER_ATTACKER);
+    let ids = engine_board_ids(game, actor);
+    let Some(card) = ids.get(attacker as usize) else {
+        return action_id;
+    };
+    let siblings: Vec<u16> = ids
+        .iter()
+        .enumerate()
+        .filter(|(i, c)| *i != attacker as usize && *c == card)
+        .map(|(i, _)| ATTACK_START + i as u16 * TARGETS_PER_ATTACKER + target)
+        .filter(|id| legal(*id))
+        .collect();
+    match siblings.as_slice() {
+        [only] => *only,
+        _ => action_id,
+    }
 }
 
 /// Engine battle-area card IDs for `player`, in `battle_area` index order.
@@ -3285,6 +4542,7 @@ mod tests {
         phase: &str,
     ) -> crate::dcgo_recording::Row {
         crate::dcgo_recording::Row::Action(crate::dcgo_recording::ActionRow {
+            inferred: false,
             step,
             actor,
             action_id,

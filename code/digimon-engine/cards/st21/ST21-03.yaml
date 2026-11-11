@@ -1,0 +1,116 @@
+# ST21-03 Ikkakumon — Digimon, Lv.4, Blue, DP 4000, Cost 4.
+# Traits: Sea Beast / ADVENTURE. Form: Champion. Attribute: Vaccine.
+#
+# Printed card text (data/card_bundles/ST21-03.md — official Bandai DB):
+#
+#   Digivolve: Blue Lv.3 / cost 2
+#   [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2
+#   [Security] At the end of the battle, play this card without paying the cost.
+#   [On Play] [When Digivolving] Trash the top 2 digivolution cards of 1 of your
+#     opponent's Digimon. Then, 1 of their Digimon with no digivolution cards
+#     can't attack or block until their turn ends.
+#   Inherited: [When Attacking] [Once Per Turn] If you have 7 or fewer cards in
+#     your hand, <Draw 1>.
+#
+#   Official Q&A: the second half "affects 1 of your opponent's Digimon with no
+#   digivolution cards, and the processing prevents that Digimon from attacking
+#   or blocking until their turn ends. Even if it gains a digivolution card
+#   after being affected by the effect, the effect will continue processing."
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Blue/ST21_03.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+#  * Alt digivolution: AddSelfDigivolutionRequirementStaticEffect(base
+#    Level == 3 && HasAdventureTraits, cost 2, ignoreDigivolutionRequirement
+#    false) → second alt-path (first is the printed blue Lv.3 / cost 2 circle).
+#  * Security: PlaySelfDigimonAfterBattleSecurityEffect → `when: on_security` +
+#    `play_from_security: {}` (BT24-036 / BT25-036 / BT21-015 idiom).
+#  * [On Play] / [When Digivolving]: two OnEnterFieldAnyone ActivateClass shells
+#    sharing one coroutine (non-optional, no OPT):
+#      Step 1: SelectPermanentEffect over ANY opponent Digimon (no "has
+#        digivolution cards" filter), `canNoSelect: false` →
+#        TrashDigivolutionCardsFromTopOrBottom(trashCount 2, isFromTop true).
+#      Step 2: gated on an opponent Digimon with `HasNoDigivolutionCards`
+#        (evaluated AFTER step 1, so the step-1 target can become eligible),
+#        SelectPermanentEffect `canNoSelect: false` → GainCanNotAttack +
+#        GainCanNotBlock, EffectDuration.UntilOpponentTurnEnd.
+#    Identical to BT16-021 Togemogumon's body (trash_top_stacked_sources +
+#    materials_count_lte 0 lock), here with count 2 and an on_play /
+#    when_digivolving trigger.
+#  * Inherited [When Attacking] [Once Per Turn] (OnAllyAttack, maxCountPerTurn
+#    1, hash "WhenAttacking_ST21_03"): `CanActivateCondition` = self on battle
+#    area && hand <= 7 && library >= 1 → draw 1 (BT18-037 Lobomon idiom for the
+#    hand-size gate, plus once_per_turn).
+
+card: ST21-03
+name: Ikkakumon
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 4000
+traits: [Sea Beast, ADVENTURE]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  # Printed standard circle: Blue Lv.3 / cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2
+
+  # [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2 (any colour).
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: ADVENTURE }
+    cost: 2
+
+effects:
+  # ─── [Security] At the end of the battle, play this card without paying the
+  #     cost ────────────────────────────────────────────────────────────────
+  - when: on_security
+    summary: "[Security] At the end of the battle, play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # ─── [On Play] [When Digivolving] strip top 2, then freeze a stripped-bare
+  #     Digimon ────────────────────────────────────────────────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash the top 2 digivolution cards of 1 of your opponent's Digimon; then 1 of their Digimon with no digivolution cards can't attack or block until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: strip_target
+          filter: { kind: digimon }
+          prompt: "Trash the top 2 digivolution cards of 1 of your opponent's Digimon"
+      - trash_top_stacked_sources:
+          target: strip_target
+          count: 2
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+          prompt: "1 of your opponent's Digimon with no digivolution cards can't attack or block until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotAttack
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: lock_target
+          modifier: CannotBlock
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── Inherited [When Attacking] [Once Per Turn] draw 1 with <=7 cards in hand
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      count_lte:
+        filter: { owner: you, zone: [hand] }
+        n: 7
+    summary: "[Inherited][When Attacking][Once Per Turn] If you have 7 or fewer cards in your hand, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

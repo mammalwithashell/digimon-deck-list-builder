@@ -1,0 +1,50 @@
+# ST20-01 Koromon — Digi-Egg, Lv.2, Black, no DP, play cost 0.
+# Traits: Lesser, ADVENTURE. Form: In-Training.
+#
+# Printed card text (official Bandai DB, data/card_bundles/ST20-01.md):
+#
+#   Inherited Effect
+#   [All Turns] This Digimon with the [ADVENTURE] trait gets +1000 DP.
+#
+# No main (face-up) text, no digivolution cost circle (Digi-Egg).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Black/ST20_01.cs
+#
+#   One `EffectTiming.None` static effect:
+#     CardEffectFactory.ChangeSelfDPStaticEffect(changeValue: 1000,
+#         isInheritedEffect: true, card: card,
+#         condition: () => card.PermanentOfThisCard().TopCard.HasAdventureTraits)
+#
+#   The gate reads the CARRIER permanent's TOP card (the card this egg is
+#   digivolved under), not this egg itself: "This Digimon with the [ADVENTURE]
+#   trait" is the Digimon whose digivolution stack holds the egg. There is no
+#   turn gate, hence [All Turns].
+#
+# ─── DSL shape ───────────────────────────────────────────────────────────────
+#
+# `scope: inherited` self-aura (`target: {}` = the carrier) with a continuously
+# re-evaluated `active_when` gate. `source_permanent_trait_has` resolves the
+# carrier permanent's TOP-card trait line (BT10-003 / AD1-013 / BT21-021
+# idiom), so the +1000 DP is live only while the carrier itself has [ADVENTURE]
+# and drops if the carrier stops having it. Same mold as BT16-002 DemiVeemon
+# (`self_color_count_gte` gate) and ST1-01 Koromon (turn-gated DP aura).
+
+card: ST20-01
+name: Koromon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+traits: [Lesser, ADVENTURE]
+form: In-Training
+
+effects:
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - source_permanent_trait_has: ADVENTURE
+    target: {}
+    dp_modifier: 1000
+    summary: "[All Turns] This Digimon with the [ADVENTURE] trait gets +1000 DP"

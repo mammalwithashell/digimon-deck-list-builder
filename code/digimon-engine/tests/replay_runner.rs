@@ -520,6 +520,7 @@ fn dcgo_bot_recording() -> RecordingV1 {
         },
         rows: vec![
             Row::Action(ActionRow {
+                inferred: false,
                 step: 0,
                 actor: 0,
                 action_id: 0,
@@ -532,6 +533,7 @@ fn dcgo_bot_recording() -> RecordingV1 {
                 memory_before: None,
             }),
             Row::Action(ActionRow {
+                inferred: false,
                 step: 1,
                 actor: 1,
                 action_id: 0,
@@ -703,6 +705,7 @@ fn dcgo_bot_recording_with_redraw() -> RecordingV1 {
         },
         rows: vec![
             Row::Action(ActionRow {
+                inferred: false,
                 step: 0,
                 actor: 0,
                 action_id: 1, // redraw, not keep
@@ -715,6 +718,7 @@ fn dcgo_bot_recording_with_redraw() -> RecordingV1 {
                 memory_before: None,
             }),
             Row::Action(ActionRow {
+                inferred: false,
                 step: 1,
                 actor: 1,
                 action_id: 0, // keep

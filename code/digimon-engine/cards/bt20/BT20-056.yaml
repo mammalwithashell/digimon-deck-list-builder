@@ -103,9 +103,12 @@ effects:
     optional: true
     once_per_turn: true
     active_when:
+      # Self-only: DCGO CanTriggerWhenRemoveField(hashtable, card) is
+      # `permanent.cardSources.Contains(card)`. Leaves that read the replacement
+      # subject (replacement_subject_is_mine, kind, name_is...) make the clause
+      # cross-permanent, so none may appear here.
       all_of:
-        - replacement_subject_is_mine: true
-        - name_is: "Alphamon: Ouryuken"
+        - source_name_is: "Alphamon: Ouryuken"
         - security_count_gte: 1
         - none_of:
             - replacement_cause: own_effect

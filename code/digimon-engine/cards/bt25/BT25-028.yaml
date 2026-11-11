@@ -115,6 +115,11 @@ effects:
           prompt: "Trash any 4 digivolution cards from your opponent's Digimon"
           then:
             - trash_selected_sources: { source_refs: trashed }
+      # DCGO (DNADigivolvePermanentsIntoHandOrTrashCard) opens its skippable
+      # GraceNovamon pick only when a GraceNovamon in hand can be DNA-played; with
+      # none in hand it asks nothing. The hand leaf leaves this pick with no
+      # candidates (so no prompt) in that case, and the declined-half refund still
+      # reads the unbound pick.
       - select_own_permanent:
           bind_as: dna_anchor
           optional: true
@@ -122,6 +127,13 @@ effects:
             all_of:
               - kind: digimon
               - zone: [battle_area]
+              - count_gte:
+                  filter:
+                    of: you
+                    zone: [hand]
+                    kind: digimon
+                    name_contains: "GraceNovamon"
+                  n: 1
           prompt: "Choose the first of 2 of your Digimon to DNA digivolve into [GraceNovamon]"
       - may_dna_digivolve_now:
           anchor: { binding: dna_anchor }

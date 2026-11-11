@@ -19660,10 +19660,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
-   "protection_constructs": [
-    "clause:flood_gate",
-    "modifier:CannotBeAffected"
-   ],
+   "protection_constructs": [],
    "untested_constructs": []
   },
   "EX10-020": {
@@ -41006,6 +41003,18 @@
     "dsl::attack_history_predicate.rs::lowers_digimon_attack_history_predicate_into_active_when",
     "dsl::attack_history_predicate.rs::parses_digimon_attack_history_predicate_with_player_ref"
    ]
+  },
+  "predicate:distinct_colors_gte": {
+   "kind": "predicate",
+   "name": "distinct_colors_gte",
+   "near_miss_files": [
+    "src/dsl_cards/predicate.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
   },
   "predicate:distinct_named_count_gte": {
    "kind": "predicate",
@@ -78511,8 +78520,8 @@
     "parsed_only": 7,
     "tested": 192,
     "tested_behaviourally": 185,
-    "total": 221,
-    "untested": 29,
+    "total": 222,
+    "untested": 30,
     "used_by_cards": 195,
     "used_untested": 22
    },

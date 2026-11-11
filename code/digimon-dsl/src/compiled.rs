@@ -524,6 +524,7 @@ pub struct CompiledPredicate {
     /// packs loadable.
     #[serde(default)]
     pub distinct_named_count_gte: Option<CompiledDistinctNamedCount>,
+    pub distinct_colors_gte: Option<CompiledDistinctNamedCount>,
     /// True when the observer's battle-area Tamers collectively carry at least
     /// N face-down digivolution sources. G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER.
     pub face_down_sources_under_tamers_gte: Option<u8>,
@@ -1218,6 +1219,10 @@ pub struct CompiledTriggeredClause {
     pub outer_prompt: bool,
     pub once_per_turn: bool,
     pub max_per_turn: Option<u8>,
+    /// Queue this clause's effects as Option effects. See
+    /// `clause::TriggeredClause::as_option_effect`.
+    #[serde(default)]
+    pub as_option_effect: bool,
     pub process: Vec<CompiledStep>,
     pub summary: Option<String>,
     pub summary_key: Option<String>,
@@ -3446,6 +3451,7 @@ mod tests {
                 optional: false,
                 outer_prompt: false,
                 once_per_turn: false,
+                as_option_effect: false,
                 max_per_turn: None,
                 process: vec![CompiledStep::GainMemory(1)],
                 summary: None,
@@ -3508,6 +3514,7 @@ mod tests {
                 optional: false,
                 outer_prompt: false,
                 once_per_turn: false,
+                as_option_effect: false,
                 max_per_turn: None,
                 process: vec![],
                 summary: None,

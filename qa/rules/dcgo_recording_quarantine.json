@@ -1,0 +1,10 @@
+{
+  "_comment": "Recordings that are invalid as replay input for a reason no signature can prove from the recording alone. Human-reviewed; one entry per game with the evidence. dcgo-replay reports a quarantined game that STILL FAILS under 'triaged' (never 'pass'); if the engine later replays it cleanly it counts as a pass. Do not add a game because it is hard to fix: add it only with a diagnosis showing the recording itself is wrong.",
+  "quarantined": [
+    {
+      "game_id": "c2bd1ab974b9430ea17cd84260688ac5",
+      "id": "R-QUARANTINE-SCRIPTED-RAW-ACTION-IDS",
+      "reason": "Scripted exam job exam-BT26-103-effect1 (policy 'scripted', harness aside/iter0-v18; its result.json names this recording). The job passed the simulator's raw action ids to DCGO: P1 'attack security' id 114 selects DCGO compact slot 0, which is ST1-10 (DCGO orders its field by frame id: [ST1-10, ST1-02]), not the ST1-02 the script meant; DCGO's scripted path does not validate attack legality (InputDriver.BuildMainPhaseAction returns the AttackPermanentAction unchecked), so P0's final scripted attack_0_to_0 targets an UNSUSPENDED Digimon with no <Raid>, which the engine correctly refuses. The engine is in step with DCGO's state sidecar until that row. Re-record with the current harness (P1 attacks with ST1-02 via action 129) to obtain a valid line."
+    }
+  ]
+}

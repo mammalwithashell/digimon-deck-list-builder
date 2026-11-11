@@ -1,0 +1,134 @@
+# ST21-14 Believe in Our Friendship — Option, Purple, Cost 3.
+# Traits: ADVENTURE.
+#
+# Printed card text (cards.json / official Bandai DB bundle
+# data/card_bundles/ST21-14.md):
+#
+#   While you have an [ADVENTURE] trait Digimon or Tamer on the field, you can
+#   ignore this card's color requirements.
+#   [Main] Reveal the top 3 cards of your deck. Add 1 card with the
+#   [ADVENTURE] trait among them to the hand. Return the rest to the bottom of
+#   the deck. Then, place this card in the battle area.
+#   [Main] <Delay> (By trashing this card after the placing turn, activate the
+#   effect below.)
+#   ・Gain 2 memory.
+#
+# Inherited (Security) effect:
+#   Security Effect [Security] Place this card in the battle area.
+#
+# Official Q&A (bundle): "on the field" = the battle area OR the breeding area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Purple/ST21_14.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Color Requirements Condition" (EffectTiming.None):
+#   `IgnoreColorConditionClass`, `cardCondition: cardSource == card`.
+#   `CanUseCondition` = `HasMatchConditionPermanent(p => (p.IsTamer ||
+#   p.IsDigimon) && p.TopCard.HasAdventureTraits, isContainBreedingArea: true)`
+#   — the breeding area is scanned (matching the official Q&A), which agrees
+#   with `any_field_permanent` (battle area + breeding).
+#   DIVERGENCE (deliberate): DCGO's `HasMatchConditionPermanent` iterates BOTH
+#   players' fields (no owner filter), so DCGO would let an OPPONENT's
+#   [ADVENTURE] permanent satisfy "While YOU have ...". The printed text says
+#   "you have", so this implementation is owner-scoped (`of: you`). The rules
+#   manual outranks DCGO on a rules question.
+#   → card-level `use_requirement` (the mechanism the Option-use mask and
+#   decoder actually consult — a `flood_gate` carried by a card in HAND never
+#   registers; see BT21-091 / BT24-094 / ST20-15) PLUS a `kind: flood_gate`
+#   IgnoreColorRequirement mirroring DCGO's `IgnoreColorConditionClass`.
+#
+# Region "Main" (EffectTiming.OptionSkill):
+#   `SetUpActivateClass(null, ..., -1, isOptional=false)` — mandatory.
+#   `RevealDeckTopCardsAndSelect(revealCount: 3, [bucket(HasAdventureTraits,
+#   maxCount 1, canNoSelect: false, AddHand)], RemainingCardsPlace.DeckBottom)`
+#   then `PlaceDelayOptionCards(card)` (the "Then, place this card in the
+#   battle area" step).
+#   → `reveal_top_deck` + single-bucket `select_reveal_buckets` (min 1, max 1:
+#   mandatory when an eligible card exists, silent when none — BT22-099 /
+#   BT24-100 idiom) + `add_to_hand_from_reveal` + `place_remainder_on_deck
+#   bottom` + `place_self_as_delay_option`.
+#
+# Region "Main Delay" (EffectTiming.OnDeclaration):
+#   `CanDeclareOptionDelayEffect` → trash self (cost) then `AddMemory(2)` →
+#   `kind: delay` with `trigger: delayed` (player-activated [Main] action,
+#   barred on the placing turn) + `gain_memory: 2`.
+#
+# Region "Security" (EffectTiming.SecuritySkill):
+#   `PlaceSelfDelayOptionSecurityEffect` → inherited `on_security` +
+#   `place_self_as_delay_option`.
+#
+# ─── Implementation status ────────────────────────────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | Ignore colour requirements with ADVENTURE Digimon/Tamer        | IMPLEMENTED (use_requirement + flood_gate) |
+# | [Main] reveal 3, add 1 ADVENTURE, bottom rest, place self      | IMPLEMENTED |
+# | [Main] <Delay> gain 2 memory                                   | IMPLEMENTED |
+# | [Security] place this card in the battle area                  | IMPLEMENTED |
+
+card: ST21-14
+name: "Believe in Our Friendship"
+kind: option
+color: [purple]
+cost: 3
+traits: [ADVENTURE]
+
+use_requirement:
+  any_field_permanent:
+    of: you
+    zone: [battle_area, breeding]
+    all_of:
+      - any_of:
+          - kind: digimon
+          - kind: tamer
+      - trait_has: ADVENTURE
+
+effects:
+  # ─── Clause 0: colour-requirement bypass ────────────────────────────────────
+  - kind: flood_gate
+    active_when:
+      any_field_permanent:
+        of: you
+        zone: [battle_area, breeding]
+        all_of:
+          - any_of:
+              - kind: digimon
+              - kind: tamer
+          - trait_has: ADVENTURE
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "ST21-14" }
+    summary: "While you have an [ADVENTURE] Digimon or Tamer on the field, ignore color requirements for this card"
+
+  # ─── Clause 1: [Main] reveal 3, add 1 ADVENTURE, bottom the rest, place self ─
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal the top 3; add 1 [ADVENTURE] card to hand; return the rest to the bottom; place this card in the battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: adventure_pick
+              min: 1
+              max: 1
+              filter: { trait_has: ADVENTURE }
+          prompt: "Add 1 card with the [ADVENTURE] trait among the revealed cards to your hand"
+      - add_to_hand_from_reveal: { of: you, card: adventure_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  # ─── Clause 2: [Main] <Delay> gain 2 memory ─────────────────────────────────
+  - kind: delay
+    trigger: delayed
+    summary: "[Main] <Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  # ─── Clause 3: [Security] place this card in the battle area ────────────────
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

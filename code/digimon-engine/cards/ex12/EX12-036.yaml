@@ -114,6 +114,12 @@ effects:
     trigger_if:
       event_target_owner: you
       event_target_kind: digimon
+    # DCGO's CanActivateCondition requires an opponent Digimon to exist
+    # (HasMatchConditionPermanent(IsOpponentsDigimon)); without one the effect is
+    # not activatable, is dropped from the simultaneous-trigger choice, and does
+    # not use up its once-per-turn.
+    condition:
+      any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
     summary: "[All Turns][OPT] When any of your Digimon are played or digivolve, 1 opponent Digimon can't activate WD effects or suspend until their turn ends"
     process:
       - select_opponent_permanent:

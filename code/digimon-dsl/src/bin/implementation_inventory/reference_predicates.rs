@@ -70,6 +70,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             has_face_down_source,
             distinct_tamer_colors_gte,
             distinct_named_count_gte,
+            distinct_colors_gte,
             face_down_sources_under_tamers_gte,
             battle_opponent_no_sources,
             self_source_count,
@@ -427,6 +428,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         distinct_named_count_gte.walk(
             c,
             &format!("{}.distinct_named_count_gte", path),
+            "UNCLASSIFIED_STRING",
+        );
+        distinct_colors_gte.walk(
+            c,
+            &format!("{}.distinct_colors_gte", path),
             "UNCLASSIFIED_STRING",
         );
         face_down_sources_under_tamers_gte.walk(
@@ -1734,6 +1740,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             has_face_down_source,
             distinct_tamer_colors_gte,
             distinct_named_count_gte,
+            distinct_colors_gte,
             face_down_sources_under_tamers_gte,
             battle_opponent_no_sources,
             self_source_count,
@@ -2087,6 +2094,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         distinct_named_count_gte.walk(
             c,
             &format!("{}.distinct_named_count_gte", path),
+            "UNCLASSIFIED_STRING",
+        );
+        distinct_colors_gte.walk(
+            c,
+            &format!("{}.distinct_colors_gte", path),
             "UNCLASSIFIED_STRING",
         );
         face_down_sources_under_tamers_gte.walk(

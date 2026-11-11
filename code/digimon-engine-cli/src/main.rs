@@ -17,6 +17,7 @@ use digimon_engine::view::Perspective;
 use serde_json::Value;
 
 mod admission;
+mod dcgo_agent;
 mod debug_repl;
 mod replay_view;
 mod selfplay;
@@ -115,6 +116,54 @@ enum Command {
         /// the profile recorded in the model's embedded training contract.
         #[arg(long)]
         tensor_profile: Option<String>,
+    },
+
+    /// Play one game in our engine with a model on both seats and save it as a native recording (the input of
+    /// DCGO playback: `make_playback_plan.py` + `dcgo-agent --script`).
+    SimRecord {
+        #[arg(long)]
+        model: PathBuf,
+        /// JSON list of card ids (eggs included) for seat 0.
+        #[arg(long)]
+        deck0: PathBuf,
+        #[arg(long)]
+        deck1: PathBuf,
+        #[arg(long, default_value_t = 1)]
+        seed: u64,
+        #[arg(long)]
+        out: PathBuf,
+        #[arg(long)]
+        tensor_profile: Option<String>,
+        #[arg(long, default_value_t = 3000)]
+        max_steps: u32,
+    },
+
+    /// Let a trained policy+value model play one seat inside the installed DCGO client (with the MelonLoader
+    /// recorder mod): watch `--dir` for request files from the mod, replay the game so far, and answer with the
+    /// model's action described in DCGO terms. See `dcgo_agent.rs` and docs/DCGO_MELONLOADER.md.
+    DcgoAgent {
+        /// Shared directory the mod writes `request-*.json` into.
+        #[arg(long)]
+        dir: PathBuf,
+        /// Policy+value ONNX export (e.g. an EX13 campaign checkpoint).
+        #[arg(long)]
+        model: PathBuf,
+        /// The mod's raw-log converter (code/dcgo-melon-recorder/convert_raw.py).
+        #[arg(long)]
+        converter: PathBuf,
+        /// Python interpreter used to run the converter.
+        #[arg(long, default_value = "python")]
+        python: String,
+        /// Observation profile; defaults to the model's embedded contract.
+        #[arg(long)]
+        tensor_profile: Option<String>,
+        /// Play back a native recording instead of choosing with the model: answer each request with the action
+        /// the seat took in that game (see `sim-record`). The model is still loaded but not consulted.
+        #[arg(long)]
+        script: Option<PathBuf>,
+        /// Answer the requests currently in `--dir` and exit (for tests).
+        #[arg(long)]
+        once: bool,
     },
 
     /// Generate AlphaZero self-play training data: play search-driven
@@ -290,6 +339,26 @@ fn run() -> ExitCode {
                 }
             };
             winprob::run(recording, model, out, batch, tensor_profile, card_data)
+        }
+        Command::DcgoAgent { dir, model, converter, python, tensor_profile, once, script } => {
+            let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
+                Ok(cd) => cd,
+                Err(e) => {
+                    eprintln!("error loading card data: {}", e);
+                    return ExitCode::from(2);
+                }
+            };
+            dcgo_agent::run(dir, model, converter, python, tensor_profile, once, script, card_data)
+        }
+        Command::SimRecord { model, deck0, deck1, seed, out, tensor_profile, max_steps } => {
+            let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
+                Ok(cd) => cd,
+                Err(e) => {
+                    eprintln!("error loading card data: {}", e);
+                    return ExitCode::from(2);
+                }
+            };
+            dcgo_agent::sim_record(model, deck0, deck1, seed, out, tensor_profile, max_steps, card_data)
         }
         Command::PrepareBeliefPrior {decks,out,format_id,provenance} => {
             let data = match load_card_data(&cli.cards_json,&cli.pool) { Ok(data)=>data,Err(e)=>{eprintln!("{e}");return ExitCode::from(2)}};

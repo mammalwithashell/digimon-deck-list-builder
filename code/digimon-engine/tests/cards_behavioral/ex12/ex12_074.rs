@@ -236,3 +236,93 @@ fn ex12_074_security_digivolve_rearms_next_turn() {
         "a new turn re-arms the [Once Per Turn]"
     );
 }
+
+/// DCGO offers only hand cards that can actually digivolve onto the attacker at
+/// the reduced cost (`CanPlayCardTargetFrame`) and opens no pick when there are
+/// none, so the recording has no row for it. A Lv.6 attacker with only a Lv.5
+/// [Shambala] Digimon (which needs a Lv.4) in hand therefore parks nothing.
+#[test]
+fn ex12_074_security_digivolve_offers_no_pick_when_no_hand_card_can_digivolve_the_attacker() {
+    let needs_lv4 = with_evo_cost(
+        tb_digimon("NEEDS-LV4", CardColor::Yellow, 5, 7000),
+        CardColor::Yellow,
+        4,
+        3,
+    );
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-074 YAML loads")
+        .add_card(tb_digimon("ATTACKER", CardColor::Yellow, 6, 9000))
+        .add_card(needs_lv4)
+        .add_card(plain_digimon("SEC", CardColor::Purple, 3, 3000))
+        .hand(0, &["NEEDS-LV4"])
+        .security(0, &[CARD_ID])
+        .security(1, &["SEC"])
+        .memory(5)
+        .start();
+    let security_index = runner.game.players[0].security[0].card_index;
+    runner.game.players[0]
+        .face_up_security
+        .insert(security_index);
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+
+    runner.attack_player(attacker, 1, false);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no hand card can digivolve the Lv.6 attacker, so nothing is offered: {:?}",
+        runner.pending_selection()
+    );
+    assert_eq!(top_card_id(&runner, 0, attacker.index as usize), "ATTACKER");
+}
+
+/// With both a legal and an illegal [Shambala] Digimon in hand, the pick lists
+/// only the legal one.
+#[test]
+fn ex12_074_security_digivolve_pick_lists_only_legal_digivolutions() {
+    let legal = with_evo_cost(
+        tb_digimon("LEGAL-EVO", CardColor::Yellow, 5, 7000),
+        CardColor::Yellow,
+        4,
+        3,
+    );
+    let illegal = with_evo_cost(
+        tb_digimon("ILLEGAL-EVO", CardColor::Yellow, 5, 7000),
+        CardColor::Yellow,
+        3,
+        3,
+    );
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-074 YAML loads")
+        .add_card(tb_digimon("ATTACKER", CardColor::Yellow, 4, 5000))
+        .add_card(legal)
+        .add_card(illegal)
+        .add_card(plain_digimon("SEC", CardColor::Purple, 3, 3000))
+        .hand(0, &["ILLEGAL-EVO", "LEGAL-EVO"])
+        .security(0, &[CARD_ID])
+        .security(1, &["SEC"])
+        .memory(5)
+        .start();
+    let security_index = runner.game.players[0].security[0].card_index;
+    runner.game.players[0]
+        .face_up_security
+        .insert(security_index);
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+
+    runner.attack_player(attacker, 1, false);
+    let view = runner
+        .pending_selection_view()
+        .expect("one legal digivolution exists, so the pick is offered");
+    let picks: Vec<u16> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|id| *id != digimon_engine::action::space::PASS)
+        .collect();
+    assert_eq!(
+        picks.len(),
+        1,
+        "only LEGAL-EVO can digivolve the Lv.4 attacker: {picks:?}"
+    );
+}

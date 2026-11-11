@@ -33,6 +33,7 @@ mod gazimon_optional_scope;
 mod gazimon_alt_paths;
 mod reveal_optional_pick_continuation;
 mod de_digivolve;
+mod replacement_self_only_guard;
 #[path = "../support/dsl_card_data.rs"]
 mod dsl_card_data;
 mod dsl_omnimon_slice;

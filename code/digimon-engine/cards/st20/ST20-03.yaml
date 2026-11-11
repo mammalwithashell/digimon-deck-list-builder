@@ -1,0 +1,94 @@
+# ST20-03 Birdramon — Digimon, Lv.4, Red, DP 4000, play cost 4.
+# Traits: Giant Bird, ADVENTURE. Form: Champion. Attribute: Vaccine.
+#
+# Printed card text (official Bandai DB, data/card_bundles/ST20-03.md):
+#
+#   [On Play] [When Digivolving] If your Tamers with the [ADVENTURE] trait have
+#   3 or more total colors, this Digimon may digivolve into a Digimon card with
+#   the [ADVENTURE] trait in the hand without paying the cost.
+#
+#   Inherited Effect
+#   [Your Turn] This Digimon gets +2000 DP.
+#
+#   Digivolution:  Red Lv.3: Cost 2   (cards.json evo_costs)
+#   [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2   (xros_req)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Red/ST20_03.cs
+#
+#   1. "Alternate Digivolution Requirement" — permanentCondition =
+#      TopCard.HasAdventureTraits && HasLevel && Level == 3, digivolutionCost 2,
+#      ignoreDigivolutionRequirement false.
+#   2/3. [On Play] and [When Digivolving] — two OnEnterFieldAnyone
+#      ActivateClasses (CanTriggerOnPlay / CanTriggerWhenDigivolving) sharing
+#      one CanActivateCondition: on the battle area AND
+#        Combinations.GetDifferenetColorCardCount(
+#            owner's battle-area Tamers whose TopCard.HasAdventureTraits) >= 3.
+#      `isOptional: true` ("may"). Body: DigivolveIntoHandOrTrashCard(
+#      targetPermanent: this permanent, cardCondition: IsDigimon &&
+#      HasAdventureTraits, payCost: false, ignoreDigivolutionRequirementFixedCost
+#      -1 = requirements NOT ignored, isHand: true).
+#   4. "Your Turn - ESS" — ChangeSelfDPStaticEffect(+2000, isInheritedEffect)
+#      gated by IsExistOnBattleAreaDigimon && IsOwnerTurn.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# All clauses authored. The [On Play]/[When Digivolving] gate ("the DISTINCT colours across your
+# [ADVENTURE]-trait Tamers number 3 or more") uses `distinct_colors_gte`
+# (G-DSL-DISTINCT-COLORS-FILTERED-GTE), the filtered sibling of `distinct_tamer_colors_gte`.
+
+card: ST20-03
+name: Birdramon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+traits: [Giant Bird, ADVENTURE]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  # Standard digivolve circle: Red Lv.3 / cost 2 (printed evo_costs).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+
+  # xros_req: "[Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2".
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: ADVENTURE }
+    cost: 2
+
+effects:
+  # ─── Inherited [Your Turn] +2000 DP ─────────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"
+
+  # ─── [On Play] [When Digivolving] optional free digivolve ───────────────────
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] If your [ADVENTURE] Tamers have 3+ total colors, this Digimon may digivolve into an [ADVENTURE] Digimon card in the hand without paying the cost"
+    condition:
+      distinct_colors_gte:
+        of: you
+        filter: { kind: tamer, trait_has: ADVENTURE }
+        n: 3
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: ADVENTURE
+              - can_digivolve_from_source: true
+          prompt: "Digivolve into 1 [ADVENTURE] Digimon in your hand without paying the cost"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo_pick
+          cost: 0
+          ignore_requirements: false

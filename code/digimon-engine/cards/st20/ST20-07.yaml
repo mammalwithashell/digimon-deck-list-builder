@@ -1,0 +1,54 @@
+# ST20-07 Tentomon — Digimon, Lv.3, Green, DP 3000, Cost 3.
+# Traits: Insectoid / ADVENTURE. Form: Rookie. Attribute: Vaccine.
+#
+# Printed card text (official Bandai DB, data/card_bundles/ST20-07.md):
+#
+#   [Opponent's Turn] Your opponent can't reduce digivolution costs.
+#
+#   Digivolve box (xros_req): "[Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0"
+#   Standard evo_costs:       Lv.2 Green, Cost 0.
+#   Official Q&A: the effect prevents digivolution costs from being reduced
+#   when the costs are to be paid, and it affects the opponent player.
+#
+# DCGO C# reference (base repo):
+#   DCGO/Assets/Scripts/CardEffect/ST20/Green/ST20_07.cs
+#
+# DCGO declares two EffectTiming.None static effects:
+#
+#   1. AddSelfDigivolutionRequirementStaticEffect — Lv.2 with
+#      HasAdventureTraits, digivolutionCost 0, ignoreDigivolutionRequirement
+#      false. This is the printed [Digivolve] xros_req box.
+#   2. CannotReduceCostClass — gated on "this card is on the battle area and
+#      it is the opponent's turn"; playerCondition = the card owner's enemy.
+#
+# Clause layout:
+#   alt_paths[0]  standard digivolve (Lv.2 Green / cost 0, printed evo_costs).
+#   alt_paths[1]  xros_req alt-digivolve (Lv.2 ADVENTURE / cost 0).
+#   effects[0]    flood_gate CannotReduceDigivolveCost on the opponent while it
+#                 is the opponent's turn (BT5-008 / BT5-021 / BT5-033 idiom).
+
+card: ST20-07
+name: Tentomon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 3000
+traits: [Insectoid, ADVENTURE]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: ADVENTURE }
+    cost: 0
+
+effects:
+  - kind: flood_gate
+    summary: "[Opponent's Turn] Your opponent can't reduce digivolution costs"
+    active_when: { opponents_turn: true }
+    target_player: opponent
+    modifier: CannotReduceDigivolveCost

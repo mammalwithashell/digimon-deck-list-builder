@@ -84,6 +84,36 @@ fn push_to_trash(runner: &mut DebugRunner, card_id: &str) {
         .push(CardSource::new(data_idx, 0, next));
 }
 
+/// Is the pending prompt DCGO's single trash pick (`CountCappedMultiSelect`)?
+fn is_trash_pick(runner: &DebugRunner) -> bool {
+    matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::CountCappedMultiSelect { .. })
+    )
+}
+
+/// Offered cards of the pending pick, not counting the PASS decline.
+fn offered_cards(runner: &DebugRunner) -> usize {
+    runner
+        .pending_selection_view()
+        .unwrap()
+        .valid_action_ids
+        .iter()
+        .filter(|id| **id != digimon_engine::action::space::PASS)
+        .count()
+}
+
+/// Take the first offered card of the trash pick `n` times.
+fn pick_trash_cards(runner: &mut DebugRunner, n: usize) {
+    for i in 0..n {
+        assert!(is_trash_pick(runner), "trash pick {} must be pending", i + 1);
+        let view = runner.pending_selection_view().unwrap();
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("pick a trash card");
+    }
+}
+
 // ─── Base runner ──────────────────────────────────────────────────────────────
 
 /// Minimal runner that registers EX10-025. No hand/deck pre-loaded.
@@ -138,9 +168,11 @@ fn ex10_025_on_play_clause_is_optional_face_up() {
         CompiledScope::FaceUp,
         "OnPlay clause must be FaceUp scope"
     );
+    // DCGO registers the effect non-optional; the "may" is the picks' own
+    // `canNoSelect`, so there is no clause-level accept prompt.
     assert!(
-        on_play.optional,
-        "OnPlay clause must be optional (\"You may\")"
+        !on_play.optional,
+        "OnPlay clause is non-optional (the \"may\" is the optional trash pick)"
     );
     assert!(
         !on_play.once_per_turn,
@@ -286,15 +318,22 @@ fn ex10_025_on_play_installs_own_field_selection_when_condition_met() {
 
     runner.play(0, 0);
 
-    let kind = runner.pending_kind();
+    // DCGO order: the trash pick comes FIRST (exactly 2, or none), optional.
+    assert!(is_trash_pick(&runner), "the trash pick installs first");
+    assert!(
+        runner.pending_is_optional(),
+        "the trash pick is declinable (PASS at 0 picks)"
+    );
+    pick_trash_cards(&mut runner, 2);
+
     assert_eq!(
-        kind,
+        runner.pending_kind(),
         Some(SelectionKind::OwnField),
         "OwnField selection must install for the destination Digimon pick"
     );
     assert!(
         runner.pending_is_optional(),
-        "destination pick must be optional (\"you may\" at clause level)"
+        "destination pick must be optional (canNoSelect)"
     );
 }
 
@@ -323,6 +362,7 @@ fn ex10_025_on_play_rock_host_is_valid_destination() {
     push_to_trash(&mut runner, "MIN-RH-2");
 
     runner.play(0, 0);
+    pick_trash_cards(&mut runner, 2);
 
     assert_eq!(
         runner.pending_kind(),
@@ -371,43 +411,20 @@ fn ex10_025_on_play_places_two_trash_cards_under_target_digimon() {
 
     runner.play(0, 0);
 
-    // Step 1: OwnField → pick the Mineral host
+    // Step 1: the single trash pick (exactly 2), one card at a time.
+    pick_trash_cards(&mut runner, 2);
+
+    // Step 2: OwnField → pick the Mineral host
     assert_eq!(
         runner.pending_kind(),
         Some(SelectionKind::OwnField),
-        "step 1 must prompt OwnField (destination pick)"
+        "step 2 must prompt OwnField (destination pick)"
     );
     {
         let view = runner.pending_selection_view().unwrap();
         runner
             .execute_action(view.selecting_player, view.valid_action_ids[0])
             .expect("pick Mineral host as destination");
-    }
-
-    // Step 2: Trash → pick first Mineral card
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::Trash),
-        "step 2 must prompt Trash (first source pick)"
-    );
-    {
-        let view = runner.pending_selection_view().unwrap();
-        runner
-            .execute_action(view.selecting_player, view.valid_action_ids[0])
-            .expect("pick first Mineral card from trash");
-    }
-
-    // Step 3: Trash → pick second Mineral card
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::Trash),
-        "step 3 must prompt Trash (second source pick)"
-    );
-    {
-        let view = runner.pending_selection_view().unwrap();
-        runner
-            .execute_action(view.selecting_player, view.valid_action_ids[0])
-            .expect("pick second Mineral card from trash");
     }
 
     let _ = runner.auto_resolve();
@@ -508,31 +525,24 @@ fn ex10_025_on_play_first_pick_leaves_trash_before_second_pick() {
 
     runner.play(0, 0);
 
-    // Pick destination.
-    {
-        let view = runner.pending_selection_view().unwrap();
-        runner
-            .execute_action(view.selecting_player, view.valid_action_ids[0])
-            .expect("pick dest");
-    }
-
     // Trash pick 1: all 3 eligible cards available.
     let count_at_first_pick = {
         let view = runner.pending_selection_view().unwrap();
-        let count = view.valid_action_ids.len();
+        let count = offered_cards(&runner);
         runner
             .execute_action(view.selecting_player, view.valid_action_ids[0])
             .expect("pick first trash card");
         count
     };
 
-    // Trash pick 2: the first card is no longer in trash → 1 fewer option.
-    let count_at_second_pick = runner.pending_action_count();
+    // Trash pick 2: the already-picked card is excluded from the same prompt.
+    assert!(is_trash_pick(&runner), "still the single trash pick");
+    let count_at_second_pick = offered_cards(&runner);
 
     assert_eq!(
         count_at_second_pick,
         count_at_first_pick - 1,
-        "second trash pick must have 1 fewer option because the first pick moved to sources"
+        "second trash pick must have 1 fewer option because the first card is already picked"
     );
 }
 
@@ -572,8 +582,8 @@ fn ex10_025_on_play_decline_leaves_sources_and_trash_unchanged() {
 
     runner.play(0, 0);
 
-    // Confirm OwnField prompt is pending (optional).
-    assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
+    // The trash pick is pending first and is declinable (canNoSelect).
+    assert!(is_trash_pick(&runner));
     assert!(runner.pending_is_optional(), "must be declinable with PASS");
 
     // Decline.
@@ -595,6 +605,80 @@ fn ex10_025_on_play_decline_leaves_sources_and_trash_unchanged() {
     assert_eq!(
         trash_after, trash_before,
         "declining must leave trash count unchanged"
+    );
+}
+
+/// DCGO order: declining at the HOST pick (after the cards were chosen) places
+/// nothing - the cards stay in the trash.
+#[test]
+fn ex10_025_on_play_decline_at_host_pick_leaves_cards_in_trash() {
+    let host = make_mineral_host("HOST-DECL-HOST");
+    let min1 = make_mineral("MIN-DH-1");
+    let min2 = make_mineral("MIN-DH-2");
+    let filler = make_plain("FILL-DECK");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-025")
+        .expect("EX10-025 parses")
+        .add_card(host)
+        .add_card(min1)
+        .add_card(min2)
+        .add_card(filler)
+        .hand(0, &["EX10-025"])
+        .deck(0, &["FILL-DECK"])
+        .memory(10)
+        .start();
+
+    let host_handle = runner.place_on_field(0, "HOST-DECL-HOST", None);
+    push_to_trash(&mut runner, "MIN-DH-1");
+    push_to_trash(&mut runner, "MIN-DH-2");
+    let sources_before = runner.game.players[0].battle_area[host_handle.index as usize]
+        .card_sources
+        .len();
+    let trash_before = runner.trash_size(0);
+
+    runner.play(0, 0);
+    pick_trash_cards(&mut runner, 2);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .expect("PASS at the optional host pick");
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.game.players[0].battle_area[host_handle.index as usize]
+            .card_sources
+            .len(),
+        sources_before,
+        "no sources placed when the host pick is declined"
+    );
+    assert_eq!(runner.trash_size(0), trash_before, "cards stay in the trash");
+}
+
+/// DCGO's CanActivateCondition also needs an eligible trash card: with a
+/// [Mineral] host on the field but no [Mineral]/[Rock] card in trash, nothing
+/// is prompted.
+#[test]
+fn ex10_025_on_play_no_prompt_when_no_eligible_trash_card() {
+    let host = make_mineral_host("HOST-NOTRASH");
+    let filler = make_plain("FILL-DECK");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-025")
+        .expect("EX10-025 parses")
+        .add_card(host)
+        .add_card(filler)
+        .hand(0, &["EX10-025"])
+        .deck(0, &["FILL-DECK"])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "HOST-NOTRASH", None);
+    runner.play(0, 0);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no [Mineral]/[Rock] card in trash: the effect cannot activate"
     );
 }
 
@@ -636,22 +720,10 @@ fn ex10_025_on_play_trash_selection_excludes_non_mineral_rock_cards() {
 
     runner.play(0, 0);
 
-    // Accept the OwnField destination pick.
-    {
-        let view = runner.pending_selection_view().unwrap();
-        runner
-            .execute_action(view.selecting_player, view.valid_action_ids[0])
-            .expect("pick dest");
-    }
-
     // First Trash pick: only the 2 Mineral cards must be offered.
+    assert!(is_trash_pick(&runner), "the trash pick installs first");
     assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::Trash),
-        "Trash selection must install for first source pick"
-    );
-    assert_eq!(
-        runner.pending_action_count(),
+        offered_cards(&runner),
         2,
         "only the 2 Mineral trash cards must be valid targets; plain cards must be excluded"
     );
@@ -685,6 +757,7 @@ fn ex10_025_on_play_own_field_selection_excludes_non_mineral_rock_digimon() {
     push_to_trash(&mut runner, "MIN-EXC-2");
 
     runner.play(0, 0);
+    pick_trash_cards(&mut runner, 2);
 
     assert_eq!(
         runner.pending_kind(),

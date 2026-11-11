@@ -1,0 +1,180 @@
+# AD1-007 Siriusmon — Digimon, Lv.6, Red, DP 12000, Cost 12.
+# Traits: Light Dragon. Form: Mega. Attribute: Vaccine.
+#
+# Printed text (card image + official Bandai DB bundle data/card_bundles/AD1-007.md):
+#
+#   [Digivolve] Lv.5 w/[Gammamon] in text: Cost 3
+#   ＜Raid＞ ＜Security A. +1＞ ＜Blocker＞
+#   [When Digivolving] [When Attacking] [Once Per Turn] By placing 3 Digimon
+#     cards with [Gammamon] in their texts from your hand or trash as this
+#     Digimon's top or bottom digivolution cards, delete 1 of your opponent's
+#     Digimon with as much or less DP as this Digimon.
+#   [End of Your Turn] [Once Per Turn] This Digimon with 5 or more digivolution
+#     cards may attack without suspending.
+#
+# Standard circle: Red Lv.5 / Cost 4 (card image, official DB, cards.json).
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/AD1/Red/AD1_007.cs
+#   - Alt-digivolve: level 5, TopCard.HasText("Gammamon"), cost 3, ignore false.
+#   - Raid / Security A. +1 / Blocker: *SelfStaticEffect.
+#   - Shared WD / WA (SetHashString "AD1_007_WD_WA", maxCount 1, isOptional
+#     TRUE → the outer yes/no): CanActivateCondition = at least 3 Digimon cards
+#     with HasText("Gammamon") in hand + trash combined; a loop picks the cards
+#     (hand-vs-trash zone prompt per pick, then ONE top/bottom prompt for the
+#     whole set and an order prompt) and AddDigivolutionCardsTop / Bottom; THEN
+#     SelectPermanentEffect Mode.Destroy over opponent Digimon with DP <=
+#     this Digimon's DP.
+#   - [End of Your Turn] (SetHashString "AD1_007_EoYT", maxCount 1, isOptional
+#     TRUE): IsOwnerTurn, >= 5 DigivolutionCards, CanAttack(withoutTap: true) →
+#     SelectAttackEffect.SetWithoutTap().
+#
+# "[Gammamon] in their texts" = the whole-card scan `in_text_contains` (official
+# Q&A: name / traits / effects / inherited / (Rule) / digivolution requirement
+# lines — BT17-070 idiom), used for the [Digivolve] box and the placement pool.
+#
+# Authoring notes:
+#   - "By placing 3 …" is an optional processing condition (§15-7): the whole
+#     clause is `optional: true` + `outer_prompt: true` (BT17-070 / BT19-101
+#     idiom), offered only when 3 qualifying cards exist across hand + trash.
+#     Declining the outer prompt preserves the once-per-turn use.
+#   - The 3 cards come from ONE `select_zone_cards` over hand ∪ trash
+#     (`min 3 / max 3`, exact, no PASS after the outer accept — an unpayable
+#     partial cost is impossible). The player chooses every card and the pick
+#     order; nothing is auto-selected.
+#   - Top-or-bottom is a player choice (`select_effect_choice`). Bottom uses
+#     `place_cards_as_bottom_sources` (list order, first pick lands highest of
+#     the placed set). Top uses `place_as_top_source` once per picked card in
+#     pick order, so each lands directly under the top card and the LAST picked
+#     card ends up as the top digivolution card (the player controls the order
+#     through the pick order). DCGO additionally offers a separate order prompt
+#     after choosing the position; the pick order carries that choice here.
+#   - The delete is MANDATORY after the cost is paid (printed text has no
+#     "may"; DCGO passes canNoSelect TRUE, which is treated as a DCGO
+#     divergence from the printed text — AD1-002 / AD1-004 same-shape clauses
+#     are mandatory). It installs only when a legal target exists (DCGO
+#     HasMatchConditionOpponentsPermanent guard).
+#   - [End of Your Turn]: inline `may_attack_now` with `without_suspending`
+#     and `optional: true` (BT21-072 / EX13-077 idiom). `materials_count_gte: 5`
+#     = "5 or more digivolution cards" (cards under the top card). The outer
+#     prompt is the "may"; see the clause comment for why DCGO's CanAttack
+#     activation gate is not copied.
+
+card: AD1-007
+name: Siriusmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+form: Mega
+attribute: Vaccine
+traits: [Light Dragon]
+
+alt_paths:
+  # ─── Standard circle: Red Lv.5 / Cost 4 ─────────────────────────────────────
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+
+  # ─── [Digivolve] Lv.5 w/[Gammamon] in text: Cost 3 ──────────────────────────
+  - kind: digivolve
+    from: { level_eq: 5, in_text_contains: "Gammamon" }
+    cost: 3
+
+effects:
+  # ─── Keywords ───────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── [When Digivolving][When Attacking][OPT] place 3 Gammamon-text cards → delete ──
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    summary: "[When Digivolving][When Attacking][Once Per Turn] By placing 3 Digimon cards with [Gammamon] in their texts from your hand or trash as this Digimon's top or bottom digivolution cards, delete 1 of your opponent's Digimon with as much or less DP as this Digimon"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          kind: digimon
+          in_text_contains: "Gammamon"
+        n: 3
+    process:
+      - select_zone_cards:
+          of: you
+          zones: [hand, trash]
+          filter:
+            all_of:
+              - kind: digimon
+              - in_text_contains: "Gammamon"
+          min: 3
+          max: 3
+          bind_as: gammamon_cards
+          prompt: "Place 3 Digimon cards with [Gammamon] in their texts from your hand or trash as this Digimon's digivolution cards"
+      - select_effect_choice:
+          labels: ["Top digivolution cards", "Bottom digivolution cards"]
+          bind_as: gammamon_position
+          prompt: "Place the 3 cards as this Digimon's top or bottom digivolution cards?"
+      - if:
+          condition: { equals: [gammamon_position, 0] }
+          then:
+            - per_selected:
+                selection: gammamon_cards
+                bind_as: gammamon_card
+                body:
+                  - place_as_top_source:
+                      source: gammamon_card
+                      target: source
+          else:
+            - place_cards_as_bottom_sources:
+                cards: gammamon_cards
+                target: source
+      - select_opponent_permanent:
+          bind_as: sirius_del
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "Delete 1 of your opponent's Digimon with as much or less DP as this Digimon"
+      - delete_permanent: { target: sirius_del }
+
+  # ─── [End of Your Turn][OPT] 5+ digivolution cards → may attack without suspending ──
+  #
+  # "may attack" is OPTIONAL PROCESSING (no "by" condition), so — like BT18-088's
+  # inherited [End of Your Turn] — the activation itself is offered whenever the
+  # printed precondition holds (5+ digivolution cards), the outer prompt is the
+  # "you may" (declining preserves the once-per-turn use), and the inner attack
+  # stays declinable; accepting counts toward the OPT even if no attack can be
+  # made (CR 4.3 §15-14-1-4, §16-16-3 shape). DCGO additionally gates the
+  # activation on CanAttack(withoutTap: true); the rules text outranks it here
+  # (a clause-level `can_attack` gate would hide a legal no-op activation).
+  - when: end_of_your_turn
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    summary: "[End of Your Turn][Once Per Turn] This Digimon with 5 or more digivolution cards may attack without suspending"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        is_source: true
+        materials_count_gte: 5
+    process:
+      - may_attack_now:
+          attacker: source
+          targets: any
+          without_suspending: true
+          optional: true
+          prompt: "This Digimon may attack without suspending"

@@ -1,0 +1,99 @@
+# ST21-08 Togemon — Lv.4, Green, Vegetation / ADVENTURE, Champion, Data,
+# DP 4000, Cost 4.
+#
+# Printed card text (official Bandai DB, data/card_bundles/ST21-08.md):
+#
+#   [On Play] [When Digivolving] If your Tamers with the [ADVENTURE] trait have
+#   3 or more total colors, this Digimon may digivolve into a Digimon card with
+#   the [ADVENTURE] trait in the hand without paying the cost.
+#
+#   Inherited:  [All Turns] This Digimon gets +1000 DP.
+#
+#   Digivolve box (xros_req): "[Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2"
+#   Standard evo circle:      Green Lv.3, Cost 2
+#
+# Official Q&A (bundle): "3 or more total colors" refers to a card having as
+# many or more total colors than the number specified.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Green/ST21_08.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt requirement (EffectTiming.None): permanentCondition =
+#   HasAdventureTraits && Level == 3, cost 2, requirements respected
+#   -> second alt_path (first alt_path = the printed green Lv.3 circle).
+#
+# [On Play] / [When Digivolving] (two OnEnterFieldAnyone ActivateClasses,
+#   isOptional TRUE): CanActivateCondition = on battle area AND the colors of
+#   your battle-area Tamers whose top card HasAdventureTraits number >= 3
+#   (Combinations.GetDifferenetColorCardCount over those Tamers' cards, so a
+#   multi-colour Tamer contributes each of its colours). Body:
+#   CardEffectCommons.DigivolveIntoHandOrTrashCard(target = this permanent,
+#   cardCondition = IsDigimon && HasAdventureTraits, payCost false,
+#   ignoreDigivolutionRequirementFixedCost -1, isHand true) -> an effect
+#   digivolve from hand, free, requirements RESPECTED.
+#   -> optional `select_hand` (can_digivolve_onto: source keeps the pick to
+#   cards that can legally digivolve onto this Digimon) + effect_initiated_
+#   digivolve { cost: free, ignore_requirements: false } (BT21-046 idiom).
+#
+# ADVENTURE-Tamer colour count: `distinct_colors_gte { of: you, filter: {kind: tamer, trait_has:
+#   ADVENTURE}, n: 3 }` (G-DSL-DISTINCT-COLORS-FILTERED-GTE) - the DISTINCT printed colours across your
+#   [ADVENTURE] Tamers. (An earlier draft of this file expanded it into a 35-way any_of over colour triples;
+#   that routed around the missing vocabulary and was replaced when the leaf landed.)
+#
+# Inherited [All Turns] +1000 DP: ChangeSelfDPStaticEffect(1000, inherited,
+#   condition null) -> `scope: inherited` aura, `active_when: all_turns`.
+
+card: ST21-08
+name: Togemon
+kind: digimon
+level: 4
+form: Champion
+color: [green]
+cost: 4
+dp: 4000
+traits: [Vegetation, ADVENTURE]
+attribute: Data
+
+alt_paths:
+  # Standard evolution circle: Green Lv.3, cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+
+  # xros_req box: "[Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2".
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: ADVENTURE }
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] If your [ADVENTURE] Tamers have 3+ total colors, this Digimon may digivolve into an [ADVENTURE] Digimon card in hand without paying the cost"
+    condition:
+      distinct_colors_gte:
+        of: you
+        filter: { kind: tamer, trait_has: ADVENTURE }
+        n: 3
+    process:
+      - select_hand:
+          of: you
+          bind_as: evolution
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: ADVENTURE
+              - can_digivolve_onto: source
+          prompt: "Digivolve this Digimon into a Digimon card with the [ADVENTURE] trait in your hand without paying the cost?"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evolution
+          cost: free
+          ignore_requirements: false
+
+  - scope: inherited
+    kind: aura
+    active_when: { all_turns: true }
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

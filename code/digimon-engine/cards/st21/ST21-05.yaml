@@ -1,0 +1,95 @@
+# ST21-05 Angemon — Digimon, Lv.4, Yellow, DP 4000, Cost 4.
+# Traits: Angel / ADVENTURE. Form: Champion. Attribute: Vaccine.
+#
+# Printed card text (data/card_bundles/ST21-05.md — official Bandai DB):
+#
+#   Digivolve: Yellow Lv.3 / cost 2
+#   [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2
+#   [When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer card
+#     with the [ADVENTURE] trait from your hand without paying the cost.
+#   Inherited: [When Attacking] [Once Per Turn] 1 of your opponent's Digimon
+#     gets -2000 DP for the turn.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Yellow/ST21_05.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+#  * Alt digivolution: AddSelfDigivolutionRequirementStaticEffect(base
+#    HasAdventureTraits && Level == 3, cost 2, ignoreDigivolutionRequirement
+#    false) → second alt-path (first = printed yellow Lv.3 / cost 2 circle).
+#
+#  * [When Digivolving] (OnEnterFieldAnyone, isOptional TRUE):
+#      CanActivateCondition = self on battle area as Digimon && a playable
+#      [ADVENTURE] Tamer in hand && own Tamer count <= 1.
+#      Coroutine: SelectHandEffect (Mode.Custom, canNoSelect TRUE) over
+#      `IsTamer && HasAdventureTraits && CanPlayAsNewPermanent(payCost: false)`
+#      → PlayPermanentCards(payCost: false).
+#    → `condition: count_lte(own battle-area Tamers) <= 1` + optional
+#    select_hand + `if binding_present` → play_from_hand_free (BT22-022
+#    Veedramon idiom: "If you have 1 or fewer Tamers, you may play 1 Tamer ...").
+#
+#  * Inherited [When Attacking] [Once Per Turn] (OnAllyAttack, maxCountPerTurn
+#    1, hash "DP-2000_ST21-005", NOT optional): SelectPermanentEffect over any
+#    opponent Digimon, canNoSelect false → ChangeDigimonDP(-2000,
+#    UntilEachTurnEnd). → mandatory select_opponent_permanent + add_dp_modifier
+#    (BT24-036 Medicmon select + add_dp_modifier idiom).
+
+card: ST21-05
+name: Angemon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+traits: [Angel, ADVENTURE]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  # Printed standard circle: Yellow Lv.3 / cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+
+  # [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2 (any colour).
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: ADVENTURE }
+    cost: 2
+
+effects:
+  # ─── [When Digivolving] with <=1 Tamers, may play 1 [ADVENTURE] Tamer free ──
+  - when: when_digivolving
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: tamer }
+        n: 1
+    summary: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer card with the [ADVENTURE] trait from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: tamer_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: ADVENTURE
+          prompt: "You may play 1 Tamer card with the [ADVENTURE] trait from your hand without paying the cost"
+      - if:
+          condition: { binding_present: tamer_pick }
+          then:
+            - play_from_hand_free: { of: you, hand_index: tamer_pick }
+
+  # ─── Inherited [When Attacking] [Once Per Turn] -2000 DP to an opp Digimon ───
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Select 1 of your opponent's Digimon to get -2000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -2000
+          expiry: end_of_turn

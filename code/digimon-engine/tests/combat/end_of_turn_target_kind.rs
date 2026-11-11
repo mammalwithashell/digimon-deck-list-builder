@@ -90,6 +90,10 @@ fn granted_end_of_turn_attack_excludes_untransformed_non_digimon() {
 }
 
 #[test]
+#[ignore = "fixture recorded a game that relied on DUAL security cards not battling: at row 21 the Paishu Token (6000) \
+            checks a face-down Monarchlizamon BT25-057 (DUAL, 8000) and must lose (CR 4.3 13-1-7, 4-6-1; DCGO battles \
+            it too). The row-38 end-of-turn attack on that token no longer happens; re-record the scenario with the \
+            fixed engine (2026-11-10)."]
 fn recorded_monarchlizamon_attack_on_paishu_token_progresses() {
     // Unchanged diagnostic recording: fixed-continuation window 4, parent
     // anchor game 786, seed 44523624. Its first stalled declaration is row 38.

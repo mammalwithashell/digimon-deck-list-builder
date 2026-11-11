@@ -426,3 +426,134 @@ fn bt25_104_your_turn_marcus_treated_as_12000_digimon_with_rush() {
         "a non-Marcus Tamer does NOT gain <Rush>"
     );
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section — the Digimon-face WD/WA clause activates the OPTION side
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Official Q&A Q6496/Q6498: "Activate 1 [Main] effect on this card's Option
+/// side" runs that effect as an OPTION card effect (DCGO
+/// `ActivateMainOfOptionSide` -> `SetIsDigimonEffect(false)`). So the immunity a
+/// target has decides the outcome by KIND:
+///   - "isn't affected by Digimon effects" (EX10-010)      -> does NOT stop it
+///   - "isn't affected by opponent's effects" (Magnamon X) -> stops it
+///   - "isn't affected by Option effects" (Yuuga, the BlackWarGreymon Tamer)
+///                                                          -> stops it
+/// A recorded DCGO game deleted EX10-010 this way; the engine had classified the
+/// inline clause as a Digimon effect and the Digimon-effect immunity blocked it.
+fn option_side_debuff_dp_change(source_kind: Option<digimon_engine::enums::EffectSourceKind>) -> i32 {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::{EffectControllerFilter, EffectImmunityFilter, ModifierEntry};
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-104")
+        .expect("BT25-104 in pack")
+        .add_card(make_opp_digimon("OPP1"))
+        .add_card(make_filler("FILL"))
+        .hand(0, &["FILL"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+
+    let shine = runner.place_on_field(0, "BT25-104", Some(0));
+    let opp = runner.place_on_field(1, "OPP1", Some(0));
+    let mut immunity =
+        ModifierEntry::simple(ModifierType::CannotBeAffected, 0, Expiry::Permanent, 0);
+    immunity.effect_immunity_filter = Some(EffectImmunityFilter {
+        source_kind,
+        controller: EffectControllerFilter::OpponentOnly,
+    });
+    runner.game.modifiers.add(opp, immunity);
+    let before = runner.effective_dp(opp).expect("opp has DP");
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(shine),
+    );
+    runner.game.drain_effect_queue();
+    drain(&mut runner);
+
+    runner.effective_dp(opp).expect("opp still has DP") - before
+}
+
+#[test]
+fn bt25_104_wd_option_effect_is_not_stopped_by_digimon_effect_immunity() {
+    use digimon_engine::enums::EffectSourceKind;
+    assert_eq!(
+        option_side_debuff_dp_change(Some(EffectSourceKind::Digimon)),
+        -15000,
+        "an Option-side effect is not a Digimon effect, so Digimon-effect immunity (EX10-010) does not stop it"
+    );
+}
+
+#[test]
+fn bt25_104_wd_option_effect_is_stopped_by_all_opponent_effects_immunity() {
+    assert_eq!(
+        option_side_debuff_dp_change(None),
+        0,
+        "'isn't affected by opponent's effects' (Magnamon X) still stops an Option effect"
+    );
+}
+
+#[test]
+fn bt25_104_wd_option_effect_is_stopped_by_option_effect_immunity() {
+    use digimon_engine::enums::EffectSourceKind;
+    assert_eq!(
+        option_side_debuff_dp_change(Some(EffectSourceKind::Option)),
+        0,
+        "'isn't affected by Option effects' (Yuuga) stops an Option-side effect"
+    );
+}
+
+/// End-to-end replica of a recorded DCGO game: the opponent's EX10-010
+/// BlackWarGreymon ACE ("isn't affected by opponent's Digimon's effects" while
+/// the opponent has a 13000+ DP Digimon) takes the -15000 from BT25-104's
+/// Option-side clause (an Option effect), drops to 0 DP and is deleted at the
+/// rule check, and its `Ace Overflow <-4>` costs the opponent 4 memory - which
+/// the recording read as 4 -> 8 from P0's side.
+#[test]
+fn bt25_104_option_side_effect_deletes_real_ex10_010_and_its_overflow_moves_memory() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-104")
+        .expect("BT25-104 in pack")
+        .dsl_card("EX10-010")
+        .expect("EX10-010 in pack")
+        .add_card(make_filler("FILL"))
+        .hand(0, &["FILL"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(4)
+        .start();
+    runner.set_first_player(0);
+
+    let shine = runner.place_on_field(0, "BT25-104", Some(0));
+    let opp = runner.place_on_field(1, "EX10-010", Some(0));
+    runner.game.tick_declarative_effects();
+    assert_eq!(
+        runner.effective_dp(opp),
+        Some(15000),
+        "EX10-010 is 12000 +3000 while the opponent has a 13000+ DP Digimon (BT25-104 is 15000)"
+    );
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(shine),
+    );
+    runner.game.drain_effect_queue();
+    drain(&mut runner);
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        runner.game.players[1].battle_area.is_empty(),
+        "EX10-010 took -15000 from the Option-side effect (0 DP) and was deleted"
+    );
+    assert_eq!(
+        runner.memory(),
+        8,
+        "EX10-010's Ace Overflow <-4> cost the opponent 4 memory (4 -> 8 from P0's side)"
+    );
+}

@@ -1,0 +1,62 @@
+# P-248 Veemon. Checked P-248.webp and DCGO P/Blue/P_248.cs.
+# Start of main: DCGO SelectHandEffect(canNoSelect: true, mode: Discard); draw + memory only after a card was trashed
+# (AfterSelectCardCoroutine checks cardSources.Count >= 1). The effect itself is offered only while the hand holds an
+# eligible card (AdditionalActivateCondition).
+# [Free] is printed as the attribute; the trait line folds form + attribute + traits, so trait_has: Free matches it.
+card: P-248
+name: Veemon
+kind: digimon
+level: 3
+color: [blue, red]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Free
+traits: [Mini Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 1
+  - kind: digivolve
+    from: { name_is: DemiVeemon }
+    cost: 0
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - in_text_contains: "Veedramon"
+            - trait_has: Armor Form
+            - trait_has: Free
+        n: 1
+    summary: "[Start of Your Main Phase] By trashing 1 card with [Veedramon] in its text or the [Armor Form] or [Free] trait from your hand, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - in_text_contains: "Veedramon"
+              - trait_has: Armor Form
+              - trait_has: Free
+          prompt: "Trash 1 card with [Veedramon] in its text or the [Armor Form]/[Free] trait to draw 1 and gain 1 memory"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

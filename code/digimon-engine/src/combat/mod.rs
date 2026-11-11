@@ -3586,7 +3586,9 @@ impl Game {
                             .get(h.index as usize)
                             .map(|p| p.top_card().handle())
                     });
-                    if kind == CardKind::Digimon
+                    // A DUAL card is a Digimon card (CR 4.3 4-6-1, 4-6-5-2), so a checked one is a
+                    // Security Digimon too (13-1-7) and battles.
+                    if matches!(kind, CardKind::Digimon | CardKind::Dual)
                         && self
                             .pending_security
                             .as_ref()

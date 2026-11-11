@@ -55,3 +55,35 @@ fn ex12_037_when_digivolving_repeats_mode_per_five_sources() {
         "mode 1 recovers after trashing security"
     );
 }
+
+/// Playback finding (2026-11-11, DCGO PvP playback of a sim game): Omnimon's "Delete 1 of your opponent's
+/// Digimon" did not delete Imperialdramon Dragon Mode ST9-06 stacked on Paildramon AD1-011, which had given it
+/// "can't be deleted in battle" (CR 4.3: an effect deletion is not a battle deletion). DCGO deletes it.
+#[test]
+fn ex12_037_delete_ignores_battle_only_protection() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-037 YAML loads")
+        .dsl_card("ST9-06")
+        .expect("ST9-06 YAML loads")
+        .dsl_card("AD1-011")
+        .expect("AD1-011 YAML loads")
+        .dsl_card("BT12-047")
+        .expect("BT12-047 YAML loads")
+        .add_card(plain_digimon("MAT1", CardColor::Blue, 6, 10000))
+        .add_card(plain_digimon("SEC", CardColor::Blue, 3, 2000))
+        .security(1, &["SEC"])
+        .start();
+    let omnimon = runner.place_stack(0, &["MAT1", CARD_ID]);
+    let dragon = runner.place_stack(1, &["BT12-047", "AD1-011", "ST9-06"]);
+    runner.game.modifiers.add(
+        dragon,
+        ModifierEntry::simple(ModifierType::CannotBeDestroyedByBattle, 1, Expiry::EndOfOpponentsTurn, 1),
+    );
+    super::support::fire_when_digivolving(&mut runner, omnimon);
+    select_first_non_pass(&mut runner);
+    runner.auto_resolve().ok();
+    assert!(!field_contains(&runner, 1, "ST9-06"), "an effect deletion is not prevented by battle-only protection");
+}

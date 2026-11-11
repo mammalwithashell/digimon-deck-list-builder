@@ -1,0 +1,156 @@
+# ST20-04 Garudamon — Digimon, Lv.5, Red, DP 7000, play cost 7.
+# Traits: Birdkin, ADVENTURE. Form: Ultimate. Attribute: Vaccine.
+#
+# Printed card text (official Bandai DB, data/card_bundles/ST20-04.md):
+#
+#   [On Play] [When Digivolving] For the turn, 1 of your Digimon gains
+#   <Security A. +1>, and for every 2 colors your Tamers have, gets +2000 DP.
+#   (This Digimon checks 1 additional security card.)
+#
+#   [Your Turn] [Once Per Turn] When your other Digimon are played or
+#   digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
+#   gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
+#
+#   Inherited Effect
+#   <Alliance> (When this Digimon attacks, by suspending 1 of your other
+#   Digimon, this Digimon gains <Security A. +1> and the suspended Digimon's DP
+#   for the attack.)
+#
+#   Digivolution:  Red Lv.4: Cost 3   (cards.json evo_costs)
+#   [Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3   (xros_req)
+#
+#   Official Q&A: "No, you can't. You must give to 1 of your Digimon." — the
+#   [On Play]/[When Digivolving] recipient pick is MANDATORY.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Red/ST20_04.cs
+#
+#   1. "Alternate Digivolution Requirement": TopCard.HasAdventureTraits &&
+#      Level == 4, digivolutionCost 3, requirements NOT ignored.
+#   2. [On Play] / [When Digivolving] — two OnEnterFieldAnyone ActivateClasses
+#      (CanTriggerOnPlay / CanTriggerWhenDigivolving), `isOptional: false`,
+#      body: SelectPermanentEffect over OWN Digimon (maxCount 1, canNoSelect
+#      false => mandatory) then, on the pick:
+#        ChangeDigimonSAttack(+1, UntilEachTurnEnd) and
+#        ChangeDigimonDP(2000 * TamerTwoColourCount(), UntilEachTurnEnd),
+#      TamerTwoColourCount = GetDifferenetColorCardCount(ALL owner Tamers'
+#      top cards) / 2 (NOT trait-filtered).
+#   3. [Your Turn][Once Per Turn] — OnEnterFieldAnyone ActivateClass,
+#      maxUsableCount 1 (hash "alliance-attack-ST20_04"), CanUse = on the
+#      battle area, owner's turn, and a played (CanTriggerOnPermanentPlay) or
+#      digivolved (CanTriggerWhenPermanentDigivolving) permanent that is one of
+#      the owner's Digimon and NOT this permanent. Body: for the played/
+#      digivolved Digimon that have the ADVENTURE trait: mandatory pick of 1 own
+#      Digimon => GainAlliance(UntilEachTurnEnd); then SelectPermanent (Mode
+#      .Attack, canNoSelect true) over own Digimon that can attack =>
+#      SelectAttackEffect. Used flag + RemoveUse() refunds the OPT when neither
+#      half ran.
+#   4. "Alliance Inherit": AllianceSelfEffect(isInheritedEffect: true).
+#
+# ─── DSL shape ───────────────────────────────────────────────────────────────
+#
+# * Alt-paths: standard circle + xros_req box (ST20-10 mold).
+# * [On Play][When Digivolving]: mandatory `select_own_permanent` ->
+#   `add_modifier SecurityAttackChange +1` (end_of_turn) +
+#   `add_dp_modifier` with the formula 2000 * floor(distinct Tamer colours / 2)
+#   (ST20-11 / AD1-014 `distinct_colors_count` idiom, end_of_turn).
+# * [Your Turn][OPT]: one clause over `[on_enter_field_anyone, on_digivolve]`
+#   (AD1-001 mold); a multi-timing once_per_turn clause shares ONE per-turn
+#   counter (G-OPT-MULTI-TIMING-SHARED-LOCKOUT). `trigger_if` pins the event
+#   to "one of YOUR OTHER Digimon" (`event_permanent_is_source: false`, EX4-038
+#   idiom) that has [ADVENTURE] (`event_target_trait_has`) -- the printed
+#   "if any of them have the [ADVENTURE] trait" gate sits on the whole effect,
+#   so no Alliance and no attack happen when the entering Digimon lacks it.
+#   Body: mandatory Alliance recipient pick, then the optional attack
+#   (BT21-044 `optional:` + `may_attack_now` mold).
+# * Inherited <Alliance>: `scope: inherited` grant_keyword (ST20-10 mold).
+
+card: ST20-04
+name: Garudamon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+traits: [Birdkin, ADVENTURE]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  # Standard digivolve circle: Red Lv.4 / cost 3 (printed evo_costs).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+
+  # xros_req: "[Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3".
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: ADVENTURE }
+    cost: 3
+
+effects:
+  # ─── [On Play][When Digivolving] Security A. +1 and +2000 DP per 2 colours ──
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] For the turn, 1 of your Digimon gains <Security A. +1> and +2000 DP for every 2 colors your Tamers have"
+    process:
+      - select_own_permanent:
+          bind_as: boosted
+          filter: { kind: digimon }
+          prompt: "Select 1 of your Digimon to gain <Security A. +1> and +2000 DP for every 2 colors your Tamers have"
+      - add_modifier:
+          target: boosted
+          modifier: SecurityAttackChange
+          value: 1
+          expiry: end_of_turn
+      - add_dp_modifier:
+          target: boosted
+          value:
+            formula:
+              multiply:
+                - floor_div:
+                    - base: 0
+                      per:
+                        distinct_colors_count:
+                          of: you
+                          zone: battle_area
+                          filter: { kind: tamer }
+                      delta: 1
+                    - 2
+                - 2000
+          expiry: end_of_turn
+
+  # ─── [Your Turn][OPT] ally ADVENTURE play/digivolve -> Alliance, then attack ─
+  - when: [on_enter_field_anyone, on_digivolve]
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any have [ADVENTURE], 1 of your Digimon gains <Alliance> for the turn; then 1 of your Digimon may attack"
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+        - event_target_trait_has: ADVENTURE
+    process:
+      - select_own_permanent:
+          bind_as: alliance_target
+          filter: { kind: digimon }
+          prompt: "Select 1 of your Digimon to gain <Alliance> for the turn"
+      - grant_keyword:
+          target: alliance_target
+          keyword: Alliance
+          expiry: end_of_turn
+      - optional:
+          - select_own_permanent:
+              bind_as: attacker
+              filter: { kind: digimon, can_attack: { targets: any } }
+              optional: true
+              prompt: "Select 1 of your Digimon that may attack"
+          - may_attack_now:
+              attacker: attacker
+              targets: any
+              optional: true
+              prompt: "Have the selected Digimon attack now?"
+
+  # ─── Inherited <Alliance> ────────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Alliance
+    summary: "Inherited <Alliance>"

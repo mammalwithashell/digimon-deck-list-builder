@@ -111,6 +111,17 @@ pub struct TriggeredClause {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_per_turn: Option<u8>,
 
+    /// The clause's effects are OPTION effects rather than effects of the card
+    /// carrying the clause. Printed "Activate 1 [Main] effect on this card's
+    /// Option side" (BT25-104, LM-068): official Q&A Q6496/Q6498 - an effect
+    /// activated from a DUAL card's Option side "is treated as an Option card
+    /// effect ... Because it isn't a Digimon effect", so a Digimon that isn't
+    /// affected by Digimon effects (EX10-010) still takes it. DCGO
+    /// `ActivateMainOfOptionSide` (`SetIsDigimonEffect(false)`). The clause is
+    /// queued with `EffectSourceKind::Option`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub as_option_effect: bool,
+
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub process: Vec<StepSpec>,
 }

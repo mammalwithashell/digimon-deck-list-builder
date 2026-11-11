@@ -1,0 +1,151 @@
+# AD1-008 Gallantmon — Digimon, Lv.6, Red, DP 12000, Cost 12.
+# Traits: Holy Warrior / Royal Knight / Hero. Form: Mega. Attribute: Virus.
+#
+# Printed text (card IMAGE + official Bandai DB bundle data/card_bundles/AD1-008.md;
+# cards.json is wrong in two places — see the notes below):
+#
+#   [Digivolve] Lv.5 w/[WarGrowlmon] in name or w/[Hero] trait: Cost 3
+#   ＜Rush＞ ＜Raid＞ ＜Piercing＞
+#   [When Digivolving] Delete up to 10000 DP total worth of your opponent's
+#     Digimon. Then, this Digimon may attack.
+#   [When Digivolving] [When Attacking] [Once Per Turn] Delete 1 of your
+#     opponent's lowest DP Digimon.
+#   [Your Turn] Your opponent's effects don't affect this Digimon with
+#     [Takato Matsuki] in its digivolution cards and it gets +5000 DP.
+#
+# Standard circle: Red Lv.5 / Cost 4 (card image, official DB, cards.json).
+#
+# Card-data corrections (image + DCGO + official DB over cards.json):
+#   - The [Digivolve] box is "Lv.5 w/[WarGrowlmon] in name or w/[Hero] trait"
+#     (image; DCGO `level: 5`). cards.json `xros_req` says "Lv.4" — wrong.
+#   - "[Takato Matsuki] in its digivolution cards" is a NAME reference (image,
+#     official DB, DCGO `EqualsCardName("Takato Matsuki")`); cards.json
+#     `effect_description_eng` says "[Takato Matsuki] trait" — wrong.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/AD1/Red/AD1_008.cs
+#   - Alt-digivolve: level 5, ContainsCardName("WarGrowlmon") ||
+#     EqualsTraits("Hero"), cost 3, ignoreDigivolutionRequirement false.
+#   - Rush / Raid / Piercing: *SelfStaticEffect / RaidSelfEffect / PierceSelfEffect.
+#   - [When Digivolving] #1 (maxCount -1, isOptional false): when an opponent
+#     Digimon with DP <= MaxDP_DeleteEffect(10000) exists, a MANDATORY (canNoSelect
+#     false) running-DP-sum multi-select with canEndNotMax true (>= 1 pick,
+#     total <= 10000) → Destroy; THEN, independent of the delete, if
+#     CanAttack → SelectAttackEffect (declinable) = "this Digimon may attack".
+#   - [When Digivolving]/[When Attacking] (SetHashString "AD1_008_WD_WA",
+#     maxCount 1, isOptional false): mandatory (canNoSelect false) Destroy
+#     select over the opponent's minimum-DP Digimon (IsMinDP).
+#   - [Your Turn] (EffectTiming.None): CanNotAffectedClass (SkillCondition
+#     IsOpponentEffect) + ChangeSelfDPStaticEffect(+5000), both gated on
+#     IsOwnerTurn && DigivolutionCards.Any(EqualsCardName("Takato Matsuki")).
+#
+# Authoring notes:
+#   - "up to 10000 DP total": `select_opponent_dp_budget` with `min_picks: 1`
+#     (BT17-018 idiom — the player picks every target, the running DP sum is
+#     enforced by the picker, and with no eligible target the step is skipped
+#     so the "Then, this Digimon may attack" half still runs).
+#   - "lowest DP Digimon": `selector: lowest_dp` restricts the pick to the
+#     opponent's minimum-DP Digimon (AD1-017 / AD1-024 idiom); ties stay a
+#     player choice. Mandatory (printed "Delete 1", DCGO canNoSelect false).
+#   - [Your Turn] is two continuous self-auras sharing one gate: the immunity is
+#     `effect_immunity: { source_controller: opponent }` (BT19-101 idiom) and the
+#     +5000 DP is a flat `dp_modifier`. The Takato Matsuki check is the exact
+#     card name among the digivolution cards (`self_source_count` + `name_is`,
+#     BT21-006 idiom).
+
+card: AD1-008
+name: Gallantmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+form: Mega
+attribute: Virus
+traits: [Holy Warrior, Royal Knight, Hero]
+
+alt_paths:
+  # ─── Standard circle: Red Lv.5 / Cost 4 ─────────────────────────────────────
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+
+  # ─── [Digivolve] Lv.5 w/[WarGrowlmon] in name or w/[Hero] trait: Cost 3 ──────
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - name_contains: "WarGrowlmon"
+            - trait_has: Hero
+    cost: 3
+
+effects:
+  # ─── Keywords ───────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"
+
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  # ─── [When Digivolving] delete up to 10000 DP total; then this Digimon may attack ──
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete up to 10000 DP total worth of your opponent's Digimon. Then, this Digimon may attack"
+    process:
+      - select_opponent_dp_budget:
+          dp_budget: 10000
+          min_picks: 1
+          filter: { kind: digimon }
+          bind_as: gallant_targets
+          prompt: "Delete up to 10000 DP total worth of your opponent's Digimon"
+          then:
+            - delete_bound_permanents: { binding: gallant_targets }
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true
+          prompt: "This Digimon may attack"
+
+  # ─── [When Digivolving][When Attacking][OPT] delete 1 lowest-DP opponent Digimon ──
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[When Digivolving][When Attacking][Once Per Turn] Delete 1 of your opponent's lowest DP Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: gallant_lowest
+          selector: lowest_dp
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's lowest DP Digimon"
+      - delete_permanent: { target: gallant_lowest }
+
+  # ─── [Your Turn] opponent's effects don't affect this Digimon (Takato Matsuki under) ──
+  - kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - your_turn: true
+        - self_source_count:
+            filter: { name_is: "Takato Matsuki" }
+            op: gte
+            value: 1
+    effect_immunity:
+      source_controller: opponent
+    summary: "[Your Turn] With [Takato Matsuki] in its digivolution cards, this Digimon isn't affected by your opponent's effects"
+
+  # ─── [Your Turn] +5000 DP (Takato Matsuki under) ─────────────────────────────
+  - kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - your_turn: true
+        - self_source_count:
+            filter: { name_is: "Takato Matsuki" }
+            op: gte
+            value: 1
+    dp_modifier: 5000
+    summary: "[Your Turn] With [Takato Matsuki] in its digivolution cards, this Digimon gets +5000 DP"

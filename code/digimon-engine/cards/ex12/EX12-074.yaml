@@ -31,6 +31,12 @@ effects:
             all_of:
               - kind: digimon
               - trait_has: Shambala
+              # DCGO's `DigivolveIntoHandOrTrashCard` (CardEffectCommons.cs) only
+              # offers hand cards that can ACTUALLY digivolve onto the attacker at
+              # the reduced cost (`CanPlayCardTargetFrame`) and opens no pick when
+              # there are none; the effect still triggers and is accepted (its
+              # CanActivateCondition only needs a [Shambala] card in hand).
+              - can_digivolve_onto_with_cost: { target: event_target, cost: { reduce: 1 } }
           prompt: "Digivolve the attacking [Shambala] Digimon into a [Shambala] Digimon in hand with the cost reduced by 1"
       - effect_initiated_digivolve:
           target: event_target

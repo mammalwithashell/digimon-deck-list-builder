@@ -168,6 +168,13 @@ pub fn lower_with_formula(
             }
         }
         if let Some(wap) = &condition_when_any {
+            // "When you would play ..." is a PLAY trigger. A digivolve is not a
+            // play, even of a card whose Option face matches the predicate (a
+            // DUAL card): DCGO's `CanTriggerWhenPermanentWouldPlay` is
+            // `if (!IsEvolution) { .. }` (WhenPermanentWouldPlay.cs).
+            if rctx.cost_is_digivolve {
+                return false;
+            }
             let Some(target) = rctx.cost_target_card else {
                 return false;
             };
@@ -215,6 +222,9 @@ pub fn lower_with_formula(
             }
         }
         if let Some(wap) = &when_any_ally_played {
+            if rctx.cost_is_digivolve {
+                return 0;
+            }
             let Some(target) = rctx.cost_target_card else {
                 return 0;
             };
