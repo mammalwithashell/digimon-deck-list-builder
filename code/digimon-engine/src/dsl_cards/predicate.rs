@@ -19,7 +19,7 @@ use crate::trigger_context::AttackTargetChangeReason;
 
 #[path = "predicate_dna.rs"]
 mod dna;
-use dna::dna_hand_candidate;
+use dna::{dna_field_pair, dna_hand_candidate};
 
 /// The subject a predicate is applied to.
 #[derive(Debug, Clone, Copy)]
@@ -211,6 +211,11 @@ fn eval_predicate_ref_known(
     }
     if let Some(spec) = &pred.dna_hand_candidate {
         if !dna_hand_candidate(spec, rctx, original_subject, bindings) {
+            return false;
+        }
+    }
+    if let Some(spec) = &pred.dna_field_pair {
+        if !dna_field_pair(spec, rctx, original_subject, bindings) {
             return false;
         }
     }
@@ -3385,9 +3390,15 @@ fn eval_card_fields(
     let option_ref = data.dual.is_some() && dual_ref == DualRef::Option;
     let ref_level = if option_ref { None } else { data.level };
     let ref_dp = if option_ref { None } else { data.dp };
-    let ref_play_cost: i32 = match (&data.dual, option_ref) {
-        (Some(d), true) => effective_use_cost(rctx, card).unwrap_or(i32::from(d.option.use_cost)),
-        _ => i32::from(data.play_cost),
+    // A DUAL referenced as a Digimon has NO play cost (it prints "Play cost:
+    // D" / "Can't play to the field."; DCGO `HasPlayCost` is false), so no
+    // play-cost comparison matches it. Game audit 2026-11-11: the stored use
+    // cost was read as a play cost (Minervamon BT24-041 "play cost 5 or
+    // lower" picked Jupitermon BT26-033).
+    let ref_play_cost: Option<i32> = match (&data.dual, option_ref) {
+        (Some(d), true) => Some(effective_use_cost(rctx, card).unwrap_or(i32::from(d.option.use_cost))),
+        (Some(_), false) => None,
+        _ => Some(i32::from(data.play_cost)),
     };
     let ref_colors: &[CardColor] = match (&data.dual, option_ref) {
         (Some(d), true) => d.option.colors.as_slice(),
@@ -3723,17 +3734,17 @@ fn eval_card_fields(
         }
     }
     if let Some(cap) = &pred.play_cost_lte {
-        if ref_play_cost > eval_int_constraint(cap, rctx, formula_target, bindings) {
+        if ref_play_cost.is_none_or(|c| c > eval_int_constraint(cap, rctx, formula_target, bindings)) {
             return false;
         }
     }
     if let Some(floor) = &pred.play_cost_gte {
-        if ref_play_cost < eval_int_constraint(floor, rctx, formula_target, bindings) {
+        if ref_play_cost.is_none_or(|c| c < eval_int_constraint(floor, rctx, formula_target, bindings)) {
             return false;
         }
     }
     if let Some(want) = &pred.play_cost_eq {
-        if ref_play_cost != eval_int_constraint(want, rctx, formula_target, bindings) {
+        if ref_play_cost.is_none_or(|c| c != eval_int_constraint(want, rctx, formula_target, bindings)) {
             return false;
         }
     }
@@ -3746,7 +3757,9 @@ fn eval_card_fields(
             return false;
         };
         let threshold = reference + i32::from(spec.offset);
-        let candidate = ref_play_cost;
+        let Some(candidate) = ref_play_cost else {
+            return false;
+        };
         let ok = match spec.op {
             digimon_dsl::compiled::CompiledComparatorOp::Eq => candidate == threshold,
             digimon_dsl::compiled::CompiledComparatorOp::Gte => candidate >= threshold,

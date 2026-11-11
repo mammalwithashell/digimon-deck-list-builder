@@ -68,9 +68,15 @@ dual:
   option:
     use_cost: 4
     colors: [yellow]
+    # <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+    # of your Digimon or Tamers in the battle area or breeding area meets
+    # the condition (an Option on the field does not count).
     use_requirement:
       any_field_permanent:
         of: you
+        any_of:
+          - kind: digimon
+          - kind: tamer
         trait_has: "Glowing Dawn"
     effect_text: "<Use Req. ([Glowing Dawn] trait)> [Main] 1 of your opponent's Digimon gets -8000 DP until their turn ends. By trashing your top security card, it further gets -5000 DP. <Arts Digivolve>"
     security_text: ""

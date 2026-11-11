@@ -753,3 +753,66 @@ fn ex11_046_eot_ignores_non_galacticmon_hand_cards() {
         "a non-[Galacticmon] hand card must not trigger the free-digivolve prompt"
     );
 }
+
+// --- No-play-cost Digimon (deck audit 2026-11-10) -------------------------
+
+fn make_token(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = digimon_engine::enums::CardKind::Token;
+    c.play_cost = 20;
+    c.level = None;
+    c
+}
+
+/// A Token has no play cost, so it is never the "highest play cost" Digimon
+/// even if its data carries a number (DCGO IsMaxCost checks HasPlayCost).
+#[test]
+fn ex11_046_token_is_not_a_highest_play_cost_candidate() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-046")
+        .expect("EX11-046 parses")
+        .add_card(make_opp("EX11-046-CHEAP", 6))
+        .add_card(make_token("EX11-046-TOKEN"))
+        .memory(10)
+        .start();
+    let galacticmon = runner.place_on_field(0, "EX11-046", None);
+    let cheap = runner.place_on_field(1, "EX11-046-CHEAP", None);
+    runner.place_on_field(1, "EX11-046-TOKEN", None);
+
+    fire_on_play(&mut runner, galacticmon);
+    let view = runner.pending_selection_view().expect("keep pick");
+    assert_eq!(
+        view.valid_action_ids,
+        vec![digimon_engine::action::space::encode_attack(0, cheap.index as u16)],
+        "only the Digimon with a play cost can be kept"
+    );
+    runner.execute_action(0, view.valid_action_ids[0]).expect("keep it");
+    runner.auto_resolve().expect("delete the rest");
+    let left: Vec<String> = runner.game.players[1]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(left, vec!["EX11-046-CHEAP".to_string()], "the Token is deleted");
+}
+
+/// With only no-play-cost Digimon, none can be kept, so all are deleted.
+#[test]
+fn ex11_046_only_tokens_deletes_them_all() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-046")
+        .expect("EX11-046 parses")
+        .add_card(make_token("EX11-046-TOKEN"))
+        .memory(10)
+        .start();
+    let galacticmon = runner.place_on_field(0, "EX11-046", None);
+    runner.place_on_field(1, "EX11-046-TOKEN", None);
+    runner.place_on_field(1, "EX11-046-TOKEN", None);
+
+    fire_on_play(&mut runner, galacticmon);
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.game.players[1].battle_area.is_empty(),
+        "no keepable Digimon: all of the opponent's Digimon are deleted"
+    );
+}

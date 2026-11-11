@@ -103,9 +103,12 @@ effects:
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Trash any 4 opponent sources, then bottom-deck 1 opponent Digimon with <= this Digimon's sources"
     process:
+      # DCGO SelectTrashDigivolutionCards(maxCount: 4) trashes up to the
+      # available count and the bottom-deck always follows (audit 2026-11-10).
       - select_opponent_sources:
           min: 4
           max: 4
+          clamp_to_available: true
           bind_as: trashed_sources
           prompt: "Trash any 4 digivolution cards from your opponent's Digimon"
           then:

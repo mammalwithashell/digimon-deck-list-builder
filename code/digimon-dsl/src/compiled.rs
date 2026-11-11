@@ -437,6 +437,9 @@ pub struct CompiledPredicate {
     #[serde(default)]
     pub can_digivolve_onto_with_cost: Option<CompiledDigivolveCostPredicate>,
     pub dna_hand_candidate: Option<CompiledDnaHandCandidate>,
+    /// See `PredicateSpec::dna_field_pair`. G-DSL-DNA-FIELD-PAIR-CANDIDATE.
+    #[serde(default)]
+    pub dna_field_pair: Option<CompiledDnaFieldPair>,
     #[serde(default)]
     pub can_play_from_effect_without_cost: Option<bool>,
     #[serde(default)]
@@ -966,6 +969,14 @@ pub struct CompiledDigivolveCostPredicate {
     pub cost: CompiledCostDelta,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDnaFieldPair {
+    pub role: crate::predicate::DnaFieldPairRole,
+    pub result: Option<String>,
+    pub first: Option<String>,
+}
+
+/// Compiled form of `dna_hand_candidate`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledDnaHandCandidate {
     pub role: crate::predicate::DnaHandCandidateRole,

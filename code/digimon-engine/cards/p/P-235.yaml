@@ -42,9 +42,15 @@ traits: ["DATA SQUAD"]
 # DCGO UseRequirements gated on an own permanent (Digimon or Tamer) whose card
 # satisfies EqualsTraits("DATA SQUAD"). Standard shipped Option use_requirement
 # board predicate (same shape as BT21-097's Appmon use_requirement).
+# <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+# of your Digimon or Tamers in the battle area or breeding area meets
+# the condition (an Option on the field does not count).
 use_requirement:
   any_field_permanent:
     of: you
+    any_of:
+      - kind: digimon
+      - kind: tamer
     trait_has: "DATA SQUAD"
 
 effects:

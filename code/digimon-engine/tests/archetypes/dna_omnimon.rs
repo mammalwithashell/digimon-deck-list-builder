@@ -377,6 +377,9 @@ fn combo_b_delay_consumes_leaving_lv6_into_merged_omnimon() {
     // Seat BT17-095 as a Delay through its REAL Option-play [Main] body (Clause A
     // `place_self_as_delay_option`) — no `OptionState::Delayed` scaffold.
     play_and_seat_bt17_095_as_delay(&mut runner, 0);
+    // CR 16-17-3: the <Delay> can't be used the turn it was placed; use it on
+    // a later turn.
+    age_delay_one_turn(&mut runner, 0, "BT17-095");
 
     let greymon_handle = runner.place_on_field(0, "ST1-11", None);
     let greymon_card = runner.top_card(greymon_handle);
@@ -1001,4 +1004,20 @@ fn combo_e_nokia_jump_gated_on_nokia_precondition() {
         after.memory, before.memory,
         "no cost is paid when the Nokia-gated jump is not offered"
     );
+}
+
+/// Treat `card_id`'s <Delay> Option as placed on the previous turn, so its
+/// Delay is usable this turn (CR 16-17-3).
+fn age_delay_one_turn(runner: &mut DebugRunner, player: u8, card_id: &str) {
+    let card_data = runner.game.card_data.clone();
+    let perm = runner.game.players[player as usize]
+        .battle_area
+        .iter_mut()
+        .find(|p| p.top_card().card_id(&card_data) == card_id)
+        .expect("Delay Option on the field");
+    if let OptionState::Delayed { placed_on_turn, .. } = &mut perm.option_state {
+        *placed_on_turn = placed_on_turn.saturating_sub(1);
+    } else {
+        panic!("{card_id} is not a Delay Option");
+    }
 }

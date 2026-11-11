@@ -405,3 +405,43 @@ fn bt25_027_inherited_save_offered_for_gaogamon_name_without_trait() {
     assert!(offered, "a [Gaogamon]-named carrier is offered the inherited save");
     assert!(stayed, "accepting the save keeps the [Gaogamon]-named carrier");
 }
+
+/// "Then, by trashing the bottom face-down card from under any of your Tamers,
+/// this Digimon unsuspends" can be declined (DCGO canNoSelect: true): the
+/// face-down card stays and MachGaogamon stays suspended.
+#[test]
+fn bt25_027_wa_trash_facedown_can_be_declined() {
+    let mut runner = runner_field_mach_suspended_with_stash_and_opp();
+    runner.game.turn_count = 3;
+    runner.game.players[1].security.clear();
+    let mach = find_field(&runner, 0, CARD_ID).expect("mach on field");
+    runner.game.players[0].battle_area[mach.index as usize].is_suspended = false;
+    let trash_before = runner.trash_size(0);
+
+    runner.attack_player(mach, 1, false);
+    let mut saw_tamer_pick = false;
+    let mut guard = 0;
+    while let Some(sel) = runner.pending_selection() {
+        guard += 1;
+        assert!(guard < 32, "selection chain did not terminate");
+        let prompt = sel.prompt.to_lowercase();
+        let ids = sel.valid_action_ids.clone();
+        let optional = sel.is_optional;
+        if prompt.contains("tamer") && prompt.contains("face") {
+            saw_tamer_pick = true;
+            assert!(optional, "the face-down trash is declinable");
+            runner.execute_action(0, PASS).expect("decline the trash");
+            continue;
+        }
+        let a = ids.iter().copied().find(|a| *a != PASS).unwrap_or(PASS);
+        runner.execute_action(0, a).expect("take the first choice");
+    }
+
+    assert!(saw_tamer_pick, "the Tamer pick was offered");
+    assert_eq!(runner.trash_size(0), trash_before, "nothing trashed");
+    let mach2 = find_field(&runner, 0, CARD_ID).expect("mach on field");
+    assert!(
+        runner.game.players[0].battle_area[mach2.index as usize].is_suspended,
+        "declined: MachGaogamon does not unsuspend"
+    );
+}

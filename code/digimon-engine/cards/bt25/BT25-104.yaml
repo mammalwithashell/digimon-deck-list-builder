@@ -91,9 +91,15 @@ dual:
   option:
     use_cost: 6
     colors: [red, yellow]
+    # <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+    # of your Digimon or Tamers in the battle area or breeding area meets
+    # the condition (an Option on the field does not count).
     use_requirement:
       any_field_permanent:
         of: you
+        any_of:
+          - kind: digimon
+          - kind: tamer
         trait_has: "DATA SQUAD"
     effect_text: "Use Req. ([DATA SQUAD] trait). [Main] 1 of your opponent's Digimon gets -15000 DP for the turn. Then, you may play 1 Tamer card from your hand without paying the cost. Arts Digivolve."
     security_text: ""

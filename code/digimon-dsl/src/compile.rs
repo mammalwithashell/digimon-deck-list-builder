@@ -1051,6 +1051,11 @@ fn compile_predicate(
                 ignore_requirements: spec.ignore_requirements,
             }
         }),
+        dna_field_pair: p.dna_field_pair.as_ref().map(|spec| CompiledDnaFieldPair {
+            role: spec.role,
+            result: spec.result.clone(),
+            first: spec.first.clone(),
+        }),
         can_play_from_effect_without_cost: p.can_play_from_effect_without_cost,
         can_play_to_breeding_from_hand: p.can_play_to_breeding_from_hand,
         can_move_from_breeding_by_effect: p.can_move_from_breeding_by_effect,

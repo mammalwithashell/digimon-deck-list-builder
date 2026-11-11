@@ -5,16 +5,23 @@ color: [white]
 cost: 3
 traits: [NSp, DS, NSo, WG, ME, VB]
 
+# <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+# of your Digimon or Tamers in the battle area or breeding area meets
+# the condition (an Option on the field does not count).
 use_requirement:
   any_field_permanent:
     of: you
-    any_of:
-      - trait_has: NSp
-      - trait_has: DS
-      - trait_has: NSo
-      - trait_has: WG
-      - trait_has: ME
-      - trait_has: VB
+    all_of:
+      - any_of:
+          - kind: digimon
+          - kind: tamer
+      - any_of:
+          - trait_has: "NSp"
+          - trait_has: "DS"
+          - trait_has: "NSo"
+          - trait_has: "WG"
+          - trait_has: "ME"
+          - trait_has: "VB"
 
 effects:
   - kind: flood_gate

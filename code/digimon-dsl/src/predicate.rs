@@ -218,6 +218,12 @@ pub struct PredicateSpec {
     /// payable hand-partner DNA declaration. Prior picks are physical bindings.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dna_hand_candidate: Option<DnaHandCandidatePredicate>,
+    /// Two-field DNA feasibility for `select_hand` + `select_dna_pair` +
+    /// `effect_initiated_dna_digivolve` ("2 of your Digimon may DNA digivolve
+    /// into X in the hand"). DCGO `CanPlayJogress(true)` /
+    /// `CanJogressFromTargetPermanents`. G-DSL-DNA-FIELD-PAIR-CANDIDATE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dna_field_pair: Option<DnaFieldPairPredicate>,
     /// Whether this physical candidate can be played free into its owner's
     /// battle area by the effect controller. Checks the owner's field capacity
     /// and the causing controller's effect-play prohibition independently.
@@ -1531,6 +1537,32 @@ pub struct DigivolveCostPredicate {
     /// cannot occur inside cost_reduction/cost_assignment clauses, including
     /// free or fixed-zero requests: affordability itself evaluates reducers.
     pub cost: crate::step::CostDelta,
+}
+
+/// Stage of a both-on-field DNA choice (G-DSL-DNA-FIELD-PAIR-CANDIDATE).
+/// `result`: a hand card with at least one pair of distinct own battle-area
+/// Digimon that satisfies one of its printed DNA requirements and whose
+/// printed DNA cost can be paid. `first`: an own Digimon that has such a
+/// partner for the card bound under `result`. `second`: an own Digimon that
+/// forms such a pair with the permanent bound under `first`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DnaFieldPairRole {
+    Result,
+    First,
+    Second,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DnaFieldPairPredicate {
+    pub role: DnaFieldPairRole,
+    /// Hand binding of the DNA result card (required for `first`/`second`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<String>,
+    /// Permanent binding of the first material (required for `second`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub first: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]

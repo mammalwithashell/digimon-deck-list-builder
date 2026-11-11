@@ -120,6 +120,16 @@ effects:
           prompt: "Delete 1 opponent lowest-DP Digimon"
       - delete_permanent: { target: delete_target }
 
+  # [Counter] [Once Per Turn] 2 of your Digimon may DNA digivolve into
+  # [Omnimon] or an [ME] or [VB] trait Digimon card in the hand. Then, you may
+  # change the attack target to 1 of your Digimon.
+  #
+  # DCGO EX12_017.cs (Counter region): the hand pick lists only cards that can
+  # DNA right now (`CanPlayJogress(true)`), the pair is the card's DNA
+  # requirement, and the redirect is offered whether or not a DNA happened.
+  # If neither the DNA nor the redirect happened, `RemoveUse` refunds the OPT.
+  # Audit 2026-11-10 (user-confirmed): the redirect used to sit inside the DNA
+  # branch, and the picks offered cards and pairs that could not DNA.
   - when: counter
     once_per_turn: true
     optional: true
@@ -136,6 +146,7 @@ effects:
                   - name_is: Omnimon
                   - trait_has: ME
                   - trait_has: VB
+              - dna_field_pair: { role: result }
           prompt: "Select [Omnimon] or [ME]/[VB] Digimon in hand to DNA digivolve into"
       - if:
           condition: { binding_present: dna_card }
@@ -145,10 +156,12 @@ effects:
                   all_of:
                     - kind: digimon
                     - of: you
+                    - dna_field_pair: { role: first, result: dna_card }
                 right_filter:
                   all_of:
                     - kind: digimon
                     - of: you
+                    - dna_field_pair: { role: second, result: dna_card, first: dna_a }
                 bind_left_as: dna_a
                 bind_right_as: dna_b
                 prompt: "Select 2 of your Digimon to DNA digivolve"
@@ -162,12 +175,20 @@ effects:
                       from_hand: dna_card
                       cost: printed
                       ignore_requirements: false
-                  - select_own_permanent:
-                      bind_as: redirect_target
-                      optional: true
-                      filter: { kind: digimon }
-                      prompt: "Change the attack target to 1 of your Digimon"
-                  - redirect_attack_target:
-                      new_target: redirect_target
-                      optional: true
-                      prompt: "Change the attack target to 1 of your Digimon"
+      - select_own_permanent:
+          bind_as: redirect_target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Change the attack target to 1 of your Digimon"
+      - redirect_attack_target:
+          new_target: redirect_target
+          optional: true
+          prompt: "Change the attack target to 1 of your Digimon"
+      # DCGO `if (!isUsed) activateClass.RemoveUse()`: nothing happened.
+      - if:
+          condition:
+            all_of:
+              - binding_absent: dna_a
+              - binding_absent: redirect_target
+          then:
+            - refund_opt: {}

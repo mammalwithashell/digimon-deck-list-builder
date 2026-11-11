@@ -57,8 +57,10 @@ effects:
       - return_to_hand: { target: bounce_target }
       # "Then, by trashing the bottom face-down card from under any of your
       # Tamers, this Digimon unsuspends." The unsuspend is the tail of the
-      # trash cost — runs only if a face-down source was trashed.
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      # trash cost — runs only if a face-down source was trashed. The Tamer
+      # pick is declinable (DCGO BT25_027.cs SelectPermanentEffect canNoSelect:
+      # true); deck audit 2026-11-10: it was forced.
+      - trash_bottom_face_down_source_under_tamer: { of: you, optional: true }
       - unsuspend: { target: source }
 
   # ─── [All Turns][OPT] leave-prevention (main) ────────────────────────────

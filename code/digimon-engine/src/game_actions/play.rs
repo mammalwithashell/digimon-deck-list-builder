@@ -26,6 +26,16 @@ impl Game {
     /// is the native actor or causing effect controller, not the destination.
     /// Consult printed DP, never battle-area DP modifiers.
     pub(crate) fn card_data_play_is_prohibited(&self, controller: PlayerId, data: &CardData) -> bool {
+        // A DUAL card prints "Can't play to the field." in place of a play
+        // cost: it is digivolved with its Digimon information or used with its
+        // Option information (CR 4-6-2), never played. DCGO
+        // `CanPlayAsNewPermanent` requires `isPlayOption || !IsOption`, and a
+        // DUAL's kinds contain Option. Game audit 2026-11-11: effects played
+        // DUAL cards (Ceresmon BT26-032 via Sirenmon BT25-039, Jupitermon
+        // BT26-033 via Minervamon BT24-041, ...) 149 times in 612 games.
+        if data.card_kind == CardKind::Dual {
+            return true;
+        }
         if !matches!(data.card_kind, CardKind::Digimon | CardKind::Dual | CardKind::Token | CardKind::DigiEgg) {
             return false;
         }

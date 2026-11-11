@@ -52,7 +52,9 @@ effects:
                 max: 2
                 filter: {}
                 bind_as: returned_cards
-                optional_zero: false
+                # "by returning 2" can be declined (DCGO EX12_047.cs
+                # SelectCardEffect canNoSelect: true). Deck audit 2026-11-10.
+                optional_zero: true
                 prompt: "Return 2 cards from your opponent's trash to the bottom of their deck"
             - return_trash_list_to_deck_bottom:
                 of: opponent

@@ -39,9 +39,14 @@ effects:
           of: you
           bind_as: revive_pick
           optional: true
+          # Printed "card", DCGO CanPlayCardCondition = HasPlayCost && cost <= 5
+          # && trait: Digimon AND Tamers (e.g. Kunlun BT26-104). Deck audit
+          # 2026-11-10: this was Digimon-only.
           filter:
             all_of:
-              - kind: digimon
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
               - play_cost_lte: 5
               - any_of:
                   - trait_has: Puppet

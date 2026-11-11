@@ -60,6 +60,28 @@ fn setup(
     let seen = Arc::new(Mutex::new(Vec::new()));
     let mut sec = card("SEC", 8000);
     sec.card_kind = kind;
+    if kind == CardKind::Dual {
+        // A DUAL card carries both faces; its Digimon face battles (DP 8000).
+        sec.dual = Some(digimon_engine::card_data::DualCardData {
+            digimon: digimon_engine::card_data::DualDigimonFace {
+                level: 6,
+                dp: 8000,
+                colors: Vec::new(),
+                traits: Vec::new(),
+                evo_costs: Vec::new(),
+                effect_text: String::new(),
+                inherited_text: String::new(),
+                keywords: Vec::new(),
+            },
+            option: digimon_engine::card_data::DualOptionFace {
+                use_cost: 5,
+                colors: Vec::new(),
+                effect_text: String::new(),
+                security_text: String::new(),
+                keywords: Vec::new(),
+            },
+        });
+    }
     let mut r = DebugRunner::builder()
         .add_card(card("ATK", dp))
         .add_card(card("OBS", 1000))
@@ -443,4 +465,31 @@ fn captured_check_then_optional_security_battle_finishes_once() {
         assert!(r.game.pending_security.is_none());
         assert!(r.pending_selection_view().is_none());
     }
+}
+
+/// A checked DUAL card is a Digimon card (4-6-1: it can be treated as either
+/// category), so 13-1-7 makes it a Security Digimon and 13-1-8-3 battles it
+/// with its Digimon-face DP. DCGO `CardController.cs` "battle with security
+/// Digimon" gates on `brokenSecurityCard.IsDigimon`, which is
+/// `CardKinds.Contains(Digimon)` and true for DUAL cards. Reported by the user
+/// 2026-11-10: smaller attackers survived checking a DUAL card.
+#[test]
+fn checked_dual_card_battles_as_a_security_digimon() {
+    // Smaller attacker loses to the 8000 DP Digimon face and is deleted.
+    let (mut r, atk, seen) = setup(3000, CardKind::Dual, false, 1);
+    r.attack_player(atk, 1, false);
+    r.auto_resolve().unwrap();
+    let events = seen.lock().unwrap().clone();
+    assert_eq!(events.len(), 1, "a DUAL security card battles");
+    assert_eq!(events[0].winner, None);
+    assert_eq!(r.battle_area_size(0), 1, "the 3000 DP attacker is deleted");
+
+    // Bigger attacker wins the battle and survives.
+    let (mut r, atk, seen) = setup(12000, CardKind::Dual, false, 1);
+    r.attack_player(atk, 1, false);
+    r.auto_resolve().unwrap();
+    let events = seen.lock().unwrap().clone();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].winner, Some(atk));
+    assert_eq!(r.battle_area_size(0), 2);
 }

@@ -51,9 +51,10 @@
 #   Musketeers] trait Digimon" (permanent.IsDigimon &&
 #   TopCard.ContainsTraits("Three Musketeers")). CardCondition: `cardSource ==
 #   card` — bypass scopes to THIS card only.
-#   → `kind: flood_gate`, `active_when: any_permanent { of: you, zone:
-#   battle_area, kind: digimon, trait_has: "Three Musketeers" }`, `modifier:
-#   IgnoreColorRequirement`, `target: { card_number_is: "EX7-070" }`.
+#   → top-level `use_requirement: any_permanent { of: you, zone:
+#   battle_area, kind: digimon, trait_has: "Three Musketeers" }` (was a
+#   card-targeted flood_gate the hand-use colour check never read; fixed
+#   2026-11-10).
 #
 # Clause 3 — `[Main]`, `EffectTiming.OptionSkill` — the STANDARD "ordinary
 #   Option played from hand" activation (DCGO's `CanTriggerOptionMainEffect`
@@ -115,6 +116,20 @@ color: [black]
 cost: 6
 traits: [Three Musketeers]
 
+# ─── Clause 2: Ignore color requirements while you have a TM Digimon ────────
+#
+# "While you have a [Three Musketeers] trait Digimon, you may ignore this
+# card's color requirements." A live board condition read when the Option is
+# used from hand (`option_color_requirement_bypass`), the same shape as its
+# siblings P-180 and EX7-071. It was a card-targeted `flood_gate`, which the
+# hand-use colour check never reads (audit 2026-11-10, user-confirmed).
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+    trait_has: "Three Musketeers"
+
 effects:
   # ─── Clause 1: Inherited self-source-trash → De-Digivolve 1 opp Digimon ────
   #
@@ -143,23 +158,6 @@ effects:
           target: dedigivolve_target
           amount: 1
           stop_at_level: 3
-
-  # ─── Clause 2: Ignore color requirements while you have a TM Digimon ──────
-  #
-  # "While you have a [Three Musketeers] trait Digimon, you may ignore this
-  # card's color requirements." Positive gate (unlike BT19-093's negative
-  # "while you DON'T have" bypass) — mirrors EX7-074's LIBERATOR bypass shape
-  # in this same set.
-  - kind: flood_gate
-    active_when:
-      any_permanent:
-        of: you
-        zone: [battle_area]
-        kind: digimon
-        trait_has: "Three Musketeers"
-    modifier: IgnoreColorRequirement
-    target: { card_number_is: "EX7-070" }
-    summary: "While you have a [Three Musketeers] trait Digimon, ignore this card's color requirements"
 
   # ─── Clause 3: [Main] delete 1 opp lowest-cost Digimon; place self under a
   #     TM Digimon (two independently-gated mandatory picks) ────────────────

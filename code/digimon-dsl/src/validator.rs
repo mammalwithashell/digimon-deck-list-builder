@@ -1732,6 +1732,9 @@ fn validate_post_payment_plural_filter(
                         "dna_hand_candidate" => {
                             value.get("result").is_some() || value.get("field").is_some()
                         }
+                        "dna_field_pair" => {
+                            value.get("result").is_some() || value.get("first").is_some()
+                        }
                         // Only event_target has a global trigger-context
                         // fallback in reference_play_cost. replacement_subject
                         // and ordinary names are still local bindings here.
@@ -1928,6 +1931,9 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
+            // The right pick runs after the left one is bound, so its filter
+            // may reference `bind_left_as` (e.g. `dna_field_pair { first }`).
+            scope.insert(args.bind_left_as.clone());
             validate_predicate_binding_scope(
                 &args.right_filter,
                 &format!("{prefix}.right_filter"),
@@ -1935,7 +1941,6 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
-            scope.insert(args.bind_left_as.clone());
             scope.insert(args.bind_right_as.clone());
         }
         StepSpec::SelectRevealBuckets(args) => {
@@ -2585,6 +2590,31 @@ fn validate_predicate_binding_scope(
                 scope,
                 errors,
             );
+        }
+    }
+    if let Some(pair) = &pred.dna_field_pair {
+        use crate::predicate::DnaFieldPairRole;
+        // G-DSL-DNA-FIELD-PAIR-CANDIDATE: each stage names exactly the prior
+        // picks it correlates with.
+        for (name, binding, required) in [
+            ("result", &pair.result, pair.role != DnaFieldPairRole::Result),
+            ("first", &pair.first, pair.role == DnaFieldPairRole::Second),
+        ] {
+            let path = format!("{prefix}.dna_field_pair.{name}");
+            if required != binding.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: path.clone(),
+                    message: format!(
+                        "{name} binding is {} for {:?} candidates",
+                        if required { "required" } else { "not allowed" },
+                        pair.role
+                    ),
+                });
+            }
+            if let Some(binding) = binding {
+                report_if_undeclared_binding(binding, &path, card_id, scope, errors);
+            }
         }
     }
     if let Some(bc) = &pred.binding_count_eq {

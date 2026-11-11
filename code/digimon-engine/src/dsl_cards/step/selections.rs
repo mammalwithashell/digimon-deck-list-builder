@@ -163,6 +163,10 @@ pub(crate) fn field_value(
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
+            // DCGO `IsMaxCost`: only a top card WITH a play cost counts (a
+            // Token, a DUAL card or an Option has none), so it is neither a
+            // highest- nor a lowest-play-cost candidate. Deck audit 2026-11-10.
+            .filter(|perm| top_card_has_play_cost(perm, &game.card_data))
             .map(|perm| i32::from(perm.top_card().play_cost(&game.card_data))),
         CompiledFieldSelector::LowestMaterialCount => game
             .player(handle.player)
@@ -170,6 +174,16 @@ pub(crate) fn field_value(
             .get(handle.index as usize)
             .map(|perm| perm.card_sources.len().saturating_sub(1) as i32),
     }
+}
+
+/// The permanent's top card has a printed play cost (not a Token, DUAL card
+/// or Option) — DCGO `CardSource.HasPlayCost` as used by `IsMaxCost`.
+pub(crate) fn top_card_has_play_cost(
+    perm: &crate::permanent::Permanent,
+    card_data: &[crate::card_data::CardData],
+) -> bool {
+    let top = perm.top_card();
+    top.has_play_cost(card_data) && top.card_kind(card_data) != crate::enums::CardKind::Token
 }
 
 pub(crate) fn selected_field_extreme(
@@ -7711,7 +7725,15 @@ fn install_select_dna_pair(
                     player,
                     index: index as u8,
                 };
-                if eval_predicate(&left_filter, &read, PredicateSubject::Permanent(handle)) {
+                // Evaluate with the effect's bindings so a filter can reference
+                // a prior pick (e.g. `dna_field_pair { result: <hand pick> }`,
+                // G-DSL-DNA-FIELD-PAIR-CANDIDATE).
+                if eval_predicate_with_bindings(
+                    &left_filter,
+                    &read,
+                    PredicateSubject::Permanent(handle),
+                    Some(&bindings),
+                ) {
                     candidates.push((encode_attack(player as u16, index as u16), handle));
                 }
             }

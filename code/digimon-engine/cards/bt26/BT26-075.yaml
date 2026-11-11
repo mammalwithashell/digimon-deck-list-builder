@@ -62,9 +62,15 @@ dual:
   option:
     use_cost: 4
     colors: [purple]
+    # <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+    # of your Digimon or Tamers in the battle area or breeding area meets
+    # the condition (an Option on the field does not count).
     use_requirement:
       any_field_permanent:
         of: you
+        any_of:
+          - kind: digimon
+          - kind: tamer
         trait_has: "Glowing Dawn"
     effect_text: "<Use Req. ([Glowing Dawn] trait)> [Main] Delete 1 of your opponent's Digimon with the lowest level. <Arts Digivolve>"
     security_text: ""
