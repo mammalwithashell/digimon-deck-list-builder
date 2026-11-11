@@ -249,6 +249,25 @@ Locally this runs at about 48 s per game per worker, so 720 games take about
 3 h. Its seeds differ from the gate's, so it is an independent measure of the
 gated champions.
 
+### 3.7 Matchup matrix (local)
+
+`specialist_matrix.py` plays every unordered pair of archetypes: 4 seed-paired
+game pairs per cell (each side opens once), lists cycling, search 320/4 on both
+seats. Run it once with the base model on both sides (deck strength alone, reusable for every generation) and once per
+generation with each archetype's champion:
+
+```bash
+python -m tools.cloud_search.specialist_matrix prepare --root R0 --engine <release cli> --inputs <inputs> --label base
+python -m tools.cloud_search.specialist_matrix prepare --root R5 --engine <release cli> --inputs <inputs> --label gen5 --models <dir of champion onnx>
+python -m tools.cloud_search.specialist_matrix run --root R5 --workers 12
+python -m tools.cloud_search.specialist_matrix report --root R5 --baseline R0
+```
+
+18 archetypes give 153 cells and 1,224 games, about 2.3 h at 12 workers.
+Field-wide lift is zero-sum: read a pilot's improvement against opponents that
+are still on the base model. Findings and next-run changes are in
+`docs/runbooks/specialist-league-next-run.md`.
+
 ## 4. Measured costs and timings (2026-11-09)
 
 | Step | Time |
