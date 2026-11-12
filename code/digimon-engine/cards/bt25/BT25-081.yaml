@@ -46,7 +46,7 @@ effects:
             all_of:
               - kind: tamer
               - zone: [battle_area]
-              - is_suspended: false
+              # suspended or not (DCGO BT25_081.cs has no IsSuspended filter; official Q&A Q845)
               - not: { color_is: purple }
           prompt: "Suspend 1 non-purple Tamer"
       - suspend: { target: tamer_target }
