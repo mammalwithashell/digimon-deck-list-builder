@@ -55,8 +55,13 @@ effects:
   # Clause (d) — security arm: [All Turns] [Once Per Turn]
   # When their security stack is removed from → opponent plays 1 Petrification Token.
   # on_opponent_security_removed fires in the attacker's battle area (fully implemented).
+  # Both arms are ONE printed effect, so they share one [Once Per Turn]
+  # (`opt_group`): official Q1550 / CR 4.3 §15-14-1, "no matter which timing
+  # the effect is triggered at, it is still the same effect". DCGO gives each
+  # arm its own counter (two ActivateClass); the manual governs.
   - when: on_opponent_security_removed
     once_per_turn: true
+    opt_group: petrify
     summary: "Opponent plays Petrification Token on security removed"
     process:
       - play_token:
@@ -67,6 +72,7 @@ effects:
   # When any of your opponent's Digimon are deleted → opponent plays Petrification Token.
   - when: on_any_deletion
     once_per_turn: true
+    opt_group: petrify
     trigger_if:
       all_of:
         - event_target_owner: opponent

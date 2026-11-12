@@ -121,22 +121,14 @@ steps:
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
-  # Empty Counter window: our engine parks a Hand prompt with only PASS.
-  # The previous oracle run reached this point and DCGO asked P1 instead;
-  # there is no P0 OptionalSkill to answer on the wire.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-    expect: { prompt: SelectHandEffect }
+  # (No Counter window here any more: it was empty except for BT13-060 being
+  # wrongly offered as a <Blast Digivolve> counter, fixed 2026-11-11.)
   # First attacker dies against ST24-10 security; Dracomon is now slot 0.
   - actor: 1
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
   - actor: 0
     do: { select: { cards: [BT26-094] } }
-    expect: { prompt: SelectHandEffect }
-  # Same empty Counter window after accepting Rosemon's second trigger.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
     expect: { prompt: SelectHandEffect }
   # Shared checkpoint after combat: Keenan must now be on P0's field, and
   # P1 can still spend memory normally. No start-of-turn Keenan trigger yet.

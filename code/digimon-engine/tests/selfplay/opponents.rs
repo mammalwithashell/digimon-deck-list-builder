@@ -17,7 +17,9 @@ fn manifest(probability: f64) -> OpponentManifest {
             sha256: "a".repeat(64),
             metadata_sha256: "b".repeat(64),
             weight: 1.0,
+            decks: None,
         }],
+        learner_decks: None,
     }
 }
 
@@ -264,6 +266,87 @@ fn historical_seats_keep_search_targets_and_filter_only_opponent_rows() {
                     std::fs::read(noop.join("shard-000").join(entry.file_name())).unwrap()
                 );
             }
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+}
+
+#[test]
+fn specialist_deck_restrictions_validate_closed() {
+    let mut pool = manifest(0.5);
+    pool.opponents[0].decks = Some(vec!["B".into()]);
+    assert!(pool.validate().unwrap_err().contains("require learner_decks"));
+    pool.learner_decks = Some(vec!["A".into()]);
+    pool.validate().unwrap();
+    pool.opponents[0].decks = Some(vec!["A".into()]);
+    assert!(pool.validate().is_err());
+    pool.opponents[0].decks = Some(vec![]);
+    assert!(pool.validate().is_err());
+    pool.opponents[0].decks = None;
+    pool.learner_decks = Some(vec![]);
+    assert!(pool.validate().is_err());
+    pool.learner_decks = Some(vec!["A".into()]);
+    let names: Vec<String> = ["A:sha256:1:slot1", "B:sha256:2:slot1", "C:sha256:3:slot1"]
+        .map(String::from)
+        .to_vec();
+    let decks = pool.specialist_decks(&names).unwrap().unwrap();
+    assert_eq!(decks.learner, vec![0]);
+    assert_eq!(decks.selfplay, vec![1, 2]);
+    assert_eq!(decks.per_opponent, vec![vec![1, 2]]);
+    pool.opponents[0].decks = Some(vec!["C".into()]);
+    assert_eq!(pool.specialist_decks(&names).unwrap().unwrap().per_opponent, vec![vec![2]]);
+    pool.opponents[0].decks = Some(vec!["Z".into()]);
+    assert!(pool.specialist_decks(&names).is_err());
+}
+
+#[test]
+fn specialist_learner_always_pilots_its_archetype_and_only_its_rows_train() {
+    std::thread::Builder::new()
+        .stack_size(256 * 1024 * 1024)
+        .spawn(|| {
+            let data = load_card_data();
+            let decks = vec![
+                D1.iter().map(|s| s.to_string()).collect(),
+                D2.iter().map(|s| s.to_string()).collect(),
+            ];
+            let names = vec!["A:sha256:1:slot1".to_string(), "B:sha256:2:slot1".to_string()];
+            let root =
+                std::env::temp_dir().join(format!("specialist-decks-{}", std::process::id()));
+            let mut config = SelfPlayConfig {
+                games: 6,
+                seed: 47,
+                decision_cap: 30,
+                shard_rows: 100000,
+                evaluation_batch_size: 2,
+                ..Default::default()
+            };
+            config.search.worlds = 2;
+            config.search.search.simulations = 4;
+            let mut manifest = manifest(0.5);
+            manifest.learner_decks = Some(vec!["A".into()]);
+            let mut pool = HistoricalOpponents {
+                manifest,
+                evaluators: vec![Box::new(UniformEvaluator)],
+            };
+            run_self_play_with_opponents(
+                &data, &decks, &names, &mut UniformEvaluator, &config, &root, "uniform",
+                Some(&mut pool),
+            )
+            .unwrap();
+            let r = receipt(&root);
+            let games = r["opponent_games"].as_array().unwrap();
+            let pairs = r["game_decks"].as_array().unwrap();
+            assert_eq!(games.len(), 6);
+            let mut kinds = std::collections::HashSet::new();
+            for (g, pair) in games.iter().zip(pairs) {
+                let learner = g["learner_seat"].as_u64().expect("learner seat in every game") as usize;
+                assert_eq!(pair[learner], 0, "learner pilots archetype A");
+                assert_eq!(pair[1 - learner], 1, "no mirrors");
+                assert_eq!(g["training_rows_by_seat"][1 - learner], 0);
+                kinds.insert(g["opponent_id"].as_str().unwrap().to_string());
+            }
+            assert!(kinds.contains("current") || kinds.contains("old"));
         })
         .unwrap()
         .join()

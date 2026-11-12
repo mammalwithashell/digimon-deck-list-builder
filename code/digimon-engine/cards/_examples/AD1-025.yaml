@@ -24,8 +24,8 @@ effects:
 
   - kind: partition
     sources:
-      - { name_contains: "WarGreymon" }
-      - { name_contains: "MetalGarurumon" }
+      - { name_is: "WarGreymon" }
+      - { name_is: "MetalGarurumon" }
     exclude_cause: [own_effect, battle]
 
   - when: [on_play, when_digivolving]

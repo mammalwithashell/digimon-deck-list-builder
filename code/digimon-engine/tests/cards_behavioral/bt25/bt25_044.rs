@@ -434,3 +434,102 @@ fn bt25_044_all_turns_without_eligible_card_is_not_offered_in_trigger_order() {
     );
     assert_eq!(runner.memory(), 2, "the observer resolved");
 }
+
+// ─── Section 4 — the cost reduction is scoped to Junomon's OWN play ─────────
+//
+// Printed: "When this card would be played, if there are 6 or fewer total
+// cards in both players' security stacks, reduce the cost by 5." DCGO
+// BT25_044.cs: `ChangeCostClass` whose card condition is `cardSource == card`
+// with `(own + enemy security) <= 6` -- it never touches any other card.
+//
+// Regression (specialist-league game 245, 2026-11-08): the clause was lowered
+// as an unscoped field reducer, so a Junomon on the board cut 5 off EVERY
+// play/use by EITHER player while the stacks held <= 6 cards. The opposing
+// TS Jupitermon seat then used Abyss Sanctuary: Throne Room (BT24-090, cost 3)
+// for free, swapped it with the face-up Throne Room in security, and repeated
+// that forever (1,000+ decisions at constant memory).
+
+fn plain_tamer(id: &str, cost: u16) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Tamer;
+    card.play_cost = cost;
+    card
+}
+
+fn scoped_base() -> DebugRunnerBuilder {
+    base().add_card(plain_tamer("TAMER-3", 3))
+}
+
+#[test]
+fn bt25_044_on_opponent_field_does_not_reduce_my_play_cost() {
+    // Both security stacks empty -> Junomon's printed condition holds.
+    let mut runner = scoped_base().hand(0, &["TAMER-3"]).memory(5).start();
+    runner.place_on_field(1, CARD_ID, Some(0));
+    let before = runner.memory();
+    runner.play(0, 0).expect("play the cost-3 Tamer");
+    assert_eq!(
+        runner.memory(),
+        before - 3,
+        "an opponent's Junomon must not discount my Tamer"
+    );
+}
+
+#[test]
+fn bt25_044_on_own_field_does_not_reduce_my_other_play_cost() {
+    let mut runner = scoped_base().hand(0, &["TAMER-3"]).memory(5).start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    let before = runner.memory();
+    runner.play(0, 0).expect("play the cost-3 Tamer");
+    assert_eq!(
+        runner.memory(),
+        before - 3,
+        "Junomon only reduces its own play cost"
+    );
+}
+
+#[test]
+fn bt25_044_play_from_hand_reduced_by_5_with_six_or_fewer_total_security() {
+    let mut runner = base()
+        .hand(0, &[CARD_ID])
+        .security(0, &["PAD"; 3])
+        .security(1, &["PAD"; 3])
+        .memory(10)
+        .start();
+    let before = runner.memory();
+    runner.play(0, 0).expect("play Junomon");
+    assert_eq!(runner.memory(), before - 7, "printed 12 reduced by 5 (6 total security)");
+}
+
+#[test]
+fn bt25_044_play_from_hand_full_cost_with_more_than_six_total_security() {
+    let mut runner = base()
+        .hand(0, &[CARD_ID])
+        .security(0, &["PAD"; 4])
+        .security(1, &["PAD"; 3])
+        .memory(10)
+        .start();
+    let before = runner.memory();
+    runner.play(0, 0).expect("play Junomon");
+    assert_eq!(runner.memory(), before - 12, "7 total security -> no reduction");
+}
+
+/// The game-245 loop in miniature: next to an opposing Junomon, using Abyss
+/// Sanctuary: Throne Room (BT24-090) must still cost its printed 3.
+#[test]
+fn bt25_044_opposing_junomon_does_not_make_throne_room_free() {
+    let mut yellow = make_digimon("YELLOW-TS", 4, 5000, &["TS"]);
+    yellow.colors = vec![digimon_engine::enums::CardColor::Yellow];
+    let mut runner = base()
+        .dsl_card("BT24-090")
+        .expect("BT24-090 compiles")
+        .add_card(yellow)
+        .hand(0, &["BT24-090"])
+        .memory(5)
+        .start();
+    runner.place_on_field(0, "YELLOW-TS", Some(0));
+    runner.place_on_field(1, CARD_ID, Some(0));
+    let before = runner.memory();
+    let _ = runner.game.play_option_from_hand(0, 0);
+    runner.auto_resolve().ok();
+    assert_eq!(runner.memory(), before - 3, "Throne Room's use cost is 3");
+}

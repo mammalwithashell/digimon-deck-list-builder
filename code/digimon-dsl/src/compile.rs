@@ -995,6 +995,7 @@ fn compile_predicate(
             .map(|s| compile_player_ref(s.player())),
         color_matches_binding: p.color_matches_binding.clone(),
         color_matches_returned_card: p.color_matches_returned_card,
+        name_matches_returned_card: p.name_matches_returned_card,
         color_matches_own_source_stack: p.color_matches_own_source_stack.map(|s| match s {
             crate::predicate::SourceStackScope::Scoped {
                 of: crate::predicate::SourceStackScopeOf::SelfCarrier,
@@ -1053,6 +1054,11 @@ fn compile_predicate(
                     &format!("{prefix}.dna_hand_candidate.cost"), card_id, errors),
                 ignore_requirements: spec.ignore_requirements,
             }
+        }),
+        dna_field_pair: p.dna_field_pair.as_ref().map(|spec| CompiledDnaFieldPair {
+            role: spec.role,
+            result: spec.result.clone(),
+            first: spec.first.clone(),
         }),
         can_play_from_effect_without_cost: p.can_play_from_effect_without_cost,
         can_play_to_breeding_from_hand: p.can_play_to_breeding_from_hand,
@@ -1150,7 +1156,7 @@ fn compile_predicate(
             }
         }),
         distinct_colors_gte: p.distinct_colors_gte.as_ref().map(|d| {
-            crate::compiled::CompiledDistinctNamedCount {
+            crate::compiled::CompiledDistinctColorsCount {
                 of: compile_player_ref(d.of),
                 filter: Box::new(compile_predicate(
                     &d.filter,
@@ -2031,6 +2037,7 @@ fn compile_triggered(
         once_per_turn: t.once_per_turn,
         max_per_turn: t.max_per_turn,
         as_option_effect: t.as_option_effect,
+        opt_group: t.opt_group.clone(),
         process: t
             .process
             .iter()
@@ -2479,6 +2486,29 @@ fn compile_declarative(
             }
         }
         B::CostReduction(c) => {
+            // A reducer with a `condition` but no trigger flag and no
+            // `active_when` lowers to an UNSCOPED field reducer: every play /
+            // use by either player gets cheaper while the condition holds.
+            // "When this card would be played, if X, reduce the cost by N"
+            // needs `when_playing_this: true`. BT25-044 Junomon shipped this
+            // way and let the opposing seat use a cost-3 Option for free
+            // forever (specialist-league game 245, 2026-11-08).
+            if c.condition.is_some()
+                && active_when.is_none()
+                && !c.when_playing_this
+                && !c.when_digivolving_this
+                && c.when_any_ally_played.is_none()
+                && c.when_any_ally_digivolves_into.is_none()
+            {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: prefix.into(),
+                    message: "cost_reduction with only a `condition` reduces every card's cost; \
+                              set `when_playing_this: true` for \"when this card would be played\", \
+                              or scope it with `active_when` / a `when_any_*` trigger"
+                        .into(),
+                });
+            }
             if c.when_playing_this && c.when_digivolving_this {
                 errors.push(ValidationError { card_id: card_id.into(), path: prefix.into(),
                     message: "when_playing_this and when_digivolving_this are mutually exclusive".into() });
@@ -2981,6 +3011,14 @@ fn compile_step(
         },
         S::ShuffleSecurity(a) => CompiledStep::ShuffleSecurity {
             of: compile_player_ref(a.of),
+        },
+        S::ShuffleHand(a) => CompiledStep::ShuffleHand {
+            of: compile_player_ref(a.of),
+        },
+        S::ReturnHandListToDeck(a) => CompiledStep::ReturnHandListToDeck {
+            of: compile_player_ref(a.of),
+            cards: compile_binding_ref(&a.cards),
+            to_top: matches!(a.destination, crate::step::DeckDestination::Top),
         },
         S::RevealSecurity(a) => CompiledStep::RevealSecurity { of: compile_player_ref(a.of) },
         S::RevealTopDeck(a) => CompiledStep::RevealTopDeck {
@@ -5001,3 +5039,7 @@ effects:
         );
     }
 }
+
+#[cfg(test)]
+#[path = "compile_cost_reduction_scope_tests.rs"]
+mod cost_reduction_scope_tests;

@@ -423,12 +423,8 @@ impl<'a> EffectContext<'a> {
     ///   (the card is PLAYED to the battle area at the reduced cost).
     /// - `Option` → [`Self::use_option_from_hand_with_cost`] (the card is USED
     ///   at the reduced use cost, full Option lifecycle).
-    /// - `Dual` → because a DUAL card can enter play as a Digimon OR be used as
-    ///   an Option, the face is a player CHOICE that is part of the use (no
-    ///   auto-selection — §17). A `SelectionKind::EffectChoice` with labels
-    ///   `["Play as Digimon", "Use as Option"]` is surfaced; the callback then
-    ///   routes to the play or use path. This call returns immediately after
-    ///   installing the prompt; the caller must drive the resulting selection.
+    /// - `Dual` → used as an Option. A DUAL card prints "Can't play to the
+    ///   field." (CR 4-6-2: it is digivolved or used, never played).
     ///
     /// `G-PLAY-OR-USE-FROM-HAND`. Used by ST23-04 / ST23-08 / BT25-041
     /// ("you may play or use 1 [Glowing Dawn] trait card from your hand with
@@ -455,52 +451,10 @@ impl<'a> EffectContext<'a> {
                 // A Token never lives in hand; nothing to play or use.
             }
             crate::enums::CardKind::Dual => {
-                let prov = crate::resume::ResumeProvenance {
-                    source_card: self.source_card,
-                    source_permanent: self.source_permanent,
-                    source_kind: self.source_kind,
-                    controller: self.player,
-                    override_pin: self.override_selecting_player(),
-                };
-                self.select_effect_choice(
-                    "Play as Digimon or use as Option",
-                    vec!["Play as Digimon".to_string(), "Use as Option".to_string()],
-                    move |cb_ctx, choice| {
-                        // Re-resolve the hand index defensively (the hand has
-                        // not mutated between installing the prompt and its
-                        // resolution within this effect, so `hand_index` is
-                        // stable, but guard against an empty/OOB hand).
-                        if cb_ctx.game.player(player).hand.get(hand_index).is_none() {
-                            return;
-                        }
-                        match choice {
-                            // 0 → Play as Digimon.
-                            0 => {
-                                let _ =
-                                    cb_ctx.play_from_hand_with_cost(player, hand_index, cost_delta);
-                            }
-                            // 1 → Use as Option.
-                            _ => {
-                                let _ = cb_ctx
-                                    .use_option_from_hand_with_cost(player, hand_index, cost_delta);
-                            }
-                        }
-                    },
-                );
-                if self.game.pending_selection.is_some() {
-                    self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
-                        frames: vec![crate::resume::ResumeFrame::PlayOrUseDualChoice(
-                            crate::resume::PlayOrUseDualChoiceState {
-                                prov,
-                                player,
-                                hand_index,
-                                source_ref: None,
-                                cost_delta,
-                                outer_conts: Vec::new(),
-                            },
-                        )],
-                    });
-                }
+                // A DUAL card can't be played to the field (it prints "Can't
+                // play to the field."); "play or use" uses it as an Option
+                // (DCGO EX12_013 / BT26_049 / ST24_06). Game audit 2026-11-11.
+                let _ = self.use_option_from_hand_with_cost(player, hand_index, cost_delta);
             }
         }
     }
@@ -545,50 +499,15 @@ impl<'a> EffectContext<'a> {
             }
             crate::enums::CardKind::Token => {}
             crate::enums::CardKind::Dual => {
-                let prov = crate::resume::ResumeProvenance {
-                    source_card: self.source_card,
-                    source_permanent: self.source_permanent,
-                    source_kind: self.source_kind,
-                    controller: self.player,
-                    override_pin: self.override_selecting_player(),
-                };
-                self.select_effect_choice(
-                    "Play as Digimon or use as Option",
-                    vec!["Play as Digimon".to_string(), "Use as Option".to_string()],
-                    move |cb_ctx, choice| match choice {
-                        0 => {
-                            let _ = cb_ctx.play_from_materials(
-                                source_ref.permanent,
-                                source_ref.source_index as usize,
-                                cost_delta,
-                            );
-                        }
-                        _ => {
-                            let _ = cb_ctx.game.use_option_from(
-                                player,
-                                crate::game_actions::OptionSource::Source {
-                                    host: source_ref.permanent,
-                                    card: source_ref.card,
-                                },
-                                cost_delta,
-                            );
-                        }
+                // Can't be played to the field: use it as an Option.
+                let _ = self.game.use_option_from(
+                    player,
+                    crate::game_actions::OptionSource::Source {
+                        host: source_ref.permanent,
+                        card: source_ref.card,
                     },
+                    cost_delta,
                 );
-                if self.game.pending_selection.is_some() {
-                    self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
-                        frames: vec![crate::resume::ResumeFrame::PlayOrUseDualChoice(
-                            crate::resume::PlayOrUseDualChoiceState {
-                                prov,
-                                player,
-                                hand_index: 0,
-                                source_ref: Some(source_ref),
-                                cost_delta,
-                                outer_conts: Vec::new(),
-                            },
-                        )],
-                    });
-                }
             }
         }
     }

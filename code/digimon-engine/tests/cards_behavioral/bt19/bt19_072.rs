@@ -127,6 +127,12 @@ fn bt19_072_opponents_turn_switches_attack_target_to_royal_knight() {
     let attacker = runner.place_on_field(1, "ATK", Some(0));
     let security_before = runner.game.players[0].security.len();
 
+    // CR 11-1-2: only the turn player can attack, so the attack runs on its
+
+    // controller's turn (the clause is an [Opponent's Turn] redirect).
+
+    runner.set_first_player(attacker.player);
+
     runner.game.begin_attack_open(AttackOpen {
         attacker,
         initiator: AttackInitiator::Effect {

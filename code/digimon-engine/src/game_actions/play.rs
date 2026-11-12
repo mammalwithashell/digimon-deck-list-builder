@@ -26,6 +26,25 @@ impl Game {
     /// is the native actor or causing effect controller, not the destination.
     /// Consult printed DP, never battle-area DP modifiers.
     pub(crate) fn card_data_play_is_prohibited(&self, controller: PlayerId, data: &CardData) -> bool {
+        // A DUAL card prints "Can't play to the field." in place of a play
+        // cost: it is digivolved with its Digimon information or used with its
+        // Option information (CR 4-6-2), never played. DCGO
+        // `CanPlayAsNewPermanent` requires `isPlayOption || !IsOption`, and a
+        // DUAL's kinds contain Option. Game audit 2026-11-11: effects played
+        // DUAL cards (Ceresmon BT26-032 via Sirenmon BT25-039, Jupitermon
+        // BT26-033 via Minervamon BT24-041, ...) 149 times in 612 games.
+        if data.card_kind == CardKind::Dual {
+            return true;
+        }
+        // CR 7-1-1: playing places "a new card with a play cost" onto the
+        // field. A Digi-Egg (hatched, never played) and an Option (used with
+        // its use cost) have none. DCGO `CanPlayAsNewPermanent` requires
+        // `HasPlayCost`. Rose Rave audit 2026-11-11: Rosemon BT26-049 could
+        // play a Digi-Egg from hand, Crowmon BT26-076 / Pinamon BT26-005
+        // offered Options and Eggs as "play from trash" picks.
+        if matches!(data.card_kind, CardKind::DigiEgg | CardKind::Option) {
+            return true;
+        }
         if !matches!(data.card_kind, CardKind::Digimon | CardKind::Dual | CardKind::Token | CardKind::DigiEgg) {
             return false;
         }

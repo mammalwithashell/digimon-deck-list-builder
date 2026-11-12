@@ -9435,18 +9435,56 @@ claimed. Exact cumulative verification and admission denominators are in
 `can_digivolve_onto` and `can_digivolve_onto_with_cost` accepted only a declared binding or `source` as their target, so a trigger about ANOTHER Digimon (EX12-074's `[Security]` "when your [Shambala] Digimon attacks, it may digivolve ...") could not restrict its hand pick to cards that can actually digivolve that Digimon. DCGO's `DigivolveIntoHandOrTrashCard` filters the candidates by `CanPlayCardTargetFrame` and opens no pick when none qualify. `event_target` is now accepted as a target by both predicates (evaluated against the trigger context by identity, like the `event_target` binding reference) and by the validator's binding checks. Used by EX12-074; EX12-046 uses the existing `source` form. Audit still to do for the same missing-legality-filter pattern: EX12-066, EX11-066, EX11-069, BT23-072, BT24-082.
 
 
-## G-DSL-DISTINCT-COLORS-FILTERED-GTE — RESOLVED (2026-11-09)
+## Filtered distinct-colour count [G-DSL-DISTINCT-FILTERED-COLORS] — RESOLVED (2026-10-27)
 
-Cards: ST20-03 Birdramon, ST21-08 Togemon — "[On Play][When Digivolving] If your Tamers with the [ADVENTURE] trait
-have 3 or more total colors, this Digimon may digivolve into a Digimon card with the [ADVENTURE] trait in the hand
-without paying the cost."
+- Effect text: ST20-03 Birdramon / ST21-08 Togemon — "[On Play] [When Digivolving] If your Tamers with the [ADVENTURE] trait have 3 or more total colors, this Digimon may digivolve into a Digimon card with the [ADVENTURE] trait in the hand without paying the cost."
+- Gap: `distinct_tamer_colors_gte` counts the colours of EVERY own Tamer; DCGO `ST20_03.cs` / `ST21_08.cs` count only Tamers whose top card has the [ADVENTURE] trait, so a non-ADVENTURE Tamer's colour must not satisfy the gate. No predicate compared a filtered colour count to a threshold.
+- Resolution: new no-subject predicate leaf `distinct_colors_gte: { of, filter, n }` — true when `of`'s battle-area permanents matching `filter` collectively carry >= `n` distinct RULES colours (gained colours count, DCGO `TopCard.CardColors`; evaluated through the shared `formula_eval::distinct_colors_in_zone` used by the `distinct_colors_count` formula). Follow-up (not done): `distinct_tamer_colors_gte` still reads printed top-card colours and ignores gained colours. Filtered sibling of `distinct_tamer_colors_gte`, modelled on `distinct_named_count_gte`. Files: `code/digimon-dsl/src/{predicate,compiled,compile,validator,pack}.rs`, `code/digimon-dsl/src/bin/implementation_inventory/{reference_predicates,references}.rs`, `code/digimon-engine/src/dsl_cards/predicate.rs`.
+- DSL syntax:
+  ```yaml
+  condition:
+    distinct_colors_gte:
+      of: you
+      filter: { all_of: [{ kind: tamer }, { trait_has: ADVENTURE }] }
+      n: 3
+  ```
+- Coverage: `st20_03_gained_tamer_color_counts`, `st20_03_non_adventure_tamer_colors_do_not_count`, `code/digimon-dsl/tests/distinct_colors_gte_schema.rs`, `st21_08_non_adventure_tamer_colors_do_not_count` (+ positive/threshold tests in the same files).
 
-Gap: `distinct_tamer_colors_gte` counts the colours of every Tamer (no trait filter), and `distinct_colors_count` is
-only a formula `per:` aggregate, so the gate could not be a standalone condition. ST21-08's first draft routed around
-it with a 35-way `any_of` over colour triples; ST20-03's clause was omitted.
+## Blind opponent-hand pick -> deck bottom  [G-DSL-BLIND-OPP-HAND-PLACE] — PARTIAL, hand->deck slice RESOLVED (2026-11-11)
 
-Resolution: new predicate leaf `distinct_colors_gte: { of: you, filter: <predicate>, n: <N> }` (same payload as
-`distinct_named_count_gte`): the DISTINCT printed colours of the top cards of `of`'s battle-area permanents matching
-`filter` number at least `n`. Implemented in `digimon-dsl` (predicate.rs / compiled.rs / compile.rs / validator.rs /
-pack.rs / inventory) and `digimon-engine/src/dsl_cards/predicate.rs`. Both cards now use it; ST20-03's six formerly
-`#[ignore]`d tests run and pass. Driver for the work: the MelonLoader-recorded bot games in `qa/dcgo-mod-recordings/`.
+- Effect text (driver BT13-033 MirageGaogamon: Burst Mode): "[When Attacking] If your opponent has 9 or more cards in their hand, by choosing cards in your opponent's hand without looking and returning them to the bottom of the deck so that 8 remain, unsuspend this Digimon."
+- DCGO `BT13_033.cs`: optional; shuffles `Enemy.HandCards`, then the owner picks exactly `hand - 8` face-down cards (`SetUseFaceDown`, `canLookReverseCard: false`, `canEndNotMax: false`) -> `AddLibraryBottomCards`; unsuspends only if a card was returned.
+- Gap: no way to (a) destroy hand-position information before a pick "without looking", (b) move a card-list binding of HAND cards to a deck, (c) force a card-zone `select_count_capped_multi` to take exactly a formula count (`clamp_to_available` was honoured for `battle_area` only; card zones ignored it, so a `min: 1` pick could stop early).
+- Resolution (dsl + dsl_cards lowering):
+  - new step `shuffle_hand: { of }` -> `EffectContext::shuffle_hand` (game RNG; drops every observer's positional hand knowledge via `shuffle_belief_knowledge(.., Hand)`).
+  - new step `return_hand_list_to_deck: { of, cards, destination: bottom|top }` (default bottom) -> per-card `return_hand_card_to_deck`; a return, not a discard; each moved card recorded in `returned_to_deck` (`effect_returned_any_card`).
+  - `select_count_capped_multi { clamp_to_available: true }` on `hand`/`trash` now sets the pick floor to `min(max, available)` (MP-30/31), mirroring the battle-area path. No existing card used the flag on a card zone.
+- DSL syntax:
+  ```yaml
+  - shuffle_hand: { of: opponent }
+  - select_count_capped_multi:
+      of: opponent
+      zone: hand
+      max: { formula: { base: -8, per: { card_count_in_zone: { of: opponent, zone: hand } }, delta: 1 } }
+      clamp_to_available: true
+      filter: {}
+      bind_as: returned_cards
+      prompt: "..."
+  - return_hand_list_to_deck: { of: opponent, cards: returned_cards }
+  ```
+- Still OPEN: EX10-059's cross-player tuck ("place it as any of their Digimon's bottom digivolution card or under any of their Tamers") — the blind pick is now expressible, the opponent-side source placement is not.
+- Coverage: `code/digimon-engine/tests/cards_behavioral/bt13/bt13_033.rs` (`bt13_033_when_attacking_*`).
+
+## Delete all with the same name as a returned card  [G-DSL-NAME-MATCHES-RETURNED-CARD] — RESOLVED (2026-11-11)
+
+- Effect text (driver BT13-092 Ravemon: Burst Mode): "[When Attacking] By returning 1 Digimon card from your opponent's trash to the bottom of the deck, delete all of your opponent's Digimon with the same name as that card."
+- DCGO `BT13_092.cs`: destroys every enemy battle-area Digimon whose `TopCard.HasSameCardName(returnedCard)`.
+- Gap: `color_matches_returned_card` existed for colour; nothing compared a candidate's NAME with the card a preceding step returned to deck.
+- Resolution: new predicate leaf `name_matches_returned_card: bool` — true when the candidate shares a card name (printed or "also treated as"; a field permanent uses its synthesized top-card names) with ANY card in the effect's `returned_to_deck` result log. Rejected in plural-security filters like its colour sibling (result-log dependency).
+- DSL syntax: `delete_all_permanents: { over: { all_of: [ { of: opponent }, { kind: digimon }, { name_matches_returned_card: true } ] } }` after `select_trash` + `return_trash_list_to_deck_bottom`.
+- Coverage: `code/digimon-engine/tests/cards_behavioral/bt13/bt13_092.rs` (`bt13_092_when_attacking_*`).
+
+## Opponent-hand search visibility in the observation  [G-OBS-OPP-HAND-SEARCH-VISIBILITY] — OPEN (2026-11-11)
+
+- Effect text (BT13-092 Ravemon: Burst Mode): "[When Digivolving] Search your opponent's hand, and trash 1 card among it." (also BT14-075, EX6-059 when authored).
+- The DSL lowering is faithful (`select_hand { of: opponent }` without `as_selecting_player`: the controller picks among the opponent's hand, mandatory). But the observation tensor encodes only the observer's OWN hand (`write_own_hand`), and the legacy `SelectionKind::Hand` prompt exposes only hand indices, so an RL agent "searching" the opponent's hand chooses without seeing it. Needs an observation-layer reveal of the searched hand to the searching player for the duration of the prompt (not a DSL change). Not fixed here (tensor/action spec change, rule 1/4).

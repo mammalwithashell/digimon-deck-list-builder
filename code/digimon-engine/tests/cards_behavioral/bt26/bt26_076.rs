@@ -14,8 +14,8 @@
 //! DCGO: BT26/Purple/BT26_076.cs.
 
 use super::support::*;
-use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, EffectTiming};
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
 use digimon_engine::selection::SelectionKind;
 
 const CARD_ID: &str = "BT26-076";
@@ -292,4 +292,63 @@ fn bt26_076_inherited_on_deletion_plays_bird_from_trash() {
     pick_first(&mut r, 0);
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"BIRD5".to_string()));
+}
+
+/// The inherited [On Deletion] plays a card from the trash, so only a card with
+/// a play cost qualifies: a cost-3 [DATA SQUAD] Option (use cost, not play
+/// cost) and a [Bird] Digi-Egg (no play cost) are never offered.
+#[test]
+fn bt26_076_inherited_play_from_trash_excludes_option_and_digi_egg_rose_rave_audit() {
+    // Rose Rave audit 2026-11-11: CR 7-1-1 / DCGO HasPlayCost -- Options and Digi-Eggs can't be played.
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT26-076")
+        .add_card(filler("FILLER"))
+        .add_card({
+            let mut c = make_test_card("DSOPT", "DS Option");
+            c.card_kind = CardKind::Option;
+            c.colors = vec![CardColor::Purple];
+            c.level = None;
+            c.dp = None;
+            c.play_cost = 3;
+            c.traits = vec!["DATA SQUAD".to_string()];
+            c
+        })
+        .add_card({
+            let mut c = digimon("BIRDEGG", "Bird Egg", CardColor::Purple, 2, 0, &["Bird"]);
+            c.card_kind = CardKind::DigiEgg;
+            c.dp = None;
+            c
+        })
+        .add_card(digimon(
+            "BIRD5",
+            "Birdy",
+            CardColor::Purple,
+            4,
+            5,
+            &["Mysterious Bird"],
+        ))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(5)
+        .start();
+    r.set_first_player(0);
+    push_trash(&mut r, 0, "DSOPT");
+    push_trash(&mut r, 0, "BIRDEGG");
+    push_trash(&mut r, 0, "BIRD5");
+    let carrier = r.place_stack(0, &[CARD_ID, "FILLER"]);
+    fire(&mut r, EffectTiming::OnDeletion, carrier);
+    let v = r.pending_selection_view().expect("optional trash pick");
+    assert!(v.is_optional);
+    assert_eq!(
+        non_pass(&r).len(),
+        1,
+        "only the [Bird] Digimon is offered, not the Option or the Digi-Egg (valid {:?})",
+        v.valid_action_ids
+    );
+    pick_trash(&mut r, 0, "BIRD5");
+    let _ = r.auto_resolve();
+    assert!(field_ids(&r, 0).contains(&"BIRD5".to_string()));
+    assert!(!field_ids(&r, 0).contains(&"DSOPT".to_string()));
+    assert!(!field_ids(&r, 0).contains(&"BIRDEGG".to_string()));
 }

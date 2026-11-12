@@ -84,3 +84,144 @@ fn ex12_034_ally_played_bottom_decks_opponent_lowest_level_digimon() {
         "LOW"
     );
 }
+
+// --- Leave replacement: offered zones + OPT refund (deck audit 2026-11-10) ---
+
+fn leave_setup(hand: &[&str]) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-034 YAML loads")
+        .add_card(super::support::red_sw("SW-5", 5))
+        .add_card(plain_digimon("VICTIM-A", CardColor::Red, 4, 4000))
+        .add_card(plain_digimon("VICTIM-B", CardColor::Red, 4, 4000))
+        .hand(0, hand)
+        .memory(10)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    let a = runner.place_on_field(0, "VICTIM-A", Some(0));
+    runner.place_on_field(0, "VICTIM-B", Some(0));
+    (runner, a)
+}
+
+fn delete_own(runner: &mut DebugRunner, card_id: &str) {
+    let h = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == card_id)
+        .map(|i| digimon_engine::permanent::PermanentHandle { player: 0, index: i as u8 })
+        .expect("own Digimon on field");
+    runner
+        .game
+        .delete_permanent_with_cause(h, digimon_engine::replacement::ReplacementCause::OwnEffect);
+}
+
+fn choice_labels(runner: &DebugRunner) -> Vec<String> {
+    runner
+        .pending_selection()
+        .and_then(|p| p.effect_choices.as_ref())
+        .map(|c| c.iter().map(|e| e.label.clone()).collect())
+        .unwrap_or_default()
+}
+
+/// DCGO EX12_034.cs offers "from hand" only when the hand holds a level 5 or
+/// lower [SW] card and "from digivolution cards" only when this Digimon's
+/// sources do, always with "Don't play".
+#[test]
+fn ex12_034_leave_offers_only_zones_with_a_playable_card() {
+    let (mut runner, _) = leave_setup(&["SW-5"]);
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    let labels = choice_labels(&runner);
+    assert_eq!(labels, vec!["Hand".to_string(), "Don't play".to_string()]);
+}
+
+/// Playing nothing refunds the [Once Per Turn] (DCGO RemoveUse), so the next
+/// leave this turn offers the replacement again.
+#[test]
+fn ex12_034_leave_playing_nothing_refunds_once_per_turn() {
+    let (mut runner, _) = leave_setup(&["SW-5"]);
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    runner.execute_branch(1).expect("choose Don't play");
+    let _ = runner.auto_resolve();
+    assert!(!field_contains(&runner, 0, "VICTIM-A"), "the first Digimon left");
+
+    delete_own(&mut runner, "VICTIM-B");
+    assert!(
+        runner.pending_selection().is_some(),
+        "the refunded [Once Per Turn] replacement is offered again"
+    );
+}
+
+/// After choosing "Hand" the card pick can't be passed: declining there would
+/// spend the [Once Per Turn] without the refund. "Don't play" is the opt-out
+/// (DCGO's decline-then-RemoveUse has the same outcome).
+#[test]
+fn ex12_034_leave_hand_pick_after_choosing_hand_is_mandatory() {
+    let (mut runner, _) = leave_setup(&["SW-5"]);
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    runner.execute_branch(0).expect("choose Hand");
+    let sel = runner.pending_selection().expect("hand pick pending");
+    assert_eq!(sel.kind, digimon_engine::selection::SelectionKind::Hand);
+    assert!(!sel.is_optional, "the hand pick has no PASS");
+}
+
+/// With nothing playable anywhere, the choice is only "Don't play" (it
+/// auto-binds, no prompt) and the [Once Per Turn] is refunded.
+#[test]
+fn ex12_034_leave_with_no_playable_card_plays_nothing() {
+    let (mut runner, _) = leave_setup(&[]);
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    let _ = runner.auto_resolve();
+    assert!(!field_contains(&runner, 0, "VICTIM-A"));
+    assert!(runner.pending_selection().is_none());
+}
+
+/// "Play ... without paying the cost" stays free for a DigiXros card: Erlangmon
+/// playing Sagomon (EX12-029, cost 7, DigiXros) from hand pays no memory.
+/// Game audit 2026-11-11: the DigiXros transaction charged 5.
+#[test]
+fn ex12_034_leave_free_play_of_a_digixros_card_pays_nothing() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-034 YAML loads")
+        .dsl_card("EX12-029")
+        .expect("EX12-029 YAML loads")
+        .add_card(plain_digimon("VICTIM-A", CardColor::Red, 4, 4000))
+        .hand(0, &["EX12-029"])
+        .memory(3)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "VICTIM-A", Some(0));
+    let memory_before = runner.memory();
+
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    assert_eq!(choice_labels(&runner)[0], "Hand");
+    runner.execute_branch(0).expect("play from hand");
+    // Pick Sagomon, then decline any DigiXros material pick.
+    let mut guard = 0;
+    while let Some(sel) = runner.pending_selection() {
+        guard += 1;
+        assert!(guard < 16, "selection chain did not terminate");
+        let player = sel.selecting_player;
+        let prompt = format!("{:?} {}", sel.kind, sel.prompt);
+        // Take Sagomon from hand; decline optional picks (DigiXros materials);
+        // otherwise (trigger ordering) take the first choice.
+        let pick = if sel.kind == digimon_engine::selection::SelectionKind::Hand {
+            sel.valid_action_ids[0]
+        } else if sel.is_optional {
+            digimon_engine::action::space::PASS
+        } else {
+            sel.valid_action_ids[0]
+        };
+        runner
+            .execute_action(player, pick)
+            .unwrap_or_else(|e| panic!("{e:?} at {prompt}"));
+    }
+    assert!(field_contains(&runner, 0, "EX12-029"), "Sagomon was played");
+    // Sagomon's own effects may gain memory; the play itself must not charge.
+    assert!(runner.memory() >= memory_before, "the free play paid no memory");
+}

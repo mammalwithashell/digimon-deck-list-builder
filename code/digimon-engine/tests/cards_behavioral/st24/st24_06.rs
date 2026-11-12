@@ -619,42 +619,71 @@ fn st24_06_inherited_save_offered_for_name_match_without_trait() {
     assert!(stayed, "accepting the save keeps the [ShineGreymon]-named carrier");
 }
 
-/// NEGATIVE (self-only): the inherited effect reads "When THIS Digimon ... would
-/// leave" (DCGO `CanTriggerWhenRemoveField` = `permanent.cardSources.Contains(card)`,
-/// i.e. only the carrier's own permanent). Another of the controller's
-/// permanents leaving - here a Tamer returned/deleted while a qualifying
-/// [ShineGreymon] carrier sits on the field - must NOT be offered the save. It
-/// was, because `replacement_subject_is_mine` switches the replacement into
-/// cross-permanent mode; this surfaced replaying a recorded game where a Burst
-/// Digivolve returned a Tamer.
+/// "When THIS Digimon ... would leave": the inherited save protects only the
+/// permanent carrying RizeGreymon as a source. Deleting ANOTHER of your Digimon
+/// offers no replacement (it leaves); deleting the [DATA SQUAD] carrier
+/// afterwards still offers it (the [Once Per Turn] was not spent).
 #[test]
-fn st24_06_inherited_save_not_offered_when_another_permanent_leaves() {
-    let mut runner = base_builder()
-        .add_card(gate_top("NAME-TOP", "ShineGreymon Ruin Mode X"))
-        .start();
+fn st24_06_inherited_save_only_for_carrier_audit() {
+    // Audit 2026-11-11: DCGO ST24_06.cs CanTriggerWhenRemoveField(hashtable, card) -- the carrier only.
+    let mut runner = base_builder().start();
     runner.set_first_player(0);
-    // A qualifying carrier (ShineGreymon in its name) holding ST24-06 inherited.
-    let _carrier = runner.place_stack(0, &[CARD_ID, "NAME-TOP"]);
-    // A different permanent that pays nothing and carries no save of its own.
+    runner.place_stack(0, &[CARD_ID, "DS-CARRIER"]);
+    let other = runner.place_on_field(0, "NON-DS", Some(0));
     let t = runner.place_stack(0, &["FILLER", "TAMER"]);
     runner.game.players[0].battle_area[t.index as usize].card_sources[0].face_down = true;
 
+    /// Drive every prompt (accepting); returns whether a Replacement prompt appeared.
+    fn drive(runner: &mut DebugRunner) -> bool {
+        let mut saw_replacement = false;
+        let mut guard = 0;
+        while let Some(sel) = runner.pending_selection() {
+            guard += 1;
+            assert!(guard < 32);
+            if matches!(sel.kind, SelectionKind::Replacement) {
+                saw_replacement = true;
+            }
+            let a = sel
+                .valid_action_ids
+                .iter()
+                .copied()
+                .find(|a| *a != PASS)
+                .unwrap_or(PASS);
+            let who = sel.selecting_player;
+            runner.execute_action(who, a).unwrap();
+        }
+        let _ = runner.auto_resolve();
+        saw_replacement
+    }
+
+    // Another of your Digimon would leave: no replacement offered.
     runner
         .game
-        .delete_permanent_with_cause(t, ReplacementCause::OpponentEffect);
-
-    let mut offered = false;
-    let mut guard = 0;
-    while let Some(p) = runner.pending_selection() {
-        guard += 1;
-        assert!(guard < 32);
-        if matches!(p.kind, SelectionKind::Replacement) {
-            offered = true;
-        }
-        let _ = runner.execute_action(0, PASS);
-    }
+        .delete_permanent_with_cause(other, ReplacementCause::OpponentEffect);
     assert!(
-        !offered,
-        "the carrier's inherited save must not be offered for a DIFFERENT permanent leaving"
+        !drive(&mut runner),
+        "no leave-prevention for a Digimon that is not RizeGreymon's carrier"
     );
+    assert!(!on_field(&runner, 0, "NON-DS"), "the other Digimon leaves");
+    assert_eq!(face_down_source_count(&runner, 0), 1, "no cost paid");
+
+    // The carrier would leave: the replacement is still offered and saves it.
+    let carrier = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|perm| perm.top_card().card_id(&runner.game.card_data) == "DS-CARRIER")
+        .map(|i| PermanentHandle {
+            player: 0,
+            index: i as u8,
+        })
+        .expect("carrier on field");
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert!(
+        drive(&mut runner),
+        "the [DATA SQUAD] carrier is offered the inherited save"
+    );
+    assert!(on_field(&runner, 0, "DS-CARRIER"), "accepting the save keeps the carrier");
+    assert_eq!(face_down_source_count(&runner, 0), 0, "1 face-down card trashed");
 }

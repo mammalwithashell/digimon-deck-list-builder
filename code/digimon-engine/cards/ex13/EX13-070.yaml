@@ -91,6 +91,11 @@ effects:
                                     of: opponent
                                     filter: { kind: digimon }
                                 delta: 1
+      # game-audit 2026-11-11 / DCGO CanPlayJogress: EX13_070.cs now exists in
+      # base DCGO; its DNA hand pick lists only [Free] cards that can DNA
+      # digivolve right now (`CanPlayJogress(true)`), the pair picks use that
+      # card's DNA requirement (`dna_field_pair`), and the roots pick is
+      # declinable (`canNoSelect: true`).
       - if:
           condition: { equals: [mode, 1] }
           then:
@@ -102,6 +107,7 @@ effects:
                   all_of:
                     - kind: digimon
                     - trait_has: Free
+                    - dna_field_pair: { role: result }
                 prompt: "2 of your Digimon may DNA digivolve into a [Free] trait Digimon card in the hand"
             - if:
                 condition: { binding_present: dna_card }
@@ -111,18 +117,24 @@ effects:
                         all_of:
                           - kind: digimon
                           - of: you
+                          - dna_field_pair: { role: first, result: dna_card }
                       right_filter:
                         all_of:
                           - kind: digimon
                           - of: you
+                          - dna_field_pair: { role: second, result: dna_card, first: dna_a }
                       bind_left_as: dna_a
                       bind_right_as: dna_b
                       prompt: "Select 2 of your Digimon to DNA digivolve"
-                  - effect_initiated_dna_digivolve:
-                      target_a: dna_a
-                      target_b: dna_b
-                      from_hand: dna_card
-                      cost: printed
+                      optional: true
+                  - if:
+                      condition: { binding_present: dna_a }
+                      then:
+                        - effect_initiated_dna_digivolve:
+                            target_a: dna_a
+                            target_b: dna_b
+                            from_hand: dna_card
+                            cost: printed
 
   - when: on_security
     summary: "[Security] Play this card without paying the cost"

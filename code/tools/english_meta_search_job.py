@@ -213,7 +213,7 @@ def bootstrap(run_dir: Path, games: int, seed: int, device: str = "cuda", teache
     directory=run_dir / "bootstrap_shards"
     if not (directory / "manifest.json").exists():
         directory=collect_bootstrap(run_dir,games,seed)
-    if teacher_label not in ("greedy", "development", "mixed"):
+    if teacher_label not in ("greedy", "development", "mixed", "mixed_v2"):
         raise ValueError("unknown bootstrap teacher label")
     imitation=run_dir / f"{teacher_label}_imitation.zip"
     if not imitation.exists():
@@ -221,7 +221,11 @@ def bootstrap(run_dir: Path, games: int, seed: int, device: str = "cuda", teache
         write_json(run_dir / "imitation_summary.json",summary)
     calibrated=run_dir / "seed.zip"
     if not calibrated.exists():
-        calibrate_value(imitation,[directory],calibrated,epochs=8,batch_size=256,lr=5e-4,device=device,seed=seed)
+        # mixed_v2 seeds start with a bounded value head and keep the best
+        # held-out calibration epoch; legacy labels keep their original recipe.
+        v2 = teacher_label == "mixed_v2"
+        calibrate_value(imitation,[directory],calibrated,epochs=8,batch_size=256,lr=5e-4,device=device,seed=seed,
+                        value_activation_name="tanh" if v2 else None,select_best=v2)
     export_mlp(str(calibrated),str(run_dir / "seed.onnx"),get_tensor_profile(PROFILE))
     write_json(run_dir / "anchors.json",{"version":1,"champions":[{"name":"frozen-bootstrap",
         "weights_path":str(calibrated.resolve()),"algorithm":"mlp","observation_profile":PROFILE,

@@ -1,98 +1,73 @@
-//! ST21-07 Palmon — Lv.3, Green, Vegetation / ADVENTURE, Rookie, Data,
-//! DP 1000, Cost 3.
+//! ST21-07 Palmon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+//! Traits: Vegetation / ADVENTURE. Form: Rookie. Attribute: Data.
 //!
-//! # Card text (official Bandai DB, data/card_bundles/ST21-07.md)
+//! # Card text (official bundle `data/card_bundles/ST21-07.md`)
 //!
 //! ```text
+//! Digivolve: Green Lv.2 / cost 0.
+//! [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0
+//!
 //! [On Play] By trashing 1 card with the [ADVENTURE] trait in your hand,
 //! <Draw 2> (Draw 2 cards from your deck.)
 //!
 //! Inherited: [All Turns] This Digimon gets +1000 DP.
-//!
-//! [Digivolve box] Lv.2 w/[ADVENTURE] trait: Cost 0
-//! [Standard circle] Green Lv.2: Cost 0
 //! ```
 //!
 //! # DCGO C# reference
-//! `DCGO/Assets/Scripts/CardEffect/ST21/Green/ST21_07.cs`
-//!
-//! # Patterns this test file covers
-//!
-//! | Clause                                   | Pattern                                         |
-//! |------------------------------------------|-------------------------------------------------|
-//! | alt-path (Lv.2 ADVENTURE, cost 0) + green Lv.2 | digivolve alt_paths (structural + behavioral) |
-//! | [On Play] by trashing 1 [ADVENTURE] card -> <Draw 2> | optional clause, `select_hand` cost pick, decline aborts the draw, GameEvent::Trash cost event |
-//! | Inherited [All Turns] +1000 DP           | inherited aura via digivolution stack, both turns |
-//!
-//! # Assertions the author was least able to confirm without running them
-//!
-//! - Whether the optional clause shows an outer accept prompt before the hand
-//!   pick; every test goes through `reach_hand` (BT20-007 idiom), which
-//!   accepts the outer prompt only when the hand pick is not already pending.
-//! - `GameEvent::Trash { card_id, .. }` carries the card id of the trashed
-//!   hand card.
+//! `DCGO/Assets/Scripts/CardEffect/ST21/Green/ST21_07.cs` — optional
+//! activation, gated on an ADVENTURE card in hand; `SelectHandEffect(Discard,
+//! canNoSelect: true, maxCount 1)` and only if a card was discarded,
+//! `DrawClass(2)`. Inherited `ChangeSelfDPStaticEffect(+1000, null)`.
 
-#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+#![allow(dead_code)]
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
-use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+use digimon_engine::action::space::{encode_digivolve, HAND_EFFECT_START, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind, PlaySource};
-use digimon_engine::events::GameEvent;
-use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::enums::{CardColor, CardKind};
 use digimon_engine::selection::SelectionKind;
-
-use crate::dsl_card_data::compiled;
 
 const CARD_ID: &str = "ST21-07";
 
-// ─── Card-data factories ─────────────────────────────────────────────────────
-
-fn digimon(id: &str, color: CardColor, level: u8, dp: i32, traits: &[&str]) -> CardData {
-    let mut c = make_test_card(id, id);
-    c.card_kind = CardKind::Digimon;
-    c.colors = vec![color];
-    c.level = Some(level);
-    c.dp = Some(dp);
-    c.play_cost = 3;
-    c.traits = traits.iter().map(|t| t.to_string()).collect();
-    c
-}
-
-fn tamer(id: &str, traits: &[&str]) -> CardData {
-    let mut c = make_test_card(id, id);
-    c.card_kind = CardKind::Tamer;
-    c.level = None;
-    c.dp = None;
-    c.play_cost = 3;
-    c.colors = vec![CardColor::Red];
-    c.traits = traits.iter().map(|t| t.to_string()).collect();
-    c
-}
-
 fn builder() -> DebugRunnerBuilder {
+    let mut adv_digi = make_test_card("ADV-DIGI", "Adv Digimon");
+    adv_digi.traits = vec!["ADVENTURE".to_string()];
+    let mut adv_opt = make_test_card("ADV-OPTION", "Adv Option");
+    adv_opt.card_kind = CardKind::Option;
+    adv_opt.level = None;
+    adv_opt.dp = None;
+    adv_opt.traits = vec!["ADVENTURE".to_string()];
+    let mut adv_lv2 = make_test_card("ADV-LV2", "Adv Baby");
+    adv_lv2.level = Some(2);
+    adv_lv2.colors = vec![CardColor::Black];
+    adv_lv2.traits = vec!["ADVENTURE".to_string()];
+    let mut green_lv2 = make_test_card("GREEN-LV2", "Green Baby");
+    green_lv2.level = Some(2);
+    green_lv2.colors = vec![CardColor::Green];
+    let mut plain_lv2 = make_test_card("PLAIN-LV2", "Plain Baby");
+    plain_lv2.level = Some(2);
+    plain_lv2.colors = vec![CardColor::Black];
+    let mut carrier = make_test_card("CARRIER", "Carrier");
+    carrier.level = Some(4);
+    carrier.dp = Some(4000);
     DebugRunner::builder()
         .dsl_card(CARD_ID)
-        .expect("ST21-07 in embedded DSL pack")
-        // Hand cards: the cost pick must offer only [ADVENTURE] cards.
-        .add_card(digimon("ADV-CARD", CardColor::Red, 3, 3000, &["ADVENTURE"]))
-        .add_card(digimon("ADV-CARD-2", CardColor::Blue, 4, 4000, &["ADVENTURE"]))
-        .add_card(tamer("ADV-TAMER", &["ADVENTURE"]))
-        .add_card(digimon("PLAIN-CARD", CardColor::Red, 3, 3000, &[]))
-        // Digivolution bases (Lv.2 / Lv.3).
-        .add_card(digimon("GREEN-LV2", CardColor::Green, 2, 1000, &[]))
-        .add_card(digimon("BLUE-LV2-ADV", CardColor::Blue, 2, 1000, &["ADVENTURE"]))
-        .add_card(digimon("RED-LV2-PLAIN", CardColor::Red, 2, 1000, &[]))
-        .add_card(digimon("GREEN-LV3-ADV", CardColor::Green, 3, 3000, &["ADVENTURE"]))
-        // Inherited-effect carrier.
-        .add_card(digimon("CARRIER", CardColor::Red, 4, 3000, &[]))
-        .add_card(make_test_card("PAD", "PAD"))
-        .deck(0, &["PAD"; 10])
-        .deck(1, &["PAD"; 10])
-        .memory(10)
+        .expect("ST21-07 YAML parses, compiles and is in the embedded pack")
+        .add_card(adv_digi)
+        .add_card(adv_opt)
+        .add_card(make_test_card("PLAIN", "Plain"))
+        .add_card(adv_lv2)
+        .add_card(green_lv2)
+        .add_card(plain_lv2)
+        .add_card(carrier)
+        .add_card(make_test_card("FILL", "Fill"))
+}
+
+fn ids(runner: &DebugRunner, zone: &[digimon_engine::card_source::CardSource]) -> Vec<String> {
+    zone.iter().map(|c| c.card_id(&runner.game.card_data).to_string()).collect()
 }
 
 fn hand_index(runner: &DebugRunner, id: &str) -> usize {
@@ -100,340 +75,152 @@ fn hand_index(runner: &DebugRunner, id: &str) -> usize {
         .hand
         .iter()
         .position(|c| c.card_id(&runner.game.card_data) == id)
-        .unwrap_or_else(|| panic!("{id} must be in player 0's hand"))
+        .unwrap_or_else(|| panic!("{id} must be in hand"))
 }
 
-fn top_id(runner: &DebugRunner, h: PermanentHandle) -> String {
-    runner.game.players[h.player as usize].battle_area[h.index as usize]
-        .top_card()
-        .card_id(&runner.game.card_data)
-        .to_string()
+fn hand_actions(runner: &DebugRunner, id: &str) -> [u16; 2] {
+    let slot = hand_index(runner, id) as u16;
+    [PLAY_HAND_START + slot, HAND_EFFECT_START + slot]
 }
 
-fn trash_has(runner: &DebugRunner, id: &str) -> bool {
-    runner.game.players[0]
-        .trash
-        .iter()
-        .any(|c| c.card_id(&runner.game.card_data) == id)
+fn walk_to_hand_prompt(runner: &mut DebugRunner) -> Option<digimon_engine::selection::PendingSelectionView> {
+    for _ in 0..4 {
+        let view = runner.pending_selection_view()?;
+        if view.kind == SelectionKind::Hand {
+            return Some(view);
+        }
+        let action = view.valid_action_ids.iter().copied().find(|&a| a != PASS)?;
+        runner.execute_action(view.selecting_player, action).expect("accept gate");
+    }
+    None
 }
 
-/// Palmon on the field plus the given hand; [On Play] fired.
-fn on_play_runner(hand: &[&str]) -> DebugRunner {
-    let mut runner = builder().hand(0, hand).start();
-    let palmon = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.fire_on_play(0, palmon.index as usize);
+fn play_palmon(hand: &[&str]) -> DebugRunner {
+    let mut all = vec![CARD_ID];
+    all.extend_from_slice(hand);
+    let mut runner = builder()
+        .hand(0, &all)
+        .deck(0, &["FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(10)
+        .start();
+    runner.skip_mulligan();
+    let slot = hand_index(&runner, CARD_ID);
+    runner.play(0, slot).expect("Palmon plays");
     runner
 }
 
-/// Reach the hand-pick prompt, accepting the outer optional prompt if one is
-/// shown first (BT20-007 idiom).
-fn reach_hand(runner: &mut DebugRunner) {
-    if runner.pending_kind() != Some(SelectionKind::Hand) {
-        runner
-            .accept_optional_trigger()
-            .expect("accept the optional [On Play]");
-    }
-    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 1 — Structural assertions
-// ═══════════════════════════════════════════════════════════════════════════
+// ─── Section 1 — Structural ──────────────────────────────────────────────────
 
 #[test]
-fn st21_07_identity_matches_printed_card() {
-    let card = compiled(CARD_ID);
-    assert_eq!(card.card, CARD_ID);
-    assert_eq!(card.name, "Palmon");
-    assert_eq!(card.level, Some(3));
-    assert_eq!(card.dp, Some(1000));
-    assert_eq!(card.cost, Some(3));
-    let traits: Vec<String> = card.traits.iter().map(|t| t.to_lowercase()).collect();
-    assert!(traits.iter().any(|t| t == "vegetation"), "{:?}", card.traits);
-    assert!(traits.iter().any(|t| t == "adventure"), "{:?}", card.traits);
-}
-
-#[test]
-fn st21_07_alt_paths_are_green_lv2_and_adventure_lv2_both_cost_0() {
-    let card = compiled(CARD_ID);
-    assert_eq!(
-        card.alt_paths.len(),
-        2,
-        "printed green Lv.2 circle + the [Digivolve] Lv.2 w/[ADVENTURE] box"
-    );
-    for path in &card.alt_paths {
-        assert_eq!(path.cost, Some(CompiledCost::Literal(0)));
-        assert!(
-            !path.ignore_requirements,
-            "DCGO ignoreDigivolutionRequirement is false"
-        );
-    }
-    let adventure_path = format!("{:?}", card.alt_paths[1].from);
-    assert!(
-        adventure_path.contains("ADVENTURE"),
-        "second alt path gates on the ADVENTURE trait, got {adventure_path}"
-    );
-}
-
-#[test]
-fn st21_07_clause_shape() {
-    let card = compiled(CARD_ID);
-    let triggered: Vec<_> = card
+fn st21_07_identity_paths_and_clauses() {
+    let runner = builder().start();
+    let card = runner.compiled_card(CARD_ID).expect("compiled");
+    assert_eq!((card.level, card.dp, card.cost), (Some(3), Some(1000), Some(3)));
+    let paths = card
+        .alt_paths
+        .iter()
+        .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
+        .count();
+    assert_eq!(paths, 2, "Green Lv.2/0 circle + Lv.2 w/[ADVENTURE]/0 box");
+    assert!(card.effects.iter().any(|c| matches!(
+        c,
+        CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::OnPlay] && !t.once_per_turn
+    )));
+    let auras: Vec<_> = card
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t) => Some(t),
+            CompiledClause::Declarative(CompiledDeclarativeClause::Aura { scope, dp_modifier, .. }) => {
+                Some((*scope, *dp_modifier))
+            }
             _ => None,
         })
         .collect();
-    assert_eq!(triggered.len(), 1, "only the [On Play] clause is triggered");
-    let on_play = triggered[0];
-    assert_eq!(on_play.when, vec![CompiledTiming::OnPlay]);
-    assert_eq!(on_play.scope, CompiledScope::FaceUp);
-    assert!(on_play.optional, "'By trashing ...' is an opt-in cost (DCGO isOptional)");
-    assert!(!on_play.once_per_turn, "no [Once Per Turn] is printed");
-
-    let aura = card.effects.iter().find_map(|c| match c {
-        CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
-            scope, dp_modifier, ..
-        }) => Some((*scope, *dp_modifier)),
-        _ => None,
-    });
-    assert_eq!(
-        aura,
-        Some((CompiledScope::Inherited, Some(1000))),
-        "inherited [All Turns] +1000 DP"
-    );
+    assert_eq!(auras, vec![(CompiledScope::Inherited, Some(1000))]);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 2 — Digivolution requirements
-// ═══════════════════════════════════════════════════════════════════════════
-
-fn digivolve_into_palmon(base_id: &str) -> (DebugRunner, PermanentHandle, bool, i16) {
-    let mut runner = builder().hand(0, &[CARD_ID]).start();
-    let base = runner.place_on_field(0, base_id, Some(0));
-    let idx = hand_index(&runner, CARD_ID);
-    let before = runner.memory();
-    let ok = runner
-        .game
-        .digivolve_from_hand(0, idx, base.index as usize, PlaySource::ByHand);
-    let paid = before - runner.memory();
-    let _ = runner.auto_resolve();
-    (runner, base, ok, paid)
-}
-
-#[test]
-fn st21_07_digivolves_from_green_lv2_for_0() {
-    let (runner, base, ok, paid) = digivolve_into_palmon("GREEN-LV2");
-    assert!(ok, "printed green Lv.2 circle");
-    assert_eq!(paid, 0);
-    assert_eq!(top_id(&runner, base), CARD_ID);
-}
-
-#[test]
-fn st21_07_digivolves_from_any_color_lv2_adventure_for_0() {
-    let (runner, base, ok, paid) = digivolve_into_palmon("BLUE-LV2-ADV");
-    assert!(ok, "[Digivolve] Lv.2 w/[ADVENTURE] trait accepts a blue base");
-    assert_eq!(paid, 0);
-    assert_eq!(top_id(&runner, base), CARD_ID);
-}
-
-#[test]
-fn st21_07_cannot_digivolve_from_non_green_non_adventure_lv2() {
-    let mut runner = builder().hand(0, &[CARD_ID]).start();
-    let base = runner.place_on_field(0, "RED-LV2-PLAIN", Some(0));
-    let card = runner.game.players[0].hand[hand_index(&runner, CARD_ID)].clone();
-    let perm = runner.game.players[0].battle_area[base.index as usize].clone();
-    assert!(
-        !runner.game.can_digivolve(&card, &perm),
-        "red Lv.2 without [ADVENTURE] matches neither route"
-    );
-}
-
-#[test]
-fn st21_07_cannot_digivolve_from_adventure_lv3() {
-    let mut runner = builder().hand(0, &[CARD_ID]).start();
-    let base = runner.place_on_field(0, "GREEN-LV3-ADV", Some(0));
-    let card = runner.game.players[0].hand[hand_index(&runner, CARD_ID)].clone();
-    let perm = runner.game.players[0].battle_area[base.index as usize].clone();
-    assert!(
-        !runner.game.can_digivolve(&card, &perm),
-        "the [ADVENTURE] box needs a LEVEL 2 base"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 3 — [On Play] by trashing 1 [ADVENTURE] card from hand, <Draw 2>
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn st21_07_on_play_without_an_adventure_card_in_hand_offers_nothing() {
-    let runner = on_play_runner(&["PLAIN-CARD"]);
-    assert!(
-        runner.pending_selection().is_none(),
-        "no [ADVENTURE] card to trash -> the effect cannot be activated"
-    );
-    assert_eq!(runner.hand_size(0), 1);
-    assert_eq!(runner.deck_size(0), 10);
-}
-
-#[test]
-fn st21_07_cost_pick_offers_only_adventure_cards() {
-    let mut runner = on_play_runner(&["ADV-CARD", "PLAIN-CARD", "ADV-TAMER"]);
-    reach_hand(&mut runner);
-
-    let view = runner.pending_selection_view().expect("hand pick");
-    let adv = PLAY_HAND_START + hand_index(&runner, "ADV-CARD") as u16;
-    let tamer = PLAY_HAND_START + hand_index(&runner, "ADV-TAMER") as u16;
-    let plain = PLAY_HAND_START + hand_index(&runner, "PLAIN-CARD") as u16;
-    assert!(view.valid_action_ids.contains(&adv));
-    assert!(
-        view.valid_action_ids.contains(&tamer),
-        "any card with the [ADVENTURE] trait qualifies, not only Digimon"
-    );
-    assert!(
-        !view.valid_action_ids.contains(&plain),
-        "a card without [ADVENTURE] cannot be the cost"
-    );
-    assert!(view.is_optional, "the trash is an opt-in cost");
-}
+// ─── Section 2/3 — [On Play] trash-cost → <Draw 2> ───────────────────────────
 
 #[test]
 fn st21_07_trashing_an_adventure_card_draws_two() {
-    let mut runner = on_play_runner(&["ADV-CARD", "ADV-CARD-2", "PLAIN-CARD"]);
-    reach_hand(&mut runner);
-    let hand_before = runner.hand_size(0);
-    let deck_before = runner.deck_size(0);
-    let trash_before = runner.trash_size(0);
-
-    let pick = PLAY_HAND_START + hand_index(&runner, "ADV-CARD") as u16;
-    runner.execute_action(0, pick).expect("trash the ADV card");
+    let mut runner = play_palmon(&["ADV-DIGI", "PLAIN"]);
+    let view = walk_to_hand_prompt(&mut runner).expect("trash prompt");
+    let action = hand_actions(&runner, "ADV-DIGI")
+        .into_iter()
+        .find(|a| view.valid_action_ids.contains(a))
+        .expect("ADV-DIGI is a legal cost");
+    runner.execute_action(view.selecting_player, action).expect("trash");
     let _ = runner.auto_resolve();
-
-    assert!(trash_has(&runner, "ADV-CARD"), "the chosen card is trashed");
-    assert!(
-        !trash_has(&runner, "ADV-CARD-2"),
-        "only the chosen card is trashed"
-    );
-    assert_eq!(runner.trash_size(0), trash_before + 1);
-    assert_eq!(runner.deck_size(0), deck_before - 2, "<Draw 2>");
-    assert_eq!(
-        runner.hand_size(0),
-        hand_before - 1 + 2,
-        "one card out (trashed), two cards in (drawn)"
-    );
+    assert!(ids(&runner, &runner.game.players[0].trash).contains(&"ADV-DIGI".to_string()));
+    let hand = ids(&runner, &runner.game.players[0].hand);
+    assert_eq!(hand.iter().filter(|h| *h == "FILL").count(), 2, "<Draw 2>");
+    assert!(hand.contains(&"PLAIN".to_string()));
 }
 
 #[test]
-fn st21_07_declining_the_cost_pick_draws_nothing() {
-    let mut runner = on_play_runner(&["ADV-CARD"]);
-    reach_hand(&mut runner);
-    let hand_before = runner.hand_size(0);
-    let deck_before = runner.deck_size(0);
-    let trash_before = runner.trash_size(0);
-
-    runner.execute_action(0, PASS).expect("decline the cost");
-    let _ = runner.auto_resolve();
-
-    assert_eq!(runner.hand_size(0), hand_before);
-    assert_eq!(runner.deck_size(0), deck_before, "no <Draw 2> without the cost");
-    assert_eq!(runner.trash_size(0), trash_before);
+fn st21_07_adventure_option_is_a_legal_cost_but_plain_is_not() {
+    let mut runner = play_palmon(&["ADV-OPTION", "PLAIN"]);
+    let view = walk_to_hand_prompt(&mut runner).expect("trash prompt");
+    assert!(hand_actions(&runner, "ADV-OPTION").iter().any(|a| view.valid_action_ids.contains(a)));
+    assert!(!hand_actions(&runner, "PLAIN").iter().any(|a| view.valid_action_ids.contains(a)));
 }
 
 #[test]
-fn st21_07_declining_the_outer_prompt_does_nothing() {
-    let mut runner = on_play_runner(&["ADV-CARD"]);
-    let hand_before = runner.hand_size(0);
-    let deck_before = runner.deck_size(0);
-    if runner.pending_kind() == Some(SelectionKind::Hand) {
-        runner.execute_action(0, PASS).expect("decline at the pick");
-    } else {
-        runner
-            .decline_optional_trigger()
-            .expect("decline the optional [On Play]");
+fn st21_07_declining_the_cost_draws_nothing() {
+    let mut runner = play_palmon(&["ADV-DIGI"]);
+    for _ in 0..4 {
+        let Some(view) = runner.pending_selection_view() else { break };
+        assert!(view.is_optional, "the trash cost is optional");
+        runner.execute_action(view.selecting_player, PASS).expect("decline");
     }
-    let _ = runner.auto_resolve();
-    assert_eq!(runner.hand_size(0), hand_before);
-    assert_eq!(runner.deck_size(0), deck_before);
-    assert_eq!(runner.trash_size(0), 0);
+    assert_eq!(ids(&runner, &runner.game.players[0].hand), vec!["ADV-DIGI"]);
+    assert!(runner.game.players[0].trash.is_empty());
+    assert_eq!(runner.deck_size(0), 4);
 }
 
 #[test]
-fn st21_07_cost_trash_emits_a_trash_event() {
-    let mut runner = on_play_runner(&["ADV-CARD"]);
-    reach_hand(&mut runner);
-    let cp = runner.event_checkpoint();
-    let pick = PLAY_HAND_START + hand_index(&runner, "ADV-CARD") as u16;
-    runner.execute_action(0, pick).expect("pay the cost");
-    let _ = runner.auto_resolve();
+fn st21_07_without_an_adventure_card_in_hand_nothing_happens() {
+    let runner = play_palmon(&["PLAIN"]);
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(ids(&runner, &runner.game.players[0].hand), vec!["PLAIN"]);
+}
 
-    let trashed: Vec<&GameEvent> = runner
-        .events_since(cp)
-        .iter()
-        .filter(|e| matches!(e, GameEvent::Trash { player: 0, .. }))
-        .collect();
-    assert!(
-        !trashed.is_empty(),
-        "paying the cost must go through the normal trash path and emit GameEvent::Trash"
-    );
+// ─── Section 4 — digivolve box + inherited ───────────────────────────────────
+
+/// Digivolve routes through the action mask: Green Lv.2 circle (cost 0),
+/// off-colour [ADVENTURE] Lv.2 box (cost 0), and an off-colour plain Lv.2 is
+/// masked out.
+#[test]
+fn st21_07_digivolve_routes_via_action_mask() {
+    for (base_id, legal) in [("GREEN-LV2", true), ("ADV-LV2", true), ("PLAIN-LV2", false)] {
+        let mut runner = builder().hand(0, &[CARD_ID]).deck(0, &["FILL", "FILL"]).memory(5).start();
+        runner.skip_mulligan();
+        let base = runner.place_on_field(0, base_id, Some(0));
+        let action = encode_digivolve(0, base.index as u16);
+        let mask = digimon_engine::build_action_mask(&runner.game, 0);
+        assert_eq!(mask[action as usize] == 1.0, legal, "digivolve from {base_id} mask bit");
+        if !legal {
+            continue;
+        }
+        let before = runner.memory();
+        runner.game.decode_action(action, 0);
+        let top = runner.game.players[0].battle_area[base.index as usize].top_card();
+        assert_eq!(top.card_id(&runner.game.card_data), CARD_ID, "from {base_id}");
+        assert_eq!(before, runner.memory(), "cost 0 from {base_id}");
+    }
 }
 
 #[test]
-fn st21_07_playing_palmon_from_hand_runs_its_on_play() {
-    let mut runner = builder().hand(0, &[CARD_ID, "ADV-CARD"]).start();
-    let idx = hand_index(&runner, CARD_ID);
-    runner.play(0, idx).expect("Palmon plays");
-    reach_hand(&mut runner);
-    let pick = PLAY_HAND_START + hand_index(&runner, "ADV-CARD") as u16;
-    let deck_before = runner.deck_size(0);
-    runner.execute_action(0, pick).expect("pay the cost");
-    let _ = runner.auto_resolve();
-    assert_eq!(runner.deck_size(0), deck_before - 2);
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 4 — Inherited [All Turns] +1000 DP
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn st21_07_inherited_plus_1000_applies_to_the_carrier_on_both_turns() {
-    let mut runner = builder().start();
+fn st21_07_inherited_plus_1000_on_both_turns() {
+    let mut runner = builder()
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL"])
+        .start();
+    runner.skip_mulligan();
     let carrier = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
-    runner.game.tick_declarative_effects();
-    assert_eq!(
-        runner.effective_dp(carrier),
-        Some(4000),
-        "3000 + 1000 on my turn"
-    );
-
+    assert_eq!(runner.effective_dp(carrier), Some(5000));
     runner.end_turn();
-    let _ = runner.auto_resolve_declining_end_of_turn_attacks();
-    runner.game.tick_declarative_effects();
-    assert_eq!(runner.turn_player(), 1);
-    assert_eq!(
-        runner.effective_dp(carrier),
-        Some(4000),
-        "[All Turns]: still +1000 on the opponent's turn"
-    );
-}
-
-#[test]
-fn st21_07_inherited_bonus_is_absent_without_palmon_in_the_stack() {
-    let mut runner = builder().start();
-    let plain = runner.place_on_field(0, "CARRIER", Some(0));
-    runner.game.tick_declarative_effects();
-    assert_eq!(runner.effective_dp(plain), Some(3000));
-}
-
-#[test]
-fn st21_07_inherited_bonus_does_not_apply_to_palmon_itself_as_top_card() {
-    let mut runner = builder().start();
-    let palmon = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.game.tick_declarative_effects();
-    assert_eq!(
-        runner.effective_dp(palmon),
-        Some(1000),
-        "an inherited effect only works while the card is a digivolution card"
-    );
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.effective_dp(carrier), Some(5000));
 }

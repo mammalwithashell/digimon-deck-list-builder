@@ -1052,6 +1052,7 @@ impl Game {
         // DIRECTLY (not through here), so the player's pick is preserved across
         // the reducer / replacement re-entries.
         self.pending_digivolve_route_choice = None;
+        self.pending_burst_digivolve = None;
         self.digivolve_from_hand_inner(player_id, hand_index, field_index, source, false)
     }
 
@@ -1085,6 +1086,7 @@ impl Game {
         );
         if self.pending_selection.is_none() {
             self.abort_would_digivolve_declaration();
+            self.pending_burst_digivolve = None;
         }
         result
     }
@@ -1135,11 +1137,26 @@ impl Game {
 
         let card = player.hand[hand_index].clone();
         let perm = &player.battle_area[field_index];
-        // Validity gate (cheapest route). The action mask and the Blast counter
-        // path consult the same `normal_digivolve_route_for_hand_card`.
-        let Some(min_route) =
-            self.normal_digivolve_route_for_hand_card(player_id, hand_index, handle)
-        else {
+        // CR 8-3-3-2 already performed: this attempt is a [Burst Digivolve]
+        // whose Tamer has been returned (a cost-reducer prompt re-entered the
+        // action). Its route can no longer be re-derived (the Tamer is gone);
+        // only the base requirement is re-checked.
+        let burst_paid = self.pending_burst_digivolve.filter(|paid| {
+            paid.player == player_id
+                && paid.card == card.handle()
+                && perm.battle_identity == Some(paid.host_identity)
+        });
+        // Validity gate (cheapest route). The action mask consults the same
+        // `normal_digivolve_route_for_hand_card` (hand routes incl. burst).
+        let min_route = match burst_paid {
+            Some(paid) => paid
+                .route
+                .burst
+                .filter(|choice| self.burst_route_base_still_valid(&card, handle, *choice))
+                .map(|_| paid.route),
+            None => self.normal_digivolve_route_for_hand_card(player_id, hand_index, handle),
+        };
+        let Some(min_route) = min_route else {
             self.logger.log(&format!(
                 "[Rejected] digivolve_from_hand: card {} cannot digivolve onto {} (evo-cost mismatch)",
                 card.card_id(&self.card_data),
@@ -1155,7 +1172,7 @@ impl Game {
         // re-enters this function with `pending_digivolve_route_choice` set. DCGO
         // registers each requirement with its own `digivolutionCost`
         // (`AddSelfDigivolutionRequirementStaticEffect`).
-        if self.pending_digivolve_route_choice.is_none() {
+        if burst_paid.is_none() && self.pending_digivolve_route_choice.is_none() {
             let routes =
                 self.distinct_digivolve_routes_for_hand_card(player_id, hand_index, handle);
             if routes.len() > 1 {
@@ -1172,27 +1189,26 @@ impl Game {
         // The route the player chose (peeked here; the choice field is consumed
         // when the resume is built below) or, when no choice was needed, the
         // cheapest. `route` carries both the printed cost and app-fusion-ness.
-        let route = self.pending_digivolve_route_choice.unwrap_or(min_route);
+        let route = match burst_paid {
+            Some(paid) => paid.route,
+            None => self.pending_digivolve_route_choice.unwrap_or(min_route),
+        };
+        // CR 8-3-3-2: a chosen [Burst Digivolve] route returns its Tamer to
+        // the hand BEFORE the cost is paid (8-3-3-3), then the action
+        // continues (re-entered with `pending_burst_digivolve` set).
+        if let (Some(choice), None) = (route.burst, burst_paid) {
+            return self.pay_burst_digivolve_tamer(
+                player_id,
+                hand_index,
+                field_index,
+                source,
+                player_reducer_resolved,
+                route,
+                choice,
+            );
+        }
         let printed_cost = route.memory_cost;
         let host_identity = self.capture_digivolve_host_identity(handle);
-        // Burst Digivolve (rule 8-3-3-2 -> 8-3-3-3): the chosen Tamer returns to
-        // hand BEFORE the digivolution cost is paid, exactly as DCGO bounces it
-        // ahead of `SelectCost`. Returning it compacts the battle area, so the
-        // host is re-found by its stable identity rather than its old index.
-        let handle = if let Some(burst) = route.burst {
-            if !self.burst_return_tamer(player_id, burst) {
-                self.pending_digivolve_route_choice = None;
-                return false;
-            }
-            let Some(handle) = self.resolve_digivolve_host_identity(player_id, host_identity)
-            else {
-                self.pending_digivolve_route_choice = None;
-                return false;
-            };
-            handle
-        } else {
-            handle
-        };
         let treated_identity_orders = route
             .treated_as
             .and_then(|profile| self.install_would_digivolve_identity(handle, profile));
@@ -1206,7 +1222,7 @@ impl Game {
                 card: card.handle(),
                 effective_cost: 0,
                 app_fusion: route.app_fusion,
-                burst: route.burst.is_some(),
+                burst: route.burst,
             });
         }
 
@@ -1290,6 +1306,7 @@ impl Game {
         // route's app-fusion-ness, so the choice field is no longer needed and
         // must be cleared before the replacement resume / next attempt.
         self.pending_digivolve_route_choice = None;
+        self.pending_burst_digivolve = None;
         if self.game_over {
             return false;
         }
@@ -1304,7 +1321,7 @@ impl Game {
                     card: card.handle(),
                     effective_cost,
                     app_fusion: route.app_fusion,
-                    burst: route.burst.is_some(),
+                    burst: route.burst,
                 });
         resume.permanent = handle;
         resume.effective_cost = effective_cost;
@@ -1339,30 +1356,155 @@ impl Game {
         }
     }
 
-    /// Return the Burst Digivolve Tamer in `burst.tamer_slot` to its owner's hand
-    /// (rule 8-3-3-2). `false` when it can no longer be returned, in which case
-    /// nothing has moved and the digivolve is abandoned (DCGO instead falls back
-    /// to a normal digivolve; see `docs/RUST_ENGINE_GAPS.md`
-    /// G-BURST-DIGIVOLVE-BOUNCE-FALLBACK).
-    pub(crate) fn burst_return_tamer(
+    /// CR 8-3-3-2: return the chosen [Burst Digivolve] Tamer from the battle
+    /// area to the hand, then continue the hand-digivolve action with the
+    /// burst marked as paid (`pending_burst_digivolve`), so the cost (8-3-3-3)
+    /// and the rest of the digivolution are processed as for any route
+    /// (cost-modifying effects apply, 8-3-2-3).
+    ///
+    /// The return is part of the burst digivolve's own processing, not an
+    /// effect; triggers it causes (e.g. a "when returned to hand") wait in a
+    /// deferred-drain scope and pend with the digivolution's own triggers.
+    /// If the Tamer does not actually leave (a replacement cancels it) the
+    /// burst digivolve is not performed. DCGO
+    /// `SelectBurstDigivolutionEffect.BounceTamer` (`IsBurst` hashtable).
+    #[allow(clippy::too_many_arguments)]
+    fn pay_burst_digivolve_tamer(
         &mut self,
-        player: PlayerId,
-        burst: crate::dna_digivolve::BurstRouteRef,
+        player_id: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+        source: PlaySource,
+        player_reducer_resolved: bool,
+        route: crate::dna_digivolve::DigivolveRouteMatch,
+        choice: crate::dna_digivolve::BurstRouteChoice,
     ) -> bool {
-        let tamer = PermanentHandle {
-            player,
-            index: burst.tamer_slot,
+        let base = PermanentHandle {
+            player: player_id,
+            index: field_index as u8,
         };
-        let still_valid = self
-            .player(player)
-            .battle_area
-            .get(burst.tamer_slot as usize)
-            .is_some_and(|p| p.is_tamer(&self.card_data))
-            && !self.modifiers.has(tamer, ModifierType::CannotReturnToHand);
-        if !still_valid {
+        let card = self.player(player_id).hand[hand_index].clone();
+        if !self.burst_route_base_still_valid(&card, base, choice)
+            || !self.burst_tamer_eligible(&card, choice)
+        {
+            self.pending_digivolve_route_choice = None;
+            self.logger.log(&format!(
+                "[Rejected] burst digivolve: {} can no longer burst digivolve onto field index {} returning slot {}",
+                card.card_id(&self.card_data),
+                field_index,
+                choice.tamer
+            ));
             return false;
         }
-        self.return_to_hand(tamer).is_some() && self.pending_selection.is_none()
+        let host_identity = self.capture_digivolve_host_identity(base);
+        let tamer = PermanentHandle {
+            player: player_id,
+            index: choice.tamer,
+        };
+        let tamer_card = self.player(player_id).battle_area[choice.tamer as usize]
+            .top_card()
+            .handle();
+        self.enter_deferred_drain();
+        let _ = self.return_to_hand(tamer);
+        let returned = self.pending_selection.is_none()
+            && !self.player(player_id).battle_area.iter().any(|perm| {
+                perm.card_sources
+                    .iter()
+                    .any(|source_card| source_card.handle() == tamer_card)
+            });
+        let result = if !returned {
+            if self.pending_selection.is_none() {
+                self.pending_digivolve_route_choice = None;
+            }
+            self.logger.log(
+                "[Rejected] burst digivolve: the burst Tamer was not returned to the hand",
+            );
+            false
+        } else {
+            let base_now = self.resolve_digivolve_host_identity(player_id, host_identity);
+            let hand_now = self
+                .player(player_id)
+                .hand
+                .iter()
+                .position(|hand_card| hand_card.handle() == card.handle());
+            match (base_now, hand_now) {
+                (Some(base_now), Some(hand_now)) => {
+                    self.pending_burst_digivolve =
+                        Some(crate::dna_digivolve::PendingBurstDigivolve {
+                            player: player_id,
+                            card: card.handle(),
+                            host_identity,
+                            route,
+                        });
+                    self.digivolve_from_hand_inner(
+                        player_id,
+                        hand_now,
+                        base_now.index as usize,
+                        source,
+                        player_reducer_resolved,
+                    )
+                }
+                _ => {
+                    self.pending_digivolve_route_choice = None;
+                    false
+                }
+            }
+        };
+        // Close the scope; flush only when nothing is parked (a parked
+        // reducer / replacement prompt resumes and drains on its own).
+        self.close_burst_drain_scope();
+        result
+    }
+
+    /// CR 8-3-2-1: as pending processing, at the end of the turn the
+    /// Digimon burst digivolved, the top card of its stack is trashed (none
+    /// if it has no stacked cards or the top card is not a Digimon --
+    /// enforced by `trash_top_source`). Runs the burst path's
+    /// `on_burst_turn_end` steps at `EndOfYourTurn`, with the carrier pinned
+    /// to the digivolved permanent's stable battle identity, so it follows
+    /// that permanent through index shifts and does nothing once it has left
+    /// the field (DCGO `SelectBurstDigivolutionEffect.AddTrashTopCardAtTurnEnd`
+    /// targets the `Permanent`, not a slot).
+    pub(crate) fn schedule_burst_turn_end_trash(
+        &mut self,
+        player_id: PlayerId,
+        burst_card: crate::card_source::CardHandle,
+        host: PermanentHandle,
+        choice: crate::dna_digivolve::BurstRouteChoice,
+    ) {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let Some(identity) = self.capture_source_play_host_identity(host) else {
+                return;
+            };
+            let mut body = self.burst_turn_end_steps(burst_card, choice);
+            if body.is_empty() {
+                // The rule applies even if a spec omits the teardown.
+                body.push(digimon_dsl::compiled::CompiledStep::TrashTopSource {
+                    target: digimon_dsl::compiled::CompiledBindingRef::Carrier,
+                });
+            }
+            let runtime = crate::dsl_cards::step::StepRuntime::default()
+                .with_source_kind(EffectSourceKind::Rule)
+                .with_source_identity(Some((player_id, identity)))
+                .with_source_requires_membership(false);
+            self.scheduled_effects
+                .push(crate::scheduled_effects::ScheduledEffect {
+                    when: EffectTiming::EndOfYourTurn,
+                    body,
+                    source_card: burst_card,
+                    source_permanent: Some(host),
+                    source_kind: EffectSourceKind::Rule,
+                    controller: player_id,
+                    captured_bindings: crate::dsl_cards::bindings::Bindings::new(),
+                    scheduled_at_turn: self.turn_count,
+                    runtime,
+                });
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = (player_id, burst_card, host, choice);
+        }
     }
 
     /// Install the `EffectChoice` "which digivolution cost do you pay?" prompt
@@ -1386,7 +1528,7 @@ impl Game {
 
         // Cheapest-first, stable so the option order is deterministic.
         let mut routes = routes;
-        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion, r.burst));
+        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion, r.burst.is_some()));
 
         let source_card = self
             .player(acting_player)
@@ -1401,16 +1543,16 @@ impl Game {
             .enumerate()
             .map(|(i, r)| EffectChoiceEntry {
                 count_choice: None,
-                label: if let Some(burst) = r.burst {
+                label: if let Some(choice) = r.burst {
                     let tamer = self
                         .player(acting_player)
                         .battle_area
-                        .get(burst.tamer_slot as usize)
+                        .get(choice.tamer as usize)
                         .map(|p| p.top_card().card_name(&self.card_data).to_string())
                         .unwrap_or_default();
                     format!(
-                        "Digivolve for cost {} (Burst Digivolve: return {} from slot {})",
-                        r.memory_cost, tamer, burst.tamer_slot
+                        "Burst Digivolve for cost {} (return [{}] in slot {} to the hand)",
+                        r.memory_cost, tamer, choice.tamer
                     )
                 } else if r.app_fusion {
                     format!("Digivolve for cost {} (App Fusion)", r.memory_cost)
@@ -1739,7 +1881,7 @@ impl Game {
                 card: declaration.result_card,
                 effective_cost: 0,
                 app_fusion: false,
-                burst: false,
+                burst: None,
             },
         });
         initial.try_prompt_digivolve_reducer_chain_mode(
@@ -2223,13 +2365,18 @@ impl Game {
         // since the resume was built), but use the player's CHOSEN route's
         // app-fusion-ness — not the re-derived min — so the commit honors the
         // cost choice.
-        // A Burst route already returned its Tamer (8-3-3-2), so no burst route
-        // remains to re-derive; the declaration was validated when it was made.
-        if !resume.burst
-            && self
+        let route_still_applies = match resume.burst {
+            // The burst Tamer is already back in hand (CR 8-3-3-2): only the
+            // burst requirement's base condition can be re-checked.
+            Some(choice) => {
+                let card = self.player(resume.player).hand[hand_index].clone();
+                self.burst_route_base_still_valid(&card, resume.permanent, choice)
+            }
+            None => self
                 .normal_digivolve_route_for_hand_card(resume.player, hand_index, resume.permanent)
-                .is_none()
-        {
+                .is_some(),
+        };
+        if !route_still_applies {
             return false;
         }
         let is_app_fusion = resume.app_fusion;
@@ -2255,7 +2402,11 @@ impl Game {
         let turn = self.turn_count;
         self.remember_belief_public_hand_departure(resume.player, hand_index);
         let removed = self.player_mut(resume.player).hand.remove(hand_index);
+        let burst_card = removed.handle();
         self.player_mut(resume.player).battle_area[field_index].digivolve(removed, turn);
+        if let Some(choice) = resume.burst {
+            self.schedule_burst_turn_end_trash(resume.player, burst_card, resume.permanent, choice);
+        }
         // App Fusion: after stacking the App-Fusion card on top of the host
         // (the digivolve above), the host's existing LINKED cards are moved
         // UNDER the new top as digivolution sources (consumed). Mirrors DCGO
@@ -2301,21 +2452,6 @@ impl Game {
         let _ = self.draw_one_for_player(resume.player);
 
         self.fire_digivolve_event_triggers(resume.permanent, event_card, false, false);
-
-        // 8-3-2-1: a burst-digivolved Digimon's top card is trashed at the end
-        // of this turn, as pending processing (18-1). Keyed to the burst card's
-        // stable identity so later battle-area shifts cannot retarget it.
-        if resume.burst {
-            let token = self.provenance_token_for_card(event_card);
-            self.scheduled_provenance_deletions
-                .push(crate::scheduled_effects::ScheduledProvenanceDeletion {
-                    token,
-                    controller: resume.player,
-                    source_card: event_card,
-                    source_kind: EffectSourceKind::Digimon,
-                    burst_trash: true,
-                });
-        }
 
         // Reward-shaping counter — bumped here at the user-action choke
         // point that both `digivolve_from_hand_inner` and the
@@ -3201,7 +3337,7 @@ impl Game {
                 card: evo_card_handle,
                 effective_cost: 0,
                 app_fusion: false,
-                burst: false,
+                burst: None,
             },
         });
         if !reducers_resolved {

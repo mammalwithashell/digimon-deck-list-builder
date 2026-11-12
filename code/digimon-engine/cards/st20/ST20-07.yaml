@@ -1,31 +1,20 @@
 # ST20-07 Tentomon — Digimon, Lv.3, Green, DP 3000, Cost 3.
-# Traits: Insectoid / ADVENTURE. Form: Rookie. Attribute: Vaccine.
+# Traits: Insectoid, ADVENTURE. Attribute: Vaccine.
 #
-# Printed card text (official Bandai DB, data/card_bundles/ST20-07.md):
-#
+# Printed text (official observation, data/card_official.json):
+#   Standard digivolve: Green Lv.2 / Cost 0 (cards.json evo_costs).
+#   [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0
 #   [Opponent's Turn] Your opponent can't reduce digivolution costs.
+# Official Q&A: "This effect prevents digivolution costs from being reduced
+#   when the costs are to be paid. This effect affects the opponent player."
 #
-#   Digivolve box (xros_req): "[Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0"
-#   Standard evo_costs:       Lv.2 Green, Cost 0.
-#   Official Q&A: the effect prevents digivolution costs from being reduced
-#   when the costs are to be paid, and it affects the opponent player.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Green/ST20_07.cs —
+#   static (EffectTiming.None) effect gated IsOpponentTurn(card) && this card
+#   on its owner's battle area, applying to `card.Owner.Enemy`.
 #
-# DCGO C# reference (base repo):
-#   DCGO/Assets/Scripts/CardEffect/ST20/Green/ST20_07.cs
-#
-# DCGO declares two EffectTiming.None static effects:
-#
-#   1. AddSelfDigivolutionRequirementStaticEffect — Lv.2 with
-#      HasAdventureTraits, digivolutionCost 0, ignoreDigivolutionRequirement
-#      false. This is the printed [Digivolve] xros_req box.
-#   2. CannotReduceCostClass — gated on "this card is on the battle area and
-#      it is the opponent's turn"; playerCondition = the card owner's enemy.
-#
-# Clause layout:
-#   alt_paths[0]  standard digivolve (Lv.2 Green / cost 0, printed evo_costs).
-#   alt_paths[1]  xros_req alt-digivolve (Lv.2 ADVENTURE / cost 0).
-#   effects[0]    flood_gate CannotReduceDigivolveCost on the opponent while it
-#                 is the opponent's turn (BT5-008 / BT5-021 / BT5-033 idiom).
+# Engine hook: the same opponent-turn flood gate as BT5-033 Cutemon /
+# BT5-008 Gaossmon / BT5-021 Syakomon — `CannotReduceDigivolveCost` on the
+# opponent, enforced in the engine's digivolve cost calculation.
 
 card: ST20-07
 name: Tentomon
@@ -35,13 +24,11 @@ color: [green]
 cost: 3
 dp: 3000
 traits: [Insectoid, ADVENTURE]
-form: Rookie
 attribute: Vaccine
 
 alt_paths:
-  - kind: digivolve
-    from: { level_eq: 2, color_is: green }
-    cost: 0
+  # [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0 (DCGO: HasAdventureTraits,
+  # level 2, cost 0).
   - kind: digivolve
     from: { level_eq: 2, trait_has: ADVENTURE }
     cost: 0

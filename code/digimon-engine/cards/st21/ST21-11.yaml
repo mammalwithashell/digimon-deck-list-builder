@@ -1,82 +1,39 @@
 # ST21-11 MetalGarurumon — Digimon, Lv.6, Purple/Blue, DP 12000, Cost 7.
-# Traits: Cyborg, ADVENTURE. Form: Mega. Attribute: Data.
+# Traits: Cyborg, ADVENTURE. Attribute: Data.
 #
-# Printed card text (official Bandai DB bundle data/card_bundles/ST21-11.md /
-# cards.json — verbatim):
-#
-#   [Hand] [Counter] <Blast Digivolve> (Your Digimon may digivolve into this
-#   card without paying the cost.)
+# Printed text (official observation, data/card_official.json +
+# data/card_bundles/ST21-11.md):
+#   Standard digivolve: Purple Lv.5 / Cost 4, Blue Lv.5 / Cost 4
+#   [Digivolve] Lv.5 w/[ADVENTURE] trait: Cost 3
+#   {Hand} [Counter] <Blast Digivolve> (Your Digimon may digivolve into this
+#     card without paying the cost.)
 #   [On Play] [When Digivolving] Return 1 of your opponent's level 4 or lower
-#   Digimon to the bottom of the deck. For every 2 colors your Tamers have,
-#   add 1 to this effect's level maximum.
+#     Digimon to the bottom of the deck. For every 2 colors your Tamers have,
+#     add 1 to this effect's level maximum.
 #   [When Attacking] [Once Per Turn] You may play 1 level 4 or lower Digimon
-#   card from your trash without paying the cost.
+#     card from your trash without paying the cost.
+#   Special Rule: <Overflow (-4)>
 #
-# Inherited: Ace Overflow <-4> (As this card moves from the field or under a
-#   card to an area other than those, lose 4 memory.)
-#
-# Digivolve circles (official bundle): Purple Lv.5 / cost 4, Blue Lv.5 /
-#   cost 4.   Digivolve box (xros_req): "[Digivolve] Lv.5 w/[ADVENTURE]
-#   trait: Cost 3".
+# Standard circles (Purple Lv.5 / 4, Blue Lv.5 / 4) come from data/cards.json
+# evo_costs, which carries both; no alt_paths entry is authored for them
+# (same convention as the other ST20/ST21/BT21 ADVENTURE cards).
 #
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Purple/ST21_11.cs
-#
-# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
-#
-# Region "Alt Digivolution" (EffectTiming.None):
-#   `AddSelfDigivolutionRequirementStaticEffect(permanent => permanent.Level
-#   == 5 && permanent.TopCard.HasAdventureTraits, 3, ignoreDigivolution
-#   Requirement: false, ...)` → second `alt_paths` entry (Lv.5 + ADVENTURE,
-#   cost 3, requirement-respecting: `ignore_requirements` stays false, same
-#   shape as ST20-10's xros_req entry).
-#   The two printed circles (purple Lv.5 / 4, blue Lv.5 / 4) are the first
-#   entry (one `digivolve` path whose `from` ORs the two colour gates — the
-#   BT18-081 two-colour-circle idiom).
-#
-# Region "Blast Digivolve" (OnCounterTiming): `BlastDigivolveEffect` →
-#   `grant_keyword BlastDigivolve` (the [Hand][Counter] marker the Counter
-#   window scans) + the `burst_digivolve` marker alt-path at cost 0 (AD1-005 /
-#   EX9-013 idiom).
-#
-# Regions "On Play" / "When Digivolving" (OnEnterFieldAnyone): two ActivateClass
-#   with identical bodies; `isOptional: false`. CanActivateConditionShared =
-#   `IsExistOnBattleAreaDigimon(card)` && the opponent has a Digimon matching
-#   `CanSelectPermanentCondition`: opponent Digimon with
-#     Level <= 4 + GetUniqueColourCountOnOwnerBattleArea(card, tamer) / 2
-#   where the colour count is the number of DISTINCT colours across the OWNER's
-#   battle-area Tamers (`permanent.IsTamer && TopCard.Owner == card.Owner`),
-#   integer-halved. Selection is mandatory (`canNoSelect: false`, maxCount 1),
-#   `Mode.PutLibraryBottom`.
-#   → `when: [on_play, when_digivolving]`, a `condition` with the same bound,
-#   `select_opponent_permanent` (mandatory) + `return_to_deck bottom`.
-#   The level bound is `floor((8 + colours) / 2)` = 4 + floor(colours / 2),
-#   written as a `floor_div` over a `base: 8` per-colour formula (the same
-#   `distinct_colors_count` primitive as AD1-004 / AD1-014 / ST20-11).
-#
-# Region "When Attacking" (OnAllyAttack): `SetUpActivateClass(.., 1, true,
-#   ..)` + `SetHashString("WA_ST21-11")` → once per turn, optional.
-#   CanActivateCondition = on field && the owner's trash has a playable
-#   `IsDigimon && Level <= 4` card (`CanPlayAsNewPermanent(payCost: false)`).
-#   The select has `canNoSelect: true`.
-#   → `when: when_attacking`, `once_per_turn`, trash-has-candidate `condition`,
-#   optional `select_trash` + `play_from_trash_free`. DCGO's optional outer
-#   prompt is declinable WITHOUT spending the use, so the clause is
-#   non-optional, the pick is optional, and declining runs `refund_opt` (same
-#   collapse as BT24-007 / AD1-024).
-#
-# Inherited Ace Overflow <-4> → top-level `ace_overflow: -4` (AD1-005 /
-#   EX9-013 / ST20-11 idiom).
-#
-# ─── Implementation status ────────────────────────────────────────────────────
-#
-# | Card-text element                                              | Status |
-# |----------------------------------------------------------------|--------|
-# | Digivolve circles purple/blue Lv.5 cost 4                      | IMPLEMENTED |
-# | [Digivolve] Lv.5 w/[ADVENTURE]: cost 3                         | IMPLEMENTED |
-# | [Hand][Counter] <Blast Digivolve>                              | IMPLEMENTED |
-# | [On Play][When Digivolving] bottom-deck opp Lv<=4+colours/2    | IMPLEMENTED |
-# | [When Attacking][OPT] may play Lv<=4 Digimon from trash free   | IMPLEMENTED |
-# | Ace Overflow <-4>                                              | IMPLEMENTED |
+#   - Alt digivolve: Level == 5 && HasAdventureTraits, cost 3.
+#   - OnCounterTiming: BlastDigivolveEffect → burst_digivolve marker cost 0
+#     (ST20-11 WarGreymon sibling idiom).
+#   - OP / WD: SelectPermanentEffect Mode.PutLibraryBottom canNoSelect false
+#     over opponent Digimon with Level <= 4 + (unique colours across own
+#     battle-area Tamers / 2) (integer division).
+#     4 + floor(c / 2) == floor((8 + c) / 2) for c >= 0, which is what the
+#     `floor_div` formula below evaluates (same distinct_colors_count selector
+#     as ST20-11 / AD1-014). Only the Digimon card itself goes to the deck
+#     bottom (printed text lacks "and all of its digivolution cards" — default
+#     `include_sources: false`, ST22-12 / BT25-056 convention).
+#   - WA: OnAllyAttack maxUsableCount 1, isOptional; SelectCardEffect
+#     Root.Trash canNoSelect true, IsDigimon && Level <= 4 → PlayPermanentCards
+#     payCost false.
+#   - Overflow (-4): ace_overflow: -4 (ST20-11 idiom).
 
 card: ST21-11
 name: MetalGarurumon
@@ -85,57 +42,25 @@ level: 6
 color: [purple, blue]
 cost: 7
 dp: 12000
-form: Mega
-attribute: Data
 traits: [Cyborg, ADVENTURE]
+attribute: Data
 
 ace_overflow: -4
 
 alt_paths:
-  # Printed circles: Purple Lv.5 / 4 and Blue Lv.5 / 4.
-  - kind: digivolve
-    from:
-      level_eq: 5
-      any_of:
-        - color_is: purple
-        - color_is: blue
-    cost: 4
-
-  # xros_req: "[Digivolve] Lv.5 w/[ADVENTURE] trait: Cost 3".
+  # [Digivolve] Lv.5 w/[ADVENTURE] trait: Cost 3.
   - kind: digivolve
     from: { level_eq: 5, trait_has: ADVENTURE }
     cost: 3
-
-  # <Blast Digivolve>: [Hand][Counter] entry path, cost 0.
+  # {Hand} [Counter] <Blast Digivolve>.
   - kind: burst_digivolve
     marker: true
     cost: 0
 
 effects:
-  # ─── [Hand][Counter] <Blast Digivolve> marker ───────────────────────────────
-  - kind: grant_keyword
-    keyword: BlastDigivolve
-    summary: "[Hand][Counter] <Blast Digivolve>"
-
-  # ─── [On Play][When Digivolving] bottom-deck an opp Lv<=4(+colours/2) ───────
+  # ─── [On Play][When Digivolving] bottom-deck 1 opp Digimon, scaling level ─
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck; +1 level maximum per 2 colors your Tamers have"
-    condition:
-      any_permanent:
-        of: opponent
-        zone: [battle_area]
-        kind: digimon
-        level_lte:
-          formula:
-            floor_div:
-              - base: 8
-                per:
-                  distinct_colors_count:
-                    of: you
-                    zone: battle_area
-                    filter: { kind: tamer }
-                delta: 1
-              - 2
+    summary: "[On Play][When Digivolving] Return 1 of your opponent's level 4 (+1 per 2 Tamer colors) or lower Digimon to the bottom of the deck"
     process:
       - select_opponent_permanent:
           bind_as: bounce_target
@@ -153,39 +78,22 @@ effects:
                             filter: { kind: tamer }
                         delta: 1
                       - 2
-          prompt: "Return 1 of your opponent's level 4 or lower Digimon (+1 level per 2 colors your Tamers have) to the bottom of the deck"
-      - return_to_deck:
-          target: bounce_target
-          position: bottom
+          prompt: "Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck (+1 level per 2 of your Tamers' colors)"
+      - return_to_deck: { target: bounce_target, position: bottom }
 
-  # ─── [When Attacking][Once Per Turn] may play a Lv<=4 Digimon from trash free ─
+  # ─── [When Attacking][OPT] you may play 1 Lv.4- Digimon from trash free ───
   - when: when_attacking
     once_per_turn: true
+    optional: true
     summary: "[When Attacking][Once Per Turn] You may play 1 level 4 or lower Digimon card from your trash without paying the cost"
-    condition:
-      count_gte:
-        filter:
-          of: you
-          zone: [trash]
-          kind: digimon
-          level_lte: 4
-        n: 1
     process:
       - select_trash:
           of: you
-          bind_as: revived
+          bind_as: revive_pick
           optional: true
           filter:
             all_of:
               - kind: digimon
               - level_lte: 4
-              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 level 4 or lower Digimon card from your trash without paying the cost"
-      - if:
-          condition: { binding_present: revived }
-          then:
-            - play_from_trash_free:
-                of: you
-                hand_index: revived
-          else:
-            - refund_opt: {}
+      - play_from_trash_free: { of: you, hand_index: revive_pick }

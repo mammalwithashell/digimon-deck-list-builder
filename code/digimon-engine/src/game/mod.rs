@@ -424,7 +424,7 @@ pub(crate) struct PendingDigimonLink {
     pub(crate) card: crate::card_source::CardHandle,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PendingWouldDigivolveResume {
     /// Cost effects share the temporary identity, but only the owned would-
     /// digivolve window may commit this declaration after costs are complete.
@@ -441,11 +441,30 @@ pub(crate) struct PendingWouldDigivolveResume {
     /// Threaded from the chosen route so the commit honors the player's pick
     /// (`pending_digivolve_route_choice`) rather than re-deriving the min route.
     pub(crate) app_fusion: bool,
-    /// Whether the player's chosen route is a Burst Digivolve (rule 8-3). Its
-    /// Tamer has already been returned to hand by the time this resume exists
-    /// (8-3-3-2), so the commit must not re-derive a route (none remains), and
-    /// it schedules the burst's end-of-turn top-card trash (8-3-2-1).
-    pub(crate) burst: bool,
+    /// The [Burst Digivolve] route being performed (its Tamer has already
+    /// been returned, CR 8-3-3-2). The commit re-validates only the base
+    /// requirement and registers the 8-3-2-1 turn-end trash.
+    pub(crate) burst: Option<crate::dna_digivolve::BurstRouteChoice>,
+}
+
+/// Field-for-field the derived `Debug`, except that `burst` is written only
+/// when set, so verification digests of every pre-burst state are unchanged.
+impl std::fmt::Debug for PendingWouldDigivolveResume {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("PendingWouldDigivolveResume");
+        d.field("window_started", &self.window_started)
+            .field("host_identity", &self.host_identity)
+            .field("treated_identity_orders", &self.treated_identity_orders)
+            .field("player", &self.player)
+            .field("permanent", &self.permanent)
+            .field("card", &self.card)
+            .field("effective_cost", &self.effective_cost)
+            .field("app_fusion", &self.app_fusion);
+        if let Some(burst) = &self.burst {
+            d.field("burst", burst);
+        }
+        d.finish()
+    }
 }
 
 /// The core game state. Drives the turn state machine.
@@ -1037,6 +1056,15 @@ pub struct Game {
     /// cost-choice callback bypasses that entry, preserving the pick across the
     /// reducer/replacement re-entries). `None` means "no pending choice".
     pub(crate) pending_digivolve_route_choice: Option<crate::dna_digivolve::DigivolveRouteMatch>,
+
+    /// A [Burst Digivolve] whose Tamer was already returned to the hand
+    /// (CR 8-3-3-2) while its digivolution is still being processed (cost
+    /// reducer prompts may re-enter the hand-digivolve action). Set by
+    /// `pay_burst_digivolve_tamer`, consumed into the
+    /// `PendingWouldDigivolveResume` (`burst`) when the cost is fixed, and
+    /// cleared at the public `digivolve_from_hand` entry and whenever an
+    /// attempt ends without a pending selection.
+    pub(crate) pending_burst_digivolve: Option<crate::dna_digivolve::PendingBurstDigivolve>,
 
     /// Spec §7.5 once-per-event guard. Records `(timing, stable subject)` pairs
     /// already offered for the current interrupting cause so a

@@ -20,7 +20,7 @@ alt_paths:
           prompt: "Return Yoshino Fujieda"
       - return_to_hand: { target: yoshi }
     on_burst_turn_end:
-      - trash_top_source: { target: self }
+      - trash_top_source: { target: carrier }
 
 effects:
   - when: when_digivolving

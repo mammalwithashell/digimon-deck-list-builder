@@ -131,10 +131,14 @@ effects:
           of: you
           zone: [trash]
           play_cost_lte: 5
-          any_of:
-            - trait_contains: "Avian"
-            - trait_contains: "Bird"
-            - trait_has: "DATA SQUAD"
+          # Only a card with a play cost can be played (CR 7-1-1; DCGO
+          # HasPlayCost): no Digi-Eggs or Options. Rose Rave audit 2026-11-11.
+          all_of:
+            - any_of: [{ kind: digimon }, { kind: tamer }]
+            - any_of:
+                - trait_contains: "Avian"
+                - trait_contains: "Bird"
+                - trait_has: "DATA SQUAD"
         n: 1
     summary: "Inherited [On Deletion] You may play 1 play cost 5 or lower [Avian]/[Bird]/[DATA SQUAD] card from your trash without paying the cost"
     process:
@@ -145,6 +149,7 @@ effects:
           filter:
             all_of:
               - play_cost_lte: 5
+              - any_of: [{ kind: digimon }, { kind: tamer }]
               - any_of:
                   - trait_contains: "Avian"
                   - trait_contains: "Bird"

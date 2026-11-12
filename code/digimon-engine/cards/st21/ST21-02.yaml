@@ -1,31 +1,18 @@
 # ST21-02 Gomamon — Digimon, Lv.3, Blue, DP 2000, Cost 3.
-# Traits: Sea Beast / ADVENTURE. Form: Rookie. Attribute: Vaccine.
+# Traits: Sea Beast, ADVENTURE. Attribute: Vaccine.
 #
-# Printed card text (data/card_bundles/ST21-02.md — official Bandai DB):
-#
-#   Digivolve: Blue Lv.2 / cost 0
+# Printed text (official observation, data/card_official.json):
+#   Standard digivolve: Blue Lv.2 / Cost 0 (cards.json evo_costs).
 #   [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0
 #   [All Turns] Your opponent can't gain memory other than by Tamer effects.
+# Official Q&A: "your opponent's memory will no longer increase by any effects
+#   except Tamer effects. This effect affects the opponent player."
 #
-#   Official Q&A: "With this effect, your opponent's memory will no longer
-#   increase by any effects except Tamer effects. This effect affects the
-#   opponent player."
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Blue/ST21_02.cs —
+#   static effect applying to `card.Owner.Enemy`.
 #
-# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Blue/ST21_02.cs
-#
-# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
-#
-# Two `EffectTiming.None` static effects:
-#   1. AddSelfDigivolutionRequirementStaticEffect — base `Level == 2 &&
-#      TopCard.HasAdventureTraits`, digivolutionCost 0,
-#      ignoreDigivolutionRequirement false → the printed xros_req box, a
-#      requirement-respecting alt-path (ST20-10 idiom). The standard blue Lv.2
-#      circle (official DB "Blue Lv.2 / cost 0") is the first alt-path.
-#   2. CannotAddMemoryClass — `CanUseCondition = IsExistOnBattleArea(card)`,
-#      `PlayerCondition = player == card.Owner.Enemy`, `CardEffectCondition =
-#      effect has a source card && !IsTamerEffect` → player-scoped opponent
-#      floodgate `CannotGainMemoryExceptFromTamers` (twin of BT3-077 Gazimon /
-#      EX8-030 Tapirmon).
+# Engine hook: identical to EX8-030 Tapirmon / BT3-077 Gazimon —
+# `CannotGainMemoryExceptFromTamers` flood gate on the opponent, all turns.
 
 card: ST21-02
 name: Gomamon
@@ -35,16 +22,10 @@ color: [blue]
 cost: 3
 dp: 2000
 traits: [Sea Beast, ADVENTURE]
-form: Rookie
 attribute: Vaccine
 
 alt_paths:
-  # Printed standard circle: Blue Lv.2 / cost 0.
-  - kind: digivolve
-    from: { level_eq: 2, color_is: blue }
-    cost: 0
-
-  # [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0 (any colour).
+  # [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0.
   - kind: digivolve
     from: { level_eq: 2, trait_has: ADVENTURE }
     cost: 0

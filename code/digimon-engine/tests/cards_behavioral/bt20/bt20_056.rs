@@ -313,6 +313,49 @@ fn bt20_056_ouryuken_replacement_does_not_fire_for_own_effect_leave() {
     );
 }
 
+/// "When THIS Digimon would leave": a second [Alphamon: Ouryuken] that does not
+/// carry BT20-056 gets no protection; the carrier afterwards still does (the
+/// OPT was not spent). Audit 2026-11-11: DCGO BT20_056.cs
+/// CanTriggerWhenRemoveField(hashtable, card).
+#[test]
+fn bt20_056_ouryuken_replacement_only_for_carrier_audit() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-056")
+        .expect("BT20-056 YAML loads")
+        .add_card(make_digimon("OURYUKEN", "Alphamon: Ouryuken", 7, 13000))
+        .add_card(make_digimon("OURYUKEN-2", "Alphamon: Ouryuken", 7, 13000))
+        .add_card(make_test_card("SEC-A", "Security A"))
+        .add_card(make_test_card("SEC-B", "Security B"))
+        .security(0, &["SEC-A", "SEC-B"])
+        .start();
+    let carrier = runner.place_stack(0, &["BT20-056", "OURYUKEN"]);
+    let other = runner.place_on_field(0, "OURYUKEN-2", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(other, ReplacementCause::OpponentEffect);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no protection for an Ouryuken that is not BT20-056's carrier"
+    );
+    assert!(!permanent_exists(&runner, 0, "OURYUKEN-2"), "it leaves");
+    assert_eq!(runner.security_count(0), 2, "no cost paid");
+
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    let view = runner
+        .pending_selection_view()
+        .expect("the carrier is still offered the protection");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept Ouryuken replacement");
+    runner.auto_resolve().expect("finish replacement");
+    assert!(permanent_exists(&runner, 0, "OURYUKEN"), "the carrier stays");
+    assert_eq!(runner.security_count(0), 1);
+}
+
 // Complete-card regression fixtures. Attack windows below isolate the printed
 // conditional tail; these are simulator tests, not DCGO oracle scenarios.
 // CR 4.3 3-4-7-4/6: breeding evolution does not trigger ordinary WD effects.

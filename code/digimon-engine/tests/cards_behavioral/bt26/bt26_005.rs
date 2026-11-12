@@ -127,6 +127,59 @@ fn bt26_005_excludes_digi_egg_from_trash() {
     assert!(!field_ids(&r, 0).contains(&"EGG".to_string()));
 }
 
+/// "play 1 play cost 5 or lower ... card": an Option has a use cost, not a play
+/// cost, so a cost-3 [DATA SQUAD] Option in the trash is never a candidate.
+#[test]
+fn bt26_005_excludes_option_from_trash_rose_rave_audit() {
+    // Rose Rave audit 2026-11-11: DCGO BT26_005.cs HasPlayCost / CR 7-1-1 -- an Option can't be played.
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT26-005")
+        .add_card(filler("FILLER"))
+        .add_card(tamer("TAMER", "Tamer", CardColor::Purple, &["DATA SQUAD"]))
+        .add_card({
+            let mut c = digimon_engine::debug_runner::make_test_card("DSOPT", "DS Option");
+            c.card_kind = CardKind::Option;
+            c.colors = vec![CardColor::Purple];
+            c.level = None;
+            c.dp = None;
+            c.play_cost = 3;
+            c.traits = vec!["DATA SQUAD".to_string()];
+            c
+        })
+        .add_card(digimon(
+            "AVIAN5",
+            "Peckmon",
+            CardColor::Purple,
+            4,
+            5,
+            &["Avian"],
+        ))
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(3)
+        .start();
+    r.set_first_player(0);
+    tamer_with_face_down(&mut r, 0, "TAMER", 1);
+    push_trash(&mut r, 0, "DSOPT");
+    push_trash(&mut r, 0, "AVIAN5");
+    let carrier = r.place_stack(0, &[CARD_ID, "FILLER"]);
+    fire(&mut r, EffectTiming::OnDeletion, carrier);
+    r.accept_optional_trigger().expect("optional clause");
+    pick_first(&mut r, 0); // Tamer
+    let v = r.pending_selection_view().expect("trash pick");
+    assert_eq!(
+        non_pass(&r).len(),
+        1,
+        "only the [Avian] Digimon is offered, not the [DATA SQUAD] Option (valid {:?})",
+        v.valid_action_ids
+    );
+    pick_trash(&mut r, 0, "AVIAN5");
+    let _ = r.auto_resolve();
+    assert!(field_ids(&r, 0).contains(&"AVIAN5".to_string()));
+    assert!(trash_ids(&r, 0).contains(&"DSOPT".to_string()));
+}
+
 #[test]
 fn bt26_005_no_prompt_without_face_down_source() {
     let mut r = setup();

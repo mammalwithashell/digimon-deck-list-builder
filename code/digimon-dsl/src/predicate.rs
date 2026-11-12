@@ -65,6 +65,15 @@ pub struct PredicateSpec {
     /// `color_matches_binding`. G-RETURNED-CARD-COLOR-BINDING (driver EX10-068).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_matches_returned_card: Option<bool>,
+    /// Name sibling of `color_matches_returned_card`: true when the candidate
+    /// shares >=1 card name (printed name or "also treated as" alias; a field
+    /// permanent uses its synthesized top-card names) with ANY card recorded in
+    /// this effect's `returned_to_deck` result log. Models "delete all of your
+    /// opponent's Digimon with the same name as that card" after a trash ->
+    /// deck-bottom return (DCGO `TopCard.HasSameCardName(returnedCard)`).
+    /// G-DSL-NAME-MATCHES-RETURNED-CARD (driver BT13-092).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_matches_returned_card: Option<bool>,
     /// True when the candidate card shares â‰¥1 color with the effect CARRIER's
     /// NON-FLIPPED digivolution-source color set (the colors printed on the
     /// carrier's face-up digivolution cards, excluding the carrier's own top
@@ -218,6 +227,12 @@ pub struct PredicateSpec {
     /// payable hand-partner DNA declaration. Prior picks are physical bindings.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dna_hand_candidate: Option<DnaHandCandidatePredicate>,
+    /// Two-field DNA feasibility for `select_hand` + `select_dna_pair` +
+    /// `effect_initiated_dna_digivolve` ("2 of your Digimon may DNA digivolve
+    /// into X in the hand"). DCGO `CanPlayJogress(true)` /
+    /// `CanJogressFromTargetPermanents`. G-DSL-DNA-FIELD-PAIR-CANDIDATE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dna_field_pair: Option<DnaFieldPairPredicate>,
     /// Whether this physical candidate can be played free into its owner's
     /// battle area by the effect controller. Checks the owner's field capacity
     /// and the causing controller's effect-play prohibition independently.
@@ -376,14 +391,15 @@ pub struct PredicateSpec {
     /// names". G-DSL-DISTINCT-NAMED-PERMANENT-COUNT.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distinct_named_count_gte: Option<DistinctNamedCountPredicate>,
-    /// True when the DISTINCT colors across the observer's battle-area permanents matching `filter` number at
-    /// least `n` (each permanent contributes the printed colors of its top card). A no-subject global
-    /// predicate - does not inspect the candidate. Same `{of, filter, n}` payload as `distinct_named_count_gte`;
-    /// the unfiltered Tamer-only sibling is `distinct_tamer_colors_gte`. Drivers: ST20-03 / ST21-08 -
-    /// "your [ADVENTURE] trait Tamers have 3 or more total colors".
-    /// G-DSL-DISTINCT-COLORS-FILTERED-GTE.
+    /// True when the observer's battle-area permanents matching `filter`
+    /// collectively carry at least `n` DISTINCT colors. A no-subject global
+    /// predicate - does not inspect the candidate. Filtered generalisation of
+    /// `distinct_tamer_colors_gte` (which counts every Tamer). Driver:
+    /// ST20-03 / ST21-08 — "If your Tamers with the [ADVENTURE] trait have 3
+    /// or more total colors" (`filter: { kind: tamer, trait_has: ADVENTURE }`).
+    /// G-DSL-DISTINCT-FILTERED-COLORS.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub distinct_colors_gte: Option<DistinctNamedCountPredicate>,
+    pub distinct_colors_gte: Option<DistinctColorsCountPredicate>,
     /// True when the observer's battle-area Tamer permanents collectively
     /// carry at least N face-down digivolution sources. A no-subject global
     /// predicate â€” does not inspect the candidate. Gates the `[Then]` clause of
@@ -1277,6 +1293,21 @@ fn default_distinct_named_of() -> PlayerRef {
     PlayerRef::You
 }
 
+/// Payload for the `distinct_colors_gte` predicate leaf - at least `n`
+/// distinct colors across the observer's battle-area permanents matching
+/// `filter`. G-DSL-DISTINCT-FILTERED-COLORS.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DistinctColorsCountPredicate {
+    /// Owner of the permanents to scan. Defaults to `you`.
+    #[serde(default = "default_distinct_named_of")]
+    pub of: PlayerRef,
+    /// Filter each battle-area permanent must satisfy to contribute colors.
+    pub filter: Box<PredicateSpec>,
+    /// Minimum number of DISTINCT colors (top card's printed colors) required.
+    pub n: u8,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum DpConstraint {
@@ -1541,6 +1572,32 @@ pub struct DigivolveCostPredicate {
     /// cannot occur inside cost_reduction/cost_assignment clauses, including
     /// free or fixed-zero requests: affordability itself evaluates reducers.
     pub cost: crate::step::CostDelta,
+}
+
+/// Stage of a both-on-field DNA choice (G-DSL-DNA-FIELD-PAIR-CANDIDATE).
+/// `result`: a hand card with at least one pair of distinct own battle-area
+/// Digimon that satisfies one of its printed DNA requirements and whose
+/// printed DNA cost can be paid. `first`: an own Digimon that has such a
+/// partner for the card bound under `result`. `second`: an own Digimon that
+/// forms such a pair with the permanent bound under `first`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DnaFieldPairRole {
+    Result,
+    First,
+    Second,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DnaFieldPairPredicate {
+    pub role: DnaFieldPairRole,
+    /// Hand binding of the DNA result card (required for `first`/`second`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<String>,
+    /// Permanent binding of the first material (required for `second`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub first: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]

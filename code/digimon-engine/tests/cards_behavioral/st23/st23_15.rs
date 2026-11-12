@@ -584,3 +584,34 @@ fn st23_15_security_placed_copy_offers_the_relocate_next_turn() {
     let sel = runner.pending_selection().expect("the [Start of Your Main Phase] relocate is asked");
     assert_eq!(sel.selecting_player, 1);
 }
+
+/// [Security] "Activate this card's [Main] effects" includes "Then, place this
+/// card in the battle area" (DCGO ST23_15.cs PlaceDelayOptionCards).
+#[test]
+fn st23_15_security_places_self_in_battle_area() {
+    use digimon_engine::permanent::OptionState;
+    let mut attacker = make_test_card("ATTACKER", "Attacker");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(5);
+    attacker.dp = Some(9000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST23-15 YAML loads")
+        .add_card(attacker)
+        .security(1, &[CARD_ID])
+        .memory(10)
+        .start();
+
+    let atk = runner.place_on_field(0, "ATTACKER", Some(0));
+    let _ = runner.attack_player(atk, 1, false);
+    let _ = runner.auto_resolve();
+
+    let placed = runner.game.players[1]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .expect("e-Pulse is placed in its owner's battle area");
+    assert!(matches!(placed.option_state, OptionState::Delayed { .. }));
+}

@@ -23,6 +23,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             color_matches_any_field_digimon,
             color_matches_binding,
             color_matches_returned_card,
+            name_matches_returned_card,
             color_matches_own_source_stack,
             trait_has,
             trait_contains,
@@ -45,6 +46,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             can_digivolve_onto,
             can_digivolve_onto_with_cost,
             dna_hand_candidate,
+            dna_field_pair,
             can_move_from_breeding_by_effect,
             dp_eq,
             dp_lte,
@@ -279,6 +281,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             &format!("{}.color_matches_returned_card", path),
             "UNCLASSIFIED_STRING",
         );
+        name_matches_returned_card.walk(
+            c,
+            &format!("{}.name_matches_returned_card", path),
+            "UNCLASSIFIED_STRING",
+        );
         color_matches_own_source_stack.walk(
             c,
             &format!("{}.color_matches_own_source_stack", path),
@@ -345,6 +352,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         );
         can_digivolve_onto_with_cost.walk(c, &format!("{}.can_digivolve_onto_with_cost", path), role);
         dna_hand_candidate.walk(c, &format!("{}.dna_hand_candidate", path), role);
+        dna_field_pair.walk(c, &format!("{}.dna_field_pair", path), role);
         can_move_from_breeding_by_effect.walk(c, &format!("{}.can_move_from_breeding_by_effect", path), role);
         dp_eq.walk(c, &format!("{}.dp_eq", path), "UNCLASSIFIED_STRING");
         dp_lte.walk(c, &format!("{}.dp_lte", path), "UNCLASSIFIED_STRING");
@@ -1132,6 +1140,20 @@ impl Walk for digimon_dsl::predicate::PlayCostBindingPredicate {
         op.walk(c, &format!("{}.op", path), "UNCLASSIFIED_STRING");
     }
 }
+impl Walk for digimon_dsl::predicate::DistinctColorsCountPredicate {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(
+            path,
+            "digimon_dsl::predicate::DistinctColorsCountPredicate",
+            "COMPOSITE",
+            serde_json::Value::Null,
+        );
+        let digimon_dsl::predicate::DistinctColorsCountPredicate { of, filter, n } = self;
+        of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
+        filter.walk(c, &format!("{}.filter", path), "UNCLASSIFIED_STRING");
+        n.walk(c, &format!("{}.n", path), "UNCLASSIFIED_STRING");
+    }
+}
 impl Walk for digimon_dsl::predicate::DistinctNamedCountPredicate {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
         c.node(
@@ -1690,6 +1712,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             color_matches_any_field_digimon,
             color_matches_binding,
             color_matches_returned_card,
+            name_matches_returned_card,
             color_matches_own_source_stack,
             trait_has,
             trait_contains,
@@ -1713,6 +1736,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             can_digivolve_onto,
             can_digivolve_onto_with_cost,
             dna_hand_candidate,
+            dna_field_pair,
             can_move_from_breeding_by_effect,
             dp_eq,
             dp_lte,
@@ -1934,6 +1958,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             &format!("{}.color_matches_returned_card", path),
             "UNCLASSIFIED_STRING",
         );
+        name_matches_returned_card.walk(
+            c,
+            &format!("{}.name_matches_returned_card", path),
+            "UNCLASSIFIED_STRING",
+        );
         color_matches_own_source_stack.walk(
             c,
             &format!("{}.color_matches_own_source_stack", path),
@@ -2003,6 +2032,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         dp_lte.walk(c, &format!("{}.dp_lte", path), "UNCLASSIFIED_STRING");
         can_digivolve_onto_with_cost.walk(c, &format!("{}.can_digivolve_onto_with_cost", path), role);
         dna_hand_candidate.walk(c, &format!("{}.dna_hand_candidate", path), role);
+        dna_field_pair.walk(c, &format!("{}.dna_field_pair", path), role);
         can_move_from_breeding_by_effect.walk(c, &format!("{}.can_move_from_breeding_by_effect", path), role);
         dp_lte_deletion_cap.walk(
             c,
@@ -2731,6 +2761,30 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
 }
 }
 
+impl Walk for digimon_dsl::predicate::DnaFieldPairRole {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        let name = match self {
+            Self::Result => "Result", Self::First => "First", Self::Second => "Second",
+        };
+        c.node(path, "digimon_dsl::predicate::DnaFieldPairRole", role, serde_json::json!(name));
+    }
+}
+impl Walk for digimon_dsl::predicate::DnaFieldPairPredicate {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        let Self { role: stage, result, first } = self;
+        stage.walk(c, &format!("{}.role", path), role);
+        result.walk(c, &format!("{}.result", path), "EXISTING_INSTANCE_BINDING");
+        first.walk(c, &format!("{}.first", path), "EXISTING_INSTANCE_BINDING");
+    }
+}
+impl Walk for digimon_dsl::compiled::CompiledDnaFieldPair {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        let Self { role: stage, result, first } = self;
+        stage.walk(c, &format!("{}.role", path), role);
+        result.walk(c, &format!("{}.result", path), "EXISTING_INSTANCE_BINDING");
+        first.walk(c, &format!("{}.first", path), "EXISTING_INSTANCE_BINDING");
+    }
+}
 impl Walk for digimon_dsl::predicate::DnaHandCandidateRole {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
         let name = match self {

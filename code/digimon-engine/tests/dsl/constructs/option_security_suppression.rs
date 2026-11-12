@@ -328,24 +328,18 @@ fn an_off_turn_effect_attack_does_not_enable_a_your_turn_restriction() {
     if r.game.current_phase == GamePhase::Breeding {
         main_action(&mut r, 1, PASS);
     }
-    let s = r
+    // CR 11-1-2: "Only the turn player can attack." No card makes a Digimon
+    // attack outside its controller's turn (EX3-024 forces the opponent's
+    // Digimon on the opponent's own Main Phase), so an effect attack by the
+    // non-turn player is refused (game audit 2026-11-11).
+    assert!(r.game.pending_attack.is_none(), "no off-turn attack was declared");
+    assert!(r
         .game
         .pending_selection
         .as_ref()
-        .expect("off-turn attacker chooses a legal target");
-    assert_eq!(s.selecting_player, 0);
-    let target = encode_attack(0, SECURITY_TARGET);
-    assert_eq!(build_action_mask(&r.game, 0)[target as usize], 1.0);
-    assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 0.0);
-    r.execute_action(0, target)
-        .expect("legal off-turn effect attack target");
-    settled(&r);
-    assert_eq!(r.hand_size(1), hand + 2);
-    assert_eq!(
-        r.memory(),
-        memory + 1,
-        "Security owner is the active player here"
-    );
+        .is_none_or(|s| s.selecting_player != 0));
+    assert_eq!(r.hand_size(1), hand, "no security check happened");
+    assert_eq!(r.memory(), memory);
 }
 
 #[test]

@@ -88,8 +88,30 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT26-050 } }
     expect: { prompt: main_phase }
+  # SIM-ONLY: since 2026-11-11 our engine offers the [Burst Digivolve] route
+  # beside the Lv.6 [DATA SQUAD] cost-5 route in its "which digivolution cost"
+  # prompt (CR 4.3 8-3). DCGO's Normal/Burst and Tamer picks are not hooked
+  # selection rows, so there is no DCGO row to pair with.
+  - actor: 0
+    do: { select: { choice: "Burst Digivolve for cost 0", sim_only: true } }
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
 meta: {produced_by: 20261006T154903534860Z-pilot-data-squad-482d7f}
-assert: []
+assert:
+  # OUR engine's result (added 2026-11-12; the 2026-10-06 oracle run compared
+  # prompts only): the burst cost 0 (memory stays 0), Yoshino Fujieda
+  # (BT26-091) is back in the hand, and the digivolve drew ST24-14.
+  - at: 21
+    that:
+      turn: 7
+      p0.memory: 0
+      p0.hand: [BT13-060, BT26-036, BT26-091, BT26-094, ST24-04, ST24-05, ST24-14, ST24-15]
+      p0.field:
+        - card_id: BT26-050
+          dp: 15000
+          suspended: false
+          sources: [BT26-005, BT26-049, BT26-072, BT26-076, ST24-12]

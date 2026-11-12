@@ -1,37 +1,26 @@
-# ST20-08 Kabuterimon — Digimon, Lv.4, Green, DP 4000, Cost 4.
-# Traits: Insectoid / ADVENTURE. Form: Champion. Attribute: Vaccine.
+# ST20-08 Kabuterimon — Lv4, Green, Insectoid / ADVENTURE, Champion / Vaccine,
+# DP 4000, Cost 4.
 #
-# Printed card text (official Bandai DB, data/card_bundles/ST20-08.md):
+# Printed card text (official bundle data/card_bundles/ST20-08.md):
+#
+#   Digivolve: Green Lv.3 / cost 2.
+#   [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2
 #
 #   [When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer
 #   card with the [ADVENTURE] trait from your hand without paying the cost.
 #
-#   Inherited: <Piercing> (When this Digimon attacks and deletes your
-#              opponent's Digimon in battle, it checks security before the
-#              attack ends.)
+#   Inherited: <Piercing>
 #
-#   Digivolve box (xros_req): "[Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2"
-#   Standard evo_costs:       Lv.3 Green, Cost 2.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Green/ST20_08.cs
+#   - Alt requirement: Lv3 && HasAdventureTraits, cost 2.
+#   - [When Digivolving] optional; CanActivate: an ADVENTURE Tamer in hand and
+#     own battle-area Tamer count <= 1; SelectHandEffect(canNoSelect: true,
+#     maxCount 1) → PlayPermanentCards(payCost: false).
+#   - Inherited PierceSelfEffect(isInheritedEffect: true).
 #
-# DCGO C# reference (base repo):
-#   DCGO/Assets/Scripts/CardEffect/ST20/Green/ST20_08.cs
+# The [When Digivolving] clause is ST21-05 Angemon's, verbatim.
 #
-#   1. AddSelfDigivolutionRequirementStaticEffect — Lv.3 with
-#      HasAdventureTraits, cost 2, requirements respected.
-#   2. OnEnterFieldAnyone (When Digivolving), ActivateClass isOptional=false:
-#      CanActivate = on battle area as a Digimon AND a playable [ADVENTURE]
-#      Tamer in hand AND own Tamer count <= 1. The body is a SelectHandEffect
-#      with canNoSelect=true ("you may"), then PlayPermanentCards(payCost
-#      false). No separate yes/no prompt — the optional pick carries the
-#      decline.
-#   3. OnDetermineDoSecurityCheck — PierceSelfEffect(isInheritedEffect true).
-#
-# Clause layout:
-#   alt_paths[0]  standard digivolve (Lv.3 Green / cost 2).
-#   alt_paths[1]  xros_req alt-digivolve (Lv.3 ADVENTURE / cost 2).
-#   effects[0]    [When Digivolving] count_lte Tamers 1 gate, optional hand pick
-#                 of an [ADVENTURE] Tamer, play it free (BT22-022 idiom).
-#   effects[1]    Inherited <Piercing> (grant_keyword scope: inherited).
+# Verdict: IMPLEMENTED.
 
 card: ST20-08
 name: Kabuterimon
@@ -54,22 +43,25 @@ alt_paths:
 
 effects:
   - when: when_digivolving
-    summary: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [ADVENTURE] Tamer card from your hand without paying the cost"
+    summary: "[When Digivolving] If you have 1 or fewer Tamers, may play 1 [ADVENTURE] Tamer from hand for free"
     condition:
       count_lte:
-        filter: { of: you, zone: [battle_area], kind: tamer }
+        filter:
+          of: you
+          zone: [battle_area]
+          kind: tamer
         n: 1
     process:
       - select_hand:
           of: you
-          bind_as: tamer
+          bind_as: adv_tamer
           optional: true
-          filter: { kind: tamer, trait_has: ADVENTURE }
-          prompt: "You may play 1 Tamer card with the [ADVENTURE] trait from your hand without paying the cost"
-      - if:
-          condition: { binding_present: tamer }
-          then:
-            - play_from_hand_free: { of: you, hand_index: tamer }
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: ADVENTURE
+          prompt: "Play 1 [ADVENTURE] Tamer card from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: adv_tamer }
 
   - scope: inherited
     kind: grant_keyword

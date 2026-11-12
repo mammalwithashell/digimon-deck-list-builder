@@ -136,38 +136,42 @@ fn dual_emits_digivolve_bit_using_digimon_face() {
     assert_eq!(mask[bit], 1.0, "DUAL can digivolve as a Digimon");
 }
 
+/// CR 4.3 4-6-2: a DUAL card can't be played to the field, so "play or use"
+/// on a DUAL card can only use it as an Option -- no play/use choice is
+/// offered (engine fix 716c6e291; this test used to play it as a Digimon).
+/// The same call on a clone must end in the same state.
 #[test]
-fn play_or_use_dual_choice_clones_faithfully() {
+fn play_or_use_dual_uses_it_as_an_option_and_clones_faithfully() {
     let mut r = DebugRunner::builder()
         .add_card(dual_card())
         .hand(0, &["DUAL-MASK"])
         .memory(0)
         .start();
     advance_to_main(&mut r);
+    let mut cloned = r.game.clone();
 
     {
         let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, 0);
         ctx.play_or_use_from_hand_with_cost(0, 0, CostDelta::Free);
     }
+    {
+        let mut ctx = EffectContext::new(&mut cloned, CardHandle(0), None, 0);
+        ctx.play_or_use_from_hand_with_cost(0, 0, CostDelta::Free);
+    }
 
+    assert!(r.game.pending_selection.is_none(), "no play/use choice for a DUAL card");
+    assert_eq!(r.game.player(0).hand.len(), 0, "the DUAL card was used");
     assert!(
-        r.game.pending_selection_resume.is_some(),
-        "dual play/use choice must be resume-driven before cloning"
-    );
-    let play_as_digimon = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
-
-    let mut cloned = r.game.clone();
-    cloned
-        .resolve_selection(0, play_as_digimon)
-        .expect("clone resolves play/use choice");
-
-    assert_eq!(cloned.player(0).hand.len(), 0, "clone: Dual left hand");
-    assert!(
-        cloned
+        !r.game
             .player(0)
             .battle_area
             .iter()
-            .any(|p| p.top_card().card_id(&cloned.card_data) == "DUAL-MASK"),
-        "clone: Dual was played as a Digimon"
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "DUAL-MASK"),
+        "not played to the field as a Digimon"
+    );
+    assert_eq!(
+        digimon_engine::serialization::to_ui_json(&r.game),
+        digimon_engine::serialization::to_ui_json(&cloned),
+        "clone ends in the same state"
     );
 }

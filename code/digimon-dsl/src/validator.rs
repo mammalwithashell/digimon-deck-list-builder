@@ -609,6 +609,13 @@ fn validate_triggered(
     if let Some(cond) = &t.condition {
         validate_predicate(cond, &format!("{prefix}.condition"), card_id, ctx, errors);
     }
+    if t.opt_group.is_some() && !t.once_per_turn && !matches!(t.max_per_turn, Some(n) if n > 0) {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: format!("{prefix}.opt_group"),
+            message: "opt_group requires once_per_turn or max_per_turn".into(),
+        });
+    }
     if let Some(aw) = &t.active_when {
         validate_predicate(aw, &format!("{prefix}.active_when"), card_id, ctx, errors);
     }
@@ -1743,6 +1750,9 @@ fn validate_post_payment_plural_filter(
                         "dna_hand_candidate" => {
                             value.get("result").is_some() || value.get("field").is_some()
                         }
+                        "dna_field_pair" => {
+                            value.get("result").is_some() || value.get("first").is_some()
+                        }
                         // Only event_target has a global trigger-context
                         // fallback in reference_play_cost. replacement_subject
                         // and ordinary names are still local bindings here.
@@ -1757,7 +1767,8 @@ fn validate_post_payment_plural_filter(
                         | "effect_trashed_any_hand_card" | "effect_deleted_any_own_digimon"
                         | "effect_deleted_any_opponent_digimon" | "effect_played_any_digimon"
                         | "effect_digivolved_any_digimon" | "effect_added_any_card_to_hand"
-                        | "color_matches_returned_card" | "returned_card_matching"
+                        | "color_matches_returned_card" | "name_matches_returned_card"
+                        | "returned_card_matching"
                         | "trashed_hand_card_matching" | "effect_deleted_opponent_digimon_dp_gte" => true,
                         // These two per-selectors read the same lost result log.
                         "per" => matches!(value.as_str(),
@@ -1939,6 +1950,9 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
+            // The right pick runs after the left one is bound, so its filter
+            // may reference `bind_left_as` (e.g. `dna_field_pair { first }`).
+            scope.insert(args.bind_left_as.clone());
             validate_predicate_binding_scope(
                 &args.right_filter,
                 &format!("{prefix}.right_filter"),
@@ -1946,7 +1960,6 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
-            scope.insert(args.bind_left_as.clone());
             scope.insert(args.bind_right_as.clone());
         }
         StepSpec::SelectRevealBuckets(args) => {
@@ -2596,6 +2609,31 @@ fn validate_predicate_binding_scope(
                 scope,
                 errors,
             );
+        }
+    }
+    if let Some(pair) = &pred.dna_field_pair {
+        use crate::predicate::DnaFieldPairRole;
+        // G-DSL-DNA-FIELD-PAIR-CANDIDATE: each stage names exactly the prior
+        // picks it correlates with.
+        for (name, binding, required) in [
+            ("result", &pair.result, pair.role != DnaFieldPairRole::Result),
+            ("first", &pair.first, pair.role == DnaFieldPairRole::Second),
+        ] {
+            let path = format!("{prefix}.dna_field_pair.{name}");
+            if required != binding.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: path.clone(),
+                    message: format!(
+                        "{name} binding is {} for {:?} candidates",
+                        if required { "required" } else { "not allowed" },
+                        pair.role
+                    ),
+                });
+            }
+            if let Some(binding) = binding {
+                report_if_undeclared_binding(binding, &path, card_id, scope, errors);
+            }
         }
     }
     if let Some(bc) = &pred.binding_count_eq {

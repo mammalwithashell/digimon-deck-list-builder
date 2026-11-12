@@ -132,21 +132,20 @@ assert:
   # itself (base + <Security A. +1>) and one from the deleted Token's
   # [On Deletion].
   #
-  # p1.field is the measurement. Our engine leaves TWO Tokens: the security-
-  # removal arm played one, the [End of Attack] delete removed one of the two
-  # then on the board, and the deletion arm played another. If clause (d)'s
-  # [Once Per Turn] were shared across both arms -- as the card prints it and as
-  # DCGO implements it -- the deletion arm would be locked out and exactly ONE
-  # Token would remain.
+  # p1.field is the measurement. Clause (d)'s [Once Per Turn] is ONE count
+  # shared by both arms (CR 4.3 15-14-1; official Q&A Q1550: the same effect
+  # triggered at a different timing is still that effect). The security-removal
+  # arm plays a Token, the [End of Attack] delete removes one of the two Tokens
+  # then on the board, and the deletion arm is locked out: ONE Token remains.
+  # DCGO plays a second Token (each arm is its own ActivateClass with its own
+  # counter; `SetHashString` is only an identity), the 2026-09-04 oracle run
+  # recorded two, and the clause is triaged `dcgo_quirk`
+  # (qa/rules/dcgo_quirks.md Q-OPT-COUNTER-PER-TRIGGER-ARM).
   - at: 24
     that:
       turn: 9
       p1.security: 2
       p1.field:
-        - card_id: TOKEN_PETRIFICATION
-          dp: 3000
-          suspended: false
-          sources: []
         - card_id: TOKEN_PETRIFICATION
           dp: 3000
           suspended: false

@@ -548,10 +548,19 @@ fn ad1_009_eot_dna_clause_is_optional() {
 /// inner step is a hand selection.
 #[test]
 fn ad1_009_eot_dna_with_omnimon_alter_s_in_hand_prompts_hand_selection() {
+    // The hand pick only lists a card that can DNA now (game-audit
+    // 2026-11-11 / DCGO CanPlayJogress), so the synthetic Omnimon Alter-S
+    // carries a recipe the field meets: Lv.6 (BlitzGreymon) + Lv.3 (AllyA).
     let mut runner = DebugRunner::builder()
         .dsl_card("AD1-009")
         .expect("AD1-009 in pack")
-        .add_card(make_test_card("TST-OMNI", "Omnimon Alter-S"))
+        .add_card(digimon_engine::debug_runner::make_test_dna_card(
+            "TST-OMNI",
+            "Omnimon Alter-S",
+            6,
+            3,
+            0,
+        ))
         .add_card(make_test_card("ALLY-A", "AllyA"))
         .hand(0, &["TST-OMNI"])
         .memory(15)
@@ -578,6 +587,54 @@ fn ad1_009_eot_dna_with_omnimon_alter_s_in_hand_prompts_hand_selection() {
              is in hand and own Digimon are on field"
         );
     }
+}
+
+/// game-audit 2026-11-11 / DCGO `CanPlayJogress(true)`: the hand pick lists
+/// only an Omnimon Alter-S whose DNA requirement the field meets. OMNI-FAR
+/// needs two Lv.7 Digimon (none on field) and must not be offered; OMNI-OK
+/// (Lv.6 + Lv.6: BlitzGreymon + a Lv.6 ally) is.
+#[test]
+fn ad1_009_eot_dna_hand_pick_excludes_card_without_a_legal_field_pair() {
+    use digimon_engine::action::space::{HAND_EFFECT_START, PLAY_HAND_START};
+    use digimon_engine::debug_runner::make_test_dna_card;
+
+    let mut ally = make_test_card("ALLY-LV6", "AllyLv6");
+    ally.level = Some(6);
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-009")
+        .expect("AD1-009 in pack")
+        .add_card(make_test_dna_card("OMNI-FAR", "Omnimon Alter-S", 7, 7, 0))
+        .add_card(make_test_dna_card("OMNI-OK", "Omnimon Alter-S", 6, 6, 0))
+        .add_card(ally)
+        .hand(0, &["OMNI-FAR", "OMNI-OK"])
+        .memory(15)
+        .start();
+    let blitz = runner.place_on_field(0, "AD1-009", None);
+    runner.place_on_field(0, "ALLY-LV6", None);
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(blitz));
+    runner.game.drain_effect_queue();
+
+    let view = runner
+        .pending_selection_view()
+        .expect("hand pick for the Omnimon Alter-S that can DNA");
+    assert_eq!(view.kind, SelectionKind::Hand);
+    let slot_actions = |id: &str| {
+        let slot = runner.game.players[0]
+            .hand
+            .iter()
+            .position(|c| c.card_id(&runner.game.card_data) == id)
+            .unwrap_or_else(|| panic!("{id} in hand")) as u16;
+        [PLAY_HAND_START + slot, HAND_EFFECT_START + slot]
+    };
+    let offered = |id: &str| slot_actions(id).iter().any(|a| view.valid_action_ids.contains(a));
+    assert!(offered("OMNI-OK"), "Lv.6 + Lv.6 pair on field: offered");
+    assert!(
+        !offered("OMNI-FAR"),
+        "no Lv.7 + Lv.7 pair on field: DCGO CanPlayJogress excludes it"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

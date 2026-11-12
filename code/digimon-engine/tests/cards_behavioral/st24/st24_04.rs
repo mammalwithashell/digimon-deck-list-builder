@@ -134,8 +134,8 @@ fn st24_04_is_agumon_lv3_data_squad_with_alt_paths() {
     let has_koromon = card.alt_paths.iter().any(|p| {
         p.from
             .as_ref()
-            .and_then(|f| f.name_contains.as_deref())
-            .map(|n| n.contains("Koromon"))
+            .and_then(|f| f.name_is.as_deref())
+            .map(|n| n == "Koromon")
             .unwrap_or(false)
     });
     let has_lv2_ds = card.alt_paths.iter().any(|p| {

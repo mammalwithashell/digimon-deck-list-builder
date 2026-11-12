@@ -336,12 +336,12 @@ effects:
     trigger: when_would_be_deleted
     optional: true
     once_per_turn: true
+    # 'When this Digimon ... would be deleted': carrier only (DCGO EX5_015.cs
+    # CanTriggerWhenRemoveField(hashtable, card)); `replacement_subject_is_mine`/
+    # `name_contains` made it cover other permanents. Audit 2026-11-11.
     active_when:
-      # Self-only: DCGO CanTriggerWhenRemoveField(hashtable, card) is
-      # `permanent.cardSources.Contains(card)`. Leaves that read the replacement
-      # subject (replacement_subject_is_mine, kind, name_is...) make the clause
-      # cross-permanent, so none may appear here.
       all_of:
+        - is_source: true
         - all_turns: true
         - any_of:
             - source_name_contains: "Garurumon"

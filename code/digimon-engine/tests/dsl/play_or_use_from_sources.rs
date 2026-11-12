@@ -318,37 +318,27 @@ fn play_or_use_from_sources_uses_selected_option_source_free() {
 }
 
 #[test]
-fn play_or_use_from_sources_dual_source_exposes_face_choice() {
+fn play_or_use_from_sources_dual_source_is_used_not_played() {
+    // A DUAL card prints "Can't play to the field." (CR 4-6-2): "play or use"
+    // uses it as an Option and offers no "Play as Digimon" face. Game audit
+    // 2026-11-11.
     let mut runner = base();
     runner.place_stack(0, &["SRC-DUAL", "HOST"]);
 
     fire_selector(&mut runner);
     choose_first_source(&mut runner);
 
-    let choice = runner
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("DUAL face choice is pending");
-    assert_eq!(choice.kind, SelectionKind::EffectChoice);
-    let labels: Vec<_> = choice
-        .effect_choices
-        .as_ref()
-        .expect("effect-choice entries")
-        .iter()
-        .map(|entry| entry.label.as_str())
-        .collect();
-    assert_eq!(labels, ["Play as Digimon", "Use as Option"]);
-    let selecting_player = choice.selecting_player;
-    runner
-        .game
-        .resolve_selection(selecting_player, HAND_EFFECT_START)
-        .expect("choose play face");
+    let face_choice = runner.game.pending_selection.as_ref().and_then(|p| {
+        p.effect_choices
+            .as_ref()
+            .map(|c| c.iter().any(|e| e.label == "Play as Digimon"))
+    });
+    assert_ne!(face_choice, Some(true), "no Play as Digimon face is offered");
     assert!(
-        runner.game.players[0]
+        !runner.game.players[0]
             .battle_area
             .iter()
             .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "SRC-DUAL"),
-        "choosing the play face should play the DUAL source as a permanent"
+        "the DUAL source is not played as a permanent"
     );
 }

@@ -44,18 +44,16 @@ traits: [DATA SQUAD]
 
 # Use Req. [DATA SQUAD] trait — a DATA SQUAD Digimon/Tamer on the field satisfies
 # the Option's color requirement (ignore color).
+# <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+# of your Digimon or Tamers in the battle area or breeding area meets
+# the condition (an Option on the field does not count).
 use_requirement:
-  # DCGO CardEffectFactory.UseRequirements: battle area OR breeding area
-  # (HasMatchConditionOwnersPermanent || ...OwnersBreedingPermanent), rule 16-42-3.
   any_field_permanent:
     of: you
     any_of:
-      - all_of:
-          - kind: digimon
-          - trait_has: "DATA SQUAD"
-      - all_of:
-          - kind: tamer
-          - trait_has: "DATA SQUAD"
+      - kind: digimon
+      - kind: tamer
+    trait_has: "DATA SQUAD"
 
 effects:
   # ─── [Main] play 1 [DATA SQUAD] cost<=4 from hand/trash free; place self in BA ─
@@ -130,3 +128,7 @@ effects:
               - play_cost_lte: 4
           prompt: "You may play 1 [DATA SQUAD] cost 4 or less card from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: ds_pick_sec }
+      # The [Main] ends "Then, place this card in the battle area"; DCGO
+      # AddActivateMainOptionSecurityEffect runs it whole (e-Pulse ST23-15
+      # idiom). Rose Rave audit 2026-11-11: it was trashed.
+      - place_self_as_delay_option: {}

@@ -89,4 +89,11 @@ Three corpus games (`395415c3`, `f574326348564fceb9fc89b2a11cac31`, `f1285790f6b
 ## Recording quarantine (`qa/rules/dcgo_recording_quarantine.json`)
 
 For a recording that is invalid as replay input but whose invalidity no signature can prove from the recording alone, a human-reviewed entry lists its game id, an id and the diagnosis. `dcgo-replay` reports a quarantined game that STILL FAILS under `triaged`, never `pass`; if the engine later replays it cleanly it simply passes. The one current entry, `R-QUARANTINE-SCRIPTED-RAW-ACTION-IDS` (`c2bd1ab9`), is a scripted exam whose raw simulator action ids selected the wrong DCGO compact slot, so its final scripted attack targets an unsuspended Digimon with no `<Raid>`; DCGO's scripted path does not validate attack legality. Entries are for recordings whose own authoring is wrong, never for games that are merely hard to replay.
+## Q-OPT-COUNTER-PER-TRIGGER-ARM: one [Once Per Turn] printed over two triggers counts each trigger separately
+
+- **DCGO:** a card whose one [Once Per Turn] effect has two trigger conditions registers each condition as its own `ActivateClass`, and the cap is that class's `timesPerTurn` counter. `SetHashString` is only an identity, so giving both arms the same hash string does not share the count. Medusamon BT21-029 (`BT21_029.cs` lines 162 and 210, both `SetHashString("PlayToken_BT21_029")`) can therefore play two [Petrification] Tokens in one turn.
+- **Rules:** CR 4.3 15-14-1 counts uses per effect, and official Q&A Q1550 rules that an effect triggered at a different timing is still the same effect, so it can be activated only once per turn. Ours shares one counter across the arms (DSL `opt_group`, d33e22596).
+- **Outcome:** changes the game (one extra Token for the opponent, and a security card when it is deleted).
+- **Exam signature:** a field or security count differing after the second arm's event in the same turn.
+- **Rows (2026-11-12):** BT21-029#effect#3. BT21-029#effect#4 runs the same line and its asserted field changed with it; its own witness (the security count) still matches DCGO.
 

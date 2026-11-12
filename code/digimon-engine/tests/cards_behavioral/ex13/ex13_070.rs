@@ -274,6 +274,38 @@ fn ex13_070_choice_2_may_be_declined_after_choosing() {
     assert_eq!(hand_ids(&r, 0).iter().filter(|c| *c == "FREE-DNA").count(), 1);
 }
 
+/// game-audit 2026-11-11 / DCGO `CanPlayJogress(true)`: the DNA branch's hand
+/// pick lists only a [Free] card whose DNA requirement the field meets.
+/// FREE-FAR needs two Lv.6 Digimon (field: two Lv.4) and must not be offered.
+#[test]
+fn ex13_070_choice_2_hand_pick_excludes_free_card_without_a_legal_field_pair() {
+    let mut r = builder()
+        .add_card({
+            let mut c = digimon("FREE-FAR", CardColor::Blue, 7, 13000, &["Free"]);
+            c.dna_costs = vec![DnaCost {
+                memory_cost: 0,
+                requirement1: dna_req_lv(6),
+                requirement2: dna_req_lv(6),
+            }];
+            c
+        })
+        .hand(0, &["FREE-FAR", "FREE-DNA"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(6)
+        .start();
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    r.place_on_field(0, "BLUE-L4", Some(0));
+    r.place_on_field(0, "GREEN-L4", Some(0));
+    end_turn_and_pay(&mut r, me);
+    r.execute_branch(1).expect("DNA branch");
+    assert_eq!(
+        offered_hand_ids(&r),
+        vec!["FREE-DNA".to_string()],
+        "no Lv.6 + Lv.6 pair on field: DCGO CanPlayJogress excludes FREE-FAR"
+    );
+}
+
 // ─── Section 3 — [Security] ──────────────────────────────────────────────────
 
 #[test]

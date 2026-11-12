@@ -149,6 +149,51 @@ fn ex7_027_inherited_does_not_prevent_own_effect_leave() {
     assert!(permanent_exists(&runner, 0, "PUPPET-COST"));
 }
 
+/// "When THIS Digimon would leave": another of your Digimon leaving is not
+/// offered the prevention (it leaves, the token survives); the carrier
+/// afterwards still is (the OPT was not spent). Audit 2026-11-11: DCGO
+/// EX7_027.cs CanTriggerWhenRemoveField(hashtable, card).
+#[test]
+fn ex7_027_inherited_replacement_only_for_carrier_audit() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX7-027")
+        .expect("EX7-027 YAML loads")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("OTHER", "Other"))
+        .add_card(make_token("TOKEN-COST"))
+        .start();
+    let carrier = runner.place_stack(0, &["EX7-027", "CARRIER"]);
+    let token = runner.place_on_field(0, "TOKEN-COST", Some(0));
+    let other = runner.place_on_field(0, "OTHER", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(other, ReplacementCause::OpponentEffect);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no leave-prevention for a Digimon that is not EX7-027's carrier"
+    );
+    assert!(!permanent_exists(&runner, 0, "OTHER"), "the other Digimon leaves");
+    assert!(permanent_exists(&runner, 0, "TOKEN-COST"), "no cost paid");
+
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    let accept = runner
+        .pending_selection_view()
+        .expect("the carrier is still offered the leave-prevention");
+    assert_eq!(accept.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(0, accept.valid_action_ids[0])
+        .expect("accept inherited replacement");
+    runner
+        .execute_action(0, encode_permanent(token))
+        .expect("delete token cost");
+    runner.auto_resolve().expect("finish replacement");
+    assert!(permanent_exists(&runner, 0, "CARRIER"), "the carrier stays");
+    assert!(!permanent_exists(&runner, 0, "TOKEN-COST"));
+}
+
 #[test]
 fn ex7_027_inherited_replacement_clause_is_compiled_inherited_and_opt() {
     use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};

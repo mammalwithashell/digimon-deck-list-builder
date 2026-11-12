@@ -1,35 +1,19 @@
-# ST21-01 Tsunomon — Digi-Egg (In-Training), Lv.2, Purple, no DP, Cost 0.
-# Traits: [Lesser, ADVENTURE].
+# ST21-01 Tsunomon — Digi-Egg, Lv.2, Purple. Traits: Lesser, ADVENTURE.
+
 #
-# Printed card text (data/card_bundles/ST21-01.md — official Bandai DB):
+# Printed text (official observation, data/card_official.json):
+#   Inherited Effect: [On Deletion] You may return 1 Digimon card with the
+#   [ADVENTURE] trait from your trash to the hand.
+# (cards.json files this under effect_description_eng with an "Inherited
+#  Effect" prefix — compat-view layout drift only; the text is inherited.)
 #
-#   Inherited Effect
-#   [On Deletion] You may return 1 Digimon card with the [ADVENTURE] trait
-#   from your trash to the hand.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Purple/ST21_01.cs —
+#   OnDestroyedAnyone, SetIsInheritedEffect(true), isOptional true;
+#   SelectCardEffect Root.Trash Mode.AddHand canNoSelect true, filter
+#   IsDigimon && HasAdventureTraits; CanActivate requires a match in trash.
 #
-# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Purple/ST21_01.cs
-#
-# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
-#
-# ONE inherited ActivateClass on `EffectTiming.OnDestroyedAnyone`
-# (`SetIsInheritedEffect(true)`), `isOptional: true`:
-#   - `CanUseCondition`: `CardEffectCommons.CanTriggerOnDeletion` — NO
-#     battle/non-battle gate (unlike BT19-006 Pagumon), so the clause fires on
-#     every deletion cause.
-#   - `CanActivateCondition`: `CanActivateOnDeletion` AND a matching card
-#     (`IsDigimon && HasAdventureTraits`) exists in the owner's trash — with no
-#     candidate the trigger never activates (no prompt installs).
-#   - `ActivateCoroutine`: `SelectCardEffect` over the trash root, `maxCount: 1`,
-#     `canNoSelect: () => true` ("You may"), `mode: AddHand`.
-#
-# DSL modelling — BT19-006 Pagumon (inherited on_deletion on a Digi-Egg +
-# mandatory select_trash + add_to_hand_from_trash) with the "you may" shape of
-# BT26-014 Darumamon (`optional: true` select + `if binding_present`). The
-# select is the clause's first step and is itself declinable, so the inner PASS
-# doubles as the decline (no separate outer confirm).
-#
-# A Digi-Egg has no digivolve circle of its own (it is the bottom of a stack),
-# hence no `alt_paths`.
+# Same shape as BT19-006 Pagumon (inherited on_deletion + select_trash +
+# add_to_hand_from_trash) with "you may" → optional pick.
 
 card: ST21-01
 name: Tsunomon
@@ -38,13 +22,12 @@ level: 2
 color: [purple]
 cost: 0
 traits: [Lesser, ADVENTURE]
-form: In-Training
 
 effects:
   - scope: inherited
     when: on_deletion
     optional: true
-    summary: "[Inherited][On Deletion] You may return 1 [ADVENTURE] Digimon card from your trash to the hand"
+    summary: "[Inherited][On Deletion] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand"
     process:
       - select_trash:
           of: you
@@ -55,7 +38,4 @@ effects:
               - kind: digimon
               - trait_has: ADVENTURE
           prompt: "You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand"
-      - if:
-          condition: { binding_present: pick }
-          then:
-            - add_to_hand_from_trash: { of: you, card: pick }
+      - add_to_hand_from_trash: { of: you, card: pick }

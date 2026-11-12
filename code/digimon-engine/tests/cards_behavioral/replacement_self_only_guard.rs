@@ -30,6 +30,14 @@ fn reads_subject_is_mine(p: &CompiledPredicate) -> bool {
         || p.none_of.iter().any(reads_subject_is_mine)
 }
 
+/// `is_source: true` evaluated against the replacement subject pins it to the
+/// carrier (`lower_replacement.rs` evaluates `active_when` on the subject), so a
+/// subject-reading leaf alongside it is still self-only. That is main's form for
+/// these twelve cards (7d1d1b48d "fix would-leave scope").
+fn requires_subject_is_source(p: &CompiledPredicate) -> bool {
+    p.is_source == Some(true) || p.all_of.iter().any(requires_subject_is_source)
+}
+
 #[test]
 fn this_digimon_leave_replacements_do_not_read_the_replacement_subject() {
     let mut examined = 0usize;
@@ -45,7 +53,8 @@ fn this_digimon_leave_replacements_do_not_read_the_replacement_subject() {
                 examined += 1;
                 if let Some(active_when) = active_when {
                     assert!(
-                        !reads_subject_is_mine(active_when),
+                        !reads_subject_is_mine(active_when)
+                            || requires_subject_is_source(active_when),
                         "{id}: a self-only replacement must not use replacement_subject_is_mine                          (it makes the clause fire for ANY of your permanents leaving)"
                     );
                 }

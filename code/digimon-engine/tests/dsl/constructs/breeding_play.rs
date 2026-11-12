@@ -226,8 +226,10 @@ fn breeding_dsl_accept_decline_and_cloned_optional_prompt_preserve_physical_card
     let view = base.pending_selection_view().unwrap();
     assert_eq!(view.kind, SelectionKind::Hand);
     assert!(view.is_optional);
-    assert_eq!(view.valid_action_ids, vec![1, 2, 4]);
-    for action in [1, 2, 4, PASS] {
+    // Slot 4 is a DUAL card: it prints "Can't play to the field." and the
+    // breeding area is part of the field (CR 3-4-6, 4-6-2).
+    assert_eq!(view.valid_action_ids, vec![1, 2]);
+    for action in [1, 2, PASS] {
         assert_eq!(build_action_mask(&base.game, 0)[action as usize], 1.0);
     }
     for action in [0, 3, 5] {
@@ -237,7 +239,7 @@ fn breeding_dsl_accept_decline_and_cloned_optional_prompt_preserve_physical_card
             "Option/Tamer/DigiEgg excluded"
         );
     }
-    for action in [1, 2, 4, PASS] {
+    for action in [1, 2, PASS] {
         let mut r = DebugRunner::wrap(base.game.clone());
         let accept = action != PASS;
         let chosen = accept.then(|| r.game.players[0].hand[action as usize].handle());
@@ -259,13 +261,14 @@ fn breeding_dsl_accept_decline_and_cloned_optional_prompt_preserve_physical_card
 }
 
 #[test]
-fn breeding_dsl_dual_is_a_digimon_for_this_destination() {
+fn breeding_dsl_dual_cannot_be_played_to_the_breeding_area() {
+    // A DUAL card prints "Can't play to the field." and the breeding area is
+    // part of the field (CR 3-4-6, 4-6-2). Game audit 2026-11-11.
     let mut r = fixture(false, false);
-    let dual = r.game.players[0].hand[4].handle();
     start(&mut r);
-    act(&mut r, 4);
-    assert_eq!(breeding_handle(&r, 0), Some(dual));
-    assert_eq!(r.memory(), 2);
+    let view = r.pending_selection_view().expect("hand pick");
+    assert!(!view.valid_action_ids.contains(&4), "the DUAL card is not offered");
+    assert_eq!(build_action_mask(&r.game, 0)[4], 0.0);
 }
 
 #[test]
@@ -401,16 +404,18 @@ fn breeding_dsl_false_predicate_inverts_kind_masks_and_does_not_bypass_play_lega
         .pending_selection_view()
         .expect("non-playable cards are selectable by the false predicate");
     assert_eq!(view.kind, SelectionKind::Hand);
-    assert_eq!(view.valid_action_ids, vec![0, 3, 5]);
+    // The DUAL card (slot 4) can't be played to the field, so it passes the
+    // false predicate (CR 4-6-2; game audit 2026-11-11).
+    assert_eq!(view.valid_action_ids, vec![0, 3, 4, 5]);
     assert!(view.is_optional);
     let mask = build_action_mask(&base.game, 0);
-    for action in [0, 3, 5, PASS] {
+    for action in [0, 3, 4, 5, PASS] {
         assert_eq!(mask[action as usize], 1.0);
     }
-    for action in [1, 2, 4] {
+    for action in [1, 2] {
         assert_eq!(
             mask[action], 0.0,
-            "playable Digimon and DUAL fail the false predicate"
+            "playable Digimon fail the false predicate"
         );
     }
     let before: Vec<_> = base.game.players[0]

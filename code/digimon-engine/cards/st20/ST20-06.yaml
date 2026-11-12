@@ -1,52 +1,40 @@
-# ST20-06 Angewomon — Digimon, Lv.5, Yellow, DP 7000, Cost 7.
-# Traits: Archangel / ADVENTURE. Form: Ultimate. Attribute: Vaccine.
+# ST20-06 Angewomon — Lv.5, Yellow, DP 7000, Cost 7.
+# Traits: Archangel, ADVENTURE. Form: Ultimate. Attribute: Vaccine.
 #
-# Printed card text (official Bandai DB, data/card_bundles/ST20-06.md):
-#
+# Printed text (official Bandai DB, data/card_bundles/ST20-06.md; matches
+# data/cards.json):
+#   Digivolve: Yellow Lv.4 / Cost 3
+#   [Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3
 #   [On Play] [When Digivolving] 1 of your other Digimon may digivolve into a
-#   Digimon card with the [ADVENTURE] trait in the hand without paying the
-#   cost.
+#     Digimon card with the [ADVENTURE] trait in the hand without paying the
+#     cost.
 #   [Your Turn] [Once Per Turn] When your other Digimon are played or
-#   digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
-#   gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
-#
+#     digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
+#     gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
 #   Inherited: <Alliance>
 #
-#   Digivolve box (xros_req): "[Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3"
-#   Standard evo_costs:       Lv.4 Yellow, Cost 3.
-#   Official Q&A: the <Alliance> must be given to 1 of YOUR Digimon (not the
-#   opponent's).
+# DCGO: DCGO/Assets/Scripts/CardEffect/ST20/Yellow/ST20_06.cs
+#   - OP / WD (isOptional): own OTHER permanent that some [ADVENTURE] hand
+#     card can legally digivolve onto (CanPlayCardTargetFrame) — pick with
+#     canNoSelect true → DigivolveIntoHandOrTrashCard(payCost false,
+#     ignoreDigivolutionRequirement false, isHand true). Normal digivolution
+#     requirements apply; only the cost is waived.
+#   - Your Turn OPT observer + inherited <Alliance>: identical to ST20-04
+#     (hash "alliance-attack-ST20_06").
 #
-# DCGO C# reference (base repo):
-#   DCGO/Assets/Scripts/CardEffect/ST20/Yellow/ST20_06.cs
+# Authoring: the "may digivolve" pick is the BT21-082 idiom —
+# `has_digivolve_candidate` restricts the base pick to Digimon with a legal
+# [ADVENTURE] result card in hand, `can_digivolve_onto` restricts the hand pick
+# to cards that can digivolve onto the chosen base, `cost: free`. The
+# observer clause is the shared ADVENTURE Lv.5 idiom documented in
+# ST20-04.yaml.
 #
-#   1. AddSelfDigivolutionRequirementStaticEffect — Lv.4 with
-#      HasAdventureTraits, cost 3, requirements respected.
-#   2. OnEnterFieldAnyone ×2 (On Play / When Digivolving, identical bodies):
-#      host pick = own battle-area permanent that is NOT this one and for
-#      which some hand [ADVENTURE] card CanPlayCardTargetFrame; canNoSelect
-#      true. Then DigivolveIntoHandOrTrashCard(payCost false, isHand true,
-#      isOptional default true) — the hand pick is optional too.
-#   3. OnEnterFieldAnyone "Your Turn": OPT (hash alliance-attack-ST20_06);
-#      IsOwnerTurn and an own Digimon other than this one was played /
-#      digivolved. IsSkippable (auto-skip) unless the played / digivolved
-#      Digimon has the ADVENTURE trait. Body: mandatory pick of 1 own Digimon
-#      -> GainAlliance(UntilEachTurnEnd); then 1 own Digimon that
-#      permanent.CanAttack may attack (canNoSelect true, SelectAttackEffect).
-#   4. OnAllyAttack — AllianceSelfEffect(isInheritedEffect true).
-#
-# Clause layout:
-#   alt_paths[0]  standard digivolve (Lv.4 Yellow / cost 3).
-#   alt_paths[1]  xros_req alt-digivolve (Lv.4 ADVENTURE / cost 3).
-#   effects[0]    [On Play][When Digivolving] optional host pick (`other: true`
-#                 + has_digivolve_candidate over [ADVENTURE] hand Digimon),
-#                 optional hand pick, free effect_initiated_digivolve
-#                 (P-204 idiom).
-#   effects[1]    [Your Turn][OPT] on_ally_played / on_digivolve observer gated
-#                 in `trigger_if` on owner, Digimon, not-self, ADVENTURE trait
-#                 (BT16-017 idiom). Mandatory Alliance grant, then optional
-#                 may_attack_now (BT20-044 / AD1-004 idiom).
-#   effects[2]    Inherited <Alliance>.
+# | Clause                                              | Status      |
+# | Yellow Lv.4 / Cost 3 circle                         | IMPLEMENTED |
+# | Lv.4 [ADVENTURE] / Cost 3 box                       | IMPLEMENTED |
+# | [OP][WD] other Digimon may digivolve into [ADVENTURE] free | IMPLEMENTED |
+# | [Your Turn][OPT] ADVENTURE observer → Alliance; may attack | IMPLEMENTED |
+# | Inherited <Alliance>                                | IMPLEMENTED |
 
 card: ST20-06
 name: Angewomon
@@ -56,8 +44,8 @@ color: [yellow]
 cost: 7
 dp: 7000
 traits: [Archangel, ADVENTURE]
-form: Ultimate
 attribute: Vaccine
+form: Ultimate
 
 alt_paths:
   - kind: digivolve
@@ -68,13 +56,11 @@ alt_paths:
     cost: 3
 
 effects:
-  # [On Play][When Digivolving] 1 of your other Digimon may digivolve into a
-  # Digimon card with the [ADVENTURE] trait in the hand without paying the cost.
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] 1 of your other Digimon may digivolve into an [ADVENTURE] Digimon card in the hand without paying the cost"
     process:
       - select_own_permanent:
-          bind_as: host
+          bind_as: evo_base
           optional: true
           filter:
             all_of:
@@ -83,47 +69,45 @@ effects:
               - has_digivolve_candidate:
                   of: you
                   zone: [hand]
-                  filter: { kind: digimon, trait_has: ADVENTURE }
-          prompt: "Choose 1 of your other Digimon to digivolve into an [ADVENTURE] Digimon card in the hand without paying the cost"
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_has: ADVENTURE
+          prompt: "You may choose 1 of your other Digimon to digivolve into an [ADVENTURE] Digimon card in the hand without paying the cost"
       - if:
-          condition: { binding_present: host }
+          condition: { binding_present: evo_base }
           then:
             - select_hand:
                 of: you
-                bind_as: evolution
-                optional: true
+                bind_as: evo_card
                 filter:
                   all_of:
                     - kind: digimon
                     - trait_has: ADVENTURE
-                    - can_digivolve_onto: host
-                prompt: "Choose an [ADVENTURE] Digimon card in your hand to digivolve into without paying the cost"
+                    - can_digivolve_onto: evo_base
+                prompt: "Choose an [ADVENTURE] Digimon card in the hand to digivolve into without paying the cost"
             - effect_initiated_digivolve:
-                target: host
-                from_hand: evolution
+                target: evo_base
+                from_hand: evo_card
                 cost: free
-                ignore_requirements: false
 
-  # [Your Turn][Once Per Turn] When your other Digimon are played or
-  # digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
-  # gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
   - when: [on_ally_played, on_digivolve]
     active_when: { your_turn: true }
     once_per_turn: true
+    summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack"
     trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
-        - event_target_is_source: false
+        - event_permanent_is_source: false
         - event_target_trait_has: ADVENTURE
-    summary: "[Your Turn][Once Per Turn] When your other [ADVENTURE] Digimon is played or digivolves, 1 of your Digimon gains <Alliance> for the turn; then 1 of your Digimon may attack"
     process:
       - select_own_permanent:
-          bind_as: ally
+          bind_as: alliance_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"
       - grant_keyword:
-          target: ally
+          target: alliance_target
           keyword: Alliance
           expiry: end_of_turn
       - select_own_permanent:
@@ -135,7 +119,7 @@ effects:
           attacker: attacker
           targets: any
           optional: true
-          prompt: "Have the selected Digimon attack now?"
+          prompt: "Attack with the selected Digimon?"
 
   - scope: inherited
     kind: grant_keyword

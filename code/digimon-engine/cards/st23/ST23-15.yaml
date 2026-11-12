@@ -47,18 +47,18 @@ traits: [Glowing Dawn, BEATBREAK]
 
 # Use Req. [BEATBREAK] trait — a BEATBREAK Digimon/Tamer on the field satisfies
 # the Option's color requirement (ignore color).
+# <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+# of your Digimon or Tamers in the battle area or breeding area meets
+# the condition (an Option on the field does not count).
 use_requirement:
   # DCGO CardEffectFactory.UseRequirements: battle area OR breeding area
   # (HasMatchConditionOwnersPermanent || ...OwnersBreedingPermanent), rule 16-42-3.
   any_field_permanent:
     of: you
     any_of:
-      - all_of:
-          - kind: digimon
-          - trait_has: "BEATBREAK"
-      - all_of:
-          - kind: tamer
-          - trait_has: "BEATBREAK"
+      - kind: digimon
+      - kind: tamer
+    trait_has: "BEATBREAK"
 
 effects:
   # ─── [Main] play 1 [BEATBREAK] cost<=4 from hand/trash free; place self in BA ─
@@ -138,7 +138,11 @@ effects:
 
   # ─── [Security] Activate this card's [Main] effects ──────────────────────────
   #
-  # Re-run the [Main] body from security: same optional play-or-use-free clause.
+  # Re-run the [Main] body from security: the optional play, THEN "place this
+  # card in the battle area" (DCGO AddActivateMainOptionSecurityEffect runs the
+  # whole OptionSkill, ending in PlaceDelayOptionCards, ST23_15.cs:98/106).
+  # Deck audit 2026-11-10: the placement was missing, so e-Pulse went to the
+  # trash and its [Start of Your Main Phase] never fired.
   - when: on_security
     summary: "[Security] Activate this card's [Main] effects"
     process:

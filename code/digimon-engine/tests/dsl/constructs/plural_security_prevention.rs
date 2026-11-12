@@ -537,6 +537,7 @@ fn plural_security_rejects_effect_result_dependencies() {
         "effect_digivolved_any_digimon",
         "effect_added_any_card_to_hand",
         "color_matches_returned_card",
+        "name_matches_returned_card",
     ] {
         for value in [true, false] {
             assert_plural_filter_rejected(&format!("{field}: {value}"));

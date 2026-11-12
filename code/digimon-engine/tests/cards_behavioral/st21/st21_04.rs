@@ -1,868 +1,348 @@
-//! ST21-04 Zudomon — Digimon, Lv.5, Blue, DP 7000, Cost 7.
-//! Traits: Sea Beast / ADVENTURE. Form: Ultimate. Attribute: Vaccine.
+//! ST21-04 Zudomon — Lv.5, Blue, DP 7000, Cost 7. Traits: Sea Beast, ADVENTURE.
 //!
-//! # Card text (data/card_bundles/ST21-04.md — official Bandai DB; cards.json
-//! # wording "From 1 of your opponent's Digimon" for the first sentence)
-//!
-//! ```text
-//! Digivolve: Blue Lv.4 / cost 3
-//! [Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3
-//! [On Play] [When Digivolving] From 1 of your opponent's Digimon, trash any 1
-//! digivolution card for every 2 colors your Tamers have. Then, return 1 of
-//! their Digimon with 1 or fewer digivolution cards to the hand.
-//! [Your Turn] [Once Per Turn] When your other Digimon are played or
-//! digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
-//! gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
-//! Inherited Effect
-//! <Alliance> (When this Digimon attacks, by suspending 1 of your other
-//! Digimon, this Digimon gains <Security A. +1> and the suspended Digimon's DP
-//! for the attack.)
-//!
-//! Official Q&A (Alliance grant): "No, you can't. You must give to 1 of your
-//! Digimon."
-//! ```
-//!
-//! # DCGO C# reference
-//! DCGO/Assets/Scripts/CardEffect/ST21/Blue/ST21_04.cs
-//!
-//! # Patterns this test covers (RUST_DSL_TEST_API.md §4.3)
-//! - "[Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3" alt-path (ST20-10 exemplar)
-//! - Shared [On Play]/[When Digivolving]: strip `floor(Tamer colors / 2)`
-//!   digivolution cards from ONE chosen opponent Digimon (AD1-014 floor_div,
-//!   EX11-057 clamp_to_available idiom), then a SEPARATE mandatory bounce pick
-//!   (opp Digimon with <= 1 digivolution cards) evaluated AFTER the strip
-//! - [Your Turn][OPT] ally play/digivolve observer gated on an [ADVENTURE]
-//!   event target (BT16-017 `trigger_if` idiom): mandatory <Alliance> grant to
-//!   one of YOUR Digimon for the turn, then an optional "may attack" pick
-//!   (BT21-044 idiom)
-//! - Inherited <Alliance> keyword through the digivolution stack
-//! - Event-log cost test (digivolve cost 3 → MemoryChange -3)
-//!
-//! Least-certain assertions (could not be executed when authored): the exact
-//! prompt count of the multi-card source pick, and the accept-path of the
-//! optional "may attack" tail.
+//! Printed (card image + data/cards.json; DCGO agrees):
+//!   Digivolve: Blue Lv.4 / Cost 3; [Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3
+//!   [On Play] [When Digivolving] From 1 of your opponent's Digimon, trash any
+//!     1 digivolution card for every 2 colors your Tamers have. Then, return 1
+//!     of their Digimon with 1 or fewer digivolution cards to the hand.
+//!   [Your Turn] [Once Per Turn] shared ADVENTURE observer (see st20_04.rs).
+//!   Inherited: <Alliance>
+//! Data drift: the official DB bundle words the first sentence "For every 2
+//! colors your Tamers have, trash any 1 of your opponent's Digimon's
+//! digivolution cards" (no explicit single-Digimon restriction); the printed
+//! card and DCGO (SelectTrashDigivolutionCards isFromOnly1Permanent: true)
+//! both restrict to ONE Digimon, which is implemented here.
+//! DCGO: ST21/Blue/ST21_04.cs — strip maxCount floor(colours/2), canNoTrash
+//! false, from 1 permanent; then mandatory bounce pick (≤1 sources).
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
-use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
-    CompiledDeclarativeClause, CompiledScope, CompiledTiming, CompiledTriggeredClause,
-};
+#[path = "../../support/dsl_card_data.rs"]
+mod dsl_card_data;
+
+use digimon_dsl::compiled::{CompiledAltPathKind, CompiledCost};
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::card_data::{CardData, EvoCost};
+use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind, Keyword, ModifierType, PlaySource};
-use digimon_engine::events::GameEvent;
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::{PendingSelectionView, SelectionKind};
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
-use crate::dsl_card_data::compiled;
+// ─── Fixtures (shared ADVENTURE Lv.5 test idiom — see st20/st20_04.rs) ───────
 
-const CARD_ID: &str = "ST21-04";
-
-// ─── Card-data factories ─────────────────────────────────────────────────────
-
-fn dig(id: &str, color: CardColor, level: u8, dp: i32, adventure: bool) -> CardData {
+fn digimon(id: &str, color: CardColor, level: u8, dp: i32, traits: &[&str]) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;
     c.level = Some(level);
     c.dp = Some(dp);
-    c.play_cost = 1;
+    c.play_cost = 3;
     c.colors = vec![color];
-    c.traits = if adventure {
-        vec!["ADVENTURE".to_string()]
-    } else {
-        Vec::new()
-    };
+    c.traits = traits.iter().map(|t| t.to_string()).collect();
     c
 }
 
-fn tamer(id: &str, colors: &[CardColor], adventure: bool) -> CardData {
+fn tamer(id: &str, colors: &[CardColor], traits: &[&str]) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Tamer;
     c.level = None;
     c.dp = None;
-    c.play_cost = 1;
+    c.play_cost = 2;
     c.colors = colors.to_vec();
-    c.traits = if adventure {
-        vec!["ADVENTURE".to_string()]
-    } else {
-        Vec::new()
-    };
+    c.traits = traits.iter().map(|t| t.to_string()).collect();
     c
 }
 
 fn base_builder() -> DebugRunnerBuilder {
-    let mut adv4 = dig("ADV4", CardColor::Red, 4, 4000, true);
-    adv4.evo_costs = vec![EvoCost {
-        card_color: CardColor::Red as u8,
-        level: 3,
-        memory_cost: 0,
-    }];
     DebugRunner::builder()
         .dsl_card(CARD_ID)
-        .expect("ST21-04 in embedded DSL pack")
-        .add_card(dig("OPP", CardColor::Red, 4, 5000, false))
-        .add_card(dig("S1", CardColor::Red, 3, 3000, false))
-        .add_card(dig("S2", CardColor::Red, 3, 3000, false))
-        .add_card(dig("S3", CardColor::Red, 3, 3000, false))
-        .add_card(dig("S4", CardColor::Red, 3, 3000, false))
-        .add_card(dig("BLUE4", CardColor::Blue, 4, 4000, false))
-        .add_card(dig("RED4-ADV", CardColor::Red, 4, 4000, true))
-        .add_card(dig("RED4-PLAIN", CardColor::Red, 4, 4000, false))
-        .add_card(dig("BLUE3-ADV", CardColor::Blue, 3, 3000, true))
-        .add_card(dig("ALLY", CardColor::Red, 3, 3000, true))
-        .add_card(dig("ALLY2", CardColor::Red, 3, 3000, true))
-        .add_card(dig("ALLY3", CardColor::Red, 3, 3000, true))
-        .add_card(dig("PLAIN-ALLY", CardColor::Red, 3, 3000, false))
-        .add_card(dig("BASE3", CardColor::Red, 3, 3000, false))
-        .add_card(adv4)
-        .add_card(dig("CARRIER", CardColor::Red, 5, 6000, false))
-        .add_card(tamer("T-RED", &[CardColor::Red], false))
-        .add_card(tamer("T-RED2", &[CardColor::Red], false))
-        .add_card(tamer("T-BLUE", &[CardColor::Blue], false))
-        .add_card(tamer("T-GREEN", &[CardColor::Green], false))
-        .add_card(tamer("T-YELLOW", &[CardColor::Yellow], false))
-        .add_card(tamer("T-DUAL", &[CardColor::Red, CardColor::Blue], false))
-        .add_card(tamer("ADV-TAMER", &[CardColor::Red], true))
-        .add_card(make_test_card("FILLER", "Filler"))
-        .add_card(dig("SEC", CardColor::Red, 3, 1000, false))
-}
-
-fn runner() -> DebugRunner {
-    let mut r = base_builder()
-        .deck(0, &["FILLER"; 8])
-        .deck(1, &["FILLER"; 8])
-        .security(0, &["SEC", "SEC"])
-        .security(1, &["SEC", "SEC"])
+        .expect("card YAML in embedded pack")
+        .add_card(digimon("ADV", CardColor::Red, 4, 4000, &["ADVENTURE"]))
+        .add_card(digimon("ALLY", CardColor::Red, 4, 5000, &["Beast"]))
+        .add_card(tamer("T-RB", &[CardColor::Red, CardColor::Blue], &["ADVENTURE"]))
+        .add_card(tamer("T-YG", &[CardColor::Yellow, CardColor::Green], &["ADVENTURE"]))
+        .add_card(tamer("T-R", &[CardColor::Red], &["ADVENTURE"]))
+        .add_card(digimon("SEC", CardColor::Blue, 3, 1000, &[]))
+        .add_card(make_test_card("FILL", "Filler"))
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL"])
+        .security(1, &["SEC", "SEC", "SEC"])
         .memory(10)
-        .start();
-    r.set_first_player(0);
-    r
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-fn field_pick(h: PermanentHandle) -> u16 {
-    encode_attack(0, h.index as u16)
-}
-
-fn pick(r: &mut DebugRunner, h: PermanentHandle) {
-    let v = r.pending_selection_view().expect("selection pending");
-    let a = field_pick(h);
-    assert!(
-        v.valid_action_ids.contains(&a),
-        "{h:?} not a legal pick: {:?}",
-        v.valid_action_ids
-    );
-    r.execute_action(v.selecting_player, a).unwrap();
-}
-
-fn source_ids(r: &DebugRunner, h: PermanentHandle) -> Vec<String> {
-    let cards = &r.game.players[h.player as usize].battle_area[h.index as usize].card_sources;
-    cards[..cards.len() - 1]
-        .iter()
-        .map(|c| c.card_id(&r.game.card_data).to_string())
-        .collect()
-}
-
-fn trashed_sources(r: &DebugRunner, player: u8) -> usize {
-    r.game.players[player as usize]
-        .trash
-        .iter()
-        .filter(|c| {
-            let id = c.card_id(&r.game.card_data);
-            id == "S1" || id == "S2" || id == "S3" || id == "S4"
-        })
-        .count()
-}
-
-fn in_hand(r: &DebugRunner, player: u8, id: &str) -> bool {
-    r.game.players[player as usize]
-        .hand
-        .iter()
-        .any(|c| c.card_id(&r.game.card_data) == id)
-}
-
-/// Add Zudomon to P0's hand and play it (fires [On Play]).
-fn play_zudo(r: &mut DebugRunner) -> PermanentHandle {
-    let hi = r.add_to_hand(0, CARD_ID);
-    let idx = r.play(0, hi).expect("Zudomon plays from hand");
-    PermanentHandle {
-        player: 0,
-        index: idx as u8,
-    }
-}
-
-/// Add `id` to P0's hand and play it, topping memory up first so the play
-/// never ends the turn.
-fn play_card(r: &mut DebugRunner, id: &str) -> PermanentHandle {
-    r.game.set_memory(10);
-    let hi = r.add_to_hand(0, id);
-    let idx = r.play(0, hi).expect("card plays from hand");
-    PermanentHandle {
-        player: 0,
-        index: idx as u8,
-    }
-}
-
-/// Resolve prompts (first legal action) until the bounce prompt — recognised
-/// by `expect` being among its legal picks — is reached, and return it.
-fn drive_to_bounce(r: &mut DebugRunner, expect: PermanentHandle) -> PendingSelectionView {
-    for _ in 0..8 {
-        let v = r
-            .pending_selection_view()
-            .expect("a prompt must still be pending before the bounce pick");
-        if v.valid_action_ids.contains(&field_pick(expect)) {
-            return v;
-        }
-        let a = v.valid_action_ids.first().copied().unwrap_or(PASS);
-        r.execute_action(v.selecting_player, a).unwrap();
-    }
-    panic!("the bounce prompt never appeared");
-}
-
-fn digivolve_from(base: &str) -> (bool, i16) {
-    let mut r = runner();
-    let h = r.place_on_field(0, base, Some(0));
-    let hi = r.add_to_hand(0, CARD_ID);
-    let before = r.memory();
-    let ok = r
+fn put_in_hand(runner: &mut DebugRunner, player: u8, card_id: &str) -> usize {
+    let data_idx = runner
         .game
-        .digivolve_from_hand(0, hi, h.index as usize, PlaySource::ByHand);
-    (ok, before - r.memory())
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("card {card_id} not registered"));
+    let card_index = runner.game.next_card_index();
+    runner.game.players[player as usize]
+        .hand
+        .push(CardSource::new(data_idx, player, card_index));
+    runner.game.player(player).hand.len() - 1
 }
 
-fn triggered<'a>(
-    card: &'a digimon_dsl::compiled::CompiledCard,
-    f: impl Fn(&CompiledTriggeredClause) -> bool,
-) -> Option<&'a CompiledTriggeredClause> {
-    card.effects.iter().find_map(|c| match c {
-        CompiledClause::Triggered(t) if f(t) => Some(t),
-        _ => None,
-    })
+fn field_action(index: u8) -> u16 {
+    encode_attack(0, index as u16)
 }
 
-/// Opponent board used by the strip/bounce tests:
-///  A — 4 digivolution cards (never bounce-eligible after a strip of <= 2)
-///  B — 1 digivolution card  (bounce-eligible)
-///  C — 0 digivolution cards (bounce-eligible)
-fn opp_board(r: &mut DebugRunner) -> (PermanentHandle, PermanentHandle, PermanentHandle) {
-    let a = r.place_stack(1, &["S1", "S2", "S3", "S4", "OPP"]);
-    let b = r.place_stack(1, &["S1", "OPP"]);
-    let c = r.place_on_field(1, "OPP", Some(0));
-    (a, b, c)
+fn play_other(runner: &mut DebugRunner, player: u8, id: &str) -> PermanentHandle {
+    let h = runner.place_on_field(player, id, None);
+    runner.fire_play_event_triggers(player, h.index as usize, false, false);
+    h
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 1 — Structural assertions
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn st21_04_identity_matches_printed_card() {
-    let c = compiled(CARD_ID);
-    assert_eq!(c.name, "Zudomon");
-    assert_eq!(c.kind, CompiledCardKind::Digimon);
-    assert_eq!(c.level, Some(5));
-    assert_eq!(c.cost, Some(7));
-    assert_eq!(c.dp, Some(7000));
-    assert_eq!(c.color, vec![CompiledColor::Blue]);
-    assert!(c.traits.iter().any(|t| t == "Sea Beast"), "{:?}", c.traits);
-    assert!(c.traits.iter().any(|t| t == "ADVENTURE"), "{:?}", c.traits);
+fn fire_on_play(runner: &mut DebugRunner, h: PermanentHandle) {
+    runner.fire_on_play(h.player, h.index as usize);
 }
 
-#[test]
-fn st21_04_has_two_cost_three_requirement_respecting_digivolve_paths() {
-    let c = compiled(CARD_ID);
-    let paths: Vec<_> = c
+fn fire_when_digivolving(runner: &mut DebugRunner, h: PermanentHandle) {
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(h));
+    runner.game.drain_effect_queue();
+}
+
+fn is_alliance_prompt(runner: &DebugRunner) -> bool {
+    runner
+        .pending_selection_view()
+        .map(|v| v.kind == SelectionKind::OwnField && v.prompt.contains("Alliance"))
+        .unwrap_or(false)
+}
+
+fn top_id(runner: &DebugRunner, h: PermanentHandle) -> String {
+    runner.game.player(h.player).battle_area[h.index as usize]
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string()
+}
+
+fn stack_len(runner: &DebugRunner, h: PermanentHandle) -> usize {
+    runner.game.player(h.player).battle_area[h.index as usize]
+        .card_sources
+        .len()
+}
+
+/// Drive a mandatory multi-pick to completion, asserting PASS is never legal
+/// before `n` picks are made; returns the number of picks made.
+fn pick_first_n(runner: &mut DebugRunner, n: usize) {
+    for i in 0..n {
+        let v = runner
+            .pending_selection_view()
+            .unwrap_or_else(|| panic!("pick {}/{} must be pending", i + 1, n));
+        assert!(
+            !v.valid_action_ids.contains(&PASS) && !v.is_optional,
+            "mandatory pick {}/{} must not allow PASS",
+            i + 1,
+            n
+        );
+        let a = v.valid_action_ids[0];
+        runner.execute_action(0, a).expect("pick");
+    }
+}
+
+/// Printed structure shared by every ADVENTURE Lv.5 in this family.
+fn assert_adventure_lv5_structure(name: &str, traits: &[&str]) {
+    let card = dsl_card_data::compiled(CARD_ID);
+    assert_eq!(card.name, name);
+    assert_eq!(card.level, Some(5));
+    assert_eq!(card.cost, Some(7));
+    assert_eq!(card.dp, Some(7000));
+    for t in traits {
+        assert!(card.traits.iter().any(|x| x == t), "missing trait {t}");
+    }
+    let digi: Vec<_> = card
         .alt_paths
         .iter()
         .filter(|p| p.kind == CompiledAltPathKind::Digivolve)
         .collect();
-    assert_eq!(paths.len(), 2, "printed blue Lv.4 circle + ADVENTURE box");
-    for p in &paths {
-        assert_eq!(p.cost, Some(CompiledCost::Literal(3)));
-        assert!(!p.ignore_requirements);
+    assert_eq!(digi.len(), 2, "colour Lv.4 circle + printed Lv.4 alt box");
+    assert!(digi.iter().all(|p| p.cost == Some(CompiledCost::Literal(3))));
+}
+
+/// Inherited <Alliance> on the carrier.
+fn assert_inherited_alliance() {
+    let mut runner = base_builder().start();
+    runner.game.turn_count = 1;
+    let host = runner.place_stack(0, &[CARD_ID, "ALLY"]);
+    assert!(runner.game.has_keyword(host, Keyword::Alliance));
+}
+
+/// Shared [Your Turn][OPT] observer smoke: an own other [ADVENTURE] play →
+/// mandatory Alliance pick → optional attack (declined); OPT holds.
+fn assert_shared_observer() {
+    let mut runner = base_builder().start();
+    runner.game.turn_count = 1;
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    play_other(&mut runner, 0, "ADV");
+    assert!(is_alliance_prompt(&runner), "Alliance pick must install");
+    let v = runner.pending_selection_view().unwrap();
+    assert!(!v.is_optional, "Alliance grant is mandatory");
+    runner.execute_action(0, field_action(ally.index)).unwrap();
+    assert!(runner.game.has_keyword(ally, Keyword::Alliance));
+    let v = runner.pending_selection_view().expect("may-attack pick");
+    assert!(v.is_optional, "'may attack' is optional");
+    assert!(v.valid_action_ids.contains(&field_action(me.index)));
+    runner.execute_action(0, PASS).unwrap();
+    assert!(runner.pending_selection_view().is_none());
+    assert_eq!(runner.security_count(1), 3);
+    // Once per turn.
+    play_other(&mut runner, 0, "ADV");
+    assert!(runner.pending_selection_view().is_none(), "[Once Per Turn]");
+    runner.end_turn();
+    assert!(!runner.game.has_keyword(ally, Keyword::Alliance), "for the turn");
+}
+
+/// The observer ignores Digimon without [ADVENTURE].
+fn assert_shared_observer_ignores_non_adventure() {
+    let mut runner = base_builder().start();
+    runner.game.turn_count = 1;
+    runner.place_on_field(0, CARD_ID, Some(0));
+    play_other(&mut runner, 0, "ALLY");
+    assert!(runner.pending_selection_view().is_none());
+}
+
+const CARD_ID: &str = "ST21-04";
+
+fn builder() -> DebugRunnerBuilder {
+    let mut b = base_builder();
+    for i in 0..6 {
+        b = b.add_card(digimon(&format!("SRC{i}"), CardColor::Blue, 3, 1000, &[]));
     }
-    let std_from = paths[0].from.as_ref().expect("blue Lv.4 `from:`");
-    assert_eq!(std_from.level_eq, Some(4));
-    assert_eq!(std_from.color_is, Some(CompiledColor::Blue));
-    let adv_from = paths[1].from.as_ref().expect("ADVENTURE Lv.4 `from:`");
-    assert_eq!(adv_from.level_eq, Some(4));
-    assert!(format!("{adv_from:?}").contains("ADVENTURE"));
+    b.add_card(digimon("TOP-A", CardColor::Blue, 5, 6000, &[]))
+        .add_card(digimon("TOP-B", CardColor::Blue, 4, 4000, &[]))
+        .add_card(digimon("TOP-C", CardColor::Blue, 4, 4000, &[]))
 }
 
-#[test]
-fn st21_04_clause_shapes() {
-    let c = compiled(CARD_ID);
-
-    let shared = triggered(&c, |t| t.when.contains(&CompiledTiming::OnPlay))
-        .expect("[On Play][When Digivolving] clause");
-    assert!(shared.when.contains(&CompiledTiming::WhenDigivolving));
-    assert_eq!(shared.scope, CompiledScope::FaceUp);
-    assert!(!shared.optional, "the strip + bounce body is mandatory");
-    assert!(!shared.once_per_turn);
-
-    let your_turn = triggered(&c, |t| t.when.contains(&CompiledTiming::OnAllyPlayed))
-        .expect("[Your Turn] ally clause");
-    assert!(your_turn.when.contains(&CompiledTiming::OnDigivolve));
-    assert!(your_turn.once_per_turn, "[Once Per Turn]");
-    assert!(
-        !your_turn.optional,
-        "the Alliance grant is mandatory (only the trailing attack is a 'may')"
-    );
-    assert_eq!(your_turn.scope, CompiledScope::FaceUp);
-    assert!(
-        your_turn.active_when.is_some(),
-        "[Your Turn] must gate the clause"
-    );
+/// Opp stacks: A = 3 sources, B = 0 sources, C = 1 source.
+fn opp_board(runner: &mut DebugRunner) -> (PermanentHandle, PermanentHandle, PermanentHandle) {
+    let a = runner.place_stack(1, &["SRC0", "SRC1", "SRC2", "TOP-A"]);
+    let b = runner.place_on_field(1, "TOP-B", Some(0));
+    let c = runner.place_stack(1, &["SRC3", "TOP-C"]);
+    (a, b, c)
 }
 
-#[test]
-fn st21_04_inherited_alliance_is_a_scope_inherited_keyword_grant() {
-    let c = compiled(CARD_ID);
-    let found = c.effects.iter().any(|e| {
-        matches!(
-            e,
-            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-                keyword,
-                scope: CompiledScope::Inherited,
-                ..
-            }) if keyword.eq_ignore_ascii_case("Alliance")
-        )
-    });
-    assert!(found, "an inherited-scope GrantKeyword Alliance clause");
+fn opp_field_action(index: u8) -> u16 {
+    encode_attack(0, index as u16)
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 2 — Digivolve conditions + cost event
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn st21_04_digivolves_from_blue_lv4_for_three() {
-    let (ok, paid) = digivolve_from("BLUE4");
-    assert!(ok);
-    assert_eq!(paid, 3);
-}
-
-#[test]
-fn st21_04_digivolves_from_non_blue_lv4_with_adventure_for_three() {
-    let (ok, paid) = digivolve_from("RED4-ADV");
-    assert!(ok, "[Digivolve] Lv.4 w/[ADVENTURE] lifts the colour gate");
-    assert_eq!(paid, 3);
-}
-
-#[test]
-fn st21_04_cannot_digivolve_from_non_blue_lv4_without_adventure() {
-    let (ok, _) = digivolve_from("RED4-PLAIN");
-    assert!(!ok);
-}
-
-#[test]
-fn st21_04_cannot_digivolve_from_lv3_adventure() {
-    let (ok, _) = digivolve_from("BLUE3-ADV");
-    assert!(!ok, "both circles need Lv.4");
-}
-
-#[test]
-fn st21_04_digivolve_cost_event_is_three_memory() {
-    let mut r = runner();
-    let h = r.place_on_field(0, "RED4-ADV", Some(0));
-    let hi = r.add_to_hand(0, CARD_ID);
-    let cp = r.event_checkpoint();
-    assert!(r
+fn opp_hand_has(runner: &DebugRunner, id: &str) -> bool {
+    runner
         .game
-        .digivolve_from_hand(0, hi, h.index as usize, PlaySource::ByHand));
-    assert!(
-        r.events_since(cp)
-            .iter()
-            .any(|e| matches!(e, GameEvent::MemoryChange { delta: -3, .. })),
-        "the digivolution cost of 3 must hit the event log"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 3 — [On Play]: strip floor(Tamer colors / 2), then bounce
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn st21_04_with_no_tamers_nothing_is_stripped_and_the_bounce_is_offered_first() {
-    let mut r = runner();
-    let (a, b, c) = opp_board(&mut r);
-    play_zudo(&mut r);
-
-    let v = r.pending_selection_view().expect("bounce pick");
-    assert_eq!(v.selecting_player, 0);
-    assert!(!v.is_optional, "the bounce pick is mandatory");
-    assert!(
-        v.valid_action_ids.contains(&field_pick(b)),
-        "B has 1 source"
-    );
-    assert!(
-        v.valid_action_ids.contains(&field_pick(c)),
-        "C has 0 sources"
-    );
-    assert!(
-        !v.valid_action_ids.contains(&field_pick(a)),
-        "A has 4 digivolution cards (> 1) — not a legal bounce target"
-    );
-    assert_eq!(
-        source_ids(&r, a).len(),
-        4,
-        "0 colors ⇒ nothing was stripped"
-    );
-
-    pick(&mut r, c);
-    r.auto_resolve().unwrap();
-    assert_eq!(r.battle_area_size(1), 2, "C left the battle area");
-    assert!(in_hand(&r, 1, "OPP"), "C returned to its owner's hand");
+        .player(1)
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == id)
 }
 
 #[test]
-fn st21_04_two_tamer_colors_strip_one_card_from_the_chosen_digimon_then_bounce() {
-    let mut r = runner();
-    r.place_on_field(0, "T-RED", Some(0));
-    r.place_on_field(0, "T-BLUE", Some(0));
-    let (a, b, c) = opp_board(&mut r);
-    play_zudo(&mut r);
-
-    let v = r.pending_selection_view().expect("strip host pick");
-    assert!(!v.is_optional, "the strip host pick is mandatory");
-    for h in [a, b, c] {
-        assert!(
-            v.valid_action_ids.contains(&field_pick(h)),
-            "DCGO: ANY opponent Digimon may be chosen to strip from"
-        );
-    }
-    pick(&mut r, a);
-
-    let bounce = drive_to_bounce(&mut r, c);
-    assert_eq!(
-        source_ids(&r, a).len(),
-        3,
-        "2 colors / 2 = exactly 1 digivolution card trashed from A"
-    );
-    assert_eq!(
-        trashed_sources(&r, 1),
-        1,
-        "exactly one source reached the trash"
-    );
-    assert!(bounce.valid_action_ids.contains(&field_pick(b)));
-    assert!(
-        !bounce.valid_action_ids.contains(&field_pick(a)),
-        "A still has 3 digivolution cards"
-    );
-    pick(&mut r, c);
-    r.auto_resolve().unwrap();
-    assert_eq!(r.battle_area_size(1), 2);
+fn st21_04_structure() {
+    assert_adventure_lv5_structure("Zudomon", &["Sea Beast", "ADVENTURE"]);
+    assert_inherited_alliance();
 }
 
+/// 4 Tamer colours → N = 2: the host pick offers only opponent Digimon with
+/// digivolution cards; exactly 2 are trashed from the chosen one; then the
+/// mandatory bounce offers Digimon with ≤1 digivolution cards (A now has 1).
 #[test]
-fn st21_04_three_tamer_colors_round_down_to_one_card() {
-    let mut r = runner();
-    r.place_on_field(0, "T-RED", Some(0));
-    r.place_on_field(0, "T-BLUE", Some(0));
-    r.place_on_field(0, "T-GREEN", Some(0));
-    let (a, _b, c) = opp_board(&mut r);
-    play_zudo(&mut r);
+fn st21_04_on_play_strips_two_from_one_digimon_then_bounces() {
+    let mut runner = builder().start();
+    runner.game.turn_count = 1;
+    runner.place_on_field(0, "T-RB", Some(0));
+    runner.place_on_field(0, "T-YG", Some(0));
+    let (a, b, c) = opp_board(&mut runner);
+    let zudo = runner.place_on_field(0, CARD_ID, None);
+    fire_on_play(&mut runner, zudo);
 
-    pick(&mut r, a);
-    drive_to_bounce(&mut r, c);
-    assert_eq!(
-        source_ids(&r, a).len(),
-        3,
-        "floor(3 / 2) = 1 card stripped, not 2"
-    );
-}
-
-#[test]
-fn st21_04_four_tamer_colors_strip_two_cards_from_one_digimon() {
-    let mut r = runner();
-    r.place_on_field(0, "T-RED", Some(0));
-    r.place_on_field(0, "T-BLUE", Some(0));
-    r.place_on_field(0, "T-GREEN", Some(0));
-    r.place_on_field(0, "T-YELLOW", Some(0));
-    let (a, _b, c) = opp_board(&mut r);
-    play_zudo(&mut r);
-
-    pick(&mut r, a);
-    drive_to_bounce(&mut r, c);
-    assert_eq!(
-        source_ids(&r, a).len(),
-        2,
-        "4 colors / 2 = 2 digivolution cards stripped, all from the SAME Digimon"
-    );
-    assert_eq!(trashed_sources(&r, 1), 2);
-}
-
-#[test]
-fn st21_04_a_dual_color_tamer_counts_both_of_its_colors() {
-    let mut r = runner();
-    r.place_on_field(0, "T-DUAL", Some(0)); // Red + Blue = 2 colors
-    let (a, _b, c) = opp_board(&mut r);
-    play_zudo(&mut r);
-
-    pick(&mut r, a);
-    drive_to_bounce(&mut r, c);
-    assert_eq!(source_ids(&r, a).len(), 3, "2 colors ⇒ 1 card stripped");
-}
-
-#[test]
-fn st21_04_duplicate_tamer_colors_count_once() {
-    let mut r = runner();
-    r.place_on_field(0, "T-RED", Some(0));
-    r.place_on_field(0, "T-RED2", Some(0)); // still 1 color
-    let (a, b, c) = opp_board(&mut r);
-    play_zudo(&mut r);
-
-    let v = r.pending_selection_view().expect("bounce pick");
-    assert!(
-        v.valid_action_ids.contains(&field_pick(c)),
-        "1 distinct color ⇒ 0 cards stripped ⇒ the first prompt is already the bounce"
-    );
-    assert_eq!(source_ids(&r, a).len(), 4, "nothing stripped");
-}
-
-#[test]
-fn st21_04_choosing_a_digimon_without_digivolution_cards_strips_nothing() {
-    let mut r = runner();
-    r.place_on_field(0, "T-RED", Some(0));
-    r.place_on_field(0, "T-BLUE", Some(0));
-    let c = r.place_on_field(1, "OPP", Some(0)); // the only opponent Digimon, 0 sources
-    play_zudo(&mut r);
-
-    pick(&mut r, c); // strip host = C (legal per DCGO, strips nothing)
-    let v = r.pending_selection_view().expect("bounce pick follows");
-    assert!(v.valid_action_ids.contains(&field_pick(c)));
-    pick(&mut r, c);
-    r.auto_resolve().unwrap();
-    assert_eq!(r.battle_area_size(1), 0, "C was bounced");
-    assert_eq!(trashed_sources(&r, 1), 0);
-}
-
-#[test]
-fn st21_04_stripped_digimon_can_become_the_bounce_target() {
-    // The bounce candidate set is evaluated AFTER the strip.
-    let mut r = runner();
-    r.place_on_field(0, "T-RED", Some(0));
-    r.place_on_field(0, "T-BLUE", Some(0));
-    let a = r.place_stack(1, &["S1", "S2", "OPP"]); // 2 sources
-    play_zudo(&mut r);
-
-    pick(&mut r, a); // strip 1 ⇒ A keeps 1 source (<= 1)
-    let v = drive_to_bounce(&mut r, a);
-    assert!(v.valid_action_ids.contains(&field_pick(a)));
-    pick(&mut r, a);
-    r.auto_resolve().unwrap();
-    assert_eq!(r.battle_area_size(1), 0, "A was bounced");
-}
-
-#[test]
-fn st21_04_no_bounce_target_when_every_digimon_has_two_or_more_cards() {
-    let mut r = runner();
-    let a = r.place_stack(1, &["S1", "S2", "S3", "OPP"]); // 3 sources, no tamers ⇒ no strip
-    play_zudo(&mut r);
-    assert!(
-        r.pending_selection().is_none(),
-        "no opposing Digimon has 1 or fewer digivolution cards ⇒ nothing to return"
-    );
-    assert_eq!(r.battle_area_size(1), 1);
-    assert_eq!(source_ids(&r, a).len(), 3);
-}
-
-#[test]
-fn st21_04_nothing_happens_when_opponent_has_no_digimon() {
-    let mut r = runner();
-    r.place_on_field(0, "T-RED", Some(0));
-    r.place_on_field(0, "T-BLUE", Some(0));
-    play_zudo(&mut r);
-    assert!(r.pending_selection().is_none());
-}
-
-#[test]
-fn st21_04_when_digivolving_runs_the_same_body() {
-    let mut r = runner();
-    r.place_on_field(0, "T-RED", Some(0));
-    r.place_on_field(0, "T-BLUE", Some(0));
-    let (a, _b, c) = opp_board(&mut r);
-    let base = r.place_on_field(0, "BLUE4", Some(0));
-    let hi = r.add_to_hand(0, CARD_ID);
-    assert!(r
-        .game
-        .digivolve_from_hand(0, hi, base.index as usize, PlaySource::ByHand));
-
-    let v = r
-        .pending_selection_view()
-        .expect("[When Digivolving] must install the strip host pick");
+    let v = runner.pending_selection_view().expect("strip host pick");
+    assert_eq!(v.kind, SelectionKind::OppField);
     assert!(!v.is_optional);
-    pick(&mut r, a);
-    drive_to_bounce(&mut r, c);
-    assert_eq!(source_ids(&r, a).len(), 3);
-    pick(&mut r, c);
-    r.auto_resolve().unwrap();
-    assert_eq!(r.battle_area_size(1), 2);
+    assert_eq!(v.valid_action_ids.len(), 2, "A and C carry digivolution cards; B doesn't");
+    runner.execute_action(0, opp_field_action(a.index)).unwrap();
+
+    let v = runner.pending_selection_view().expect("source pick");
+    assert!(
+        matches!(v.kind, SelectionKind::SourceMulti { min: 2, max: 2, .. }),
+        "exactly 2 from the chosen Digimon; got {:?}",
+        v.kind
+    );
+    pick_first_n(&mut runner, 2);
+    assert_eq!(stack_len(&runner, a), 2, "TOP-A + 1 remaining source");
+
+    let v = runner.pending_selection_view().expect("bounce pick");
+    assert_eq!(v.kind, SelectionKind::OppField);
+    assert!(!v.is_optional, "the return is mandatory");
+    assert_eq!(v.valid_action_ids.len(), 3, "A (1 src), B (0), C (1) all qualify");
+    runner.execute_action(0, opp_field_action(b.index)).unwrap();
+    runner.auto_resolve().unwrap();
+    assert!(opp_hand_has(&runner, "TOP-B"));
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 4 — [Your Turn] [Once Per Turn] Alliance grant + optional attack
-// ═══════════════════════════════════════════════════════════════════════════
+/// N = 2 but the chosen Digimon has only 1 source → the pick clamps to 1.
+#[test]
+fn st21_04_strip_clamps_to_chosen_digimons_sources() {
+    let mut runner = builder().start();
+    runner.game.turn_count = 1;
+    runner.place_on_field(0, "T-RB", Some(0));
+    runner.place_on_field(0, "T-YG", Some(0));
+    let (a, b, c) = opp_board(&mut runner);
+    let zudo = runner.place_stack(0, &["ALLY", CARD_ID]);
+    fire_when_digivolving(&mut runner, zudo);
+    runner.execute_action(0, opp_field_action(c.index)).unwrap();
+    let v = runner.pending_selection_view().expect("source pick");
+    assert!(
+        matches!(v.kind, SelectionKind::SourceMulti { min: 1, max: 1, .. }),
+        "clamped to C's single source; got {:?}",
+        v.kind
+    );
+    pick_first_n(&mut runner, 1);
+    assert_eq!(stack_len(&runner, c), 1);
+    assert_eq!(stack_len(&runner, a), 4, "other Digimon untouched");
+}
 
-/// Zudomon on the field (able to attack), nothing else.
-fn ally_runner() -> (DebugRunner, PermanentHandle) {
-    let mut r = runner();
-    let z = r.place_on_field(0, CARD_ID, Some(0));
-    (r, z)
+/// 1 Tamer colour → no strip; the bounce still resolves and never offers a
+/// Digimon with 2+ digivolution cards.
+#[test]
+fn st21_04_one_color_skips_strip_but_still_bounces() {
+    let mut runner = builder().start();
+    runner.game.turn_count = 1;
+    runner.place_on_field(0, "T-R", Some(0));
+    let (a, b, c) = opp_board(&mut runner);
+    let zudo = runner.place_on_field(0, CARD_ID, None);
+    fire_on_play(&mut runner, zudo);
+    let v = runner.pending_selection_view().expect("bounce pick");
+    assert_eq!(v.kind, SelectionKind::OppField);
+    assert_eq!(v.valid_action_ids.len(), 2, "B and C only — A has 3 sources");
+    assert!(!v.valid_action_ids.contains(&opp_field_action(a.index)));
+    runner.execute_action(0, opp_field_action(c.index)).unwrap();
+    runner.auto_resolve().unwrap();
+    assert!(opp_hand_has(&runner, "TOP-C"));
+    assert_eq!(stack_len(&runner, a), 4);
+}
+
+/// 2 Tamer colours but no opponent Digimon has digivolution cards → the
+/// strip has no host and is skipped; "Then" still reaches the bounce.
+#[test]
+fn st21_04_strip_without_any_sources_still_bounces() {
+    let mut runner = builder().start();
+    runner.game.turn_count = 1;
+    runner.place_on_field(0, "T-RB", Some(0));
+    let b = runner.place_on_field(1, "TOP-B", Some(0));
+    let zudo = runner.place_on_field(0, CARD_ID, None);
+    fire_on_play(&mut runner, zudo);
+    let v = runner.pending_selection_view().expect("bounce pick");
+    assert_eq!(v.kind, SelectionKind::OppField);
+    assert_eq!(v.valid_action_ids, vec![opp_field_action(b.index)]);
+    runner.execute_action(0, opp_field_action(b.index)).unwrap();
+    runner.auto_resolve().unwrap();
+    assert!(opp_hand_has(&runner, "TOP-B"));
 }
 
 #[test]
-fn st21_04_adventure_ally_play_grants_alliance_to_a_chosen_digimon_then_offers_an_attack() {
-    let (mut r, z) = ally_runner();
-    let ally = play_card(&mut r, "ALLY");
-
-    let v = r.pending_selection_view().expect("Alliance grant pick");
-    assert_eq!(v.selecting_player, 0);
-    assert_eq!(v.kind, SelectionKind::OwnField);
-    assert!(!v.is_optional, "the grant is mandatory — you must give it");
-    assert!(
-        v.valid_action_ids.contains(&field_pick(z)),
-        "Zudomon itself"
-    );
-    assert!(
-        v.valid_action_ids.contains(&field_pick(ally)),
-        "the new ally"
-    );
-
-    pick(&mut r, ally);
-    assert!(
-        r.game.has_keyword(ally, Keyword::Alliance),
-        "the chosen Digimon gains <Alliance>"
-    );
-    assert!(
-        !r.game.has_keyword(z, Keyword::Alliance),
-        "only the chosen Digimon gains it"
-    );
-
-    let v = r.pending_selection_view().expect("optional attack pick");
-    assert_eq!(v.kind, SelectionKind::OwnField);
-    assert!(v.is_optional, "'may attack' — PASS must be legal");
-    assert!(
-        v.valid_action_ids.contains(&field_pick(z)),
-        "Zudomon can attack"
-    );
-    assert!(
-        !v.valid_action_ids.contains(&field_pick(ally)),
-        "the just-played ally is summoning sick"
-    );
-
-    let sec_before = r.security_count(1);
-    r.execute_action(0, PASS).unwrap();
-    assert!(r.pending_selection().is_none());
-    assert_eq!(r.security_count(1), sec_before, "declined: nobody attacked");
-}
-
-#[test]
-fn st21_04_alliance_can_be_given_to_zudomon_itself() {
-    let (mut r, z) = ally_runner();
-    let ally = play_card(&mut r, "ALLY");
-    pick(&mut r, z);
-    assert!(r.game.has_keyword(z, Keyword::Alliance));
-    assert!(!r.game.has_keyword(ally, Keyword::Alliance));
-    let _ = r.execute_action(0, PASS);
-}
-
-#[test]
-fn st21_04_granted_alliance_expires_at_end_of_turn() {
-    let (mut r, z) = ally_runner();
-    let ally = play_card(&mut r, "ALLY");
-    pick(&mut r, ally);
-    r.execute_action(0, PASS).unwrap();
-    assert!(r.game.has_keyword(ally, Keyword::Alliance));
-
-    r.end_turn();
-    let _ = r.auto_resolve();
-    assert!(
-        !r.game.has_keyword(ally, Keyword::Alliance),
-        "'for the turn' — the grant is gone after the turn ends"
-    );
-}
-
-#[test]
-fn st21_04_accepting_the_optional_attack_makes_zudomon_attack() {
-    let (mut r, z) = ally_runner();
-    let ally = play_card(&mut r, "ALLY");
-    pick(&mut r, ally);
-    let sec_before = r.security_count(1);
-
-    // Accept the optional attacker pick (Zudomon), then keep accepting
-    // whatever the attack flow asks until it is over.
-    pick(&mut r, z);
-    for _ in 0..30 {
-        let Some(v) = r.pending_selection_view() else {
-            break;
-        };
-        let a = v
-            .valid_action_ids
-            .iter()
-            .copied()
-            .find(|a| *a != PASS)
-            .unwrap_or(PASS);
-        r.execute_action(v.selecting_player, a).unwrap();
-    }
-    assert!(
-        r.security_count(1) < sec_before || r.game_over(),
-        "Zudomon attacked the opponent's security"
-    );
-}
-
-#[test]
-fn st21_04_non_adventure_ally_does_not_trigger_and_does_not_spend_the_opt() {
-    let (mut r, z) = ally_runner();
-    play_card(&mut r, "PLAIN-ALLY");
-    assert!(
-        r.pending_selection().is_none(),
-        "no [ADVENTURE] trait ⇒ the clause is not triggered"
-    );
-
-    // The once-per-turn use must be unspent: a later [ADVENTURE] ally triggers.
-    let ally = play_card(&mut r, "ALLY");
-    assert!(
-        r.pending_selection().is_some(),
-        "the OPT was not consumed by the non-ADVENTURE ally"
-    );
-}
-
-#[test]
-fn st21_04_adventure_tamer_does_not_trigger() {
-    let (mut r, z) = ally_runner();
-    play_card(&mut r, "ADV-TAMER");
-    assert!(
-        r.pending_selection().is_none(),
-        "'your other Digimon' — a Tamer with the trait is not a Digimon"
-    );
-}
-
-#[test]
-fn st21_04_zudomons_own_play_is_not_an_other_digimon() {
-    let mut r = runner();
-    r.place_on_field(0, "ALLY", Some(0)); // an ADVENTURE Digimon already in play
-    play_zudo(&mut r);
-    assert!(
-        r.pending_selection().is_none(),
-        "Zudomon entering must not trigger its own 'other Digimon' clause \
-         (and with no opposing Digimon its [On Play] has no targets)"
-    );
-}
-
-#[test]
-fn st21_04_does_not_trigger_when_zudomon_is_not_on_the_battle_area() {
-    let mut r = runner();
-    r.add_to_hand(0, CARD_ID); // in hand only
-    play_card(&mut r, "ALLY");
-    assert!(r.pending_selection().is_none());
-}
-
-#[test]
-fn st21_04_is_gated_to_your_turn() {
-    let (mut r, z) = ally_runner();
-    let ally = r.place_on_field(0, "ALLY", Some(0));
-    r.game.turn_player_idx = 1; // the opponent's turn
-    r.fire_play_event_triggers(0, ally.index as usize, true, false);
-    assert!(
-        r.pending_selection().is_none(),
-        "[Your Turn] — an ally entering on the opponent's turn does not trigger it"
-    );
-}
-
-#[test]
-fn st21_04_once_per_turn_lockout_and_rearm_next_turn() {
-    let (mut r, z) = ally_runner();
-    play_card(&mut r, "ALLY");
-    // Resolve: grant to Zudomon, decline the attack.
-    pick(&mut r, z);
-    r.execute_action(0, PASS).unwrap();
-    assert!(r.pending_selection().is_none());
-
-    play_card(&mut r, "ALLY2");
-    assert!(
-        r.pending_selection().is_none(),
-        "[Once Per Turn]: a second [ADVENTURE] ally in the same turn does not trigger it"
-    );
-
-    // Two end_turns later it is my turn again and the use is back.
-    r.end_turn();
-    let _ = r.auto_resolve();
-    r.end_turn();
-    let _ = r.auto_resolve();
-    assert_eq!(r.turn_player(), 0);
-    play_card(&mut r, "ALLY3");
-    assert!(
-        r.pending_selection().is_some(),
-        "the once-per-turn use re-arms on my next turn"
-    );
-}
-
-#[test]
-fn st21_04_adventure_digimon_digivolving_triggers_it_too() {
-    let (mut r, z) = ally_runner();
-    let base = r.place_on_field(0, "BASE3", Some(0));
-    let hi = r.add_to_hand(0, "ADV4");
-    assert!(r
-        .game
-        .digivolve_from_hand(0, hi, base.index as usize, PlaySource::ByHand));
-
-    let v = r
-        .pending_selection_view()
-        .expect("[ADVENTURE] Digimon digivolving must trigger the Alliance grant");
-    assert_eq!(v.kind, SelectionKind::OwnField);
-    assert!(!v.is_optional);
-    assert!(v.valid_action_ids.contains(&field_pick(z)));
-    assert!(v.valid_action_ids.contains(&field_pick(base)));
-}
-
-#[test]
-fn st21_04_non_adventure_digivolution_does_not_trigger() {
-    // A plain Lv.4 (no ADVENTURE trait) digivolving from BASE3 must not trigger.
-    let mut plain4 = dig("PLAIN4", CardColor::Red, 4, 4000, false);
-    plain4.evo_costs = vec![EvoCost {
-        card_color: CardColor::Red as u8,
-        level: 3,
-        memory_cost: 0,
-    }];
-    // The card must exist before the runner starts, so build a dedicated runner.
-    let mut r = base_builder()
-        .add_card(plain4)
-        .deck(0, &["FILLER"; 8])
-        .deck(1, &["FILLER"; 8])
-        .security(1, &["SEC", "SEC"])
-        .memory(10)
-        .start();
-    r.set_first_player(0);
-    r.place_on_field(0, CARD_ID, Some(0));
-    let base = r.place_on_field(0, "BASE3", Some(0));
-    let hi = r.add_to_hand(0, "PLAIN4");
-    assert!(r
-        .game
-        .digivolve_from_hand(0, hi, base.index as usize, PlaySource::ByHand));
-    assert!(r.pending_selection().is_none());
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 5 — Inherited <Alliance>
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn st21_04_inherited_alliance_grants_to_the_carrier_via_the_stack() {
-    let mut r = runner();
-    let carrier = r.place_stack(0, &[CARD_ID, "CARRIER"]);
-    assert!(
-        r.game.has_keyword(carrier, Keyword::Alliance),
-        "a Digimon with Zudomon in its digivolution cards inherits <Alliance>"
-    );
-}
-
-#[test]
-fn st21_04_inherited_alliance_is_absent_without_zudomon_in_the_stack() {
-    let mut r = runner();
-    let carrier = r.place_on_field(0, "CARRIER", Some(0));
-    assert!(!r.game.has_keyword(carrier, Keyword::Alliance));
+fn st21_04_shared_observer() {
+    assert_shared_observer();
+    assert_shared_observer_ignores_non_adventure();
 }

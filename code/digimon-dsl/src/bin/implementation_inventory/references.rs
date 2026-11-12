@@ -919,6 +919,7 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
             once_per_turn,
             max_per_turn,
             as_option_effect,
+            opt_group,
             process,
             trigger_if,
         } = self;
@@ -946,6 +947,7 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         max_per_turn.walk(c, &format!("{}.max_per_turn", path), "UNCLASSIFIED_STRING");
         as_option_effect.walk(c, &format!("{}.as_option_effect", path), "UNCLASSIFIED_STRING");
+        opt_group.walk(c, &format!("{}.opt_group", path), "UNCLASSIFIED_STRING");
         process.walk(c, &format!("{}.process", path), "UNCLASSIFIED_STRING");
             trigger_if.walk(c, &format!("{}.trigger_if", path), "UNCLASSIFIED_STRING");
 }
@@ -3302,6 +3304,20 @@ impl Walk for digimon_dsl::compiled::CompiledPlayCostBindingPredicate {
         op.walk(c, &format!("{}.op", path), "UNCLASSIFIED_STRING");
     }
 }
+impl Walk for digimon_dsl::compiled::CompiledDistinctColorsCount {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(
+            path,
+            "digimon_dsl::compiled::CompiledDistinctColorsCount",
+            "COMPOSITE",
+            serde_json::Value::Null,
+        );
+        let digimon_dsl::compiled::CompiledDistinctColorsCount { of, filter, n } = self;
+        of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
+        filter.walk(c, &format!("{}.filter", path), "UNCLASSIFIED_STRING");
+        n.walk(c, &format!("{}.n", path), "UNCLASSIFIED_STRING");
+    }
+}
 impl Walk for digimon_dsl::compiled::CompiledDistinctNamedCount {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
         c.node(
@@ -3711,6 +3727,7 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
             once_per_turn,
             max_per_turn,
             as_option_effect,
+            opt_group,
             process,
             summary,
             summary_key,
@@ -3730,6 +3747,7 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         max_per_turn.walk(c, &format!("{}.max_per_turn", path), "UNCLASSIFIED_STRING");
         as_option_effect.walk(c, &format!("{}.as_option_effect", path), "UNCLASSIFIED_STRING");
+        opt_group.walk(c, &format!("{}.opt_group", path), "UNCLASSIFIED_STRING");
         process.walk(c, &format!("{}.process", path), "UNCLASSIFIED_STRING");
         summary.walk(
             c,

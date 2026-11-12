@@ -27,8 +27,14 @@ def validate_pool(pool: dict, base: Path, current: Path) -> dict:
     """Validate hashes and sidecars without importing ONNX; native load also
     checks the embedded contract, actual shapes and terminal value semantics.
     """
-    if set(pool) != {"schema", "selfplay_probability", "opponents"} or pool["schema"] != SCHEMA:
+    if (not {"schema", "selfplay_probability", "opponents"} <= set(pool)
+            or set(pool) - {"schema", "selfplay_probability", "opponents", "learner_decks"}
+            or pool["schema"] != SCHEMA):
         raise ValueError("Invalid historical opponent pool schema")
+    learner = pool.get("learner_decks")
+    if learner is not None and (not isinstance(learner, list) or not learner
+                                or not all(isinstance(a, str) and a.strip() for a in learner)):
+        raise ValueError("learner_decks must name nonempty archetypes")
     probability = pool["selfplay_probability"]
     if type(probability) not in (int, float) or not math.isfinite(probability) or not 0 <= probability <= 1:
         raise ValueError("selfplay_probability must be finite and in [0, 1]")
@@ -40,8 +46,14 @@ def validate_pool(pool: dict, base: Path, current: Path) -> dict:
         raise ValueError("Current model needs a complete terminal-outcome metadata contract")
     ids, hashes, entries = set(), set(), []
     for entry in pool["opponents"]:
-        if set(entry) != {"id", "path", "sha256", "metadata_sha256", "weight"}:
+        required = {"id", "path", "sha256", "metadata_sha256", "weight"}
+        if not required <= set(entry) or set(entry) - required - {"decks"}:
             raise ValueError("Invalid opponent entry fields")
+        if "decks" in entry:
+            decks = entry["decks"]
+            if (learner is None or not isinstance(decks, list) or not decks
+                    or any(not isinstance(a, str) or a in learner for a in decks)):
+                raise ValueError("Opponent decks need learner_decks, nonempty and excluding the learner")
         identifier, weight = entry["id"], entry["weight"]
         if not isinstance(identifier, str) or not identifier.strip() or identifier == "current" or identifier in ids:
             raise ValueError("Opponent IDs must be unique, nonempty and not 'current'")

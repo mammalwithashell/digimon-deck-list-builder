@@ -33,7 +33,7 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledDeclarativeClause,
     CompiledScope, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -180,6 +180,29 @@ fn cougar_runner(
         push_to_hand(&mut runner, 0, tgt);
     }
     (runner, cougar, tamers)
+}
+
+/// Answer the "trash 2 face-down cards?" choice (index 0 = pay).
+fn choose_pay(runner: &mut DebugRunner, pay: bool) {
+    let v = runner.pending_selection_view().expect("pay-or-not choice installs");
+    assert_eq!(v.kind, SelectionKind::EffectChoice);
+    let id = HAND_EFFECT_START + if pay { 0 } else { 1 };
+    runner.execute_action(0, id).unwrap();
+}
+
+/// Resolve any Tamer picks for the trash-2 cost, then return the hand pick.
+fn pending_hand_pick(
+    runner: &mut DebugRunner,
+) -> Option<digimon_engine::selection::PendingSelectionView> {
+    for _ in 0..8 {
+        let v = runner.pending_selection_view()?;
+        if v.kind == SelectionKind::Hand {
+            return Some(v);
+        }
+        let id = v.valid_action_ids.iter().copied().find(|&id| id != PASS)?;
+        runner.execute_action(0, id).unwrap();
+    }
+    None
 }
 
 fn process_contains_trash_n_under_tamers(steps: &[CompiledStep]) -> bool {
@@ -394,10 +417,10 @@ fn bt25_035_trash_2_from_one_tamer_then_free_digivolve() {
 
     runner.fire_on_play(0, cougar.index as usize);
 
-    // "may digivolve" — the optional hand pick installs first. Only GD5 is legal.
-    let view = runner
-        .pending_selection_view()
-        .expect("'may digivolve' hand pick installs");
+    // Pay the trash-2 cost first (DCGO pays it before the digivolve pick), then
+    // the "may digivolve" hand pick (after the Tamer pick). Only GD5 is legal.
+    choose_pay(&mut runner, true);
+    let view = pending_hand_pick(&mut runner).expect("'may digivolve' hand pick installs");
     assert!(view.is_optional, "'may digivolve' ⇒ declinable");
     assert_eq!(
         view.valid_action_ids
@@ -415,9 +438,6 @@ fn bt25_035_trash_2_from_one_tamer_then_free_digivolve() {
         .find(|&id| id != PASS)
         .unwrap();
     runner.execute_action(0, pick).expect("choose GD5");
-
-    // Now the trash-2 cost: a Tamer pick installs (the only eligible Tamer).
-    // Resolve every follow-up Tamer pick.
     let _ = runner.auto_resolve();
 
     let perm = &runner.game.player(0).battle_area[cougar.index as usize];
@@ -457,14 +477,7 @@ fn bt25_035_trash_1_from_each_of_two_tamers_then_free_digivolve() {
     let mem_before = runner.memory();
 
     runner.fire_on_play(0, cougar.index as usize);
-    let view = runner.pending_selection_view().expect("hand pick installs");
-    let pick = view
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&id| id != PASS)
-        .unwrap();
-    runner.execute_action(0, pick).expect("choose GD5");
+    choose_pay(&mut runner, true);
 
     // First Tamer pick.
     let v1 = runner
@@ -499,6 +512,19 @@ fn bt25_035_trash_1_from_each_of_two_tamers_then_free_digivolve() {
                 .unwrap(),
         )
         .expect("pick second Tamer");
+
+    // Then the "may digivolve" hand pick.
+    let view = runner
+        .pending_selection_view()
+        .expect("hand pick installs after the cost");
+    assert_eq!(view.kind, SelectionKind::Hand);
+    let pick = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != PASS)
+        .unwrap();
+    runner.execute_action(0, pick).expect("choose GD5");
     let _ = runner.auto_resolve();
 
     let perm = &runner.game.player(0).battle_area[cougar.index as usize];
@@ -519,19 +545,15 @@ fn bt25_035_trash_1_from_each_of_two_tamers_then_free_digivolve() {
     );
 }
 
-/// DECLINABLE ("may"): PASS on the hand pick leaves Cougarmon as-is, no trash,
-/// no digivolve.
+/// DECLINABLE: choosing not to pay the trash-2 cost leaves Cougarmon as-is, no
+/// trash, no digivolve.
 #[test]
 fn bt25_035_then_clause_is_declinable() {
     let (mut runner, cougar, _tamers) = cougar_runner(&["GD5"], &[2]);
     let mem_before = runner.memory();
 
     runner.fire_on_play(0, cougar.index as usize);
-    let view = runner
-        .pending_selection_view()
-        .expect("optional hand pick surfaces");
-    assert!(view.is_optional);
-    runner.execute_action(0, PASS).expect("declining is legal");
+    choose_pay(&mut runner, false);
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -602,14 +624,7 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
     let mem_before = runner.memory();
 
     runner.fire_on_play(0, cougar.index as usize);
-    let view = runner.pending_selection_view().expect("hand pick installs");
-    let pick = view
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&id| id != PASS)
-        .unwrap();
-    runner.execute_action(0, pick).expect("choose GD5");
+    choose_pay(&mut runner, true);
 
     // First Tamer pick → resolve it (records it, re-parks the second pick).
     let v1 = runner
@@ -670,6 +685,22 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
     clone
         .resolve_selection(0, t2)
         .expect("clone's second pick resolves");
+    // The cost is paid on the clone; then its "may digivolve" hand pick.
+    let clone_pick = {
+        let sel = clone
+            .pending_selection
+            .as_ref()
+            .expect("clone: hand pick installs after the cost");
+        assert_eq!(sel.kind, SelectionKind::Hand);
+        sel.valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != PASS)
+            .expect("clone: GD5 is offered")
+    };
+    clone
+        .resolve_selection(0, clone_pick)
+        .expect("clone's hand pick resolves");
     assert_eq!(
         clone.player(0).battle_area[cougar.index as usize]
             .top_card()
@@ -701,6 +732,9 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
     runner
         .execute_action(0, t2)
         .expect("original's second pick resolves");
+    runner
+        .execute_action(0, clone_pick)
+        .expect("original's hand pick resolves");
     let _ = runner.auto_resolve();
     assert_eq!(
         runner.game.player(0).battle_area[cougar.index as usize]
@@ -721,18 +755,26 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
     );
 }
 
-/// NEGATIVE (target filter): no [Glowing Dawn] Lv.5 in hand ⇒ clean no-op even
-/// with 2 face-down sources available.
+/// Paying the trash-2 cost with no card that can digivolve onto Cougarmon is
+/// legal (user ruling 2026-11-10; DCGO BT25_035.cs pays first). The face-down
+/// cards go, nothing digivolves, and no illegal target is offered. Audit
+/// 2026-11-11: the old gate refused to pay without a [Glowing Dawn] card in
+/// hand.
 #[test]
-fn bt25_035_then_clause_no_glowing_dawn_in_hand_clean_noop() {
+fn bt25_035_pays_trash_2_without_a_legal_target_audit() {
     let (mut runner, cougar, _tamers) = cougar_runner(&["NONGD5"], &[2]);
 
     runner.fire_on_play(0, cougar.index as usize);
+    choose_pay(&mut runner, true);
+    assert!(
+        pending_hand_pick(&mut runner).is_none(),
+        "no legal [Glowing Dawn] digivolve target offered"
+    );
     let _ = runner.auto_resolve();
 
     assert!(
         runner.game.pending_selection.is_none(),
-        "no legal [Glowing Dawn] hand pick ⇒ no stuck selection"
+        "no stuck selection"
     );
     assert_eq!(
         runner.game.player(0).battle_area[cougar.index as usize]
@@ -741,10 +783,57 @@ fn bt25_035_then_clause_no_glowing_dawn_in_hand_clean_noop() {
         CARD_ID,
         "nothing digivolved"
     );
+    assert_eq!(face_down_source_count(&runner, 0), 0, "the cost was paid");
+}
+
+/// Only hand cards that can digivolve onto THIS Digimon are offered: a
+/// [Glowing Dawn] Lv.6 (no Lv.4 digivolution route onto Cougarmon) is not a
+/// legal pick. Audit 2026-11-11 (DCGO DigivolveIntoHandOrTrashCard).
+#[test]
+fn bt25_035_offers_only_cards_that_can_digivolve_onto_this_digimon_audit() {
+    let mut gd6 = gd_lv5("GD6");
+    gd6.level = Some(6);
+    gd6.evo_costs = vec![EvoCost {
+        card_color: 2,
+        level: 5,
+        memory_cost: 4,
+    }];
+    let mut runner = DebugRunner::builder()
+        .add_card(cougarmon())
+        .add_card(make_filler("FILLER"))
+        .add_card(gd_lv5("GD5"))
+        .add_card(gd6)
+        .add_card(tamer("TAMER"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    let cougar = runner.place_stack(0, &["FILLER", CARD_ID]);
+    let t = runner.place_stack(0, &["FILLER", "FILLER", "TAMER"]);
+    for i in 0..2 {
+        runner.game.players[0].battle_area[t.index as usize].card_sources[i].face_down = true;
+    }
+    push_to_hand(&mut runner, 0, "GD6");
+    push_to_hand(&mut runner, 0, "GD5");
+
+    runner.fire_on_play(0, cougar.index as usize);
+    choose_pay(&mut runner, true);
+    let view = pending_hand_pick(&mut runner).expect("hand pick installs");
+    let picks: Vec<u16> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .collect();
+    assert_eq!(picks.len(), 1, "only GD5 can digivolve onto Cougarmon: {picks:?}");
+    runner.execute_action(0, picks[0]).unwrap();
+    let _ = runner.auto_resolve();
     assert_eq!(
-        face_down_source_count(&runner, 0),
-        2,
-        "no digivolve ⇒ no face-down sources trashed"
+        runner.game.player(0).battle_area[cougar.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "GD5"
     );
 }
 
@@ -780,14 +869,7 @@ fn st23_13_offers_after_cost(tamers_fd: &[usize], picks: &[usize]) -> Vec<CardHa
     push_to_hand(&mut runner, 0, "GD5");
 
     runner.fire_on_play(0, cougar.index as usize);
-    let view = runner.pending_selection_view().expect("hand pick installs");
-    let pick = view
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&id| id != PASS)
-        .unwrap();
-    runner.execute_action(0, pick).expect("choose GD5");
+    choose_pay(&mut runner, true);
     for &p in picks {
         let v = runner.pending_selection_view().expect("a Tamer pick installs");
         assert_eq!(v.kind, SelectionKind::OwnField, "a Tamer pick: {v:?}");
@@ -799,6 +881,15 @@ fn st23_13_offers_after_cost(tamers_fd: &[usize], picks: &[usize]) -> Vec<CardHa
             .collect();
         runner.execute_action(0, tamer_picks[p]).expect("pick a Tamer");
     }
+    let view = runner.pending_selection_view().expect("hand pick installs");
+    assert_eq!(view.kind, SelectionKind::Hand, "the hand pick: {view:?}");
+    let pick = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != PASS)
+        .unwrap();
+    runner.execute_action(0, pick).expect("choose GD5");
 
     // The first pending pool after the effect: ST23-13's branches in it.
     let mut offered: Option<Vec<CardHandle>> = None;

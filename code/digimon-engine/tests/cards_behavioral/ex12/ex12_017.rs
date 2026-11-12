@@ -352,3 +352,170 @@ where
 
     false
 }
+
+// ─── [Counter] in a real attack (audit 2026-11-10, user-confirmed) ───────────
+//
+// DCGO EX12_017.cs (Counter region):
+// - the hand pick lists only cards that can DNA now (`CanPlayJogress(true)`);
+// - the two Digimon must satisfy that card's DNA requirement;
+// - the redirect is offered whether or not a DNA happened.
+
+mod counter_runtime {
+    use super::*;
+    use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
+    use digimon_engine::debug_runner::make_test_dna_card;
+    use digimon_engine::enums::GamePhase;
+    use digimon_engine::permanent::PermanentHandle;
+
+    /// "Omnimon" that DNAs from two Lv.5 Digimon (cost 0).
+    fn omnimon_lv5_pair() -> digimon_engine::card_data::CardData {
+        let mut c = make_test_dna_card("OMNI-OK", "Omnimon", 5, 5, 0);
+        c.card_kind = digimon_engine::enums::CardKind::Digimon;
+        c.level = Some(7);
+        c.dp = Some(15000);
+        c
+    }
+
+    /// A [VB] Digimon whose DNA needs two Lv.6 Digimon: no legal pair here.
+    fn vb_needs_lv6_pair() -> digimon_engine::card_data::CardData {
+        let mut c = make_test_dna_card("VB-LV6PAIR", "Far Off", 6, 6, 0);
+        c.card_kind = digimon_engine::enums::CardKind::Digimon;
+        c.level = Some(7);
+        c.dp = Some(15000);
+        c.traits = vec!["VB".to_string()];
+        c
+    }
+
+    struct Board {
+        runner: DebugRunner,
+        lv5_a: PermanentHandle,
+        lv5_b: PermanentHandle,
+        lv4: PermanentHandle,
+    }
+
+    /// Player 0 attacks player 1. Player 1 has WarGreymon, two Lv.5 Digimon
+    /// and one Lv.4 Digimon, and `hand` in hand.
+    fn attacked(hand: &[&str]) -> Board {
+        let mut runner = DebugRunner::builder()
+            .dsl_card(CARD_ID)
+            .expect("EX12-017 YAML loads")
+            .add_card(plain_digimon("ATK", CardColor::Blue, 5, 7000))
+            .add_card(plain_digimon("LV5-A", CardColor::Red, 5, 7000))
+            .add_card(plain_digimon("LV5-B", CardColor::Black, 5, 7000))
+            .add_card(plain_digimon("LV4", CardColor::Green, 4, 5000))
+            .add_card(omnimon_lv5_pair())
+            .add_card(vb_needs_lv6_pair())
+            .hand(1, hand)
+            .memory(3)
+            .start();
+        let atk = runner.place_on_field(0, "ATK", Some(0));
+        runner.place_on_field(1, CARD_ID, Some(0));
+        let lv5_a = runner.place_on_field(1, "LV5-A", Some(0));
+        let lv5_b = runner.place_on_field(1, "LV5-B", Some(0));
+        let lv4 = runner.place_on_field(1, "LV4", Some(0));
+        runner.attack_player(atk, 1, false);
+        assert_eq!(runner.current_phase(), GamePhase::CounterTiming);
+        Board { runner, lv5_a, lv5_b, lv4 }
+    }
+
+    fn hand_slot_actions(runner: &DebugRunner, id: &str) -> [u16; 2] {
+        let slot = runner.game.players[1]
+            .hand
+            .iter()
+            .position(|c| c.card_id(&runner.game.card_data) == id)
+            .unwrap_or_else(|| panic!("{id} in player 1's hand")) as u16;
+        [PLAY_HAND_START + slot, HAND_EFFECT_START + slot]
+    }
+
+    /// Take the Counter window and accept the optional effect, stopping at
+    /// the first prompt of `kind`.
+    fn advance_to(runner: &mut DebugRunner, kind: SelectionKind) -> digimon_engine::selection::PendingSelectionView {
+        for _ in 0..6 {
+            let view = runner.pending_selection_view().expect("a prompt is pending");
+            // The Counter window is also a Hand-kind prompt; stop only at the
+            // effect's own prompt.
+            if view.kind == kind && !view.prompt.starts_with("Counter (") {
+                return view;
+            }
+            let action = view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .find(|&a| a != PASS)
+                .expect("accept the counter / effect gate");
+            runner.execute_action(view.selecting_player, action).expect("accept");
+        }
+        panic!("never reached a {kind:?} prompt");
+    }
+
+    fn offers(view: &digimon_engine::selection::PendingSelectionView, actions: &[u16]) -> bool {
+        actions.iter().any(|a| view.valid_action_ids.contains(a))
+    }
+
+    #[test]
+    fn hand_pick_offers_only_cards_that_can_dna_now() {
+        let Board { mut runner, .. } = attacked(&["OMNI-OK", "VB-LV6PAIR"]);
+        let card = runner.compiled_card(CARD_ID).expect("compiled EX12-017");
+        let counter = card
+            .effects
+            .iter()
+            .find_map(|clause| match clause {
+                CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::Counter) => Some(t),
+                _ => None,
+            })
+            .expect("Counter clause");
+        let filter = find_select_hand_filter(&counter.process).expect("hand pick");
+        assert!(
+            filter.all_of.iter().any(|p| p.dna_field_pair.is_some()),
+            "the hand pick carries the dna_field_pair legality filter"
+        );
+        let view = advance_to(&mut runner, SelectionKind::Hand);
+        assert!(offers(&view, &hand_slot_actions(&runner, "OMNI-OK")));
+        assert!(
+            !offers(&view, &hand_slot_actions(&runner, "VB-LV6PAIR")),
+            "no pair of Lv.6 Digimon: DCGO CanPlayJogress excludes it"
+        );
+    }
+
+    #[test]
+    fn pair_picks_offer_only_digimon_that_meet_the_dna_requirement() {
+        use digimon_engine::action::space::encode_attack;
+        let Board { mut runner, lv5_a, lv5_b, lv4 } = attacked(&["OMNI-OK"]);
+        let view = advance_to(&mut runner, SelectionKind::Hand);
+        let pick = hand_slot_actions(&runner, "OMNI-OK")
+            .into_iter()
+            .find(|a| view.valid_action_ids.contains(a))
+            .unwrap();
+        runner.execute_action(1, pick).expect("pick Omnimon");
+
+        let left = runner.pending_selection_view().expect("first DNA material pick");
+        let act = |h: PermanentHandle| encode_attack(h.player as u16, h.index as u16);
+        assert!(left.valid_action_ids.contains(&act(lv5_a)));
+        assert!(left.valid_action_ids.contains(&act(lv5_b)));
+        assert!(
+            !left.valid_action_ids.contains(&act(lv4)),
+            "a Lv.4 Digimon is not a Lv.5 DNA material"
+        );
+        runner.execute_action(1, act(lv5_a)).expect("first material");
+        let right = runner.pending_selection_view().expect("second DNA material pick");
+        assert!(right.valid_action_ids.contains(&act(lv5_b)));
+        assert!(!right.valid_action_ids.contains(&act(lv4)));
+        assert!(!right.valid_action_ids.contains(&act(lv5_a)));
+    }
+
+    #[test]
+    fn redirect_is_offered_even_without_a_dna() {
+        let Board { mut runner, .. } = attacked(&["OMNI-OK"]);
+        let view = advance_to(&mut runner, SelectionKind::Hand);
+        assert!(view.is_optional);
+        runner.execute_action(1, PASS).expect("decline the DNA");
+        let next = runner
+            .pending_selection_view()
+            .expect("the redirect is still offered after declining the DNA");
+        assert!(
+            next.prompt.contains("attack target"),
+            "expected the redirect prompt, got {:?}",
+            next.prompt
+        );
+    }
+}

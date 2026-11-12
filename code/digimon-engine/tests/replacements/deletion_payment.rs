@@ -269,11 +269,19 @@ fn ordinary_medusamon_deletion_keeps_immune_targets_selectable() {
         digimon_engine::selection::TriggerSource::Permanent(medusa),
     );
     r.game.drain_effect_queue();
-    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    // The clause has no accept/decline window (DCGO EX11_012.cs isOptional:
+    // false, since 2026-11-11); its "may" rides the delete pick, which must
+    // still offer the immune target.
+    let pick = r.game.pending_selection.as_ref().expect("delete pick");
+    assert!(pick.is_optional, "\"You may delete\"");
+    let action = pick
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::PASS)
+        .expect("the immune LOW stays selectable");
     choose(&mut r.game, action);
-    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
-    choose(&mut r.game, action);
-    assert!(contains(&r.game, 1, "LOW"));
+    assert!(contains(&r.game, 1, "LOW"), "immune: not deleted");
 }
 
 #[test]
@@ -305,6 +313,9 @@ fn styracomon_tied_lowest_dp_filters_immunity_and_pays_exact_payer() {
 
 #[test]
 fn recorded_medusamon_immune_token_payment_does_not_loop() {
+    // Recorded 2026-10-27. Rows 21, 30 and 56 (the accept of EX11-012's old
+    // accept/decline window) were removed on 2026-11-12: the clause has had
+    // no such window since 2026-11-11 (DCGO isOptional: false).
     let recording: serde_json::Value = serde_json::from_str(include_str!(
         "../fixtures/training/medusamon-immune-token-payment.json"
     ))

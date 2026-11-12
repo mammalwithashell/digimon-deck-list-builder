@@ -225,6 +225,32 @@ pub(super) fn resolve_card_source_ref(
         let top = ctx.game.player(p).security.len().checked_sub(1)?;
         return Some(CardSourceRef::Security(p, top));
     }
+    // `event_card` naming a DELETED Digimon (the trigger carries its
+    // `deleted_object` snapshot): the deleted card is addressable only in its
+    // owner's trash. Once something else has moved it out of the trash (to
+    // the hand, deck, field, ...) it is a new card (CR 4.3 3-1-3-1, 15-4-4-3) and the
+    // [On Deletion] self-placement finds nothing (DCGO checks
+    // `IsExistOnTrash` before Ravemon BT26-082 / Sirenmon BT25-039 /
+    // EX10-020 place themselves into security).
+    if matches!(source, digimon_dsl::compiled::CompiledBindingRef::EventCard) {
+        if let Some(deleted_top) = ctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.deleted_object.as_ref())
+            .map(|snapshot| snapshot.top_card)
+        {
+            return (0..ctx.game.players.len()).find_map(|pid| {
+                let player_id = pid as crate::enums::PlayerId;
+                ctx.game
+                    .player(player_id)
+                    .trash
+                    .iter()
+                    .position(|c| c.handle() == deleted_top)
+                    .map(|idx| CardSourceRef::Trash(player_id, idx))
+            });
+        }
+    }
     match resolve_binding_ref(source, ctx, bindings)? {
         ResolvedBinding::HandIndex(owner, i) => Some(CardSourceRef::Hand(owner, i as usize)),
         ResolvedBinding::TrashIndex(owner, i) => Some(CardSourceRef::Trash(owner, i as usize)),

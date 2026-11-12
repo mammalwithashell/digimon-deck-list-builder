@@ -319,3 +319,94 @@ def test_cheap_rows_train_the_value_head_but_not_the_policy(tmp_path):
     history = summary["epochs"]
     assert history[-1]["policy_loss"] < history[0]["policy_loss"]
     assert history[-1]["value_loss"] < history[0]["value_loss"]
+
+
+def _seed_zip(tmp_path, seed=0):
+    model = MaskablePPO("MlpPolicy", _TinyEnv(), n_steps=8, batch_size=8, verbose=0, seed=seed, device="cpu")
+    model.digimon_contract = _contract()
+    path = tmp_path / "seed.zip"
+    model.save(str(path))
+    return path
+
+
+def test_split_games_holds_out_whole_games_only():
+    from digimon_gym.agents.azero_trainer import split_games
+    games = np.repeat(np.arange(10), 7)
+    mask = split_games(games, 0.2, seed=3)
+    held = set(games[mask].tolist())
+    assert len(held) == 2
+    # Every row of a held-out game is held out; no game is split across sets.
+    for g in range(10):
+        assert mask[games == g].all() or not mask[games == g].any()
+    assert np.array_equal(mask, split_games(games, 0.2, seed=3))
+    with pytest.raises(ValueError):
+        split_games(np.zeros(5, np.int64), 0.2, seed=0)
+
+
+def test_holdout_keeps_heldout_games_out_and_restores_best_epoch(tmp_path):
+    shard_dir = _write_shard_dir(tmp_path / "gen0", rows=80, seed=5)
+    summary = train(init_from=_seed_zip(tmp_path), shard_dirs=[shard_dir], out=tmp_path / "fit.zip",
+                    epochs=6, batch_size=16, lr=1e-2, device="cpu", seed=0, holdout_fraction=0.25)
+    assert summary["heldout_games"] == 10 and summary["heldout_rows"] == 20
+    selection = summary["selection"]
+    losses = [e["heldout"]["loss"] for e in summary["epochs"]]
+    assert selection["best_epoch"] == int(np.argmin(losses))
+    # The learnable synthetic task generalises: value beats guessing the mean.
+    assert selection["selected"]["value_beats_constant"] is True
+    assert selection["selected"]["value_mse"] < selection["selected"]["constant_mse"]
+    # The saved checkpoint is the restored best epoch, not the last one.
+    saved = MaskablePPO.load(str(tmp_path / "fit.zip"), device="cpu")
+    from digimon_gym.agents.azero_trainer import heldout_metrics, split_games
+    ds = load_shards([shard_dir])
+    rows = np.flatnonzero(split_games(ds.game_ids, 0.25, 7919))
+    fit_mean = float(ds.z[np.setdiff1d(np.arange(len(ds)), rows)].mean())
+    again = heldout_metrics(saved.policy, ds, rows, "identity", fit_mean, 16, 1.0)
+    assert again["loss"] == pytest.approx(selection["selected"]["loss"], rel=1e-5)
+
+
+def test_holdout_zero_is_the_legacy_fit_everything_path(tmp_path):
+    shard_dir = _write_shard_dir(tmp_path / "gen0", rows=16, seed=1)
+    summary = train(init_from=_seed_zip(tmp_path), shard_dirs=[shard_dir], out=tmp_path / "fit.zip",
+                    epochs=2, batch_size=8, device="cpu")
+    assert summary["selection"] is None and summary["heldout_rows"] == 0
+    assert "heldout" not in summary["epochs"][0]
+    assert summary["value_activation"] == "identity"
+
+
+def test_tanh_value_is_recorded_bounded_and_persisted(tmp_path):
+    shard_dir = _write_shard_dir(tmp_path / "gen0", rows=32, seed=2)
+    seed = _seed_zip(tmp_path)
+    with torch.no_grad():
+        model = MaskablePPO.load(str(seed), device="cpu")
+        model.policy.value_net.bias.fill_(40.0)  # an unbounded legacy head
+        model.save(str(seed))
+    summary = train(init_from=seed, shard_dirs=[shard_dir], out=tmp_path / "fit.zip", epochs=20,
+                    batch_size=16, lr=1e-2, device="cpu", value_activation_name="tanh")
+    assert summary["value_activation"] == "tanh"
+    trained = MaskablePPO.load(str(tmp_path / "fit.zip"), device="cpu")
+    assert trained.digimon_value_activation == "tanh"
+    # Continuing from a tanh checkpoint keeps tanh by default and refuses to drop it.
+    again = train(init_from=tmp_path / "fit.zip", shard_dirs=[shard_dir], out=tmp_path / "fit2.zip",
+                  epochs=1, batch_size=16, device="cpu")
+    assert again["value_activation"] == "tanh"
+    with pytest.raises(ValueError, match="tanh"):
+        train(init_from=tmp_path / "fit.zip", shard_dirs=[shard_dir], out=tmp_path / "fit3.zip",
+              epochs=1, batch_size=16, device="cpu", value_activation_name="identity")
+
+
+def test_calibration_select_best_converts_to_tanh_and_keeps_actor(tmp_path):
+    directory = _write_shard_dir(tmp_path / "data", rows=80, seed=3)
+    seed = _seed_zip(tmp_path)
+    summary = calibrate_value(seed, [directory], tmp_path / "cal.zip", epochs=10, batch_size=16,
+                              lr=1e-2, device="cpu", value_activation_name="tanh", select_best=True)
+    mses = [h["heldout_mse"] for h in summary["history"]]
+    assert summary["selected_epoch"] == int(np.argmin(mses))
+    assert summary["value_activation"] == "tanh"
+    assert min(mses) < summary["heldout_constant_mse"]
+    before = MaskablePPO.load(str(seed), device="cpu")
+    after = MaskablePPO.load(str(tmp_path / "cal.zip"), device="cpu")
+    obs = torch.as_tensor(load_shards([directory]).obs)
+    with torch.no_grad():
+        assert torch.equal(before.policy.get_distribution(obs).distribution.probs,
+                           after.policy.get_distribution(obs).distribution.probs)
+    assert after.digimon_value_activation == "tanh"

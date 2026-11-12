@@ -136,14 +136,16 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
+    # 'When this Digimon with ... would leave': carrier only (DCGO BT26_044.cs
+    # CanTriggerWhenRemoveField(hashtable, card)); `replacement_subject_is_mine`
+    # made it cover other permanents. Audit 2026-11-11.
     active_when:
-      # Self-only: DCGO CanTriggerWhenRemoveField(hashtable, card) is
-      # `permanent.cardSources.Contains(card)`. Leaves that read the replacement
-      # subject (replacement_subject_is_mine, kind, name_is...) make the clause
-      # cross-permanent, so none may appear here.
-      any_of:
-        - source_name_contains: "Rosemon"
-        - source_permanent_trait_has: "DATA SQUAD"
+      all_of:
+        - is_source: true
+        - replacement_subject_is_mine: true
+        - any_of:
+            - source_name_contains: "Rosemon"
+            - source_permanent_trait_has: "DATA SQUAD"
     summary: "Inherited [All Turns][OPT] When this [Rosemon]-name / [DATA SQUAD] Digimon would leave, by trashing a bottom face-down card under a Tamer, it doesn't leave"
     process:
       - trash_bottom_face_down_source_under_tamer: { of: you }

@@ -78,6 +78,11 @@ pub struct SearchConfig {
     /// auto-advance loop and the selection path length. Rollouts truncated
     /// by the cap are scored by the evaluator (not as terminals).
     pub max_decisions: u32,
+    /// Q assigned to an unvisited edge during PUCT selection (first-play
+    /// urgency), in the selecting mover's frame. 0.0 is the historical
+    /// behaviour. Negative values make search exploit visited moves more,
+    /// which is what a higher-level value head does implicitly.
+    pub unvisited_q: f32,
 }
 
 impl Default for SearchConfig {
@@ -90,6 +95,7 @@ impl Default for SearchConfig {
             seed: 0,
             observation_profile: default_observation_profile(),
             max_decisions: 512,
+            unvisited_q: 0.0,
         }
     }
 }
@@ -332,7 +338,7 @@ impl<'a> Mcts<'a> {
                     let eval = evaluator.evaluate_batch(&[EvalRequest { obs, mask }]);
                     break (eval[0].value, node.mover);
                 }
-                let edge_idx = select_edge(&arena[cur], config.c_puct);
+                let edge_idx = select_edge(&arena[cur], config.c_puct, config.unvisited_q);
                 path.push((cur, edge_idx));
                 match arena[cur].edges[edge_idx].child {
                     Some(child) => cur = child,
@@ -562,23 +568,26 @@ pub(super) fn advance_forced_chain(game: &mut Game, cap: u32) -> Vec<f32> {
 }
 
 /// Standard PUCT selection: `argmax_a Q(s,a) + c * P(s,a) * sqrt(N(s)) / (1 + N(s,a))`
-/// with `Q` from the node mover's perspective (0.0 for unvisited edges) and
+/// with `Q` from the node mover's perspective (`unvisited_q` for unvisited edges) and
 /// `N(s)` the sum of the node's edge visits (+1 so the very first pick is
 /// still prior-driven). Deterministic first-max tie-break.
-fn select_edge(node: &Node, c_puct: f32) -> usize {
+fn select_edge(node: &Node, c_puct: f32, unvisited_q: f32) -> usize {
     let stats: Vec<(f32, u32, f32)> = node
         .edges
         .iter()
-        .map(|e| {
-            let q = if e.visits > 0 {
-                e.w / e.visits as f32
-            } else {
-                0.0
-            };
-            (e.prior, e.visits, q)
-        })
+        .map(|e| (e.prior, e.visits, edge_q(e.w, e.visits, unvisited_q)))
         .collect();
     puct_argmax_q(&stats, c_puct)
+}
+
+/// Mean action value of an edge in its node mover's frame; `unvisited_q`
+/// (first-play urgency) when the edge has never been visited.
+pub(super) fn edge_q(w: f32, visits: u32, unvisited_q: f32) -> f32 {
+    if visits > 0 {
+        w / visits as f32
+    } else {
+        unvisited_q
+    }
 }
 
 /// Pure PUCT argmax over `(prior, visits, Q)` edge stats — Q is the MEAN
@@ -643,6 +652,21 @@ mod tests {
         // A clearly winning visited edge stays selected over an unvisited
         // low-prior one at modest c_puct.
         assert_eq!(puct_argmax_q(&[(0.5, 8, 0.94), (0.1, 0, 0.0)], 1.5), 0);
+    }
+
+    #[test]
+    fn unvisited_q_sets_first_play_urgency() {
+        // A visited, losing high-prior edge vs an unvisited low-prior one.
+        // Scores at c=1.5, N=4: visited -0.3 + 0.604; unvisited fpu + 0.335.
+        let stats = |fpu: f32| {
+            vec![(0.9, 4, edge_q(-1.2, 4, fpu)), (0.1, 0, edge_q(0.0, 0, fpu))]
+        };
+        // Historical behaviour (unvisited Q = 0): the untried move wins.
+        assert_eq!(puct_argmax_q(&stats(0.0), 1.5), 1);
+        // A pessimistic first-play value keeps search on the visited move.
+        assert_eq!(puct_argmax_q(&stats(-0.5), 1.5), 0);
+        assert_eq!(edge_q(1.5, 3, -0.5), 0.5);
+        assert_eq!(SearchConfig::default().unvisited_q, 0.0);
     }
 
     #[test]

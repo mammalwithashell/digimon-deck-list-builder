@@ -82,3 +82,64 @@ fn bt13_060_when_attacking_trashes_nothing_below_two() {
     let (before, after) = attack_with(1, 0, 2);
     assert_eq!(after, before, "1 suspended -> floor(1/2) = 0 trashed");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// [Burst Digivolve] (CR 6-5-1-2-3, 8-3) through the real action surface.
+// Shared scenario: `crate::burst_digivolve_common`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+mod burst_digivolve {
+    use crate::burst_digivolve_common::*;
+    use digimon_engine::enums::CardColor;
+
+    const SPEC: BurstSpec = BurstSpec {
+        card: "BT13-060",
+        host_name: "Rosemon",
+        host_color: CardColor::Green,
+        tamer_name: "Yoshino Fujieda",
+    };
+
+    /// 8-3-3: offered via the mask with [Yoshino Fujieda] on the field; returns the
+    /// Tamer, pays 0, draws 1, stacks on the [Rosemon].
+    #[test]
+    fn bt13_060_burst_offered_returns_tamer_costs_zero_draws_one() {
+        burst_and_check(SPEC, Host::BurstOnly);
+    }
+
+    /// The burst cost can't be paid without a [Yoshino Fujieda].
+    #[test]
+    fn bt13_060_burst_not_offered_without_tamer() {
+        assert_not_offered_without_tamer(SPEC);
+    }
+
+    /// 8-3-2-1: the top card is trashed at the end of the burst turn,
+    /// tracked by permanent identity (the host shifted slots).
+    #[test]
+    fn bt13_060_burst_top_card_trashed_at_turn_end() {
+        assert_turn_end_trash(SPEC, Host::BurstOnly);
+    }
+
+    /// Normal (cost 5) and burst routes both legal: a real player choice.
+    #[test]
+    fn bt13_060_burst_vs_normal_route_is_a_player_choice() {
+        assert_route_choice(SPEC);
+    }
+
+    /// Choosing the burst route from the route prompt, then the turn-end trash.
+    #[test]
+    fn bt13_060_burst_chosen_from_route_prompt_then_trashed() {
+        assert_turn_end_trash(SPEC, Host::AlsoNormal);
+    }
+
+    /// 8-3-2-2: an effect that digivolves can't burst digivolve.
+    #[test]
+    fn bt13_060_effect_digivolve_cannot_burst() {
+        assert_effect_cannot_burst(SPEC);
+    }
+
+    /// Two qualifying Tamers: the player picks which returns.
+    #[test]
+    fn bt13_060_burst_two_tamers_is_a_player_choice() {
+        assert_two_tamers_choice(SPEC);
+    }
+}

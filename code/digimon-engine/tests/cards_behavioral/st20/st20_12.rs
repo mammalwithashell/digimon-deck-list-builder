@@ -1,551 +1,500 @@
-//! ST20-12 Sora Takenouchi & Kari Kamiya — Tamer, Red/Yellow, Cost 3, traits: [ADVENTURE].
+//! ST20-12 Sora Takenouchi & Kari Kamiya — Tamer, Red+Yellow, Cost 3,
+//! traits: [ADVENTURE].
 //!
-//! # Card text (official Bandai DB, `data/card_bundles/ST20-12.md`)
+//! # Card text (official bundle `data/card_bundles/ST20-12.md`)
 //!
-//! **[Start of Your Main Phase]** If you have a Digimon with the [ADVENTURE]
-//! trait, gain 1 memory.
+//! ```text
+//! [Start of Your Main Phase] If you have a Digimon with the [ADVENTURE] trait,
+//! gain 1 memory.
+//! [Your Turn] When any Digimon cards with the [ADVENTURE] trait would be played
+//! from your hand, by suspending this Tamer, reduce the play cost by 1.
+//! Security Effect: [Security] Play this card without paying the cost.
+//! ```
 //!
-//! **[Your Turn]** When any Digimon cards with the [ADVENTURE] trait would be
-//! played from your hand, by suspending this Tamer, reduce the play cost by 1.
-//!
-//! **Security Effect:** [Security] Play this card without paying the cost.
-//!
-//! Official Q&A: "Yes, the play cost will be reduced by a total of 2" when two
-//! such Tamers both reduce the same play.
+//! Official Q&A (bundle): with two such Tamers "the play cost will be reduced
+//! by a total of 2".
 //!
 //! # DCGO C# reference
-//! `DCGO/Assets/Scripts/CardEffect/ST20/Red/ST20_12.cs`
-//! - `OnStartMainPhase` ActivateClass (mandatory): on battle area + owner's turn;
-//!   activation needs `CanAddMemory` and an owner Digimon whose TopCard
-//!   `HasAdventureTraits`; `AddMemory(1)`.
-//! - `BeforePayCost` ActivateClass (optional): see ST20-13 / ST21-13; suspends
-//!   this Tamer, then a -1 `ChangeCostClass`.
-//! - `SecuritySkill`: `PlaySelfTamerSecurityEffect`.
+//! `DCGO/Assets/Scripts/CardEffect/ST20/Red/ST20_12.cs` — OnStartMainPhase
+//! (non-optional, `HasMatchConditionOwnersPermanent(IsDigimon && TopCard
+//! HasAdventureTraits)`), BeforePayCost (isOptional, `IsOwnerTurn`,
+//! `CanActivateSuspendCostEffect`, `PlayCardCondition = IsExistOnHand &&
+//! IsDigimon && HasAdventureTraits && Owner == card.Owner`; suspend self then
+//! `ChangeCostClass -1`), `PlaySelfTamerSecurityEffect`.
 //!
-//! # Patterns this test covers (RUST_DSL_TEST_API.md section 4.3)
-//! - Start-of-main-phase conditional memory gain (AD1-019 idiom): positive +
-//!   negative per condition (no Digimon / non-ADVENTURE / Tamer-only / opponent's).
-//! - [Your Turn] `kind: cost_reduction` with `pay_cost: [suspend self]` (sibling
-//!   ST21-13): positive, negative per predicate, decline, already-suspended,
-//!   event-log cost proof, and the official two-Tamer stacking ruling.
-//! - `[Security] play self free` through the real security-check path.
+//! ST21-12 (Joe & Mimi) and ST20-13 (Tai & Izzy, cost-reduction clause) print
+//! the identical "would be played ... by suspending this Tamer" clause; they
+//! reuse the `pub(crate)` suite below with their own card id.
 
 #![allow(dead_code)]
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
-use digimon_engine::card_data::CardData;
+use digimon_engine::action::space::{encode_digivolve, PASS, PLAY_HAND_START};
+use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind};
-use digimon_engine::events::GameEvent;
-
-use crate::dsl_card_data::compiled;
+use digimon_engine::build_action_mask;
+use digimon_engine::enums::{CardColor, CardKind, GamePhase};
+use digimon_engine::permanent::PermanentHandle;
 
 const CARD_ID: &str = "ST20-12";
 
-// ─── Fixtures ────────────────────────────────────────────────────────────────
+// ─── Shared fixtures (reused by ST21-12 / ST20-13) ──────────────────────────
 
-fn filler(id: &str) -> CardData {
-    make_test_card(id, id)
-}
-
-fn digimon(id: &str, name: &str, level: u8, cost: u16, adventure: bool) -> CardData {
-    let mut c = make_test_card(id, name);
+pub(crate) fn digimon(id: &str, level: u8, cost: u16, adventure: bool) -> CardData {
+    let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;
     c.level = Some(level);
     c.dp = Some(5000);
     c.play_cost = cost;
-    c.colors = vec![CardColor::Yellow];
+    c.colors = vec![CardColor::Red];
     c.traits = if adventure {
         vec!["ADVENTURE".to_string()]
     } else {
-        Vec::new()
+        vec![]
     };
     c
 }
 
-fn tamer(id: &str, cost: u16, adventure: bool) -> CardData {
+pub(crate) fn tamer(id: &str, adventure: bool) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Tamer;
     c.level = None;
     c.dp = None;
-    c.play_cost = cost;
-    c.colors = vec![CardColor::Yellow];
+    c.play_cost = 3;
+    c.colors = vec![CardColor::Blue];
     c.traits = if adventure {
         vec!["ADVENTURE".to_string()]
     } else {
-        Vec::new()
+        vec![]
     };
     c
 }
 
-fn builder() -> DebugRunnerBuilder {
-    DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("ST20-12 in embedded DSL pack")
-        .add_card(filler("PAD"))
-        .add_card(digimon("ADV-DIGI", "Adv Digimon", 4, 5, true))
-        .add_card(digimon("PLAIN-DIGI", "Plain Digimon", 4, 5, false))
-        .add_card(digimon("OPP-ADV", "Opp Adventure", 4, 4, true))
-        .add_card(tamer("ADV-TAMER", 3, true))
-        .deck(0, &["PAD"; 8])
-        .deck(1, &["PAD"; 8])
+/// A red, cost-2 Option card with the [ADVENTURE] trait and no effect text.
+pub(crate) fn adventure_option(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Option;
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 2;
+    c.colors = vec![CardColor::Red];
+    c.traits = vec!["ADVENTURE".to_string()];
+    c
 }
 
-fn drive_accept(runner: &mut DebugRunner, player: u8) {
-    while let Some(view) = runner.pending_selection_view() {
-        let accept = view
+/// Builder with `ids` (DSL cards) + the synthetic pool.
+pub(crate) fn builder(ids: &[&str]) -> DebugRunnerBuilder {
+    let mut b = DebugRunner::builder();
+    let mut seen: Vec<&str> = Vec::new();
+    for id in ids {
+        if seen.contains(id) {
+            continue;
+        }
+        seen.push(id);
+        b = b.dsl_card(id).expect("card YAML in the embedded DSL pack");
+    }
+    // Lv.4 ADVENTURE that digivolves from a red Lv.3 for 2.
+    let mut evo = digimon("ADV-EVO", 4, 6, true);
+    evo.evo_costs = vec![EvoCost { card_color: 0, level: 3, memory_cost: 2 }];
+    b.add_card(digimon("ADV-DIGI", 4, 5, true))
+        .add_card(digimon("PLAIN-DIGI", 4, 5, false))
+        .add_card(digimon("BASE", 3, 3, false))
+        .add_card(evo)
+        .add_card(tamer("ADV-TAMER", true))
+        .add_card(adventure_option("ADV-OPT"))
+        .add_card(make_test_card("FILL", "Fill"))
+}
+
+fn start(ids: &[&str], hand: &[&str]) -> DebugRunner {
+    let mut r = builder(ids)
+        .hand(0, hand)
+        .hand(1, hand)
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    r
+}
+
+fn suspended(r: &DebugRunner, h: PermanentHandle) -> bool {
+    r.game.players[h.player as usize].battle_area[h.index as usize].is_suspended
+}
+
+fn top_id(r: &DebugRunner, h: PermanentHandle) -> String {
+    r.game.players[h.player as usize].battle_area[h.index as usize]
+        .top_card()
+        .card_id(&r.game.card_data)
+        .to_string()
+}
+
+fn hand_slot(r: &DebugRunner, player: usize, id: &str) -> usize {
+    r.game.players[player]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == id)
+        .unwrap_or_else(|| panic!("{id} in hand"))
+}
+
+fn on_field(r: &DebugRunner, player: usize, id: &str) -> bool {
+    r.game.players[player]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&r.game.card_data) == id)
+}
+
+/// Count of optional "use this reducer?" prompts accepted.
+fn accept_all(r: &mut DebugRunner) -> usize {
+    let mut n = 0;
+    while let Some(view) = r.pending_selection_view() {
+        assert!(view.is_optional, "the reduction is a 'by suspending' opt-in: {view:?}");
+        assert!(
+            build_action_mask(&r.game, view.selecting_player)[PASS as usize] > 0.5,
+            "decline must be legal in the mask: {view:?}"
+        );
+        let a = *view
             .valid_action_ids
             .iter()
-            .copied()
-            .find(|&id| id != PASS)
-            .unwrap_or(view.valid_action_ids[0]);
-        runner
-            .execute_action(player, accept)
-            .expect("execute pending selection");
+            .find(|&&a| a != PASS)
+            .expect("an accept action");
+        r.execute_action(view.selecting_player, a).expect("accept");
+        n += 1;
+    }
+    n
+}
+
+// ─── Shared cost-reduction suite ─────────────────────────────────────────────
+
+/// Accept → cost 5 - 1 = 4, the Tamer suspends, the Digimon is played.
+pub(crate) fn reduction_accept_pays_one_less_and_suspends(id: &str) {
+    let mut r = start(&[id], &["ADV-DIGI"]);
+    let t = r.place_on_field(0, id, Some(0));
+    let before = r.memory();
+    let _ = r.play(0, 0);
+    assert!(r.pending_selection().is_some(), "{id}: optional reduction prompt");
+    assert_eq!(accept_all(&mut r), 1);
+    let _ = r.auto_resolve();
+    assert_eq!(before - r.memory(), 4, "{id}: 5 - 1");
+    assert!(suspended(&r, t), "{id}: suspend cost paid");
+    assert!(on_field(&r, 0, "ADV-DIGI"));
+}
+
+/// Decline (PASS) → full cost, Tamer stays unsuspended.
+pub(crate) fn reduction_decline_pays_full(id: &str) {
+    let mut r = start(&[id], &["ADV-DIGI"]);
+    let t = r.place_on_field(0, id, Some(0));
+    let before = r.memory();
+    let _ = r.play(0, 0);
+    let view = r.pending_selection_view().expect("reduction prompt");
+    assert!(view.is_optional);
+    r.execute_action(view.selecting_player, PASS).expect("decline");
+    assert!(r.pending_selection().is_none());
+    let _ = r.auto_resolve();
+    assert_eq!(before - r.memory(), 5, "{id}: declined → full cost");
+    assert!(!suspended(&r, t));
+    assert!(on_field(&r, 0, "ADV-DIGI"));
+}
+
+/// Non-ADVENTURE Digimon and ADVENTURE Tamer → no prompt, full cost.
+pub(crate) fn reduction_only_for_adventure_digimon(id: &str) {
+    for (card, cost) in [("PLAIN-DIGI", 5), ("ADV-TAMER", 3)] {
+        let mut r = start(&[id], &[card]);
+        let t = r.place_on_field(0, id, Some(0));
+        let before = r.memory();
+        assert!(r.play(0, 0).is_some(), "{id}/{card}: plays with no prompt");
+        assert!(r.pending_selection().is_none());
+        let _ = r.auto_resolve();
+        assert_eq!(before - r.memory(), cost, "{id}/{card}: full cost");
+        assert!(!suspended(&r, t));
     }
 }
 
-fn is_suspended(runner: &DebugRunner, player: u8, index: u8) -> bool {
-    runner.game.players[player as usize].battle_area[index as usize].is_suspended
+/// An already-suspended Tamer cannot pay → not offered.
+pub(crate) fn reduction_not_offered_when_suspended(id: &str) {
+    let mut r = start(&[id], &["ADV-DIGI"]);
+    let t = r.place_on_field(0, id, Some(0));
+    r.game.players[0].battle_area[t.index as usize].is_suspended = true;
+    let before = r.memory();
+    assert!(r.play(0, 0).is_some(), "{id}: no prompt for a suspended Tamer");
+    assert!(r.pending_selection().is_none());
+    assert_eq!(before - r.memory(), 5);
 }
 
-/// Run the start-of-main-phase window from memory 0 and return the memory.
-fn start_main_memory(runner: &mut DebugRunner) -> i16 {
-    runner.game.memory = 0;
-    runner.game.enter_main_phase();
-    let _ = runner.auto_resolve();
-    runner.memory()
+/// [Your Turn]: the opponent's ADVENTURE play on its turn is not reduced by
+/// our Tamer (also owner-scoped: "your hand").
+pub(crate) fn reduction_not_on_opponents_turn(id: &str) {
+    let mut r = start(&[id], &["ADV-DIGI"]);
+    let t = r.place_on_field(0, id, Some(0));
+    r.game.memory = 0;
+    r.end_turn();
+    let _ = r.auto_resolve();
+    assert_eq!(r.turn_player(), 1);
+    let before = r.memory();
+    let slot = hand_slot(&r, 1, "ADV-DIGI");
+    assert!(r.play(1, slot).is_some(), "{id}: P1 plays without P0's prompt");
+    assert!(r.pending_selection().is_none());
+    let _ = r.auto_resolve();
+    assert_eq!((r.memory() - before).abs(), 5, "{id}: P1 pays full");
+    assert!(!suspended(&r, t));
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Section 1 — Structural
-// ═══════════════════════════════════════════════════════════════════════════════
+/// Q&A: two such Tamers each reduce → total -2, both suspended. A third,
+/// already-suspended Tamer adds nothing.
+pub(crate) fn reduction_stacks_across_tamers(a: &str, b: &str) {
+    let mut r = start(&[a, b], &["ADV-DIGI"]);
+    let ta = r.place_on_field(0, a, Some(0));
+    let tb = r.place_on_field(0, b, Some(0));
+    let tc = r.place_on_field(0, a, Some(0));
+    r.game.players[0].battle_area[tc.index as usize].is_suspended = true;
+    let before = r.memory();
+    let _ = r.play(0, 0);
+    assert_eq!(accept_all(&mut r), 2, "{a}+{b}: one prompt per payable Tamer");
+    let _ = r.auto_resolve();
+    assert_eq!(before - r.memory(), 3, "{a}+{b}: 5 - 2");
+    assert!(suspended(&r, ta) && suspended(&r, tb));
+    assert!(on_field(&r, 0, "ADV-DIGI"));
+}
 
-#[test]
-fn st20_12_identity_matches_printed_card() {
-    let card = compiled(CARD_ID);
-    assert_eq!(card.card, CARD_ID);
-    assert_eq!(card.name, "Sora Takenouchi & Kari Kamiya");
+/// Taking one reduction and declining the other → -1, only one suspended.
+pub(crate) fn reduction_each_tamer_is_its_own_choice(a: &str, b: &str) {
+    let mut r = start(&[a, b], &["ADV-DIGI"]);
+    let ta = r.place_on_field(0, a, Some(0));
+    let tb = r.place_on_field(0, b, Some(0));
+    let before = r.memory();
+    let _ = r.play(0, 0);
+    let view = r.pending_selection_view().expect("first prompt");
+    let acc = *view.valid_action_ids.iter().find(|&&x| x != PASS).unwrap();
+    r.execute_action(view.selecting_player, acc).unwrap();
+    let view = r.pending_selection_view().expect("second Tamer is offered too");
+    assert!(view.is_optional);
+    r.execute_action(view.selecting_player, PASS).unwrap();
+    let _ = r.auto_resolve();
+    assert_eq!(before - r.memory(), 4, "{a}+{b}: one accepted → 5 - 1");
+    assert_eq!(
+        [suspended(&r, ta), suspended(&r, tb)].iter().filter(|s| **s).count(),
+        1
+    );
+}
+
+/// "would be PLAYED": digivolving into an ADVENTURE Digimon from hand is not
+/// a play → no prompt, printed digivolve cost.
+pub(crate) fn reduction_not_on_digivolve(id: &str) {
+    let mut r = start(&[id], &["ADV-EVO"]);
+    let t = r.place_on_field(0, id, Some(0));
+    let base = r.place_on_field(0, "BASE", Some(0));
+    let before = r.memory();
+    let slot = hand_slot(&r, 0, "ADV-EVO");
+    let action = encode_digivolve(slot as u16, base.index as u16);
+    assert!(build_action_mask(&r.game, 0)[action as usize] > 0.5, "{id}: digivolve masked in");
+    r.game.decode_action(action, 0);
+    assert!(
+        r.pending_selection().is_none(),
+        "{id}: no reduction prompt on digivolve: {:?}",
+        r.pending_selection_view()
+    );
+    assert_eq!(top_id(&r, base), "ADV-EVO", "{id}: digivolve resolved");
+    let _ = r.auto_resolve();
+    assert_eq!(before - r.memory(), 2, "{id}: printed digivolve cost");
+    assert!(!suspended(&r, t));
+}
+
+/// "would be played FROM YOUR HAND": a cost-paying effect play of an
+/// [ADVENTURE] Digimon from the trash is not reduced (DCGO `IsExistOnHand`).
+pub(crate) fn reduction_not_on_cost_paying_trash_play(id: &str) {
+    let mut r = start(&[id], &[]);
+    let t = r.place_on_field(0, id, Some(0));
+    r.inject_trash(0, "ADV-DIGI");
+    let before = r.memory();
+    let idx = r.game.players[0]
+        .trash
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "ADV-DIGI")
+        .unwrap();
+    let _ = r.game.play_from_trash(0, idx);
+    assert!(
+        r.pending_selection().is_none(),
+        "{id}: no reduction prompt for a play from trash: {:?}",
+        r.pending_selection_view()
+    );
+    let _ = r.auto_resolve();
+    assert!(on_field(&r, 0, "ADV-DIGI"), "{id}: the trash play resolved");
+    assert_eq!(before - r.memory(), 5, "{id}: full play cost from trash");
+    assert!(!suspended(&r, t));
+}
+
+/// "Digimon cards": using an [ADVENTURE] Option card from hand (masked
+/// play-hand action) is not reduced.
+pub(crate) fn reduction_not_on_adventure_option(id: &str) {
+    let mut r = start(&[id], &["ADV-OPT"]);
+    let t = r.place_on_field(0, id, Some(0));
+    r.place_on_field(0, "BASE", Some(0)); // red Digimon → Option colour requirement
+    let before = r.memory();
+    let action = PLAY_HAND_START + hand_slot(&r, 0, "ADV-OPT") as u16;
+    assert!(build_action_mask(&r.game, 0)[action as usize] > 0.5, "{id}: Option usable");
+    r.game.decode_action(action, 0);
+    assert!(
+        r.pending_selection().is_none(),
+        "{id}: no reduction prompt for an Option: {:?}",
+        r.pending_selection_view()
+    );
+    let _ = r.auto_resolve();
+    assert_eq!(before - r.memory(), 2, "{id}: full Option cost");
+    assert!(!suspended(&r, t));
+    assert!(r.game.players[0].hand.is_empty(), "{id}: Option was used");
+}
+
+/// `[Security] Play this card without paying the cost.`
+pub(crate) fn security_plays_self_free(id: &str) {
+    let mut r = builder(&[id])
+        .security(0, &[id])
+        .deck(0, &["FILL"; 4])
+        .deck(1, &["FILL"; 4])
+        .memory(4)
+        .start();
+    let attacker = r.place_on_field(1, "PLAIN-DIGI", Some(0));
+    r.game.turn_player_idx = 1;
+    r.game.turn_count = 3;
+    r.game.current_phase = GamePhase::Main;
+    let memory = r.memory();
+    let _ = r.attack_player(attacker, 0, false);
+    r.auto_resolve().unwrap();
+    assert!(on_field(&r, 0, id), "{id}: played from security");
+    assert_eq!(r.memory(), memory, "{id}: without paying the cost");
+}
+
+/// `[Start of Your Main Phase] If you have a Digimon with the [ADVENTURE]
+/// trait, gain 1 memory.` Own ADVENTURE Digimon only (not a Tamer, not the
+/// opponent's, not a non-ADVENTURE Digimon).
+pub(crate) fn start_of_main_gains_one_with_adventure_digimon(id: &str) {
+    for (own, opp, expected) in [
+        (Some("ADV-DIGI"), None, 1),
+        (None, None, 0),
+        (Some("PLAIN-DIGI"), None, 0),
+        (Some("ADV-TAMER"), None, 0),
+        (None, Some("ADV-DIGI"), 0),
+    ] {
+        let mut r = builder(&[id]).deck(0, &["FILL"; 4]).deck(1, &["FILL"; 4]).memory(0).start();
+        r.place_on_field(0, id, Some(0));
+        if let Some(c) = own {
+            r.place_on_field(0, c, Some(0));
+        }
+        if let Some(c) = opp {
+            r.place_on_field(1, c, Some(0));
+        }
+        r.game.memory = 0;
+        r.game.enter_main_phase();
+        let _ = r.auto_resolve();
+        assert_eq!(r.memory(), expected, "{id}: own={own:?} opp={opp:?}");
+    }
+}
+
+pub(crate) fn assert_adventure_tamer_identity(id: &str, colors: [CompiledColor; 2]) {
+    let r = builder(&[id]).start();
+    let card = r.compiled_card(id).expect("compiled");
     assert_eq!(card.kind, CompiledCardKind::Tamer);
-    assert_eq!(card.cost, Some(3), "ST20-12 prints Cost 3");
-    assert!(
-        card.traits
-            .iter()
-            .any(|t| t.eq_ignore_ascii_case("ADVENTURE")),
-        "ST20-12 carries the ADVENTURE trait, got {:?}",
-        card.traits
-    );
-    assert!(card.color.contains(&CompiledColor::Red));
-    assert!(card.color.contains(&CompiledColor::Yellow));
-    assert_eq!(card.color.len(), 2, "Red/Yellow only");
-}
-
-#[test]
-fn st20_12_has_start_main_cost_reduction_and_security_clauses() {
-    let card = compiled(CARD_ID);
-    let start_main = card
-        .effects
-        .iter()
-        .filter(|c| {
-            matches!(c, CompiledClause::Triggered(t)
-                if t.when == vec![CompiledTiming::StartOfYourMainPhase])
-        })
-        .count();
-    let cost_reductions = card
-        .effects
-        .iter()
-        .filter(|c| {
-            matches!(
-                c,
-                CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { .. })
-            )
-        })
-        .count();
-    let security = card
-        .effects
-        .iter()
-        .filter(|c| {
-            matches!(c, CompiledClause::Triggered(t)
-                if t.when == vec![CompiledTiming::OnSecurity])
-        })
-        .count();
-    assert_eq!(start_main, 1, "one start_of_your_main_phase clause");
-    assert_eq!(cost_reductions, 1, "one cost_reduction clause");
-    assert_eq!(security, 1, "one on_security clause");
-    assert_eq!(card.effects.len(), 3, "no clauses beyond the printed three");
-}
-
-#[test]
-fn st20_12_start_main_clause_is_mandatory_and_not_once_per_turn() {
-    let card = compiled(CARD_ID);
-    let t = card
-        .effects
-        .iter()
-        .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when == vec![CompiledTiming::StartOfYourMainPhase] =>
-            {
-                Some(t)
-            }
-            _ => None,
-        })
-        .expect("start-of-main clause");
-    assert_eq!(t.scope, CompiledScope::FaceUp);
-    assert!(
-        !t.optional,
-        "DCGO isOptional false: the memory gain is mandatory"
-    );
-    assert!(!t.once_per_turn, "no printed [Once Per Turn]");
-    assert!(
-        t.condition.is_some(),
-        "'If you have a Digimon with [ADVENTURE]' gate"
-    );
-}
-
-#[test]
-fn st20_12_cost_reduction_is_optional_your_turn_amount_1_with_a_suspend_cost() {
-    let card = compiled(CARD_ID);
-    let (scope, active_when, optional, once_per_turn, amount, when_any, pay_cost) = card
+    assert_eq!(card.cost, Some(3));
+    for c in colors {
+        assert!(card.color.contains(&c), "{id} color {c:?}");
+    }
+    assert!(card.traits.iter().any(|t| t == "ADVENTURE"));
+    let cr = card
         .effects
         .iter()
         .find_map(|c| match c {
             CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction {
-                scope,
-                active_when,
                 optional,
                 once_per_turn,
                 amount,
-                when_any_ally_played,
-                pay_cost,
                 ..
-            }) => Some((
-                *scope,
-                active_when.clone(),
-                *optional,
-                *once_per_turn,
-                *amount,
-                when_any_ally_played.clone(),
-                pay_cost.clone(),
-            )),
+            }) => Some((*optional, *once_per_turn, *amount)),
             _ => None,
         })
         .expect("cost_reduction clause");
-    assert_eq!(scope, CompiledScope::FaceUp);
-    assert!(
-        optional,
-        "'by suspending this Tamer' is an opt-in cost (DCGO isOptional)"
-    );
-    assert!(
-        !once_per_turn,
-        "no printed [Once Per Turn]; the suspend self-limits"
-    );
-    assert_eq!(amount, Some(1));
-    assert!(
-        when_any.is_some(),
-        "ADVENTURE Digimon play predicate present"
-    );
-    assert!(active_when.is_some_and(|p| p.your_turn == Some(true)));
-    assert!(!pay_cost.is_empty(), "suspend-self pay_cost present");
+    assert_eq!(cr, (true, false, Some(1)), "{id}: optional, no OPT, -1");
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Section 2 — [Start of Your Main Phase] If you have an [ADVENTURE] Digimon, gain 1 memory
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── ST20-12 tests ───────────────────────────────────────────────────────────
 
 #[test]
-fn st20_12_start_main_gains_1_memory_with_an_adventure_digimon() {
-    let mut runner = builder().memory(0).start();
-    runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "ADV-DIGI", Some(0));
-    let cp = runner.event_checkpoint();
-
-    assert_eq!(start_main_memory(&mut runner), 1, "+1 memory");
-
-    let gained = runner.events_since(cp).iter().any(|e| {
-        matches!(
-            e,
-            GameEvent::MemoryChange {
-                player: 0,
-                delta: 1,
-                ..
-            }
-        )
-    });
-    assert!(
-        gained,
-        "the +1 memory shows up as a MemoryChange event in the log"
-    );
-}
-
-#[test]
-fn st20_12_start_main_no_gain_without_any_digimon() {
-    let mut runner = builder().memory(0).start();
-    runner.place_on_field(0, CARD_ID, Some(0));
-    assert_eq!(start_main_memory(&mut runner), 0, "no Digimon: no gain");
-}
-
-#[test]
-fn st20_12_start_main_no_gain_with_only_a_non_adventure_digimon() {
-    let mut runner = builder().memory(0).start();
-    runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "PLAIN-DIGI", Some(0));
-    assert_eq!(
-        start_main_memory(&mut runner),
-        0,
-        "non-ADVENTURE Digimon: no gain"
-    );
-}
-
-#[test]
-fn st20_12_start_main_no_gain_with_only_an_adventure_tamer() {
-    // The printed gate is "a Digimon with the [ADVENTURE] trait": a Tamer
-    // (ST20-12 itself, or another ADVENTURE Tamer) does not satisfy it.
-    let mut runner = builder().memory(0).start();
-    runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "ADV-TAMER", Some(0));
-    assert_eq!(start_main_memory(&mut runner), 0, "Tamers are not Digimon");
-}
-
-#[test]
-fn st20_12_start_main_no_gain_when_only_the_opponent_has_an_adventure_digimon() {
-    let mut runner = builder().memory(0).start();
-    runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(1, "OPP-ADV", Some(0));
-    assert_eq!(
-        start_main_memory(&mut runner),
-        0,
-        "'you have' - own Digimon only"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Section 3 — [Your Turn] by suspending this Tamer, reduce the play cost by 1
-// ═══════════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn st20_12_cost_reduction_fires_on_adventure_digimon_play() {
-    let mut runner = builder().hand(0, &["ADV-DIGI"]).memory(10).start();
-    runner.skip_mulligan();
-    let tamer = runner.place_on_field(0, CARD_ID, Some(0));
-    assert!(
-        !is_suspended(&runner, 0, tamer.index),
-        "Tamer starts unsuspended"
-    );
-
-    let mem_before = runner.memory();
-    let _ = runner.play(0, 0);
-    assert!(
-        runner.game.pending_selection.is_some(),
-        "an optional cost-reduction prompt must install"
-    );
-    drive_accept(&mut runner, 0);
-    let _ = runner.auto_resolve();
-
-    assert_eq!(mem_before - runner.memory(), 4, "5 - 1 = 4");
-    assert!(
-        is_suspended(&runner, 0, tamer.index),
-        "the 'by suspending this Tamer' cost was paid"
-    );
-    assert!(
-        runner.game.players[0]
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == "ADV-DIGI"),
-        "the Digimon was played"
-    );
-}
-
-#[test]
-fn st20_12_cost_reduction_event_log_records_reduced_cost() {
-    let mut runner = builder().hand(0, &["ADV-DIGI"]).memory(10).start();
-    runner.skip_mulligan();
-    runner.place_on_field(0, CARD_ID, Some(0));
-
-    let cp = runner.event_checkpoint();
-    let _ = runner.play(0, 0);
-    drive_accept(&mut runner, 0);
-    let _ = runner.auto_resolve();
-
-    let play = runner
-        .events_since(cp)
+fn st20_12_identity_and_clauses() {
+    assert_adventure_tamer_identity(CARD_ID, [CompiledColor::Red, CompiledColor::Yellow]);
+    let r = builder(&[CARD_ID]).start();
+    let card = r.compiled_card(CARD_ID).unwrap();
+    let timings: Vec<_> = card
+        .effects
         .iter()
-        .find_map(|e| match e {
-            GameEvent::Play {
-                card_id,
-                cost_paid,
-                cost_printed,
-                ..
-            } if card_id == "ADV-DIGI" => Some((*cost_paid, *cost_printed)),
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t.when.clone()),
             _ => None,
         })
-        .expect("a Play event for ADV-DIGI");
-    assert_eq!(play, (4, 5), "Play event: paid 4 of printed 5");
-}
-
-#[test]
-fn st20_12_cost_reduction_does_not_fire_on_non_adventure_digimon() {
-    let mut runner = builder().hand(0, &["PLAIN-DIGI"]).memory(10).start();
-    runner.skip_mulligan();
-    let tamer = runner.place_on_field(0, CARD_ID, Some(0));
-
-    let mem_before = runner.memory();
-    let played = runner.play(0, 0);
-    assert!(
-        played.is_some(),
-        "plain Digimon plays with no reduction prompt"
-    );
-    drive_accept(&mut runner, 0);
-    let _ = runner.auto_resolve();
-
-    assert_eq!(mem_before - runner.memory(), 5, "full printed cost");
-    assert!(
-        !is_suspended(&runner, 0, tamer.index),
-        "Tamer not suspended"
+        .collect();
+    assert_eq!(
+        timings,
+        vec![
+            vec![CompiledTiming::StartOfYourMainPhase],
+            vec![CompiledTiming::OnSecurity]
+        ]
     );
 }
 
 #[test]
-fn st20_12_cost_reduction_does_not_fire_on_adventure_tamer_card() {
-    let mut runner = builder().hand(0, &["ADV-TAMER"]).memory(10).start();
-    runner.skip_mulligan();
-    let tamer = runner.place_on_field(0, CARD_ID, Some(0));
-
-    let mem_before = runner.memory();
-    let played = runner.play(0, 0);
-    assert!(played.is_some(), "Tamer plays with no reduction prompt");
-    drive_accept(&mut runner, 0);
-    let _ = runner.auto_resolve();
-
-    assert_eq!(mem_before - runner.memory(), 3, "full printed cost 3");
-    assert!(!is_suspended(&runner, 0, tamer.index));
+fn st20_12_start_of_main_gains_one_with_adventure_digimon() {
+    start_of_main_gains_one_with_adventure_digimon(CARD_ID);
 }
 
 #[test]
-fn st20_12_cost_reduction_does_not_fire_on_opponents_turn() {
-    let mut runner = builder().hand(1, &["ADV-DIGI"]).memory(0).start();
-    runner.skip_mulligan();
-    let tamer = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.end_turn();
-    assert_eq!(runner.turn_player(), 1, "precondition: player 1's turn");
-
-    let mem_before = runner.memory();
-    let played = runner.play(1, 0);
-    assert!(played.is_some(), "player 1's play has no reduction prompt");
-    drive_accept(&mut runner, 1);
-    let _ = runner.auto_resolve();
-
-    assert_eq!((runner.memory() - mem_before).abs(), 5, "full cost 5");
-    assert!(!is_suspended(&runner, 0, tamer.index));
+fn st20_12_reduction_accept_pays_one_less_and_suspends() {
+    reduction_accept_pays_one_less_and_suspends(CARD_ID);
 }
 
 #[test]
-fn st20_12_cost_reduction_unavailable_while_tamer_is_suspended() {
-    let mut runner = builder().hand(0, &["ADV-DIGI"]).memory(10).start();
-    runner.skip_mulligan();
-    let tamer = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.game.players[0].battle_area[tamer.index as usize].is_suspended = true;
-
-    let mem_before = runner.memory();
-    let played = runner.play(0, 0);
-    assert!(
-        played.is_some(),
-        "no reduction prompt when the cost is unpayable"
-    );
-    drive_accept(&mut runner, 0);
-    let _ = runner.auto_resolve();
-
-    assert_eq!(mem_before - runner.memory(), 5, "full cost 5");
+fn st20_12_reduction_decline_pays_full() {
+    reduction_decline_pays_full(CARD_ID);
 }
 
 #[test]
-fn st20_12_cost_reduction_can_be_declined() {
-    let mut runner = builder().hand(0, &["ADV-DIGI"]).memory(10).start();
-    runner.skip_mulligan();
-    let tamer = runner.place_on_field(0, CARD_ID, Some(0));
-
-    let mem_before = runner.memory();
-    let _ = runner.play(0, 0);
-    assert!(runner.game.pending_selection.is_some(), "prompt installs");
-    while let Some(view) = runner.pending_selection_view() {
-        let action = if view.is_optional {
-            PASS
-        } else {
-            view.valid_action_ids[0]
-        };
-        runner.execute_action(0, action).expect("decline");
-    }
-    let _ = runner.auto_resolve();
-
-    assert_eq!(mem_before - runner.memory(), 5, "declined: full cost");
-    assert!(!is_suspended(&runner, 0, tamer.index));
+fn st20_12_reduction_only_for_adventure_digimon() {
+    reduction_only_for_adventure_digimon(CARD_ID);
 }
 
-/// Official Q&A: with ST20-12 and ST20-13 both on the field, accepting both
-/// reductions lowers a single play by a total of 2 (5 -> 3), suspending both.
 #[test]
-fn st20_12_and_st20_13_reductions_stack_for_a_total_of_2() {
-    let mut runner = builder()
-        .dsl_card("ST20-13")
-        .expect("ST20-13 in embedded DSL pack")
-        .hand(0, &["ADV-DIGI"])
-        .memory(10)
-        .start();
-    runner.skip_mulligan();
-    let sora = runner.place_on_field(0, CARD_ID, Some(0));
-    let tai = runner.place_on_field(0, "ST20-13", Some(0));
-
-    let mem_before = runner.memory();
-    let _ = runner.play(0, 0);
-    drive_accept(&mut runner, 0);
-    let _ = runner.auto_resolve();
-
-    assert_eq!(mem_before - runner.memory(), 3, "5 - 1 - 1 = 3");
-    assert!(is_suspended(&runner, 0, sora.index), "ST20-12 suspended");
-    assert!(is_suspended(&runner, 0, tai.index), "ST20-13 suspended");
+fn st20_12_reduction_not_offered_when_suspended() {
+    reduction_not_offered_when_suspended(CARD_ID);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Section 4 — [Security] Play this card without paying the cost
-// ═══════════════════════════════════════════════════════════════════════════════
+#[test]
+fn st20_12_reduction_not_on_opponents_turn() {
+    reduction_not_on_opponents_turn(CARD_ID);
+}
+
+#[test]
+fn st20_12_reduction_stacks_with_second_copy_qa() {
+    reduction_stacks_across_tamers(CARD_ID, CARD_ID);
+}
+
+#[test]
+fn st20_12_reduction_each_tamer_is_its_own_choice() {
+    reduction_each_tamer_is_its_own_choice(CARD_ID, CARD_ID);
+}
+
+#[test]
+fn st20_12_reduction_not_on_digivolve() {
+    reduction_not_on_digivolve(CARD_ID);
+}
 
 #[test]
 fn st20_12_security_plays_self_free() {
-    let mut attacker = filler("SEC-ATK");
-    attacker.level = Some(4);
-    attacker.dp = Some(6000);
+    security_plays_self_free(CARD_ID);
+}
 
-    let mut runner = builder()
-        .add_card(attacker)
-        .security(1, &[CARD_ID])
-        .memory(10)
-        .start();
-    runner.skip_mulligan();
-    let atk = runner.place_on_field(0, "SEC-ATK", Some(0));
-    assert_eq!(
-        runner.security_count(1),
-        1,
-        "precondition: Tamer in security"
-    );
-    let mem_before = runner.memory();
+#[test]
+fn st20_12_reduction_not_on_cost_paying_trash_play() {
+    reduction_not_on_cost_paying_trash_play(CARD_ID);
+}
 
-    let _ = runner.attack_player(atk, 1, false);
-    runner.auto_resolve().expect("security selections resolve");
-
-    assert_eq!(runner.security_count(1), 0, "Tamer left the security stack");
-    assert!(
-        runner.game.players[1]
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
-        "ST20-12 is played onto the defender's field"
-    );
-    assert_eq!(
-        runner.memory(),
-        mem_before,
-        "played without paying the cost"
-    );
+#[test]
+fn st20_12_reduction_not_on_adventure_option() {
+    reduction_not_on_adventure_option(CARD_ID);
 }

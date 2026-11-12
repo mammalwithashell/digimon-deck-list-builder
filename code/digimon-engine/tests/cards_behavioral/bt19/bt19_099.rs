@@ -169,7 +169,8 @@ fn seat_as_delay_option(
         owner: handle.player,
         trash_on_turn: turn + 2,
         trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
-        placed_on_turn: turn,
+        // CR 16-17-3: placed on an earlier turn, so the <Delay> is usable now.
+        placed_on_turn: turn.saturating_sub(1),
     };
 }
 
@@ -1303,3 +1304,52 @@ fn bt19_099_security_places_self_in_battle_area_on_attack() {
 
 #[path = "../../support/owned_union_fixture.rs"]
 mod owned_union_fixture;
+
+/// CR 16-17-3: <Delay> can't be activated the turn its card was placed in the
+/// battle area (DCGO `CanDeclareOptionDelayEffect`: EnterFieldTurnCount !=
+/// TurnCount). Deck audit 2026-11-10: this would-leave Delay used to fire.
+#[test]
+fn bt19_099_replacement_not_offered_the_turn_it_was_placed() {
+    use digimon_engine::permanent::OptionState;
+    let mm = make_millenniummon_named("BT19099-MM-SAME", 10);
+    let wicked_god = make_wicked_god_digimon("BT19099-WG-SAME", "Armageddemon", 11);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT19_099_YAML)
+        .expect("BT19-099 YAML parses")
+        .add_card(mm.clone())
+        .add_card(wicked_god.clone())
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .hand(0, &["BT19099-WG-SAME"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    let bt19_099 = runner.place_on_field(0, "BT19-099", Some(0));
+    let turn = runner.game.turn_count;
+    runner.game.players[0].battle_area[bt19_099.index as usize].option_state =
+        OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: turn + 2,
+            trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn: turn,
+        };
+    let own_handle = runner.place_on_field(0, "BT19099-MM-SAME", None);
+
+    runner
+        .game
+        .delete_permanent_with_cause(own_handle, ReplacementCause::OwnEffect);
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "a <Delay> placed this turn offers no replacement"
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT19-099"),
+        "the Option stays in the battle area"
+    );
+}

@@ -403,6 +403,41 @@ fn ex13_060_end_of_turn_decline_plays_nothing() {
     assert!(!field_ids(&runner, 0).contains(&"CHR-D7".to_string()));
 }
 
+/// CR 1-3-11-1: a card whose reduced cost can't be paid (memory would go below
+/// -10) is not offered; DCGO `CanPlayAsNewPermanent(fixedCost: cost - 6)`.
+/// At -9 memory CHR-D7 (8 - 6 = 2) would land at -11; CHR-L3 (3 - 6 = 0) is
+/// still payable.
+#[test]
+fn ex13_060_end_of_turn_offers_only_cards_payable_after_the_reduction() {
+    let mut runner = builder()
+        .hand(0, &["CHR-D7", "CHR-L3"])
+        .deck(0, &["FILL"; 4])
+        .deck(1, &["FILL"; 4])
+        .memory(-9)
+        .start();
+    runner.skip_mulligan();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner.end_turn();
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    assert!(hand_action(&runner, "CHR-D7").is_none(), "2 more memory would pass -10");
+    assert!(hand_action(&runner, "CHR-L3").is_some(), "a 0-cost play stays payable");
+}
+
+/// With the only Chronicle card unpayable after the reduction, nothing is offered.
+#[test]
+fn ex13_060_end_of_turn_with_only_unpayable_cards_prompts_nothing() {
+    let mut runner = builder()
+        .hand(0, &["CHR-D7"])
+        .deck(0, &["FILL"; 4])
+        .deck(1, &["FILL"; 4])
+        .memory(-9)
+        .start();
+    runner.skip_mulligan();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner.end_turn();
+    assert_ne!(runner.pending_kind(), Some(SelectionKind::Hand));
+}
+
 #[test]
 fn ex13_060_end_of_turn_with_no_eligible_hand_card_prompts_nothing() {
     let runner = end_turn_with(&["ALLY"]);

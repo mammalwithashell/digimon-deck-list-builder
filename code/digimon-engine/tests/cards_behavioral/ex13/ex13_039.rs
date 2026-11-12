@@ -98,6 +98,18 @@ fn builder() -> DebugRunnerBuilder {
         })
         .add_card(examon_evo("EXAMON-EVO", "[Examon] DNA material."))
         .add_card(examon_evo("PLAIN-EVO", ""))
+        .add_card({
+            // [Examon] in its text but Lv.6 from Lv.5: Coredramon (Lv.4)
+            // cannot digivolve into it.
+            let mut c = examon_evo("EXAMON-LV6", "[Examon] DNA material.");
+            c.level = Some(6);
+            c.evo_costs = vec![EvoCost {
+                card_color: 0,
+                level: 5,
+                memory_cost: 4,
+            }];
+            c
+        })
         .add_card(card("CARRIER-L5", "Carrier Five", 5, ""))
         .add_card(card("FILL", "Fill", 3, ""))
 }
@@ -506,4 +518,35 @@ fn ex13_039_inherited_gives_plus_2000_dp_on_your_turn_only() {
     runner.end_turn();
     let _ = runner.auto_resolve();
     assert_eq!(runner.effective_dp(carrier), Some(2000), "no bonus on the opponent's turn");
+}
+
+// ─── Reactive digivolve offers only legal digivolutions ─────────────────────
+//
+// DCGO `EX13_039.cs` `DigivolveCardCondition` requires
+// `CanPlayCardTargetFrame(this permanent's frame)`, and `CanActivateCondition`
+// needs such a card in hand, so a card this Coredramon can't digivolve into
+// is never offered (audit 2026-11-10, user-confirmed).
+
+#[test]
+fn ex13_039_observer_does_not_offer_an_examon_card_it_cannot_digivolve_into() {
+    let (mut runner, _core) = observer_setup(&["DRACO-L3", "EXAMON-EVO", "EXAMON-LV6"]);
+    let slot = hand_index(&runner, 0, "DRACO-L3");
+    runner.play(0, slot).expect("ally plays");
+    assert!(
+        !hand_pick_offered(&mut runner, "EXAMON-LV6"),
+        "a Lv.6 card can't digivolve onto Lv.4 Coredramon"
+    );
+}
+
+#[test]
+fn ex13_039_observer_with_only_illegal_examon_cards_opens_no_prompt() {
+    let (mut runner, core) = observer_setup(&["DRACO-L3", "EXAMON-LV6"]);
+    let slot = hand_index(&runner, 0, "DRACO-L3");
+    runner.play(0, slot).expect("ally plays");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no legal digivolution in hand: nothing to offer"
+    );
+    let _ = runner.auto_resolve();
+    assert_eq!(top_id(&runner, core), CARD_ID);
 }

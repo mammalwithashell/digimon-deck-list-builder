@@ -255,3 +255,85 @@ fn ex12_035_decode_does_not_trigger_on_a_battle_leave() {
         "16-36-1: a battle leave Decodes nothing — the source goes to trash          with the stack"
     );
 }
+
+/// "Trash any 4 digivolution cards from your opponent's Digimon. Then, return
+/// 1 ..." with fewer than 4 opponent sources: DCGO
+/// (`EX12_035.cs` `SelectTrashDigivolutionCards(maxCount: 4)`, which clamps to
+/// the available count) trashes what exists and always runs the bottom-deck.
+/// Audit 2026-11-10 (user-confirmed): `min: 4` with no clamp skipped both.
+fn opp_trash_ids(runner: &DebugRunner) -> Vec<String> {
+    runner.game.players[1]
+        .trash
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect()
+}
+
+fn resolve_all_picks(runner: &mut DebugRunner) {
+    for _ in 0..8 {
+        if runner.pending_selection_view().is_none() {
+            break;
+        }
+        select_first_non_pass(runner);
+    }
+    runner.auto_resolve().expect("resolve EX12-035 on-play");
+}
+
+#[test]
+fn ex12_035_on_play_with_fewer_than_4_opponent_sources_trashes_them_and_still_bottom_decks() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-035 YAML loads")
+        .add_card(plain_digimon("OWN-MAT1", CardColor::Blue, 3, 2000))
+        .add_card(plain_digimon("OWN-MAT2", CardColor::Blue, 4, 4000))
+        .add_card(plain_digimon("OPP-A1", CardColor::Blue, 3, 2000))
+        .add_card(plain_digimon("OPP-A2", CardColor::Blue, 4, 4000))
+        .add_card(plain_digimon("OPP-HIGH", CardColor::Blue, 5, 7000))
+        .start();
+
+    let metalgarurumon = runner.place_stack(0, &["OWN-MAT1", "OWN-MAT2", CARD_ID]);
+    runner.place_stack(1, &["OPP-A1", "OPP-A2", "OPP-HIGH"]);
+
+    runner.fire_on_play(0, metalgarurumon.index as usize);
+    resolve_all_picks(&mut runner);
+
+    let trash = opp_trash_ids(&runner);
+    assert!(
+        trash.contains(&"OPP-A1".to_string()) && trash.contains(&"OPP-A2".to_string()),
+        "both available sources are trashed; trash = {trash:?}"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "the now source-less Digimon is bottom-decked"
+    );
+}
+
+#[test]
+fn ex12_035_on_play_with_no_opponent_sources_still_bottom_decks() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-035 YAML loads")
+        .add_card(plain_digimon("OWN-MAT1", CardColor::Blue, 3, 2000))
+        .add_card(plain_digimon("OPP-LOW", CardColor::Blue, 4, 4000))
+        .start();
+
+    let metalgarurumon = runner.place_stack(0, &["OWN-MAT1", CARD_ID]);
+    runner.place_stack(1, &["OPP-LOW"]);
+
+    runner.fire_on_play(0, metalgarurumon.index as usize);
+    resolve_all_picks(&mut runner);
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "no sources to trash; the bottom-deck still happens"
+    );
+    assert_eq!(
+        runner.game.players[1]
+            .deck
+            .last()
+            .map(|c| c.card_id(&runner.game.card_data).to_string()),
+        Some("OPP-LOW".to_string())
+    );
+}

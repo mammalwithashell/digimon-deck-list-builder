@@ -483,6 +483,10 @@ fan-out launcher, distributed orchestrator). **Provision/verify every pod by
 `cpu.max`, not `nproc`, and harvest artifacts before terminate (no reliable
 persistent volume).**
 
+The 2026-11 **search-model** specialist league (PIMC search self-play, not
+PPO) ran on one Hetzner box with gates offloaded to DigitalOcean helpers. Its
+structure, commands and costs are in `docs/runbooks/specialist-league.md`.
+
 ---
 
 # Path B: CPU runs on Hetzner CCX (MLP vs greedy, env-bound jobs only)
@@ -492,6 +496,19 @@ the same vCPU shape. Skip this whole section if you're running LSTM or
 pool-opponent jobs.
 
 ## B.1 Prerequisites (one-time)
+
+**Provider API tokens are Windows User environment variables** on the dev
+laptop (never commit or print them):
+
+| Variable | Provider | Use |
+|---|---|---|
+| `HCLOUD_TOKEN` | Hetzner Cloud (project API token, Read&Write) | `curl -H "Authorization: Bearer $HCLOUD_TOKEN" https://api.hetzner.cloud/v1/...`; `hcloud` CLI reads it automatically |
+| `DO_TOKEN` | DigitalOcean (personal access token) | `curl -H "Authorization: Bearer $DO_TOKEN" https://api.digitalocean.com/v2/...`; `doctl --access-token "$DO_TOKEN"` |
+
+A User variable added after the Claude app launched is **not** in the session's
+process env: read it with PowerShell
+`[Environment]::GetEnvironmentVariable('DO_TOKEN','User')` until the app restarts.
+SSH to provisioned boxes uses `~/.ssh/digimon_deploy`.
 
 ```bash
 # Install Tailscale on your laptop and phone.
@@ -556,9 +573,14 @@ hcloud firewall add-rule digimon-train \
 ### DigitalOcean (fallback)
 
 ```bash
-# NOTE: a low-tier / unverified DO account is capped at 4 vCPU per droplet —
-# `doctl compute size list` simply won't offer c-8/g-8 etc. Check first; if
-# 8-vCPU sizes are absent, that's the cap (a support-ticket limit, not billing).
+# NOTE: DO gates droplet sizes per account. As of 2026-11-09 this account
+# (droplet_limit 15) is offered NO CPU-optimized / general-purpose sizes
+# (no c-*, c2-*, g-*): the largest non-GPU size is 8 *shared* vCPU
+# (s-8vcpu-16gb ~$0.143/h, s-8vcpu-32gb-amd $0.25/h). Shared vCPUs are
+# oversubscribed and throttle under sustained 100% load, so for CPU-bound
+# search/self-play prefer Hetzner CCX (dedicated, ~$0.033/core/h). Unlocking
+# dedicated DO sizes is a support-ticket limit, not billing.
+# Check: GET /v2/sizes (or `doctl compute size list`).
 doctl compute droplet create digimon-train \
   --region nyc3 --image ubuntu-24-04-x64 --size g-4vcpu-16gb \
   --ssh-keys "$(doctl compute ssh-key list --format ID --no-header | head -1)" \

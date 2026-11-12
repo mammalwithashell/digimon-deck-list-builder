@@ -1,0 +1,119 @@
+# BT13-033 MirageGaogamon: Burst Mode — Digimon, Lv.7, Blue, DP 15000,
+# Cost 15, Beast Knight / Mega / Data.
+#
+# Printed (official Bandai DB, data/card_bundles/BT13-033.md; card image
+# confirmed):
+#   Digivolve: Blue Lv.6 / cost 5.
+#   [Burst Digivolve] 0 from [MirageGaogamon] by returning 1 [Thomas H.
+#   Norstein] to hand. At the end of the burst digivolution turn, trash this
+#   Digimon's top card.
+#   [When Digivolving] Return 1 of your opponent's Digimon to the hand. Then,
+#   gain 1 memory for every 4 cards in your opponent's hand.
+#   [When Attacking] If your opponent has 9 or more cards in their hand, by
+#   choosing cards in your opponent's hand without looking and returning them
+#   to the bottom of the deck so that 8 remain, unsuspend this Digimon.
+#   Official Q&A: only your own Tamer can be returned for Burst Digivolve.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT13/Blue/BT13_033.cs
+#   - Burst: TamerCondition = own battle-area [Thomas H. Norstein] that can be
+#     returned to hand; DigimonCondition = own [MirageGaogamon] (name only).
+#   - OnEnterFieldAnyone (When Digivolving), mandatory: SelectPermanentEffect
+#     Bounce over opponent Digimon, maxCount min(1, n), canNoSelect false; then
+#     AddMemory(Enemy.HandCards.Count / 4) — counted AFTER the bounce.
+#   - OnAllyAttack, OPTIONAL (SetUpActivateClass 4th arg true); activates only
+#     with Enemy.HandCards.Count >= 9. Shuffles the enemy hand, then the owner
+#     picks exactly (hand - 8) cards face-down (SetUseFaceDown,
+#     canLookReverseCard false, canEndNotMax false) -> AddLibraryBottomCards;
+#     unsuspends this Digimon only if >= 1 card was returned.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+# | Blue Lv.6 / cost 5 circle                                  | IMPLEMENTED |
+# | [Burst Digivolve] from [MirageGaogamon] / return Thomas      | IMPLEMENTED |
+# | Burst turn-end trash of the top card                         | IMPLEMENTED |
+# | [When Digivolving] bounce 1 opponent Digimon (mandatory)     | IMPLEMENTED |
+# | [When Digivolving] then +1 memory per 4 opponent hand cards  | IMPLEMENTED |
+# | [When Attacking] >=9 gate, blind pick to 8, deck bottom      | IMPLEMENTED |
+# |   (shuffle_hand + select_count_capped_multi clamp + return_hand_list_to_deck;
+# |    G-DSL-BLIND-OPP-HAND-PLACE hand->deck half)                            |
+# | [When Attacking] unsuspend this Digimon if any returned      | IMPLEMENTED |
+
+card: BT13-033
+name: "MirageGaogamon: Burst Mode"
+kind: digimon
+level: 7
+color: [blue]
+cost: 15
+dp: 15000
+traits: ["Beast Knight"]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 5
+  - kind: burst_digivolve
+    from: { name_is: "MirageGaogamon" }
+    cost: 0
+    extra_cost:
+      - select_own_permanent:
+          bind_as: thomas
+          filter: { kind: tamer, name_is: "Thomas H. Norstein" }
+          prompt: "Return Thomas H. Norstein to hand"
+      - return_to_hand: { target: thomas }
+    on_burst_turn_end:
+      - trash_top_source: { target: carrier }
+
+effects:
+  # ─── [When Digivolving] bounce 1, then memory per 4 opponent hand cards ────
+  - when: when_digivolving
+    summary: "[When Digivolving] Return 1 of your opponent's Digimon to the hand. Then, gain 1 memory for every 4 cards in your opponent's hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: bounced
+          filter: { kind: digimon }
+          prompt: "Return 1 of your opponent's Digimon to the hand"
+      - return_to_hand: { target: bounced }
+      - gain_memory_fn:
+          formula:
+            floor_div:
+              - base: 0
+                per:
+                  card_count_in_zone: { of: opponent, zone: hand }
+                delta: 1
+              - 4
+
+  # ─── [When Attacking] blind-return opponent hand down to 8 → unsuspend ─────
+  - when: when_attacking
+    optional: true
+    outer_prompt: true
+    condition:
+      count_gte:
+        filter: { of: opponent, zone: [hand] }
+        n: 9
+    summary: "[When Attacking] If your opponent has 9 or more cards in their hand, by choosing cards in their hand without looking and returning them to the bottom of the deck so that 8 remain, unsuspend this Digimon"
+    process:
+      # "Without looking": hand positions carry no information after a shuffle
+      # (DCGO shuffles before its face-down pick); the opponent's hand is never
+      # encoded in the chooser's observation.
+      - shuffle_hand: { of: opponent }
+      - select_count_capped_multi:
+          of: opponent
+          zone: hand
+          max:
+            formula:
+              base: -8
+              per:
+                card_count_in_zone: { of: opponent, zone: hand }
+              delta: 1
+          clamp_to_available: true
+          filter: {}
+          bind_as: returned_cards
+          prompt: "Choose cards in your opponent's hand without looking to return to the bottom of their deck so that 8 remain"
+      - return_hand_list_to_deck:
+          of: opponent
+          cards: returned_cards
+      - if:
+          condition: { effect_returned_any_card: true }
+          then:
+            - unsuspend: { target: source }

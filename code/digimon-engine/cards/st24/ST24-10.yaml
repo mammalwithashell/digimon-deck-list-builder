@@ -83,42 +83,40 @@ effects:
           expiry: end_of_opponents_turn
       # "Then, by trashing 2 bottom face-down cards from under any of your Tamers,
       # this Digimon may digivolve into a [DATA SQUAD] trait Digimon card in the
-      # hand without paying the cost." Gated on BOTH >=2 face-down sources AND a
-      # [DATA SQUAD] card in hand, so the trash-2 cost is never paid for nothing.
+      # hand without paying the cost." DCGO ST24_10.cs pays the optional trash-2
+      # first (the Tamers' trash triggers fire either way), then offers only
+      # cards that can digivolve onto this Digimon; paying without digivolving
+      # is legal (user ruling 2026-11-10). Rose Rave audit 2026-11-11: the old
+      # gate needed a [DATA SQUAD] card in hand to pay and offered illegal
+      # targets (23 of 33 recorded picks digivolved nothing).
       - if:
-          condition:
-            all_of:
-              - face_down_sources_under_tamers_gte: 2
-              - count_gte:
-                  filter:
-                    of: you
-                    zone: [hand]
-                    all_of:
-                      - kind: digimon
-                      - trait_has: "DATA SQUAD"
-                  n: 1
+          condition: { face_down_sources_under_tamers_gte: 2 }
           then:
-            # "may digivolve …" — optional select_hand carries the decline.
-            - select_hand:
-                of: you
-                bind_as: ds_evo
-                optional: true
-                filter:
-                  all_of:
-                    - kind: digimon
-                    - trait_has: "DATA SQUAD"
-                prompt: "Digivolve this Digimon into a [DATA SQUAD] trait Digimon card in your hand for free"
+            - select_effect_choice:
+                bind_as: pay_trash
+                labels: ["Trash 2 face-down cards", "Don't"]
+                prompt: "Trash 2 bottom face-down cards from under your Tamers to digivolve this Digimon for free?"
             - if:
-                condition: { binding_present: ds_evo }
+                condition: { equals: [pay_trash, 0] }
                 then:
-                  # "by trashing 2 bottom face-down cards from under any of your
-                  # Tamers" — the activation cost (multi-Tamer pick surfaced).
                   - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
-                  # "this Digimon may digivolve … without paying the cost."
-                  - effect_initiated_digivolve:
-                      target: source
-                      from_hand: ds_evo
-                      cost: free
+                  - select_hand:
+                      of: you
+                      bind_as: ds_evo
+                      optional: true
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - trait_has: "DATA SQUAD"
+                          - can_digivolve_onto: source
+                      prompt: "Digivolve this Digimon into a [DATA SQUAD] trait Digimon card in your hand for free"
+                  - if:
+                      condition: { binding_present: ds_evo }
+                      then:
+                        - effect_initiated_digivolve:
+                            target: source
+                            from_hand: ds_evo
+                            cost: free
 
   # ─── Inherited [All Turns][OPT] Rosemon-name/DATA SQUAD carrier would leave →
   #     trash 1 bottom FD under a Tamer → it doesn't leave ──────────────────────
@@ -127,11 +125,15 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
+    # "When THIS Digimon ... would leave": the carrier only (DCGO ST24_10.cs
+    # checks card.PermanentOfThisCard()). `replacement_subject_is_mine` made it
+    # cover any of your permanents. Rose Rave audit 2026-11-11.
     active_when:
       # Self-only: DCGO CanTriggerWhenRemoveField(hashtable, card) is
       # `permanent.cardSources.Contains(card)`. `replacement_subject_is_mine` would
       # make this a cross-permanent trigger (any of my permanents leaving).
       all_of:
+        - is_source: true
         - any_of:
             - source_name_contains: "Rosemon"
             - source_permanent_trait_has: "DATA SQUAD"

@@ -450,3 +450,34 @@ fn ex12_065_retaliation_is_not_offered_as_a_branch_on_an_effect_deletion() {
         }
     }
 }
+
+/// Printed "1 play cost 5 or lower [Puppet] or [Shambala] trait card": a Tamer
+/// qualifies (DCGO EX12_065.cs CanPlayCardCondition checks HasPlayCost, not
+/// the card kind).
+#[test]
+fn ex12_065_on_play_can_play_a_shambala_tamer_from_trash() {
+    use digimon_engine::debug_runner::make_test_card;
+    use digimon_engine::enums::CardKind;
+    let mut tamer = make_test_card("SHAMBALA-TAMER", "Shambala Tamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    tamer.play_cost = 4;
+    tamer.colors = vec![CardColor::Yellow];
+    tamer.traits = vec!["Shambala".to_string()];
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-065 YAML loads")
+        .add_card(tamer)
+        .hand(0, &[CARD_ID])
+        .memory(12)
+        .start();
+    push_to_trash(&mut runner, 0, "SHAMBALA-TAMER");
+
+    let play_slot = hand_index(&runner, 0, CARD_ID);
+    runner.play(0, play_slot).expect("play EX12-065");
+    select_first_non_pass(&mut runner);
+    runner.auto_resolve().expect("resolve trash play");
+
+    assert!(field_contains(&runner, 0, "SHAMBALA-TAMER"));
+}

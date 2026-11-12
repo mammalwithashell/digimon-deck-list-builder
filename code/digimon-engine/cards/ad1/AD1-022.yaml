@@ -1,54 +1,40 @@
-# AD1-022 Izzy Izumi & Tai Kamiya — Tamer, Green/Red, Cost 3.
+# AD1-022 Izzy Izumi & Tai Kamiya — Tamer, Green+Red, Cost 3.
 # Traits: ADVENTURE / Hero.
 #
-# Printed text (card image + official Bandai DB bundle data/card_bundles/AD1-022.md):
+# Printed card text (official bundle data/card_bundles/AD1-022.md):
 #
 #   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
 #   [Your Turn] When any of your other [ADVENTURE] trait Digimon or Tamers are
-#     played, by suspending this Tamer, 1 of your Digimon may digivolve into an
-#     [ADVENTURE] trait Digimon card in the hand. For every 2 of your Tamers'
-#     colors, reduce this effect's digivolution cost by 1.
+#   played, by suspending this Tamer, 1 of your Digimon may digivolve into an
+#   [ADVENTURE] trait Digimon card in the hand. For every 2 of your Tamers'
+#   colors, reduce this effect's digivolution cost by 1.
+#
 #   Security Effect: [Security] Play this card without paying the cost.
 #
-# DCGO: DCGO/Assets/Scripts/CardEffect/AD1/Green/AD1_022.cs
-#   - EffectTiming.OnStartMainPhase → Gain1MemoryTamerOpponentDigimonEffect.
-#   - EffectTiming.OnEnterFieldAnyone (maxCount -1, isOptional TRUE):
-#     CanUseCondition = on the battle area, IsOwnerTurn, CanTriggerOnPermanentPlay
-#     for a permanent that is NOT this Tamer, on the owner's battle area, a
-#     Digimon or Tamer whose TopCard has the ADVENTURE trait. CanActivate =
-#     CanActivateSuspendCostEffect. Body: suspend this Tamer (the cost); then,
-#     if the owner has a Digimon and an [ADVENTURE] Digimon card in hand,
-#     SelectPermanentEffect (own Digimon, canNoSelect TRUE) →
-#     DigivolveIntoHandOrTrashCard(IsAdventureDigimon, payCost true,
-#     reduceCostTuple = floor(distinct colors of the owner's Tamers / 2), isHand
-#     true).
-#   - SecuritySkill → PlaySelfTamerSecurityEffect.
+#   Official Q&A: you can't activate multiple digivolving effects at the same
+#   time (each trigger resolves its own single digivolve).
 #
-# Official Q&A: Q6112 — two copies' [Your Turn] effects can't be combined into
-# one digivolution with a doubled reduction ("You can't activate multiple
-# digivolving effects at the same time"); each activation is its own effect with
-# its own suspend cost and its own reduction.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/AD1/Green/AD1_022.cs
+#   - OnStartMainPhase: Gain1MemoryTamerOpponentDigimonEffect.
+#   - OnEnterFieldAnyone, optional: CanUse = on battle area && IsOwnerTurn &&
+#     CanTriggerOnPermanentPlay(permanent != this && own battle area &&
+#     (IsDigimon || IsTamer) && TopCard.EqualsTraits("ADVENTURE"));
+#     CanActivate = CanActivateSuspendCostEffect. Body: suspend this Tamer,
+#     reduceCost = GetDifferenetColorCardCount(all own battle-area Tamers) / 2,
+#     select 1 own Digimon (canNoSelect: true) →
+#     DigivolveIntoHandOrTrashCard(IsDigimon && ADVENTURE, payCost: true,
+#     reduceCostTuple: (reduceCost, null), requirements respected).
+#   - SecuritySkill: PlaySelfTamerSecurityEffect.
 #
-# Authoring notes (sister Tamer AD1-019 / BT18-063 / AD1-021 idioms):
-#   - Trigger = `on_ally_played` (fires for the controller's plays only; a
-#     digivolution is not a play) + `active_when: { your_turn: true }`.
-#     `trigger_if`: the played permanent is not this Tamer
-#     (`event_permanent_is_source: false` — "other"), is a Digimon or Tamer, and
-#     has the ADVENTURE trait (`event_target_trait_has`, top card).
-#   - "by suspending this Tamer" = `activation_cost: { suspend_self: true }`,
-#     the first step; the clause is `optional: true` (DCGO isOptional TRUE) and
-#     `source_is_unsuspended: true` keeps the unpayable cost from being offered
-#     (CR 4.3 §15-7-4). Declining the Digimon / card pick after the cost is paid
-#     leaves the Tamer suspended (DCGO: the suspend precedes the picks).
-#   - The digivolution is player-driven end to end: pick 1 of your Digimon
-#     (optional — "may"), then pick the [ADVENTURE] Digimon card from the hand,
-#     then `effect_initiated_digivolve` with the formula cost reduction
-#     floor(distinct colors among your battle-area Tamers / 2) — the same
-#     `reduce` formula as AD1-019. The cost-aware candidate predicates
-#     (`has_digivolve_candidate` / `can_digivolve_onto_with_cost`, BT18-063
-#     idiom) only offer hosts and cards for which a payable route exists, as
-#     DCGO's CanPlayCardTargetFrame(payCost true) does. Requirements are
-#     respected (`ignore_requirements: false`).
+# Clause 2 shape: AD1-019 (on-trigger optional + `activation_cost:
+# suspend_self` + floor(tamer colours / 2) formula) combined with BT25-092 /
+# EX5-070 (pick a host that has a payable [ADVENTURE] candidate, then pick a
+# candidate that can digivolve onto that host at the reduced cost). The host
+# pick is the "may" (PASS legal); every legal host has a payable result so the
+# card pick is mandatory and never dead. The reduction formula is evaluated at
+# resolution (after the suspend), like DCGO.
+#
+# Verdict: IMPLEMENTED.
 
 card: AD1-022
 name: Izzy Izumi & Tai Kamiya
@@ -58,7 +44,7 @@ cost: 3
 traits: [ADVENTURE, Hero]
 
 effects:
-  # ─── [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory ──
+  # ─── Clause 1: [Start of Your Main Phase] gain 1 memory if opp has Digimon
   - when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
     condition:
@@ -69,25 +55,25 @@ effects:
     process:
       - gain_memory: 1
 
-  # ─── [Your Turn] other ADVENTURE Digimon/Tamer played → suspend this Tamer: may digivolve ──
+  # ─── Clause 2: [Your Turn] other ADVENTURE played → suspend → digivolve ───
   - when: on_ally_played
     active_when: { your_turn: true }
     optional: true
-    summary: "[Your Turn] When any of your other [ADVENTURE] trait Digimon or Tamers are played, by suspending this Tamer, 1 of your Digimon may digivolve into an [ADVENTURE] trait Digimon card in the hand. For every 2 of your Tamers' colors, reduce this effect's digivolution cost by 1"
+    summary: "[Your Turn] When another own [ADVENTURE] Digimon/Tamer is played, by suspending this Tamer, 1 of your Digimon may digivolve into an [ADVENTURE] Digimon in hand, -1 cost per 2 Tamer colors"
     condition:
       source_is_unsuspended: true
     trigger_if:
       all_of:
         - event_target_owner: you
-        - event_permanent_is_source: false
+        - event_target_is_source: false
+        - event_target_trait_has: ADVENTURE
         - any_of:
             - event_target_kind: digimon
             - event_target_kind: tamer
-        - event_target_trait_has: ADVENTURE
     process:
       - activation_cost: { suspend_self: true }
       - select_own_permanent:
-          bind_as: izzy_host
+          bind_as: evo_base
           optional: true
           filter:
             all_of:
@@ -95,32 +81,10 @@ effects:
               - has_digivolve_candidate:
                   of: you
                   zone: [hand]
-                  cost:
-                    reduce:
-                      floor_div:
-                        - base: 0
-                          per:
-                            distinct_colors_count:
-                              of: you
-                              zone: battle_area
-                              filter: { kind: tamer }
-                          delta: 1
-                        - 2
                   filter:
                     all_of:
                       - kind: digimon
                       - trait_has: ADVENTURE
-          prompt: "1 of your Digimon may digivolve into an [ADVENTURE] trait Digimon card in your hand"
-      - select_hand:
-          of: you
-          bind_as: izzy_card
-          optional: true
-          filter:
-            all_of:
-              - kind: digimon
-              - trait_has: ADVENTURE
-              - can_digivolve_onto_with_cost:
-                  target: izzy_host
                   cost:
                     reduce:
                       floor_div:
@@ -132,24 +96,47 @@ effects:
                               filter: { kind: tamer }
                           delta: 1
                         - 2
-          prompt: "Digivolve into an [ADVENTURE] trait Digimon card in your hand (cost reduced by 1 per 2 of your Tamers' colors)"
-      - effect_initiated_digivolve:
-          target: izzy_host
-          source: izzy_card
-          cost:
-            reduce:
-              floor_div:
-                - base: 0
-                  per:
-                    distinct_colors_count:
-                      of: you
-                      zone: battle_area
-                      filter: { kind: tamer }
-                  delta: 1
-                - 2
-          ignore_requirements: false
+          prompt: "Choose 1 of your Digimon to digivolve into an [ADVENTURE] Digimon card in your hand"
+      - if:
+          condition: { binding_present: evo_base }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo_card
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: ADVENTURE
+                    - can_digivolve_onto_with_cost:
+                        target: evo_base
+                        cost:
+                          reduce:
+                            floor_div:
+                              - base: 0
+                                per:
+                                  distinct_colors_count:
+                                    of: you
+                                    zone: battle_area
+                                    filter: { kind: tamer }
+                                delta: 1
+                              - 2
+                prompt: "Choose an [ADVENTURE] Digimon card in your hand to digivolve into (cost -1 per 2 Tamer colors)"
+            - effect_initiated_digivolve:
+                target: evo_base
+                from_hand: evo_card
+                cost:
+                  reduce:
+                    floor_div:
+                      - base: 0
+                        per:
+                          distinct_colors_count:
+                            of: you
+                            zone: battle_area
+                            filter: { kind: tamer }
+                        delta: 1
+                      - 2
 
-  # ─── [Security] Play this card without paying the cost ───────────────────────
+  # ─── Clause 3: [Security] play this card without paying the cost ─────────
   - when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:

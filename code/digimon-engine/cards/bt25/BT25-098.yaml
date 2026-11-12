@@ -12,13 +12,16 @@ traits: [Appmon]
 # battle area AND breeding area, restricted to Digimon/Tamer permanents
 # ((IsDigimon || IsTamer) && trait check) — `any_field_permanent` mirrors that
 # battle+breeding scan exactly.
+# <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+# of your Digimon or Tamers in the battle area or breeding area meets
+# the condition (an Option on the field does not count).
 use_requirement:
   any_field_permanent:
     of: you
-    trait_has: Appmon
     any_of:
       - kind: digimon
       - kind: tamer
+    trait_has: "Appmon"
 effects:
   # Belt-and-braces companion of `use_requirement` (BT25 Use-Req idiom; the
   # functional play-legality path is the use_requirement above). active_when

@@ -1,74 +1,47 @@
-# ST21-04 Zudomon — Digimon, Lv.5, Blue, DP 7000, Cost 7.
-# Traits: Sea Beast / ADVENTURE. Form: Ultimate. Attribute: Vaccine.
+# ST21-04 Zudomon — Lv.5, Blue, DP 7000, Cost 7.
+# Traits: Sea Beast, ADVENTURE. Form: Ultimate. Attribute: Vaccine.
 #
-# Printed card text (data/card_bundles/ST21-04.md — official Bandai DB;
-# cards.json wording "From 1 of your opponent's Digimon" kept for clause 1):
-#
-#   Digivolve: Blue Lv.4 / cost 3
+# Printed text (card image ST21-04.webp + data/cards.json):
+#   Digivolve: Blue Lv.4 / Cost 3
 #   [Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3
-#   [On Play] [When Digivolving] From 1 of your opponent's Digimon, trash any 1
-#     digivolution card for every 2 colors your Tamers have. Then, return 1 of
-#     their Digimon with 1 or fewer digivolution cards to the hand.
+#   [On Play] [When Digivolving] From 1 of your opponent's Digimon, trash any
+#     1 digivolution card for every 2 colors your Tamers have. Then, return 1
+#     of their Digimon with 1 or fewer digivolution cards to the hand.
 #   [Your Turn] [Once Per Turn] When your other Digimon are played or
 #     digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
 #     gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
 #   Inherited: <Alliance>
 #
-#   Official Q&A (Alliance grant): "No, you can't. You must give to 1 of your
-#   Digimon." → the grant target is a mandatory pick among YOUR Digimon.
+# DATA DRIFT: the official Bandai DB bundle (data/card_bundles/ST21-04.md)
+# words the first sentence "For every 2 colors your Tamers have, trash any 1
+# of your opponent's Digimon's digivolution cards." — no explicit "From 1 of
+# your opponent's Digimon". The printed card image and DCGO
+# (SelectTrashDigivolutionCards isFromOnly1Permanent: true) both restrict the
+# trash to ONE Digimon; that reading is implemented. Flagged for review.
 #
-# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Blue/ST21_04.cs
+# DCGO: DCGO/Assets/Scripts/CardEffect/ST21/Blue/ST21_04.cs
+#   - OP / WD: if colours/2 > 0 and an opponent Digimon exists:
+#     SelectTrashDigivolutionCards(opp Digimon, maxCount floor(colours/2),
+#     canNoTrash false, isFromOnly1Permanent true) — pick 1 opponent Digimon
+#     with trashable digivolution cards, trash min(N, its cards). Then, if any
+#     opponent Digimon has <= 1 digivolution cards: mandatory pick → Bounce.
+#   - Your Turn OPT observer + inherited <Alliance>: identical to ST20-04
+#     (hash "alliance-attack-ST21_04").
 #
-# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# Authoring: `select_opponent_permanent` (materials_count_gte 1) binds the
+# host, then `select_opponent_sources` with `target:` the host, formula
+# min = max = floor_div(distinct tamer colours, 2) and `clamp_to_available`
+# (DCGO min(N, available)). The whole strip is gated on
+# `distinct_tamer_colors_gte: 2` (N >= 1). The bounce runs regardless. The
+# observer clause is the shared ADVENTURE Lv.5 idiom documented in
+# ST20-04.yaml.
 #
-#  * Alt digivolution: AddSelfDigivolutionRequirementStaticEffect(base
-#    HasAdventureTraits && Level == 4, cost 3, ignoreDigivolutionRequirement
-#    false) → second alt-path (first = printed blue Lv.4 / cost 3 circle).
-#
-#  * [On Play]/[When Digivolving] (two OnEnterFieldAnyone shells, identical
-#    bodies, non-optional):
-#      Step 1 (only if opp has a Digimon && tamerTwoColourCount > 0):
-#        CardEffectCommons.SelectTrashDigivolutionCards(maxCount =
-#        GetDifferenetColorCardCount(own Tamers) / 2, canNoTrash false,
-#        isFromOnly1Permanent TRUE). The helper first picks ONE opponent
-#        Digimon (permanentCondition = ANY opponent Digimon — it need NOT have
-#        digivolution cards), then trashes exactly min(N, that Digimon's
-#        digivolution cards) from it (canEndNotMax false when
-#        isFromOnly1Permanent).
-#        → `if distinct_tamer_colors_gte: 2` guard, mandatory
-#        select_opponent_permanent, then select_opponent_sources { target,
-#        min = max = floor(distinct Tamer colors / 2), clamp_to_available }
-#        (EX11-057 / EX13-024 clamp idiom; AD1-014 floor_div formula).
-#      Step 2: a SEPARATE gated mandatory SelectPermanentEffect (Mode.Bounce)
-#        over opponent Digimon with `DigivolutionCards.Count() <= 1`, evaluated
-#        AFTER step 1 → select_opponent_permanent (materials_count_lte 1,
-#        silently skipped when none) + return_to_hand.
-#
-#  * [Your Turn] [Once Per Turn] (OnEnterFieldAnyone, maxCountPerTurn 1,
-#    NOT optional):
-#      CanUseCondition = self on battle area as Digimon && owner's turn &&
-#        (CanTriggerOnPermanentPlay || CanTriggerWhenPermanentDigivolving)
-#        over MyDigimonPlayedDigid (own Digimon that is not this permanent).
-#      IsSkippable returns false only when one of the played/digivolved
-#        permanents is an [ADVENTURE] own Digimon ≠ self — i.e. the printed
-#        "if any of them have the [ADVENTURE] trait" gates the WHOLE effect,
-#        including "Then, 1 of your Digimon may attack".
-#      Coroutine: mandatory SelectPermanentEffect over ALL own Digimon
-#        (`MyDigimonAlliance`, canNoSelect false) → GainAlliance
-#        (UntilEachTurnEnd); then OPTIONAL SelectPermanentEffect over own
-#        Digimon that `CanAttack` (canNoSelect TRUE) → SelectAttackEffect.
-#    The ADVENTURE test is placed in `trigger_if` (the event qualifier) so a
-#    non-ADVENTURE ally never queues the effect and never spends the OPT —
-#    DCGO's `RemoveUse()` when nothing was used.
-#    Modelled on BT16-017 Veemon (`[on_ally_played, on_digivolve]` + `trigger_if`
-#    over the event target) and BT21-044 RizeGreymon (`grant_keyword` Alliance
-#    for the turn, then `optional:` select + `may_attack_now`).
-#    Simultaneous multi-permanent plays ("any of them") fire one event per
-#    permanent in this engine; with the once-per-turn cap this is equivalent
-#    unless the simultaneous set mixes ADVENTURE and non-ADVENTURE permanents
-#    (the ADVENTURE one still qualifies on its own event).
-#
-#  * Inherited <Alliance>: AllianceSelfEffect(isInheritedEffect: true).
+# | Clause                                              | Status      |
+# | Blue Lv.4 / Cost 3 circle                           | IMPLEMENTED |
+# | Lv.4 [ADVENTURE] / Cost 3 box                       | IMPLEMENTED |
+# | [OP][WD] trash N sources from 1 opp Digimon; bounce <=1-source Digimon | IMPLEMENTED |
+# | [Your Turn][OPT] ADVENTURE observer → Alliance; may attack | IMPLEMENTED |
+# | Inherited <Alliance>                                | IMPLEMENTED |
 
 card: ST21-04
 name: Zudomon
@@ -78,64 +51,60 @@ color: [blue]
 cost: 7
 dp: 7000
 traits: [Sea Beast, ADVENTURE]
-form: Ultimate
 attribute: Vaccine
+form: Ultimate
 
 alt_paths:
-  # Printed standard circle: Blue Lv.4 / cost 3.
   - kind: digivolve
     from: { level_eq: 4, color_is: blue }
     cost: 3
-
-  # [Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3 (any colour).
   - kind: digivolve
     from: { level_eq: 4, trait_has: ADVENTURE }
     cost: 3
 
 effects:
-  # ─── [On Play] [When Digivolving] strip per 2 Tamer colors, then bounce ────
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] From 1 of your opponent's Digimon, trash any 1 digivolution card for every 2 colors your Tamers have; then return 1 of their Digimon with 1 or fewer digivolution cards to the hand"
+    summary: "[On Play][When Digivolving] From 1 of your opponent's Digimon, trash 1 digivolution card for every 2 colors your Tamers have. Then, return 1 of their Digimon with 1 or fewer digivolution cards to the hand"
     process:
       - if:
           condition: { distinct_tamer_colors_gte: 2 }
           then:
             - select_opponent_permanent:
                 bind_as: strip_host
-                filter: { kind: digimon }
-                prompt: "Select 1 of your opponent's Digimon to trash digivolution cards from"
-            - if:
-                condition: { binding_present: strip_host }
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - materials_count_gte: 1
+                prompt: "Choose 1 of your opponent's Digimon to trash digivolution cards from"
+            - select_opponent_sources:
+                target: strip_host
+                min:
+                  formula:
+                    floor_div:
+                      - base: 0
+                        per:
+                          distinct_colors_count:
+                            of: you
+                            zone: battle_area
+                            filter: { kind: tamer }
+                        delta: 1
+                      - 2
+                max:
+                  formula:
+                    floor_div:
+                      - base: 0
+                        per:
+                          distinct_colors_count:
+                            of: you
+                            zone: battle_area
+                            filter: { kind: tamer }
+                        delta: 1
+                      - 2
+                clamp_to_available: true
+                bind_as: stripped
+                prompt: "Trash 1 of this Digimon's digivolution cards for every 2 colors your Tamers have"
                 then:
-                  - select_opponent_sources:
-                      target: strip_host
-                      min:
-                        formula:
-                          floor_div:
-                            - base: 0
-                              per:
-                                distinct_colors_count:
-                                  of: you
-                                  zone: battle_area
-                                  filter: { kind: tamer }
-                              delta: 1
-                            - 2
-                      max:
-                        formula:
-                          floor_div:
-                            - base: 0
-                              per:
-                                distinct_colors_count:
-                                  of: you
-                                  zone: battle_area
-                                  filter: { kind: tamer }
-                              delta: 1
-                            - 2
-                      clamp_to_available: true
-                      bind_as: stripped
-                      prompt: "Trash any 1 digivolution card for every 2 colors your Tamers have"
-                      then:
-                        - trash_selected_sources: { source_refs: stripped }
+                  - trash_selected_sources: { source_refs: stripped }
       - select_opponent_permanent:
           bind_as: bounce_target
           filter:
@@ -145,40 +114,36 @@ effects:
           prompt: "Return 1 of your opponent's Digimon with 1 or fewer digivolution cards to the hand"
       - return_to_hand: { target: bounce_target }
 
-  # ─── [Your Turn] [Once Per Turn] ADVENTURE ally played/digivolved →
-  #     <Alliance> for the turn, then 1 Digimon may attack ───────────────────
   - when: [on_ally_played, on_digivolve]
     active_when: { your_turn: true }
     once_per_turn: true
+    summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack"
     trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
-        - event_target_is_source: false
+        - event_permanent_is_source: false
         - event_target_trait_has: ADVENTURE
-    summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn; then 1 of your Digimon may attack"
     process:
       - select_own_permanent:
           bind_as: alliance_target
           filter: { kind: digimon }
-          prompt: "Select 1 of your Digimon to gain <Alliance> for the turn"
+          prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"
       - grant_keyword:
           target: alliance_target
           keyword: Alliance
           expiry: end_of_turn
-      - optional:
-          - select_own_permanent:
-              bind_as: attacker
-              filter: { kind: digimon, can_attack: { targets: any } }
-              optional: true
-              prompt: "Select 1 of your Digimon that may attack"
-          - may_attack_now:
-              attacker: attacker
-              targets: any
-              optional: true
-              prompt: "Have the selected Digimon attack now?"
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          filter: { kind: digimon, can_attack: { targets: any } }
+          prompt: "Choose 1 of your Digimon that may attack"
+      - may_attack_now:
+          attacker: attacker
+          targets: any
+          optional: true
+          prompt: "Attack with the selected Digimon?"
 
-  # ─── Inherited <Alliance> ───────────────────────────────────────────────────
   - scope: inherited
     kind: grant_keyword
     keyword: Alliance

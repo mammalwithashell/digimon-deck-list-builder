@@ -235,6 +235,15 @@ impl Game {
                 .map(|t| t.selected_cost_delta() as i32)
                 .unwrap_or(0),
         );
+        // "Play ... without paying the cost" pays nothing, DigiXros or not: the
+        // DigiXros transaction's cost starts from the printed cost and would
+        // otherwise replace the free base (DCGO payCost: false). Game audit
+        // 2026-11-11: Erlangmon EX12-034 free-played Sagomon EX12-029 for 5.
+        let effective_cost = if matches!(cost_delta, crate::enums::CostDelta::Free) {
+            0
+        } else {
+            effective_cost
+        };
 
         self.pending_would_play_resume = Some(PendingWouldPlayResume {
             player: player_id,

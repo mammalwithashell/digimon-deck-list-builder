@@ -432,7 +432,7 @@ fn green_coredramon_recurs_dracomon_whose_replay_searches_again() {
             pick_revealed(&mut runner, COREDRAMON_BLUE);
             searched = true;
         } else if view.kind == SelectionKind::Hand {
-            // Coredramon's "may digivolve into an [Examon]-text Digimon": none in hand.
+            // Coredramon's "may digivolve into an [Examon]-text Digimon".
             saw_observer = true;
             pass(&mut runner);
         } else if view.is_optional && view.effect_choices.is_none() && searched {
@@ -453,9 +453,12 @@ fn green_coredramon_recurs_dracomon_whose_replay_searches_again() {
     assert_eq!(stack_ids(&runner, core), vec![DRACOMON, COREDRAMON_GREEN]);
     assert!(field_ids(&runner, 0).contains(&DRACOMON.to_string()), "Dracomon back in play");
     assert_eq!(mem0 - runner.memory(), 2 + 3, "digivolve 2 + replay 3");
+    // No [Examon]-text Digimon it can digivolve into is in hand, so DCGO
+    // (`CanActivateCondition` + `CanPlayCardTargetFrame`) offers nothing: the
+    // observer must not open a dead prompt (audit 2026-11-10).
     assert!(
         !saw_observer,
-        "with no [Examon]-text card that can digivolve onto Coredramon, EX13-039's observer asks nothing"
+        "with no legal [Examon] digivolution in hand, EX13-039's observer opens no prompt"
     );
 }
 

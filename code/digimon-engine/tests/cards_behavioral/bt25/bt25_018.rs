@@ -184,3 +184,65 @@ fn bt25_018_on_play_deletes_weaker_opponent_digimon() {
         "the weaker opp Digimon is deleted"
     );
 }
+
+// ─── Cost reduction is scoped to Apollomon's OWN play ─────────────────────────
+//
+// Printed: "When this card would be played, if your opponent has a Digimon
+// with 12000 DP or more, reduce the cost by 5." It was lowered as an unscoped
+// field reducer (same defect as Junomon BT25-044, specialist-league game 245),
+// cutting 5 off every other play while Apollomon sat on the board.
+
+fn plain_tamer(id: &str, cost: u16) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.play_cost = cost;
+    c
+}
+
+#[test]
+fn bt25_018_on_field_does_not_reduce_other_play_costs() {
+    let mut runner = base()
+        .add_card(plain_tamer("TAMER-3", 3))
+        .hand(0, &["TAMER-3"])
+        .memory(5)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    let before = runner.memory();
+    runner.play(0, 0).expect("play the cost-3 Tamer");
+    assert_eq!(runner.memory(), before - 3, "Apollomon only reduces its own play cost");
+}
+
+#[test]
+fn bt25_018_on_opponent_field_does_not_reduce_my_play_cost() {
+    let mut runner = base()
+        .add_card(plain_tamer("TAMER-3", 3))
+        .hand(0, &["TAMER-3"])
+        .memory(5)
+        .start();
+    runner.place_on_field(1, CARD_ID, Some(0));
+    runner.place_on_field(0, "OPP-BIG", Some(0));
+    let before = runner.memory();
+    runner.play(0, 0).expect("play the cost-3 Tamer");
+    assert_eq!(runner.memory(), before - 3, "an opponent's Apollomon must not discount my Tamer");
+}
+
+#[test]
+fn bt25_018_play_from_hand_reduced_by_5_vs_12000_dp() {
+    let mut runner = base().hand(0, &[CARD_ID]).memory(10).start();
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    let before = runner.memory();
+    runner.play(0, 0).expect("play Apollomon");
+    let printed = runner.compiled_card(CARD_ID).unwrap().cost.unwrap() as i16;
+    assert_eq!(runner.memory(), before - (printed - 5), "reduced by 5 vs a 13000-DP Digimon");
+}
+
+#[test]
+fn bt25_018_play_from_hand_full_cost_without_12000_dp() {
+    let mut runner = base().hand(0, &[CARD_ID]).memory(10).start();
+    runner.place_on_field(1, "OPP-SMALL", Some(0));
+    let before = runner.memory();
+    runner.play(0, 0).expect("play Apollomon");
+    let printed = runner.compiled_card(CARD_ID).unwrap().cost.unwrap() as i16;
+    assert_eq!(runner.memory(), before - printed, "no 12000-DP opp Digimon -> no reduction");
+}

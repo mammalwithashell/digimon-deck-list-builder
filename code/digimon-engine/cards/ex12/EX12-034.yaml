@@ -54,10 +54,39 @@ effects:
         - replacement_subject_is_mine: true
         - kind: digimon
     summary: "[All Turns][OPT] When any own Digimon would leave, play 1 level 5 or lower [SW] from hand or this Digimon's sources free"
+    # DCGO EX12_034.cs ActivateCoroutine: offers "Play from hand" only when the
+    # hand holds a playable card, "Play from this Digimon's Digivolution Cards"
+    # only when its sources do, plus "Don't play"; if nothing is played the
+    # [Once Per Turn] use is refunded (RemoveUse). Deck audit 2026-11-10: both
+    # zones were always offered and the OPT was spent on an empty pick.
+    # The card pick inside a zone is mandatory: DCGO lets you decline it
+    # (PlayByEffect canNoSelect) and then refunds, which is the same outcome
+    # as "Don't play"; an optional pick here ended the clause before the
+    # refund ran.
     process:
       - select_effect_choice:
           bind_as: play_zone
-          labels: ["Hand", "Sources"]
+          labels: ["Hand", "Sources", "Don't play"]
+          legal_when:
+            - count_gte:
+                filter:
+                  of: you
+                  zone: [hand]
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                    - trait_has: SW
+                n: 1
+            - count_gte:
+                filter:
+                  of: you
+                  zone: [material]
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                    - trait_has: SW
+                n: 1
+            - all_turns: true
           prompt: "Play a level 5 or lower [SW] card from hand or this Digimon's digivolution cards?"
       - if:
           condition: { equals: [play_zone, 0] }
@@ -65,7 +94,6 @@ effects:
             - select_hand:
                 of: you
                 bind_as: sw_hand
-                optional: true
                 filter:
                   all_of:
                     - kind: digimon
@@ -79,7 +107,6 @@ effects:
             - select_material:
                 of_permanent: source
                 bind_as: sw_source
-                optional: true
                 filter:
                   all_of:
                     - kind: digimon
@@ -90,3 +117,10 @@ effects:
                 target: source
                 source_index: sw_source
                 cost_delta: free
+      - if:
+          condition:
+            all_of:
+              - binding_absent: sw_hand
+              - binding_absent: sw_source
+          then:
+            - refund_opt: {}

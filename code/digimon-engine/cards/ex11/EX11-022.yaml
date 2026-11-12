@@ -97,13 +97,16 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
+    # 'When this Digimon would leave': carrier only (DCGO EX11_022.cs
+    # CanTriggerWhenRemoveField(hashtable, card)); `replacement_subject_is_mine`/
+    # `kind` made it cover other permanents. Audit 2026-11-11.
     active_when:
-      # Self-only: DCGO CanTriggerWhenRemoveField(hashtable, card) is
-      # `permanent.cardSources.Contains(card)`. Leaves that read the replacement
-      # subject (replacement_subject_is_mine, kind, name_is...) make the clause
-      # cross-permanent, so none may appear here.
-      none_of:
-        - replacement_cause: own_effect
+      all_of:
+        - is_source: true
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - none_of:
+            - replacement_cause: own_effect
     summary: "[All Turns][OPT] Delete 1 Token or other Puppet Digimon so this Digimon doesn't leave"
     process:
       - select_own_permanent:

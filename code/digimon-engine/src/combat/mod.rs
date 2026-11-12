@@ -653,6 +653,17 @@ impl Game {
         if self.pending_attack.is_some() {
             return AttackResult::Invalid;
         }
+        // CR 11-1-2: "Only the turn player can attack." An effect can't make a
+        // Digimon attack outside its controller's turn (DCGO Permanent.CanAttack:
+        // the owner must be the turn player). Main-phase attacks are already
+        // gated by the action mask. Game audit 2026-11-11: Gokuumon EX12-015's
+        // [On Play], resolved on the opponent's turn, let Sanzomon EX12-045
+        // attack.
+        if matches!(initiator, AttackInitiator::Effect { .. })
+            && attacker.player != self.turn_player()
+        {
+            return AttackResult::Invalid;
+        }
         let vortex = matches!(initiator, AttackInitiator::Vortex);
         let skips_suspend_cost = !suspend_attacker;
 
@@ -3574,7 +3585,9 @@ impl Game {
                     // as it is now, as `resolve_battle_with` does.
                     self.refresh_progress_shield();
                     // Only Digimon security runs the DP battle; Option /
-                    // Tamer / DigiEgg skip straight through.
+                    // Tamer / DigiEgg skip straight through. A DUAL card is a
+                    // Digimon card too (4-6-1, 13-1-7): DCGO battles it via
+                    // `IsDigimon` = `CardKinds.Contains(Digimon)`.
                     let Some(state) = self.security_resolution.as_ref() else {
                         break;
                     };
@@ -3604,7 +3617,7 @@ impl Game {
                                 let raw_sec_dp = self
                                     .pending_security
                                     .as_ref()
-                                    .and_then(|p| p.card.dp(&self.card_data))
+                                    .and_then(|p| p.card.digimon_dp(&self.card_data))
                                     .unwrap_or(0);
                                 // §2.5e: attacker's inherited stack may carry
                                 // "+N DP when attacking security" modifiers.

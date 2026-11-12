@@ -163,11 +163,13 @@ impl CardEffect for DslCardEffect {
             }
         }
         for path in &self.compiled.alt_paths {
-            // `burst_digivolve` is overloaded in YAML: `marker: true` is the
-            // counter-timing <Blast Digivolve> marker, an unmarked path is a
-            // real Burst Digivolve (rule 8-3), a Main-phase action that must
-            // NOT open a counter window (6-5-1-2-3, 8-3-2-2).
-            if matches!(path.kind, CompiledAltPathKind::BurstDigivolve) && path.marker
+            // Only <Blast Digivolve> ([Hand] [Counter]) gets the counter-window
+            // marker: the `marker: true` form of `burst_digivolve`, and Blast DNA.
+            // A printed [Burst Digivolve] (BT13-020/060, BT25-104, BT26-050) is
+            // a Main-phase digivolve. Rose Rave audit 2026-11-11: the marker let
+            // Rosemon: Burst Mode be digivolved into for free during the
+            // opponent's attack (13 times in 68 games).
+            if (matches!(path.kind, CompiledAltPathKind::BurstDigivolve) && path.marker)
                 || matches!(path.kind, CompiledAltPathKind::BlastDnaDigivolve)
             {
                 out.push(
@@ -231,6 +233,17 @@ impl CardEffect for DslCardEffect {
         // the breeding area carries `Effect::breeding_zone`. Applied to the
         // range a clause appended once the next clause starts (or the loop
         // ends), so an arm that `continue 'clause`s is still covered.
+        // `opt_group`: clauses on one face sharing a label share the per-turn
+        // counter of the first such clause (Q1550 / CR 4.3 §15-14-1).
+        let mut opt_group_seed: std::collections::HashMap<(usize, &str), usize> =
+            std::collections::HashMap::new();
+        for (clause_index, clause, _, _) in &clauses {
+            if let CompiledClause::Triggered(t) = clause {
+                if let Some(label) = t.opt_group.as_deref() {
+                    opt_group_seed.entry((clause_index / 64, label)).or_insert(*clause_index);
+                }
+            }
+        }
         let mut breeding_range: Option<(usize, bool)> = None;
         let mark_breeding = |out: &mut Vec<Effect>, range: Option<(usize, bool)>| {
             if let Some((start, true)) = range {
@@ -251,6 +264,11 @@ impl CardEffect for DslCardEffect {
                         clause_use_req.clone(),
                         Some(clause_kind),
                         clause_index,
+                        clause
+                            .opt_group
+                            .as_deref()
+                            .and_then(|l| opt_group_seed.get(&(clause_index / 64, l)).copied())
+                            .unwrap_or(clause_index),
                     ));
                 }
                 CompiledClause::Declarative(decl) => match decl {
@@ -553,7 +571,10 @@ impl CardEffect for DslCardEffect {
                         ..
                     } => {
                         let filter = filter.clone();
-                        let mut builder = Effect::on_play(card).link(*cost, move |ctx, host| {
+                        // Built without the `on_play` flag: `.link` sets the timing to
+                        // OptionMain, and OnPlay dispatch matches on that flag.
+                        let mut builder = crate::effect::EffectBuilder::new(card, crate::enums::EffectTiming::OptionMain)
+                            .link(*cost, move |ctx, host| {
                             eval_predicate(&filter, ctx, PredicateSubject::Permanent(host))
                         });
                         if let Some(summary) = summary {

@@ -68,3 +68,48 @@ def test_fit_rejects_failed_or_tampered_corpora_before_training(tmp_path, monkey
     with pytest.raises(ValueError, match="hash mismatch"):
         fit(tmp_path, 7)
     assert not calls, "neither policy nor value fitting may consume failed/tampered data"
+
+
+def test_mixed_v2_keeps_mixed_games_and_swaps_only_teachers():
+    groups = {f"arch-{i}": [f"deck-{i}-a", f"deck-{i}-b"] for i in range(12)}
+    groups["Light Hybrid"] = ["lh-a", "lh-b"]
+    mixed = make_schedule(groups, seed=41)
+    v2 = make_schedule(groups, seed=41, arm="mixed_v2", tamer_first_archetypes=("Light Hybrid",),
+                       random_fraction=0.175)
+    strip = lambda s: [{k: v for k, v in g.items() if k != "teachers"} for g in s]
+    assert strip(v2) == strip(mixed), "decks, seeds, seats and openers must not move"
+    assert v2 == make_schedule(groups, seed=41, arm="mixed_v2", tamer_first_archetypes=("Light Hybrid",),
+                               random_fraction=0.175)
+    seats = [(g["archetypes"][s], g["teachers"][s], m["teachers"][s])
+             for g, m in zip(v2, mixed) for s in (0, 1)]
+    randoms = [t for _, t, _ in seats if t == "random_v1"]
+    assert 0.13 < len(randoms) / len(seats) < 0.22
+    for archetype, teacher, base in seats:
+        if teacher == "random_v1":
+            continue
+        if archetype == "Light Hybrid":
+            assert teacher == {"greedy": "greedy_tamer_first_v1",
+                               "development_v1": "development_tamer_first_v1"}[base]
+        else:
+            assert teacher == base
+
+
+def test_mixed_v2_options_are_validated():
+    groups = {"a": ["a1"], "b": ["b1"]}
+    with pytest.raises(ValueError, match="mixed_v2"):
+        make_schedule(groups, seed=1, random_fraction=0.1)
+    with pytest.raises(ValueError, match="not in the pool"):
+        make_schedule(groups, seed=1, arm="mixed_v2", tamer_first_archetypes=("Light Hybrid",))
+    with pytest.raises(ValueError, match="random_fraction"):
+        make_schedule(groups, seed=1, arm="mixed_v2", random_fraction=1.0)
+
+
+def test_random_seat_rows_are_value_only(tmp_path):
+    import numpy as np
+    from tools.cloud_search.mixed_bootstrap import save_shard
+    rows = [(np.zeros(3, np.float32), [0, 1], 1, mover) for mover in (1, 2, 1, 2)]
+    save_shard(tmp_path / "legacy", rows, game_id=0, winner=1)
+    assert not (tmp_path / "legacy/policy_weight.npy").exists()
+    save_shard(tmp_path / "v2", rows, game_id=0, winner=1, value_only_movers=(2,))
+    assert np.load(tmp_path / "v2/policy_weight.npy").tolist() == [1.0, 0.0, 1.0, 0.0]
+    assert np.load(tmp_path / "v2/z.npy").tolist() == [1.0, -1.0, 1.0, -1.0]

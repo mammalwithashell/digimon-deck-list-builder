@@ -499,22 +499,24 @@ fn bt16_033_opponents_turn_effect_created_attack_does_not_trigger_both_seats() {
         let src = r.top_card(atk);
         {
             let mut ctx = EffectContext::new(&mut r.game, src, Some(atk), seat);
-            ctx.may_attack_now(
+            let _ = ctx.may_attack_now(
                 atk,
                 AttackTargetRestriction::PlayerOnly,
                 false,
                 "synthetic opponent-turn attack",
-            )
-            .unwrap();
+            );
         }
-        choose(
-            &mut r,
-            seat,
-            encode_attack(atk.index as u16, SECURITY_TARGET),
+        // CR 11-1-2: "Only the turn player can attack." No card makes a Digimon
+    // attack outside its controller's turn (EX3-024 forces the opponent's
+    // Digimon on the opponent's own Main Phase), so an effect attack by the
+    // non-turn player is refused (game audit 2026-11-11).
+        assert!(
+            r.pending_selection()
+                .is_none_or(|p| !p.valid_action_ids.contains(&encode_attack(atk.index as u16, SECURITY_TARGET))),
+            "no off-turn attack target is offered"
         );
-        assert_eq!(reveal_positions(&r).len(), 1);
+        assert!(reveal_positions(&r).is_empty());
         assert!(harp_memory_positions(&r).is_empty());
-        assert_eq!(r.memory(), 3);
     });
 }
 

@@ -54,5 +54,7 @@ effects:
               # printed play cost and can't be played (its cards.json cost 0 is
               # a missing-value default), so it is never a candidate.
               - not: { kind: digi_egg }
+              # Nor an Option (use cost, not play cost). Rose Rave audit 2026-11-11.
+              - not: { kind: option }
           prompt: "You may play 1 play cost 5 or lower [Avian]/[DATA SQUAD] card from your trash without paying the cost"
       - play_from_trash_free: { of: you, hand_index: revive }

@@ -939,3 +939,30 @@ fn bt18_065_inherited_is_once_per_turn() {
 
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;
+
+/// A [Vemmon]-text card Snatchmon can't digivolve into (wrong level) is not
+/// offered, so with only that card in hand no prompt opens.
+#[test]
+fn bt18_065_end_of_turn_does_not_offer_a_card_it_cannot_digivolve_into() {
+    let (mut runner, _handle) = snatchmon_on_field(4);
+    let mut far = make_vemmon_text_result("EOT-FAR");
+    far.level = Some(7);
+    far.evo_costs = vec![EvoCost {
+        level: 6,
+        memory_cost: 2,
+        card_color: 5,
+    }];
+    {
+        let g = runner.game_mut();
+        let data_idx = g.card_data.len();
+        g.card_data.push(far);
+        let idx = g.next_card_index();
+        g.players[0].hand.push(CardSource::new(data_idx, 0, idx));
+    }
+
+    runner.end_turn();
+    assert!(
+        runner.pending_selection().is_none(),
+        "no legal digivolution in hand: no dead prompt"
+    );
+}

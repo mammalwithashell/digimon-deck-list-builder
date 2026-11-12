@@ -112,9 +112,13 @@ pub fn lower_with_raw_and_slot(
     serde::Serialize::serialize(process.as_ref(), &mut plural_probe).expect("typed prevention probe");
     if let Some(filter) = plural_probe.plural_filter {
         builder = builder.prevention_all_matching().paid_prevention_filter(filter);
-        runtime = runtime.with_opt_key(if once_per_turn {effect_slot}else{None})
-            .with_opt_key_inherited(matches!(scope,CompiledScope::Inherited|CompiledScope::Linked));
     }
+    // `refund_opt` (DCGO RemoveUse) reads the clause's OPT key from the
+    // runtime. Every [Once Per Turn] replacement needs it, not only the
+    // plural-prevention shape: EX12-034 / EX13-024 refund a use that played
+    // nothing (deck audit 2026-11-10: the refund was a silent no-op).
+    runtime = runtime.with_opt_key(if once_per_turn {effect_slot}else{None})
+        .with_opt_key_inherited(matches!(scope,CompiledScope::Inherited|CompiledScope::Linked));
 
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
@@ -152,9 +156,22 @@ pub fn lower_with_raw_and_slot(
     };
     let field_dna_flow = DelayFieldDnaDigivolveFlow::from_process(&process);
     let requires_ready_delay = field_dna_flow.is_some();
+    // CR 16-17-3: <Delay> can't be activated the same turn its card was placed
+    // in the battle area. A replacement whose process opens by trashing its
+    // own source (`delete_permanent: source`) is that card's <Delay> cost (the
+    // would-leave Delay family: EX12-070, BT19-099, BT17-095, BT20-093,
+    // BT20-100, ST20-14). DCGO `OptionEffect.cs` checks the placed turn for
+    // every Delay. Deck audit 2026-11-10: only the DNA flow checked it.
+    let opens_with_delay_cost = matches!(
+        process.first(),
+        Some(CompiledStep::DeletePermanent {
+            target: CompiledBindingRef::Source
+        })
+    );
     builder = builder.replacement_condition(move |ctx, subject| {
         source_permanent_is_still_active(ctx)
             && (!requires_ready_delay || source_delay_is_ready(ctx))
+            && (!opens_with_delay_cost || !source_delay_placed_this_turn(ctx))
             && (can_match_cross_permanent_subject || replacement_subject_is_source(ctx, *subject))
             && active_when.as_ref().is_none_or(|active_when| {
                 eval_predicate(
@@ -957,6 +974,9 @@ fn field_value(
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
+            .filter(|perm| {
+                crate::dsl_cards::step::selections::top_card_has_play_cost(perm, ctx.card_data())
+            })
             .map(|perm| i32::from(perm.top_card().play_cost(ctx.card_data()))),
         CompiledFieldSelector::LowestMaterialCount => ctx
             .game
@@ -1598,6 +1618,17 @@ impl DelayFieldDnaDigivolveFlow {
             pair_prompt: pair_prompt.clone(),
         })
     }
+}
+
+/// The source permanent is a <Delay> Option placed in the battle area this
+/// turn (CR 16-17-3). False for anything that is not a Delayed Option.
+fn source_delay_placed_this_turn(ctx: &EffectReadContext<'_>) -> bool {
+    ctx.source_permanent
+        .and_then(|h| ctx.game.player(h.player).battle_area.get(h.index as usize))
+        .is_some_and(|p| {
+            matches!(p.option_state, OptionState::Delayed { placed_on_turn, .. }
+                if placed_on_turn >= ctx.game.turn_count)
+        })
 }
 
 fn source_delay_is_ready(ctx: &EffectReadContext<'_>) -> bool {

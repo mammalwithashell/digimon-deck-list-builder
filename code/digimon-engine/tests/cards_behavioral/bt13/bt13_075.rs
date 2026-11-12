@@ -451,3 +451,45 @@ fn bt13_075_would_leave_does_not_trigger_on_battle_removal() {
         "Alphamon is removed by the battle deletion"
     );
 }
+
+/// "When an effect would remove THIS Digimon": another of your Digimon being
+/// removed is not offered the prevention (it leaves, no source returned);
+/// Alphamon itself afterwards still is (the OPT was not spent). Audit
+/// 2026-11-11: DCGO BT13_075.cs CanTriggerWhenRemoveField(hashtable, card).
+#[test]
+fn bt13_075_would_leave_only_protects_this_digimon_audit() {
+    let mut runner = alpha_runner()
+        .add_card(make_digimon("RK-SRC", 3000, 4, &["Royal Knight"]))
+        .add_card(make_digimon("OTHER", 3000, 4, &["Royal Knight"]))
+        .start();
+    let alpha = runner.place_stack(0, &["RK-SRC", "BT13-075"]);
+    let other = runner.place_on_field(0, "OTHER", None);
+
+    runner
+        .game
+        .delete_permanent_with_cause(other, ReplacementCause::OpponentEffect);
+    assert!(
+        runner.pending_selection().is_none(),
+        "no leave-prevention for a Digimon that is not this Alphamon"
+    );
+    assert!(!permanent_exists(&runner, 0, "OTHER"), "the other Digimon leaves");
+
+    runner
+        .game
+        .delete_permanent_with_cause(alpha, ReplacementCause::OpponentEffect);
+    let view = runner
+        .pending_selection_view()
+        .expect("Alphamon is still offered its leave-prevention");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("accept the leave-prevention replacement");
+    let cost_view = runner
+        .pending_selection_view()
+        .expect("source-return cost selection installs");
+    runner
+        .execute_action(0, cost_view.valid_action_ids[0])
+        .expect("return the Royal Knight source");
+    runner.auto_resolve().expect("finish replacement");
+    assert!(permanent_exists(&runner, 0, "BT13-075"), "Alphamon stays");
+}

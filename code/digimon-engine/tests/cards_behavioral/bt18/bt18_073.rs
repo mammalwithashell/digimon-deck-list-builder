@@ -1040,6 +1040,12 @@ fn bt18_073_inherited_redirect_installs_when_buried_and_composite_target_exists(
     let attacker = runner.place_on_field(1, "ATK", Some(0));
     let security_before = runner.game.players[0].security.len();
 
+    // CR 11-1-2: only the turn player can attack, so the attack runs on its
+
+    // controller's turn (the clause is an [Opponent's Turn] redirect).
+
+    runner.set_first_player(attacker.player);
+
     runner.game.begin_attack_open(AttackOpen {
         attacker,
         initiator: AttackInitiator::Effect {
@@ -1099,6 +1105,12 @@ fn bt18_073_inherited_redirect_accepts_wicked_god_target() {
     let wg_target = runner.place_on_field(0, "WG-TARGET", Some(0));
     let attacker = runner.place_on_field(1, "ATK", Some(0));
 
+    // CR 11-1-2: only the turn player can attack, so the attack runs on its
+
+    // controller's turn (the clause is an [Opponent's Turn] redirect).
+
+    runner.set_first_player(attacker.player);
+
     runner.game.begin_attack_open(AttackOpen {
         attacker,
         initiator: AttackInitiator::Effect {
@@ -1145,6 +1157,12 @@ fn bt18_073_inherited_redirect_does_not_fire_when_standalone_top_card() {
     let attacker = runner.place_on_field(1, "ATK", Some(0));
     let security_before = runner.game.players[0].security.len();
 
+    // CR 11-1-2: only the turn player can attack, so the attack runs on its
+
+    // controller's turn (the clause is an [Opponent's Turn] redirect).
+
+    runner.set_first_player(attacker.player);
+
     runner.game.begin_attack_open(AttackOpen {
         attacker,
         initiator: AttackInitiator::Effect {
@@ -1188,6 +1206,12 @@ fn bt18_073_inherited_redirect_does_not_fire_without_eligible_target() {
     runner.place_on_field(0, "PLAIN", Some(0)); // no Composite/Wicked God trait
     let attacker = runner.place_on_field(1, "ATK", Some(0));
     let security_before = runner.game.players[0].security.len();
+
+    // CR 11-1-2: only the turn player can attack, so the attack runs on its
+
+    // controller's turn (the clause is an [Opponent's Turn] redirect).
+
+    runner.set_first_player(attacker.player);
 
     runner.game.begin_attack_open(AttackOpen {
         attacker,
@@ -1236,6 +1260,9 @@ fn bt18_073_inherited_redirect_opt_blocks_second_activation_same_turn() {
     let attacker2 = runner.place_on_field(1, "ATK2", Some(0));
 
     // First activation this turn.
+    // CR 11-1-2: only the turn player can attack, so the attack runs on its
+    // controller's turn (the clause is an [Opponent's Turn] redirect).
+    runner.set_first_player(attacker.player);
     runner.game.begin_attack_open(AttackOpen {
         attacker,
         initiator: AttackInitiator::Effect {
@@ -1259,6 +1286,9 @@ fn bt18_073_inherited_redirect_opt_blocks_second_activation_same_turn() {
     runner.auto_resolve().ok();
 
     // Second attack, same turn: OPT must lock it out -- no outer prompt installs.
+    // CR 11-1-2: only the turn player can attack, so the attack runs on its
+    // controller's turn (the clause is an [Opponent's Turn] redirect).
+    runner.set_first_player(attacker2.player);
     runner.game.begin_attack_open(AttackOpen {
         attacker: attacker2,
         initiator: AttackInitiator::Effect {

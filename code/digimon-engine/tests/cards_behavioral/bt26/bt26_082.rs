@@ -124,6 +124,42 @@ fn bt26_082_on_deletion_discard_then_face_up_bottom_security() {
     );
 }
 
+/// CR 4.3 3-1-3-1 / 15-4-4-3: if Ravemon leaves the trash before its
+/// [On Deletion] places it (here: moved to the hand mid-resolution), it is a
+/// new card and the placement finds nothing. Before the fix the engine found
+/// the card in ANY zone and moved it from the hand into security.
+#[test]
+fn bt26_082_on_deletion_does_not_place_a_card_that_left_the_trash() {
+    let mut r = setup();
+    push_hand(&mut r, 1, "JUNK");
+    let rave = r.place_on_field(0, CARD_ID, Some(0));
+    let sec_before = r.security_count(0);
+    r.game.delete_permanents_batch(
+        vec![rave],
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+    pick_hand(&mut r, 1, "JUNK");
+    let pos = r.game.players[0]
+        .trash
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == CARD_ID)
+        .expect("Ravemon is in the trash after deletion");
+    let card = r.game.players[0].trash.remove(pos);
+    r.game.players[0].hand.push(card);
+    r.execute_branch(0)
+        .expect("choose to place face up as bottom security");
+
+    let _ = r.auto_resolve();
+    assert_eq!(r.security_count(0), sec_before, "nothing placed");
+    assert!(
+        r.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == CARD_ID),
+        "Ravemon stays in the hand"
+    );
+}
+
 #[test]
 fn bt26_082_face_up_security_plays_itself_at_end_of_opponents_turn() {
     let mut r = builder()

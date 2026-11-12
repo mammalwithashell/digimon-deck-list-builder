@@ -423,62 +423,56 @@ fn st24_15_paid_main_is_ordinary_field_option_and_survives_next_turn() {
     }
 }
 
-// ─── Use Req. reads the whole field, breeding area included ─────────────────
-//
-// Rule 16-42-3: <Use Req.> lets a player ignore color requirements with
-// specific Digimon/Tamers "on the field", and 3-4-6 divides the field into the
-// breeding area and the battle area. DCGO reads `GetFieldPermanents()` (whole
-// field). A recorded human game used DNA Charge (white) with an off-color
-// [DATA SQUAD] Gaomon still in breeding and an empty battle area; the engine
-// refused the play. The fixtures above hide this by using a WHITE provider,
-// which satisfies the ordinary color match without the Use Req. at all.
+// ════════════════════════════════════════════════════════════════════════════
+// Section 4 — [Security] activate the [Main] effects (incl. "place this card")
+// ════════════════════════════════════════════════════════════════════════════
 
-fn blue_breeding_digimon(id: &str, traits: &[&str]) -> CardData {
-    let mut c = make_test_card(id, id);
-    c.card_kind = CardKind::Digimon;
-    c.colors = vec![CardColor::Blue];
-    c.level = Some(3);
-    c.dp = Some(2000);
-    c.play_cost = 3;
-    c.traits = traits.iter().map(|t| t.to_string()).collect();
-    c
-}
+/// [Security] "Activate this card's [Main] effects" runs the whole [Main],
+/// including "Then, place this card in the battle area": after the security
+/// check DNA Charge sits in its owner's battle area as a delay Option, not in
+/// the trash. Sister of `st23_15_security_places_self_in_battle_area`.
+#[test]
+fn st24_15_security_places_self_in_battle_area_rose_rave_audit() {
+    // Rose Rave audit 2026-11-11: DCGO AddActivateMainOptionSecurityEffect runs the [Main] whole (PlaceDelayOptionCards).
+    use digimon_engine::permanent::OptionState;
+    let mut attacker = make_test_card("ATTACKER", "Attacker");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(5);
+    attacker.dp = Some(9000);
 
-fn dna_charge_play_is_legal(provider: CardData) -> bool {
-    let provider_id = provider.card_id.clone();
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
-        .expect("ST24-15 in embedded pack")
-        .add_card(provider)
+        .expect("ST24-15 YAML loads")
+        .add_card(attacker)
         .add_card(filler("FILLER"))
-        .hand(0, &[CARD_ID])
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
+        .security(1, &[CARD_ID])
         .memory(10)
         .start();
     runner.set_first_player(0);
-    runner.place_in_breeding(0, &provider_id);
-    assert!(
-        runner.game.players[0].battle_area.is_empty(),
-        "fixture: battle area must be empty so only breeding can satisfy Use Req."
-    );
-    runner.game.enter_main_phase();
-    let action = digimon_engine::action::space::PLAY_HAND_START;
-    digimon_engine::action::mask::build_action_mask(&runner.game, 0)[action as usize] == 1.0
-}
 
-#[test]
-fn st24_15_use_req_counts_off_color_data_squad_digimon_in_breeding() {
-    assert!(
-        dna_charge_play_is_legal(blue_breeding_digimon("BLUE-DS", &["DATA SQUAD"])),
-        "<Use Req. ([DATA SQUAD])> must be satisfied by a DATA SQUAD Digimon in the breeding area"
-    );
-}
+    let atk = runner.place_on_field(0, "ATTACKER", Some(0));
+    let _ = runner.attack_player(atk, 1, false);
+    let _ = runner.auto_resolve();
 
-#[test]
-fn st24_15_use_req_ignores_off_color_non_data_squad_in_breeding() {
+    assert_eq!(runner.security_count(1), 0, "DNA Charge was checked");
+    let placed = runner.game.players[1]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .expect("DNA Charge is placed in its owner's battle area");
     assert!(
-        !dna_charge_play_is_legal(blue_breeding_digimon("BLUE-PLAIN", &["Beast"])),
-        "an off-color non-[DATA SQUAD] breeding Digimon satisfies neither color nor Use Req."
+        matches!(placed.option_state, OptionState::Delayed { owner: 1, .. }),
+        "placed as a delay Option; got {:?}",
+        placed.option_state
+    );
+    assert!(
+        !runner.game.players[1]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
+        "DNA Charge must not be trashed after its [Security] effect"
     );
 }

@@ -10,9 +10,11 @@
 #     turn.
 #   Inherited: [Security] Play this card without paying the cost.
 #
-# (DCGO carries a [Rule] name-alias — also treated as "Marcus Damon"/"Thomas H.
-#  Norstein" — which is metadata-only and is NOT authored, exactly as the sister
-#  ST23-13/14 omit theirs. Does not block.)
+#   <Rule> Name: Also treated as [Marcus Damon]/[Thomas H. Norstein].
+#     (official Bandai DB, data/card_bundles/ST24-13.md; DCGO ChangeCardNamesClass)
+#     → top-level `also_treated_as`. Gaogamon (BT25-023), ShineGreymon: Burst
+#     Mode (BT25-104) and ShineGreymon (AD1-016) name these Tamers. (ST23-13/14
+#     print no such rule.)
 #
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Yellow/ST24_13.cs
 #
@@ -43,6 +45,7 @@ kind: tamer
 color: [yellow, blue]
 cost: 4
 traits: [DATA SQUAD]
+also_treated_as: ["Marcus Damon", "Thomas H. Norstein"]
 
 effects:
   # ─── [SOMP][On Play] may place top deck card FD under self; then if opp has a

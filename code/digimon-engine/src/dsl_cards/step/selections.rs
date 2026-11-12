@@ -163,6 +163,10 @@ pub(crate) fn field_value(
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
+            // DCGO `IsMaxCost`: only a top card WITH a play cost counts (a
+            // Token, a DUAL card or an Option has none), so it is neither a
+            // highest- nor a lowest-play-cost candidate. Deck audit 2026-11-10.
+            .filter(|perm| top_card_has_play_cost(perm, &game.card_data))
             .map(|perm| i32::from(perm.top_card().play_cost(&game.card_data))),
         CompiledFieldSelector::LowestMaterialCount => game
             .player(handle.player)
@@ -170,6 +174,16 @@ pub(crate) fn field_value(
             .get(handle.index as usize)
             .map(|perm| perm.card_sources.len().saturating_sub(1) as i32),
     }
+}
+
+/// The permanent's top card has a printed play cost (not a Token, DUAL card
+/// or Option) — DCGO `CardSource.HasPlayCost` as used by `IsMaxCost`.
+pub(crate) fn top_card_has_play_cost(
+    perm: &crate::permanent::Permanent,
+    card_data: &[crate::card_data::CardData],
+) -> bool {
+    let top = perm.top_card();
+    top.has_play_cost(card_data) && top.card_kind(card_data) != crate::enums::CardKind::Token
 }
 
 pub(crate) fn selected_field_extreme(
@@ -1901,9 +1915,12 @@ fn park_non_dsl_count_capped_state(
         Some(owner)
     } else { None };
     game.current_phase = GamePhase::SelectBudgeted;
+    let chooser = state.prov.override_pin.unwrap_or(state.prov.controller);
+    let zone_owner = (!matches!(state.zone, CountCappedZone::Material(_)) && state.of_player != chooser)
+        .then_some(state.of_player);
     game.pending_selection = Some(PendingSelection {
         card_choice,
-        zone_owner: None,
+        zone_owner,
         kind: SelectionKind::CountCappedMultiSelect {
             min: effective_min,
             max: state.max,
@@ -3894,9 +3911,14 @@ pub(crate) fn install_multipick_step(
     let valid_action_ids: Vec<u16> = owner.as_ref().map(|owner| owner.valid_action_ids(game))
         .unwrap_or_else(|| state.candidate_indices.iter().map(|&i| state.range_start + i as u16).collect());
     game.current_phase = crate::enums::GamePhase::SelectBudgeted;
+    // Mirror `install_count_capped_step`: a hand/trash pick over another
+    // player's zone records that zone's owner.
+    let zone_owner = (!matches!(state.zone, CountCappedZone::Material(_))
+        && state.of_player != state.selecting_player)
+        .then_some(state.of_player);
     game.pending_selection = Some(PendingSelection {
         card_choice: owner,
-        zone_owner: None,
+        zone_owner,
         kind: SelectionKind::CountCappedMultiSelect {
             min: effective_min,
             max: state.max,
@@ -4490,11 +4512,24 @@ pub fn try_install(
             let min_unpayable = !*clamp_to_available && *min > 0 && candidate_count < *min as usize;
             let completes_synchronously =
                 !min_unpayable && (candidate_count == 0 || max_value == 0);
+            // MP-30/31 for card zones (hand/trash): a `clamp_to_available`
+            // effect-target pick MUST take `min(max, available)` cards — the
+            // battle-area path clamps inside `install_select_count_capped_
+            // permanents`; card zones fold it into the pick floor here.
+            // Driver BT13-033 ("returning them ... so that 8 remain": exactly
+            // hand-8 picks, DCGO canEndNotMax:false).
+            let effective_min = if *clamp_to_available
+                && !matches!(zone, digimon_dsl::compiled::CompiledZone::BattleArea)
+            {
+                (*min).max((max_value as usize).min(candidate_count) as u8)
+            } else {
+                *min
+            };
             install_select_count_capped_multi(
                 ctx,
                 *of,
                 *zone,
-                *min,
+                effective_min,
                 max_value,
                 *clamp_to_available,
                 filter.clone(),
@@ -7711,7 +7746,15 @@ fn install_select_dna_pair(
                     player,
                     index: index as u8,
                 };
-                if eval_predicate(&left_filter, &read, PredicateSubject::Permanent(handle)) {
+                // Evaluate with the effect's bindings so a filter can reference
+                // a prior pick (e.g. `dna_field_pair { result: <hand pick> }`,
+                // G-DSL-DNA-FIELD-PAIR-CANDIDATE).
+                if eval_predicate_with_bindings(
+                    &left_filter,
+                    &read,
+                    PredicateSubject::Permanent(handle),
+                    Some(&bindings),
+                ) {
                     candidates.push((encode_attack(player as u16, index as u16), handle));
                 }
             }

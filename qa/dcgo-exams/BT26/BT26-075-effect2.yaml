@@ -80,13 +80,10 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.1, using: BT26-075 } }
     expect: { prompt: main_phase }
-  # ENGINE FINDING: Armalizamon's "[Your Turn][OPT] When you would USE a
-  # [Glowing Dawn] Option card ... reduce the cost by 3" is offered on a
-  # DIGIVOLVE into the DUAL ScourgeChiropmon (its `kind: option` filter
-  # matches a DUAL). DCGO keys it on option USE only -> declined here; no
-  # DCGO counterpart expected -> sim_only.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+  # (RESOLVED: Armalizamon's "When you would USE a [Glowing Dawn] Option card
+  # ... reduce the cost by 3" used to be offered on this DIGIVOLVE into the
+  # DUAL ScourgeChiropmon; like DCGO it now keys on Option use only, so the
+  # sim-only decline that answered it is gone.)
   - actor: 0
     do: { attack: { attacker: field.1, target: field.0 } }
     expect: { prompt: main_phase }
@@ -115,7 +112,7 @@ steps:
   - actor: 0
     do: { pass: {} }
 assert:
-  - at: 19
+  - at: 18
     that:
       turn: 3
       p0.memory: 3

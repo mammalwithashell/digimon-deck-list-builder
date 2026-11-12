@@ -402,6 +402,22 @@ pub enum StepSpec {
     SecurityPlaceTopCard(SecurityPlaceTopStackedCardArgs),
     ReturnAllTrashToDeckBottom(PlayerArg),
     ReturnTrashListToDeckBottom(ReturnTrashListToDeckBottomArgs),
+    /// Move a card-list binding of HAND cards (e.g. from
+    /// `select_count_capped_multi { zone: hand }`) out of `of`'s hand to the
+    /// bottom (default) or top of each card's OWNER's deck. A return, not a
+    /// trash: no `OnDiscardHand`. Each moved card is recorded in the
+    /// `returned_to_deck` result log (`effect_returned_any_card`).
+    /// Hand sibling of `return_trash_list_to_deck_bottom`. Driver BT13-033
+    /// ("returning them to the bottom of the deck so that 8 remain").
+    /// G-DSL-BLIND-OPP-HAND-PLACE (hand -> deck half).
+    ReturnHandListToDeck(ReturnTrashListToDeckBottomArgs),
+    /// Shuffle `of`'s hand, destroying every observer's knowledge of hand
+    /// positions. Precedes a pick "without looking" from an opponent's hand
+    /// so the chosen indices carry no information (DCGO
+    /// `RandomUtility.ShuffledDeckCards(Enemy.HandCards)` before its
+    /// face-down `SelectCardEffect`). Driver BT13-033.
+    /// G-DSL-BLIND-OPP-HAND-PLACE (blind-pick half).
+    ShuffleHand(PlayerArg),
     MoveTrashCardToDeckTop(MoveTrashCardToDeckTopArgs),
     TrashTopNDigivolutionCardsOfEach(TrashTopNDigivolutionCardsOfEachArgs),
     TrashOpponentHandToCount(TrashOpponentHandToCountArgs),
@@ -616,6 +632,8 @@ impl Serialize for StepSpec {
             StepSpec::ReturnToDeckFromReveal(v) => kv!(s, "return_to_deck_from_reveal", v),
             StepSpec::ShuffleDeck(v) => kv!(s, "shuffle_deck", v),
             StepSpec::ShuffleSecurity(v) => kv!(s, "shuffle_security", v),
+            StepSpec::ShuffleHand(v) => kv!(s, "shuffle_hand", v),
+            StepSpec::ReturnHandListToDeck(v) => kv!(s, "return_hand_list_to_deck", v),
             StepSpec::RevealSecurity(v) => kv!(s, "reveal_security", v),
             StepSpec::RevealTopDeck(v) => kv!(s, "reveal_top_deck", v),
             StepSpec::PlaceRemainderOnDeck(v) => kv!(s, "place_remainder_on_deck", v),
@@ -918,6 +936,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "return_to_deck_from_reveal" => StepSpec::ReturnToDeckFromReveal(map.next_value()?),
             "shuffle_deck" => StepSpec::ShuffleDeck(map.next_value()?),
             "shuffle_security" => StepSpec::ShuffleSecurity(map.next_value()?),
+            "shuffle_hand" => StepSpec::ShuffleHand(map.next_value()?),
+            "return_hand_list_to_deck" => StepSpec::ReturnHandListToDeck(map.next_value()?),
             "reveal_security" => StepSpec::RevealSecurity(map.next_value()?),
             "reveal_top_deck" => StepSpec::RevealTopDeck(map.next_value()?),
             "place_remainder_on_deck" => StepSpec::PlaceRemainderOnDeck(map.next_value()?),

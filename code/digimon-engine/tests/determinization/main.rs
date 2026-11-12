@@ -23,6 +23,7 @@ mod support;
 mod beliefs;
 mod closed;
 mod closed_cloud;
+mod fixture_regen;
 mod infoset_tests;
 mod invariants_tests;
 mod materialize_tests;

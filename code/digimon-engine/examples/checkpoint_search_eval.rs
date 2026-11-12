@@ -69,6 +69,9 @@ fn config(v: &Value, seed: u64, noise: f32, main_root: bool) -> DeterminizedConf
     c.search.seed = seed;
     c.search.dirichlet_epsilon = noise;
     c.search.observation_profile = PROFILE;
+    if let Some(q) = v["unvisited_q"].as_f64() {
+        c.search.unvisited_q = q as f32;
+    }
     c
 }
 fn policy(
@@ -277,7 +280,13 @@ fn run() {
             let decks = decks_for(&plan, &json!({"deck_indices":indices}));
             let game_seed = number(&request, "game_seed");
             let mut games = Vec::new();
-            for candidate_seat in 0..2u8 {
+            // Optional `candidate_seats` restricts which seat the candidate
+            // takes (default both, seat-swapped on the same seed and decks).
+            let seats: Vec<u8> = request["candidate_seats"].as_array().map_or(vec![0, 1], |a| {
+                a.iter().map(|v| v.as_u64().expect("candidate seat") as u8).collect()
+            });
+            for candidate_seat in seats {
+                assert!(candidate_seat < 2, "candidate seat out of range");
                 let mut game = new_game(&data, &decks, game_seed);
                 let mut decisions = 0;
                 let mut searched = 0;

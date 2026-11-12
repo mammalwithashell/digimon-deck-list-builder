@@ -9,8 +9,9 @@
 //!   Tamer, 1 of your [DATA SQUAD] trait Digimon gains ＜Jamming＞ for the turn.
 //! Inherited: [Security] Play this card without paying the cost.
 //!
-//! (DCGO carries a [Rule] name-alias — Marcus Damon / Thomas H. Norstein — which
-//!  is metadata only and not authored, exactly as ST23-13/14 omit theirs.)
+//! <Rule> Name: Also treated as [Marcus Damon]/[Thomas H. Norstein] — authored as
+//!  `also_treated_as` (deck audit 2026-11-10: without it Gaogamon BT25-023,
+//!  ShineGreymon: Burst Mode BT25-104 and ShineGreymon AD1-016 could not find it).
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/ST24/Yellow/ST24_13.cs
@@ -367,4 +368,44 @@ fn st24_13_trash_under_other_permanent_does_not_trigger() {
         !runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
         "a trash on a different permanent's stack must NOT suspend this Tamer"
     );
+}
+
+// ─── Section 4 — <Rule> Name alias ───────────────────────────────────────────
+
+#[test]
+fn st24_13_is_also_treated_as_marcus_damon_and_thomas_h_norstein() {
+    let card = compiled(CARD_ID);
+    assert_eq!(
+        card.also_treated_as,
+        vec!["Marcus Damon".to_string(), "Thomas H. Norstein".to_string()]
+    );
+    let data = tamer_data();
+    assert!(data.also_treated_as.contains(&"Marcus Damon".to_string()));
+    assert!(data.also_treated_as.contains(&"Thomas H. Norstein".to_string()));
+}
+
+/// Gaogamon (BT25-023): "you may play 1 [Thomas H. Norstein] from your hand
+/// without paying the cost" finds this Tamer through its name alias.
+#[test]
+fn st24_13_is_found_by_gaogamons_thomas_h_norstein_play() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST24-13 compiles")
+        .dsl_card("BT25-023")
+        .expect("BT25-023 compiles")
+        .add_card(filler("FILL"))
+        .hand(0, &["BT25-023", CARD_ID])
+        .deck(0, &["FILL"; 10])
+        .deck(1, &["FILL"; 10])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    runner.play(0, 0);
+    let _ = runner.accept_optional_trigger();
+    runner.auto_resolve().expect("Gaogamon's play resolves");
+    let on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID);
+    assert!(on_field, "Marcus & Thomas is played as [Thomas H. Norstein]");
 }

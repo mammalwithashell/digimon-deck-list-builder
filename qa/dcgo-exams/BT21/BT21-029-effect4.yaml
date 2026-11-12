@@ -125,11 +125,11 @@ assert:
       # 5 -> 2. Two from the attack's security checks, the THIRD from the
       # deleted Token's [On Deletion] -- the clause under exam.
       p1.security: 2
+      # One Token, not DCGO's two: the shared [Once Per Turn] of clause (d)
+      # (see BT21-029-effect3.yaml and qa/rules/dcgo_quirks.md
+      # Q-OPT-COUNTER-PER-TRIGGER-ARM). The security count, this clause's
+      # witness, is the same in both engines.
       p1.field:
-        - card_id: TOKEN_PETRIFICATION
-          dp: 3000
-          suspended: false
-          sources: []
         - card_id: TOKEN_PETRIFICATION
           dp: 3000
           suspended: false

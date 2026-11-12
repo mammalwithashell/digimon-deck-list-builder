@@ -100,6 +100,25 @@ fn digimon(
     let mut d = make_test_card(card_id, name);
     d.dp = Some(dp);
     d.traits = traits.iter().map(|t| t.to_string()).collect();
+    // The <Delay> digivolve keeps the digivolution requirements, so a hand
+    // card needs a real one: `EVO-*` cards are Lv.4 from a red Lv.3 (the
+    // default test base); `EVO-FAR` is Lv.6 from Lv.5 and can't digivolve onto
+    // a Lv.3 base.
+    if card_id == "EVO-FAR" {
+        d.level = Some(6);
+        d.evo_costs = vec![digimon_engine::card_data::EvoCost {
+            card_color: 0,
+            level: 5,
+            memory_cost: 3,
+        }];
+    } else if card_id.starts_with("EVO-") {
+        d.level = Some(4);
+        d.evo_costs = vec![digimon_engine::card_data::EvoCost {
+            card_color: 0,
+            level: 3,
+            memory_cost: 2,
+        }];
+    }
     d
 }
 
@@ -328,7 +347,7 @@ fn bt21_093_event_gated_delay_clause_is_all_turns_on_opponent_security_removed()
         steps.iter().any(|step| match step {
             CompiledStep::EffectInitiatedDigivolve {
                 cost,
-                ignore_requirements: true,
+                ignore_requirements: false,
                 ..
             } => *cost == CompiledCostDelta::Literal(0),
             CompiledStep::If {
@@ -339,7 +358,8 @@ fn bt21_093_event_gated_delay_clause_is_all_turns_on_opponent_security_removed()
     }
     assert!(
         has_free_digivolve(&delay_body.process),
-        "Delay body should include a free (cost 0, ignore_requirements) effect-initiated digivolve"
+        "Delay body should include a free (cost 0) effect-initiated digivolve that keeps \
+         the digivolution requirements (DCGO DigivolveIntoHandOrTrashCard)"
     );
 }
 
@@ -1092,5 +1112,66 @@ fn bt21_093_inherited_security_deletes_highest_dp_opponent_digimon() {
     assert!(
         !remaining_dp.contains(&12000),
         "[Security] must delete the highest-DP (12000) Digimon; remaining: {remaining_dp:?}"
+    );
+}
+
+/// The <Delay> digivolve keeps the digivolution requirements (DCGO
+/// `DigivolveIntoHandOrTrashCard`, no ignore flag): a Dragonkin card that
+/// can't digivolve onto the chosen Digimon is not offered. Deck audit
+/// 2026-11-10: requirements were ignored.
+#[test]
+fn bt21_093_delay_digivolve_offers_only_cards_that_can_digivolve_onto_the_base() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-093")
+        .expect("BT21-093 in embedded pack")
+        .add_card(digimon("MY-REPTILE", "MyReptile", 4000, &["Reptile"]))
+        .add_card(digimon("EVO-FAR", "EvoFar", 11000, &["Dragonkin"]))
+        .add_card(digimon("EVO-DRAGONKIN", "EvoDragonkin", 9000, &["Dragonkin"]))
+        .hand(0, &["EVO-FAR", "EVO-DRAGONKIN"])
+        .memory(20)
+        .start();
+
+    let option = runner.place_on_field(0, "BT21-093", Some(0));
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[option.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn,
+        };
+    runner.place_on_field(0, "MY-REPTILE", Some(0));
+
+    let observed_card = runner.game.player(1).security.first().map(|c| c.handle());
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::SecurityRemoved {
+            affected_player: 1,
+            observer_player: 0,
+            source_player: 0,
+            card: observed_card.unwrap_or(digimon_engine::card_source::CardHandle(0)),
+            cause: EventCause::SecurityRemoval,
+        },
+    );
+    runner.game.drain_effect_queue();
+
+    let gate = runner.pending_selection_view().expect("<Delay> prompt");
+    runner
+        .game
+        .resolve_selection(gate.selecting_player, gate.valid_action_ids[0])
+        .expect("accept the <Delay>");
+    let view = runner.pending_selection_view().expect("base pick");
+    runner
+        .game
+        .resolve_selection(view.selecting_player, view.valid_action_ids[0])
+        .expect("choose the Reptile base");
+
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    let view = runner.pending_selection_view().expect("hand pick");
+    assert_eq!(
+        view.valid_action_ids,
+        vec![1],
+        "only EVO-DRAGONKIN (hand slot 1) can digivolve onto the Lv.3 base"
     );
 }
