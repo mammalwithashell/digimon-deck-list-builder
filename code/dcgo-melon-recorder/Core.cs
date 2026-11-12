@@ -1572,6 +1572,15 @@ namespace DcgoRecorder
             if (category != "trigger_order" && !string.IsNullOrEmpty(src) && opanel != null && opanel.gameObject.activeInHierarchy)
             {
                 var ids = opanel.GetComponentsInChildren<Il2Cpp.HandCard>(false).Select(h => h?.cardSource?.CardID).ToList();
+                // The engine DECLINES its effect (an optional gate answered PASS: "Use Cost reduction ...?") while DCGO
+                // lists it among several in its "Multiple effects" panel: that is DCGO's "Don't activate these
+                // effects" (No Selection, -1), not resolving it first (ST23-15 played with two BT25-049 reducers).
+                if (declined && ids.Contains(src) && PanelSays(opanel, "Multiple effects") && FindActiveButton("NotSelectButton") != null)
+                {
+                    LoggerInstance.Msg("agent: DCGO lists the effect the engine declines among others - Don't activate these effects");
+                    opanel.OnClickNotSelectButton();
+                    throw new Exception("effects declined - the prompt follows");
+                }
                 if (ids.Contains(src) && !chosen.Any(c => c["card_id"] != null && ids.Contains(c["card_id"])))
                 {
                     LoggerInstance.Msg("agent: DCGO asks the order of triggers the engine did not order - resolving " + src + " first");

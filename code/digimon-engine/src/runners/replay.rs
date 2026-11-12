@@ -2314,6 +2314,34 @@ impl ReplayDriver {
             payload
         };
 
+        // `MultipleSkills` -1 against an optional prompt that is NOT a trigger order: DCGO listed the effect the
+        // engine parks as a yes/no gate ("Use Cost reduction to reduce Option-use cost?") among several in its
+        // "Multiple effects" panel, and declined them all - the engine's decline of that gate.
+        if payload.prompt == "MultipleSkills"
+            && payload.int_value == Some(-1)
+            && game.pending_selection.as_ref().is_some_and(|p| {
+                !matches!(p.kind, crate::selection::SelectionKind::TriggerOrder)
+                    && p.is_optional
+                    && p.selecting_player == actor
+            })
+        {
+            game.decode_action(crate::action::space::PASS, actor);
+            self.cursor += 1;
+            return ReplayStepResult {
+                step_number: self.cursor,
+                player_id: actor,
+                action_id: crate::action::space::PASS,
+                phase_before,
+                phase_after: game.current_phase.py_name().to_string(),
+                memory_before,
+                memory_after: game.memory,
+                turn_number,
+                is_game_over: game.game_over,
+                winner_id: game.winner,
+                divergences: Vec::new(),
+            };
+        }
+
         // `MultipleSkills` -1 is DCGO's "Don't activate these effects": every
         // remaining simultaneous effect is declined. Our engine resolves them one
         // at a time - pick the next entry of the trigger-order list, then decline

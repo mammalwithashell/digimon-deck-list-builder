@@ -388,7 +388,9 @@ def convert(rows, cards, allow_truncated=False):
             if tp not in (0, 1) or len(a) < 3:
                 truncated_at = truncated_at or ("SelectPermanentEffect without a turn player at step %d" % step)
                 break
-            targets = [{"player": tp if is_tp else 1 - tp, "frame": idx} for is_tp, idx in zip(a[1], a[2])]
+            # a declined pick sends null arrays (SetTargetFrames(pid, null, null), ST23-12's optional "you may"
+            # declined with the back button): no targets, a cancel
+            targets = [{"player": tp if is_tp else 1 - tp, "frame": idx} for is_tp, idx in zip(a[1] or [], a[2] or [])]
             row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectPermanentEffect",
                    "phase": "Main"}
             if r.get("boards") and len(r["boards"]) == 2:

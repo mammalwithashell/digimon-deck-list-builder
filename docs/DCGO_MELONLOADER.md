@@ -425,6 +425,62 @@ Getting there, besides the answering rules above:
 Run it: make the plan (`make_playback_plan.py sim1b.json plan.txt`), point both sandboxes' `playback.txt` at it,
 start two `dcgo-agent --script sim1b.json` (one per seat dir), then launch the host and, 20 s later, the joiner.
 
+### More archetypes played back: what they found (2026-11-11/12)
+
+Three more cp8 sim games (seed 1, decks in `qa/dcgo-mod-recordings/playback/deck_*.json`):
+
+| Match | Result |
+|---|---|
+| Toho Braves vs TS Jupitermon (`sim_toho_jup`, 86 decisions) | Plays back to the same winner (seat 1, turn 11); both clients' recordings replay as a full PASS. Took ten runs. |
+| Medusamon vs Rocks (`sim_med_rocks`) | Blocked at DCGO step 58 by a DCGO bug: Sunarizamon EX8-047's rule-granted [Mineral] trait is missing in DCGO (`qa/rules/dcgo_quirks.md`, Q-DCGO-RULE-TRAIT-MISSING). |
+| Glowing Dawn vs DNA Omnimon (`sim_gd_dna`, re-recorded after each engine fix, last 56 steps) | Plays back to the same winner (seat 1); both clients' recordings replay as a full PASS. |
+
+Engine bugs found and fixed:
+
+- **Tsunomon BT24-003 offered a card that cannot digivolve.** An effect digivolve from hand/trash now only offers
+  cards that can digivolve onto the target (`digimon-dsl` pass `digivolve_candidates`, DCGO `CanPlayCardTargetFrame`).
+- **Turn end after the breeding phase (CR 4.3 6-1-4-1).** A breeding-phase effect that pays memory over to the
+  opponent's side ends the turn; the engine used to open the main phase. Pinned by `rules_conformance`
+  `ch06_turn_flow`.
+- **Native replay double-applied a forced pick.** The one-card ordering auto-answer ran for native recordings too,
+  which log that pick themselves, so the recorded pick landed on the next decision (a main-phase id decodes for the
+  turn player: P0's "place the last card" played P1's BT24-090 a step early). Now DCGO recordings only. It silently
+  corrupted the states the playback agent matches against.
+
+More engine bugs, from Glowing Dawn vs DNA Omnimon:
+
+- **EX9-066 Tai Kamiya & Matt Ishida** ("You may return 1 ... If this effect didn't return, <Draw 1>") was a
+  Return/Draw branch choice whose return branch drew nothing when it returned nothing. Now one optional trash pick,
+  then the return or the draw.
+- **BT25-049 / BT25-081** filtered already-suspended targets out of "suspend 1 ..." (Q&A Q845 allows them).
+- **BT25-090** "by suspending this Tamer, you may place the top 2 ..." had no suspend-only choice (CR 15-7-5).
+- **ST23-15 e-Pulse**'s [Security] ("Activate this card's [Main] effects") trashed the card instead of placing it in
+  the battle area, so its [Start of Your Main Phase] never came.
+- **Replay:** DCGO's "Don't activate these effects" (-1) now uses the engine's decline-all, and declines an optional
+  gate DCGO lists among other effects; a declined permanent pick with null arrays converts as a cancel.
+
+DCGO asks things the engine does not, and the mod now answers them:
+
+- **Replacement order** is DCGO's "Multiple effects" card panel; the agent names each branch's source card.
+- **One effect listed twice** (BT24-040's "[On Play] [When Digivolving]" activated by BT24-102): the mod takes the
+  first; the pick is stamped stray (-2) and the converter drops it.
+- **A lone optional trigger** gets only DCGO's "Use?"; the mod answers it with the engine's order-pick stamp.
+- **Zone menus** ("From hand / From trash / Don't play", EX12-074's [Security]): the decline is stamped PASS; a zone
+  choice is held back by the agent until the card pick follows it.
+- **The non-turn seat's card panel** opens a moment late; answering through the setter first left it open.
+- **[Main] activation index:** the engine's field-effect sub-slot (2 = [Main], 3 = <Link>) is mapped to DCGO's
+  positional skill index, and back via `activate_link` on the packet row.
+- **Hand picks** wait for DCGO's End Selection after the click.
+- **A declined effect listed with others** in DCGO's "Multiple effects" panel is answered with No Selection.
+
+Open question, not changed: official Q&A Q845 (ST18-10) and Q1782 say an already-suspended Digimon can be chosen for a
+"suspend 1 ..." effect (it just isn't suspended by it). BT25-049 and BT25-081 now allow that (DCGO agrees). Five more
+non-cost suspends still require an unsuspended target in both the engine and DCGO: BT25-055, BT26-035, BT26-036,
+BT26-044, EX13-076. Following the ruling there would diverge from DCGO; it needs a decision.
+
+Known open: `tests/replay_empty_replacement_window.rs` fails its recorded digest at step 18 on this branch. It
+predates this work: it is unaffected by the candidate pass and the turn-end fix, and does not use the replay runner.
+
 ### Where playback stopped earlier (2026-11-10, historical)
 
 `sim1` (cp8 vs cp8, EX12 Gammamon/Greymon vs BT12 Veemon, 124 decisions) plays back through turn 4: mulligans, plays,
