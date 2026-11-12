@@ -196,6 +196,35 @@ fn handle(
             }
         }
     }
+    // A zone menu ("From hand / From trash / Don't play") in front of a hand/trash pick is a `generic_int` row the
+    // replay reads with LOOKAHEAD: followed by this seat's card pick it only narrowed the zone, with no pick after it
+    // it was "Don't play". Live, the pick does not exist yet, so a trailing zone int would read as a decline: hold it
+    // back while it answers a parked UnionZone pick (EX12-074's [Security], "From trash" then EX12-009). A real
+    // "Don't play" is applied once DCGO's next rows arrive.
+    if session.divergences().is_empty() {
+        let mut lines: Vec<&str> = rec_text.lines().filter(|l| !l.trim().is_empty()).collect();
+        let end = lines.pop();
+        let zone_int = lines.last().copied().filter(|l| {
+            l.contains("\"prompt\":\"generic_int\"") && !l.contains("\"card_ids\"") && !l.contains("\"engine_action\"")
+        });
+        if let (Some(_), Some(end)) = (zone_int, end) {
+            lines.pop();
+            lines.push(end);
+            let trimmed = lines.join("
+");
+            if let Ok(rec2) = digimon_engine::dcgo_recording::parse_jsonl(&trimmed) {
+                if let Ok(mut s2) = ReplaySession::from_dcgo(rec2, card_data, false) {
+                    s2.run_to_completion();
+                    let union_open = s2.game.pending_selection.as_ref().is_some_and(|p| {
+                        matches!(p.kind, digimon_engine::selection::SelectionKind::UnionZone { .. })
+                    });
+                    if s2.divergences().is_empty() && union_open {
+                        session = s2;
+                    }
+                }
+            }
+        }
+    }
     if let Some(d) = session.divergences().first() {
         return Ok(json!({"id": id, "status": "diverged", "step": d.step, "message": format!("{:?}", d.kind)}));
     }
@@ -205,7 +234,10 @@ fn handle(
     let mut advanced = session.game.clone();
     for _ in 0..8 {
         let forced = match advanced.pending_selection.as_ref() {
-            Some(p) if matches!(p.kind, digimon_engine::selection::SelectionKind::OrderedPermutation { remaining: 1 })
+            // (and a trigger order with one trigger left: DCGO resolves a lone effect without asking)
+            Some(p) if (matches!(p.kind, digimon_engine::selection::SelectionKind::OrderedPermutation { remaining: 1 })
+                || matches!(p.kind, digimon_engine::selection::SelectionKind::TriggerOrder))
+                && !p.is_optional
                 && p.valid_action_ids.len() == 1 =>
             {
                 Some((p.selecting_player, p.valid_action_ids[0]))
@@ -400,7 +432,15 @@ fn describe_pick(game: &digimon_engine::game::Game, seat: u8, action: u16) -> Va
         }
         K::EffectChoice => {
             let idx = p.effect_choices.as_ref().and_then(|e| e.iter().position(|c| c.action_id == action));
-            json!({"pick": "branch", "index": idx,
+            // a replacement-order choice ("Choose the next immediate replacement effect") is DCGO's "Multiple
+            // effects" card panel, which lists each effect's SOURCE card: carry it so the mod can click it
+            let src = p
+                .effect_choices
+                .as_ref()
+                .and_then(|e| e.iter().find(|c| c.action_id == action))
+                .and_then(|c| c.source_card)
+                .and_then(|h| card_id_by_handle(game, h));
+            json!({"pick": "branch", "index": idx, "card_id": src,
                    "label": p.effect_choices.as_ref().and_then(|e| e.iter().find(|c| c.action_id == action).map(|c| c.label.clone()))})
         }
         _ => json!({"pick": "unknown", "action_id": action}),

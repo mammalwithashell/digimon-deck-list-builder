@@ -1977,6 +1977,15 @@ impl ReplayDriver {
                     && p.effect_choices.is_none()
                     && p.selecting_player == actor
             })
+            // only when this actor's card pick follows: with no pick after it the int was DCGO's "Don't play"
+            // (EX12-074's [Security]: From hand / From trash / Don't play = 3), the engine's decline, which the
+            // zone-choice handling below resolves
+            && self
+                .source
+                .steps()
+                .get(self.cursor as usize + 1)
+                .and_then(|s| s.selection.as_ref())
+                .is_some_and(|n| n.actor == actor && n.card_ids.as_ref().is_some_and(|c| !c.is_empty()))
         {
             self.cursor += 1;
             return ReplayStepResult {
@@ -2012,6 +2021,17 @@ impl ReplayDriver {
             && game.pending_selection.as_ref().map_or(true, |p| {
                 !matches!(p.kind, crate::selection::SelectionKind::TriggerOrder)
                     && p.selecting_player == actor
+                    // a replacement order is DCGO's MultipleSkills panel too: the row's card answers it
+                    && !(matches!(p.kind, crate::selection::SelectionKind::EffectChoice)
+                        && payload.chosen_effect_card.as_deref().is_some_and(|cid| {
+                            p.effect_choices.as_ref().is_some_and(|es| {
+                                es.iter().any(|e| {
+                                    e.source_card
+                                        .and_then(|c| game.card_data_for_handle(c))
+                                        .is_some_and(|d| d.card_id == cid)
+                                })
+                            })
+                        }))
             })
         {
             self.cursor += 1;
@@ -2500,8 +2520,13 @@ impl ReplayDriver {
         let mut guard = 0;
         while let Some(pending) = game.pending_selection.as_ref() {
             guard += 1;
+            // ... and a trigger order with ONE trigger left: DCGO's MultipleSkills resolves a lone effect without
+            // asking (`skillInfos_active.Count == 1`), so it records no row; the engine still parks the order. DCGO
+            // recordings only - a native recording logs this pick like any other engine action.
+            let lone_trigger = matches!(pending.kind, SelectionKind::TriggerOrder)
+                && self.policy == StepPolicy::CheckThenApply;
             if guard > 8
-                || !matches!(pending.kind, SelectionKind::OrderedPermutation { remaining: 1 })
+                || !(matches!(pending.kind, SelectionKind::OrderedPermutation { remaining: 1 }) || lone_trigger)
                 || pending.is_optional
                 || pending.valid_action_ids.len() != 1
             {

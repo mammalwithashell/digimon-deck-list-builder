@@ -1410,7 +1410,9 @@ pub fn resolve_next(
         if let (Some(card_id), Some(entries)) =
             (payload.chosen_effect_card.as_deref(), pending.effect_choices.as_ref())
         {
-            if matches!(pending.kind, SelectionKind::TriggerOrder) {
+            // ... and the engine's replacement order ("Choose the next immediate replacement effect", an
+            // EffectChoice over each replacement's source card): DCGO asks it in the same MultipleSkills panel
+            if matches!(pending.kind, SelectionKind::TriggerOrder | SelectionKind::EffectChoice) {
                 let matching: Vec<u16> = entries
                     .iter()
                     .filter(|e| accepts(e.action_id))

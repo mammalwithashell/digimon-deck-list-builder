@@ -306,6 +306,8 @@ def convert(rows, cards, allow_truncated=False):
             continue
         if m in ("TurnStateMachine.QueueMainPhaseAction", "TurnStateMachine.PassTurn"):
             continue  # the Internal row above already carries the decision
+        if m == "SelectCardEffect.SetTargetCardAndIndicies" and r.get("stray"):
+            continue  # a pick DCGO asked among identical candidates and the engine did not (the mod marks it)
         if m == "SelectCardEffect.SetTargetCardAndIndicies" and "card_ids" in r:
             row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectCardEffect", "phase": "Main"}
             if r["card_ids"] and None not in r["card_ids"]:

@@ -1034,6 +1034,21 @@ namespace DcgoRecorder
                     var sce = inst as Il2Cpp.SelectCardEffect;
                     if (sce != null)
                     {
+                        // a card-panel answer takes a stamp too (both clients, in order): -2 marks a pick DCGO asked
+                        // and the engine did not (identical candidates), which the converter drops
+                        if (key == "SelectCardEffect.SetTargetCardAndIndicies" && Il2Cpp.GManager.instance?.You != null)
+                        {
+                            int spid = Convert.ToInt32(args[0]);
+                            int sea;
+                            if (spid == Il2Cpp.GManager.instance.You.PlayerID)
+                            {
+                                sea = _engineAction;
+                                _engineAction = -1;
+                                AppendStamp(spid, sea);
+                            }
+                            else sea = ReadStamp(spid, _remoteStampIdx[spid & 1]++);
+                            if (sea == -2) sb.Append(",\"stray\":true");
+                        }
                         sb.Append(",\"zone\":").Append(Quote(sce._root.ToString()));
                         if (sce._isAssembly) sb.Append(",\"mechanic\":\"assembly\"");
                         else if (sce._isDigiXros) sb.Append(",\"mechanic\":\"digixros\"");
@@ -1417,6 +1432,8 @@ namespace DcgoRecorder
         string _agentLastSig;
         float _agentLastSigAt;
         float _panelOpenSince = float.MaxValue;
+        string _cardWaitReq = null;
+        float _cardWaitSince;
         bool _agentResent;
         bool _agentStallWarned;
 
@@ -1554,7 +1571,15 @@ namespace DcgoRecorder
                         // DCGO's MultipleSkills prompt: the card panel lists each pending trigger's source card
                         var tpanel = gm.selectCardPanel;
                         if (tpanel == null || !tpanel.gameObject.activeInHierarchy)
+                        {
+                            // ONE trigger left: DCGO resolves a lone effect without the panel (MultipleSkills
+                            // `skillInfos_active.Count == 1`) and asks only its "Use?" - which is the engine's order
+                            // pick when every queued trigger is optional (BT24-083 at the start of the turn): "Use"
+                            // realizes the pick, the back button the engine's decline-all
+                            if (int.TryParse(Field(text, "action_id") ?? "", out var toa)
+                                && ConfirmOptional(declined, declined ? -1 : toa)) break;
                             throw new Exception("trigger-order panel not open yet");
+                        }
                         DriveCardPanel(tpanel, chosen, declined);
                         break;
                     }
@@ -1630,6 +1655,12 @@ namespace DcgoRecorder
                         // Not open yet (a reveal is still animating): retry. Never answer through the setter here - an
                         // early answer sits in DCGO's selection queue and is consumed by a LATER prompt.
                         if (TurnPlayerId() == you || gm.IsAI) throw new Exception("card selection panel not open yet");
+                        // the non-turn seat gets DCGO's panel too, a moment later (EX12-074's [Security] during the
+                        // opponent's attack): an answer through the setter before it opens is recorded but leaves the
+                        // panel waiting. Give it time; use the setter only when no panel comes.
+                        var reqId = (Field(text, "prompt") ?? "") + "@" + (Field(text, "steps") ?? "");
+                        if (_cardWaitReq != reqId) { _cardWaitReq = reqId; _cardWaitSince = now; }
+                        if (now - _cardWaitSince < 10f) throw new Exception("card selection panel not open yet (non-turn seat)");
                         var sce = UnityEngine.Object.FindObjectOfType<Il2Cpp.SelectCardEffect>();
                         if (sce == null) throw new Exception("no SelectCardEffect open");
                         var roots = sce.RootCardList();
@@ -1724,6 +1755,16 @@ namespace DcgoRecorder
                         // the engine's digivolution-cost choice is DCGO's SelectCountEffect over the candidate COSTS
                         // ("Which digivolution cost do you pay?", CardController): answer with the cost, not the index
                         var label = chosen.Count > 0 ? chosen[0]["label"] : null;
+                        // the engine's replacement order ("Choose the next immediate replacement effect") is DCGO's
+                        // MultipleSkills card panel ("Multiple effects are triggered"), listing each effect's source card
+                        var mp = gm.selectCardPanel;
+                        var bsrc = chosen.Count > 0 ? chosen[0]["card_id"] : null;
+                        if (!string.IsNullOrEmpty(bsrc) && mp != null && mp.gameObject.activeInHierarchy && PanelSays(mp, "Multiple effects"))
+                        {
+                            LoggerInstance.Msg("agent: effect order: resolving " + bsrc + " first for '" + (label ?? "?") + "'");
+                            DriveCardPanel(mp, new List<Dictionary<string, string>> { new Dictionary<string, string> { ["card_id"] = bsrc } }, false);
+                            break;
+                        }
                         if (MenuOpen() && label != null)
                         {
                             var want = label.ToLowerInvariant();
@@ -2014,11 +2055,18 @@ namespace DcgoRecorder
             var p = gm.selectCardPanel;
             var sce = gm.GetComponent<Il2Cpp.SelectCardEffect>();
             if (p == null || !p.gameObject.activeInHierarchy || sce == null || !sce._isAssembly) return false;
+            // `_isAssembly` lingers on SelectCardEffect after an Assembly; MultipleSkills reuses the same card panel
+            // for "Multiple effects are triggered", whose "No Selection" is "Don't activate these effects" (-1)
+            if (PanelSays(p, "Multiple effects")) return false;
             if (UnityEngine.Time.realtimeSinceStartup - _panelOpenSince < 1.0f) return false;
             LoggerInstance.Warning("agent: DCGO asks another Assembly element the engine already declined - No Selection");
             p.OnClickNotSelectButton();
             return true;
         }
+
+        static bool PanelSays(Il2Cpp.SelectCardPanel p, string text) =>
+            p.GetComponentsInChildren<UnityEngine.UI.Text>(false).Any(t => t != null && t.text != null && t.text.Contains(text))
+            || p.GetComponentsInChildren<Il2CppTMPro.TMP_Text>(false).Any(t => t != null && t.text != null && t.text.Contains(text));
 
         static bool FieldClickable()
         {
@@ -2066,15 +2114,32 @@ namespace DcgoRecorder
                     // likewise a trigger-order panel ("Multiple effects are triggered"): the engine resolved those
                     // triggers without an ordering decision, so any order is the engine's; take the first
                     var tp0 = gm.selectCardPanel;
-                    if (tp0 != null && tp0.gameObject.activeInHierarchy
-                        && (tp0.GetComponentsInChildren<UnityEngine.UI.Text>(false).Any(t => t != null && t.text != null && t.text.Contains("Multiple effects"))
-                            || tp0.GetComponentsInChildren<Il2CppTMPro.TMP_Text>(false).Any(t => t != null && t.text != null && t.text.Contains("Multiple effects"))))
+                    if (tp0 != null && tp0.gameObject.activeInHierarchy && PanelSays(tp0, "Multiple effects"))
                     {
                         var first = tp0.GetComponentsInChildren<Il2Cpp.HandCard>(false).FirstOrDefault(h => h?.cardSource != null);
                         if (first != null)
                         {
                             LoggerInstance.Warning("agent: DCGO asks a trigger order the engine did not - resolving " + first.cardSource.CardID + " first");
                             try { DriveCardPanel(tp0, new List<Dictionary<string, string>> { new Dictionary<string, string> { ["card_id"] = first.cardSource.CardID } }, false); }
+                            catch (Exception e) { LoggerInstance.Warning("agent: " + e.Message); }
+                            _agentNextAt = now + 2f;
+                            return;
+                        }
+                    }
+                    // a mandatory card panel whose candidates are all ONE card: DCGO listing one effect once per
+                    // timing (BT24-040's "[On Play] [When Digivolving]" effect activated by BT24-102's end-of-turn
+                    // effect is offered twice). The engine has one effect and no choice; take the first, marked stray.
+                    if (tp0 != null && tp0.gameObject.activeInHierarchy && !PanelSays(tp0, "Multiple effects")
+                        && FindActiveButton("NotSelectButton") == null)
+                    {
+                        var hc = tp0.GetComponentsInChildren<Il2Cpp.HandCard>(false).Where(h => h?.cardSource != null).ToList();
+                        if (hc.Count >= 2 && hc.Select(h => h.cardSource.CardID).Distinct().Count() == 1
+                            && UnityEngine.Time.realtimeSinceStartup - _panelOpenSince > 3f)
+                        {
+                            LoggerInstance.Warning("agent: DCGO asks to pick among " + hc.Count + " identical " + hc[0].cardSource.CardID +
+                                                   " entries the engine has as one - taking the first");
+                            _engineAction = -2;
+                            try { DriveCardPanel(tp0, new List<Dictionary<string, string>> { new Dictionary<string, string> { ["card_id"] = hc[0].cardSource.CardID } }, false); }
                             catch (Exception e) { LoggerInstance.Warning("agent: " + e.Message); }
                             _agentNextAt = now + 2f;
                             return;
