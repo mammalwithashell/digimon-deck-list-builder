@@ -78,6 +78,27 @@ fn start(r: &mut DebugRunner) {
     r.game.decode_action(PLAY_HAND_START, 0);
     choose(r, 30);
 }
+/// The DigiXros material pick is an owned physical card choice: address the
+/// battle-area Part A by identity, not by a field-slot action id.
+fn digixros_part_a(r: &DebugRunner) -> u16 {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let pending = r.game.pending_selection.as_ref().expect("DigiXros material selection");
+    let rows: Vec<_> = pending
+        .card_choice
+        .as_ref()
+        .expect("DigiXros material selection owns its page")
+        .view(&r.game, pending.selecting_player)
+        .rows
+        .into_iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .collect();
+    assert_eq!(rows.len(), 1, "only the battle-area Part A is a legal material");
+    let row = &rows[0];
+    assert_eq!(row.card_id.as_deref(), Some("SET-MATERIAL-A"));
+    assert!(matches!(row.zone, Some(CardChoiceZone::BattleTop)));
+    assert_eq!(row.owner, Some(0));
+    row.action_id
+}
 fn played_sources(r: &DebugRunner) -> usize {
     r.game.players[0]
         .battle_area
@@ -130,7 +151,8 @@ fn assignment_survives_digixros_material_selection_and_stop_clones() {
     assert_eq!(r.memory(), 95);
     assert_eq!(played_sources(&r), 1);
     r.game = saved;
-    choose(&mut r, 1);
+    let part_a = digixros_part_a(&r);
+    choose(&mut r, part_a);
     let selected = r.game.clone();
     for _ in 0..2 {
         r.game = selected.clone();
@@ -143,7 +165,8 @@ fn assignment_survives_digixros_material_selection_and_stop_clones() {
 fn assignment_survives_late_digixros_leave_window_accept_and_decline() {
     let mut r = fixture(false, true);
     start(&mut r);
-    choose(&mut r, 1);
+    let part_a = digixros_part_a(&r);
+    choose(&mut r, part_a);
     choose(&mut r, PASS);
     assert!(
         r.game.pending_selection.is_some(),
@@ -177,7 +200,8 @@ fn assignment_survives_late_digixros_leave_window_accept_and_decline() {
 fn own_once_per_turn_leave_effect_survives_digixros_limbo_in_both_cloned_branches() {
     let mut r = fixture_inner(false, true, true);
     start(&mut r);
-    choose(&mut r, 1);
+    let part_a = digixros_part_a(&r);
+    choose(&mut r, part_a);
     choose(&mut r, PASS);
     let parked = r.game.clone();
     assert!(parked.pending_selection.is_some());

@@ -1647,6 +1647,27 @@ fn install_optional_selection(
     });
 }
 
+/// Whether two guard identities name the same physical battle-area subject: the
+/// same identity, or a Digimon incarnation and its current top card on the field.
+fn same_field_subject(
+    game: &crate::game::Game,
+    a: ReplacementSubjectIdentity,
+    b: ReplacementSubjectIdentity,
+) -> bool {
+    use ReplacementSubjectIdentity::{Card, Permanent};
+    let top = |player: PlayerId, id: u64| {
+        game.resolve_digivolve_host_identity(player, id)
+            .and_then(|h| game.player(h.player).battle_area.get(h.index as usize))
+            .map(|p| p.top_card().handle())
+    };
+    match (a, b) {
+        _ if a == b => true,
+        (Permanent(player, id), Card(card, Zone::BattleArea))
+        | (Card(card, Zone::BattleArea), Permanent(player, id)) => top(player, id) == Some(card),
+        _ => false,
+    }
+}
+
 /// Panic-safe helper for the `in_replacement_commit` /
 /// `replacement_commit_fired` flags around `commit_deferred_outcome`. Sets
 /// both flags, invokes `body`, and restores the prior values — even if
@@ -1682,6 +1703,18 @@ fn run_commit_with_flag<F>(
     // happens to be the last one that ran before this callback.
     let prior_ledger = key.map(|(timing, identity)| {
         let prior = std::mem::take(&mut game.replacement_fired);
+        // ...but the windows already spent on THIS subject while its event was
+        // resolving stay spent (rule 15-8-5-4: an activated immediate effect
+        // can't activate again until the cause that first interrupted it is
+        // resolved). A Digimon placed in security from inside its own leave
+        // window is the same event's subject; its resumed placement must not
+        // re-offer the placement window that nested move already consumed.
+        let same_subject = prior
+            .iter()
+            .copied()
+            .filter(|(_, recorded)| same_field_subject(game, *recorded, identity))
+            .collect::<Vec<_>>();
+        game.replacement_fired.extend(same_subject);
         game.replacement_fired.insert((timing, identity));
         if timing == EffectTiming::WhenWouldBeDeleted {
             game.replacement_fired.insert((EffectTiming::WhenWouldLeaveBattleArea, identity));

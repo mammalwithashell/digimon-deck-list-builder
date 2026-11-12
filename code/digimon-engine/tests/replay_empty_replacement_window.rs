@@ -38,6 +38,17 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
     // BT24-016 source-attributed observers at step 56, and the real pending clone at step 59
     // with its complete seven-action suffix. The original 64-action historical trace was
     // independently verified before constructing this corrected production replay.
+    // Migrated 2026-11-12, digests only (actions unchanged, every action still legal):
+    // digests 18, 26, 34 and 43 are the start-of-turn window holding P0's LM-027 <Delay>
+    // prompt. ac86b510e (CR 4.3 15-14-1-5-1 per-turn counts reset when the turn changes,
+    // before start-turn triggers; 15-4-3 a [Start of Your Turn] <Delay> is collected in the
+    // same simultaneous window as ordinary start-turn triggers) changed that transient
+    // state; the next digest is unchanged each time. Digest 42 (P1's turn 9, just after two
+    // Owen Dreadnought [Security] plays) changed with 54e615a74 (Dynasmon admission), which
+    // added security placement / public-security bookkeeping to the verification digest;
+    // digest 44 onward is unchanged. Proven by building the old engines: f733e0754
+    // (ac86b510e's parent) reproduces all 66 recorded digests, ac86b510e reproduces the new
+    // 18/26/34/43, and 6ef082477 vs 751ebca2b (the #758 merge holding 54e615a74) brackets 42.
     assert_eq!(rec.actions.len(), 66);
     assert_eq!(rec.digests.len(), 66);
     let deck = |d: &ReplayDeckRef| match d {

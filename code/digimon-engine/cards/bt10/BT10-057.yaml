@@ -67,7 +67,6 @@ effects:
           filter:
             all_of:
               - kind: digimon
-              - is_unsuspended: true
           prompt: "You may suspend 1 of your Digimon"
       - if:
           condition: { binding_present: to_suspend }

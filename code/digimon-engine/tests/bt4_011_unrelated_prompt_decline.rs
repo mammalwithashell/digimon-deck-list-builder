@@ -37,8 +37,15 @@ fn unrelated_prompt(native:bool) {
     assert_eq!(r.game.players[0].battle_area[1].top_card().card_id(&r.game.card_data),"TEST-Q1157-INNER");
     let parked=r.game.clone();let mut digest=None;
     for _ in 0..2 {
-        r.game=parked.clone();choose(&mut r,PASS);
+        r.game=parked.clone();
+        // CR 4.3 §15-8-3-2: the inner [When Digivolving] can't activate during the
+        // enclosing reducer payment; it waits until that processing finishes.
+        assert_eq!(r.pending_selection_view().unwrap().prompt,"Enclosing payment tail before completion");
         for _ in 0..2 {choose(&mut r,ATTACK_START+2);}
+        let p=r.pending_selection_view().expect("deferred unrelated optional trigger");
+        assert!(p.is_optional,"{:?}",p);
+        assert_eq!(p.source_card,r.top_card(digimon_engine::PermanentHandle{player:0,index:1}),"inner evolution's own optional trigger");
+        choose(&mut r,PASS);
         assert!(r.pending_selection().is_none());
         assert_eq!(r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data),"BT4-011");
         assert_eq!(r.memory(),8,"declining unrelated on-evolution gain1 cannot revoke outer reducer credit");

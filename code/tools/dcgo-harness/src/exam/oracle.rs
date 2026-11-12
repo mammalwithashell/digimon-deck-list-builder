@@ -1506,7 +1506,9 @@ mod oracle_exam_tests {
         std::thread::spawn(move || {
             let job = format!("exam-{stem}");
             let queued = root.join("jobs").join(format!("{job}.json"));
-            for _ in 0..1000 {
+            // Up to 60 s: under a full parallel test run the sim pass that
+            // precedes queueing can take well over the old 10 s.
+            for _ in 0..6000 {
                 if queued.exists() {
                     break;
                 }

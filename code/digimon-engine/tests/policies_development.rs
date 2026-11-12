@@ -11,6 +11,11 @@ fn successive_visible_trigger_choices_are_not_a_nonprogress_loop() {
         "../../../docs/superpowers/research/2026-10-25-development-progress-regression.json"));
 }
 
+// Since 2026-11-12 this fixture's prefix stops at decision 17: the DUAL
+// security-battle rule (CR 4.3 4-6-1, 13-1-7) changed the game there, so the
+// original nested Tamer payment state is no longer reached and this test now
+// only checks that the same teacher game finishes (see the fixture's
+// `migrations`).
 #[test]
 fn nested_tamer_payment_choices_are_not_a_nonprogress_loop() {
     replay_teacher_regression(include_str!(

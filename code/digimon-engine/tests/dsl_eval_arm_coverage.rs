@@ -71,6 +71,12 @@ const STEP_SCHEDULE_DELAYED: &str = include_str!("../src/dsl_cards/step/schedule
 const STEP_SELECTIONS: &str = include_str!("../src/dsl_cards/step/selections.rs");
 const STEP_ZONE_MOVES: &str = include_str!("../src/dsl_cards/step/zone_moves.rs");
 const STEP_ZONE_CARDS: &str = include_str!("../src/dsl_cards/step/zone_cards.rs");
+const STEP_SECURITY_PLAY_RESULTS: &str = include_str!("../src/dsl_cards/step/security_play_results.rs");
+const STEP_SECURITY_TRASH_RESULTS: &str = include_str!("../src/dsl_cards/step/security_trash_results.rs");
+const STEP_SECURITY_PLACEMENT_RESULTS: &str = include_str!("../src/dsl_cards/step/security_placement_results.rs");
+const STEP_DELETION_PAYMENT: &str = include_str!("../src/dsl_cards/step/deletion_payment.rs");
+const STEP_NAMED_MATERIALS: &str = include_str!("../src/dsl_cards/step/named_materials.rs");
+const STEP_SOURCE_PREFIX_PAYMENT: &str = include_str!("../src/dsl_cards/step/source_prefix_payment.rs");
 
 fn step_corpus() -> String {
     let mut s = String::new();
@@ -101,6 +107,12 @@ fn step_corpus() -> String {
         STEP_SELECTIONS,
         STEP_ZONE_MOVES,
         STEP_ZONE_CARDS,
+        STEP_SECURITY_PLAY_RESULTS,
+        STEP_SECURITY_TRASH_RESULTS,
+        STEP_SECURITY_PLACEMENT_RESULTS,
+        STEP_DELETION_PAYMENT,
+        STEP_NAMED_MATERIALS,
+        STEP_SOURCE_PREFIX_PAYMENT,
     ] {
         s.push_str(chunk);
         s.push('\n');

@@ -164,3 +164,45 @@ were 64/64/64/64/65/58/64/59/64/67 (633 total). Indices below are zero-based.
 - **Verification:** independently reviewed 001 candidate passed all 66 actions
   and clone checks. Fresh `replay_corpus verify` passed all ten candidates
   (635 actions) before promotion. No game engine action or tensor contract changed.
+
+## Digest-only migration of 001 -- 2026-11-12 (no action changed)
+
+Golden 001 (curated, pinned by `tests/replay_empty_replacement_window.rs`): five
+per-step digests replaced by hand; actions, decks, seed, cards_hash and the final
+digest are unchanged. Zero-based action indices 17, 25, 33 and 42 leave P0 in the
+start-of-turn window with LM-027's <Delay> prompt; ac86b510e (CR 4.3 15-14-1-5-1:
+per-turn counts reset when the turn changes, before start-turn triggers; 15-4-3:
+a [Start of Your Turn] <Delay> joins the same simultaneous window) changed that
+transient state. Index 41 (after two Owen Dreadnought [Security] plays) changed
+with 54e615a74, which added security placement / public-security bookkeeping to
+the digest. Each following digest is unchanged. Attribution was proven by
+building old engines with a replay probe: f733e0754 reproduces all 66 digests,
+ac86b510e reproduces the new values at 17/25/33/42, 6ef082477 keeps index 41 and
+751ebca2b (the #758 merge holding 54e615a74) changes it.
+
+## Corpus re-bless + 005/009 regenerated -- 2026-11-12
+
+- **First, a replay fix (no golden change):** this branch's DCGO-playback helpers
+  (`answer_forced_single_ordering_prompt` and the four `answer_dcgo_*` silent-prompt
+  answers in `runners/replay.rs`) ran for every `CheckThenApply` source, including
+  `VerificationReplayAdapter`. They auto-answered prompts these native recordings
+  had recorded, so all ten goldens diverged at steps 6-13. They now run only for a
+  source whose rows omit DCGO's silent prompts (`omits_dcgo_silent_prompts`, true
+  for `DcgoAdapter` only).
+- **Digest-only re-bless (`replay_corpus bless`, every recorded action legal):**
+  000, 002, 004, 006 (001 is the hand migration above; 003, 007, 008 unchanged).
+  Same rot the nightly shows on main: the Delay start-of-turn window (ac86b510e,
+  CR 4.3 15-14-1-5-1 / 15-4-3) and the security bookkeeping added to the digest
+  (54e615a74), as proven for 001.
+- **Regenerated** with `replay_corpus regenerate --id greedy_005_` / `greedy_009_`
+  (same inline decks, seeds and budgets; the legal prefix is kept and greedy plays
+  on from the first illegal action):
+  - 005 (58 actions): at zero-based action 51 P0 is now offered LM-027's
+    [Start of Your Turn] <Delay> in the start-of-turn window (ac86b510e, CR 4.3
+    15-4-3); the recording continued with P1.
+  - 009 (67 actions): at zero-based action 30 two triggers including BT18-087's
+    are pending together and P0 must order them (legal 30/31); the recording
+    declined a single prompt (62). Consistent with main's simultaneous-trigger
+    timing changes; the commit was NOT bisected.
+  Neither deck contains a card changed on this branch.
+- **Result:** `replay_corpus verify` 10/10.

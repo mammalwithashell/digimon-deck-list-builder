@@ -3,8 +3,12 @@
 use digimon_engine::{debug_runner::DebugRunner,effect_context::{EffectContext,EffectReadContext},enums::{EffectSourceKind,Expiry},modifiers::ModifierEntry,permanent::PermanentHandle};
 fn setup(treated:bool)->(DebugRunner,PermanentHandle){ setup_with_extra(treated,None) }
 fn setup_with_extra(treated:bool, extra:Option<&str>)->(DebugRunner,PermanentHandle){
- let mut b=DebugRunner::builder();if let Some(yaml)=extra {b=b.from_dsl_yaml(yaml).unwrap();}for id in ["BT12-092","ST1-03","ST1-04"] {b=b.dsl_card(id).unwrap();}
+ let mut b=DebugRunner::builder();if let Some(yaml)=extra {b=b.from_dsl_yaml(yaml).unwrap();}for id in ["BT12-092","ST1-03","ST1-04","BT12-038"] {b=b.dsl_card(id).unwrap();}
  let mut r=b.deck(0,&["ST1-04";12]).deck(1,&["ST1-04";12]).memory(10).start();r.skip_mulligan();
+ // Marcus's suspend clause activates only with a legal yellow [Greymon] result
+ // (requirements kept, only the cost waived: Q1740, CR4.3 8-1-3-1). GeoGreymon
+ // (BT12-038) has a red Lv.3 circle, so it can digivolve onto ST1-03 Agumon.
+ r.add_to_hand(0,"BT12-038");
  let h=r.place_on_field(0,"BT12-092",Some(0));r.place_on_field(0,"ST1-03",Some(0));r.game.enter_main_phase();
  if treated {r.accept_optional_trigger().unwrap();assert_eq!(r.effective_dp(h),Some(3000));}else{r.decline_optional_trigger().unwrap();}
  (r,h)

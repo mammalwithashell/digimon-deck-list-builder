@@ -156,12 +156,23 @@ fn bt26_034_inherited_wa_decline_keeps_use() {
     );
 }
 
+/// Q845 / Q1782: "You may suspend 1 of your opponent's Digimon" may choose an
+/// already-suspended Digimon (it just isn't suspended by the effect).
 #[test]
-fn bt26_034_inherited_wa_needs_unsuspended_target() {
+fn bt26_034_inherited_wa_may_choose_an_already_suspended_target() {
     let mut r = setup(&[], 3);
     let carrier = r.place_stack(0, &[CARD_ID, "CARRIER"]);
     let a = r.place_on_field(1, "OPP", Some(0));
     r.game.players[1].battle_area[a.index as usize].is_suspended = true;
     fire(&mut r, EffectTiming::WhenAttacking, carrier);
-    assert!(r.pending_selection_view().is_none());
+    r.accept_optional_trigger().expect("the optional clause is offered");
+    let v = r
+        .pending_selection_view()
+        .expect("an already-suspended Digimon is still a legal choice");
+    assert!(
+        v.valid_action_ids
+            .contains(&digimon_engine::action::space::encode_attack(0, a.index as u16)),
+        "{:?}",
+        v.valid_action_ids
+    );
 }

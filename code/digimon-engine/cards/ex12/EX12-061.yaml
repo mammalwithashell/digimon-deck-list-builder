@@ -13,6 +13,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 2, color_is: purple }
     cost: 0
+  # Split Purple/Yellow circle on the card face (image); the API ingest dropped Yellow.
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
   - kind: digivolve
     from: { level_eq: 2, trait_has: Shambala }
     cost: 0

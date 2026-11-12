@@ -101,7 +101,7 @@ steps:
     do: { select: { value: 3, dcgo_only: true } }
     expect: { prompt: generic_int }
   - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+    do: { select: { choice: "Don't pay the cost", sim_only: true } }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
@@ -123,9 +123,12 @@ steps:
     do: { attack: { attacker: field.1, target: security } }
     expect: { prompt: main_phase }
   # Kekkomon's (ST23-01) inherited [When Attacking] is now the only trigger:
-  # declined. (DCGO: OptionalSkill; ours: the optional Hand pick.)
+  # declined. (DCGO: OptionalSkill. Ours asks nothing: no [Glowing Dawn] card in
+  # hand can digivolve onto the attacker, so the effect-digivolve hand pick has
+  # no candidate and is not opened -- DCGO-only.)
   - actor: 0
-    do: { select: { decline: true } }
+    do: { select: { decline: true, dcgo_only: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }

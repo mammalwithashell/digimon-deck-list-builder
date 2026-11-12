@@ -166,34 +166,23 @@ steps:
       - BT25-028
       - BT25-028
   - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-    expect: { prompt: OptionalSkill }
-  - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
   # T6 (p1, memory 3): Biyomon for 2 (3 -> 1), then Phoenixmon for 10
   # (1 -> -9). Both plays wake Dianamon's [All Turns] body; p1 holds no
   # digivolution cards at all, so DCGO's SelectTrashDigivolutionCards breaks
   # out before prompting and the DNA half needs two own Digimon p0 does not
-  # have -- silent on DCGO, a declined gate on ours.
+  # have -- silent on both sides (ours: the opponent-source pick has no
+  # candidate and the DNA pick needs a [GraceNovamon] in hand).
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
   - actor: 1
     do: { play: { card: ST1-02, from: hand } }
     expect: { prompt: main_phase }
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-    expect: { prompt: OptionalSkill }
   - actor: 1
     do: { play: { card: ST1-10, from: hand } }
     expect: { prompt: main_phase }
-  # And again on the second play: declining does not burn the once-per-turn on
-  # our side, which is the same accounting DCGO does explicitly
-  # (`if (!executed) activateClass.RemoveUse();`, BT25_028.cs:181).
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-    expect: { prompt: OptionalSkill }
   # T7 (p0, memory 9): digivolve Omnimon Alter-S onto Dianamon for 5 (9 -> 4).
   # Its [When Digivolving] deletes p1's highest-level Digimon (Phoenixmon)
   # with no selection on either side; Biyomon survives.
@@ -233,7 +222,7 @@ steps:
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: OptionalSkill }
 assert:
-  - at: 23
+  - at: 20
     that:
       p0.field:
         - card_id: EX9-021

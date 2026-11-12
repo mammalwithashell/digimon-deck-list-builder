@@ -99,7 +99,6 @@ effects:
       any_field_permanent:
         of: opponent
         kind: digimon
-        is_unsuspended: true
     summary: "[Inherited][When Attacking][Once Per Turn] You may suspend 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
@@ -107,6 +106,5 @@ effects:
           filter:
             all_of:
               - kind: digimon
-              - is_unsuspended: true
           prompt: "Suspend 1 of your opponent's Digimon"
       - suspend: { target: tgt }

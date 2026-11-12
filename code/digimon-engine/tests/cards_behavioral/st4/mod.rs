@@ -586,7 +586,20 @@ fn st4_15_security_suspends_and_adds_to_hand() {
     let target = runner.place_on_field(0, "TARGET", Some(0));
 
     runner.attack_player(attacker, 1, false);
-    resolve_all(&mut runner);
+    // The (already suspended) attacker is also a legal choice (Q845); pick
+    // the unsuspended TARGET explicitly.
+    let target_action =
+        digimon_engine::action::space::encode_attack(0, target.index as u16);
+    for _ in 0..8 {
+        let Some(v) = runner.pending_selection_view() else { break };
+        if v.valid_action_ids.contains(&target_action) {
+            runner
+                .execute_action(v.selecting_player, target_action)
+                .expect("pick TARGET");
+        } else {
+            runner.auto_resolve().expect("pending selection resolves");
+        }
+    }
 
     assert!(runner.game.players[0].battle_area[target.index as usize].is_suspended);
     assert_eq!(runner.hand_size(1), 1, "Needle Spray adds itself to hand");

@@ -24,6 +24,16 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+/// Official-mirror circles the card face does NOT print (the mirror keeps
+/// every printing's rows / has DB errors; CLAUDE.md "Printed card data").
+/// `(card_id, color, level, cost)`. Each entry must still be in the mirror,
+/// so a corrected mirror retires it.
+const MIRROR_CIRCLE_ERRORS: &[(&str, i64, i64, i64)] = &[
+    // Sunflowmon BT10-048: the card image prints one Green Lv.3 / cost 2
+    // circle; the mirror adds a Green Lv.3 / cost 0 row.
+    ("BT10-048", 3, 3, 0),
+];
+
 fn repo_data(file: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("..")
@@ -77,6 +87,23 @@ fn official_db_digivolve_circles_present_in_cards_json() {
 
     let mut failures: Vec<String> = Vec::new();
     let official_cards = official["cards"].as_object().expect("official cards map");
+    for (id, color, level, cost) in MIRROR_CIRCLE_ERRORS {
+        let still_in_mirror = official_cards
+            .get(*id)
+            .and_then(|e| e.get("digivolve_costs"))
+            .and_then(|v| v.as_array())
+            .is_some_and(|cs| {
+                cs.iter().any(|c| {
+                    (c["card_color"].as_i64(), c["level"].as_i64(), c["memory_cost"].as_i64())
+                        == (Some(*color), Some(*level), Some(*cost))
+                })
+            });
+        if !still_in_mirror {
+            failures.push(format!(
+                "{id}: MIRROR_CIRCLE_ERRORS entry is no longer in the mirror; delete it"
+            ));
+        }
+    }
     for (id, entry) in official_cards {
         let Some(circles) = entry.get("digivolve_costs").and_then(|v| v.as_array()) else {
             continue;
@@ -95,6 +122,12 @@ fn official_db_digivolve_circles_present_in_cards_json() {
                 c["level"].as_i64().unwrap_or(-1),
                 c["memory_cost"].as_i64().unwrap_or(-1),
             );
+            if MIRROR_CIRCLE_ERRORS
+                .iter()
+                .any(|e| e.0 == id.as_str() && (e.1, e.2, e.3) == t)
+            {
+                continue;
+            }
             if !have.contains(&t) {
                 failures.push(format!(
                     "{id}: missing printed circle (color={}, Lv.{}, cost {})",

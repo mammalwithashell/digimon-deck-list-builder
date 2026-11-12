@@ -2495,6 +2495,13 @@ fn build_selection_row(
                         pending.prompt
                     );
                     row.int_value = Some(*idx as i64);
+                    // ...and name the exact branch action too. `resolve_next`
+                    // also reads a bare `int_value` as a DCGO RECORDING's menu
+                    // value (card-authored constants, 1-based for the cards in
+                    // `dcgo_int_menu_base.json`), which is not what this
+                    // positional index is; `engine_action` is taken first and is
+                    // exactly the branch the label named.
+                    row.engine_action = Some(entries[*idx].action_id);
                 }
                 [] => {
                     return Err(format!(

@@ -1,9 +1,10 @@
 //! Effect evolution onto breeding keeps a zone-pinned declaration through
 //! player choices. CR 4.3 3-4-7-3..8 / 8-1-3-3; official Q4300 / Q4389.
 use digimon_engine::{
-    action::{build_action_mask, space::{encode_breeding_select, BREEDING_TARGET, HAND_EFFECT_START, PASS, PLAY_HAND_START, TRASH_EFFECT_START}},
+    action::{build_action_mask, space::{encode_breeding_select, BREEDING_TARGET, HAND_EFFECT_START, PASS, PLAY_HAND_START}},
     card_data::EvoCost,
     debug_runner::{make_test_card, DebugRunner},
+    owned_card_choice::{CardChoiceOperation, CardChoiceZone},
     enums::{CardColor, CardSourceRef, CostDelta, EffectTiming, GamePhase, Keyword, PlaySource},
     permanent::PermanentHandle,
     selection::{SelectionKind, TriggerSource},
@@ -128,6 +129,23 @@ fn park_result(r: &mut DebugRunner, source: PermanentHandle) {
     assert_eq!(r.pending_selection().unwrap().selecting_player, source.player);
 }
 
+/// The hand-or-trash result pick is a complete physical-card choice: its one
+/// commit row names the card and the zone it is in, and its action id is the
+/// row's (the card-choice selection contract), not a zone-range action.
+fn result_row(r: &DebugRunner, from_trash: bool) -> u16 {
+    let view = r.pending_selection_view().expect("result choice");
+    assert!(view.valid_action_ids.contains(&PASS), "the result pick is optional");
+    let choice = view.card_choice.expect("complete card choice");
+    let commits: Vec<_> = choice.rows.iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard)).collect();
+    assert_eq!(commits.len(), 1, "only the one physical Breeding result is offered");
+    let row = commits[0];
+    assert_eq!(row.card_id.as_deref(), Some("BREED-RESULT"));
+    assert!(if from_trash {matches!(row.zone, Some(CardChoiceZone::Trash))} else {matches!(row.zone, Some(CardChoiceZone::Hand))},
+        "commit row reports the card's real zone: {:?}", row.zone);
+    row.action_id
+}
+
 #[test]
 fn breeding_effect_hand_and_trash_both_owners_draw_and_suppress_ordinary_triggers() {
     for owner in [0, 1] {
@@ -139,7 +157,7 @@ fn breeding_effect_hand_and_trash_both_owners_draw_and_suppress_ordinary_trigger
                 r.game.players[owner as usize].trash.push(card);
             }
             park_result(&mut r, source);
-            let action = if from_trash {TRASH_EFFECT_START} else {PLAY_HAND_START};
+            let action = result_row(&r, from_trash);
             assert_eq!(build_action_mask(&r.game, owner)[action as usize], 1.0);
             r.execute_action(owner, action).unwrap();
             assert_eq!(top(&r, owner), "BREED-RESULT");
@@ -175,9 +193,10 @@ fn breeding_selected_host_does_not_retarget_replaced_or_moved_stack() {
         let original = r.game.players[0].breeding_area.take().unwrap();
         if moved {r.game.players[0].battle_area.push(original);}
         r.place_in_breeding(0, "BREED-HOST");
+        let action = result_row(&r, false);
         let mut clone = r.game.clone();
-        r.execute_action(0, PLAY_HAND_START).unwrap();
-        clone.decode_action(PLAY_HAND_START, 0);
+        r.execute_action(0, action).unwrap();
+        clone.decode_action(action, 0);
         for game in [&r.game, &clone] {
             assert_eq!(game.players[0].breeding_area.as_ref().unwrap().top_card().card_id(&game.card_data), "BREED-HOST");
             assert_eq!(game.memory, 6);

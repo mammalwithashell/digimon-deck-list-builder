@@ -53,7 +53,6 @@ steps:
   - {actor: 0, do: {select: {decline: true}}, expect: {prompt: OptionalSkill}}
   - {actor: 0, do: {digivolve: {from: field.0, using: BT25-082}}, expect: {prompt: main_phase}}
   - {actor: 0, do: {select: {value: 2}}, expect: {prompt: SelectCountEffect}}
-  - {actor: 0, do: {select: {yes: true, sim_only: true}}}
   - {actor: 0, do: {select: {cards: [BT25-092]}}, expect: {prompt: SelectHandEffect}}
   - {actor: 0, do: {play: {card: ST1-03, from: hand}}, expect: {prompt: main_phase}}
   - {actor: 1, do: {pass: {}}, expect: {prompt: main_phase}}
@@ -92,5 +91,5 @@ assert: []
 expect_ruling:
   q_id: Q6716
   assert:
-  - at: 39
+  - at: 38
     that: {phase: BlockTiming}

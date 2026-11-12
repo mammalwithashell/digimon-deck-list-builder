@@ -79,6 +79,8 @@ steps:
   do:
     select:
       'yes': true
+# BT8-097's lock forbids the play, so the revealed Vemmon is not offered
+# (Q4662; DCGO CanPlayAsNewPermanent in BT11_105.cs): no bucket prompt.
 - actor: 0
   do:
     pass: {}

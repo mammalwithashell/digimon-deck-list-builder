@@ -459,56 +459,66 @@ effects:
     }
 }
 
+/// A DUAL card prints "Can't play to the field." in place of a play cost: it is
+/// digivolved with its Digimon information or used with its Option information
+/// (CR 4.3 4-6-2; DCGO `CanPlayAsNewPermanent` requires `isPlayOption ||
+/// !IsOption`). So no DP ceiling can make one playable. Its DP, wherever it is
+/// referenced as a Digimon card, is the Digimon face's (CR 4.3 4-6-5-2), never
+/// the compatibility `dp` field.
 #[test]
-fn dp_ceiling_reads_the_dual_digimon_face_instead_of_compatibility_dp() {
+fn dual_is_never_effect_playable_and_its_dp_reads_the_digimon_face() {
     use digimon_engine::card_data::{DualCardData, DualDigimonFace, DualOptionFace};
     use digimon_engine::enums::CardColor;
-    for (compatibility_dp, face_dp, allowed) in [
-        (None, 5000, false),
-        (Some(1000), 6000, true),
-        (Some(9000), 5000, false),
-    ] {
-        let mut card = make_test_card("FACE-DUAL", "Dual face control");
-        card.card_kind = CardKind::Dual;
-        card.dp = compatibility_dp;
-        card.dual = Some(DualCardData {
-            digimon: DualDigimonFace {
-                level: 4,
-                dp: face_dp,
-                colors: vec![CardColor::Red],
-                traits: vec![],
-                evo_costs: vec![],
-                effect_text: String::new(),
-                inherited_text: String::new(),
-                keywords: vec![],
-            },
-            option: DualOptionFace {
-                use_cost: 1,
-                colors: vec![CardColor::Red],
-                effect_text: String::new(),
-                security_text: String::new(),
-                keywords: vec![],
-            },
-        });
-        let mut r = DebugRunner::builder()
-            .add_card(card)
-            .hand(0, &["FACE-DUAL"])
-            .start();
-        r.skip_mulligan();
-        lock(&mut r, 0, 5000, Expiry::Permanent);
-        let physical = r.game.players[0].hand[0].handle();
-        assert_eq!(
-            r.game
-                .can_play_card_from_effect_without_cost_for_controller(0, physical, 0, 0),
-            allowed,
-            "compatibility={compatibility_dp:?} face={face_dp}"
-        );
-        assert_eq!(
-            r.game
+    for (compatibility_dp, face_dp) in [(None, 5000), (Some(1000), 6000), (Some(9000), 5000)] {
+        for locked in [false, true] {
+            let mut card = make_test_card("FACE-DUAL", "Dual face control");
+            card.card_kind = CardKind::Dual;
+            card.dp = compatibility_dp;
+            card.dual = Some(DualCardData {
+                digimon: DualDigimonFace {
+                    level: 4,
+                    dp: face_dp,
+                    colors: vec![CardColor::Red],
+                    traits: vec![],
+                    evo_costs: vec![],
+                    effect_text: String::new(),
+                    inherited_text: String::new(),
+                    keywords: vec![],
+                },
+                option: DualOptionFace {
+                    use_cost: 1,
+                    colors: vec![CardColor::Red],
+                    effect_text: String::new(),
+                    security_text: String::new(),
+                    keywords: vec![],
+                },
+            });
+            let mut r = DebugRunner::builder()
+                .add_card(card)
+                .hand(0, &["FACE-DUAL"])
+                .start();
+            r.skip_mulligan();
+            if locked {
+                lock(&mut r, 0, 5000, Expiry::Permanent);
+            }
+            let physical = r.game.players[0].hand[0].handle();
+            assert_eq!(
+                r.game.card_data_for_handle(physical).and_then(|d| d.digimon_dp()),
+                Some(face_dp),
+                "DUAL DP reads the Digimon face: compatibility={compatibility_dp:?}"
+            );
+            assert!(
+                !r.game
+                    .can_play_card_from_effect_without_cost_for_controller(0, physical, 0, 0),
+                "DUAL is never playable: compatibility={compatibility_dp:?} face={face_dp} locked={locked}"
+            );
+            assert!(r
+                .game
                 .play_from_hand_with_cost(0, 0, CostDelta::Free, PlaySource::ByEffect)
-                .is_some(),
-            allowed
-        );
+                .is_none());
+            assert_eq!(r.game.players[0].hand.len(), 1, "refused DUAL stays in hand");
+            assert!(r.game.players[0].battle_area.is_empty());
+        }
     }
 }
 

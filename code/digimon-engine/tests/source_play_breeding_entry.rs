@@ -76,7 +76,10 @@ fn setup(actor:u8)->DebugRunner{
 fn act(r:&mut DebugRunner,actor:u8,action:u16){
     assert!(build_action_mask(&r.game,actor)[action as usize]>0.0);r.game.resolve_selection(actor,action).unwrap();
 }
-fn pick_only(r:&mut DebugRunner,actor:u8){let v=r.pending_selection_view().expect("pending choice");assert_eq!(v.valid_action_ids.len(),1);assert_eq!(v.selecting_player,actor);act(r,actor,v.valid_action_ids[0]);}
+fn pick_only(r:&mut DebugRunner,actor:u8){let v=r.pending_selection_view().expect("pending choice");
+    // Card-choice views list an optional prompt's Decline row (PASS) among the valid ids.
+    let picks=v.valid_action_ids.iter().copied().filter(|&a|a!=PASS).collect::<Vec<_>>();
+    assert_eq!(picks.len(),1);assert_eq!(v.selecting_player,actor);act(r,actor,picks[0]);}
 #[test]
 fn breeding_source_enters_suspended_after_replacement_decline_and_clone(){
     for actor in [0,1]{let mut r=setup(actor);let hand=r.hand_size(actor);pick_only(&mut r,actor);pick_only(&mut r,actor);

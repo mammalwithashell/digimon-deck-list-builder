@@ -198,7 +198,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     .get(h.index as usize)
                     .is_some_and(|p| !p.is_suspended);
                 ctx.suspend(h);
-                if was_unsuspended {
+                // "Suspended by this effect" (Q845): the permanent changed state.
+                // An already-suspended target, or one under CannotSuspend, was not.
+                let now_suspended = ctx
+                    .game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+                    .is_some_and(|p| p.is_suspended);
+                if was_unsuspended && now_suspended {
                     bindings.record_suspended(h);
                 }
             }

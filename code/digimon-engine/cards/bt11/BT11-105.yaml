@@ -237,6 +237,7 @@ effects:
               max: 1
               filter:
                 all_of:
+                  - can_play_from_effect_without_cost: true
                   - kind: digimon
                   - name_is: "Vemmon"
           prompt: "Play 1 [Vemmon] among the revealed cards without paying the cost"

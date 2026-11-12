@@ -37,9 +37,10 @@
 #   IsOptional alone. With ONE active skill DCGO skips MultipleSkills outright
 #   (`if (skillInfos_active.Count == 1) { _skillIndex = 0; Activate(true); }`,
 #   MultipleSkills.cs:267-273), so on T8 there is no order prompt either.
-#   Our engine authors the body optional: true (BT25-028.yaml), so OUR side
-#   parks a yes/no gate DCGO never asks -- a sim_only row in every Dianamon
-#   line, logged as the "vacuous optional gate" finding in NOTES-BT25-028.md.
+#   Our engine authors the body optional: true (BT25-028.yaml); it used to park
+#   a vacuous yes/no gate DCGO never asks (the "vacuous optional gate" finding
+#   in NOTES-BT25-028.md). Its DNA pick now opens only with a [GraceNovamon] in
+#   hand, as DCGO's does, so with nothing to trash there is no gate row.
 #   Then SelectTrashDigivolutionCards(..., maxCount: 4, canNoTrash: true,
 #   isFromOnly1Permanent: false): one loop round of SelectPermanentEffect (the
 #   CARRIER, canNoSelect: true) then SelectCardEffect over that carrier's
@@ -179,10 +180,6 @@ steps:
       candidates:
       - BT25-028
       - BT25-028
-  # SIM-ONLY: our vacuous [All Turns] yes/no gate, declined (nothing to trash).
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -214,11 +211,6 @@ steps:
   - actor: 1
     do: { digivolve: { from: field.0, using: ST2-06 } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: our engine's optional: true gate. ACCEPTED -- this is the one
-  # activation the line is for. DCGO has no gate (isOptional: false).
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
-    expect: { prompt: OptionalSkill }
   # DCGO-ONLY: which Digimon trashes digivolution cards (Garurumon, p1's only
   # Digimon). Our flat SourceMulti prompt names carrier and source together.
   - actor: 0
@@ -231,7 +223,7 @@ steps:
   #
   # This row did not exist until 2026-09-21 and its absence was the whole of
   # the retracted finding F-ENGINE-BT25-028-OPP-SOURCE-PICK-NEVER-OFFERED: the
-  # `yes:` gate row above exhausted its picks with our SourceMulti freshly
+  # `yes:` gate row (since removed) exhausted its picks with our SourceMulti freshly
   # parked at `picked: 0`, and `resolve_next` spent a trailing PASS on it --
   # legal because `min: 0` -- so the clause's own trash pick was DECLINED
   # before any row reached it, and the next prompt the line saw was the DNA
@@ -241,11 +233,6 @@ steps:
   - actor: 0
     do: { select: { cards: [ST2-01, ST2-02] } }
     expect: { prompt: SelectCardEffect }
-  # SIM-ONLY: the DNA anchor (select_own_permanent, optional: true) although p0
-  # has ONE Digimon and no [GraceNovamon] in hand; DCGO's helper returns before
-  # asking anything (DNADigivolveEffects.cs:456). Declined.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -262,7 +249,7 @@ assert:
   # 20260921T045227Z_15e1e879de3c4c9baebf0c0cba4cad59. Both fields are pinned
   # here, to the DCGO-confirmed values, because they ARE the clause's outcome:
   # Garurumon keeps no digivolution cards and both are in p1's trash.
-  - at: 23
+  - at: 21
     that:
       p1.memory: 1
       p0.field:
@@ -276,7 +263,7 @@ assert:
           suspended: false
           sources: []
       p1.trash: [ST2-01, ST2-02]
-  - at: 25
+  - at: 22
     that:
       turn: 9
       p0.field:

@@ -275,7 +275,9 @@ fn bt10_057_suspend_pick_is_own_unsuspended_digimon() {
     let v = r.pending_selection_view().expect("suspend pick");
     assert!(v.valid_action_ids.contains(&own_pick(base)));
     assert!(v.valid_action_ids.contains(&own_pick(veg)));
-    assert!(!v.valid_action_ids.contains(&own_pick(plant)), "already suspended");
+    // Q845 / Q1782: an already-suspended Digimon may be chosen (it is not
+    // suspended by the effect).
+    assert!(v.valid_action_ids.contains(&own_pick(plant)), "already suspended, still a legal choice");
 }
 
 /// <Piercing> lasts for the turn only.

@@ -122,11 +122,8 @@ steps:
   - actor: 0
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
-  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
-  # park -- DCGO builds this effect non-optional and carries the "may" on the
-  # pick's canNoSelect), then the shared hand pick: Asuna for free.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
+  # [When Digivolving]: the shared hand pick (no outer gate: like DCGO, BT25-082
+  # carries the "may" on the pick's own decline): Asuna for free.
   - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
@@ -176,7 +173,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 23
+  - at: 22
     that:
       turn: 8
       p0.memory: -3

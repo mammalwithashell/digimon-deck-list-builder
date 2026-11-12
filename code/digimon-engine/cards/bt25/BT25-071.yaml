@@ -103,6 +103,7 @@ effects:
               max: 1
               filter:
                 all_of:
+                  - can_play_from_effect_without_cost: true
                   - kind: digimon
                   - trait_has: TS
                   - play_cost_lte: 4
@@ -131,6 +132,7 @@ effects:
               max: 1
               filter:
                 all_of:
+                  - can_play_from_effect_without_cost: true
                   - kind: digimon
                   - trait_has: TS
                   - play_cost_lte: 4

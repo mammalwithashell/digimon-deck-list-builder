@@ -27,6 +27,12 @@ use super::support::*;
 use digimon_engine::enums::EffectTiming;
 use digimon_engine::Game;
 
+/// Why the entries this run regenerates were regenerated. Name the engine change that made each
+/// regenerated entry stop replaying; refine the stamp per entry afterwards if they differ. History:
+/// 2026-11-11 the CR 11-1-2 / DUAL / play-gate fixes; 2026-11-12 this branch's DCGO-playback fixes
+/// (0de06211d, c6eda5678; per-entry reasons are in each regenerated `source`).
+const REGEN_NOTE: &str = "regenerated 2026-11-12 after the DCGO-playback prompt fixes 0de06211d / c6eda5678";
+
 const FIXTURE_DIR: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/determinization/fixtures"
@@ -149,12 +155,11 @@ fn regenerate_file(name: &str, wanted: fn(&Game) -> bool, label: &str, write: bo
             .iter()
             .map(|(p, a)| serde_json::json!([p, a]))
             .collect::<Vec<_>>());
-        let source = fixture["source"].as_str().unwrap().to_string();
-        if !source.contains("regenerated") {
-            fixture["source"] = serde_json::json!(format!(
-                "{source} (regenerated 2026-11-11 after the CR 11-1-2 / DUAL / play-gate fixes)"
-            ));
-        }
+        // Stamp why this entry was regenerated (update REGEN_NOTE with the
+        // engine change each time the generator is run), replacing an older stamp.
+        let source = fixture["source"].as_str().unwrap();
+        let base = source.split(" (regenerated").next().unwrap();
+        fixture["source"] = serde_json::json!(format!("{base} ({REGEN_NOTE})"));
         // The regenerated prefix must replay through the strict path.
         let root = replay_fixture(fixture);
         assert!(wanted(&root));

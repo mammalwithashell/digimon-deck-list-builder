@@ -93,10 +93,13 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT25-041 } }
     expect: { prompt: main_phase }
-  # BT25-041 [When Digivolving] optional play/use -> decline.
+  # BT25-041 [When Digivolving] play/use -> decline. Ours is a non-optional 3-way
+  # pay-cost menu (as DCGO registers it), declined by its "Don't pay the cost".
   - actor: 0
-    do: { select: { decline: true } }
+    do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { choice: "Don't pay the cost", sim_only: true } }
   - actor: 0
     do: { attack: { attacker: field.0, target: field.0 } }
     expect: { prompt: main_phase }
@@ -109,7 +112,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 16
+  - at: 17
     that:
       turn: 5
       p0.memory: 0

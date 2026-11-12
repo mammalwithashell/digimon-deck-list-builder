@@ -66,8 +66,6 @@ steps:
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
   - actor: 0
-    do: { select: { yes: true, sim_only: true } }
-  - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
   # P-108 (memory 1 -> -1), take Youkomon from the reveal.
@@ -110,6 +108,6 @@ assert: []
 expect_ruling:
   q_id: Q6392
   assert:
-  - at: 24
+  - at: 23
     that:
       p0.field: [BT25-085, BT25-092]

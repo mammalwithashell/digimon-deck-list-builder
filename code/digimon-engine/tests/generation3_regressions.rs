@@ -96,26 +96,39 @@ fn replay(id: u64, count: usize) -> (HeadlessRunner, serde_json::Value) {
 
 #[test]
 fn generation3_game521_finishes_delay_choices() {
+    // Migrated 2026-11-12 for daa1f4c1d (fix-deletion-event-identity, CR 4.3
+    // 15-8-5 / 16-36): Sanmyojin Arrival (EX12-070)'s Delay pays its self-trash
+    // and performs its reward ("play 1 [Sanmyojin] Digimon from hand") inside
+    // the original would-leave window; it no longer finishes the subject's
+    // leave as a second deletion before the reward. So after accepting the
+    // first Arrival (decision 18), decision 19 is that reward, not the second
+    // Arrival's window; the second Arrival's would-leave window, which the old
+    // engine raised as a nested replacement here, still follows and must also
+    // resolve back to Main.
     let (r, _) = replay(521, 19);
-    let nested = r
+    let reward = r
         .game
         .pending_selection
         .as_ref()
-        .expect("Delay preserves nested leave replacement");
+        .expect("Arrival's Delay reward is offered inside its window");
     assert_eq!(
-        nested.kind,
-        digimon_engine::selection::SelectionKind::Replacement
+        reward.kind,
+        digimon_engine::selection::SelectionKind::EffectChoice
     );
     assert_eq!(
-        nested.previous_phase,
-        digimon_engine::enums::GamePhase::Main
+        r.game.card_data_for_handle(reward.source_card).unwrap().card_id,
+        "EX12-070"
     );
+    assert!(reward.prompt.contains("Sanmyojin"), "{}", reward.prompt);
     let mut game = r.game.clone();
     let mut cloned = game.clone();
+    let mut second_window = false;
     for _ in 0..40 {
         let Some(selection) = game.pending_selection.as_ref() else {
             break;
         };
+        second_window |= selection.kind == digimon_engine::selection::SelectionKind::Replacement
+            && selection.source_card != reward.source_card;
         let p = selection.selecting_player;
         let mask = build_action_mask(&game, p);
         let a = if mask[62] > 0.0 {
@@ -130,6 +143,7 @@ fn generation3_game521_finishes_delay_choices() {
             digimon_engine::serialization::to_ui_json(&cloned)
         );
     }
+    assert!(second_window, "the second Arrival's would-leave window is still offered");
     assert!(game.pending_selection.is_none());
     assert_eq!(game.current_phase, digimon_engine::enums::GamePhase::Main);
     assert!(
@@ -160,7 +174,10 @@ fn generation3_game858_returns_egg_to_egg_deck() {
 
 #[test]
 fn generation3_game340_search_continuation_does_not_panic() {
-    let (r, c) = replay(340, 111);
+    // 110 decisions since the 2026-11-12 migration (one dead EX12-002 pick
+    // removed; see the fixture's `migrations`): the same search state as the
+    // original decision 111.
+    let (r, c) = replay(340, 110);
     let registry = CardRegistry::from_cards(
         &CardData::load_from_str(
             &std::fs::read_to_string(concat!(
@@ -190,7 +207,10 @@ fn generation3_game340_search_continuation_does_not_panic() {
 #[test]
 #[ignore = "requires a current-contract model supplied by GEN3_MODEL; original schema-1 checkpoint is incompatible"]
 fn generation3_game340_explicit_checkpoint_search() {
-    let (r, c) = replay(340, 111);
+    // 110 decisions since the 2026-11-12 migration (one dead EX12-002 pick
+    // removed; see the fixture's `migrations`): the same search state as the
+    // original decision 111.
+    let (r, c) = replay(340, 110);
     let registry = CardRegistry::from_cards(
         &CardData::load_from_str(
             &std::fs::read_to_string(concat!(

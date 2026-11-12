@@ -128,15 +128,18 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect }
-  # BT25-041 [When Digivolving] optional play/use -> decline.
+  # BT25-041 [When Digivolving] play/use -> decline. Ours is a non-optional 3-way
+  # pay-cost menu (as DCGO registers it), declined by its "Don't pay the cost".
   - actor: 0
-    do: { select: { decline: true } }
+    do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { choice: "Don't pay the cost", sim_only: true } }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 22
+  - at: 23
     that:
       turn: 3
       p0.memory: 0

@@ -84651,6 +84651,9 @@
     },
     "P-243": {
       "blocking": [
+        "P-243#effect#0",
+        "P-243#effect#1",
+        "P-243#effect#2",
         "P-243#security#0",
         "P-243#denominator#missing"
       ],
@@ -84665,11 +84668,11 @@
         "confirmed": 0,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 1,
+        "unmeasured": 4,
         "unreachable": 0
       },
       "status": "not_ready",
-      "total_clauses": 1,
+      "total_clauses": 4,
       "total_interactions": 0
     },
     "P-244": {
@@ -84704,6 +84707,9 @@
     },
     "P-245": {
       "blocking": [
+        "P-245#effect#0",
+        "P-245#effect#1",
+        "P-245#inherited#0",
         "P-245#security#0",
         "P-245#denominator#missing"
       ],
@@ -84718,15 +84724,18 @@
         "confirmed": 0,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 1,
+        "unmeasured": 4,
         "unreachable": 0
       },
       "status": "not_ready",
-      "total_clauses": 1,
+      "total_clauses": 4,
       "total_interactions": 0
     },
     "P-246": {
       "blocking": [
+        "P-246#effect#0",
+        "P-246#effect#1",
+        "P-246#inherited#0",
         "P-246#security#0",
         "P-246#denominator#missing"
       ],
@@ -84741,15 +84750,18 @@
         "confirmed": 0,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 1,
+        "unmeasured": 4,
         "unreachable": 0
       },
       "status": "not_ready",
-      "total_clauses": 1,
+      "total_clauses": 4,
       "total_interactions": 0
     },
     "P-247": {
       "blocking": [
+        "P-247#effect#0",
+        "P-247#effect#1",
+        "P-247#inherited#0",
         "P-247#security#0",
         "P-247#denominator#missing"
       ],
@@ -84764,15 +84776,18 @@
         "confirmed": 0,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 1,
+        "unmeasured": 4,
         "unreachable": 0
       },
       "status": "not_ready",
-      "total_clauses": 1,
+      "total_clauses": 4,
       "total_interactions": 0
     },
     "P-248": {
       "blocking": [
+        "P-248#effect#0",
+        "P-248#effect#1",
+        "P-248#inherited#0",
         "P-248#security#0",
         "P-248#denominator#missing"
       ],
@@ -84787,11 +84802,11 @@
         "confirmed": 0,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 1,
+        "unmeasured": 4,
         "unreachable": 0
       },
       "status": "not_ready",
-      "total_clauses": 1,
+      "total_clauses": 4,
       "total_interactions": 0
     },
     "P-249": {

@@ -23,13 +23,13 @@ effects:
     process:
       - select_any_permanent:
           bind_as: suspended
-          filter: { kind: digimon, is_unsuspended: true }
+          filter: { kind: digimon }
           prompt: "You may suspend 1 Digimon"
           optional: true
       - suspend: { target: suspended }
       - if:
           condition:
-            binding_owner: { binding: suspended, of: you }
+            effect_suspended_any_own_digimon: true
           then:
             - select_own_permanent:
                 bind_as: unsuspended

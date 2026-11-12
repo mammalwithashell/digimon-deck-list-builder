@@ -105,7 +105,6 @@ effects:
           continue_on_decline: true
           filter:
             all_of:
-              - is_unsuspended: true
               - any_of:
                   - kind: digimon
                   - kind: tamer
@@ -120,7 +119,7 @@ effects:
                 continue_on_decline: true
                 filter:
                   all_of:
-                    - is_unsuspended: true
+                    - not_in_binding: first_suspend
                     - any_of:
                         - kind: digimon
                         - kind: tamer

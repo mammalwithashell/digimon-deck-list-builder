@@ -113,10 +113,8 @@ steps:
   - actor: 0
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
-  # [When Digivolving]: SIM-ONLY outer gate, then the shared hand pick (Asuna
-  # BT25-092 for free).
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
+  # [When Digivolving]: the shared hand pick (Asuna BT25-092 for free). No outer
+  # gate: the "may" is the pick's own decline, as DCGO registers it.
   - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
@@ -457,7 +455,7 @@ assert:
     p1.security: 5
     p1.trash: []
     turn: 5
-- at: 13
+- at: 12
   that:
     _backfilled: true
     memory: 1
@@ -493,7 +491,7 @@ assert:
     p1.security: 5
     p1.trash: []
     turn: 5
-- at: 14
+- at: 13
   that:
     _backfilled: true
     memory: 1
@@ -533,7 +531,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 5
-- at: 15
+- at: 14
   that:
     _backfilled: true
     memory: 1
@@ -574,7 +572,7 @@ assert:
     - ST1-02
     phase: Main
     turn: 5
-- at: 16
+- at: 15
   that:
     _backfilled: true
     memory: -3
@@ -616,7 +614,7 @@ assert:
     - ST1-02
     phase: Breeding
     turn: 6
-- at: 17
+- at: 16
   that:
     _backfilled: true
     memory: -3
@@ -658,7 +656,7 @@ assert:
     - ST1-02
     phase: Main
     turn: 6
-- at: 18
+- at: 17
   that:
     _backfilled: true
     memory: -3

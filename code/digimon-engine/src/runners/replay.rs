@@ -855,6 +855,19 @@ pub trait RecordingSource: Send {
     fn answers_engine_only_prompts(&self) -> bool {
         false
     }
+
+    /// True only for a DCGO recording: a source whose rows omit the prompts
+    /// DCGO resolves silently (a lone ordering card, a lone trigger, a lone
+    /// target, an unrecorded stack order, an ordinary cost route), so the
+    /// replay must answer those itself before the next recorded row.
+    ///
+    /// Native / verification recordings are the engine's own decisions and
+    /// record every one of those prompts; auto-answering them there consumes
+    /// a recorded row's prompt and shifts every later row (the replay-golden
+    /// corpus diverged at steps 6-13 on all ten goldens this way).
+    fn omits_dcgo_silent_prompts(&self) -> bool {
+        false
+    }
 }
 
 /// The single shared decision point for whether mulligan-phase actions
@@ -1284,6 +1297,10 @@ impl RecordingSource for DcgoAdapter {
     // Raw DCGO action IDs never declare the engine-owned paging protocol.
     // Semantic selection payloads have their own live mapping path.
     fn action_schema_version(&self) -> u32 { 1 }
+
+    fn omits_dcgo_silent_prompts(&self) -> bool {
+        true
+    }
 
     fn build_initial_game(
         &self,
@@ -1931,6 +1948,15 @@ impl ReplayDriver {
 
         let actor = payload.actor;
 
+        // Every fold below reconciles a DCGO RECORDING's prompt shape with the
+        // engine's (an int zone menu, a separate yes/no gate, a MultipleSkills
+        // panel, a forced prompt DCGO never asks...). A source that writes every
+        // one of OUR prompts itself - the exam's `ScenarioAdapter`, see
+        // `RecordingSource::answers_engine_only_prompts` - must meet the engine's
+        // prompts exactly as parked: folding there consumes or auto-answers the
+        // prompt its own row was written for and shifts every later row.
+        let dcgo_folds = !self.source.answers_engine_only_prompts();
+
         // DCGO folds a "you may" gate into the pick itself (`canNoSelect`): the
         // effect is registered non-optional, so there is no `OptionalSkill` row -
         // an affirmative pick row IS the acceptance. Our engine models the same
@@ -1939,7 +1965,8 @@ impl ReplayDriver {
         // pick that names cards/targets against that prompt therefore means
         // "accept, then pick": accept first so the row meets the body's own
         // prompt. A cancel row (decline) is left to resolve as the PASS.
-        if payload.cancel != Some(true)
+        if dcgo_folds
+            && payload.cancel != Some(true)
             && payload.bool_value.is_none()
             && payload.int_value.is_none()
             && (payload.card_ids.as_ref().is_some_and(|c| !c.is_empty())
@@ -1967,7 +1994,8 @@ impl ReplayDriver {
         // only narrows where the following recorded pick comes from, so it is
         // consumed and the pick that follows answers the engine's prompt. (A sim
         // that mixed zones cannot be reproduced in DCGO and still diverges there.)
-        if payload.prompt == "generic_int"
+        if dcgo_folds
+            && payload.prompt == "generic_int"
             && payload.int_value.is_some()
             && payload.card_ids.is_none()
             && payload.targets.is_none()
@@ -2011,7 +2039,8 @@ impl ReplayDriver {
         // The row is therefore consumed: the engine already ran the only order
         // there was, and the decision that follows (the recorded pick or cancel)
         // meets the gate as usual.
-        if payload.prompt == "MultipleSkills"
+        if dcgo_folds
+            && payload.prompt == "MultipleSkills"
             && payload.int_value.is_some_and(|v| v >= 0)
             && payload.card_ids.is_none()
             && payload.targets.is_none()
@@ -2061,7 +2090,7 @@ impl ReplayDriver {
         // recorded against - and before the memory check below, which DCGO read
         // AFTER the forced step. With a single option there is no choice a row
         // could have made differently, so no divergence can hide here.
-        for _ in 0..4 {
+        for _ in 0..(if dcgo_folds { 4 } else { 0 }) {
             let Some(pending) = game.pending_selection.as_ref() else {
                 break;
             };
@@ -2145,7 +2174,8 @@ impl ReplayDriver {
         //    play", which is the engine's decline.
         // Driver: AD1-016 ShineGreymon's [When Digivolving], and every
         // `Hand/Trash/Don't-play` card of the same shape (ST24-15 DNA Charge).
-        let zone_choice_int = payload.prompt == "generic_int"
+        let zone_choice_int = dcgo_folds
+            && payload.prompt == "generic_int"
             && payload.int_value.is_some()
             && payload.card_ids.is_none()
             && payload.targets.is_none()
@@ -2173,7 +2203,8 @@ impl ReplayDriver {
                     && (n.card_ids.as_ref().is_some_and(|c| !c.is_empty())
                         || n.targets.as_ref().is_some_and(|c| !c.is_empty()))
             });
-        let optional_yes_gate = payload.bool_value == Some(true)
+        let optional_yes_gate = dcgo_folds
+            && payload.bool_value == Some(true)
             && payload.card_ids.is_none()
             && payload.targets.is_none()
             && game.pending_selection.as_ref().is_some_and(|p| {
@@ -2198,7 +2229,8 @@ impl ReplayDriver {
         // `UnionZone` prompt over every legal source card, so the Digimon row
         // only narrowed the carrier: consume it when this actor's card row
         // follows, and let that row (which names the card) carry the decision.
-        let material_carrier_row = payload.card_ids.is_none()
+        let material_carrier_row = dcgo_folds
+            && payload.card_ids.is_none()
             && payload.cancel != Some(true)
             && payload.bool_value.is_none()
             && payload.int_value.is_none()
@@ -2220,7 +2252,8 @@ impl ReplayDriver {
         // Yes/No and THEN the host (cost paid after the host pick). Our engine
         // parks only the mandatory host pick, so a recorded yes in front of the host
         // row is just the gate and is consumed without touching the engine.
-        let link_host_yes_gate = payload.bool_value == Some(true)
+        let link_host_yes_gate = dcgo_folds
+            && payload.bool_value == Some(true)
             && payload.card_ids.is_none()
             && payload.targets.is_none()
             && next_row_names_pick
@@ -2241,7 +2274,8 @@ impl ReplayDriver {
         // prompt over both zones in the engine. A recorded `false` there is the
         // zone, not a decline: it is consumed when the next row picks a TRASH
         // card that the engine's own union prompt accepts (BT25-092 Asuna).
-        let zone_choice_bool_trash = payload.prompt == "generic_bool"
+        let zone_choice_bool_trash = dcgo_folds
+            && payload.prompt == "generic_bool"
             && payload.bool_value == Some(false)
             && payload.card_ids.is_none()
             && payload.targets.is_none()
@@ -2317,7 +2351,8 @@ impl ReplayDriver {
         // `MultipleSkills` -1 against an optional prompt that is NOT a trigger order: DCGO listed the effect the
         // engine parks as a yes/no gate ("Use Cost reduction to reduce Option-use cost?") among several in its
         // "Multiple effects" panel, and declined them all - the engine's decline of that gate.
-        if payload.prompt == "MultipleSkills"
+        if dcgo_folds
+            && payload.prompt == "MultipleSkills"
             && payload.int_value == Some(-1)
             && game.pending_selection.as_ref().is_some_and(|p| {
                 !matches!(p.kind, crate::selection::SelectionKind::TriggerOrder)
@@ -2348,7 +2383,8 @@ impl ReplayDriver {
         // the optional prompt that effect opens - so decline-all is that loop.
         // Stops at the first prompt that is neither (a mandatory effect cannot be
         // declined, and is left for the following rows).
-        if payload.prompt == "MultipleSkills"
+        if dcgo_folds
+            && payload.prompt == "MultipleSkills"
             && payload.int_value == Some(-1)
             && game.pending_selection.as_ref().is_some_and(|p| {
                 matches!(p.kind, crate::selection::SelectionKind::TriggerOrder)
@@ -2399,7 +2435,8 @@ impl ReplayDriver {
         // accept first, then resolve the row against the pick the branch opens.
         // A gate whose entries DO belong to the picked card (a genuine card
         // choice) keeps the ordinary path.
-        if payload.cancel != Some(true)
+        if dcgo_folds
+            && payload.cancel != Some(true)
             && payload.bool_value.is_none()
             && payload.int_value.is_none()
         {
@@ -2440,7 +2477,9 @@ impl ReplayDriver {
         // (or, for a cancel, can be declined) is the one DCGO took. Applied only
         // when exactly one branch qualifies; two qualifying branches need DCGO's
         // trailing true/false row to name one; none leaves the row to diverge.
-        if let Some((branch, row_consumed)) = self.probe_branch_for_row(game, payload, actor) {
+        if let Some((branch, row_consumed)) =
+            dcgo_folds.then(|| self.probe_branch_for_row(game, payload, actor)).flatten()
+        {
             let was_trigger_order = game
                 .pending_selection
                 .as_ref()
@@ -2473,7 +2512,8 @@ impl ReplayDriver {
         // its pick; DCGO usually has no separate accept and records only the pick (e.g. a "when this Digimon would
         // leave the battle area, you may play 1 ..." card). When the row cannot answer the accept prompt but
         // answers the prompt that accepting opens (probed on a clone), the row is the acceptance AND the pick.
-        if game.pending_selection.as_ref().is_some_and(|p| {
+        if dcgo_folds
+            && game.pending_selection.as_ref().is_some_and(|p| {
             p.is_optional
                 && p.selecting_player == actor
                 && p.valid_action_ids == [crate::action::space::REPLACEMENT_ACCEPT]
@@ -3083,12 +3123,15 @@ impl ReplayDriver {
             return self.no_progress_result(game);
         }
 
-        // A forced one-card ordering prompt DCGO never asked (see the helper).
-        self.answer_forced_single_ordering_prompt(game);
-        self.answer_dcgo_silent_partition_pick(game);
-        self.answer_dcgo_silent_lone_target_pick(game);
-        self.answer_dcgo_unrecorded_stack_order(game);
-        self.answer_dcgo_ordinary_cost_route(game);
+        // Prompts DCGO resolves without recording a row (see each helper).
+        // Only a DCGO recording omits them; every other source recorded them.
+        if self.source.omits_dcgo_silent_prompts() {
+            self.answer_forced_single_ordering_prompt(game);
+            self.answer_dcgo_silent_partition_pick(game);
+            self.answer_dcgo_silent_lone_target_pick(game);
+            self.answer_dcgo_unrecorded_stack_order(game);
+            self.answer_dcgo_ordinary_cost_route(game);
+        }
 
         let cur = self.cursor as usize;
 

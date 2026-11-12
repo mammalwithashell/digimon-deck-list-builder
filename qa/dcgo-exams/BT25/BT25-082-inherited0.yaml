@@ -114,11 +114,8 @@ steps:
   - actor: 0
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
-  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
-  # park -- DCGO builds this effect non-optional and carries the "may" on the
-  # pick's canNoSelect), then the shared hand pick.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
+  # [When Digivolving]: the shared hand pick (no outer gate: like DCGO, BT25-082
+  # carries the "may" on the pick's own decline).
   - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
@@ -173,7 +170,7 @@ assert:
   # attack and now carries FOUR digivolution cards -- EX7-073 placed
   # underneath is the cost paid. P1's security fell 5 -> 4 (one check) and
   # its trash holds the Biyomon that lost the security battle.
-  - at: 22
+  - at: 21
     that:
       turn: 7
       phase: Main

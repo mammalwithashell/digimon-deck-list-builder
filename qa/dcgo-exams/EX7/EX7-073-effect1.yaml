@@ -18,8 +18,8 @@
 # Pagumon / Sparrowmon / BlackGatomon -- NO [Three Musketeers]-trait card --
 # so the trash-2 effect's CanActivateCondition is false AT THAT MOMENT and DCGO
 # offers only THE CLAUSE: one active trigger, no MultipleSkills row. Our engine
-# queues both clauses regardless and parks a TriggerOrder, so that row is
-# SIM-ONLY. (The trash-2 effect comes back once P-180 is a digivolution card --
+# carries the same CanActivateCondition as a clause `condition` (EX7-073.yaml),
+# so it queues only THE CLAUSE too and asks no TriggerOrder. (The trash-2 effect comes back once P-180 is a digivolution card --
 # see the DCGO-ONLY OptionalSkill row near the end.)
 #
 # THE CLAUSE's prompt: SelectHandEffect (canNoSelect: true) over Options that
@@ -116,11 +116,8 @@ steps:
   - actor: 0
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
-  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
-  # park -- DCGO builds this effect non-optional and carries the "may" on the
-  # pick's canNoSelect), then the shared hand pick.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
+  # [When Digivolving]: the shared hand pick (no outer gate: like DCGO, BT25-082
+  # carries the "may" on the pick's own decline).
   - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
@@ -131,10 +128,6 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: EX7-073 } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: our TriggerOrder over EX7-073's two queued clauses. DCGO has ONE
-  # active trigger here (see header) and asks nothing.
-  - actor: 0
-    do: { select: { cards: [EX7-073], ordinal: 0, sim_only: true } }
   # THE CLAUSE: pick Bind Red Trigger to use it for free.
   - actor: 0
     do: { select: { cards: [P-180] } }
@@ -190,7 +183,7 @@ assert:
   # Pre-step state of the trailing pass (P1's turn 6). P-180 is EX7-073's
   # bottom digivolution card and P1's security is one card shorter; P0's
   # memory shows P-180 cost nothing.
-  - at: 20
+  - at: 18
     that:
       turn: 6
       p0.memory: -3

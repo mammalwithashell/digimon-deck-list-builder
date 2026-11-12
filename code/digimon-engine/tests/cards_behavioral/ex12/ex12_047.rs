@@ -247,11 +247,11 @@ fn ex12_047_effect_initiated_digivolve_uses_standard_yellow_circle() {
 
 #[test]
 fn ex12_047_effect_initiated_digivolve_honors_shambala_trait_circle() {
-    // A RED Lv.5 [Shambala] base satisfies ONLY the alternative trait circle
-    // ("Lv.5 w/[Shambala] trait: Cost 3") — the standard circle requires a
-    // yellow base. The player main-phase digivolve action accepts this base;
+    // A GREEN Lv.5 [Shambala] base satisfies ONLY the alternative trait circle
+    // ("Lv.5 w/[Shambala] trait: Cost 3") — the printed circle is split
+    // Yellow/Red (card image), so neither colour matches. The player main-phase digivolve action accepts this base;
     // an effect-initiated digivolve must too.
-    let base = super::support::digimon("SHAMBALA-BASE", CardColor::Red, 5, 8, 7000, &["Shambala"]);
+    let base = super::support::digimon("SHAMBALA-BASE", CardColor::Green, 5, 8, 7000, &["Shambala"]);
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX12-047 YAML loads")

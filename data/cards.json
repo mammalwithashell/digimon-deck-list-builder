@@ -153619,6 +153619,11 @@
         "card_color": 2,
         "level": 5,
         "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
@@ -154225,6 +154230,11 @@
     "evo_costs": [
       {
         "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 2,
         "level": 2,
         "memory_cost": 0
       }

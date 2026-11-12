@@ -109,11 +109,12 @@ steps:
     expect: { prompt: main_phase }
   # BT25-041's own [When Attacking] "by adding your top security card to the
   # hand or trashing ... you may play or use 1 [Glowing Dawn] card ... cost
-  # reduced by 3": DECLINED. Ours is one optional trigger (decline);
+  # reduced by 3": DECLINED. Ours is the same non-optional 3-way menu
+  # (EffectChoice; "Don't pay the cost");
   # DCGO is a 3-way SetIntSelection where value 3 = "Don't pay the cost"
   # (BT25-041.yaml crosscheck, values documented there).
   - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+    do: { select: { choice: "Don't pay the cost", sim_only: true } }
   - actor: 0
     do: { select: { value: 3, dcgo_only: true } }
     expect: { prompt: generic_int }

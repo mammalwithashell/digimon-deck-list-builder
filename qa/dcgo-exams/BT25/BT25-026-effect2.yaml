@@ -222,18 +222,12 @@ steps:
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # SIM-ONLY: our yes/no gate for Dianamon's [All Turns] body (`optional:
-  # true` in BT25-028.yaml); DCGO's ActivateClass is isOptional: false and the
-  # body is silent here (no opponent Digimon left, no [GraceNovamon] in hand).
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-    expect: { prompt: OptionalSkill }
   # T8 (p1, memory 1): one step past the clause.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 26
+  - at: 25
     that:
       turn: 8
       p0.memory: -1

@@ -87,7 +87,6 @@ effects:
           filter:
             all_of:
               - kind: digimon
-              - is_unsuspended: true
           prompt: "You may suspend 1 Digimon"
       - suspend: { target: to_suspend }
       - select_opponent_permanent:

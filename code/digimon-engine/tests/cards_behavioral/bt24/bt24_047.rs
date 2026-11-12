@@ -60,7 +60,7 @@ fn fire_on_play(runner: &mut DebugRunner, source: digimon_engine::PermanentHandl
 }
 
 #[test]
-fn bt24_047_clause_uses_binding_owner_for_result_bound_branch() {
+fn bt24_047_clause_gates_the_tail_on_an_actual_suspend_of_your_digimon() {
     let compiled = compiled_bt24_047();
     let clause = compiled
         .effects
@@ -80,10 +80,9 @@ fn bt24_047_clause_uses_binding_owner_for_result_bound_branch() {
         CompiledStep::If {
             condition, then, ..
         } => {
-            condition.binding_owner.as_ref().is_some_and(|owner| {
-                owner.binding == "suspended"
-                    && matches!(owner.of, digimon_dsl::compiled::CompiledPlayerRef::You)
-            }) && then
+            // "If this effect suspended your Digimon": an actual suspend of
+            // your Digimon, not merely choosing one (Q845).
+            condition.effect_suspended_any_own_digimon == Some(true) && then
                 .iter()
                 .any(|tail| matches!(tail, CompiledStep::MayAttackNow { optional: true, .. }))
         }
@@ -92,7 +91,7 @@ fn bt24_047_clause_uses_binding_owner_for_result_bound_branch() {
 
     assert!(
         has_bound_branch,
-        "the unsuspend/may-attack tail must be gated on the suspended Digimon being yours"
+        "the unsuspend/may-attack tail must be gated on this effect having suspended your Digimon"
     );
 }
 
@@ -170,6 +169,39 @@ fn bt24_047_suspending_own_bird_unsuspends_it_and_opens_may_attack() {
         runner.game.players[0].battle_area[bird.index as usize].is_suspended,
         "the attacker should pay the normal suspend cost after being unsuspended by the effect"
     );
+}
+
+/// Q845 / Q1782: an already-suspended Digimon may be chosen, but it is not
+/// "suspended by this effect", so the "If this effect suspended your Digimon"
+/// tail does not open.
+#[test]
+fn bt24_047_choosing_your_already_suspended_digimon_does_not_open_the_tail() {
+    let mut runner = runner();
+    let source = runner.place_on_field(0, "BT24-047", Some(0));
+    let bird = runner.place_on_field(0, "BIRD", Some(0));
+    runner.game.players[0].battle_area[bird.index as usize].is_suspended = true;
+    runner.game.turn_count = 1;
+
+    fire_on_play(&mut runner, source);
+
+    let suspend_prompt = runner
+        .pending_selection_view()
+        .expect("Kokatorimon should offer a Digimon to suspend");
+    let bird_action = encode_attack(bird.player as u16, bird.index as u16);
+    assert!(
+        suspend_prompt.valid_action_ids.contains(&bird_action),
+        "an already-suspended Digimon is a legal choice (Q845)"
+    );
+    runner
+        .game
+        .resolve_selection(suspend_prompt.selecting_player, bird_action)
+        .expect("suspend choice resolves");
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "choosing an already-suspended Digimon did not suspend it, so no unsuspend/may-attack follows"
+    );
+    assert!(runner.game.players[0].battle_area[bird.index as usize].is_suspended);
 }
 
 #[test]

@@ -26,7 +26,6 @@ effects:
             all_of:
               - kind: tamer
               - name_contains: "Marcus Damon"
-              - is_unsuspended: true
           prompt: "Suspend 1 of your Marcus Damon Tamers"
       - suspend: { target: marcus }
 

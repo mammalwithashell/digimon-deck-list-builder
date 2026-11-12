@@ -137,11 +137,8 @@ steps:
   - actor: 0
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
-  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
-  # park -- DCGO builds this effect non-optional and carries the "may" on the
-  # pick's canNoSelect), then the shared hand pick.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
+  # [When Digivolving]: the shared hand pick (no outer gate: like DCGO, BT25-082
+  # carries the "may" on the pick's own decline).
   - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
@@ -172,7 +169,7 @@ assert:
   # Pre-step state of the trailing pass. BeelStarmon caps the stack
   # Pagumon -> Sparrowmon -> BlackGatomon; Asuna stands beside it; P0 paid
   # 2 + 4 from 3 memory.
-  - at: 17
+  - at: 16
     that:
       turn: 6
       p0.memory: -3

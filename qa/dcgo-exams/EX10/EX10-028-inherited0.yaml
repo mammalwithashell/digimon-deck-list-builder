@@ -102,21 +102,17 @@ steps:
     do: { select: { cards: [BT14-009] } }
     expect: { prompt: SelectHandEffect }
   # EX10-025 (-> memory -3): place [EX10-028, BT14-009] from trash onto itself.
-  # PROMPT ORDER (as measured on the EX10-025 sibling exam): DCGO asks ONE
-  # SelectCardEffect (2 cards) first and the host SelectPermanentEffect second; ours
-  # asks the host first then two sequential trash picks.
+  # PROMPT ORDER (as measured on the EX10-025 sibling exam): both engines ask ONE
+  # pick of the 2 trash cards first and the host second (the host row is a
+  # sim_only / dcgo_only pair: DCGO names it by card id, ours by field slot).
   - actor: 0
     do: { play: { card: EX10-025, from: hand } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { targets: [own.field.2], sim_only: true } }
-  - actor: 0
-    do: { select: { cards: [EX10-028, BT14-009], dcgo_only: true } }
+    do: { select: { cards: [EX10-028, BT14-009] } }
     expect: { prompt: SelectCardEffect }
   - actor: 0
-    do: { select: { cards: [EX10-028], sim_only: true } }
-  - actor: 0
-    do: { select: { cards: [BT14-009], sim_only: true } }
+    do: { select: { targets: [own.field.2], sim_only: true } }
   - actor: 0
     do: { select: { cards: [EX10-025], dcgo_only: true } }
     expect: { prompt: SelectPermanentEffect }
