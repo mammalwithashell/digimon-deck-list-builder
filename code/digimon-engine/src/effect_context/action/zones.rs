@@ -234,6 +234,20 @@ impl<'a> EffectContext<'a> {
         self.game.shuffle_deck(player);
     }
 
+    /// Shuffle `player`'s hand so hand POSITIONS carry no information — the
+    /// prelude to choosing cards from an opponent's hand "without looking"
+    /// (DCGO BT13_033 shuffles `Enemy.HandCards` before its face-down pick).
+    /// Every observer's positional hand knowledge is dropped; contents are
+    /// unchanged. G-DSL-BLIND-OPP-HAND-PLACE.
+    pub fn shuffle_hand(&mut self, player: PlayerId) {
+        use rand::seq::SliceRandom;
+        self.game
+            .shuffle_belief_knowledge(player, crate::determinize::beliefs::KnowledgeZone::Hand);
+        let mut hand = std::mem::take(&mut self.game.player_mut(player).hand);
+        hand.shuffle(&mut self.game.rng);
+        self.game.player_mut(player).hand = hand;
+    }
+
     /// Move `player`'s real breeding permanent into the battle area by effect.
     pub fn move_from_breeding_by_effect(&mut self, player: PlayerId) -> bool {
         self.game.move_from_breeding_by_effect(player)

@@ -2223,7 +2223,7 @@
   },
   "BT13-020": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_modifier",
     "verb:grant_keyword",
@@ -50273,6 +50273,19 @@
     "rules_conformance::ch17_rule_checks.rs::rule_check_not_during_rule_processing"
    ]
   },
+  "predicate:name_matches_returned_card": {
+   "kind": "predicate",
+   "name": "name_matches_returned_card",
+   "near_miss_files": [
+    "src/dsl_cards/predicate.rs",
+    "tests/dsl/constructs/plural_security_prevention.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
+  },
   "predicate:name_not_in_binding": {
    "kind": "predicate",
    "name": "name_not_in_binding",
@@ -73121,6 +73134,19 @@
     "rules_conformance::ch15_04_effect_states.rs::rule_check_after_a_queued_effect_pools_with_its_window_triggers"
    ]
   },
+  "verb:return_hand_list_to_deck": {
+   "kind": "verb",
+   "lowering_files": [],
+   "name": "return_hand_list_to_deck",
+   "near_miss_files": [
+    "src/dsl_cards/step/zone_moves.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
+  },
   "verb:return_selected_security_to_deck": {
    "kind": "verb",
    "lowering_files": [
@@ -78037,6 +78063,19 @@
     "dsl::phase2a_steps.rs::shuffle_deck_step_preserves_card_count"
    ]
   },
+  "verb:shuffle_hand": {
+   "kind": "verb",
+   "lowering_files": [],
+   "name": "shuffle_hand",
+   "near_miss_files": [
+    "src/dsl_cards/step/draw.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
+  },
   "verb:shuffle_security": {
    "kind": "verb",
    "lowering_files": [
@@ -79832,8 +79871,8 @@
     "parsed_only": 7,
     "tested": 196,
     "tested_behaviourally": 189,
-    "total": 223,
-    "untested": 27,
+    "total": 224,
+    "untested": 28,
     "used_by_cards": 196,
     "used_untested": 20
    },
@@ -79850,8 +79889,8 @@
     "parsed_only": 5,
     "tested": 179,
     "tested_behaviourally": 174,
-    "total": 184,
-    "untested": 5,
+    "total": 186,
+    "untested": 7,
     "used_by_cards": 172,
     "used_untested": 5
    }

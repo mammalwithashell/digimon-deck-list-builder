@@ -197,6 +197,60 @@ fn st19_11_inherited_does_not_prevent_own_effect_leave() {
     );
 }
 
+/// "When THIS Digimon would leave": another of your Digimon leaving is not
+/// offered the prevention (it leaves, the Puppet survives); the carrier
+/// afterwards still is (the OPT was not spent). Audit 2026-11-11: DCGO
+/// ST19_11.cs CanTriggerWhenRemoveField(hashtable, card).
+#[test]
+fn st19_11_inherited_replacement_only_for_carrier_audit() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST19-11")
+        .expect("ST19-11 YAML loads")
+        .add_card(make_digimon("CARRIER", 8000, &[]))
+        .add_card(make_digimon("PUPPET-COST", 3000, &["Puppet"]))
+        .add_card(make_digimon("OTHER", 3000, &[]))
+        .start();
+    let carrier = runner.place_stack(0, &["ST19-11", "CARRIER"]);
+    runner.place_on_field(0, "PUPPET-COST", Some(0));
+    let other = runner.place_on_field(0, "OTHER", Some(0));
+    let on_field = |r: &DebugRunner, id: &str| {
+        r.game.players[0]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&r.game.card_data) == id)
+    };
+
+    runner
+        .game
+        .delete_permanent_with_cause(other, ReplacementCause::OpponentEffect);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no leave-prevention for a Digimon that is not ST19-11's carrier"
+    );
+    assert!(!on_field(&runner, "OTHER"), "the other Digimon leaves");
+    assert!(on_field(&runner, "PUPPET-COST"), "no cost paid");
+
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    let accept = runner
+        .pending_selection_view()
+        .expect("the carrier is still offered the leave-prevention");
+    assert_eq!(accept.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(0, accept.valid_action_ids[0])
+        .expect("accept inherited replacement");
+    let view = runner
+        .pending_selection_view()
+        .expect("Puppet cost prompt");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("delete other Puppet");
+    runner.auto_resolve().expect("finish prevention");
+    assert!(on_field(&runner, "CARRIER"), "the carrier stays");
+    assert!(!on_field(&runner, "PUPPET-COST"), "the Puppet paid the cost");
+}
+
 fn make_digimon(id: &str, dp: i32, traits: &[&str]) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card(id, id);
     card.dp = Some(dp);

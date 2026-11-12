@@ -406,6 +406,99 @@ fn bt25_027_inherited_save_offered_for_gaogamon_name_without_trait() {
     assert!(stayed, "accepting the save keeps the [Gaogamon]-named carrier");
 }
 
+/// Drive every prompt (accepting); returns whether a Replacement prompt appeared.
+fn drive_saw_replacement(runner: &mut DebugRunner) -> bool {
+    let mut saw_replacement = false;
+    let mut guard = 0;
+    while let Some(sel) = runner.pending_selection() {
+        guard += 1;
+        assert!(guard < 32);
+        if matches!(sel.kind, SelectionKind::Replacement) {
+            saw_replacement = true;
+        }
+        let a = sel
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|a| *a != PASS)
+            .unwrap_or(PASS);
+        let who = sel.selecting_player;
+        runner.execute_action(who, a).unwrap();
+    }
+    let _ = runner.auto_resolve();
+    saw_replacement
+}
+
+/// Main clause, "When THIS Digimon would leave": another of your Digimon
+/// leaving is not offered the save (it leaves, no face-down card trashed);
+/// MachGaogamon afterwards still is (the OPT was not spent). Audit 2026-11-11:
+/// DCGO BT25_027.cs CanTriggerWhenRemoveField(hashtable, card).
+#[test]
+fn bt25_027_leave_prevention_only_for_this_digimon_audit() {
+    let mut runner = runner_field_mach_suspended_with_stash_and_opp();
+    let other = runner.place_on_field(0, "OPP-L4", None);
+    runner
+        .game
+        .delete_permanent_with_cause(other, ReplacementCause::OpponentEffect);
+    assert!(
+        !drive_saw_replacement(&mut runner),
+        "no leave-prevention for a Digimon that is not MachGaogamon"
+    );
+    assert!(find_field(&runner, 0, "OPP-L4").is_none(), "the other Digimon leaves");
+    let trash_before = runner.trash_size(0);
+
+    let mach = find_field(&runner, 0, CARD_ID).expect("mach on field");
+    runner
+        .game
+        .delete_permanent_with_cause(mach, ReplacementCause::OpponentEffect);
+    assert!(
+        drive_saw_replacement(&mut runner),
+        "MachGaogamon is still offered the save"
+    );
+    assert!(find_field(&runner, 0, CARD_ID).is_some(), "MachGaogamon stays");
+    assert_eq!(runner.trash_size(0), trash_before + 1, "1 face-down card trashed");
+}
+
+/// Inherited clause, "When THIS Digimon with ... would leave": another of your
+/// Digimon leaving is not offered the save; the [Gaogamon]-named carrier
+/// afterwards still is. Audit 2026-11-11: DCGO BT25_027.cs
+/// CanTriggerWhenRemoveField(hashtable, card).
+#[test]
+fn bt25_027_inherited_save_only_for_carrier_audit() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT25-027 YAML loads")
+        .add_card(ds_tamer("DS-TAMER", "Thomas H. Norstein"))
+        .add_card(gate_top("PLAIN-TOP", "Plainmon", &["Beast"]))
+        .add_card(gate_top("NAME-TOP", "ZeedGaogamon X", &["Beast"]))
+        .add_card(filler("STASH"))
+        .memory(10)
+        .start();
+    runner.place_stack(0, &[CARD_ID, "NAME-TOP"]);
+    let tamer = runner.place_stack(0, &["STASH", "DS-TAMER"]);
+    runner.game.players[0].battle_area[tamer.index as usize].card_sources[0].face_down = true;
+    let other = runner.place_on_field(0, "PLAIN-TOP", None);
+
+    runner
+        .game
+        .delete_permanent_with_cause(other, ReplacementCause::OpponentEffect);
+    assert!(
+        !drive_saw_replacement(&mut runner),
+        "no inherited save for a Digimon that is not BT25-027's carrier"
+    );
+    assert!(find_field(&runner, 0, "PLAIN-TOP").is_none(), "the other Digimon leaves");
+
+    let carrier = find_field(&runner, 0, "NAME-TOP").expect("carrier on field");
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert!(
+        drive_saw_replacement(&mut runner),
+        "the [Gaogamon]-named carrier is offered the inherited save"
+    );
+    assert!(find_field(&runner, 0, "NAME-TOP").is_some(), "the carrier stays");
+}
+
 /// "Then, by trashing the bottom face-down card from under any of your Tamers,
 /// this Digimon unsuspends" can be declined (DCGO canNoSelect: true): the
 /// face-down card stays and MachGaogamon stays suspended.

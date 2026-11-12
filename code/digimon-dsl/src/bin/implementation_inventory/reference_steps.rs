@@ -198,6 +198,14 @@ impl Walk for digimon_dsl::step::StepSpec {
                 );
                 f0.walk(c, &format!("{}@ShuffleSecurity.0", path), role);
             }
+            digimon_dsl::step::StepSpec::ShuffleHand(f0) => {
+                c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("ShuffleHand"));
+                f0.walk(c, &format!("{}@ShuffleHand.0", path), role);
+            }
+            digimon_dsl::step::StepSpec::ReturnHandListToDeck(f0) => {
+                c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("ReturnHandListToDeck"));
+                f0.walk(c, &format!("{}@ReturnHandListToDeck.0", path), role);
+            }
             digimon_dsl::step::StepSpec::RevealSecurity(f0) => {
                 c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("RevealSecurity"));
                 f0.walk(c, &format!("{}@RevealSecurity.0", path), role);
@@ -5537,6 +5545,8 @@ digimon_dsl::compiled::CompiledStep::TrashFromHandByIndex{of,hand_index} => { c.
 digimon_dsl::compiled::CompiledStep::TrashFromReveal{of,card} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashFromReveal"));of.walk(c, &format!("{}.of", &format!("{}@TrashFromReveal",path)), "UNCLASSIFIED_STRING");card.walk(c, &format!("{}.card", &format!("{}@TrashFromReveal",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::ReturnToDeckFromReveal{of,card,position} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnToDeckFromReveal"));of.walk(c, &format!("{}.of", &format!("{}@ReturnToDeckFromReveal",path)), "UNCLASSIFIED_STRING");card.walk(c, &format!("{}.card", &format!("{}@ReturnToDeckFromReveal",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@ReturnToDeckFromReveal",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::ShuffleDeck{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ShuffleDeck"));of.walk(c, &format!("{}.of", &format!("{}@ShuffleDeck",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::ShuffleHand{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ShuffleHand"));of.walk(c, &format!("{}.of", &format!("{}@ShuffleHand",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::ReturnHandListToDeck{of,cards,to_top} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnHandListToDeck"));of.walk(c, &format!("{}.of", &format!("{}@ReturnHandListToDeck",path)), "UNCLASSIFIED_STRING");cards.walk(c, &format!("{}.cards", &format!("{}@ReturnHandListToDeck",path)), "EXISTING_INSTANCE_BINDING");to_top.walk(c, &format!("{}.to_top", &format!("{}@ReturnHandListToDeck",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::ShuffleSecurity{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ShuffleSecurity"));of.walk(c, &format!("{}.of", &format!("{}@ShuffleSecurity",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::RevealSecurity{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RevealSecurity"));of.walk(c, &format!("{}@RevealSecurity.of",path), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SecurityPermanentPlacementFinalize{receipt,card,bind_as,source_anchor,source_breeding,rebind} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SecurityPermanentPlacementFinalize"));receipt.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.receipt",path),"EXISTING_INSTANCE_BINDING");card.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.card",path),"EXISTING_INSTANCE_BINDING");bind_as.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.bind_as",path),"EXISTING_INSTANCE_BINDING");source_anchor.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.source_anchor",path),"EXISTING_INSTANCE_BINDING");source_breeding.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.source_breeding",path),"UNCLASSIFIED_STRING");rebind.walk(c,&format!("{}@SecurityPermanentPlacementFinalize.rebind",path),"EXISTING_INSTANCE_BINDING");},

@@ -68,8 +68,12 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
+    # 'When this Digimon would leave': carrier only (DCGO BT25_027.cs
+    # CanTriggerWhenRemoveField(hashtable, card)); `replacement_subject_is_mine`
+    # made it cover other permanents. Audit 2026-11-11.
     active_when:
       all_of:
+        - is_source: true
         - replacement_subject_is_mine: true
     summary: "[All Turns][OPT] Trash FD under a Tamer so this Digimon doesn't leave"
     process:
@@ -82,8 +86,12 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
+    # 'When this Digimon with ... would leave': carrier only (DCGO BT25_027.cs
+    # CanTriggerWhenRemoveField(hashtable, card)); `replacement_subject_is_mine`
+    # made it cover other permanents. Audit 2026-11-11.
     active_when:
       all_of:
+        - is_source: true
         - replacement_subject_is_mine: true
         - any_of:
             - source_name_contains: Gaogamon

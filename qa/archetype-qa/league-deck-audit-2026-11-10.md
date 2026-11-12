@@ -407,8 +407,44 @@ Falcomon (ST24-12), Yoshino & Keenan (ST24-14). In the games: Crowmon and
 Peckmon deletions, Ravemon targets, Tamer memory gains, Your-Turn timings and
 effect digivolve costs were all right.
 
-**Open:**
-- The real [Burst Digivolve] is never offered (all 16 Rosemon: Burst Mode
-  digivolves paid 5), gap G-BURST-ON-TURN-END-NOT-EXECUTED.
-- Hero Tactics (AD1-023) and BT25-035 have the same patterns as Lilamon
-  (`kind: digimon` without `is_source`; unchecked digivolve picks). Not checked.
+**Open:** both items are fixed in Part 6.
+
+# Part 6: Burst Digivolve and the Lilamon pattern (2026-11-11)
+
+**Burst Digivolve (CR 8-3), all six cards:** BT13-020, MirageGaogamon: Burst
+Mode (BT13-033), BT13-060, Ravemon: Burst Mode (BT13-092), ShineGreymon: Burst
+Mode (BT25-104), Rosemon: Burst Mode (BT26-050).
+- The hand digivolve now offers the burst route when the base qualifies and a
+  named Tamer that can be returned is on the field. It shares the existing
+  "which digivolution cost" prompt (one entry per Tamer). The Tamer returns to
+  hand before the cost (8-3-3-2), then the normal digivolve runs (cost
+  modifiers, draw, [When Digivolving]). Effect digivolves, Arts Digivolve and
+  the Blast counter cannot burst (8-3-2-2).
+- The end-of-turn top-card trash (8-3-2-1) is scheduled on the digivolved
+  Digimon's identity. All six YAMLs used `target: self` (the card, not the
+  Digimon), so the trash never happened; now `target: carrier`.
+- BT13-020 and BT13-060 required a named Lv.6 on their cost-5 and burst paths;
+  the official DB prints plain colour circles, and DCGO checks the burst base
+  by name only. Corrected.
+- BT13-033 and BT13-092 had no YAML; both are now implemented with clause tests.
+  BT13-092 searches the opponent's hand, which the observation tensor never
+  shows the searcher (G-OBS-OPP-HAND-SEARCH-VISIBILITY, open).
+- Gap: G-BURST-DIGIVOLVE-NOT-OFFERED (resolved) in `docs/RUST_ENGINE_GAPS.md`.
+- Not done: a replacement that stops the Tamer leaving abandons the burst
+  (DCGO falls back to a normal cost choice); judge-quiz Q8 is still a stub;
+  `dcgo-replay` does not map DCGO's Normal/Burst + Tamer prompts onto ours.
+
+**"This Digimon would leave" protections (the Lilamon ST24-10 pattern):**
+`is_source: true` added so the inherited protection covers only its carrier,
+not every permanent you own: J.P., Koji, & Koichi (AD1-023), Alphamon
+(BT13-075, BT20-056), Chaperomon (BT22-036, EX7-027, ST19-11), MachGaogamon
+(BT25-027, two clauses), Lilamon (BT26-044), Karakurumon (EX11-022, EX9-032),
+Gabumon (X Antibody) (EX5-015), Lilithmon (EX6-057), RizeGreymon (ST24-06).
+Cougarmon (BT25-035) now has the ST24-10 shape: paying the cost is its own
+choice, then only cards that can digivolve onto it are offered.
+
+**[On Deletion] self-placement only from the trash:** Ravemon (BT26-082),
+Sirenmon (BT25-039) and Puppetmon (EX10-020) place "this card" into security.
+The engine found the card in any zone, so if an earlier effect had already
+moved it out of the trash it was still placed. A deleted card named by
+`event_card` is now looked up only in the trash (CR 3-1-3-1, 15-4-4-3).

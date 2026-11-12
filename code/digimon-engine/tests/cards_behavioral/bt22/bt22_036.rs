@@ -358,6 +358,66 @@ fn bt22_036_inherited_replacement_does_not_prevent_own_effect_or_no_cost_leave()
     );
 }
 
+/// "When THIS Digimon would leave": another of your Digimon leaving is not
+/// offered the prevention (it leaves, the token survives); the carrier
+/// afterwards still is (the OPT was not spent). Audit 2026-11-11: DCGO
+/// BT22_036.cs CanTriggerWhenRemoveField(hashtable, card).
+#[test]
+fn bt22_036_inherited_replacement_only_for_carrier_audit() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT22-036")
+        .expect("BT22-036 YAML loads")
+        .add_card(make_digimon(
+            "CARRIER",
+            6,
+            11000,
+            CardColor::Yellow,
+            &["Puppet"],
+        ))
+        .add_card(make_digimon(
+            "NON-PUPPET",
+            4,
+            4000,
+            CardColor::Yellow,
+            &["Beast"],
+        ))
+        .add_card(make_token("COST-TOKEN"))
+        .start();
+    let carrier = runner.place_stack(0, &["BT22-036", "CARRIER"]);
+    runner.place_on_field(0, "COST-TOKEN", Some(0));
+    let other = runner.place_on_field(0, "NON-PUPPET", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(other, ReplacementCause::OpponentEffect);
+    assert!(
+        runner.pending_selection().is_none(),
+        "no leave-prevention for a Digimon that is not BT22-036's carrier"
+    );
+    assert!(!permanent_exists(&runner, 0, "NON-PUPPET"), "the other Digimon leaves");
+    assert!(permanent_exists(&runner, 0, "COST-TOKEN"), "no cost paid");
+
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    let view = runner
+        .pending_selection_view()
+        .expect("the carrier is still offered the leave-prevention");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("accept inherited replacement");
+    let view = runner
+        .pending_selection_view()
+        .expect("token cost selection");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("pay token cost");
+    runner.auto_resolve().expect("finish replacement");
+    assert!(permanent_exists(&runner, 0, "CARRIER"), "the carrier stays");
+    assert!(!permanent_exists(&runner, 0, "COST-TOKEN"), "token cost is deleted");
+}
+
 #[test]
 fn bt22_036_hand_main_is_masked_without_shoeshoemon_in_trash() {
     let mut runner = DebugRunner::builder()

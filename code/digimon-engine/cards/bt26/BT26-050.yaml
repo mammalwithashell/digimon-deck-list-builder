@@ -94,7 +94,7 @@ alt_paths:
           prompt: "Return [Yoshino Fujieda] to the hand"
       - return_to_hand: { target: yoshino }
     on_burst_turn_end:
-      - trash_top_source: { target: self }
+      - trash_top_source: { target: carrier }
 
 effects:
   # ─── [When Digivolving] may suspend 2 Digimon/Tamers (either side); then 2

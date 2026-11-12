@@ -1765,7 +1765,8 @@ fn validate_post_payment_plural_filter(
                         | "effect_trashed_any_hand_card" | "effect_deleted_any_own_digimon"
                         | "effect_deleted_any_opponent_digimon" | "effect_played_any_digimon"
                         | "effect_digivolved_any_digimon" | "effect_added_any_card_to_hand"
-                        | "color_matches_returned_card" | "returned_card_matching"
+                        | "color_matches_returned_card" | "name_matches_returned_card"
+                        | "returned_card_matching"
                         | "trashed_hand_card_matching" | "effect_deleted_opponent_digimon_dp_gte" => true,
                         // These two per-selectors read the same lost result log.
                         "per" => matches!(value.as_str(),

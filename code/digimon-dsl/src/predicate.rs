@@ -65,6 +65,15 @@ pub struct PredicateSpec {
     /// `color_matches_binding`. G-RETURNED-CARD-COLOR-BINDING (driver EX10-068).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_matches_returned_card: Option<bool>,
+    /// Name sibling of `color_matches_returned_card`: true when the candidate
+    /// shares >=1 card name (printed name or "also treated as" alias; a field
+    /// permanent uses its synthesized top-card names) with ANY card recorded in
+    /// this effect's `returned_to_deck` result log. Models "delete all of your
+    /// opponent's Digimon with the same name as that card" after a trash ->
+    /// deck-bottom return (DCGO `TopCard.HasSameCardName(returnedCard)`).
+    /// G-DSL-NAME-MATCHES-RETURNED-CARD (driver BT13-092).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_matches_returned_card: Option<bool>,
     /// True when the candidate card shares â‰¥1 color with the effect CARRIER's
     /// NON-FLIPPED digivolution-source color set (the colors printed on the
     /// carrier's face-up digivolution cards, excluding the carrier's own top

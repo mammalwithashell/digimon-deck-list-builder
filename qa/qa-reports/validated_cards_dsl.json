@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-30",
+  "last_updated": "2026-11-11",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -16660,6 +16660,46 @@
         "TRASH-TO-HAND"
       ],
       "notes": "EX13 Adventure lane C: inherited [On Deletion] optional return 1 ADVENTURE Digimon card trash->hand (decline tested). cards.json files the text under effect_description_eng (compat layout drift; official = Inherited Effect)."
+    },
+    "BT13-033": {
+      "card_name": "MirageGaogamon: Burst Mode",
+      "validated_date": "2026-11-11",
+      "report": "burst-mode-cards-bt13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Burst Mode (DATS)",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_033.rs",
+      "test_count": 18,
+      "patterns": [
+        "BURST-DIGIVOLVE",
+        "WHEN-DIGIVOLVING-BOUNCE",
+        "MEMORY-PER-OPP-HAND",
+        "WHEN-ATTACKING-OPTIONAL",
+        "BLIND-OPP-HAND-PICK",
+        "UNSUSPEND-SELF"
+      ],
+      "notes": "Blue Lv.6/5 circle + [Burst Digivolve] from [MirageGaogamon] (return Thomas H. Norstein, cost 0, turn-end top-card trash). WD: mandatory bounce 1 opp Digimon, then gain floor(opp hand/4) memory counted after the bounce (DCGO BT13_033.cs). WA: optional, >=9 opp hand gate; shuffle_hand + select_count_capped_multi{clamp_to_available} picks exactly hand-8 blind cards -> return_hand_list_to_deck bottom -> unsuspend if any returned. New DSL: shuffle_hand, return_hand_list_to_deck, clamp_to_available honoured on hand/trash (G-DSL-BLIND-OPP-HAND-PLACE hand->deck slice). Count-capped picks over another player's hand/trash now record zone_owner. 11 card-clause tests pass; the 7 shared burst_digivolve tests: 4 pass, 3 (turn-end trash x2, route choice) fail identically for BT13-020/060 - engine burst path in flux, not this YAML."
+    },
+    "BT13-092": {
+      "card_name": "Ravemon: Burst Mode",
+      "validated_date": "2026-11-11",
+      "report": "burst-mode-cards-bt13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Burst Mode (DATS)",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-092.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_092.rs",
+      "test_count": 16,
+      "patterns": [
+        "BURST-DIGIVOLVE",
+        "OPP-HAND-SEARCH-TRASH",
+        "OPP-ADD-SECURITY-TO-HAND",
+        "WHEN-ATTACKING-OPTIONAL",
+        "TRASH-TO-DECK-BOTTOM",
+        "DELETE-ALL-SAME-NAME"
+      ],
+      "notes": "Purple Lv.6/5 circle + [Burst Digivolve] from [Ravemon] (return Keenan Crier, cost 0, turn-end top-card trash). WD: controller picks 1 card of the opponent's hand to trash (mandatory while non-empty), then if opp hand <=7 the opponent adds its top security card (DCGO BT13_092.cs). WA: optional, needs a Digimon card in opp trash; optional cost select_trash -> return_trash_list_to_deck_bottom -> delete_all_permanents over opp Digimon with name_matches_returned_card (new predicate, G-DSL-NAME-MATCHES-RETURNED-CARD; top-card synthesized names). Observation caveat: the searching player's tensor does not encode the opponent's hand (G-OBS-OPP-HAND-SEARCH-VISIBILITY, open). 9 card-clause tests pass; shared burst tests: 4 pass, 3 fail identically for BT13-020/060 (engine burst path in flux)."
     }
   }
 }

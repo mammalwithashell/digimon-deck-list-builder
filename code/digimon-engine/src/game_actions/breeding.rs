@@ -423,8 +423,13 @@ impl Game {
             player: player_id,
             index: crate::action::space::BREEDING_TARGET as u8,
         };
+        // [Burst Digivolve] (CR 6-5-1-2-3, 8-3) is part of the same hand
+        // digivolve action and may target any of the player's cards on the
+        // field (DCGO `digimonCondition` uses `GetFieldPermanents`, which
+        // includes the breeding area); its Tamer still comes from the battle
+        // area.
         let routes: Vec<crate::dna_digivolve::DigivolveRouteMatch> = self
-            .all_digivolve_routes_for_card(&card, breeding_handle)
+            .hand_digivolve_routes_for_card(&card, breeding_handle)
             .into_iter()
             .filter(|route| !route.app_fusion)
             .collect();
@@ -462,6 +467,53 @@ impl Game {
             .unwrap_or(min_route);
         let printed_cost = route.memory_cost;
 
+        // CR 8-3-3-2: a [Burst Digivolve] returns its Tamer from the battle
+        // area to the hand before the cost is paid. The breeding handle does
+        // not shift when a battle-area Tamer leaves. Triggers the return
+        // causes pend with the rest of this action (deferred drain).
+        let mut burst_scope_open = false;
+        if let Some(choice) = route.burst {
+            if !self.burst_route_base_still_valid(&card, breeding_handle, choice)
+                || !self.burst_tamer_eligible(&card, choice)
+            {
+                self.logger.log("[Rejected] digivolve_breeding: burst route no longer applies");
+                return false;
+            }
+            let tamer = PermanentHandle {
+                player: player_id,
+                index: choice.tamer,
+            };
+            let tamer_card = self.player(player_id).battle_area[choice.tamer as usize]
+                .top_card()
+                .handle();
+            self.enter_deferred_drain();
+            burst_scope_open = true;
+            let _ = self.return_to_hand(tamer);
+            let returned = self.pending_selection.is_none()
+                && !self.player(player_id).battle_area.iter().any(|perm| {
+                    perm.card_sources
+                        .iter()
+                        .any(|source_card| source_card.handle() == tamer_card)
+                });
+            if !returned {
+                self.logger
+                    .log("[Rejected] digivolve_breeding: the burst Tamer was not returned to the hand");
+                self.close_burst_drain_scope();
+                return false;
+            }
+        }
+        let Some(hand_index) = self
+            .player(player_id)
+            .hand
+            .iter()
+            .position(|hand_card| hand_card.handle() == card.handle())
+        else {
+            if burst_scope_open {
+                self.close_burst_drain_scope();
+            }
+            return false;
+        };
+
         // Pass the breeding-target hand card as the cost-target so
         // target-aware predicates can fire (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET).
         // Note: breeding digivolve does not have a battle-area target
@@ -488,6 +540,9 @@ impl Game {
                 "[Rejected] digivolve_breeding: cannot pay memory cost {} (current memory={})",
                 effective_cost, self.memory
             ));
+            if burst_scope_open {
+                self.close_burst_drain_scope();
+            }
             return false;
         }
 
@@ -509,9 +564,13 @@ impl Game {
         let turn = self.turn_count;
         self.remember_belief_public_hand_departure(player_id, hand_index);
         let removed = self.player_mut(player_id).hand.remove(hand_index);
+        let burst_card = removed.handle();
         let player_mut = self.player_mut(player_id);
         if let Some(breeding) = player_mut.breeding_area.as_mut() {
             breeding.digivolve(removed, turn);
+        }
+        if let Some(choice) = route.burst {
+            self.schedule_burst_turn_end_trash(player_id, burst_card, breeding_handle, choice);
         }
         let _ = self.draw_one_for_player(player_id);
 
@@ -539,8 +598,20 @@ impl Game {
         self.n_digivolutions[player_id as usize] += 1;
 
         // Breeding digivolve does NOT fire WhenDigivolving (Python parity).
+        if burst_scope_open {
+            self.close_burst_drain_scope();
+        }
         self.check_turn_end();
         true
+    }
+
+    /// Close the deferred-drain scope a [Burst Digivolve] opened around its
+    /// Tamer return, flushing the queued triggers once nothing is parked.
+    pub(crate) fn close_burst_drain_scope(&mut self) {
+        self.draining_deferred = self.draining_deferred.saturating_sub(1);
+        if self.draining_deferred == 0 && self.pending_selection.is_none() {
+            self.drain_effect_queue();
+        }
     }
 }
 

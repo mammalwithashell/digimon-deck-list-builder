@@ -1,0 +1,117 @@
+# BT13-092 Ravemon: Burst Mode — Digimon, Lv.7, Purple, DP 15000, Cost 15,
+# Cyborg / Mega / Vaccine. (Not BT26-082 Ravemon.)
+#
+# Printed (official Bandai DB, data/card_bundles/BT13-092.md; card image
+# confirmed):
+#   Digivolve: Purple Lv.6 / cost 5.
+#   [Burst Digivolve] 0 from [Ravemon] by returning 1 [Keenan Crier] to hand.
+#   At the end of the burst digivolution turn, trash this Digimon's top card.
+#   [When Digivolving] Search your opponent's hand, and trash 1 card among it.
+#   Then, if they have 7 or fewer cards in their hand, they add the top card
+#   of their security stack to the hand.
+#   [When Attacking] By returning 1 Digimon card from your opponent's trash to
+#   the bottom of the deck, delete all of your opponent's Digimon with the same
+#   name as that card.
+#   Official Q&A: the [When Digivolving] search is only for choosing the card
+#   to trash.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT13/Purple/BT13_092.cs
+#   - Burst: own battle-area [Keenan Crier] Tamer returned to hand; host is an
+#     own [Ravemon] (name only).
+#   - OnEnterFieldAnyone (When Digivolving), mandatory: if the enemy hand is
+#     non-empty, the OWNER picks 1 card from the revealed enemy hand
+#     (SelectCardEffect Discard, canNoSelect false, canLookReverseCard true);
+#     then if Enemy.HandCards.Count <= 7 and the enemy has security, the enemy
+#     adds its top security card to its hand.
+#   - OnAllyAttack, OPTIONAL; activates only with >= 1 Digimon card in the
+#     enemy trash. Owner picks up to 1 enemy-trash Digimon card (canNoSelect
+#     true) -> AddLibraryBottomCards; then destroys every enemy battle-area
+#     Digimon whose TopCard.HasSameCardName(returnedCard). Declining the pick
+#     deletes nothing.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+# | Purple Lv.6 / cost 5 circle                                  | IMPLEMENTED |
+# | [Burst Digivolve] from [Ravemon] / return Keenan Crier         | IMPLEMENTED |
+# | Burst turn-end trash of the top card                           | IMPLEMENTED |
+# | [When Digivolving] owner trashes 1 card from opponent's hand   | IMPLEMENTED |
+# |   (the chooser's tensor does not encode the opponent's hand: an
+# |    observation-layer gap shared by every "search your opponent's hand"
+# |    card, logged as G-OBS-OPP-HAND-SEARCH-VISIBILITY)                     |
+# | [When Digivolving] then hand <= 7 -> opponent adds top security | IMPLEMENTED |
+# | [When Attacking] return 1 opp-trash Digimon card to deck bottom | IMPLEMENTED |
+# | [When Attacking] delete all opp Digimon with that card's name   | IMPLEMENTED |
+# |   (name_matches_returned_card; G-DSL-NAME-MATCHES-RETURNED-CARD)         |
+
+card: BT13-092
+name: "Ravemon: Burst Mode"
+kind: digimon
+level: 7
+color: [purple]
+cost: 15
+dp: 15000
+traits: [Cyborg]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: purple }
+    cost: 5
+  - kind: burst_digivolve
+    from: { name_is: "Ravemon" }
+    cost: 0
+    extra_cost:
+      - select_own_permanent:
+          bind_as: keenan
+          filter: { kind: tamer, name_is: "Keenan Crier" }
+          prompt: "Return Keenan Crier to hand"
+      - return_to_hand: { target: keenan }
+    on_burst_turn_end:
+      - trash_top_source: { target: carrier }
+
+effects:
+  # ─── [When Digivolving] trash 1 from opp hand; then hand <= 7 -> +security ─
+  - when: when_digivolving
+    summary: "[When Digivolving] Search your opponent's hand, and trash 1 card among it. Then, if they have 7 or fewer cards in their hand, they add the top card of their security stack to the hand"
+    process:
+      # The controller (not `as_selecting_player`) chooses among the
+      # opponent's hand; mandatory while the hand is non-empty.
+      - select_hand:
+          of: opponent
+          bind_as: discarded
+          filter: {}
+          prompt: "Search your opponent's hand and trash 1 card among it"
+      - trash_from_hand_by_index: { of: opponent, hand_index: discarded }
+      - if:
+          condition:
+            count_lte:
+              filter: { of: opponent, zone: [hand] }
+              n: 7
+          then:
+            - add_top_security_to_hand: { of: opponent }
+
+  # ─── [When Attacking] opp-trash Digimon -> deck bottom; delete same name ───
+  - when: when_attacking
+    optional: true
+    condition:
+      count_gte:
+        filter: { of: opponent, zone: [trash], kind: digimon }
+        n: 1
+    summary: "[When Attacking] By returning 1 Digimon card from your opponent's trash to the bottom of the deck, delete all of your opponent's Digimon with the same name as that card"
+    process:
+      - select_trash:
+          of: opponent
+          bind_as: returned
+          optional: true
+          cost: true
+          filter: { kind: digimon }
+          prompt: "You may return 1 Digimon card from your opponent's trash to the bottom of their deck"
+      - return_trash_list_to_deck_bottom:
+          of: opponent
+          cards: returned
+      - delete_all_permanents:
+          over:
+            all_of:
+              - of: opponent
+              - kind: digimon
+              - name_matches_returned_card: true

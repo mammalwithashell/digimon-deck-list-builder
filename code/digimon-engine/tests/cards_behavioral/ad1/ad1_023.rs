@@ -147,6 +147,29 @@ fn ad1_023_protection_all_causes_both_traits_opt() {
         }
     }
 }
+/// "When THIS Digimon ... would leave": only the permanent carrying AD1-023 as a
+/// source is protected. Another of your [Ten Warriors] Digimon leaving gets no
+/// offer; the carrier afterwards still does (the OPT was not spent). Audit
+/// 2026-11-11: DCGO AD1_023.cs CanTriggerWhenRemoveField(hashtable, card).
+#[test]
+fn ad1_023_protection_only_for_carrier_audit() {
+    let mut r = setup(&[]);
+    let carrier = r.place_stack(0, &[ID, "R"]);
+    let other = r.place_on_field(0, "W", None);
+    r.game
+        .delete_permanent_with_cause(other, ReplacementCause::OpponentEffect);
+    assert!(
+        r.pending_selection().is_none(),
+        "no protection offered for a Digimon that is not AD1-023's carrier"
+    );
+    assert_eq!(r.game.players[0].battle_area.len(), 1, "the other Digimon left");
+    assert_eq!(r.game.players[0].security.len(), 2, "no cost paid");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    accept(&mut r);
+    assert_eq!(r.game.players[0].battle_area.len(), 1, "the carrier stays");
+    assert_eq!(r.game.players[0].security.len(), 1);
+}
 #[test]
 fn ad1_023_protection_decline_wrong_trait_empty_security() {
     for mode in 0..3 {

@@ -295,6 +295,52 @@ fn ex11_022_inherited_leave_prevention_uses_token_or_other_puppet_and_is_once_pe
     );
 }
 
+/// "When THIS Digimon would leave": another of your Digimon leaving is not
+/// offered the inherited prevention (it leaves, the token survives); the
+/// carrier afterwards still is (the OPT was not spent). Audit 2026-11-11: DCGO
+/// EX11_022.cs CanTriggerWhenRemoveField(hashtable, card).
+#[test]
+fn ex11_022_inherited_leave_prevention_only_for_carrier_audit() {
+    let mut runner = load_runner();
+    let carrier = runner.place_stack(0, &["EX11-022", "CARRIER"]);
+    runner.place_on_field(0, "TOKEN-COST", Some(0));
+    let other = runner.place_on_field(0, "NON-PUPPET", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(other, ReplacementCause::OpponentEffect);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no leave-prevention for a Digimon that is not EX11-022's carrier"
+    );
+    let field = card_ids_on_field(&runner, 0);
+    assert!(!field.contains(&"NON-PUPPET".to_string()), "the other Digimon leaves");
+    assert!(field.contains(&"TOKEN-COST".to_string()), "no cost paid");
+
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    let accept = runner
+        .pending_selection_view()
+        .expect("the carrier is still offered the leave-prevention");
+    assert_eq!(accept.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(0, accept.valid_action_ids[0])
+        .expect("accept inherited replacement");
+    let cost = runner
+        .pending_selection_view()
+        .expect("select the Token cost");
+    runner
+        .execute_action(0, cost.valid_action_ids[0])
+        .expect("pay replacement cost");
+    runner
+        .auto_resolve()
+        .expect("finish inherited leave prevention");
+    let field = card_ids_on_field(&runner, 0);
+    assert!(field.contains(&"CARRIER".to_string()), "the carrier stays");
+    assert!(!field.contains(&"TOKEN-COST".to_string()), "the token paid the cost");
+}
+
 /// PUPPETS-G021 (Task 6): union-zone DP filter for hidden-zone candidates.
 ///
 /// The selection must offer ONLY Puppet Digimon cards with DP ≤ 4000 from

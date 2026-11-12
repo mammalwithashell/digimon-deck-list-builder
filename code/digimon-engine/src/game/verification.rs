@@ -465,6 +465,11 @@ impl Game {
             "pending_digivolve_route_choice",
             &self.pending_digivolve_route_choice,
         );
+        // Hashed only while set: a [Burst Digivolve] in progress is a state no
+        // earlier recording can contain, so every existing digest is unchanged.
+        if let Some(burst) = &self.pending_burst_digivolve {
+            debug_field(&mut h, "pending_burst_digivolve", burst);
+        }
         debug_field(
             &mut h,
             "current_trigger_context",
@@ -1289,7 +1294,7 @@ effects:
         let identity=r.game.capture_digivolve_host_identity(host);
         r.game.effect_digivolve_scopes.push(EffectDigivolveScope{
             declaration:EffectDigivolveCostChoiceState{acting_player:0,source_ref:CardSourceRef::Hand(0,0),result_card:card,source_carrier_top:None,source_carrier_identity:None,target_player:0,target_zone:crate::enums::Zone::BattleArea,target_top:top,target_identity:identity,dna_origin:None,cost_delta:CostDelta::Free,waiver:DigivolveRequirementWaiver::None,source:PlaySource::ByEffect,printed_costs:vec![],effect_source_player:Some(0),trigger_context:None,result_clause:None,outer_conts:vec![cont]},
-            identity:crate::game::PendingWouldDigivolveResume{window_started:true,host_identity:identity,treated_identity_orders:None,player:0,permanent:host,card,effective_cost:0,app_fusion:false}});
+            identity:crate::game::PendingWouldDigivolveResume{window_started:true,host_identity:identity,treated_identity_orders:None,player:0,permanent:host,card,effective_cost:0,app_fusion:false,burst:None}});
         r
     }
     fn rewrite_scope_marker(g:&mut Game,new:u64){

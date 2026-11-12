@@ -992,6 +992,7 @@ fn compile_predicate(
             .map(|s| compile_player_ref(s.player())),
         color_matches_binding: p.color_matches_binding.clone(),
         color_matches_returned_card: p.color_matches_returned_card,
+        name_matches_returned_card: p.name_matches_returned_card,
         color_matches_own_source_stack: p.color_matches_own_source_stack.map(|s| match s {
             crate::predicate::SourceStackScope::Scoped {
                 of: crate::predicate::SourceStackScopeOf::SelfCarrier,
@@ -3006,6 +3007,14 @@ fn compile_step(
         },
         S::ShuffleSecurity(a) => CompiledStep::ShuffleSecurity {
             of: compile_player_ref(a.of),
+        },
+        S::ShuffleHand(a) => CompiledStep::ShuffleHand {
+            of: compile_player_ref(a.of),
+        },
+        S::ReturnHandListToDeck(a) => CompiledStep::ReturnHandListToDeck {
+            of: compile_player_ref(a.of),
+            cards: compile_binding_ref(&a.cards),
+            to_top: matches!(a.destination, crate::step::DeckDestination::Top),
         },
         S::RevealSecurity(a) => CompiledStep::RevealSecurity { of: compile_player_ref(a.of) },
         S::RevealTopDeck(a) => CompiledStep::RevealTopDeck {

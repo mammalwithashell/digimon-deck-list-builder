@@ -1079,6 +1079,20 @@ pub(crate) fn passive_modifier_to_would(
     }
 }
 
+/// Read-only probe: would a passive restriction modifier (e.g.
+/// `CannotBeReturnedToHand`) cancel `subject`'s event at `timing` for
+/// `cause`? Lets a legality check (the [Burst Digivolve] Tamer, CR 8-3-3-2)
+/// agree with what the movement would actually do.
+pub(crate) fn passive_cancel_applies(
+    game: &crate::game::Game,
+    timing: EffectTiming,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    source_controller: Option<PlayerId>,
+) -> bool {
+    !passive_modifier_candidates(game, timing, subject, cause, source_controller).is_empty()
+}
+
 /// Passive-modifier replacement collector (Phase 7 Task 5).
 ///
 /// Scans `ModifierRegistry` for entries whose `ModifierType` maps to the

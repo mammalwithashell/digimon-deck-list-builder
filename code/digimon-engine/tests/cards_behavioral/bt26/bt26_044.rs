@@ -224,3 +224,36 @@ fn bt26_044_inherited_protects_rosemon_named_carrier() {
         "[Rosemon] in its name qualifies"
     );
 }
+
+/// "When THIS Digimon ... would leave": another of your Digimon leaving is not
+/// offered the inherited save (it leaves, no cost paid); the [DATA SQUAD]
+/// carrier afterwards still is (the OPT was not spent). Audit 2026-11-11: DCGO
+/// BT26_044.cs CanTriggerWhenRemoveField(hashtable, card).
+#[test]
+fn bt26_044_inherited_save_only_for_carrier_audit() {
+    let mut r = setup();
+    let carrier = r.place_stack(0, &[CARD_ID, "DS6"]);
+    let t = tamer_with_face_down(&mut r, 0, "TAMER", 1);
+    let other = r.place_on_field(0, "PLAIN6", Some(0));
+    assert!(
+        !delete_and_expect_replacement(&mut r, other),
+        "no save for a Digimon that is not BT26-044's carrier"
+    );
+    let _ = r.auto_resolve();
+    assert!(
+        !field_ids(&r, 0).contains(&"PLAIN6".to_string()),
+        "the other Digimon leaves"
+    );
+    assert_eq!(sources(&r, t), 1, "no cost paid");
+
+    assert!(
+        delete_and_expect_replacement(&mut r, carrier),
+        "the carrier is still offered the save"
+    );
+    let v = r.pending_selection_view().unwrap();
+    r.execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
+    let _ = r.auto_resolve();
+    assert!(field_ids(&r, 0).contains(&"DS6".to_string()), "the carrier stays");
+    assert_eq!(sources(&r, t), 0, "cost paid");
+}

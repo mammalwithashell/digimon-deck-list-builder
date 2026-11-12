@@ -376,6 +376,9 @@ pub struct CompiledPredicate {
     /// G-RETURNED-CARD-COLOR-BINDING — true when the candidate shares a color
     /// with a card this effect returned to deck (`returned_to_deck` log).
     pub color_matches_returned_card: Option<bool>,
+    /// G-DSL-NAME-MATCHES-RETURNED-CARD — true when the candidate shares a
+    /// card name with a card this effect returned to deck (`returned_to_deck`).
+    pub name_matches_returned_card: Option<bool>,
     /// G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK — true when the candidate shares a
     /// color with the effect carrier's NON-FLIPPED digivolution-source color set
     /// (DCGO `DigivolutionCards.Filter(!IsFlipped).SelectMany(CardColors)
@@ -1784,6 +1787,17 @@ pub enum CompiledStep {
     },
     ShuffleSecurity {
         of: CompiledPlayerRef,
+    },
+    /// G-DSL-BLIND-OPP-HAND-PLACE — shuffle `of`'s hand (blind-pick prelude).
+    ShuffleHand {
+        of: CompiledPlayerRef,
+    },
+    /// G-DSL-BLIND-OPP-HAND-PLACE — move a card-list binding of hand cards to
+    /// the bottom (or top) of their owners' decks; records `returned_to_deck`.
+    ReturnHandListToDeck {
+        of: CompiledPlayerRef,
+        cards: CompiledBindingRef,
+        to_top: bool,
     },
     RevealTopDeck {
         of: CompiledPlayerRef,

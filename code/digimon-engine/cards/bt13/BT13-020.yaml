@@ -48,22 +48,26 @@ attribute: Vaccine
 #   The "trash this Digimon's top card at end of burst turn" is the Burst Mode
 #   framework teardown that the engine runs from on_burst_turn_end.
 #
-# Modeled exactly on the canonical Burst Mode exemplar
-# `cards/_examples/BT13-060.yaml` (Rosemon: Burst Mode) — the structurally
-# identical sibling:
-#   - The standard named-prior-form digivolve path (from the named Lv.6, cost
-#     5). Burst Mode digivolves from its named Lv.6 only, not "any Lv.6"; the
-#     evo_costs metadata does not carry the name restriction, so this explicit
-#     `from: { level_eq: 6, name_is: "ShineGreymon" }` path encodes it (same
-#     precedent as BT13-060's explicit Rosemon Lv.6 digivolve path).
-#   - The burst_digivolve path: cost 0, extra_cost returns 1 [Marcus Damon] to
-#     hand, on_burst_turn_end trashes this Digimon's top source.
+# Printed digivolution requirements (official Bandai DB, data/card_bundles/
+# BT13-020.md): the standard circles Red Lv.6 / cost 5 and Yellow Lv.6 / cost 5
+# (any red or yellow Lv.6 -- NOT only a named ShineGreymon; the earlier named
+# Lv.6 path invented a restriction), plus the [Burst Digivolve] from a
+# [ShineGreymon] (name only -- DCGO digimonCondition checks
+# `CardNames.Contains("ShineGreymon")`, no level) by returning 1 [Marcus Damon]
+# to hand, cost 0. The circles are spelled as `{ level_eq, color_is }` paths so
+# DSL-loaded fixtures backfill `evo_costs` (production also has them in
+# cards.json; identical routes dedup). The burst path is performed by the
+# engine's hand-digivolve action (CR 6-5-1-2-3, 8-3): `extra_cost` names the
+# Tamer to return, `on_burst_turn_end` is the 8-3-2-1 pending processing.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 6, name_is: "ShineGreymon" }
+    from: { level_eq: 6, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: yellow }
     cost: 5
   - kind: burst_digivolve
-    from: { level_eq: 6, name_is: "ShineGreymon" }
+    from: { name_is: "ShineGreymon" }
     cost: 0
     extra_cost:
       - select_own_permanent:
@@ -72,7 +76,7 @@ alt_paths:
           prompt: "Return Marcus Damon to hand"
       - return_to_hand: { target: marcus }
     on_burst_turn_end:
-      - trash_top_source: { target: self }
+      - trash_top_source: { target: carrier }
 
 effects:
   # ─── Clause 1 — [When Digivolving] play a Marcus Damon, treat it as a 12000 DP
