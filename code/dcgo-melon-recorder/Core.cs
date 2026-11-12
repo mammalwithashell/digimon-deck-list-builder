@@ -1611,10 +1611,14 @@ namespace DcgoRecorder
                         if (MenuOpen())
                         {
                             var zone = declined ? null : chosen[0]["zone"];
-                            // a decline is "Don't ..." / "No Selection", or ending the selection with nothing picked
+                            // a decline is "Don't ..." / "No Selection", or ending the selection with nothing picked.
+                            // Stamp it PASS: the int row it leaves is then the engine's decline on its own, where an
+                            // unstamped zone int ("From trash") waits for the card pick that follows it
+                            if (declined) _engineAction = 62;
                             bool clicked = declined
                                 ? ClickMenu(t => t.StartsWith("don") || t.StartsWith("no") || t.Contains("not ") || t == "end selection")
                                 : ClickMenu(t => zone != null && t.Contains(zone.ToLowerInvariant()));
+                            if (!clicked) _engineAction = -1;
                             if (clicked)
                             {
                                 if (declined) break;

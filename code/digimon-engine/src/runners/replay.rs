@@ -2523,8 +2523,13 @@ impl ReplayDriver {
             // ... and a trigger order with ONE trigger left: DCGO's MultipleSkills resolves a lone effect without
             // asking (`skillInfos_active.Count == 1`), so it records no row; the engine still parks the order. DCGO
             // recordings only - a native recording logs this pick like any other engine action.
-            let lone_trigger = matches!(pending.kind, SelectionKind::TriggerOrder)
-                && self.policy == StepPolicy::CheckThenApply;
+            let lone_trigger = matches!(pending.kind, SelectionKind::TriggerOrder);
+            // DCGO recordings only. A native recording logs the forced pick itself; answering it here as well made the
+            // recorded pick land on the NEXT decision (a main-phase id decodes for the turn player: the sim's
+            // Toho-vs-Jupitermon P0 "place the last card" 30 played P1's hand slot - BT24-090 - a step early)
+            if self.policy != StepPolicy::CheckThenApply {
+                break;
+            }
             if guard > 8
                 || !(matches!(pending.kind, SelectionKind::OrderedPermutation { remaining: 1 }) || lone_trigger)
                 || pending.is_optional
