@@ -43276,9 +43276,73 @@
       "reasons": [],
       "untested_constructs": []
     },
+    "P-242": {
+      "admissible": false,
+      "dsl": false,
+      "has_card_test": false,
+      "needs_card_test": false,
+      "reason": "untested_lowering",
+      "reasons": [
+        "untested_lowering"
+      ],
+      "untested_constructs": []
+    },
+    "P-243": {
+      "admissible": false,
+      "dsl": false,
+      "has_card_test": false,
+      "needs_card_test": false,
+      "reason": "untested_lowering",
+      "reasons": [
+        "untested_lowering"
+      ],
+      "untested_constructs": []
+    },
     "P-244": {
       "admissible": true,
       "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": false,
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    "P-245": {
+      "admissible": false,
+      "dsl": false,
+      "has_card_test": false,
+      "needs_card_test": false,
+      "reason": "untested_lowering",
+      "reasons": [
+        "untested_lowering"
+      ],
+      "untested_constructs": []
+    },
+    "P-246": {
+      "admissible": false,
+      "dsl": false,
+      "has_card_test": false,
+      "needs_card_test": false,
+      "reason": "untested_lowering",
+      "reasons": [
+        "untested_lowering"
+      ],
+      "untested_constructs": []
+    },
+    "P-247": {
+      "admissible": false,
+      "dsl": false,
+      "has_card_test": false,
+      "needs_card_test": false,
+      "reason": "untested_lowering",
+      "reasons": [
+        "untested_lowering"
+      ],
+      "untested_constructs": []
+    },
+    "P-248": {
+      "admissible": true,
+      "dsl": false,
       "has_card_test": true,
       "needs_card_test": false,
       "reason": null,
@@ -47159,21 +47223,21 @@
     }
   },
   "counts": {
-    "admissible": 1125,
+    "admissible": 1126,
     "diverged_no_quirk": 0,
     "failed_verdict": 19,
-    "registered": 4477,
+    "registered": 4483,
     "unregistered": 0,
     "untested_card": 7,
-    "untested_lowering": 3326
+    "untested_lowering": 3331
   },
-  "generated_at": "2026-11-09T03:37:20+00:00",
+  "generated_at": "2026-11-12T09:40:28+00:00",
   "sources": {
-    "behavioral_test_modules_sha256": "7f19ae7834f8d15ae7028d2895a562c9abf68a395a908e777defb937ba2c20c1",
-    "card_registry_sha256": "9f1d73468af07111086c2d7b7fbde57025691b32a04de52e294b485591a091d9",
+    "behavioral_test_modules_sha256": "5edea1b8fe031e131a508149b78b54f7d4c7521e8c3eb505f9e751c65c479522",
+    "card_registry_sha256": "9a604ff3e4feb20a16ff8ce38febf866191d6d2b9697162e5b7e002332799599",
     "exam_verdicts_sha256": "5703a857c51ce004beba06da63e5ae6fad4c485e6128a72c9a20073813414eca",
     "lowering_coverage_sha256": "e2829e604c4437828e25731302ff3e58400bb37b98a4b58f1c23222c6d42752e",
-    "validated_cards_dsl_sha256": "84f7ade58e27a404a52c4ef0176cc78e7884bf4f2487497085f06a52339b6d44",
+    "validated_cards_dsl_sha256": "7a95f9deb4aa5ceea4bf5f78c59c3f0fe87501ec8df7e4752e3f98f1bc71a3b3",
     "validated_cards_sha256": "64443d5a477f01781b8c8cce7defc79b47636d0da4c92ed20a977b61de46246a"
   },
   "version": 2

@@ -285,6 +285,11 @@ def convert(rows, cards, allow_truncated=False):
                 if not (0 <= perm < 15 and 0 <= skill < EFFECTS_PER_PERMANENT):
                     truncated_at = truncated_at or ("activate packet (%d, %d) at step %d" % (perm, skill, step))
                     break
+                # DCGO's skill index is POSITIONAL (into the permanent's OnDeclaration effects); the engine's
+                # sub-slot is semantic: 2 = [Main], 3 = <Link>. The mod logs which kind it named (activate_link);
+                # rows from before that field keep the old positional reading.
+                if "activate_link" in r:
+                    skill = 3 if r["activate_link"] else 2
                 action(a[0], FIELD_EFFECT_START + perm * EFFECTS_PER_PERMANENT + skill, "Main", "main_phase",
                        boards=r.get("boards"))
                 continue

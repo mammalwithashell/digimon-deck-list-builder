@@ -1059,6 +1059,36 @@ namespace DcgoRecorder
             catch { }
             try
             {
+                // an ActivatePermanentAction's SkillIndex is POSITIONAL into the permanent's EffectList(OnDeclaration);
+                // the engine's sub-slot is semantic (2 = [Main], 3 = <Link>): log which kind the index names
+                if (key == "TurnStateMachine.QueueMainPhaseAction_Internal" && args != null && args.Length >= 3
+                    && Convert.ToInt32(args[1]) == 2 && args[2] is System.Collections.IEnumerable pk)
+                {
+                    var bytes = new List<int>();
+                    foreach (var o in pk) bytes.Add(Convert.ToInt32(o));
+                    if (bytes.Count >= 8)
+                    {
+                        int be(int i) => (bytes[i] << 24) | (bytes[i + 1] << 16) | (bytes[i + 2] << 8) | bytes[i + 3];
+                        int perm = be(0), skill = be(4);
+                        var owner = Il2Cpp.GManager.instance?.GetPlayerFromID(Convert.ToInt32(args[0]));
+                        var fp = owner?.GetFieldPermanents();
+                        if (fp != null && perm >= 0 && perm < fp.Count)
+                        {
+                            var effs = fp[perm].EffectList(Il2Cpp.EffectTiming.OnDeclaration);
+                            if (effs != null && skill >= 0 && skill < effs.Count && effs[skill] != null)
+                            {
+                                var nm = effs[skill].EffectName;
+                                return ",\"activate_link\":" + ((nm != null && nm.StartsWith("Link (Cost:")) ? "true" : "false")
+                                       + ",\"boards\":[" + PermIds(Il2Cpp.GManager.instance?.GetPlayerFromID(0)?.GetFieldPermanents()) + ","
+                                       + PermIds(Il2Cpp.GManager.instance?.GetPlayerFromID(1)?.GetFieldPermanents()) + "]";
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+            try
+            {
                 if (key == "TurnStateMachine.QueueMainPhaseAction_Internal" && args != null && args.Length >= 3
                     && Convert.ToInt32(args[1]) == 4 && args[2] is System.Collections.IEnumerable raw)
                     return PlayPacketJson(Convert.ToInt32(args[0]), raw);
@@ -1983,7 +2013,10 @@ namespace DcgoRecorder
                     LoggerInstance.Msg("agent: hand click " + pk["card_id"]);
                     hit.OnClickAction.Invoke(hit);
                 }
-                if (MenuOpen() && !ClickMenu(t => t == "end selection" || t.StartsWith("no selection")))
+                // DCGO shows "End Selection" a moment AFTER the click: until it is clicked the prompt is still open
+                // (Glowing Dawn's ST23-03 sat selected with no End Selection), so retry until it is
+                if (!MenuOpen()) throw new Exception("hand card clicked - waiting for End Selection");
+                if (!ClickMenu(t => t == "end selection" || t.StartsWith("no selection")))
                     throw new Exception("hand prompt has no End Selection");
                 return;
             }
@@ -2309,8 +2342,23 @@ namespace DcgoRecorder
                         var actId = Field(text, "card_id");
                         int pi = FieldIndexByCard(me, actId, int.Parse(Field(text, "occurrence") ?? "0"));
                         if (pi < 0) throw new Exception("permanent " + actId + " to activate not found");
-                        int skill = int.Parse(Field(text, "skill_index") ?? "0");
-                        LoggerInstance.Msg("agent: activate " + actId + " (" + pi + ") skill " + skill);
+                        // the engine's sub-slot is SEMANTIC (2 = [Main], 3 = <Link>); DCGO's SkillIndex is POSITIONAL,
+                        // into the permanent's EffectList(OnDeclaration): the first activatable effect that is not the
+                        // link declaration, or the link declaration (DCGO's Harness InputDriver.FindDeclarableSkillIndex).
+                        // Sending the sub-slot itself activated nothing for P-206's <Delay> (its only declarable effect).
+                        int sub = int.Parse(Field(text, "skill_index") ?? "2");
+                        bool wantLink = sub == 3;
+                        int skill = -1;
+                        var effs = me.GetFieldPermanents()[pi].EffectList(Il2Cpp.EffectTiming.OnDeclaration);
+                        for (int i = 0; effs != null && i < effs.Count; i++)
+                        {
+                            var e = effs[i];
+                            if (e == null || e.TryCast<Il2Cpp.ActivateClass>() == null) continue;
+                            bool isLink = e.EffectName != null && e.EffectName.StartsWith("Link (Cost:");
+                            if (isLink == wantLink) { skill = i; break; }
+                        }
+                        if (skill < 0) throw new Exception("no declarable " + (wantLink ? "link" : "[Main]") + " effect on " + actId);
+                        LoggerInstance.Msg("agent: activate " + actId + " (" + pi + ") skill " + skill + " (engine sub-slot " + sub + ")");
                         tsm.QueueMainPhaseAction(me, new Il2Cpp.ActivatePermanentAction(pi, skill));
                         break;
                     }
