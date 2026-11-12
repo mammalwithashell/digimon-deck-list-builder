@@ -1617,7 +1617,8 @@ fn replacement_digivolve_triggers_wait_for_the_deleting_effect() {
             owner: 0,
             trash_on_turn: turn + 1,
             trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
-            placed_on_turn: turn,
+            // CR 16-17-3: placed on an earlier turn, so the <Delay> is usable now.
+            placed_on_turn: turn.saturating_sub(1),
         };
     let deleter = r.place_on_field(1, "WD_DEL_OPP_THEN_MEM", Some(0));
     let cp = r.event_checkpoint();
@@ -1738,7 +1739,8 @@ fn replacement_digivolve_triggers_pend_in_one_pool() {
             owner: 0,
             trash_on_turn: turn + 1,
             trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
-            placed_on_turn: turn,
+            // CR 16-17-3: placed on an earlier turn, so the <Delay> is usable now.
+            placed_on_turn: turn.saturating_sub(1),
         };
     let deleter = r.place_on_field(1, "WD_DEL_OPP_THEN_MEM", Some(0));
     let cp = r.event_checkpoint();

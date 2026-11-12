@@ -44,167 +44,129 @@ fn printed_security_observers_have_direct_facts_and_require_runtime_reference_ch
     });
 }
 
+/// Replay a recorded `{game_seed, cards, actions}` decision prefix, asserting
+/// every recorded decision is the decision player's and legal.
+pub(super) fn replay_fixture(fixture: &serde_json::Value) -> digimon_engine::Game {
+    let cards: Vec<String> = serde_json::from_value(fixture["cards"].clone()).unwrap();
+    let refs: Vec<_> = cards.iter().map(String::as_str).collect();
+    let mut root = new_game_with(fixture["game_seed"].as_u64().unwrap(), &refs, &refs);
+    root.enable_belief_knowledge().unwrap();
+    root.turn_count = 1;
+    for (i, step) in fixture["actions"].as_array().unwrap().iter().enumerate() {
+        let p = step[0].as_u64().unwrap() as u8;
+        let a = step[1].as_u64().unwrap() as u16;
+        assert_eq!(decision_player(&root), p, "{}: decision {i} {step}", fixture["source"]);
+        assert!(
+            digimon_engine::build_action_mask(&root, p)[a as usize] > 0.5,
+            "{}: decision {i} {step} is not legal",
+            fixture["source"]
+        );
+        root.decode_action(a, p);
+    }
+    root
+}
+
+/// The closed-world checks shared by the security-observer and
+/// link-continuation fixtures: the materialized world exists, is independent
+/// of the opponent's unseen composition, and resolves the next decision the
+/// same way.
+pub(super) fn check_closed_fixture(
+    root: &digimon_engine::Game,
+    cards: Vec<String>,
+    label: &str,
+) {
+    let viewer = decision_player(root);
+    let memory = root.belief_knowledge(viewer).unwrap().clone();
+    let prior = WeightedDeckPrior::new(
+        PriorSnapshot::new(
+            "standard",
+            label,
+            cards.iter().cloned().collect(),
+            vec![CandidateDeck { cards, weight: 1.0 }],
+            0.1,
+            128,
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let a = materialize_closed(root, viewer, &memory, &prior, 88).unwrap_or_else(|e| {
+        panic!(
+            "{e}; queue={:?}; frames={:?}",
+            root.effect_queue, root.pending_selection_resume
+        )
+    });
+    let known: std::collections::HashSet<_> = serde_json::to_value(&memory).unwrap()["cards"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["instance"].as_u64().unwrap() as u16)
+        .collect();
+    let mut changed = root.clone();
+    let replacement = changed
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "ST1-02")
+        .unwrap();
+    let opp = &mut changed.players[(1 - viewer) as usize];
+    for c in opp
+        .hand
+        .iter_mut()
+        .chain(&mut opp.deck)
+        .chain(&mut opp.security)
+    {
+        if !known.contains(&c.card_index) {
+            c.data_index = replacement;
+        }
+    }
+    opp.original_deck.clear();
+    assert_same_actor_observation(root, &changed, viewer);
+    let b = materialize_closed(&changed, viewer, &memory, &prior, 88).unwrap();
+    assert_eq!(full_zone_dump(&a), full_zone_dump(&b));
+    let mask = digimon_engine::build_action_mask(&a, viewer);
+    assert_eq!(mask, digimon_engine::build_action_mask(root, viewer));
+    let action = mask
+        .iter()
+        .enumerate()
+        .find(|(i, v)| **v > 0.5 && *i != digimon_engine::action::PASS as usize)
+        .unwrap()
+        .0 as u16;
+    let mut a = a;
+    let mut b = b;
+    a.decode_action(action, viewer);
+    b.decode_action(action, viewer);
+    assert_eq!(a.to_scenario(), b.to_scenario());
+}
+
+fn check_fixture_file(text: &str, label: &str) {
+    let fixtures: serde_json::Value = serde_json::from_str(text).unwrap();
+    for fixture in fixtures.as_array().unwrap() {
+        let root = replay_fixture(fixture);
+        let cards: Vec<String> = serde_json::from_value(fixture["cards"].clone()).unwrap();
+        check_closed_fixture(&root, cards, label);
+    }
+}
+
+/// Recorded prefixes end with a security-removal observer queued or parked
+/// (regenerate with `fixture_regen`, see that module).
 #[test]
 fn queued_and_optional_security_observers_discard_only_unused_private_references() {
     with_big_stack(|| {
-        let fixtures: serde_json::Value =
-            serde_json::from_str(include_str!("fixtures/security-observer-contexts.json")).unwrap();
-        for fixture in fixtures.as_array().unwrap() {
-            let cards: Vec<String> = serde_json::from_value(fixture["cards"].clone()).unwrap();
-            let refs: Vec<_> = cards.iter().map(String::as_str).collect();
-            let mut root = new_game_with(fixture["game_seed"].as_u64().unwrap(), &refs, &refs);
-            root.enable_belief_knowledge().unwrap();
-            root.turn_count = 1;
-            for step in fixture["actions"].as_array().unwrap() {
-                let p = step[0].as_u64().unwrap() as u8;
-                let a = step[1].as_u64().unwrap() as u16;
-                assert_eq!(decision_player(&root), p);
-                assert!(digimon_engine::build_action_mask(&root, p)[a as usize] > 0.5);
-                root.decode_action(a, p);
-            }
-            let viewer = decision_player(&root);
-            let memory = root.belief_knowledge(viewer).unwrap().clone();
-            let prior = WeightedDeckPrior::new(
-                PriorSnapshot::new(
-                    "standard",
-                    "security-observer-regression",
-                    cards.iter().cloned().collect(),
-                    vec![CandidateDeck { cards, weight: 1.0 }],
-                    0.1,
-                    128,
-                )
-                .unwrap(),
-            )
-            .unwrap();
-            let a = materialize_closed(&root, viewer, &memory, &prior, 88).unwrap_or_else(|e| {
-                panic!(
-                    "{e}; queue={:?}; frames={:?}",
-                    root.effect_queue, root.pending_selection_resume
-                )
-            });
-            let known: std::collections::HashSet<_> = serde_json::to_value(&memory).unwrap()
-                ["cards"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|c| c["instance"].as_u64().unwrap() as u16)
-                .collect();
-            let mut changed = root.clone();
-            let replacement = changed
-                .card_data
-                .iter()
-                .position(|c| c.card_id == "ST1-02")
-                .unwrap();
-            let opp = &mut changed.players[(1 - viewer) as usize];
-            for c in opp
-                .hand
-                .iter_mut()
-                .chain(&mut opp.deck)
-                .chain(&mut opp.security)
-            {
-                if !known.contains(&c.card_index) {
-                    c.data_index = replacement;
-                }
-            }
-            opp.original_deck.clear();
-            assert_same_actor_observation(&root, &changed, viewer);
-            let b = materialize_closed(&changed, viewer, &memory, &prior, 88).unwrap();
-            assert_eq!(full_zone_dump(&a), full_zone_dump(&b));
-            let mask = digimon_engine::build_action_mask(&a, viewer);
-            assert_eq!(mask, digimon_engine::build_action_mask(&root, viewer));
-            let action = mask
-                .iter()
-                .enumerate()
-                .find(|(i, v)| **v > 0.5 && *i != digimon_engine::action::PASS as usize)
-                .unwrap()
-                .0 as u16;
-            let mut a = a;
-            let mut b = b;
-            a.decode_action(action, viewer);
-            b.decode_action(action, viewer);
-            assert_eq!(a.to_scenario(), b.to_scenario());
-        }
+        check_fixture_file(
+            include_str!("fixtures/security-observer-contexts.json"),
+            "security-observer-regression",
+        )
     });
 }
 
+/// Recorded prefixes end inside a parked link selection continuation
+/// (regenerate with `fixture_regen`, see that module).
 #[test]
 fn link_selection_continuations_are_composition_independent_and_resolve() {
     with_big_stack(|| {
-        let fixtures: serde_json::Value =
-            serde_json::from_str(include_str!("fixtures/link-continuations.json")).unwrap();
-        for fixture in fixtures.as_array().unwrap() {
-            let cards: Vec<String> = serde_json::from_value(fixture["cards"].clone()).unwrap();
-            let refs: Vec<_> = cards.iter().map(String::as_str).collect();
-            let mut root = new_game_with(fixture["game_seed"].as_u64().unwrap(), &refs, &refs);
-            root.enable_belief_knowledge().unwrap();
-            root.turn_count = 1;
-            for step in fixture["actions"].as_array().unwrap() {
-                let p = step[0].as_u64().unwrap() as u8;
-                let a = step[1].as_u64().unwrap() as u16;
-                assert_eq!(decision_player(&root), p);
-                assert!(digimon_engine::build_action_mask(&root, p)[a as usize] > 0.5);
-                root.decode_action(a, p);
-            }
-            let viewer = decision_player(&root);
-            let memory = root.belief_knowledge(viewer).unwrap().clone();
-            let prior = WeightedDeckPrior::new(
-                PriorSnapshot::new(
-                    "standard",
-                    "link-continuation-regression",
-                    cards.iter().cloned().collect(),
-                    vec![CandidateDeck {
-                        cards: cards.clone(),
-                        weight: 1.0,
-                    }],
-                    0.1,
-                    128,
-                )
-                .unwrap(),
-            )
-            .unwrap();
-            let a = materialize_closed(&root, viewer, &memory, &prior, 88).unwrap();
-            let known: std::collections::HashSet<_> = serde_json::to_value(&memory).unwrap()
-                ["cards"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|c| c["instance"].as_u64().unwrap() as u16)
-                .collect();
-            let mut changed = root.clone();
-            let replacement = changed
-                .card_data
-                .iter()
-                .position(|c| c.card_id == "ST1-02")
-                .unwrap();
-            let opp = &mut changed.players[(1 - viewer) as usize];
-            for c in opp
-                .hand
-                .iter_mut()
-                .chain(&mut opp.deck)
-                .chain(&mut opp.security)
-            {
-                if !known.contains(&c.card_index) {
-                    c.data_index = replacement;
-                }
-            }
-            opp.original_deck.clear();
-            assert_same_actor_observation(&root, &changed, viewer);
-            let b = materialize_closed(&changed, viewer, &memory, &prior, 88).unwrap();
-            assert_eq!(full_zone_dump(&a), full_zone_dump(&b));
-            let mask = digimon_engine::build_action_mask(&a, viewer);
-            assert_eq!(mask, digimon_engine::build_action_mask(&root, viewer));
-            let action = mask
-                .iter()
-                .enumerate()
-                .find(|(i, v)| **v > 0.5 && *i != digimon_engine::action::PASS as usize)
-                .unwrap()
-                .0 as u16;
-            let mut a = a;
-            let mut b = b;
-            a.decode_action(action, viewer);
-            b.decode_action(action, viewer);
-            assert_eq!(a.to_scenario(), b.to_scenario());
-        }
+        check_fixture_file(
+            include_str!("fixtures/link-continuations.json"),
+            "link-continuation-regression",
+        )
     });
 }
 

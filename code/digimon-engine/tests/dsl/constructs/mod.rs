@@ -43,3 +43,4 @@ mod effect_play_results;
 mod tamer_color_predicates;
 
 mod face_up_security_named;
+mod hand_shuffle_return_and_name_match;

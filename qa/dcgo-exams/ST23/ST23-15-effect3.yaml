@@ -80,22 +80,25 @@ steps:
 assert:
   # T4 after the check (before P1's trailing pass): Tomoro Tenma was played
   # from P0's hand for free (P1 still holds 3 -> p0.memory -3), security 5 -> 4.
-  # ENGINE FINDING (expected oracle divergence): e-Pulse ends in P0's TRASH.
-  # The [Main] it activates ends "Then, place this card in the battle area",
-  # so the printed text (and DCGO's AddActivateMainOptionSecurityEffect, which
-  # re-runs the whole [Main] incl. PlaceDelayOptionCards -- cf.
-  # EX12-071-security0, where DCGO placed the Option on the field) puts
-  # ST23-15 on P0's FIELD with an empty trash. Our on_security body omits the
-  # placement. Asserted as OUR behaviour.
+  # RESOLVED 2026-11-11 (716c6e291, league deck audit): the [Main] this
+  # activates ends "Then, place this card in the battle area", so ST23-15 is
+  # placed on P0's FIELD with an empty trash -- the printed text, and DCGO's
+  # AddActivateMainOptionSecurityEffect (re-runs the whole [Main] incl.
+  # PlaceDelayOptionCards; cf. EX12-071-security0). Our on_security body used
+  # to omit the placement and trash it.
   - at: 10
     that:
       turn: 4
       p0.memory: -3
       p0.security: 4
-      p0.trash: [ST23-15]
+      p0.trash: []
       p0.hand: [BT16-082, BT16-082, BT25-043, BT25-043, BT25-057]
       p0.field:
         - card_id: BT25-090
+          dp: -1
+          suspended: false
+          sources: []
+        - card_id: ST23-15
           dp: -1
           suspended: false
           sources: []

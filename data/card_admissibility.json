@@ -5506,9 +5506,9 @@
     },
     "BT13-033": {
       "admissible": true,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": true,
-      "needs_card_test": false,
+      "needs_card_test": true,
       "reason": null,
       "reasons": [],
       "untested_constructs": []
@@ -6143,9 +6143,9 @@
     },
     "BT13-092": {
       "admissible": true,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": true,
-      "needs_card_test": false,
+      "needs_card_test": true,
       "reason": null,
       "reasons": [],
       "untested_constructs": []
@@ -47150,12 +47150,12 @@
     "untested_card": 7,
     "untested_lowering": 3320
   },
-  "generated_at": "2026-11-12T03:40:06+00:00",
+  "generated_at": "2026-11-12T06:25:48+00:00",
   "sources": {
     "behavioral_test_modules_sha256": "379ca13b970b09cce09c5eb69e3565aa74380a019bffa2fc3fc49d2f878da44f",
     "card_registry_sha256": "9f1d73468af07111086c2d7b7fbde57025691b32a04de52e294b485591a091d9",
-    "exam_verdicts_sha256": "5703a857c51ce004beba06da63e5ae6fad4c485e6128a72c9a20073813414eca",
-    "lowering_coverage_sha256": "9bba9e63f2ecf772084437c7ad76be0cfc16b0e4dddc6571fb8e8048d5912c72",
+    "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
+    "lowering_coverage_sha256": "c787655ca9ce640e535d2ce426d1aeb90c049baba270109f77113c5044e53b8a",
     "validated_cards_dsl_sha256": "78a9d1553705fd1b113b0c013b276874857161a20ca646cfa8ea6728c77df326",
     "validated_cards_sha256": "64443d5a477f01781b8c8cce7defc79b47636d0da4c92ed20a977b61de46246a"
   },

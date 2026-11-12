@@ -448,3 +448,40 @@ Sirenmon (BT25-039) and Puppetmon (EX10-020) place "this card" into security.
 The engine found the card in any zone, so if an earlier effect had already
 moved it out of the trash it was still placed. A deleted card named by
 `event_card` is now looked up only in the trash (CR 3-1-3-1, 15-4-4-3).
+
+# Part 7: tests and exam scenarios brought in line with the fixes (2026-11-12)
+
+The rules fixes in Parts 3 to 6 made some recorded games and staged tests
+illegal. None of these changes alters engine behaviour.
+
+- **Recorded games:**
+  - Two determinization prefixes (`tests/determinization/fixtures/`) were
+    regenerated from their seeds and still-legal prefixes by the new
+    `fixture_regen` test (ignored by default).
+  - The Paishu-token combat recording is replaced by a staged MonarchLizamon
+    (BT25-057) end-of-turn attack, because a DUAL security card now deletes
+    the token before that attack.
+  - The Medusamon (EX11-012) payment recording loses the three accepts of the
+    clause's former yes/no window.
+- **`<Delay>` timing:** tests that used a `<Delay>` the turn it was placed now
+  place it a turn earlier (CR 16-17-3). This covers judge quiz Q25-Q27,
+  option_flow BT17-097 and two rules_conformance ch15 tests.
+- **Other staged tests:**
+  - The forced-opponent-attack test runs on the attacker's turn (CR 11-1-2).
+  - The DUAL "play or use" test now expects the card to be used as an Option
+    (CR 4-6-2).
+- **Exam scenarios (sim-only):** nine were updated for the fixed behaviour:
+  - Medusamon BT21-029 now plays one Petrification Token. That clause is
+    triaged `dcgo_quirk` (`Q-OPT-COUNTER-PER-TRIGGER-ARM` in
+    `qa/rules/dcgo_quirks.md`).
+  - Cougarmon BT25-035 pays before it picks.
+  - Rosemon BT26-049 has no empty Counter window.
+  - Rosemon: Burst Mode BT26-050 shows the burst route prompt; the scenario
+    now asserts cost 0 and Yoshino returned.
+  - Medusamon EX11-012 has no yes/no window.
+  - e-Pulse ST23-15 is placed on the field.
+  - ScourgeChiropmon BT26-075 is no longer offered Armalizamon's Option cost
+    reduction.
+- **New mechanics tests:** `shuffle_hand`, `return_hand_list_to_deck` and
+  `name_matches_returned_card` (`tests/dsl/constructs/`), so BT13-033 and
+  BT13-092 pass the training gate.

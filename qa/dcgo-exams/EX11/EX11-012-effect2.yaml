@@ -8,9 +8,8 @@
 # the same clause and is NOT reachable in a scripted line today -- see the
 # note at the bottom of this header.
 #
-# Like BT21-029 and unlike BT24-017, this clause is OPTIONAL ("You may
-# delete"), so our engine installs an outer accept/decline window before the
-# target prompt; step 15 answers it.
+# The "You may delete" rides the delete pick (DCGO canNoSelect: true); the
+# clause itself has no accept/decline window (since 2026-11-11, matching DCGO).
 #
 # THE LINE reuses the oracle-verified Red LIBERATOR prefix from
 # qa/dcgo-exams/BT21/BT21-029-effect2.yaml -- Tokomon BT25-001 (egg) ->
@@ -134,13 +133,9 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: EX11-012 } }
     expect: { prompt: main_phase }
-  # SIM-ONLY. Our engine's outer accept/decline gate for the optional clause.
-  # DCGO has no gate here: EX11_012.cs is `SetUpActivateClass(..., -1, false,
-  # ...)` with `canNoSelect: true` on the permanent pick, so its "may" rides
-  # the pick and it asks ONE prompt where we ask two. Answers our prompt,
-  # emits no wire row.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
+  # (No outer accept/decline gate since 2026-11-11: like DCGO's EX11_012.cs,
+  # `SetUpActivateClass(..., -1, false, ...)`, the clause is not optional and
+  # its "may" rides the delete pick, so both engines ask ONE prompt here.)
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
   - actor: 0
@@ -159,7 +154,7 @@ assert:
   # BT23-005 (the deleted Elizamon). BT25-001 -- the egg beneath it -- is
   # ABSENT because it is the one card returned to the bottom of P1's deck as
   # the clause's cost, which is the positive evidence the cost was paid.
-  - at: 19
+  - at: 18
     that:
       turn: 7
       phase: Main
