@@ -33,6 +33,9 @@ import sys
 import time
 import urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from import_official_qa import render_qa_section  # noqa: E402
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 IMG_DIR = os.environ.get(
     "DIGIMON_CARD_IMAGE_DIR",
@@ -140,6 +143,17 @@ def parse_official(card_id: str, html: str) -> dict:
     return out
 
 
+_OFFICIAL_QA = None
+
+
+def _official_qa() -> dict:
+    global _OFFICIAL_QA
+    if _OFFICIAL_QA is None:
+        p = os.path.join(ROOT, "data", "card_official_qa.json")
+        _OFFICIAL_QA = json.load(open(p, encoding="utf-8"))["cards"] if os.path.exists(p) else {}
+    return _OFFICIAL_QA
+
+
 def write_bundle(card_id: str, official: dict, meta: dict, outdir: str):
     """Write a per-card markdown bundle merging official + cards.json + image."""
     img = os.path.join(IMG_DIR, card_id + ".webp")
@@ -185,7 +199,12 @@ def write_bundle(card_id: str, official: dict, meta: dict, outdir: str):
         if "special digivolution" in s["label"].lower():
             continue
         lines += [f"### {s['label']}", s["text"], ""]
-    if official.get("qa"):
+    # The card-list page keeps only the first ruling's answer; data/card_official_qa.json
+    # (code/tools/import_official_qa.py) holds every ruling from the official Q&A pages.
+    full_qa = _official_qa().get(card_id)
+    if full_qa:
+        lines += render_qa_section(card_id, full_qa)
+    elif official.get("qa"):
         lines += ["## Official Q&A"] + [f"- {q}" for q in official["qa"]]
     lines += [
         "",
