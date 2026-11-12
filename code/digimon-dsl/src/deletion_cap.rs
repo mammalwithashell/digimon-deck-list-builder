@@ -93,7 +93,7 @@ fn for_each_child(step: &CompiledStep, f: &mut dyn FnMut(&CompiledStep)) {
     }
 }
 
-fn child_bodies(step: &CompiledStep) -> Vec<&Vec<CompiledStep>> {
+pub(crate) fn child_bodies(step: &CompiledStep) -> Vec<&Vec<CompiledStep>> {
     use CompiledStep as S;
     match step {
         S::SearchOwnSecurityStack {
@@ -136,7 +136,7 @@ fn child_bodies(step: &CompiledStep) -> Vec<&Vec<CompiledStep>> {
     }
 }
 
-fn child_bodies_mut(step: &mut CompiledStep) -> Vec<&mut Vec<CompiledStep>> {
+pub(crate) fn child_bodies_mut(step: &mut CompiledStep) -> Vec<&mut Vec<CompiledStep>> {
     use CompiledStep as S;
     match step {
         S::SearchOwnSecurityStack {

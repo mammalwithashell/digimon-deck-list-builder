@@ -172,6 +172,30 @@ fn handle(
     // 2. replay it
     let mut session = ReplaySession::from_dcgo(recording, card_data, false).map_err(|e| format!("session: {e:?}"))?;
     session.run_to_completion();
+    // DCGO picks a digivolution source in two steps (the Digimon, then the card); the replay folds the Digimon row
+    // into the card row that follows it. Live, the card row does not exist yet: hold back a trailing carrier-only
+    // row that does not resolve on its own, and answer from the state before it (the pick is still open).
+    if session.divergences().first().is_some() {
+        let mut lines: Vec<&str> = rec_text.lines().filter(|l| !l.trim().is_empty()).collect();
+        let end = lines.pop();
+        let carrier = lines.last().copied().filter(|l| {
+            l.contains("\"prompt\":\"SelectPermanentEffect\"") && l.contains("\"targets\"") && !l.contains("\"card_ids\"")
+        });
+        if let (Some(_), Some(end)) = (carrier, end) {
+            lines.pop();
+            lines.push(end);
+            let trimmed = lines.join("
+");
+            if let Ok(rec2) = digimon_engine::dcgo_recording::parse_jsonl(&trimmed) {
+                if let Ok(mut s2) = ReplaySession::from_dcgo(rec2, card_data, false) {
+                    s2.run_to_completion();
+                    if s2.divergences().is_empty() {
+                        session = s2;
+                    }
+                }
+            }
+        }
+    }
     if let Some(d) = session.divergences().first() {
         return Ok(json!({"id": id, "status": "diverged", "step": d.step, "message": format!("{:?}", d.kind)}));
     }
@@ -192,6 +216,28 @@ fn handle(
         advanced.decode_action(action, actor);
     }
     let game = &advanced;
+    // DCGO-vs-engine audit: DCGO's own zones (its latest snapshot) against the engine's replay of DCGO's
+    // decisions. A difference that persists is a real rules / card difference (or a recorder gap).
+    // Reported once it has held for 3 requests in a row: DCGO's snapshot runs ahead of its own logged rows
+    // during animations (a card drawn or played before its row is written).
+    {
+        use std::sync::Mutex;
+        static LAST: Mutex<(String, u32)> = Mutex::new((String::new(), 0));
+        let mut last = LAST.lock().unwrap();
+        match zone_mismatch(game, Path::new(raw)) {
+            Some(note) => {
+                if last.0 == note {
+                    last.1 += 1;
+                } else {
+                    *last = (note.clone(), 1);
+                }
+                if last.1 == 3 {
+                    eprintln!("ZONE-MISMATCH step {} turn {}: {}", session.current_step(), game.turn_count, note);
+                }
+            }
+            None => *last = (String::new(), 0),
+        }
+    }
     if game.game_over {
         return Ok(json!({"id": id, "status": "game_over"}));
     }
@@ -292,8 +338,13 @@ fn describe_pick(game: &digimon_engine::game::Game, seat: u8, action: u16) -> Va
     if let Some(choice) = p.card_choice.as_ref() {
         let view = choice.view(game, seat);
         if let Some(row) = view.rows.iter().find(|r| r.action_id == action) {
+            // a digivolution source names its carrier: DCGO first asks for that Digimon, then for the card
+            let carrier = row.carrier_slot.and_then(|slot| {
+                let pl = game.player(row.owner.unwrap_or(seat));
+                pl.battle_area.get(slot as usize).map(|perm| card_id(game, perm.top_card()))
+            });
             return json!({"pick": "card", "card_id": row.card_id, "owner": row.owner, "zone": row.zone.as_ref().map(|z| format!("{:?}", z)),
-                          "slot": row.carrier_slot});
+                          "slot": row.carrier_slot, "carrier_card_id": carrier});
         }
     }
     use digimon_engine::selection::SelectionKind as K;
@@ -400,6 +451,47 @@ fn selection_chain(
         }
     }
     Ok(json!({"kind": "selection", "category": category, "selection_kind": kind, "prompt": prompt, "picks": picks}))
+}
+
+/// Compare DCGO's latest `Snapshot.*` row (hand, trash, battle-area tops, security count per player) with the
+/// engine state. `None` when they agree or there is no snapshot.
+fn zone_mismatch(game: &digimon_engine::game::Game, raw: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(raw).ok()?;
+    let snap: Value = text
+        .lines()
+        .rev()
+        .filter(|l| l.contains("\"method\":\"Snapshot."))
+        .find_map(|l| serde_json::from_str(l).ok())?;
+    let mut diffs = Vec::new();
+    for p in snap["players"].as_array()? {
+        let pid = p["id"].as_u64()? as u8;
+        if pid > 1 {
+            continue;
+        }
+        let pl = game.player(pid);
+        let sorted = |v: Vec<String>| {
+            let mut v = v;
+            v.sort();
+            v
+        };
+        let ids = |key: &str| sorted(p[key].as_array().map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect()).unwrap_or_default());
+        let checks: [(&str, Vec<String>, Vec<String>); 3] = [
+            ("hand", ids("hand"), sorted(pl.hand.iter().map(|c| card_id(game, c)).collect())),
+            ("trash", ids("trash"), sorted(pl.trash.iter().map(|c| card_id(game, c)).collect())),
+            ("battle", ids("battle"), sorted(pl.battle_area.iter().map(|b| card_id(game, b.top_card())).collect())),
+        ];
+        for (zone, dcgo, ours) in checks {
+            if dcgo != ours {
+                diffs.push(format!("p{pid} {zone}: dcgo {dcgo:?} engine {ours:?}"));
+            }
+        }
+        if let Some(sec) = p["security"].as_array() {
+            if sec.len() != pl.security.len() {
+                diffs.push(format!("p{pid} security: dcgo {} engine {}", sec.len(), pl.security.len()));
+            }
+        }
+    }
+    (!diffs.is_empty()).then(|| diffs.join("; "))
 }
 
 fn card_id(game: &digimon_engine::game::Game, cs: &digimon_engine::card_source::CardSource) -> String {
@@ -590,6 +682,29 @@ impl Script {
         if mask.get(action as usize).copied().unwrap_or(0.0) < 0.5 {
             return Ok(json!({"status": "diverged", "message": format!("recorded action {action} is not legal here"), "script_step": k}));
         }
+        // An accepted "you may activate X" (Replacement accept) whose effect then asks this seat a pick: DCGO has no
+        // separate accept for most of these (it opens the pick, with "don't" on its back button, or asks "Use?"
+        // which the card / hand / permanent answers confirm first), and the replay folds the accept into the pick
+        // row. Describe the pick that follows instead.
+        let accepted;
+        let (game, k) = match game.pending_selection.as_ref() {
+            Some(p) if matches!(p.kind, digimon_engine::selection::SelectionKind::Replacement)
+                && action == digimon_engine::action::space::REPLACEMENT_ACCEPT
+                && k + 1 < self.actions.len()
+                && self.actions[k + 1].0 == seat =>
+            {
+                let mut g = game.clone();
+                g.decode_action(action, seat);
+                if g.pending_selection.as_ref().is_some_and(|q| q.selecting_player == seat) {
+                    accepted = g;
+                    (&accepted, k + 1)
+                } else {
+                    (game, k)
+                }
+            }
+            _ => (game, k),
+        };
+        let action = self.actions[k].1;
         let mut out = if let Some(first) = game.pending_selection.as_ref() {
             // DCGO answers a multi-pick prompt in one call: take the recorded picks while the same prompt continues
             let category = selection_category(first);
@@ -598,7 +713,12 @@ impl Script {
             let mut j = k;
             while j < self.actions.len() {
                 let Some(p) = g.pending_selection.as_ref() else { break };
-                if p.selecting_player != seat || selection_category(p) != category || self.actions[j].0 != seat {
+                // one DCGO answer covers the picks of ONE prompt (a multi-pick re-parks the same prompt); two
+                // different prompts of the same category (e.g. "link to which Digimon", then "which Digimon gains
+                // +3000") are two DCGO prompts and two answers
+                if p.selecting_player != seat || selection_category(p) != category || self.actions[j].0 != seat
+                    || (j > k && p.prompt != first.prompt)
+                {
                     break;
                 }
                 let pick = describe_pick(&g, seat, self.actions[j].1);

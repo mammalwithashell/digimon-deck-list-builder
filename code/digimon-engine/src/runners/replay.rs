@@ -2414,6 +2414,25 @@ impl ReplayDriver {
             }
         }
 
+        // A "may" replacement / triggered effect parks its own accept (REPLACEMENT_ACCEPT, decline = PASS) before
+        // its pick; DCGO usually has no separate accept and records only the pick (e.g. a "when this Digimon would
+        // leave the battle area, you may play 1 ..." card). When the row cannot answer the accept prompt but
+        // answers the prompt that accepting opens (probed on a clone), the row is the acceptance AND the pick.
+        if game.pending_selection.as_ref().is_some_and(|p| {
+            p.is_optional
+                && p.selecting_player == actor
+                && p.valid_action_ids == [crate::action::space::REPLACEMENT_ACCEPT]
+        }) && payload.cancel != Some(true)
+            && payload.bool_value.is_none()
+            && resolve_next(game, payload, 0).is_err()
+        {
+            let mut probe = game.clone();
+            probe.decode_action(crate::action::space::REPLACEMENT_ACCEPT, actor);
+            if matches!(resolve_next(&probe, payload, 0), Ok(Some(_))) {
+                game.decode_action(crate::action::space::REPLACEMENT_ACCEPT, actor);
+            }
+        }
+
         let mut picks_done = 0usize;
         let mut last_action: u16 = 0;
         loop {

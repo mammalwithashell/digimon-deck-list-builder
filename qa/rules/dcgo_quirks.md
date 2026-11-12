@@ -72,6 +72,20 @@ Three corpus games (`395415c3`, `f574326348564fceb9fc89b2a11cac31`, `f1285790f6b
 
 `cab6f074`: DCGO's bot plays the Option face of the DUAL card BT25-085 (cost 6 paid, its `[Main]` executed) and then Red Option P-180, for a player whose battle area is empty. An Option's colour requirement needs a Digimon or Tamer of each of its colours on your field (CR 4.3 4-22-2, 4-22-3) and `<Use Req.>` only waives it "with specific Digimon and/or Tamers on the field" (16-42-3); BT25-085 needs a [Three Musketeers] permanent and P-180 ignores its colour only "while you have a [Three Musketeers] trait Digimon". The engine models both correctly. The DCGO mechanism that let it through is unresolved (its `CardSource` colour and use-requirement code reads as if it should block this). `dcgo-replay` triages an `illegal_action` on a play-hand action as this only when the played card is an Option or DUAL card, the actor's board in that row is empty, and DCGO resolved the play (a paid `action_detail`).
 
+## Q-DCGO-RULE-TRAIT-MISSING: DCGO ignores a printed "(Rule) Trait: Has [X] Type" grant
+
+- **DCGO:** Sunarizamon EX8-047 (`Assets/Scripts/CardEffect/EX8/Black/EX8_047.cs`) adds no trait, and its card
+  data carries only Reptile/LIBERATOR. Every [Mineral]/[Rock] filter (`EqualsTraits("Mineral")`) therefore leaves it
+  out, e.g. Magneticdramon EX10-036's "trash 3 [Mineral] or [Rock] trait cards from your Digimon's digivolution
+  cards" offers it nowhere.
+- **Rules / printed data:** the card prints "(Rule) Trait: Has [Mineral] Type." (official DB bundle
+  `data/card_bundles/EX8-047.md`). A rule-granted trait is a trait like any other (the 2026 Language
+  Standardization / trait announcements), and `card_overrides.json` folds it in for the engine.
+- **Playback signature (2026-11-11, Medusamon vs Rocks `sim_med_rocks`):** the sim chose EX8-047 among three
+  [Mineral]/[Rock] sources; DCGO's panel never shows it, and End Selection with two picks does nothing. The game
+  cannot be played back past that pick (step 58 of 66). The same family covers the other rule-trait cards CLAUDE.md
+  names (Ice-Snow line, Iliad/TS, `[Free]`-attribute Royal Knights) wherever DCGO lacks the grant.
+
 ## Recording quarantine (`qa/rules/dcgo_recording_quarantine.json`)
 
 For a recording that is invalid as replay input but whose invalidity no signature can prove from the recording alone, a human-reviewed entry lists its game id, an id and the diagnosis. `dcgo-replay` reports a quarantined game that STILL FAILS under `triaged`, never `pass`; if the engine later replays it cleanly it simply passes. The one current entry, `R-QUARANTINE-SCRIPTED-RAW-ACTION-IDS` (`c2bd1ab9`), is a scripted exam whose raw simulator action ids selected the wrong DCGO compact slot, so its final scripted attack targets an unsuspended Digimon with no `<Raid>`; DCGO's scripted path does not validate attack legality. Entries are for recordings whose own authoring is wrong, never for games that are merely hard to replay.

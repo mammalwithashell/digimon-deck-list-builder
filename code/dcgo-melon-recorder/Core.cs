@@ -1495,7 +1495,7 @@ namespace DcgoRecorder
                 if (!part.Contains("\"pick\"")) continue;
                 var obj = "{" + part;
                 var d = new Dictionary<string, string>();
-                foreach (var k in new[] { "pick", "card_id", "owner", "slot", "index", "zone", "label" }) d[k] = Field(obj, k);
+                foreach (var k in new[] { "pick", "card_id", "owner", "slot", "index", "zone", "label", "carrier_card_id" }) d[k] = Field(obj, k);
                 list.Add(d);
             }
             return list;
@@ -1570,6 +1570,16 @@ namespace DcgoRecorder
                         // EX12-018) where the engine asks one pick over both zones: answer the menu with the zone of the
                         // pick, then retry - the pick itself comes in the panel / hand prompt DCGO opens next.
                         if (ConfirmOptional(declined)) break;
+                        // the carrier of a source pick is clicked; DCGO then wants its End Selection (the pick follows)
+                        if (!declined && chosen.Count > 0 && chosen[0]["carrier_card_id"] != null)
+                        {
+                            var only = MenuButtons().Select(b => ButtonText(b).Trim().ToLowerInvariant()).ToList();
+                            if (only.Count == 1 && only[0] == "end selection")
+                            {
+                                ClickMenu(t => t == "end selection");
+                                throw new Exception("carrier confirmed - the source pick follows");
+                            }
+                        }
                         if (MenuOpen())
                         {
                             var zone = declined ? null : chosen[0]["zone"];
@@ -1599,6 +1609,20 @@ namespace DcgoRecorder
                         {
                             AnswerHandPick(gm, you, chosen);
                             break;
+                        }
+                        // A digivolution-source pick: DCGO first asks which Digimon holds it (field cards clickable),
+                        // then shows its sources in the panel. Click the carrier; the source follows in the panel.
+                        var carrierId = chosen.Count > 0 ? chosen[0]["carrier_card_id"] : null;
+                        if (!declined && carrierId != null && FieldClickable())
+                        {
+                            foreach (var f in UnityEngine.Object.FindObjectsOfType<Il2Cpp.FieldPermanentCard>())
+                            {
+                                var top = f?.ThisPermanent?.TopCard;
+                                if (f == null || f.OnClickAction == null || top == null || top.CardID != carrierId || top.Owner?.PlayerID != you) continue;
+                                LoggerInstance.Msg("agent: source carrier click " + carrierId);
+                                f.OnClickAction.Invoke(f);
+                                throw new Exception("carrier chosen - the source pick follows");
+                            }
                         }
                         // Not open yet (a reveal is still animating): retry. Never answer through the setter here - an
                         // early answer sits in DCGO's selection queue and is consumed by a LATER prompt.
@@ -1637,6 +1661,9 @@ namespace DcgoRecorder
                             var back = FindActiveButtonPath("戻るボタン");
                             if (back == null) throw new Exception("hand prompt has no way to decline");
                             LoggerInstance.Msg("agent: hand prompt: No Selection (back button)");
+                            // when the back button is an optional effect's "don't use", DCGO answers SetUseOptional:
+                            // stamp the engine's decline on it (a hand "No Selection" logs no stamped row)
+                            _engineAction = 62;
                             back.onClick.Invoke();
                             break;
                         }
@@ -1665,7 +1692,12 @@ namespace DcgoRecorder
                         // Only answer a prompt DCGO actually opened (candidates carry a click target). A forced pick
                         // (mandatory, candidates == max) DCGO resolves by itself while the engine still asks: an RPC
                         // then would be an extra answer that a LATER prompt consumes.
-                        if (!gm.IsAI && !FieldClickable() && ConfirmOptional(declined)) break;
+                        int selfPick = -1;
+                        var srcId = Field(text, "source_card_id");
+                        if (!declined && chosen.Count == 1 && srcId != null && chosen[0]["card_id"] == srcId
+                            && int.TryParse(Field(text, "action_id") ?? "", out var selfAct))
+                            selfPick = selfAct;
+                        if (!gm.IsAI && !FieldClickable() && ConfirmOptional(declined, selfPick)) break;
                         if (!gm.IsAI && !FieldClickable())
                             throw new Exception("permanent prompt not open (DCGO may have resolved a forced pick itself)");
                         var isTurn = new List<bool>();
@@ -1907,6 +1939,9 @@ namespace DcgoRecorder
                     throw new Exception("hand prompt has no End Selection");
                 return;
             }
+            // a local (non-AI) seat answers through the UI only: an RPC sent before the UI is up is recorded, but the
+            // UI stays open and DCGO waits on it
+            if (!gm.IsAI) throw new Exception("hand prompt not open yet");
             var she = UnityEngine.Object.FindObjectOfType<Il2Cpp.SelectHandEffect>();
             var used = new HashSet<int>();
             var idx = new List<int>();
@@ -1934,17 +1969,22 @@ namespace DcgoRecorder
         // A "you may" effect first asks whether to use it (OptionalSkill: a lone "Use" button + the back button); the
         // engine folds that into its pick (a pick = use, a decline = don't). Answer it; returns true when the decline
         // ended the prompt, throws (retry) after "Use" so the pick is answered once DCGO opens it.
-        bool ConfirmOptional(bool declined)
+        bool ConfirmOptional(bool declined, int useStamp = -1)
         {
             var texts = MenuButtons().Select(b => ButtonText(b).Trim().ToLowerInvariant()).ToList();
             if (texts.Count != 1 || texts[0] != "use") return false;
             var back = FindActiveButtonPath("戻るボタン");
             if (declined && back != null)
             {
+                // this decline IS the engine's answer to its prompt (PASS): stamp it on DCGO's SetUseOptional row
+                _engineAction = 62;
                 LoggerInstance.Msg("agent: optional effect: not used (back button)");
                 back.onClick.Invoke();
                 return true;
             }
+            // when the engine's pick IS the activation (the effect's own card, e.g. "suspend Close to ..."), "Use" is
+            // that answer: stamp it on DCGO's SetUseOptional row
+            _engineAction = useStamp;
             ClickMenu(t => t == "use");
             throw new Exception("optional effect confirmed - the pick follows");
         }

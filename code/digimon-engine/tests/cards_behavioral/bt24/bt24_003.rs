@@ -743,3 +743,40 @@ fn bt24_003_integrated_attack_breaks_security_and_offers_digivolve() {
         runner.game.drain_effect_queue();
     }
 }
+
+/// DCGO playback finding (2026-11-11, Toho Braves vs TS Jupitermon): a [Shaman] card that cannot digivolve onto
+/// this Digimon is not a candidate. DCGO's `SelectSourceCard` requires `CanPlayCardTargetFrame(...)`; the engine
+/// offered Venusmon BT24-040 (Lv.6, needs a Lv.5) onto a Lv.4 and the digivolve then did nothing. The DSL compile
+/// pass `digivolve_candidates` now adds `can_digivolve_onto: source` to the hand pick.
+#[test]
+fn bt24_003_offers_only_shaman_cards_that_can_digivolve_onto_it() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT24-003 YAML parses and compiles")
+        .dsl_card("ST3-02")
+        .expect("ST3-02 YAML parses")
+        .dsl_card("BT24-040")
+        .expect("BT24-040 YAML parses")
+        .add_card(make_test_card("FILLER-DECK", "Filler"))
+        .deck(0, &["FILLER-DECK"; 10])
+        .deck(1, &["FILLER-DECK"; 10])
+        .memory(10)
+        .start();
+    runner.place_stack(0, &["BT24-003", "ST3-02"]);
+    // Venusmon: [Shaman], Lv.6 - only a Lv.5 can digivolve into it, never this Lv.3 host.
+    push_hand(&mut runner, "BT24-040");
+    let hand_before = runner.game.players[0].hand.len();
+
+    remove_own_security(&mut runner);
+
+    if let Some(view) = runner.pending_selection_view() {
+        assert!(
+            view.valid_action_ids.iter().all(|&a| a == PASS),
+            "a [Shaman] card that cannot digivolve onto the host must not be offered: {:?}",
+            view.valid_action_ids
+        );
+        runner.execute_action(view.selecting_player, PASS).expect("decline");
+        runner.game.drain_effect_queue();
+    }
+    assert_eq!(runner.game.players[0].hand.len(), hand_before);
+}

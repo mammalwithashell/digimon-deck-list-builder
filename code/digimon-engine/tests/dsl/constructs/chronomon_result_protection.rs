@@ -556,7 +556,9 @@ fn effect_digivolved_result_is_false_when_declined_rejected_or_no_result_exists(
             choices(&r, 0, 2, true);
             r.execute_action(0, PASS).unwrap();
         } else if mode == "rejected" {
-            pick(&mut r, 0, 2, true, 1);
+            // a host that can't digivolve leaves no card that can digivolve onto it: the card pick offers
+            // nothing (DCGO `CanPlayCardTargetFrame` filters the candidates), so the effect fails like "empty"
+            assert!(r.game.pending_selection.is_none(), "no card can digivolve onto a CannotDigivolve host");
         }
         assert_eq!(stack_ids(&r, h), vec!["RESULT-HOST"], "{mode}");
         assert_eq!(r.memory(), memory + 1, "failure branch for {mode}");
@@ -729,7 +731,8 @@ fn effect_digivolved_result_does_not_leak_from_an_earlier_effect() {
     );
     fire(&mut r, EffectTiming::OnPlay, actor);
     pick(&mut r, 0, 1, false, 0);
-    pick(&mut r, 0, 1, true, 0);
+    // the CannotDigivolve host has no card that can digivolve onto it: no card pick (DCGO filters it out)
+    assert!(r.game.pending_selection.is_none());
     assert_eq!(stack_ids(&r, h), vec!["RESULT-HOST"]);
     assert_eq!(
         r.memory(),

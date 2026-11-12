@@ -5030,6 +5030,12 @@ impl Walk for digimon_dsl::compiled::CompiledEffectSourceKind {
                 "ENUM_SCALAR",
                 serde_json::json!("Tamer"),
             ),
+            digimon_dsl::compiled::CompiledEffectSourceKind::DigiEgg => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledEffectSourceKind",
+                "ENUM_SCALAR",
+                serde_json::json!("DigiEgg"),
+            ),
             digimon_dsl::compiled::CompiledEffectSourceKind::Option => c.node(
                 path,
                 "digimon_dsl::compiled::CompiledEffectSourceKind",
