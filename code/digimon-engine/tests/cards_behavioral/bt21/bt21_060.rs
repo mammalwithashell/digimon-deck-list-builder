@@ -577,7 +577,10 @@ fn bt21_060_inherited_returns_two_vemmon_to_deck_and_ends_attack() {
     assert_eq!(vemmon_in_sources(&runner), 2, "2 Vemmon sources before");
 
     runner.attack_player(attacker, 0, false);
-    // Drive both mandatory source picks + follow-ups.
+    runner
+        .accept_optional_trigger()
+        .expect("accept the optional return-2 / end-attack");
+    // Drive both source picks + follow-ups.
     runner.auto_resolve().ok();
 
     assert_eq!(
@@ -615,6 +618,7 @@ fn bt21_060_inherited_opt_locks_second_attack_same_turn() {
     let (mut runner, _host, attacker) = inherited_setup(4);
 
     runner.attack_player(attacker, 0, false);
+    runner.accept_optional_trigger().expect("accept the first use");
     runner.auto_resolve().ok();
     assert!(
         runner.pending_selection().is_none(),
@@ -628,5 +632,62 @@ fn bt21_060_inherited_opt_locks_second_attack_same_turn() {
     assert!(
         runner.pending_selection().is_none(),
         "[Once Per Turn] locks the inherited clause for the rest of the opponent's turn"
+    );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Section 6 — the inherited clause is optional (deck audit 2026-11-10)
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// DCGO `SetUpActivateClass(..., 1, true, ...)`: "by returning 2 [Vemmon] ...,
+/// end that attack" is the player's choice.
+#[test]
+fn bt21_060_inherited_is_optional() {
+    let runner = base().start();
+    let card = runner.compiled_card(CARD_ID).expect("present");
+    let inh = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) if t.scope == CompiledScope::Inherited => Some(t),
+            _ => None,
+        })
+        .expect("inherited clause");
+    assert!(inh.optional, "the return-2 / end-attack clause is optional");
+
+    let (mut runner, _host, attacker) = inherited_setup(2);
+    runner.attack_player(attacker, 0, false);
+    assert!(
+        runner.pending_is_optional(),
+        "the opponent's attack offers an accept/decline prompt"
+    );
+}
+
+/// Declining keeps both [Vemmon] under the Digimon and the attack goes on.
+#[test]
+fn bt21_060_inherited_decline_keeps_the_vemmon_and_the_attack_continues() {
+    let (mut runner, _host, attacker) = inherited_setup(2);
+    let security_before = runner.security_count(0);
+    runner.attack_player(attacker, 0, false);
+    runner
+        .decline_optional_trigger()
+        .expect("decline the return-2 / end-attack");
+    runner.auto_resolve().ok();
+
+    let vemmon_in_sources: usize = runner.game.players[0]
+        .battle_area
+        .iter()
+        .map(|p| {
+            p.card_sources
+                .iter()
+                .filter(|c| c.card_id(&runner.game.card_data) == "VEMMON")
+                .count()
+        })
+        .sum();
+    assert_eq!(vemmon_in_sources, 2, "declining returns no [Vemmon]");
+    assert_eq!(
+        runner.security_count(0),
+        security_before - 1,
+        "the attack was not ended, so it checked a security card"
     );
 }

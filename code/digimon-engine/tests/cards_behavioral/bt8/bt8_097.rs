@@ -872,12 +872,17 @@ fn bt8_097_cost_reduction_reduces_play_cost_by_one_per_opp_digimon() {
     opp_digi.level = Some(5);
     let mut opp_tamer = make_test_card("CR-OPP-TAMER", "CrOppTamer");
     opp_tamer.card_kind = CardKind::Tamer;
+    // A red Digimon of your own meets the Option's color requirement.
+    let mut own_red = make_test_card("CR-OWN-RED", "CrOwnRed");
+    own_red.card_kind = CardKind::Digimon;
+    own_red.colors = vec![digimon_engine::enums::CardColor::Red];
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
         .expect("BT8-097 production YAML")
         .add_card(opp_digi.clone())
         .add_card(opp_tamer)
+        .add_card(own_red)
         .hand(0, &["BT8-097"])
         .memory(4) // With 2 opp Digimon, cost becomes 6 - 2 = 4 → playable exactly.
         .start();
@@ -890,8 +895,13 @@ fn bt8_097_cost_reduction_reduces_play_cost_by_one_per_opp_digimon() {
     let memory_before = runner.memory();
 
     // With 2 opp Digimon: base cost 6 - 2 = 4. If the Tamer were counted,
-    // the cost would incorrectly become 3.
-    runner.play(0, 0);
+    // the cost would incorrectly become 3. Use it the way a player does (the
+    // main-phase hand action); an Option is used, never played to the field.
+    runner.place_on_field(0, "CR-OWN-RED", None);
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner
+        .game
+        .decode_action(digimon_engine::action::space::PLAY_HAND_START, 0);
     runner.auto_resolve().unwrap();
 
     // Verify BT8-097 is no longer in hand (was played).

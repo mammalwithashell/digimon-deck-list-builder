@@ -376,6 +376,9 @@ pub struct CompiledPredicate {
     /// G-RETURNED-CARD-COLOR-BINDING — true when the candidate shares a color
     /// with a card this effect returned to deck (`returned_to_deck` log).
     pub color_matches_returned_card: Option<bool>,
+    /// G-DSL-NAME-MATCHES-RETURNED-CARD — true when the candidate shares a
+    /// card name with a card this effect returned to deck (`returned_to_deck`).
+    pub name_matches_returned_card: Option<bool>,
     /// G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK — true when the candidate shares a
     /// color with the effect carrier's NON-FLIPPED digivolution-source color set
     /// (DCGO `DigivolutionCards.Filter(!IsFlipped).SelectMany(CardColors)
@@ -437,6 +440,9 @@ pub struct CompiledPredicate {
     #[serde(default)]
     pub can_digivolve_onto_with_cost: Option<CompiledDigivolveCostPredicate>,
     pub dna_hand_candidate: Option<CompiledDnaHandCandidate>,
+    /// See `PredicateSpec::dna_field_pair`. G-DSL-DNA-FIELD-PAIR-CANDIDATE.
+    #[serde(default)]
+    pub dna_field_pair: Option<CompiledDnaFieldPair>,
     #[serde(default)]
     pub can_play_from_effect_without_cost: Option<bool>,
     #[serde(default)]
@@ -981,6 +987,14 @@ pub struct CompiledDigivolveCostPredicate {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDnaFieldPair {
+    pub role: crate::predicate::DnaFieldPairRole,
+    pub result: Option<String>,
+    pub first: Option<String>,
+}
+
+/// Compiled form of `dna_hand_candidate`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledDnaHandCandidate {
     pub role: crate::predicate::DnaHandCandidateRole,
     pub result: Option<String>,
@@ -1232,6 +1246,10 @@ pub struct CompiledTriggeredClause {
     pub outer_prompt: bool,
     pub once_per_turn: bool,
     pub max_per_turn: Option<u8>,
+    /// See `TriggeredClause::opt_group`: clauses on one card face with the
+    /// same label share one per-turn counter.
+    #[serde(default)]
+    pub opt_group: Option<String>,
     pub process: Vec<CompiledStep>,
     pub summary: Option<String>,
     pub summary_key: Option<String>,
@@ -1769,6 +1787,17 @@ pub enum CompiledStep {
     },
     ShuffleSecurity {
         of: CompiledPlayerRef,
+    },
+    /// G-DSL-BLIND-OPP-HAND-PLACE — shuffle `of`'s hand (blind-pick prelude).
+    ShuffleHand {
+        of: CompiledPlayerRef,
+    },
+    /// G-DSL-BLIND-OPP-HAND-PLACE — move a card-list binding of hand cards to
+    /// the bottom (or top) of their owners' decks; records `returned_to_deck`.
+    ReturnHandListToDeck {
+        of: CompiledPlayerRef,
+        cards: CompiledBindingRef,
+        to_top: bool,
     },
     RevealTopDeck {
         of: CompiledPlayerRef,
@@ -3459,6 +3488,7 @@ mod tests {
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
+                opt_group: None,
                 once_per_turn: false,
                 max_per_turn: None,
                 process: vec![CompiledStep::GainMemory(1)],
@@ -3521,6 +3551,7 @@ mod tests {
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
+                opt_group: None,
                 once_per_turn: false,
                 max_per_turn: None,
                 process: vec![],

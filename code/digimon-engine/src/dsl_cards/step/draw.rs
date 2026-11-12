@@ -66,6 +66,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             ctx.shuffle_security(p);
             true
         }
+        // G-DSL-BLIND-OPP-HAND-PLACE — blind-pick prelude (BT13-033).
+        CompiledStep::ShuffleHand { of } => {
+            let p = resolve_player(ctx, *of);
+            ctx.shuffle_hand(p);
+            true
+        }
         CompiledStep::Hatch { of } => {
             let p = resolve_player(ctx, *of);
             ctx.hatch(p);

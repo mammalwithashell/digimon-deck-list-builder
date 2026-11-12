@@ -52,7 +52,7 @@ pub fn lower_with_raw_and_option_use_requirement_for_kind(
     option_use_requirement: Option<Arc<CompiledPredicate>>,
     card_kind: Option<CompiledCardKind>,
 ) -> Vec<Effect> {
-    lower_for_kind_with_clause_index(card, clause, raw, option_use_requirement, card_kind, 0)
+    lower_for_kind_with_clause_index(card, clause, raw, option_use_requirement, card_kind, 0, 0)
 }
 
 /// Lower a triggered clause, supplying its index among the card's clauses.
@@ -67,6 +67,9 @@ pub fn lower_for_kind_with_clause_index(
     option_use_requirement: Option<Arc<CompiledPredicate>>,
     card_kind: Option<CompiledCardKind>,
     clause_index: usize,
+    // The per-turn counter seed: `clause_index`, or for an `opt_group` clause
+    // the index of the first clause on its face with that label.
+    opt_seed: usize,
 ) -> Vec<Effect> {
     let mut out = Vec::new();
     // Count the timings that map to a real engine timing. When a clause is
@@ -91,11 +94,12 @@ pub fn lower_for_kind_with_clause_index(
     // own shared-opt group makes the key `0x80 | clause_index` instead of the
     // effect-slot index, which the lowering cannot know here.
     let has_refund_opt = steps_contain_refund_opt(&process);
-    let needs_shared_opt = has_opt_cap && (real_timing_count > 1 || has_refund_opt);
+    let needs_shared_opt =
+        has_opt_cap && (real_timing_count > 1 || has_refund_opt || clause.opt_group.is_some());
     // Disjoint keyspace: real effect slots are vec indices (0..N). A shared
     // group key sets the high bit so it can never collide with a slot index.
     let shared_opt_group: Option<u8> = if needs_shared_opt {
-        Some(0x80u8 | (clause_index as u8 & 0x7f))
+        Some(0x80u8 | (opt_seed as u8 & 0x7f))
     } else {
         None
     };
@@ -1546,7 +1550,11 @@ fn new_builder(card: CardHandle, timing: EffectTiming) -> EffectBuilder {
         EffectTiming::SecuritySkill => Effect::security(card),
         EffectTiming::BeforePayCost => Effect::before_pay_cost(card),
         EffectTiming::BeforePayCostObserve => Effect::before_pay_cost_observe(card),
-        EffectTiming::OptionMain => Effect::on_play(card).option_main(),
+        // No `on_play` flag: `timing_flag_matches` dispatches OnPlay on that
+        // flag, so an Option body built with it also fired as an [On Play]
+        // whenever the card was played (game audit 2026-11-11, DUAL plays).
+        // [Main] dispatch reads `timing == OptionMain` only.
+        EffectTiming::OptionMain => EffectBuilder::new(card, EffectTiming::OptionMain).option_main(),
         EffectTiming::WhenAttacking => Effect::when_attacking(card),
         EffectTiming::EndOfAttack => Effect::end_of_attack(card),
         EffectTiming::EndOfBattle => Effect::end_of_battle(card),

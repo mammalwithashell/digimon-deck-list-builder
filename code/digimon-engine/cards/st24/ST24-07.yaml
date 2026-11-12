@@ -135,9 +135,15 @@ dual:
       [Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, delete 1 of your opponent's Digimon with 7000 DP or less.
     # Use Req. [DATA SQUAD] trait — a DATA SQUAD Digimon/Tamer on the field
     # satisfies the Option's color requirement (ignore color).
+    # <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+    # of your Digimon or Tamers in the battle area or breeding area meets
+    # the condition (an Option on the field does not count).
     use_requirement:
       any_field_permanent:
         of: you
+        any_of:
+          - kind: digimon
+          - kind: tamer
         trait_has: "DATA SQUAD"
     arts_digivolve: true
     effects:

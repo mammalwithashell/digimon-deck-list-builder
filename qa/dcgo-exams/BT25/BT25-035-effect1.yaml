@@ -29,7 +29,8 @@
 #   P0 trash [BT25-043, ST23-04]; the Tamer down to [ST23-03].
 #
 # ENGINE FINDINGS on this clause (asserted as OUR behaviour, flagged):
-#   1. The digivolve pick offers EVERY [Glowing Dawn] Digimon in hand --
+#   1. RESOLVED 2026-11-11 (can_digivolve_onto filter): the digivolve pick
+#      used to offer EVERY [Glowing Dawn] Digimon in hand --
 #      here also ST23-09 / BT25-043, both Lv.6, which cannot digivolve onto a
 #      Lv.4. Probed: picking ST23-09 trashes both face-down cards and then no
 #      digivolution happens (cost paid for nothing). The printed "may
@@ -132,11 +133,13 @@ steps:
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # THE CLAUSE, "Then": the optional pick of the [Glowing Dawn] Digimon to
-  # digivolve into (declining here would skip the trash cost entirely).
+  # THE CLAUSE, "Then": the optional cost comes first (DCGO BT25_035.cs: the
+  # Tamer pick with canNoSelect, BEFORE the hand pick -- the 2026-10-10 oracle
+  # run stopped here when the scenario had the hand pick first). SIM-ONLY: our
+  # engine asks "pay?" as its own choice; DCGO's "pay" is picking a Tamer.
+  # Re-authored 2026-11-12 for the ST24-10 pay-then-pick shape.
   - actor: 0
-    do: { select: { cards: [BT25-041] } }
-    expect: { prompt: SelectHandEffect }
+    do: { select: { choice: "Trash 2 face-down cards", sim_only: true } }
   # The cost: our engine asks the Tamer once per card to trash (which Tamers
   # pay is the player's decision), then trashes both cards together.
   - actor: 0
@@ -147,6 +150,11 @@ steps:
   # CanEndSelectCondition "2 from one Tamer").
   - actor: 0
     do: { select: { targets: [own.field.0], sim_only: true } }
+  # Then the optional pick of a [Glowing Dawn] Digimon that can digivolve onto
+  # Cougarmon (the Lv.6 ST23-09 / BT25-043 in hand are no longer offered).
+  - actor: 0
+    do: { select: { cards: [BT25-041] } }
+    expect: { prompt: SelectHandEffect }
   # ST23-13 "[Your Turn] When effects trash cards from under this Tamer, by
   # suspending this Tamer, ..." -- RE-LOWERED 2026-10-19: it no longer fires
   # mid-cost; it waits until BT25-035's effect (the digivolve) finishes
@@ -173,7 +181,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 23
+  - at: 24
     that:
       turn: 3
       p0.memory: 2

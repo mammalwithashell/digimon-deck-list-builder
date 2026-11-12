@@ -227,7 +227,30 @@ impl DigivolveTreatedIdentity {
     }
 }
 
+/// A [Burst Digivolve] route's choices (CR 8-3-3-1): which registered
+/// `burst_digivolve` alt-path on the result card, and which of the player's
+/// battle-area Tamers (by index at enumeration time) the burst returns to
+/// the hand (8-3-3-2). Each qualifying Tamer is its own route, so the player
+/// picks the Tamer in the same route prompt as the cost (rule 17).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub(crate) struct BurstRouteChoice {
+    pub path: u8,
+    pub tamer: u8,
+}
+
+/// A burst digivolve whose Tamer has already been returned (CR 8-3-3-2) and
+/// whose digivolution is still being processed. Re-entries of the hand
+/// digivolve action (reducer prompts) recognise it so the paid route is not
+/// re-validated against the Tamer that has already left. Plain data.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PendingBurstDigivolve {
+    pub player: PlayerId,
+    pub card: CardHandle,
+    pub host_identity: u64,
+    pub route: DigivolveRouteMatch,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) struct DigivolveRouteMatch {
     /// The chosen route's temporary source identity; never inferred from cost.
     pub treated_as: Option<DigivolveTreatedIdentity>,
@@ -243,6 +266,26 @@ pub(crate) struct DigivolveRouteMatch {
     /// the linked-card consumption step. See `general_rule.pdf` §App
     /// Fusion and DCGO `AddAppfusionMethod.cs` / `CardController.cs`.
     pub app_fusion: bool,
+    /// Set for a [Burst Digivolve] route (CR 8-3). Only the player's
+    /// hand-digivolve action offers these (8-3-2-2: an effect that
+    /// digivolves can't burst digivolve).
+    pub burst: Option<BurstRouteChoice>,
+}
+
+/// Field-for-field the derived `Debug`, except that `burst` is written only
+/// when set: verification digests hash this text, and every recorded state
+/// from before [Burst Digivolve] existed must keep its digest.
+impl std::fmt::Debug for DigivolveRouteMatch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("DigivolveRouteMatch");
+        d.field("treated_as", &self.treated_as)
+            .field("memory_cost", &self.memory_cost)
+            .field("app_fusion", &self.app_fusion);
+        if let Some(burst) = &self.burst {
+            d.field("burst", burst);
+        }
+        d.finish()
+    }
 }
 
 impl DigivolveRouteMatch {
@@ -252,6 +295,7 @@ impl DigivolveRouteMatch {
             memory_cost,
             app_fusion: false,
             treated_as: None,
+            burst: None,
         }
     }
 
@@ -261,6 +305,7 @@ impl DigivolveRouteMatch {
             memory_cost,
             app_fusion: true,
             treated_as: None,
+            burst: None,
         }
     }
 }
@@ -401,7 +446,249 @@ impl Game {
         }
         let player_state = self.players.get(player as usize)?;
         let card = player_state.hand.get(hand_index)?;
-        self.normal_digivolve_route_for_card(card, base_handle)
+        // The hand-digivolve ACTION (CR 6-5-1-2) also offers [Burst
+        // Digivolve] (6-5-1-2-3); `normal_digivolve_route_for_card` is the
+        // card-level query effects and the Blast counter use, which must
+        // not (8-3-2-2).
+        self.hand_digivolve_routes_for_card(card, base_handle)
+            .into_iter()
+            .min_by_key(|route| route.memory_cost)
+    }
+
+    /// Every route the player's hand-digivolve ACTION offers for `card` onto
+    /// `base_handle`: the normal routes (`all_digivolve_routes_for_card`)
+    /// plus the [Burst Digivolve] routes (CR 6-5-1-2-3, 8-3), one per
+    /// returnable Tamer. Burst routes are never offered to an effect that
+    /// digivolves (8-3-2-2), so only the action entry points use this.
+    pub(crate) fn hand_digivolve_routes_for_card(
+        &self,
+        card: &CardSource,
+        base_handle: PermanentHandle,
+    ) -> Vec<DigivolveRouteMatch> {
+        let mut routes = self.all_digivolve_routes_for_card(card, base_handle);
+        let burst = self.burst_digivolve_routes_for_card(card, base_handle);
+        if burst.is_empty() {
+            return routes;
+        }
+        routes.extend(burst);
+        routes.sort_by_key(|r| {
+            (
+                r.memory_cost,
+                r.app_fusion,
+                r.burst,
+                r.treated_as.map(|p| (p.kind as u8, p.level, p.colors)),
+            )
+        });
+        routes.dedup();
+        routes
+    }
+
+    /// [Burst Digivolve] routes (CR 8-3) for `card` onto `base_handle`.
+    ///
+    /// For each `kind: burst_digivolve` alt-path registered on the card (not
+    /// the `marker: true` <Blast Digivolve> form): the base must satisfy the
+    /// path's `from:` requirement (8-3-3-1) and any `condition`, the base
+    /// must be digivolvable (no `CanOnlyDigivolveInto` restriction, not a
+    /// token), and the burst cost must be payable -- at least one of the
+    /// player's battle-area permanents must match the Tamer filter of the
+    /// path's `extra_cost` (`select_own_permanent` -> `return_to_hand`) and
+    /// be returnable to the hand (DCGO `BurstDigivolutionCondition.
+    /// tamerCondition` + `!CannotReturnToHand`). One route per such Tamer,
+    /// so the Tamer is a real player choice (rule 17). The cost is the
+    /// path's cost; cost-modifying effects apply later through the same
+    /// digivolve payment as any other route (8-3-2-3).
+    pub(crate) fn burst_digivolve_routes_for_card(
+        &self,
+        card: &CardSource,
+        base_handle: PermanentHandle,
+    ) -> Vec<DigivolveRouteMatch> {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let player = card.owner;
+            if base_handle.player != player {
+                return Vec::new();
+            }
+            let Some(paths) = self.alt_path_registry.get(card.card_id(&self.card_data)) else {
+                return Vec::new();
+            };
+            if !paths.iter().any(is_burst_digivolve_path) {
+                return Vec::new();
+            }
+            let is_breeding_base =
+                base_handle.index == crate::action::space::BREEDING_TARGET as u8;
+            if !is_breeding_base && self.digivolve_target_blocked_by_restriction(base_handle, card)
+            {
+                return Vec::new();
+            }
+            if self.digivolve_base_permanent(base_handle).is_none() {
+                return Vec::new();
+            }
+            let tamer_slots = self
+                .players
+                .get(player as usize)
+                .map_or(0, |p| p.battle_area.len());
+            let mut routes = Vec::new();
+            for (path_index, path) in paths.iter().enumerate() {
+                if !is_burst_digivolve_path(path) {
+                    continue;
+                }
+                let Ok(path_u8) = u8::try_from(path_index) else {
+                    continue;
+                };
+                let Some(memory_cost) = self.burst_path_base_cost(card, base_handle, path) else {
+                    continue;
+                };
+                for tamer_index in 0..tamer_slots {
+                    let Ok(tamer) = u8::try_from(tamer_index) else {
+                        continue;
+                    };
+                    let choice = BurstRouteChoice {
+                        path: path_u8,
+                        tamer,
+                    };
+                    if !self.burst_tamer_eligible(card, choice) {
+                        continue;
+                    }
+                    let mut route = DigivolveRouteMatch::digivolve(memory_cost);
+                    route.burst = Some(choice);
+                    routes.push(route);
+                }
+            }
+            routes
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = (card, base_handle);
+            Vec::new()
+        }
+    }
+
+    /// The burst path's base memory cost when `base_handle` satisfies its
+    /// `from:` requirement and activation `condition` (CR 8-3-3-1), else
+    /// `None`.
+    #[cfg(feature = "dsl-yaml-loader")]
+    fn burst_path_base_cost(
+        &self,
+        card: &CardSource,
+        base_handle: PermanentHandle,
+        path: &CompiledAltPath,
+    ) -> Option<u16> {
+        let from = path.from.as_ref()?;
+        let rctx = EffectReadContext::new(self, card.handle(), Some(base_handle), card.owner);
+        if !eval_predicate(from, &rctx, PredicateSubject::Permanent(base_handle)) {
+            return None;
+        }
+        if let Some(condition) = path.condition.as_ref() {
+            if !eval_predicate(condition, &rctx, PredicateSubject::Permanent(base_handle)) {
+                return None;
+            }
+        }
+        match &path.cost {
+            Some(CompiledCost::Literal(n)) => u16::try_from(*n).ok(),
+            Some(CompiledCost::Formula(formula)) => {
+                u16::try_from(formula_eval::evaluate_read(formula, &rctx, base_handle)).ok()
+            }
+            None => Some(0),
+        }
+    }
+
+    /// Whether `card`'s burst `choice` still applies to `base_handle`: the
+    /// base still meets the path's requirement. Used when the digivolution
+    /// commits after the Tamer has already been returned (8-3-3-2), when the
+    /// full route (which needs a returnable Tamer) can no longer be derived.
+    pub(crate) fn burst_route_base_still_valid(
+        &self,
+        card: &CardSource,
+        base_handle: PermanentHandle,
+        choice: BurstRouteChoice,
+    ) -> bool {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let Some(path) = self
+                .alt_path_registry
+                .get(card.card_id(&self.card_data))
+                .and_then(|paths| paths.get(choice.path as usize))
+            else {
+                return false;
+            };
+            let is_breeding_base =
+                base_handle.index == crate::action::space::BREEDING_TARGET as u8;
+            is_burst_digivolve_path(path)
+                && (is_breeding_base
+                    || !self.digivolve_target_blocked_by_restriction(base_handle, card))
+                && self.digivolve_base_permanent(base_handle).is_some()
+                && self.burst_path_base_cost(card, base_handle, path).is_some()
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = (card, base_handle, choice);
+            false
+        }
+    }
+
+    /// Whether the battle-area permanent `choice.tamer` of `card`'s owner can
+    /// pay `choice.path`'s burst cost: it matches the path's Tamer filter
+    /// and returning it to the hand would not be cancelled by a passive
+    /// "can't be returned to hand" protection (DCGO `tamerCondition` +
+    /// `!permanent.CannotReturnToHand(null)`).
+    pub(crate) fn burst_tamer_eligible(&self, card: &CardSource, choice: BurstRouteChoice) -> bool {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let Some(path) = self
+                .alt_path_registry
+                .get(card.card_id(&self.card_data))
+                .and_then(|paths| paths.get(choice.path as usize))
+            else {
+                return false;
+            };
+            let Some(filter) = burst_tamer_filter(path) else {
+                return false;
+            };
+            if self
+                .player(card.owner)
+                .battle_area
+                .get(choice.tamer as usize)
+                .is_none()
+            {
+                return false;
+            }
+            let tamer = PermanentHandle {
+                player: card.owner,
+                index: choice.tamer,
+            };
+            let rctx = EffectReadContext::new(self, card.handle(), Some(tamer), card.owner);
+            if !eval_predicate(filter, &rctx, PredicateSubject::Permanent(tamer)) {
+                return false;
+            }
+            !crate::replacement::passive_cancel_applies(
+                self,
+                EffectTiming::WhenWouldBeReturnedToHand,
+                crate::replacement::ReplacementSubject::Permanent(tamer),
+                self.infer_effect_cause(card.owner),
+                self.effect_source_player,
+            )
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = (card, choice);
+            false
+        }
+    }
+
+    /// The `on_burst_turn_end` steps of `card`'s burst path `choice.path`
+    /// (CR 8-3-2-1 pending processing). Empty if the path is not a burst path.
+    #[cfg(feature = "dsl-yaml-loader")]
+    pub(crate) fn burst_turn_end_steps(
+        &self,
+        card: CardHandle,
+        choice: BurstRouteChoice,
+    ) -> Vec<digimon_dsl::compiled::CompiledStep> {
+        self.card_data_for_handle(card)
+            .and_then(|data| self.alt_path_registry.get(&data.card_id))
+            .and_then(|paths| paths.get(choice.path as usize))
+            .filter(|path| is_burst_digivolve_path(path))
+            .map(|path| path.on_burst_turn_end.clone())
+            .unwrap_or_default()
     }
 
     pub(crate) fn normal_digivolve_route_for_card(
@@ -538,7 +825,7 @@ impl Game {
         else {
             return Vec::new();
         };
-        self.all_digivolve_routes_for_card(card, base_handle)
+        self.hand_digivolve_routes_for_card(card, base_handle)
     }
 
     /// `ignore_level`: evaluate each path's `from:` filter with its subject
@@ -1510,6 +1797,52 @@ fn registered_dna_route_match(
         });
     }
     None
+}
+
+/// A printed [Burst Digivolve] path (CR 8-3). The `marker: true` form of
+/// `burst_digivolve` is the <Blast Digivolve> counter marker, not a burst.
+#[cfg(feature = "dsl-yaml-loader")]
+fn is_burst_digivolve_path(path: &CompiledAltPath) -> bool {
+    matches!(path.kind, CompiledAltPathKind::BurstDigivolve)
+        && !path.marker
+        && matches!(
+            path.direction,
+            digimon_dsl::compiled::CompiledAltPathDirection::From
+        )
+        && path.from.is_some()
+}
+
+/// The Tamer requirement of a burst path's `extra_cost`: exactly
+/// `select_own_permanent { filter, bind_as: X }` followed by
+/// `return_to_hand { target: X }` ("By returning 1 [Tamer] to the hand",
+/// CR 8-3-1). Any other shape is not a burst cost this engine knows how to
+/// pay, so the route is not offered.
+#[cfg(feature = "dsl-yaml-loader")]
+fn burst_tamer_filter(path: &CompiledAltPath) -> Option<&digimon_dsl::compiled::CompiledPredicate> {
+    use digimon_dsl::compiled::{CompiledBindingRef, CompiledStep};
+    let [CompiledStep::SelectOwnPermanent {
+        filter,
+        bind_as: Some(bound),
+        optional: false,
+        then,
+        ..
+    }, CompiledStep::ReturnToHand { target }] = path.extra_cost.as_slice()
+    else {
+        return None;
+    };
+    if !then.is_empty() {
+        return None;
+    }
+    match target {
+        CompiledBindingRef::Named(name)
+        | CompiledBindingRef::Binding(name)
+        | CompiledBindingRef::Permanent(name)
+            if name == bound =>
+        {
+            Some(filter)
+        }
+        _ => None,
+    }
 }
 
 fn registered_path_literal_cost(path: &CompiledAltPath) -> Option<i16> {

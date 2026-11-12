@@ -6836,3 +6836,33 @@ agent-side workaround.
 
 Not scored in the experiment (`incomplete`). Hypothesis on the cause is from
 the recording and the YAML, not yet confirmed in the resolver.
+
+### [Burst Digivolve] is never offered; its Tamer return and turn-end trash never run  [G-BURST-DIGIVOLVE-NOT-OFFERED] — RESOLVED (2026-11-11; supersedes G-BURST-ON-TURN-END-NOT-EXECUTED in `qa/archetype-qa/engine-gaps.md`)
+
+- **Rule:** CR 4.3 6-5-1-2-3 (burst digivolve is the hand-digivolve action, paying its cost), 8-3-1 / 8-3-3 (reveal, choose the requirement and a base, return the specified Tamer from the battle area to the hand, pay the cost, place on top, draw 1), 8-3-2-1 (pending processing: at the end of that turn trash the top card of that Digimon's stack, none if it has no stacked cards or the top card is not a Digimon), 8-3-2-2 (an effect that digivolves can't burst digivolve), 8-3-2-3 (digivolution cost/requirement effects apply).
+- **Ours (before):** `dna_digivolve.rs::collect_dsl_alt_digivolve_routes` skipped every alt-path that was not `Digivolve` or that had `extra_cost` / `on_burst_turn_end`, so a `burst_digivolve` path never became a route. The 2026-11-10 league deck audit found all 16 Rosemon: Burst Mode digivolves paying the normal cost 5. Nothing returned the Tamer or ran `on_burst_turn_end`.
+- **DCGO:** `SelectBurstDigivolutionEffect.cs` (`SelectWheterToBurst` normal vs burst, `SelectTamer`, `BounceTamer` with an `IsBurst` hashtable, `AddTrashTopCardAtTurnEnd` on the `Permanent`), `CardController.cs` (`IsBurst`, burst cost `burstDigivolutionCondition.cost`).
+- **Resolution:**
+  - **Routes.** `DigivolveRouteMatch` has `burst: Option<BurstRouteChoice { path, tamer }>`. `Game::burst_digivolve_routes_for_card` returns one route per returnable Tamer. A route needs a `burst_digivolve` path that is not a `marker` and has direction `From`, a base that meets its `from:` and `condition`, no `CanOnlyDigivolveInto` restriction and no token, and an `extra_cost` of exactly `select_own_permanent {filter, bind_as: X}` then `return_to_hand {target: X}`. The Tamer must match `filter` and not be blocked by a passive `CannotBeReturnedToHand` (`replacement::passive_cancel_applies`).
+  - **Only the action offers burst.** `hand_digivolve_routes_for_card` (normal routes plus burst) feeds `normal_digivolve_route_for_hand_card` (the mask and the action validity gate), `distinct_digivolve_routes_for_hand_card` (the route `EffectChoice`) and the breeding-area action. The card-level `normal_digivolve_route_for_card` / `all_digivolve_routes_for_card`, which effects, Arts Digivolve and the Blast counter use, never include burst (8-3-2-2).
+  - **Choosing.** Normal and burst routes are listed together in the existing "Choose which digivolution cost to pay" prompt. A burst entry reads "Burst Digivolve for cost N (return [Tamer] in slot k to the hand)", so the Tamer is a real choice when more than one qualifies (rule 17). The prompt keeps its data `ResumeFrame::DigivolveCostChoice`, so the route stays clone-safe.
+  - **Paying.** `Game::pay_burst_digivolve_tamer` returns the Tamer to hand before the cost (8-3-3-2), inside a deferred-drain scope so the triggers it causes pend with the digivolution's triggers. It then re-enters the action with `Game::pending_burst_digivolve` set, so the paid route survives cost-reducer re-entries without re-deriving it from a Tamer that is gone. After that the route uses the normal payment: reducers, BeforePayCost, the would-digivolve window, the draw and [When Digivolving]. `PendingWouldDigivolveResume.burst` makes the commit re-check only the base requirement.
+  - **Turn-end trash.** `Game::schedule_burst_turn_end_trash` pushes a `ScheduledEffect` at `EndOfYourTurn` running the path's `on_burst_turn_end`, with source kind `Rule`. Its `StepRuntime` pins the carrier to the digivolved permanent's `battle_identity` (`with_source_identity`, `with_source_requires_membership(false)`), so the trash follows the permanent through slot shifts and does nothing once it has left the field.
+  - **YAML fix.** The six specs used `trash_top_source: { target: self }`. `self` resolves to the source *card*, so the step was a no-op; they now use `{ target: carrier }`.
+- **Tests:** in `tests/cards_behavioral/{bt13/bt13_020,bt13/bt13_033,bt13/bt13_060,bt13/bt13_092,bt25/bt25_104,bt26/bt26_050}.rs`, the `burst_digivolve::` module runs the shared scenario in `tests/cards_behavioral/burst_digivolve_common.rs`:
+  - offered with the Tamer: returns it, pays 0, draws 1;
+  - not offered without the Tamer;
+  - the top card is trashed at turn end, the host shifted slots, and another stack is untouched;
+  - a normal-vs-burst route choice;
+  - burst chosen from the route prompt, then the turn-end trash;
+  - an effect digivolve can't burst;
+  - two Tamers give a player choice.
+- **Card data fixed along the way:**
+  - BT13-020 and BT13-060 had invented a name+Lv.6 restriction on both their cost-5 path and their burst path. They now use the printed circles (Red/Yellow Lv.6 and Green Lv.6, cost 5) and name-only burst requirements (DCGO `digimonCondition`).
+  - BT13-033 (MirageGaogamon: Burst Mode) and BT13-092 (Ravemon: Burst Mode) were authored.
+- **Residuals:**
+  - (1) If a replacement effect stops the Tamer from leaving, or parks on a selection, the burst digivolve is abandoned. DCGO instead falls back to a normal digivolve cost choice (`TamerBounced == false`).
+  - (2) The Tamer return uses `infer_effect_cause` (an own effect), not a dedicated rules cause. Only "by your opponent's effects" protections differ, and they don't apply to your own Tamer.
+  - (3) Judge-quiz Q8 (`b::q8_burst_digivolve_dp_less_digimon_trash_chain_at_eot`) is still an ignored stub. The burst substrate it needed now exists; the scenario itself has not been written.
+  - (4) A recorded DCGO burst digivolve (a "Normal / Burst" panel, then a `SelectPermanentEffect` Tamer pick) has not been mapped onto this engine's single route prompt for `dcgo-replay`.
+- **Digests:** `DigivolveRouteMatch` and `PendingWouldDigivolveResume` have hand-written `Debug` impls that print `burst` only when it is set, and `pending_burst_digivolve` is hashed only while set. Every pre-burst verification digest, including the pinned LegacyV2 constant, is unchanged.

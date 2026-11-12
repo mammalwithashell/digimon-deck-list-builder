@@ -1022,6 +1022,11 @@ fn attack_declaration_action_ids(
     vortex: bool,
     unsuspended_targets: bool,
 ) -> Vec<u16> {
+    // CR 11-1-2: only the turn player can attack (effect-granted and keyword
+    // attacks included). Game audit 2026-11-11.
+    if attacker.player != game.turn_player() {
+        return Vec::new();
+    }
     if game
         .modifiers
         .player_has(attacker.player, ModifierType::CannotAttack)

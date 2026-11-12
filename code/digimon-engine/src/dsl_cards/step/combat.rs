@@ -135,6 +135,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             let Some(attacker) = resolve_permanent_ref(attacker, ctx, bindings) else {
                 return true;
             };
+            // CR 11-1-2: only the turn player can attack; an effect can't make
+            // a Digimon attack outside its controller's turn (game audit
+            // 2026-11-11: Gokuumon EX12-015 resolved on the opponent's turn).
+            if attacker.player != ctx.game.turn_player() {
+                return true;
+            }
             if *windowed {
                 use crate::enums::{Expiry, ModifierType};
                 use crate::modifiers::ModifierEntry;
@@ -199,6 +205,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             let Some(attacker) = resolve_permanent_ref(attacker, ctx, bindings) else {
                 return true;
             };
+            // CR 11-1-2: only the turn player can attack; an effect can't make
+            // a Digimon attack outside its controller's turn (game audit
+            // 2026-11-11: Gokuumon EX12-015 resolved on the opponent's turn).
+            if attacker.player != ctx.game.turn_player() {
+                return true;
+            }
             let prompt = prompt.as_deref().unwrap_or("Attack with this Digimon");
             let lowered_upgrade = lower_attack_cost_upgrade(*cost_upgrade);
             let _ = ctx.force_opponent_attack_with_upgrade(

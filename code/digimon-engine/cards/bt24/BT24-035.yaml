@@ -65,6 +65,14 @@ effects:
                       - color_is: red
                       - color_is: green
                   n: 1
+          # game-audit 2026-11-11 / DCGO CanPlayJogress: the hand pick offers
+          # only a [Silphymon] that can DNA digivolve right now (DCGO
+          # `CanPlayJogress(true)`), and the pair picks use that card's own
+          # DNA requirement (`dna_field_pair`). The pair filters used to
+          # hard-code BT24-037's Yellow Lv.4 + Red/Green Lv.4 recipe, which
+          # offered pairs other Silphymon printings (BT8-015 / BT16-012: Red
+          # Lv.4 + Yellow Lv.4) cannot DNA from, and offered BT3-014 (no DNA
+          # requirement at all) in the hand pick.
           then:
             - optional:
                 - select_hand:
@@ -75,31 +83,35 @@ effects:
                       all_of:
                         - kind: digimon
                         - name_is: "Silphymon"
+                        - dna_field_pair: { role: result }
                     prompt: "Select [Silphymon] in hand to DNA digivolve into"
-                - select_dna_pair:
-                    left_filter:
-                      all_of:
-                        - kind: digimon
-                        - of: you
-                        - level_eq: 4
-                        - color_is: yellow
-                    right_filter:
-                      all_of:
-                        - kind: digimon
-                        - of: you
-                        - level_eq: 4
-                        - any_of:
-                            - color_is: red
-                            - color_is: green
-                    bind_left_as: dna_src_a
-                    bind_right_as: dna_src_b
-                    prompt: "Select 2 of your Digimon to DNA digivolve into [Silphymon]"
-                - effect_initiated_dna_digivolve:
-                    target_a: dna_src_a
-                    target_b: dna_src_b
-                    from_hand: dna_card
-                    cost: 0
-                    ignore_requirements: false
+                - if:
+                    condition: { binding_present: dna_card }
+                    then:
+                      - select_dna_pair:
+                          left_filter:
+                            all_of:
+                              - kind: digimon
+                              - of: you
+                              - dna_field_pair: { role: first, result: dna_card }
+                          right_filter:
+                            all_of:
+                              - kind: digimon
+                              - of: you
+                              - dna_field_pair: { role: second, result: dna_card, first: dna_src_a }
+                          bind_left_as: dna_src_a
+                          bind_right_as: dna_src_b
+                          prompt: "Select 2 of your Digimon to DNA digivolve into [Silphymon]"
+                          optional: true
+                      - if:
+                          condition: { binding_present: dna_src_a }
+                          then:
+                            - effect_initiated_dna_digivolve:
+                                target_a: dna_src_a
+                                target_b: dna_src_b
+                                from_hand: dna_card
+                                cost: 0
+                                ignore_requirements: false
 
   - scope: inherited
     kind: grant_keyword

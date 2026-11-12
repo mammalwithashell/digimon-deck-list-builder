@@ -646,6 +646,56 @@ fn ex5_015_inherited_substitute_blocked_when_trash_has_fewer_than_two_non_egg() 
     );
 }
 
+/// "When THIS Digimon ... would be deleted": another of your Garurumon-named
+/// Digimon (not carrying EX5-015) gets no Substitute; the carrier afterwards
+/// still does (the OPT was not spent). Audit 2026-11-11: DCGO EX5_015.cs
+/// CanTriggerWhenRemoveField(hashtable, card).
+#[test]
+fn ex5_015_inherited_substitute_only_for_carrier_audit() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX5-015 YAML loads")
+        .add_card(make_named_digimon("HOST", "WereGarurumon", &["Beast Man"]))
+        .add_card(make_named_digimon("OTHER", "Garurumon", &["Beast"]))
+        .start();
+    let host = runner.place_stack(0, &[CARD_ID, "HOST"]);
+    let other = runner.place_on_field(0, "OTHER", Some(0));
+    seed_non_egg_trash(&mut runner, 3);
+    let deck_before = runner.game.players[0].deck.len();
+
+    runner
+        .game
+        .delete_permanent_with_cause(other, ReplacementCause::Battle);
+    assert!(
+        runner.pending_selection().is_none(),
+        "no Substitute for a Garurumon that is not EX5-015's carrier"
+    );
+    assert_eq!(runner.battle_area_size(0), 1, "the other Garurumon is deleted");
+    assert_eq!(runner.game.players[0].deck.len(), deck_before, "no cost paid");
+
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::Battle);
+    let view = runner
+        .pending_selection_view()
+        .expect("the carrier is still offered the Substitute");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("accept Substitute");
+    for n in 0..2 {
+        let view = runner
+            .pending_selection_view()
+            .unwrap_or_else(|| panic!("trash pick {n} prompt installs"));
+        runner
+            .execute_action(0, view.valid_action_ids[0])
+            .unwrap_or_else(|_| panic!("pick trash card {n}"));
+    }
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.battle_area_size(0), 1, "the carrier survives");
+    assert_eq!(runner.game.players[0].deck.len(), deck_before + 2);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 4 — Anti-helpers (silence dead-code warnings)
 // ═══════════════════════════════════════════════════════════════════════════════

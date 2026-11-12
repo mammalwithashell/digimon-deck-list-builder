@@ -27,7 +27,7 @@
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledScope, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -301,19 +301,15 @@ fn st24_10_suspends_locks_then_trash_2_free_digivolve() {
         "the suspended opp Digimon gains CannotUnsuspend"
     );
 
-    // Prompt 2: the "may digivolve" hand pick (only DS6 is legal).
-    let v2 = runner
-        .pending_selection_view()
-        .expect("'may digivolve' hand pick installs");
+    // Prompt 2: pay the trash-2 cost (DCGO pays it before the digivolve pick).
+    choose_pay(&mut runner, true);
+    // Prompt 3 (after any Tamer picks): the "may digivolve" hand pick. Only
+    // DS6 can digivolve onto Lilamon (NONDS6 lacks the trait).
+    let v2 = pending_hand_pick(&mut runner).expect("'may digivolve' hand pick installs");
     assert!(v2.is_optional, "'may digivolve' ⇒ declinable");
-    let pick = v2
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&id| id != PASS)
-        .expect("DS6 is the only legal hand pick");
-    runner.execute_action(0, pick).unwrap();
-    // Resolve the trash-2 Tamer pick(s).
+    let picks: Vec<u16> = v2.valid_action_ids.iter().copied().filter(|&id| id != PASS).collect();
+    assert_eq!(picks.len(), 1, "DS6 is the only legal hand pick");
+    runner.execute_action(0, picks[0]).unwrap();
     let _ = runner.auto_resolve();
 
     let perm = &runner.game.player(0).battle_area[lilamon.index as usize];
@@ -334,7 +330,49 @@ fn st24_10_suspends_locks_then_trash_2_free_digivolve() {
     );
 }
 
-/// The trash-2 free-digivolve "Then" half is DECLINABLE: PASS on the hand pick
+/// Answer the "trash 2 face-down cards?" choice (index 0 = pay).
+fn choose_pay(runner: &mut DebugRunner, pay: bool) {
+    let v = runner.pending_selection_view().expect("pay-or-not choice installs");
+    assert_eq!(v.kind, SelectionKind::EffectChoice);
+    let id = HAND_EFFECT_START + if pay { 0 } else { 1 };
+    runner.execute_action(0, id).unwrap();
+}
+
+/// Resolve any Tamer picks for the trash-2 cost, then return the hand pick.
+fn pending_hand_pick(
+    runner: &mut DebugRunner,
+) -> Option<digimon_engine::selection::PendingSelectionView> {
+    for _ in 0..8 {
+        let v = runner.pending_selection_view()?;
+        if v.kind == SelectionKind::Hand {
+            return Some(v);
+        }
+        let id = v.valid_action_ids.iter().copied().find(|&id| id != PASS)?;
+        runner.execute_action(0, id).unwrap();
+    }
+    None
+}
+
+/// Paying the trash-2 cost with no card that can digivolve onto Lilamon is
+/// legal (user ruling 2026-11-10; DCGO pays first). The face-down cards go,
+/// nothing digivolves, and no illegal target is offered. Rose Rave audit
+/// 2026-11-11: the old gate refused to pay without a [DATA SQUAD] card in hand.
+#[test]
+fn st24_10_pays_trash_2_without_a_legal_target_rose_rave_audit() {
+    let (mut runner, lilamon, _tamers) = lilamon_runner(&["NONDS6"], &[2]);
+    runner.place_on_field(1, "OPP-DIGI", Some(0));
+    fire(&mut runner, EffectTiming::OnPlay, lilamon);
+    let v = runner.pending_selection_view().expect("suspend pick installs");
+    runner.execute_action(0, v.valid_action_ids[0]).unwrap();
+    choose_pay(&mut runner, true);
+    assert!(pending_hand_pick(&mut runner).is_none(), "no legal digivolve target offered");
+    let _ = runner.auto_resolve();
+    assert_eq!(face_down_source_count(&runner, 0), 0, "the cost was paid");
+    let perm = &runner.game.player(0).battle_area[lilamon.index as usize];
+    assert_eq!(perm.top_card().card_id(&runner.game.card_data), CARD_ID);
+}
+
+/// The trash-2 free-digivolve "Then" half is DECLINABLE: choosing not to pay
 /// leaves Lilamon as-is and trashes no sources. (The suspend still happened.)
 #[test]
 fn st24_10_then_free_digivolve_is_declinable() {
@@ -349,12 +387,8 @@ fn st24_10_then_free_digivolve_is_declinable() {
     runner.execute_action(0, v.valid_action_ids[0]).unwrap();
     assert!(runner.game.players[1].battle_area[opp.index as usize].is_suspended);
 
-    // Decline the "may digivolve".
-    let v2 = runner.pending_selection_view().expect("hand pick installs");
-    assert!(v2.is_optional);
-    runner
-        .execute_action(0, PASS)
-        .expect("decline the digivolve");
+    // Decline: don't pay the trash-2 cost.
+    choose_pay(&mut runner, false);
     let _ = runner.auto_resolve();
 
     let perm = &runner.game.player(0).battle_area[lilamon.index as usize];
@@ -560,4 +594,79 @@ fn st24_10_inherited_save_offered_for_name_match_without_trait() {
     let (offered, stayed) = gate_delete_carrier("NAME-TOP");
     assert!(offered, "a [Rosemon]-named carrier is offered the inherited save");
     assert!(stayed, "accepting the save keeps the [Rosemon]-named carrier");
+}
+
+/// "When THIS Digimon ... would leave": the inherited save protects only the
+/// permanent carrying Lilamon as a source. Deleting ANOTHER of your Digimon
+/// offers no replacement (it leaves); deleting the [DATA SQUAD] carrier
+/// afterwards still offers it (the [Once Per Turn] was not spent).
+#[test]
+fn st24_10_inherited_save_only_for_carrier_rose_rave_audit() {
+    // Rose Rave audit 2026-11-11: DCGO ST24_10.cs checks card.PermanentOfThisCard() -- the carrier only.
+    let mut runner = base_builder().start();
+    runner.set_first_player(0);
+    let carrier = runner.place_stack(0, &[CARD_ID, "DS6"]);
+    let other = runner.place_on_field(0, "FILLER", Some(0));
+    let t = runner.place_stack(0, &["FILLER", "TAMER"]);
+    runner.game.players[0].battle_area[t.index as usize].card_sources[0].face_down = true;
+
+    /// Drive every prompt (accepting); returns whether a Replacement prompt appeared.
+    fn drive(runner: &mut DebugRunner) -> bool {
+        let mut saw_replacement = false;
+        let mut guard = 0;
+        while let Some(sel) = runner.pending_selection() {
+            guard += 1;
+            assert!(guard < 32);
+            if matches!(sel.kind, SelectionKind::Replacement) {
+                saw_replacement = true;
+            }
+            let a = sel
+                .valid_action_ids
+                .iter()
+                .copied()
+                .find(|a| *a != PASS)
+                .unwrap_or(PASS);
+            let who = sel.selecting_player;
+            runner.execute_action(who, a).unwrap();
+        }
+        let _ = runner.auto_resolve();
+        saw_replacement
+    }
+    let on_field = |r: &DebugRunner, id: &str| {
+        r.game.players[0]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&r.game.card_data) == id)
+    };
+
+    // Another of your Digimon would leave: no replacement offered.
+    runner
+        .game
+        .delete_permanent_with_cause(other, ReplacementCause::OpponentEffect);
+    assert!(
+        !drive(&mut runner),
+        "no leave-prevention for a Digimon that is not Lilamon's carrier"
+    );
+    assert!(!on_field(&runner, "FILLER"), "the other Digimon leaves");
+    assert_eq!(face_down_source_count(&runner, 0), 1, "no cost paid");
+
+    // The carrier would leave: the replacement is still offered and saves it.
+    let carrier = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|perm| perm.top_card().card_id(&runner.game.card_data) == "DS6")
+        .map(|i| PermanentHandle {
+            player: 0,
+            index: i as u8,
+        })
+        .unwrap_or(carrier);
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert!(
+        drive(&mut runner),
+        "the [DATA SQUAD] carrier is offered the inherited save"
+    );
+    assert!(on_field(&runner, "DS6"), "accepting the save keeps the carrier");
+    assert_eq!(face_down_source_count(&runner, 0), 0, "1 face-down card trashed");
 }

@@ -126,7 +126,7 @@ fn st24_11_metadata_and_two_alt_paths() {
     let lila = card.alt_paths.iter().any(|p| {
         p.from
             .as_ref()
-            .map(|f| f.name_contains.as_deref() == Some("Lilamon"))
+            .map(|f| f.name_is.as_deref() == Some("Lilamon"))
             .unwrap_or(false)
     });
     assert!(lila, "Lilamon-named alt-path present");

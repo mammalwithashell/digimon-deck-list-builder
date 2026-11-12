@@ -425,6 +425,12 @@ effects:
         .start();
     let source = runner.place_on_field(0, "TEST-FORCE-ATTACK-RUNTIME", Some(0));
     let forced = runner.place_on_field(1, "FORCED", Some(0));
+    // CR 11-1-2: "Only the turn player can attack." No card makes a Digimon
+    // attack outside its controller's turn (EX3-024 forces the opponent's
+    // Digimon on the opponent's own Main Phase), so an effect attack by the
+    // non-turn player is refused (game audit 2026-11-11). Run it on
+    // the forced Digimon's controller's turn.
+    runner.set_first_player(1);
 
     runner.fire_on_play(0, source.index as usize);
     let select_forced_action = encode_attack(0, forced.index as u16);

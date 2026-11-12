@@ -182,10 +182,14 @@ effects:
           of: you
           bind_as: result
           optional: true
+          # Only cards this Digimon can legally digivolve into are offered
+          # (DCGO DigivolveIntoHandOrTrashCard -> CanPlayCardTargetFrame).
+          # Deck audit 2026-11-10: illegal cards were offered as dead picks.
           filter:
             all_of:
               - kind: digimon
               - in_text_contains: "Vemmon"
+              - can_digivolve_onto: source
           prompt: "Digivolve this Digimon into a Digimon card with [Vemmon] in its text in your hand, paying the cost"
       - effect_initiated_digivolve:
           target: source

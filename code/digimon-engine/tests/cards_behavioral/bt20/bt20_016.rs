@@ -876,6 +876,80 @@ fn bt20_016_all_turns_offers_dna_into_imperialdramon_and_deletion_still_commits(
     assert!(materials.contains(&"TST-DINOBEEMON") && materials.contains(&"TST-PURPLE-MAT"));
 }
 
+/// game-audit 2026-11-11 / DCGO `CanPlayJogress(true)`: the hand pick lists
+/// only an Imperialdramon: Dragon Mode whose DNA requirement the field meets.
+/// TST-IMP-FAR needs two Lv.6 Digimon (none on field) and must not be
+/// offered; TST-IMP-DM (Lv.5 Purple + Lv.5 Red) is.
+#[test]
+fn bt20_016_all_turns_hand_pick_excludes_card_without_a_legal_field_pair() {
+    use digimon_engine::action::space::{HAND_EFFECT_START, PLAY_HAND_START};
+
+    let far = {
+        let mut card = digimon_engine::debug_runner::make_test_dna_card(
+            "TST-IMP-FAR",
+            "Imperialdramon: Dragon Mode",
+            6,
+            6,
+            0,
+        );
+        card.card_kind = CardKind::Digimon;
+        card.level = Some(6);
+        card.dp = Some(11000);
+        card
+    };
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT20-016 YAML loads")
+        .add_card(paildramon_card())
+        .add_card(dinobeemon_card())
+        .add_card(imperialdramon_dm_card())
+        .add_card(far)
+        .memory(10)
+        .hand(0, &["TST-IMP-FAR", "TST-IMP-DM"])
+        .build();
+
+    let _carrier = runner.place_on_field(0, "BT20-016", Some(0));
+    let victim = runner.place_on_field(0, "TST-PAILDRAMON", Some(0));
+    runner.place_on_field(0, "TST-DINOBEEMON", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(victim, ReplacementCause::OpponentEffect);
+
+    // Accept the observer's gate(s) until the Imperialdramon hand pick.
+    let mut view = None;
+    for _ in 0..8 {
+        let Some(v) = runner.pending_selection_view() else { break };
+        if v.kind == SelectionKind::Hand && v.prompt.contains("Imperialdramon") {
+            view = Some(v);
+            break;
+        }
+        let action = v
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .expect("an accept action");
+        runner.game.resolve_selection(v.selecting_player, action).expect("accept");
+        runner.game.drain_effect_queue();
+    }
+    let view = view.expect("the Imperialdramon: Dragon Mode hand pick is offered");
+    let slot_actions = |id: &str| {
+        let slot = runner.game.players[0]
+            .hand
+            .iter()
+            .position(|c| c.card_id(&runner.game.card_data) == id)
+            .unwrap_or_else(|| panic!("{id} in hand")) as u16;
+        [PLAY_HAND_START + slot, HAND_EFFECT_START + slot]
+    };
+    let offered = |id: &str| slot_actions(id).iter().any(|a| view.valid_action_ids.contains(a));
+    assert!(offered("TST-IMP-DM"), "Lv.5 Purple + Lv.5 Red pair on field: offered");
+    assert!(
+        !offered("TST-IMP-FAR"),
+        "no Lv.6 + Lv.6 pair on field: DCGO CanPlayJogress excludes it"
+    );
+}
+
 // ─── Section 7: Inherited Security A.+1 ─────────────────────────────────────
 
 #[test]

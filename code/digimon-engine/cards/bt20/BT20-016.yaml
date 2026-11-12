@@ -97,37 +97,54 @@ effects:
             - name_contains: "Paildramon"
             - name_contains: "Dinobeemon"
     summary: "[All Turns] When own [Paildramon]/[Dinobeemon] would be deleted, may DNA digivolve 2 own Digimon into [Imperialdramon: Dragon Mode] in hand; the deletion proceeds"
+    #
+    # game-audit 2026-11-11 / DCGO CanPlayJogress: the hand pick offers only an
+    # Imperialdramon: Dragon Mode that can DNA digivolve right now (DCGO
+    # `CanPlayJogress(true)`), the pair picks offer only Digimon that meet that
+    # card's DNA requirement (`dna_field_pair`), and both picks are declinable
+    # (DCGO `isOptional: true` / roots `canNoSelect: true`).
     process:
       - optional:
           # Step 1: pick the Imperialdramon: Dragon Mode card in hand.
           - select_hand:
               of: you
               bind_as: dna_card
+              optional: true
               filter:
                 all_of:
                   - kind: digimon
                   - name_contains: "Imperialdramon: Dragon Mode"
+                  - dna_field_pair: { role: result }
               prompt: "Select Imperialdramon: Dragon Mode from hand to DNA digivolve into"
-          # Step 2: pick the 2 own Digimon as DNA materials.
-          - select_dna_pair:
-              left_filter:
-                all_of:
-                  - kind: digimon
-                  - of: you
-              right_filter:
-                all_of:
-                  - kind: digimon
-                  - of: you
-              bind_left_as: dna_src_a
-              bind_right_as: dna_src_b
-              prompt: "Select 2 of your Digimon to DNA digivolve into Imperialdramon: Dragon Mode"
-          # Step 3: execute the DNA digivolve. Cost paid normally per dna_costs.
-          - effect_initiated_dna_digivolve:
-              target_a: dna_src_a
-              target_b: dna_src_b
-              from_hand: dna_card
-              cost: 0
-              ignore_requirements: false
+          - if:
+              condition: { binding_present: dna_card }
+              then:
+                # Step 2: pick the 2 own Digimon as DNA materials.
+                - select_dna_pair:
+                    left_filter:
+                      all_of:
+                        - kind: digimon
+                        - of: you
+                        - dna_field_pair: { role: first, result: dna_card }
+                    right_filter:
+                      all_of:
+                        - kind: digimon
+                        - of: you
+                        - dna_field_pair: { role: second, result: dna_card, first: dna_src_a }
+                    bind_left_as: dna_src_a
+                    bind_right_as: dna_src_b
+                    prompt: "Select 2 of your Digimon to DNA digivolve into Imperialdramon: Dragon Mode"
+                    optional: true
+                # Step 3: execute the DNA digivolve. Cost paid normally per dna_costs.
+                - if:
+                    condition: { binding_present: dna_src_a }
+                    then:
+                      - effect_initiated_dna_digivolve:
+                          target_a: dna_src_a
+                          target_b: dna_src_b
+                          from_hand: dna_card
+                          cost: 0
+                          ignore_requirements: false
 
   # ─── Inherited: <Security A. +1> ─────────────────────────────────────────────
   #

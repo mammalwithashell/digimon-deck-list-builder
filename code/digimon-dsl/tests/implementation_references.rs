@@ -144,6 +144,7 @@ fn repeated_formula_and_alternate_path_predicates_keep_occurrence_paths() {
         }],
         optional: false,
         outer_prompt: false,
+        opt_group: None,
         once_per_turn: false,
         max_per_turn: None,
         process: vec![CompiledStep::GainMemoryFn {

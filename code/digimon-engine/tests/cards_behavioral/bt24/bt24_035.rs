@@ -155,6 +155,110 @@ fn bt24_035_debuffs_then_dna_digivolves_into_silphymon_on_your_turn() {
         .any(|perm| perm.top_card().card_id(&runner.game.card_data) == SILPHYMON_ID));
 }
 
+/// game-audit 2026-11-11 / DCGO `CanPlayJogress(true)`: the hand pick lists
+/// only a [Silphymon] that can DNA digivolve on this field, and the pair picks
+/// follow that card's own requirement instead of BT24-037's.
+/// - SILPHY-NODNA (BT3-014 shape: no DNA requirement) is not offered.
+/// - SILPHY-RY (BT8-015 / BT16-012 shape: Red Lv.4 + Yellow Lv.4) is; after
+///   the Yellow first pick, the Green Lv.4 the old hard-coded "Red/Green"
+///   filter accepted is not a legal second material.
+#[test]
+fn bt24_035_dna_offers_only_silphymon_and_pairs_that_can_dna_now() {
+    use digimon_engine::action::space::HAND_EFFECT_START;
+    use digimon_engine::card_data::{DnaCost, DnaRequirement};
+
+    let silphymon = |id: &str| {
+        let mut card = make_test_card(id, "Silphymon");
+        card.card_kind = CardKind::Digimon;
+        card.colors = vec![CardColor::Red, CardColor::Yellow];
+        card.level = Some(5);
+        card.dp = Some(8000);
+        card.play_cost = 8;
+        card
+    };
+    let mut ry = silphymon("SILPHY-RY");
+    let lv4 = |color| DnaRequirement {
+        level: 4,
+        card_colors: vec![color],
+        name_contains: String::new(),
+        text_contains: String::new(),
+    };
+    ry.dna_costs = vec![DnaCost {
+        requirement1: lv4(CardColor::Red),
+        requirement2: lv4(CardColor::Yellow),
+        memory_cost: 0,
+    }];
+
+    let mut runner = gatomon_runner()
+        .add_card(silphymon("SILPHY-NODNA"))
+        .add_card(ry)
+        .add_card(level4("YELLOW-MAT", CardColor::Yellow))
+        .add_card(level4("RED-MAT", CardColor::Red))
+        .add_card(level4("GREEN-MAT", CardColor::Green))
+        .add_card(opponent_digimon("OPP", 7000))
+        .hand(0, &["SILPHY-NODNA", "SILPHY-RY"])
+        .memory(10)
+        .start();
+    let gatomon = runner.place_on_field(0, CARD_ID, Some(0));
+    let yellow = runner.place_on_field(0, "YELLOW-MAT", Some(0));
+    let red = runner.place_on_field(0, "RED-MAT", Some(0));
+    let green = runner.place_on_field(0, "GREEN-MAT", Some(0));
+    runner.place_on_field(1, "OPP", Some(0));
+    runner.game.turn_count = 1;
+
+    fire_on_play(&mut runner, gatomon);
+    let debuff_prompt = runner
+        .pending_selection_view()
+        .expect("opponent Digimon selection");
+    runner
+        .execute_action(debuff_prompt.selecting_player, debuff_prompt.valid_action_ids[0])
+        .expect("select opponent Digimon for -3000 DP");
+    if runner.pending_kind() == Some(SelectionKind::EffectChoice) {
+        runner
+            .execute_branch(0)
+            .expect("accept optional DNA follow-up");
+    }
+
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    let hand_view = runner.pending_selection_view().expect("Silphymon hand pick");
+    let slot_actions = |id: &str| {
+        let slot = runner.game.players[0]
+            .hand
+            .iter()
+            .position(|c| c.card_id(&runner.game.card_data) == id)
+            .unwrap_or_else(|| panic!("{id} in hand")) as u16;
+        [PLAY_HAND_START + slot, HAND_EFFECT_START + slot]
+    };
+    let offered = |id: &str| {
+        slot_actions(id)
+            .into_iter()
+            .find(|a| hand_view.valid_action_ids.contains(a))
+    };
+    assert!(
+        offered("SILPHY-NODNA").is_none(),
+        "a Silphymon with no DNA requirement cannot DNA: DCGO CanPlayJogress excludes it"
+    );
+    let pick = offered("SILPHY-RY").expect("Red Lv.4 + Yellow Lv.4 Silphymon is offered");
+    runner.execute_action(0, pick).expect("select SILPHY-RY");
+
+    let first = runner.pending_selection_view().expect("first DNA material");
+    assert!(first.valid_action_ids.contains(&encode_attack(0, yellow.index as u16)));
+    assert!(first.valid_action_ids.contains(&encode_attack(0, red.index as u16)));
+    assert!(
+        !first.valid_action_ids.contains(&encode_attack(0, green.index as u16)),
+        "Green Lv.4 is not a material of the Red + Yellow recipe"
+    );
+    runner
+        .execute_action(first.selecting_player, encode_attack(0, yellow.index as u16))
+        .expect("select yellow material");
+    let second = runner.pending_selection_view().expect("second DNA material");
+    assert!(second.valid_action_ids.contains(&encode_attack(0, red.index as u16)));
+    assert!(
+        !second.valid_action_ids.contains(&encode_attack(0, green.index as u16)),
+        "the old Red/Green right filter would have offered Green here"
+    );
+}
+
 #[test]
 fn bt24_035_inherited_barrier_is_available_to_carrier() {
     let mut runner = gatomon_runner()

@@ -24,6 +24,7 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod app_fuse_primitive;
 mod assembly_material_predicates;
+mod burst_digivolve_common;
 mod printed_metadata_routes;
 mod printed_attribute_filters;
 mod printed_form_filters;

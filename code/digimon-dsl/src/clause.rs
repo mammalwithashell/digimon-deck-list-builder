@@ -111,6 +111,15 @@ pub struct TriggeredClause {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_per_turn: Option<u8>,
 
+    /// Share one [Once Per Turn] / [N Per Turn] counter with every other
+    /// clause on the same card face carrying the same label. For ONE printed
+    /// effect whose triggers the DSL has to split into separate clauses
+    /// (different `trigger_if` per trigger): official Q1550 / CR 4.3 §15-14-1,
+    /// "no matter which timing the effect is triggered at, it is still the
+    /// same effect". BT21-029 Medusamon: deletion arm + security arm.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opt_group: Option<String>,
+
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub process: Vec<StepSpec>,
 }

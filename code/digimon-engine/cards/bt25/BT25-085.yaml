@@ -243,10 +243,15 @@ dual:
     colors: [purple]
     effect_text: |
       <Use Req. ([Three Musketeers] in text)> [Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.
+    # <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+    # of your Digimon or Tamers in the battle area or breeding area meets
+    # the condition (an Option on the field does not count).
     use_requirement:
-      any_permanent:
+      any_field_permanent:
         of: you
-        zone: [battle_area, breeding]
+        any_of:
+          - kind: digimon
+          - kind: tamer
         in_text_contains: "Three Musketeers"
     arts_digivolve: true
     effects:

@@ -287,6 +287,7 @@ impl Game {
             active_cost_payment_receipt: None,
             preferred_play_cost_effect: None,
             pending_digivolve_route_choice: None,
+            pending_burst_digivolve: None,
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             replacement_commit_fired: false,

@@ -312,6 +312,36 @@ def _child_env() -> dict:
     return env
 
 
+def quarantine_truncations(proc_dirs: list[Path]) -> list[dict]:
+    """Exclude every decision-capped game from training (both losses) with a
+    manifest-bound ``training_exclusions.json`` that azero_trainer verifies.
+    Capped games are engine/search pathologies to investigate, never data;
+    the list is returned so the caller can record it next to the summary."""
+    import hashlib
+    from tools.selfplay_scheduler import atomic_json
+    out = []
+    for directory in proc_dirs:
+        manifest_path = directory / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        if not manifest["truncated_games"]:
+            continue
+        ids = [r["game_id"] for r in manifest.get("opponent_games", []) if r["truncated"]]
+        if len(ids) != manifest["truncated_games"]:
+            raise ValueError(f"{directory}: cannot identify capped games for quarantine")
+        target = directory / "training_exclusions.json"
+        entry = dict(schema="selfplay-training-exclusions-v1",
+                     manifest_sha256=hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+                     games=[dict(game_id=i, reason="decision cap reached; auto-quarantined for investigation")
+                            for i in ids])
+        if target.exists() and json.loads(target.read_text()) != entry:
+            raise ValueError(f"{target}: existing exclusions differ")
+        atomic_json(target, entry)
+        names = manifest["deck_names"]
+        decks = dict(zip((r["game_id"] for r in manifest["opponent_games"]), manifest["game_decks"]))
+        out.extend(dict(directory=str(directory), game_id=i, decks=[names[d] for d in decks[i]]) for i in ids)
+    return out
+
+
 def run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -> dict:
     from tools.selfplay_scheduler import controller_lock
 
@@ -387,8 +417,13 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
     if opponent_coverage is not None:
         atomic_json(gen_dir / 'opponent_coverage.json', opponent_coverage)
 
+    quarantined = quarantine_truncations(proc_dirs) if getattr(args, "quarantine_truncation", False) else []
+    if quarantined:
+        atomic_json(gen_dir / 'quarantined_truncations.json', quarantined)
+        print(f"quarantined {len(quarantined)} capped game(s) from training: {quarantined}", flush=True)
     if getattr(args, "fail_on_truncation", False):
         truncated = sum(json.loads((p / "manifest.json").read_text())["truncated_games"] for p in proc_dirs)
+        truncated -= len(quarantined)
         if truncated:
             raise RuntimeError(f"Collected {truncated} truncated games; preserving shards and refusing to fit until investigated")
 
@@ -416,6 +451,8 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
         device=args.train_device,
         seed=args.seed + gen,
         export_onnx=model_onnx,
+        holdout_fraction=getattr(args, "value_holdout_fraction", 0.0),
+        value_activation_name=getattr(args, "value_activation", None),
     )
     t_train = time.time() - t1
 
@@ -538,6 +575,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--mode", default="pimc")
     p.add_argument("--temperature-decisions", type=int, default=16)
     p.add_argument("--decision-cap", type=int, default=600)
+    p.add_argument("--quarantine-truncation", action="store_true",
+                   help="exclude decision-capped games from training (recorded in quarantined_truncations.json)")
     p.add_argument("--fail-on-truncation", action="store_true",
                    help="preserve collected shards and stop before fitting if any new game reaches its cap")
     p.add_argument("--shard-rows", type=int, default=4096)
@@ -549,6 +588,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--batch-size", type=int, default=512)
     p.add_argument("--lr", type=float, default=1e-4)
     p.add_argument("--value-coef", type=float, default=1.0)
+    p.add_argument("--value-holdout-fraction", type=float, default=0.0,
+                   help="hold out this share of WHOLE games from fitting and save the best held-out epoch")
+    p.add_argument("--value-activation", choices=("identity", "tanh"), default=None,
+                   help="value-head activation; tanh converts an identity warm start once (default: inherit)")
     p.add_argument("--train-device", default="auto")
 
     p.add_argument("--skip-eval", action="store_true")

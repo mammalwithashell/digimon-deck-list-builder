@@ -280,7 +280,8 @@ fn seat_bt17_095_as_delay(runner: &mut DebugRunner, handle: PermanentHandle) {
         owner: handle.player,
         trash_on_turn: turn + 2,
         trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
-        placed_on_turn: turn,
+        // CR 16-17-3: placed on an earlier turn, so the <Delay> is usable now.
+        placed_on_turn: turn.saturating_sub(1),
     };
 }
 

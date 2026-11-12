@@ -172,3 +172,23 @@ def test_coverage_distinguishes_current_and_historical_actor_rows(tmp_path):
     path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="leaked"):
         history.summarize_opponents([tmp_path])
+
+
+def test_specialist_deck_fields_round_trip_and_fail_closed(tmp_path):
+    current, older = model(tmp_path, "current"), model(tmp_path, "old")
+    pool = pool_for(older) | {"learner_decks": ["Examon"]}
+    pool["opponents"][0]["decks"] = ["Toho Braves"]
+    resolved = history.validate_pool(pool, tmp_path, current)
+    assert resolved["learner_decks"] == ["Examon"]
+    assert resolved["opponents"][0]["decks"] == ["Toho Braves"]
+    for bad in (["Examon"], [], "Toho Braves"):
+        broken = json.loads(json.dumps(pool))
+        broken["opponents"][0]["decks"] = bad
+        with pytest.raises(ValueError, match="Opponent decks"):
+            history.validate_pool(broken, tmp_path, current)
+    orphan = pool_for(older)
+    orphan["opponents"][0]["decks"] = ["Toho Braves"]
+    with pytest.raises(ValueError, match="Opponent decks"):
+        history.validate_pool(orphan, tmp_path, current)
+    with pytest.raises(ValueError, match="learner_decks"):
+        history.validate_pool(pool_for(older) | {"learner_decks": []}, tmp_path, current)

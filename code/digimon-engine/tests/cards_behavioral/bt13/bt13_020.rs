@@ -199,19 +199,14 @@ fn bt13_020_clause2_on_suspend_is_opt() {
 // SECTION 1b — Alt-paths (named-prior-form digivolve + Burst Digivolve)
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// A full behavioral burst-digivolve test (perform the burst digivolve returning
-// Marcus Damon, then assert the top source trashes at the burst turn's end) is
-// not driveable through the current DebugRunner surface — there is no
-// burst-digivolve action helper, and the on_burst_turn_end teardown runs from
-// the alt-path registry during the digivolve action machinery, which the runner
-// does not expose. Every other shipping Burst/Blast Digivolve card (BT16-027,
-// BT17-077, BT17-018) is covered structurally for the same reason. We therefore
-// assert the compiled alt-path shape — kind, cost, and that the extra_cost /
-// on_burst_turn_end step lists are populated — matching the canonical
-// `cards/_examples/BT13-060.yaml` (Rosemon: Burst Mode) exemplar and DCGO
-// BT13_020.cs AddBurstDigivolutionConditionClass.
+// The compiled alt-path shape is pinned here; the burst digivolve itself (the
+// Tamer return, cost 0 + draw, the turn-end top-card trash, the route choice
+// and the 8-3-2-2 effect exclusion) is driven through the real action surface
+// in `mod burst_digivolve` at the bottom of this file
+// (`crate::burst_digivolve_common`). DCGO BT13_020.cs
+// AddBurstDigivolutionConditionClass.
 
-/// The named-prior-form digivolve path: from a Lv.6 [ShineGreymon], cost 5.
+/// The printed cost-5 circles (Red / Yellow Lv.6) are authored as digivolve paths.
 #[test]
 fn bt13_020_has_named_lv6_digivolve_path_cost5() {
     let card = burst();
@@ -661,4 +656,65 @@ fn bt13_020_opt_clears_next_turn() {
         sec_mid - 1,
         "OPT lockout must clear on the new turn"
     );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// [Burst Digivolve] (CR 6-5-1-2-3, 8-3) through the real action surface.
+// Shared scenario: `crate::burst_digivolve_common`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+mod burst_digivolve {
+    use crate::burst_digivolve_common::*;
+    use digimon_engine::enums::CardColor;
+
+    const SPEC: BurstSpec = BurstSpec {
+        card: "BT13-020",
+        host_name: "ShineGreymon",
+        host_color: CardColor::Yellow,
+        tamer_name: "Marcus Damon",
+    };
+
+    /// 8-3-3: offered via the mask with [Marcus Damon] on the field; returns the
+    /// Tamer, pays 0, draws 1, stacks on the [ShineGreymon].
+    #[test]
+    fn bt13_020_burst_offered_returns_tamer_costs_zero_draws_one() {
+        burst_and_check(SPEC, Host::BurstOnly);
+    }
+
+    /// The burst cost can't be paid without a [Marcus Damon].
+    #[test]
+    fn bt13_020_burst_not_offered_without_tamer() {
+        assert_not_offered_without_tamer(SPEC);
+    }
+
+    /// 8-3-2-1: the top card is trashed at the end of the burst turn,
+    /// tracked by permanent identity (the host shifted slots).
+    #[test]
+    fn bt13_020_burst_top_card_trashed_at_turn_end() {
+        assert_turn_end_trash(SPEC, Host::BurstOnly);
+    }
+
+    /// Normal (cost 5) and burst routes both legal: a real player choice.
+    #[test]
+    fn bt13_020_burst_vs_normal_route_is_a_player_choice() {
+        assert_route_choice(SPEC);
+    }
+
+    /// Choosing the burst route from the route prompt, then the turn-end trash.
+    #[test]
+    fn bt13_020_burst_chosen_from_route_prompt_then_trashed() {
+        assert_turn_end_trash(SPEC, Host::AlsoNormal);
+    }
+
+    /// 8-3-2-2: an effect that digivolves can't burst digivolve.
+    #[test]
+    fn bt13_020_effect_digivolve_cannot_burst() {
+        assert_effect_cannot_burst(SPEC);
+    }
+
+    /// Two qualifying Tamers: the player picks which returns.
+    #[test]
+    fn bt13_020_burst_two_tamers_is_a_player_choice() {
+        assert_two_tamers_choice(SPEC);
+    }
 }

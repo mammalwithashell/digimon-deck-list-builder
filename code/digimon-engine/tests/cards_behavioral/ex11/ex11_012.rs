@@ -86,9 +86,9 @@ fn ex11_012_compiles_with_end_of_attack_triggered_clause() {
         triggered.iter().any(|t| {
             t.when.contains(&CompiledTiming::EndOfAttack)
                 && t.when.contains(&CompiledTiming::WhenDigivolving)
-                && t.optional
+                && !t.optional
         }),
-        "EX11-012 must have optional WhenDigivolving+EndOfAttack clause; got: {triggered:?}"
+        "EX11-012's WhenDigivolving+EndOfAttack clause is mandatory with optional picks          (DCGO isOptional: false, canNoSelect: true); got: {triggered:?}"
     );
 }
 
@@ -117,11 +117,15 @@ fn ex11_012_delete_trash_token_clause_uses_native_trash_return_step() {
             .any(|step| matches!(step, CompiledStep::RawRust { .. })),
         "EX11-012 trash-return clause must use native DSL, not raw_rust"
     );
+    fn has_return(steps: &[CompiledStep]) -> bool {
+        steps.iter().any(|step| match step {
+            CompiledStep::ReturnTrashListToDeckBottom { .. } => true,
+            CompiledStep::If { then, else_branch, .. } => has_return(then) || has_return(else_branch),
+            _ => false,
+        })
+    }
     assert!(
-        clause
-            .process
-            .iter()
-            .any(|step| matches!(step, CompiledStep::ReturnTrashListToDeckBottom { .. })),
+        has_return(&clause.process),
         "EX11-012 must return the selected trash binding with return_trash_list_to_deck_bottom"
     );
 }
@@ -210,12 +214,8 @@ fn end_of_attack_optional_fires_deletes_target_returns_trash_and_plays_token() {
     // Digimon (one more card in P1's trash), then EndOfAttack fires.
     r.attack_player(medusa, 1, false);
 
-    // The EndOfAttack clause is optional ("You may delete ...") and its body's
-    // first step is a mandatory select_opponent_permanent, so an outer
-    // accept/decline prompt installs first (G-OUTER-OPTIONAL-NOT-INSTALLED).
-    // Accept it to reach the inner target-select prompt.
-    r.accept_optional_trigger()
-        .expect("accept the outer optional-trigger prompt");
+    // "You may delete": the clause's first step is the optional delete pick,
+    // which carries the "may" itself (no separate accept prompt).
 
     // After accepting, the select_opponent_permanent step prompts to pick the
     // Digimon to delete.
@@ -354,17 +354,17 @@ fn current_dp_targets(end_of_attack: bool, initial_delta: i32, later_delta: i32)
     let high = r.place_on_field(1, "DP-ABOVE", None);
     r.game.modifiers.add(medusa, ModifierEntry::simple(
         ModifierType::ChangeDp, initial_delta, Expiry::Permanent, 0));
+    // The delete pick is the clause's first (optional) step, so it opens as soon
+    // as the effect processes; the DP it reads is the DP at that moment, so
+    // `later_delta` is applied before the trigger.
+    r.game.modifiers.add(medusa, ModifierEntry::simple(
+        ModifierType::ChangeDp, later_delta, Expiry::Permanent, 0));
+    assert_eq!(r.effective_dp(medusa), Some(limit));
     if end_of_attack {
         r.attack_player(medusa, 1, false);
     } else {
         fire_when_digivolving_on(&mut r, medusa);
     }
-    assert!(r.pending_selection().is_some(), "a deletable target must enable the effect");
-    // The effect is triggered, but its deletion body has not activated yet.
-    r.game.modifiers.add(medusa, ModifierEntry::simple(
-        ModifierType::ChangeDp, later_delta, Expiry::Permanent, 0));
-    assert_eq!(r.effective_dp(medusa), Some(limit));
-    r.accept_optional_trigger().expect("activate Medusamon deletion");
     let selection = r.pending_selection().expect("choose a deletion target");
     let player = selection.selecting_player;
     let low_action = encode_attack(0, low.index as u16);
@@ -658,8 +658,6 @@ fn when_digivolving_returning_the_corpse_makes_kaguyamon_miss_its_on_deletion() 
 
     fire_when_digivolving_on(&mut r, medusa);
 
-    r.accept_optional_trigger()
-        .expect("accept Medusamon's outer optional prompt");
 
     let (pl, act) = {
         let s = r.pending_selection().expect("delete-target prompt");
@@ -719,8 +717,6 @@ fn when_digivolving_returning_the_corpse_makes_amaterasumon_miss_both_triggers()
 
     fire_when_digivolving_on(&mut r, medusa);
 
-    r.accept_optional_trigger()
-        .expect("accept Medusamon's outer optional prompt");
 
     let (pl, act) = {
         let s = r.pending_selection().expect("delete-target prompt");
@@ -787,8 +783,6 @@ fn when_digivolving_returning_the_decoy_leaves_kaguyamon_triggers_intact() {
     seed_decoy_trash(&mut r);
 
     fire_when_digivolving_on(&mut r, medusa);
-    r.accept_optional_trigger()
-        .expect("accept Medusamon's outer optional prompt");
 
     let (pl, act) = {
         let s = r.pending_selection().expect("delete-target prompt");
@@ -877,5 +871,77 @@ fn ex11_012_standard_alt_path_accepts_right_color_base() {
     assert!(
         ex11_012_color_gate_try(digimon_engine::enums::CardColor::Red),
         "a red level-5 base digivolves into EX11-012 via the Red Lv.5 alt path"
+    );
+}
+
+// --- 8. Deck audit 2026-11-10: the Token line needs no deletable target -----
+
+/// With no Digimon it can delete but a card in the opponent's trash, the
+/// effect is still offered: return the card and the opponent plays the Token
+/// (DCGO EX11_012.cs: the return is independent of the delete).
+#[test]
+fn token_line_is_offered_without_a_deletable_target() {
+    let mut strong = make_test_card("STRONG", "StrongDigimon");
+    strong.dp = Some(13000);
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX11-012")
+        .expect("EX11-012 in embedded pack")
+        .add_card(strong)
+        .add_card(make_test_card("DECOY-TRASH", "DecoyTrash"))
+        .memory(20)
+        .start();
+    let medusa = r.place_on_field(0, "EX11-012", None);
+    r.place_on_field(1, "STRONG", None);
+    seed_decoy_trash(&mut r);
+
+    fire_when_digivolving_on(&mut r, medusa);
+    // No deletable target, so the optional delete pick is skipped and the
+    // trash-return pick is next.
+    pick_trash_by_id(&mut r, "DECOY-TRASH");
+    let _ = r.auto_resolve();
+
+    assert!(deck_contains(&r, 1, "DECOY-TRASH"), "the card went to the deck bottom");
+    assert!(
+        r.game.players[1]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token),
+        "the opponent played the Petrification Token"
+    );
+    assert!(field_has(&r, 1, "STRONG"), "nothing was deleted");
+}
+
+/// The return is optional ("by returning"): declining it plays no Token, and
+/// declining the delete still leaves the return available.
+#[test]
+fn delete_and_return_can_each_be_declined() {
+    let mut weak = make_test_card("WEAK", "WeakDigimon");
+    weak.dp = Some(6000);
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX11-012")
+        .expect("EX11-012 in embedded pack")
+        .add_card(weak)
+        .add_card(make_test_card("DECOY-TRASH", "DecoyTrash"))
+        .memory(20)
+        .start();
+    let medusa = r.place_on_field(0, "EX11-012", None);
+    r.place_on_field(1, "WEAK", None);
+    seed_decoy_trash(&mut r);
+
+    fire_when_digivolving_on(&mut r, medusa);
+    assert!(r.pending_is_optional(), "the delete pick can be declined");
+    r.decline_optional_trigger().expect("decline the delete");
+    assert!(field_has(&r, 1, "WEAK"), "declined: nothing deleted");
+    assert!(r.pending_is_optional(), "the return pick can be declined");
+    r.decline_optional_trigger().expect("decline the return");
+    let _ = r.auto_resolve();
+
+    assert!(trash_has(&r, 1, "DECOY-TRASH"), "nothing returned");
+    assert!(
+        !r.game.players[1]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token),
+        "no return, so no Token"
     );
 }

@@ -88,7 +88,8 @@ fn ad1_014_has_printed_stats_and_alt_paths() {
     assert_eq!(card.card, "AD1-014");
     assert_eq!(card.name, "MetalGarurumon");
     assert_eq!(card.level, Some(6));
-    assert_eq!(card.color, vec![CompiledColor::Blue]);
+    // Printed Blue/Purple (official DB, cards.json colours [1, 6]).
+    assert_eq!(card.color, vec![CompiledColor::Blue, CompiledColor::Purple]);
     assert_eq!(card.cost, Some(12));
     assert_eq!(card.dp, Some(12000));
     for trait_name in ["Cyborg", "ADVENTURE", "Hero"] {

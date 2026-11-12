@@ -84,8 +84,12 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
+    # 'When this Digimon would leave': carrier only (DCGO EX9_032.cs
+    # CanTriggerWhenRemoveField(hashtable, card)); `replacement_subject_is_mine`/
+    # `kind` made it cover other permanents. Audit 2026-11-11.
     active_when:
       all_of:
+        - is_source: true
         - replacement_subject_is_mine: true
         - kind: digimon
         - none_of:

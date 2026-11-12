@@ -73,10 +73,16 @@ dual:
   option:
     use_cost: 5
     colors: [purple]
+    # <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+    # of your Digimon or Tamers in the battle area or breeding area meets
+    # the condition (an Option on the field does not count).
     use_requirement:
       any_field_permanent:
         of: you
-        trait_has: TS
+        any_of:
+          - kind: digimon
+          - kind: tamer
+        trait_has: "TS"
     effect_text: "<Use Req. ([TS] trait)> [Main] You may unsuspend 1 Digimon. Then, delete all of your opponent's unsuspended Digimon with the lowest DP. <Arts Digivolve>"
     security_text: ""
     keywords: [ArtsDigivolve]

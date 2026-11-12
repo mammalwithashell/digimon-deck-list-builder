@@ -865,6 +865,25 @@ pub fn try_run(
             }
             true
         }
+        CompiledStep::ReturnHandListToDeck { of, cards, to_top } => {
+            // G-DSL-BLIND-OPP-HAND-PLACE (BT13-033) — move exactly the bound
+            // hand cards out of `of`'s hand to the bottom (or top) of their
+            // owners' decks, in pick order. A return, not a trash: no
+            // `OnDiscardHand`. Each moved card is recorded so
+            // `effect_returned_any_card` sees it.
+            let player = resolve_player(ctx, *of);
+            let handles: Vec<_> = match resolve_binding_ref(cards, ctx, bindings) {
+                Some(ResolvedBinding::CardList(v)) => v,
+                Some(ResolvedBinding::Card(h)) => vec![h],
+                _ => Vec::new(),
+            };
+            for h in handles {
+                if ctx.return_hand_card_to_deck(player, h, !*to_top) {
+                    bindings.record_returned_to_deck(h);
+                }
+            }
+            true
+        }
         CompiledStep::MoveTrashCardToDeckTop { of, card } => {
             // G-ZONE-SELECTED-TRASH-TO-DECK-TOP — move exactly the one bound
             // trash card to the TOP of its owner's deck. `of` identifies whose

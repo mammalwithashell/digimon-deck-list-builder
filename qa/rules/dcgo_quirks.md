@@ -37,3 +37,12 @@ Older families documented elsewhere and not repeated here: `docs/DCGO_EXAM.md` "
 - **Rules:** official Q&A Q7335 ("X in its text" includes effects) and Q7336 ("[AA] or [BB] in its text" = either). Ours fires and trashes the card, and agrees with both rulings (expect_ruling 6/6).
 - **Exam signature:** one LEAD row at the trailing step: `p1.security` ours 4 / DCGO 5 and `p1.trash` one card longer in ours.
 - **Rows (2026-10-21):** EX13-041 `qa:Q7335`, `qa:Q7336`. (`qa:Q7339` on the same line is `stale`: the line does not exercise that ruling.)
+
+## Q-OPT-COUNTER-PER-TRIGGER-ARM: one [Once Per Turn] printed over two triggers counts each trigger separately
+
+- **DCGO:** a card whose one [Once Per Turn] effect has two trigger conditions registers each condition as its own `ActivateClass`, and the cap is that class's `timesPerTurn` counter. `SetHashString` is only an identity, so giving both arms the same hash string does not share the count. Medusamon BT21-029 (`BT21_029.cs` lines 162 and 210, both `SetHashString("PlayToken_BT21_029")`) can therefore play two [Petrification] Tokens in one turn.
+- **Rules:** CR 4.3 15-14-1 counts uses per effect, and official Q&A Q1550 rules that an effect triggered at a different timing is still the same effect, so it can be activated only once per turn. Ours shares one counter across the arms (DSL `opt_group`, d33e22596).
+- **Outcome:** changes the game (one extra Token for the opponent, and a security card when it is deleted).
+- **Exam signature:** a field or security count differing after the second arm's event in the same turn.
+- **Rows (2026-11-12):** BT21-029#effect#3. BT21-029#effect#4 runs the same line and its asserted field changed with it; its own witness (the security count) still matches DCGO.
+

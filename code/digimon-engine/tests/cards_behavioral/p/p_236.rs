@@ -15,9 +15,10 @@
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/P/Green/P_236.cs
 //!   - EffectTiming.None: UseRequirements(card, cardSource.EqualsTraits("Glowing
-//!     Dawn")). P-236 IS a [Glowing Dawn] card, so this is UNCONDITIONALLY true
-//!     → ignore color requirements always (authored as an unconditional
-//!     IgnoreColorRequirement flood gate, no active_when).
+//!     Dawn")). The condition is checked on your Digimon/Tamers in the battle
+//!     area or breeding area (CardEffectFactory.UseRequirements), so P-236
+//!     ignores its color requirement only with a [Glowing Dawn] Digimon or
+//!     Tamer (deck audit 2026-11-10; this used to be authored unconditional).
 //!   - OptionSkill: SimplifiedRevealDeckTopCardsAndSelect(3, bucket
 //!     EqualsTraits("Glowing Dawn"), maxCount 1, AddHand, remaining DeckBottom);
 //!     then PlaceDelayOptionCards (place self as a standard <Delay> Option).
@@ -248,6 +249,7 @@ fn p_236_main_adds_one_glowing_dawn_bottoms_the_other_two_then_parks_as_delay() 
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("P-236 YAML loads")
+        .add_card(gd_card("GD-FIELD"))
         .add_card(gd_card("GD-A"))
         .add_card(plain_card("PLAIN-B"))
         .add_card(plain_card("PLAIN-C"))
@@ -256,6 +258,8 @@ fn p_236_main_adds_one_glowing_dawn_bottoms_the_other_two_then_parks_as_delay() 
         .deck(1, &["PLAIN-B"; 3])
         .memory(10)
         .start();
+    // <Use Req.>: a [Glowing Dawn] Digimon waives the green requirement.
+    runner.place_on_field(0, "GD-FIELD", None);
     runner.game.enter_main_phase();
 
     // Top-3 (last pushed = top): PLAIN-C, PLAIN-B, GD-A.
@@ -335,6 +339,7 @@ fn p_236_main_with_no_glowing_dawn_revealed_bottoms_all_three_and_still_places()
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("P-236 YAML loads")
+        .add_card(gd_card("GD-FIELD"))
         .add_card(plain_card("PLAIN-A"))
         .add_card(plain_card("PLAIN-B"))
         .add_card(plain_card("PLAIN-C"))
@@ -343,6 +348,8 @@ fn p_236_main_with_no_glowing_dawn_revealed_bottoms_all_three_and_still_places()
         .deck(1, &["PLAIN-A"; 3])
         .memory(10)
         .start();
+    // <Use Req.>: a [Glowing Dawn] Digimon waives the green requirement.
+    runner.place_on_field(0, "GD-FIELD", None);
     runner.game.enter_main_phase();
     stack_deck_top(&mut runner, &["PLAIN-C", "PLAIN-B", "PLAIN-A"]);
     let deck_before = runner.game.players[0].deck.len();
@@ -479,4 +486,33 @@ fn p_236_security_places_self_in_battle_area_when_revealed() {
             "P-236 placed via [Security] must be a Delayed Option"
         );
     }
+}
+
+/// <Use Req.>: without a green source and without a [Glowing Dawn] Digimon or
+/// Tamer, P-236 can't be used (it used to be authored as always usable).
+#[test]
+fn p_236_needs_a_glowing_dawn_digimon_or_tamer_to_ignore_colour() {
+    use digimon_engine::action::{build_action_mask, space::PLAY_HAND_START};
+    let mut plain = plain_card("PLAIN-RED");
+    plain.colors = vec![CardColor::Red];
+    let mut gd = gd_card("GD-RED");
+    gd.colors = vec![CardColor::Red];
+    let build = |with_gd: bool| {
+        let mut r = DebugRunner::builder()
+            .dsl_card(CARD_ID)
+            .expect("P-236 YAML loads")
+            .add_card(plain.clone())
+            .add_card(gd.clone())
+            .hand(0, &[CARD_ID])
+            .deck(0, &["PLAIN-RED"; 3])
+            .deck(1, &["PLAIN-RED"; 3])
+            .memory(10)
+            .start();
+        r.skip_mulligan();
+        r.place_on_field(0, if with_gd { "GD-RED" } else { "PLAIN-RED" }, None);
+        r.game.enter_main_phase();
+        build_action_mask(&r.game, 0)[PLAY_HAND_START as usize]
+    };
+    assert_eq!(build(false), 0.0, "no green and no [Glowing Dawn] Digimon");
+    assert_eq!(build(true), 1.0, "a red [Glowing Dawn] Digimon waives the requirement");
 }

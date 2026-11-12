@@ -184,7 +184,8 @@ fn place_as_delay(
             owner: player,
             trash_on_turn: runner.game.turn_count + 1,
             trigger: DelayTrigger::EndOfYourNextTurn,
-            placed_on_turn: runner.game.turn_count,
+            // CR 16-17-3: placed on an earlier turn, so the <Delay> is usable now.
+            placed_on_turn: runner.game.turn_count.saturating_sub(1),
         };
     handle
 }

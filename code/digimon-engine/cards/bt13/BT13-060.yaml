@@ -7,12 +7,17 @@ color: [green]
 cost: 15
 dp: 15000
 traits: [Fairy]
+# Printed (official Bandai DB, data/card_bundles/BT13-060.md): standard circle
+# Green Lv.6 / cost 5 (any green Lv.6), and [Burst Digivolve] from a [Rosemon]
+# (name only -- DCGO BT13_060.cs digimonCondition) by returning 1 [Yoshino
+# Fujieda] to hand, cost 0; the top card is trashed at the end of the burst
+# turn (CR 8-3-2-1). Performed by the engine's hand-digivolve action.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 6, name_is: "Rosemon" }
+    from: { level_eq: 6, color_is: green }
     cost: 5
   - kind: burst_digivolve
-    from: { level_eq: 6, name_is: "Rosemon" }
+    from: { name_is: "Rosemon" }
     cost: 0
     extra_cost:
       - select_own_permanent:
@@ -21,7 +26,7 @@ alt_paths:
           prompt: "Return Yoshino Fujieda"
       - return_to_hand: { target: yoshi }
     on_burst_turn_end:
-      - trash_top_source: { target: self }
+      - trash_top_source: { target: carrier }
 
 effects:
   - when: when_digivolving

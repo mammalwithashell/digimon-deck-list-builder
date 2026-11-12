@@ -57,8 +57,10 @@ effects:
       - return_to_hand: { target: bounce_target }
       # "Then, by trashing the bottom face-down card from under any of your
       # Tamers, this Digimon unsuspends." The unsuspend is the tail of the
-      # trash cost — runs only if a face-down source was trashed.
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      # trash cost — runs only if a face-down source was trashed. The Tamer
+      # pick is declinable (DCGO BT25_027.cs SelectPermanentEffect canNoSelect:
+      # true); deck audit 2026-11-10: it was forced.
+      - trash_bottom_face_down_source_under_tamer: { of: you, optional: true }
       - unsuspend: { target: source }
 
   # ─── [All Turns][OPT] leave-prevention (main) ────────────────────────────
@@ -66,8 +68,12 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
+    # 'When this Digimon would leave': carrier only (DCGO BT25_027.cs
+    # CanTriggerWhenRemoveField(hashtable, card)); `replacement_subject_is_mine`
+    # made it cover other permanents. Audit 2026-11-11.
     active_when:
       all_of:
+        - is_source: true
         - replacement_subject_is_mine: true
     summary: "[All Turns][OPT] Trash FD under a Tamer so this Digimon doesn't leave"
     process:
@@ -80,8 +86,12 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
+    # 'When this Digimon with ... would leave': carrier only (DCGO BT25_027.cs
+    # CanTriggerWhenRemoveField(hashtable, card)); `replacement_subject_is_mine`
+    # made it cover other permanents. Audit 2026-11-11.
     active_when:
       all_of:
+        - is_source: true
         - replacement_subject_is_mine: true
         - any_of:
             - source_name_contains: Gaogamon

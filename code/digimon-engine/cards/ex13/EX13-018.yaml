@@ -91,6 +91,9 @@ effects:
             all_of:
               - kind: digimon
               - in_text_contains: Examon
+              # DCGO CanPlayCardTargetFrame onto this Digimon: only legal
+              # digivolutions are offered (audit 2026-11-10).
+              - can_digivolve_onto: source
           prompt: "Digivolve into a Digimon card with [Examon] in its text in your hand with the cost reduced by 2"
       - if:
           condition: { binding_present: examon_evo }

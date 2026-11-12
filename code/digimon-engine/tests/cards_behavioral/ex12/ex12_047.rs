@@ -369,3 +369,34 @@ fn ex12_047_ascension_first_makes_the_on_deletion_miss_timing() {
         "the [On Deletion]'s follow-on play must not happen either"
     );
 }
+
+/// "Then, by returning 2 cards from your opponent's trash ..." is optional
+/// (DCGO canNoSelect: true): declining returns nothing and gives no +6000 DP.
+#[test]
+fn ex12_047_return_two_can_be_declined() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-047 YAML loads")
+        .add_card(plain_digimon("LOW", CardColor::Red, 3, 1000))
+        .add_card(plain_digimon("TRASH-R", CardColor::Red, 3, 3000))
+        .add_card(plain_digimon("TRASH-Y", CardColor::Yellow, 3, 3000))
+        .start();
+    let amaterasumon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(1, "LOW", Some(0));
+    push_to_trash(&mut runner, 1, "TRASH-R");
+    push_to_trash(&mut runner, 1, "TRASH-Y");
+    let dp_before = runner.effective_dp(amaterasumon);
+
+    runner.fire_on_play(0, amaterasumon.index as usize);
+    resolve_first_action(&mut runner); // delete LOW
+    let pending = runner.pending_selection().expect("return-2 pick");
+    assert!(pending.is_optional, "the return-2 pick can be declined");
+    let player = pending.selecting_player;
+    runner
+        .execute_action(player, digimon_engine::action::space::PASS)
+        .expect("decline the return");
+    let _ = runner.auto_resolve();
+
+    assert_eq!(runner.game.players[1].trash.len(), 3, "nothing returned");
+    assert_eq!(runner.effective_dp(amaterasumon), dp_before, "no +6000 DP");
+}

@@ -52,7 +52,7 @@ class MlpActorWrapper(nn.Module):
     presence, not by exact output set.
     """
 
-    def __init__(self, policy):
+    def __init__(self, policy, value_activation: str = "identity"):
         super().__init__()
         self.features_extractor = policy.features_extractor
         self.pi_features_extractor = getattr(policy, "pi_features_extractor", None)
@@ -61,13 +61,18 @@ class MlpActorWrapper(nn.Module):
         self.mlp_extractor_value = policy.mlp_extractor.value_net
         self.action_net = policy.action_net
         self.value_net = policy.value_net
+        # Baked into the graph so native search reads a bounded value directly.
+        self.value_activation = value_activation
 
     def forward(self, obs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         pi_extractor = self.pi_features_extractor or self.features_extractor
         vf_extractor = self.vf_features_extractor or self.features_extractor
         latent_pi = self.mlp_extractor_policy(pi_extractor(obs))
         latent_vf = self.mlp_extractor_value(vf_extractor(obs))
-        return self.action_net(latent_pi), self.value_net(latent_vf)
+        value = self.value_net(latent_vf)
+        if self.value_activation == "tanh":
+            value = torch.tanh(value)
+        return self.action_net(latent_pi), value
 
 
 class LstmActorWrapper(nn.Module):
@@ -236,7 +241,9 @@ def export_mlp(sb3_zip_path: str, output_path: str, observation_layout=None) -> 
     policy = model.policy
     policy.eval()
 
-    wrapper = MlpActorWrapper(policy)
+    from digimon_gym.agents import value_activation
+    activation = value_activation.get(model)
+    wrapper = MlpActorWrapper(policy, activation)
     wrapper.eval()
 
     dummy_obs = torch.randn(1, tensor_size, dtype=torch.float32)
@@ -285,7 +292,18 @@ def export_mlp(sb3_zip_path: str, output_path: str, observation_layout=None) -> 
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
         meta["information"] = information
         meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
-    _verify_mlp(policy, wrapper, output_path, tensor_size)
+    if activation != "identity":
+        # Legacy exports carry no key, which consumers read as identity.
+        import onnx
+        graph = onnx.load(str(output_path))
+        prop = graph.metadata_props.add()
+        prop.key, prop.value = value_activation.ATTRIBUTE, activation
+        onnx.save(graph, str(output_path))
+        meta_path = Path(f"{output_path}.meta.json")
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        meta["value_activation"] = activation
+        meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    _verify_mlp(policy, wrapper, output_path, tensor_size, activation)
 
 
 def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) -> None:
@@ -363,7 +381,8 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
 # Verification helpers
 # ---------------------------------------------------------------------------
 
-def _verify_mlp(policy, wrapper, onnx_path: str, tensor_size: int = TENSOR_SIZE) -> None:
+def _verify_mlp(policy, wrapper, onnx_path: str, tensor_size: int = TENSOR_SIZE,
+                activation: str = "identity") -> None:
     """Verify ONNX output matches PyTorch output."""
     import onnxruntime as ort
 
@@ -388,7 +407,10 @@ def _verify_mlp(policy, wrapper, onnx_path: str, tensor_size: int = TENSOR_SIZE)
     # Cross-check the wrapper's value path against SB3's own predict_values —
     # guards against wiring the wrong extractor/latent into the value head.
     with torch.no_grad():
-        sb3_value = policy.predict_values(dummy_obs).numpy()
+        sb3_value = policy.predict_values(dummy_obs)
+        if activation == "tanh":
+            sb3_value = torch.tanh(sb3_value)
+        sb3_value = sb3_value.numpy()
 
     max_diff = np.max(np.abs(pt_logits - ort_logits))
     value_diff = np.max(np.abs(pt_value - ort_value))

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-09-05T15:27:04.108573100+00:00",
+  "last_updated": "2026-11-12T00:00:00+00:00",
   "clauses": {
     "BT21-029#effect#0": {
       "clause_id": "BT21-029#effect#0",
@@ -32,11 +32,14 @@
     "BT21-029#effect#3": {
       "clause_id": "BT21-029#effect#3",
       "card_id": "BT21-029",
-      "verdict": "confirmed",
+      "verdict": "diverged",
       "label": "Effect",
       "text_sha256": "1affe9724dd243388605a0fd54831396c0bf2096a2f1bc6b2e50e49ecc0d1ef5",
       "scenario_path": "qa/dcgo-exams/BT21/BT21-029-effect3.yaml",
-      "recorded_at": "2026-09-04T09:47:58.946425100+00:00"
+      "recorded_at": "2026-11-12T00:00:00+00:00",
+      "reason": "DIVERGED at the end state: p1.field holds 1 [Petrification] Token in ours, 2 in DCGO (the 2026-09-04 oracle run). Ours changed 2026-11-11 (d33e22596, DSL opt_group) to share one [Once Per Turn] across both trigger arms.",
+      "triage": "dcgo_quirk",
+      "citation": "CR 4.3 15-14-1 + official Q&A Q1550 (one effect has one [Once Per Turn] whatever timing triggers it); DCGO BT21_029.cs registers each arm as its own ActivateClass, whose timesPerTurn counter is per class (SetHashString is identity only). qa/rules/dcgo_quirks.md Q-OPT-COUNTER-PER-TRIGGER-ARM"
     },
     "BT21-029#effect#4": {
       "clause_id": "BT21-029#effect#4",

@@ -141,6 +141,25 @@ impl StepRuntime {
         self
     }
 
+    /// Pin the carrier to a permanent's stable battle identity: every run
+    /// rebinds `ctx.source_permanent` to wherever that permanent is now (or
+    /// `None` once it has left). Engine-scheduled pending processing that
+    /// targets a specific permanent (the [Burst Digivolve] turn-end trash,
+    /// CR 8-3-2-1) uses this instead of a slot index.
+    pub fn with_source_identity(mut self, identity: Option<(PlayerId, u64)>) -> Self {
+        self.source_identity = Some(identity);
+        self
+    }
+
+    /// Whether the rebound carrier must still physically hold the source
+    /// card. `false` for processing aimed at the permanent itself rather
+    /// than at its source card's effect (CR 8-3-2-1 trashes "the top card of
+    /// the digivolved Digimon's stack", whatever that card now is).
+    pub fn with_source_requires_membership(mut self, required: bool) -> Self {
+        self.source_requires_membership = Some(required);
+        self
+    }
+
     /// The effect category the clause started under, if captured.
     pub fn source_identity(&self) -> Option<(PlayerId, u64)> {
         self.source_identity.flatten()

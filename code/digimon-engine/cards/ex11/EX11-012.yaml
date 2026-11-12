@@ -18,36 +18,56 @@ effects:
   - kind: grant_keyword
     keyword: Progress
 
+  # DCGO EX11_012.cs SharedActivateCoroutine: the delete pick is optional
+  # (canNoSelect: true); THEN, independently, if the opponent's trash has a card
+  # the return pick is optional too (canNoSelect: true), and the Token is played
+  # only when a card was returned. So the Token line does not need a deletable
+  # target. Deck audit 2026-11-10: the clause used to require one, and the
+  # return was forced. The clause itself is NOT optional (DCGO isOptional:
+  # false) -- each pick is, so passing on the delete still offers the return.
   - when: [when_digivolving, end_of_attack]
-    optional: true
     condition:
-      any_permanent:
-        of: opponent
-        zone: [battle_area]
-        all_of:
-          - kind: digimon
-          - dp_lte: { formula: { source_dp: {} } }
-    summary: "Delete Digimon with DP <= this Digimon; return trash; play Petrification Token"
+      any_of:
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+        - count_gte:
+            filter: { of: opponent, zone: [trash] }
+            n: 1
+    summary: "You may delete Digimon with DP <= this Digimon; then by returning 1 opponent trash card, they play a Petrification Token"
     process:
       - select_opponent_permanent:
           bind_as: tgt
+          optional: true
+          # Declining the delete still continues to the return/Token half.
+          continue_on_decline: true
           filter:
             all_of:
               - kind: digimon
               - dp_lte: { formula: { source_dp: {} } }
-          prompt: "Delete 1 opponent Digimon with <= this Digimon's DP"
-      - delete_permanent: { target: tgt }
+          prompt: "You may delete 1 opponent Digimon with <= this Digimon's DP"
+      - if:
+          condition: { binding_present: tgt }
+          then:
+            - delete_permanent: { target: tgt }
       - select_trash:
           of: opponent
           bind_as: r
+          optional: true
           filter: {}
-          prompt: "Return 1 card from opponent's trash to bottom of deck"
-      - return_trash_list_to_deck_bottom:
-          of: opponent
-          cards: r
-      - play_token:
-          controller: opponent
-          token_name: petrification
+          prompt: "You may return 1 card from your opponent's trash to the bottom of the deck so they play a Petrification Token"
+      - if:
+          condition: { binding_present: r }
+          then:
+            - return_trash_list_to_deck_bottom:
+                of: opponent
+                cards: r
+            - play_token:
+                controller: opponent
+                token_name: petrification
 
   - kind: replacement
     trigger: when_would_leave_battle_area

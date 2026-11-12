@@ -545,19 +545,14 @@ fn inherited_your_turn_gate_allows_option_security_on_real_off_turn_attack() {
     let mut r = security_runner(0, "EX1-072");
     r.place_stack(0, &[ID, "OFF-TURN-HOST"]);
     r.game.tick_declarative_effects();
+    let security_before = r.security_count(1);
     main_action(&mut r, 0, PASS);
     assert_eq!(r.turn_player(), 1);
-    // This fixture has no Digi-Eggs or breeding permanent, so the turn machine
-    // automatically enters Main and parks on the host's mandatory effect attack.
-    assert_eq!(r.current_phase(), GamePhase::SelectTarget);
-    let p = r
-        .pending_selection()
-        .expect("off-turn host chooses its attack target");
-    assert_eq!(p.selecting_player, 0);
-    assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 0.0);
-    choose(&mut r, encode_attack(0, SECURITY_TARGET));
-    assert!(r.pending_selection().is_none());
-    assert!(option_in_hand(&r, 1));
-    assert!(r.game.option_use_blocked(0));
-    assert_eq!(r.security_count(1), 3);
+    // CR 11-1-2: "Only the turn player can attack." No card makes a Digimon
+    // attack outside its controller's turn (EX3-024 forces the opponent's
+    // Digimon on the opponent's own Main Phase), so an effect attack by the
+    // non-turn player is refused (game audit 2026-11-11).
+    assert_ne!(r.current_phase(), GamePhase::SelectTarget);
+    assert!(r.pending_selection().is_none_or(|p| p.selecting_player != 0));
+    assert_eq!(r.security_count(1), security_before, "no off-turn attack, no security check");
 }

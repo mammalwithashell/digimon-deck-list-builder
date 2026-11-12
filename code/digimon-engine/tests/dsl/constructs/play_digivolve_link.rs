@@ -1433,45 +1433,21 @@ effects:
         no_prompt(&r);
     }
     #[test]
-    fn play_or_use_from_hand_dual_two_mandatory_faces() {
-        for face in 0..2 {
-            let mut r = runner(HAND, "H-DUAL");
-            pick(&mut r, PLAY_HAND_START);
-            prompt(&r, &[HAND_EFFECT_START, HAND_EFFECT_START + 1], false);
-            let p = r.game.pending_selection.as_ref().unwrap();
-            assert_eq!(p.kind, SelectionKind::EffectChoice);
-            let labels: Vec<_> = p
-                .effect_choices
-                .as_ref()
-                .unwrap()
-                .iter()
-                .map(|e| e.label.as_str())
-                .collect();
-            assert_eq!(labels, ["Play as Digimon", "Use as Option"]);
-            pick(&mut r, HAND_EFFECT_START + face);
-            assert_eq!(r.game.memory, 8);
-            if face == 0 {
-                assert_eq!(r.game.players[0].battle_area.len(), 2);
-                assert_eq!(
-                    top(
-                        &r,
-                        PermanentHandle {
-                            player: 0,
-                            index: 1
-                        }
-                    ),
-                    "H-DUAL"
-                );
-            } else {
-                assert_eq!(r.game.players[0].battle_area.len(), 1);
-                assert_eq!(
-                    r.game.players[0].trash[0].card_id(&r.game.card_data),
-                    "H-DUAL"
-                );
-                assert_eq!(r.game.players[0].hand.len(), 3);
-            }
-            no_prompt(&r);
-        }
+    fn play_or_use_from_hand_dual_is_used_as_an_option() {
+        // A DUAL card prints "Can't play to the field." (CR 4-6-2): "play or
+        // use" uses it, with no "Play as Digimon" face (DCGO EX12_013 /
+        // BT26_049 / ST24_06). Game audit 2026-11-11.
+        let mut r = runner(HAND, "H-DUAL");
+        pick(&mut r, PLAY_HAND_START);
+        assert_eq!(r.game.memory, 8);
+        assert_eq!(r.game.players[0].battle_area.len(), 1, "not played");
+        assert_eq!(
+            r.game.players[0].trash[0].card_id(&r.game.card_data),
+            "H-DUAL",
+            "used as an Option, then trashed"
+        );
+        assert_eq!(r.game.players[0].hand.len(), 3);
+        no_prompt(&r);
     }
 }
 const ROUTE: &str = r#"

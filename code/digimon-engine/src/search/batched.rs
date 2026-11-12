@@ -100,7 +100,7 @@ impl Tree {
                     });
                     return Some(vec![request]);
                 }
-                let edge = select_edge(&self.arena[cur], self.config.c_puct);
+                let edge = select_edge(&self.arena[cur], self.config.c_puct, self.config.unvisited_q);
                 path.push((cur, edge));
                 match self.arena[cur].edges[edge].child {
                     Some(child) => cur = child,

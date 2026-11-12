@@ -47,6 +47,15 @@ use digimon_engine::selection::{OptionPlayResult, SelectionKind};
 
 const CARD_ID: &str = "BT25-043";
 
+/// A plain Option for the defender's security. Habakirimon itself is a DUAL
+/// card, which battles from security (4-6-1, 13-1-7), so these attack-flow
+/// tests must not check one.
+fn security_filler() -> CardData {
+    let mut c = make_test_card("SEC-FILL", "Security Filler");
+    c.card_kind = CardKind::Option;
+    c
+}
+
 fn base() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -172,7 +181,8 @@ fn bt25_043_recovery_then_trash_own_unsuspends() {
         .deck(0, &["BT25-043"; 10])
         .deck(1, &["BT25-043"; 10])
         .security(0, &["BT25-043"; 5])
-        .security(1, &["BT25-043"; 1])
+        .add_card(security_filler())
+        .security(1, &["SEC-FILL"; 1])
         .memory(8)
         .start();
 
@@ -203,7 +213,8 @@ fn bt25_043_decline_trash_leaves_suspended() {
         .deck(0, &["BT25-043"; 10])
         .deck(1, &["BT25-043"; 10])
         .security(0, &["BT25-043"; 5])
-        .security(1, &["BT25-043"; 1])
+        .add_card(security_filler())
+        .security(1, &["SEC-FILL"; 1])
         .memory(8)
         .start();
 

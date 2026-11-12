@@ -26,9 +26,8 @@
 //!   Positive fire, negative (host-owner mismatch / different source card /
 //!   no opponent Digimon), and no-decline coverage (EX7_070.cs:18 isOptional
 //!   = false; printed text has no "may"; <De-Digivolve> is Mandatory, 16-12).
-//! - Clause 2 (flood_gate): positive-gate ignore-color while a [Three
-//!   Musketeers] Digimon is on the field (vs BT19-093's negative-gate
-//!   sibling), scoped to this card only via `card_number_is`.
+//! - Clause 2 (use_requirement): ignore colour while a [Three Musketeers]
+//!   Digimon is on the field, checked when the Option is used from hand.
 //! - Clause 3 ([Main], main_from_hand): two INDEPENDENTLY-gated mandatory
 //!   picks — delete opponent's lowest-play-cost Digimon, and place self as
 //!   bottom digivolution source of 1 of the controller's [Three Musketeers]
@@ -159,7 +158,8 @@ fn ex7_070_compiles_with_printed_stats() {
 }
 
 /// EX7-070 must have exactly 3 triggered clauses (inherited self-trash
-/// De-Digivolve, [Main], inherited [Security]) plus 1 declarative flood_gate.
+/// De-Digivolve, [Main], inherited [Security]) and no declarative clause: the
+/// colour bypass is the card-level `use_requirement` (audit 2026-11-10).
 #[test]
 fn ex7_070_has_expected_clause_shape() {
     let runner = base_builder().start();
@@ -183,8 +183,8 @@ fn ex7_070_has_expected_clause_shape() {
         "expected 3 triggered clauses (self-trash DeDigivolve, Main, Security)"
     );
     assert_eq!(
-        declarative_count, 1,
-        "expected 1 declarative clause (ignore-color flood_gate)"
+        declarative_count, 0,
+        "the colour bypass is a use_requirement, not a declarative flood_gate"
     );
 }
 
@@ -213,24 +213,20 @@ fn ex7_070_clause1_is_inherited_mandatory_source_trash() {
     );
 }
 
-/// Clause 2 is a flood_gate declarative granting IgnoreColorRequirement.
+/// Clause 2 is the card-level `use_requirement` (P-180 / EX7-071 shape).
 #[test]
-fn ex7_070_clause2_is_ignore_color_flood_gate() {
+fn ex7_070_clause2_is_a_three_musketeers_use_requirement() {
     let runner = base_builder().start();
     let compiled = runner
         .compiled_card(CARD_ID)
         .expect("EX7-070 in compiled cards");
-
-    let found = compiled.effects.iter().any(|c| {
-        matches!(
-            c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { modifier, .. })
-                if modifier.contains("IgnoreColorRequirement")
-        )
-    });
+    let req = compiled
+        .use_requirement
+        .as_ref()
+        .expect("EX7-070 must carry a use_requirement");
     assert!(
-        found,
-        "Clause 2 must be a flood_gate granting IgnoreColorRequirement"
+        format!("{req:?}").contains("Three Musketeers"),
+        "use_requirement must require a [Three Musketeers] Digimon; got {req:?}"
     );
 }
 
@@ -471,62 +467,48 @@ fn ex7_070_source_trash_no_fire_when_host_owned_by_opponent() {
 // SECTION 3 — Clause 2: ignore-color flood_gate
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// POSITIVE: with a [Three Musketeers] Digimon on the field, EX7-070 (a
-/// Black card) becomes playable ignoring color — verified via the compiled
-/// flood_gate's active_when predicate matching the board state indirectly
-/// through a structural check (the runtime color-mask enforcement itself is
-/// a separate, already-covered engine concern — G-IGNORE-COLOR-MASK).
+/// Red [Three Musketeers] Digimon, no black anywhere: the printed bypass lets
+/// Der Blitz (black) be used from hand. The old card-targeted flood_gate was
+/// never read by the hand-use colour check, so this was illegal before the
+/// 2026-11-10 fix (user-confirmed).
 #[test]
-fn ex7_070_flood_gate_scoped_to_this_card_only() {
-    let runner = base_builder().start();
-    let compiled = runner
-        .compiled_card(CARD_ID)
-        .expect("EX7-070 in compiled cards");
-
-    let target = compiled
-        .effects
-        .iter()
-        .find_map(|c| match c {
-            CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
-                target, ..
-            }) => Some(target),
-            _ => None,
-        })
-        .expect("flood_gate clause must exist");
-
-    // The target predicate must scope the bypass to this card's own number.
-    let target_debug = format!("{target:?}");
-    assert!(
-        target_debug.contains("EX7-070"),
-        "flood_gate target must scope to EX7-070 only; got {target_debug}"
+fn ex7_070_three_musketeers_digimon_lets_it_be_used_without_black() {
+    use digimon_engine::action::{build_action_mask, space::PLAY_HAND_START};
+    let mut tm = tm_digimon("TM-RED", 4, 5000);
+    tm.colors = vec![CardColor::Red];
+    let mut runner = base_builder()
+        .add_card(tm)
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
+    runner.skip_mulligan();
+    runner.place_on_field(0, "TM-RED", None);
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0,
+        "a [Three Musketeers] Digimon waives Der Blitz's colour requirement"
     );
 }
 
-/// The flood_gate's active_when must require a [Three Musketeers] Digimon —
-/// checked structurally since active_when is a compiled predicate tree.
+/// Without a [Three Musketeers] Digimon the normal black requirement applies.
 #[test]
-fn ex7_070_flood_gate_requires_three_musketeers_digimon() {
-    let runner = base_builder().start();
-    let compiled = runner
-        .compiled_card(CARD_ID)
-        .expect("EX7-070 in compiled cards");
-
-    let active_when = compiled
-        .effects
-        .iter()
-        .find_map(|c| match c {
-            CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
-                active_when,
-                ..
-            }) => Some(active_when),
-            _ => None,
-        })
-        .expect("flood_gate clause must exist");
-
-    let active_when_debug = format!("{active_when:?}");
-    assert!(
-        active_when_debug.contains("Three Musketeers"),
-        "flood_gate active_when must require a [Three Musketeers] Digimon; got {active_when_debug}"
+fn ex7_070_without_three_musketeers_digimon_needs_black() {
+    use digimon_engine::action::{build_action_mask, space::PLAY_HAND_START};
+    let mut red = plain_digimon("PLAIN-RED", 4, 5000);
+    red.colors = vec![CardColor::Red];
+    let mut runner = base_builder()
+        .add_card(red)
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
+    runner.skip_mulligan();
+    runner.place_on_field(0, "PLAIN-RED", None);
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        0.0,
+        "no black and no [Three Musketeers] Digimon: Der Blitz can't be used"
     );
 }
 

@@ -159,7 +159,11 @@ effects:
   #          do we prompt for the hand evolution card and digivolve.
   #          - select_hand: Reptile/Dragonkin Digimon card in hand.
   #          - effect_initiated_digivolve: cost 0 (DCGO payCost: false),
-  #            ignore_requirements: true.
+  #            digivolution requirements KEPT (DCGO DigivolveIntoHandOrTrashCard
+  #            passes no ignore flag, BT21_093.cs:360-366). The hand pick only
+  #            offers cards that can digivolve onto the chosen Digimon. Deck
+  #            audit 2026-11-10: it ignored requirements (a Lv.3 could become
+  #            Medusamon).
   - when: on_opponent_security_removed
     active_when: { all_turns: true }
     summary: "[All Turns]<Delay> By trashing this card, Reptile/Dragonkin may free-digivolve"
@@ -206,13 +210,14 @@ effects:
                     - any_of:
                         - trait_has: Reptile
                         - trait_has: Dragonkin
+                    - can_digivolve_onto: evo_target
                 prompt: "Choose a Reptile or Dragonkin card to digivolve into"
             # Free digivolve (DCGO payCost: false).
             - effect_initiated_digivolve:
                 target: evo_target
                 from_hand: evo_card
                 cost: 0
-                ignore_requirements: true
+                ignore_requirements: false
 
   # ─── Clause 4: [Security] ───────────────────────────────────────────────────
   #

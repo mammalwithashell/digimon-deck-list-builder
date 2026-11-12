@@ -101,6 +101,9 @@ effects:
           of: you
           zone: [hand]
           trait_has: "DATA SQUAD"
+          # A Digi-Egg has no play cost and can't be played (CR 7-1-1; DCGO
+          # HasPlayCost). Rose Rave audit 2026-11-11.
+          not: { kind: digi_egg }
           play_or_use_cost_lte:
             formula:
               base: 3
@@ -125,6 +128,7 @@ effects:
           filter:
             all_of:
               - trait_has: "DATA SQUAD"
+              - not: { kind: digi_egg }
               - play_or_use_cost_lte:
                   formula:
                     base: 3

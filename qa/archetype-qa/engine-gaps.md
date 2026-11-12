@@ -1171,7 +1171,9 @@ Likely a shared substrate need for every "all [opp] Digimon get ±DP until [turn
 mass-buff/debuff card, not just EX4-074.
 
 
-### §Burst-Digivolve `on_burst_turn_end` teardown never executed (G-BURST-ON-TURN-END-NOT-EXECUTED) — OPEN
+### §Burst-Digivolve `on_burst_turn_end` teardown never executed (G-BURST-ON-TURN-END-NOT-EXECUTED) — RESOLVED (2026-11-11)
+
+**Resolved 2026-11-11:** burst digivolve is now a real hand-digivolve route with the Tamer return and the turn-end trash. Details and tests: `docs/RUST_ENGINE_GAPS.md` `G-BURST-DIGIVOLVE-NOT-OFFERED`. Judge-quiz Q8 is still ignored: it needs the Comet Hammer + DP-less rules-check scenario written, not more burst substrate.
 
 **Surfaced 2026-05-30** (judge-quiz Q8 attempt). The DSL `on_burst_turn_end:` alt-path step
 list (Burst Mode's "At the end of the burst digivolution turn, trash this Digimon's top

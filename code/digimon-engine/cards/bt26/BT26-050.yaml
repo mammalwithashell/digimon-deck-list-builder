@@ -63,9 +63,15 @@ dual:
   option:
     use_cost: 6
     colors: [green]
+    # <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
+    # of your Digimon or Tamers in the battle area or breeding area meets
+    # the condition (an Option on the field does not count).
     use_requirement:
       any_field_permanent:
         of: you
+        any_of:
+          - kind: digimon
+          - kind: tamer
         trait_has: "DATA SQUAD"
     effect_text: "<Use Req. ([DATA SQUAD] trait)> [Main] Suspend 2 of your opponent's Digimon or Tamers. Then, until their turn ends, none of their suspended Digimon or Tamers can digivolve or unsuspend. <Arts Digivolve>"
     security_text: ""
@@ -88,7 +94,7 @@ alt_paths:
           prompt: "Return [Yoshino Fujieda] to the hand"
       - return_to_hand: { target: yoshino }
     on_burst_turn_end:
-      - trash_top_source: { target: self }
+      - trash_top_source: { target: carrier }
 
 effects:
   # ─── [When Digivolving] may suspend 2 Digimon/Tamers (either side); then 2

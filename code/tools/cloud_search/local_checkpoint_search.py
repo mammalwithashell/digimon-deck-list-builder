@@ -30,13 +30,22 @@ def read(path):
     return json.loads(Path(path).read_text(encoding='utf-8-sig'))
 
 
-def make_schedule(decks, seed=8326102900):
+SCHEDULES = ('with_mirrors', 'no_mirrors')
+
+
+def make_schedule(decks, seed=8326102900, schedule='with_mirrors'):
     """130 four-game blocks: roles and openers balanced within every block.
 
 Ten cyclic rounds give each archetype twenty block endpoints. Each endpoint
 plays twice (one first, one second), including both endpoints of exact mirrors.
 All unordered archetype matchups occur; this is not a uniform 13x13 matrix.
+
+``with_mirrors`` (the historical default) uses rounds 0-9, so round 0 is 13
+mirror blocks. ``no_mirrors`` uses rounds 1-10: no mirrors, and round 10
+repeats round 3's matchups with the next exact-list variants.
 """
+    if schedule not in SCHEDULES:
+        raise ValueError(f'Unknown schedule {schedule!r}')
     groups = defaultdict(list)
     for index, deck in enumerate(decks):
         groups[deck['name']].append(index)
@@ -47,7 +56,7 @@ All unordered archetype matchups occur; this is not a uniform 13x13 matrix.
         raise ValueError('Schedule base seed must be even')
     seen = Counter()
     result = []
-    for round_index in range(10):
+    for round_index in (range(10) if schedule == 'with_mirrors' else range(1, 11)):
         for index, a in enumerate(names):
             b = names[(index + round_index) % len(names)]
             low, high = sorted((a, b))
@@ -118,7 +127,12 @@ def prepare(root, binary, workers):
     candidate=protocol['candidate']; opponent=protocol['opponent']
     metadata=read(inputs/(candidate['model']+'.meta.json'))
     other_metadata=read(inputs/(opponent['model']+'.meta.json'))
-    if metadata != other_metadata:
+    # Value-head activation/offset are deliberate experimental differences
+    # (baked into the ONNX graph) and `information` is training provenance;
+    # every observation/action/value contract field must match.
+    ignored = {'value_activation', 'value_offset', 'information'}
+    if ({k: v for k, v in metadata.items() if k not in ignored}
+            != {k: v for k, v in other_metadata.items() if k not in ignored}):
         raise ValueError('Candidate/opponent observation and value contracts differ')
     if metadata['value_semantics']!='terminal_outcome' or metadata['value_head']!='inline':
         raise ValueError('Expected inline terminal-outcome model')
@@ -126,7 +140,8 @@ def prepare(root, binary, workers):
     decks=[dict(name=d['archetype'],cards=d['card_ids'],source_deck_id=d['deck_id'])
            for d in sorted(snapshot['decks'],key=lambda d:(d['archetype'],d['deck_id']))]
     if len(decks)!=21: raise ValueError('Expected frozen 21-list pool')
-    scheduled=make_schedule(decks,seed=protocol['seed'])
+    schedule_kind=protocol.get('schedule','with_mirrors')
+    scheduled=make_schedule(decks,seed=protocol['seed'],schedule=schedule_kind)
     for row in scheduled:
         row['candidate']=candidate['settings']; row['opponent']=opponent['settings']
     if {i for r in scheduled for i in r['deck_indices']}!=set(range(21)):
@@ -151,7 +166,7 @@ def prepare(root, binary, workers):
         source_commit=source['controller_commit'],model_contract=metadata,
         native_harness_sha256=sha256(native),files=files,
         python_sources={str(p):sha256(p) for p in runtime_sources()},
-        regime='open_decklist_exact_composition',evaluation_root_noise=0,
+        regime='open_decklist_exact_composition',evaluation_root_noise=0,schedule=schedule_kind,
         full_search_fraction=1,batch_size=4,candidate=candidate['settings'],opponent=opponent['settings'],
         training=False,automatic_promotion=False,cloud_mutations=False,
         cohort='Same 21 training lists; 40 candidate appearances per archetype, 20 per opening order',

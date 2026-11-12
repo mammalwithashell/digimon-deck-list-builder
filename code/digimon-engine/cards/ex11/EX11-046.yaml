@@ -183,16 +183,33 @@ effects:
           filter: { kind: digimon }
           selector: highest_play_cost
           prompt: "Choose 1 of your opponent's highest play cost Digimon to keep"
-      - for_each:
-          over:
-            all_of:
-              - of: opponent
-              - zone: [battle_area]
-              - kind: digimon
-              - not_in_binding: kept
-          bind_as: victim
-          body:
-            - delete_permanent: { target: victim }
+      # DCGO EX11_046.cs:84-86 + IsMaxCost: a Digimon with no play cost (Token,
+      # DUAL card) is never "highest play cost"; when none can be kept, ALL of
+      # their Digimon are deleted (official Q&A agrees). Deck audit 2026-11-10:
+      # with no candidate nothing was deleted.
+      - if:
+          condition: { binding_present: kept }
+          then:
+            - for_each:
+                over:
+                  all_of:
+                    - of: opponent
+                    - zone: [battle_area]
+                    - kind: digimon
+                    - not_in_binding: kept
+                bind_as: victim
+                body:
+                  - delete_permanent: { target: victim }
+          else:
+            - for_each:
+                over:
+                  all_of:
+                    - of: opponent
+                    - zone: [battle_area]
+                    - kind: digimon
+                bind_as: victim
+                body:
+                  - delete_permanent: { target: victim }
       - if:
           condition:
             self_source_count:

@@ -4018,9 +4018,14 @@ fn install_count_capped_step(
     let prefix_for_decline = material_prefix.clone();
 
     game.current_phase = GamePhase::SelectBudgeted;
+    // Hand/Trash indices refer to `of_player`'s zone; record it when that is
+    // not the chooser's own zone (BT13-033: the attacker's controller picks
+    // from the OPPONENT's hand), so UI/replay resolve the right zone.
+    let zone_owner = (!matches!(zone, CountCappedZone::Material(_)) && of_player != selecting_player)
+        .then_some(of_player);
     game.pending_selection = Some(PendingSelection {
         card_choice: owner,
-        zone_owner: None,
+        zone_owner,
         kind: SelectionKind::CountCappedMultiSelect {
             min: effective_min,
             max,

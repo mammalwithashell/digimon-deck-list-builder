@@ -704,6 +704,7 @@ mod tests {
                     timing_conditions: Vec::new(),
                     optional: false,
                     outer_prompt: false,
+                    opt_group: None,
                     once_per_turn: false,
                     max_per_turn: None,
                     process: vec![CompiledStep::RawRust {

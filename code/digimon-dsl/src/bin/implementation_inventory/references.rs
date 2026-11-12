@@ -918,6 +918,7 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
             outer_prompt,
             once_per_turn,
             max_per_turn,
+            opt_group,
             process,
             trigger_if,
         } = self;
@@ -944,6 +945,7 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
         outer_prompt.walk(c, &format!("{}.outer_prompt", path), "UNCLASSIFIED_STRING");
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         max_per_turn.walk(c, &format!("{}.max_per_turn", path), "UNCLASSIFIED_STRING");
+        opt_group.walk(c, &format!("{}.opt_group", path), "UNCLASSIFIED_STRING");
         process.walk(c, &format!("{}.process", path), "UNCLASSIFIED_STRING");
             trigger_if.walk(c, &format!("{}.trigger_if", path), "UNCLASSIFIED_STRING");
 }
@@ -3722,6 +3724,7 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
             outer_prompt,
             once_per_turn,
             max_per_turn,
+            opt_group,
             process,
             summary,
             summary_key,
@@ -3740,6 +3743,7 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
         outer_prompt.walk(c, &format!("{}.outer_prompt", path), "UNCLASSIFIED_STRING");
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         max_per_turn.walk(c, &format!("{}.max_per_turn", path), "UNCLASSIFIED_STRING");
+        opt_group.walk(c, &format!("{}.opt_group", path), "UNCLASSIFIED_STRING");
         process.walk(c, &format!("{}.process", path), "UNCLASSIFIED_STRING");
         summary.walk(
             c,

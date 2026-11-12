@@ -19,7 +19,7 @@ use crate::trigger_context::AttackTargetChangeReason;
 
 #[path = "predicate_dna.rs"]
 mod dna;
-use dna::dna_hand_candidate;
+use dna::{dna_field_pair, dna_hand_candidate};
 
 /// The subject a predicate is applied to.
 #[derive(Debug, Clone, Copy)]
@@ -211,6 +211,11 @@ fn eval_predicate_ref_known(
     }
     if let Some(spec) = &pred.dna_hand_candidate {
         if !dna_hand_candidate(spec, rctx, original_subject, bindings) {
+            return false;
+        }
+    }
+    if let Some(spec) = &pred.dna_field_pair {
+        if !dna_field_pair(spec, rctx, original_subject, bindings) {
             return false;
         }
     }
@@ -1697,6 +1702,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.color_matches_any_field_digimon.is_none()
         && pred.color_matches_binding.is_none()
         && pred.color_matches_returned_card.is_none()
+        && pred.name_matches_returned_card.is_none()
         && pred.color_matches_own_source_stack.is_none()
         && pred.trait_has.is_none()
         && pred.trait_contains.is_none()
@@ -3354,7 +3360,7 @@ printed_card_information_constraints!(
     kind, level_eq, level_eq_binding, level_lte_binding, level_gte_binding,
     level_lte, level_gte, level_matches_aggregate, color_is, color_only,
     color_matches_any_field_digimon, color_matches_binding, color_matches_returned_card,
-    color_matches_own_source_stack, trait_has, trait_contains, form_is, attribute_is,
+    name_matches_returned_card, color_matches_own_source_stack, trait_has, trait_contains, form_is, attribute_is,
     name_is, name_contains, name_in, name_not_shared_by_field_digimon,
     name_not_shared_by_field_tamer, name_not_in_binding, card_number_is,
     effect_text_contains, in_text_contains, printed_keyword, has_keyword,
@@ -3411,9 +3417,15 @@ fn eval_card_fields(
     let option_ref = data.dual.is_some() && dual_ref == DualRef::Option;
     let ref_level = if option_ref { None } else { data.level };
     let ref_dp = if option_ref { None } else { data.dp };
-    let ref_play_cost: i32 = match (&data.dual, option_ref) {
-        (Some(d), true) => effective_use_cost(rctx, card).unwrap_or(i32::from(d.option.use_cost)),
-        _ => i32::from(data.play_cost),
+    // A DUAL referenced as a Digimon has NO play cost (it prints "Play cost:
+    // D" / "Can't play to the field."; DCGO `HasPlayCost` is false), so no
+    // play-cost comparison matches it. Game audit 2026-11-11: the stored use
+    // cost was read as a play cost (Minervamon BT24-041 "play cost 5 or
+    // lower" picked Jupitermon BT26-033).
+    let ref_play_cost: Option<i32> = match (&data.dual, option_ref) {
+        (Some(d), true) => Some(effective_use_cost(rctx, card).unwrap_or(i32::from(d.option.use_cost))),
+        (Some(_), false) => None,
+        _ => Some(i32::from(data.play_cost)),
     };
     let ref_colors: &[CardColor] = match (&data.dual, option_ref) {
         (Some(d), true) => d.option.colors.as_slice(),
@@ -3582,6 +3594,18 @@ fn eval_card_fields(
     {
         return false;
     }
+    if let Some(want) = pred.name_matches_returned_card {
+        // G-DSL-NAME-MATCHES-RETURNED-CARD — printed name + static aliases +
+        // physical runtime aliases of the candidate card.
+        let mut names = vec![data.card_name.clone()];
+        names.extend(data.also_treated_as.iter().cloned());
+        if let Some(source) = rctx.game.card_source_for_handle(card) {
+            names.extend(source.also_treated_as.iter().cloned());
+        }
+        if card_shares_name_with_returned_card(rctx, bindings, &names) != want {
+            return false;
+        }
+    }
     if pred.color_matches_own_source_stack.is_some()
         && !card_shares_color_with_own_source_stack(rctx, ref_colors)
     {
@@ -3749,17 +3773,17 @@ fn eval_card_fields(
         }
     }
     if let Some(cap) = &pred.play_cost_lte {
-        if ref_play_cost > eval_int_constraint(cap, rctx, formula_target, bindings) {
+        if ref_play_cost.is_none_or(|c| c > eval_int_constraint(cap, rctx, formula_target, bindings)) {
             return false;
         }
     }
     if let Some(floor) = &pred.play_cost_gte {
-        if ref_play_cost < eval_int_constraint(floor, rctx, formula_target, bindings) {
+        if ref_play_cost.is_none_or(|c| c < eval_int_constraint(floor, rctx, formula_target, bindings)) {
             return false;
         }
     }
     if let Some(want) = &pred.play_cost_eq {
-        if ref_play_cost != eval_int_constraint(want, rctx, formula_target, bindings) {
+        if ref_play_cost.is_none_or(|c| c != eval_int_constraint(want, rctx, formula_target, bindings)) {
             return false;
         }
     }
@@ -3772,7 +3796,9 @@ fn eval_card_fields(
             return false;
         };
         let threshold = reference + i32::from(spec.offset);
-        let candidate = ref_play_cost;
+        let Some(candidate) = ref_play_cost else {
+            return false;
+        };
         let ok = match spec.op {
             digimon_dsl::compiled::CompiledComparatorOp::Eq => candidate == threshold,
             digimon_dsl::compiled::CompiledComparatorOp::Gte => candidate >= threshold,
@@ -4365,6 +4391,30 @@ fn card_shares_color_with_returned_card(
     })
 }
 
+/// G-DSL-NAME-MATCHES-RETURNED-CARD — true when any of `candidate_names`
+/// equals a card name (printed or "also treated as") of ANY card recorded in
+/// this effect's `returned_to_deck` result log. Name sibling of
+/// `card_shares_color_with_returned_card` (DCGO `HasSameCardName`). Driver:
+/// BT13-092 Ravemon: Burst Mode [When Attacking].
+fn card_shares_name_with_returned_card(
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+    candidate_names: &[String],
+) -> bool {
+    let Some(bindings) = bindings else {
+        return false;
+    };
+    let returned = &bindings.result_log().returned_to_deck;
+    returned.iter().any(|&handle| {
+        let Some(returned_data) = rctx.game.card_data_for_handle(handle) else {
+            return false;
+        };
+        std::iter::once(&returned_data.card_name)
+            .chain(returned_data.also_treated_as.iter())
+            .any(|name| candidate_names.iter().any(|c| c == name))
+    })
+}
+
 fn eval_permanent_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
@@ -4521,6 +4571,14 @@ fn eval_permanent_fields(
     {
         return false;
     }
+    // G-DSL-NAME-MATCHES-RETURNED-CARD — a field permanent's names are its
+    // synthesized top-card names (base-name overlays applied).
+    let has_name_returned_comparison = pred.name_matches_returned_card.is_some();
+    if let Some(want) = pred.name_matches_returned_card {
+        if card_shares_name_with_returned_card(rctx, bindings, &synth_identity.card_names) != want {
+            return false;
+        }
+    }
     let has_dp_constraint = pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some();
     // `kind` for a field permanent is authoritatively checked below against
     // `synth_identity.kind` via `kind_matches_field` (which treats a battle-area
@@ -4546,6 +4604,7 @@ fn eval_permanent_fields(
         pred.self_color_count_gte.is_some() || pred.self_color_count_lte.is_some();
     let delegated_pred_storage;
     let delegated_pred = if has_color_comparison
+        || has_name_returned_comparison
         || has_kind_constraint
         || level_eq_dna_match
         || trait_overlay_match
@@ -4565,6 +4624,7 @@ fn eval_permanent_fields(
         p.color_matches_any_field_digimon = None;
         p.color_matches_binding = None;
         p.color_matches_returned_card = None;
+        p.name_matches_returned_card = None;
         p.color_matches_own_source_stack = None;
         if has_kind_constraint {
             // Authoritative permanent-kind check is `kind_matches_field`

@@ -35,8 +35,12 @@ effects:
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
+    # 'When this Digimon ... would leave': carrier only (DCGO AD1_023.cs
+    # CanTriggerWhenRemoveField(hashtable, card)); `kind`/`trait_has` made it
+    # cover other permanents. Audit 2026-11-11.
     active_when:
       all_of:
+        - is_source: true
         - kind: digimon
         - any_of: [{trait_has: Hybrid}, {trait_has: Ten Warriors}]
         - security_count_gte: 1

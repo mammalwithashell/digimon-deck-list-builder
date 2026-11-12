@@ -56,7 +56,7 @@ attribute: Vaccine
 # Alt-digivolve: from Koromon (cost 0); from Lv.2 [DATA SQUAD] (cost 0).
 alt_paths:
   - kind: digivolve
-    from: { name_contains: "Koromon" }
+    from: { name_is: "Koromon" }
     cost: 0
   - kind: digivolve
     from: { level_eq: 2, trait_has: "DATA SQUAD" }

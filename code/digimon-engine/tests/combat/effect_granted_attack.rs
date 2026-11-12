@@ -362,8 +362,12 @@ fn force_opponent_attack_prompts_attacker_controller() {
         .add_card(make_digimon("SEC", 2000))
         .security(0, &["SEC"])
         .start();
-    let p0 = r.game.turn_player();
-    let p1 = 1 - p0;
+    // CR 11-1-2: only the turn player can attack, so the forced attacker's
+    // controller (p1) must be the turn player; the effect's controller (p0)
+    // forces it on p1's turn (e.g. a [Start of Your Opponent's Main Phase]).
+    r.set_first_player(1);
+    let p0: u8 = 0;
+    let p1: u8 = 1;
     let source = r.place_on_field(p0, "SRC", Some(0));
     let forced_attacker = r.place_on_field(p1, "OPP", Some(0));
     let source_card = r.top_card(source);

@@ -78,8 +78,10 @@
 #     → scope: inherited, when: on_opponent_attack, once_per_turn, active_when
 #       opponents_turn; select_own_sources min:2 max:2 Vemmon →
 #       return_selected_sources_to_deck bottom → cancel_attack.
-#     "by returning 2 [Vemmon]" is a hard cost of exactly 2 (mandatory once the
-#     trigger fires and >=2 Vemmon exist) — DCGO EX10-003 nested-then idiom.
+#     "by returning 2 [Vemmon]" is a cost of exactly 2, and paying it is the
+#     player's choice: DCGO SetUpActivateClass(..., 1, true, ...) makes the
+#     ActivateClass optional (deck audit 2026-11-10 — it was forced, so any
+#     attack stripped the Vemmon). Once accepted, exactly 2 are returned.
 #
 # ─── Implementation status ─────────────────────────────────────────────────
 #
@@ -188,12 +190,14 @@ effects:
   # ─── Inherited [Opponent's Turn][OPT] return 2 Vemmon → deck bottom, end atk ─
   # DCGO Region "Opponent's Turn Inherited" (OnAllyAttack, isInheritedEffect):
   #   IsOpponentTurn + an opponent's Digimon attacks + DigivolutionCards has >=2
-  #   Vemmon. Mandatory once triggered (canNoSelect: false): select exactly 2
-  #   Vemmon sources, return them to the bottom of the deck, then end the attack.
+  #   Vemmon. Optional (SetUpActivateClass isOptional: true); once accepted the
+  #   pick is exactly 2 (canNoSelect: false): return them to the bottom of the
+  #   deck, then end the attack.
   # scope: inherited so it lives on the digivolution card beneath a later evo.
   # active_when opponents_turn = DCGO IsOpponentTurn. EX10-003 nested-then idiom.
   - scope: inherited
     when: on_opponent_attack
+    optional: true
     once_per_turn: true
     active_when: { opponents_turn: true }
     # DCGO CanActivateCondition: DigivolutionCards.Count("Vemmon") >= 2 — the

@@ -422,3 +422,57 @@ fn st24_15_paid_main_is_ordinary_field_option_and_survives_next_turn() {
             .any(|p| p.top_card().card_id(&clone.card_data) == CARD_ID));
     }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 4 — [Security] activate the [Main] effects (incl. "place this card")
+// ════════════════════════════════════════════════════════════════════════════
+
+/// [Security] "Activate this card's [Main] effects" runs the whole [Main],
+/// including "Then, place this card in the battle area": after the security
+/// check DNA Charge sits in its owner's battle area as a delay Option, not in
+/// the trash. Sister of `st23_15_security_places_self_in_battle_area`.
+#[test]
+fn st24_15_security_places_self_in_battle_area_rose_rave_audit() {
+    // Rose Rave audit 2026-11-11: DCGO AddActivateMainOptionSecurityEffect runs the [Main] whole (PlaceDelayOptionCards).
+    use digimon_engine::permanent::OptionState;
+    let mut attacker = make_test_card("ATTACKER", "Attacker");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(5);
+    attacker.dp = Some(9000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST24-15 YAML loads")
+        .add_card(attacker)
+        .add_card(filler("FILLER"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .security(1, &[CARD_ID])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+
+    let atk = runner.place_on_field(0, "ATTACKER", Some(0));
+    let _ = runner.attack_player(atk, 1, false);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(runner.security_count(1), 0, "DNA Charge was checked");
+    let placed = runner.game.players[1]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .expect("DNA Charge is placed in its owner's battle area");
+    assert!(
+        matches!(placed.option_state, OptionState::Delayed { owner: 1, .. }),
+        "placed as a delay Option; got {:?}",
+        placed.option_state
+    );
+    assert!(
+        !runner.game.players[1]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
+        "DNA Charge must not be trashed after its [Security] effect"
+    );
+}
