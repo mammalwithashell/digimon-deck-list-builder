@@ -918,7 +918,7 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `cancel_attack` | `EmptyArgs` | 2 | rare | `bt21/BT21-060.yaml` |  |
 | `end_attack` | `bool` | 6 |  | `bt13/BT13-088.yaml` |  |
 | `force_attack` | `ForceAttackArgs` | 12 |  | `bt20/BT20-102.yaml` |  |
-| `may_attack_now` | `MayAttackNowArgs` | 55 |  | `ad1/AD1-004.yaml` |  |
+| `may_attack_now` | `MayAttackNowArgs` | 57 |  | `ad1/AD1-004.yaml` |  |
 | `open_counter_window` | `EmptyArgs` | 0 | unused | — |  |
 | `redirect_attack_target` | `RedirectAttackTargetArgs` | 16 |  | `ad1/AD1-012.yaml` |  |
 | `refire_card_effect` | `RefireCardEffectArgs` | 1 | rare | `bt15/BT15-102.yaml` | Activate a timing-filtered effect printed on a CARD OBJECT (not a battle-area permanent's top card) — the foreign-card refire variant (BT15-102 Apocalymon: "activate 1 [On Play] effect on that card as an effect of this Digimon"). The `card` binding is a `CardHandle` (typically bound by `place_as_bottom_source.bind_placed_as`), and the card must currently be a digivolution source of this effect's carrier permanent. The chosen effect runs with the CARRIER as "this Digimon" (DCGO `EffectList_ForCard(timing, card)` — the foreign card's effect bodies are constructed against the carrier's card), one EffectChoice surfaces when the card has >1 eligible effect, and the pick is mandatory (DCGO `canNoSelect: () => false`). |
@@ -929,11 +929,11 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 
 | key | arg | uses | tag | fixture | description |
 |-----|-----|------|-----|---------|-------------|
-| `activation_cost` | `ActivationCostArgs` | 73 |  | `ad1/AD1-019.yaml` |  |
+| `activation_cost` | `ActivationCostArgs` | 72 |  | `ad1/AD1-019.yaml` |  |
 | `for_each` | `ForEachStep` | 37 |  | `_examples/BT13-007.yaml` |  |
-| `if` | `IfStep` | 451 |  | `_examples/BT17-015.yaml` |  |
-| `optional` | `OptionalStep` | 844 |  | `_examples/BT11-042.yaml` |  |
-| `per_selected` | `PerSelectedStep` | 60 |  | `_examples/BT18-019.yaml` |  |
+| `if` | `IfStep` | 456 |  | `_examples/BT17-015.yaml` |  |
+| `optional` | `OptionalStep` | 848 |  | `_examples/BT11-042.yaml` |  |
+| `per_selected` | `PerSelectedStep` | 62 |  | `_examples/BT18-019.yaml` |  |
 | `place_self_as_delay_option` | `EmptyArgs` | 68 |  | `bt13/BT13-110.yaml` |  |
 | `schedule_delayed` | `ScheduleDelayedStep` | 2 | rare | `bt1/BT1-090.yaml` |  |
 | `schedule_delete_played_at_turn_end` | `ScheduleDeletePlayedAtTurnEndArgs` | 4 |  | `bt23/BT23-037.yaml` | PUPPETS-G003 — schedule the bound permanent for deletion at turn end. |
@@ -964,12 +964,12 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 |-----|-----|------|-----|---------|-------------|
 | `bind_permanent_property` | `BindPermanentProperty` | 4 |  | `bt17/BT17-078.yaml` |  |
 | `de_digivolve` | `DeDigivolveArgs` | 60 |  | `ad1/AD1-009.yaml` |  |
-| `delete_bound_permanents` | `DeleteBoundPermanentsArgs` | 5 |  | `bt17/BT17-018.yaml` |  |
-| `delete_permanent` | `TargetArg` | 213 |  | `_examples/BT17-015.yaml` |  |
+| `delete_bound_permanents` | `DeleteBoundPermanentsArgs` | 6 |  | `ad1/AD1-008.yaml` |  |
+| `delete_permanent` | `TargetArg` | 216 |  | `_examples/BT17-015.yaml` |  |
 | `hatch` | `PlayerArg` | 6 |  | `bt16/BT16-082.yaml` |  |
 | `return_to_deck` | `ReturnPermanentArgs` | 44 |  | `_examples/BT12-112.yaml` |  |
 | `return_to_hand` | `TargetArg` | 28 |  | `_examples/BT13-060.yaml` |  |
-| `suspend` | `TargetArg` | 122 |  | `_examples/BT13-060.yaml` |  |
+| `suspend` | `TargetArg` | 123 |  | `_examples/BT13-060.yaml` |  |
 | `trash_breeding_permanent` | `TrashBreedingPermanentArgs` | 1 | rare | `bt13/BT13-112.yaml` |  |
 | `unsuspend` | `TargetArg` | 84 |  | `ad1/AD1-006.yaml` |  |
 
@@ -979,7 +979,7 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 |-----|-----|------|-----|---------|-------------|
 | `add_to_hand_from_deck` | `HandleMoveArgs` | 0 | unused | — |  |
 | `add_to_hand_from_trash` | `HandleMoveArgs` | 33 |  | `_examples/EX6-072.yaml` |  |
-| `draw` | `DrawArgs` | 183 |  | `_examples/TST_DNA_TRIGGER.yaml` |  |
+| `draw` | `DrawArgs` | 184 |  | `_examples/TST_DNA_TRIGGER.yaml` |  |
 | `move_from_breeding` | `MoveFromBreedingArgs` | 2 | rare | `bt20/BT20-095.yaml` | Move the specified player's eligible breeding-area Digimon to the battle area through the effect-initiated engine path. Pair with `select_own_breeding_permanent optional: true` when printed text says "you may move..." so the accept/decline choice stays visible. |
 | `move_trash_card_to_deck_top` | `MoveTrashCardToDeckTopArgs` | 7 |  | `bt18/BT18-019.yaml` |  |
 | `recover` | `DrawArgs` | 38 |  | `_examples/BT11-042.yaml` |  |
@@ -989,7 +989,7 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `return_trash_list_to_deck_bottom` | `ReturnTrashListToDeckBottomArgs` | 20 |  | `bt13/BT13-083.yaml` |  |
 | `shuffle_deck` | `PlayerArg` | 0 | unused | — |  |
 | `shuffle_hand` | `PlayerArg` | 1 | rare | `bt13/BT13-033.yaml` | Shuffle `of`'s hand, destroying every observer's knowledge of hand positions. Precedes a pick "without looking" from an opponent's hand so the chosen indices carry no information (DCGO `RandomUtility.ShuffledDeckCards(Enemy.HandCards)` before its face-down `SelectCardEffect`). Driver BT13-033. G-DSL-BLIND-OPP-HAND-PLACE (blind-pick half). |
-| `trash_from_hand_by_index` | `IndexedMoveArgs` | 108 |  | `ad1/AD1-002.yaml` |  |
+| `trash_from_hand_by_index` | `IndexedMoveArgs` | 109 |  | `ad1/AD1-002.yaml` |  |
 | `trash_from_top` | `TrashFromTopArgs` | 7 |  | `bt15/BT15-102.yaml` |  |
 | `trash_opponent_hand_to_count` | `TrashOpponentHandToCountArgs` | 2 | rare | `bt19/BT19-075.yaml` |  |
 
@@ -1008,7 +1008,7 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 
 | key | arg | uses | tag | fixture | description |
 |-----|-----|------|-----|---------|-------------|
-| `gain_memory` | `FormulaSpec` | 180 |  | `_examples/BT11-042.yaml` |  |
+| `gain_memory` | `FormulaSpec` | 181 |  | `_examples/BT11-042.yaml` |  |
 | `lose_memory` | `FormulaSpec` | 14 |  | `bt1/BT1-090.yaml` |  |
 | `set_memory` | `FormulaSpec` | 34 |  | `bt1/BT1-085.yaml` |  |
 
@@ -1058,13 +1058,13 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `play_cards_free` | `PlayCardsFreeArgs` | 3 |  | `ad1/AD1-015.yaml` |  |
 | `play_from_hand` | `PlayFromHandArgs` | 26 |  | `ad1/AD1-019.yaml` |  |
 | `play_from_hand_free` | `PlayFromHandFreeArgs` | 92 |  | `bt10/BT10-048.yaml` |  |
-| `play_from_materials` | `PlayFromMaterialsArgs` | 34 |  | `_examples/BT20-083.yaml` |  |
+| `play_from_materials` | `PlayFromMaterialsArgs` | 35 |  | `_examples/BT20-083.yaml` |  |
 | `play_from_trash` | `PlayFromHandArgs` | 7 |  | `bt19/BT19-099.yaml` |  |
 | `play_from_trash_free` | `PlayFromHandArgs` | 55 |  | `_examples/BT18-019.yaml` |  |
 | `play_or_use_from_hand` | `PlayOrUseFromHandArgs` | 15 |  | `bt25/BT25-041.yaml` | Unified "play OR use 1 card from hand" — inspects the bound hand card's kind and routes Digimon/Tamer → play and Option → use (a DUAL card surfaces a "Play as Digimon / Use as Option" face choice). The card is bound by an upstream `select_hand` step. `G-PLAY-OR-USE-FROM-HAND`. |
 | `play_to_breeding_from_hand` | `PlayToBreedingFromHandArgs` | 2 | rare | `bt20/BT20-015.yaml` |  |
 | `play_token` | `PlayTokenArgs` | 16 |  | `bt20/BT20-017.yaml` |  |
-| `play_union_bound_free` | `PlayUnionBoundFreeArgs` | 56 |  | `ad1/AD1-002.yaml` | PUPPETS-G014 — play a `select_union_zone`-bound card for free from its true origin zone (hand, trash, or material), recovered from the binding. |
+| `play_union_bound_free` | `PlayUnionBoundFreeArgs` | 57 |  | `ad1/AD1-002.yaml` | PUPPETS-G014 — play a `select_union_zone`-bound card for free from its true origin zone (hand, trash, or material), recovered from the binding. |
 | `use_option_bound` | `UseOptionBoundArgs` | 10 |  | `bt21/BT21-062.yaml` | Use a `select_union_zone{hand,trash}`-bound Option from its true origin zone, applying `cost` to its printed use cost (omitted = free). Driver BT21-062 "use 1 [Ragnarok Cannon] from your hand or trash without paying the cost". `G-DSL-USE-OPTION-FROM-SOURCES`. |
 | `use_option_from_hand` | `UseOptionFromHandArgs` | 6 |  | `bt24/BT24-085.yaml` |  |
 | `use_option_from_trash` | `UseOptionFromTrashArgs` | 3 |  | `bt25/BT25-083.yaml` | Effect-driven Option USE from the controller's trash with a cost delta (Gap 2, `G-DSL-USE-OPTION-FROM-SOURCES`). Trash analogue of `use_option_from_hand`. |
@@ -1128,28 +1128,28 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `select_any_permanent` | `SelectFieldArgs` | 30 |  | `bt18/BT18-039.yaml` |  |
 | `select_count_capped_multi` | `SelectCountCappedArgs` | 50 |  | `_examples/BT18-019.yaml` |  |
 | `select_dna_pair` | `SelectDnaPairArgs` | 8 |  | `ad1/AD1-009.yaml` |  |
-| `select_effect_choice` | `SelectEffectChoiceArgs` | 90 |  | `_examples/BT17-015.yaml` |  |
-| `select_hand` | `SelectZoneArgs` | 387 |  | `_examples/BT17-015.yaml` |  |
+| `select_effect_choice` | `SelectEffectChoiceArgs` | 91 |  | `_examples/BT17-015.yaml` |  |
+| `select_hand` | `SelectZoneArgs` | 388 |  | `_examples/BT17-015.yaml` |  |
 | `select_material` | `SelectMaterialArgs` | 31 |  | `bt18/BT18-042.yaml` |  |
-| `select_materials` | `SelectMaterialsArgs` | 7 |  | `_examples/BT20-083.yaml` |  |
-| `select_opponent_dp_budget` | `SelectOpponentDpBudgetArgs` | 2 | rare | `bt17/BT17-018.yaml` |  |
-| `select_opponent_permanent` | `SelectFieldArgs` | 419 |  | `_examples/BT12-112.yaml` |  |
+| `select_materials` | `SelectMaterialsArgs` | 8 |  | `_examples/BT20-083.yaml` |  |
+| `select_opponent_dp_budget` | `SelectOpponentDpBudgetArgs` | 3 |  | `ad1/AD1-008.yaml` |  |
+| `select_opponent_permanent` | `SelectFieldArgs` | 422 |  | `_examples/BT12-112.yaml` |  |
 | `select_opponent_play_cost_budget` | `SelectOpponentPlayCostBudgetArgs` | 3 |  | `bt8/BT8-070.yaml` |  |
 | `select_ordered_permutation` | `SelectPermutationArgs` | 0 | unused | — |  |
 | `select_own_breeding_permanent` | `SelectOwnBreedingPermanentArgs` | 11 |  | `_examples/BT20-083.yaml` |  |
 | `select_own_permanent` | `SelectFieldArgs` | 304 |  | `_examples/BT12-112.yaml` |  |
-| `select_trash` | `SelectZoneArgs` | 135 |  | `_examples/BT18-019.yaml` |  |
+| `select_trash` | `SelectZoneArgs` | 134 |  | `_examples/BT18-019.yaml` |  |
 | `select_union_zone` | `SelectUnionArgs` | 110 |  | `ad1/AD1-002.yaml` |  |
-| `select_zone_cards` | `SelectZoneCardsArgs` | 11 |  | `ad1/AD1-015.yaml` |  |
+| `select_zone_cards` | `SelectZoneCardsArgs` | 14 |  | `ad1/AD1-007.yaml` |  |
 
 #### Stack / Source — 22 (1 unused)
 
 | key | arg | uses | tag | fixture | description |
 |-----|-----|------|-----|---------|-------------|
 | `pay_source_prefix` | `PaySourcePrefixArgs` | 1 | rare | `ex2/EX2-055.yaml` |  |
-| `place_as_bottom_source` | `PlaceAsBottomSourceArgs` | 80 |  | `_examples/BT13-007.yaml` |  |
-| `place_as_top_source` | `PlaceAsTopSourceArgs` | 6 |  | `bt13/BT13-088.yaml` | G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05): place a card as `target`'s TOP digivolution source — inserted directly beneath the active top card (DCGO `Permanent.AddDigivolutionCardsTop`, which `Insert(1, …)`s into its top-first `cardSources`). The permanent's top card / identity is unchanged (placing a digivolution card never changes what the permanent IS). Sibling of `place_as_bottom_source` with the same args shape. Consumers: EX9-074 Kimeramon ("as this Digimon's top digivolution card"), BT13-088 Belphemon: Sleep Mode ("on top of this Digimon's digivolution cards"). |
-| `place_cards_as_bottom_sources` | `PlaceCardsAsBottomSourcesArgs` | 11 |  | `ad1/AD1-020.yaml` |  |
+| `place_as_bottom_source` | `PlaceAsBottomSourceArgs` | 78 |  | `_examples/BT13-007.yaml` |  |
+| `place_as_top_source` | `PlaceAsTopSourceArgs` | 7 |  | `ad1/AD1-007.yaml` | G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05): place a card as `target`'s TOP digivolution source — inserted directly beneath the active top card (DCGO `Permanent.AddDigivolutionCardsTop`, which `Insert(1, …)`s into its top-first `cardSources`). The permanent's top card / identity is unchanged (placing a digivolution card never changes what the permanent IS). Sibling of `place_as_bottom_source` with the same args shape. Consumers: EX9-074 Kimeramon ("as this Digimon's top digivolution card"), BT13-088 Belphemon: Sleep Mode ("on top of this Digimon's digivolution cards"). |
+| `place_cards_as_bottom_sources` | `PlaceCardsAsBottomSourcesArgs` | 14 |  | `ad1/AD1-007.yaml` |  |
 | `place_top_source_as_bottom` | `TargetArg` | 2 | rare | `bt23/BT23-008.yaml` | Phase 2 Track F (2026-05-17): move `target`'s top stacked card (the digivolution source immediately beneath the active top card) to the bottom of its own stack. Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM (BT23-008 / BT23-018-shape "place top stacked card as bottom" costs). Per the no-approximations policy this is a deterministic source pick — the printed text identifies a singular top source, so no `select_material` choice is exposed. |
 | `play_or_use_from_sources` | `PlayOrUseFromSourcesArgs` | 1 | rare | `ex12/EX12-077.yaml` | Unified source-origin play/use of a selected digivolution source. |
 | `play_selected_sources_free` | `TrashSelectedSourcesArgs` | 2 | rare | `bt13/BT13-096.yaml` |  |
@@ -1189,16 +1189,16 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 |-----|-----|------|-----|---------|-------------|
 | `all_permanents` | `ExistentialPredicate?` | 0 | unused | — |  |
 | `any_field_permanent` | `ExistentialPredicate?` | 67 |  | `bt12/BT12-029.yaml` |  |
-| `any_permanent` | `ExistentialPredicate?` | 278 |  | `_examples/BT11-042.yaml` |  |
+| `any_permanent` | `ExistentialPredicate?` | 280 |  | `_examples/BT11-042.yaml` |  |
 | `color_matches_any_field_digimon` | `PlayerRefSelector?` | 1 | rare | `p/P-206.yaml` |  |
-| `count_gte` | `CountAggregate?` | 198 |  | `_examples/EX11-027.yaml` |  |
+| `count_gte` | `CountAggregate?` | 202 |  | `_examples/EX11-027.yaml` |  |
 | `count_lte` | `CountAggregate?` | 51 |  | `bt13/BT13-092.yaml` |  |
 | `distinct_named_count_gte` | `DistinctNamedCountPredicate?` | 1 | rare | `bt21/BT21-040.yaml` | True when the observer's battle-area permanents matching `filter` include at least `n` DISTINCT (synth-identity-aware) card names. A no-subject global predicate â€” does not inspect the candidate. Modeled on `distinct_tamer_colors_gte`, but keyed on distinct card names among a filtered permanent set rather than distinct Tamer colors. Driver: BT21-040 â€” "you have 3 or more [Hero] trait Tamers with different names". G-DSL-DISTINCT-NAMED-PERMANENT-COUNT. |
 | `has_alt_path` | `str?` | 4 |  | `bt10/BT10-087.yaml` |  |
 | `level_matches_aggregate` | `LevelAggregatePredicate?` | 16 |  | `ad1/AD1-012.yaml` |  |
 | `link_card_count` | `SourceCountPredicate?` | 2 | rare | `bt25/BT25-085.yaml` | Permanent-subject predicate â€” the LINK-CARD sibling of `source_count`. True when the candidate carries at least `at_least` **link cards** (`Permanent.linked_cards`, the cards plugged in sideways via ï¼œLinkï¼ž) matching the nested `filter`. Drives BT25-085 BeelStarmon's activation gate "By trashing 1 Option card from any of your Digimon's digivolution cards OR LINK CARDS" (DCGO `permanent.DigivolutionOrLinkCards.Any(IsOption)` = `source_count` OR `link_card_count`). Breeding-area permanents carry no link cards, so the leaf is false there for `at_least â‰¥ 1`. G-DSL-LINK-CARD-COUNT-FILTERED. |
 | `materials_count` | `MetricComparators?` | 0 | unused | — |  |
-| `materials_count_gte` | `DpConstraint?` | 14 |  | `bt13/BT13-030.yaml` |  |
+| `materials_count_gte` | `DpConstraint?` | 15 |  | `ad1/AD1-007.yaml` |  |
 | `materials_count_lte` | `DpConstraint?` | 25 |  | `ad1/AD1-025.yaml` |  |
 | `materials_count_matches_aggregate` | `MaterialCountAggregatePredicate?` | 3 |  | `bt24/BT24-030.yaml` |  |
 | `no_permanent` | `ExistentialPredicate?` | 28 |  | `bt12/BT12-016.yaml` |  |
@@ -1208,29 +1208,29 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 
 | key | arg | uses | tag | fixture | description |
 |-----|-----|------|-----|---------|-------------|
-| `binding_absent` | `str?` | 24 |  | `ad1/AD1-024.yaml` |  |
+| `binding_absent` | `str?` | 25 |  | `ad1/AD1-024.yaml` |  |
 | `binding_card_kind` | `BindingCardKindPredicate?` | 4 |  | `bt26/BT26-084.yaml` | True when the card bound to `binding` has the given card category. Resolves the named card binding (e.g. from `reveal_top_deck { bind_as }`) and compares its printed kind. Used by LM-020 Quantumon to test whether the revealed opponent deck-top matches the declared category. |
-| `binding_count_eq` | `BindingCountPredicate?` | 12 |  | `bt12/BT12-031.yaml` | True when the named list-typed binding (a `source_refs`, permanent-list or card-list binding produced by a multi-select / `select_own_sources` step) holds exactly `n` entries. Used by EX4-073 clause C's "if you trashed 3 cards" tail. A scalar / single binding counts as 1; a missing binding counts as 0. G-DSL-BINDING-COUNT-EQ. |
-| `binding_exists` | `str?` | 14 |  | `ad1/AD1-024.yaml` |  |
-| `binding_owner` | `BindingOwnerPredicate?` | 3 |  | `bt24/BT24-047.yaml` |  |
-| `binding_present` | `str?` | 205 |  | `ad1/AD1-002.yaml` |  |
+| `binding_count_eq` | `BindingCountPredicate?` | 11 |  | `bt12/BT12-031.yaml` | True when the named list-typed binding (a `source_refs`, permanent-list or card-list binding produced by a multi-select / `select_own_sources` step) holds exactly `n` entries. Used by EX4-073 clause C's "if you trashed 3 cards" tail. A scalar / single binding counts as 1; a missing binding counts as 0. G-DSL-BINDING-COUNT-EQ. |
+| `binding_exists` | `str?` | 15 |  | `ad1/AD1-024.yaml` |  |
+| `binding_owner` | `BindingOwnerPredicate?` | 2 | rare | `ex7/EX7-010.yaml` |  |
+| `binding_present` | `str?` | 209 |  | `ad1/AD1-002.yaml` |  |
 | `cost_target` | `PredicateSpec?` | 22 |  | `bt11/BT11-061.yaml` | BeforePayCost target card predicate. When present, the inner predicate is evaluated against the card whose cost is currently being computed (`cost_target_card` on the effect read context), treated as a `Card` subject. Fails when no cost target is active (i.e., outside `BeforePayCost` cost-calc dispatch). Use the full card-shape vocabulary inside: `trait_has`, `color_is`, `name_contains`, `level_eq`/`_lte`/`_gte`, `kind`, etc. Example: a cost-reduction clause that fires only when the card being digivolved into has the [Free] trait: ```yaml active_when: your_turn: true cost_target: { trait_has: Free } ``` G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure). |
-| `equals` | `[]?` | 99 |  | `_examples/BT17-015.yaml` |  |
-| `is_source` | `bool?` | 37 |  | `ad1/AD1-015.yaml` | `is_source: true` â€” the subject permanent must BE the effect's source permanent (the mirror of `other: true`). Use it to filter a select down to "this Digimon" â€” e.g. DCGO's standalone "Will you unsuspend this card?" prompt becomes an optional `select_own_permanent` with `is_source: true`, exposing the Yes/No to the RL action space. |
+| `equals` | `[]?` | 100 |  | `_examples/BT17-015.yaml` |  |
+| `is_source` | `bool?` | 39 |  | `ad1/AD1-003.yaml` | `is_source: true` â€” the subject permanent must BE the effect's source permanent (the mirror of `other: true`). Use it to filter a select down to "this Digimon" â€” e.g. DCGO's standalone "Will you unsuspend this card?" prompt becomes an optional `select_own_permanent` with `is_source: true`, exposing the Yes/No to the RL action space. |
 | `not_equals` | `[]?` | 0 | unused | — |  |
-| `not_in_binding` | `str?` | 11 |  | `bt15/BT15-101.yaml` |  |
+| `not_in_binding` | `str?` | 12 |  | `bt15/BT15-101.yaml` |  |
 
 #### Compound / structural — 7 (0 unused)
 
 | key | arg | uses | tag | fixture | description |
 |-----|-----|------|-----|---------|-------------|
-| `all_of` | `[PredicateSpec]` | 917 |  | `_examples/BT11-042.yaml` |  |
-| `any_of` | `[PredicateSpec]` | 594 |  | `_examples/BT11-042.yaml` |  |
-| `none_of` | `[PredicateSpec]` | 83 |  | `bt13/BT13-019.yaml` |  |
+| `all_of` | `[PredicateSpec]` | 920 |  | `_examples/BT11-042.yaml` |  |
+| `any_of` | `[PredicateSpec]` | 597 |  | `_examples/BT11-042.yaml` |  |
+| `none_of` | `[PredicateSpec]` | 84 |  | `ad1/AD1-003.yaml` |  |
 | `not` | `PredicateSpec?` | 39 |  | `ad1/AD1-017.yaml` |  |
 | `other` | `bool?` | 37 |  | `ad1/AD1-012.yaml` |  |
-| `owner` | `PlayerRef?` | 86 |  | `_examples/BT11-042.yaml` |  |
-| `zone` | `[Zone]` | 593 |  | `_examples/BT11-042.yaml` |  |
+| `owner` | `PlayerRef?` | 87 |  | `_examples/BT11-042.yaml` |  |
+| `zone` | `[Zone]` | 597 |  | `_examples/BT11-042.yaml` |  |
 
 #### Context / global — 23 (4 unused)
 
@@ -1258,7 +1258,7 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `total_security_count_eq` | `DpConstraint?` | 0 | unused | — |  |
 | `total_security_count_gte` | `DpConstraint?` | 0 | unused | — |  |
 | `total_security_count_lte` | `DpConstraint?` | 2 | rare | `bt13/BT13-106.yaml` | True when the SUM of both players' security-stack card counts (the controller's + the opponent's) is at most / at least / equal to this threshold. Gates BT13-106 Odin's Breath's "[Then], if there're 6 or fewer total cards in both players' security stacks, â€¦" clause. DCGO `card.Owner.SecurityCards.Count + card.Owner.Enemy.SecurityCards.Count <= 6`. G-DSL-TOTAL-SECURITY-COUNT-PREDICATE (driver BT13-106). |
-| `your_turn` | `bool?` | 347 |  | `_examples/BT11-042.yaml` |  |
+| `your_turn` | `bool?` | 349 |  | `_examples/BT11-042.yaml` |  |
 
 #### Effect-history — 12 (0 unused)
 
@@ -1272,7 +1272,7 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `effect_played_any_digimon` | `bool?` | 3 |  | `bt13/BT13-012.yaml` |  |
 | `effect_returned_any_card` | `bool?` | 6 |  | `bt11/BT11-033.yaml` |  |
 | `effect_suspended_any_opponent_digimon` | `bool?` | 1 | rare | `bt16/BT16-025.yaml` | Opponent-side sibling of `effect_suspended_any_own_digimon`. True when the current effect's result log records a suspend of any of the controller's OPPONENT's Digimon. Used by BT16-025 Paildramon clause 2 ("If this effect didn't suspend, unsuspend this Digimon"). G-DSL-EFFECT-SUSPENDED-RESULT. |
-| `effect_suspended_any_own_digimon` | `bool?` | 2 | rare | `bt10/BT10-048.yaml` |  |
+| `effect_suspended_any_own_digimon` | `bool?` | 3 |  | `bt10/BT10-048.yaml` |  |
 | `effect_text_contains` | `str?` | 13 |  | `_examples/EX11-027.yaml` | Case-insensitive substring scan against the candidate card's printed text â€” `effect_text`, `inherited_text`, and `security_text` concatenated. Distinct from `name_contains`, which only scans `card_name`. Used by BT22-017's bucket 1 ("1 card with [Omnimon] in its text"). DCGO `source.HasText(s)`. G-DSL-PREDICATE-TEXT-CONTAINS. |
 | `effect_trashed_any_hand_card` | `bool?` | 1 | rare | `bt6/bt6_068.yaml` | True when the current effect's result log records at least one card trashed FROM A HAND by a preceding `trash_from_hand_by_index` (or a hand-origin `trash_union_bound`) step in the SAME effect. Bare-bool sibling of `effect_returned_any_card`. G-DSL-EFFECT-TRASHED-HAND-CARD. |
 | `returned_card_matching` | `PredicateSpec?` | 1 | rare | `bt17/BT17-077.yaml` | Filtered variant of `effect_returned_any_card`. True when at least one card moved by a preceding return / zone-move step in the SAME effect satisfies the inner card-shape predicate. The inner predicate is evaluated as a `Card` subject against each returned card identity in the per-effect result log (`returned_to_deck`). Distinct field name from the bare-bool `any_returned_card` alias so the two never collide. Example: `returned_card_matching: { color_is: white, level_eq: 7 }`. G-ANY-RETURNED-CARD-PREDICATE â€” driver BT17-077 clause 1c. |
@@ -1345,13 +1345,13 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `can_change_orientation` | `bool?` | 11 |  | `bt11/BT11-112.yaml` | Permanent-subject leaf: the permanent can change orientation â€” a suspended one can unsuspend (no `CannotUnsuspend`), an unsuspended one can suspend (no `CannotSuspend`). DCGO `Permanent.CanChangeOrientation` (`IsSuspended ? CanUnsuspend : CanSuspend`). Driver EX13-023 UlforceVeedramon "1 of your Digimon may change orientation". |
 | `can_digivolve_from_source` | `bool?` | 22 |  | `bt13/BT13-013.yaml` |  |
 | `can_digivolve_onto` | `str?` | 46 |  | `ad1/AD1-011.yaml` | Card-subject leaf â€” the BINDING-TARGETED sibling of `can_digivolve_from_source`. True when the candidate card has at least one normal-digivolve route (printed evo circles, DSL alt-digivolve paths, `CanOnlyDigivolveInto` gate honoured; App Fusion excluded) onto the permanent bound under this name â€” e.g. the Digimon a preceding `select_own_permanent { bind_as: target }` picked. Mirrors DCGO `cardSource.CanPlayCardTargetFrame(selectedPermanent.PermanentFrame, â€¦)` so a "1 of your Digimon may digivolve into a card in the hand or trash" pick offers exactly the cards the commit would accept. False when the binding is absent or no longer a battle-area permanent. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST (BT25-092). The magic name `source` resolves to the effect's own carrier permanent ("THIS Digimon may digivolve into ..."), with no `bind_as` needed. G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE (EX13-055 / EX13-057). |
-| `can_digivolve_onto_with_cost` | `DigivolveCostPredicate?` | 10 |  | `ad1/AD1-022.yaml` | Opt-in complete payment check for a physical result card. Unlike the route-only leaf above, searches legal reducer choices using the cost declared by the consuming effect (printed, free, fixed or reduced). |
+| `can_digivolve_onto_with_cost` | `DigivolveCostPredicate?` | 12 |  | `ad1/AD1-022.yaml` | Opt-in complete payment check for a physical result card. Unlike the route-only leaf above, searches legal reducer choices using the cost declared by the consuming effect (printed, free, fixed or reduced). |
 | `can_move_from_breeding_by_effect` | `bool?` | 1 | rare | `bt20/BT20-095.yaml` | Existing breeding-permanent subject only. True if its owner can move it to battle by effect; false if that existing permanent cannot move. Non-breeding subjects and an empty breeding slot match neither value. |
-| `can_play_from_effect_without_cost` | `bool?` | 12 |  | `ad1/AD1-015.yaml` | Whether this physical candidate can be played free into its owner's battle area by the effect controller. Checks the owner's field capacity and the causing controller's effect-play prohibition independently. |
+| `can_play_from_effect_without_cost` | `bool?` | 23 |  | `ad1/AD1-003.yaml` | Whether this physical candidate can be played free into its owner's battle area by the effect controller. Checks the owner's field capacity and the causing controller's effect-play prohibition independently. |
 | `can_play_to_breeding_from_hand` | `bool?` | 2 | rare | `bt20/BT20-015.yaml` | Candidate is a physical hand Digimon/Dual whose owner's breeding is empty; checks the effect controller's play prohibition, not battle-area capacity. |
 | `can_unsuspend` | `bool?` | 3 |  | `bt12/BT12-029.yaml` | Permanent-subject leaf: unsuspending is not prohibited, independently of current orientation. Already-unsuspended targets remain selectable. Unlike can_change_orientation, this never consults CannotSuspend. |
-| `card_number_is` | `str?` | 60 |  | `bt13/BT13-083.yaml` |  |
-| `color_is` | `ColorSpec?` | 694 |  | `_examples/BT11-042.yaml` |  |
+| `card_number_is` | `str?` | 59 |  | `bt13/BT13-083.yaml` |  |
+| `color_is` | `ColorSpec?` | 698 |  | `_examples/BT11-042.yaml` |  |
 | `color_matches_binding` | `str?` | 1 | rare | `p/P-156.yaml` |  |
 | `color_matches_own_source_stack` | `SourceStackScope?` | 1 | rare | `ex9/EX9-074.yaml` | True when the candidate card shares â‰¥1 color with the effect CARRIER's NON-FLIPPED digivolution-source color set (the colors printed on the carrier's face-up digivolution cards, excluding the carrier's own top card). Mirrors DCGO `EX9_074.cs`: `card.PermanentOfThisCard().DigivolutionCards.Filter(!IsFlipped) .SelectMany(CardColors).Distinct()`. Authored as `color_matches_own_source_stack: { of: self }` â€” `of: self` marks the carrier (the effect's `source_permanent`); the scope is fixed there (there is no "opponent's source stack" reading in the printed corpus). The candidate side is kind-aware exactly like `color_matches_binding`. G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK. Driver: EX9-074 Kimeramon. |
 | `color_matches_returned_card` | `bool?` | 1 | rare | `ex10/EX10-068.yaml` | True when the candidate card shares â‰¥1 color with ANY card recorded in this effect's `returned_to_deck` result log (the cards a preceding `return_trash_list_to_deck_bottom` / `return_all_trash_to_deck_bottom` moved). The returned card never becomes a permanent, so it cannot be a permanent binding â€” this leaf reads the result log directly rather than a binding name. Candidate side is kind-aware exactly like `color_matches_binding`. G-RETURNED-CARD-COLOR-BINDING (driver EX10-068). |
@@ -1364,10 +1364,10 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `distinct_tamer_colors_gte` | `i32?` | 5 |  | `bt21/BT21-061.yaml` | True when the observer's Tamers (battle-area Tamer permanents) collectively have at least N distinct colors. A no-subject global predicate â€” does not inspect the candidate. Used by ST20-10's warp-into-WarGreymon alt-path condition ("your Tamers have 3 or more total colors"). G-DSL-DISTINCT-TAMER-COLORS. |
 | `dna_field_pair` | `DnaFieldPairPredicate?` | 7 |  | `ad1/AD1-009.yaml` | Two-field DNA feasibility for `select_hand` + `select_dna_pair` + `effect_initiated_dna_digivolve` ("2 of your Digimon may DNA digivolve into X in the hand"). DCGO `CanPlayJogress(true)` / `CanJogressFromTargetPermanents`. G-DSL-DNA-FIELD-PAIR-CANDIDATE. |
 | `dna_hand_candidate` | `DnaHandCandidatePredicate?` | 1 | rare | `_examples/EX6-072.yaml` | A result, field or hand-material pick with at least one complete, payable hand-partner DNA declaration. Prior picks are physical bindings. |
-| `dp` | `MetricComparators?` | 868 |  | `_examples/AD1-025.yaml` | Canonical uniform DP comparator (unify-dsl-scalar-and-comparators Â§2). `dp: { op: lte, value: 5000 }` or `dp: [{op: gte, value: 3000}, {op: lte, value: 8000}]` (a list expresses a range). Lowered at compile time into the same `dp_eq`/`dp_lte`/`dp_gte` compiled fields the legacy flat keys produce, so the compiled IR is byte-identical and engine eval is unchanged. The legacy `dp_eq`/`dp_lte`/`dp_gte` keys still parse (a predicate carrying both the canonical field and a legacy flat key is rejected by the lint, since they would silently merge). |
+| `dp` | `MetricComparators?` | 872 |  | `_examples/AD1-025.yaml` | Canonical uniform DP comparator (unify-dsl-scalar-and-comparators Â§2). `dp: { op: lte, value: 5000 }` or `dp: [{op: gte, value: 3000}, {op: lte, value: 8000}]` (a list expresses a range). Lowered at compile time into the same `dp_eq`/`dp_lte`/`dp_gte` compiled fields the legacy flat keys produce, so the compiled IR is byte-identical and engine eval is unchanged. The legacy `dp_eq`/`dp_lte`/`dp_gte` keys still parse (a predicate carrying both the canonical field and a legacy flat key is rejected by the lint, since they would silently merge). |
 | `dp_eq` | `DpConstraint?` | 0 | unused | — |  |
 | `dp_gte` | `DpConstraint?` | 16 |  | `bt13/BT13-111.yaml` |  |
-| `dp_lte` | `DpConstraint?` | 94 |  | `_examples/BT17-015.yaml` |  |
+| `dp_lte` | `DpConstraint?` | 96 |  | `_examples/BT17-015.yaml` |  |
 | `during_attack` | `bool?` | 6 |  | `bt20/BT20-015.yaml` | Game-level "if during an attack" gate: true (`during_attack: true`) while an attack is in flight (`Game::pending_attack` is set â€” DCGO `GManager.instance.attackProcess.IsAttacking`). `false` asserts no attack is in progress. Drives EX13-057 Grademon's "If during an attack, it also ..." rider (BT20-053 precedent). G-DSL-DURING-ATTACK. |
 | `face_down_sources_under_tamers_gte` | `i32?` | 13 |  | `bt25/BT25-035.yaml` | True when the observer's battle-area Tamer permanents collectively carry at least N face-down digivolution sources. A no-subject global predicate â€” does not inspect the candidate. Gates the `[Then]` clause of BT25-035 Cougarmon ("by trashing 2 bottom face-down cards from under any of your Tamers") so the optional digivolve is only offered when the trash-2 cost is actually payable. G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER. |
 | `form_is` | `str?` | 1 | rare | `ex12/EX12-076.yaml` | The subject has this trait, named for the Form line it is printed on. A form is a trait (general_rule.pdf 2-3-2-1) and printed text names one only as "the [X] trait", so this matches exactly like `trait_has` (`ChangeTraits` overlays included). |
@@ -1378,30 +1378,30 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `has_on_deletion_effect` | `bool?` | 1 | rare | `ex1/EX1-021.yaml` | Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) â€” true when the permanent's top card (or any card in its digivolution stack) has a triggered effect with `EffectTiming::OnDeletion` either via a compiled DSL clause or a hand-written `CardEffect` impl. Used by EX1-021 MetalGarurumon's "[When Attacking] return 1 opponent Digimon **that has an [On Deletion] effect** to the bottom of deck." DCGO `permanent.HasOnDeletionEffect`. |
 | `has_security_attack_change` | `bool?` | 1 | rare | `bt10/BT10-042.yaml` | Permanent-subject predicate. True when the candidate currently has any Security Attack delta, whether from printed/granted `<Security A. +/-N>` keywords, temporary `SecurityAttackChange` modifiers, or formula-driven security-attack auras. |
 | `in_event_discarded_cards` | `bool?` | 1 | rare | `bt24/BT24-007.yaml` | Card-subject predicate for `on_discard_hand` clauses: true when the candidate card is one of the cards the triggering effect just trashed from the hand ("you may play 1 of THEM" â€” BT24-007 Tsunomon; DCGO `GetDiscardedCardsFromHashtable`). Combine with a `zone: [trash]` selection. Always false outside an `on_discard_hand` firing. G-ENGINE-DISCARDED-HAND-CARDS. |
-| `in_text_contains` | `str?` | 94 |  | `bt17/BT17-070.yaml` | Whole-card "[X] in its text" scan â€” the broad DCGO `CardSource.HasText` surface (`CardSource.cs`). Unlike `effect_text_contains` (which scans ONLY effect / inherited / security text of the top card), this scans the card's **name**, **also-treated-as aliases**, **DigiXros aliases**, **traits (the Type line, incl. Rule-granted traits)**, and **all printed text** (effect / inherited / security, plus both dual faces). Case- insensitive substring. Required for the official ruling that "[X] in its text refers to a card that contains the text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements" â€” the structured requirement strings the CardData model carries live inside the printed text, and the trait line is scanned directly. Concrete regression: the [Three Musketeers]-TRAIT cards (BT6-017 MagnaKidmon, BT6-065 Gundramon, ST14-09 BeelStarmon) carry that trait but NOT the literal string in effect text â€” `effect_text_contains` misses them; `in_text_contains` matches via the trait scan. Driver family: BT21-098 Ragnarok Cannon ("[Vemmon] in its text"), 12 store-champs cards. G-DSL-IN-TEXT-CONTAINS. |
+| `in_text_contains` | `str?` | 96 |  | `ad1/AD1-007.yaml` | Whole-card "[X] in its text" scan â€” the broad DCGO `CardSource.HasText` surface (`CardSource.cs`). Unlike `effect_text_contains` (which scans ONLY effect / inherited / security text of the top card), this scans the card's **name**, **also-treated-as aliases**, **DigiXros aliases**, **traits (the Type line, incl. Rule-granted traits)**, and **all printed text** (effect / inherited / security, plus both dual faces). Case- insensitive substring. Required for the official ruling that "[X] in its text refers to a card that contains the text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements" â€” the structured requirement strings the CardData model carries live inside the printed text, and the trait line is scanned directly. Concrete regression: the [Three Musketeers]-TRAIT cards (BT6-017 MagnaKidmon, BT6-065 Gundramon, ST14-09 BeelStarmon) carry that trait but NOT the literal string in effect text â€” `effect_text_contains` misses them; `in_text_contains` matches via the trait scan. Driver family: BT21-098 Ragnarok Cannon ("[Vemmon] in its text"), 12 store-champs cards. G-DSL-IN-TEXT-CONTAINS. |
 | `is_bottom_source` | `bool?` | 0 | unused | — | Source-subject predicate. Matches whether the source sits at `card_sources` index 0 (the bottom of the digivolution stack). Only meaningful when the predicate subject is a digivolution-stack source (e.g. inside a `select_own_sources` filter). |
 | `is_event_host` | `bool?` | 1 | rare | `ex10/EX10-070.yaml` | Subject-permanent gate: true when the evaluated permanent IS the triggering event's host (its top card equals `TriggerContext.event_host_card`; card-handle identity survives the battle-area compaction a `<Delay>` self-trash causes). Used as a `link_cards` `host_filter` for "â€¦ to 1 of THOSE Digimon" (EX10-070). G-DSL-ON-LINK-CARD-TRASHED-DELAY. |
 | `is_face_down` | `bool?` | 0 | unused | — | Source-subject predicate (Tamer face-down stash). Matches `CardSource.face_down`. Only meaningful when the predicate subject is a digivolution-stack source (e.g. inside a `select_own_sources` filter). |
 | `is_source_permanent` | `bool?` | 5 |  | `bt24/BT24-062.yaml` | True when the subject permanent IS the effect's source permanent (the carrier/host). Lets `kind: flood_gate` / `kind: aura` target `self` â€” install a modifier on the carrier itself instead of scanning the whole board with an aux self-identity predicate. Pair with `scope: both` so the carrier resolves to the active top (face_up) AND the host of the digivolution stack (inherited). (BT24-062 attack-target lock.) |
-| `is_suspended` | `bool?` | 50 |  | `ad1/AD1-012.yaml` |  |
-| `is_unsuspended` | `bool?` | 47 |  | `bt10/BT10-048.yaml` |  |
-| `kind` | `CardKind?` | 1236 |  | `_examples/AD1-025.yaml` |  |
-| `level` | `MetricComparators?` | 927 |  | `_examples/AD1-025.yaml` | Canonical uniform comparator for level (unify-dsl-scalar-and-comparators Â§2.4) and the trigger-event card's level (Â§2.2). NOTE: `eq` is literal-only here (the compiled `_eq` is `u8`); `lte`/`gte` are formula-capable. Lowered byte-identically into `level_*` / `event_target_level_*`. Legacy flat keys still parse. |
-| `level_eq` | `i32?` | 795 |  | `_examples/AD1-025.yaml` |  |
+| `is_suspended` | `bool?` | 44 |  | `ad1/AD1-012.yaml` |  |
+| `is_unsuspended` | `bool?` | 35 |  | `bt10/BT10-048.yaml` |  |
+| `kind` | `CardKind?` | 1240 |  | `_examples/AD1-025.yaml` |  |
+| `level` | `MetricComparators?` | 931 |  | `_examples/AD1-025.yaml` | Canonical uniform comparator for level (unify-dsl-scalar-and-comparators Â§2.4) and the trigger-event card's level (Â§2.2). NOTE: `eq` is literal-only here (the compiled `_eq` is `u8`); `lte`/`gte` are formula-capable. Lowered byte-identically into `level_*` / `event_target_level_*`. Legacy flat keys still parse. |
+| `level_eq` | `i32?` | 799 |  | `_examples/AD1-025.yaml` |  |
 | `level_eq_binding` | `str?` | 3 |  | `bt17/BT17-078.yaml` |  |
 | `level_gte` | `DpConstraint?` | 30 |  | `_examples/EX6-072.yaml` |  |
 | `level_gte_binding` | `str?` | 0 | unused | — | Card/permanent-subject leaf: the subject's level must be `>=` the literal value bound to `binding`. Sibling of `level_eq_binding` / `level_lte_binding`. |
 | `level_lte` | `DpConstraint?` | 118 |  | `ad1/AD1-014.yaml` |  |
 | `level_lte_binding` | `str?` | 0 | unused | — | Card/permanent-subject leaf: the subject's level must be `<=` the literal value bound to `binding`. Sibling of `level_eq_binding` (which tests equality). Driver: BT8-107 â€” "delete 1 opponent Digimon with a level less than or equal to the deleted Digimon's level" (the deleted Digimon's level captured into a literal binding). |
 | `level_sum_gte` | `CountAggregate?` | 1 | rare | `bt25/BT25-077.yaml` | Board stat aggregate: the summed level of every permanent matching `filter` (zone defaults to the battle area, owner to `you`; use `owner: any` for both players) is `>= n`. Permanents without a level (Tamers, Options) contribute 0. YAML: `level_sum_gte: { filter: { owner: any, kind: digimon }, n: 12 }`. BT25-077 Bacchusmon: "if there are 12 or more levels' total worth of Digimon". G-DSL-BOARD-LEVEL-SUM. |
-| `name_contains` | `str?` | 230 |  | `_examples/AD1-025.yaml` |  |
+| `name_contains` | `str?` | 232 |  | `_examples/AD1-025.yaml` |  |
 | `name_in` | `[str]?` | 23 |  | `ad1/AD1-005.yaml` |  |
-| `name_is` | `str?` | 249 |  | `_examples/AD1-025.yaml` |  |
+| `name_is` | `str?` | 252 |  | `_examples/AD1-025.yaml` |  |
 | `name_matches_returned_card` | `bool?` | 1 | rare | `bt13/BT13-092.yaml` | Name sibling of `color_matches_returned_card`: true when the candidate shares >=1 card name (printed name or "also treated as" alias; a field permanent uses its synthesized top-card names) with ANY card recorded in this effect's `returned_to_deck` result log. Models "delete all of your opponent's Digimon with the same name as that card" after a trash -> deck-bottom return (DCGO `TopCard.HasSameCardName(returnedCard)`). G-DSL-NAME-MATCHES-RETURNED-CARD (driver BT13-092). |
 | `name_not_in_binding` | `str?` | 1 | rare | `bt26/BT26-086.yaml` | Card subject: true when the card shares NO card name with any card in the named `CardList` binding (an absent binding â‡’ true â€” nothing chosen yet). Models "N cards with different names" across a multi-pick loop (BT26-086 Dantemon "link up to 7 [Appmon] trait cards with different names", DCGO `CanTargetCondition_ByPreSelecetedList` + `EqualsCardName`). Pair with the loop step's `bind_as`. |
 | `name_not_shared_by_field_digimon` | `PlayerRefSelector?` | 1 | rare | `bt23/BT23-013.yaml` | Card-subject leaf: true when NO battle-area Digimon belonging to the scoped player shares the candidate card's name. Models the printed "This effect can't play cards with the same names as any of your Digimon" exclusion on the Jesmon family (BT23-013) â€” applied as a filter on a `select_union_zone` (hand+trash) play candidate set so the in-play names are masked out, never auto-picked. G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2). |
 | `name_not_shared_by_field_tamer` | `PlayerRefSelector?` | 1 | rare | `bt24/BT24-034.yaml` | Card-subject leaf: true when NO battle-area Tamer belonging to the scoped player shares the candidate card's name. |
-| `of_permanent` | `str?` | 39 |  | `_examples/BT20-083.yaml` |  |
+| `of_permanent` | `str?` | 40 |  | `_examples/BT20-083.yaml` |  |
 | `owner_can_add_security` | `bool?` | 4 |  | `bt24/BT24-040.yaml` | Permanent-subject leaf: the OWNER of the permanent's top card can have security cards added by effects (no `CannotAddSecurityByEffect` on that player). Use it to filter out a cost body that can't be placed in its owner's security (§3-1-3-8): choosing it would make the optional processing condition impossible, so it can't be chosen (§15-7-4). Driver BT24-040 Venusmon. |
 | `play_cost` | `MetricComparators?` | 2 | rare | `ex7/EX7-008.yaml` | Canonical uniform comparators for the identity metrics that the legacy flat surface left without an `_eq` operator (unify-dsl-scalar-and-comparators Â§2.4). `play_cost: { op: eq, value: 3 }`, ranges via a list, etc. Lowered byte-identically into the `<metric>_eq`/`_lte`/`_gte` compiled fields (the `_eq` compiled slots are new). Legacy `<metric>_lte`/`_gte` keys still parse. |
 | `play_cost_eq_binding` | `PlayCostBindingPredicate?` | 1 | rare | `bt19/BT19-099.yaml` | Candidate-card play-cost comparator relative to a bound/event permanent's play cost, with an integer offset: `{ binding: replacement_subject\|event_target\|<name>, offset, op }`. The candidate matches when `candidate.play_cost OP (subject.play_cost + offset)`. Mirrors `level_eq_binding` resolution but for play cost and with a comparator + offset. Driver: BT19-099 â€” "play 1 [Wicked God] Digimon with a play cost 1 higher than that [leaving] Digimon". G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT. |
@@ -1415,7 +1415,7 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `stack_size_gte` | `DpConstraint?` | 13 |  | `bt1/BT1-085.yaml` |  |
 | `stack_size_lte` | `DpConstraint?` | 5 |  | `bt12/BT12-028.yaml` |  |
 | `trait_contains` | `str?` | 17 |  | `bt10/BT10-048.yaml` | Substring sibling of `trait_has`. Matches when ANY of the subject's traits CONTAINS this token (case-insensitive substring), mirroring DCGO `CardSource.ContainsTraits`. `trait_has` is an EXACT case-insensitive match; `trait_contains` is the substring reading demanded by printed text of the form "[Dragon], [saur] or [Ceratopsian] in any of its traits" â€” where e.g. `saur` only ever appears inside `Dinosaur` / `Plesiosaur` and `Dragon` mostly inside `Dragonkin` / `Dark Dragon`. Threaded identically to `trait_has`, including synth-identity / `ChangeTraits` overlay visibility. G-DSL-TRAIT-CONTAINS-SUBSTRING. Driver: EX3-014 Dorbickmon. |
-| `trait_has` | `str?` | 684 |  | `_examples/BT11-042.yaml` |  |
+| `trait_has` | `str?` | 687 |  | `_examples/BT11-042.yaml` |  |
 | `trashed_hand_card_matching` | `PredicateSpec?` | 1 | rare | `p/P-212.yaml` | Filtered variant of `effect_trashed_any_hand_card`: true when at least one hand card trashed by THIS effect satisfies the inner card-shape predicate (evaluated as a `Card` subject against each recorded card identity â€” zone-agnostic, so it reads the card now sitting in the trash). Driver P-212 Asuna Shiroki â€” "<Draw 1> and trash 1 card in your hand. If this effect trashed a card with the [Three Musketeers] or [TS] trait, delete 1 of your opponent's level 3 Digimon." Example: `trashed_hand_card_matching: { any_of: [{ trait_has: TS }] }`. G-DSL-EFFECT-TRASHED-HAND-CARD. |
 | `trashed_source_card_id_is` | `str?` | 16 |  | `bt21/BT21-055.yaml` |  |
 | `trashed_source_trait_has` | `str?` | 0 | unused | — |  |
@@ -1425,9 +1425,9 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 
 | key | arg | uses | tag | fixture | description |
 |-----|-----|------|-----|---------|-------------|
-| `replacement_cause` | `ReplacementCauseSpec?` | 69 |  | `bt13/BT13-075.yaml` |  |
+| `replacement_cause` | `ReplacementCauseSpec?` | 70 |  | `ad1/AD1-003.yaml` |  |
 | `replacement_source_is_opponent` | `bool?` | 0 | unused | — |  |
-| `replacement_subject_is_mine` | `bool?` | 41 |  | `bt13/BT13-075.yaml` |  |
+| `replacement_subject_is_mine` | `bool?` | 42 |  | `ad1/AD1-003.yaml` |  |
 
 #### Source-relative — 18 (2 unused)
 
@@ -1442,13 +1442,13 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `self_digivolution_sources_contain_name` | `str?` | 12 |  | `_examples/BT20-083.yaml` | Like `self_digivolution_contains_name` but scans ONLY the digivolution *source* cards beneath the carrier â€” the carrier's own top card is excluded. `self_digivolution_contains_name` calls `Permanent::contains_card_name`, which scans the top card too, so a card named "Omnimon (X Antibody)" always self-matches "Omnimon" and the negative case ("no Omnimon among the digivolution cards") is inexpressible. BT20-102 needs the sources-only scan. G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY. |
 | `self_digivolution_sources_trait_has` | `str?` | 6 |  | `bt13/BT13-075.yaml` | Like `self_digivolution_sources_contain_name`, but matches any digivolution source card carrying the named trait. Used by Royal Knights breeding-source effects to gate carriers that actually contain playable [Royal Knight] sources. |
 | `self_same_level_source_pairs_gte` | `i32?` | 2 | rare | `ex12/EX12-032.yaml` | True when the effect carrier has at least N pairs of same-level digivolution source cards below its top card. Each pair consumes two source cards from the same level bucket (`count / 2` per level), matching the existing `same_level_pairs_in_sources` formula selector. Driver: EX12-032 WereGarurumon â€” "[When Attacking] If this Digimon's stack has 2 or more same-level cards...". |
-| `self_source_count` | `SelfSourceCountPredicate?` | 20 |  | `bt12/BT12-029.yaml` | Source-relative threshold predicate â€” compares the number of the effect carrier's OWN digivolution source cards (those beneath its top card) that match `filter` against `value` under `op`. A no-subject global predicate: it does NOT inspect the candidate, it reads `ctx.source_permanent`. Reuses the same source-counting logic as the `source_stack_count` formula (`formula_eval`), so the two agree. Gates a conditional self-aura: BT21-006 Tsumemon inherited "[All Turns] This Digimon with 4 or more [Vemmon] digivolution cards gets +3000 DP" is `active_when: { self_source_count: { filter: { name_is: Vemmon }, op: gte, value: 4 } }`. DCGO `card.PermanentOfThisCard().DigivolutionCards.Count(cond) >= N`. G-DSL-SELF-SOURCE-COUNT-THRESHOLD (driver BT21-006). |
+| `self_source_count` | `SelfSourceCountPredicate?` | 22 |  | `ad1/AD1-008.yaml` | Source-relative threshold predicate â€” compares the number of the effect carrier's OWN digivolution source cards (those beneath its top card) that match `filter` against `value` under `op`. A no-subject global predicate: it does NOT inspect the candidate, it reads `ctx.source_permanent`. Reuses the same source-counting logic as the `source_stack_count` formula (`formula_eval`), so the two agree. Gates a conditional self-aura: BT21-006 Tsumemon inherited "[All Turns] This Digimon with 4 or more [Vemmon] digivolution cards gets +3000 DP" is `active_when: { self_source_count: { filter: { name_is: Vemmon }, op: gte, value: 4 } }`. DCGO `card.PermanentOfThisCard().DigivolutionCards.Count(cond) >= N`. G-DSL-SELF-SOURCE-COUNT-THRESHOLD (driver BT21-006). |
 | `source_count` | `SourceCountPredicate?` | 18 |  | `ad1/AD1-015.yaml` | Permanent-subject predicate. True when the candidate carries at least `at_least` digivolution SOURCE cards (the cards beneath its top card) matching the nested `filter`. Unlike `materials_count_gte` (which counts ALL sources by raw stack length), this counts only sources satisfying an arbitrary card predicate â€” the DCGO `DigivolutionCards.Count(predicate) >= N` idiom. Drives P-094 Destromon's inherited gate: "1 of your [Galacticmon]'s digivolution cards" must carry â‰¥2 [Vemmon] before the return-2-Vemmon cost is offered. The nested `filter` is evaluated against each source card (source subject), so it accepts `name_is` / `name_contains` / `trait_has` / `kind` / etc. G-DSL-SOURCE-COUNT-FILTERED. |
 | `source_deleted_battle_opponent` | `bool?` | 11 |  | `bt16/BT16-004.yaml` | True when the current deletion event's target is this effect source's battle opponent and the source's carrier is still present. Used for inherited "deletes an opponent's Digimon in battle and survives" clauses. |
 | `source_is_cost_target_permanent` | `bool?` | 28 |  | `bt11/BT11-061.yaml` | True when the effect's `source_permanent` is the (or one of the) permanent(s) being digivolved by the action whose cost is being computed. Use to gate "When THIS Digimon would digivolve into â€¦" printed semantics so the observer / cost reducer only fires when its carrier permanent is actually the digivolution target. Single entry for normal digivolve; both DNA materials for DNA digivolve. Always false outside cost-calc dispatch and for effects whose `source_permanent` is `None`. G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure). |
 | `source_is_tamer` | `bool?` | 0 | unused | — |  |
-| `source_is_unsuspended` | `bool?` | 67 |  | `_examples/BT20-083.yaml` |  |
-| `source_name_contains` | `str?` | 29 |  | `_examples/BT17-015.yaml` |  |
+| `source_is_unsuspended` | `bool?` | 68 |  | `_examples/BT20-083.yaml` |  |
+| `source_name_contains` | `str?` | 30 |  | `_examples/BT17-015.yaml` |  |
 | `source_name_is` | `str?` | 2 | rare | `bt17/BT17-102.yaml` | Exact-name sibling of `source_name_contains`: true when one of "this Digimon"'s names — its TOP card's rules names in the synthesized identity (printed name, "also treated as" names, and names gained from effects such as BT17-102's "gains all the names of level 3 or lower cards in its digivolution cards") — equals the value exactly. Never a substring match; digivolution cards are not read (§4-8-2). For printed "this Digimon is [X]" / "this Digimon's name is [X]" (DCGO `TopCard.EqualsCardName`). G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS. |
 | `source_permanent_trait_has` | `str?` | 39 |  | `ad1/AD1-013.yaml` |  |
 
@@ -1465,8 +1465,8 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `end_of_opponents_next_turn` | 13 |  |
 | `end_of_opponents_turn` | 191 |  |
 | `end_of_your_next_turn` | 12 |  |
-| `end_of_your_turn` | 59 |  |
-| `main` | 52 |  |
+| `end_of_your_turn` | 60 |  |
+| `main` | 53 |  |
 | `main_from_hand` | 176 |  |
 | `main_from_trash` | 1 |  |
 | `main_on_field` | 27 |  |
@@ -1504,7 +1504,7 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `on_option_trashed` | 2 |  |
 | `on_own_security_removed` | 28 |  |
 | `on_place_security` | 0 |  |
-| `on_play` | 509 |  |
+| `on_play` | 510 |  |
 | `on_security` | 315 |  |
 | `on_security_check` | 1 |  |
 | `on_source_returned_to_deck_bottom` | 2 | `[All Turns]`-style observer: a digivolution source was RETURNED to the bottom of a player's deck (not trashed) — "when any [Vemmon] return to the bottom of the deck from this Digimon's digivolution cards" (BT21-058, BT18-065). Gate host-scope with `trigger_if: { event_host_permanent_is_source: true }` and the returned card's name with `event_card_name_contains:`. Distinct from `on_digivolution_card_trashed`. G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM. |
@@ -1514,12 +1514,12 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 | `on_use_option` | 2 | `when: on_use_option` — board-wide observer that fires when ANY player uses an Option card (engine `EffectTiming::OnUseOption`, dispatched to every battle-area permanent of BOTH players after the use cost is paid and AFTER the Option's own [Main] body has fully resolved — DCGO `UseOptionClass.UseOption` STACKS the `OnUseOption` skill infos and runs `OptionSkill` inline, and the official BT3-096 Q&A reads "It can be activated after activating the used Option card's [Main] effect"). The engine defers the observers via `Game::on_use_option_armed` / `fire_on_use_option_observers` (`OptionResolutionPhase::OnUseOptionDrain`) so a body that parks a selection or claims `pending_option` still fires them exactly once. Printed shapes: "[All Turns] When a player uses an Option card, …" (BT3-096 Mimi Tachikawa) and "[Your Turn] When you use [TS] trait Option cards, …" (BT25-091 Monica Simmons). Scope the actor with `active_when:` (`your_turn` / `all_turns`). G-DSL-ON-USE-OPTION-TIMING. |
 | `start_of_opponents_main_phase` | 1 | Start of the opposing player's Main phase (after breeding). |
 | `start_of_opponents_turn` | 1 |  |
-| `start_of_your_main_phase` | 109 |  |
+| `start_of_your_main_phase` | 110 |  |
 | `start_of_your_turn` | 49 |  |
 | `until_next_unsuspend` | 0 |  |
-| `when_attacking` | 266 |  |
+| `when_attacking` | 268 |  |
 | `when_card_linked_to_this` | 18 | DigiLink host-side: "[When Linked] when a card gets linked **to this Digimon**" (`when: when_card_linked_to_this`). The effect lives on the HOST (a face-up `scope`), not on the linked card. Lowers to `OnLink` + a host self-filter (`event_permanent == source_permanent`) so it fires once for the host the card actually attached to and not for a sibling host. Mirrors DCGO `CardEffectCommons.CanTriggerWhenLinked`. |
-| `when_digivolving` | 482 |  |
+| `when_digivolving` | 485 |  |
 | `when_linked` | 25 | DigiLink Shape-B: "when this Digimon gets linked" (`when: when_linked`). Use on a `scope: linked` effect; lowers to `OnLink` + a self-filter. |
 | `when_would_link_to_this` | 2 | DigiLink host-side pre-link **replacement**: "when a card **would** link **to this Digimon**" (`when: when_would_link_to_this`). The effect lives on the HOST (a face-up `scope`). Lowers to a `WhenWouldLink` REPLACEMENT effect (not a triggered observer) + a host self-filter (`pending_link_host() == source_permanent`) so it fires only while the linking card is attaching to THIS permanent. Pair with an `optional` clause + a `reduce_link_cost` step to express "you may reduce the cost" (Gap 5 — BT25-004 Tapmon / BT25-045 Onmon). Filter the would-link card's traits via `active_when: { would_link_card_trait_any_of: [...] }`. |
 
@@ -1529,16 +1529,16 @@ Complete, enum-derived index of every authoring primitive: **186 step verbs**, *
 |-----|------|-------------|
 | `ace_overflow` | 21 |  |
 | `alt_path_registration` | 6 |  |
-| `aura` | 220 |  |
+| `aura` | 222 |  |
 | `cost_reduction` | 87 |  |
 | `delay` | 72 |  |
 | `flood_gate` | 63 |  |
-| `grant_keyword` | 449 |  |
+| `grant_keyword` | 452 |  |
 | `link_condition` | 33 |  |
 | `link_requirement` | 9 |  |
 | `partition` | 11 |  |
 | `raw_rust` | 15 |  |
-| `replacement` | 128 |  |
+| `replacement` | 129 |  |
 | `succession` | 4 |  |
 | `use_cost_increase` | 2 |  |
 

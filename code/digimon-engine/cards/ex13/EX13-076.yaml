@@ -129,7 +129,6 @@ effects:
           filter:
             all_of:
               - kind: digimon
-              - is_suspended: false
           prompt: "You may suspend 1 of your opponent's Digimon"
       - if:
           condition: { binding_present: suspend_target }

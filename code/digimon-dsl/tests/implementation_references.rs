@@ -146,6 +146,7 @@ fn repeated_formula_and_alternate_path_predicates_keep_occurrence_paths() {
         outer_prompt: false,
         opt_group: None,
         once_per_turn: false,
+        as_option_effect: false,
         max_per_turn: None,
         process: vec![CompiledStep::GainMemoryFn {
             formula: CompiledFormula::SourceStackCount {
@@ -209,7 +210,7 @@ fn binding_slot_and_name_slot_never_conflate() {
     }
 }
 #[test]
-fn all_actual_seven_literal_filters_have_exact_typed_paths() {
+fn all_actual_self_id_literal_filters_have_exact_typed_paths() {
     let cards: [(&str, &[u8], usize); 5] = [
         (
             "BT24-090",
@@ -224,7 +225,9 @@ fn all_actual_seven_literal_filters_have_exact_typed_paths() {
         (
             "EX7-070",
             include_bytes!("../../digimon-engine/cards/ex7/EX7-070.yaml"),
-            2,
+            // 1 since 716c6e291: the colour bypass became a top-level
+            // `use_requirement`, dropping the `card_number_is` flood-gate target.
+            1,
         ),
         (
             "EX7-071",
@@ -260,7 +263,7 @@ fn all_actual_seven_literal_filters_have_exact_typed_paths() {
         }
         total += expected;
     }
-    assert_eq!(total, 7);
+    assert_eq!(total, 6);
 }
 #[test]
 fn duplicate_rows_remain_blocked_and_v1_bytes_stable() {

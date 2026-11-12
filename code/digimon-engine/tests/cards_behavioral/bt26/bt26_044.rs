@@ -148,16 +148,18 @@ fn bt26_044_declined_digivolve_refunds_once_per_turn() {
     let lila = r.place_on_field(0, CARD_ID, Some(0));
     push_hand(&mut r, 0, "ROSE");
     let carrier = r.place_stack(0, &["BT26-036", "FILLER"]);
-    r.place_on_field(1, "OPP", Some(0));
-    r.place_on_field(1, "OPP", Some(0));
+    let opp_a = r.place_on_field(1, "OPP", Some(0));
+    let opp_b = r.place_on_field(1, "OPP", Some(0));
     fire(&mut r, EffectTiming::WhenAttacking, carrier);
-    pick_first(&mut r, 0);
+    pick_side_field(&mut r, 0, opp_a);
     pass(&mut r, 0); // decline the digivolve
     let _ = r.auto_resolve();
-    // A second opponent suspend this turn re-offers it (DCGO RemoveUse).
+    // A second opponent suspend this turn re-offers it (DCGO RemoveUse). The
+    // second Lalamon suspends the other, still-unsuspended Digimon: choosing
+    // the already-suspended one is legal (Q845) but suspends nothing.
     let lala2 = r.place_stack(0, &["BT26-036", "FILLER"]);
     fire(&mut r, EffectTiming::WhenAttacking, lala2);
-    pick_first(&mut r, 0);
+    pick_side_field(&mut r, 0, opp_b);
     assert!(
         r.pending_selection_view().is_some(),
         "re-offered after a decline"
@@ -256,4 +258,47 @@ fn bt26_044_inherited_save_only_for_carrier_audit() {
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"DS6".to_string()), "the carrier stays");
     assert_eq!(sources(&r, t), 0, "cost paid");
+}
+
+/// Q845 / Q1782: "You may suspend 1 of your opponent's Digimon or Tamers" may
+/// choose one that is already suspended. It is not suspended by the effect; the
+/// independent "Then" lock still follows (Q7035).
+#[test]
+fn bt26_044_may_choose_an_already_suspended_target_and_still_locks() {
+    let mut r = setup();
+    let lila = r.place_on_field(0, CARD_ID, Some(0));
+    let opp = r.place_on_field(1, "OPP", Some(0));
+    r.game.players[1].battle_area[opp.index as usize].is_suspended = true;
+    r.fire_on_play(0, lila.index as usize);
+    let v = r.pending_selection_view().expect("optional suspend");
+    assert!(v.is_optional);
+    pick_first(&mut r, 0); // OPP, already suspended
+    let v = r.pending_selection_view().expect("lock pick");
+    assert!(!v.is_optional, "the lock is mandatory");
+    let _ = r.auto_resolve();
+    assert!(r.game.players[1].battle_area[opp.index as usize].is_suspended);
+    assert!(r.modifiers().has(opp, ModifierType::CannotUnsuspend));
+}
+
+/// Lalamon's suspend may target an already-suspended Digimon, but nothing
+/// suspends, so Lilamon's "When any of your opponent's Digimon or Tamers
+/// suspend" digivolve does not trigger.
+#[test]
+fn bt26_044_choosing_an_already_suspended_digimon_does_not_trigger_the_digivolve() {
+    let mut r = setup();
+    r.place_on_field(0, CARD_ID, Some(0));
+    push_hand(&mut r, 0, "ROSE");
+    let carrier = r.place_stack(0, &["BT26-036", "FILLER"]);
+    let opp = r.place_on_field(1, "OPP", Some(0));
+    r.game.players[1].battle_area[opp.index as usize].is_suspended = true;
+    fire(&mut r, EffectTiming::WhenAttacking, carrier);
+    let v = r
+        .pending_selection_view()
+        .expect("Lalamon offers the already-suspended Digimon");
+    assert!(v.is_optional);
+    pick_first(&mut r, 0);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "no suspend happened, so Lilamon's digivolve is not offered"
+    );
 }

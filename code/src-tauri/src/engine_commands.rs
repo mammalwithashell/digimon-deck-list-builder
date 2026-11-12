@@ -2913,6 +2913,7 @@ mod tests {
             cost_paid: 3,
             cost_printed: 3,
             via_alt_path: None,
+            effect_initiated: false,
         });
         let attack_seq = game.next_event_seq();
         game.events.push(GameEvent::Attack {

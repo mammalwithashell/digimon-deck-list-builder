@@ -37,6 +37,51 @@ fn fixture(stack: &[&str]) -> (DebugRunner, PermanentHandle) {
     r.game.tick_declarative_effects();
     (r, h)
 }
+/// Stack positions of the committable source rows on the pending owned
+/// source-choice page (battle-area digivolution cards of player 0).
+fn source_positions(game: &digimon_engine::Game) -> Vec<usize> {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let pending = game.pending_selection.as_ref().expect("source selection");
+    let mut positions: Vec<usize> = pending
+        .card_choice
+        .as_ref()
+        .expect("source selection owns its page")
+        .view(game, pending.selecting_player)
+        .rows
+        .into_iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .map(|row| {
+            assert!(matches!(row.zone, Some(CardChoiceZone::BattleSource)));
+            assert_eq!(row.owner, Some(0));
+            row.position.expect("source rows carry their stack position").parse().unwrap()
+        })
+        .collect();
+    positions.sort();
+    positions
+}
+/// The mask-legal action committing the source at stack `position`.
+fn source_action(game: &digimon_engine::Game, position: usize) -> u16 {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    let pending = game.pending_selection.as_ref().expect("source selection");
+    let action = pending
+        .card_choice
+        .as_ref()
+        .expect("source selection owns its page")
+        .view(game, pending.selecting_player)
+        .rows
+        .into_iter()
+        .find(|row| {
+            matches!(row.operation, CardChoiceOperation::CommitCard)
+                && row.position.as_deref() == Some(position.to_string().as_str())
+        })
+        .unwrap_or_else(|| panic!("source at position {position} must be a legal pick"))
+        .action_id;
+    assert_eq!(
+        digimon_engine::action::build_action_mask(game, pending.selecting_player)[action as usize],
+        1.0
+    );
+    action
+}
 fn ids(r: &DebugRunner, h: PermanentHandle) -> Vec<String> {
     r.game.players[0].battle_area[h.index as usize]
         .card_sources
@@ -335,8 +380,13 @@ fn explicit_source_cost_requires_actual_payment_but_ordinary_effect_continues() 
             &mut ctx,
             &mut bindings,
         );
-        assert_eq!(ctx.game.players[0].trash.len(), 1);
+        // Ordinary effect: trash what can be trashed (the unprotected PLAIN)
+        // and continue. Cost: the selected payment includes a protected card,
+        // so it cannot be performed in full and nothing is paid — no partial
+        // payment of an optional processing condition (CR 4.3 §15-7-3/-4).
+        assert_eq!(ctx.game.players[0].trash.len(), if cost { 0 } else { 1 });
         assert_eq!(ctx.game.memory, before + if cost { 0 } else { 3 });
+        assert!(ctx.cost_unpayable == cost, "only the cost form reports an unpaid cost");
     }
 }
 
@@ -447,7 +497,7 @@ fn cloned_source_cost_rechecks_protection_added_after_first_pick() {
     r.game.tick_declarative_effects();
     let first_card = r.game.players[0].battle_area[0].card_sources[1].handle();
     assert!(r.game.activate_field_main(0, 0));
-    let first = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let first = source_action(&r.game, 1);
     r.game.resolve_selection(0, first).unwrap();
     let mut cloned = r.game.clone();
     for game in [&mut r.game, &mut cloned] {
@@ -456,17 +506,23 @@ fn cloned_source_cost_rechecks_protection_added_after_first_pick() {
             ModifierEntry::simple(ModifierType::CannotTrash, 0, Expiry::Permanent, 0)
                 .with_payload(ModifierPayload::ProtectedSourceCards(vec![first_card])),
         );
-        let second = game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let second = source_action(game, 2);
         game.resolve_selection(0, second).unwrap();
         assert!(!game.players[1].battle_area[0].is_suspended);
         assert_eq!(
             game.players[0].trash.len(),
-            1,
-            "only the unprotected selected card paid"
+            0,
+            "a selected card protected after the pick makes the Digi-Burst cost \
+             unpayable as a whole: nothing is trashed (atomic payment, CR 4.3 §15-7-3)"
+        );
+        assert_eq!(
+            game.players[0].battle_area[0].card_sources.len(),
+            4,
+            "the whole stack is intact"
         );
         assert!(
             game.pending_selection.is_none(),
-            "no benefit target selection after partial payment"
+            "no benefit target selection after a failed payment"
         );
     }
 }
@@ -503,7 +559,8 @@ fn up_to_source_cost_counts_actual_removals_after_late_protection_on_clone() {
         &mut EffectContext::new(&mut r.game, cards[3].handle(), Some(h), 0),
         &mut Bindings::new(),
     );
-    let first = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    assert_eq!(source_positions(&r.game), vec![1, 2], "the protected bottom card is not offered");
+    let first = source_action(&r.game, 1);
     r.game.resolve_selection(0, first).unwrap();
     let mut cloned = r.game.clone();
     for game in [&mut r.game, &mut cloned] {
@@ -513,13 +570,16 @@ fn up_to_source_cost_counts_actual_removals_after_late_protection_on_clone() {
                 ModifierPayload::ProtectedSourceCards(vec![cards[1].handle()]),
             ),
         );
-        let second = game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let second = source_action(game, 2);
         game.resolve_selection(0, second).unwrap();
-        assert_eq!(game.players[0].trash.len(), 1);
+        // The already-picked cards[1] is now protected: the selected payment
+        // cannot be performed in full, so none of it is (no partial payment,
+        // CR 4.3 §15-7-3) and the per-trashed-card benefit counts zero.
+        assert_eq!(game.players[0].trash.len(), 0);
         assert_eq!(
             game.memory,
-            before + 1,
-            "up-to cost benefit counts only successfully trashed refs, including clone resume"
+            before,
+            "up-to cost benefit counts only actually trashed refs, including clone resume"
         );
         assert!(game.pending_selection.is_none());
     }
@@ -527,7 +587,7 @@ fn up_to_source_cost_counts_actual_removals_after_late_protection_on_clone() {
 #[test]
 fn optional_exact_cost_can_decline_zero_or_one_without_trashing_on_clone() {
     use digimon_dsl::compiled::{CompiledBindingRef, CompiledPredicate, CompiledStep};
-    use digimon_engine::action::space::{encode_source_select, PASS};
+    use digimon_engine::action::space::PASS;
     use digimon_engine::dsl_cards::{bindings::Bindings, step::run_steps};
     for take_one in [false, true] {
         let (mut r, h) = fixture(&["PROTECT", "PLAIN", "TOP"]);
@@ -553,15 +613,20 @@ fn optional_exact_cost_can_decline_zero_or_one_without_trashing_on_clone() {
             &mut EffectContext::new(&mut r.game, top, Some(h), 0),
             &mut Bindings::new(),
         );
-        let payable = encode_source_select(h.index as u16, 1).unwrap();
-        let protected = encode_source_select(h.index as u16, 0).unwrap();
+        // Source picks are owned physical card choices: the protected bottom
+        // card (position 0) is never committable; only PLAIN (position 1).
+        assert_eq!(
+            source_positions(&r.game),
+            vec![1],
+            "the protected source is not a legal pick"
+        );
+        let payable = source_action(&r.game, 1);
         let pending = r.game.pending_selection.as_ref().unwrap();
         assert_eq!(
             pending.valid_action_ids,
             vec![payable, PASS],
             "only the unprotected source and explicit decline are legal"
         );
-        assert!(!pending.valid_action_ids.contains(&protected));
         let choice = if take_one { payable } else { PASS };
         let mut cloned = r.game.clone();
         for game in [&mut r.game, &mut cloned] {

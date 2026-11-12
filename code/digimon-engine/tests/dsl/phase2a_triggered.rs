@@ -161,6 +161,7 @@ fn fixture_on_play_gain_memory(n: i32) -> CompiledCard {
             outer_prompt: false,
             opt_group: None,
             once_per_turn: false,
+            as_option_effect: false,
             max_per_turn: None,
             process: vec![CompiledStep::GainMemory(n)],
             summary: Some("Gain N memory".into()),

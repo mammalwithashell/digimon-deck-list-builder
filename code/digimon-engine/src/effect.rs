@@ -284,6 +284,11 @@ pub struct Effect {
     pub on_attack: bool,
     pub on_deletion: bool,
     pub inherited: bool,
+    /// Queue this effect as an OPTION effect (`EffectSourceKind::Option`)
+    /// instead of an effect of the carrying card's own kind. Used by a DUAL
+    /// card's Digimon-face clause that "activates a [Main] effect on this
+    /// card's Option side" (official Q&A Q6496/Q6498).
+    pub acts_as_option: bool,
     pub security: bool,
     /// Trash-zone clause: the printed text carries an explicit `[Trash]`
     /// timing scope, so the clause is active ONLY while the card sits in its
@@ -962,6 +967,7 @@ impl EffectBuilder {
                 on_attack: false,
                 on_deletion: false,
                 inherited: false,
+                acts_as_option: false,
                 security: false,
                 trash_zone: false,
                 breeding_zone: false,
@@ -1643,6 +1649,12 @@ impl EffectBuilder {
     /// forces `timing = None` for declarative digivolution-stack effects.
     pub fn inherited(mut self) -> Self {
         self.inner.inherited = true;
+        self
+    }
+
+    /// See [`Effect::acts_as_option`].
+    pub fn acts_as_option(mut self) -> Self {
+        self.inner.acts_as_option = true;
         self
     }
 

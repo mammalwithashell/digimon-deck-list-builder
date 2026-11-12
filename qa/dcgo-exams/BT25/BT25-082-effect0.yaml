@@ -97,11 +97,8 @@ steps:
   - actor: 0
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
-  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
-  # park -- DCGO builds this effect non-optional and carries the "may" on the
-  # pick's canNoSelect), then the shared hand pick.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
+  # [When Digivolving]: the shared hand pick (no outer gate: like DCGO, BT25-082
+  # carries the "may" on the pick's own decline).
   - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
@@ -117,7 +114,7 @@ assert:
   # Memory 1 is the witness: 3 - 2 (alt-circle), not 3 - 3. BlackGatomon sits
   # on Sparrowmon and Pagumon; Asuna Shiroki arrived for free through the
   # [When Digivolving] measured in BT25-082-effect1.yaml.
-  - at: 14
+  - at: 13
     that:
       turn: 5
       phase: Main

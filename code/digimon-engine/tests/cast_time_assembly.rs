@@ -26,11 +26,62 @@
 use std::sync::{Arc, Mutex};
 
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::{PASS, PLAY_HAND_START, TRASH_EFFECT_START};
+use digimon_engine::action::space::{PASS, PLAY_HAND_START};
 use digimon_engine::debug_runner::{make_test_card_with_level, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::GamePhase;
 use digimon_engine::events::GameEvent;
-use digimon_engine::{CardEffect, CardHandle, Effect};
+use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+use digimon_engine::{CardEffect, CardHandle, Effect, Game};
+
+/// Committable physical candidates on the pending mixed-zone material page,
+/// as `(action_id, card_id, zone)`. The assembly pick is an owned card choice:
+/// a row's action id is a page slot, never a zone index, and rows rebind after
+/// every pick — so tests address cards by identity, not by cached action ids.
+fn material_rows(game: &Game) -> Vec<(u16, String, CardChoiceZone)> {
+    let pending = game.pending_selection.as_ref().expect("material selection");
+    // A finishing prompt with no candidates left (slot cap reached) carries
+    // no card page at all: it offers nothing to commit.
+    let Some(choice) = pending.card_choice.as_ref() else {
+        return Vec::new();
+    };
+    choice
+        .view(game, pending.selecting_player)
+        .rows
+        .into_iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .map(|row| {
+            assert_eq!(row.owner, Some(pending.selecting_player));
+            (
+                row.action_id,
+                row.card_id.expect("own battle-area/trash materials are public"),
+                row.zone.expect("committable rows name their zone"),
+            )
+        })
+        .collect()
+}
+
+fn material_ids(game: &Game) -> Vec<String> {
+    let mut ids: Vec<String> = material_rows(game).into_iter().map(|(_, id, _)| id).collect();
+    ids.sort();
+    ids
+}
+
+/// The mask-legal action committing `card_id`, asserting it sits in `zone`.
+fn material_action(game: &Game, card_id: &str, zone: CardChoiceZone) -> u16 {
+    let (action, _, found) = material_rows(game)
+        .into_iter()
+        .find(|(_, id, _)| id == card_id)
+        .unwrap_or_else(|| panic!("{card_id} must be a legal physical candidate"));
+    assert_eq!(
+        format!("{found:?}"),
+        format!("{zone:?}"),
+        "{card_id} is offered from the wrong zone"
+    );
+    let player = game.pending_selection.as_ref().unwrap().selecting_player;
+    assert_eq!(build_action_mask(game, player)[action as usize], 1.0);
+    assert_eq!(build_action_mask(game, 1 - player)[action as usize], 0.0);
+    action
+}
 
 const TEST_CTA_YAML: &str = r#"
 card: TEST-CTA
@@ -126,7 +177,7 @@ fn assembly_select_surfaces_optional_zero_and_decline_plays_at_full_cost() {
     let mut runner = builder_with_cta().hand(0, &["TEST-CTA"]).memory(10).start();
     runner.inject_trash(0, "DM-PIED");
     runner.inject_trash(0, "DM-METAL");
-    let machine = runner.place_stack(0, &["VANILLA", "DM-MACHINE"]);
+    runner.place_stack(0, &["VANILLA", "DM-MACHINE"]);
 
     let played = runner.game.play_from_hand(0, 0);
     assert_eq!(
@@ -140,15 +191,16 @@ fn assembly_select_surfaces_optional_zero_and_decline_plays_at_full_cost() {
         sel.is_optional,
         "at memory 10 the full cost 15 is payable (10-15 = -5 >= -10), so 0 placements is legal"
     );
-    // Candidates: the Dark Masters battle-area TOP + both trash Dark Masters.
-    assert!(
-        sel.valid_action_ids.contains(&(machine.index as u16)),
-        "the battle-area Dark Masters top must be a candidate: {:?}",
-        sel.valid_action_ids
+    // Candidates: the Dark Masters battle-area TOP + both trash Dark Masters
+    // (the VANILLA source under Machinedramon is not offered).
+    material_action(&runner.game, "DM-MACHINE", CardChoiceZone::BattleTop);
+    material_action(&runner.game, "DM-PIED", CardChoiceZone::Trash);
+    material_action(&runner.game, "DM-METAL", CardChoiceZone::Trash);
+    assert_eq!(
+        material_ids(&runner.game),
+        vec!["DM-MACHINE", "DM-METAL", "DM-PIED"],
+        "exactly the three Dark Masters are committable"
     );
-    assert!(sel.valid_action_ids.contains(&TRASH_EFFECT_START));
-    assert!(sel.valid_action_ids.contains(&(TRASH_EFFECT_START + 1)));
-    assert_eq!(sel.valid_action_ids.len(), 3);
     let mask = build_action_mask(&runner.game, 0);
     assert_eq!(
         mask[PASS as usize], 1.0,
@@ -193,34 +245,29 @@ fn picking_a_name_masks_out_same_named_candidates() {
     runner.inject_trash(0, "DM-PIED");
 
     assert_eq!(runner.game.play_from_hand(0, 0), None);
-    let sel = runner.pending_selection().expect("assembly selection");
     assert_eq!(
-        sel.valid_action_ids.len(),
-        3,
+        material_ids(&runner.game),
+        vec!["DM-PIED", "DM-PUPPET", "DM-PUPPET-ALT"],
         "before any pick, both same-named Puppetmon and Piedmon are candidates"
     );
 
+    let first = material_action(&runner.game, "DM-PUPPET", CardChoiceZone::Trash);
     runner
-        .execute_action(0, TRASH_EFFECT_START)
+        .execute_action(0, first)
         .expect("pick the first Puppetmon");
 
-    let sel = runner.pending_selection().expect("selection re-installs");
+    assert!(runner.pending_selection().is_some(), "selection re-installs");
     // The picked card stays in trash until commit (materials move at
-    // placement time), so candidate ids keep addressing the live trash:
-    // DM-PUPPET is excluded as already-selected, the same-named
-    // DM-PUPPET-ALT as a distinctness violation, and Piedmon must remain.
-    let candidate_trash_ids: Vec<String> = sel
-        .valid_action_ids
-        .iter()
-        .filter(|id| **id >= TRASH_EFFECT_START)
-        .map(|id| {
-            runner.game.players[0].trash[(*id - TRASH_EFFECT_START) as usize]
-                .card_id(&runner.game.card_data)
-                .to_string()
-        })
-        .collect();
+    // placement time): DM-PUPPET is excluded as already-selected, the
+    // same-named DM-PUPPET-ALT as a distinctness violation, and Piedmon
+    // must remain.
     assert_eq!(
-        candidate_trash_ids,
+        runner.trash_size(0),
+        3,
+        "materials do not move until placement commits"
+    );
+    assert_eq!(
+        material_ids(&runner.game),
         vec!["DM-PIED".to_string()],
         "the second same-named Puppetmon must be greyed out (distinct_by: name)"
     );
@@ -233,27 +280,36 @@ fn full_assembly_pays_reduced_cost_places_sources_and_trashes_material_stack() {
     let mut runner = builder_with_cta().hand(0, &["TEST-CTA"]).memory(10).start();
     runner.inject_trash(0, "DM-PIED");
     runner.inject_trash(0, "DM-METAL");
-    let machine = runner.place_stack(0, &["VANILLA", "DM-MACHINE"]);
+    runner.place_stack(0, &["VANILLA", "DM-MACHINE"]);
 
     assert_eq!(runner.game.play_from_hand(0, 0), None);
+    let pick = material_action(&runner.game, "DM-MACHINE", CardChoiceZone::BattleTop);
     runner
-        .execute_action(0, machine.index as u16)
+        .execute_action(0, pick)
         .expect("pick the battle-area Dark Masters");
+    let pick = material_action(&runner.game, "DM-PIED", CardChoiceZone::Trash);
     runner
-        .execute_action(0, TRASH_EFFECT_START)
+        .execute_action(0, pick)
         .expect("pick Piedmon from trash");
+    let pick = material_action(&runner.game, "DM-METAL", CardChoiceZone::Trash);
     runner
-        .execute_action(0, TRASH_EFFECT_START + 1)
+        .execute_action(0, pick)
         .expect("pick MetalSeadramon from trash");
 
     // Slot cap (3) reached — the finishing prompt has no candidates left and
     // must therefore be declinable regardless of payability.
     let sel = runner.pending_selection().expect("finishing prompt");
     assert!(
-        sel.valid_action_ids.is_empty(),
+        material_rows(&runner.game).is_empty(),
         "no candidates past the cap"
     );
+    assert!(sel.valid_action_ids.is_empty(), "no candidate ids past the cap");
     assert!(sel.is_optional);
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PASS as usize],
+        1.0,
+        "finishing (PASS) is mask-legal at the cap"
+    );
     runner.execute_action(0, PASS).expect("finish placing");
 
     assert_eq!(runner.memory(), 7, "cost 15 - 3×4 = 3 paid from memory 10");
@@ -318,22 +374,23 @@ fn stop_is_masked_until_placements_make_the_cost_payable() {
         "PASS is rejected while the remaining cost is unpayable"
     );
 
+    let first = material_action(&runner.game, "DM-PIED", CardChoiceZone::Trash);
     runner
-        .execute_action(0, TRASH_EFFECT_START)
+        .execute_action(0, first)
         .expect("first placement");
     let sel = runner.pending_selection().expect("selection re-installs");
     assert!(
         !sel.is_optional,
         "1 placed → cost 11 → 0-11 < -10: still forced"
     );
+    assert!(!sel.valid_action_ids.contains(&PASS));
+    assert_eq!(
+        material_ids(&runner.game),
+        vec!["DM-MACHINE", "DM-METAL"],
+        "the picked Piedmon is no longer offered"
+    );
 
-    // Trash index 0 was picked; the next candidate addresses the live trash.
-    let next = *runner
-        .pending_selection()
-        .unwrap()
-        .valid_action_ids
-        .first()
-        .expect("second candidate");
+    let next = material_action(&runner.game, "DM-METAL", CardChoiceZone::Trash);
     runner.execute_action(0, next).expect("second placement");
     let sel = runner.pending_selection().expect("selection re-installs");
     assert!(
@@ -428,13 +485,9 @@ fn assembly_play_is_not_marked_digixros_and_on_play_drains_after_placement() {
     runner.inject_trash(0, "DM-METAL");
 
     assert_eq!(runner.game.play_from_hand(0, 0), None);
-    runner.execute_action(0, TRASH_EFFECT_START).expect("pick");
-    let next = *runner
-        .pending_selection()
-        .unwrap()
-        .valid_action_ids
-        .first()
-        .expect("second candidate");
+    let first = material_action(&runner.game, "DM-PIED", CardChoiceZone::Trash);
+    runner.execute_action(0, first).expect("pick");
+    let next = material_action(&runner.game, "DM-METAL", CardChoiceZone::Trash);
     runner.execute_action(0, next).expect("pick");
     runner.execute_action(0, PASS).expect("finish");
 
@@ -464,8 +517,9 @@ fn clone_mid_assembly_selection_resolves_on_the_clone() {
     assert!(runner.pending_selection().is_some());
 
     let mut cloned = runner.game.clone();
+    let pick = material_action(&cloned, "DM-PIED", CardChoiceZone::Trash);
     cloned
-        .resolve_selection(0, TRASH_EFFECT_START)
+        .resolve_selection(0, pick)
         .expect("clone resolves the assembly pick via the resumable VM");
     // Finish on the clone: one placement → cost 11 → payable from 10.
     cloned.resolve_selection(0, PASS).expect("clone finishes");

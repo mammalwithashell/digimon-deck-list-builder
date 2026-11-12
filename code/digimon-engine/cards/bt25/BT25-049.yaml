@@ -69,9 +69,10 @@ effects:
           bind_as: tgt
           optional: true
           filter:
+            # any of the opponent's Digimon, suspended or not (DCGO BT25_049.cs `OpponentsDigimon`; official Q&A Q845:
+            # an already-suspended Digimon can be specified for a suspending effect, it just isn't suspended by it)
             all_of:
               - kind: digimon
-              - is_suspended: false
           prompt: "You may suspend 1 of your opponent's Digimon"
       - suspend: { target: tgt }
 

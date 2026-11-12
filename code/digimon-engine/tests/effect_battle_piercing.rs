@@ -8,7 +8,51 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{Expiry, Keyword};
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::game::Game;
+use digimon_engine::selection::SelectionKind;
 use std::sync::Arc;
+
+/// The effect battle is part of the On Attack effect's processing, so the
+/// battle's `<Piercing>` (a battle-result trigger) and the end-of-battle reward
+/// pend in ONE pool once that effect finishes (CR 4.3 15-8-3-2, 15-4-3-2) and
+/// the turn player chooses their order (15-4-3-5-1). Resolve that order with
+/// `<Piercing>` first or second; every branch must give the same outcome.
+fn order_pool(game: &mut Game, piercing_first: bool) {
+    let selection = game.pending_selection.as_ref().expect("pooled triggers");
+    assert_eq!(selection.kind, SelectionKind::TriggerOrder);
+    let choices = selection.effect_choices.as_ref().expect("order entries");
+    assert_eq!(choices.len(), 2, "Piercing and the battle reward");
+    assert_eq!(
+        choices.iter().filter(|c| c.keyword == Some(Keyword::Piercing)).count(),
+        1
+    );
+    let action = choices
+        .iter()
+        .find(|c| (c.keyword == Some(Keyword::Piercing)) == piercing_first)
+        .unwrap()
+        .action_id;
+    let actor = selection.selecting_player;
+    assert!(build_action_mask(game, actor)[action as usize] > 0.5);
+    game.resolve_selection(actor, action).unwrap();
+}
+
+/// Answer the battle reward's optional prompt (accept or decline).
+fn answer_reward(game: &mut Game, accept: bool) {
+    let selection = game.pending_selection.as_ref().expect("battle reward");
+    assert!(build_action_mask(game, selection.selecting_player)[PASS as usize] > 0.5, "reward is optional");
+    let actor = selection.selecting_player;
+    let action = if accept {
+        *selection
+            .valid_action_ids
+            .iter()
+            .find(|&&a| a != PASS)
+            .unwrap()
+    } else {
+        PASS
+    };
+    assert!(build_action_mask(game, actor)[action as usize] > 0.5);
+    game.resolve_selection(actor, action).unwrap();
+}
 
 struct BattleOnAttack {
     other: bool,
@@ -115,27 +159,22 @@ fn attacking_effect_battler_checks_after_target_disappears_and_cloned_reward() {
         5,
         "wait for battle reward"
     );
-    let mut clone = r.game.clone();
-    for (game, accept) in [(&mut r.game, true), (&mut clone, false)] {
-        let selection = game.pending_selection.as_ref().expect("battle reward");
-        let actor = selection.selecting_player;
-        let action = if accept {
-            *selection
-                .valid_action_ids
-                .iter()
-                .find(|&&a| a != PASS)
-                .unwrap()
-        } else {
-            PASS
-        };
-        assert!(build_action_mask(game, actor)[action as usize] > 0.5);
-        game.resolve_selection(actor, action).unwrap();
-        assert_eq!(
-            game.players[1].security.len(),
-            4,
-            "owed Piercing survives vanished target"
-        );
-        assert!(game.pending_attack.is_none());
+    let snapshot = r.game.clone();
+    for accept in [true, false] {
+        for piercing_first in [true, false] {
+            let mut game = snapshot.clone();
+            order_pool(&mut game, piercing_first);
+            assert_eq!(game.players[1].security.len(), 5, "check waits for the pool");
+            answer_reward(&mut game, accept);
+            assert!(game.pending_selection.is_none());
+            assert_eq!(
+                game.players[1].security.len(),
+                4,
+                "owed Piercing survives vanished target"
+            );
+            assert_eq!(game.memory, snapshot.memory + i16::from(accept));
+            assert!(game.pending_attack.is_none());
+        }
     }
 }
 #[test]
@@ -174,17 +213,12 @@ fn removed_attacker_cannot_process_owed_piercing_on_clone() {
         }),
     );
     r.attack_digimon(atk, target, false);
-    let mut clone = r.game.clone();
-    for game in [&mut r.game, &mut clone] {
-        let selection = game.pending_selection.as_ref().unwrap();
-        let actor = selection.selecting_player;
-        let action = *selection
-            .valid_action_ids
-            .iter()
-            .find(|&&a| a != PASS)
-            .unwrap();
-        assert!(build_action_mask(game, actor)[action as usize] > 0.5);
-        game.resolve_selection(actor, action).unwrap();
+    let snapshot = r.game.clone();
+    for piercing_first in [true, false] {
+        let mut game = snapshot.clone();
+        order_pool(&mut game, piercing_first);
+        answer_reward(&mut game, true);
+        assert!(game.pending_selection.is_none());
         assert!(game.players[0].battle_area.is_empty());
         assert_eq!(game.players[1].security.len(), 5);
         assert!(game.pending_attack.is_none());
@@ -204,17 +238,12 @@ fn ended_attack_skips_owed_piercing_on_clone() {
         }),
     );
     r.attack_digimon(atk, target, false);
-    let mut clone = r.game.clone();
-    for game in [&mut r.game, &mut clone] {
-        let selection = game.pending_selection.as_ref().unwrap();
-        let actor = selection.selecting_player;
-        let action = *selection
-            .valid_action_ids
-            .iter()
-            .find(|&&a| a != PASS)
-            .unwrap();
-        assert!(build_action_mask(game, actor)[action as usize] > 0.5);
-        game.resolve_selection(actor, action).unwrap();
+    let snapshot = r.game.clone();
+    for piercing_first in [true, false] {
+        let mut game = snapshot.clone();
+        order_pool(&mut game, piercing_first);
+        answer_reward(&mut game, true);
+        assert!(game.pending_selection.is_none());
         assert_eq!(game.players[1].security.len(), 5);
         assert!(game.pending_attack.is_none());
     }

@@ -164,7 +164,16 @@ fn run(owner: u8, seed: u64, decline: bool, prohibit: bool, outer: bool) {
         first = false;
         decisions += 1;
     }
-    assert!(decisions > 0);
+    // Migrated 2026-11-12 for c6eda5678 (effect-digivolve candidates must be able to
+    // digivolve): the `select_hand` of every requirement-honouring
+    // `effect_initiated_digivolve` now carries `can_digivolve_onto`, matching DCGO's
+    // `SelectSourceCard` filter `CanPlayCardTargetFrame` -> `CanEvolve` ->
+    // `CanNotEvolve` (`CardSource.cs`), which excludes cards an `ICanNotDigivolveEffect`
+    // forbids. Under `CannotDigivolveDigimonByEffect` BT26-029 is therefore no longer a
+    // candidate and BT24-003 asks nothing (DCGO asks nothing when no card qualifies);
+    // nothing is paid either way. Previously the pick was offered and the digivolve
+    // then did nothing.
+    assert_eq!(decisions > 0, !prohibit, "prohibited Shaman evolution offers no pick");
     assert!(projected.pending_selection.is_none());
     assert!(original.effect_queue.is_empty() && projected.effect_queue.is_empty());
     assert_observed_equal(&mut original, &mut projected);

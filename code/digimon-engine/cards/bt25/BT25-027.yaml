@@ -43,6 +43,12 @@ effects:
   # ─── WD/WA: bounce opp lvl<=4, then trash face-down → unsuspend self ──────
   - when: [when_digivolving, when_attacking]
     optional: true
+    # DCGO always shows the initial Yes/No (`OptionalSkill`); declining it does
+    # nothing. Without this the first body step's own PASS doubles as the decline,
+    # but that step has no prompt when the opponent has no level<=4 Digimon, so
+    # the clause silently became mandatory and went straight to the Tamer-trash
+    # cost (recorded game: a declined activation still trashed a face-down card).
+    outer_prompt: true
     once_per_turn: true
     summary: "[WD][WA][OPT] May bounce opp lvl<=4; then trash FD under a Tamer to unsuspend self"
     process:

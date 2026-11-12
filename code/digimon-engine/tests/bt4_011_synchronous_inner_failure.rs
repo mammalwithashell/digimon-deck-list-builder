@@ -41,6 +41,11 @@ fn synchronous_inner_failure_does_not_steal_outer_initiating_success_binding() {
         .hand(0, &["BT4-011", "TEST-Q1157-INNER"])
         .deck(0, &["ST1-03"; 12]).deck(1, &["ST1-03";12])
         .memory(5).start();
+    // Exact printed circle (official DB: Red Lv.3 / cost 2); DebugRunner compiled
+    // metadata omits compatibility evo_costs, and the effect-digivolve candidate
+    // filter (`can_digivolve_onto`) prices the Tamer route from that circle.
+    r.game.card_data.iter_mut().find(|c|c.card_id=="BT4-011").unwrap().evo_costs =
+        vec![EvoCost {card_color:0, level:3, memory_cost:2}];
     r.skip_mulligan();
     let outer = r.place_on_field(0, "TEST-OUTER-INITIATOR", Some(0));
     let inner = r.place_on_field(0, "ST1-03", Some(0));
@@ -52,12 +57,15 @@ fn synchronous_inner_failure_does_not_steal_outer_initiating_success_binding() {
     r.fire_play_event_triggers(0, outer.index as usize, true, false);
     choose(&mut r, PLAY_HAND_START);
     accept(&mut r);
-    choose(&mut r, ATTACK_START + 1);
     let parked = r.game.clone();
     let mut digest = None;
     for _ in 0..2 {
         r.game = parked.clone();
-        choose(&mut r, PLAY_HAND_START + 1);
+        choose(&mut r, ATTACK_START + 1);
+        // The chosen inner base can't digivolve, so no hand card is a legal
+        // inner result: the result prompt asks nothing (DCGO filters the
+        // selection with CanPlayCardTargetFrame) and the inner digivolve
+        // fails synchronously inside the enclosing payment.
         assert!(r.pending_selection().is_none());
         assert_eq!(r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data), "BT4-011");
         assert_eq!(r.game.players[0].battle_area[1].top_card().card_id(&r.game.card_data), "ST1-03");

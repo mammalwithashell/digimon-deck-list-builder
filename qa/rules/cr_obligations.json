@@ -13281,9 +13281,11 @@
       "mechanisms": [
         "turn-flow"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Checked at the end of the breeding phase: with memory on the opponent's side, passing or moving out of the breeding area ends the turn (`Game::enter_main_or_end_turn`, used by decode_breeding and resume_pending_enter_main) and no main phase begins; memory 0 opens the main phase. Found by the DCGO playback of a sim game (2026-11-11): Tsunomon BT24-003's digivolve, fired by moving out of breeding, took memory to the opponent's side. Proof limit: the turn-start auto-advance when no breeding option exists still enters the main phase unconditionally (DebugRunner::end_turn force-ends turns with memory on the turn player's side, which would otherwise end the next turn at once).",
+      "status": "proven",
+      "tests": [
+        "ch06_turn_flow::turn_ends_with_the_breeding_phase_when_memory_is_on_the_opponents_side"
+      ],
       "text": "The turn end conditions are met when the memory is at 1 or more on your opponent's side and all processing has been resolved for the current phase. Then, the turn will end with the current phase. (For details, refer to 6-6 \"End of Turn\")6-6"
     },
     "6-2": {
@@ -15415,9 +15417,9 @@
         "total": 14
       },
       "6": {
-        "gap": 34,
+        "gap": 33,
         "not_testable": 10,
-        "proven": 1,
+        "proven": 2,
         "total": 45
       },
       "7": {
@@ -15439,15 +15441,15 @@
         "total": 13
       }
     },
-    "gap": 584,
+    "gap": 583,
     "mechanics": {
       "gap_blocking": 0,
-      "gap_nonblocking": 315,
+      "gap_nonblocking": 314,
       "not_testable": 152,
-      "proven": 248
+      "proven": 249
     },
     "not-testable": 246,
-    "proven": 289
+    "proven": 290
   },
   "version": 1
 }

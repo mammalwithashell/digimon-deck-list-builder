@@ -346,8 +346,28 @@ fn recorded_interrupted_token_return_removes_token_and_clones_identically() {
     let mut replay = ReplayRunner::new(recording.clone(), &cards, true).unwrap();
     // Recorded row 91 resumes MarineBullmon's return after Erlangmon's
     // would-leave play and Sagomon's material selection. Two mulligans are
-    // excluded by the native replay adapter, so the pre-step cursor is 88.
-    for _ in 0..88 {
+    // excluded by the native replay adapter, so the pre-step cursor was 88.
+    //
+    // Migrated 2026-11-12 for effect-digivolve candidates that must be able to
+    // digivolve (0de06211d for EX12-074, generalised by c6eda5678; DCGO
+    // `DigivolveIntoHandOrTrashCard` filters with `CanPlayCardTargetFrame` and
+    // opens no pick when nothing qualifies). The original game made four picks
+    // that could not digivolve and did nothing: step 23 (EX12-002 inherited,
+    // Lv.6 SeitenGokuumon EX12-048 onto Lv.6 Takutoumon), step 44 (EX12-074
+    // [Security], Lv.7 Susanoomon EX12-076 onto attacking Lv.3 Gasamon),
+    // step 59 (EX12-074, Lv.3 Hanimon EX12-061 onto attacking Lv.4
+    // Kokeshimon) and step 77 (EX12-074 for attacking MarineBullmon EX12-031,
+    // no hand card can digivolve onto it). Steps 23, 44 and 77 now have no prompt and are dropped
+    // (each dropped row's memory_after moves to the previous row: step 22's
+    // turn now ends there). Step 59 now offers a real Lv.5 card, so it is
+    // replaced by a decline (62). Because declining the folded "may" keeps
+    // EX12-074's [Once Per Turn] (Q1818), which the original no-op pick had
+    // spent, EX12-074 is re-offered on the later attacks: each re-offer gets
+    // a trigger-order pick that resolves the recorded trigger first (30) and,
+    // where it has candidates, a decline (62). Inserted rows carry fractional
+    // `step` values and a `migration_note`. Every other recorded action is
+    // unchanged; recorded step 91 (the material pick below) is now cursor 92.
+    for _ in 0..92 {
         let result = replay.step();
         assert!(result.divergences.is_empty(), "{:?}", result.divergences);
     }

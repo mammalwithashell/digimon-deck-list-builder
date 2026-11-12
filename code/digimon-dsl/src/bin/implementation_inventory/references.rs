@@ -918,6 +918,7 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
             outer_prompt,
             once_per_turn,
             max_per_turn,
+            as_option_effect,
             opt_group,
             process,
             trigger_if,
@@ -945,6 +946,7 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
         outer_prompt.walk(c, &format!("{}.outer_prompt", path), "UNCLASSIFIED_STRING");
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         max_per_turn.walk(c, &format!("{}.max_per_turn", path), "UNCLASSIFIED_STRING");
+        as_option_effect.walk(c, &format!("{}.as_option_effect", path), "UNCLASSIFIED_STRING");
         opt_group.walk(c, &format!("{}.opt_group", path), "UNCLASSIFIED_STRING");
         process.walk(c, &format!("{}.process", path), "UNCLASSIFIED_STRING");
             trigger_if.walk(c, &format!("{}.trigger_if", path), "UNCLASSIFIED_STRING");
@@ -3724,6 +3726,7 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
             outer_prompt,
             once_per_turn,
             max_per_turn,
+            as_option_effect,
             opt_group,
             process,
             summary,
@@ -3743,6 +3746,7 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
         outer_prompt.walk(c, &format!("{}.outer_prompt", path), "UNCLASSIFIED_STRING");
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         max_per_turn.walk(c, &format!("{}.max_per_turn", path), "UNCLASSIFIED_STRING");
+        as_option_effect.walk(c, &format!("{}.as_option_effect", path), "UNCLASSIFIED_STRING");
         opt_group.walk(c, &format!("{}.opt_group", path), "UNCLASSIFIED_STRING");
         process.walk(c, &format!("{}.process", path), "UNCLASSIFIED_STRING");
         summary.walk(
@@ -5043,6 +5047,12 @@ impl Walk for digimon_dsl::compiled::CompiledEffectSourceKind {
                 "digimon_dsl::compiled::CompiledEffectSourceKind",
                 "ENUM_SCALAR",
                 serde_json::json!("Tamer"),
+            ),
+            digimon_dsl::compiled::CompiledEffectSourceKind::DigiEgg => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledEffectSourceKind",
+                "ENUM_SCALAR",
+                serde_json::json!("DigiEgg"),
             ),
             digimon_dsl::compiled::CompiledEffectSourceKind::Option => c.node(
                 path,

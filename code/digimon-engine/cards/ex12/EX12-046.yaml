@@ -60,6 +60,11 @@ effects:
             all_of:
               - kind: digimon
               - trait_has: TB
+              # DCGO's `DigivolveIntoHandOrTrashCard` (CardEffectCommons.cs) only
+              # offers hand cards that can ACTUALLY digivolve onto this Digimon at
+              # the reduced cost (`CanPlayCardTargetFrame`), and opens no pick at
+              # all when there are none, so the recording has no row for it.
+              - can_digivolve_onto_with_cost: { target: source, cost: { reduce: 2 } }
           prompt: "Digivolve this Digimon into a [TB] Digimon card in hand with the cost reduced by 2"
       - effect_initiated_digivolve:
           target: source

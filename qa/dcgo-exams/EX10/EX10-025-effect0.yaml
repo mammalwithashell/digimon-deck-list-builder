@@ -85,21 +85,17 @@ steps:
   - actor: 0
     do: { play: { card: EX10-025, from: hand } }
     expect: { prompt: main_phase }
-  # PROMPT ORDER: OUR clause opens with the host pick (its optional gate doubles as
-  # the target pick), then two sequential trash picks; DCGO's EX10_025.cs asks ONE
-  # SelectCardEffect (maxCount 2, from trash) FIRST and the host SelectPermanentEffect
-  # second. Authored as sim_only / dcgo_only pairs so the end state is compared.
+  # PROMPT ORDER: both engines ask ONE pick of the 2 trash cards FIRST (DCGO's
+  # EX10_025.cs SelectCardEffect, maxCount 2; our clause's select_zone_cards min/max
+  # 2), then the host. The host row is a sim_only / dcgo_only pair because DCGO's
+  # SelectPermanentEffect row names the host by card id and ours by field slot.
   # Host = EX10-025 itself (unique id: two EX11-038 would be an occurrence-order coin
   # flip on the DCGO side; field slot 2 = third Digimon played).
   - actor: 0
-    do: { select: { targets: [own.field.2], sim_only: true } }
-  - actor: 0
-    do: { select: { cards: [EX8-047, EX8-048], dcgo_only: true } }
+    do: { select: { cards: [EX8-047, EX8-048] } }
     expect: { prompt: SelectCardEffect }
   - actor: 0
-    do: { select: { cards: [EX8-047], sim_only: true } }
-  - actor: 0
-    do: { select: { cards: [EX8-048], sim_only: true } }
+    do: { select: { targets: [own.field.2], sim_only: true } }
   - actor: 0
     do: { select: { cards: [EX10-025], dcgo_only: true } }
     expect: { prompt: SelectPermanentEffect }

@@ -102,11 +102,8 @@ steps:
   - actor: 0
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
-  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
-  # park -- DCGO builds this effect non-optional and carries the "may" on the
-  # pick's canNoSelect), then the shared hand pick.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
+  # [When Digivolving]: the shared hand pick (no outer gate: like DCGO, BT25-082
+  # carries the "may" on the pick's own decline).
   - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
@@ -120,7 +117,7 @@ steps:
 expect_ruling:
   q_id: Q6387
   assert:
-  - at: 13
+  - at: 12
     that:
       p0.memory: 1
 assert:
@@ -475,7 +472,7 @@ assert:
     p1.security: 5
     p1.trash: []
     turn: 5
-- at: 13
+- at: 12
   that:
     _backfilled: true
     memory: 1
@@ -511,7 +508,7 @@ assert:
     p1.security: 5
     p1.trash: []
     turn: 5
-- at: 14
+- at: 13
   that:
     _backfilled: true
     memory: 1

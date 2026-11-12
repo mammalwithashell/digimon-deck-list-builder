@@ -1740,11 +1740,13 @@ fn validate_post_payment_plural_filter(
                         | "binding_dp" | "binding_play_cost" | "binding_value" => true,
                         // `source` has an explicit carrier fallback in the
                         // evaluator; other names require the local binding map.
-                        "can_digivolve_onto" => value.as_str() != Some("source"),
-                        "can_digivolve_onto_with_cost" => {
-                            value.get("target").and_then(serde_json::Value::as_str)
-                                != Some("source")
+                        "can_digivolve_onto" => {
+                            !matches!(value.as_str(), Some("source" | "event_target"))
                         }
+                        "can_digivolve_onto_with_cost" => !matches!(
+                            value.get("target").and_then(serde_json::Value::as_str),
+                            Some("source" | "event_target")
+                        ),
                         "dna_hand_candidate" => {
                             value.get("result").is_some() || value.get("field").is_some()
                         }
@@ -2597,7 +2599,7 @@ fn validate_predicate_binding_scope(
             // `can_digivolve_onto: source` names the effect's own carrier
             // permanent ("THIS Digimon may digivolve into ..."), a magic name
             // that is never a `bind_as`. G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE.
-            if field == "can_digivolve_onto" && binding == "source" {
+            if field == "can_digivolve_onto" && (binding == "source" || binding == "event_target") {
                 continue;
             }
             report_if_undeclared_binding(

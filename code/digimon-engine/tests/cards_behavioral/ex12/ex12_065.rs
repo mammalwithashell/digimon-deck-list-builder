@@ -268,6 +268,10 @@ fn ex12_065_simultaneous_on_deletion_branches_are_distinguishable_by_keyword() {
         .add_card(plain_digimon("DECOY-LOW", CardColor::Purple, 3, 1000))
         .start();
     let kaguyamon = runner.place_on_field(0, CARD_ID, Some(0));
+    // <Fortitude> needs at least one digivolution card under the top
+    // (DCGO `CanActivateFortitude`: `CardSources.Count >= 1`); a bare Kaguyamon
+    // never lists it among the simultaneous effects, so give it one.
+    runner.push_source(kaguyamon, "DECOY-LOW");
     let attacker = runner.place_on_field(1, "HUGE-ATTACKER", Some(0));
     runner.place_on_field(1, "DECOY-LOW", Some(0));
     runner.game.tick_declarative_effects();
@@ -315,6 +319,48 @@ fn ex12_065_simultaneous_on_deletion_branches_are_distinguishable_by_keyword() {
         3,
         "every branch of a same-card trigger stack must be separately \
          addressable; got {keywords:?}"
+    );
+}
+
+/// `<Fortitude>` needs at least one digivolution card under the top card
+/// (DCGO `CanActivateFortitude`: `CardSources.Count >= 1`). A Kaguyamon deleted
+/// with nothing under it therefore raises only its printed [On Deletion] and the
+/// aura-granted `<Retaliation>`; the dead `<Fortitude>` branch is not offered as
+/// a phantom entry in the trigger-order prompt.
+#[test]
+fn ex12_065_bare_kaguyamon_offers_no_fortitude_branch() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-065 YAML loads")
+        .add_card(plain_digimon("HUGE-ATTACKER", CardColor::Purple, 7, 20000))
+        .add_card(plain_digimon("DECOY-LOW", CardColor::Purple, 3, 1000))
+        .start();
+    let kaguyamon = runner.place_on_field(0, CARD_ID, Some(0));
+    let attacker = runner.place_on_field(1, "HUGE-ATTACKER", Some(0));
+    runner.place_on_field(1, "DECOY-LOW", Some(0));
+    runner.game.tick_declarative_effects();
+
+    let _ = runner.attack_digimon(attacker, kaguyamon, false);
+    advance_to_trigger_order(&mut runner);
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("a TriggerOrder prompt is parked");
+    let entries = pending
+        .effect_choices
+        .as_ref()
+        .expect("a TriggerOrder prompt carries effect choices");
+    let keywords: Vec<Option<Keyword>> = entries.iter().map(|e| e.keyword).collect();
+    assert!(
+        !keywords.contains(&Some(Keyword::Fortitude)),
+        "a Kaguyamon with no digivolution cards cannot activate <Fortitude>; got {keywords:?}"
+    );
+    assert_eq!(
+        entries.len(),
+        2,
+        "only [On Deletion] and <Retaliation> remain; got {keywords:?}"
     );
 }
 

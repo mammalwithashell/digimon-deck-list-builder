@@ -173,15 +173,18 @@ steps:
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   # Free digivolve into Murasamemon done; BT25-041's optional [When
-  # Digivolving] -> decline.
+  # Digivolving] -> decline (ours: the non-optional 3-way pay-cost menu's
+  # "Don't pay the cost").
   - actor: 0
-    do: { select: { decline: true } }
+    do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { choice: "Don't pay the cost", sim_only: true } }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 24
+  - at: 25
     that:
       turn: 3
       p0.memory: 2

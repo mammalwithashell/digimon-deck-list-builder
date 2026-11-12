@@ -335,3 +335,30 @@ fn bt25_081_inherited_retaliation_deletes_the_winner() {
         "inherited <Retaliation> must delete the winning attacker"
     );
 }
+
+/// A suspended non-purple Tamer is still a candidate (no unsuspended requirement; DCGO BT25_081.cs has no IsSuspended
+/// filter; official Q&A Q845).
+#[test]
+fn bt25_081_on_play_offers_an_already_suspended_non_purple_tamer() {
+    let mut runner = DebugRunner::builder()
+        .add_card(fangmon())
+        .add_card(make_tamer("RED-TAMER", CardColor::Red))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER"; 3])
+        .deck(1, &["FILLER"; 3])
+        .memory(10)
+        .start();
+
+    let red = runner.place_on_field(1, "RED-TAMER", Some(0));
+    runner.game.players[1].battle_area[red.index as usize].is_suspended = true;
+    let fang = runner.place_on_field(0, CARD_ID, None);
+    runner.fire_on_play(0, fang.index as usize);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("the suspended non-purple Tamer is still a candidate");
+    assert_eq!(view.valid_action_ids.len(), 1, "exactly the suspended red Tamer");
+    runner.execute_action(view.selecting_player, view.valid_action_ids[0]).expect("choose it");
+    let _ = runner.auto_resolve();
+    assert!(runner.game.players[1].battle_area[red.index as usize].is_suspended);
+}

@@ -12,6 +12,11 @@ fn nested_multi_route_prompt_keeps_inner_payment_source_after_outer_unwinds() {
         .from_dsl_yaml(SYNC_PAYER).unwrap()
         .hand(0,&["BT4-011"]).deck(0,&["ST1-03";12])
         .deck(1,&["ST1-03";12]).memory(5).start();
+    // Exact printed circle (official DB: Red Lv.3 / cost 2); DebugRunner compiled
+    // metadata omits compatibility evo_costs, and the effect-digivolve candidate
+    // filter (`can_digivolve_onto`) prices the Tamer route from that circle.
+    r.game.card_data.iter_mut().find(|c|c.card_id=="BT4-011").unwrap().evo_costs =
+        vec![EvoCost {card_color:0, level:3, memory_cost:2}];
     r.skip_mulligan();
     let outer=r.place_on_field(0,"TEST-SYNC-INITIATOR",Some(0));
     let payer=r.place_on_field(0,"TEST-SYNC-PAYER",Some(0));

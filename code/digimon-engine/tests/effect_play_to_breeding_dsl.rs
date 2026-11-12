@@ -103,11 +103,11 @@ fn breeding_dsl_accept_decline_and_cloned_optional_prompt_preserve_physical_card
     let view = base.pending_selection_view().unwrap();
     assert_eq!(view.kind, SelectionKind::Hand);
     assert!(view.is_optional);
-    for action in [1, 2, 4, PASS] {
+    for action in [1, 2, PASS] {
         assert_eq!(build_action_mask(&base.game, 0)[action as usize], 1.0);
     }
-    for action in [0, 3, 5] {
-        assert_eq!(build_action_mask(&base.game, 0)[action], 0.0, "Option/Tamer/DigiEgg excluded");
+    for action in [0, 3, 4, 5] {
+        assert_eq!(build_action_mask(&base.game, 0)[action], 0.0, "Option/Tamer/DUAL/DigiEgg excluded");
     }
     for accept in [true, false] {
         let mut r = DebugRunner::wrap(base.game.clone());
@@ -121,13 +121,22 @@ fn breeding_dsl_accept_decline_and_cloned_optional_prompt_preserve_physical_card
     assert!(breeding_handle(&base, 0).is_none(), "forks do not mutate parked original");
 }
 
+/// A DUAL card prints "Can't play to the field." in place of a play cost and is
+/// only digivolved or used (CR 4.3 4-6-2), so it is never played, the breeding
+/// area included. DCGO routes breeding plays through `CanPlayAsNewPermanent(...,
+/// isBreedingArea: true)`, which rejects `IsOption` cards (a DUAL is one).
 #[test]
-fn breeding_dsl_dual_is_a_digimon_for_this_destination() {
+fn breeding_dsl_dual_is_never_played_to_breeding() {
     let mut r = fixture(false, false);
     let dual = r.game.players[0].hand[4].handle();
     start(&mut r);
-    act(&mut r, 4);
-    assert_eq!(breeding_handle(&r, 0), Some(dual));
+    let view = r.pending_selection_view().expect("ordinary Digimon remain choosable");
+    assert_eq!(view.kind, SelectionKind::Hand);
+    assert!(!view.valid_action_ids.contains(&4), "DUAL is not a breeding play candidate");
+    assert_eq!(build_action_mask(&r.game, 0)[4], 0.0);
+    assert!(r.game.resolve_selection(0, 4).is_err(), "an unoffered DUAL pick is rejected");
+    assert!(breeding_handle(&r, 0).is_none());
+    assert!(r.game.players[0].hand.iter().any(|c| c.handle() == dual));
     assert_eq!(r.memory(), 3);
 }
 

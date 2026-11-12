@@ -74,9 +74,12 @@ effects:
   # ─── [WD][WA][OPT] if your turn, pay one of two costs (add top security to
   #     hand | trash bottom FD under a Tamer) → may play or use 1 [Glowing Dawn]
   #     card from hand with the cost reduced by 3 (G-PLAY-OR-USE-FROM-HAND) ──────
+  # DCGO runs this effect with optional: false - there is no separate "activate?"
+  # question. The one menu below carries the decline ("Don't pay the cost" =
+  # DCGO value 3), so a clause-level outer accept prompt would be a question the
+  # recording never contains.
   - when: [when_digivolving, when_attacking]
     once_per_turn: true
-    optional: true
     active_when: { your_turn: true }
     summary: "[WD][WA][OPT] If your turn, by adding your top security card to the hand or trashing a bottom face-down card under a Tamer, you may play or use 1 [Glowing Dawn] card from hand with the cost reduced by 3"
     process:

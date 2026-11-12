@@ -66,7 +66,6 @@ effects:
             all_of:
               - kind: digimon
               - zone: [battle_area]
-              - is_suspended: false
           prompt: "You may suspend 1 Digimon"
       - suspend: { target: suspend_target }
       - if:

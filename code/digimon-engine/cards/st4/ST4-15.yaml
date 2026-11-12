@@ -13,7 +13,6 @@ effects:
           filter:
             all_of:
               - kind: digimon
-              - is_unsuspended: true
           prompt: "Suspend 1 of your opponent's Digimon"
       - suspend: { target: target }
 
@@ -25,7 +24,6 @@ effects:
           filter:
             all_of:
               - kind: digimon
-              - is_unsuspended: true
           prompt: "Suspend 1 of your opponent's Digimon"
       - suspend: { target: target }
       - add_this_option_to_hand: {}

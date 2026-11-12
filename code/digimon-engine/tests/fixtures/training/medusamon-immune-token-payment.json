@@ -277,17 +277,6 @@
       "winner_id": null
     },
     {
-      "action_id": 2,
-      "is_game_over": false,
-      "memory_after": 1,
-      "memory_before": 1,
-      "phase": "SelectHand",
-      "player_id": 1,
-      "step": 27,
-      "turn": 4,
-      "winner_id": null
-    },
-    {
       "action_id": 30,
       "is_game_over": false,
       "memory_after": 2,
@@ -515,17 +504,6 @@
       "phase": "SelectTarget",
       "player_id": 1,
       "step": 49,
-      "turn": 6,
-      "winner_id": null
-    },
-    {
-      "action_id": 6,
-      "is_game_over": false,
-      "memory_after": 3,
-      "memory_before": 3,
-      "phase": "SelectHand",
-      "player_id": 1,
-      "step": 50,
       "turn": 6,
       "winner_id": null
     },
@@ -1338,5 +1316,5 @@
     "timestamp": "2026-10-27T05:16:00+00:00"
   },
   "tensor_snapshots_count": 0,
-  "total_actions": 99
+  "total_actions": 97
 }

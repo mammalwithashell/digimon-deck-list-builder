@@ -120,11 +120,8 @@ steps:
   - actor: 0
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
-  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
-  # park -- DCGO builds this effect non-optional and carries the "may" on the
-  # pick's canNoSelect), then the shared hand pick.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
+  # [When Digivolving]: the shared hand pick (no outer gate: like DCGO, BT25-082
+  # carries the "may" on the pick's own decline).
   - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
@@ -192,7 +189,7 @@ steps:
 assert:
   # Pre-step state of the trailing pass. Memory 2 = 3 - 1 is the witness.
   # EX7-073 caps a five-card stack; nothing was trashed or deleted.
-  - at: 22
+  - at: 21
     that:
       turn: 7
       phase: Main

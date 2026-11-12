@@ -90,6 +90,7 @@ fn matches_link(card: &CompiledCard, id: &str, cost: u16, dp: i32) -> bool {
                     effect_immunity: None,
                     modifier_from: None,
                     dna_material_identity: None,
+                    source_card_trash_protection: None,
                     summary: summary.clone(),
                     summary_key: summary_key.clone(),
                 }

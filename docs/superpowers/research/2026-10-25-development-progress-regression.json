@@ -500,50 +500,9 @@
     {
       "player": 1,
       "action": 159
-    },
-    {
-      "player": 1,
-      "action": 3
-    },
-    {
-      "player": 1,
-      "action": 100
-    },
-    {
-      "player": 1,
-      "action": 0
-    },
-    {
-      "player": 1,
-      "action": 1
-    },
-    {
-      "player": 1,
-      "action": 2
-    },
-    {
-      "player": 1,
-      "action": 432
-    },
-    {
-      "player": 1,
-      "action": 100
-    },
-    {
-      "player": 1,
-      "action": 144
-    },
-    {
-      "player": 1,
-      "action": 30
-    },
-    {
-      "player": 1,
-      "action": 100
-    },
-    {
-      "player": 1,
-      "action": 30
     }
+  ],
+  "migrations": [
+    "2026-11-12: truncated the prefix to its first 97 decisions (108 before). Printed [End of Attack] effects now trigger only for the attacking Digimon (CR 4.3 15-16-15-1; ac86b510e). After Strabimon P-249's attack at decision 96 the old engine also fired Beowolfmon AD1-015's [End of Attack] (another Digimon), whose 'play 1 Tamer from hand' pick, 'place a Hybrid card under ...' picks and draw are recorded decisions 97-99; with no such effect, recorded decision 97 (action 3) would be read as a Main-phase play of AD1-023 and every later decision is from a game that no longer happens. The test's DevelopmentPolicy continuation now plays on from decision 97; the original successive-trigger state is no longer reached."
   ]
 }

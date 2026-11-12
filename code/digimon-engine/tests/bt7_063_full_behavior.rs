@@ -1,6 +1,6 @@
 //! Full BT7-063 source-backed behavior; source role/entry primitives have separate tests.
 
-use digimon_engine::action::{build_action_mask,space::{PASS,REPLACEMENT_ACCEPT,SOURCE_SELECT_START}};
+use digimon_engine::action::{build_action_mask,space::{PASS,REPLACEMENT_ACCEPT}};
 
 use digimon_engine::debug_runner::{make_test_card,DebugRunner};
 
@@ -44,6 +44,14 @@ fn fire(r:&mut DebugRunner,h:PermanentHandle){r.game.enqueue_triggered(EffectTim
 
 fn stack(r:&DebugRunner,actor:u8)->Vec<String>{r.game.player(actor).battle_area[0].card_sources.iter().map(|c|c.card_id(&r.game.card_data).to_string()).collect()}
 
+// Physical choices are typed OwnedCardChoice rows (paged CARD_CHOICE_START ids, 5305fa337),
+// not the legacy SOURCE_SELECT / PLAY_HAND / TRASH_EFFECT bands. Address one exact
+// physical card by zone + position; an absent row reads as not legal (mask 0).
+const SRC:&str="BattleSource";const HAND:&str="Hand";const TRASH:&str="Trash";
+fn row(r:&DebugRunner,zone:&str,position:usize)->Option<u16>{let v=r.pending_selection_view()?;v.card_choice.as_ref()?.rows.iter().find(|row|row.zone.as_ref().is_some_and(|z|format!("{z:?}")==zone)&&row.position.as_deref()==Some(position.to_string().as_str())).map(|row|row.action_id)}
+fn at(r:&DebugRunner,actor:u8,zone:&str,position:usize)->f32{row(r,zone,position).map_or(0.0,|a|build_action_mask(&r.game,actor)[a as usize])}
+fn pick(r:&mut DebugRunner,actor:u8,zone:&str,position:usize){let a=row(r,zone,position).unwrap_or_else(||panic!("{zone} {position} must be a physical choice row"));act(r,actor,a);}
+
 #[test]
 
 fn on_play_mixes_hand_and_trash_and_exposes_both_source_orders_in_clones(){
@@ -86,9 +94,9 @@ fn would_delete_requires_both_named_sources_and_the_original_deletion_follows_su
 
  for actor in [0,1]{let mut r=setup(actor);let h=r.place_stack(actor,&["BT7-SKULL","BT7-AXE","BT7-063"]);let memory=r.game.memory;r.game.delete_permanent_with_effects(h);assert_eq!(r.pending_selection_view().expect("immediate pre-deletion choice").kind,SelectionKind::Replacement);assert_eq!(r.battle_area_size(actor),1);assert_eq!(r.trash_size(actor),0);act(&mut r,actor,REPLACEMENT_ACCEPT);let snap=r.game.clone();
 
-  for initial in [0,1]{r.game=snap.clone();act(&mut r,actor,SOURCE_SELECT_START+initial);assert_eq!(build_action_mask(&r.game,actor)[PASS as usize],0.0,"Q1623 cannot stop after only one name");assert_eq!(r.battle_area_size(actor),1,"choices complete before either card plays");let mid=r.game.clone();
+  for initial in [0,1]{r.game=snap.clone();pick(&mut r,actor,SRC,initial);assert_eq!(build_action_mask(&r.game,actor)[PASS as usize],0.0,"Q1623 cannot stop after only one name");assert_eq!(r.battle_area_size(actor),1,"choices complete before either card plays");let mid=r.game.clone();
 
-   for cloned in [false,true]{r.game=mid.clone();if cloned{r.game=r.game.clone();}act(&mut r,actor,SOURCE_SELECT_START+(1-initial));assert!(r.pending_selection_view().is_none());assert_eq!(r.battle_area_size(actor),2);assert!(r.game.player(actor).battle_area.iter().all(|p|p.is_suspended));assert_eq!(r.trash_size(actor),1);assert_eq!(r.game.player(actor).trash[0].card_id(&r.game.card_data),"BT7-063");assert_eq!(r.game.memory,memory);}
+   for cloned in [false,true]{r.game=mid.clone();if cloned{r.game=r.game.clone();}pick(&mut r,actor,SRC,1-initial);assert!(r.pending_selection_view().is_none());assert_eq!(r.battle_area_size(actor),2);assert!(r.game.player(actor).battle_area.iter().all(|p|p.is_suspended));assert_eq!(r.trash_size(actor),1);assert_eq!(r.game.player(actor).trash[0].card_id(&r.game.card_data),"BT7-063");assert_eq!(r.game.memory,memory);}
 
   }
 
@@ -130,7 +138,7 @@ fn prohibited_named_source_is_excluded_and_remaining_playable_name_is_still_opti
 
   assert_eq!(r.pending_selection_view().unwrap().kind,SelectionKind::Replacement);let snap=r.game.clone();
 
-  for decline in [false,true]{r.game=snap.clone();act(&mut r,actor,if decline{PASS}else{REPLACEMENT_ACCEPT});if decline{assert_eq!(r.battle_area_size(actor),0);assert_eq!(r.trash_size(actor),3);}else{let m=build_action_mask(&r.game,actor);assert_eq!(m[SOURCE_SELECT_START as usize],0.0);assert!(m[(SOURCE_SELECT_START+1)as usize]>0.0);act(&mut r,actor,SOURCE_SELECT_START+1);assert!(r.pending_selection_view().is_none());assert_eq!(r.battle_area_size(actor),1);assert_eq!(r.game.player(actor).battle_area[0].top_card().card_id(&r.game.card_data),"BT7-AXE");assert_eq!(r.trash_size(actor),2);}}
+  for decline in [false,true]{r.game=snap.clone();act(&mut r,actor,if decline{PASS}else{REPLACEMENT_ACCEPT});if decline{assert_eq!(r.battle_area_size(actor),0);assert_eq!(r.trash_size(actor),3);}else{assert_eq!(at(&r,actor,SRC,0),0.0);assert!(at(&r,actor,SRC,1)>0.0);pick(&mut r,actor,SRC,1);assert!(r.pending_selection_view().is_none());assert_eq!(r.battle_area_size(actor),1);assert_eq!(r.game.player(actor).battle_area[0].top_card().card_id(&r.game.card_data),"BT7-AXE");assert_eq!(r.trash_size(actor),2);}}
 
  }}
 
@@ -142,7 +150,7 @@ fn one_remaining_field_slot_keeps_both_required_picks_but_only_first_play_commit
 
  for actor in [0,1]{let mut r=setup(actor);let h=r.place_stack(actor,&["BT7-SKULL","BT7-AXE","BT7-063"]);let cap=r.game.rules.field_slots as usize;while r.battle_area_size(actor)<cap-1{r.place_on_field(actor,"BT7-FILL",None);}r.game.delete_permanent_with_effects(h);act(&mut r,actor,REPLACEMENT_ACCEPT);let snap=r.game.clone();
 
-  for initial in [0,1]{r.game=snap.clone();act(&mut r,actor,SOURCE_SELECT_START+initial);assert_eq!(build_action_mask(&r.game,actor)[PASS as usize],0.0);act(&mut r,actor,SOURCE_SELECT_START+(1-initial));assert!(r.pending_selection_view().is_none());assert_eq!(r.battle_area_size(actor),cap-1,"first entry uses final slot; original deletion then frees its slot");let wanted=if initial==0{"BT7-SKULL"}else{"BT7-AXE"};assert_eq!(r.game.player(actor).battle_area.iter().filter(|p|p.top_card().card_id(&r.game.card_data)==wanted).count(),1);assert_eq!(r.trash_size(actor),2,"unplayed source remains for original deletion");}
+  for initial in [0,1]{r.game=snap.clone();pick(&mut r,actor,SRC,initial);assert_eq!(build_action_mask(&r.game,actor)[PASS as usize],0.0);pick(&mut r,actor,SRC,1-initial);assert!(r.pending_selection_view().is_none());assert_eq!(r.battle_area_size(actor),cap-1,"first entry uses final slot; original deletion then frees its slot");let wanted=if initial==0{"BT7-SKULL"}else{"BT7-AXE"};assert_eq!(r.game.player(actor).battle_area.iter().filter(|p|p.top_card().card_id(&r.game.card_data)==wanted).count(),1);assert_eq!(r.trash_size(actor),2,"unplayed source remains for original deletion");}
 
  }
 
@@ -200,9 +208,9 @@ fn both_sources_are_present_for_each_simultaneous_on_play_condition() {
 
   act(&mut r,actor,REPLACEMENT_ACCEPT);
 
-  act(&mut r,actor,SOURCE_SELECT_START);
+  pick(&mut r,actor,SRC,0);
 
-  act(&mut r,actor,SOURCE_SELECT_START+1);
+  pick(&mut r,actor,SRC,1);
 
   r.auto_resolve().unwrap();
 
@@ -275,23 +283,22 @@ fn runtime_named_source_gate_offers_playable_identity_and_suppresses_blocked_or_
 
 #[test]
 fn duplicate_hand_and_trash_copies_offer_distinct_physical_actions() {
- use digimon_engine::action::space::{PLAY_HAND_START,TRASH_EFFECT_START};
  for actor in [0,1] {
   let mut r=setup(actor); let h=r.place_stack(actor,&["BT7-063"]);
   let hand_index=r.hand_size(actor); r.add_to_hand(actor,"BT7-SKULL"); r.add_to_hand(actor,"BT7-SKULL");
   r.inject_trash(actor,"BT7-SKULL"); r.inject_trash(actor,"BT7-AXE");
-  let choices=[PLAY_HAND_START+hand_index as u16,PLAY_HAND_START+hand_index as u16+1,TRASH_EFFECT_START];
+  let choices=[(HAND,hand_index),(HAND,hand_index+1),(TRASH,0)];
   let handles=[r.game.player(actor).hand[hand_index].handle(),r.game.player(actor).hand[hand_index+1].handle(),r.game.player(actor).trash[0].handle()];
   fire(&mut r,h);branch(&mut r,actor,0);
-  let mask=build_action_mask(&r.game,actor);for a in choices {assert_eq!(mask[a as usize],1.0);}
+  for (zone,position) in choices {assert_eq!(at(&r,actor,zone,position),1.0);}
   assert_eq!(r.pending_selection_view().unwrap().valid_action_ids.iter().filter(|a|**a!=PASS).count(),3);
-  assert_eq!(mask[(TRASH_EFFECT_START+1)as usize],0.0);
+  assert_eq!(at(&r,actor,TRASH,1),0.0);
   let saved=r.game.clone();
-  for (a,physical) in choices.into_iter().zip(handles) {
-   r.game=saved.clone();act(&mut r,actor,a);
+  for ((zone,position),physical) in choices.into_iter().zip(handles) {
+   r.game=saved.clone();pick(&mut r,actor,zone,position);
    assert_eq!(stack(&r,actor),["BT7-063"],"first physical pick is collected, not placed early");
    let axe_index=r.game.player(actor).trash.iter().position(|c|c.card_id(&r.game.card_data)=="BT7-AXE").unwrap();
-   act(&mut r,actor,TRASH_EFFECT_START+axe_index as u16);
+   pick(&mut r,actor,TRASH,axe_index);
    assert!(r.pending_selection_view().is_none());assert_eq!(stack(&r,actor),["BT7-SKULL","BT7-AXE","BT7-063"]);
    assert_eq!(r.game.player(actor).battle_area[0].card_sources[0].handle(),physical);
    assert_eq!(r.game.player(actor).hand.iter().chain(r.game.player(actor).trash.iter()).filter(|c|c.card_id(&r.game.card_data)=="BT7-SKULL").count(),2);
@@ -304,16 +311,16 @@ fn duplicate_and_dual_name_sources_expose_every_valid_two_role_pair_only() {
   let mut r=setup(actor);let h=r.place_stack(actor,&["BT7-SKULL","BT7-SKULL","BT7-AXE","BT7-DUAL","BT7-063"]);
   let physical:Vec<_>=r.game.player(actor).battle_area[0].card_sources.iter().map(|c|c.handle()).collect();
   r.game.delete_permanent_with_effects(h);act(&mut r,actor,REPLACEMENT_ACCEPT);
-  let initial=build_action_mask(&r.game,actor);for i in 0..4 {assert_eq!(initial[(SOURCE_SELECT_START+i)as usize],1.0);}assert_eq!(initial[(SOURCE_SELECT_START+4)as usize],0.0);
+  for i in 0..4 {assert_eq!(at(&r,actor,SRC,i),1.0);}assert_eq!(at(&r,actor,SRC,4),0.0);
   let saved=r.game.clone();
   for first_pick in 0..4u16 {
-   r.game=saved.clone();act(&mut r,actor,SOURCE_SELECT_START+first_pick);
+   r.game=saved.clone();pick(&mut r,actor,SRC,first_pick as usize);
    let expected:Vec<u16>=match first_pick {0|1=>vec![2,3],2=>vec![0,1,3],3=>vec![0,1,2],_=>unreachable!()};
    let mask=build_action_mask(&r.game,actor);assert_eq!(mask[PASS as usize],0.0);
-   for i in 0..5u16 {assert_eq!(mask[(SOURCE_SELECT_START+i)as usize],if expected.contains(&i){1.0}else{0.0});}
+   for i in 0..5u16 {assert_eq!(at(&r,actor,SRC,i as usize),if expected.contains(&i){1.0}else{0.0});}
    let mid=r.game.clone();
    for second in expected {
-    r.game=mid.clone();act(&mut r,actor,SOURCE_SELECT_START+second);
+    r.game=mid.clone();pick(&mut r,actor,SRC,second as usize);
     assert!(r.pending_selection_view().is_none(),"maximum two physical sources");
     let got:Vec<_>=r.game.player(actor).battle_area.iter().map(|p|p.top_card().handle()).collect();
     assert_eq!(got.len(),2);assert!(got.contains(&physical[first_pick as usize]));assert!(got.contains(&physical[second as usize]));
@@ -360,7 +367,7 @@ fn simultaneous_source_preplay_windows_finish_before_either_source_enters() {
  let h=r.place_stack(0,&["BT7-SKULL","BT7-AXE","BT7-063"]);
  r.place_on_field(0,"BT7-FILL",None);
  r.game.delete_permanent_with_effects(h);act(&mut r,0,REPLACEMENT_ACCEPT);
- act(&mut r,0,SOURCE_SELECT_START);act(&mut r,0,SOURCE_SELECT_START+1);
+ pick(&mut r,0,SRC,0);pick(&mut r,0,SRC,1);
  r.auto_resolve().unwrap();
  assert_eq!(r.battle_area_size(0),3);
  assert_eq!(r.game.memory,3,"second pre-play must not see first simultaneous entrant already on field");

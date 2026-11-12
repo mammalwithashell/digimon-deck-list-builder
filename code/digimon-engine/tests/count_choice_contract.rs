@@ -163,7 +163,7 @@ fn observation_limb_encoding_roundtrips_above_u8_and_f32_integer_limits() {
     }
 }
 
-use digimon_dsl::compiled::CompiledStep;
+use digimon_dsl::compiled::{CompiledFormula, CompiledStep};
 use digimon_engine::action::{build_action_mask, space::PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::{bindings::Bindings, step::StepRuntime};
@@ -172,6 +172,13 @@ use digimon_engine::enums::GamePhase;
 use digimon_engine::permanent::PermanentHandle;
 
 fn parked(n: u64, optional: bool) -> DebugRunner {
+    parked_with(n, optional, vec![CompiledStep::GainMemory(2)])
+}
+
+/// `parked`, with a caller-supplied effect tail. A tail that reads the bound
+/// `count` is how a test observes WHICH count was committed: the committed value
+/// is handed straight to the tail, and nothing publishes it afterwards.
+fn parked_with(n: u64, optional: bool, tail: Vec<CompiledStep>) -> DebugRunner {
     let mut r = DebugRunner::builder()
         .add_card(make_test_card("COUNT-SOURCE", "Count source"))
         .deck(0, &["COUNT-SOURCE"; 12])
@@ -196,7 +203,7 @@ fn parked(n: u64, optional: bool) -> DebugRunner {
         optional,
         "Choose a declared count".into(),
         Some("count".into()),
-        vec![CompiledStep::GainMemory(2)],
+        tail,
         Bindings::new(),
         StepRuntime::default(),
     );
@@ -326,43 +333,46 @@ fn maximum_dsl_count_commits_its_exact_binding_without_wrapping() {
         None,
     )
     .unwrap();
+    // The tail gains min(count, 5): +5 only when the binding stayed at its huge
+    // value. A value that wrapped to -1 (`i64::MAX as i32`) would gain -1 instead.
     digimon_engine::count_choice::install_count_choice(
         &mut ctx,
         page,
         false,
         "Exact count".into(),
         Some("count".into()),
-        vec![CompiledStep::GainMemory(2)],
+        vec![CompiledStep::GainMemoryFn {
+            formula: CompiledFormula::Min(vec![
+                CompiledFormula::BindingValue("count".into()),
+                CompiledFormula::Literal(5),
+            ]),
+        }],
         Bindings::new(),
         StepRuntime::default(),
     );
     resolve(&mut r, 30);
-    assert_eq!(r.game.memory, 5);
-    assert_eq!(
-        r.game
-            .dsl_resolved_tail_bindings
-            .as_ref()
-            .unwrap()
-            .get_literal("count"),
-        Some(i64::MAX)
-    );
+    assert_eq!(r.game.memory, 3 + 5, "the committed count was not wrapped or truncated");
 }
 
 #[test]
 fn later_page_binds_declared_count_rather_than_action_ordinal() {
-    let mut r = parked(300, false);
+    // The tail gains `count - 297` memory: exactly +3 for a committed 300, and
+    // something else for the action ordinal (43) or any off-by-one.
+    let mut r = parked_with(
+        300,
+        false,
+        vec![CompiledStep::GainMemoryFn {
+            formula: CompiledFormula::Subtract(vec![
+                CompiledFormula::BindingValue("count".into()),
+                CompiledFormula::Literal(297),
+            ]),
+        }],
+    );
     for _ in 0..10 {
         resolve(&mut r, 59);
     }
     resolve(&mut r, 43);
-    assert_eq!(
-        r.game
-            .dsl_resolved_tail_bindings
-            .as_ref()
-            .unwrap()
-            .get_literal("count"),
-        Some(300)
-    );
+    assert_eq!(r.game.memory, 3 + 3, "the tail saw the declared count 300");
 }
 
 fn count_payload(value: i32) -> digimon_engine::dcgo_recording::SelectionRow {

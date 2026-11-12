@@ -211,11 +211,6 @@
       "action": 59
     },
     {
-      "decision": 19,
-      "player": 0,
-      "action": 62
-    },
-    {
       "decision": 20,
       "player": 0,
       "action": 100
@@ -511,9 +506,19 @@
       "action": 62
     },
     {
+      "player": 1,
+      "action": 30,
+      "migration": "inserted 2026-11-12 (daa1f4c1d): order the two remaining immediate replacement windows"
+    },
+    {
       "decision": 79,
       "player": 1,
       "action": 62
+    },
+    {
+      "player": 1,
+      "action": 62,
+      "migration": "inserted 2026-11-12 (daa1f4c1d): decline the second Erlangmon EX12-034's would-leave window"
     },
     {
       "decision": 80,
@@ -700,5 +705,9 @@
       "player": 1,
       "action": 3
     }
+  ],
+  "migrations": [
+    "2026-11-12: removed decision 19 (seat 0 PASS). It declined the hand pick of Inori Misono BT24-084's \"1 of your [Aegiomon] may digivolve into an [Aegiochusmon]-name hand card\" after no Aegiomon was chosen (none on the field), so Aegiochusmon P-213 was offered with no digivolve target. Effect-digivolve candidates must be able to digivolve onto their target (c6eda5678; DCGO CanPlayCardTargetFrame), so the pick is no longer asked. Later decisions keep their original `decision` numbers.",
+    "2026-11-12: inserted two seat-1 decisions around recorded decision 79. Since daa1f4c1d (fix-deletion-event-identity, CR 4.3 15-8-5 / 16-36: each immediate effect can activate once per cause, with independent activation guards that follow the battle-area incarnation instead of the field slot), Crimson Blaze's deletion at decision 76 offers both Erlangmon EX12-034 \"when any of your Digimon would leave\" windows plus Cho-Hakkaimon's <Guard>; the old slot-keyed guard hid the second Erlangmon. The recorded path declined every window it was offered, so the inserts order the remaining two (30) and decline the extra Erlangmon (62)."
   ]
 }

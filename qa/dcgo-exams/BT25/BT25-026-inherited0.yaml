@@ -42,8 +42,9 @@
 #
 # DIANAMON'S TWO SAME-CARD TRIGGERS ([When Digivolving] + the [All Turns]
 # "when any Digimon ... digivolve") follow the BT25-028-effect0.yaml shape:
-# a `dcgo_only` MultipleSkills row, the shared delete pick, then our
-# `sim_only` yes/no gate for the [All Turns] body. That body is silent on
+# a `dcgo_only` MultipleSkills row and the shared delete pick. The [All
+# Turns] body is silent on both sides (ours no longer parks a vacuous gate:
+# its DNA pick has no candidate without a [GraceNovamon] in hand). On
 # DCGO: SelectTrashDigivolutionCards breaks out at once when the opponent's
 # Digimon hold no digivolution cards (maxDigivolutionDiscardCount = 0) and
 # p0 has no [GraceNovamon] / second Digimon for the DNA half.
@@ -188,11 +189,6 @@ steps:
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # SIM-ONLY: our yes/no gate for the [All Turns] body (`optional: true` in
-  # BT25-028.yaml); DCGO's is isOptional: false and silent here.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-    expect: { prompt: OptionalSkill }
   # T6 (p1, memory 1): all-pass. Grizzlymon's lock expires with this turn.
   - actor: 1
     do: { pass: {} }
@@ -213,7 +209,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 21
+  - at: 20
     that:
       turn: 7
       p0.memory: 3

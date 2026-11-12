@@ -137,6 +137,9 @@ effects:
     # CanTriggerWhenRemoveField(hashtable, card)); `replacement_subject_is_mine`
     # made it cover other permanents. Audit 2026-11-11.
     active_when:
+      # Self-only: DCGO CanTriggerWhenRemoveField(hashtable, card) is
+      # `permanent.cardSources.Contains(card)`. `replacement_subject_is_mine` would
+      # make this a cross-permanent trigger (any of my permanents leaving).
       all_of:
         - is_source: true
         - replacement_subject_is_mine: true

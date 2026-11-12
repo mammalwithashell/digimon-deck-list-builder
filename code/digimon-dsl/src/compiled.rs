@@ -1246,6 +1246,10 @@ pub struct CompiledTriggeredClause {
     pub outer_prompt: bool,
     pub once_per_turn: bool,
     pub max_per_turn: Option<u8>,
+    /// Queue this clause's effects as Option effects. See
+    /// `clause::TriggeredClause::as_option_effect`.
+    #[serde(default)]
+    pub as_option_effect: bool,
     /// See `TriggeredClause::opt_group`: clauses on one card face with the
     /// same label share one per-turn counter.
     #[serde(default)]
@@ -3490,6 +3494,7 @@ mod tests {
                 outer_prompt: false,
                 opt_group: None,
                 once_per_turn: false,
+                as_option_effect: false,
                 max_per_turn: None,
                 process: vec![CompiledStep::GainMemory(1)],
                 summary: None,
@@ -3553,6 +3558,7 @@ mod tests {
                 outer_prompt: false,
                 opt_group: None,
                 once_per_turn: false,
+                as_option_effect: false,
                 max_per_turn: None,
                 process: vec![],
                 summary: None,

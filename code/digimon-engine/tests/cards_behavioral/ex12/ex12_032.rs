@@ -74,7 +74,7 @@ fn ex12_032_when_attacking_requires_same_level_source_pair() {
         .expect("EX12-032 YAML loads")
         .add_card(plain_digimon("SRC-L3", CardColor::Blue, 3, 2000))
         .add_card(plain_digimon("SRC-L4", CardColor::Blue, 4, 4000))
-        .add_card(vb_digimon("TRASH-GARURUMON", CardColor::Blue, 6, 12000))
+        .add_card(from_blue_l5(vb_digimon("TRASH-GARURUMON", CardColor::Blue, 6, 12000)))
         .start();
 
     let weregarurumon = runner.place_stack(0, &["SRC-L3", "SRC-L4", CARD_ID]);
@@ -95,7 +95,7 @@ fn ex12_032_when_attacking_prompts_with_same_level_source_pair() {
         .expect("EX12-032 YAML loads")
         .add_card(plain_digimon("SRC-L4A", CardColor::Blue, 4, 4000))
         .add_card(plain_digimon("SRC-L4B", CardColor::Purple, 4, 4000))
-        .add_card(vb_digimon("TRASH-GARURUMON", CardColor::Blue, 6, 12000))
+        .add_card(from_blue_l5(vb_digimon("TRASH-GARURUMON", CardColor::Blue, 6, 12000)))
         .start();
 
     let weregarurumon = runner.place_stack(0, &["SRC-L4A", "SRC-L4B", CARD_ID]);
@@ -144,7 +144,7 @@ fn ex12_032_when_attacking_window_opens_before_the_security_check() {
         .expect("EX12-032 YAML loads")
         .add_card(plain_digimon("SRC-L4A", CardColor::Blue, 4, 4000))
         .add_card(plain_digimon("SRC-L4B", CardColor::Purple, 4, 4000))
-        .add_card(vb_digimon("TRASH-VB-L6", CardColor::Blue, 6, 12000))
+        .add_card(from_blue_l5(vb_digimon("TRASH-VB-L6", CardColor::Blue, 6, 12000)))
         .add_card(plain_digimon("SEC-BIG", CardColor::Red, 6, 12000))
         .security(1, &["SEC-BIG"])
         .start();
@@ -206,7 +206,7 @@ fn ex12_032_without_a_same_level_pair_the_security_check_deletes_the_attacker() 
         .expect("EX12-032 YAML loads")
         .add_card(plain_digimon("SRC-L3", CardColor::Blue, 3, 3000))
         .add_card(plain_digimon("SRC-L4A", CardColor::Blue, 4, 4000))
-        .add_card(vb_digimon("TRASH-VB-L6", CardColor::Blue, 6, 12000))
+        .add_card(from_blue_l5(vb_digimon("TRASH-VB-L6", CardColor::Blue, 6, 12000)))
         .add_card(plain_digimon("SEC-BIG", CardColor::Red, 6, 12000))
         .security(1, &["SEC-BIG"])
         .start();
@@ -382,4 +382,11 @@ fn ex12_032_inherited_decode_does_not_trigger_on_a_battle_leave() {
         "16-36-1: a battle leave Decodes nothing -- the source goes to trash \
          with the stack"
     );
+}
+
+/// A Lv.6 that can digivolve from a blue Lv.5 (WereGarurumon EX12-032 is one). The effect digivolves under the
+/// normal requirements, so a trash card with none is not a candidate (DCGO `CanPlayCardTargetFrame`).
+fn from_blue_l5(mut c: digimon_engine::card_data::CardData) -> digimon_engine::card_data::CardData {
+    c.evo_costs = vec![digimon_engine::card_data::EvoCost { card_color: 1, level: 5, memory_cost: 4 }];
+    c
 }

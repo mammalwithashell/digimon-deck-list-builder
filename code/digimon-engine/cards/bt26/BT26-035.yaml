@@ -55,7 +55,6 @@ effects:
         of: any
         zone: [battle_area]
         kind: digimon
-        is_suspended: false
     summary: "[When Moving][On Play] You may suspend 1 Digimon"
     process:
       - select_any_permanent:
@@ -64,7 +63,6 @@ effects:
           filter:
             all_of:
               - kind: digimon
-              - is_unsuspended: true
           prompt: "You may suspend 1 Digimon"
       - if:
           condition: { binding_present: susp }

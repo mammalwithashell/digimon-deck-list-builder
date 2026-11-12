@@ -181,8 +181,10 @@ fn bt25_043_recovery_then_trash_own_unsuspends() {
         .deck(0, &["BT25-043"; 10])
         .deck(1, &["BT25-043"; 10])
         .security(0, &["BT25-043"; 5])
-        .add_card(security_filler())
-        .security(1, &["SEC-FILL"; 1])
+        // A non-Digimon security card: the attack checks security without a battle. (BT25-043 here would be a
+        // DUAL Security Digimon that battles the attacker, CR 4.3 13-1-7, and the tie deletes it.)
+        .add_card(security_option_filler())
+        .security(1, &["SEC-OPT"])
         .memory(8)
         .start();
 
@@ -213,8 +215,10 @@ fn bt25_043_decline_trash_leaves_suspended() {
         .deck(0, &["BT25-043"; 10])
         .deck(1, &["BT25-043"; 10])
         .security(0, &["BT25-043"; 5])
-        .add_card(security_filler())
-        .security(1, &["SEC-FILL"; 1])
+        // A non-Digimon security card: the attack checks security without a battle. (BT25-043 here would be a
+        // DUAL Security Digimon that battles the attacker, CR 4.3 13-1-7, and the tie deletes it.)
+        .add_card(security_option_filler())
+        .security(1, &["SEC-OPT"])
         .memory(8)
         .start();
 
@@ -236,6 +240,14 @@ fn bt25_043_decline_trash_leaves_suspended() {
         own_sec_before + 1,
         "declining must not trash security (only the Recovery +1 applies)"
     );
+}
+
+fn security_option_filler() -> digimon_engine::card_data::CardData {
+    let mut c = digimon_engine::debug_runner::make_test_card("SEC-OPT", "SEC-OPT");
+    c.card_kind = digimon_engine::enums::CardKind::Option;
+    c.level = None;
+    c.dp = None;
+    c
 }
 
 fn recovery_choice_attack(

@@ -60,4 +60,6 @@ mod p_204;
 
 mod p_153;
 
+mod p_248;
+
 mod p_249;

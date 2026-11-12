@@ -695,6 +695,19 @@ impl Game {
         if self.game_over {
             return;
         }
+        self.enter_main_or_end_turn();
+    }
+
+    /// Leave the breeding phase. CR 4.3 6-1-4-1: when memory is on the opponent's side once the breeding phase's
+    /// processing has resolved (a breeding-action trigger paid for a digivolve or a play), the turn ends with the
+    /// breeding phase - there is no main phase. DCGO ends the turn there too. Found by the DCGO playback of a sim
+    /// game (2026-11-11): Tsunomon BT24-003's digivolve, fired by moving out of the breeding area, took memory to
+    /// the opponent's side and the engine still opened the main phase and attacked.
+    pub(crate) fn enter_main_or_end_turn(&mut self) {
+        if self.pending_selection.is_none() && !self.game_over && self.memory < 0 {
+            self.end_turn();
+            return;
+        }
         self.enter_main_phase();
     }
 

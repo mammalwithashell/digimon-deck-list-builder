@@ -1,9 +1,20 @@
 //! Paid-deletion result must run after Decode's payer commit and before parent leave.
 use digimon_engine::{Game,debug_runner::{DebugRunner,make_test_card}};
-use digimon_engine::action::{mask::build_action_mask,space::{PASS,REPLACEMENT_ACCEPT,encode_source_select,encode_attack}};
+use digimon_engine::action::{mask::build_action_mask,space::{PASS,REPLACEMENT_ACCEPT,encode_attack}};
 use digimon_engine::selection::SelectionKind;
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::enums::Keyword;
+/// The Decode material pick is an owned physical card choice: find the one
+/// committable `Source` digivolution card by identity, not by a slot encoding.
+fn source_pick(g:&Game)->u16 {
+ use digimon_engine::owned_card_choice::{CardChoiceOperation,CardChoiceZone};
+ let s=g.pending_selection.as_ref().expect("Decode material selection");
+ let rows:Vec<_>=s.card_choice.as_ref().expect("material selection owns its page").view(g,s.selecting_player).rows.into_iter().filter(|row|matches!(row.operation,CardChoiceOperation::CommitCard)).collect();
+ assert_eq!(rows.len(),1,"only the Source digivolution card is a legal Decode material");
+ assert_eq!(rows[0].card_id.as_deref(),Some("SOURCE"));
+ assert!(matches!(rows[0].zone,Some(CardChoiceZone::BattleSource)));
+ rows[0].action_id
+}
 fn board(guard:bool,evade:bool)->DebugRunner { board_detail(guard,evade,false) }
 fn board_detail(guard:bool,evade:bool,repark:bool)->DebugRunner {
  let grant=if guard {"  - kind: grant_keyword\n    keyword: Guard\n    summary: '<Guard>'\n"}else{""};
@@ -47,16 +58,16 @@ fn endpoint(g:&Game,field:&[&str],trash:&[&str]){assert!(g.pending_selection.is_
 fn begin(r:&mut DebugRunner,guard:bool){let subject=digimon_engine::permanent::PermanentHandle{player:0,index:1};r.game.delete_permanent_with_cause(subject,ReplacementCause::OpponentEffect);replacement(&r.game,if guard {"<Guard>"}else{"<Scapegoat>"});choose(&mut r.game,REPLACEMENT_ACCEPT);if !guard {choose(&mut r.game,encode_attack(0,0));}}
 #[test]
 fn guard_decode_accept_and_decline_settle_payment_before_parent_in_clones(){
- for decline in [false,true] {let mut r=board(true,false);begin(&mut r,true);replacement(&r.game,"when_would_leave_battle_area");let clone=r.game.clone();for mut g in [r.game,clone] {if decline {choose(&mut g,PASS);endpoint(&g,&["SUBJECT"],&["PAYER","SOURCE"]);}else{choose(&mut g,REPLACEMENT_ACCEPT);let pick=encode_source_select(0,0).unwrap();let clone=g.clone();for mut h in [g,clone]{choose(&mut h,pick);endpoint(&h,&["SUBJECT","SOURCE"],&["PAYER"]);}}}}
+ for decline in [false,true] {let mut r=board(true,false);begin(&mut r,true);replacement(&r.game,"when_would_leave_battle_area");let clone=r.game.clone();for mut g in [r.game,clone] {if decline {choose(&mut g,PASS);endpoint(&g,&["SUBJECT"],&["PAYER","SOURCE"]);}else{choose(&mut g,REPLACEMENT_ACCEPT);let pick=source_pick(&g);let clone=g.clone();for mut h in [g,clone]{choose(&mut h,pick);endpoint(&h,&["SUBJECT","SOURCE"],&["PAYER"]);}}}}
 }
 #[test]
-fn scapegoat_selected_decode_payer_saves_original_in_clones(){let mut r=board(false,false);begin(&mut r,false);replacement(&r.game,"when_would_leave_battle_area");choose(&mut r.game,REPLACEMENT_ACCEPT);let clone=r.game.clone();for mut g in [r.game,clone]{choose(&mut g,encode_source_select(0,0).unwrap());endpoint(&g,&["SUBJECT","SOURCE"],&["PAYER"]);}}
+fn scapegoat_selected_decode_payer_saves_original_in_clones(){let mut r=board(false,false);begin(&mut r,false);replacement(&r.game,"when_would_leave_battle_area");choose(&mut r.game,REPLACEMENT_ACCEPT);let clone=r.game.clone();for mut g in [r.game,clone]{let pick=source_pick(&g);choose(&mut g,pick);endpoint(&g,&["SUBJECT","SOURCE"],&["PAYER"]);}}
 #[test]
-fn guard_decode_then_evade_failed_payment_does_not_save_parent(){let mut r=board(true,true);begin(&mut r,true);let s=r.game.pending_selection.as_ref().unwrap();assert_eq!(s.kind,SelectionKind::EffectChoice);assert!(!s.is_optional);let rows=s.effect_choices.as_ref().unwrap();assert_eq!(rows.len(),2);let choices:Vec<_>=rows.iter().filter(|x|x.label.contains("when_would_leave_battle_area")||x.label.contains("Decode")).collect();assert_eq!(choices.len(),1);let action=choices[0].action_id;choose(&mut r.game,action);replacement(&r.game,"when_would_leave_battle_area");choose(&mut r.game,REPLACEMENT_ACCEPT);choose(&mut r.game,encode_source_select(0,0).unwrap());replacement(&r.game,"<Evade>");let clone=r.game.clone();for mut g in [r.game,clone]{choose(&mut g,REPLACEMENT_ACCEPT);endpoint(&g,&["PAYER","SOURCE"],&["SUBJECT"]);assert!(g.players[0].battle_area.iter().find(|p|p.top_card().card_id(&g.card_data)=="PAYER").unwrap().is_suspended);}}
+fn guard_decode_then_evade_failed_payment_does_not_save_parent(){let mut r=board(true,true);begin(&mut r,true);let s=r.game.pending_selection.as_ref().unwrap();assert_eq!(s.kind,SelectionKind::EffectChoice);assert!(!s.is_optional);let rows=s.effect_choices.as_ref().unwrap();assert_eq!(rows.len(),2);let choices:Vec<_>=rows.iter().filter(|x|x.label.contains("when_would_leave_battle_area")||x.label.contains("Decode")).collect();assert_eq!(choices.len(),1);let action=choices[0].action_id;choose(&mut r.game,action);replacement(&r.game,"when_would_leave_battle_area");choose(&mut r.game,REPLACEMENT_ACCEPT);let pick=source_pick(&r.game);choose(&mut r.game,pick);replacement(&r.game,"<Evade>");let clone=r.game.clone();for mut g in [r.game,clone]{choose(&mut g,REPLACEMENT_ACCEPT);endpoint(&g,&["PAYER","SOURCE"],&["SUBJECT"]);assert!(g.players[0].battle_area.iter().find(|p|p.top_card().card_id(&g.card_data)=="PAYER").unwrap().is_suspended);}}
 
 #[test]
 fn guard_payment_waits_for_further_decode_body_prompt_in_clones(){
- let mut r=board_detail(true,false,true);begin(&mut r,true);replacement(&r.game,"when_would_leave_battle_area");choose(&mut r.game,REPLACEMENT_ACCEPT);choose(&mut r.game,encode_source_select(0,0).unwrap());
+ let mut r=board_detail(true,false,true);begin(&mut r,true);replacement(&r.game,"when_would_leave_battle_area");choose(&mut r.game,REPLACEMENT_ACCEPT);let pick=source_pick(&r.game);choose(&mut r.game,pick);
  let s=r.game.pending_selection.as_ref().expect("further body choice");assert!(s.prompt.contains("Finish Decode body"));assert_eq!(s.kind,SelectionKind::OwnField);assert!(!s.is_optional);let id=r.game.players[0].battle_area.iter().position(|p|p.top_card().card_id(&r.game.card_data)=="SOURCE").unwrap();let action=encode_attack(0,id as u16);assert_eq!(s.valid_action_ids,vec![action]);
  let before:Vec<_>=r.game.players[0].battle_area.iter().map(|p|p.top_card().card_id(&r.game.card_data)).collect();assert!(before.contains(&"PAYER")&&before.contains(&"SUBJECT"),"payment and original departure wait for the body");
  let clone=r.game.clone();for mut g in [r.game,clone]{choose(&mut g,action);endpoint(&g,&["SOURCE","SUBJECT"],&["PAYER"]);}
@@ -108,5 +119,5 @@ effects:
           cost_delta: free
 "#;
  let mut r=DebugRunner::builder().from_dsl_yaml(DRIVER).unwrap().from_dsl_yaml(DECODE).unwrap().add_card(make_test_card("SOURCE","Source")).add_card(make_test_card("FILL","Fill")).deck(0,&["FILL";20]).deck(1,&["FILL";20]).start();r.skip_mulligan();let driver=r.place_on_field(0,"DRIVER",None);r.place_stack(1,&["SOURCE","DECODE"]);let hand=r.game.players[0].hand.len();r.game.enqueue_triggered(digimon_engine::enums::EffectTiming::OnPlay,digimon_engine::selection::TriggerSource::Permanent(driver));r.game.drain_effect_queue();
- let s=r.game.pending_selection.as_ref().unwrap();assert_eq!(s.selecting_player,1);assert_eq!(s.kind,SelectionKind::Replacement);assert!(build_action_mask(&r.game,1)[REPLACEMENT_ACCEPT as usize]>0.0);r.game.resolve_selection(1,REPLACEMENT_ACCEPT).unwrap();let a=encode_source_select(0,0).unwrap();assert_eq!(r.game.players[0].hand.len(),hand,"result branch waits for payer body");let clone=r.game.clone();for mut g in [r.game,clone]{let s=g.pending_selection.as_ref().unwrap();assert_eq!(s.selecting_player,1);assert!(s.prompt.contains("Ordinary Decode source"));assert!(s.valid_action_ids.contains(&a));assert!(build_action_mask(&g,1)[a as usize]>0.0);g.resolve_selection(1,a).unwrap();assert!(g.pending_selection.is_none());assert_eq!(g.players[0].hand.len(),hand+1,"actual receipt records original Decode deletion exactly once");assert_eq!(g.players[1].battle_area.len(),1);assert_eq!(g.players[1].battle_area[0].top_card().card_id(&g.card_data),"SOURCE");let trash:Vec<_>=g.players[1].trash.iter().map(|c|c.card_id(&g.card_data)).collect();assert_eq!(trash,vec!["DECODE"]);}
+ let s=r.game.pending_selection.as_ref().unwrap();assert_eq!(s.selecting_player,1);assert_eq!(s.kind,SelectionKind::Replacement);assert!(build_action_mask(&r.game,1)[REPLACEMENT_ACCEPT as usize]>0.0);r.game.resolve_selection(1,REPLACEMENT_ACCEPT).unwrap();let a=source_pick(&r.game);assert_eq!(r.game.players[0].hand.len(),hand,"result branch waits for payer body");let clone=r.game.clone();for mut g in [r.game,clone]{let s=g.pending_selection.as_ref().unwrap();assert_eq!(s.selecting_player,1);assert!(s.prompt.contains("Ordinary Decode source"));assert!(s.valid_action_ids.contains(&a));assert!(build_action_mask(&g,1)[a as usize]>0.0);g.resolve_selection(1,a).unwrap();assert!(g.pending_selection.is_none());assert_eq!(g.players[0].hand.len(),hand+1,"actual receipt records original Decode deletion exactly once");assert_eq!(g.players[1].battle_area.len(),1);assert_eq!(g.players[1].battle_area[0].top_card().card_id(&g.card_data),"SOURCE");let trash:Vec<_>=g.players[1].trash.iter().map(|c|c.card_id(&g.card_data)).collect();assert_eq!(trash,vec!["DECODE"]);}
 }

@@ -620,6 +620,20 @@ fn native_post_actions_keep_control_flow_and_registered_raw_tails_reject_before_
                     p.kind = SelectionKind::EffectChoice;
                     p.valid_action_ids = vec![HAND_EFFECT_START];
                 }
+                // Variant 0's post action trashes the picked permanent's bottom
+                // face-down card. Its installer (install_trash_bottom_face_down_
+                // source_under_tamer) only offers permanents with a payable
+                // face-down card (face_down_cards_under > 0), and the post arm
+                // debug_asserts that invariant (1b1871be2). Give the picked
+                // permanent a real face-down card so the state is one the
+                // engine can reach; the cost is then paid and the cost-gated
+                // tail runs.
+                if variant == 0 {
+                    let owner = viewer as usize;
+                    let mut under = g.players[owner].hand.pop().unwrap();
+                    under.face_down = true;
+                    g.players[owner].battle_area[0].card_sources.insert(0, under);
+                }
                 if variant == 4 {
                     add_outer(&mut g, viewer, Some(security_context(event, 3)), vec![raw]);
                     if let ResumeFrame::RunTail { outer_conts, .. } = frame(&mut g) { outer_conts[0].runtime = runtime; }
@@ -628,13 +642,24 @@ fn native_post_actions_keep_control_flow_and_registered_raw_tails_reject_before_
                 let original = g.belief_knowledge(viewer).unwrap().clone();
                 let mut ordinary = materialize_closed(&g, viewer, &original, &prior(), 81).unwrap();
                 assert!(digimon_engine::build_action_mask(&ordinary, viewer)[action as usize] > 0.5);
-                let ordinary_zones = support::full_zone_dump(&ordinary);
+                // Expected zones after resolution: unchanged, except that
+                // variant 0's paid cost moves the face-down card to its trash.
+                let after_zones = |w: &Game| {
+                    let mut zones = support::full_zone_dump(w);
+                    if variant == 0 {
+                        let card = &w.players[viewer as usize].battle_area[0].card_sources[0];
+                        assert!(card.face_down);
+                        zones[viewer as usize * 5 + 4].push(card.card_id(&w.card_data).to_owned());
+                    }
+                    zones
+                };
+                let ordinary_zones = after_zones(&ordinary);
                 ordinary.resolve_selection(viewer, action).unwrap();
                 assert_eq!(calls.load(Ordering::SeqCst), usize::from(variant >= 2));
                 calls.store(0, Ordering::SeqCst);
                 let mut memory = original.clone(); memory.forget_zone(1 - viewer, KnowledgeZone::Hand);
                 let mut checked = materialize_closed(&g, viewer, &memory, &prior(), 81).unwrap();
-                let checked_zones = support::full_zone_dump(&checked);
+                let checked_zones = after_zones(&checked);
                 if variant >= 2 {
                     assert_legal_resume_rejected(&mut checked, viewer, action,
                         "closed-list projected context reached unproven callback: raw_dsl_step");
@@ -645,7 +670,8 @@ fn native_post_actions_keep_control_flow_and_registered_raw_tails_reject_before_
                     assert_eq!(checked.pending_selection.is_none(), ordinary.pending_selection.is_none());
                     assert_eq!(support::full_zone_dump(&ordinary), ordinary_zones);
                     assert_eq!(support::full_zone_dump(&checked), checked_zones);
-                    assert_eq!(checked.memory, if variant == 0 { 0 } else { 1 });
+                    // Variant 0: cost paid, so the tail's GainMemory(1) runs.
+                    assert_eq!(checked.memory, 1);
                 }
                 assert_eq!(g.memory, 0);
                 assert_eq!(g.belief_knowledge(viewer).unwrap(), &original);

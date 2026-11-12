@@ -1564,7 +1564,9 @@ pub struct DigivolveCandidatePredicate {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DigivolveCostPredicate {
-    /// Named permanent binding, or `source` for the effect's live carrier.
+    /// Named permanent binding, `source` for the effect's live carrier, or
+    /// `event_target` for the permanent the trigger is about (an attack
+    /// trigger's attacker, a digivolving Digimon).
     pub target: String,
     /// Must match the consuming effect_initiated_digivolve step. This predicate
     /// cannot occur inside cost_reduction/cost_assignment clauses, including

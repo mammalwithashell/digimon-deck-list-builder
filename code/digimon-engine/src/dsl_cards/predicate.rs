@@ -3924,6 +3924,8 @@ fn eval_card_fields(
             bindings.and_then(|b| b.get_permanent(binding)).or_else(|| {
                 if binding == "source" {
                     rctx.source_permanent
+                } else if binding == "event_target" {
+                    resolve_cost_probe_target(rctx, bindings, binding)
                 } else {
                     None
                 }
@@ -4046,6 +4048,17 @@ fn resolve_cost_probe_target(
         if bindings.get_ref(name).is_some() {
             return bindings.get_permanent(name);
         }
+    }
+    // `event_target`: the permanent the trigger is about (an attack trigger's
+    // attacker, a digivolving Digimon, ...), resolved by identity exactly as the
+    // `event_target` binding reference is, so a departed subject is gone rather
+    // than replaced by whatever slid into its slot.
+    if name == "event_target" {
+        return rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.resolve_event_permanent(rctx.game));
     }
     if name != "source" || rctx.source_permanent.is_none() {
         return None;

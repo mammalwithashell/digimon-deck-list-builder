@@ -58,8 +58,6 @@ steps:
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
   - actor: 0
-    do: { select: { yes: true, sim_only: true } }
-  - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
@@ -414,7 +412,7 @@ assert:
     p1.security: 5
     p1.trash: []
     turn: 5
-- at: 12
+- at: 11
   that:
     _backfilled: true
     memory: 0
@@ -450,7 +448,7 @@ assert:
     p1.security: 5
     p1.trash: []
     turn: 5
-- at: 13
+- at: 12
   that:
     _backfilled: true
     memory: 0
@@ -490,7 +488,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 5
-- at: 14
+- at: 13
   that:
     _backfilled: true
     memory: -4
@@ -532,7 +530,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 6
-- at: 15
+- at: 14
   that:
     _backfilled: true
     memory: 3
@@ -575,7 +573,7 @@ assert:
     p1.trash: []
     phase: Breeding
     turn: 7
-- at: 18
+- at: 17
   that:
     _backfilled: true
     memory: 3
@@ -617,6 +615,49 @@ assert:
     p1.security: 5
     p1.trash: []
     phase: Main
+    turn: 7
+- at: 18
+  that:
+    _backfilled: true
+    memory: 2
+    p0.field:
+    - card_id: BT25-092
+      dp: -1
+      suspended: false
+      sources: []
+    - card_id: EX7-073
+      dp: 12000
+      suspended: false
+      sources:
+      - BT25-082
+      - BT25-085
+      - EX7-051
+      - ST6-01
+    p0.hand:
+    - BT21-071
+    - BT21-074
+    - BT25-078
+    - BT25-083
+    - BT25-083
+    - BT25-083
+    - P-180
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: BT4-014
+      dp: 8000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT1-009
+    - BT3-007
+    - ST1-04
+    - ST1-04
+    p1.security: 5
+    p1.trash: []
     turn: 7
 - at: 19
   that:
@@ -685,49 +726,6 @@ assert:
     - BT25-083
     - BT25-083
     - BT25-083
-    - P-180
-    p0.security: 5
-    p0.trash: []
-    p1.field:
-    - card_id: BT4-014
-      dp: 8000
-      suspended: false
-      sources: []
-    p1.hand:
-    - BT1-009
-    - BT1-009
-    - BT1-009
-    - BT1-009
-    - BT3-007
-    - ST1-04
-    - ST1-04
-    p1.security: 5
-    p1.trash: []
-    turn: 7
-- at: 21
-  that:
-    _backfilled: true
-    memory: 2
-    p0.field:
-    - card_id: BT25-092
-      dp: -1
-      suspended: false
-      sources: []
-    - card_id: EX7-073
-      dp: 12000
-      suspended: false
-      sources:
-      - BT25-082
-      - BT25-085
-      - EX7-051
-      - ST6-01
-    p0.hand:
-    - BT21-071
-    - BT21-074
-    - BT25-078
-    - BT25-083
-    - BT25-083
-    - BT25-083
     p0.security: 5
     p0.trash: []
     p1.field:
@@ -747,7 +745,7 @@ assert:
     p1.trash:
     - ST1-02
     turn: 7
-- at: 24
+- at: 23
   that:
     _backfilled: true
     memory: 2

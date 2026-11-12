@@ -16700,6 +16700,57 @@
         "DELETE-ALL-SAME-NAME"
       ],
       "notes": "Purple Lv.6/5 circle + [Burst Digivolve] from [Ravemon] (return Keenan Crier, cost 0, turn-end top-card trash). WD: controller picks 1 card of the opponent's hand to trash (mandatory while non-empty), then if opp hand <=7 the opponent adds its top security card (DCGO BT13_092.cs). WA: optional, needs a Digimon card in opp trash; optional cost select_trash -> return_trash_list_to_deck_bottom -> delete_all_permanents over opp Digimon with name_matches_returned_card (new predicate, G-DSL-NAME-MATCHES-RETURNED-CARD; top-card synthesized names). Observation caveat: the searching player's tensor does not encode the opponent's hand (G-OBS-OPP-HAND-SEARCH-VISIBILITY, open). 9 card-clause tests pass; shared burst tests: 4 pass, 3 fail identically for BT13-020/060 (engine burst path in flux)."
+    },
+    "AD1-003": {
+      "card_name": "WarGrowlmon",
+      "validated_date": "2026-11-09",
+      "report": "batch-implement-cards-rust-dsl (workflow author-adventure-starter-cards)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure starter decks (ST20/ST21) + AD1",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-003.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_003.rs",
+      "test_count": 28,
+      "patterns": [],
+      "notes": "Authored for the mod-recorded DCGO replays (qa/dcgo-mod-recordings). Authoring agents could not run tests; orchestrator ran all ST20/ST21/AD1 cards_behavioral tests together (986 passed + 38 for ST20-03/ST21-08, one wrong ST20-05 expectation fixed per rule 14-2-3)."
+    },
+    "AD1-007": {
+      "card_name": "Siriusmon",
+      "validated_date": "2026-11-09",
+      "report": "batch-implement-cards-rust-dsl (workflow author-adventure-starter-cards)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure starter decks (ST20/ST21) + AD1",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-007.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_007.rs",
+      "test_count": 26,
+      "patterns": [],
+      "notes": "Authored for the mod-recorded DCGO replays (qa/dcgo-mod-recordings). Authoring agents could not run tests; orchestrator ran all ST20/ST21/AD1 cards_behavioral tests together (986 passed + 38 for ST20-03/ST21-08, one wrong ST20-05 expectation fixed per rule 14-2-3)."
+    },
+    "AD1-008": {
+      "card_name": "Gallantmon",
+      "validated_date": "2026-11-09",
+      "report": "batch-implement-cards-rust-dsl (workflow author-adventure-starter-cards)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure starter decks (ST20/ST21) + AD1",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-008.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_008.rs",
+      "test_count": 28,
+      "patterns": [],
+      "notes": "Authored for the mod-recorded DCGO replays (qa/dcgo-mod-recordings). Authoring agents could not run tests; orchestrator ran all ST20/ST21/AD1 cards_behavioral tests together (986 passed + 38 for ST20-03/ST21-08, one wrong ST20-05 expectation fixed per rule 14-2-3)."
+    },
+    "P-248": {
+      "card_name": "Veemon",
+      "validated_date": "2026-11-10",
+      "report": "dcgo-playback",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "(opponent deck in DCGO playback games)",
+      "notes": "Start-of-main trash ([Veedramon] text / [Armor Form] / [Free]) -> draw 1 + 1 memory, optional pick (DCGO canNoSelect); inherited [Your Turn] +2000 DP; [DemiVeemon] cost-0 digivolve. Six behavioral tests GREEN. Found as a DCGO-only prompt during sim playback in DCGO (card had no YAML). Checked P-248.webp and DCGO P/Blue/P_248.cs.",
+      "yaml_path": "code/digimon-engine/cards/p/P-248.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_248.rs",
+      "test_count": 6
     }
   }
 }

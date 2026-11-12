@@ -1,0 +1,157 @@
+# AD1-003 WarGrowlmon — Digimon, Lv.5, Red, DP 7000, Cost 7.
+# Traits: Cyborg / Hero. Form: Ultimate. Attribute: Virus.
+#
+# Printed text (card image + official Bandai DB bundle data/card_bundles/AD1-003.md):
+#
+#   [Digivolve] Lv.4 w/[Growlmon] in name or w/[Hero] trait: Cost 3
+#   ＜Raid＞
+#   [On Play] [When Digivolving] You may play 1 [Takato Matsuki] from your hand
+#     or trash without paying the cost. Then, you may delete 1 of your
+#     opponent's Digimon with 6000 DP or less.
+#   Inherited: [All Turns] When this Digimon with [Gallantmon] in its name
+#     would leave the battle area other than by your effects, you may play 1
+#     each of [Takato Matsuki] and [Guilmon] from its digivolution cards
+#     without paying the cost.
+#
+# Standard circle: Red Lv.4 / Cost 3 (card image, official DB, cards.json).
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/AD1/Red/AD1_003.cs
+#   - EffectTiming.None AddSelfDigivolutionRequirementStaticEffect(level 4,
+#     TopCard.ContainsCardName("Growlmon") || EqualsTraits("Hero"), cost 3,
+#     ignoreDigivolutionRequirement false) → second alt_path.
+#   - RaidSelfEffect → grant_keyword Raid.
+#   - Shared OP / WD (maxCount -1, isOptional false — each half carries its own
+#     "may"): hand-vs-trash prompt then a SelectHand / SelectCard with
+#     canNoSelect TRUE over EqualsCardName("Takato Matsuki") &&
+#     CanPlayAsNewPermanent(payCost false) → PlayPermanentCards; THEN a
+#     SelectPermanentEffect Mode.Destroy (canNoSelect TRUE) over opponent
+#     Digimon with DP <= MaxDP_DeleteEffect(6000) → two INDEPENDENT optional
+#     halves (declining the play does not skip the delete).
+#   - Inherited [All Turns] (EffectTiming.WhenRemoveField, optional outer,
+#     SetIsInheritedEffect): CanUseCondition = on the battle area, the carrier's
+#     TOP card name contains "Gallantmon", CanTriggerWhenRemoveField and NOT
+#     IsByEffect(own-owner effect). Body = two selects over the digivolution
+#     cards (Takato Matsuki, Guilmon), each canNoSelect TRUE in DCGO.
+#
+# Source-priority note (official Q&A outranks DCGO for rulings): AD1-003's
+# official Q&A reads "No, you can't. You must play 1 [Takato Matsuki] and 1
+# [Guilmon] whenever possible." — i.e. once the inherited effect is accepted
+# (the outer "you may"), a Takato Matsuki AND a Guilmon must both be played if
+# each is available; the player may NOT choose to play only one of them. DCGO's
+# per-half canNoSelect TRUE is therefore NOT copied: `select_materials` with
+# `named_groups` + `require_max` offers exactly the largest feasible
+# one-of-each set (BT7-063 idiom) and never auto-picks — which physical
+# Takato / Guilmon is played is still the player's choice, and the outer
+# `optional: true` is the only decline.
+#
+# "Other than by your effects" = exclude `replacement_cause: own_effect`
+# (relative to the carrier's controller; BT23-032 / BT18-063 idiom). The play
+# is NON-cancelling — the leaving Digimon still leaves (BT18-063 precedent).
+
+card: AD1-003
+name: WarGrowlmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Virus
+traits: [Cyborg, Hero]
+
+alt_paths:
+  # ─── Standard circle: Red Lv.4 / Cost 3 ─────────────────────────────────────
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+
+  # ─── [Digivolve] Lv.4 w/[Growlmon] in name or w/[Hero] trait: Cost 3 ─────────
+  # DCGO: level 4 + (ContainsCardName("Growlmon") || EqualsTraits("Hero")),
+  # cost 3, requirements respected (colour gate replaced by the name/trait box).
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - name_contains: "Growlmon"
+            - trait_has: Hero
+    cost: 3
+
+effects:
+  # ─── ＜Raid＞ ───────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  # ─── [On Play][When Digivolving] may play Takato Matsuki; then may delete ─────
+  #
+  # Two independent "you may" halves (DCGO outer isOptional false; each inner
+  # select has canNoSelect TRUE). A declined union-zone pick leaves the binding
+  # unbound and `play_union_bound_free` is a silent no-op; the tail then still
+  # runs (zone selects continue on decline unless `cost: true`). The delete
+  # pick is the LAST step, so its field-select decline simply ends the clause.
+  # `can_play_from_effect_without_cost` = DCGO CanPlayAsNewPermanent(payCost
+  # false) in the candidate filter, so an unplayable Takato is never offered.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may play 1 [Takato Matsuki] from your hand or trash without paying the cost. Then, you may delete 1 of your opponent's Digimon with 6000 DP or less"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: takato_pick
+          optional: true
+          filter:
+            all_of:
+              - name_is: "Takato Matsuki"
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 [Takato Matsuki] from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: takato_pick
+      - select_opponent_permanent:
+          bind_as: wg_del
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 6000
+          prompt: "You may delete 1 of your opponent's Digimon with 6000 DP or less"
+      - delete_permanent: { target: wg_del }
+
+  # ─── Inherited [All Turns]: would leave (not by own effects) → play Takato + Guilmon ──
+  #
+  # `kind: replacement` + `trigger: when_would_leave_battle_area`, non-cancelling.
+  # The gate is the carrier itself (`is_source` + `replacement_subject_is_mine`,
+  # BT19-075 idiom), a Digimon whose top-card NAME contains [Gallantmon]
+  # (DCGO `TopCard.ContainsCardName("Gallantmon")`), leaving by anything other
+  # than the controller's own effects. `select_materials` + `named_groups` +
+  # `require_max` picks exactly one [Takato Matsuki] and one [Guilmon] among the
+  # digivolution cards when both exist (the largest feasible set — official Q&A:
+  # "must play ... whenever possible"); the optional outer prompt is the only
+  # decline. The replacement preflight offers the prompt only when at least one
+  # named card is playable.
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - is_source: true
+        - kind: digimon
+        - name_contains: "Gallantmon"
+        - none_of:
+            - replacement_cause: own_effect
+    summary: "[Inherited][All Turns] When this Digimon with [Gallantmon] in its name would leave the battle area other than by your effects, you may play 1 each of [Takato Matsuki] and [Guilmon] from its digivolution cards without paying the cost"
+    process:
+      - select_materials:
+          of_permanent: replacement_subject
+          max: 2
+          named_groups: ["Takato Matsuki", "Guilmon"]
+          require_max: true
+          filter: { can_play_from_effect_without_cost: true }
+          bind_as: wg_pair
+          prompt: "Choose 1 [Takato Matsuki] and 1 [Guilmon] from this Digimon's digivolution cards to play without paying the cost"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: wg_pair
+          cost_delta: free

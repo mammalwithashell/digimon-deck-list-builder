@@ -153619,6 +153619,11 @@
         "card_color": 2,
         "level": 5,
         "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
@@ -154225,6 +154230,11 @@
     "evo_costs": [
       {
         "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 2,
         "level": 2,
         "memory_cost": 0
       }
@@ -162675,5 +162685,179 @@
       "Beastkin"
     ],
     "xros_req": ""
+  },
+  "P-242": {
+    "attribute_eng": [],
+    "card_colors": [
+      6
+    ],
+    "card_effect_class_name": "P_242",
+    "card_id": "P-242",
+    "card_index": 242,
+    "card_kind": 1,
+    "card_name_eng": "Rei Katsura",
+    "card_name_jpn": "",
+    "dp": null,
+    "effect_description_eng": "[Start of Your Main Phase] By trashing 1 [System], [Life (App Name)] or [Transmutation (App Name)] trait card from your hand, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.\r\n[Main] By suspending this Tamer, you may link 1 [System], [Life (App Name)] or [Transmutation (App Name)] trait card from your trash to 1 of your Digimon with the cost reduced by 1.",
+    "evo_costs": [],
+    "form_eng": [],
+    "index": 4482,
+    "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+    "level": null,
+    "norm_id": 0.2241,
+    "play_cost": 4,
+    "rarity": 5,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "App Driver",
+      "Appmon"
+    ],
+    "xros_req": ""
+  },
+  "P-243": {
+    "attribute_eng": [],
+    "card_colors": [
+      5
+    ],
+    "card_effect_class_name": "P_243",
+    "card_id": "P-243",
+    "card_index": 243,
+    "card_kind": 2,
+    "card_name_eng": "Digiseabass",
+    "card_name_jpn": "",
+    "dp": null,
+    "effect_description_eng": "＜Use Req. ([DM] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Main] By trashing 1 card in your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place this card in the battle area.\r\n[Start of Your Turn] If your opponent has a Digimon, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・By returning 1 [DM] trait Digimon card from trash to the top of your deck, you may play 1 play cost of 3 or lower [DM] trait card from your trash without paying the cost.",
+    "evo_costs": [],
+    "form_eng": [],
+    "index": 4483,
+    "inherited_effect_description_eng": "[Security] You may play 1 play cost of 3 or lower [DM] trait card from your hand or trash without paying the cost.",
+    "level": null,
+    "norm_id": 0.22415,
+    "play_cost": 3,
+    "rarity": 5,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "DM"
+    ],
+    "xros_req": ""
+  },
+  "P-245": {
+    "attribute_eng": [],
+    "card_colors": [
+      5
+    ],
+    "card_effect_class_name": "P_245",
+    "card_id": "P-245",
+    "card_index": 245,
+    "card_kind": 3,
+    "card_name_eng": "Kakkinmon",
+    "card_name_jpn": "",
+    "dp": null,
+    "effect_description_eng": "Inherited Effect [End of All Turns] [Once Per Turn] By suspending 1 of your black Digimon with ＜Blocker＞, if your hand has 7 or fewer cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
+    "evo_costs": [],
+    "form_eng": [],
+    "index": 4484,
+    "inherited_effect_description_eng": "[Once Per Turn] By suspending 1 of your Digimon with , if your hand has 7 or fewer cards, Draw 1",
+    "level": 2,
+    "norm_id": 0.2242,
+    "play_cost": 0,
+    "rarity": 5,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Armor"
+    ],
+    "xros_req": ""
+  },
+  "P-246": {
+    "attribute_eng": [],
+    "card_colors": [
+      5
+    ],
+    "card_effect_class_name": "P_246",
+    "card_id": "P-246",
+    "card_index": 246,
+    "card_kind": 3,
+    "card_name_eng": "Motimon",
+    "card_name_jpn": "",
+    "dp": null,
+    "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When any of your other Digimon with [Sukamon] or [Mamemon] in their names are deleted, this Digimon may digivolve into a Digimon card with [Sukamon], [Etemon] or [Mamemon] in its name in the hand with the cost reduced by 2.",
+    "evo_costs": [],
+    "form_eng": [],
+    "index": 4485,
+    "inherited_effect_description_eng": "[Once Per Turn] When any of your other Digimon with are deleted, this Digimon may digivolve into a Digimon card with in the hand with the cost reduced by 2.",
+    "level": 2,
+    "norm_id": 0.22425,
+    "play_cost": 0,
+    "rarity": 5,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Lesser"
+    ],
+    "xros_req": ""
+  },
+  "P-247": {
+    "attribute_eng": [],
+    "card_colors": [
+      6
+    ],
+    "card_effect_class_name": "P_247",
+    "card_id": "P-247",
+    "card_index": 247,
+    "card_kind": 3,
+    "card_name_eng": "Nyaromon",
+    "card_name_jpn": "",
+    "dp": null,
+    "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] By trashing 1 [Dark Animal], [Shaman], [Undead] or [TS] trait card from your hand, delete 1 of your opponent's unsuspended level 4 or lower Digimon.",
+    "evo_costs": [],
+    "form_eng": [],
+    "index": 4486,
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] By trashing 1 [Dark Animal|Shaman|Undead|TS] trait card from your hand, delete 1 of your opponent's unsuspended level 4 or lower Digimon.",
+    "level": 2,
+    "norm_id": 0.2243,
+    "play_cost": 0,
+    "rarity": 5,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Lesser",
+      "Titan",
+      "TS"
+    ],
+    "xros_req": ""
+  },
+  "P-248": {
+    "attribute_eng": [
+      "Free"
+    ],
+    "card_colors": [
+      1,
+      0
+    ],
+    "card_effect_class_name": "P_248",
+    "card_id": "P-248",
+    "card_index": 248,
+    "card_kind": 0,
+    "card_name_eng": "Veemon",
+    "card_name_jpn": "",
+    "dp": 2000,
+    "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with [Veedramon] in its text or the [Armor Form] or [Free] trait from your hand, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.",
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "form_eng": [],
+    "index": 4487,
+    "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+    "level": 3,
+    "norm_id": 0.22435,
+    "play_cost": 3,
+    "rarity": 5,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Mini Dragon"
+    ],
+    "xros_req": "[Digivolve] [DemiVeemon]: Cost 0"
   }
 }

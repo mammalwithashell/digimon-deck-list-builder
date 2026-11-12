@@ -6,8 +6,10 @@ use digimon_dsl::compiled::{
 };
 use digimon_dsl::CardSpec;
 
-const TITA: &[u8] =
-    include_bytes!("../../tests/fixtures/card_data/assembly_recipe_binding/BT24-081.yaml");
+// BT24-081 compiles from the live card file. The assembly_recipe_binding
+// fixture is a frozen snapshot of an earlier revision (the Python diagnostics
+// pin it); 23c291417 then made the materials name-only, so the two differ.
+const TITA: &[u8] = include_bytes!("../../digimon-engine/cards/bt24/BT24-081.yaml");
 const AEGIO: &[u8] =
     include_bytes!("../../tests/fixtures/card_data/assembly_recipe_binding/BT26-073.yaml");
 
@@ -63,8 +65,9 @@ fn expected_tita() -> Vec<CompiledAltPath> {
     assembly.materials = ["Titamon", "SkullBaluchimon"]
         .into_iter()
         .map(|name| {
+            // Name only: "[Titamon]" names a card, not a card kind
+            // (23c291417, assembly_material_predicates.rs).
             material(CompiledPredicate {
-                kind: Some(CompiledCardKind::Digimon),
                 name_is: Some(name.into()),
                 ..Default::default()
             })
@@ -124,10 +127,6 @@ fn exact_paths(card: &CompiledCard, expected: &[CompiledAltPath]) -> bool {
 
 #[test]
 fn original_titamon_full_ordered_assembly_metadata() {
-    assert_eq!(
-        TITA,
-        include_bytes!("../../digimon-engine/cards/bt24/BT24-081.yaml")
-    );
     let c = compile(TITA);
     assert_eq!(c.card, "BT24-081");
     assert_eq!(c.kind, CompiledCardKind::Digimon);
@@ -189,8 +188,8 @@ fn named_recipe_cost_origin_stack_multiplicity_and_exact_name_refusals() {
                 "name_is: \"Titamon\", zones: [trash], stack_under: false",
             ),
             (
-                "kind: digimon, name_is: \"Titamon\", zones",
-                "kind: tamer, name_is: \"Titamon\", zones",
+                "{ name_is: \"Titamon\", zones",
+                "{ kind: tamer, name_is: \"Titamon\", zones",
             ),
             (
                 "name_is: \"Titamon\", zones",

@@ -38,8 +38,9 @@
 # face-down card from 1 tamer" / 3 "Don't pay"; only if paid, a canNoSelect
 # SelectHandEffect over [Glowing Dawn] cards -> ChangeCostClass -3 ->
 # PlayPermanentCards):
-#   * DCGO's one generic_int (value 1) is a `dcgo_only` row; OUR outer optional
-#     accept (Replacement yes) and our EffectChoice branch are `sim_only` rows.
+#   * DCGO's one generic_int (value 1) is a `dcgo_only` row; OUR EffectChoice
+#     branch is a `sim_only` row (no outer accept: the clause is non-optional,
+#     as DCGO registers it -- the decline is the menu's "Don't pay the cost").
 #   * The SelectHandEffect pick is shared.
 #   * ST23-12's [On Play] decline: ours is a Replacement (optional-effect gate);
 #     DCGO's is a canNoSelect SelectPermanentEffect (ST23-12 YAML) answered
@@ -123,8 +124,6 @@ steps:
     do: { select: { value: 1, dcgo_only: true } }
     expect: { prompt: generic_int }
   - actor: 0
-    do: { select: { yes: true, sim_only: true } }
-  - actor: 0
     do: { select: { choice: "Add your top security", sim_only: true } }
   - actor: 0
     do: { select: { cards: [ST23-12] } }
@@ -156,11 +155,9 @@ steps:
     expect: { prompt: MultipleSkills }
   # RE-LOWERED 2026-10-19: <Alliance> now pends in the same [When Attacking]
   # pool (§16-24-2, §15-4-3-2; Task 1, ab044bb9f), so the pick above names the
-  # non-keyword branch (`trigger_not: Alliance`); and an optional effect picked
-  # from our TriggerOrder now passes through its own you-may gate (Task 2,
-  # da93979e8) -- a sim-only accept before our pay-cost EffectChoice.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
+  # non-keyword branch (`trigger_not: Alliance`). BT25-041's clause is
+  # non-optional (as DCGO registers it), so no you-may gate precedes our
+  # pay-cost EffectChoice.
   - actor: 0
     do: { select: { value: 3, dcgo_only: true } }
     expect: { prompt: generic_int }
@@ -180,7 +177,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 33
+  - at: 31
     that:
       turn: 5
       p0.memory: 4

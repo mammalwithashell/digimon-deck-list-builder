@@ -235,22 +235,11 @@
     {
       "action_id": 100,
       "is_game_over": false,
-      "memory_after": -4,
+      "memory_after": 4,
       "memory_before": -4,
       "phase": "SelectTarget",
       "player_id": 1,
       "step": 22,
-      "turn": 4,
-      "winner_id": null
-    },
-    {
-      "action_id": 0,
-      "is_game_over": false,
-      "memory_after": 4,
-      "memory_before": -4,
-      "phase": "SelectHand",
-      "player_id": 1,
-      "step": 23,
       "turn": 4,
       "winner_id": null
     },
@@ -475,17 +464,6 @@
       "winner_id": null
     },
     {
-      "action_id": 0,
-      "is_game_over": false,
-      "memory_after": 4,
-      "memory_before": 4,
-      "phase": "SelectHand",
-      "player_id": 2,
-      "step": 44,
-      "turn": 7,
-      "winner_id": null
-    },
-    {
       "action_id": 100,
       "is_game_over": false,
       "memory_after": 4,
@@ -504,6 +482,18 @@
       "phase": "Main",
       "player_id": 2,
       "step": 46,
+      "turn": 7,
+      "winner_id": null
+    },
+    {
+      "action_id": 30,
+      "is_game_over": false,
+      "memory_after": 4,
+      "memory_before": 4,
+      "migration_note": "EX12-074 re-offered (its OPT was spent on a no-op pick in the original game, now declined and kept): resolve the recorded trigger first",
+      "phase": "SelectEffectChoice",
+      "player_id": 2,
+      "step": 46.1,
       "turn": 7,
       "winner_id": null
     },
@@ -640,13 +630,14 @@
       "winner_id": null
     },
     {
-      "action_id": 1,
+      "action_id": 62,
       "is_game_over": false,
       "memory_after": 2,
       "memory_before": 2,
+      "migration_note": "replaces the original no-op EX12-074 pick of EX12-061 (cannot digivolve onto Lv.4 Kokeshimon)",
       "phase": "SelectHand",
       "player_id": 2,
-      "step": 59,
+      "step": 58.1,
       "turn": 9,
       "winner_id": null
     },
@@ -662,6 +653,18 @@
       "winner_id": null
     },
     {
+      "action_id": 30,
+      "is_game_over": false,
+      "memory_after": 2,
+      "memory_before": 2,
+      "migration_note": "EX12-074 re-offered (its OPT was spent on a no-op pick in the original game, now declined and kept): resolve the recorded trigger first",
+      "phase": "SelectEffectChoice",
+      "player_id": 2,
+      "step": 60.1,
+      "turn": 9,
+      "winner_id": null
+    },
+    {
       "action_id": 0,
       "is_game_over": false,
       "memory_after": 2,
@@ -669,6 +672,18 @@
       "phase": "SelectHand",
       "player_id": 2,
       "step": 61,
+      "turn": 9,
+      "winner_id": null
+    },
+    {
+      "action_id": 62,
+      "is_game_over": false,
+      "memory_after": 2,
+      "memory_before": 2,
+      "migration_note": "decline EX12-074 (the original game had spent its OPT on a no-op pick)",
+      "phase": "SelectHand",
+      "player_id": 2,
+      "step": 61.1,
       "turn": 9,
       "winner_id": null
     },
@@ -684,6 +699,18 @@
       "winner_id": null
     },
     {
+      "action_id": 30,
+      "is_game_over": false,
+      "memory_after": 2,
+      "memory_before": 2,
+      "migration_note": "EX12-074 re-offered (its OPT was spent on a no-op pick in the original game, now declined and kept): resolve the recorded trigger first",
+      "phase": "SelectEffectChoice",
+      "player_id": 2,
+      "step": 62.1,
+      "turn": 9,
+      "winner_id": null
+    },
+    {
       "action_id": 0,
       "is_game_over": false,
       "memory_after": 2,
@@ -691,6 +718,18 @@
       "phase": "SelectHand",
       "player_id": 2,
       "step": 63,
+      "turn": 9,
+      "winner_id": null
+    },
+    {
+      "action_id": 62,
+      "is_game_over": false,
+      "memory_after": 2,
+      "memory_before": 2,
+      "migration_note": "decline EX12-074 (the original game had spent its OPT on a no-op pick)",
+      "phase": "SelectHand",
+      "player_id": 2,
+      "step": 63.1,
       "turn": 9,
       "winner_id": null
     },
@@ -838,17 +877,6 @@
       "winner_id": null
     },
     {
-      "action_id": 0,
-      "is_game_over": false,
-      "memory_after": 2,
-      "memory_before": 2,
-      "phase": "SelectHand",
-      "player_id": 2,
-      "step": 77,
-      "turn": 11,
-      "winner_id": null
-    },
-    {
       "action_id": 59,
       "is_game_over": false,
       "memory_after": 2,
@@ -882,6 +910,18 @@
       "winner_id": null
     },
     {
+      "action_id": 30,
+      "is_game_over": false,
+      "memory_after": 2,
+      "memory_before": 2,
+      "migration_note": "EX12-074 re-offered (its OPT was spent on a no-op pick in the original game, now declined and kept): resolve the recorded trigger first",
+      "phase": "SelectEffectChoice",
+      "player_id": 2,
+      "step": 80.1,
+      "turn": 11,
+      "winner_id": null
+    },
+    {
       "action_id": 0,
       "is_game_over": false,
       "memory_after": 2,
@@ -889,6 +929,18 @@
       "phase": "SelectHand",
       "player_id": 2,
       "step": 81,
+      "turn": 11,
+      "winner_id": null
+    },
+    {
+      "action_id": 62,
+      "is_game_over": false,
+      "memory_after": 2,
+      "memory_before": 2,
+      "migration_note": "decline EX12-074 (the original game had spent its OPT on a no-op pick)",
+      "phase": "SelectHand",
+      "player_id": 2,
+      "step": 81.1,
       "turn": 11,
       "winner_id": null
     },
@@ -1657,5 +1709,5 @@
     "timestamp": "2026-10-28T03:18:57+00:00"
   },
   "tensor_snapshots_count": 0,
-  "total_actions": 128
+  "total_actions": 132
 }

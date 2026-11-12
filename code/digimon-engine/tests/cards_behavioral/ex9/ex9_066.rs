@@ -71,6 +71,7 @@ use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::action::space::PASS;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const YAML: &str = include_str!("../../../cards/ex9/EX9-066.yaml");
@@ -306,20 +307,6 @@ fn ex9_066_process_steps_match_card_text() {
         .find(|t| t.when.contains(&CompiledTiming::OnPlay))
         .expect("clause 1 present");
 
-    // The top-level process step is an `If` (count_gte trash gate). Inside the
-    // `then` arm, we expect a SelectEffectChoice prompt.
-    let has_top_if = clause1
-        .process
-        .iter()
-        .any(|s| matches!(s, CompiledStep::If { .. }));
-    assert!(
-        has_top_if,
-        "Clause 1 must include an `if` step gating on count_gte over trash"
-    );
-
-    // Recursively scan for a SelectEffectChoice and a Draw step anywhere in
-    // the process tree (both should be present — the choice prompt and the
-    // draw fallback).
     fn find_step<F>(steps: &[CompiledStep], f: &F) -> bool
     where
         F: Fn(&CompiledStep) -> bool,
@@ -332,10 +319,7 @@ fn ex9_066_process_steps_match_card_text() {
                 then, else_branch, ..
             } = s
             {
-                if find_step(then, f) {
-                    return true;
-                }
-                if find_step(else_branch, f) {
+                if find_step(then, f) || find_step(else_branch, f) {
                     return true;
                 }
             }
@@ -343,37 +327,21 @@ fn ex9_066_process_steps_match_card_text() {
         false
     }
 
-    let has_choice = find_step(&clause1.process, &|s| {
-        matches!(s, CompiledStep::SelectEffectChoice { .. })
-    });
+    // "You may return 1 ... If this effect didn't return, <Draw 1>": an optional trash pick, then the return when a
+    // card was picked and the draw when none was. No separate "return or draw" choice: DCGO asks only the pick
+    // (canNoSelect) and draws when it added nothing, with no prompt at all when the trash holds no eligible card.
     assert!(
-        has_choice,
-        "Clause 1 must include a `select_effect_choice` step (binary Return/Draw prompt)"
+        !find_step(&clause1.process, &|s| matches!(s, CompiledStep::SelectEffectChoice { .. })),
+        "Clause 1 asks no Return/Draw branch choice: the optional pick is the choice"
     );
-
-    let has_draw = find_step(&clause1.process, &|s| {
-        matches!(s, CompiledStep::Draw { .. })
-    });
-    assert!(
-        has_draw,
-        "Clause 1 must include a `draw` step (the 'if didn't return, Draw 1' fallback)"
-    );
-
-    let has_select_trash = find_step(&clause1.process, &|s| {
-        matches!(s, CompiledStep::SelectTrash { .. })
-    });
-    assert!(
-        has_select_trash,
-        "Clause 1 must include a `select_trash` step (the return-branch picker)"
-    );
-
-    let has_add_to_hand = find_step(&clause1.process, &|s| {
-        matches!(s, CompiledStep::AddToHandFromTrash { .. })
-    });
-    assert!(
-        has_add_to_hand,
-        "Clause 1 must include `add_to_hand_from_trash` to complete the return branch"
-    );
+    let checks = [
+        ("select_trash", find_step(&clause1.process, &|s| matches!(s, CompiledStep::SelectTrash { .. }))),
+        ("add_to_hand_from_trash", find_step(&clause1.process, &|s| matches!(s, CompiledStep::AddToHandFromTrash { .. }))),
+        ("draw", find_step(&clause1.process, &|s| matches!(s, CompiledStep::Draw { .. }))),
+    ];
+    for (what, found) in checks {
+        assert!(found, "Clause 1 must include `{what}`");
+    }
 
     let clause2 = card
         .effects
@@ -384,13 +352,8 @@ fn ex9_066_process_steps_match_card_text() {
         })
         .find(|t| t.when.contains(&CompiledTiming::OnEnterFieldAnyone))
         .expect("clause 2 present");
-
-    let has_suspend = clause2
-        .process
-        .iter()
-        .any(|s| matches!(s, CompiledStep::Suspend { .. }));
     assert!(
-        has_suspend,
+        clause2.process.iter().any(|s| matches!(s, CompiledStep::Suspend { .. })),
         "Clause 2 must include a `suspend` step (the \"by suspending this Tamer\" cost)"
     );
 }
@@ -399,396 +362,110 @@ fn ex9_066_process_steps_match_card_text() {
 // SECTION 2 — Clause 1 [On Play] behavior
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// With NO eligible cards in the trash, the binary [Return / Draw] prompt
-/// STILL installs (G-COUNT-GTE-NOT-EVALUATED prevents the count_gte pre-gate
-/// from being evaluated; faithful workaround leaves the choice prompt always
-/// on, with the trash-pick step internally optional). Picking branch 1
-/// (Decline → Draw 1) draws unconditionally.
-#[test]
-fn ex9_066_on_play_empty_trash_choice_branch_draw_works() {
-    let mut runner = taimatt_runner();
-    let hand_before = runner.game.players[0].hand.len();
-
+/// Play EX9-066 for P0 and fire its [On Play].
+fn play_taimatt(runner: &mut DebugRunner) {
     let owen = runner.place_on_field(0, "EX9-066", None);
     runner.fire_on_play(0, owen.index as usize);
-
-    let view = runner
-        .pending_selection_view()
-        .expect("binary choice prompt installs");
-    assert_eq!(
-        view.kind,
-        SelectionKind::EffectChoice,
-        "select_effect_choice installs an EffectChoice selection"
-    );
-    assert_eq!(
-        view.valid_action_ids.len(),
-        2,
-        "Both branches surface to RL — agent learns to pick Draw when trash empty"
-    );
-    let p = view.selecting_player;
-    // Pick branch 1 (Decline → Draw).
-    runner
-        .game
-        .resolve_selection(p, view.valid_action_ids[1])
-        .expect("decline branch resolves");
-    runner.game.drain_effect_queue();
-
-    assert_eq!(
-        runner.game.players[0].hand.len(),
-        hand_before + 1,
-        "Decline branch on empty trash must draw exactly 1 card"
-    );
 }
 
-/// With NO eligible cards in trash, picking the Return branch installs an
-/// optional select_trash prompt with NO valid pick targets (the inner
-/// optional select silently passes through). The card_added step still
-/// resolves cleanly with no card moved.
-#[test]
-fn ex9_066_on_play_empty_trash_return_branch_passes_through_no_op() {
-    let mut runner = taimatt_runner();
+fn hand_has(runner: &DebugRunner, id: &str) -> bool {
+    runner.game.players[0].hand.iter().any(|c| c.card_id(&runner.game.card_data) == id)
+}
 
-    let trash_before = runner.game.players[0].trash.len();
+/// Nothing to return (empty trash): no prompt, and "If this effect didn't return, <Draw 1>" draws. DCGO
+/// (`EX9_066.cs`) opens no selection when `HasMatchConditionOwnersCardInTrash` is false, then draws. Found by the
+/// DCGO playback of Glowing Dawn vs DNA Omnimon (2026-11-12): the engine offered a "return" branch that then did
+/// nothing - no draw.
+#[test]
+fn ex9_066_on_play_nothing_to_return_draws_without_a_prompt() {
+    let mut runner = taimatt_runner();
     let hand_before = runner.game.players[0].hand.len();
-
-    let owen = runner.place_on_field(0, "EX9-066", None);
-    runner.fire_on_play(0, owen.index as usize);
-
-    let view = runner.pending_selection_view().expect("choice prompt");
-    let p = view.selecting_player;
-    // Pick branch 0 (Return). The inner select_trash is optional, so the
-    // engine should pass through cleanly when no eligible cards exist.
-    runner
-        .game
-        .resolve_selection(p, view.valid_action_ids[0])
-        .expect("return branch resolves");
-    runner.game.drain_effect_queue();
-
-    // Drain any optional prompt that auto-passes.
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 10 {
-        let view = runner.pending_selection_view().unwrap();
-        let p = view.selecting_player;
-        // Take PASS if available (action 0 in optional selections), else first.
-        let action = view.valid_action_ids[0];
-        runner.game.resolve_selection(p, action).ok();
-        runner.game.drain_effect_queue();
-        steps += 1;
-    }
-
-    // Empty-trash + Return branch: no card moves, no draw. Documents the
-    // case-C divergence vs DCGO (DCGO would force-draw here; faithful DSL
-    // workaround relies on the agent picking branch 1 instead).
-    assert_eq!(
-        runner.game.players[0].trash.len(),
-        trash_before,
-        "Return branch on empty trash must not change trash"
-    );
-    assert_eq!(
-        runner.game.players[0].hand.len(),
-        hand_before,
-        "Return branch on empty trash is a no-op (case C — see YAML header)"
-    );
+    play_taimatt(&mut runner);
+    assert!(runner.pending_selection_view().is_none(), "no eligible card: no prompt");
+    assert_eq!(runner.game.players[0].hand.len(), hand_before + 1, "didn't return -> draw 1");
 }
 
-/// With NO eligible cards but unrelated cards present, the binary choice
-/// still installs and Decline → Draw works.
+/// Unrelated cards in the trash are not eligible: still no prompt, still the draw.
 #[test]
-fn ex9_066_on_play_irrelevant_trash_cards_decline_branch_draws() {
+fn ex9_066_on_play_irrelevant_trash_cards_draw_without_a_prompt() {
     let mut runner = taimatt_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("TRSH-PLAIN", "PlainDigimon", 4, 4000));
+    runner.game.card_data.push(make_named_digimon("TRSH-PLAIN", "PlainDigimon", 4, 4000));
     push_to_trash(&mut runner, 0, "TRSH-PLAIN");
-
     let hand_before = runner.game.players[0].hand.len();
-
-    let owen = runner.place_on_field(0, "EX9-066", None);
-    runner.fire_on_play(0, owen.index as usize);
-
-    let view = runner.pending_selection_view().expect("choice prompt");
-    let p = view.selecting_player;
-    runner
-        .game
-        .resolve_selection(p, view.valid_action_ids[1])
-        .expect("decline branch");
-    runner.game.drain_effect_queue();
-
-    assert_eq!(
-        runner.game.players[0].hand.len(),
-        hand_before + 1,
-        "Decline branch must draw 1 even when trash has unrelated cards"
-    );
+    play_taimatt(&mut runner);
+    assert!(runner.pending_selection_view().is_none(), "no eligible card: no prompt");
+    assert_eq!(runner.game.players[0].hand.len(), hand_before + 1);
+    assert!(!hand_has(&runner, "TRSH-PLAIN"));
 }
 
-/// With an eligible Greymon-named card in trash, the count_gte gate passes
-/// and the binary Return/Draw choice prompt installs.
-#[test]
-fn ex9_066_on_play_greymon_in_trash_installs_choice_prompt() {
-    let mut runner = taimatt_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("TRSH-GREY", "Greymon", 4, 4000));
-    push_to_trash(&mut runner, 0, "TRSH-GREY");
-
-    let owen = runner.place_on_field(0, "EX9-066", None);
-    runner.fire_on_play(0, owen.index as usize);
-
-    let kind = runner.pending_kind().expect("a prompt must install");
-    assert_eq!(
-        kind,
-        SelectionKind::EffectChoice,
-        "select_effect_choice installs an EffectChoice selection"
-    );
-    let view = runner
-        .pending_selection_view()
-        .expect("selection view available");
-    assert_eq!(
-        view.valid_action_ids.len(),
-        2,
-        "binary Return/Draw choice must surface exactly 2 valid actions to RL"
-    );
-}
-
-/// Same as above but for a Garurumon-named card in trash.
-#[test]
-fn ex9_066_on_play_garurumon_in_trash_installs_choice_prompt() {
-    let mut runner = taimatt_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("TRSH-GARU", "Garurumon", 4, 4000));
-    push_to_trash(&mut runner, 0, "TRSH-GARU");
-
-    let owen = runner.place_on_field(0, "EX9-066", None);
-    runner.fire_on_play(0, owen.index as usize);
-
-    let kind = runner.pending_kind().expect("a prompt must install");
-    assert_eq!(
-        kind,
-        SelectionKind::EffectChoice,
-        "select_effect_choice installs an EffectChoice selection"
-    );
-}
-
-/// Same as above but for an Omnimon-named card in trash.
-#[test]
-fn ex9_066_on_play_omnimon_in_trash_installs_choice_prompt() {
-    let mut runner = taimatt_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("TRSH-OMNI", "Omnimon", 6, 13000));
-    push_to_trash(&mut runner, 0, "TRSH-OMNI");
-
-    let owen = runner.place_on_field(0, "EX9-066", None);
-    runner.fire_on_play(0, owen.index as usize);
-
-    let kind = runner.pending_kind().expect("a prompt must install");
-    assert_eq!(
-        kind,
-        SelectionKind::EffectChoice,
-        "select_effect_choice installs an EffectChoice selection"
-    );
-}
-
-/// Negative filter: the trash filter on the inner select_trash requires
-/// `kind: digimon`. A non-digimon (e.g. a Tamer) named "Greymon" must NOT
-/// be a valid pick target inside branch 0. Picking branch 0 in this scenario
-/// produces an empty optional select_trash that passes through; picking
-/// branch 1 always draws.
+/// A non-Digimon named "Greymon" is not eligible ("1 Digimon card with [Greymon]..."): it stays, and the effect draws.
 #[test]
 fn ex9_066_on_play_filter_rejects_non_digimon() {
     let mut runner = taimatt_runner();
-    let tamer = make_named_tamer("TRSH-T-GREY", "Greymon");
-    runner.game.card_data.push(tamer);
+    runner.game.card_data.push(make_named_tamer("TRSH-T-GREY", "Greymon"));
     push_to_trash(&mut runner, 0, "TRSH-T-GREY");
+    let hand_before = runner.game.players[0].hand.len();
+    play_taimatt(&mut runner);
+    assert!(runner.pending_selection_view().is_none(), "a Tamer is not eligible: no prompt");
+    assert!(!hand_has(&runner, "TRSH-T-GREY"), "the Tamer stays in the trash");
+    assert_eq!(runner.game.players[0].hand.len(), hand_before + 1, "nothing returned -> draw 1");
+}
 
-    let trash_before = runner.game.players[0].trash.len();
-
-    let owen = runner.place_on_field(0, "EX9-066", None);
-    runner.fire_on_play(0, owen.index as usize);
-
-    let view = runner
-        .pending_selection_view()
-        .expect("binary choice still installs");
-    let p = view.selecting_player;
-    runner
-        .game
-        .resolve_selection(p, view.valid_action_ids[0])
-        .expect("return branch");
-    runner.game.drain_effect_queue();
-
-    // If a select_trash prompt installed, every valid action ID must NOT
-    // correspond to picking the Tamer (kind: digimon filter rejects it).
-    // Drain through any optional pass-through.
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 5 {
-        let view = runner.pending_selection_view().unwrap();
-        let p = view.selecting_player;
-        runner
-            .game
-            .resolve_selection(p, view.valid_action_ids[0])
-            .ok();
-        runner.game.drain_effect_queue();
-        steps += 1;
+/// Each named card makes the optional trash pick appear, with exactly that card to pick.
+#[test]
+fn ex9_066_on_play_eligible_names_install_an_optional_trash_pick() {
+    let cases = [("TRSH-GREY", "Greymon", 4, 4000), ("TRSH-GARU", "Garurumon", 4, 4000), ("TRSH-OMNI", "Omnimon", 6, 13000)];
+    for (id, name, lv, dp) in cases {
+        let mut runner = taimatt_runner();
+        runner.game.card_data.push(make_named_digimon(id, name, lv, dp));
+        push_to_trash(&mut runner, 0, id);
+        play_taimatt(&mut runner);
+        let view = runner.pending_selection_view().unwrap_or_else(|| panic!("{name}: a trash pick installs"));
+        assert_eq!(view.kind, SelectionKind::Trash, "{name}: the pick is a trash selection, not a branch choice");
+        assert!(view.is_optional, "{name}: \"You may return\" - the pick can be declined");
+        let picks = view.valid_action_ids.iter().filter(|&&a| a != PASS).count();
+        assert_eq!(picks, 1, "{name}: exactly the one eligible card");
     }
-
-    // The Tamer must not have been moved to hand (kind: digimon filter).
-    let tamer_in_hand = runner.game.players[0]
-        .hand
-        .iter()
-        .any(|c| c.card_id(&runner.game.card_data) == "TRSH-T-GREY");
-    assert!(
-        !tamer_in_hand,
-        "kind: digimon filter on select_trash must reject the Tamer"
-    );
-    assert_eq!(
-        runner.game.players[0].trash.len(),
-        trash_before,
-        "Tamer must remain in trash (no eligible Digimon picks)"
-    );
 }
 
-/// When the player picks the "Return" branch (action 0), a follow-up
-/// select_trash prompt installs filtered to the eligible names.
+/// Returning the card: it moves to the hand and there is no draw.
 #[test]
-fn ex9_066_on_play_return_branch_installs_select_trash_prompt() {
+fn ex9_066_on_play_return_moves_the_card_and_does_not_draw() {
     let mut runner = taimatt_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("TRSH-GREY", "Greymon", 4, 4000));
+    runner.game.card_data.push(make_named_digimon("TRSH-GREY", "Greymon", 4, 4000));
     push_to_trash(&mut runner, 0, "TRSH-GREY");
-
-    let owen = runner.place_on_field(0, "EX9-066", None);
-    runner.fire_on_play(0, owen.index as usize);
-
-    let view = runner.pending_selection_view().expect("choice prompt");
-    let sel_player = view.selecting_player;
-    // Action 0 = "Return" branch (per labels order in YAML).
-    let return_action = view.valid_action_ids[0];
-    runner
-        .game
-        .resolve_selection(sel_player, return_action)
-        .expect("choice resolves");
-
-    let next_kind = runner
-        .pending_kind()
-        .expect("Return branch must install a follow-up select_trash prompt");
-    assert_eq!(
-        next_kind,
-        SelectionKind::Trash,
-        "select_trash installs a Trash selection"
-    );
-    let view = runner.pending_selection_view().unwrap();
-    assert_eq!(
-        view.valid_action_ids.len(),
-        1,
-        "Exactly 1 eligible Greymon-named trash card → 1 valid action"
-    );
-}
-
-/// Pick "Return" then complete the select_trash → the eligible card moves
-/// from trash to hand.
-#[test]
-fn ex9_066_on_play_return_branch_full_flow_moves_card_to_hand() {
-    let mut runner = taimatt_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("TRSH-GREY", "Greymon", 4, 4000));
-    push_to_trash(&mut runner, 0, "TRSH-GREY");
-
     let trash_before = runner.game.players[0].trash.len();
     let hand_before = runner.game.players[0].hand.len();
-
-    let owen = runner.place_on_field(0, "EX9-066", None);
-    runner.fire_on_play(0, owen.index as usize);
-
-    // Step 1: choice prompt → pick "Return" (index 0).
-    let view = runner.pending_selection_view().expect("choice prompt");
-    let p = view.selecting_player;
-    runner
-        .game
-        .resolve_selection(p, view.valid_action_ids[0])
-        .expect("choice resolves");
+    let deck_before = runner.game.players[0].deck.len();
+    play_taimatt(&mut runner);
+    let view = runner.pending_selection_view().expect("trash pick");
+    let pick = *view.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+    runner.game.resolve_selection(view.selecting_player, pick).expect("pick resolves");
     runner.game.drain_effect_queue();
-
-    // Step 2: trash picker → pick the only eligible card.
-    let view = runner
-        .pending_selection_view()
-        .expect("trash picker prompt");
-    let p = view.selecting_player;
-    runner
-        .game
-        .resolve_selection(p, view.valid_action_ids[0])
-        .expect("trash pick resolves");
-    runner.game.drain_effect_queue();
-
-    assert_eq!(
-        runner.game.players[0].trash.len(),
-        trash_before - 1,
-        "Returned card must leave trash"
-    );
-    assert_eq!(
-        runner.game.players[0].hand.len(),
-        hand_before + 1,
-        "Returned card must enter hand"
-    );
-    // Confirm the returned card is the Greymon-named one (not a draw).
-    let in_hand_grey = runner.game.players[0]
-        .hand
-        .iter()
-        .any(|c| c.card_id(&runner.game.card_data) == "TRSH-GREY");
-    assert!(
-        in_hand_grey,
-        "The Greymon-named trash card must be the one in hand (not a deck-drawn card)"
-    );
+    assert!(runner.pending_selection_view().is_none());
+    assert!(hand_has(&runner, "TRSH-GREY"), "the Greymon card is returned");
+    assert_eq!(runner.game.players[0].trash.len(), trash_before - 1);
+    assert_eq!(runner.game.players[0].hand.len(), hand_before + 1, "returned, so no draw");
+    assert_eq!(runner.game.players[0].deck.len(), deck_before, "no card drawn");
 }
 
-/// Pick "Decline → Draw" (action 1) → no select_trash, just a draw.
+/// Declining the return: "If this effect didn't return, <Draw 1>" - the card stays and 1 card is drawn.
 #[test]
-fn ex9_066_on_play_decline_branch_draws_one_no_trash_prompt() {
+fn ex9_066_on_play_declining_the_return_draws_one() {
     let mut runner = taimatt_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("TRSH-GREY", "Greymon", 4, 4000));
+    runner.game.card_data.push(make_named_digimon("TRSH-GREY", "Greymon", 4, 4000));
     push_to_trash(&mut runner, 0, "TRSH-GREY");
-
     let trash_before = runner.game.players[0].trash.len();
     let hand_before = runner.game.players[0].hand.len();
-
-    let owen = runner.place_on_field(0, "EX9-066", None);
-    runner.fire_on_play(0, owen.index as usize);
-
-    let view = runner.pending_selection_view().expect("choice prompt");
-    let p = view.selecting_player;
-    // Action 1 = "Decline → Draw" (per labels order in YAML).
-    let draw_action = view.valid_action_ids[1];
-    runner
-        .game
-        .resolve_selection(p, draw_action)
-        .expect("draw branch resolves");
+    play_taimatt(&mut runner);
+    let view = runner.pending_selection_view().expect("trash pick");
+    assert!(view.is_optional, "the decline (PASS) is offered");
+    runner.game.resolve_selection(view.selecting_player, PASS).expect("decline resolves");
     runner.game.drain_effect_queue();
-
-    assert!(
-        runner.pending_selection().is_none(),
-        "Draw branch is non-interactive — no follow-up prompt"
-    );
-    assert_eq!(
-        runner.game.players[0].trash.len(),
-        trash_before,
-        "Decline branch must NOT remove anything from trash"
-    );
-    assert_eq!(
-        runner.game.players[0].hand.len(),
-        hand_before + 1,
-        "Decline branch must draw exactly 1 card"
-    );
+    assert!(runner.pending_selection_view().is_none());
+    assert!(!hand_has(&runner, "TRSH-GREY"), "declined: the card stays in the trash");
+    assert_eq!(runner.game.players[0].trash.len(), trash_before);
+    assert_eq!(runner.game.players[0].hand.len(), hand_before + 1, "didn't return -> draw 1");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

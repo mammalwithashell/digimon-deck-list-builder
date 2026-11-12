@@ -316,6 +316,13 @@ fn recorded_medusamon_immune_token_payment_does_not_loop() {
     // Recorded 2026-10-27. Rows 21, 30 and 56 (the accept of EX11-012's old
     // accept/decline window) were removed on 2026-11-12: the clause has had
     // no such window since 2026-11-11 (DCGO isOptional: false).
+    // Rows 27 and 50 were removed on 2026-11-12 for c6eda5678 (effect-digivolve
+    // candidates must be able to digivolve; DCGO filters with
+    // `CanPlayCardTargetFrame` and asks nothing when no card qualifies): both
+    // were the hand pick of BT21-001's inherited "1 of your Digimon may digivolve
+    // into a [Reptile]/[Dragonkin] card in the hand" after choosing Lv.6 Medusamon,
+    // a card that could not digivolve onto it, so the digivolve did nothing. No
+    // hand card qualifies now, so that pick is no longer asked.
     let recording: serde_json::Value = serde_json::from_str(include_str!(
         "../fixtures/training/medusamon-immune-token-payment.json"
     ))

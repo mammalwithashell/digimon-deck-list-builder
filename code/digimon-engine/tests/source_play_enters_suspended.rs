@@ -117,8 +117,11 @@ fn act(r: &mut DebugRunner, actor: u8, action: u16) {
 fn pick(r: &mut DebugRunner, actor: u8) {
     let v=r.pending_selection_view().expect("source choice");
     assert_eq!(v.selecting_player,actor);assert!(v.is_optional);
-    assert_eq!(v.valid_action_ids.len(),1);
-    act(r,actor,v.valid_action_ids[0]);
+    // The card-choice view lists its Decline row (PASS) among the valid ids.
+    assert!(v.valid_action_ids.contains(&PASS),"optional source pick exposes decline");
+    let picks=v.valid_action_ids.iter().copied().filter(|&a|a!=PASS).collect::<Vec<_>>();
+    assert_eq!(picks.len(),1);
+    act(r,actor,picks[0]);
 }
 fn drain_orders(r: &mut DebugRunner) {
     for _ in 0..8 {

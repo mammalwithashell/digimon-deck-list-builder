@@ -706,6 +706,7 @@ mod tests {
                     outer_prompt: false,
                     opt_group: None,
                     once_per_turn: false,
+                    as_option_effect: false,
                     max_per_turn: None,
                     process: vec![CompiledStep::RawRust {
                         fn_name: "step_fn".into(),

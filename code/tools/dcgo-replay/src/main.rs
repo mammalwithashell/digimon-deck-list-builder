@@ -20,7 +20,7 @@ use std::process::ExitCode;
 use clap::Parser;
 
 use dcgo_replay::{
-    aggregate, collect_recording_paths, load_card_data, parse_jsonl, replay_recording,
+    aggregate_triaged, collect_recording_paths, load_card_data, parse_jsonl, replay_recording, triage_failure,
     ParityReport, RecordingV1, ReplayConfig, ReplayFail, ReplayOutcome,
 };
 
@@ -111,14 +111,44 @@ fn run(args: Args) -> ExitCode {
                 continue;
             }
         };
+        let mut truncated = false;
         let recording = match parse_jsonl(&text) {
             Ok(r) => r,
+            // A recording the client never finished (closed mid-game) has no
+            // `game_end`. Its prefix is still real DCGO play: replay it, but it can
+            // never count as a pass, because there is no recorded outcome.
+            Err(dcgo_replay::SchemaError::MissingGameEnd) => {
+                let mut with_end = text.trim_end().to_string();
+                with_end.push_str(
+                    "\n{\"type\":\"game_end\",\"winner\":-1,\"reason\":\"truncated\",\"total_steps\":0}\n",
+                );
+                match parse_jsonl(&with_end) {
+                    Ok(r) => {
+                        truncated = true;
+                        r
+                    }
+                    Err(e) => {
+                        eprintln!("warn: skipping {}: parse failed: {}", path.display(), e);
+                        continue;
+                    }
+                }
+            }
             Err(e) => {
                 eprintln!("warn: skipping {}: parse failed: {}", path.display(), e);
                 continue;
             }
         };
-        let outcome = replay_recording(&recording, &card_data, &cfg);
+        let mut outcome = replay_recording(&recording, &card_data, &cfg);
+        if truncated {
+            // A clean replay of a cut-off game verifies its prefix only.
+            if let ReplayOutcome::Pass { steps_consumed, skipped_actions, .. } = outcome {
+                outcome = ReplayOutcome::PartialPass {
+                    steps_consumed,
+                    stop_reason: "recording truncated (no game_end row): prefix replayed with no divergence, outcome unverifiable".to_string(),
+                    skipped_actions,
+                };
+            }
+        }
         if args.verbose {
             eprintln!("  {} → {}", path.display(), summary(&outcome));
             eprintln!("{}", detail(&outcome));
@@ -129,14 +159,23 @@ fn run(args: Args) -> ExitCode {
 
     let entries: Vec<(&RecordingV1, &ReplayOutcome)> =
         recordings.iter().zip(outcomes.iter()).collect();
-    let report = aggregate(&entries);
+    let quarantine = load_quarantine(args.cards_json.as_deref());
+    let report = aggregate_triaged(&entries, &|rec, fail| {
+        triage_failure(rec, fail, &card_data).or_else(|| {
+            quarantine.triage(rec).map(|(id, reason)| dcgo_replay::Triage {
+                quirk_id: id,
+                evidence: reason,
+            })
+        })
+    });
 
     write_report(&report, args.output.as_deref());
 
     eprintln!(
-        "\nDone. {} pass, {} partial_pass, {} fail (of {}).{}",
+        "\nDone. {} pass, {} partial_pass, {} triaged (documented DCGO bug or recorder gap, NOT a pass), {} fail (of {}).{}",
         report.pass,
         report.partial_pass,
+        report.quirk,
         report.fail,
         report.total_recordings,
         if report.skipped_actions > 0 {
@@ -149,10 +188,34 @@ fn run(args: Args) -> ExitCode {
         }
     );
 
+    for q in &report.quirk_games {
+        eprintln!("  triaged {} {}: {}", q.quirk_id, q.game_id, q.evidence);
+    }
+
     if report.fail > 0 {
         ExitCode::from(1)
     } else {
         ExitCode::SUCCESS
+    }
+}
+
+/// `qa/rules/dcgo_recording_quarantine.json` next to `data/` (or beside the
+/// supplied `--cards-json`'s repo root); absent means nothing is quarantined.
+fn load_quarantine(cards_json: Option<&std::path::Path>) -> dcgo_replay::Quarantine {
+    let cards = cards_json
+        .map(std::path::Path::to_path_buf)
+        .or_else(dcgo_replay::default_cards_json_path);
+    let path = cards
+        .as_deref()
+        .and_then(|p| p.parent())
+        .and_then(|data| data.parent())
+        .map(|root| root.join("qa").join("rules").join("dcgo_recording_quarantine.json"));
+    match path {
+        Some(p) if p.exists() => dcgo_replay::Quarantine::load(&p).unwrap_or_else(|e| {
+            eprintln!("warn: quarantine manifest unreadable: {e}");
+            dcgo_replay::Quarantine::default()
+        }),
+        _ => dcgo_replay::Quarantine::default(),
     }
 }
 

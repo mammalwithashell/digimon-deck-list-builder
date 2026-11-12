@@ -300,3 +300,62 @@ fn integration_aggregate_mixed_corpus() {
     assert_eq!(report.by_kind.get("winner_mismatch").copied(), Some(1));
     assert_eq!(report.failed_games, vec!["illegal", "wrong"]);
 }
+
+// ---- converter-inferred rows and surrender (MelonLoader recorder; docs/DCGO_MELONLOADER.md) ----
+
+/// Two mulligan-keep rows, `first_player` 0, then the supplied extra rows, then a `game_end`.
+fn first_player_zero_recording(extra_rows: &str, winner: i8) -> String {
+    let deck = deck_jsonl();
+    format!(
+        r#"{{"v":1,"type":"game_start","game_id":"g_inferred","timestamp":"t","my_player_id":0,"first_player":0,"is_ai":true,"my_deck_post_shuffle":{deck},"opp_deck_post_shuffle":{deck}}}
+{{"type":"action","step":0,"actor":0,"action_id":0,"phase":"Mulligan","source":"mulligan"}}
+{{"type":"action","step":1,"actor":1,"action_id":0,"phase":"Mulligan","source":"mulligan"}}
+{extra_rows}
+{{"type":"game_end","winner":{winner},"reason":"surrender","total_steps":9}}
+"#,
+        deck = deck,
+        extra_rows = extra_rows,
+        winner = winner
+    )
+}
+
+/// A surrender is available to either seat at any time: the seat that is NOT on decision may concede.
+#[test]
+fn integration_concede_by_the_seat_not_on_decision_passes() {
+    let rows = r#"{"type":"action","step":2,"actor":1,"action_id":93,"phase":"Main","source":"concede"}"#;
+    let recording = parse_jsonl(&first_player_zero_recording(rows, 0)).expect("parse");
+    let outcome = replay_recording(&recording, &card_db(), &ReplayConfig::default());
+    match outcome {
+        ReplayOutcome::Pass { winner, .. } => assert_eq!(winner, 0, "P1 conceded, so P0 wins"),
+        other => panic!("expected Pass, got {:?}", other),
+    }
+}
+
+/// A converter-synthesised row for a seat the engine is not waiting on is skipped (the guess was unnecessary).
+#[test]
+fn integration_inferred_row_for_the_wrong_seat_is_skipped() {
+    let rows = r#"{"type":"action","step":2,"actor":1,"action_id":62,"phase":"Main","source":"main_phase","inferred":true}
+{"type":"action","step":3,"actor":0,"action_id":93,"phase":"Main","source":"concede"}"#;
+    let recording = parse_jsonl(&first_player_zero_recording(rows, 1)).expect("parse");
+    let outcome = replay_recording(&recording, &card_db(), &ReplayConfig::default());
+    match outcome {
+        ReplayOutcome::Pass { winner, .. } => assert_eq!(winner, 1, "P0 conceded, so P1 wins"),
+        other => panic!("expected Pass, got {:?}", other),
+    }
+}
+
+/// The same row WITHOUT the `inferred` flag is a real divergence: the skip never hides an observed decision.
+#[test]
+fn integration_observed_row_for_the_wrong_seat_still_diverges() {
+    let rows = r#"{"type":"action","step":2,"actor":1,"action_id":62,"phase":"Main","source":"main_phase"}
+{"type":"action","step":3,"actor":0,"action_id":93,"phase":"Main","source":"concede"}"#;
+    let recording = parse_jsonl(&first_player_zero_recording(rows, 1)).expect("parse");
+    let outcome = replay_recording(&recording, &card_db(), &ReplayConfig::default());
+    match outcome {
+        ReplayOutcome::Fail(ReplayFail::ActorMismatch(am)) => {
+            assert_eq!(am.step, 2);
+            assert_eq!(am.recorded_actor, 1);
+        }
+        other => panic!("expected ActorMismatch, got {:?}", other),
+    }
+}

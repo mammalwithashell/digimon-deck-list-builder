@@ -245,15 +245,17 @@ fn ex13_076_on_play_suspends_then_strips_and_wins_on_digivolution_cards() {
 }
 
 #[test]
-fn ex13_076_suspend_prompt_only_offers_unsuspended_digimon() {
+/// Q845 / Q1782: "You may suspend 1 of your opponent's Digimon" may choose an
+/// already-suspended Digimon; it just isn't suspended by the effect.
+fn ex13_076_suspend_prompt_also_offers_an_already_suspended_digimon() {
     let (mut runner, me, huge, b) = board(1);
     runner.game.players[1].battle_area[b.index as usize].is_suspended = true;
     fire(&mut runner, EffectTiming::OnPlay, me);
     let v = runner.pending_selection_view().expect("suspend prompt");
     assert!(v.valid_action_ids.contains(&(ATTACK_START + huge.index as u16)));
     assert!(
-        !v.valid_action_ids.contains(&(ATTACK_START + b.index as u16)),
-        "an already-suspended Digimon is not a suspend target"
+        v.valid_action_ids.contains(&(ATTACK_START + b.index as u16)),
+        "an already-suspended Digimon is a legal suspend choice"
     );
 }
 

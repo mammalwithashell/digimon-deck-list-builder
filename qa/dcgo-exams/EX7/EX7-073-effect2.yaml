@@ -216,11 +216,8 @@ steps:
   - actor: 0
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
-  # [When Digivolving]: SIM-ONLY outer gate (our `Replacement` accept/decline
-  # park -- DCGO builds this effect non-optional and carries the "may" on the
-  # pick's canNoSelect), then the shared hand pick: Asuna BT25-092.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
+  # [When Digivolving]: the shared hand pick (no outer gate: like DCGO, BT25-082
+  # carries the "may" on the pick's own decline): Asuna BT25-092.
   - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
@@ -302,7 +299,7 @@ assert:
   # Pre-digivolve (T7): BeelStarmon BT25-085 caps the stack with ONE
   # [Three Musketeers]-trait digivolution card under it, Asuna beside it,
   # Vermilimon alone on P1's board, security untouched at 5.
-  - at: 18
+  - at: 17
     that:
       turn: 7
       p0.memory: 3
@@ -331,7 +328,7 @@ assert:
   # P-180's own "when effects trash this card from digivolution cards" clause
   # is correctly silent on both sides (P_180.cs:60-66 needs DP <= 7000;
   # Vermilimon is 8000 -- and by then already deleted).
-  - at: 25
+  - at: 24
     that:
       turn: 7
       phase: Main

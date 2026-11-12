@@ -130,18 +130,12 @@ steps:
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # SIM-ONLY: our [All Turns] yes/no gate (`optional: true` in
-  # BT25-028.yaml), declined -- nothing to trash, no [GraceNovamon] in hand;
-  # DCGO runs that body silently. Zero wire rows.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-    expect: { prompt: OptionalSkill }
   # T6 (p1, memory 2): one step past the clause.
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 13
+  - at: 12
     that:
       turn: 6
       p0.memory: -2

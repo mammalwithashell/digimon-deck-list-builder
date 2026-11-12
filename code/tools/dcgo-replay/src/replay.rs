@@ -154,6 +154,10 @@ pub struct WinnerMismatch {
 
 #[derive(Debug, Clone)]
 pub struct MemoryMismatch {
+    /// Card ids of digivolve actions the engine only accepted through the
+    /// recorded-operand fallback (its remapped target was illegal). Evidence for
+    /// the phantom-digivolve triage; empty unless `replay_recording` filled it.
+    pub digivolve_operand_fallbacks: Vec<String>,
     pub step: u32,
     /// Memory gauge value DCGO recorded, converted to the recording's
     /// `my_player_id` perspective (positive = favor of that player).
@@ -218,7 +222,11 @@ pub fn replay_recording(
 
     // A pausing differential divergence → the matching batch failure.
     if let Some(div) = session.divergences().first() {
-        return ReplayOutcome::Fail(map_divergence(div));
+        let mut fail = map_divergence(div);
+        if let ReplayFail::MemoryMismatch(mm) = &mut fail {
+            mm.digivolve_operand_fallbacks = session.digivolve_operand_fallbacks().to_vec();
+        }
+        return ReplayOutcome::Fail(fail);
     }
 
     // An encoder_failure truncated the replayable prefix — the engine is
@@ -305,6 +313,7 @@ fn map_divergence(div: &Divergence) -> ReplayFail {
             replayed,
             my_player_id,
         } => ReplayFail::MemoryMismatch(MemoryMismatch {
+            digivolve_operand_fallbacks: Vec::new(),
             step: div.step,
             recorded: *recorded,
             replayed: *replayed,
@@ -469,6 +478,7 @@ mod tests {
             },
             rows: vec![
                 Row::Action(crate::recording::ActionRow {
+                    inferred: false,
                     step: 0,
                     actor: 0,
                     action_id: 0, // mulligan keep
@@ -481,6 +491,7 @@ mod tests {
                     memory_before: None,
                 }),
                 Row::Action(crate::recording::ActionRow {
+                    inferred: false,
                     step: 1,
                     actor: 1,
                     action_id: 0,
@@ -535,6 +546,7 @@ mod tests {
                 // First mulligan decision: action_id 999 is wildly out of
                 // range for the Mulligan phase (legal IDs are 0 and 1).
                 Row::Action(crate::recording::ActionRow {
+                    inferred: false,
                     step: 0,
                     actor: 0,
                     action_id: 999,

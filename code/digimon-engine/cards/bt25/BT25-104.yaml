@@ -166,6 +166,11 @@ effects:
   # the option-face `when: main_from_hand` clause below; both run the same steps.
   - when: [when_digivolving, when_attacking]
     once_per_turn: true
+    # Official Q&A Q6496/Q6498 (+ DCGO ActivateMainOfOptionSide, which calls
+    # SetIsDigimonEffect(false)): an effect activated from the Option side is an
+    # OPTION card effect, so it affects a Digimon that "isn't affected by Digimon
+    # effects" (EX10-010 BlackWarGreymon ACE). Recorded DCGO game: it deleted one.
+    as_option_effect: true
     summary: "[WD][WA][OPT] Activate this card's Option [Main]: 1 opp Digimon -15000 DP; then you may play 1 Tamer from hand free"
     process:
       - select_opponent_permanent:

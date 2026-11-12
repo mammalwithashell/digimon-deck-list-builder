@@ -185,17 +185,17 @@ fn bt25_082_op_wd_clause_is_optional_and_tamer_gated() {
         .expect("BT25-082 must have an [On Play][When Digivolving] clause");
 
     assert_eq!(clause.scope, CompiledScope::FaceUp);
+    // DCGO registers this effect non-optional and folds the printed "may" into the
+    // hand pick's `canNoSelect`, so there is no clause-level accept prompt (a
+    // recording has no row for one); the "may" is the optional `select_hand`.
     assert!(
-        clause.optional,
-        "printed 'you may' → clause must be optional"
+        !clause.optional,
+        "the 'you may' is the inner pick's optional, not a clause-level prompt"
     );
-    // The body plays a Tamer for free from hand.
-    let has_free_play = clause
-        .process
-        .iter()
-        .any(|s| matches!(s, CompiledStep::PlayFromHandFree { .. }));
+    // The body plays a Tamer for free from hand (guarded on the pick existing).
+    let body = format!("{:?}", clause.process);
     assert!(
-        has_free_play,
+        body.contains("PlayFromHandFree"),
         "OP/WD clause body must contain a play_from_hand_free step"
     );
 }
@@ -261,9 +261,6 @@ fn bt25_082_op_plays_tm_text_tamer_free_from_hand() {
         "OnPlay clause must install the optional 'may play a Tamer' prompt"
     );
     runner
-        .accept_optional_trigger()
-        .expect("accept the optional OnPlay trigger");
-    runner
         .auto_resolve()
         .expect("pick the TM Tamer + free-play it");
 
@@ -319,7 +316,7 @@ fn bt25_082_op_decline_keeps_field_unchanged() {
 
     runner
         .decline_optional_trigger()
-        .expect("declining the optional trigger is legal");
+        .expect("declining the optional pick is legal");
 
     let tamers_after = runner.game.players[0]
         .battle_area

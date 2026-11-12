@@ -63,6 +63,7 @@ effects:
               max: 1
               filter:
                 all_of:
+                  - can_play_from_effect_without_cost: true
                   - kind: digimon
                   - level_lte: 4
                   - color_is: black

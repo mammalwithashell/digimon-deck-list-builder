@@ -135,6 +135,11 @@ pub struct ActionRow {
     pub action_id: u16,
     pub phase: String,
     pub source: String,
+    /// `true` on a row a CONVERTER synthesised because the recorder could not observe the decision (the
+    /// MelonLoader mod cannot see the bot seat's breeding/pass decisions). Never written by the in-game
+    /// recorder. The replay skips such a row only when the engine has already moved past it, and counts it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub inferred: bool,
     /// Battle-area card IDs at decision time, in the DCGO compact order the
     /// row's board operands index. Absent in pre-0.4 recordings.
     ///
@@ -316,6 +321,28 @@ pub struct SelectionRow {
     /// Generic bool channel payload.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bool_value: Option<bool>,
+    /// `MultipleSkills` only: the card whose effect DCGO activated as a result of
+    /// this choice, read by [`parse_jsonl`] from the next `effect_activation` row
+    /// of the same actor. DCGO's `int_value` is an index into ITS ordering of the
+    /// simultaneous effects, which has no reason to equal our trigger-order list
+    /// (both engines list the same effects in different orders), so the replay
+    /// prefers the effect whose source card matches and falls back to the index.
+    /// Never present in a recorder-written file; derived at load time.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chosen_effect_card: Option<String>,
+    /// Playback only (`dcgo-agent --script` through the MelonLoader mod): the engine action the mod was realizing
+    /// when it answered this DCGO prompt. DCGO's own encoding of a menu answer (a bool, an int value) can differ in
+    /// order from the engine's branch list (BT17-025 lists "From trash" first); the action the answer was MADE FROM
+    /// needs no mapping. Used only when legal at that prompt; absent in any other recording.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub engine_action: Option<u16>,
+    /// `MultipleSkills` only, alongside [`Self::chosen_effect_card`]: the
+    /// activated effect's NAME from the same `effect_activation` row. It tells
+    /// apart two simultaneous effects of one card (a printed clause and a
+    /// keyword body such as `<Fortitude>`), whose relative order differs
+    /// between the engines. Derived at load time, never recorder-written.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chosen_effect_name: Option<String>,
     /// True when the player cancelled / declined the prompt.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cancel: Option<bool>,
@@ -636,11 +663,35 @@ pub fn parse_jsonl(text: &str) -> Result<RecordingV1, SchemaError> {
     };
 
     // Strip header and footer so `rows` is just the decision stream.
-    let middle = if rows.len() > 2 {
+    let mut middle = if rows.len() > 2 {
         rows[1..rows.len() - 1].to_vec()
     } else {
         Vec::new()
     };
+
+    // `MultipleSkills` hint: which card's effect the chosen index activated.
+    let mut hints: Vec<(usize, String, Option<String>)> = Vec::new();
+    for (i, row) in middle.iter().enumerate() {
+        let Row::Selection(sel) = row else { continue };
+        if sel.prompt != "MultipleSkills" || !sel.int_value.is_some_and(|v| v >= 0) {
+            continue;
+        }
+        let next = middle[i + 1..].iter().find_map(|r| match r {
+            Row::EffectActivation(e) if e.actor == sel.actor => {
+                e.card_id.clone().map(|card| (card, e.effect_name.clone()))
+            }
+            _ => None,
+        });
+        if let Some((card, name)) = next {
+            hints.push((i, card, name));
+        }
+    }
+    for (i, card, name) in hints {
+        if let Row::Selection(sel) = &mut middle[i] {
+            sel.chosen_effect_card = Some(card);
+            sel.chosen_effect_name = name;
+        }
+    }
 
     Ok(RecordingV1 {
         start,

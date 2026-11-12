@@ -351,6 +351,7 @@ fn event_card_liveness_proof_rejects_context_reads_and_unaudited_shapes() {
         outer_prompt: false,
         opt_group: None,
         once_per_turn: false,
+        as_option_effect: false,
         max_per_turn: None,
         process: vec![CompiledStep::GainMemory(1)],
         summary: None,

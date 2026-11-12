@@ -34,8 +34,9 @@
 # face-down card from 1 tamer" / 3 "Don't pay"; only if paid, a canNoSelect
 # SelectHandEffect over [Glowing Dawn] cards -> ChangeCostClass -3 ->
 # PlayPermanentCards):
-#   * DCGO's one generic_int (value 1) is a `dcgo_only` row; OUR outer optional
-#     accept (Replacement yes) and our EffectChoice branch are `sim_only` rows.
+#   * DCGO's one generic_int (value 1) is a `dcgo_only` row; OUR EffectChoice
+#     branch is a `sim_only` row (no outer accept: the clause is non-optional,
+#     as DCGO registers it -- the decline is the menu's "Don't pay the cost").
 #   * The SelectHandEffect pick is shared.
 #   * ST23-12's [On Play] decline: ours is a Replacement (optional-effect gate);
 #     DCGO's is a canNoSelect SelectPermanentEffect (ST23-12 YAML) answered
@@ -110,8 +111,6 @@ steps:
     do: { select: { value: 1, dcgo_only: true } }
     expect: { prompt: generic_int }
   - actor: 0
-    do: { select: { yes: true, sim_only: true } }
-  - actor: 0
     do: { select: { choice: "Add your top security", sim_only: true } }
   - actor: 0
     do: { select: { cards: [ST23-12] } }
@@ -122,7 +121,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 20
+  - at: 19
     that:
       turn: 4
       p0.memory: -1

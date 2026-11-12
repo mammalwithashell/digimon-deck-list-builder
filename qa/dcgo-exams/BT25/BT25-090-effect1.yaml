@@ -65,14 +65,16 @@ steps:
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
   # THE CLAUSE: Agumon suspending to attack triggers Tomoro Tenma for P0 on
-  # P1's turn. One declinable trigger -> DCGO OptionalSkill-shaped row.
-  # PROMPT-SHAPE RISK: BT25-090.yaml notes DCGO asks a 3-WAY menu
-  # (place-2 / suspend-only / no), likely a generic_int or SelectCountEffect,
-  # not a yes/no. If the oracle aborts here, re-author this row as a
-  # dcgo_only `value:` row + a sim_only yes.
+  # P1's turn. BT25_090.cs registers it non-optional and asks ONE 3-way
+  # SetIntSelection (1 "Suspend and place 2 cards from deck under this card" /
+  # 2 "Only suspend without placing cards" / 3 "No"); BT25-090.yaml mirrors it
+  # as a 3-branch EffectChoice. Same answer on both sides, split by channel:
+  # DCGO's int is dcgo_only, our branch is sim_only.
   - actor: 0
-    do: { select: { cards: [BT25-090] } }
-    expect: { prompt: OptionalSkill }
+    do: { select: { value: 1, dcgo_only: true } }
+    expect: { prompt: generic_int }
+  - actor: 0
+    do: { select: { choice: "Suspend and place 2 cards", sim_only: true } }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -81,7 +83,7 @@ assert:
   # SUSPENDED (the cost) and holds the top 2 deck cards face down; the check
   # still happened (security 5 -> 4, BT25-032 trashed after its tie with
   # Agumon, which was deleted).
-  - at: 10
+  - at: 11
     that:
       turn: 4
       p0.memory: -3

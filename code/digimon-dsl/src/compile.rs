@@ -76,6 +76,9 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
     // deletion effects so "add N to this Digimon's DP deletion effects'
     // maximums" can raise exactly those.
     crate::deletion_cap::mark_card(&mut card);
+    // An effect digivolve's card selection offers only cards that can digivolve onto its target (DCGO
+    // `CanPlayCardTargetFrame`), unless the effect ignores the requirements.
+    crate::digivolve_candidates::mark_card(&mut card);
     Ok(card)
 }
 
@@ -2033,6 +2036,7 @@ fn compile_triggered(
         outer_prompt: t.outer_prompt,
         once_per_turn: t.once_per_turn,
         max_per_turn: t.max_per_turn,
+        as_option_effect: t.as_option_effect,
         opt_group: t.opt_group.clone(),
         process: t
             .process

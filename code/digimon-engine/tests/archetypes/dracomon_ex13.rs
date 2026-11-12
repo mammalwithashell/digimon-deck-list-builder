@@ -385,8 +385,10 @@ fn dracomon_search_finds_coredramon_which_digivolves_for_2_and_draws() {
 /// [Dracomon]-text card); replaying that Dracomon fires its [On Play] reveal a
 /// second time, adding the next Coredramon. Replaying it ALSO fires EX13-039's
 /// own [Your Turn] "other [Dracomon]-text Digimon played" observer (the system
-/// fact); with no [Examon]-text Digimon in hand there is nothing to digivolve
-/// into, so declining it leaves Coredramon in place. Memory −2 −3.
+/// fact); with no [Examon]-text Digimon in hand that could digivolve onto it, the
+/// observer asks nothing (DCGO `EX13_039.cs` CanActivateCondition:
+/// `HasMatchConditionOwnersHand(DigivolveCardCondition)`), so Coredramon stays in
+/// place. Memory −2 −3.
 ///
 /// Sources: printed text `cards/ex13/EX13-039.json`, `EX13-008.json`;
 /// DCGO `EX13/Green/EX13_039.cs` (SelectCardEffect Root.Trash AddHand,

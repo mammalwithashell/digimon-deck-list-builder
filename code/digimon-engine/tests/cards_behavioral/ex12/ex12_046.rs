@@ -173,3 +173,37 @@ fn ex12_046_effect_initiated_digivolve_still_draws_the_rule_8_1_3_3_card() {
         "the drawn card came off the deck"
     );
 }
+
+/// DCGO's `DigivolveIntoHandOrTrashCard` offers only hand cards that can
+/// actually digivolve onto this Digimon at the reduced cost, and opens no pick
+/// when none can (the recording then has no row for it). A [TB] Digimon in hand
+/// that has no digivolution route onto this Lv.5 must therefore not park a prompt.
+#[test]
+fn ex12_046_security_removed_offers_no_pick_when_no_tb_in_hand_can_digivolve() {
+    // Lv.5 [TB] whose only route is from a Lv.4: it cannot go onto the Lv.5 EX12-046.
+    let needs_lv4 = with_evo_cost(
+        tb_digimon("NEEDS-LV4", CardColor::Yellow, 5, 7000),
+        CardColor::Yellow,
+        4,
+        3,
+    );
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-046 YAML loads")
+        .add_card(needs_lv4)
+        .add_card(plain_digimon("SEC", CardColor::Yellow, 3, 3000))
+        .hand(0, &["NEEDS-LV4"])
+        .security(1, &["SEC"])
+        .memory(5)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+
+    fire_opponent_security_removed(&mut runner, 1);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no [TB] card in hand can digivolve onto EX12-046, so no pick is parked: {:?}",
+        runner.pending_selection()
+    );
+    assert_eq!(top_card_id(&runner, 0, 0), CARD_ID);
+}

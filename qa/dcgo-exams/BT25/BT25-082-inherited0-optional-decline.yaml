@@ -84,8 +84,6 @@ steps:
     do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
   - actor: 0
-    do: { select: { yes: true, sim_only: true } }
-  - actor: 0
     do: { select: { cards: [BT25-092] } }
     expect: { prompt: SelectHandEffect }
   - actor: 0

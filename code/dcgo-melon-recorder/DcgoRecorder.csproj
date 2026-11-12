@@ -1,0 +1,84 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    DCGO recorder as a MelonLoader mod (IL2CPP build of DCGO.exe).
+
+    The Unity-project recorder (DCGO/Assets/Scripts/Script/Recording) is compiled INTO the game and
+    hooked at ~29 call sites inside game methods. A player install cannot be edited that way, so the
+    same recording is re-expressed here as Harmony patches over the interop assemblies MelonLoader
+    generates. See docs/DCGO_MELONLOADER.md.
+
+    Build:  dotnet build code/dcgo-melon-recorder -c Release -p:GamePath="D:\DCGO_mod_sandbox\Game"
+    The output DLL is copied to <GamePath>\Mods. Point GamePath at a SANDBOX COPY of Game/ until the
+    mod is proven; the first boot of a MelonLoader-patched Game/ generates MelonLoader\Il2CppAssemblies.
+
+    netstandard2.0 on purpose: MelonLoader hosts .NET 6 and this machine has no net6 targeting pack.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>DcgoRecorder</AssemblyName>
+    <RootNamespace>DcgoRecorder</RootNamespace>
+    <GamePath Condition="'$(GamePath)' == ''">D:\DCGO_mod_sandbox\Game</GamePath>
+    <ML>$(GamePath)\MelonLoader</ML>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader">
+      <HintPath>$(ML)\net6\MelonLoader.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(ML)\net6\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ML)\Il2CppAssemblies\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(ML)\Il2CppAssemblies\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppPhotonUnityNetworking">
+      <HintPath>$(ML)\Il2CppAssemblies\Il2CppPhotonUnityNetworking.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppPhotonRealtime">
+      <HintPath>$(ML)\Il2CppAssemblies\Il2CppPhotonRealtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppPhoton3Unity3D">
+      <HintPath>$(ML)\Il2CppAssemblies\Il2CppPhoton3Unity3D.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(ML)\Il2CppAssemblies\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(ML)\Il2CppAssemblies\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(ML)\Il2CppAssemblies\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2Cppmscorlib">
+      <HintPath>$(ML)\Il2CppAssemblies\Il2Cppmscorlib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.Runtime">
+      <HintPath>$(ML)\net6\Il2CppInterop.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="DeployToMods" AfterTargets="Build" Condition="Exists('$(GamePath)')">
+    <MakeDir Directories="$(GamePath)\Mods" />
+    <Copy SourceFiles="$(OutputPath)DcgoRecorder.dll" DestinationFolder="$(GamePath)\Mods" />
+    <Message Importance="high" Text="DcgoRecorder.dll -> $(GamePath)\Mods" />
+  </Target>
+</Project>

@@ -65,7 +65,7 @@ fn bt26_050_arts_digivolve_offers_when_digivolving_before_turn_end() {
         count: None,
         candidates: None,
         int_value: None,
-        bool_value: None,
+        chosen_effect_card: None, chosen_effect_name: None, bool_value: None, engine_action: None,
         cancel: None,
         board_p0: None,
         board_p1: None,

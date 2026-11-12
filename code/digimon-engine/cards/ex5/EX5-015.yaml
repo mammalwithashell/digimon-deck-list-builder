@@ -343,10 +343,9 @@ effects:
       all_of:
         - is_source: true
         - all_turns: true
-        - replacement_subject_is_mine: true
         - any_of:
-            - name_contains: "Garurumon"
-            - name_contains: "Omnimon"
+            - source_name_contains: "Garurumon"
+            - source_name_contains: "Omnimon"
         - replacement_cause: battle
     summary: "[All Turns][OPT] Substitute on battle deletion — return 2 non-Digi-Egg trash cards to deck bottom"
     process:

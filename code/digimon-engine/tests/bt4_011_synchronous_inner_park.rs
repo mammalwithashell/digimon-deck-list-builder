@@ -51,6 +51,11 @@ effects:
         .from_dsl_yaml(INNER).unwrap().from_dsl_yaml(SYNC_INITIATOR).unwrap()
         .from_dsl_yaml(SYNC_PAYER).unwrap().from_dsl_yaml(&observer).unwrap()
         .hand(0,&["BT4-011"]).deck(0,&["ST1-03";12]).deck(1,&["ST1-03";12]).memory(5).start();
+    // Exact printed circle (official DB: Red Lv.3 / cost 2); DebugRunner compiled
+    // metadata omits compatibility evo_costs, and the effect-digivolve candidate
+    // filter (`can_digivolve_onto`) prices the Tamer route from that circle.
+    r.game.card_data.iter_mut().find(|c|c.card_id=="BT4-011").unwrap().evo_costs =
+        vec![EvoCost {card_color:0, level:3, memory_cost:2}];
     r.skip_mulligan();
     let h=r.place_on_field(0,"TEST-SYNC-INITIATOR",Some(0));r.place_on_field(0,"TEST-SYNC-PAYER",Some(0));r.place_on_field(0,"TEST-INNER-WOULD",Some(0));
     let i=r.add_to_hand(0,"TEST-Q1157-INNER");let card=r.game.players[0].hand.remove(i);r.game.players[0].deck.push(card);

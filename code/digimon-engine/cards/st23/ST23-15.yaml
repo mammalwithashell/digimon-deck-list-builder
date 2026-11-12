@@ -51,6 +51,8 @@ traits: [Glowing Dawn, BEATBREAK]
 # of your Digimon or Tamers in the battle area or breeding area meets
 # the condition (an Option on the field does not count).
 use_requirement:
+  # DCGO CardEffectFactory.UseRequirements: battle area OR breeding area
+  # (HasMatchConditionOwnersPermanent || ...OwnersBreedingPermanent), rule 16-42-3.
   any_field_permanent:
     of: you
     any_of:
@@ -158,4 +160,6 @@ effects:
               - play_cost_lte: 4
           prompt: "You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: bb_pick_sec }
+      # "Then, place this card in the battle area." - the [Main] being activated places it there too (DCGO
+      # AddActivateMainOptionSecurityEffect; BT24-089 idiom). Without it the checked card was trashed.
       - place_self_as_delay_option: {}

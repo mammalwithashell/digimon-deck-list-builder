@@ -999,10 +999,6 @@
           "action": 62
         },
         {
-          "player": 0,
-          "action": 62
-        },
-        {
           "player": 1,
           "action": 62
         },
@@ -1098,6 +1094,9 @@
           "player": 0,
           "action": 101
         }
+      ],
+      "migrations": [
+        "2026-11-12: removed decision 85 (seat 0 PASS). It declined the hand pick of EX12-002 Mococomon's inherited \"may digivolve into an [SW] hand card\" (triggered by playing Hakubamon at decision 79) onto Lv.3 Takinmon EX12-039 when only Lv.5 cards were in hand. Effect-digivolve candidates must be able to digivolve (c6eda5678; DCGO CanPlayCardTargetFrame), so that pick is no longer asked; the remaining decline is BT26-104's [End of Your Turn]. The search state formerly reached after 111 decisions is now reached after 110."
       ]
     }
   ]

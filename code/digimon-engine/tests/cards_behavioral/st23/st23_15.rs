@@ -472,6 +472,119 @@ fn st23_15_marker_delay_does_not_trash_it_at_end_of_next_turn() {
     );
 }
 
+/// The [Start of Your Main Phase] relocate is offered in a real game: e-Pulse placed by its own [Main] (not staged
+/// as an ordinary field Option), then the controller's next main phase. Found by the DCGO playback of Glowing Dawn
+/// vs DNA Omnimon (2026-11-12): DCGO asked this pick at the start of the main phase and the engine did not.
+#[test]
+fn st23_15_somp_offered_after_a_real_use_on_the_next_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST23-15 in embedded pack")
+        .add_card(bb_tamer("BBT"))
+        .add_card(bb_digimon("BBD"))
+        .add_card(filler("FILLER"))
+        .hand(0, &[CARD_ID, "BBD"])
+        .deck(0, &["FILLER"; 12])
+        .deck(1, &["FILLER"; 12])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    runner.place_on_field(0, "BBT", Some(0));
+    use_fixture_option(&mut runner, "FILLER");
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.game.players[0].battle_area.iter().any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
+        "fixture: e-Pulse is on the field"
+    );
+    runner.end_turn();
+    let _ = runner.auto_resolve();
+    runner.end_turn();
+    // P0's next turn: reach the main phase (pass the breeding phase if it is asked)
+    for _ in 0..4 {
+        if runner.current_phase() == digimon_engine::enums::GamePhase::Breeding && runner.pending_selection().is_none() {
+            runner.game.decode_action(digimon_engine::action::space::PASS, 0);
+        }
+    }
+    let sel = runner.pending_selection().expect("the [Start of Your Main Phase] relocate is asked");
+    assert_eq!(sel.selecting_player, 0);
+    assert!(sel.prompt.to_lowercase().contains("tamer") || sel.prompt.to_lowercase().contains("beatbreak"),
+            "the relocate Tamer pick: {}", sel.prompt);
+}
+
+/// "[Security] Activate this card's [Main] effects": the [Main] ends "Then, place this card in the battle area", so a
+/// security-checked e-Pulse is placed in its owner's battle area after the free play (DCGO
+/// `AddActivateMainOptionSecurityEffect`). The engine trashed it instead (found by the DCGO playback of Glowing Dawn
+/// vs DNA Omnimon, 2026-11-12), losing its later [Start of Your Main Phase] relocate.
+#[test]
+fn st23_15_security_places_it_in_the_battle_area() {
+    let mut attacker = filler("ATK");
+    attacker.dp = Some(6000);
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST23-15 in embedded pack")
+        .add_card(attacker)
+        .add_card(bb_digimon("BBD"))
+        .add_card(filler("FILLER"))
+        .hand(1, &["BBD"])
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .security(1, &[CARD_ID])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    let atk = runner.place_on_field(0, "ATK", Some(0));
+    let _ = runner.attack_player(atk, 1, false);
+    let _ = runner.auto_resolve();
+
+    let on_field = |r: &DebugRunner, id: &str| {
+        r.game.players[1].battle_area.iter().any(|p| p.top_card().card_id(&r.game.card_data) == id)
+    };
+    assert!(on_field(&runner, CARD_ID), "e-Pulse is placed in its owner's battle area");
+    assert!(
+        !runner.game.players[1].trash.iter().any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
+        "e-Pulse is not trashed"
+    );
+}
+
+/// After the [Security] placement, e-Pulse works as a field Option: on its owner's next main phase the
+/// [Start of Your Main Phase] relocate is offered, and it is still on the field then.
+#[test]
+fn st23_15_security_placed_copy_offers_the_relocate_next_turn() {
+    let mut attacker = filler("ATK");
+    attacker.dp = Some(6000);
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST23-15 in embedded pack")
+        .add_card(attacker)
+        .add_card(bb_tamer("BBT"))
+        .add_card(bb_digimon("BBD"))
+        .add_card(filler("FILLER"))
+        .hand(1, &["BBD"])
+        .deck(0, &["FILLER"; 12])
+        .deck(1, &["FILLER"; 12])
+        .security(1, &[CARD_ID])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    runner.place_on_field(1, "BBT", Some(0));
+    let atk = runner.place_on_field(0, "ATK", Some(0));
+    let _ = runner.attack_player(atk, 1, false);
+    let _ = runner.auto_resolve();
+    runner.end_turn();
+    for _ in 0..4 {
+        if runner.current_phase() == digimon_engine::enums::GamePhase::Breeding && runner.pending_selection().is_none() {
+            runner.game.decode_action(digimon_engine::action::space::PASS, 1);
+        }
+    }
+    assert_eq!(runner.turn_player(), 1);
+    assert!(
+        runner.game.players[1].battle_area.iter().any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
+        "e-Pulse is still on the field"
+    );
+    let sel = runner.pending_selection().expect("the [Start of Your Main Phase] relocate is asked");
+    assert_eq!(sel.selecting_player, 1);
+}
+
 /// [Security] "Activate this card's [Main] effects" includes "Then, place this
 /// card in the battle area" (DCGO ST23_15.cs PlaceDelayOptionCards).
 #[test]

@@ -43,7 +43,7 @@ fn clause(process: Vec<CompiledStep>) -> CompiledTriggeredClause {
     CompiledTriggeredClause {
         when: vec![CompiledTiming::OnOwnSecurityRemoved], scope: CompiledScope::FaceUp,
         active_when: None, condition: None, trigger_if: None, timing_conditions: vec![],
-        optional: true, outer_prompt: false, once_per_turn: false, max_per_turn: None, opt_group: None,
+        optional: true, outer_prompt: false, once_per_turn: false, max_per_turn: None, as_option_effect: false, opt_group: None,
         process, summary: None, summary_key: None,
     }
 }

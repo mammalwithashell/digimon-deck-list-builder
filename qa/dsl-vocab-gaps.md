@@ -9430,6 +9430,11 @@ shared repairs. No action/tensor expansion or new oracle confirmation is
 claimed. Exact cumulative verification and admission denominators are in
 `docs/superpowers/research/2026-10-22-construct-tests/remaining-meta-repairs.md`.
 
+## G-DSL-CAN-DIGIVOLVE-ONTO-EVENT-TARGET (2026-11-08) - FIXED
+
+`can_digivolve_onto` and `can_digivolve_onto_with_cost` accepted only a declared binding or `source` as their target, so a trigger about ANOTHER Digimon (EX12-074's `[Security]` "when your [Shambala] Digimon attacks, it may digivolve ...") could not restrict its hand pick to cards that can actually digivolve that Digimon. DCGO's `DigivolveIntoHandOrTrashCard` filters the candidates by `CanPlayCardTargetFrame` and opens no pick when none qualify. `event_target` is now accepted as a target by both predicates (evaluated against the trigger context by identity, like the `event_target` binding reference) and by the validator's binding checks. Used by EX12-074; EX12-046 uses the existing `source` form. Audit still to do for the same missing-legality-filter pattern: EX12-066, EX11-066, EX11-069, BT23-072, BT24-082.
+
+
 ## Filtered distinct-colour count [G-DSL-DISTINCT-FILTERED-COLORS] — RESOLVED (2026-10-27)
 
 - Effect text: ST20-03 Birdramon / ST21-08 Togemon — "[On Play] [When Digivolving] If your Tamers with the [ADVENTURE] trait have 3 or more total colors, this Digimon may digivolve into a Digimon card with the [ADVENTURE] trait in the hand without paying the cost."

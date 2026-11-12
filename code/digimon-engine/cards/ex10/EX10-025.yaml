@@ -19,64 +19,86 @@ effects:
   # from your trash as 1 of your [Mineral] or [Rock] trait Digimon's bottom
   # digivolution cards."
   #
-  # Modelling rationale:
-  #   - "You may" → optional: true; the first step is an optional
-  #     select_own_permanent gate that doubles as the target pick.
-  #   - Target: one of your own Digimon on the field with [Mineral] or [Rock].
-  #   - Source: 2 cards from own trash with [Mineral] or [Rock] trait.
-  #   - Sequence: pick target → pick 1st trash card + place → pick 2nd trash
-  #     card + place.  The 1st card moves to the digivolution stack before the
-  #     2nd pick, so the 2nd select_trash naturally excludes it (the card is
-  #     no longer in trash).
-  #   - Pattern matches BT24-016 (select_trash → place_as_bottom_source from
-  #     trash) repeated twice.
+  # Modelling rationale (DCGO EX10_025.cs ActivateCoroutine - the effect is
+  # registered NON-optional; every "may" is a `canNoSelect` pick):
+  #   1. ONE pick over the trash for [Mineral]/[Rock] cards: exactly
+  #      min(2, eligible) of them, or none (`canEndNotMax: false`).
+  #   2. Only if cards were picked, ONE pick of the destination Digimon
+  #      ([Mineral]/[Rock], skippable); declining leaves the cards in the trash.
+  #   3. The picked cards go under it as bottom digivolution cards.
+  # `select_zone_cards` bounds are constants, so the "min(2, eligible)" is a
+  # branch on the eligible count.
   - when: on_play
-    optional: true
     summary: "[On Play] You may place 2 [Mineral]/[Rock] cards from trash as a [Mineral]/[Rock] Digimon's bottom digivolution cards"
     condition:
-      any_permanent:
-        of: you
-        zone: [battle_area]
-        kind: digimon
-        any_of:
-          - trait_has: Mineral
-          - trait_has: Rock
+      all_of:
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              any_of:
+                - trait_has: Mineral
+                - trait_has: Rock
+            n: 1
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
     process:
-      # Gate + target selection: pick the destination Digimon (optional — PASS declines).
-      - select_own_permanent:
-          bind_as: dest
-          optional: true
-          filter:
-            all_of:
-              - kind: digimon
-              - any_of:
+      - if:
+          condition:
+            count_gte:
+              filter:
+                of: you
+                zone: [trash]
+                any_of:
                   - trait_has: Mineral
                   - trait_has: Rock
-          prompt: "Choose 1 of your [Mineral] or [Rock] Digimon to place trash cards under"
-      # First trash pick + placement.
-      - select_trash:
-          of: you
-          bind_as: source1
-          filter:
-            any_of:
-              - trait_has: Mineral
-              - trait_has: Rock
-          prompt: "Choose the first [Mineral] or [Rock] card from your trash (1/2)"
-      - place_as_bottom_source:
-          source: source1
-          target: dest
-      # Second trash pick + placement.
-      - select_trash:
-          of: you
-          bind_as: source2
-          filter:
-            any_of:
-              - trait_has: Mineral
-              - trait_has: Rock
-          prompt: "Choose the second [Mineral] or [Rock] card from your trash (2/2)"
-      - place_as_bottom_source:
-          source: source2
-          target: dest
+              n: 2
+          then:
+            - select_zone_cards:
+                zones: [trash]
+                filter:
+                  any_of:
+                    - trait_has: Mineral
+                    - trait_has: Rock
+                min: 2
+                max: 2
+                optional_zero: true
+                bind_as: sources
+                prompt: "You may place 2 [Mineral] or [Rock] cards from your trash as bottom digivolution cards"
+          else:
+            - select_zone_cards:
+                zones: [trash]
+                filter:
+                  any_of:
+                    - trait_has: Mineral
+                    - trait_has: Rock
+                min: 1
+                max: 1
+                optional_zero: true
+                bind_as: sources
+                prompt: "You may place 1 [Mineral] or [Rock] card from your trash as a bottom digivolution card"
+      - if:
+          condition: { binding_present: sources }
+          then:
+            - select_own_permanent:
+                bind_as: dest
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: Mineral
+                        - trait_has: Rock
+                prompt: "Choose 1 of your [Mineral] or [Rock] Digimon to place trash cards under"
+            - if:
+                condition: { binding_present: dest }
+                then:
+                  - place_cards_as_bottom_sources: { cards: sources, target: dest }
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:

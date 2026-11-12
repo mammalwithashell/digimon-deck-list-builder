@@ -16453,6 +16453,18 @@
       "Tentei Hachibushu",
       "Shambala",
       "TB"
+    ],
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
     ]
   },
   "_note_EX12-004": "EX12-004 Onibimon is a Lv.2 Digi-Egg whose card face carries exactly ONE text box, an Inherited Effect. The digimoncard.io ingest put that inherited text into effect_description_eng -- prefixed with the literal label \"Inherited Effect\" and with the <Execute> reminder text appended -- and left inherited_effect_description_eng truncated mid-sentence at 38 characters (\"This Digimon with the [TB] trait gains\"). Healthy Digi-Eggs (BT1-001, BT1-002, BT1-003) have an EMPTY effect field and their text in the inherited field; this restores that shape. Text read off the card image (DCGO_Application/Assets/Textures/Card/EX12-004.webp), which is the authoritative source for printed text. Nine sibling Digi-Eggs share the same ingest defect: BT25-001..006 and EX12-001..003. See docs/RUST_ENGINE_GAPS.md#g-data-egg-inherited-text-in-effect-field.",
@@ -18721,5 +18733,19 @@
   },
   "_note_BT18-094_light_hybrid_sections": "Printed security section verified against local card image and saved official observation in qa/archetype-qa/dsl/light-hybrid-training/official-observations/. Separates security text from main/inherited; does not change printed behavior.",
   "_note_BT18-097_light_hybrid_sections": "Printed security section verified against local card image and saved official observation in qa/archetype-qa/dsl/light-hybrid-training/official-observations/. Separates security text from main/inherited; does not change printed behavior.",
-  "_note_BT18-042_light_hybrid_effect": "Official observation 29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574 and local printed card image say as the bottom security card, not as your bottom. Unspecified destination follows card ownership under CR3-1-3-8. Correct stale API wording; shared timing OPT remains one printed clause."
+  "_note_BT18-042_light_hybrid_effect": "Official observation 29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574 and local printed card image say as the bottom security card, not as your bottom. Unspecified destination follows card ownership under CR3-1-3-8. Correct stale API wording; shared timing OPT remains one printed clause.",
+  "EX12-061": {
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ]
+  }
 }

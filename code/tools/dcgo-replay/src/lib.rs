@@ -22,6 +22,7 @@
 pub mod recording;
 pub mod replay;
 pub mod report;
+pub mod triage;
 
 use std::collections::HashMap;
 use std::fs;
@@ -36,7 +37,8 @@ pub use replay::{
     replay_recording, ActorMismatch, IllegalAction, ReplayConfig, ReplayFail, ReplayOutcome,
     WinnerMismatch,
 };
-pub use report::{aggregate, ParityReport, PerCardEntry};
+pub use report::{aggregate, aggregate_triaged, ParityReport, PerCardEntry};
+pub use triage::{triage_failure, Quarantine, QuarantineEntry, Triage};
 
 /// Load `data/cards.json` (or the given path) into the engine's card-data
 /// table. `None` triggers the same upward-search-from-CWD behavior the CLI
