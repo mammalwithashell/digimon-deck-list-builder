@@ -2332,7 +2332,14 @@ impl ReplayDriver {
                     break;
                 };
                 let (who, action) = if matches!(p.kind, crate::selection::SelectionKind::TriggerOrder) {
-                    (p.selecting_player, p.valid_action_ids[0])
+                    // every queued trigger optional: the order prompt's own decline-all (PASS) IS DCGO's -1.
+                    // Picking each trigger instead runs any whose cost is not behind its own optional gate
+                    // (BT17-081's "by suspending this Tamer, gain memory" was paid and resolved).
+                    if p.is_optional {
+                        (p.selecting_player, crate::action::space::PASS)
+                    } else {
+                        (p.selecting_player, p.valid_action_ids[0])
+                    }
                 } else if p.is_optional {
                     (p.selecting_player, crate::action::space::PASS)
                 } else {

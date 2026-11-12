@@ -156,3 +156,6 @@ effects:
               - play_cost_lte: 4
           prompt: "You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: bb_pick_sec }
+      # "Then, place this card in the battle area." - the [Main] being activated places it there too (DCGO
+      # AddActivateMainOptionSecurityEffect; BT24-089 idiom). Without it the checked card was trashed.
+      - place_self_as_delay_option: {}
