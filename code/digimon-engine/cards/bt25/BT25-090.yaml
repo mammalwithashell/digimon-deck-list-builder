@@ -23,7 +23,7 @@
 #   clause-level optional + two place_as_bottom_source { deck_top } face_down.
 #   active_when { all_turns, event_target_kind: digimon } gates the trigger to a
 #   Digimon suspending (not a Tamer). DCGO's 3-way menu (place-2 / suspend-only /
-#   no) reduces to optional suspend-self+place-2; declining = "No".
+#   no) is mirrored as one 3-branch choice, gated on this Tamer being unsuspended.
 # Clause 3 (BeforePayCost) — NOW IMPLEMENTED (2026-06-15):
 #   "[Your Turn][Once Per Turn] When you would USE a [Glowing Dawn] Option card,
 #   by trashing the bottom face-down card under any Tamer, reduce the cost by 1."
@@ -58,23 +58,45 @@ effects:
       - set_memory: 3
 
   # ─── [All Turns] When any Digimon suspends: may suspend self → place top 2 ──
+  # "By suspending this Tamer, you may place ...": the suspend is an optional processing condition (CR 4.3
+  # 15-7-1) and the placement a further "you may", so there are three outcomes - suspend and place, suspend only
+  # (15-7-5: the condition may be executed whatever follows), or neither. DCGO BT25_090.cs asks exactly that as one
+  # menu ("Suspend and place 2 cards from deck under this card" / "Only suspend without placing cards" / "No"), and
+  # only while this Tamer can be suspended (CanActivateSuspendCostEffect; 15-7-4). The engine had folded it into
+  # one optional "suspend and place", with no suspend-only choice (found by the DCGO playback of Glowing Dawn vs
+  # DNA Omnimon, 2026-11-12).
   - when: on_suspend
-    optional: true
     active_when:
       all_turns: true
+    condition:
+      source_is_unsuspended: true
     trigger_if:
       event_target_kind: digimon
     summary: "[All Turns] When any Digimon suspend, by suspending this Tamer you may place the top 2 deck cards face down under this Tamer"
     process:
-      - activation_cost: { suspend_self: true }
-      - place_as_bottom_source:
-          source: { deck_top: you }
-          target: source
-          face_down: true
-      - place_as_bottom_source:
-          source: { deck_top: you }
-          target: source
-          face_down: true
+      - select_effect_choice:
+          bind_as: choice
+          labels:
+            - "Suspend and place 2 cards from deck under this card"
+            - "Only suspend without placing cards"
+            - "No"
+          prompt: "Will you suspend this Tamer to place the top 2 cards from your deck under this Tamer face down?"
+      - if:
+          condition: { equals: [choice, 0] }
+          then:
+            - suspend: { target: source }
+            - place_as_bottom_source:
+                source: { deck_top: you }
+                target: source
+                face_down: true
+            - place_as_bottom_source:
+                source: { deck_top: you }
+                target: source
+                face_down: true
+      - if:
+          condition: { equals: [choice, 1] }
+          then:
+            - suspend: { target: source }
 
   # ─── [Your Turn][Once Per Turn] When you would use a [Glowing Dawn] Option,
   #     by trashing a bottom face-down card under a Tamer, reduce the cost by 1 ─

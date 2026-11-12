@@ -37,6 +37,7 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::selection::SelectionKind;
 
 use crate::dsl_card_data::{card_data_from_compiled, compiled};
 
@@ -91,7 +92,10 @@ fn bt25_090_has_start_of_turn_suspend_and_security_clauses() {
         .iter()
         .find(|t| t.when == vec![CompiledTiming::OnSuspend])
         .expect("on-suspend clause present");
-    assert!(on_suspend.optional, "'you may place' → optional clause");
+    assert!(
+        !on_suspend.optional,
+        "the choice (place / suspend only / no) is one 3-branch prompt, as DCGO asks it"
+    );
     assert!(
         triggered
             .iter()
@@ -180,8 +184,8 @@ fn bt25_090_start_of_turn_does_not_change_high_memory() {
 // Section 3 — [All Turns] on ANY Digimon suspend → may suspend self + place 2
 // ═══════════════════════════════════════════════════════════════════════════════
 
-#[test]
-fn bt25_090_on_any_digimon_suspend_suspends_self_and_places_top_two() {
+/// Tomoro (P0) and an opponent Digimon; the opponent Digimon suspends, which triggers the 3-way choice.
+fn suspend_trigger_runner() -> (DebugRunner, digimon_engine::permanent::PermanentHandle, usize) {
     let mut runner = DebugRunner::builder()
         .add_card(tomoro())
         .add_card(make_filler("OPP-DIGI"))
@@ -191,38 +195,73 @@ fn bt25_090_on_any_digimon_suspend_suspends_self_and_places_top_two() {
         .deck(1, &["D1"])
         .memory(8)
         .start();
-
     let tomoro_perm = runner.place_on_field(0, CARD_ID, Some(0));
     let opp_digi = runner.place_on_field(1, "OPP-DIGI", Some(0));
-
     let deck_before = runner.deck_size(0);
-    // Any Digimon suspending fires the trigger — suspend the opponent's Digimon.
     runner.game.suspend(opp_digi);
+    (runner, tomoro_perm, deck_before)
+}
 
-    assert!(
-        runner.game.pending_selection.is_some(),
-        "an optional accept/decline prompt installs when a Digimon suspends"
-    );
-    runner
-        .accept_optional_trigger()
-        .expect("accept the suspend+place");
+fn choose(runner: &mut DebugRunner, branch: usize) {
+    let sel = runner.pending_selection().expect("the 3-way choice is asked");
+    assert_eq!(sel.kind, SelectionKind::EffectChoice, "one EffectChoice prompt");
+    assert_eq!(sel.effect_choices.as_ref().map(|c| c.len()), Some(3), "place 2 / suspend only / no");
+    runner.execute_branch(branch).expect("branch resolves");
     let _ = runner.auto_resolve();
+}
 
-    assert!(
-        runner.game.players[0].battle_area[tomoro_perm.index as usize].is_suspended,
-        "Tomoro is suspended (the activation cost was paid)"
-    );
-    assert_eq!(
-        runner.deck_size(0),
-        deck_before - 2,
-        "top 2 deck cards placed under Tomoro"
-    );
+#[test]
+fn bt25_090_on_any_digimon_suspend_suspends_self_and_places_top_two() {
+    let (mut runner, tomoro_perm, deck_before) = suspend_trigger_runner();
+    choose(&mut runner, 0);
     let perm = &runner.game.players[0].battle_area[tomoro_perm.index as usize];
+    assert!(perm.is_suspended, "Tomoro is suspended (the condition was executed)");
+    assert_eq!(runner.deck_size(0), deck_before - 2, "top 2 deck cards placed under Tomoro");
     assert_eq!(perm.card_sources.len(), 3, "own card + 2 face-down stash");
+    assert!(perm.card_sources[0].face_down && perm.card_sources[1].face_down, "the two placed sources are face-down");
+}
+
+/// CR 4.3 15-7-5: the optional processing condition may be executed without the "you may" after it.
+#[test]
+fn bt25_090_on_suspend_can_suspend_without_placing() {
+    let (mut runner, tomoro_perm, deck_before) = suspend_trigger_runner();
+    choose(&mut runner, 1);
+    let perm = &runner.game.players[0].battle_area[tomoro_perm.index as usize];
+    assert!(perm.is_suspended, "Tomoro is suspended");
+    assert_eq!(runner.deck_size(0), deck_before, "no cards placed");
+    assert_eq!(perm.card_sources.len(), 1);
+}
+
+#[test]
+fn bt25_090_on_suspend_decline_does_nothing() {
+    let (mut runner, tomoro_perm, deck_before) = suspend_trigger_runner();
+    choose(&mut runner, 2);
     assert!(
-        perm.card_sources[0].face_down && perm.card_sources[1].face_down,
-        "the two placed sources are face-down"
+        !runner.game.players[0].battle_area[tomoro_perm.index as usize].is_suspended,
+        "declining leaves Tomoro unsuspended"
     );
+    assert_eq!(runner.deck_size(0), deck_before, "no cards placed");
+}
+
+/// CR 4.3 15-7-4: a suspended Tomoro cannot execute the condition, so nothing is asked.
+#[test]
+fn bt25_090_on_suspend_not_asked_while_tomoro_is_suspended() {
+    let mut runner = DebugRunner::builder()
+        .add_card(tomoro())
+        .add_card(make_filler("OPP-DIGI"))
+        .add_card(make_filler("D1"))
+        .add_card(make_filler("D2"))
+        .deck(0, &["D1", "D2"])
+        .deck(1, &["D1"])
+        .memory(8)
+        .start();
+    let tomoro_perm = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.players[0].battle_area[tomoro_perm.index as usize].is_suspended = true;
+    let opp_digi = runner.place_on_field(1, "OPP-DIGI", Some(0));
+    runner.game.suspend(opp_digi);
+    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no prompt while the cost cannot be paid");
+    assert_eq!(runner.game.players[0].battle_area[tomoro_perm.index as usize].card_sources.len(), 1);
 }
 
 #[test]
@@ -238,48 +277,14 @@ fn bt25_090_on_suspend_does_not_fire_for_tamer_suspend() {
         .start();
 
     let tomoro_perm = runner.place_on_field(0, CARD_ID, Some(0));
-    // Suspend Tomoro itself (a Tamer). The clause gates on a Digimon suspending.
     runner.game.suspend(tomoro_perm);
     let _ = runner.auto_resolve();
-
-    // No place-2 prompt fired (Tamer suspend is not a Digimon suspend).
     let perm = &runner.game.players[0].battle_area[tomoro_perm.index as usize];
     assert_eq!(
         perm.card_sources.len(),
         1,
         "a Tamer suspend must not trigger the place-2 effect (event_target_kind: digimon gate)"
     );
-}
-
-#[test]
-fn bt25_090_on_suspend_decline_does_nothing() {
-    let mut runner = DebugRunner::builder()
-        .add_card(tomoro())
-        .add_card(make_filler("OPP-DIGI"))
-        .add_card(make_filler("D1"))
-        .add_card(make_filler("D2"))
-        .deck(0, &["D1", "D2"])
-        .deck(1, &["D1"])
-        .memory(8)
-        .start();
-
-    let tomoro_perm = runner.place_on_field(0, CARD_ID, Some(0));
-    let opp_digi = runner.place_on_field(1, "OPP-DIGI", Some(0));
-    let deck_before = runner.deck_size(0);
-
-    runner.game.suspend(opp_digi);
-    assert!(runner.game.pending_selection.is_some());
-    assert!(runner.pending_is_optional());
-    runner
-        .decline_optional_trigger()
-        .expect("decline the optional clause");
-    let _ = runner.auto_resolve();
-
-    assert!(
-        !runner.game.players[0].battle_area[tomoro_perm.index as usize].is_suspended,
-        "declining leaves Tomoro unsuspended"
-    );
-    assert_eq!(runner.deck_size(0), deck_before, "no cards placed");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
