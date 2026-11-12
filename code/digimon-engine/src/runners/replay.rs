@@ -2868,6 +2868,24 @@ impl ReplayDriver {
                 return;
             }
         }
+        // An EFFECT digivolve (DCGO `DigivolveIntoHandOrTrashCard`) never asks which route: DCGO pays the
+        // cheapest (`PayingCost` takes the minimum over the matching conditions). When our engine parks the
+        // choice and the next row cannot answer it, DCGO took the cheapest printed route.
+        let effect_routes = game.pending_selection_resume.as_ref().and_then(|stack| {
+            stack.frames.iter().rev().find_map(|frame| match frame {
+                crate::resume::ResumeFrame::EffectDigivolveCostChoice(state) => Some(state.printed_costs.clone()),
+                _ => None,
+            })
+        });
+        if let Some(routes) = effect_routes {
+            if routes.len() == pending.valid_action_ids.len() && routes.len() > 1 {
+                if let Some((i, _)) = routes.iter().enumerate().min_by_key(|(_, r)| r.memory_cost) {
+                    let (actor, action) = (pending.selecting_player, pending.valid_action_ids[i]);
+                    game.decode_action(action, actor);
+                }
+            }
+            return;
+        }
         let Some(routes) = game.pending_selection_resume.as_ref().and_then(|stack| {
             stack.frames.iter().rev().find_map(|frame| match frame {
                 crate::resume::ResumeFrame::DigivolveCostChoice(state) => Some(state.routes.clone()),

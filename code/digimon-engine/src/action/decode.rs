@@ -242,18 +242,18 @@ impl Game {
         match action_id {
             HATCH => {
                 if self.hatch(tp) {
-                    self.enter_main_phase();
+                    self.enter_main_or_end_turn();
                 }
             }
             MOVE_FROM_BREEDING => {
                 if self.move_from_breeding(tp) {
-                    self.enter_main_phase();
+                    self.enter_main_or_end_turn();
                 }
             }
             PASS => {
                 // Breeding pass: advance to Main phase. Python's action_breeding_pass
                 // calls next_phase(); Rust's equivalent is enter_main_phase.
-                self.enter_main_phase();
+                self.enter_main_or_end_turn();
             }
             _ => {}
         }

@@ -178,6 +178,7 @@ def convert(rows, cards, allow_truncated=False):
 
     started = False  # past the mulligans
     breeding_occupied = {0: False, 1: False}
+    queued_play_indexes = set()  # card indexes of queued main-phase play packets not yet resolved
     for ridx, r in enumerate(rows):
         m, a = r["method"], r.get("args", [])
         tp, turn = r.get("tp", -1), r.get("turn", r.get("turn_count", -1))
@@ -213,6 +214,16 @@ def convert(rows, cards, allow_truncated=False):
                 # an effect's play / digivolve step that played nothing (e.g. a "may digivolve" with no card chosen):
                 # no card moved, no decision
                 continue
+            # A main-phase play is always queued first (a play packet naming the card). A paid play with no such
+            # packet is an effect's play or digivolve ("may digivolve into ... with the cost reduced by 1"): the
+            # effect's own selection rows carry that decision, so it is not a main-phase action.
+            hand_cards = (r.get("hand") or {}).get("cards") or []
+            slot = (r.get("hand") or {}).get("slot", -1)
+            played_index = hand_cards[slot].get("card_index") if 0 <= slot < len(hand_cards) else None
+            if played_index is not None and played_index not in queued_play_indexes:
+                continue
+            if played_index is not None:
+                queued_play_indexes.discard(played_index)
             started = True
             # Only a BOT seat's turn is inferred (its breeding / end-of-turn are invisible). A human or PvP seat's
             # breeding and pass decisions are recorded rows.
@@ -258,6 +269,8 @@ def convert(rows, cards, allow_truncated=False):
                 action(a[0], ACTION_PASS, "Breeding", "breeding_action")
             continue
         if m == "TurnStateMachine.QueueMainPhaseAction_Internal":
+            if isinstance(r.get("play"), dict) and r["play"].get("card_index") is not None:
+                queued_play_indexes.add(r["play"]["card_index"])
             # GamePacketRegistration order: 0 attack, 1 activate card, 2 activate permanent, 3 cheat, 4 play, 5 pass
             # An attack is taken from SetAttackingPermaent, logged when DCGO EXECUTES the queued attack (with both
             # battle areas, the index basis). The attack packet is only the request: decoding it as well counted every
@@ -355,8 +368,11 @@ def convert(rows, cards, allow_truncated=False):
             step += 1
             continue
         if m == "SelectCountEffect.SetCount":
-            out.append({"type": "selection", "step": step, "actor": a[0], "prompt": "SelectCountEffect",
-                        "phase": "Main", "count": a[1]})
+            row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectCountEffect",
+                   "phase": "Main", "count": a[1]}
+            if "engine_action" in r:
+                row["engine_action"] = r["engine_action"]
+            out.append(row)
             step += 1
             continue
         if m == "SelectPermanentEffect.SetTargetFrames":

@@ -12,6 +12,7 @@ use crate::cite::*;
 /// `*.rs` files actually present in the directory.
 const CHAPTER_SOURCES: &[(&str, &str)] = &[
     ("ch03_areas.rs", include_str!("ch03_areas.rs")),
+    ("ch06_turn_flow.rs", include_str!("ch06_turn_flow.rs")),
     (
         "ch15_04_effect_states.rs",
         include_str!("ch15_04_effect_states.rs"),

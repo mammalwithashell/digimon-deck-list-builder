@@ -1319,7 +1319,10 @@ namespace DcgoRecorder
                 sb.Append("{\"seq\":").Append(System.Threading.Interlocked.Increment(ref _seq))
                   .Append(",\"t\":\"").Append(DateTime.UtcNow.ToString("o"))
                   .Append("\",\"method\":\"SelectCountEffect.SetCount\",\"args\":[").Append(__0).Append(',').Append(__1)
-                  .Append("],\"tp\":").Append(TurnPlayerId()).Append(",\"turn\":").Append(CurrentTurn()).Append('}');
+                  .Append("],\"tp\":").Append(TurnPlayerId()).Append(",\"turn\":").Append(CurrentTurn())
+                  // the engine action this count realizes (a cost menu shows DCGO's unreduced costs, so the value
+                  // alone cannot name the engine's route)
+                  .Append(SelectionExtras(null, "SelectCountEffect.SetCount", new object[] { __0, __1 })).Append('}');
                 lock (Gate)
                     File.AppendAllText(Path.Combine(_dir, "raw-" + _session + ".jsonl"), sb.ToString() + "\n");
             }
