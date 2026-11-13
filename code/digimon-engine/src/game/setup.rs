@@ -237,6 +237,8 @@ impl Game {
             loop_watch: std::collections::BTreeMap::new(),
             loop_watch_steps: 0,
             optional_decision_mark: None,
+            optional_activation_mark: None,
+            optional_activation_window: None,
             trigger_batch_seq: 0,
             effect_drain_depth: 0,
             logger: Box::new(SilentLogger),
@@ -446,6 +448,8 @@ impl Game {
         self.loop_watch.clear();
         self.loop_watch_steps = 0;
         self.optional_decision_mark = None;
+        self.optional_activation_mark = None;
+        self.optional_activation_window = None;
         self.pending_hand_discard = None;
         self.pending_deck_discards.clear();
         self.pending_deck_add = None;

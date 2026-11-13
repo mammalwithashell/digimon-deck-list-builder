@@ -93,6 +93,11 @@ fn use_option_from_revealed_plays_body_free_and_consumes_only_that_card() {
         .hand(1, &["SRC"])
         .memory(2)
         .start();
+    // CR 4.3 4-22-2: the using player needs a permanent of the Option's colour
+    // (red) on the field; an effect-driven use is still a use (Q1500/Q2785).
+    // The fixture used to rely on effect-driven uses skipping the check.
+    // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+    runner.place_on_field(1, "SRC", None);
     runner.register_effect("TS-REV", Arc::new(OptionMainDraw));
 
     // Two cards in the reveal pool; the Option is at index 1.
@@ -303,6 +308,11 @@ fn dsl_use_option_from_revealed_uses_picked_option_free() {
         .hand(1, &["SRC-EX7"])
         .memory(2)
         .start();
+    // CR 4.3 4-22-2: the using player needs a permanent of the Option's colour
+    // (red) on the field; an effect-driven use is still a use (Q1500/Q2785).
+    // The fixture used to rely on effect-driven uses skipping the check.
+    // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+    runner.place_on_field(1, "SRC-EX7", None);
     runner.register_effect("TS-REV", Arc::new(OptionMainDraw));
 
     let _digi = push_option_to_reveal(&mut runner, "REV-DIGI");
@@ -424,6 +434,11 @@ fn dsl_use_option_from_revealed_accepts_bucket_cardlist_binding() {
         .hand(1, &["SRC-EX7"])
         .memory(2)
         .start();
+    // CR 4.3 4-22-2: the using player needs a permanent of the Option's colour
+    // (red) on the field; an effect-driven use is still a use (Q1500/Q2785).
+    // The fixture used to rely on effect-driven uses skipping the check.
+    // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+    runner.place_on_field(1, "SRC-EX7", None);
     runner.register_effect("TS-REV", Arc::new(OptionMainDraw));
 
     let digi = push_option_to_reveal(&mut runner, "REV-DIGI");
@@ -689,6 +704,10 @@ fn check_dsl_use_option_from_revealed_mid_body_park_resolves_before_outer_tail()
             c.card_kind = CardKind::Digimon;
             c.level = Some(4);
             c.traits = vec!["TS".to_string()];
+            // Black, so it meets the black TST-OPT-MIDPARK's colour requirement
+            // (CR 4.3 4-22-2; an effect-driven use is still a use).
+            // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+            c.colors = vec![digimon_engine::enums::CardColor::Black];
             c
         })
         .add_card({
@@ -845,6 +864,11 @@ fn dsl_use_option_bound_uses_union_picked_option_free_from_trash() {
         .hand(1, &["SRC-BT21"])
         .memory(3)
         .start();
+    // CR 4.3 4-22-2: the using player needs a permanent of the Option's colour
+    // (red) on the field; an effect-driven use is still a use (Q1500/Q2785).
+    // The fixture used to rely on effect-driven uses skipping the check.
+    // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+    runner.place_on_field(1, "SRC-BT21", None);
     runner.register_effect("RAGNAROK", Arc::new(OptionMainDraw));
 
     // The Ragnarok Cannon lives in trash (the trash leg of the union).

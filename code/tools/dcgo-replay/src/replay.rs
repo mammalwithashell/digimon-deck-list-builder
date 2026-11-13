@@ -218,6 +218,10 @@ pub fn replay_recording(
             session.total_steps(),
             session.divergences().len()
         );
+        // Non-halting notes: rows consumed with no engine prompt to apply them to.
+        for note in session.replay_notes() {
+            eprintln!("note: {note}");
+        }
     }
 
     // A pausing differential divergence → the matching batch failure.

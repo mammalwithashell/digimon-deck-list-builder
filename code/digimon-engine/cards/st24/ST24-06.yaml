@@ -28,16 +28,29 @@
 #   1. maxCount = min(1, opp-Digimon count), canNoSelect:false → MANDATORY pick
 #      when one exists: -5000 DP UntilEachTurnEnd (end_of_turn). →
 #      select_opponent_permanent {kind:digimon} + add_dp_modifier -5000.
-#   2. THEN gated on total ≥2 face-down sources under Tamers (DCGO: (a Tamer ≥2)
-#      OR (>1 Tamers ≥1) ≡ total ≥2): "by trashing 2 bottom face-down cards … you
-#      may play or use 1 [DATA SQUAD] card with play/use cost ≤5 for free." The
-#      trash-2 cost is trash_bottom_face_down_sources_under_tamers {count:2}
-#      (multi-Tamer distributable: 2-from-1 or 1-from-2). The "may" is the
-#      optional select_hand (ST24-10 idiom): declining (PASS) → trash-2 NOT paid.
-#      On a real pick CanSelectCardCondition = DATA SQUAD ∧ GetCostItself≤5 ∧
-#      playable → play_or_use_from_hand cost_delta free (PlayOptionCards /
-#      PlayPermanentCards payCost:false; the unified verb routes by kind). Gated
-#      on BOTH ≥2 sources AND a matching hand card so the trash is never wasted.
+#   2. THEN, gated ONLY on total ≥2 face-down sources under Tamers (DCGO: (a
+#      Tamer ≥2) OR (>1 Tamers ≥1) ≡ total ≥2): "by trashing 2 bottom face-down
+#      cards … you may play or use 1 [DATA SQUAD] card with play/use cost ≤5 for
+#      free." DCGO SharedActivateCoroutine pays the trash FIRST: a canNoSelect
+#      Tamer pick (selecting none = decline) → trashed = true → `if (trashed)` a
+#      canNoSelect SelectHandEffect. CR 4.3 15-7-1/15-7-2: the optional
+#      processing condition is chosen and executed before what follows it; 15-7-5:
+#      it may be paid even when the follow-up can't be executed (no eligible hand
+#      card); 15-7-3 + official Q&A: it can't be paid in part (hence the ≥2 gate).
+#      → select_effect_choice ["Trash 2 face-down cards", "Don't"] (ST24-10 idiom;
+#      the "Don't" label lets the replay's yes/no fold recognise the decline) →
+#      trash_bottom_face_down_sources_under_tamers {count:2} (multi-Tamer
+#      distributable: 2-from-1 or 1-from-2) → optional select_hand (the "may";
+#      PASS keeps the trash paid) with CanSelectCardCondition = DATA SQUAD ∧
+#      GetCostItself≤5 ∧ ((IsOption ∧ !CanNotPlayThisOption) ∨ (HasPlayCost ∧
+#      CanPlayAsNewPermanent)) = `can_play_or_use_from_effect: true` (no Digi-Egg —
+#      ST24-01, BT25-002, BT26-002, BT26-005, EX13-003 — and no unplayable /
+#      unusable card is offered) → play_or_use_from_hand cost_delta free (PlayOptionCards /
+#      PlayPermanentCards payCost:false; the unified verb routes by kind).
+#      Fixed 2026-11-12 (DCGO PvP replay audit): the old YAML picked the hand card
+#      first, paid the trash only on a pick, and refused the trash without a
+#      matching hand card — so the Tamers' trash triggers (e.g. ST24-13) could
+#      never fire from a bare payment.
 # Inherited (WhenRemoveField, isInheritedEffect, maxPerTurn 1, optional): a
 #   carrier with [ShineGreymon] in name OR the [DATA SQUAD] trait would leave,
 #   gated on a Tamer carrying a face-down source → trash 1 bottom FD under a Tamer
@@ -88,43 +101,50 @@ effects:
           expiry: end_of_turn
       # "Then, by trashing 2 bottom face-down cards from under any of your
       # Tamers, you may play or use 1 [DATA SQUAD] trait card with a play or use
-      # cost of 5 or less from your hand without paying the cost." Gated on BOTH
-      # ≥2 face-down sources AND a matching [DATA SQUAD] (cost ≤5) hand card.
+      # cost of 5 or less from your hand without paying the cost." The trash is
+      # the optional processing condition: chosen and paid FIRST (CR 4.3 15-7-1),
+      # payable even with no eligible hand card (15-7-5), never in part (15-7-3).
+      # Gated only on ≥2 face-down sources (DCGO ST24_06.cs; ST24-10 idiom).
       - if:
-          condition:
-            all_of:
-              - face_down_sources_under_tamers_gte: 2
-              - count_gte:
-                  filter:
-                    of: you
-                    zone: [hand]
-                    all_of:
-                      - trait_has: "DATA SQUAD"
-                      - play_or_use_cost_lte: 5
-                  n: 1
+          condition: { face_down_sources_under_tamers_gte: 2 }
           then:
-            # "you may play or use …" — optional select_hand carries the decline.
-            - select_hand:
-                of: you
-                bind_as: ds_pick
-                optional: true
-                filter:
-                  all_of:
-                    - trait_has: "DATA SQUAD"
-                    - play_or_use_cost_lte: 5
-                prompt: "Play or use 1 [DATA SQUAD] card (play/use cost ≤5) from your hand without paying the cost"
+            - select_effect_choice:
+                bind_as: pay_trash
+                labels: ["Trash 2 face-down cards", "Don't"]
+                prompt: "Trash 2 bottom face-down cards from under your Tamers to play or use a [DATA SQUAD] card for free?"
             - if:
-                condition: { binding_present: ds_pick }
+                condition: { equals: [pay_trash, 0] }
                 then:
-                  # "by trashing 2 bottom face-down cards from under any of your
-                  # Tamers" — the activation cost (multi-Tamer distributable).
                   - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
-                  # "play or use … without paying the cost." Unified verb routes
-                  # by kind (Digimon/Tamer play, Option use, Dual face-choice).
-                  - play_or_use_from_hand:
+                  # "you may play or use …" — optional select_hand carries the
+                  # decline; PASS leaves the trash paid (DCGO canNoSelect:true).
+                  # Only cards that can actually be played or used are offered
+                  # (DCGO CanSelectCardCondition: `(IsOption &&
+                  # !CanNotPlayThisOption) || (HasPlayCost &&
+                  # CanPlayAsNewPermanent(card, false, activateClass))`): never a
+                  # Digi-Egg (no play cost, CR 4.3 7-1-1 — e.g. Koromon ST24-01),
+                  # never a Digimon/Tamer an effect forbids playing or with no
+                  # free slot, never an Option while Options can't be used.
+                  - select_hand:
                       of: you
-                      hand_index: ds_pick
-                      cost_delta: free
+                      bind_as: ds_pick
+                      optional: true
+                      filter:
+                        all_of:
+                          - trait_has: "DATA SQUAD"
+                          - play_or_use_cost_lte: 5
+                          - can_play_or_use_from_effect: true
+                      prompt: "Play or use 1 [DATA SQUAD] card (play/use cost ≤5) from your hand without paying the cost"
+                  - if:
+                      condition: { binding_present: ds_pick }
+                      then:
+                        # "play or use … without paying the cost." Unified verb
+                        # routes by kind (Digimon/Tamer play, Option use, Dual
+                        # face-choice).
+                        - play_or_use_from_hand:
+                            of: you
+                            hand_index: ds_pick
+                            cost_delta: free
 
   # ─── Inherited [All Turns][OPT] ShineGreymon-name / DATA SQUAD carrier would
   #     leave → trash 1 bottom FD under a Tamer → it doesn't leave ──────────────

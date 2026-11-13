@@ -530,6 +530,9 @@ impl Game {
                 patch(trigger);
             }
         }
+        // The scan's event-gated `<Delay>` fan-out is part of the same event:
+        // complete its context with the same patch, then gate it.
+        self.gate_event_gated_delay_entries(first, timing, &mut patch);
         // §15-8-3-1 / §15-8-3-4: only the effects whose trigger qualifier
         // this event met trigger.
         self.discard_entries_not_triggered(first);
@@ -3039,16 +3042,17 @@ impl Game {
             {
                 continue;
             }
-            if !self.event_gated_delay_condition_matches(
-                effect,
-                source_card,
-                Some(handle),
-                source_kind,
-                handle.player,
-                trigger_context.clone(),
-            ) {
-                continue;
-            }
+            // The Delay's `active_when` gate is NOT decided here: this runs
+            // inside `enqueue_triggered_scan`, before the event's caller has
+            // completed the trigger context (`enqueue_triggered_with_context`'s
+            // `patch`, e.g. a deletion's last-known snapshot). It is decided
+            // there, after the patch, on the context the entry carries
+            // (`gate_event_gated_delay_entries`). Deciding it here read a
+            // deleted Digimon's `event_target_*` from the live slot at its
+            // stale index -- whatever permanent had shifted into it -- so
+            // BT20-095's Delay missed a [Chronicle] deletion whenever the
+            // deleted Digimon sat left of the Option (DCGO PvP replay
+            // 2026-11-13 g6). G-ENGINE-EVENT-DELAY-GATE-READS-UNPATCHED-CONTEXT.
             self.push_effect_with_identity(QueuedEffect {
                 source_identity: None,
                 source_card,
@@ -3071,6 +3075,66 @@ impl Game {
                 trigger_batch: 0,
                 pending_processing: None,
             });
+        }
+    }
+
+    /// Complete and gate the event-gated `<Delay>` entries one event scan
+    /// queued (from `first`): each carries the event's trigger context, so
+    /// it gets the caller's `patch` exactly like the event's observer
+    /// entries (§15-8-3-1: the trigger is decided on the event as it
+    /// happened, a deleted Digimon's last-known information included), and
+    /// only then is its `active_when` evaluated; an entry whose gate fails
+    /// was not triggered and is removed (§15-8-3-4).
+    fn gate_event_gated_delay_entries(
+        &mut self,
+        first: usize,
+        timing: EffectTiming,
+        patch: &mut impl FnMut(&mut TriggerContext),
+    ) {
+        let mut i = first;
+        while i < self.effect_queue.len() {
+            let qe = &self.effect_queue[i];
+            if qe.timing != EffectTiming::DelayEffect
+                || qe.granted_effect_id.is_some()
+                || qe.keyword_effect.is_some()
+                || qe.pending_processing.is_some()
+            {
+                i += 1;
+                continue;
+            }
+            let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+                i += 1;
+                continue;
+            };
+            let Some(effect) = effects.get(qe.effect_slot as usize) else {
+                i += 1;
+                continue;
+            };
+            if effect.delay_trigger != Some(DelayTrigger::OnEvent(timing)) {
+                i += 1;
+                continue;
+            }
+            let qe = &mut self.effect_queue[i];
+            let Some(trigger) = qe.trigger_context.as_mut() else {
+                i += 1;
+                continue;
+            };
+            patch(trigger);
+            let trigger = trigger.clone();
+            let (source_card, source_permanent, source_kind, controller) =
+                (qe.source_card, qe.source_permanent, qe.source_kind, qe.controller);
+            if self.event_gated_delay_condition_matches(
+                effect,
+                source_card,
+                source_permanent,
+                source_kind,
+                controller,
+                trigger,
+            ) {
+                i += 1;
+            } else {
+                self.effect_queue.remove(i);
+            }
         }
     }
 
@@ -4676,7 +4740,17 @@ impl Game {
         if qe.dna_origin_context.is_some() {
             self.current_dna_origin = qe.dna_origin_context;
         }
+        // The "you may" of an optional effect with no outer accept/decline is
+        // folded into the body's FIRST decision (that decision's PASS
+        // declines the effect): open a first-decision window for the body;
+        // closing it marks the prompt the body parked as that decision, only
+        // if it really is the first one (`game::optional_activation`). A mark
+        // left from an earlier prompt that is no longer pending names nothing.
+        self.sync_optional_activation_mark();
+        let window = self.folded_optional_activation_window(&qe, attribution_source_card);
+        let enclosing_window = self.open_optional_activation_window(window);
         let out = crate::replacement::with_effect_body(self, |game| game.run_queued_effect_inner(qe));
+        self.close_optional_activation_window(enclosing_window);
         if is_pending_option_main {
             self.option_first_main_resolved = true;
         }
@@ -4686,6 +4760,47 @@ impl Game {
         self.effect_source_card = prev_effect_source_card;
         self.effect_source_player = prev_effect_source;
         out
+    }
+
+    /// The first-decision window for `qe`'s body when its "you may" is
+    /// folded into that body's first decision (see
+    /// `game::optional_activation`): an optional effect with no outer
+    /// accept/decline prompt (`Effect::needs_outer_optional_prompt`) and no
+    /// activation cost (declined at the pre-cost order prompt instead), or an
+    /// effect flagged `Effect::optional_activation_folded` (a mandatory keyword
+    /// body DCGO activates as an `IsOptional` `ActivateClass`). Granted
+    /// inline bodies carry no `Effect` and are never folded. `None` when a
+    /// prompt is already parked: the body then parks behind it.
+    fn folded_optional_activation_window(
+        &self,
+        qe: &QueuedEffect,
+        attribution_source_card: crate::card_source::CardHandle,
+    ) -> Option<crate::game::optional_activation::OptionalActivationWindow> {
+        if qe.granted_effect_id.is_some() || self.pending_selection.is_some() {
+            return None;
+        }
+        let effects = self.effects_for_queued(qe)?;
+        let effect = effects.get(qe.effect_slot as usize)?;
+        let folded = effect.optional_activation_folded
+            || (qe.is_optional
+                && !effect.needs_outer_optional_prompt
+                && effect.activation_cost_fn.is_none());
+        if !folded {
+            return None;
+        }
+        let mut cards = vec![qe.source_card, attribution_source_card];
+        if let Some(top) = qe
+            .source_permanent
+            .and_then(|h| self.players.get(h.player as usize)?.battle_area.get(h.index as usize))
+            .map(|p| p.top_card().handle())
+        {
+            cards.push(top);
+        }
+        Some(crate::game::optional_activation::OptionalActivationWindow {
+            effect: crate::game::optional_activation::OptionalActivationEffect::of(qe),
+            cards,
+            state: crate::game::optional_activation::FirstDecision::Open,
+        })
     }
 
     fn run_queued_effect_inner(&mut self, mut qe: QueuedEffect) {
@@ -6748,6 +6863,7 @@ impl Game {
         //   loop whose repetitions only ask forced questions is still one
         //   neither player can stop (§18-3-2) and keeps its watch.
         let mark = self.optional_decision_mark.take();
+        self.optional_activation_mark = None;
         let declinable = self.pending_selection.as_ref().is_some_and(|sel| {
             crate::game::infinite_loop::selection_can_stop_a_loop(sel, mark.as_ref())
         });

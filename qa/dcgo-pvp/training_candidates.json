@@ -9,6 +9,24 @@
       "result": "won: opponent surrendered on turn 5",
       "why": "Owner piloted it so well the opponent had no recourse and forfeited.",
       "added": "2026-11-12"
+    },
+    {
+      "started": "2026-11-13T03:16:37.6494978Z",
+      "raw": "raw-20261113T025510Z.jsonl#g4",
+      "my_deck": "Virus Busters",
+      "opp_deck": "Toho Braves",
+      "result": "lost: owner surrendered on turn 13",
+      "why": "Good plays from both seats (incl. the owner's WereGarurumon DNA digivolve and the opponent's Sanmyojin line).",
+      "added": "2026-11-12"
+    },
+    {
+      "started": "2026-11-13T03:46:27.6443072Z",
+      "raw": "raw-20261113T025510Z.jsonl#g6",
+      "my_deck": "Data Squad ShineGreymon",
+      "opp_deck": "Chronicle",
+      "result": "won: opponent surrendered on turn 11",
+      "why": "Good plays from both seats.",
+      "added": "2026-11-12"
     }
   ]
 }

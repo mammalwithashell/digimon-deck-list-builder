@@ -2263,7 +2263,7 @@ fn build_selection_row(
         count: None,
         candidates: None,
         int_value: None,
-        chosen_effect_card: None, chosen_effect_name: None, bool_value: None, engine_action: None,
+        chosen_effect_card: None, chosen_effect_name: None, bool_value: None, engine_action: None, unstamped: false,
         cancel: None,
         board_p0: None,
         board_p1: None,

@@ -34,6 +34,7 @@ PLAY_PACKET_ID, ATTACK_PACKET_ID, ACTIVATE_PERMANENT_PACKET_ID = 4, 0, 2
 FIELD_EFFECT_START, EFFECTS_PER_PERMANENT = 1000, 10
 PLAY_HAND_START, PLAY_HAND_END = 0, 30
 DIGIVOLVE_START, FIELDS_PER_HAND, BREEDING_TARGET = 400, 15, 14
+DNA_DIGIVOLVE_START, DNA_DIGIVOLVE_END = 63, 93  # DNA digivolve: DNA_DIGIVOLVE_START + hand index
 PASS_PACKET_ID = 5  # QueueMainPhaseAction_Internal(playerID, packetId=5, bytes): PassAction
 
 SELECTION_PREFIXES = ("SelectCardEffect.", "UserSelectionManager.SetBoolForPlayer", "SelectHandEffect.",
@@ -59,6 +60,44 @@ def load_cards(path):
 def is_egg(cards, card_id):
     c = cards.get(card_id) or {}
     return "egg" in str(c.get("card_kind", "")).lower() or c.get("level") == 2 and (c.get("play_cost") in (0, None))
+
+
+def jogress_root_slots(roots, anchor_frame, anchor_slot, n_battle):
+    """Compact battle-area positions of a DNA play's two root frames, or None when they are not certain.
+
+    DCGO names the roots by FrameID, in pick order (TurnStateMachine.cs:2983 queues
+    [permanents[0].PermanentFrame.FrameID, permanents[1].PermanentFrame.FrameID]; CardController.cs:540 and :1682
+    resolve them as Owner.fieldCardFrames[id]), while the engine's DNA material prompts take compact battle-area
+    indices. A FrameID is the frame's list position (Player.cs:31/48 `FrameID = count`, the breeding frame last) and
+    indexes FieldPermanents (CardObjectController.cs:564), which GetBattleAreaPermanents walks in id order
+    (Player.cs:621), so a root's compact position is the number of occupied battle frames below it. Frame occupancy
+    is not logged; the one anchor is the play's TargetFrameID, whose permanent (TurnStateMachine.cs:1819) the mod
+    logs at compact `anchor_slot`. Each root is bounded from that anchor (both roots are occupied battle frames:
+    CR 4.3 6-5-1-2-2 "multiple Digimon in your battle area", SelectJogressEffect.cs:210) and accepted only when its
+    bounds meet."""
+    if (len(roots) != 2 or len(set(roots)) != 2 or min(roots) < 0
+            or not (0 <= anchor_slot <= anchor_frame) or anchor_slot >= n_battle):
+        return None
+    slots = []
+    for r in roots:
+        others = [o for o in roots if o != r]
+        if r == anchor_frame:
+            lo = hi = anchor_slot
+        elif r < anchor_frame:
+            # anchor_slot occupied battle frames lie below the anchor, r among them
+            between = sum(1 for o in others if r < o < anchor_frame)
+            below = sum(1 for o in others if o < r)
+            lo = max(below, anchor_slot - 1 - (anchor_frame - r - 1))
+            hi = min(r, anchor_slot - 1 - between)
+        else:
+            between = sum(1 for o in others if anchor_frame < o < r)
+            above = sum(1 for o in others if o > r)
+            lo = anchor_slot + 1 + between
+            hi = min(anchor_slot + 1 + (r - anchor_frame - 1), n_battle - 1 - above)
+        if lo != hi or not 0 <= lo < n_battle:
+            return None
+        slots.append(lo)
+    return slots if len(set(slots)) == 2 else None
 
 
 def convert(rows, cards, allow_truncated=False):
@@ -115,6 +154,9 @@ def convert(rows, cards, allow_truncated=False):
 
     step = 0
     truncated_at = None
+    dna_play_indexes = set()  # card indexes whose LATEST queued play packet named DNA (jogress) roots
+    dna_unknown_indexes = set()  # card indexes whose latest queued play packet's jogress list could not be read
+    dna_roots = {}  # card index -> (jogress root FrameIDs or None when unreadable, the packet's TargetFrameID)
     winner = -1
     reason = ""
     inferred = []
@@ -131,6 +173,17 @@ def convert(rows, cards, allow_truncated=False):
             row["card_id"] = card_id
         out.append(row)
         step += 1
+
+    def move_last_before(k):
+        """Move the row just written ahead of the k rows before it, renumbering the steps (the rows keep order)."""
+        if not k:
+            return
+        row = out.pop()
+        at = len(out) - k
+        row["step"] = out[at]["step"]
+        for later in out[at:]:
+            later["step"] += 1
+        out.insert(at, row)
 
     # Bot turns: the bot decides without any hooked setter, so its breeding PASS comes first on a turn and its
     # main-phase PASS closes the turn. Track which bot turns already had their breeding / pass synthesised.
@@ -185,15 +238,55 @@ def convert(rows, cards, allow_truncated=False):
         bot_bred = False
 
     started = False  # past the mulligans
+    # Breeding-area occupancy per seat, for SetBreedingPhase(doBreeding=true): hatch when empty, move when occupied
+    # (CR 4.3 6-4-1-1 / 6-4-1-2).
+    # Toggled by the breeding decisions themselves, and corrected by what the rows show of the area, because EFFECTS
+    # also fill and empty it (g6: BT20-095's <Delay> moved Ryudamon BT20-010 out during the other seat's turn).
     breeding_occupied = {0: False, 1: False}
+    breeding_top = {0: None, 1: None}  # the breeding Digimon's top card id; "?" = occupied, card not known (a hatch)
+
+    def breeding_evidence(p, occupied, top, why):
+        if breeding_occupied[p] != occupied:
+            inferred.append("P%d breeding area %s: %s (the toggled flag said %s)" % (
+                p, "occupied" if occupied else "empty", why, "occupied" if breeding_occupied[p] else "empty"))
+        breeding_occupied[p], breeding_top[p] = occupied, top
+
     queued_play_indexes = set()  # card indexes of queued main-phase play packets not yet resolved
     for ridx, r in enumerate(rows):
         m, a = r["method"], r.get("args", [])
         tp, turn = r.get("tp", -1), r.get("turn", r.get("turn_count", -1))
         if m.startswith("Snapshot."):
             for pl in r.get("players", []):
-                if "breeding" in pl:
+                if "breeding" in pl and pl.get("id") in (0, 1):
+                    # exact: the breeding area's permanents (top card ids)
                     breeding_occupied[pl["id"]] = bool(pl["breeding"])
+                    breeding_top[pl["id"]] = pl["breeding"][0] if pl["breeding"] else None
+        elif (m == "SelectPermanentEffect.SetTargetFrames"
+              or (m == "TurnStateMachine.QueueMainPhaseAction_Internal" and len(a) >= 2
+                  and a[1] in (ATTACK_PACKET_ID, ACTIVATE_PERMANENT_PACKET_ID))):
+            # These rows' boards are GetFieldPermanents(): every permanent of the seat INCLUDING the breeding one
+            # (dcgo-melon-recorder Core.cs; Player.cs:669 walks all FieldPermanents, the breeding frame among them).
+            # A known breeding top card missing from its owner's whole field has left the breeding area.
+            boards = r.get("boards")
+            if isinstance(boards, list) and len(boards) == 2:
+                for p in (0, 1):
+                    top = breeding_top[p]
+                    if (breeding_occupied[p] and top not in (None, "?") and isinstance(boards[p], list)
+                            and top not in boards[p]):
+                        breeding_evidence(p, False, None, "%s is not on P%d's field (seq %s)" % (top, p, r.get("seq")))
+        elif m in ("PlayCardClass.ctor", "PlayCardClass.PlayCard"):
+            played = (r.get("cards") or [None])[0]
+            if played and r.get("target_breeding") is True and tp in (0, 1):
+                # a digivolution onto the turn player's breeding Digimon (the mod's TargetSlotJson): it stays, under
+                # a new top card
+                breeding_evidence(tp, True, played, "%s digivolved in it (seq %s)" % (played, r.get("seq")))
+            elif played and r.get("breeding_area") is True:
+                # PlayCardClass._isBreedingArea: the card is played INTO its player's breeding area
+                owner = (r.get("hand") or {}).get("player", tp)
+                if owner not in (0, 1):
+                    owner = tp
+                if owner in (0, 1):
+                    breeding_evidence(owner, True, played, "%s played into it (seq %s)" % (played, r.get("seq")))
 
         # entering a different turn than the bot's open one closes it
         if bot_turn_open is not None and tp != bot and turn != bot_turn_open and turn >= 0:
@@ -244,8 +337,9 @@ def convert(rows, cards, allow_truncated=False):
                 truncated_at = truncated_at or ("bot hatch of %s at step %d" % (card, step))
                 break
             slot = hand.get("slot", -1)
+            is_dna = played_index is not None and played_index in dna_play_indexes
             digivolve_field = None
-            if r.get("target") is not None:
+            if r.get("target") is not None and not is_dna:
                 # A play onto an occupied frame is a digivolution: DIGIVOLVE_START + hand * 15 + field, where field is
                 # the compact battle-area position of the target, or 14 (BREEDING_TARGET) for the breeding area.
                 if r.get("target_breeding"):
@@ -258,6 +352,74 @@ def convert(rows, cards, allow_truncated=False):
             if not (0 <= slot < PLAY_HAND_END):
                 truncated_at = truncated_at or ("play of %s with no hand slot at step %d" % (card, step))
                 break
+            if played_index is not None and played_index in dna_unknown_indexes:
+                truncated_at = truncated_at or ("play of %s whose play packet has no readable jogress list at step %d"
+                                                % (card, step))
+                break
+            if is_dna:
+                # A DNA (jogress) digivolve. DCGO asks the two material Digimon (SelectPermanentEffect, this seat,
+                # own side) BEFORE it queues the play; the engine starts DNA from the hand card (DNA_DIGIVOLVE_START
+                # + hand index) and then asks the first and second material. Put the action ahead of the material
+                # picks already written, so the replay sees the engine's order. A REMOTE seat's root selection never
+                # runs on this client (only its play packet arrives), so it has no picks: they are synthesised from
+                # the packet's root FrameIDs when those place with certainty. A DNA action is never written without
+                # both materials.
+                dna_play_indexes.discard(played_index)
+                if slot >= DNA_DIGIVOLVE_END - DNA_DIGIVOLVE_START:
+                    truncated_at = truncated_at or ("DNA digivolve of %s from hand slot %d at step %d" % (card, slot, step))
+                    break
+                picks = 0
+                while (picks < 2 and len(out) > picks and out[-1 - picks].get("type") == "selection"
+                       and out[-1 - picks].get("prompt") == "SelectPermanentEffect"
+                       and out[-1 - picks].get("actor") == actor
+                       and all(t.get("player") == actor for t in out[-1 - picks].get("targets") or [{}])):
+                    picks += 1
+                # Place the packet's roots: anchored on its TargetFrameID, whose permanent this resolve row logs at
+                # compact `target_slot` in the resolution-time battle area `boards` (TurnStateMachine.cs:1819 reads
+                # the same frame; the roots resolve against the same frames, CardController.cs:540).
+                roots, anchor_frame = dna_roots.pop(played_index, (None, None))
+                boards = r.get("boards")
+                anchor_slot = r.get("target_slot")
+                placed, why = None, "the play packet's jogress roots could not be read"
+                if roots is not None:
+                    why = "jogress roots %s have no resolution-time anchor (target_slot / boards) for TargetFrameID %s" % (
+                        roots, anchor_frame)
+                    if (actor == tp and isinstance(anchor_slot, int) and r.get("target_breeding") is not True
+                            and isinstance(boards, list) and len(boards) == 2 and isinstance(boards[actor], list)):
+                        placed = jogress_root_slots(roots, anchor_frame, anchor_slot, len(boards[actor]))
+                        why = "jogress roots %s are not certain from TargetFrameID %s at slot %s of %d" % (
+                            roots, anchor_frame, anchor_slot, len(boards[actor]))
+                if picks == 2:
+                    picked = [t.get("frame") for row in out[-2:] for t in row.get("targets") or []]
+                    if placed is not None and picked != placed:
+                        truncated_at = truncated_at or (
+                            "DNA digivolve of %s: material picks %s contradict the jogress roots %s (slots %s) at step %d"
+                            % (card, picked, roots, placed, step))
+                        break
+                elif picks == 1:
+                    truncated_at = truncated_at or ("DNA digivolve of %s with a single material pick at step %d"
+                                                    % (card, step))
+                    break
+                elif placed is None:
+                    truncated_at = truncated_at or ("DNA digivolve of %s with no material picks: %s at step %d"
+                                                    % (card, why, step))
+                    break
+                if infer and not bot_bred:
+                    # the bot's inferred breeding decision comes before this play and the picks DCGO asked for it
+                    breeding_for_bot(ridx, turn)
+                    bot_bred = True
+                    move_last_before(picks)
+                action(actor, DNA_DIGIVOLVE_START + slot, "Main", "main_phase", card_id=card, boards=boards)
+                move_last_before(picks)
+                if not picks:
+                    for frame in placed:
+                        out.append({"type": "selection", "step": step, "actor": actor, "prompt": "SelectPermanentEffect",
+                                    "phase": "Main", "board_p0": boards[0], "board_p1": boards[1],
+                                    "targets": [{"player": actor, "frame": frame}], "synthesized": "jogress_roots"})
+                        step += 1
+                    inferred.append("P%d DNA %s materials from its jogress roots %s -> slots %s" % (
+                        actor, card, roots, placed))
+                continue
             if infer and not bot_bred:
                 breeding_for_bot(ridx, turn)
                 bot_bred = True
@@ -270,15 +432,39 @@ def convert(rows, cards, allow_truncated=False):
         if m == "TurnStateMachine.SetBreedingPhase":
             if a[1]:
                 # doBreeding: hatch when the breeding area is empty, otherwise move its Digimon to the battle area
-                # (DCGO's own rule in SetBreedingPhase). Occupancy comes from the last snapshot.
-                action(a[0], ACTION_MOVE if breeding_occupied.get(a[0]) else ACTION_HATCH, "Breeding", "breeding_action")
-                breeding_occupied[a[0]] = not breeding_occupied.get(a[0])
+                # (DCGO's own rule in SetBreedingPhase). Occupancy: snapshots, field boards and breeding-area plays
+                # above, else the toggle.
+                moving = bool(breeding_occupied.get(a[0]))
+                action(a[0], ACTION_MOVE if moving else ACTION_HATCH, "Breeding", "breeding_action")
+                breeding_occupied[a[0]] = not moving
+                breeding_top[a[0]] = None if moving else "?"
             else:
                 action(a[0], ACTION_PASS, "Breeding", "breeding_action")
             continue
         if m == "TurnStateMachine.QueueMainPhaseAction_Internal":
             if isinstance(r.get("play"), dict) and r["play"].get("card_index") is not None:
-                queued_play_indexes.add(r["play"]["card_index"])
+                ci = r["play"]["card_index"]
+                queued_play_indexes.add(ci)
+                # PlayCardAction bytes: card index, frame, then int[] JogressEvoRootsFrameIDs (count + ids). A
+                # non-empty jogress list is a DNA digivolve (DCGO ActionEncoder.cs reads the same field).
+                # The queue logs ATTEMPTS (a DNA packet DCGO rejects never resolves), so the LATEST packet for a card
+                # decides: an empty list clears an earlier DNA flag, and a list that cannot be read leaves the play's
+                # kind unknown (the resolve then stops rather than guess).
+                b = a[2] if len(a) >= 3 and isinstance(a[2], list) else []
+                n_roots = (b[8] << 24) | (b[9] << 16) | (b[10] << 8) | b[11] if len(b) >= 12 else -1
+                dna_play_indexes.discard(ci)
+                dna_unknown_indexes.discard(ci)
+                dna_roots.pop(ci, None)
+                if a[1] != PLAY_PACKET_ID or not 0 <= n_roots < 0x80000000:
+                    dna_unknown_indexes.add(ci)
+                elif n_roots > 0:
+                    dna_play_indexes.add(ci)
+                    # the root FrameIDs follow the count; the packet's TargetFrameID (bytes 4-7) is their anchor
+                    def s32(i):
+                        v = (b[i] << 24) | (b[i + 1] << 16) | (b[i + 2] << 8) | b[i + 3]
+                        return v - (1 << 32) if v & 0x80000000 else v
+                    roots = [s32(12 + 4 * k) for k in range(n_roots)] if len(b) >= 12 + 4 * n_roots else None
+                    dna_roots[ci] = (roots, s32(4))
             # GamePacketRegistration order: 0 attack, 1 activate card, 2 activate permanent, 3 cheat, 4 play, 5 pass
             # An attack is taken from SetAttackingPermaent, logged when DCGO EXECUTES the queued attack (with both
             # battle areas, the index basis). The attack packet is only the request: decoding it as well counted every
@@ -370,6 +556,14 @@ def convert(rows, cards, allow_truncated=False):
             if "engine_action" in r:
                 out.append({"type": "selection", "step": step, "actor": a[0], "prompt": "generic_bool",
                             "phase": "Main", "bool_value": bool(a[1]), "engine_action": r["engine_action"]})
+                step += 1
+            elif a[0] == bot:
+                # The REMOTE seat's answer (no recorder there, so nothing tied it to an engine prompt): keep it, marked
+                # unstamped. The replay applies it only while an optional accept gate of that seat is parked and
+                # consumes it as a no-op otherwise - dropping it lost declines such as P0 refusing EX12-070's
+                # replacement, which the engine would otherwise have to guess.
+                out.append({"type": "selection", "step": step, "actor": a[0], "prompt": "generic_bool",
+                            "phase": "Main", "bool_value": bool(a[1]), "unstamped": True})
                 step += 1
             continue
         if m == "UserSelectionManager.SetIntForPlayer":

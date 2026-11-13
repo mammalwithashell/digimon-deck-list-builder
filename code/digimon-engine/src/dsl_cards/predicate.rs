@@ -1686,6 +1686,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.can_attack.is_none()
         && pred.can_change_orientation.is_none()
         && pred.can_play_from_effect_without_cost.is_none()
+        && pred.can_play_or_use_from_effect.is_none()
         && pred.can_play_to_breeding_from_hand.is_none()
         && pred.can_move_from_breeding_by_effect.is_none()
         && pred.can_digivolve_onto_with_cost.is_none()
@@ -3451,6 +3452,42 @@ fn eval_card_fields(
                         rctx.game
                             .can_play_to_breeding_from_hand(owner, index, rctx.player)
                     })
+            });
+        if can != want {
+            return false;
+        }
+    }
+    // G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY (ST24-06): "play or use 1 ... card
+    // from your hand" offers only cards the effect controller can actually
+    // play (Digimon/Tamer: play cost, free slot, no prohibition — the same
+    // check as `can_play_from_effect_without_cost`; CR 4.3 7-1-1 excludes
+    // Digi-Eggs) or use (Option, or a DUAL used as an Option: no "can't use
+    // Option cards" lock AND the colour requirement met, CR 4.3 4-22-1..3, via
+    // colour, `<Use Req.>` or an "ignore colour requirements" grant — the
+    // same card checks `play_option_core` applies to the use; official rulings
+    // Q1500 / Q2785). DCGO ST24_06.cs `(IsOption && !CanNotPlayThisOption)
+    // || (HasPlayCost && CanPlayAsNewPermanent(card, false, activateClass))`;
+    // `CanNotPlayThisOption` includes `!MatchColorRequirement`
+    // (CardSource.cs:184-246, 253-309), read against the card's `Owner`'s
+    // field — the owner is the player who uses it.
+    // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+    if let Some(want) = pred.can_play_or_use_from_effect {
+        let can = rctx
+            .game
+            .card_source_for_handle(card)
+            .is_some_and(|source| match data.card_kind {
+                crate::enums::CardKind::Option | crate::enums::CardKind::Dual => rctx
+                    .game
+                    .option_use_available_from_effect(source.owner, source),
+                crate::enums::CardKind::Digimon | crate::enums::CardKind::Tamer => rctx
+                    .game
+                    .can_play_card_from_effect_without_cost_for_controller(
+                        source.owner,
+                        card,
+                        1,
+                        rctx.player,
+                    ),
+                crate::enums::CardKind::DigiEgg | crate::enums::CardKind::Token => false,
             });
         if can != want {
             return false;

@@ -6009,13 +6009,12 @@ fn install_use_option_from_trash(
             let Some(card) = game.player(target_player).trash.get(idx) else {
                 return false;
             };
-            let kind = card.card_kind(&game.card_data);
-            if !matches!(kind, CardKind::Option | CardKind::Dual) {
-                return false;
-            }
-            // G-ENGINE-CANNOT-USE-OPTION-CARDS: no dead candidates while the
-            // user can't use Option cards (the use would be `Invalid`).
-            if game.option_use_blocked(target_player) {
+            // G-ENGINE-CANNOT-USE-OPTION-CARDS /
+            // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT: no dead candidates
+            // -- only an Option (or DUAL) the user can actually use: no "can't
+            // use Option cards" lock and the colour requirement / <Use Req.>
+            // met (CR 4.3 4-22-1..3); otherwise the use would be `Invalid`.
+            if !game.option_use_available_from_effect(target_player, card) {
                 return false;
             }
             let read_ctx = EffectReadContext::new_with_source_kind(

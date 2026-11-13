@@ -1,5 +1,63 @@
 # DSL Vocabulary Gaps Tracker
 
+## Play-or-use hand candidate legality [G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY] — added 2026-11-13 (ST24-06)
+
+Surfaced by the DCGO PvP replay of Data Squad (ST24-06 RizeGreymon). The
+"play or use 1 [DATA SQUAD] trait card with a play or use cost of 5 or less
+from your hand without paying the cost" pick filtered only on trait + cost, so
+it offered cards that cannot be played or used: [DATA SQUAD] Digi-Eggs
+(Koromon ST24-01, BT25-002, BT26-002, BT26-005, EX13-003 — no play cost, CR 4.3
+7-1-1; DCGO `HasPlayCost` false), Digimon/Tamers under an effect-play
+prohibition or with no free battle-area slot, and Options while Options can't
+be used. DCGO ST24_06.cs filters with `(IsOption && !CanNotPlayThisOption) ||
+(HasPlayCost && CanPlayAsNewPermanent(card, false, activateClass))`.
+
+Existing vocabulary could not say this in one leaf: `can_play_from_effect_without_cost`
+covers only the play half (it rejects Options and Digi-Eggs via
+`card_data_play_is_prohibited`), and no predicate exposed the
+`option_use_blocked` lock. New card-subject predicate
+`can_play_or_use_from_effect: bool` (`code/digimon-dsl/src/predicate.rs`,
+`compiled.rs`, `compile.rs`; evaluated in
+`code/digimon-engine/src/dsl_cards/predicate.rs`): Digimon/Tamer →
+`Game::can_play_card_from_effect_without_cost_for_controller(owner, card, 1,
+effect controller)`; Option/DUAL (a DUAL is used, never played) →
+`!Game::option_use_blocked(effect controller)`; Digi-Egg/Token → false. It does
+not check memory affordability (compose with `affordable_with_cost_reduce`).
+
+Update 2026-11-13 (G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT, see
+`docs/RUST_ENGINE_GAPS.md`): the Option/DUAL branch now calls
+`Game::option_use_available_from_effect(card owner, card)` — the lock above AND
+the colour requirement (CR 4.3 4-22-1..3; colour, `<Use Req.>` or an "ignore
+colour requirements" grant) AND an authored `[Main]` body — matching DCGO
+`CanNotPlayThisOption` (CardSource.cs:184-246, incl. `MatchColorRequirement`
+253-309). Official rulings Q1500 / Q2785: an effect-driven use does not ignore
+colour unless the text says so. The `use_option_from_hand` and
+`use_option_from_trash` verbs' built-in candidate filters use the same helper.
+Counterexample now excluded: Queen of Thorns (BT26-098, green) with only
+RizeGreymon (ST24-06) and ST24-13 on the field. No new vocabulary: an effect
+that waives colour for the Options it uses (Taomon BT10-039, Sakuyamon: Maid
+Mode BT10-041, both unimplemented) has no DSL verb yet; the engine
+representation is the player-scoped `IgnoreColorRequirement` modifier
+(`EffectContext::ignore_option_color_requirement`).
+Mechanics tests: `code/digimon-engine/tests/dsl/constructs/play_or_use_candidate_legality.rs`.
+Card: ST24-06 (tests in `tests/cards_behavioral/st24/st24_06.rs`).
+
+Not yet applied elsewhere (report only, 2026-11-13 survey of `select_hand`
+picks feeding a play verb with no playability leaf in the filter): 138 of 143
+such picks are unguarded. Of those, the filter names no card kind at all (so a
+Digi-Egg or Option of the right trait/cost can be offered) in 14
+`play_or_use_from_hand` picks (BT25-041 ×2, BT25-073, BT26-012, BT26-032,
+BT26-033, EX12-013, EX12-043, EX13-005, EX13-012, EX13-043, EX13-058, ST23-04,
+ST23-08), 27 `play_from_hand_free` picks (BT12-011, BT16-085, BT20-091,
+BT20-100, BT21-009, BT21-017, BT22-084, BT22-088, BT23-101 ×2, BT24-016,
+BT24-041, BT24-067, BT24-082, BT25-023, BT25-042, BT25-052, BT5-092, EX10-063,
+EX10-069 ×2, EX11-021, EX13-068, EX7-025, EX8-048, P-151 ×2) and 3
+`play_from_hand` picks (AD1-019, BT25-098, EX11-071). The kind-filtered rest
+still offer cards blocked by a prohibition or a full battle area, and `kind:
+digimon` in hand also matches DUAL cards, which can't be played. Each needs its
+own DCGO check before changing (e.g. some DCGO filters omit the playability
+test).
+
 ## Mandatory reveal overlap and security-payment results - audit correction (2026-10-29)
 
 Q2953 requires available category picks; it does not justify globally optimizing

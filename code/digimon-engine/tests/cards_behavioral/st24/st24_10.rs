@@ -27,7 +27,7 @@
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledScope, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -80,6 +80,26 @@ fn ds_lv6(id: &str) -> CardData {
         card_color: 3, // Green
         level: 5,
         memory_cost: 4,
+    }];
+    c
+}
+
+/// A [DATA SQUAD] Digi-Egg that (artificially) prints a green Lv.5 digivolve
+/// cost — a trap: a route-only check would accept it, but a Digi-Egg is never a
+/// digivolve target ("digivolve into a [DATA SQUAD] trait Digimon card"; DCGO
+/// `DigivolveIntoHandOrTrashCard` → `CanPlayCardTargetFrame`, Digimon only).
+fn ds_egg_with_route(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::DigiEgg;
+    c.colors = vec![CardColor::Green];
+    c.level = Some(2);
+    c.dp = None;
+    c.play_cost = 0;
+    c.traits = vec!["DATA SQUAD".to_string()];
+    c.evo_costs = vec![EvoCost {
+        card_color: 3,
+        level: 5,
+        memory_cost: 0,
     }];
     c
 }
@@ -151,6 +171,9 @@ fn base_builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
         .add_card(non_ds_lv6("NONDS6"))
         .add_card(tamer("TAMER"))
         .add_card(filler("FILLER"))
+        // Koromon (ST24-01): a real [DATA SQUAD] Digi-Egg.
+        .add_card(card_data_from_compiled("ST24-01"))
+        .add_card(ds_egg_with_route("DS-EGG"))
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
         .memory(10)
@@ -370,6 +393,32 @@ fn st24_10_pays_trash_2_without_a_legal_target_rose_rave_audit() {
     assert_eq!(face_down_source_count(&runner, 0), 0, "the cost was paid");
     let perm = &runner.game.player(0).battle_area[lilamon.index as usize];
     assert_eq!(perm.top_card().card_id(&runner.game.card_data), CARD_ID);
+}
+
+/// [DATA SQUAD] Digi-Eggs — the real Koromon (ST24-01) and a synthetic egg that
+/// even prints a Lv.5 route — are never offered as digivolve targets; only DS6.
+#[test]
+fn st24_10_hand_pick_excludes_data_squad_digi_eggs() {
+    let (mut runner, lilamon, _tamers) = lilamon_runner(&["ST24-01", "DS-EGG", "DS6"], &[2]);
+    runner.place_on_field(1, "OPP-DIGI", Some(0));
+    fire(&mut runner, EffectTiming::OnPlay, lilamon);
+    let v = runner.pending_selection_view().expect("suspend pick installs");
+    runner.execute_action(0, v.valid_action_ids[0]).unwrap();
+    choose_pay(&mut runner, true);
+    let v2 = pending_hand_pick(&mut runner).expect("hand pick installs");
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let offered: Vec<String> = v2
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| hand[(id - PLAY_HAND_START) as usize].clone())
+        .collect();
+    assert_eq!(offered, vec!["DS6".to_string()], "only the [DATA SQUAD] Digimon is offered");
 }
 
 /// The trash-2 free-digivolve "Then" half is DECLINABLE: choosing not to pay

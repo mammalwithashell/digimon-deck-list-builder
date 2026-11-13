@@ -343,6 +343,14 @@ pub struct SelectionRow {
     /// between the engines. Derived at load time, never recorder-written.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub chosen_effect_name: Option<String>,
+    /// `generic_bool` only: an answer the converter could not stamp with an
+    /// [`Self::engine_action`] - a REMOTE seat's `OptionalSkill.SetUseOptional`
+    /// (the recording client saw the answer but not the prompt the engine would
+    /// park for it). The replay applies it only while an optional accept gate
+    /// of the row's actor is parked and otherwise consumes it as a no-op; it is
+    /// never used to infer anything about the rows around it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub unstamped: bool,
     /// True when the player cancelled / declined the prompt.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cancel: Option<bool>,

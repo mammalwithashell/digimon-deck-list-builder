@@ -59,6 +59,8 @@ fn builder() -> DebugRunnerBuilder {
         .add_card(card("TAMER", CardKind::Tamer, true, 5))
         .add_card(card("OPTION", CardKind::Option, true, 3))
         .add_card(egg)
+        .from_dsl_yaml(MINUS_YAML)
+        .expect("test -5000 card compiles")
         .add_card(evolution("EVOLUTION", true, 3, CardColor::Black))
         .add_card(evolution("NON-CHRON-EVO", false, 3, CardColor::Black))
         .add_card(evolution("WRONG-LEVEL", true, 5, CardColor::Black))
@@ -589,6 +591,97 @@ fn bt20_095_move_result_survives_compaction_and_clone_at_the_evolution_prompt() 
         if clone {
             r.game = parked_state.clone();
         }
+        choose(&mut r, action);
+        assert_eq!(top(&r, locate(&r, 0, moved)), "EVOLUTION");
+        assert!(r.pending_selection().is_none());
+    }
+}
+
+/// Test-only opponent card: "[On Play] 1 of your opponent's Digimon gets
+/// -5000 DP for the turn." (the shape of RizeGreymon (ST24-06)'s first clause).
+const MINUS_YAML: &str = r#"
+card: TEST-MINUS5K
+name: Minus Five Thousand
+kind: digimon
+level: 3
+color: [red]
+cost: 7
+dp: 3000
+effects:
+  - when: on_play
+    summary: "1 opp Digimon -5000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -5000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -5000
+          expiry: end_of_turn
+"#;
+
+/// DCGO PvP replay (Data Squad vs Chronicle, 2026-11-13 g6): on the opponent's
+/// turn an effect drops a Chronicle Digimon to 0 DP; the rule check deletes it
+/// (CR 4.3 17-1-3-1-1) and the deletion triggers the Delay (16-17), which is
+/// pending activation for the NON-turn player (15-4-3-5-2). The play cost has
+/// already put the memory on the Delay owner's side, so the turn end
+/// conditions are only met once "all processing has been resolved" (6-1-4-1,
+/// 6-6-2): the pending Delay must be offered before the turn ends.
+#[test]
+fn bt20_095_delay_fires_for_a_zero_dp_rule_deletion_before_the_opponents_turn_ends() {
+    for (memory_after, victim_before_delay) in [(3i16, false), (-2, false), (3, true), (-2, true)] {
+        let case = format!("memory {memory_after}, victim before Delay {victim_before_delay}");
+        let mut r = placed();
+        r.pass_turn();
+        r.auto_resolve().unwrap();
+        r.game.enter_main_phase();
+        assert_eq!(r.turn_player(), 1);
+        // memory is from the turn player's (P1) perspective here.
+        r.game.set_memory(7 + memory_after);
+        let mut chron = r.place_on_field(0, "CHRON", None);
+        if victim_before_delay {
+            // The replay's board: the Chronicle Digimon sits LEFT of the Delay
+            // Option, so its removal shifts the Option's battle-area index.
+            let perm = r.game.players[0].battle_area.pop().unwrap();
+            r.game.players[0].battle_area.insert(0, perm);
+            chron.index = 0;
+        }
+        let delay_index = r.game.players[0]
+            .battle_area
+            .iter()
+            .position(|p| p.top_card().card_id(&r.game.card_data) == ID)
+            .unwrap();
+        assert_eq!(victim_before_delay, (chron.index as usize) < delay_index);
+        let chron_card = r.top_card(chron);
+        let moved = r.place_in_breeding(0, "CHRON").card;
+        r.add_to_hand(0, "EVOLUTION");
+        let idx = r.add_to_hand(1, "TEST-MINUS5K");
+        let play = space::PLAY_HAND_START + idx as u16;
+        assert_eq!(build_action_mask(&r.game, 1)[play as usize], 1.0);
+        r.game.decode_action(play, 1);
+        // P1's mandatory -5000 target: P0's only Digimon.
+        let view = r.pending_selection_view().expect("P1 picks the -5000 target");
+        assert_eq!(view.selecting_player, 1);
+        let target = 100 + chron.index as u16;
+        assert!(view.valid_action_ids.contains(&target), "{:?}", view.valid_action_ids);
+        choose(&mut r, target);
+        assert!(
+            r.game.players[0]
+                .trash
+                .iter()
+                .any(|c| c.handle() == chron_card),
+            "{case}: the 0 DP Chronicle Digimon is deleted by rule"
+        );
+        assert_eq!(r.turn_player(), 1, "{case}: turn has not ended yet");
+        assert!(
+            r.pending_selection_view().is_some_and(|v| v.selecting_player == 0),
+            "{case}: the Delay is offered to its owner before the turn ends"
+        );
+        accept_delay(&mut r);
+        accept_move(&mut r);
+        choices(&r, 0, 1, true);
+        let action = union_action(&r, 0, "EVOLUTION", false);
         choose(&mut r, action);
         assert_eq!(top(&r, locate(&r, 0, moved)), "EVOLUTION");
         assert!(r.pending_selection().is_none());

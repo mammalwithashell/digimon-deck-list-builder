@@ -55,10 +55,12 @@ impl CompiledHandFilter {
         let (predicate, bindings) = match self {
             Self::Predicate(predicate, bindings) => (predicate, bindings),
             Self::UseOption { predicate, bindings, use_cost_lte_opponent_memory } => {
-                if !matches!(card.card_kind(&ctx.game.card_data), CardKind::Option | CardKind::Dual) {
-                    return false;
-                }
-                if ctx.game.option_use_blocked(owner) {
+                // Only a card the owner can actually USE (kind, no "can't use
+                // Option cards" lock, colour requirement / <Use Req.>, CR 4.3
+                // 4-22-1..3) -- the commit refuses anything else, so it would
+                // be a dead pick. DCGO filters on `!CanNotPlayThisOption`.
+                // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+                if !ctx.game.option_use_available_from_effect(owner, card) {
                     return false;
                 }
                 if *use_cost_lte_opponent_memory {

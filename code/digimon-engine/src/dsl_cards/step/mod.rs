@@ -962,57 +962,77 @@ fn run_steps_with_runtime_inner(
             continue;
         }
 
-        // `link_cards` (Gap 2) captures the remaining slice itself and drives a
-        // pick loop of chained selections. It always either parks on a pending
-        // selection or runs the captured tail synchronously — in both cases the
-        // outer loop must stop (the tail was consumed inside the step).
-        // `select_zone_cards` / `return_top_stacked_to_deck` capture the tail
-        // like `link_cards` (parked selection or tail already run).
-        if zone_cards::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
-            return if ctx.game.pending_selection.is_some() {
-                RunOutcome::Parked
-            } else {
-                RunOutcome::Synchronous
-            };
+        // A leaf step (not a control-flow container): the first one an
+        // optional effect's body reaches is its first decision, whose prompt
+        // (if it parks one itself) is the folded "you may"
+        // (`game::optional_activation`).
+        let first_decision = ctx.game.claim_first_decision();
+        let leaf = run_leaf_step(steps, i, ctx, bindings, runtime);
+        if first_decision {
+            ctx.game.settle_first_decision();
         }
-
-        if link_cards::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
-            return if ctx.game.pending_selection.is_some() {
-                RunOutcome::Parked
-            } else {
-                RunOutcome::Synchronous
-            };
+        match leaf {
+            Some(outcome) => return outcome,
+            None => i += 1,
         }
-
-        // Selection steps either install the remainder as their callback, no-op
-        // and continue, or complete their captured tail synchronously.
-        match selections::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
-            selections::InstallResult::NotSelection => {}
-            selections::InstallResult::Continue => {
-                i += 1;
-                continue;
-            }
-            selections::InstallResult::TailAlreadyRan => {
-                return RunOutcome::Synchronous;
-            }
-            selections::InstallResult::Parked => {
-                simultaneous_play::annotate_selection(step, ctx);
-                return RunOutcome::Parked;
-            }
-        }
-
-        // Synchronous families — execute and advance.
-        run_step_with_runtime(step, ctx, bindings, runtime);
-        if ctx.cost_unpayable {
-            return RunOutcome::Synchronous;
-        }
-        if ctx.game.pending_selection.is_some() {
-            park_pending_selection_tail(ctx, bindings, steps, i, runtime);
-            return RunOutcome::Parked;
-        }
-        i += 1;
     }
     RunOutcome::Synchronous
+}
+
+/// Run the leaf step `steps[i]`: `Some(outcome)` stops the slice (parked, or
+/// its tail already ran), `None` advances to the next step.
+fn run_leaf_step(
+    steps: &[CompiledStep],
+    i: usize,
+    ctx: &mut EffectContext<'_>,
+    bindings: &mut Bindings,
+    runtime: &StepRuntime,
+) -> Option<RunOutcome> {
+    let step = &steps[i];
+    // `link_cards` (Gap 2) captures the remaining slice itself and drives a
+    // pick loop of chained selections. It always either parks on a pending
+    // selection or runs the captured tail synchronously — in both cases the
+    // outer loop must stop (the tail was consumed inside the step).
+    // `select_zone_cards` / `return_top_stacked_to_deck` capture the tail
+    // like `link_cards` (parked selection or tail already run).
+    if zone_cards::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
+        return Some(if ctx.game.pending_selection.is_some() {
+            RunOutcome::Parked
+        } else {
+            RunOutcome::Synchronous
+        });
+    }
+
+    if link_cards::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
+        return Some(if ctx.game.pending_selection.is_some() {
+            RunOutcome::Parked
+        } else {
+            RunOutcome::Synchronous
+        });
+    }
+
+    // Selection steps either install the remainder as their callback, no-op
+    // and continue, or complete their captured tail synchronously.
+    match selections::try_install(step, &steps[i + 1..], ctx, bindings.clone(), runtime) {
+        selections::InstallResult::NotSelection => {}
+        selections::InstallResult::Continue => return None,
+        selections::InstallResult::TailAlreadyRan => return Some(RunOutcome::Synchronous),
+        selections::InstallResult::Parked => {
+            simultaneous_play::annotate_selection(step, ctx);
+            return Some(RunOutcome::Parked);
+        }
+    }
+
+    // Synchronous families — execute and advance.
+    run_step_with_runtime(step, ctx, bindings, runtime);
+    if ctx.cost_unpayable {
+        return Some(RunOutcome::Synchronous);
+    }
+    if ctx.game.pending_selection.is_some() {
+        park_pending_selection_tail(ctx, bindings, steps, i, runtime);
+        return Some(RunOutcome::Parked);
+    }
+    None
 }
 
 /// Dispatch a compiled step to its family-specific handler. Unhandled

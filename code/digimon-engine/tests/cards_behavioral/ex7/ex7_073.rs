@@ -113,6 +113,12 @@ fn opp_digimon(id: &str, level: u8, dp: i32) -> CardData {
 fn tm_option(id: &str) -> CardData {
     let mut c = make_test_card(id, "TMOption");
     c.card_kind = CardKind::Option;
+    // Purple, so purple BeelStarmon (X Antibody) meets its colour requirement:
+    // the clause doesn't waive it (CR 4.3 4-22-1..3; rulings Q1500/Q2785), and
+    // DCGO EX7_073.cs:62-70 offers only `!CanNotPlayThisOption` cards. This
+    // fixture used to be red and relied on effect-driven uses skipping colour.
+    // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+    c.colors = vec![CardColor::Purple];
     c.level = None;
     c.dp = None;
     c.play_cost = 3;
