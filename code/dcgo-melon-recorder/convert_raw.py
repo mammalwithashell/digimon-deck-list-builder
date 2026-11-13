@@ -403,6 +403,23 @@ def convert(rows, cards, allow_truncated=False):
             out.append(row)
             step += 1
             continue
+        if m == "SelectAttackEffect.SetAttackTarget":
+            # (attackOwnerID, isTurnPlayer, permanentIndex): an effect-granted attack's target. -2 (NopIndex) =
+            # "Not Attack"; -1 (SecurityIndex) = the player; otherwise the defender's compact battle-area index,
+            # turn-relative like SetTargetFrames. Same row the Unity recorder writes (DCGO_RECORDING_SCHEMA.md).
+            if tp not in (0, 1) or len(a) < 3:
+                truncated_at = truncated_at or ("SelectAttackEffect without a turn player at step %d" % step)
+                break
+            row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectAttackEffect", "phase": "Main"}
+            if a[2] == -2:
+                row["cancel"] = True
+            elif a[2] < 0:
+                row["targets"] = [{"player": 1 - tp, "frame": -1}]
+            else:
+                row["targets"] = [{"player": tp if a[1] else 1 - tp, "frame": a[2]}]
+            out.append(row)
+            step += 1
+            continue
         if m == "SelectHandEffect.SetTargetHandCards" and "card_ids" in r:
             row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectHandEffect", "phase": "Main",
                    "zone": "Hand"}
