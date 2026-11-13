@@ -1375,6 +1375,7 @@ namespace DcgoRecorder
         }
 
         static int _snapshots;
+        static int _redrawSnapshots; // pre-mulligan (SetRedraw) snapshots written in the current game
         static bool _gameEnded;
 
         // ---- agent seat: one of our trained models plays the local seat (docs/DCGO_MELONLOADER.md) ------------------
@@ -2507,7 +2508,13 @@ namespace DcgoRecorder
                 {
                     File.AppendAllText(Path.Combine(_dir, "raw-" + _session + ".jsonl"), sb.ToString() + "\n");
                 }
-                if (__originalMethod.Name == "Init" || (__originalMethod.Name == "SetRedraw" && _snapshots < 2)
+                // The pre-mulligan snapshots (one per seat's SetRedraw) are counted PER GAME: Init starts a new game.
+                // A session-wide count (the old `_snapshots < 2`) left every game after a launch's first without
+                // its pre-mulligan zones.
+                if (__originalMethod.Name == "Init") _redrawSnapshots = 0;
+                bool redrawSnap = __originalMethod.Name == "SetRedraw" && _redrawSnapshots < 2;
+                if (redrawSnap) _redrawSnapshots++;
+                if (__originalMethod.Name == "Init" || redrawSnap
                     || __originalMethod.Name == "PassTurn" || __originalMethod.Name == "EndGame")
                     WriteSnapshot(__originalMethod.Name);
             }

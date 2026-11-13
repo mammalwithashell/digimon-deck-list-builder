@@ -1,0 +1,14 @@
+{
+  "description": "Real DCGO games (recorded by code/dcgo-melon-recorder on the owner's client) picked as training seeds: wins and combo showcases. A game is identified by its start time (the game_start timestamp) and the local raw file + game number it was found in. The raw recordings themselves are NOT committed: they hold the opponent's full deck order. `python code/dcgo-melon-recorder/triage_recordings.py <raw dir> --replay <dcgo-replay.exe>` reports each candidate's status and what blocks it.",
+  "games": [
+    {
+      "started": "2026-11-13T02:56:14.7177892Z",
+      "raw": "raw-20261113T025510Z.jsonl#g1",
+      "my_deck": "Virus Busters",
+      "opp_deck": "Metal Empire",
+      "result": "won: opponent surrendered on turn 5",
+      "why": "Owner piloted it so well the opponent had no recourse and forfeited.",
+      "added": "2026-11-12"
+    }
+  ]
+}

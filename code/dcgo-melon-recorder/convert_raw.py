@@ -68,6 +68,14 @@ def convert(rows, cards, allow_truncated=False):
         # A live log read at the FIRST mulligan decision has no SetRedraw yet: the agent's request snapshot holds the
         # same pre-mulligan zones (hands dealt, nothing redrawn).
         snap = next((r for r in rows if r["method"] == "Snapshot.Request" and r.get("turn_count", 0) == 0), None)
+    deck_of = deck_order
+    if snap is None:
+        # Mod builds before 2026-11-13 took the pre-mulligan snapshot only for the FIRST game of a DCGO session, so
+        # later games have only the post-mulligan one. The replay restores zones from `initial_state` (written from
+        # that same snapshot) and skips the mulligan decisions, so game_start needs each deck's cards, not their
+        # pre-mulligan order: hand + security + library is the whole deck.
+        snap = next((r for r in rows if r["method"] == "Snapshot.PostMulligan"), None)
+        deck_of = lambda pl: list(pl["hand"]) + list(pl["security"]) + list(pl["library"])  # noqa: E731
     if snap is None:
         raise SystemExit("no pre-mulligan snapshot (Snapshot.SetRedraw or a turn-0 Snapshot.Request)")
     you = snap["you"]
@@ -85,14 +93,14 @@ def convert(rows, cards, allow_truncated=False):
         "my_player_id": you,
         "first_player": first_player,
         "is_ai": is_ai,
-        "my_deck_post_shuffle": deck_order(players[you]),
+        "my_deck_post_shuffle": deck_of(players[you]),
         # Each DCGO client simulates the whole game locally (PvP included), so its snapshot holds BOTH decks in order.
-        "opp_deck_post_shuffle": deck_order(players[bot]),
+        "opp_deck_post_shuffle": deck_of(players[bot]),
         "my_egg_deck": list(players[you]["egg_library"]),
         "opp_egg_deck": list(players[bot]["egg_library"]),
     }]
     if not is_ai:
-        out[0]["opp_decklist_composition"] = deck_order(players[bot])
+        out[0]["opp_decklist_composition"] = deck_of(players[bot])
 
     post = next((r for r in rows if r["method"] == "Snapshot.PostMulligan"), None)
     if post is not None:
