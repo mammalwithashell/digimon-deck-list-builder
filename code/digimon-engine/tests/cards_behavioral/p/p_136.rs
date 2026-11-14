@@ -245,6 +245,72 @@ fn p_136_on_play_does_not_prompt_without_shoemon_in_hand() {
     );
 }
 
+// ─── Candidate legality ──────────────────────────────────────────────────────
+// DCGO P_136.cs:26-41 `SelectShoemon`: name [Shoemon] AND
+// `CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)` (an empty
+// battle-area frame, no play prohibition). CR 4.3 1-3-11-1 (with 7-1-1): a
+// card can be declared for play only if it can be played, so a Shoemon that
+// can't be played is not a legal choice for "play 1 [Shoemon]".
+
+fn arisa_with_shoemon(full_area: bool, prohibit: bool) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-136")
+        .expect("P-136 YAML loads")
+        .add_card(shoemon("SHOEMON-OK"))
+        .hand(0, &["P-136", "SHOEMON-OK"])
+        .memory(10)
+        .start();
+    if full_area {
+        // Arisa takes the only battle-area slot.
+        runner.game.rules.field_slots = 1;
+    }
+    if prohibit {
+        use digimon_engine::enums::{Expiry, ModifierType};
+        use digimon_engine::modifiers::PlayerModifierEntry;
+        runner.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(
+                ModifierType::CannotPlayDigimonByEffect,
+                0,
+                Expiry::Permanent,
+                None,
+                1,
+            ),
+        );
+    }
+    runner.play(0, 0).expect("play Arisa");
+    runner
+}
+
+fn shoemon_in_hand(runner: &DebugRunner) -> bool {
+    runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "SHOEMON-OK")
+}
+
+#[test]
+fn p_136_on_play_does_not_offer_shoemon_when_battle_area_full() {
+    let mut runner = arisa_with_shoemon(true, false);
+    assert!(
+        runner.pending_selection().is_none(),
+        "a full battle area: Shoemon can't be played, so it is not offered"
+    );
+    runner.auto_resolve().ok();
+    assert!(shoemon_in_hand(&runner));
+}
+
+#[test]
+fn p_136_on_play_does_not_offer_shoemon_under_effect_play_prohibition() {
+    let mut runner = arisa_with_shoemon(false, true);
+    assert!(
+        runner.pending_selection().is_none(),
+        "\"can't play Digimon by effects\": Shoemon is not offered"
+    );
+    runner.auto_resolve().ok();
+    assert!(shoemon_in_hand(&runner));
+}
+
 #[test]
 fn p_136_security_plays_itself_without_paying_cost() {
     let mut runner = DebugRunner::builder()

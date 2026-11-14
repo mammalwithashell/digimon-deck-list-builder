@@ -14,10 +14,14 @@ effects:
           of: you
           bind_as: pawn
           optional: true
+          # DCGO BT13_101.cs:24-38: ContainsCardName("PawnChessmon") && IsDigimon
+          # && CanPlayAsNewPermanent(payCost: false) — only a card the free play
+          # can place (free slot, no play prohibition; CR 4.3 1-3-2) is offered.
           filter:
             all_of:
               - kind: digimon
               - name_contains: "PawnChessmon"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 PawnChessmon Digimon from hand"
       - play_from_hand_free: { of: you, hand_index: pawn }
 

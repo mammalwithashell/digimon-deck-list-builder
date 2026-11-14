@@ -123,6 +123,48 @@ fn bt22_022_free_tamer_decline_and_no_target() {
         assert_eq!(r.game.players[0].battle_area.len(), 1);
     }
 }
+// DCGO BT22_022.cs:48-53 `TamerWithVeedramonText` = `IsTamer &&
+// HasText("Veedramon") && CanPlayAsNewPermanent(payCost: false)`: a Tamer the
+// free play would refuse (no free slot, a Tamer-play prohibition) is not
+// offered (CR 4.3 1-3-11-1). Engine leaf: `can_play_from_effect_without_cost`.
+fn digivolve_blue(r: &mut DebugRunner) {
+    let h = r.place_on_field(0, "BLUE", None);
+    let action = encode_digivolve(0, h.index as u16);
+    assert!(build_action_mask(&r.game, 0)[action as usize] > 0.0);
+    r.game.decode_action(action, 0);
+}
+#[test]
+fn bt22_022_free_tamer_not_offered_when_battle_area_full() {
+    let mut r = setup(&[ID, "MATCH"]);
+    r.game.rules.field_slots = 1;
+    digivolve_blue(&mut r);
+    assert!(
+        r.pending_selection().is_none(),
+        "no free slot: the [Veedramon]-text Tamer can't be played"
+    );
+    assert!(r.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "MATCH"));
+}
+#[test]
+fn bt22_022_free_tamer_not_offered_under_tamer_play_prohibition() {
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup(&[ID, "MATCH"]);
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayTamerByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+    digivolve_blue(&mut r);
+    assert!(r.pending_selection().is_none());
+    assert_eq!(r.game.players[0].battle_area.len(), 1);
+}
 #[test]
 fn bt22_022_inherited_protection_success_clone_and_opt() {
     let mut r = setup(&[]);

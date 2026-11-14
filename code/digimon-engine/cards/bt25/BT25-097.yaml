@@ -117,6 +117,13 @@ effects:
               - any_of:
                   - color_is: yellow
                   - color_is: purple
+              # DCGO `CanPlayAsNewPermanent(card, payCost: true, ..., fixedCost:
+              # GetCostItself - 3)`: playable (has a play cost, CR 4.3 7-1-1 --
+              # so never a DUAL, which prints play cost "-" -- free slot, no
+              # prohibition) and affordable at the
+              # reduced cost the verb below charges.
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 3 }
           prompt: "You may play 1 yellow or purple [TS] trait Digimon card from your hand with the cost reduced by 3"
       - play_from_hand:
           of: you
@@ -142,6 +149,8 @@ effects:
               - any_of:
                   - color_is: yellow
                   - color_is: purple
+              # DCGO `CanPlayAsNewPermanent(card, payCost: false, ...)`.
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 level 4 or lower yellow or purple [TS] trait Digimon card from your hand or trash without paying the cost"
       - play_union_bound_free:
           binding: picked

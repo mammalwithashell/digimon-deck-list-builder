@@ -65,7 +65,8 @@ use_requirement:
 #       → add_to_hand_from_reveal → place_remainder_on_deck bottom
 #   (2) select_hand (optional, filter trait_has: LIBERATOR) → play_from_hand_free
 #
-# play_cost_lte: 3 is enforced by the select_hand card filter.
+# play_cost_lte: 3, the Digimon/Tamer kind (a card with a play cost) and
+# can_play_from_effect_without_cost are enforced by the select_hand filter.
 #
 # ─── Clause 2: [Security] (inherited) ─────────────────────────────────────────
 #
@@ -135,10 +136,22 @@ effects:
           of: you
           bind_as: free_play_target
           optional: true
+          # DCGO P_151.cs:63-76: HasPlayCost && cost <= 3 &&
+          # CanPlayAsNewPermanent && LIBERATOR. Only a Digimon or Tamer has a
+          # play cost (CR 4.3 7-1-1, 2-6-1 / 2-7-1; a Digi-Egg has none, 2-8-1;
+          # a DUAL prints "Play cost: D", so it has none — it is digivolved or
+          # used as an Option, 4-6-1 / 4-6-2 — and fails play_cost_lte).
+          # CanPlayAsNewPermanent: CR 4.3 1-3-11-1 — a card can be declared
+          # for play only if it can be played, so an unplayable card is never
+          # offered.
           filter:
             all_of:
               - trait_has: LIBERATOR
               - play_cost_lte: 3
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [LIBERATOR] card with cost 3 or less from your hand without paying its cost"
       - play_from_hand_free:
           of: you
@@ -170,10 +183,22 @@ effects:
           of: you
           bind_as: sec_free_play_target
           optional: true
+          # DCGO P_151.cs:63-76: HasPlayCost && cost <= 3 &&
+          # CanPlayAsNewPermanent && LIBERATOR. Only a Digimon or Tamer has a
+          # play cost (CR 4.3 7-1-1, 2-6-1 / 2-7-1; a Digi-Egg has none, 2-8-1;
+          # a DUAL prints "Play cost: D", so it has none — it is digivolved or
+          # used as an Option, 4-6-1 / 4-6-2 — and fails play_cost_lte).
+          # CanPlayAsNewPermanent: CR 4.3 1-3-11-1 — a card can be declared
+          # for play only if it can be played, so an unplayable card is never
+          # offered.
           filter:
             all_of:
               - trait_has: LIBERATOR
               - play_cost_lte: 3
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [LIBERATOR] card with cost 3 or less from your hand without paying its cost"
       - play_from_hand_free:
           of: you

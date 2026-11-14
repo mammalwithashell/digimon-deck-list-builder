@@ -50,6 +50,39 @@ event_battle_surviving_deleter: { binding_exists: ST1-04 }
     }
 }
 #[test]
+fn candidate_cost_and_dna_material_predicates_visit_their_bindings_in_both_forms() {
+    // G-DSL-AFFORDABLE-WITH-COST, G-DSL-DNA-TRASH-PARTNER-CANDIDATE,
+    // G-DSL-DNA-FIELD-PAIR-FIXED-MATERIALS.
+    let authored: digimon_dsl::predicate::PredicateSpec = serde_yml::from_str(r#"
+affordable_with_cost: { reduce: 2 }
+dna_trash_candidate: { role: partner, result: RESULT-B, field: FIELD-B, cost: printed }
+dna_field_pair: { role: result, first: FIRST-B, second: SECOND-B, cost: free }
+"#).unwrap();
+    use digimon_dsl::compiled::{CompiledCostDelta, CompiledDnaFieldPair, CompiledDnaHandCandidate, CompiledPredicate};
+    use digimon_dsl::predicate::{DnaFieldPairRole, DnaHandCandidateRole};
+    let compiled = CompiledPredicate {
+        affordable_with_cost: Some(CompiledCostDelta::Reduce(2)),
+        dna_trash_candidate: Some(CompiledDnaHandCandidate {
+            role: DnaHandCandidateRole::Partner, result: Some("RESULT-B".into()),
+            field: Some("FIELD-B".into()), field_filter: None, partner_filter: None,
+            cost: CompiledCostDelta::Printed, ignore_requirements: false,
+        }),
+        dna_field_pair: Some(CompiledDnaFieldPair {
+            role: DnaFieldPairRole::Result, result: None, first: Some("FIRST-B".into()),
+            second: Some("SECOND-B".into()), cost: Some(CompiledCostDelta::Free),
+        }),
+        ..Default::default()
+    };
+    for rows in [nodes(&authored), nodes(&compiled)] {
+        for field in ["affordable_with_cost", "dna_trash_candidate.role", "dna_field_pair.cost"] {
+            assert!(rows.iter().any(|node| node.path.starts_with(&format!("root.{field}"))), "{field}");
+        }
+        for binding in ["RESULT-B", "FIELD-B", "FIRST-B", "SECOND-B"] {
+            assert!(has(&rows, "EXISTING_INSTANCE_BINDING", binding), "{binding}");
+        }
+    }
+}
+#[test]
 fn top_card_references_and_runtime_finalizers_preserve_binding_roles() {
     use digimon_dsl::compiled::{CompiledBindingRef, CompiledPredicate, CompiledStep};
     let authored: digimon_dsl::step::StructuredBindingRef = serde_yml::from_str("top_of: ST1-02").unwrap();

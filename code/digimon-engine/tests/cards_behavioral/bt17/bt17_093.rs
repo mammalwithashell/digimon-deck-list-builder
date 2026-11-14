@@ -666,6 +666,85 @@ fn bt17_093_clause2_eot_no_eligible_tamer_in_hand_still_pays_cost_and_draws() {
     );
 }
 
+/// Clause-2 hand-pick legality (2026-11-13 select-hand audit). DCGO
+/// BT17_093.cs:84-95 `HasProperTamer` = `IsTamer && (ContainsCardName("Tai
+/// Kamiya") || ContainsCardName("Kari Kamiya")) && CanPlayAsNewPermanent(source,
+/// false, activateClass)`. CR 4.3 1-3-2: an impossible play is not carried out,
+/// so a Tamer the free play would refuse is not a legal pick. CR 4.3 15-7-5:
+/// the return-to-deck cost may still be paid (and the draw happens) even though
+/// nothing can then be played. Guard for the `can_play_from_effect_without_cost`
+/// leaf.
+///
+/// "You can't play Tamers by effects": the Tai-Kamiya Tamer is never offered.
+#[test]
+fn bt17_093_clause2_does_not_offer_tai_tamer_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    use digimon_engine::selection::SelectionKind;
+    let mut runner = runner_for_eot();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    let tai_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "TAI-NAMED")
+        .expect("TAI-NAMED registered");
+    let next = runner.game.next_card_index();
+    runner.game.players[0]
+        .hand
+        .push(digimon_engine::card_source::CardSource::new(tai_idx, 0, next));
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+
+    runner.end_turn();
+
+    let mut offered_tai_picks = 0usize;
+    let mut steps = 0;
+    while let Some(view) = runner.pending_selection_view() {
+        steps += 1;
+        assert!(steps < 30, "selection loop did not settle");
+        let non_pass: Vec<u16> = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&id| id != digimon_engine::action::space::PASS)
+            .collect();
+        if view.kind == SelectionKind::Hand && view.selecting_player == 0 {
+            offered_tai_picks += non_pass.len();
+            runner
+                .execute_action(0, digimon_engine::action::space::PASS)
+                .expect("pass the hand pick");
+            continue;
+        }
+        let accept = non_pass.first().copied().unwrap_or(view.valid_action_ids[0]);
+        runner
+            .execute_action(view.selecting_player, accept)
+            .expect("accept pending selection");
+    }
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        offered_tai_picks, 0,
+        "a Tai-Kamiya Tamer that can't be played by an effect must not be offered"
+    );
+    assert!(
+        !runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
+        "the return-to-deck cost is still paid (CR 4.3 15-7-5)"
+    );
+    assert!(
+        !runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "TAI-NAMED"),
+        "the prohibited Tamer is not played"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 4 — Anti-helpers (silence dead-code warnings across the test fork)
 // ═══════════════════════════════════════════════════════════════════════════════

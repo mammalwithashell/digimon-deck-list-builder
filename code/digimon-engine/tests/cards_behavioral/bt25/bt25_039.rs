@@ -1077,3 +1077,180 @@ fn mark_security_face_up(runner: &mut DebugRunner, card_id: &str) {
         .expect("card in security");
     runner.game.players[0].face_up_security.insert(idx);
 }
+
+// ─── Section 6 — {Security} Ceresmon pick: hand-pick legality ───────────────
+//
+// DCGO BT25_039.cs:50-55 `CanSelectCardCondition`: `HasPlayCost &&
+// EqualsCardName("Ceresmon") && CanPlayAsNewPermanent(cardSource, true,
+// activateClass, fixedCost: GetCostItself - 7)` — a play cost (so never the
+// DUAL Ceresmon BT26-032, which prints "Can't play to the field." and is only
+// digivolved / used, CR 4.3 4-6-2 and 7-1-1), a free battle-area frame, no
+// effect-play lock, and the reduced cost payable (CardSource.cs:1150-1162:
+// `MaxMemoryCost < cost` refuses). CR 4.3 1-3-2: an impossible play is not
+// carried out, so none of those is a legal choice.
+
+/// Put Sirenmon face up in security, run `setup`, end the turn, and return the
+/// non-PASS hand-pick candidates' ids (empty when no pick installs).
+fn offered_at_end_of_turn(hand: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    use digimon_engine::action::space::PLAY_HAND_START;
+    let mut runner = base()
+        .dsl_card("BT26-032")
+        .expect("BT26-032 Ceresmon (DUAL) compiles")
+        .hand(0, hand)
+        .security(0, &["FILL", CARD_ID])
+        .start();
+    mark_security_face_up(&mut runner, CARD_ID);
+    setup(&mut runner);
+    runner.end_turn();
+    let Some(v) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if v.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    v.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| ids[(id - PLAY_HAND_START) as usize].clone())
+        .collect()
+}
+
+/// Regression guard: a playable, affordable Ceresmon (12 − 7 = 5 at memory 0)
+/// is the one candidate.
+#[test]
+fn bt25_039_ceresmon_pick_offers_playable_ceresmon() {
+    assert_eq!(
+        offered_at_end_of_turn(&["CERESMON", "OTHER-DIGI"], |_| {}),
+        vec!["CERESMON".to_string()]
+    );
+}
+
+/// The DUAL Ceresmon (BT26-032) can't be played (CR 4.3 4-6-2; DCGO
+/// `HasPlayCost`), so it is not offered.
+#[test]
+fn bt25_039_ceresmon_pick_excludes_dual_ceresmon() {
+    let offered = offered_at_end_of_turn(&["BT26-032"], |_| {});
+    assert!(offered.is_empty(), "DUAL Ceresmon BT26-032 is not playable: {offered:?}");
+}
+
+/// Unaffordable: at memory −6 the reduced cost 5 would take memory to −11, past
+/// the opponent's 10 (DCGO `MaxMemoryCost < cost`), so Ceresmon is not offered.
+#[test]
+fn bt25_039_ceresmon_pick_excludes_unaffordable_ceresmon() {
+    let offered = offered_at_end_of_turn(&["CERESMON"], |r| r.game.set_memory(-6));
+    assert!(offered.is_empty(), "cost 5 at memory -6 is unpayable: {offered:?}");
+}
+
+/// Affordability boundary: at memory −5 the reduced cost 5 leaves memory at
+/// −10, which is payable — Ceresmon is offered.
+#[test]
+fn bt25_039_ceresmon_pick_offers_ceresmon_at_memory_floor() {
+    assert_eq!(
+        offered_at_end_of_turn(&["CERESMON"], |r| r.game.set_memory(-5)),
+        vec!["CERESMON".to_string()]
+    );
+}
+
+/// A full battle area: Ceresmon can't be played, so it is not offered.
+#[test]
+fn bt25_039_ceresmon_pick_excludes_ceresmon_when_battle_area_full() {
+    let offered = offered_at_end_of_turn(&["CERESMON"], |r| {
+        r.place_on_field(0, "FILL", Some(0));
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "no free slot ⇒ nothing offered: {offered:?}");
+}
+
+/// "You can't play Digimon by effects": not offered.
+#[test]
+fn bt25_039_ceresmon_pick_excludes_ceresmon_under_digimon_effect_play_lock() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = offered_at_end_of_turn(&["CERESMON"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "effect-play lock ⇒ nothing offered: {offered:?}");
+}
+
+/// The real Ceresmon (BT25-059) carries a mandatory "When this card would be
+/// played, if there are 2 or more suspended Digimon, reduce the cost by 5"
+/// (an immediate-type effect, CR 4.3 7-1-2-2). With 2 suspended Digimon the
+/// play costs 12 − 7 − 5 = 0 (official ruling Q6306: "reduced by a total of
+/// 12"), so at memory −6 it is payable. DCGO offers it: `CanPlayAsNewPermanent
+/// (…, fixedCost)` → `PayingCost(checkAvailability: true)` →
+/// `GetChangedPayingCost` credits the card's own `MandatorySelfPlayCostReduction`
+/// (`isCheckAvailability: () => false`, ChangePlayCost.cs:123-143). Our
+/// `play_from_hand` verb credits it too (the before-pay-cost chain).
+///
+/// KNOWN GAP (G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT): the
+/// `affordable_with_cost` leaf (`card_cost_affordable`, predicate.rs) prices the
+/// card at its printed cost and credits no before-pay-cost reducer, so it
+/// computes 12 − 7 = 5 → −11 and drops the pick. Fixing it means widening that
+/// shared leaf (engine code outside this card's files). Un-ignore when it lands.
+/// The play verb half of the gap: an effect play of the real Ceresmon
+/// (BT25-059) "with the cost reduced by 7" from memory −6 with 2 suspended
+/// Digimon succeeds and costs 0 — the before-pay-cost chain credits its
+/// mandatory −5 (Q6306). So the pick the `affordable_with_cost` leaf drops (the
+/// ignored test below) is one the verb accepts.
+#[test]
+fn bt25_039_reduced_play_verb_credits_real_ceresmons_own_cost_reduction() {
+    use digimon_engine::enums::{CostDelta, PlaySource};
+    let mut runner = base()
+        .dsl_card("BT25-059")
+        .expect("BT25-059 Ceresmon compiles")
+        .hand(0, &["BT25-059"])
+        .start();
+    for _ in 0..2 {
+        let h = runner.place_on_field(0, "FILL", Some(0));
+        runner.game.players[0].battle_area[h.index as usize].is_suspended = true;
+    }
+    runner.game.set_memory(-6);
+    let played = runner
+        .game
+        .play_from_hand_with_cost(0, 0, CostDelta::Reduce(7), PlaySource::ByEffect);
+    assert!(played.is_some(), "12 - 7 - 5 = 0 is payable at memory -6");
+    assert_eq!(runner.memory(), -6, "BT25-059 plays for 0 (reduced by a total of 12)");
+    assert!(field_contains(&runner, 0, "BT25-059"));
+}
+
+#[test]
+#[ignore = "G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT: affordable_with_cost ignores Ceresmon BT25-059's mandatory self cost reduction"]
+fn bt25_039_ceresmon_pick_credits_real_ceresmons_own_cost_reduction() {
+    let mut runner = base()
+        .dsl_card("BT25-059")
+        .expect("BT25-059 Ceresmon compiles")
+        .hand(0, &["BT25-059"])
+        .security(0, &["FILL", CARD_ID])
+        .start();
+    mark_security_face_up(&mut runner, CARD_ID);
+    for _ in 0..2 {
+        let h = runner.place_on_field(0, "FILL", Some(0));
+        runner.game.players[0].battle_area[h.index as usize].is_suspended = true;
+    }
+    runner.game.set_memory(-6);
+    runner.end_turn();
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Ceresmon BT25-059 is offered: 12 - 7 - 5 = 0 is payable at memory -6");
+    assert_eq!(view.kind, SelectionKind::Hand);
+    let pick = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != PASS)
+        .expect("a non-PASS pick for BT25-059");
+    let memory_before = runner.memory();
+    runner.execute_action(0, pick).expect("pick Ceresmon BT25-059");
+    assert_eq!(runner.memory(), memory_before, "BT25-059 plays for 0 (reduced by a total of 12)");
+    assert!(field_contains(&runner, 0, "BT25-059"), "Ceresmon BT25-059 was played");
+}

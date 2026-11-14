@@ -43,17 +43,22 @@
 #     • `!CardEffectCommons.IsByEffect(hashtable, cardEffect => IsOwnerEffect(cardEffect, card))`
 #       — deletion must NOT be by the controller's own effects. This is the
 #       printed "other than by one of your effects" gate.
+#   `SetUpActivateClass(null, ActivateCoroutine, -1, true, ...)` — the
+#   activation is OPTIONAL (isOptional = true; CR 4.3 16-17-2): the player is
+#   asked before the Delay cost is paid.
 #   ActivateCoroutine:
 #     1. `DeletePermanentAndProcessAccordingToResult(card.PermanentOfThisCard())`
 #        — pays the Delay cost (trash this Option from the battle area).
 #     2. On success: `SelectPermanentEffect` over qualifying own Digimon with
-#        [Free] trait (the would-be-deleted subject). `canNoSelect: false` (once
-#        the Delay cost is paid, the player MUST attempt the digivolve).
+#        [Free] trait (the would-be-deleted subject), `canNoSelect: true`.
 #     3. `DigivolveIntoHandOrTrashCard` with `isHand: true`, `payCost: false`
-#        (free digivolve), filtered to Imperialdramon-name Digimon. If the
-#        digivolve lands, the deletion is implicitly cancelled because the
-#        subject permanent now carries the new top card and is no longer
-#        "would-be-deleted" in the same way.
+#        (free digivolve), filtered to Imperialdramon-name Digimon; its hand
+#        pick is optional (`isOptional = true` → `canNoSelect: true`). DCGO then
+#        clears `willBeRemoveField` whenever a Digimon was selected, even if
+#        the hand pick was declined; the engine follows the printed "By
+#        digivolving ..., prevent" instead (CR 4.3 15-7-2: if the "by"
+#        condition isn't executed, the prevention isn't either), so a declined
+#        hand pick lets the deletion proceed.
 #     4. Formally: DCGO's `DeletePermanentAndProcessAccordingToResult` on the
 #        delay card trashes it (paying the cost), then `DigivolveIntoHandOrTrashCard`
 #        performs the free digivolve on the subject. The printed "prevent that
@@ -131,12 +136,33 @@ effects:
     optional: true
     summary: "[Main] 1 of your Digimon may digivolve into a Lv5+ [Free] hand card, cost -4; then place self in battle area as Delay permanent"
     process:
+      # Candidate legality (a pick the digivolve would refuse is a choice
+      # with no legal outcome, CR 4.3 1-3-2):
+      #   * own-Digimon pick: only a Digimon some Lv.5+ [Free] hand card can
+      #     digivolve onto (DCGO BT17_097.cs:39-43). DCGO checks the route
+      #     only (`CanPlayCardTargetFrame(frame, false, ...)`); the engine
+      #     also requires the -4 digivolution to be payable, since choosing a
+      #     Digimon whose every candidate is unpayable leads to an empty hand
+      #     pick (narrows past DCGO, rules-side).
+      #   * hand pick: route AND payment with the -4 installed, exactly
+      #     DCGO `DigivolveIntoHandOrTrashCard` (CardEffectCommons.cs:859-881,
+      #     `CanPlayCardTargetFrame(PayCost: true)`); official Q&A: this
+      #     [Main] doesn't ignore digivolution requirements.
       - select_own_permanent:
           bind_as: digi_target
           optional: true
           filter:
             all_of:
               - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - level_gte: 5
+                      - trait_has: "Free"
+                  cost: { reduce: 4 }
           prompt: "Select 1 of your Digimon to digivolve"
       - select_hand:
           of: you
@@ -147,6 +173,9 @@ effects:
               - kind: digimon
               - level_gte: 5
               - trait_has: "Free"
+              - can_digivolve_onto_with_cost:
+                  target: digi_target
+                  cost: { reduce: 4 }
           prompt: "Select a Lv5+ [Free] trait hand card to digivolve (cost -4)"
       - effect_initiated_digivolve:
           target: digi_target
@@ -177,20 +206,19 @@ effects:
   #     by one of your effects" gate. Allows battle, opponent_effect,
   #     security_check, cost-driven deletion (DCGO: `!IsByEffect(hashtable,
   #     cardEffect => IsOwnerEffect(cardEffect, card))`).
-  #   - mandatory (no `optional: true`) — the replacement fires unconditionally
-  #     when the active_when conditions match. The player's "may decline"
-  #     semantics (DCGO `SetUpActivateClass(..., isOptional=true)`) are captured
-  #     by the `SelectHand { optional: true }` step: the player passes the hand
-  #     pick to decline the benefit, in which case the Delay cost (self-trash)
-  #     has already been paid but the digivolve is skipped. This mandatory model
-  #     is consistent with the existing engine tests and avoids requiring an
-  #     extra REPLACEMENT_ACCEPT step for the common accept path.
+  #   - `optional: true` — <Delay> processing is optional (CR 4.3 16-17-2;
+  #     DCGO BT17_097.cs:105 `SetUpActivateClass(null, ActivateCoroutine, -1,
+  #     true, ...)`). The player is asked first (SelectionKind::Replacement:
+  #     REPLACEMENT_ACCEPT / PASS); declining keeps this Option on the field
+  #     (Delay cost unpaid) and the deletion proceeds. Accepting pays the cost.
   #   - `cost: delay_self: true` — pays the Delay cost by trashing this Option
   #     from the battle area.
-  #   - `choose: from: hand, card_filter: name_contains: "Imperialdramon", min: 1, max: 1`
-  #     — selects the hand card to digivolve onto the subject. DCGO: player must
-  #     pick a hand Digimon with "Imperialdramon" in name. `min: 1` makes the
-  #     selection mandatory once the cost is paid (DCGO: `canNoSelect: false`).
+  #   - `choose: from: hand, card_filter: ..., min: 1, max: 1` — the hand card
+  #     to digivolve onto the subject. The compiled replacement `choose` is an
+  #     OPTIONAL `select_hand` (it can be passed), matching DCGO
+  #     `DigivolveIntoHandOrTrashCard` (`isOptional = true` → `canNoSelect:
+  #     true`). Passing it leaves the "by digivolving" condition unexecuted,
+  #     so the deletion is not prevented (CR 4.3 15-7-2).
   #   - `then: digivolve_without_cost: target: replacement_subject, card: chosen`
   #     — performs the free digivolve of the subject into the chosen hand card.
   #   - `outcome: prevent` — cancel the replacement; the subject is not deleted.
@@ -207,6 +235,7 @@ effects:
   # newly-faithful gate.
   - kind: replacement
     timing: when_would_be_deleted
+    optional: true
     active_when:
       all_of:
         - all_turns: true
@@ -214,13 +243,32 @@ effects:
         - replacement_subject_is_mine: true
         - none_of:
             - replacement_cause: own_effect
+        # DCGO `IsOwnerPermanentCondition` (BT17_097.cs:133-137): the <Delay>
+        # is offered only while some [Imperialdramon] Digimon card in the
+        # hand can digivolve onto the would-be-deleted Digimon; otherwise
+        # paying the Delay would buy nothing.
+        - has_digivolve_candidate:
+            of: you
+            zone: [hand]
+            filter:
+              all_of:
+                - kind: digimon
+                - name_contains: "Imperialdramon"
     summary: "[All Turns] Delay: when own [Free] Digimon would be deleted (not by own effect), pay Delay cost → digivolve subject into Imperialdramon-name hand card → prevent deletion"
     cost:
       delay_self: true
+    # Only a card that can digivolve onto the subject (requirements apply:
+    # DCGO BT17_097.cs:126-137 + `DigivolveIntoHandOrTrashCard` with
+    # `ignoreDigivolutionRequirementFixedCost: -1`). The compiled
+    # `digivolve_without_cost` ignores requirements, so this filter is the
+    # requirement check. G-DSL-CAN-DIGIVOLVE-ONTO-REPLACEMENT-SUBJECT.
     choose:
       from: hand
       card_filter:
-        name_contains: "Imperialdramon"
+        all_of:
+          - kind: digimon
+          - name_contains: "Imperialdramon"
+          - can_digivolve_onto: replacement_subject
       min: 1
       max: 1
     outcome: prevent
@@ -274,6 +322,10 @@ effects:
               - any_of:
                   - name_contains: "Davis Motomiya"
                   - name_contains: "Ken Ichijoji"
+              # DCGO BT17_097.cs:226 `CanPlayAsNewPermanent`: free frame, no
+              # effect-play prohibition; a trash card also needs its owner
+              # able to play from the trash.
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [Davis Motomiya] or [Ken Ichijoji] Tamer from your hand or trash without paying the cost"
       - play_union_bound_free:
           binding: picked_tamer

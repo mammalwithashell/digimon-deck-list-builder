@@ -1307,3 +1307,103 @@ fn bt18_073_inherited_redirect_opt_blocks_second_activation_same_turn() {
         "[Once Per Turn] must lock a second redirect attempt in the same turn"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// [On Deletion] candidates: only a DNA digivolution that can happen
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Same shape as Kimeramon (BT18-015), with the materials swapped (field
+// [Kimeramon], trash [Machinedramon]). DCGO BT18_073.cs offers a
+// [Millenniummon] with `jogressCondition.Count > 0` and lets
+// `CanPlayJogress(true)` fail after the picks; BT18-015's official Q&A ("the
+// DNA digivolution requirements have to be met ... can't be performed unless
+// the [Millenniummon] has DNA digivolution") and CR 4.3 1-3-2 mean a result
+// no (field, trash) pair can complete is not a legal choice, so the engine
+// offers only a result the DNA digivolution can use, and no [On Deletion] at
+// all when none exists.
+
+fn make_millenniummon_without_dna(id: &str) -> CardData {
+    let mut card = make_test_card(id, "Millenniummon");
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(7);
+    card.dp = Some(13000);
+    card
+}
+
+/// Delete Machinedramon with Kimeramon on the field and `hand` in hand.
+fn delete_machinedramon(hand: &[&str], extra: &[CardData], setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut b = machinedramon_runner();
+    for c in extra {
+        b = b.add_card(c.clone());
+    }
+    let mut runner = b.memory(20).start();
+    let machinedramon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "BT18-015", None);
+    for id in hand {
+        push_to_hand(&mut runner, 0, id);
+    }
+    setup(&mut runner);
+    runner
+        .game
+        .delete_permanent_with_cause(machinedramon, ReplacementCause::OwnEffect);
+    runner.game.drain_effect_queue();
+    runner
+}
+
+/// Accept the outer "may" and return the hand cards the result pick offers.
+fn accept_and_offered_results(runner: &mut DebugRunner) -> Vec<String> {
+    let sel = runner.game.pending_selection.as_ref().expect("outer accept prompt");
+    let accept = sel.valid_action_ids.iter().copied().find(|&a| a != PASS).expect("accept");
+    let player = sel.selecting_player;
+    runner.game.resolve_selection(player, accept).expect("accept");
+    runner.game.drain_effect_queue();
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let sel = runner.game.pending_selection.as_ref().expect("result pick");
+    assert_eq!(sel.kind, SelectionKind::Hand);
+    sel.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[a as usize].clone())
+        .collect()
+}
+
+#[test]
+fn bt18_073_on_deletion_result_pick_excludes_millenniummon_without_dna() {
+    let mut runner = delete_machinedramon(
+        &["BT18-019", "MILLENNIUM-NODNA"],
+        &[make_millenniummon_without_dna("MILLENNIUM-NODNA")],
+        |_| {},
+    );
+    assert_eq!(accept_and_offered_results(&mut runner), vec!["BT18-019".to_string()]);
+}
+
+#[test]
+fn bt18_073_on_deletion_not_offered_with_only_a_millenniummon_without_dna() {
+    let runner = delete_machinedramon(
+        &["MILLENNIUM-NODNA"],
+        &[make_millenniummon_without_dna("MILLENNIUM-NODNA")],
+        |_| {},
+    );
+    assert!(runner.game.pending_selection.is_none(), "no prompt");
+    assert!(has_named_on_field(&runner, 0, "Kimeramon"));
+}
+
+#[test]
+fn bt18_073_on_deletion_not_offered_when_digivolving_by_effect_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let runner = delete_machinedramon(&["BT18-019"], &[], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotDigivolveDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(runner.game.pending_selection.is_none(), "no prompt");
+    assert_eq!(runner.game.players[0].hand.len(), 1, "Millenniummon stays in hand");
+    assert!(has_named_on_field(&runner, 0, "Kimeramon"));
+}

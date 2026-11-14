@@ -761,3 +761,111 @@ fn bt21_062_when_digivolving_ignores_non_cannon_options() {
 
 #[path = "../../support/owned_union_fixture.rs"]
 mod owned_union_fixture;
+
+// ─── Ragnarok Cannon candidate legality ──────────────────────────────────────
+//
+// DCGO BT21_062.cs:76-89 `CanSelectCardCondition1`: `EqualsCardName("Ragnarok
+// Cannon") && HasUseCost && !CanNotPlayThisOption` -- an Option that can
+// actually be used (no "can't use Option cards" lock, colour requirement met:
+// CardSource.cs `CanNotPlayThisOption`). It gates both the hand and the trash
+// pick (148-149, 192, 216). CR 4.3 1-3-11-1 (a card can't be declared for use
+// unless it can be used) and 4-22-1..3 (colour requirement; Q1500/Q2785: an
+// effect-driven use does not waive it). BT23-014's "can't play Digimon or
+// Tamers from the trash" lock does NOT touch an Option use (see the ignored
+// test below for the engine over-block that currently contradicts this).
+
+/// Galacticmon (BT21-062) with 4 Vemmon in trash and the given Ragnarok
+/// Cannon copies; pays the 4 placements and returns the runner at the
+/// Ragnarok Cannon pick (if any).
+fn cannon_pick_runner(
+    in_hand: bool,
+    in_trash: bool,
+    setup: impl FnOnce(&mut DebugRunner),
+) -> DebugRunner {
+    let mut runner = galacticmon_runner()
+        .add_card(make_vemmon("VEM-1"))
+        .add_card(make_vemmon("VEM-2"))
+        .add_card(make_vemmon("VEM-3"))
+        .add_card(make_vemmon("VEM-4"))
+        .add_card(make_ragnarok_cannon("CANNON"))
+        .add_card(make_test_card("FILL", "Filler"))
+        .deck(0, &["FILL"; 10])
+        .deck(1, &["FILL"; 10])
+        .memory(0)
+        .start();
+    for id in ["VEM-1", "VEM-2", "VEM-3", "VEM-4"] {
+        push_to_trash(&mut runner, 0, id);
+    }
+    if in_trash {
+        push_to_trash(&mut runner, 0, "CANNON");
+    }
+    if in_hand {
+        push_to_hand(&mut runner, 0, "CANNON");
+    }
+    setup(&mut runner);
+    let galacticmon = runner.place_on_field(0, "BT21-062", Some(0));
+    fire_when_digivolving(&mut runner, galacticmon);
+    for _ in 0..4 {
+        take_first_or_pass(&mut runner);
+    }
+    runner
+}
+
+/// Non-PASS rows of the Ragnarok Cannon union pick: (hand offered, trash
+/// offered). (false, false) when no pick installs.
+fn cannon_rows(runner: &DebugRunner) -> (bool, bool) {
+    if runner.game.pending_selection.is_none() {
+        return (false, false);
+    }
+    (
+        owned_union_fixture::action(&runner.game, 0, "CANNON", false).is_some(),
+        owned_union_fixture::action(&runner.game, 0, "CANNON", true).is_some(),
+    )
+}
+
+/// Positive control: with no lock both copies are offered.
+#[test]
+fn bt21_062_cannon_offered_from_hand_and_trash() {
+    let runner = cannon_pick_runner(true, true, |_| {});
+    assert_eq!(cannon_rows(&runner), (true, true));
+}
+
+/// "You can't use Option cards" (DCGO `CanNotPlayThisOption`): neither copy is
+/// offered, so no pick installs.
+#[test]
+fn bt21_062_cannon_not_offered_when_options_cannot_be_used() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = cannon_pick_runner(true, true, |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(cannon_rows(&runner), (false, false), "no usable Ragnarok Cannon");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.game.players[0].hand.len(), 1, "the hand copy stays in hand");
+}
+
+/// BT23-014's lock is printed "their effects can't play Digimon or Tamers from
+/// the trash", and DCGO's `CanNotPutFieldClass` (BT23_014.cs:49) gates on
+/// `IsDigimon || IsTamer`, so it never restricts an Option use: both Ragnarok
+/// Cannon copies stay offered. Our `CannotPlayFromTrash` modifier is not
+/// kind-discriminating (`trash_play_locked` in dsl_cards/predicate.rs and
+/// `use_option_from` / `play_option_from_trash` in game_actions/options.rs
+/// refuse the trash Option too), so today the trash copy is excluded. This
+/// asserts the faithful target and is ignored until the engine lock is
+/// narrowed to Digimon/Tamer plays.
+#[test]
+#[ignore = "engine over-block: CannotPlayFromTrash also refuses Option use from trash (BT23-014 prints Digimon or Tamers only)"]
+fn bt21_062_trash_cannon_still_offered_under_bt23_014_digimon_tamer_trash_lock() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let runner = cannon_pick_runner(true, true, |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(cannon_rows(&runner), (true, true));
+}

@@ -30,10 +30,20 @@ effects:
       - select_union_zone:
           of: you
           zones: [hand, trash]
+          # Candidates. DCGO ST19_08.cs:38-43 = LIBERATOR && !IsDigiEgg &&
+          # HasPlayCost (false for Option/DUAL kinds, CEntity_Base.cs:340) &&
+          # GetCostItself <= 4, with NO CanPlayAsNewPermanent -- so it offers a
+          # card the play then refuses (effect-play lock, full area, trash
+          # lock). The rules govern there: CR 4.3 1-3-11-1 (a card that can't
+          # be played can't be declared), 7-1-1 (play needs a play cost: no
+          # Digi-Egg, no Option), 4-6-2 (a DUAL is never played).
+          # `can_play_from_effect_without_cost` covers all of it. Select-hand
+          # audit 2026-11-13.
           filter:
             all_of:
               - trait_has: LIBERATOR
               - play_cost_lte: 4
+              - can_play_from_effect_without_cost: true
           bind_as: picked
           optional: true
           prompt: "You may play 1 [LIBERATOR] card with play cost 4 or less from your hand or trash without paying the cost"

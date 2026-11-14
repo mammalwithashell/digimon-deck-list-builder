@@ -203,3 +203,61 @@ fn bt20_091_no_omekamon_in_hand_does_not_offer_response() {
     );
     assert!(!field_contains(&r, 0, "RK-TARGET"));
 }
+
+// ─── Omekamon pick legality ──────────────────────────────────────────────────
+// DCGO BT20_091.cs:90-94 `IsOmekamon`: EqualsCardName("Omekamon") &&
+// CanPlayAsNewPermanent(source, payCost: false, activateClass) — the hand pick
+// (:133-147) and `CanActivateCondition` (:118-123, HasMatchConditionOwnersHand)
+// both use it, so an Omekamon the play would refuse (no free battle-area
+// frame, a "can't play Digimon by effects" lock) is never offered, and with
+// no playable Omekamon the response isn't offered at all. CR 4.3 1-3-2.
+
+/// Cool Boy + a Royal Knight on P0's field, an Omekamon in hand, P1's turn.
+fn would_leave_runner() -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT20-091")
+        .expect("BT20-091 YAML loads")
+        .add_card(royal_knight_card("RK-TARGET"))
+        .add_card(omekamon_card("OMEKAMON-HAND"))
+        .hand(0, &["OMEKAMON-HAND"])
+        .memory(0)
+        .start();
+    r.game.turn_player_idx = 1;
+    r.place_on_field(0, "BT20-091", Some(0));
+    let target = r.place_on_field(0, "RK-TARGET", Some(0));
+    (r, target)
+}
+
+#[test]
+fn bt20_091_omekamon_not_offered_under_effect_play_lock() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, target) = would_leave_runner();
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "the only Omekamon can't be played by effects: no response offered"
+    );
+    assert!(!field_contains(&r, 0, "RK-TARGET"), "the leave proceeds");
+    assert!(!field_contains(&r, 0, "OMEKAMON-HAND"));
+}
+
+#[test]
+fn bt20_091_omekamon_not_offered_with_a_full_battle_area() {
+    let (mut r, target) = would_leave_runner();
+    // The Royal Knight is still on the field when the response would play
+    // Omekamon, so a field at capacity has no frame for it.
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    r.game
+        .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no free frame for Omekamon: no response offered"
+    );
+    assert!(!field_contains(&r, 0, "RK-TARGET"), "the leave proceeds");
+}

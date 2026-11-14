@@ -17,7 +17,10 @@
 #   "black" test; printed text governs and the colour gate is kept).
 #   Inherited OnTappedAnyone OPT on the opponent's turn for any own Digimon →
 #   optional PlayByEffect of a Level<=5 HasBlocker hand Digimon; RemoveUse()
-#   when nothing is played.
+#   when nothing is played. Its filter (:124-130) also requires
+#   `CanPlayAsNewPermanent(card, false, activateClass)` →
+#   `can_play_from_effect_without_cost` (no play prohibition, free slot, never
+#   a DUAL such as Cerberusmon: Werewolf Mode BT26-056 — CR 4.3 4-6-2, 7-1-1).
 #
 # DSL: `on_suspend` + `event_target_is_source`; BT24-059 reveal →
 # `select_reveal_buckets` (0..1) → `play_from_revealed_free` → trash rest;
@@ -95,6 +98,7 @@ effects:
           filter:
             all_of:
               - kind: digimon
+              - can_play_from_effect_without_cost: true
               - level_lte: 5
               - color_is: black
               - printed_keyword: Blocker

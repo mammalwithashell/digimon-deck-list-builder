@@ -156,18 +156,36 @@ effects:
       - select_own_permanent:
           bind_as: target
           optional: true
+          # Only a Digimon that has a hand Digimon it can digivolve into at the
+          # reduced cost. DCGO EX7_074.cs:67-72 checks the route only
+          # (`CanPlayCardTargetFrame(frame, false, ...)`, PayCost false), but
+          # its own digivolve pick then refuses an unpayable card
+          # (CardEffectCommons.cs:858-880, PayCost: true), so a Digimon whose
+          # only candidates are unpayable would be a dead choice: the
+          # digivolve can't be performed (CR 4.3 1-3-2). Rules-tighter than
+          # DCGO by design; identical whenever a payable candidate exists.
           filter:
             all_of:
               - kind: digimon
               - zone: [battle_area]
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter: { kind: digimon }
+                  cost: { reduce: 4 }
           prompt: "Choose 1 of your Digimon to digivolve"
       # Select the target Digimon card from hand.
-      # DCGO: DigivolveIntoHandOrTrashCard cardCondition: IsDigimon, isHand: true.
+      # DCGO: DigivolveIntoHandOrTrashCard cardCondition: IsDigimon, isHand: true,
+      # whose own filter (CardEffectCommons.cs:858-880) requires
+      # `CanPlayCardTargetFrame(target, PayCost: true, ...)` with the -4
+      # applied: a route onto `target` AND the reduced cost payable.
       - select_hand:
           of: you
           bind_as: evo
           filter:
-            kind: digimon
+            all_of:
+              - kind: digimon
+              - can_digivolve_onto_with_cost: { target: target, cost: { reduce: 4 } }
           prompt: "Choose a Digimon card in your hand to digivolve into"
       # Execute effect-initiated digivolve, cost reduced by 4.
       # DCGO: payCost: true, reduceCostTuple: (reduceCost: 4, null), isHand: true.
@@ -203,6 +221,12 @@ effects:
             all_of:
               - trait_has: LIBERATOR
               - play_cost_lte: 4
+              # DCGO EX7_074.cs:160-166: HasPlayCost && !IsDigiEgg &&
+              # CanPlayAsNewPermanent(payCost: false) (which also requires
+              # !IsOption). Excludes Digi-Eggs and Options (no play cost, CR
+              # 4.3 7-1-1), DUALs (CR 4.3 4-6-2), a full area, effect-play
+              # prohibitions and, for the trash, "can't play from trash".
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [LIBERATOR] card (cost 4 or less) from your hand or trash without paying the cost"
       # `play_union_bound_free` replays the bound card from its true origin
       # zone (hand or trash) without paying the cost. DCGO: PlayPermanentCards

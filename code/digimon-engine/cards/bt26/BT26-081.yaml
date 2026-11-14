@@ -73,6 +73,13 @@ effects:
               - any_of:
                   - kind: digimon
                   - kind: tamer
+              # DCGO BT26_081.cs:57-61 `HasPlayCost && CanPlayAsNewPermanent`:
+              # never a DUAL (no play cost, CR 4.3 7-1-1, 4-6-2 — Jupitermon BT26-033,
+              # BeelStarmon BT25-085, ...), a free frame, no play prohibition,
+              # no trash-play lock for a trash card. One free frame per card,
+              # not N for N picks (qa/dsl-vocab-gaps.md, multi-card free-slot
+              # residual). Select-hand audit 2026-11-13.
+              - can_play_from_effect_without_cost: true
           play_cost_budget: 8
           bind_as: iliad_plays
           prompt: "You may play up to 8 play cost's total worth of [Iliad] trait cards from your hand or trash without paying the costs"

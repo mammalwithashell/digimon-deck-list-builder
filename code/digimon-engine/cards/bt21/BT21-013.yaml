@@ -181,6 +181,12 @@ effects:
               - any_of:
                   - trait_has: Hybrid
                   - trait_has: Hero
+              # DCGO DigivolveIntoHandOrTrashCard (CardEffectCommons.cs:859-883)
+              # offers only cards with a route onto this Digimon AND a payable
+              # cost (PayCost: true, the -1 already registered). CR 4.3 1-3-11-1.
+              - can_digivolve_onto_with_cost:
+                  target: source
+                  cost: { reduce: 1 }
           prompt: "Choose a red [Hybrid] or [Hero] Digimon to digivolve into"
       - effect_initiated_digivolve:
           target: source

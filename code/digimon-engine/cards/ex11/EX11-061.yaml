@@ -58,7 +58,15 @@ effects:
       # Cost: suspend this Tamer (activation gate — declinable).
       - activation_cost: { suspend_self: true }
       # "you may play 1 level 3 [Puppet] trait Digimon card from your hand" —
-      # optional selection (the player may decline the play).
+      # optional selection (the player may decline the play). Only a card the
+      # free play can put on the field is offered (DCGO EX11_061.cs:57-63
+      # `CanPlayAsNewPermanent(payCost: false)`): never a DUAL such as
+      # Sistermon Blanc (Awakened) (EX13-065) — its Digimon side prints no play
+      # cost, so it can't be played (CR 4.3 7-1-1; 4-6-2: a DUAL is digivolved
+      # or used as an Option) — and never under a play prohibition or with no
+      # free battle-area slot (the slot limit is DCGO's/the engine's
+      # `CanPlayAsNewPermanent`, not a CR rule; a card that can't be played
+      # can't be declared for play, CR 4.3 1-3-11-1).
       - select_hand:
           of: you
           bind_as: puppet_pick
@@ -68,6 +76,7 @@ effects:
               - kind: digimon
               - trait_has: Puppet
               - level_eq: 3
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 level 3 Puppet Digimon from your hand without paying the cost"
       # Play the picked card for free and bind the played permanent.
       - play_from_hand_free: { of: you, hand_index: puppet_pick, bind_as: puppet_played }

@@ -53,6 +53,13 @@ fn setup() -> DebugRunner {
             5,
             &["Beast"],
         ))
+        // A level-2 [Insectoid] Digi-Egg (synthetic): no play cost.
+        .add_card({
+            let mut e = digimon_engine::debug_runner::make_test_egg("BUG-EGG", "Bug Egg");
+            e.colors = vec![CardColor::Green];
+            e.traits = vec!["Insectoid".to_string()];
+            e
+        })
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
         .memory(5)
@@ -115,6 +122,66 @@ fn bt26_045_decline_refunds_once_per_turn() {
     let _ = r.auto_resolve();
     fire(&mut r, EffectTiming::WhenAttacking, h);
     assert!(r.pending_selection_view().is_some(), "re-offered");
+}
+
+// ─── Hand-pick candidate legality (select-hand playability audit) ────────────
+// DCGO BT26_045.cs:41-45 offers only `IsDigimon && HasLevel && Level <= 4 &&
+// (Insectoid || Titan) && CanPlayAsNewPermanent(card, payCost: false,
+// activateClass)`, and the effect activates only when such a card is in hand
+// (`SharedAdditionalActivateCondition`, :47-48) — so an unplayable card neither
+// is offered nor spends the [Once Per Turn] (CR 4.3 1-3-2).
+
+/// "You can't play Digimon by effects": nothing is offered and the [Once Per
+/// Turn] is still available once the lock is gone.
+#[test]
+fn bt26_045_not_offered_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup();
+    let h = r.place_on_field(0, CARD_ID, Some(0));
+    push_hand(&mut r, 0, "BUG4");
+    let unlocked = r.game.modifiers.clone();
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::EndOfTurn, None, 1),
+    );
+    fire(&mut r, EffectTiming::OnPlay, h);
+    assert!(r.pending_selection_view().is_none(), "no playable candidate");
+    let _ = r.auto_resolve();
+    assert_eq!(hand_ids(&r, 0), vec!["BUG4".to_string()]);
+    r.game.modifiers = unlocked;
+    fire(&mut r, EffectTiming::WhenAttacking, h);
+    assert!(r.pending_selection_view().is_some(), "OPT not spent");
+}
+
+/// A full battle area (DCGO needs an empty frame): nothing is offered.
+#[test]
+fn bt26_045_not_offered_when_battle_area_full() {
+    let mut r = setup();
+    let h = r.place_on_field(0, CARD_ID, Some(0));
+    push_hand(&mut r, 0, "BUG4");
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    fire(&mut r, EffectTiming::WhenDigivolving, h);
+    assert!(r.pending_selection_view().is_none(), "no free slot");
+    let _ = r.auto_resolve();
+    assert_eq!(hand_ids(&r, 0), vec!["BUG4".to_string()]);
+}
+
+/// A level-2 [Insectoid] Digi-Egg is never a "Digimon card" play candidate
+/// (no play cost, CR 4.3 7-1-1). Regression guard.
+#[test]
+fn bt26_045_digi_egg_is_not_offered() {
+    let mut r = setup();
+    let h = r.place_on_field(0, CARD_ID, Some(0));
+    push_hand(&mut r, 0, "BUG-EGG");
+    push_hand(&mut r, 0, "BUG4");
+    fire(&mut r, EffectTiming::OnPlay, h);
+    let ids = hand_ids(&r, 0);
+    let offered: Vec<String> = non_pass(&r)
+        .into_iter()
+        .map(|a| ids[(a - digimon_engine::action::space::PLAY_HAND_START) as usize].clone())
+        .collect();
+    assert_eq!(offered, vec!["BUG4".to_string()]);
 }
 
 #[test]

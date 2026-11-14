@@ -615,3 +615,210 @@ fn st23_15_security_places_self_in_battle_area() {
         .expect("e-Pulse is placed in its owner's battle area");
     assert!(matches!(placed.option_state, OptionState::Delayed { .. }));
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 5 — [Main] / [Security] free-play pick legality
+// ════════════════════════════════════════════════════════════════════════════
+//
+// DCGO ST23_15.cs:47-55 `CanSelectPlayCondition = (IsDigimon || IsTamer) &&
+// HasPlayCost && EqualsTraits("BEATBREAK") && GetCostItself <= 4 &&
+// CanPlayAsNewPermanent(payCost: false)` gates the Hand/Trash/Don't zone menu
+// (:57-58) and is the SelectHand/SelectCard filter (:89); the [Security]
+// re-runs the same [Main] body. Only a card that can actually be placed is
+// offered: a free frame, no "can't play Digimon/Tamers by effects" lock, and
+// (for the trash copy) no "can't play cards from the trash" lock — the play
+// from the trash refuses it (DCGO PlayPermanentCards root Trash). Digi-Eggs
+// (e.g. Kekkomon ST23-01, [BEATBREAK], no play cost — CR 4.3 7-1-1) are never
+// candidates. CR 4.3 1-3-11-1: a card can be declared for play only if it is
+// able to be played (the locks). The frame cap is the engine's
+// `rules.field_slots`, mirroring DCGO's frame limit; CR 4.3 3-4-8-2 itself
+// sets no battle-area limit.
+
+fn push_to_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("unknown card_id {card_id}"));
+    let next_idx = runner.game.next_card_index();
+    runner.game.players[p as usize]
+        .trash
+        .push(CardSource::new(data_idx, p, next_idx));
+}
+
+fn push_to_hand(runner: &mut DebugRunner, p: u8, card_id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("unknown card_id {card_id}"));
+    let next_idx = runner.game.next_card_index();
+    runner.game.players[p as usize]
+        .hand
+        .push(CardSource::new(data_idx, p, next_idx));
+}
+
+/// The pending union pick's candidates as sorted "Zone:card_id" strings (empty
+/// when no union pick is pending).
+fn union_offered(runner: &DebugRunner) -> Vec<String> {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    use digimon_engine::selection::SelectionKind;
+    let Some(pending) = runner.pending_selection() else {
+        return Vec::new();
+    };
+    if !matches!(pending.kind, SelectionKind::UnionZone { .. }) {
+        return Vec::new();
+    }
+    let owner = pending.card_choice.as_ref().expect("union pick owns a card-choice page");
+    let mut out: Vec<String> = owner
+        .view(&runner.game, pending.selecting_player)
+        .rows
+        .into_iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .map(|row| format!("{:?}:{}", row.zone.expect("zone"), row.card_id.unwrap_or_default()))
+        .collect();
+    out.sort();
+    out
+}
+
+/// e-Pulse first in p0's hand, then `hand`; `trash` in p0's trash; a white
+/// filler in breeding as the colour provider.
+fn main_runner(hand: &[&str], trash: &[&str]) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST23-15 in embedded pack")
+        .dsl_card("ST23-01")
+        .expect("Kekkomon in embedded pack")
+        .add_card(bb_digimon("BBD"))
+        .add_card(bb_tamer("BBT"))
+        .add_card(filler("FILLER"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    for h in hand {
+        push_to_hand(&mut runner, 0, h);
+    }
+    for t in trash {
+        push_to_trash(&mut runner, 0, t);
+    }
+    runner
+}
+
+fn add_player_lock(runner: &mut DebugRunner, p: u8, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        p,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Regression guard: Digimon and Tamer, hand and trash, are all offered.
+#[test]
+fn st23_15_main_offers_beatbreak_from_hand_and_trash() {
+    let mut runner = main_runner(&["BBD", "BBT"], &["BBD"]);
+    use_fixture_option(&mut runner, "FILLER");
+    assert_eq!(
+        union_offered(&runner),
+        vec!["Hand:BBD", "Hand:BBT", "Trash:BBD"]
+    );
+}
+
+/// Kekkomon (ST23-01) is a [BEATBREAK] Digi-Egg: never offered (regression guard).
+#[test]
+fn st23_15_main_excludes_beatbreak_digi_egg() {
+    let mut runner = main_runner(&["ST23-01", "BBD"], &["ST23-01"]);
+    use_fixture_option(&mut runner, "FILLER");
+    assert_eq!(union_offered(&runner), vec!["Hand:BBD"]);
+}
+
+/// "You can't play Digimon by effects": the Digimon copies are dropped, the
+/// Tamer is still offered.
+#[test]
+fn st23_15_main_excludes_digimon_under_effect_play_prohibition() {
+    let mut runner = main_runner(&["BBD", "BBT"], &["BBD"]);
+    add_player_lock(&mut runner, 0, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    use_fixture_option(&mut runner, "FILLER");
+    assert_eq!(union_offered(&runner), vec!["Hand:BBT"]);
+}
+
+/// "You can't play Tamers by effects": the Tamer is dropped.
+#[test]
+fn st23_15_main_excludes_tamer_under_effect_play_prohibition() {
+    let mut runner = main_runner(&["BBD", "BBT"], &[]);
+    add_player_lock(&mut runner, 0, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    use_fixture_option(&mut runner, "FILLER");
+    assert_eq!(union_offered(&runner), vec!["Hand:BBD"]);
+}
+
+/// "You can't play cards from the trash": the trash copy is dropped, the hand
+/// copy is still offered.
+#[test]
+fn st23_15_main_excludes_trash_copy_under_cannot_play_from_trash() {
+    let mut runner = main_runner(&["BBD"], &["BBD"]);
+    add_player_lock(&mut runner, 0, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    use_fixture_option(&mut runner, "FILLER");
+    assert_eq!(union_offered(&runner), vec!["Hand:BBD"]);
+}
+
+/// e-Pulse checked from p1's security; `hand` / `trash` are p1's. Returns the
+/// runner after the attack, with the [Security] union pick pending.
+fn security_runner(hand: &[&str], trash: &[&str], full_battle_area: bool) -> DebugRunner {
+    let mut attacker = filler("ATK");
+    attacker.dp = Some(6000);
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST23-15 in embedded pack")
+        .add_card(attacker)
+        .add_card(bb_digimon("BBD"))
+        .add_card(bb_tamer("BBT"))
+        .add_card(filler("FILLER"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .security(1, &[CARD_ID])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    for h in hand {
+        push_to_hand(&mut runner, 1, h);
+    }
+    for t in trash {
+        push_to_trash(&mut runner, 1, t);
+    }
+    if full_battle_area {
+        // p1's only frame holds a Tamer; p0's attacker sits in its own area.
+        runner.place_on_field(1, "BBT", Some(0));
+    }
+    let atk = runner.place_on_field(0, "ATK", Some(0));
+    if full_battle_area {
+        runner.game.rules.field_slots = runner.game.players[1].battle_area.len() as u8;
+    }
+    let _ = runner.attack_player(atk, 1, false);
+    runner
+}
+
+/// Regression guard: the [Security] copy offers p1's hand and trash cards.
+#[test]
+fn st23_15_security_offers_beatbreak_from_hand_and_trash() {
+    let runner = security_runner(&["BBD"], &["BBD"], false);
+    assert_eq!(union_offered(&runner), vec!["Hand:BBD", "Trash:BBD"]);
+}
+
+/// p1's battle area has no free frame: nothing can be placed, so nothing is
+/// offered and the cards stay where they are.
+/// The frame cap is the engine's `rules.field_slots` (mirroring DCGO's frame
+/// limit); CR 4.3 3-4-8-2 itself sets no battle-area limit.
+#[test]
+fn st23_15_security_offers_nothing_when_battle_area_full() {
+    let mut runner = security_runner(&["BBD"], &["BBD"], true);
+    let offered = union_offered(&runner);
+    assert!(offered.is_empty(), "no free frame (got {offered:?})");
+    let _ = runner.auto_resolve();
+    assert!(runner.game.players[1].hand.iter().any(|c| c.card_id(&runner.game.card_data) == "BBD"));
+    assert!(runner.game.players[1].trash.iter().any(|c| c.card_id(&runner.game.card_data) == "BBD"));
+}

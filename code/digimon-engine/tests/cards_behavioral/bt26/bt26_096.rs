@@ -33,6 +33,7 @@ fn setup(memory: i16) -> DebugRunner {
         .add_card(texted)
         .add_card(ts_t)
         .add_card(digimon("PLAIN", "Plain", CardColor::Purple, 4, 6, &["TS"]))
+        .add_card(digimon("BIGCHRONO", "Chronomon: Big", CardColor::Purple, 7, 16, &[]))
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
         .memory(memory)
@@ -140,3 +141,95 @@ fn bt26_096_security_plays_self() {
 
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;
+
+// ─── [Main] candidate legality (G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE +
+// G-DSL-AFFORDABLE-WITH-COST) ─────────────────────────────────────────────────
+// DCGO BT26_096.cs:34-36 CanPlayCondition: `((IsDigimon && HasText("Chronomon"))
+// || (IsTamer && HasTSTraits)) && CanPlayAsNewPermanent(card, payCost:true,
+// activateClass, fixedCost: GetCostItself - 2)` — a free frame, no play
+// prohibition, and the reduced cost payable. CR 4.3 1-3-2 (an impossible action
+// is not carried out), 7-1-2-3 (a card whose cost can't be paid is not played).
+
+/// Sorted card ids of the non-PASS candidates of the pending hand∪trash pick.
+fn offered(r: &DebugRunner) -> Vec<String> {
+    if r.game.pending_selection.is_none() {
+        return Vec::new();
+    }
+    let mut ids: Vec<String> = physical_menu::commits(&r.game)
+        .into_iter()
+        .filter_map(|row| row.card_id)
+        .collect();
+    ids.sort();
+    ids
+}
+
+fn add_player_lock(r: &mut DebugRunner, m: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(m, 0, Expiry::Permanent, None, 1));
+}
+
+/// Kosuke on the field at index 0, then activate its [Main].
+fn activate_main(r: &mut DebugRunner) {
+    r.game.enter_main_phase();
+    let _ = r.auto_resolve();
+    r.game.decode_action(main_bit(0), 0);
+}
+
+/// Memory 3: a cost-16 [Chronomon] Digimon pays 14 (3 - 14 = -11, below the
+/// -10 floor) and is not offered; the cost-5 [TS] Tamer (pays 3) is.
+#[test]
+fn bt26_096_unaffordable_card_not_offered() {
+    let mut r = setup(3);
+    r.place_on_field(0, CARD_ID, Some(0));
+    push_hand(&mut r, 0, "BIGCHRONO");
+    push_hand(&mut r, 0, "TS-T");
+    activate_main(&mut r);
+    assert_eq!(offered(&r), vec!["TS-T".to_string()]);
+}
+
+/// "You can't play Digimon by effects": the [Chronomon] Digimon is not offered,
+/// the [TS] Tamer still is.
+#[test]
+fn bt26_096_effect_play_prohibition_excludes_digimon() {
+    let mut r = setup(6);
+    r.place_on_field(0, CARD_ID, Some(0));
+    push_hand(&mut r, 0, "CHRONO");
+    push_hand(&mut r, 0, "TS-T");
+    add_player_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    activate_main(&mut r);
+    assert_eq!(offered(&r), vec!["TS-T".to_string()]);
+}
+
+/// "You can't play cards from the trash" (BT23-014): the trash card is not
+/// offered, the hand card still is.
+#[test]
+fn bt26_096_trash_play_lock_excludes_trash_cards() {
+    let mut r = setup(6);
+    r.place_on_field(0, CARD_ID, Some(0));
+    push_trash(&mut r, 0, "CHRONO");
+    push_hand(&mut r, 0, "TS-T");
+    add_player_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    activate_main(&mut r);
+    assert_eq!(offered(&r), vec!["TS-T".to_string()]);
+}
+
+/// A battle area still full after Kosuke returns itself: nothing can be played,
+/// so nothing is offered and the card stays in hand.
+#[test]
+fn bt26_096_full_battle_area_offers_nothing() {
+    let mut r = setup(6);
+    r.place_on_field(0, CARD_ID, Some(0));
+    r.place_on_field(0, "FILLER", Some(0));
+    r.place_on_field(0, "FILLER", Some(0));
+    push_hand(&mut r, 0, "TS-T");
+    // After Kosuke leaves, the two fillers fill a 2-slot battle area.
+    r.game.rules.field_slots = 2;
+    activate_main(&mut r);
+    assert!(offered(&r).is_empty(), "offered {:?}", offered(&r));
+    let _ = r.auto_resolve();
+    assert_eq!(hand_ids(&r, 0), vec!["TS-T".to_string()]);
+    assert_eq!(r.memory(), 6, "nothing paid");
+}

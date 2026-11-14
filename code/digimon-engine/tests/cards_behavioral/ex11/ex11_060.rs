@@ -589,3 +589,91 @@ fn find_deletion_observer(
         _ => None,
     })
 }
+
+// ─── Overclock Puppet pick: candidate legality (CR 4.3 4-6-1..4-6-3 / 7-1-1) ─
+// DCGO EX11_060.cs:50-56 `CardSelectCondition` = IsDigimon && HasLevel &&
+// Level <= 4 && EqualsTraits("Puppet"), with no playability check; the pick
+// opens when such a card is in hand (EX11_060.cs:68). DCGO's `IsDigimon` is
+// `CardKinds.Contains(Digimon)` (CardSource.cs:3519), true for a DUAL card, so
+// DCGO offers a [Puppet] DUAL that `PlayPermanentCards` then refuses
+// (`CanPlayAsNewPermanent` requires `!IsOption`). Under the rules a DUAL card
+// is digivolved or used as an Option (CR 4.3 4-6-1, 4-6-2), is a Digimon only
+// once on the field (4-6-3), and its play cost prints "Can't play to the field"
+// (7-1-1), so the play would not be carried out (1-3-2). The pick is optional,
+// so not offering it changes no outcome. Same for a Puppet with no free
+// battle-area slot (engine `rules.field_slots`, not a CR limit, CR 4.3 3-4-8-2).
+
+/// Arisa + an Overclock Puppet + a Puppet sacrifice on the field, `hand` in hand;
+/// run the end-of-turn <Overclock>, accept Arisa, apply `after_sacrifice`, and
+/// return the card ids the Overclock Puppet pick offers (empty when none).
+fn overclock_pick_offers(
+    hand: &[&str],
+    after_sacrifice: impl FnOnce(&mut DebugRunner),
+) -> Vec<String> {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-060")
+        .expect("EX11-060 YAML loads")
+        .dsl_card("EX13-065")
+        .expect("EX13-065 YAML loads")
+        .dsl_card("EX13-066")
+        .expect("EX13-066 YAML loads")
+        .add_card(puppet_digimon("PUPPET-SAC", 4, 4000))
+        .add_card(puppet_digimon("PUPPET-HAND", 4, 4000))
+        .add_card(overclock_puppet("PUPPET-OVERCLOCK"))
+        .add_card(make_test_card("DRAW-FILLER-EX11-060", "Draw Filler"))
+        .hand(0, hand)
+        .deck(0, &["DRAW-FILLER-EX11-060"])
+        .security(1, &["DRAW-FILLER-EX11-060"])
+        .start();
+    let _arisa = runner.place_on_field(0, "EX11-060", Some(0));
+    let _overclock = runner.place_on_field(0, "PUPPET-OVERCLOCK", Some(0));
+    let sacrifice = runner.place_on_field(0, "PUPPET-SAC", Some(0));
+    runner.game.end_turn();
+    runner
+        .game
+        .resolve_selection(0, encode_attack(0, sacrifice.index as u16))
+        .expect("choose Puppet sacrifice for Overclock");
+    after_sacrifice(&mut runner);
+    choose_arisa_activation(&mut runner, "Overclock deletion offers Arisa activation");
+    let Some(view) = runner
+        .pending_selection_view()
+        .filter(|v| v.kind == SelectionKind::Hand)
+    else {
+        return Vec::new();
+    };
+    let ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != digimon_engine::action::space::PASS)
+        .map(|a| ids[(a - digimon_engine::action::space::PLAY_HAND_START) as usize].clone())
+        .collect();
+    offered.sort();
+    offered
+}
+
+/// Sistermon Blanc (Awakened) (EX13-065, Lv.3) and Sistermon Noir (Awakened)
+/// (EX13-066, Lv.4) are level 4 or lower [Puppet] DUAL cards: they cannot be
+/// played, so only the playable Puppet is offered.
+#[test]
+fn ex11_060_overclock_puppet_pick_excludes_dual_cards() {
+    assert_eq!(
+        overclock_pick_offers(&["EX13-065", "EX13-066", "PUPPET-HAND"], |_| {}),
+        vec!["PUPPET-HAND".to_string()]
+    );
+}
+
+/// After the sacrifice, Arisa + the Overclock Puppet fill a 2-slot battle area:
+/// the Puppet in hand cannot be played, so it is not offered.
+#[test]
+fn ex11_060_overclock_puppet_pick_offers_nothing_when_battle_area_full() {
+    let offered = overclock_pick_offers(&["PUPPET-HAND"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "no Puppet is offered into a full battle area: {offered:?}");
+}

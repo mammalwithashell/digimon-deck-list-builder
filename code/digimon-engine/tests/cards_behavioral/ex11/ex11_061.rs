@@ -320,3 +320,149 @@ fn ex11_061_turn_end_deletes_only_the_digimon_this_effect_played() {
         "the Tamer EX11-061 itself must survive"
     );
 }
+
+// ─── Hand-pick candidate legality (select-hand playability audit) ───────────
+// DCGO EX11_061.cs:57-63 `IsLevel3PuppetCardCondition`: `IsDigimon && IsLevel3
+// && ContainsTraits("Puppet") && CanPlayAsNewPermanent(cardSource, payCost:
+// false, activateClass)`. Only a card the free play can actually put on the
+// field is offered: CR 4.3 1-3-11-1 (a card can be utilized only if it can be
+// played), 4-6-2 (a DUAL is digivolved or used, never played — its Digimon
+// information prints no play cost), 7-1-1 (playing places a card with a play
+// cost). A pick the play would then refuse is an illegal RL choice.
+
+/// Digivolve BASE-LV3 into PUPPET-LV4 (fires the observer), accept the
+/// suspend-this-Tamer activation, and return the hand cards the level-3 Puppet
+/// pick offers (empty if no pick installs). `tweak` runs before the digivolve.
+fn ex11_061_offered_puppets(
+    extra_cards: Vec<digimon_engine::card_data::CardData>,
+    extra_dsl: &[&str],
+    hand: &[&str],
+    tweak: impl FnOnce(&mut DebugRunner),
+) -> Vec<String> {
+    use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    let mut builder = DebugRunner::builder()
+        .dsl_card("EX11-061")
+        .expect("EX11-061 YAML loads")
+        .add_card(digimon_lvl("BASE-LV3", 3, &[]))
+        .add_card(digimon_lvl("PUPPET-LV4", 4, &["Puppet"]))
+        .add_card(digimon_lvl("PUPPET-LV3", 3, &["Puppet"]));
+    for card in extra_cards {
+        builder = builder.add_card(card);
+    }
+    for id in extra_dsl {
+        builder = builder.dsl_card(id).expect("extra DSL card loads");
+    }
+    let mut runner = builder.hand(0, hand).memory(20).start();
+    runner.place_on_field(0, "EX11-061", Some(0));
+    let base = runner.place_on_field(0, "BASE-LV3", Some(0));
+    runner.game.enter_main_phase();
+    tweak(&mut runner);
+
+    let evo_idx = runner.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "PUPPET-LV4")
+        .expect("PUPPET-LV4 in hand");
+    assert!(
+        runner
+            .game
+            .digivolve_from_hand(0, evo_idx, base.index as usize, PlaySource::ByDigivolve),
+        "digivolve into a Puppet must succeed"
+    );
+    runner.game.drain_effect_queue();
+    let activation = runner
+        .pending_selection_view()
+        .expect("the observer offers its suspend-this-Tamer activation");
+    runner
+        .execute_action(activation.selecting_player, activation.valid_action_ids[0])
+        .expect("accept the activation");
+    runner.game.drain_effect_queue();
+
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| {
+            let slot = if id >= HAND_EFFECT_START { id - HAND_EFFECT_START } else { id - PLAY_HAND_START };
+            hand_ids[slot as usize].clone()
+        })
+        .collect();
+    offered.sort();
+    offered
+}
+
+/// Sistermon Blanc (Awakened) (EX13-065) is a level 3 [Puppet] DUAL card: its
+/// Digimon information prints no play cost ("Play cost: D"), so it can't be
+/// played (CR 4.3 4-6-2; DCGO `CanPlayAsNewPermanent` requires `!IsOption`).
+/// Only the level 3 Puppet Digimon is offered.
+#[test]
+fn ex11_061_puppet_pick_excludes_level3_puppet_dual_card() {
+    let offered = ex11_061_offered_puppets(
+        Vec::new(),
+        &["EX13-065"],
+        &["PUPPET-LV4", "PUPPET-LV3", "EX13-065"],
+        |_| {},
+    );
+    assert_eq!(
+        offered,
+        vec!["PUPPET-LV3".to_string()],
+        "Sistermon Blanc (Awakened) (EX13-065) can't be played, so it isn't offered"
+    );
+}
+
+/// A full battle area: the free play has no frame (DCGO `CanPlayAsNewPermanent`
+/// needs an empty one), so no level 3 Puppet is offered.
+#[test]
+fn ex11_061_puppet_pick_offers_nothing_when_battle_area_full() {
+    let offered = ex11_061_offered_puppets(
+        Vec::new(),
+        &[],
+        &["PUPPET-LV4", "PUPPET-LV3"],
+        |r| {
+            // EX11-061 + BASE-LV3 (digivolving keeps the slot count).
+            r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+        },
+    );
+    assert!(offered.is_empty(), "no playable candidate: {offered:?}");
+}
+
+/// "You can't play Digimon with 2000 DP or less" (a play prohibition the free
+/// play honours): the 2000 DP Puppet is not offered, the 3000 DP one is.
+#[test]
+fn ex11_061_puppet_pick_excludes_puppet_under_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut low = digimon_lvl("PUPPET-LV3-LOW", 3, &["Puppet"]);
+    low.dp = Some(2000);
+    let offered = ex11_061_offered_puppets(
+        vec![low],
+        &[],
+        &["PUPPET-LV4", "PUPPET-LV3", "PUPPET-LV3-LOW"],
+        |r| {
+            r.game.modifiers.add_player_modifier(
+                0,
+                PlayerModifierEntry::simple(
+                    ModifierType::CannotPlayDigimonWithDPAtMost,
+                    2000,
+                    Expiry::Permanent,
+                    None,
+                    1,
+                ),
+            );
+        },
+    );
+    assert_eq!(offered, vec!["PUPPET-LV3".to_string()]);
+}

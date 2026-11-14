@@ -40,7 +40,11 @@ effects:
             - select_hand:
                 of: you
                 bind_as: played
-                filter: { kind: digimon, name_contains: Dramon, any_of: [{ color_is: blue }, { color_is: green }], dp_lte: 12000 }
+                # DCGO EX3_074.cs:137-162 `CanSelectCardCondition1` adds
+                # CanPlayAsNewPermanent(payCost: false) (:151): only a card the
+                # free play accepts is offered (no DUAL, CR 4.3 4-6-2; free
+                # frame; no effect-play prohibition; CR 4.3 7-1-1, 1-3-2).
+                filter: { kind: digimon, name_contains: Dramon, any_of: [{ color_is: blue }, { color_is: green }], dp_lte: 12000, can_play_from_effect_without_cost: true }
                 optional: true
                 prompt: "Play a blue or green Dramon with 12000 DP or less without paying the cost"
             - play_from_hand_free: { of: you, hand_index: played }

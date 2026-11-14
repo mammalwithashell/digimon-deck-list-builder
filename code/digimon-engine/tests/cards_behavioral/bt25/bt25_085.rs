@@ -894,5 +894,117 @@ fn bt25_085_counter_window_respects_activation_condition() {
         .contains(&encode_attack(0, beel.index as u16)));
 }
 
+// ─── Section 5 — Use-pick candidate legality (select-hand playability audit) ─
+//
+// DCGO BT25_085.cs:58-64 `IsTraitedOption = IsOption && (Three Musketeers |
+// TS) && !CanNotPlayThisOption`, used for both the activation condition
+// (:66-70) and the hand / digivolution-card picks (:107, :128).
+// `CanNotPlayThisOption` covers "can't use Option cards" and an unmet colour
+// requirement (CardSource.cs:184-246, 253-309). CR 4.3 4-22-1..3: an Option
+// can only be used with its colour requirement met; rulings Q1500 / Q2785: an
+// effect that uses an Option doesn't waive it unless it says so.
+
+fn colored_option(id: &str, traits: &[&str], color: CardColor) -> CardData {
+    let mut c = option(id, 4, traits);
+    c.colors = vec![color];
+    c
+}
+
+fn legality_runner(hand: &[&str], sources: &[&str]) -> (DebugRunner, PermanentHandle) {
+    let mut runner = base()
+        .add_card(colored_option("GREEN-TM-OPT", &["Three Musketeers"], CardColor::Green))
+        .add_card(colored_option("GREEN-TS-OPT", &["TS"], CardColor::Green))
+        .hand(0, hand)
+        .memory(3)
+        .start();
+    for id in ["TM-OPT", "TS-OPT", "GREEN-TM-OPT", "GREEN-TS-OPT"] {
+        runner.register_effect(id, Arc::new(OptionMainDraw));
+    }
+    let beel = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.push_source(beel, "PLAIN-DIGI");
+    for id in sources {
+        runner.push_source(beel, id);
+    }
+    (runner, beel)
+}
+
+/// Fire [When Attacking], decline any other clause's prompts, and return the
+/// card ids the hand|digivolution-card use pick offers (`None` when it never
+/// installs).
+fn use_pick_offers(runner: &mut DebugRunner, beel: PermanentHandle) -> Option<Vec<String>> {
+    fire(runner, EffectTiming::WhenAttacking, beel);
+    let mut guard = 0;
+    loop {
+        guard += 1;
+        assert!(guard < 16, "prompt loop did not terminate");
+        match runner.pending_kind() {
+            Some(SelectionKind::UnionZone { zones })
+                if zones == UnionZoneSet::HAND | UnionZoneSet::MATERIAL =>
+            {
+                let mut ids: Vec<String> = physical_menu::commits(&runner.game)
+                    .into_iter()
+                    .map(|row| row.card_id.unwrap_or_default())
+                    .collect();
+                ids.sort();
+                return Some(ids);
+            }
+            Some(SelectionKind::TriggerOrder) => resolve_trigger_order_if_present(runner),
+            Some(_) => {
+                runner.execute_action(0, PASS).expect("decline the other prompt");
+            }
+            None => return None,
+        }
+    }
+}
+
+/// Regression guard: a purple [Three Musketeers] Option in hand is offered.
+#[test]
+fn bt25_085_use_pick_offers_a_usable_option() {
+    let (mut runner, beel) = legality_runner(&["TM-OPT"], &[]);
+    assert_eq!(use_pick_offers(&mut runner, beel), Some(vec!["TM-OPT".to_string()]));
+}
+
+/// A green [Three Musketeers] Option with only purple/black BeelStarmon
+/// (BT25-085) on the field: its colour requirement is unmet, so it is not
+/// offered; the purple one still is.
+#[test]
+fn bt25_085_use_pick_excludes_option_whose_colour_requirement_is_unmet() {
+    let (mut runner, beel) = legality_runner(&["TM-OPT", "GREEN-TM-OPT"], &[]);
+    assert_eq!(use_pick_offers(&mut runner, beel), Some(vec!["TM-OPT".to_string()]));
+}
+
+/// Only an unusable (green) candidate: DCGO's activation condition fails, so no
+/// pick installs.
+#[test]
+fn bt25_085_no_use_pick_when_only_candidate_colour_is_unmet() {
+    let (mut runner, beel) = legality_runner(&["GREEN-TM-OPT"], &[]);
+    assert_eq!(use_pick_offers(&mut runner, beel), None);
+}
+
+/// A green [TS] Option among BeelStarmon's digivolution cards is not usable
+/// either (same DCGO filter for that origin): no pick installs.
+#[test]
+fn bt25_085_no_use_pick_for_a_digivolution_card_option_whose_colour_is_unmet() {
+    let (mut runner, beel) = legality_runner(&["PLAIN-OPT"], &["GREEN-TS-OPT"]);
+    assert_eq!(use_pick_offers(&mut runner, beel), None);
+}
+
+/// "You can't use Option cards": no pick installs.
+#[test]
+fn bt25_085_no_use_pick_when_options_cannot_be_used() {
+    let (mut runner, beel) = legality_runner(&["TM-OPT"], &["TS-OPT"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        digimon_engine::modifiers::PlayerModifierEntry::simple(
+            digimon_engine::enums::ModifierType::CannotUseOptionCards,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            None,
+            0,
+        ),
+    );
+    assert_eq!(use_pick_offers(&mut runner, beel), None);
+}
+
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;

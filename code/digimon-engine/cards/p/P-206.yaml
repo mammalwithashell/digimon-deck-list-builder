@@ -205,6 +205,14 @@ effects:
             all_of:
               - kind: tamer
               - color_matches_any_field_digimon: { of: you }
+              # DCGO P_206.cs:104-111 `CanPlayAsNewPermanent(card, false,
+              # ...)` (free frame, no "can't play Tamers by effects" lock).
+              - can_play_from_effect_without_cost: true
+              # The play pays the cost -4 (P_206.cs:205-211 payCost: true).
+              # DCGO's candidate check skips memory, but a card whose cost
+              # can't be paid can't be declared for play (CR 4.3 1-3-11-1),
+              # so an unpayable Tamer is not offered.
+              - affordable_with_cost: { reduce: 4 }
           prompt: "You may play 1 Tamer card with the same color as any of your Digimon on the field"
       # DCGO: PlayPermanentCards with payCost: true and a ChangeCostClass
       # applying -4 to the selected card only. "play cost reduced by 4" is a
@@ -260,6 +268,7 @@ effects:
                     zone: [hand]
                     kind: digimon
                     play_cost_lte: 3
+                    can_play_from_effect_without_cost: true
                   n: 1
               - count_gte:
                   filter:
@@ -267,6 +276,7 @@ effects:
                     zone: [trash]
                     kind: digimon
                     play_cost_lte: 3
+                    can_play_from_effect_without_cost: true
                   n: 1
           then:
             # "You may" — offer an explicit Play / Decline choice.
@@ -278,8 +288,28 @@ effects:
                 condition: { equals: [play_choice, 0] }
                 then:
                   # DCGO: "From which area?" EffectChoice when both zones have candidates.
+                  # DCGO P_206.cs:262-282 asks only when BOTH zones hold a
+                  # playable candidate (`SetBool(canSelectHand)` otherwise):
+                  # a zone with none is not a legal branch.
                   - select_effect_choice:
                       labels: ["From hand", "From trash"]
+                      legal_when:
+                        - count_gte:
+                            filter:
+                              of: you
+                              zone: [hand]
+                              kind: digimon
+                              play_cost_lte: 3
+                              can_play_from_effect_without_cost: true
+                            n: 1
+                        - count_gte:
+                            filter:
+                              of: you
+                              zone: [trash]
+                              kind: digimon
+                              play_cost_lte: 3
+                              can_play_from_effect_without_cost: true
+                            n: 1
                       bind_as: zone_choice
                       prompt: "From which area do you play a Digimon?"
                   - if:
@@ -293,6 +323,8 @@ effects:
                               all_of:
                                 - kind: digimon
                                 - play_cost_lte: 3
+                                # DCGO P_206.cs:254-259 CanPlayAsNewPermanent.
+                                - can_play_from_effect_without_cost: true
                             prompt: "Select a Digimon card (cost <=3) to play from hand"
                         - play_from_hand_free:
                             of: you
@@ -308,6 +340,8 @@ effects:
                               all_of:
                                 - kind: digimon
                                 - play_cost_lte: 3
+                                # DCGO P_206.cs:254-259 CanPlayAsNewPermanent.
+                                - can_play_from_effect_without_cost: true
                             prompt: "Select a Digimon card (cost <=3) to play from trash"
                         - play_from_trash_free:
                             of: you

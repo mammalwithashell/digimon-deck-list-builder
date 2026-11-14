@@ -2441,7 +2441,7 @@
   },
   "BT13-040": {
    "behaviourally_covered": true,
-   "clause_count": 3,
+   "clause_count": 4,
    "constructs": [
     "verb:draw",
     "verb:play_union_bound_free",
@@ -4442,7 +4442,7 @@
    "untested_constructs": []
   },
   "BT18-015": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 6,
    "constructs": [
     "verb:delete_permanent",
@@ -4469,12 +4469,10 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "verb:effect_initiated_dna_digivolve_trash_partner"
-   ]
+   "untested_constructs": []
   },
   "BT18-019": {
    "behaviourally_covered": true,
@@ -4827,7 +4825,7 @@
    "untested_constructs": []
   },
   "BT18-073": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 5,
    "constructs": [
     "verb:de_digivolve",
@@ -4855,12 +4853,10 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "verb:effect_initiated_dna_digivolve_trash_partner"
-   ]
+   "untested_constructs": []
   },
   "BT18-076": {
    "behaviourally_covered": true,
@@ -37837,11 +37833,41 @@
     "rules_conformance::ch16_attack_keywords.rs::vortex_timing_matches_rule"
    ]
   },
+  "predicate:affordable_with_cost": {
+   "kind": "predicate",
+   "name": "affordable_with_cost",
+   "parsed_only": false,
+   "signals": {
+    "dsl::constructs/affordable_with_cost.rs::commit_pays_the_same_reduced_cost_the_filter_priced": [
+     "yaml_key"
+    ],
+    "dsl::constructs/affordable_with_cost.rs::fixed_free_and_printed_costs_follow_the_verb_semantics": [
+     "yaml_key"
+    ],
+    "dsl::constructs/affordable_with_cost.rs::formula_reduction_offers_exactly_the_payable_cards": [
+     "yaml_key"
+    ],
+    "dsl::constructs/affordable_with_cost.rs::literal_reduction_matches_the_formula_of_the_same_value": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::constructs/affordable_with_cost.rs::commit_pays_the_same_reduced_cost_the_filter_priced",
+    "dsl::constructs/affordable_with_cost.rs::fixed_free_and_printed_costs_follow_the_verb_semantics",
+    "dsl::constructs/affordable_with_cost.rs::formula_reduction_offers_exactly_the_payable_cards",
+    "dsl::constructs/affordable_with_cost.rs::literal_reduction_matches_the_formula_of_the_same_value"
+   ]
+  },
   "predicate:affordable_with_cost_reduce": {
    "kind": "predicate",
    "name": "affordable_with_cost_reduce",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/affordable_with_cost.rs::reduce_leaf_prices_a_dual_at_its_use_cost": [
+     "yaml_key"
+    ],
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_decline_preserves_hand_and_memory": [
      "yaml_key"
     ],
@@ -37855,6 +37881,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/affordable_with_cost.rs::reduce_leaf_prices_a_dual_at_its_use_cost",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_decline_preserves_hand_and_memory",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_mask_inherited_text_and_payable_reduced_cost",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_paid_choice_and_zero_floor_use_real_payment"
@@ -37917,6 +37944,45 @@
      "yaml_key"
     ],
     "dsl::constructs/cost_target_event.rs::source_trash_never_dispatches_unconditional_addition_observer": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair": [
      "yaml_key"
     ],
     "dsl::constructs/evolution_candidate_cost.rs::cost_aware_host_rejects_unpayable_result_and_keeps_route_only_compatibility": [
@@ -38043,6 +38109,9 @@
      "yaml_key"
     ],
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures": [
@@ -38706,6 +38775,19 @@
     "dsl::constructs/cost_target_event.rs::ordinary_digivolve_never_addition_event",
     "dsl::constructs/cost_target_event.rs::source_added_observer_nonhost_once_and_after_body",
     "dsl::constructs/cost_target_event.rs::source_trash_never_dispatches_unconditional_addition_observer",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair",
     "dsl::constructs/evolution_candidate_cost.rs::cost_aware_host_rejects_unpayable_result_and_keeps_route_only_compatibility",
     "dsl::constructs/evolution_candidate_cost.rs::host_cost_probe_honors_player_prohibitions",
     "dsl::constructs/evolution_candidate_cost.rs::own_host_existence_does_not_substitute_other_hosts_route",
@@ -38748,6 +38830,7 @@
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_hand_mask_accepts_both_kinds_and_distinct_physical_duplicates_for_both_owners",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_prohibitions_discriminate_digimon_and_tamer_for_both_owners",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures",
     "dsl::constructs/plural_security_prevention.rs::empty_security_cannot_offer_atomic_payment_even_without_authored_security_guard",
     "dsl::constructs/plural_security_prevention.rs::no_matching_departure_never_offers_or_pays_plural_prevention",
@@ -38997,6 +39080,15 @@
     "dsl::activation_cost.rs::pre_cost_prompt_appears_when_event_condition_is_true": [
      "yaml_key"
     ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered": [
+     "yaml_key"
+    ],
     "dsl::constructs/identity_state.rs::self_color_count_gte_ignores_face_down_source_colours": [
      "yaml_key"
     ],
@@ -39183,6 +39275,9 @@
    "tests": [
     "dsl::activation_cost.rs::pre_cost_prompt_absent_when_event_condition_is_false",
     "dsl::activation_cost.rs::pre_cost_prompt_appears_when_event_condition_is_true",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered",
     "dsl::constructs/identity_state.rs::self_color_count_gte_ignores_face_down_source_colours",
     "dsl::constructs/identity_state.rs::self_color_count_gte_on_a_permanent_counts_effective_colours",
     "dsl::constructs/security_stack.rs::on_lose_security_and_on_opponent_security_removed_are_disjoint",
@@ -39942,6 +40037,18 @@
     "dsl::constructs/breeding_play.rs::breeding_dsl_resolution_rechecks_new_occupation_and_new_prohibition": [
      "yaml_key"
     ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair": [
+     "yaml_key"
+    ],
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance": [
      "yaml_key"
     ],
@@ -39985,6 +40092,21 @@
      "yaml_key"
     ],
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
@@ -40139,6 +40261,10 @@
     "dsl::constructs/breeding_play.rs::breeding_dsl_q4663_controller_not_destination_owns_the_effect_play_gate",
     "dsl::constructs/breeding_play.rs::breeding_dsl_removed_choice_never_substitutes_an_identical_copy",
     "dsl::constructs/breeding_play.rs::breeding_dsl_resolution_rechecks_new_occupation_and_new_prohibition",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_budget_color_completion_uses_matching_after_contraction",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_budget_does_not_count_an_unencodable_completion",
@@ -40154,6 +40280,11 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
@@ -40365,6 +40496,15 @@
     "dsl::constructs/breeding_move_binding.rs::moving_is_payable_without_an_evolution_and_evolution_can_be_declined": [
      "yaml_key"
     ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered": [
+     "yaml_key"
+    ],
     "dsl::constructs/meta_effect_affordability.rs::an_unpayable_reducer_cannot_make_a_candidate_legal": [
      "yaml_key"
     ],
@@ -40476,6 +40616,9 @@
     "dsl::constructs/breeding_move_binding.rs::moved_identity_survives_compaction_and_clone_during_evolution_choice",
     "dsl::constructs/breeding_move_binding.rs::moved_route_only_evolution_pick_follows_compaction_after_a_parked_observer",
     "dsl::constructs/breeding_move_binding.rs::moving_is_payable_without_an_evolution_and_evolution_can_be_declined",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered",
     "dsl::constructs/meta_effect_affordability.rs::an_unpayable_reducer_cannot_make_a_candidate_legal",
     "dsl::constructs/meta_effect_affordability.rs::both_payable_routes_remain_visible_after_candidate_selection",
     "dsl::constructs/meta_effect_affordability.rs::cost_aware_hand_filter_uses_printed_free_reduced_and_fixed_costs",
@@ -40738,6 +40881,18 @@
     ],
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance": [
      "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
+     "yaml_key"
     ]
    },
    "tested": true,
@@ -40748,7 +40903,11 @@
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_false_polarity_selects_blocked_cards_without_bypassing_commit_legality",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_hand_mask_accepts_both_kinds_and_distinct_physical_duplicates_for_both_owners",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_prohibitions_discriminate_digimon_and_tamer_for_both_owners",
-    "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance"
+    "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance",
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies"
    ]
   },
   "predicate:can_play_or_use_from_effect": {
@@ -40756,6 +40915,9 @@
    "name": "can_play_or_use_from_effect",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy": [
      "yaml_key"
     ],
@@ -40784,6 +40946,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg",
@@ -42388,6 +42551,24 @@
    "name": "dna_field_pair",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair": [
+     "yaml_key"
+    ],
     "dsl::dna_field_pair_masks.rs::first_and_second_choices_are_correlated_with_the_result_and_each_other": [
      "yaml_key"
     ],
@@ -42401,6 +42582,12 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair",
     "dsl::dna_field_pair_masks.rs::first_and_second_choices_are_correlated_with_the_result_and_each_other",
     "dsl::dna_field_pair_masks.rs::no_prompt_when_no_hand_card_has_a_legal_pair",
     "dsl::dna_field_pair_masks.rs::result_choice_offers_only_a_card_with_a_legal_field_pair"
@@ -42474,6 +42661,33 @@
     "dsl::phase3_dna_digivolve_triggers.rs::non_dna_digivolve_does_not_satisfy_dna_origin_predicate",
     "dsl::phase3_dna_digivolve_triggers.rs::on_digivolve_global_observer_reads_dna_origin_payload",
     "dsl::phase3_dna_digivolve_triggers.rs::optional_when_digivolving_accepted_after_dna_still_sees_dna_origin"
+   ]
+  },
+  "predicate:dna_trash_candidate": {
+   "kind": "predicate",
+   "name": "dna_trash_candidate",
+   "parsed_only": false,
+   "signals": {
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair"
    ]
   },
   "predicate:dp": {
@@ -45780,6 +45994,36 @@
     "dsl::constructs/cost_target_event.rs::source_trash_never_dispatches_unconditional_addition_observer": [
      "yaml_key"
     ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair": [
+     "yaml_key"
+    ],
     "dsl::constructs/evolution_candidate_cost.rs::cost_aware_host_rejects_unpayable_result_and_keeps_route_only_compatibility": [
      "yaml_key"
     ],
@@ -45976,6 +46220,12 @@
      "yaml_key"
     ],
     "dsl::constructs/option_security_suppression.rs::digimon_and_tamer_security_effects_still_activate_with_the_same_source": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
@@ -47521,6 +47771,16 @@
     "dsl::constructs/cost_target_event.rs::opponent_deletion_completed_declined_and_evade",
     "dsl::constructs/cost_target_event.rs::source_added_observer_nonhost_once_and_after_body",
     "dsl::constructs/cost_target_event.rs::source_trash_never_dispatches_unconditional_addition_observer",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair",
     "dsl::constructs/evolution_candidate_cost.rs::cost_aware_host_rejects_unpayable_result_and_keeps_route_only_compatibility",
     "dsl::constructs/evolution_candidate_cost.rs::host_cost_probe_honors_player_prohibitions",
     "dsl::constructs/evolution_candidate_cost.rs::own_host_existence_does_not_substitute_other_hosts_route",
@@ -47587,6 +47847,8 @@
     "dsl::constructs/meta_source_keyword.rs::top_source_from_hand_or_trash_preserves_exact_stack_and_physical_identity",
     "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material",
     "dsl::constructs/option_security_suppression.rs::digimon_and_tamer_security_effects_still_activate_with_the_same_source",
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::link_card_count_filtered_empty_filter_and_unreachable",
@@ -49625,6 +49887,15 @@
     "cost_hooks::pay_cost_play_delete_reducer.rs::variable_play_reducer_reduces_by_deleted_cost": [
      "yaml_key"
     ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered": [
+     "yaml_key"
+    ],
     "dsl::constructs/identity_state.rs::source_count_counts_sources_below_the_top_card_matching_the_filter": [
      "yaml_key"
     ],
@@ -49795,6 +50066,9 @@
     "cost_hooks::pay_cost_play_delete_reducer.rs::variable_play_reducer_clone_resolves_park_identically",
     "cost_hooks::pay_cost_play_delete_reducer.rs::variable_play_reducer_decline_pays_full_cost",
     "cost_hooks::pay_cost_play_delete_reducer.rs::variable_play_reducer_reduces_by_deleted_cost",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered",
     "dsl::constructs/identity_state.rs::source_count_counts_sources_below_the_top_card_matching_the_filter",
     "dsl::constructs/identity_state.rs::source_count_face_down_row_d_obeys_cr_4_7_9_characteristic_opacity",
     "dsl::constructs/identity_state.rs::source_count_no_matching_permanent_installs_no_prompt",
@@ -51215,6 +51489,24 @@
     "dsl::constructs/cost_target_event.rs::own_deletion_completed_and_evade": [
      "yaml_key"
     ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair": [
+     "yaml_key"
+    ],
     "dsl::constructs/plural_security_prevention.rs::plural_security_permits_subject_source_global_and_literal_predicates": [
      "yaml_key"
     ],
@@ -51258,6 +51550,12 @@
     "dsl::constructs/cost_target_event.rs::deletion_cost_prevention_not_credited",
     "dsl::constructs/cost_target_event.rs::deletion_results_include_tokens",
     "dsl::constructs/cost_target_event.rs::own_deletion_completed_and_evade",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair",
     "dsl::constructs/plural_security_prevention.rs::plural_security_permits_subject_source_global_and_literal_predicates",
     "dsl::group6_auras.rs::aura_other_predicate_excludes_source_permanent",
     "dsl::protect_others_leave_replacement.rs::bt25_039_accept_deletes_self_and_protects_the_other_subject",
@@ -52746,6 +53044,15 @@
    "name": "replacement_subject_is_mine",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered": [
+     "yaml_key"
+    ],
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures": [
      "yaml_key"
     ],
@@ -52909,6 +53216,9 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered",
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures",
     "dsl::constructs/plural_security_prevention.rs::empty_security_cannot_offer_atomic_payment_even_without_authored_security_guard",
     "dsl::constructs/plural_security_prevention.rs::no_matching_departure_never_offers_or_pays_plural_prevention",
@@ -53789,6 +54099,15 @@
     "dsl::constructs/cost_target_event.rs::source_payment_two_cards_one_observer_event": [
      "yaml_key"
     ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered": [
+     "yaml_key"
+    ],
     "dsl::constructs/evolution_candidate_cost.rs::cost_aware_host_rejects_unpayable_result_and_keeps_route_only_compatibility": [
      "yaml_key"
     ],
@@ -54587,6 +54906,9 @@
     "dsl::constructs/cost_target_event.rs::source_cost_refused_pick_is_atomic",
     "dsl::constructs/cost_target_event.rs::source_cost_zero_sources_aborts_outer_tail",
     "dsl::constructs/cost_target_event.rs::source_payment_two_cards_one_observer_event",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::choose_offers_only_cards_that_can_digivolve_onto_the_subject",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::no_choice_and_the_deletion_stands_when_no_card_can_digivolve_onto_it",
+    "dsl::constructs/digivolve_onto_replacement_subject.rs::without_the_leaf_the_unroutable_card_is_offered",
     "dsl::constructs/evolution_candidate_cost.rs::cost_aware_host_rejects_unpayable_result_and_keeps_route_only_compatibility",
     "dsl::constructs/evolution_candidate_cost.rs::host_cost_probe_honors_player_prohibitions",
     "dsl::constructs/evolution_candidate_cost.rs::own_host_existence_does_not_substitute_other_hosts_route",
@@ -59413,6 +59735,36 @@
     "dsl::constructs/cost_target_event.rs::source_trash_never_dispatches_unconditional_addition_observer": [
      "yaml_key"
     ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair": [
+     "yaml_key"
+    ],
     "dsl::constructs/effect_attack_pending_guard.rs::effect_attack_modes_never_offer_nested_declarations_including_end_of_attack": [
      "yaml_key"
     ],
@@ -59819,6 +60171,21 @@
      "yaml_key"
     ],
     "dsl::constructs/option_security_suppression.rs::suppressed_option_security_does_not_offer_its_choice_but_sibling_does": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
@@ -60836,6 +61203,16 @@
     "dsl::constructs/cost_target_event.rs::source_cost_zero_sources_aborts_outer_tail",
     "dsl::constructs/cost_target_event.rs::source_payment_two_cards_one_observer_event",
     "dsl::constructs/cost_target_event.rs::source_trash_never_dispatches_unconditional_addition_observer",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair",
     "dsl::constructs/effect_attack_pending_guard.rs::effect_attack_modes_never_offer_nested_declarations_including_end_of_attack",
     "dsl::constructs/effect_attack_pending_guard.rs::effect_attack_modes_offer_existing_legal_choices_without_an_attack",
     "dsl::constructs/effect_play_results.rs::a_late_play_restriction_does_not_publish_a_played_result",
@@ -60972,6 +61349,11 @@
     "dsl::constructs/option_security_suppression.rs::removing_the_inherited_source_clears_its_live_restriction",
     "dsl::constructs/option_security_suppression.rs::security_precedes_check_observers_that_would_later_enable_suppression",
     "dsl::constructs/option_security_suppression.rs::suppressed_option_security_does_not_offer_its_choice_but_sibling_does",
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
@@ -66973,6 +67355,24 @@
    "name": "effect_initiated_dna_digivolve",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair": [
+     "yaml_key"
+    ],
     "dsl::dna_field_pair_masks.rs::first_and_second_choices_are_correlated_with_the_result_and_each_other": [
      "yaml_key"
     ],
@@ -66996,6 +67396,12 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair",
     "dsl::dna_field_pair_masks.rs::first_and_second_choices_are_correlated_with_the_result_and_each_other",
     "dsl::dna_field_pair_masks.rs::no_prompt_when_no_hand_card_has_a_legal_pair",
     "dsl::dna_field_pair_masks.rs::result_choice_offers_only_a_card_with_a_legal_field_pair",
@@ -67052,15 +67458,29 @@
     "code/digimon-engine/src/dsl_cards/step/play_digivolve.rs"
    ],
    "name": "effect_initiated_dna_digivolve_trash_partner",
-   "near_miss_files": [
-    "src/dsl_cards/step/play_digivolve.rs",
-    "tests/effect_context/effect_dna_trash_partner.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair"
+   ]
   },
   "verb:end_attack": {
    "kind": "verb",
@@ -70513,6 +70933,18 @@
     "dsl::constructs/cost_target_event.rs::own_deletion_completed_and_evade": [
      "yaml_key"
     ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair": [
+     "yaml_key"
+    ],
     "dsl::constructs/effect_play_results.rs::a_late_play_restriction_does_not_publish_a_played_result": [
      "yaml_key"
     ],
@@ -70632,6 +71064,21 @@
      "yaml_key"
     ],
     "dsl::constructs/option_security_suppression.rs::suppressed_option_security_does_not_offer_its_choice_but_sibling_does": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
@@ -71045,6 +71492,10 @@
     "dsl::constructs/cost_target_event.rs::during_attack_lasts_through_end",
     "dsl::constructs/cost_target_event.rs::opponent_deletion_completed_declined_and_evade",
     "dsl::constructs/cost_target_event.rs::own_deletion_completed_and_evade",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair",
     "dsl::constructs/effect_play_results.rs::a_late_play_restriction_does_not_publish_a_played_result",
     "dsl::constructs/effect_play_results.rs::a_previous_effects_completed_play_does_not_leak_into_a_new_effect",
     "dsl::constructs/effect_play_results.rs::declining_selection_does_not_publish_a_played_result",
@@ -71085,6 +71536,11 @@
     "dsl::constructs/option_security_suppression.rs::live_restriction_is_rechecked_between_security_clauses_after_a_cloned_choice",
     "dsl::constructs/option_security_suppression.rs::moving_the_checked_option_to_hand_does_not_erase_its_activation_restriction",
     "dsl::constructs/option_security_suppression.rs::suppressed_option_security_does_not_offer_its_choice_but_sibling_does",
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
@@ -73047,6 +73503,18 @@
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance": [
      "yaml_key"
     ],
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
+     "yaml_key"
+    ],
     "dsl::delay_union_play_flow.rs::delay_union_flow_comparator_uses_pre_leave_subject_cost_snapshot": [
      "yaml_key"
     ],
@@ -73088,6 +73556,10 @@
    "tested_behaviourally": true,
    "tests": [
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance",
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies",
     "dsl::delay_union_play_flow.rs::delay_union_flow_comparator_uses_pre_leave_subject_cost_snapshot",
     "dsl::delay_union_play_flow.rs::delay_union_flow_offer_installs_with_zero_candidates",
     "dsl::delay_union_play_flow.rs::delay_union_flow_plays_reward_on_field_and_subject_completes_leave",
@@ -75148,6 +75620,36 @@
     "dsl::constructs/cost_target_event.rs::names_exclude_printed_and_alias_clashes": [
      "yaml_key"
     ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair": [
+     "yaml_key"
+    ],
     "dsl::constructs/evolution_candidate_cost.rs::cost_aware_host_rejects_unpayable_result_and_keeps_route_only_compatibility": [
      "yaml_key"
     ],
@@ -75604,6 +76106,16 @@
     "dsl::constructs/chronomon_result_protection.rs::selected_host_follows_field_compaction_through_hand_choice_and_clone",
     "dsl::constructs/chronomon_result_protection.rs::selected_host_identity_survives_its_first_digivolution_and_another_cloned_choice",
     "dsl::constructs/cost_target_event.rs::names_exclude_printed_and_alias_clashes",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair",
     "dsl::constructs/evolution_candidate_cost.rs::cost_aware_host_rejects_unpayable_result_and_keeps_route_only_compatibility",
     "dsl::constructs/evolution_candidate_cost.rs::host_cost_probe_honors_player_prohibitions",
     "dsl::constructs/evolution_candidate_cost.rs::own_host_existence_does_not_substitute_other_hosts_route",
@@ -77176,6 +77688,36 @@
     "dsl::constructs/cost_target_event.rs::own_deletion_completed_and_evade": [
      "yaml_key"
     ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair": [
+     "yaml_key"
+    ],
     "dsl::constructs/evolution_candidate_cost.rs::cost_aware_host_rejects_unpayable_result_and_keeps_route_only_compatibility": [
      "yaml_key"
     ],
@@ -77581,6 +78123,16 @@
     "dsl::constructs/cost_target_event.rs::deletion_cost_reduction_credits_only_completed_payment",
     "dsl::constructs/cost_target_event.rs::deletion_results_include_tokens",
     "dsl::constructs/cost_target_event.rs::own_deletion_completed_and_evade",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::declined_partner_leaves_no_result_to_choose",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_commit_digivolves_the_two_bound_materials",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_cost_mirrors_a_free_dna_step",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_follows_the_chosen_partner",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::fixed_pair_result_offers_only_cards_whose_recipe_that_pair_satisfies",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair",
     "dsl::constructs/evolution_candidate_cost.rs::cost_aware_host_rejects_unpayable_result_and_keeps_route_only_compatibility",
     "dsl::constructs/evolution_candidate_cost.rs::host_cost_probe_honors_player_prohibitions",
     "dsl::constructs/evolution_candidate_cost.rs::own_host_existence_does_not_substitute_other_hosts_route",
@@ -78135,6 +78687,18 @@
     "dsl::collapse_then_tail.rs::select_trash_then_add_to_hand_parity": [
      "yaml_key"
     ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden": [
+     "yaml_key"
+    ],
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair": [
+     "yaml_key"
+    ],
     "dsl::constructs/hand_shuffle_return_and_name_match.rs::name_matches_returned_card_selects_permanents_named_like_the_returned_card": [
      "yaml_key"
     ],
@@ -78204,6 +78768,10 @@
    "tested_behaviourally": true,
    "tests": [
     "dsl::collapse_then_tail.rs::select_trash_then_add_to_hand_parity",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_field_and_partner_stages_are_correlated",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_free_cost_admits_the_expensive_result",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_offers_nothing_while_digivolving_by_effect_is_forbidden",
+    "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::trash_dna_result_offers_only_cards_with_a_payable_field_and_trash_pair",
     "dsl::constructs/hand_shuffle_return_and_name_match.rs::name_matches_returned_card_selects_permanents_named_like_the_returned_card",
     "dsl::effect_refiring.rs::refire_card_effect_yaml_lowers_with_bound_card_and_timing",
     "dsl::group7_predicate_batch.rs::select_trash_uses_play_cost_lte_for_valid_actions",
@@ -78319,6 +78887,21 @@
      "yaml_key"
     ],
     "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/zone_moves.rs::sequential_union_picks_define_top_order": [
@@ -78451,6 +79034,11 @@
     "dsl::constructs/meta_source_keyword.rs::top_source_declining_material_or_host_leaves_both_origins_and_stacks_untouched",
     "dsl::constructs/meta_source_keyword.rs::top_source_from_hand_or_trash_preserves_exact_stack_and_physical_identity",
     "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material",
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/zone_moves.rs::sequential_union_picks_define_top_order",
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards",
     "dsl::delay_union_play_flow.rs::delay_union_flow_comparator_uses_pre_leave_subject_cost_snapshot",
@@ -80248,6 +80836,9 @@
    "name": "use_option_bound",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
+     "yaml_key"
+    ],
     "dsl::option_source_use_cluster.rs::dsl_use_option_bound_uses_union_picked_option_free_from_trash": [
      "variant"
     ]
@@ -80255,6 +80846,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
     "dsl::option_source_use_cluster.rs::dsl_use_option_bound_uses_union_picked_option_free_from_trash"
    ]
   },
@@ -80427,11 +81019,11 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2229,
+  "behavioural_tests": 2253,
   "cards": {
-   "behaviourally_covered": 1162,
-   "lowering_covered": 1179,
-   "not_covered": 54,
+   "behaviourally_covered": 1164,
+   "lowering_covered": 1181,
+   "not_covered": 52,
    "total": 1233
   },
   "constructs": {
@@ -80446,9 +81038,9 @@
    },
    "predicate": {
     "parsed_only": 7,
-    "tested": 198,
-    "tested_behaviourally": 191,
-    "total": 225,
+    "tested": 200,
+    "tested_behaviourally": 193,
+    "total": 227,
     "untested": 27,
     "used_by_cards": 198,
     "used_untested": 20
@@ -80464,12 +81056,12 @@
    },
    "verb": {
     "parsed_only": 5,
-    "tested": 181,
-    "tested_behaviourally": 176,
+    "tested": 182,
+    "tested_behaviourally": 177,
     "total": 186,
-    "untested": 5,
+    "untested": 4,
     "used_by_cards": 174,
-    "used_untested": 5
+    "used_untested": 4
    }
   },
   "ex13_lists": 1552,
@@ -80589,8 +81181,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 411,
-  "scanned_tests": 2636,
+  "scanned_files": 415,
+  "scanned_tests": 2660,
   "top_untested": [
    {
     "cards_blocked": 3,
@@ -80655,11 +81247,6 @@
    {
     "cards_blocked": 3,
     "construct": "timing:on_add_to_hand",
-    "ex13_lists_blocked": 15
-   },
-   {
-    "cards_blocked": 2,
-    "construct": "verb:effect_initiated_dna_digivolve_trash_partner",
     "ex13_lists_blocked": 15
    },
    {

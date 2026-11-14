@@ -50,6 +50,27 @@ fn setup() -> DebugRunner {
             &["Beast"],
         ))
         .add_card(tamer("TS-TAMER", "TS Tamer", CardColor::Green, &["TS"]))
+        // Play cost 21 / 22 reduced by 5 at memory 6: 16 → -10 (payable),
+        // 17 → -11 (not payable).
+        .add_card(digimon("TS-21", "TS 21", CardColor::Green, 7, 21, &["TS"]))
+        .add_card(digimon("TS-22", "TS 22", CardColor::Green, 7, 22, &["TS"]))
+        // Budmon (BT26-002): a [Vegetation] Digi-Egg.
+        .dsl_card("BT26-002")
+        .expect("BT26-002 Budmon (Digi-Egg)")
+        // [Vegetation] Options: green (requirement met by Ceresmon) and purple
+        // (unmet on a yellow/green board, CR 4.3 4-22).
+        .add_card({
+            let mut o = gd_option("VEG-OPT", 3);
+            o.traits = vec!["Vegetation".to_string()];
+            o.colors = vec![CardColor::Green];
+            o
+        })
+        .add_card({
+            let mut o = gd_option("VEG-OPT-PURPLE", 3);
+            o.traits = vec!["Vegetation".to_string()];
+            o.colors = vec![CardColor::Purple];
+            o
+        })
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
         .memory(6)
@@ -147,6 +168,111 @@ fn bt26_032_wd_declined_suspend_skips_play() {
     let _ = r.auto_resolve();
     assert!(r.pending_selection_view().is_none());
     assert_eq!(hand_ids(&r, 0), vec!["TS-8".to_string()]);
+}
+
+// ─── Hand-pick candidate legality (select-hand playability audit) ────────────
+// DCGO BT26_032.cs:62-64 offers only `(EqualsTraits("Vegetation") ||
+// HasTSTraits) && CanPlayOrUse(card, activateClass, fixedCost: max(0,
+// GetCostItself - 5))` (PlayEffects.cs:286-293): an Option (a DUAL counts) with
+// `!CanNotPlayThisOption` (no "can't use Option" lock, colour requirement or
+// <Use Req.> met — CR 4.3 4-22, Q1500 / Q2785) and `MaxMemoryCost >= cost`, or
+// a card with a play cost (never a Digi-Egg, CR 4.3 7-1-1) that
+// `CanPlayAsNewPermanent` (empty frame, no play lock, payable). A card the
+// play / use would refuse is never offered (CR 4.3 1-3-2).
+
+/// Fire [When Digivolving] on Ceresmon, suspend Ceresmon itself, and return
+/// the hand-pick candidates' card ids (empty when no hand pick installs).
+fn offered_after_suspend(r: &mut DebugRunner, hand: &[&str]) -> Vec<String> {
+    use digimon_engine::action::space::PLAY_HAND_START;
+    let c = r.place_on_field(0, CARD_ID, Some(0));
+    for id in hand {
+        push_hand(r, 0, id);
+    }
+    fire(r, EffectTiming::WhenDigivolving, c);
+    pick_first(r, 0); // suspend Ceresmon
+    assert!(r.game.players[0].battle_area[c.index as usize].is_suspended);
+    let Some(v) = r.pending_selection_view() else {
+        return Vec::new();
+    };
+    assert!(
+        r.game
+            .pending_selection
+            .as_ref()
+            .is_none_or(|p| p.card_choice.is_none()),
+        "hand pick uses PLAY_HAND_START action ids"
+    );
+    let ids = hand_ids(r, 0);
+    v.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS && a >= PLAY_HAND_START && ((a - PLAY_HAND_START) as usize) < ids.len())
+        .map(|a| ids[(a - PLAY_HAND_START) as usize].clone())
+        .collect()
+}
+
+/// Budmon (BT26-002) is a [Vegetation] Digi-Egg: no play cost, never played.
+#[test]
+fn bt26_032_hand_pick_excludes_vegetation_digi_egg() {
+    let mut r = setup();
+    let offered = offered_after_suspend(&mut r, &["BT26-002", "VEG-8"]);
+    assert_eq!(offered, vec!["VEG-8".to_string()]);
+}
+
+/// A purple [Vegetation] Option's colour requirement is unmet: not offered;
+/// the green one is.
+#[test]
+fn bt26_032_hand_pick_excludes_option_whose_colour_is_unmet() {
+    let mut r = setup();
+    let offered = offered_after_suspend(&mut r, &["VEG-OPT-PURPLE", "VEG-OPT"]);
+    assert_eq!(offered, vec!["VEG-OPT".to_string()]);
+}
+
+/// "You can't use Option cards": the Option is not offered, the Digimon is.
+#[test]
+fn bt26_032_hand_pick_excludes_option_when_options_cannot_be_used() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup();
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = offered_after_suspend(&mut r, &["VEG-OPT", "VEG-8"]);
+    assert_eq!(offered, vec!["VEG-8".to_string()]);
+}
+
+/// "You can't play Digimon by effects": the Digimon is not offered, the Option
+/// still is.
+#[test]
+fn bt26_032_hand_pick_excludes_digimon_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup();
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = offered_after_suspend(&mut r, &["VEG-OPT", "VEG-8"]);
+    assert_eq!(offered, vec!["VEG-OPT".to_string()]);
+}
+
+/// A full battle area: the Digimon and the Tamer are not offered, the Option
+/// still is.
+#[test]
+fn bt26_032_hand_pick_excludes_digimon_and_tamer_when_battle_area_full() {
+    let mut r = setup();
+    r.game.rules.field_slots = 1; // Ceresmon alone fills it
+    let offered = offered_after_suspend(&mut r, &["VEG-OPT", "VEG-8", "TS-TAMER"]);
+    assert_eq!(offered, vec!["VEG-OPT".to_string()]);
+}
+
+/// The play pays the cost reduced by 5: a card whose reduced cost would take
+/// memory past -10 is not offered.
+#[test]
+fn bt26_032_hand_pick_excludes_unaffordable_digimon() {
+    let mut r = setup();
+    let offered = offered_after_suspend(&mut r, &["TS-21", "TS-22"]);
+    assert_eq!(offered, vec!["TS-21".to_string()]);
 }
 
 #[test]

@@ -35,8 +35,12 @@ effects:
           of: you
           bind_as: arisa_pick
           optional: true
+          # DCGO BT22_088.cs:40-45 IsArisaKinosaki: EqualsCardName &&
+          # CanPlayAsNewPermanent (free slot, no Tamer play prohibition).
           filter:
-            name_is: "Arisa Kinosaki"
+            all_of:
+              - name_is: "Arisa Kinosaki"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Arisa Kinosaki] from your hand without paying the cost"
       - play_from_hand_free:
           of: you
@@ -51,8 +55,12 @@ effects:
                 of: you
                 bind_as: shoemon_pick
                 optional: true
+                # DCGO BT22_088.cs:47-52 IsShoemon: EqualsCardName &&
+                # CanPlayAsNewPermanent(..., Root.Trash).
                 filter:
-                  name_is: "Shoemon"
+                  all_of:
+                    - name_is: "Shoemon"
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 [Shoemon] from your trash without paying the cost"
             - play_from_trash_free:
                 of: you

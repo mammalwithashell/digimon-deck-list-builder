@@ -16,7 +16,11 @@
 # DCGO C# reference: EX13/Black/EX13_060.cs. The [End of Your Turn] pick
 # offers only cards payable at max(0, cost - 6) (`CanPlayAsNewPermanent(payCost:
 # true, fixedCost: cost - 6)`; CR 1-3-11-1, memory floor -10), so it carries
-# `affordable_with_cost_reduce: 6` (game-audit follow-up 2026-11-11).
+# `affordable_with_cost_reduce: 6` (game-audit follow-up 2026-11-11), and
+# only cards `CanPlayAsNewPermanent` accepts at all -- an empty frame, no
+# effect-play prohibition -- so it also carries
+# `can_play_from_effect_without_cost: true` (memory is the affordability leaf's
+# job; G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY, 2026-11-13).
 #
 # DSL notes:
 #   - "if they have 5 or more memory" — the opponent's memory ≥ 5 ⇔ the
@@ -135,6 +139,9 @@ effects:
               - none_of:
                   - name_contains: Alphamon
               - affordable_with_cost_reduce: 6
+              # DCGO EX13_060.cs:294 `CanPlayAsNewPermanent`: an empty frame
+              # and no effect-play prohibition (CR 4.3 1-3-2).
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Chronicle] trait card without [Alphamon] in its name with the cost reduced by 6"
       - if:
           condition: { binding_present: chronicle }

@@ -303,3 +303,180 @@ fn ex11_071_main_action_path_returns_self_to_deck_bottom() {
         "the Tamer left the battle area as the cost"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Hand-pick candidate legality (select-hand playability audit)
+//
+// DCGO EX11_071.cs:100-106 `CanSelectCardCondition`: `(EqualsTraits("Royal
+// Knight") || EqualsTraits("LIBERATOR")) && GetCostItself >= 4 &&
+// CanPlayAsNewPermanent(cardSource, payCost: true, activateClass, fixedCost:
+// Max(0, GetCostItself - 2))` — only a card the reduced-cost play can actually
+// put on the field: never an Option (no play cost, CR 4.3 7-1-1; "play" is not
+// "use"), never a card under a play prohibition or with no free frame, never a
+// card whose reduced cost can't be paid (CR 4.3 1-3-11-1).
+// ═══════════════════════════════════════════════════════════════════════════
+
+fn ex11_071_card(
+    id: &str,
+    kind: digimon_engine::enums::CardKind,
+    cost: u16,
+    dp: Option<i32>,
+    traits: &[&str],
+) -> digimon_engine::card_data::CardData {
+    use digimon_engine::enums::CardKind;
+    let mut c = digimon_engine::debug_runner::make_test_card(id, id);
+    c.card_kind = kind;
+    c.play_cost = cost;
+    c.colors = vec![digimon_engine::enums::CardColor::White];
+    c.level = if kind == CardKind::Digimon { Some(5) } else { None };
+    c.dp = dp;
+    c.traits = traits.iter().map(|t| t.to_string()).collect();
+    c
+}
+
+/// Activate Cool Boy's [Main] (paying the return-to-deck-bottom cost) and
+/// return the hand cards the reduced-cost play pick offers (sorted; empty if
+/// no pick installs). `tweak` runs after Cool Boy is placed.
+fn ex11_071_offered(
+    extra_dsl: &[&str],
+    hand: &[&str],
+    memory: i16,
+    tweak: impl FnOnce(&mut DebugRunner),
+) -> Vec<String> {
+    use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
+    use digimon_engine::enums::CardKind;
+    use digimon_engine::selection::SelectionKind;
+    let mut builder = DebugRunner::builder()
+        .dsl_card("EX11-071")
+        .expect("EX11-071 YAML loads")
+        .add_card(ex11_071_card("RK-DIGI", CardKind::Digimon, 6, Some(6000), &["Royal Knight"]))
+        .add_card(ex11_071_card("RK-LOW-DP", CardKind::Digimon, 5, Some(3000), &["Royal Knight"]))
+        .add_card(ex11_071_card("RK-BIG", CardKind::Digimon, 13, Some(13000), &["Royal Knight"]))
+        .add_card(ex11_071_card("LIB-TAMER", CardKind::Tamer, 4, None, &["LIBERATOR"]))
+        .add_card(ex11_071_card("FILL", CardKind::Digimon, 3, Some(1000), &[]))
+        .deck(0, &["FILL"; 6]);
+    for id in extra_dsl {
+        builder = builder.dsl_card(id).expect("extra DSL card loads");
+    }
+    let mut r = builder.hand(0, hand).memory(memory).start();
+    let cool_boy = r.place_on_field(0, "EX11-071", Some(0));
+    r.game.enter_main_phase();
+    r.game.memory = memory;
+    tweak(&mut r);
+    assert!(
+        r.game.activate_field_main(0, cool_boy.index as usize),
+        "[Main] fires through the action path"
+    );
+    let Some(view) = r.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let hand_ids: Vec<String> = r.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    let mut offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| {
+            let slot = if id >= HAND_EFFECT_START { id - HAND_EFFECT_START } else { id - PLAY_HAND_START };
+            hand_ids[slot as usize].clone()
+        })
+        .collect();
+    offered.sort();
+    offered
+}
+
+/// Royal Knights of the Purge (BT13-110) is a [Royal Knight] Option with a use
+/// cost of 4 or more: an Option has no play cost and is used, not played, so
+/// it isn't offered. The LIBERATOR Tamer and the Royal Knight Digimon are.
+#[test]
+fn ex11_071_main_pick_excludes_royal_knight_option() {
+    let offered = ex11_071_offered(&["BT13-110"], &["BT13-110", "RK-DIGI", "LIB-TAMER"], 10, |_| {});
+    assert_eq!(offered, vec!["LIB-TAMER".to_string(), "RK-DIGI".to_string()]);
+}
+
+/// With 0 memory, a play cost 13 Royal Knight still costs 11 after the
+/// reduction: paying it would take memory past 10 on the opponent's side, so it
+/// can't be played (CR 4.3 1-3-11-1; DCGO `CanPlayAsNewPermanent(payCost:
+/// true, fixedCost: cost - 2)`). The cost-6 one (pays 4) is offered.
+#[test]
+fn ex11_071_main_pick_excludes_unaffordable_card() {
+    let offered = ex11_071_offered(&[], &["RK-BIG", "RK-DIGI"], 0, |_| {});
+    assert_eq!(offered, vec!["RK-DIGI".to_string()]);
+}
+
+/// "You can't play Digimon with 4000 DP or less": the 3000 DP Royal Knight is
+/// not offered.
+#[test]
+fn ex11_071_main_pick_excludes_card_under_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = ex11_071_offered(&[], &["RK-LOW-DP", "RK-DIGI"], 10, |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(
+                ModifierType::CannotPlayDigimonWithDPAtMost,
+                4000,
+                Expiry::Permanent,
+                None,
+                1,
+            ),
+        );
+    });
+    assert_eq!(offered, vec!["RK-DIGI".to_string()]);
+}
+
+/// A full battle area after Cool Boy leaves: nothing can be played, so nothing
+/// is offered.
+#[test]
+fn ex11_071_main_pick_offers_nothing_when_battle_area_full() {
+    let offered = ex11_071_offered(&[], &["RK-DIGI", "LIB-TAMER"], 10, |r| {
+        r.place_on_field(0, "FILL", Some(0));
+        // Cool Boy returns to the deck as the cost; FILL alone fills the area.
+        r.game.rules.field_slots = 1;
+    });
+    assert!(offered.is_empty(), "no playable candidate: {offered:?}");
+}
+
+/// "you may play": the reduced-cost pick can be passed (DCGO EX11_071.cs:129
+/// `canNoSelect: true`). Passing plays nothing; the Royal Knight stays in hand
+/// and memory is unchanged.
+#[test]
+fn ex11_071_main_pick_is_optional_and_passing_plays_nothing() {
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::enums::CardKind;
+    use digimon_engine::selection::SelectionKind;
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX11-071")
+        .expect("EX11-071 YAML loads")
+        .add_card(ex11_071_card("RK-DIGI", CardKind::Digimon, 6, Some(6000), &["Royal Knight"]))
+        .add_card(ex11_071_card("FILL", CardKind::Digimon, 3, Some(1000), &[]))
+        .deck(0, &["FILL"; 6])
+        .hand(0, &["RK-DIGI"])
+        .memory(5)
+        .start();
+    let cool_boy = r.place_on_field(0, "EX11-071", Some(0));
+    r.game.enter_main_phase();
+    r.game.memory = 5;
+    assert!(r.game.activate_field_main(0, cool_boy.index as usize));
+    let view = r.pending_selection_view().expect("hand pick pending");
+    assert_eq!(view.kind, SelectionKind::Hand);
+    assert!(view.is_optional, "'you may play': the pick admits PASS");
+    r.execute_action(0, PASS).expect("pass the pick");
+    let _ = r.auto_resolve();
+    assert!(
+        r.game.players[0].hand.iter().any(|c| c.card_id(&r.game.card_data) == "RK-DIGI"),
+        "RK-DIGI stays in hand"
+    );
+    assert!(
+        !r.game.players[0].battle_area.iter().any(|p| p.top_card().card_id(&r.game.card_data) == "RK-DIGI"),
+        "nothing was played"
+    );
+    assert_eq!(r.game.memory, 5, "no memory was paid");
+}

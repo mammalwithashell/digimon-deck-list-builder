@@ -42,6 +42,13 @@ effects:
     # can't happen. The cost is paid FIRST; only then is the hand checked, so a
     # [TS] Tamer that arrives from the security card is playable. The Tamer
     # pick is declinable (SelectHandEffect canNoSelect: true).
+    #
+    # KNOWN GAP (not a candidate-filter issue): DCGO BT24_034.cs:72 offers the
+    # Tamer pick only if the security card actually reached the hand
+    # (`HandCards.Contains(topCard)`) -- CR 4.3 15-7-1 / 15-7-2: if the "By X"
+    # part isn't executed, the part after it can't be. The steps below always
+    # go on to the pick, which differs only when a replacement effect stops the
+    # security card from reaching the hand. Needs a "by-cost succeeded" gate.
     optional: true
     condition: { security_count_gte: 1 }
     summary: "[When Moving][On Play][When Digivolving] By adding your top security card to the hand, you may play 1 TS Tamer from hand free, excluding names of your Tamers"
@@ -56,5 +63,8 @@ effects:
               - kind: tamer
               - trait_has: TS
               - name_not_shared_by_field_tamer: { of: you }
+              # DCGO BT24_034.cs:47-63 ValidTamer CanPlayAsNewPermanent: a free
+              # slot, no "can't play" lock (CR 4.3 1-3-11-1).
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 TS Tamer from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: pick }

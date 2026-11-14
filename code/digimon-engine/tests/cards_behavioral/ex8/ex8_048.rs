@@ -499,3 +499,103 @@ fn ex8_048_source_trash_deletes_only_opponent_digimon_cost_four_or_less() {
         .collect();
     assert_eq!(remaining, vec!["EXPENSIVE5"]);
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 5 — [Close] candidate legality (free play from hand)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// DCGO EX8_048.cs:31-35 `HasClose` = `EqualsCardName("Close") &&
+// CanPlayAsNewPermanent(source, false, activateClass)`, used as the
+// SelectHandEffect `canTargetCondition` (EX8_048.cs:53-69): a [Close] that can't
+// be played (full battle area, or "can't play Tamers by effects") is not
+// offered, and with none the effect asks nothing. CR 4.3 1-3-11-1: a card that
+// can't be played can't be declared for play.
+
+/// The battle area is full: [Close] can't be played, so it is not offered.
+#[test]
+fn ex8_048_close_not_offered_when_battle_area_full() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX8-048")
+        .expect("EX8-048 YAML parses")
+        .add_card(make_close_tamer("CLOSE-1"))
+        .add_card(make_filler("FILLER-DECK"))
+        .hand(0, &["CLOSE-1"])
+        .deck(0, &["FILLER-DECK", "FILLER-DECK", "FILLER-DECK"])
+        .memory(10)
+        .start();
+
+    let handle = runner.place_on_field(0, "EX8-048", Some(0));
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    fire_when_digivolving(&mut runner, handle);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "a [Close] that can't be played into a full battle area must not be offered"
+    );
+    assert_eq!(runner.hand_size(0), 1, "[Close] stays in hand");
+}
+
+/// "You can't play Tamers by effects": [Close] is not offered.
+#[test]
+fn ex8_048_close_not_offered_when_tamer_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX8-048")
+        .expect("EX8-048 YAML parses")
+        .add_card(make_close_tamer("CLOSE-1"))
+        .add_card(make_filler("FILLER-DECK"))
+        .hand(0, &["CLOSE-1"])
+        .deck(0, &["FILLER-DECK", "FILLER-DECK", "FILLER-DECK"])
+        .memory(10)
+        .start();
+
+    let handle = runner.place_on_field(0, "EX8-048", Some(0));
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    fire_when_digivolving(&mut runner, handle);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "a [Close] that can't be played by effects must not be offered"
+    );
+    assert_eq!(runner.hand_size(0), 1, "[Close] stays in hand");
+}
+
+/// Regression guard: one free slot is enough, and a "can't play Digimon by
+/// effects" lock does not stop a Tamer, so [Close] is still offered.
+#[test]
+fn ex8_048_close_offered_with_one_free_slot_under_digimon_only_lock() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX8-048")
+        .expect("EX8-048 YAML parses")
+        .add_card(make_close_tamer("CLOSE-1"))
+        .add_card(make_filler("FILLER-DECK"))
+        .hand(0, &["CLOSE-1"])
+        .deck(0, &["FILLER-DECK", "FILLER-DECK", "FILLER-DECK"])
+        .memory(10)
+        .start();
+
+    let handle = runner.place_on_field(0, "EX8-048", Some(0));
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8 + 1;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    fire_when_digivolving(&mut runner, handle);
+
+    let view = runner.pending_selection_view().expect("[Close] is offered");
+    assert_eq!(view.valid_action_ids.len(), 1);
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("select Close");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 0, "[Close] was played");
+}

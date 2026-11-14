@@ -56,13 +56,23 @@ effects:
           bind_as: pick
           optional: true
           filter:
-            any_of:
-              - all_of:
-                  - kind: digimon
-                  - in_text_contains: "Chronomon"
-              - all_of:
-                  - kind: tamer
-                  - trait_has: TS
+            all_of:
+              - any_of:
+                  - all_of:
+                      - kind: digimon
+                      - in_text_contains: "Chronomon"
+                  - all_of:
+                      - kind: tamer
+                      - trait_has: TS
+              # DCGO BT26_096.cs:34-36 `CanPlayAsNewPermanent(payCost: true,
+              # fixedCost: GetCostItself - 2)`: a free frame (after this
+              # Tamer left), no play prohibition, no trash-play lock for a
+              # trash card (never a DUAL: no play cost, CR 4.3 7-1-1, 4-6-2), and the
+              # reduced cost payable (CR 4.3 7-1-2-3). The
+              # `affordable_with_cost` value is the verb's `cost_delta`.
+              # Select-hand audit 2026-11-13.
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 2 }
           prompt: "You may play 1 Digimon card with [Chronomon] in its text or 1 [TS] trait Tamer card from your hand or trash with the cost reduced by 2"
       - play_union_bound_free:
           binding: pick

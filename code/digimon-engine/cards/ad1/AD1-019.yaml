@@ -1,10 +1,10 @@
 # AD1-019 Matt Ishida & T.K. Takaishi — Tamer, Blue+Yellow, Cost 3.
 #
-# NOTE — this card has NO row in data/cards.json (incomplete ingest; the
-# project plans mislabel AD1-019 as an "empty/placeholder card"). It is in
-# fact a real Tamer. Card details below are sourced per CLAUDE.md "Source
-# priority": the official cardlist (world.digimoncard.com AD-01) and the
-# DCGO behavioral reference DCGO/Assets/Scripts/CardEffect/AD1/Blue/AD1_019.cs.
+# Traits ADVENTURE/Hero (official bundle data/card_bundles/AD1-019.md;
+# data/cards.json row AD1-019 `type_eng` agrees). Card details are sourced per
+# CLAUDE.md "Source priority": the official cardlist (world.digimoncard.com
+# AD-01) and the DCGO behavioral reference
+# DCGO/Assets/Scripts/CardEffect/AD1/Blue/AD1_019.cs.
 #
 # Printed card text:
 #
@@ -69,6 +69,7 @@ name: Matt Ishida & T.K. Takaishi
 kind: tamer
 color: [blue, yellow]
 cost: 3
+traits: [ADVENTURE, Hero]
 
 effects:
   # ─── Clause 1: [Start of Your Main Phase] gain 1 memory if opp has Digimon
@@ -118,12 +119,35 @@ effects:
         - event_target_trait_has: ADVENTURE
     process:
       - activation_cost: { suspend_self: true }
+      # Candidates (DCGO AD1_019.cs:52-57 IsAdventureDigimon = `HasPlayCost &&
+      # EqualsTraits("ADVENTURE") && CanPlayAsNewPermanent(card, payCost: true,
+      # activateClass, fixedCost: Math.Max(0, GetCostItself - reduction))`):
+      # `can_play_from_effect_without_cost` = has a play cost (no Digi-Egg,
+      # CR 4.3 7-1-1 — Koromon ST20-01; no Option, which is used, never played
+      # — Our Courage United ST20-14; no DUAL, CR 4.3 4-6-2), a free slot, no
+      # effect-play lock; `affordable_with_cost` = the same reduced cost the
+      # play below charges is payable. CR 4.3 1-3-11-1: a card can't be
+      # declared for play if it can't be played or its cost can't be paid.
       - select_hand:
           of: you
           bind_as: adventure_card
           optional: true
           filter:
-            trait_has: ADVENTURE
+            all_of:
+              - trait_has: ADVENTURE
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost:
+                  reduce:
+                    floor_div:
+                      - base: 0
+                        per:
+                          distinct_colors_count:
+                            of: you
+                            zone: battle_area
+                            filter:
+                              kind: tamer
+                        delta: 1
+                      - 2
           prompt: "Play 1 [ADVENTURE] card from hand at reduced cost"
       - play_from_hand:
           of: you

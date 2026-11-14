@@ -520,6 +520,78 @@ fn bt12_038_when_digivolving_decline_plays_no_tamer() {
     );
 }
 
+// ─── Candidate legality: only a Marcus Damon the free play would accept ───
+// DCGO BT12_038.cs:36-50 `CanSelectCardCondition`: CardNames ∋ "Marcus Damon"
+// && Owner == card.Owner && `CanPlayAsNewPermanent(cardSource, payCost:false,
+// activateClass)` — no free battle-area frame or a "can't play Tamers by
+// effects" lock removes the card from the pick, and with no candidate the
+// effect asks nothing. CR 4.3 1-3-11-1: only a card that can be played may be
+// declared for play.
+
+/// Fire GeoGreymon's [When Digivolving] with Marcus Damon in hand after
+/// `setup` (run with the carrier already on the field).
+fn fire_with_marcus_after(setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT12-038")
+        .expect("BT12-038 in pack")
+        .add_card(make_marcus("MARCUS", CardColor::Yellow))
+        .hand(0, &["MARCUS"])
+        .memory(10)
+        .start();
+    let carrier = runner.place_on_field(0, "BT12-038", Some(0));
+    setup(&mut runner);
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(carrier),
+    );
+    runner.game.drain_effect_queue();
+    runner
+}
+
+fn non_pass_candidates(runner: &DebugRunner) -> Vec<u16> {
+    runner
+        .game
+        .pending_selection
+        .as_ref()
+        .map(|p| p.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect())
+        .unwrap_or_default()
+}
+
+#[test]
+fn bt12_038_marcus_not_offered_when_battle_area_full() {
+    let runner = fire_with_marcus_after(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(
+        non_pass_candidates(&runner).is_empty(),
+        "no free slot → Marcus Damon can't be played, so not offered; got {:?}",
+        runner.game.pending_selection
+    );
+    assert!(find_hand_index(&runner, 0, "MARCUS").is_some(), "Marcus stays in hand");
+}
+
+#[test]
+fn bt12_038_marcus_not_offered_under_tamer_play_prohibition() {
+    let runner = fire_with_marcus_after(|r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            digimon_engine::modifiers::PlayerModifierEntry::simple(
+                digimon_engine::enums::ModifierType::CannotPlayTamerByEffect,
+                0,
+                digimon_engine::enums::Expiry::Permanent,
+                None,
+                1,
+            ),
+        );
+    });
+    assert!(
+        non_pass_candidates(&runner).is_empty(),
+        "\"can't play Tamers by effects\" → not offered; got {:?}",
+        runner.game.pending_selection
+    );
+    assert!(find_hand_index(&runner, 0, "MARCUS").is_some(), "Marcus stays in hand");
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // SECTION 3 — Clause 2 [Your Turn][OPT] inherited: own red/yellow Tamer
 // suspend → 1 opponent Digimon gets -2000 DP for the turn

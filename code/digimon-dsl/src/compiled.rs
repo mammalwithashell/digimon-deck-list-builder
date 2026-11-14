@@ -431,6 +431,9 @@ pub struct CompiledPredicate {
     /// See `PredicateSpec::affordable_with_cost_reduce` (BT26-084).
     #[serde(default)]
     pub affordable_with_cost_reduce: Option<u8>,
+    /// See `PredicateSpec::affordable_with_cost` (G-DSL-AFFORDABLE-WITH-COST).
+    #[serde(default)]
+    pub affordable_with_cost: Option<CompiledCostDelta>,
     pub can_digivolve_from_source: Option<bool>,
     /// Card-subject leaf: the candidate has ≥1 non-App-Fusion digivolve
     /// route onto the permanent bound under this name. Compiled form of
@@ -440,6 +443,9 @@ pub struct CompiledPredicate {
     #[serde(default)]
     pub can_digivolve_onto_with_cost: Option<CompiledDigivolveCostPredicate>,
     pub dna_hand_candidate: Option<CompiledDnaHandCandidate>,
+    /// See `PredicateSpec::dna_trash_candidate`. G-DSL-DNA-TRASH-PARTNER-CANDIDATE.
+    #[serde(default)]
+    pub dna_trash_candidate: Option<CompiledDnaHandCandidate>,
     /// See `PredicateSpec::dna_field_pair`. G-DSL-DNA-FIELD-PAIR-CANDIDATE.
     #[serde(default)]
     pub dna_field_pair: Option<CompiledDnaFieldPair>,
@@ -995,6 +1001,13 @@ pub struct CompiledDnaFieldPair {
     pub role: crate::predicate::DnaFieldPairRole,
     pub result: Option<String>,
     pub first: Option<String>,
+    /// Fixed second material for a `result` stage
+    /// (G-DSL-DNA-FIELD-PAIR-FIXED-MATERIALS).
+    #[serde(default)]
+    pub second: Option<String>,
+    /// Consuming step's cost; `None` = the printed DNA cost.
+    #[serde(default)]
+    pub cost: Option<CompiledCostDelta>,
 }
 
 /// Compiled form of `dna_hand_candidate`.

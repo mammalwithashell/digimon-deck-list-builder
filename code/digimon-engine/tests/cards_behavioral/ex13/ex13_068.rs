@@ -442,3 +442,97 @@ fn ex13_068_security_plays_itself_for_free() {
     assert_eq!(field_ids(&r, 1), vec![CARD_ID.to_string()]);
     assert_eq!(r.security_count(1), 0);
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Candidate legality: only cards the free play can actually play
+// ════════════════════════════════════════════════════════════════════════════
+// DCGO EX13_068.cs:35-41 filters [Takato Matsuki] with `CanPlayAsNewPermanent(
+// payCost: false, cardEffect)` and [Guilmon] with the same plus `root: Trash`,
+// and skips each play when nothing matches (:51, :60-61). CR 4.3 1-3-11-1: a
+// card that can't be played can't be declared for the play; 1-3-2: the
+// impossible play is not carried out, so offering it is a dead choice.
+
+fn add_player_lock(r: &mut DebugRunner, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1));
+}
+
+/// The open prompt's hand candidates if it is a hand pick, else none. A hand
+/// pick with no candidate is passed so the clause can continue.
+fn take_hand_offer(r: &mut DebugRunner) -> Vec<String> {
+    match r.pending_selection_view() {
+        Some(v) if v.kind == SelectionKind::Hand => {
+            let offered = offered_hand_ids(r);
+            if offered.is_empty() {
+                r.execute_action(0, PASS).expect("pass the empty hand pick");
+            }
+            offered
+        }
+        _ => Vec::new(),
+    }
+}
+
+/// The open prompt's trash candidates if it is a trash pick, else none.
+fn trash_offer(r: &DebugRunner) -> Vec<String> {
+    match r.pending_selection_view() {
+        Some(v) if v.kind == SelectionKind::Trash => offered_trash_ids(r),
+        _ => Vec::new(),
+    }
+}
+
+/// "You can't play Tamers by effects": [Takato Matsuki] is not offered; the
+/// [Guilmon] play (a Digimon) still is.
+#[test]
+fn ex13_068_takato_not_offered_under_tamer_effect_play_prohibition() {
+    let (mut r, takato) = setup(&["TAKATO-ALT"], &["GUILMON"]);
+    add_player_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    fire(&mut r, EffectTiming::StartOfYourMainPhase, takato);
+    r.accept_optional_trigger().expect("accept");
+    assert_eq!(take_hand_offer(&mut r), Vec::<String>::new(), "Takato can't be played");
+    assert_eq!(trash_offer(&r), vec!["GUILMON".to_string()]);
+}
+
+/// "You can't play Digimon by effects": [Guilmon] is not offered.
+#[test]
+fn ex13_068_guilmon_not_offered_under_digimon_effect_play_prohibition() {
+    let (mut r, takato) = setup(&["TAKATO-ALT"], &["GUILMON"]);
+    add_player_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    fire(&mut r, EffectTiming::StartOfYourMainPhase, takato);
+    r.accept_optional_trigger().expect("accept");
+    assert_eq!(offered_hand_ids(&r), vec!["TAKATO-ALT".to_string()]);
+    r.execute_action(0, PASS).expect("decline Takato");
+    assert_eq!(trash_offer(&r), Vec::<String>::new(), "Guilmon can't be played");
+    let _ = r.auto_resolve();
+    assert_eq!(ids(&r.game.players[0].trash, &r), vec!["GUILMON".to_string()]);
+}
+
+/// "You can't play cards from the trash": [Guilmon] is not offered.
+#[test]
+fn ex13_068_guilmon_not_offered_when_playing_from_trash_is_prohibited() {
+    let (mut r, takato) = setup(&["TAKATO-ALT"], &["GUILMON"]);
+    add_player_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    fire(&mut r, EffectTiming::StartOfYourMainPhase, takato);
+    r.accept_optional_trigger().expect("accept");
+    assert_eq!(offered_hand_ids(&r), vec!["TAKATO-ALT".to_string()]);
+    r.execute_action(0, PASS).expect("decline Takato");
+    assert_eq!(trash_offer(&r), Vec::<String>::new(), "no play from the trash");
+}
+
+/// A full battle area even after this Tamer leaves (a 1-slot area held by
+/// another Tamer): neither [Takato Matsuki] nor [Guilmon] can be played.
+#[test]
+fn ex13_068_full_battle_area_offers_neither_card() {
+    let (mut r, takato) = setup(&["TAKATO-ALT"], &["GUILMON"]);
+    r.place_on_field(0, "OTHER-TAMER", Some(0));
+    r.game.rules.field_slots = 1;
+    fire(&mut r, EffectTiming::StartOfYourMainPhase, takato);
+    r.accept_optional_trigger().expect("accept");
+    assert_eq!(take_hand_offer(&mut r), Vec::<String>::new(), "no free slot for Takato");
+    assert_eq!(trash_offer(&r), Vec::<String>::new(), "no free slot for Guilmon");
+    let _ = r.auto_resolve();
+    assert_eq!(field_ids(&r, 0), vec!["OTHER-TAMER".to_string()]);
+    assert_eq!(ids(&r.game.players[0].hand, &r), vec!["TAKATO-ALT".to_string()]);
+}

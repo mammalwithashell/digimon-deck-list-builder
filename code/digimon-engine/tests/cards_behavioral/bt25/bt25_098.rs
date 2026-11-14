@@ -931,3 +931,147 @@ fn bt25_098_main_pipeline_emits_events_and_places_self() {
         "playing BT25-098 must emit at least one engine event; got 0 events after checkpoint {cp}"
     );
 }
+
+// ── Section 6: <Delay> hand-pick legality (select-hand audit 2026-11-13) ────
+//
+// DCGO BT25_098.cs:85-90 `CanSelectCardCondition`: `HasPlayCost &&
+// EqualsTraits("Appmon") && CanPlayAsNewPermanent(card, payCost: true,
+// activateClass, fixedCost: GetCostItself - 3)`. "Playing a card" places a card
+// with a play cost (CR 4.3 7-1-1): a Digi-Egg is hatched and an Option is used,
+// so neither is ever a "play" candidate (DCGO `HasPlayCost` is false for both,
+// CEntity_Base.cs:340). `CanPlayAsNewPermanent` (GameContextDeterminarion.cs:
+// 419-432) also needs an empty battle-area frame, no play prohibition, and the
+// reduced cost payable (CardSource.cs:1150-1160). A card that can't be played
+// stays where it is (CR 4.3 7-1-2-3, 1-3-2), so offering it would be a dead
+// choice. YAML: `can_play_from_effect_without_cost` + `affordable_with_cost`.
+
+/// An [Appmon] Digimon with an explicit play cost.
+fn appmon_with_cost(id: &str, cost: u16) -> digimon_engine::CardData {
+    let mut card = appmon_digimon(id, 5);
+    card.play_cost = cost;
+    card
+}
+
+/// The non-PASS hand candidates of the pending pick, as sorted card ids; empty
+/// when no hand pick is pending.
+fn offered_hand_ids(runner: &DebugRunner, p: u8) -> Vec<String> {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    let hand = &runner.game.players[p as usize].hand;
+    let id_at = |i: usize| hand.get(i).map(|c| c.card_id(&runner.game.card_data).to_string());
+    let mut ids: Vec<String> = match view.card_choice {
+        Some(choice) => choice
+            .rows
+            .iter()
+            .filter(|row| {
+                matches!(row.operation, CardChoiceOperation::CommitCard)
+                    && matches!(row.zone, Some(CardChoiceZone::Hand))
+            })
+            .filter_map(|row| row.position.as_deref()?.parse::<usize>().ok())
+            .filter_map(id_at)
+            .collect(),
+        None => view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&a| a != PASS)
+            .filter_map(|a| a.checked_sub(digimon_engine::action::space::PLAY_HAND_START))
+            .filter_map(|i| id_at(i as usize))
+            .collect(),
+    };
+    ids.sort();
+    ids
+}
+
+/// BT25-098 seated as an activatable <Delay> with `hand` in player 0's hand
+/// (Swipemon BT21-005 and App Link BT21-097 are real [Appmon] cards).
+fn delay_pick_runner(hand: &[&str]) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-098")
+        .expect("BT25-098 YAML loads")
+        .dsl_card("BT21-005")
+        .expect("Swipemon (BT21-005) loads")
+        .dsl_card("BT21-097")
+        .expect("App Link (BT21-097) loads")
+        .add_card(appmon_digimon("APP-PLAY", 4)) // play cost 6
+        .add_card(appmon_tamer("APP-TAMER"))
+        .add_card(appmon_with_cost("APP-13", 13))
+        .add_card(appmon_with_cost("APP-14", 14))
+        .add_card(plain_digimon("FILL", 3))
+        .hand(0, hand)
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+    let handle = seat_and_advance_to_activatable_delay(&mut runner);
+    runner.game.set_memory(10);
+    (runner, handle)
+}
+
+fn activate_delay(runner: &mut DebugRunner, handle: digimon_engine::permanent::PermanentHandle) {
+    assert!(
+        runner.game.activate_field_main(0, handle.index as usize),
+        "the <Delay> is activatable after the placing turn"
+    );
+}
+
+/// The Digi-Egg Swipemon (BT21-005) and the Option App Link (BT21-097) carry
+/// [Appmon] but can't be played: only the Digimon is offered.
+#[test]
+fn bt25_098_delay_pick_excludes_appmon_digi_egg_and_option() {
+    let (mut runner, handle) = delay_pick_runner(&["BT21-005", "BT21-097", "APP-PLAY"]);
+    activate_delay(&mut runner, handle);
+    assert_eq!(offered_hand_ids(&runner, 0), vec!["APP-PLAY".to_string()]);
+}
+
+/// Only a Digi-Egg and an Option in hand: no hand pick opens and both stay in
+/// hand; the <Delay> still trashes BT25-098 (its activation cost, CR 4.3 16-17-1).
+#[test]
+fn bt25_098_delay_with_only_egg_and_option_offers_no_pick() {
+    let (mut runner, handle) = delay_pick_runner(&["BT21-005", "BT21-097"]);
+    activate_delay(&mut runner, handle);
+    assert!(offered_hand_ids(&runner, 0).is_empty());
+    let _ = runner.auto_resolve();
+    let hand = hand_ids(&runner, 0);
+    assert!(hand.contains(&"BT21-005".to_string()) && hand.contains(&"BT21-097".to_string()));
+    assert!(trash_ids(&runner, 0).contains(&"BT25-098".to_string()));
+}
+
+/// At 0 memory the reduced cost must still be payable (down to -10): APP-13
+/// (13 - 3 = 10) is offered, APP-14 (14 - 3 = 11) is not. DCGO passes
+/// `fixedCost: GetCostItself - 3` to `CanPlayAsNewPermanent(payCost: true)`.
+#[test]
+fn bt25_098_delay_pick_excludes_unaffordable_appmon() {
+    let (mut runner, handle) = delay_pick_runner(&["APP-13", "APP-14"]);
+    runner.game.set_memory(0);
+    activate_delay(&mut runner, handle);
+    assert_eq!(offered_hand_ids(&runner, 0), vec!["APP-13".to_string()]);
+}
+
+/// "You can't play Digimon by effects": the [Appmon] Digimon is not offered,
+/// the [Appmon] Tamer still is.
+#[test]
+fn bt25_098_delay_pick_excludes_digimon_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, handle) = delay_pick_runner(&["APP-PLAY", "APP-TAMER"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    activate_delay(&mut runner, handle);
+    assert_eq!(offered_hand_ids(&runner, 0), vec!["APP-TAMER".to_string()]);
+}
+
+/// Regression guard: the <Delay> trashes BT25-098 before its effect (CR 4.3
+/// 16-17-1, 15-7-1; DCGO deletes the permanent, then plays in its success
+/// process), so a battle area full only because of BT25-098 still has room.
+#[test]
+fn bt25_098_delay_pick_counts_the_slot_freed_by_trashing_itself() {
+    let (mut runner, handle) = delay_pick_runner(&["APP-PLAY"]);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    activate_delay(&mut runner, handle);
+    assert_eq!(offered_hand_ids(&runner, 0), vec!["APP-PLAY".to_string()]);
+}

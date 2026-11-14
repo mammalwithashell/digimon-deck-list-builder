@@ -688,3 +688,195 @@ fn st23_08_inherited_non_glowing_dawn_host_can_pay_or_decline_cost() {
         );
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 6 — hand-pick legality: only cards that can actually be played/used
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// DCGO ST23_08.cs:98-104 CanSelectCardCondition = `EqualsTraits("Glowing
+// Dawn") && ((IsOption && !CanNotPlayThisOption) || (HasPlayCost &&
+// CanPlayAsNewPermanent(cardSource, true, activateClass, fixedCost:
+// GetCostItself - 3)))`, the SelectHandEffect filter (:114) — identical to
+// Murasamemon (ST23-04):
+// - a Digi-Egg has no play cost (CR 4.3 7-1-1) — e.g. Kekkomon (ST23-01);
+// - a Digimon needs a free frame, no effect-play lock, and memory for the
+//   reduced cost (CanPlayCardTargetFrame: `Owner.MaxMemoryCost < cost` refuses);
+//   the frame cap is the engine's `rules.field_slots`, mirroring DCGO's frame
+//   limit (CR 4.3 3-4-8-2 itself sets no battle-area limit);
+// - an Option needs no "can't use Options" lock and its colour requirement met
+//   (CanNotPlayThisOption, CardSource.cs:184-246; CR 4.3 4-22-1..3).
+// DCGO does not check memory for the Option half; the rules do: CR 4.3
+// 1-3-11-1, 4-2-2 + 1-4-2-2, 9-1-8. A DUAL is used (Option information, CR 4.3
+// 4-6-2) and priced at its use cost.
+
+fn gd_card(id: &str, kind: CardKind, color: CardColor, cost: u16) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = kind;
+    c.colors = vec![color];
+    if kind == CardKind::Digimon {
+        c.level = Some(4);
+        c.dp = Some(5000);
+    } else {
+        c.level = None;
+        c.dp = None;
+    }
+    c.play_cost = cost;
+    c.traits = vec!["Glowing Dawn".to_string()];
+    c
+}
+
+/// Monarchlizamon (ST23-08) on the field with a payable Tamer; `hand` pushed to
+/// p0's hand. Includes the real Kekkomon (ST23-01, [Glowing Dawn] Digi-Egg) and
+/// Habakirimon (BT25-043, [Glowing Dawn] DUAL, use cost 6).
+fn legality_runner(hand: &[&str]) -> (DebugRunner, PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST23-08 in embedded DSL pack")
+        .dsl_card("ST23-01")
+        .expect("Kekkomon in embedded DSL pack")
+        .dsl_card("BT25-043")
+        .expect("Habakirimon in embedded DSL pack")
+        .add_card(gd_digimon("GD-DIGI"))
+        .add_card(gd_option("GD-OPT"))
+        .add_card(gd_card("GD-BIG", CardKind::Digimon, CardColor::Green, 14))
+        .add_card(gd_card("GD-OPT-BIG", CardKind::Option, CardColor::Green, 14))
+        .add_card(gd_card("GD-OPT-RED", CardKind::Option, CardColor::Red, 3))
+        .add_card(make_tamer("TAMER"))
+        .add_card(filler("FILLER"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(8)
+        .start();
+    runner.set_first_player(0);
+    tamer_with_face_down(&mut runner);
+    for h in hand {
+        push_to_hand(&mut runner, 0, h);
+    }
+    let source = runner.place_on_field(0, CARD_ID, Some(0));
+    (runner, source)
+}
+
+/// Fire [On Play], pay the Tamer trash, and return the sorted card ids offered
+/// at the [Glowing Dawn] hand pick (empty when no hand pick installs).
+fn offered_after_paying(runner: &mut DebugRunner, source: PermanentHandle) -> Vec<String> {
+    use digimon_engine::action::space::HAND_EFFECT_START;
+    fire_shared(runner, EffectTiming::OnPlay, source);
+    for _ in 0..8 {
+        let Some(v) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        if v.kind == SelectionKind::Hand {
+            let hand: Vec<String> = runner.game.players[0]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            let mut out: Vec<String> = hand
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| {
+                    let i = *i as u16;
+                    v.valid_action_ids.contains(&(PLAY_HAND_START + i))
+                        || v.valid_action_ids.contains(&(HAND_EFFECT_START + i))
+                })
+                .map(|(_, id)| id.clone())
+                .collect();
+            out.sort();
+            return out;
+        }
+        let action = v
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .expect("a non-decline action (Tamer payment)");
+        runner.execute_action(v.selecting_player, action).unwrap();
+    }
+    panic!("hand pick never reached");
+}
+
+fn add_player_lock(runner: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Regression guard: a playable Digimon and a usable Option are both offered.
+#[test]
+fn st23_08_hand_pick_offers_playable_digimon_and_usable_option() {
+    let (mut runner, source) = legality_runner(&["GD-DIGI", "GD-OPT"]);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-DIGI", "GD-OPT"]);
+}
+
+/// Kekkomon (ST23-01) is a [Glowing Dawn] Digi-Egg with no play cost: never
+/// offered (CR 4.3 7-1-1).
+#[test]
+fn st23_08_hand_pick_excludes_glowing_dawn_digi_egg() {
+    let (mut runner, source) = legality_runner(&["ST23-01", "GD-DIGI"]);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-DIGI"]);
+}
+
+/// "You can't play Digimon by effects": the Digimon is not offered, the Option is.
+#[test]
+fn st23_08_hand_pick_excludes_digimon_under_effect_play_prohibition() {
+    let (mut runner, source) = legality_runner(&["GD-DIGI", "GD-OPT"]);
+    add_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-OPT"]);
+}
+
+/// No free frame: the Digimon is not offered, the Option is.
+/// The frame cap is the engine's `rules.field_slots` (mirroring DCGO's frame
+/// limit); CR 4.3 3-4-8-2 itself sets no battle-area limit.
+#[test]
+fn st23_08_hand_pick_excludes_digimon_when_battle_area_full() {
+    let (mut runner, source) = legality_runner(&["GD-DIGI", "GD-OPT"]);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-OPT"]);
+}
+
+/// "You can't use Option cards": the Option is not offered, the Digimon is.
+#[test]
+fn st23_08_hand_pick_excludes_option_when_options_cannot_be_used() {
+    let (mut runner, source) = legality_runner(&["GD-DIGI", "GD-OPT"]);
+    add_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotUseOptionCards);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-DIGI"]);
+}
+
+/// A red [Glowing Dawn] Option with no `<Use Req.>` while only green cards are
+/// on p0's field: its colour requirement is unmet, so it can't be used.
+#[test]
+fn st23_08_hand_pick_excludes_option_whose_colour_requirement_is_unmet() {
+    let (mut runner, source) = legality_runner(&["GD-OPT-RED", "GD-OPT"]);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-OPT"]);
+}
+
+/// Memory 0: a cost-14 Digimon would cost 11 after the reduction, past the
+/// 10-memory limit on the opponent's side, so it can't be played (DCGO
+/// `MaxMemoryCost`); the cost-5 one (pay 2) still is.
+#[test]
+fn st23_08_hand_pick_excludes_unaffordable_digimon() {
+    let (mut runner, source) = legality_runner(&["GD-BIG", "GD-DIGI"]);
+    runner.game.memory = 0;
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-DIGI"]);
+}
+
+/// Memory 0: a use-cost-14 Option (pay 11) can't be used. DCGO offers it (no
+/// memory check on the Option half); CR 4.3 1-3-11-1 / 9-1-8 do not.
+#[test]
+fn st23_08_hand_pick_excludes_unaffordable_option() {
+    let (mut runner, source) = legality_runner(&["GD-OPT-BIG", "GD-OPT"]);
+    runner.game.memory = 0;
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-OPT"]);
+}
+
+/// Habakirimon (BT25-043), a [Glowing Dawn] DUAL, is used, so it is priced at
+/// its use cost 6 (pay 3 after the reduction), affordable at memory 0.
+#[test]
+fn st23_08_hand_pick_offers_dual_priced_at_its_use_cost() {
+    let (mut runner, source) = legality_runner(&["BT25-043"]);
+    runner.game.memory = 0;
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["BT25-043"]);
+}

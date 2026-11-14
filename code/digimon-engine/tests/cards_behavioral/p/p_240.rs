@@ -623,3 +623,82 @@ fn p_240_inherited_does_not_fire_on_your_own_turn() {
         "[Opponent's Turn] only — my own attack never offers the redirect"
     );
 }
+
+// ═══ [On Deletion] candidate legality (select-hand audit) ════════════════════
+//
+// DCGO P_240.cs:280-284 offers only `EqualsCardName("Proximamon") &&
+// CanPlayAsNewPermanent(card, payCost: false, activateClass)`: a Proximamon
+// the free play would refuse (no free battle-area frame, a "can't play
+// Digimon by effects" or "can't play from the trash" lock) is not a choice
+// (CR 4.3 1-3-2 / 1-3-11-1). The YAML union pick carries
+// `can_play_from_effect_without_cost: true` (zone-aware).
+
+fn p240_lock(r: &mut DebugRunner, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+fn p240_union_candidates(r: &DebugRunner) -> usize {
+    match r.pending_selection_view() {
+        Some(v) if matches!(v.kind, SelectionKind::UnionZone { .. }) => v
+            .valid_action_ids
+            .iter()
+            .filter(|&&id| id != PASS)
+            .count(),
+        _ => 0,
+    }
+}
+
+/// A Proximamon in hand and one in trash; `setup` runs right before P-240 is
+/// deleted. Returns (union-pick candidate count, whether any prompt pends).
+/// DCGO's `CanActivateCondition` (P_240.cs:273-278) requires a playable
+/// Proximamon in hand or trash, so with none the effect offers no prompt at
+/// all (not even an "activate?" / PASS-only one).
+fn p240_deletion_candidates(setup: impl FnOnce(&mut DebugRunner)) -> (usize, bool) {
+    let mut r = builder().hand(0, &["PROXIMA"]).memory(3).start();
+    r.inject_trash(0, "PROXIMA");
+    r.place_on_field(0, "HOST", Some(0));
+    let arc = r.place_on_field(0, CARD_ID, Some(0));
+    setup(&mut r);
+    r.game.delete_permanent_with_effects(arc);
+    (p240_union_candidates(&r), r.pending_selection().is_some())
+}
+
+/// Regression guard: no lock, a free frame — both copies are offered.
+#[test]
+fn p_240_on_deletion_offers_hand_and_trash_proximamon_control() {
+    assert_eq!(p240_deletion_candidates(|_| {}), (2, true));
+}
+
+/// "You can't play Digimon by effects": neither copy is playable, so the
+/// effect offers nothing.
+#[test]
+fn p_240_on_deletion_not_offered_when_effect_play_is_prohibited() {
+    let got = p240_deletion_candidates(|r| {
+        p240_lock(r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect)
+    });
+    assert_eq!(got, (0, false));
+}
+
+/// "You can't play cards from the trash": only the hand copy is offered.
+#[test]
+fn p_240_on_deletion_trash_copy_not_offered_when_trash_play_is_locked() {
+    let got = p240_deletion_candidates(|r| {
+        p240_lock(r, digimon_engine::enums::ModifierType::CannotPlayFromTrash)
+    });
+    assert_eq!(got, (1, true));
+}
+
+/// A battle area that is still full once P-240 has left (HOST fills the only
+/// frame): neither copy is offered.
+#[test]
+fn p_240_on_deletion_not_offered_when_battle_area_is_full() {
+    let got = p240_deletion_candidates(|r| {
+        r.game.rules.field_slots = (r.game.players[0].battle_area.len() - 1) as u8;
+    });
+    assert_eq!(got, (0, false));
+}

@@ -25,6 +25,26 @@ cost: 3
 #   reduced by 3. (Pattern: BT22-098 Unique Emblem: Fable Waltz, same shape.)
 # - [Security] re-runs the [Main] play, then places this card in the battle
 #   area via `place_self_as_delay_option`.
+#
+# Candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY):
+# - [Main] / [Security] picks offer only a [Sunarizamon] / [Close] this effect
+#   can actually play (free battle-area slot, no play prohibition; a trash card
+#   is also refused under CannotPlayFromTrash) — `can_play_from_effect_without_
+#   cost: true`. DCGO EX10_069.cs:33-37 CanSelectCardCondition reads
+#   `EqualsCardName("Sunarizamon") || EqualsCardName("Close") &&
+#   CanPlayAsNewPermanent(...)`: by C# precedence the playability check binds
+#   only to [Close], so DCGO offers an unplayable [Sunarizamon]. That is looser
+#   than the rules (CR 4.3 1-3-2: an impossible action is not carried out;
+#   7-1-1), so the check applies to both names here.
+# - The "From hand / From trash" choice offers only a zone holding such a card,
+#   is skipped when exactly one zone does, and binds nothing when neither does
+#   (DCGO EX10_069.cs:41-71 canSelectHand / canSelectTrash → SetBoolSelection,
+#   SetBool(canSelectHand), or no selection) — `legal_when`.
+# - <Delay> digivolve: the hand pick offers only a card that can digivolve onto
+#   the chosen Digimon and whose cost (reduced by 3) can be paid. DCGO
+#   CardEffectCommons.cs:858-880 DigivolveIntoHandOrTrashCard filters with
+#   CanPlayCardTargetFrame(frame, PayCost: true, ...) (EX10_069.cs:243-253,
+#   payCost: true, reduceCost: 3) — `can_digivolve_onto_with_cost`.
 
 effects:
   # [Main] hand/trash play. No explicit placement step: EX10-069 is a Delay
@@ -36,6 +56,27 @@ effects:
     process:
       - select_effect_choice:
           labels: ["From hand", "From trash"]
+          legal_when:
+            - count_gte:
+                filter:
+                  of: you
+                  zone: [hand]
+                  all_of:
+                    - any_of:
+                        - name_is: Sunarizamon
+                        - name_is: Close
+                    - can_play_from_effect_without_cost: true
+                n: 1
+            - count_gte:
+                filter:
+                  of: you
+                  zone: [trash]
+                  all_of:
+                    - any_of:
+                        - name_is: Sunarizamon
+                        - name_is: Close
+                    - can_play_from_effect_without_cost: true
+                n: 1
           bind_as: zone_choice
           prompt: "From which area do you play a card?"
       - if:
@@ -46,9 +87,11 @@ effects:
                 bind_as: picked_hand
                 optional: true
                 filter:
-                  any_of:
-                    - name_is: Sunarizamon
-                    - name_is: Close
+                  all_of:
+                    - any_of:
+                        - name_is: Sunarizamon
+                        - name_is: Close
+                    - can_play_from_effect_without_cost: true
                 prompt: "Select Sunarizamon or Close from your hand"
             - play_from_hand_free: { of: you, hand_index: picked_hand }
       - if:
@@ -59,9 +102,11 @@ effects:
                 bind_as: picked_trash
                 optional: true
                 filter:
-                  any_of:
-                    - name_is: Sunarizamon
-                    - name_is: Close
+                  all_of:
+                    - any_of:
+                        - name_is: Sunarizamon
+                        - name_is: Close
+                    - can_play_from_effect_without_cost: true
                 prompt: "Select Sunarizamon or Close from your trash"
             - play_from_trash_free: { of: you, hand_index: picked_trash }
 
@@ -72,6 +117,27 @@ effects:
     process:
       - select_effect_choice:
           labels: ["From hand", "From trash"]
+          legal_when:
+            - count_gte:
+                filter:
+                  of: you
+                  zone: [hand]
+                  all_of:
+                    - any_of:
+                        - name_is: Sunarizamon
+                        - name_is: Close
+                    - can_play_from_effect_without_cost: true
+                n: 1
+            - count_gte:
+                filter:
+                  of: you
+                  zone: [trash]
+                  all_of:
+                    - any_of:
+                        - name_is: Sunarizamon
+                        - name_is: Close
+                    - can_play_from_effect_without_cost: true
+                n: 1
           bind_as: zone_choice
           prompt: "From which area do you play a card?"
       - if:
@@ -82,9 +148,11 @@ effects:
                 bind_as: picked_hand
                 optional: true
                 filter:
-                  any_of:
-                    - name_is: Sunarizamon
-                    - name_is: Close
+                  all_of:
+                    - any_of:
+                        - name_is: Sunarizamon
+                        - name_is: Close
+                    - can_play_from_effect_without_cost: true
                 prompt: "Select Sunarizamon or Close from your hand"
             - play_from_hand_free: { of: you, hand_index: picked_hand }
       - if:
@@ -95,9 +163,11 @@ effects:
                 bind_as: picked_trash
                 optional: true
                 filter:
-                  any_of:
-                    - name_is: Sunarizamon
-                    - name_is: Close
+                  all_of:
+                    - any_of:
+                        - name_is: Sunarizamon
+                        - name_is: Close
+                    - can_play_from_effect_without_cost: true
                 prompt: "Select Sunarizamon or Close from your trash"
             - play_from_trash_free: { of: you, hand_index: picked_trash }
       - place_self_as_delay_option: {}
@@ -133,6 +203,7 @@ effects:
               - kind: digimon
               - trait_has: Mineral
               - trait_has: LIBERATOR
+              - can_digivolve_onto_with_cost: { target: target, cost: { reduce: 3 } }
           prompt: "Choose a [Mineral] and [LIBERATOR] Digimon card to digivolve into"
       - effect_initiated_digivolve:
           target: target

@@ -120,6 +120,17 @@ effects:
               - kind: digimon
               - trait_has: LIBERATOR
               - level_lte: 6
+              # DCGO DigivolveIntoHandOrTrashCard (CardEffectCommons.cs:
+              # 859-883, payCost: true, -3) keeps only cards with a route onto
+              # the chosen Digimon AND a payable reduced cost. CR 4.3 1-3-11-1
+              # (a card can't be declared for digivolution if it can't be
+              # digivolved or its cost can't be paid). The Digimon pick above
+              # stays unfiltered, as in DCGO PermanentCondition: a Digimon with
+              # no candidate may be chosen and the digivolve then just doesn't
+              # happen (CR 4.3 1-3-2).
+              - can_digivolve_onto_with_cost:
+                  target: target
+                  cost: { reduce: 3 }
           prompt: "Choose a level 6 or lower [LIBERATOR] card to digivolve into"
       - effect_initiated_digivolve:
           target: target

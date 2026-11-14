@@ -20,9 +20,18 @@ effects:
   - when: main_on_field
     once_per_turn: true
     optional: true
+    # Usable only while the hand holds a card this effect can play or use
+    # (DCGO EX12_043.cs:45-49 `HasMatchConditionOwnersHand(card,
+    # CanSelectCardCondition)`).
     condition:
       count_gte:
-        filter: { of: you, zone: [hand], trait_has: SW }
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - trait_has: SW
+            - can_play_or_use_from_effect: true
+            - affordable_with_cost: { reduce: 2 }
         n: 1
     summary: "[Main][OPT] You may play or use 1 [SW] card from hand with cost reduced by 2"
     process:
@@ -30,7 +39,18 @@ effects:
           of: you
           bind_as: sw_pick
           optional: true
-          filter: { trait_has: SW }
+          # DCGO EX12_043.cs:51-58 `(IsOption && !CanNotPlayThisOption) ||
+          # (HasPlayCost && CanPlayAsNewPermanent(payCost: true, fixedCost:
+          # cost - 2))`: never a Digi-Egg (CR 4.3 7-1-1, e.g. Mococomon
+          # EX12-002), an Option whose colour requirement is unmet (CR 4.3
+          # 4-22), or a Digimon under a play prohibition / with no free frame.
+          # Affordability also covers Options (CR 4.3 1-3-11-1), which DCGO's
+          # `CanNotPlayThisOption` does not price — the rule governs.
+          filter:
+            all_of:
+              - trait_has: SW
+              - can_play_or_use_from_effect: true
+              - affordable_with_cost: { reduce: 2 }
           prompt: "Play or use 1 [SW] card from your hand with the cost reduced by 2"
       - play_or_use_from_hand:
           of: you

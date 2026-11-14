@@ -887,3 +887,116 @@ fn bt17_102_when_digivolving_requires_the_exact_koromon_name() {
     let dp = runner.effective_dp(stack).expect("perm has DP");
     assert_eq!(dp, 5000, "[Koromon (X Antibody)] is not [Koromon]; got {dp}");
 }
+
+// ─── Section 7 — Tamer pick offers only playable Tamers ─────────────────────
+//
+// DCGO BT17_102.cs:157-171 (face-up) and :269-283 (inherited) offer a Tai /
+// Kari Tamer only when `CanPlayAsNewPermanent(cardSource, payCost: false,
+// activateClass)`: a free battle-area frame and no effect-play prohibition. A
+// Tamer the free play would refuse is a choice with no legal outcome (CR 4.3
+// 1-3-2), so it is not offered.
+
+/// The hand cards the pending `Hand` pick offers (PASS excluded); empty when
+/// no hand pick is pending.
+fn offered_hand_cards(runner: &DebugRunner) -> Vec<String> {
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let Some(sel) = runner.game.pending_selection.as_ref() else {
+        return Vec::new();
+    };
+    if sel.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    sel.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != digimon_engine::action::space::PASS)
+        .map(|a| hand[a as usize].clone())
+        .collect()
+}
+
+fn prohibit_tamer_effect_play(runner: &mut DebugRunner) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Delete a lone BT17-102 with TAI in hand, accept, run `before_branch`, then
+/// take the Play branch; returns the offered hand cards.
+fn on_deletion_play_branch_offers(before_branch: impl FnOnce(&mut DebugRunner)) -> (DebugRunner, Vec<String>) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-102")
+        .expect("BT17-102 in embedded DSL pack")
+        .add_card(make_tai_tamer("TAI"))
+        .add_card(make_filler_lv3("FILL3"))
+        .hand(0, &["TAI"])
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+    let perm = runner.place_on_field(0, "BT17-102", Some(0));
+    runner.game.delete_permanent_with_cause(
+        perm,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+    accept_on_deletion_optional(&mut runner);
+    before_branch(&mut runner);
+    runner.execute_branch(0).expect("pick Play branch");
+    let offered = offered_hand_cards(&runner);
+    (runner, offered)
+}
+
+/// Control: the Tai Tamer is offered when it can be played.
+#[test]
+fn bt17_102_on_deletion_play_branch_offers_playable_tai() {
+    let (_, offered) = on_deletion_play_branch_offers(|_| {});
+    assert_eq!(offered, vec!["TAI".to_string()]);
+}
+
+/// "Can't play Tamers by effects": the Tai Tamer is not offered.
+#[test]
+fn bt17_102_on_deletion_play_branch_excludes_tai_when_tamer_effect_play_is_prohibited() {
+    let (mut runner, offered) = on_deletion_play_branch_offers(prohibit_tamer_effect_play);
+    assert!(offered.is_empty(), "no Tamer offered: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "Tai stays in hand");
+}
+
+/// A full battle area (no free frame): the Tai Tamer is not offered.
+#[test]
+fn bt17_102_on_deletion_play_branch_excludes_tai_when_battle_area_full() {
+    let (_, offered) = on_deletion_play_branch_offers(|r| {
+        r.place_on_field(0, "FILL3", Some(0));
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "no Tamer offered: {offered:?}");
+}
+
+/// Inherited [On Deletion]: the same playability filter.
+#[test]
+fn bt17_102_inherited_on_deletion_excludes_tai_when_tamer_effect_play_is_prohibited() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-102")
+        .expect("BT17-102 in embedded DSL pack")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_tai_tamer("TAI"))
+        .hand(0, &["TAI"])
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+    let carrier = runner.place_stack(0, &["BT17-102", "CARRIER"]);
+    runner.game.delete_permanent_with_cause(
+        carrier,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+    accept_on_deletion_optional(&mut runner);
+    prohibit_tamer_effect_play(&mut runner);
+    runner.execute_branch(0).expect("pick Play branch");
+    let offered = offered_hand_cards(&runner);
+    assert!(offered.is_empty(), "no Tamer offered: {offered:?}");
+}

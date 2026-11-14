@@ -15,8 +15,15 @@
 #   Digivolve: Green Lv.5 / cost 3; [Leopardmon: Leopard Mode]: cost 1.
 #   Official Q&A: "Yes, either can be suspended." (either player's Digimon).
 #
-# DCGO C# reference: none at the submodule (no EX13_043.cs). Printed text and
-# general_rule.pdf govern.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Green/EX13_043.cs
+#   [WD][WA] :143-162 → `PlayOrUseByEffect(payCost: true, reducedCost: 4 +
+#   suspended count)`, whose hand filter PlayEffects.cs:352-357 adds
+#   `(IsOption && !CanNotPlayThisOption && affordable) || (HasPlayCost &&
+#   CanPlayAsNewPermanent(card, payCost: true, ...))` to the trait test.
+#   → `can_play_or_use_from_effect` + `affordable_with_cost` (same CostDelta
+#   as the verb): no Digi-Egg (CR 4.3 7-1-1), no Option whose colour
+#   requirement is unmet (4-22-1..3), no card under a play/use lock or
+#   without a free slot, no card whose reduced cost can't be paid (1-3-2).
 #
 # DSL notes:
 #   - [OP][WD]: optional any-side Digimon pick (Q&A) → suspend; then an
@@ -107,11 +114,19 @@ effects:
           bind_as: beast_card
           optional: true
           filter:
-            any_of:
-              - trait_has: Mammal
-              - trait_has: Beast
-              - trait_has: Beastkin
-              - trait_has: "Royal Knight"
+            all_of:
+              - any_of:
+                  - trait_has: Mammal
+                  - trait_has: Beast
+                  - trait_has: Beastkin
+                  - trait_has: "Royal Knight"
+              - can_play_or_use_from_effect: true
+              - affordable_with_cost:
+                  reduce:
+                    base: 4
+                    per:
+                      suspended_count: { of: any }
+                    delta: 1
           prompt: "Play or use 1 [Mammal], [Beast], [Beastkin] or [Royal Knight] trait card from your hand with the cost reduced by 4 (and 1 more per suspended Digimon)"
       - if:
           condition: { binding_present: beast_card }

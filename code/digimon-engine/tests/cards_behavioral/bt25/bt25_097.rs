@@ -486,5 +486,168 @@ fn bt25_097_security_play_is_optional() {
     assert!(ids(&r, 0, "hand").contains(&"Y-TS".to_string()));
 }
 
+// ─── Candidate legality (select-hand playability audit, 2026-11-13) ──────────
+//
+// DCGO BT25_097.cs:143-149: the [Main] pick offers `IsDigimon && yellow|purple
+// && HasTSTraits && CanPlayAsNewPermanent(card, payCost: true, activateClass,
+// fixedCost: GetCostItself - 3)`; :188-194: the [Security] pick offers
+// `IsDigimon && Level <= 4 && yellow|purple && HasTSTraits &&
+// CanPlayAsNewPermanent(card, payCost: false, activateClass)`. A candidate must
+// be playable: a play cost (CR 4.3 7-1-1; a DUAL has none and is digivolved or
+// used, never played, CR 4.3 4-6-2 / 4-6-3), a free battle-area slot, no play
+// prohibition, not in a trash its owner can't play from; and for the [Main]'s
+// cost-paying play, affordable at the reduced cost. CR 4.3 1-3-2: an
+// impossible play is not carried out, so offering it is a dead choice.
+
+fn ts_costing(id: &str, color: CardColor, cost: u16) -> CardData {
+    let mut card = ts_digimon(id, color, 6);
+    card.play_cost = cost;
+    card
+}
+
+fn lock(r: &mut DebugRunner, player: u8, modifier: digimon_engine::enums::ModifierType) {
+    r.game.modifiers.add_player_modifier(
+        player,
+        digimon_engine::modifiers::PlayerModifierEntry::simple(
+            modifier,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            None,
+            player,
+        ),
+    );
+}
+
+fn legality_builder() -> DebugRunnerBuilder {
+    builder()
+        .dsl_card("BT25-085")
+        .expect("BeelStarmon (BT25-085) YAML loads")
+        .add_card(ts_costing("EDGE-TS", CardColor::Yellow, 20))
+        .add_card(ts_costing("PRICEY-TS", CardColor::Yellow, 21))
+}
+
+/// Use Guardian Palace (two face-down security cards, memory 10) with `hand`
+/// and return the sorted card ids its [Main] hand pick offers.
+fn main_offered(r: &mut DebugRunner, hand: &[&str]) -> Vec<String> {
+    for id in hand {
+        push_hand(r, 0, id);
+    }
+    use_palace(r);
+    let Some(v) = r.pending_selection_view() else {
+        return Vec::new();
+    };
+    if v.kind != digimon_engine::selection::SelectionKind::Hand {
+        return Vec::new();
+    }
+    let ids_now = ids(r, 0, "hand");
+    let mut offered: Vec<String> = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| ids_now[(a - PLAY_HAND_START) as usize].clone())
+        .collect();
+    offered.sort();
+    offered
+}
+
+/// Regression guard: an affordable, playable yellow [TS] Digimon is offered.
+#[test]
+fn bt25_097_main_offers_a_playable_ts_digimon() {
+    let mut r = legality_builder().security(0, &["FILL", "FILL"]).start();
+    assert_eq!(main_offered(&mut r, &["Y-TS"]), vec!["Y-TS".to_string()]);
+}
+
+/// BeelStarmon (BT25-085) is a purple [TS] DUAL card: `kind: digimon` matches it
+/// in hand, but it can't be played (CR 4.3 4-6-2), so it is not offered.
+#[test]
+fn bt25_097_main_does_not_offer_a_dual_card() {
+    let mut r = legality_builder().security(0, &["FILL", "FILL"]).start();
+    assert_eq!(
+        main_offered(&mut r, &["Y-TS", "BT25-085"]),
+        vec!["Y-TS".to_string()],
+        "BeelStarmon (BT25-085) is never played"
+    );
+}
+
+/// Memory 10 - use cost 3 = 7. EDGE-TS (20, reduced to 17) is payable down to
+/// the opponent's 10; PRICEY-TS (21, reduced to 18) is not.
+#[test]
+fn bt25_097_main_does_not_offer_a_card_it_cannot_afford_at_the_reduced_cost() {
+    let mut r = legality_builder().security(0, &["FILL", "FILL"]).start();
+    assert_eq!(
+        main_offered(&mut r, &["EDGE-TS", "PRICEY-TS"]),
+        vec!["EDGE-TS".to_string()]
+    );
+}
+
+#[test]
+fn bt25_097_main_offers_nothing_under_an_effect_play_prohibition() {
+    let mut r = legality_builder().security(0, &["FILL", "FILL"]).start();
+    lock(&mut r, 0, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    assert!(main_offered(&mut r, &["Y-TS"]).is_empty());
+    let _ = r.auto_resolve();
+    assert!(ids(&r, 0, "hand").contains(&"Y-TS".to_string()));
+}
+
+#[test]
+fn bt25_097_main_offers_nothing_with_a_full_battle_area() {
+    let mut r = legality_builder().security(0, &["FILL", "FILL"]).start();
+    r.place_on_field(0, "ATK", Some(0));
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    assert!(main_offered(&mut r, &["Y-TS"]).is_empty());
+}
+
+/// The [Security] pick's legal (card id, zone) rows; empty when no physical
+/// card pick is installed.
+fn security_offered(r: &DebugRunner) -> Vec<(String, &'static str)> {
+    if !r
+        .game
+        .pending_selection
+        .as_ref()
+        .is_some_and(|p| p.card_choice.is_some())
+    {
+        return Vec::new();
+    }
+    let mut rows: Vec<(String, &'static str)> = physical_choice::commits(&r.game)
+        .into_iter()
+        .map(|row| {
+            let zone = match row.zone {
+                Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand) => "hand",
+                Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash) => "trash",
+                _ => "other",
+            };
+            (row.card_id.unwrap_or_default(), zone)
+        })
+        .collect();
+    rows.sort();
+    rows
+}
+
+/// "You can't play cards from the trash": the trash candidate is not offered.
+#[test]
+fn bt25_097_security_trash_candidate_not_offered_when_trash_play_is_locked() {
+    let mut r = builder().start();
+    push_hand(&mut r, 0, "Y-TS");
+    push_trash(&mut r, 0, "P-TS");
+    lock(&mut r, 0, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    check_palace(&mut r);
+    assert_eq!(security_offered(&r), vec![("Y-TS".to_string(), "hand")]);
+}
+
+/// "You can't play Digimon by effects": nothing is offered, nothing is played.
+#[test]
+fn bt25_097_security_offers_nothing_under_an_effect_play_prohibition() {
+    let mut r = builder().start();
+    push_hand(&mut r, 0, "Y-TS");
+    push_trash(&mut r, 0, "P-TS");
+    lock(&mut r, 0, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    check_palace(&mut r);
+    assert!(security_offered(&r).is_empty());
+    let _ = r.auto_resolve();
+    assert!(field_ids(&r, 0).is_empty());
+    assert!(ids(&r, 0, "hand").contains(&"Y-TS".to_string()));
+}
+
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_choice;

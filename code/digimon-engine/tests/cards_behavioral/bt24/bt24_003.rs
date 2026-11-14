@@ -780,3 +780,54 @@ fn bt24_003_offers_only_shaman_cards_that_can_digivolve_onto_it() {
     }
     assert_eq!(runner.game.players[0].hand.len(), hand_before);
 }
+
+/// CR 4.3 1-3-11-1: a card can't be declared for digivolution when its cost (or
+/// alternate cost) can't be paid, and 1-4-2-2 / 4-2-2: memory can't pass 10 on
+/// the opponent's side. Aegiomon (BT24-034) digivolves from this yellow Lv.3
+/// for 2, reduced by 1 to 1; with the memory already at 10 on the opponent's
+/// side it can't be paid, so it is not a candidate. DCGO's `SelectSourceCard`
+/// (BT24_003.cs:28-33, `CanPlayCardTargetFrame(frame, true, ...)` ->
+/// `CanEvolve`) checks only that a digivolution route exists, not memory; the
+/// rules govern here. The DSL compile pass already adds `can_digivolve_onto:
+/// source`; the paid check is `can_digivolve_onto_with_cost`.
+#[test]
+fn bt24_003_does_not_offer_a_shaman_card_whose_reduced_cost_cannot_be_paid() {
+    let mut runner = base();
+    runner.place_stack(0, &["BT24-003", "ST3-02"]);
+    push_hand(&mut runner, "BT24-034");
+    runner.game.memory = -10;
+    let hand_before = runner.game.players[0].hand.len();
+
+    remove_own_security(&mut runner);
+
+    if let Some(view) = runner.pending_selection_view() {
+        assert!(
+            view.valid_action_ids.iter().all(|&a| a == PASS),
+            "a [Shaman] card whose reduced digivolution cost can't be paid must not be offered: {:?}",
+            view.valid_action_ids
+        );
+        runner.execute_action(view.selecting_player, PASS).expect("decline");
+        runner.game.drain_effect_queue();
+    }
+    assert_eq!(runner.game.players[0].hand.len(), hand_before);
+    assert_eq!(top_id(&runner, 0), "ST3-02");
+}
+
+/// Regression guard for the paid check: at 9 on the opponent's side the
+/// reduced cost of 1 is payable (memory reaches exactly 10 on their side), so
+/// Aegiomon (BT24-034) is offered and the digivolve happens.
+#[test]
+fn bt24_003_offers_a_shaman_card_whose_reduced_cost_is_exactly_payable() {
+    let mut runner = base();
+    let host = runner.place_stack(0, &["BT24-003", "ST3-02"]);
+    push_hand(&mut runner, "BT24-034");
+    runner.game.memory = -9;
+
+    remove_own_security(&mut runner);
+    pick_first_candidate(&mut runner);
+    assert_eq!(top_id(&runner, host.index), "BT24-034");
+    // `Game::memory` reads from the turn player's side; memory past 0 passes
+    // the turn, so read it from player 0's side.
+    let p0_memory = if runner.game.turn_player() == 0 { runner.game.memory } else { -runner.game.memory };
+    assert_eq!(p0_memory, -10, "the reduced cost of 1 was paid");
+}

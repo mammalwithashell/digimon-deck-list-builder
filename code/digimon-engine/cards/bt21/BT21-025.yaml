@@ -39,8 +39,8 @@ effects:
   # security is removed from, you may play 1 [Reptile] or [Dragonkin] trait
   # Digimon card with 5000 DP or less from your hand without paying the cost.
   #
-  # Engine gap G-INHERITED-DISPATCH: inherited triggered effects on
-  # digivolution-stack sources never fire — clause 3 tests are ignored.
+  # G-INHERITED-DISPATCH is closed: bt21_025.rs §5 drives this clause through
+  # a real security removal (Lamiamon as a digivolution card).
   - scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
@@ -57,5 +57,8 @@ effects:
               - any_of:
                   - trait_has: Reptile
                   - trait_has: Dragonkin
+              # DCGO BT21_025.cs:131-145 CanPlayAsNewPermanent(payCost: false):
+              # a free slot and no play prohibition (CR 4.3 1-3-11-1).
+              - can_play_from_effect_without_cost: true
           prompt: "Play a Reptile / Dragonkin Digimon with 5000 DP or less free"
       - play_from_hand_free: { of: you, hand_index: pick }

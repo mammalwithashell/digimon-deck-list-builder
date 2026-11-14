@@ -36,6 +36,26 @@ fn setup() -> DebugRunner {
         ))
         .add_card(digimon("PLAIN", "Plain", CardColor::Yellow, 4, 5, &[]))
         .add_card(tamer("TS-T", "Ts Tamer", CardColor::Yellow, &["TS"]))
+        // Play cost 18 / 19 reduced by 5 at memory 3: 13 → -10 (payable),
+        // 14 → -11 (not payable).
+        .add_card(digimon("ILIAD-18", "Iliad 18", CardColor::Yellow, 7, 18, &["Iliad"]))
+        .add_card(digimon("ILIAD-19", "Iliad 19", CardColor::Yellow, 7, 19, &["Iliad"]))
+        // Tokomon (BT25-001): an [Iliad]/[TS] Digi-Egg.
+        .dsl_card("BT25-001")
+        .expect("BT25-001 Tokomon (Digi-Egg)")
+        // [Iliad] Options: yellow (requirement met by Jupitermon) and purple
+        // (unmet on a yellow/red board, CR 4.3 4-22).
+        .add_card({
+            let mut o = gd_option("ILIAD-OPT", 3);
+            o.traits = vec!["Iliad".to_string()];
+            o
+        })
+        .add_card({
+            let mut o = gd_option("ILIAD-OPT-PURPLE", 3);
+            o.traits = vec!["Iliad".to_string()];
+            o.colors = vec![CardColor::Purple];
+            o
+        })
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
         .security(0, &["FILLER", "FILLER", "PLAIN"])
@@ -108,6 +128,110 @@ fn bt26_033_wd_non_iliad_cards_are_not_offered() {
     assert!(non_pass(&r).is_empty(), "no Iliad/TS candidate");
     let _ = r.auto_resolve();
     assert_eq!(hand_ids(&r, 0), vec!["PLAIN".to_string()]);
+}
+
+// ─── Hand-pick candidate legality (select-hand playability audit) ────────────
+// DCGO BT26_033.cs:101-105 offers only `(EqualsTraits("Iliad") ||
+// EqualsTraits("TS")) && CanPlayOrUse(card, activateClass, fixedCost: max(0,
+// GetCostItself - 5))` (PlayEffects.cs:286-293): an Option (a DUAL counts)
+// with `!CanNotPlayThisOption` (no "can't use Option" lock, colour requirement
+// or <Use Req.> met — CR 4.3 4-22, Q1500 / Q2785) and `MaxMemoryCost >= cost`,
+// or a card with a play cost (never a Digi-Egg, CR 4.3 7-1-1) that
+// `CanPlayAsNewPermanent` (empty frame, no play lock, payable). A card the
+// play / use would refuse is never offered (CR 4.3 1-3-2).
+
+/// Fire [When Digivolving] on a TS5 + Jupitermon stack and return the
+/// hand-pick candidates' card ids (empty when no hand pick installs). PLAIN
+/// (from security) joins the hand last and is never a candidate.
+fn wd_offered(r: &mut DebugRunner, hand: &[&str]) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    for id in hand {
+        push_hand(r, 0, id);
+    }
+    let j = r.place_stack(0, &["TS5", CARD_ID]);
+    fire(r, EffectTiming::WhenDigivolving, j);
+    let Some(v) = r.pending_selection_view() else {
+        return Vec::new();
+    };
+    assert!(
+        r.game
+            .pending_selection
+            .as_ref()
+            .is_none_or(|p| p.card_choice.is_none()),
+        "hand pick uses PLAY_HAND_START action ids"
+    );
+    let ids = hand_ids(r, 0);
+    v.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS && a >= PLAY_HAND_START && ((a - PLAY_HAND_START) as usize) < ids.len())
+        .map(|a| ids[(a - PLAY_HAND_START) as usize].clone())
+        .collect()
+}
+
+/// Tokomon (BT25-001) is an [Iliad]/[TS] Digi-Egg: no play cost, never played.
+#[test]
+fn bt26_033_wd_pick_excludes_iliad_digi_egg() {
+    let mut r = setup();
+    let offered = wd_offered(&mut r, &["BT25-001", "ILIAD"]);
+    assert_eq!(offered, vec!["ILIAD".to_string()]);
+}
+
+/// A purple [Iliad] Option's colour requirement is unmet: not offered; the
+/// yellow one is.
+#[test]
+fn bt26_033_wd_pick_excludes_option_whose_colour_is_unmet() {
+    let mut r = setup();
+    let offered = wd_offered(&mut r, &["ILIAD-OPT-PURPLE", "ILIAD-OPT"]);
+    assert_eq!(offered, vec!["ILIAD-OPT".to_string()]);
+}
+
+/// "You can't use Option cards": the Option is not offered, the Digimon is.
+#[test]
+fn bt26_033_wd_pick_excludes_option_when_options_cannot_be_used() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup();
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = wd_offered(&mut r, &["ILIAD-OPT", "ILIAD"]);
+    assert_eq!(offered, vec!["ILIAD".to_string()]);
+}
+
+/// "You can't play Digimon by effects": the Digimon is not offered, the Option
+/// still is.
+#[test]
+fn bt26_033_wd_pick_excludes_digimon_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup();
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = wd_offered(&mut r, &["ILIAD-OPT", "ILIAD"]);
+    assert_eq!(offered, vec!["ILIAD-OPT".to_string()]);
+}
+
+/// A full battle area: the Digimon and the Tamer are not offered, the Option
+/// still is.
+#[test]
+fn bt26_033_wd_pick_excludes_digimon_and_tamer_when_battle_area_full() {
+    let mut r = setup();
+    r.game.rules.field_slots = 1; // the Jupitermon stack alone fills it
+    let offered = wd_offered(&mut r, &["ILIAD-OPT", "ILIAD", "TS-T"]);
+    assert_eq!(offered, vec!["ILIAD-OPT".to_string()]);
+}
+
+/// The play pays the cost reduced by 5: a card whose reduced cost would take
+/// memory past -10 is not offered.
+#[test]
+fn bt26_033_wd_pick_excludes_unaffordable_digimon() {
+    let mut r = setup();
+    let offered = wd_offered(&mut r, &["ILIAD-18", "ILIAD-19"]);
+    assert_eq!(offered, vec!["ILIAD-18".to_string()]);
 }
 
 #[test]

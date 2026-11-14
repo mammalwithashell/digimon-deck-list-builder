@@ -31,10 +31,19 @@ effects:
           of: you
           bind_as: card
           optional: true
+          # DCGO EX13_005.cs:28-30: HasText(...) && CanPlayOrUse(card, fixedCost:
+          # cost - 1) (PlayEffects.cs:286-294) -- an Option must be usable
+          # (colour requirement / <Use Req.>, no "can't use" lock; CR 4.3 4-22),
+          # a Digimon/Tamer playable (has a play cost so never a Digi-Egg, CR
+          # 4.3 7-1-1; free frame; no play prohibition), and either payable at
+          # the reduced cost (CR 4.3 1-3-11-1).
           filter:
-            any_of:
-              - in_text_contains: Dracomon
-              - in_text_contains: Examon
+            all_of:
+              - any_of:
+                  - in_text_contains: Dracomon
+                  - in_text_contains: Examon
+              - can_play_or_use_from_effect: true
+              - affordable_with_cost: { reduce: 1 }
           prompt: "You may play or use 1 card with [Dracomon] or [Examon] in its text with the cost reduced by 1"
       - if:
           condition: { binding_present: card }

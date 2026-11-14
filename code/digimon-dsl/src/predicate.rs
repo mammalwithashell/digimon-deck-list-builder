@@ -197,9 +197,28 @@ pub struct PredicateSpec {
     /// `CanPlayAsNewPermanent(payCost: true, fixedCost: cost - N)` /
     /// Option-use affordability in a "play or use 1 ... with the cost reduced
     /// by N" pick filter (BT26-084 Copipemon), so an unpayable card is never
-    /// offered.
+    /// offered. A DUAL card is priced at its Option use cost (it is used,
+    /// never played: CR 4.3 4-6-2, its Digimon face has no play cost).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub affordable_with_cost_reduce: Option<u8>,
+    /// Card-subject leaf, the general form of `affordable_with_cost_reduce`
+    /// (G-DSL-AFFORDABLE-WITH-COST): the card's owner can pay the cost the
+    /// consuming play / use verb will charge, written with the SAME
+    /// `CostDelta` the verb carries — `{reduce: N}`, a formula `{reduce:
+    /// <formula>}` (evaluated with the effect's bindings, exactly as the verb
+    /// evaluates it), a literal fixed cost, `free` or `printed`. The base cost
+    /// is the play cost of a Digimon / Tamer and the effective use cost of an
+    /// Option or a DUAL (a DUAL is used, never played: CR 4.3 4-6-2). True when
+    /// `memory - cost` stays at or above the memory floor. Mirrors DCGO
+    /// `CanPlayAsNewPermanent(card, payCost: true, ..., fixedCost: cost)`
+    /// (AD1_019.cs:56) and `Owner.MaxMemoryCost >= GetCostItself - reduce`
+    /// (BT26_090.cs:61) in the pick filter, so a card the verb can't pay for is
+    /// never offered (CR 4.3 1-3-2: an impossible action is not carried out).
+    /// Like the action mask's own hand-play check, it does not credit optional
+    /// "before paying" cost reducers. Note that a bare negative integer is a
+    /// fixed cost (`cost_delta: -5` is a fixed cost of 0), not a reduction.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub affordable_with_cost: Option<crate::step::CostDelta>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_digivolve_from_source: Option<bool>,
     /// Card-subject leaf â€” the BINDING-TARGETED sibling of
@@ -217,6 +236,11 @@ pub struct PredicateSpec {
     /// The magic name `source` resolves to the effect's own carrier
     /// permanent ("THIS Digimon may digivolve into ..."), with no `bind_as`
     /// needed. G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE (EX13-055 / EX13-057).
+    /// `replacement_subject` names the permanent a replacement effect is
+    /// about (the Digimon that would be deleted), inside a replacement's
+    /// `choose.card_filter` ("By digivolving that Digimon into ...", BT17-097;
+    /// DCGO BT17_097.cs:137 `CanPlayCardTargetFrame(permanent.PermanentFrame,
+    /// ...)`). G-DSL-CAN-DIGIVOLVE-ONTO-REPLACEMENT-SUBJECT.
     pub can_digivolve_onto: Option<String>,
     /// Opt-in complete payment check for a physical result card. Unlike the
     /// route-only leaf above, searches legal reducer choices using the cost
@@ -227,6 +251,21 @@ pub struct PredicateSpec {
     /// payable hand-partner DNA declaration. Prior picks are physical bindings.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dna_hand_candidate: Option<DnaHandCandidatePredicate>,
+    /// The field + TRASH sibling of `dna_hand_candidate`, for
+    /// `effect_initiated_dna_digivolve_trash_partner` ("1 of your [X] in play
+    /// and 1 [Y] in the trash may DNA digivolve into [Z] in the hand", BT18-015
+    /// / BT18-073). Same stages and fields: `result` (a hand card with at
+    /// least one own battle-area Digimon + own trash card pair that satisfies
+    /// one of its printed DNA requirements, unless `ignore_requirements`, at a
+    /// payable `cost`), `field` (an own Digimon with such a trash partner for
+    /// the bound `result`), `partner` (a trash card that completes the bound
+    /// `result` + `field`). `field_filter` restricts the field material,
+    /// `partner_filter` the trash material. `cost` must match the consuming
+    /// step. Mirrors the commit's own checks (no "can't digivolve by effect"
+    /// lock, recipe, memory). CR 4.3 1-3-2.
+    /// G-DSL-DNA-TRASH-PARTNER-CANDIDATE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dna_trash_candidate: Option<DnaHandCandidatePredicate>,
     /// Two-field DNA feasibility for `select_hand` + `select_dna_pair` +
     /// `effect_initiated_dna_digivolve` ("2 of your Digimon may DNA digivolve
     /// into X in the hand"). DCGO `CanPlayJogress(true)` /
@@ -236,6 +275,11 @@ pub struct PredicateSpec {
     /// Whether this physical candidate can be played free into its owner's
     /// battle area by the effect controller. Checks the owner's field capacity
     /// and the causing controller's effect-play prohibition independently.
+    /// Zone-aware: a card in its owner's trash fails while that player can't
+    /// play cards from the trash (`CannotPlayFromTrash`, BT23-014), the same
+    /// refusal the trash-origin play makes, so a hand-or-trash union pick
+    /// (`select_union_zone`) offers a trash card only when the play from the
+    /// trash can happen. G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_play_from_effect_without_cost: Option<bool>,
     /// Card-subject leaf for "play or use 1 ... card from your hand" picks
@@ -250,7 +294,10 @@ pub struct PredicateSpec {
     /// Mirrors DCGO `(IsOption &&
     /// !CanNotPlayThisOption) || (HasPlayCost && CanPlayAsNewPermanent(...))`.
     /// It does not check memory affordability: pair it with
-    /// `affordable_with_cost_reduce` for a cost-paying play.
+    /// `affordable_with_cost` (or `affordable_with_cost_reduce`) for a
+    /// cost-paying play. Zone-aware like `can_play_from_effect_without_cost`:
+    /// a trash card fails under `CannotPlayFromTrash`, which also refuses an
+    /// Option use from the trash.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_play_or_use_from_effect: Option<bool>,
     /// Candidate is a physical hand Digimon/Dual whose owner's breeding is empty;
@@ -1595,6 +1642,13 @@ pub struct DigivolveCostPredicate {
 /// printed DNA cost can be paid. `first`: an own Digimon that has such a
 /// partner for the card bound under `result`. `second`: an own Digimon that
 /// forms such a pair with the permanent bound under `first`.
+///
+/// A `result` stage may also fix one or both materials with `first` /
+/// `second` when they were picked BEFORE the result ("This Digimon and 1 of
+/// your other Digimon may DNA digivolve into X in the hand": BT20-036, EX3-008
+/// bind `source` + `dna_partner` first). The result card then needs a printed
+/// DNA requirement satisfied by exactly that pair, not just some pair.
+/// G-DSL-DNA-FIELD-PAIR-FIXED-MATERIALS.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum DnaFieldPairRole {
@@ -1603,16 +1657,27 @@ pub enum DnaFieldPairRole {
     Second,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DnaFieldPairPredicate {
     pub role: DnaFieldPairRole,
     /// Hand binding of the DNA result card (required for `first`/`second`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub result: Option<String>,
-    /// Permanent binding of the first material (required for `second`).
+    /// Permanent binding of the first material (required for `second`;
+    /// optional for `result`, where it fixes that material). `source` names
+    /// the effect's own carrier.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub first: Option<String>,
+    /// Permanent binding of the second material, only for `result` (fixes
+    /// that material). `source` names the effect's own carrier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub second: Option<String>,
+    /// The cost the consuming `effect_initiated_dna_digivolve` charges
+    /// (`printed`, `free`, a literal, or `{reduce: N}` off the printed DNA
+    /// cost). Omitted = `printed`, the historical behaviour.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<crate::step::CostDelta>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1623,7 +1688,9 @@ pub enum DnaHandCandidateRole {
     Partner,
 }
 
-/// Correlated stages of a field-plus-hand DNA choice. A field pick requires
+/// Correlated stages of a field-plus-hand DNA choice (`dna_hand_candidate`)
+/// or a field-plus-trash DNA choice (`dna_trash_candidate`, where `partner`
+/// is the trash material). A field pick requires
 /// the prior result binding; a partner pick requires both prior bindings.
 /// Filters restrict the other materials at every stage. Cost must match the
 /// consuming evolution step; affordability probes never mutate the live game.

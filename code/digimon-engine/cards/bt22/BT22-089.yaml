@@ -164,15 +164,20 @@ effects:
           of: you
           bind_as: pick
           optional: true
+          # DCGO BT22_089.cs:39-45: ... && (EqualsCardName("Mirei Mikagura") ||
+          # (IsTamer && HasCSTraits)) && CanPlayAsNewPermanent. Exact name
+          # (CR 4.3 2-3-1-2); free slot, no Tamer play prohibition.
           filter:
-            any_of:
-              - all_of:
-                  - name_contains: "Mirei Mikagura"
-                  - play_cost_gte: 4
-              - all_of:
-                  - kind: tamer
-                  - trait_has: CS
-                  - play_cost_gte: 4
+            all_of:
+              - any_of:
+                  - all_of:
+                      - name_is: "Mirei Mikagura"
+                      - play_cost_gte: 4
+                  - all_of:
+                      - kind: tamer
+                      - trait_has: CS
+                      - play_cost_gte: 4
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Mirei Mikagura] or CS-trait Tamer (cost ≥ 4) from hand free"
       - play_from_hand_free: { of: you, hand_index: pick }
 

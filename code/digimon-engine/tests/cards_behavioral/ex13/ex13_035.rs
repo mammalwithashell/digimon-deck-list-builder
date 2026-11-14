@@ -21,8 +21,10 @@
 //! paying the costs."
 //!
 //! # DCGO C# reference
-//! None at the submodule (no EX13_035.cs at b9a0638cd). Printed text, the
-//! official Q&A, and general_rule.pdf govern.
+//! `DCGO/Assets/Scripts/CardEffect/EX13/Yellow/EX13_035.cs` — pick filter
+//! :108-115 (`IsDigimon && name && HasPlayCost && GetCostItself <= totalCost
+//! && ... && CanPlayAsNewPermanent`), hand roots :151/:190, trash roots
+//! :152/:217. Printed text, the official Q&A, and CR 4.3 govern otherwise.
 //!
 //! # Pattern rows
 //! - A-union hand-or-trash free play, x2 under a running play-cost budget
@@ -381,3 +383,63 @@ fn ex13_035_aura_does_not_touch_own_digimon() {
 
 #[path="../../support/owned_card_choice.rs"]
 mod physical_fixture;
+
+// ─── Candidate legality (select-hand playability audit, 2026-11-13) ──────────
+// DCGO EX13_035.cs:108-115 offers only `IsDigimon && name && HasPlayCost &&
+// GetCostItself <= totalCost && ... && CanPlayAsNewPermanent(cardSource, false,
+// activateClass)`, for both the hand (:151, :190-192) and the trash (:152,
+// :217-218) root. A card the free play would refuse is not a legal pick (CR
+// 4.3 1-3-2; 7-1-1).
+
+fn play_king_with(hand: &[&str], trash: &[&str], lock: ModifierType) -> DebugRunner {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut all = vec![CARD_ID];
+    all.extend_from_slice(hand);
+    let mut r = builder().hand(0, &all).deck(0, &["FILL"; 5]).memory(20).start();
+    r.game.turn_count = 1;
+    r.game.current_phase = GamePhase::Main;
+    for id in trash {
+        r.inject_trash(0, id);
+    }
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(lock, 0, Expiry::Permanent, None, 1),
+    );
+    let idx = hand_pos(&r, 0, CARD_ID);
+    r.play(0, idx).expect("play KingEtemon");
+    r
+}
+
+fn offered_count(r: &DebugRunner) -> usize {
+    r.pending_selection_view()
+        .map(|v| v.valid_action_ids.iter().filter(|&&a| a != PASS).count())
+        .unwrap_or(0)
+}
+
+/// "You can't play Digimon by effects": no named Digimon is offered from the
+/// hand or the trash, and nothing reaches the field.
+#[test]
+fn ex13_035_nothing_offered_while_digimon_effect_play_is_prohibited() {
+    let mut r = play_king_with(&["CHUU"], &["SUKA"], ModifierType::CannotPlayDigimonByEffect);
+    assert_eq!(
+        offered_count(&r),
+        0,
+        "neither Chuumon (hand) nor Sukamon (trash) can be played: {:?}",
+        r.pending_selection_view()
+    );
+    let _ = r.auto_resolve();
+    assert_eq!(field_ids(&r, 0), vec![CARD_ID.to_string()]);
+}
+
+/// "You can't play cards from the trash": the hand Chuumon is still offered,
+/// the trash Sukamon is not.
+#[test]
+fn ex13_035_trash_copy_not_offered_while_trash_play_is_locked() {
+    let r = play_king_with(&["CHUU"], &["SUKA"], ModifierType::CannotPlayFromTrash);
+    let offered: Vec<String> = physical_fixture::commits(&r.game)
+        .into_iter()
+        .filter_map(|row| row.card_id)
+        .collect();
+    assert_eq!(offered, vec!["CHUU".to_string()], "only the hand copy is playable");
+}

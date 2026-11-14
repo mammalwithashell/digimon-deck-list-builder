@@ -389,6 +389,94 @@ fn ex7_027_inherited_replacement_opt_locks_second_use_same_turn() {
     );
 }
 
+// ─── [When Digivolving] free-play candidates must be playable ───────────────
+// DCGO EX7_027.cs:42-48 `IsLevel3PuppetCardCondition` = IsDigimon && Level 3
+// && [Puppet] && `CardEffectCommons.CanPlayAsNewPermanent(cardSource,
+// payCost: false, ...)`: a card the play would refuse is never offered.
+// CR 4.3 7-1-1 (a play places a card with a play cost onto the field),
+// 4-6-1/4-6-2 (a DUAL card is digivolved or used, never played; DCGO
+// `CanPlayAsNewPermanent` requires `!IsOption`) and 1-3-2.
+
+/// Chaperomon over a base, `hand` in hand; fire [When Digivolving] and return
+/// the hand ids the free-play pick offers (empty when no pick installs).
+fn wd_offer(hand: &[&str], prep: impl FnOnce(&mut DebugRunner)) -> (DebugRunner, Vec<String>) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX7-027")
+        .expect("EX7-027 YAML loads")
+        .dsl_card("EX13-065")
+        .expect("EX13-065 YAML loads")
+        .add_card(make_test_card("BASE", "Base"))
+        .add_card(make_puppet_level3("PUPPET-L3"))
+        .hand(0, hand)
+        .memory(10)
+        .start();
+    let chapero = runner.place_stack(0, &["BASE", "EX7-027"]);
+    prep(&mut runner);
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(chapero),
+    );
+    runner.game.drain_effect_queue();
+    let Some(view) = runner.pending_selection_view() else {
+        return (runner, Vec::new());
+    };
+    assert_eq!(view.kind, SelectionKind::Hand, "only the hand pick may prompt");
+    let ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let offered = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| ids[a as usize].clone())
+        .collect();
+    (runner, offered)
+}
+
+/// Sistermon Blanc (Awakened) (EX13-065) is a level 3 [Puppet] DUAL card: it
+/// can't be played (CR 4.3 4-6-2), so only the Digimon card is offered.
+#[test]
+fn ex7_027_wd_pick_excludes_dual_sistermon_blanc_awakened() {
+    let (_, offered) = wd_offer(&["EX13-065", "PUPPET-L3"], |_| {});
+    assert_eq!(offered, vec!["PUPPET-L3".to_string()]);
+}
+
+/// With only the DUAL card in hand there is nothing to play: no pick.
+#[test]
+fn ex7_027_wd_dual_only_hand_offers_no_pick() {
+    let (runner, offered) = wd_offer(&["EX13-065"], |_| {});
+    assert!(offered.is_empty(), "{offered:?}");
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+}
+
+/// "You can't play Digimon by effects": no pick.
+#[test]
+fn ex7_027_wd_pick_offers_nothing_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (runner, offered) = wd_offer(&["PUPPET-L3"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+}
+
+/// A full battle area (no empty frame): no pick.
+#[test]
+fn ex7_027_wd_pick_offers_nothing_when_battle_area_full() {
+    let (runner, offered) = wd_offer(&["PUPPET-L3"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+}
+
 fn make_puppet_level3(id: &str) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card(id, id);
     card.level = Some(3);

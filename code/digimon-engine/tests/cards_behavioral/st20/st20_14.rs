@@ -837,3 +837,102 @@ fn st20_14_security_places_self_in_defender_battle_area() {
         "ST20-14 is seated as a Delay-Option in the defender's battle area"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 6 — <Delay> reward candidate legality (select-hand audit 2026-11-13)
+// ═══════════════════════════════════════════════════════════════════════════
+// DCGO ST20_14.cs:110-118 offers a hand card only when
+// `CanPlayAsNewPermanent(payCost: false)` && IsDigimon && HasAdventureTraits &&
+// Level <= 5. `CanPlayAsNewPermanent` (GameContextDeterminarion.cs:419-433)
+// refuses an Option-kind card (a DUAL's kinds contain Option) and needs an
+// empty frame + no play lock. CR 4.3 1-3-11-1: a card that can't be played
+// can't be declared for play; 4-6-2: a DUAL is digivolved or used, never
+// played. Regression guards for `can_play_from_effect_without_cost`.
+
+/// A Lv.4 [ADVENTURE] DUAL card (Digimon face + Option face).
+fn adventure_dual(id: &str) -> CardData {
+    let mut c = digimon(id, "Adventure Dual", 4, CardColor::Black, &["ADVENTURE"]);
+    c.card_kind = CardKind::Dual;
+    c
+}
+
+/// Seat ST20-14 as a usable Delay-Option, put `hand` in hand, run `setup`,
+/// delete an own Lv.5 Digimon and accept the <Delay>. Returns the runner and
+/// the hand card ids offered by the reward pick (empty when no pick installs).
+fn delay_reward_offered(hand: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> (DebugRunner, Vec<String>) {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        .add_card(digimon("LV5-LEAVER", "Big Adventure", 5, CardColor::Black, &[]))
+        .add_card(digimon("ADV-HAND", "Small Adventure", 4, CardColor::Black, &["ADVENTURE"]))
+        .add_card(adventure_dual("ADV-DUAL"))
+        .add_card(filler("FILL"))
+        .hand(0, hand)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .memory(10)
+        .start();
+    let opt = r.place_on_field(0, CARD_ID, Some(0));
+    seat_as_delay_option(&mut r, opt);
+    let leaver = r.place_on_field(0, "LV5-LEAVER", None);
+    setup(&mut r);
+    r.game.delete_permanent_with_cause(leaver, ReplacementCause::OwnEffect);
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the <Delay> response");
+    // The reward pick is an EffectChoice whose entries name the physical hand
+    // card each one plays (`source_card`); map the offered entries to card ids.
+    let hand: Vec<(digimon_engine::card_source::CardHandle, String)> = r.game.players[0]
+        .hand
+        .iter()
+        .map(|c| (c.handle(), c.card_id(&r.game.card_data).to_string()))
+        .collect();
+    let mut offered: Vec<String> = match r.game.pending_selection.as_ref() {
+        Some(p) if p.kind == SelectionKind::EffectChoice => p
+            .effect_choices
+            .iter()
+            .flatten()
+            .filter(|e| e.action_id != PASS && p.valid_action_ids.contains(&e.action_id))
+            .map(|e| {
+                e.source_card
+                    .and_then(|h| hand.iter().find(|(hh, _)| *hh == h).map(|(_, id)| id.clone()))
+                    .unwrap_or_else(|| format!("label:{}", e.label))
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
+    offered.sort();
+    (r, offered)
+}
+
+/// Control: the plain Lv.4 [ADVENTURE] Digimon is offered.
+#[test]
+fn st20_14_delay_reward_offers_playable_adventure_digimon() {
+    let (_r, offered) = delay_reward_offered(&["ADV-HAND"], |_| {});
+    assert_eq!(offered, vec!["ADV-HAND".to_string()]);
+}
+
+/// A Lv.4 [ADVENTURE] DUAL card is never played (CR 4.3 4-6-2; DCGO
+/// `CanPlayAsNewPermanent` refuses `IsOption`): not offered.
+#[test]
+fn st20_14_delay_reward_does_not_offer_adventure_dual() {
+    let (_r, offered) = delay_reward_offered(&["ADV-DUAL", "ADV-HAND"], |_| {});
+    assert_eq!(offered, vec!["ADV-HAND".to_string()], "the DUAL is not a play candidate");
+}
+
+/// "You can't play Digimon by effects": nothing is offered and the hand card
+/// stays in hand.
+#[test]
+fn st20_14_delay_reward_not_offered_when_effect_digimon_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, offered) = delay_reward_offered(&["ADV-HAND"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "nothing playable is offered: {offered:?}");
+    r.game.drain_effect_queue();
+    assert!(!field_contains(&r, 0, "ADV-HAND"));
+}

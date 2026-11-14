@@ -32,10 +32,15 @@ effects:
           of: you
           bind_as: pick
           optional: true
+          # DCGO BT22_052.cs:86-94 / :164-172 CanSelectCondition =
+          # CanSelectCardCondition (:43-57, Digimon, DP <= 5000) &&
+          # CanPlayAsNewPermanent: no DUAL (CR 4.3 7-1-1 no play cost + 4-6-2), free slot, no play
+          # prohibition.
           filter:
             all_of:
               - kind: digimon
               - dp_lte: 5000
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 5000 DP or lower Digimon card from your hand"
       - play_from_hand_free: { of: you, hand_index: pick }
       - for_each:

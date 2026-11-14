@@ -1126,3 +1126,114 @@ fn cost_target_from_hand_leaf_allows_hand_digivolve_reduction() {
     let spent = digivolve_and_measure_memory(&mut runner, ally, "GREYMON");
     assert_eq!(spent, 2, "hand target: reduced (3 - 1)");
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 5 — Clause 1 candidate filter: only cards the effect can play
+//
+// DCGO BT5_092.cs:27-44 — `CanSelectCardCondition` = name contains [Agumon] or
+// [Gabumon], owned by this card's owner, AND `CardEffectCommons.
+// CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)`. CR 4.3
+// 1-3-11-1: a card can be declared for play only if it is able to be played;
+// 1-3-2: an impossible action is not carried out. An [Agumon] that the effect
+// cannot place (no free battle-area slot, "can't play Digimon by effects") is
+// therefore not a legal choice, and with no legal choice the "you may" clause
+// offers nothing.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// After Nokia's [On Play] is queued: accept the outer "you may activate"
+/// prompt if one is shown (DCGO BT5_092.cs:51-61 `CanActivateCondition` only
+/// needs a non-empty hand, so the outer prompt may legitimately appear), then
+/// return the hand cards the inner pick offers (empty when none installs).
+fn agumon_pick_offered(runner: &mut DebugRunner) -> Vec<String> {
+    use digimon_engine::selection::SelectionKind;
+    if runner.pending_kind() == Some(SelectionKind::Replacement) {
+        runner
+            .accept_optional_trigger()
+            .expect("accept the outer optional-trigger prompt");
+        let _ = runner.game.drain_effect_queue();
+    }
+    let Some(pending) = runner.game.pending_selection.as_ref() else {
+        return Vec::new();
+    };
+    if pending.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    if let Some(owner) = pending.card_choice.as_ref() {
+        use digimon_engine::owned_card_choice::CardChoiceOperation;
+        return owner
+            .view(&runner.game, pending.selecting_player)
+            .rows
+            .into_iter()
+            .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+            .filter_map(|row| row.card_id)
+            .collect();
+    }
+    let hand = &runner.game.players[0].hand;
+    pending
+        .valid_action_ids
+        .iter()
+        .filter(|&&a| a != digimon_engine::action::space::PASS)
+        .filter_map(|&a| {
+            let idx = a.checked_sub(digimon_engine::action::space::PLAY_HAND_START)? as usize;
+            hand.get(idx).map(|c| c.card_id(&runner.game.card_data).to_string())
+        })
+        .collect()
+}
+
+fn nokia_with_agumon() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT5-092 in DSL pack")
+        .add_card(make_agumon("AGUMON-1"))
+        .add_card(make_filler("FILLER-DECK"))
+        .deck(0, &["FILLER-DECK"])
+        .deck(1, &["FILLER-DECK"])
+        .hand(0, &[CARD_ID, "AGUMON-1"])
+        .memory(10)
+        .start()
+}
+
+/// "You can't play Digimon by effects": [Agumon] is not offered, so the
+/// [On Play] installs no prompt.
+#[test]
+fn bt5_092_clause1_agumon_not_offered_under_digimon_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = nokia_with_agumon();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 0),
+    );
+    runner.play(0, 0).expect("Nokia plays from hand");
+    let _ = runner.game.drain_effect_queue();
+    let offered = agumon_pick_offered(&mut runner);
+    assert!(
+        offered.is_empty(),
+        "the lock leaves no playable [Agumon] → [Agumon] is not a legal pick; got {offered:?}"
+    );
+    assert!(runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "AGUMON-1"));
+    assert_eq!(runner.battle_area_size(0), 1);
+}
+
+/// Nokia takes the only battle-area slot: [Agumon] cannot be placed, so it is
+/// not offered.
+#[test]
+fn bt5_092_clause1_agumon_not_offered_when_battle_area_full() {
+    let mut runner = nokia_with_agumon();
+    runner.game.rules.field_slots = 1;
+    runner.play(0, 0).expect("Nokia plays into the last slot");
+    let _ = runner.game.drain_effect_queue();
+    let offered = agumon_pick_offered(&mut runner);
+    assert!(
+        offered.is_empty(),
+        "no free slot → no playable [Agumon] → [Agumon] is not a legal pick; got {offered:?}"
+    );
+    assert!(runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "AGUMON-1"));
+    assert_eq!(runner.battle_area_size(0), 1);
+}

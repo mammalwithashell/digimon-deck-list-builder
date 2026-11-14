@@ -14,8 +14,14 @@
 //! opponent's Digimon.
 //!
 //! # DCGO C# reference
-//! None at b9a0638cd (no `EX13_058.cs`); printed text governs. Idioms:
-//! ST24-06 (`play_or_use_cost_lte` + `play_or_use_from_hand { cost_delta: free }`),
+//! `DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_058.cs`. The hand pick
+//! (`CanSelectCardCondition`, EX13_058.cs:32-35) offers `HasText("Knightmon")
+//! && GetCostItself <= 4 && CardEffectCommons.CanPlayOrUse(card, activateClass)`;
+//! `CanPlayOrUse` (PlayEffects.cs:286-292) = `(IsOption && !CanNotPlayThisOption)
+//! || (HasPlayCost && CanPlayAsNewPermanent(card, payCost: false, ...))`, and
+//! `CanNotPlayThisOption` includes an unmet colour requirement
+//! (CardSource.cs:184-246). Idioms: ST24-06 (`play_or_use_cost_lte` +
+//! `can_play_or_use_from_effect` + `play_or_use_from_hand { cost_delta: free }`),
 //! EX13-062 (`[Knightmon]`-text keyword aura), EX13-053 (De-Digivolve 1).
 //!
 //! # Patterns
@@ -43,6 +49,21 @@ fn builder() -> DebugRunnerBuilder {
             let mut o = option("K-OPT", CardColor::Black, 3);
             o.effect_text = "Your [Knightmon] gets +2000 DP.".into();
             o
+        })
+        .add_card({
+            // A red [Knightmon]-text Option: no red Digimon/Tamer of player 0
+            // meets its colour requirement (CR 4.3 4-22-2).
+            let mut o = option("K-OPT-RED", CardColor::Red, 2);
+            o.effect_text = "Your [Knightmon] gets +1000 DP.".into();
+            o
+        })
+        .add_card({
+            // A [Knightmon]-text Digi-Egg: no play cost (CR 4.3 7-1-1).
+            let mut e = named("K-EGG", "Knightmon Egg", CardColor::Black, 2, 0);
+            e.card_kind = digimon_engine::enums::CardKind::DigiEgg;
+            e.dp = None;
+            e.play_cost = 0;
+            e
         })
         .add_card(with_cost(named("PLAIN", "Plainmon", CardColor::Black, 4, 5000), 3))
         .add_card(named("ALLY-K", "Knightmon Ally", CardColor::Black, 4, 5000))
@@ -132,6 +153,82 @@ fn ex13_058_declining_plays_nothing() {
     decline(&mut r);
     let _ = r.auto_resolve();
     assert_eq!(hand_ids(&r, 0), vec!["K4".to_string()]);
+}
+
+// ─── Section 2/3 — candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY) ──
+// The pick offers only cards the follow-up play/use can carry out (DCGO
+// EX13_058.cs:32-35 `CanPlayOrUse`; CR 4.3 1-3-2: an impossible action is not
+// carried out, so offering it would be an illegal choice in the action space).
+
+fn when_attacking_offered(hand: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut r = start(hand);
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    setup(&mut r);
+    r.attack_player(me, 1, false);
+    if r.pending_kind() != Some(SelectionKind::Hand) {
+        return Vec::new();
+    }
+    offered_hand_ids(&r)
+}
+
+/// A [Knightmon]-text Digi-Egg has no play cost (CR 4.3 7-1-1; DCGO
+/// `HasPlayCost` false) and is no Option: it is never offered.
+#[test]
+fn ex13_058_digi_egg_is_not_offered() {
+    assert_eq!(
+        when_attacking_offered(&["K-EGG", "K4"], |_| {}),
+        vec!["K4".to_string()]
+    );
+}
+
+/// A red [Knightmon]-text Option can't be used without a red Digimon/Tamer
+/// (CR 4.3 4-22-1/4-22-2; an effect use still needs the colour requirement,
+/// official rulings Q1500 / Q2785; DCGO `CanNotPlayThisOption`).
+#[test]
+fn ex13_058_option_whose_colour_requirement_is_unmet_is_not_offered() {
+    assert_eq!(
+        when_attacking_offered(&["K-OPT-RED", "K-OPT"], |_| {}),
+        vec!["K-OPT".to_string()],
+        "black K-OPT is usable via Knightmon (EX13-058); red K-OPT-RED is not"
+    );
+}
+
+/// "You can't use Option cards": the Option is not offered.
+#[test]
+fn ex13_058_option_not_offered_when_options_cannot_be_used() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = when_attacking_offered(&["K-OPT", "K4"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(offered, vec!["K4".to_string()]);
+}
+
+/// "You can't play Digimon by effects": the Digimon is not offered.
+#[test]
+fn ex13_058_digimon_not_offered_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = when_attacking_offered(&["K-OPT", "K4"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(offered, vec!["K-OPT".to_string()]);
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs an empty frame): the
+/// Digimon is not offered, the Option still is.
+#[test]
+fn ex13_058_digimon_not_offered_when_battle_area_full() {
+    let offered = when_attacking_offered(&["K-OPT", "K4"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert_eq!(offered, vec!["K-OPT".to_string()]);
 }
 
 // ─── Section 2 — [Opponent's Turn] aura ──────────────────────────────────────

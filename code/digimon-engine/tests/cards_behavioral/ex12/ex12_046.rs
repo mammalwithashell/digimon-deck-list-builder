@@ -1,12 +1,116 @@
 use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
-use digimon_engine::enums::{CardColor, ModifierType};
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_END, PLAY_HAND_START};
+use digimon_engine::card_data::CardData;
+use digimon_engine::enums::{CardColor, Expiry, ModifierType};
+use digimon_engine::modifiers::PlayerModifierEntry;
+use digimon_engine::selection::SelectionKind;
 
 use super::support::{
-    field_contains, fire_end_of_attack, fire_opponent_security_removed, hand_index, plain_digimon,
-    select_first_non_pass, select_hand_card, tb_digimon, top_card_id, with_evo_cost, DebugRunner,
+    digimon, field_contains, fire_end_of_attack, fire_opponent_security_removed, hand_contains,
+    hand_index, plain_digimon, select_first_non_pass, select_hand_card, tb_digimon, top_card_id,
+    with_evo_cost, DebugRunner,
 };
 
 const CARD_ID: &str = "EX12-046";
+
+/// Walk the prompts (accepting each non-hand prompt with its first non-PASS
+/// action) to the hand pick and return the card ids it offers, sorted. Empty
+/// when no hand pick installs.
+fn offered_hand_ids(runner: &mut DebugRunner, player: u8) -> Vec<String> {
+    for _ in 0..8 {
+        let Some(view) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        if view.kind == SelectionKind::Hand {
+            let hand: Vec<String> = runner.game.players[player as usize]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            let mut ids: Vec<String> = view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&a| a != PASS)
+                .map(|a| {
+                    let slot = if a < PLAY_HAND_END { a - PLAY_HAND_START } else { a - HAND_EFFECT_START };
+                    hand[slot as usize].clone()
+                })
+                .collect();
+            ids.sort();
+            return ids;
+        }
+        let Some(action) = view.valid_action_ids.iter().copied().find(|&a| a != PASS) else {
+            return Vec::new();
+        };
+        runner.execute_action(view.selecting_player, action).expect("advance prompt");
+    }
+    panic!("never reached the hand pick");
+}
+
+/// Shishimamon (EX12-046) under a carrier (the inherited [End of Attack]),
+/// `memory` memory, `hand` in hand.
+fn end_of_attack_runner(
+    extra: Vec<CardData>,
+    hand: &[&str],
+    memory: i16,
+) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut builder = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-046 YAML loads")
+        .add_card(plain_digimon("CARRIER", CardColor::Yellow, 3, 3000));
+    for card in extra {
+        builder = builder.add_card(card);
+    }
+    let mut runner = builder.hand(0, hand).memory(memory).start();
+    runner.game.turn_count = 1;
+    let carrier = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
+    (runner, carrier)
+}
+
+// ── Inherited [End of Attack][OPT] free play: candidate legality ─────────────
+// DCGO EX12_046.cs:203-210 `CanSelectCardCondition`: IsDigimon, DP <= 5000,
+// [TB], AND `CardEffectCommons.CanPlayAsNewPermanent(cardSource, false,
+// activateClass)` (GameContextDeterminarion.cs:419-432): not an Option (never a
+// DUAL, CR 4.3 4-6-2), an empty battle-area frame, no play prohibition. A card
+// the free play would refuse is not a legal choice (CR 4.3 1-3-2).
+
+/// "You can't play Digimon by effects": no [TB] Digimon can be played, so none
+/// is offered.
+#[test]
+fn ex12_046_end_of_attack_pick_offers_nothing_under_effect_play_prohibition() {
+    let (mut runner, carrier) =
+        end_of_attack_runner(vec![tb_digimon("TB-LOW", CardColor::Yellow, 4, 5000)], &["TB-LOW"], 10);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    fire_end_of_attack(&mut runner, carrier);
+    assert!(offered_hand_ids(&mut runner, 0).is_empty());
+    assert!(hand_contains(&runner, 0, "TB-LOW"));
+}
+
+/// A full battle area: no [TB] Digimon can be played, so none is offered.
+#[test]
+fn ex12_046_end_of_attack_pick_offers_nothing_when_battle_area_full() {
+    let (mut runner, carrier) =
+        end_of_attack_runner(vec![tb_digimon("TB-LOW", CardColor::Yellow, 4, 5000)], &["TB-LOW"], 10);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    fire_end_of_attack(&mut runner, carrier);
+    assert!(offered_hand_ids(&mut runner, 0).is_empty());
+    assert!(hand_contains(&runner, 0, "TB-LOW"));
+}
+
+/// The play is free ("without paying the cost"), so memory never gates it: a
+/// cost-20 [TB] Digimon is offered with 0 memory. Regression guard against a
+/// memory check on a free play.
+#[test]
+fn ex12_046_end_of_attack_pick_ignores_memory_for_free_play() {
+    let pricey = digimon("TB-PRICEY", CardColor::Yellow, 4, 20, 5000, &["TB"]);
+    let (mut runner, carrier) = end_of_attack_runner(vec![pricey], &["TB-PRICEY"], 0);
+    fire_end_of_attack(&mut runner, carrier);
+    assert_eq!(offered_hand_ids(&mut runner, 0), vec!["TB-PRICEY".to_string()]);
+}
 
 #[test]
 fn ex12_046_security_removed_effect_is_not_once_per_turn() {

@@ -380,3 +380,80 @@ fn st24_07_arts_offered_onto_lv5_data_squad_base() {
         .to_string();
     assert_eq!(top, CARD_ID);
 }
+
+// ─── Section 4 — Tamer-pick legality (hand + trash union) ─────────────────────
+// DCGO ST24_07.cs:60-66 `PlayableTamerCard`: `IsTamer && HasPlayCost &&
+// GetCostItself <= 5 && CanPlayAsNewPermanent(cardSource, false,
+// activateClass)`; `CanPlayAsNewPermanent` (GameContextDeterminarion.cs:
+// 419-432) needs an empty battle-area frame the card can be played into.
+// DCGO prices the trash pick with the default `Root.Hand`, so it would still
+// offer a trash Tamer while its owner "can't play cards from the trash" —
+// looser than the rules: the play from the trash is then refused, and CR 4.3
+// 1-3-2 says an impossible action is not carried out, so we don't offer it.
+
+/// Fire [When Digivolving] and return how many Tamers the union pick offers
+/// (0 when the pick does not install and the -9000 DP prompt comes first).
+fn tamer_pick_count(r: &mut DebugRunner, me: PermanentHandle) -> usize {
+    fire(r, EffectTiming::WhenDigivolving, me);
+    match r.pending_selection_view() {
+        Some(v) if v.prompt.starts_with("You may play 1 Tamer") => {
+            v.valid_action_ids.iter().filter(|&&id| id != PASS).count()
+        }
+        _ => 0,
+    }
+}
+
+fn tamer_pick_runner() -> (DebugRunner, PermanentHandle) {
+    let mut r = builder().hand(0, &["DS-TAMER"]).memory(10).start();
+    r.inject_trash(0, "DS-TAMER");
+    let me = r.place_stack(0, &["DS-BASE", CARD_ID]);
+    r.place_on_field(1, "OPP-13K", Some(0));
+    r.game.enter_main_phase();
+    (r, me)
+}
+
+/// Regression guard: a Tamer in hand and one in the trash are both offered.
+#[test]
+fn st24_07_tamer_pick_offers_hand_and_trash_tamers() {
+    let (mut r, me) = tamer_pick_runner();
+    assert_eq!(tamer_pick_count(&mut r, me), 2);
+}
+
+/// "Can't play cards from the trash" (BT23-014's lock): only the hand Tamer.
+#[test]
+fn st24_07_tamer_pick_excludes_trash_tamer_under_trash_play_lock() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, me) = tamer_pick_runner();
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+    );
+    assert_eq!(tamer_pick_count(&mut r, me), 1, "the trash Tamer can't be played");
+}
+
+/// "You can't play Tamers by effects": no Tamer is offered.
+#[test]
+fn st24_07_tamer_pick_empty_when_effect_tamer_play_is_prohibited() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, me) = tamer_pick_runner();
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    assert_eq!(tamer_pick_count(&mut r, me), 0);
+}
+
+/// A full battle area: no Tamer can be played, so none is offered; the -9000
+/// DP still resolves.
+#[test]
+fn st24_07_tamer_pick_empty_when_battle_area_full() {
+    let (mut r, me) = tamer_pick_runner();
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    let opp = r.perm_handle(1, 0);
+    let dp_before = r.dp_of(opp).unwrap();
+    assert_eq!(tamer_pick_count(&mut r, me), 0);
+    let _ = r.auto_resolve();
+    assert_eq!(r.dp_of(opp).unwrap(), dp_before - 9000, "the -9000 DP still applies");
+}

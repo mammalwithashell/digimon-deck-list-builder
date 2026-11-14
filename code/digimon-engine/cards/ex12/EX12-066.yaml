@@ -48,11 +48,15 @@ effects:
                         - any_of:
                             - in_text_contains: Gammamon
                             - trait_has: VB
+                        - can_digivolve_onto_with_cost: { target: event_target, cost: { reduce: 1 } }
                     n: 1
                 then:
                   - select_hand:
                       of: you
                       bind_as: evo
+                      # "It may digivolve" (DCGO DigivolveIntoHandOrTrashCard
+                      # isOptional: true, CardEffectCommons.cs:834).
+                      optional: true
                       filter:
                         all_of:
                           - kind: digimon
@@ -60,6 +64,11 @@ effects:
                           - any_of:
                               - in_text_contains: Gammamon
                               - trait_has: VB
+                          # DCGO EX12_066.cs:113-123 DigivolveIntoHandOrTrashCard
+                          # (attacker, payCost: true, reduce 1): only cards that
+                          # CanPlayCardTargetFrame onto the attacker -- a route
+                          # AND the reduced cost payable (CR 4.3 8-1-3-2, 1-3-2).
+                          - can_digivolve_onto_with_cost: { target: event_target, cost: { reduce: 1 } }
                       prompt: "Digivolve the attacking Digimon into a level 6 or lower [Gammamon]-text/[VB] card with the cost reduced by 1"
                   - effect_initiated_digivolve:
                       target: event_target
@@ -80,17 +89,29 @@ effects:
                         - any_of:
                             - in_text_contains: Gammamon
                             - trait_has: VB
+                        - can_play_or_use_from_effect: true
+                        - affordable_with_cost: { reduce: 2 }
                     n: 1
                 then:
                   - select_hand:
                       of: you
                       bind_as: option_pick
+                      # "You may use" (DCGO EX12_066.cs:132 canNoSelect: true).
+                      optional: true
                       filter:
                         all_of:
                           - kind: option
                           - any_of:
                               - in_text_contains: Gammamon
                               - trait_has: VB
+                          # Stricter than DCGO (EX12_066.cs:64-69 offers every
+                          # [Gammamon]-text/[VB] Option): the use needs the colour
+                          # requirement or <Use Req.> met and no "can't use
+                          # Option" lock (CR 4.3 4-22-1..3, 16-42) and the reduced
+                          # use cost paid (9-1-9-2, 9-1-8); an impossible action is
+                          # not carried out (1-3-2). Same CostDelta as the use.
+                          - can_play_or_use_from_effect: true
+                          - affordable_with_cost: { reduce: 2 }
                       prompt: "Use 1 [Gammamon]-text or [VB] Option card from your hand with the cost reduced by 2"
                   # USE only (G-DSL-USE-OPTION-ONLY) — no DUAL Digimon face.
                   - use_option_bound:

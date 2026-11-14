@@ -948,3 +948,54 @@ fn bt23_037_when_attacking_does_not_fire_on_opponent_attack() {
         "the opponent attacking must not fire P0's inherited When Attacking"
     );
 }
+
+// ─── Hand-pick candidate legality (select-hand playability audit, 2026-11-13) ──
+// DCGO BT23_037.cs:98-104 `CanSelectCardCondition` = `IsDigimon && HasPlayCost
+// && BasePlayCost <= 5 && [Hudie] && CanPlayAsNewPermanent(card, payCost: false,
+// …)` (an empty battle-area frame and `CanEnterField` — no play prohibition).
+// CR 4.3 1-3-2 / 15-1-3: a card the play can't perform is not a "play" choice,
+// and with no such card the optional ability asks nothing.
+
+fn hudie_lock(runner: &mut DebugRunner, kind: ModifierType) {
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner
+        .game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1));
+}
+
+/// "You can't play Digimon by effects": the only Hudie <=5 can't be played, so
+/// no hand pick installs.
+#[test]
+fn bt23_037_when_attacking_no_prompt_when_effect_play_is_prohibited() {
+    let mut runner = attacking_runner();
+    push_to_hand(&mut runner, 0, "HUDIE-3");
+    let attacker = stack_tentomon_attacker(&mut runner);
+    hudie_lock(&mut runner, ModifierType::CannotPlayDigimonByEffect);
+
+    let _ = runner.attack_player(attacker, 1, false);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "the prohibited Hudie is not a play candidate; got {:?}",
+        runner.pending_selection_view().map(|v| v.kind)
+    );
+    assert!(field_card_ids(&runner, 0).iter().all(|id| id != "HUDIE-3"));
+}
+
+/// A full battle area (DCGO needs an empty frame): no hand pick installs.
+#[test]
+fn bt23_037_when_attacking_no_prompt_when_battle_area_full() {
+    let mut runner = attacking_runner();
+    push_to_hand(&mut runner, 0, "HUDIE-3");
+    let attacker = stack_tentomon_attacker(&mut runner);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+
+    let _ = runner.attack_player(attacker, 1, false);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no free slot: the Hudie is not a play candidate; got {:?}",
+        runner.pending_selection_view().map(|v| v.kind)
+    );
+}

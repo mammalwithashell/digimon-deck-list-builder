@@ -98,8 +98,15 @@ effects:
           of: you
           bind_as: haru
           optional: true
+          # DCGO BT21_009.cs:116-127 `CanSelectCardCondition` = EqualsCardName
+          # ("Haru Shinkai") && CanPlayAsNewPermanent(payCost: false): only a
+          # Haru Shinkai the free play would accept (free frame, no "can't play
+          # Tamers by effects" lock) is offered; with none, nothing is (:103
+          # HasMatchConditionOwnersHand). Fixed 2026-11-13.
           filter:
-            name_is: "Haru Shinkai"
+            all_of:
+              - name_is: "Haru Shinkai"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Haru Shinkai] from your hand without paying the cost"
       - if:
           condition: { binding_present: haru }

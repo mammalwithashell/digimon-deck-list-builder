@@ -1747,11 +1747,13 @@ fn validate_post_payment_plural_filter(
                             value.get("target").and_then(serde_json::Value::as_str),
                             Some("source" | "event_target")
                         ),
-                        "dna_hand_candidate" => {
+                        "dna_hand_candidate" | "dna_trash_candidate" => {
                             value.get("result").is_some() || value.get("field").is_some()
                         }
                         "dna_field_pair" => {
-                            value.get("result").is_some() || value.get("first").is_some()
+                            value.get("result").is_some()
+                                || value.get("first").is_some()
+                                || value.get("second").is_some()
                         }
                         // Only event_target has a global trigger-context
                         // fallback in reference_play_cost. replacement_subject
@@ -1885,6 +1887,13 @@ fn validate_step_binding_scope(
             }
             // `bind_count_as` DECLARES the number of security cards actually
             // trashed. G-DSL-TRASH-TOP-SECURITY-COUNT-BINDING (BT26-083).
+            declare_optional_binding(scope, &args.bind_count_as);
+        }
+        StepSpec::MoveMatchingSourcesUnderTamer(args) => {
+            // `bind_count_as` DECLARES the number of cards moved, read by later
+            // steps' `binding_value` formulas — e.g. BT21-092's follow-up
+            // `affordable_with_cost: {reduce: {binding_value: moved_count}}`
+            // pick filter. G-DSL-MOVE-SOURCES-COUNT-BINDING-SCOPE.
             declare_optional_binding(scope, &args.bind_count_as);
         }
         StepSpec::DeDigivolve(args) => {
@@ -2614,13 +2623,18 @@ fn validate_predicate_binding_scope(
     if let Some(pair) = &pred.dna_field_pair {
         use crate::predicate::DnaFieldPairRole;
         // G-DSL-DNA-FIELD-PAIR-CANDIDATE: each stage names exactly the prior
-        // picks it correlates with.
-        for (name, binding, required) in [
-            ("result", &pair.result, pair.role != DnaFieldPairRole::Result),
-            ("first", &pair.first, pair.role == DnaFieldPairRole::Second),
+        // picks it correlates with. A `result` stage may fix materials picked
+        // before it (G-DSL-DNA-FIELD-PAIR-FIXED-MATERIALS): `first` / `second`
+        // are optional there, `source` naming the effect's carrier.
+        let is_result = pair.role == DnaFieldPairRole::Result;
+        for (name, binding, required, allowed) in [
+            ("result", &pair.result, !is_result, !is_result),
+            ("first", &pair.first, pair.role == DnaFieldPairRole::Second,
+                is_result || pair.role == DnaFieldPairRole::Second),
+            ("second", &pair.second, false, is_result),
         ] {
             let path = format!("{prefix}.dna_field_pair.{name}");
-            if required != binding.is_some() {
+            if (required && binding.is_none()) || (!allowed && binding.is_some()) {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
                     path: path.clone(),
@@ -2632,9 +2646,24 @@ fn validate_predicate_binding_scope(
                 });
             }
             if let Some(binding) = binding {
+                // A material may be the effect's own carrier, never a bind_as.
+                if name != "result" && binding == "source" {
+                    continue;
+                }
                 report_if_undeclared_binding(binding, &path, card_id, scope, errors);
             }
         }
+    }
+    // G-DSL-AFFORDABLE-WITH-COST: a formula reduction reads the same bindings
+    // as the consuming verb's `cost_delta`, so they must be in scope here too.
+    if let Some(crate::step::CostDelta::Reduce { reduce }) = &pred.affordable_with_cost {
+        validate_formula_binding_scope(
+            reduce,
+            &format!("{prefix}.affordable_with_cost.reduce"),
+            card_id,
+            scope,
+            errors,
+        );
     }
     if let Some(bc) = &pred.binding_count_eq {
         report_if_undeclared_binding(

@@ -101,9 +101,14 @@ effects:
           of: you
           zone: [hand]
           trait_has: "DATA SQUAD"
-          # A Digi-Egg has no play cost and can't be played (CR 7-1-1; DCGO
-          # HasPlayCost). Rose Rave audit 2026-11-11.
+          # Only a card that can actually be played or used (DCGO BT26_049.cs
+          # :125-131 / CanActivateCondition :117-123): a Digimon/Tamer with a
+          # play cost (never a Digi-Egg, CR 4.3 7-1-1), a free frame and no
+          # play prohibition; an Option with its colour requirement met and
+          # no Option lock (CR 4.3 4-22, Q1500/Q2785). Rose Rave audit
+          # 2026-11-11 (Digi-Egg); select-hand audit 2026-11-13.
           not: { kind: digi_egg }
+          can_play_or_use_from_effect: true
           play_or_use_cost_lte:
             formula:
               base: 3
@@ -129,6 +134,7 @@ effects:
             all_of:
               - trait_has: "DATA SQUAD"
               - not: { kind: digi_egg }
+              - can_play_or_use_from_effect: true
               - play_or_use_cost_lte:
                   formula:
                     base: 3

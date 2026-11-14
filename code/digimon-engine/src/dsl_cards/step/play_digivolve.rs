@@ -171,6 +171,41 @@ fn lower_dna_cost(
     bindings: &Bindings,
     printed_cost: impl Fn() -> Option<i32>,
 ) -> i32 {
+    lower_dna_cost_value(cost, printed_cost, |formula| {
+        let target = ctx
+            .source_permanent
+            .unwrap_or(crate::permanent::PermanentHandle {
+                player: ctx.player,
+                index: 0,
+            });
+        crate::dsl_cards::formula_eval::evaluate_with_bindings(formula, ctx, target, Some(bindings))
+    })
+}
+
+/// Read-context twin of [`lower_dna_cost`] for candidate predicates
+/// (`dna_field_pair { cost }`, `dna_trash_candidate`): the same keyword
+/// interpretation, with formulas evaluated in the effect's read context so a
+/// pick offers exactly the pairs the commit can pay for.
+pub(crate) fn lower_dna_cost_read(
+    cost: &digimon_dsl::compiled::CompiledCostDelta,
+    ctx: &crate::effect_context::EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+    printed_cost: impl Fn() -> Option<i32>,
+) -> i32 {
+    lower_dna_cost_value(cost, printed_cost, |formula| {
+        let target = ctx.source_permanent.unwrap_or(crate::permanent::PermanentHandle {
+            player: ctx.player,
+            index: 0,
+        });
+        crate::dsl_cards::formula_eval::evaluate_read_with_bindings(formula, ctx, target, bindings)
+    })
+}
+
+fn lower_dna_cost_value(
+    cost: &digimon_dsl::compiled::CompiledCostDelta,
+    printed_cost: impl Fn() -> Option<i32>,
+    evaluate: impl FnOnce(&digimon_dsl::compiled::CompiledFormula) -> i32,
+) -> i32 {
     use digimon_dsl::compiled::CompiledCostDelta;
     match cost {
         CompiledCostDelta::Printed => printed_cost().unwrap_or(0).max(0),
@@ -186,19 +221,7 @@ fn lower_dna_cost(
             }
         }
         CompiledCostDelta::ReduceFn(formula) => {
-            let target = ctx
-                .source_permanent
-                .unwrap_or(crate::permanent::PermanentHandle {
-                    player: ctx.player,
-                    index: 0,
-                });
-            let reduce = crate::dsl_cards::formula_eval::evaluate_with_bindings(
-                formula,
-                ctx,
-                target,
-                Some(bindings),
-            )
-            .max(0);
+            let reduce = evaluate(formula).max(0);
             (printed_cost().unwrap_or(0) - reduce).max(0)
         }
     }

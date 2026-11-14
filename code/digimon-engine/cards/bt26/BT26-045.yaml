@@ -74,6 +74,9 @@ effects:
   #     lower [Insectoid]/[Titan] Digimon from hand free ─────────────────────
   - when: [on_play, when_digivolving, when_attacking]
     once_per_turn: true
+    # DCGO BT26_045.cs:47-48 activates only with a PLAYABLE candidate in hand
+    # (the :41-45 pick condition, incl. CanPlayAsNewPermanent), so an
+    # unplayable hand neither offers a pick nor spends the [Once Per Turn].
     condition:
       count_gte:
         filter:
@@ -84,6 +87,7 @@ effects:
           any_of:
             - trait_has: "Insectoid"
             - trait_has: "Titan"
+          can_play_from_effect_without_cost: true
         n: 1
     summary: "[On Play][When Digivolving][When Attacking][Once Per Turn] You may play 1 level 4 or lower [Insectoid]/[Titan] Digimon card from your hand without paying the cost"
     process:
@@ -91,6 +95,10 @@ effects:
           of: you
           bind_as: bug
           optional: true
+          # DCGO BT26_045.cs:41-45 `IsDigimon && Level <= 4 && (Insectoid ||
+          # Titan) && CanPlayAsNewPermanent(card, payCost: false, ...)`: a play
+          # cost (never a DUAL or Digi-Egg), a free slot, no play lock
+          # (CR 4.3 1-3-2).
           filter:
             all_of:
               - kind: digimon
@@ -98,6 +106,7 @@ effects:
               - any_of:
                   - trait_has: "Insectoid"
                   - trait_has: "Titan"
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 level 4 or lower [Insectoid]/[Titan] Digimon card from your hand without paying the cost"
       - if:
           condition: { binding_present: bug }

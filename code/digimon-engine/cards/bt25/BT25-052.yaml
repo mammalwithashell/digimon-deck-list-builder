@@ -136,6 +136,21 @@ effects:
               zone: [battle_area]
               kind: tamer
             n: 1
+    # DCGO BT25_052.cs:218-232: CanActivateCondition and the pick share
+    # `EqualsCardName("Kazuki & Itsuki") && HasPlayCost &&
+    # CanPlayAsNewPermanent(cardSource, false, activateClass)` (an empty frame,
+    # no "can't play Tamers by effects" lock). Without a playable copy the
+    # effect does not activate, so the [Once Per Turn] is not spent.
+    # CR 4.3 1-3-2.
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - name_is: "Kazuki & Itsuki"
+            - can_play_from_effect_without_cost: true
+        n: 1
     summary: "[Your Turn][OPT] When this Digimon gets linked, if <=1 Tamers, may play 1 [Kazuki & Itsuki] from hand free"
     process:
       - select_hand:
@@ -143,7 +158,9 @@ effects:
           bind_as: kazuki
           optional: true
           filter:
-            name_is: "Kazuki & Itsuki"
+            all_of:
+              - name_is: "Kazuki & Itsuki"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Kazuki & Itsuki] from your hand without paying the cost"
       - if:
           condition: { binding_present: kazuki }

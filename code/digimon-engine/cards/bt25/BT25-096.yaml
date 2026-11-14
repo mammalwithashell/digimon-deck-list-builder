@@ -146,9 +146,12 @@ effects:
           bind_as: play_pick
           optional: true
           filter:
-            any_of:
-              - name_is: "Gaomon"
-              - name_is: "Thomas H. Norstein"
+            all_of:
+              - any_of:
+                  - name_is: "Gaomon"
+                  - name_is: "Thomas H. Norstein"
+              # DCGO BT25_096.cs:359-363 `CanPlayAsNewPermanent(card, false, ...)`.
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [Gaomon] or [Thomas H. Norstein] from your hand or trash without paying the cost"
       # No-op when the union pick is declined (PASS leaves play_pick unbound).
       - play_union_bound_free: { binding: play_pick }

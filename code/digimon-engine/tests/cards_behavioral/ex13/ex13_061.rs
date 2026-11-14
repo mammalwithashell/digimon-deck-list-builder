@@ -15,7 +15,14 @@
 //! Digivolve: Black Lv.5 / cost 5; Lv.5 w/[Huckmon] in text: cost 4.
 //!
 //! # DCGO C# reference
-//! None at the submodule (no EX13_061.cs); printed text governs.
+//! `DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_061.cs`. The suspend
+//! observer's candidates (`IsUsableHuckmonOption`, EX13_061.cs:182-186) are
+//! `IsOption && HasText("Huckmon") && GetCostItself <= 5 &&
+//! !CanNotPlayThisOption` (the latter includes an unmet colour requirement,
+//! CardSource.cs:184-246), in the hand or this Digimon's digivolution cards;
+//! `CanActivateCondition` (EX13_061.cs:199-202) activates the trigger only
+//! when such a card exists in either place (`CanUseCondition`, :195-197, is
+//! only the white-Digimon-suspended check).
 //!
 //! # Patterns this test covers
 //! - H7 Reboot / H5 Blocker.
@@ -88,6 +95,13 @@ fn builder() -> DebugRunnerBuilder {
         .add_card(make_test_card("PAD", "PAD"))
         .add_card(option("HUCK-OPT", 5, "[Main] ... [Huckmon] ..."))
         .add_card(option("PLAIN-OPT", 1, "[Main] Draw 1."))
+        .add_card({
+            // A green [Huckmon]-text Option: no green Digimon/Tamer of player 0
+            // meets its colour requirement (CR 4.3 4-22-2).
+            let mut o = option("HUCK-GREEN", 3, "[Main] ... [Huckmon] ...");
+            o.colors = vec![CardColor::Green];
+            o
+        })
         .add_card(digimon("WHITE", "White Ally", 4, CardColor::White, ""))
         .add_card(digimon("RED", "Red Ally", 4, CardColor::Red, ""))
         .add_card(digimon("HA", "Huck A", 3, CardColor::White, HUCK_TEXT))
@@ -298,6 +312,146 @@ fn ex13_061_decline_keeps_the_opt_and_use_spends_it() {
     assert!(runner.pending_selection().is_none(), "OPT spent");
 }
 
+// ─── Candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY) ───────────────
+// DCGO EX13_061.cs:182-186 offers only usable Options (`!CanNotPlayThisOption`,
+// which includes the colour requirement); an effect use still needs it (CR 4.3
+// 4-22-1/4-22-2, only 4-22-5's activate-without-using is exempt; official
+// rulings Q1500 / Q2785). CR 4.3 1-3-2: an impossible use is not carried out,
+// so it is not a legal pick, and with no usable card DCGO's
+// `CanActivateCondition` (EX13_061.cs:199-202) does not activate the trigger.
+
+/// Offered rows of the pending hand-or-sources union pick as `"hand:<id>"` /
+/// `"source:<id>"`; empty when no physical pick is pending.
+fn offered_union(runner: &DebugRunner) -> Vec<String> {
+    use digimon_engine::owned_card_choice::CardChoiceZone;
+    if runner
+        .game
+        .pending_selection
+        .as_ref()
+        .and_then(|p| p.card_choice.as_ref())
+        .is_none()
+    {
+        return Vec::new();
+    }
+    let mut v: Vec<String> = physical_menu::commits(&runner.game)
+        .into_iter()
+        .filter_map(|row| {
+            let zone = match row.zone? {
+                CardChoiceZone::Hand => "hand",
+                CardChoiceZone::BattleSource => "source",
+                _ => "other",
+            };
+            Some(format!("{zone}:{}", row.card_id?))
+        })
+        .collect();
+    v.sort();
+    v
+}
+
+/// A green [Huckmon]-text Option in hand is not usable (no green Digimon or
+/// Tamer): only the white one is offered.
+#[test]
+fn ex13_061_hand_option_whose_colour_requirement_is_unmet_is_not_offered() {
+    let (mut runner, _me, white, _red) = suspend_runner(&["HUCK-GREEN", "HUCK-OPT"]);
+    runner.game.suspend(white);
+    assert!(matches!(runner.pending_kind(), Some(SelectionKind::UnionZone { .. })));
+    assert_eq!(offered_union(&runner), vec!["hand:HUCK-OPT".to_string()]);
+}
+
+/// The same check in this Digimon's digivolution cards.
+#[test]
+fn ex13_061_source_option_whose_colour_requirement_is_unmet_is_not_offered() {
+    let mut runner = builder().hand(0, &["HUCK-OPT"]).memory(3).start();
+    runner.register_effect("HUCK-OPT", Arc::new(OptionMainDraw));
+    runner.register_effect("HUCK-GREEN", Arc::new(OptionMainDraw));
+    let _me = runner.place_stack(0, &["HUCK-GREEN", CARD_ID]);
+    let white = runner.place_on_field(0, "WHITE", Some(0));
+    runner.game.suspend(white);
+    assert!(matches!(runner.pending_kind(), Some(SelectionKind::UnionZone { .. })));
+    assert_eq!(offered_union(&runner), vec!["hand:HUCK-OPT".to_string()]);
+}
+
+/// A usable [Huckmon]-text Option only among this Digimon's digivolution
+/// cards, with an empty hand: the trigger is still offered (DCGO
+/// `CanActivateCondition` `|| HasUsableDigivolutionCard()`, EX13_061.cs:199-202)
+/// and offers that source card, which is used for free.
+#[test]
+fn ex13_061_source_only_usable_option_with_empty_hand_triggers() {
+    let mut runner = builder().hand(0, &[]).memory(3).start();
+    runner.register_effect("HUCK-OPT", Arc::new(OptionMainDraw));
+    let me = runner.place_stack(0, &["HUCK-OPT", CARD_ID]);
+    let white = runner.place_on_field(0, "WHITE", Some(0));
+    assert!(runner.game.players[0].hand.is_empty(), "empty hand");
+    let mem0 = runner.memory();
+    runner.game.suspend(white);
+    assert!(
+        matches!(runner.pending_kind(), Some(SelectionKind::UnionZone { .. })),
+        "{:?}",
+        runner.pending_selection_view()
+    );
+    assert_eq!(offered_union(&runner), vec!["source:HUCK-OPT".to_string()]);
+    let a = non_pass(&runner)[0];
+    runner.execute_action(0, a).expect("use");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.memory(), mem0, "used without paying the cost");
+    assert_eq!(
+        runner.game.players[0].battle_area[me.index as usize].card_sources.len(),
+        1,
+        "the source Option left Gankoomon's digivolution cards"
+    );
+    assert!(runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "HUCK-OPT"));
+}
+
+/// Only an unusable [Huckmon]-text Option: the trigger is not offered (DCGO
+/// `CanActivateCondition`), so the Once Per Turn is not consumed by a dead
+/// prompt.
+#[test]
+fn ex13_061_only_unusable_options_offers_no_trigger() {
+    let (mut runner, _me, white, _red) = suspend_runner(&["HUCK-GREEN"]);
+    runner.game.suspend(white);
+    assert!(runner.pending_selection().is_none(), "{:?}", runner.pending_selection_view());
+}
+
+/// "You can't use Option cards": nothing can be used, so nothing is offered.
+#[test]
+fn ex13_061_no_trigger_when_options_cannot_be_used() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, _me, white, _red) = suspend_runner(&["HUCK-OPT"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+    );
+    runner.game.suspend(white);
+    assert!(runner.pending_selection().is_none(), "{:?}", runner.pending_selection_view());
+}
+
+/// Regression guard: a DUAL card is used through its Option face (CR 4.3
+/// 4-6-2). Sistermon Blanc (Awakened) (EX13-065) is a white use-cost-5 Option
+/// with [Huckmon] in its text, so Gankoomon (EX13-061, white) offers it. The
+/// DSL-compiled fixture carries no printed requirement text, so the printed
+/// digivolve-condition line ("Lv.2 w/[Huckmon] in text", where its [Huckmon]
+/// is, as in production `cards.json` `xros_req`) is restored on the fixture.
+#[test]
+fn ex13_061_offers_a_huckmon_text_dual_through_its_option_face() {
+    let mut blanc = crate::dsl_card_data::card_data_from_compiled("EX13-065");
+    blanc.requirement_text =
+        "[Digivolve] [Sistermon Blanc]: Cost 0\n[Digivolve] Lv.2 w/[Huckmon] in text: Cost 1".into();
+    let mut runner = builder()
+        .add_card(blanc)
+        .hand(0, &["EX13-065", "PLAIN-OPT"])
+        .memory(3)
+        .start();
+    let _me = runner.place_on_field(0, CARD_ID, Some(0));
+    let white = runner.place_on_field(0, "WHITE", Some(0));
+    runner.game.suspend(white);
+    assert!(matches!(runner.pending_kind(), Some(SelectionKind::UnionZone { .. })));
+    assert_eq!(offered_union(&runner), vec!["hand:EX13-065".to_string()]);
+}
+
 // ─── Section 3 — Assembly ────────────────────────────────────────────────────
 
 #[test]
@@ -357,3 +511,6 @@ fn ex13_061_assembly_masks_a_second_card_with_an_already_chosen_name() {
         "a second [Huck A] is masked once one is chosen"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

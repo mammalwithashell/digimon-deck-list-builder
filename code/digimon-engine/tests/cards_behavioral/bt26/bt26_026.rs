@@ -36,6 +36,17 @@ fn setup() -> DebugRunner {
             o.traits.clear();
             o
         })
+        // A purple [Glowing Dawn] Option: its colour requirement is unmet on
+        // a yellow-only board (CR 4.3 4-22).
+        .add_card({
+            let mut o = gd_option("GD-PURPLE", 5);
+            o.colors = vec![CardColor::Purple];
+            o
+        })
+        // Use cost 15 / 16 reduced by 2 at memory 3: 13 → -10 (payable),
+        // 14 → -11 (not payable).
+        .add_card(gd_option("GD-15", 15))
+        .add_card(gd_option("GD-16", 16))
         .add_card(digimon("HOST", "Host", CardColor::Yellow, 5, 5, &[]))
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
@@ -203,6 +214,96 @@ fn bt26_026_is_once_per_turn() {
     let _ = r.auto_resolve();
     fire(&mut r, EffectTiming::WhenAttacking, c);
     assert!(r.game.pending_selection.is_none(), "OPT spent");
+}
+
+// ─── Hand-pick candidate legality (select-hand playability audit) ────────────
+// DCGO BT26_026.cs:52-56 offers only `IsOption && EqualsTraits("Glowing Dawn")
+// && !CanNotPlayThisOption && Owner.MaxMemoryCost >= GetCostItself - 2`:
+// `CanNotPlayThisOption` covers a "can't use Option cards" lock and an unmet
+// colour requirement (CR 4.3 4-22; Q1500 / Q2785 — an effect-driven use is a
+// use), and the memory check refuses a reduced cost the player can't pay. A
+// card the use would refuse is never offered (CR 4.3 1-3-2).
+
+/// Fire [When Attacking], pay `branch` (0 = a Tamer's face-down card, 1 = top
+/// security) and return the hand-pick candidates' card ids.
+fn offered_after_paying(r: &mut DebugRunner, branch: usize, hand: &[&str]) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    let (_t, c) = board(r, 1);
+    for id in hand {
+        push_hand(r, 0, id);
+    }
+    fire(r, EffectTiming::WhenAttacking, c);
+    r.execute_branch(branch).expect("pay the cost");
+    if branch == 0 {
+        pick_first(r, 0); // the Tamer
+    }
+    let Some(v) = r.pending_selection_view() else {
+        return Vec::new();
+    };
+    assert!(
+        r.game
+            .pending_selection
+            .as_ref()
+            .is_none_or(|p| p.card_choice.is_none()),
+        "hand pick uses PLAY_HAND_START action ids"
+    );
+    let ids = hand_ids(r, 0);
+    v.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS && a >= PLAY_HAND_START && ((a - PLAY_HAND_START) as usize) < ids.len())
+        .map(|a| ids[(a - PLAY_HAND_START) as usize].clone())
+        .collect()
+}
+
+/// Security branch: a purple [Glowing Dawn] Option with no purple Digimon or
+/// Tamer is not offered.
+#[test]
+fn bt26_026_security_branch_excludes_option_whose_colour_is_unmet() {
+    let mut r = setup();
+    let offered = offered_after_paying(&mut r, 1, &["GD-PURPLE", "GD-OPT"]);
+    assert_eq!(offered, vec!["GD-OPT".to_string()]);
+}
+
+/// Face-down branch: the same colour check applies to its own hand pick.
+#[test]
+fn bt26_026_face_down_branch_excludes_option_whose_colour_is_unmet() {
+    let mut r = setup();
+    let offered = offered_after_paying(&mut r, 0, &["GD-PURPLE", "GD-OPT"]);
+    assert_eq!(offered, vec!["GD-OPT".to_string()]);
+}
+
+/// "You can't use Option cards": no [Glowing Dawn] Option is offered.
+#[test]
+fn bt26_026_excludes_options_when_options_cannot_be_used() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup();
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = offered_after_paying(&mut r, 1, &["GD-OPT"]);
+    assert!(offered.is_empty(), "{offered:?}");
+    let _ = r.auto_resolve();
+    assert_eq!(hand_ids(&r, 0), vec!["GD-OPT".to_string()]);
+}
+
+/// The use pays the cost reduced by 2: an Option whose reduced cost would take
+/// memory past -10 is not offered.
+#[test]
+fn bt26_026_security_branch_excludes_unaffordable_option() {
+    let mut r = setup();
+    let offered = offered_after_paying(&mut r, 1, &["GD-15", "GD-16"]);
+    assert_eq!(offered, vec!["GD-15".to_string()]);
+}
+
+/// Face-down branch: the same affordability check.
+#[test]
+fn bt26_026_face_down_branch_excludes_unaffordable_option() {
+    let mut r = setup();
+    let offered = offered_after_paying(&mut r, 0, &["GD-15", "GD-16"]);
+    assert_eq!(offered, vec!["GD-15".to_string()]);
 }
 
 #[test]

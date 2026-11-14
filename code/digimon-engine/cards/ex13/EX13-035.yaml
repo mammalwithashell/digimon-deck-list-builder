@@ -18,8 +18,13 @@
 #   effect's play cost maximum is increased by 6. Afterwards, you can play up
 #   to 6 total play cost worth of specified cards ..."
 #
-# DCGO C# reference: none at the submodule (no EX13_035.cs at b9a0638cd).
-# Printed text + the official Q&A + general_rule.pdf govern.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Yellow/EX13_035.cs
+#   Pick filter :108-115 `IsDigimon && name && HasPlayCost && GetCostItself <=
+#   totalCost && ... && CanPlayAsNewPermanent(card, false, activateClass)`,
+#   for the hand (:151, :190) and trash (:152, :217) roots. Every pick below
+#   carries `can_play_from_effect_without_cost` so a card the free play would
+#   refuse (play prohibition, no free slot, trash-play lock) is never offered
+#   (CR 4.3 1-3-2). Printed text + the official Q&A + CR 4.3 govern otherwise.
 #
 # ── Clause notes ─────────────────────────────────────────────────────────────
 # [OP][WD] — ordered per the Q&A:
@@ -131,6 +136,7 @@ effects:
                 filter:
                   all_of:
                     - kind: digimon
+                    - can_play_from_effect_without_cost: true
                     - any_of:
                         - name_contains: Chuumon
                         - name_contains: Sukamon
@@ -153,6 +159,7 @@ effects:
                       filter:
                         all_of:
                           - kind: digimon
+                          - can_play_from_effect_without_cost: true
                           - any_of:
                               - name_contains: Chuumon
                               - name_contains: Sukamon
@@ -181,6 +188,7 @@ effects:
                 filter:
                   all_of:
                     - kind: digimon
+                    - can_play_from_effect_without_cost: true
                     - any_of:
                         - name_contains: Chuumon
                         - name_contains: Sukamon
@@ -203,6 +211,7 @@ effects:
                       filter:
                         all_of:
                           - kind: digimon
+                          - can_play_from_effect_without_cost: true
                           - any_of:
                               - name_contains: Chuumon
                               - name_contains: Sukamon

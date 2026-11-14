@@ -808,3 +808,83 @@ fn bt21_017_cannot_digivolve_from_off_color_base() {
         "the blue base is untouched (no digivolution happened)"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 6 — [When Digivolving] candidate legality
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// DCGO BT21_017.cs:53-63 `CanSelectCardCondition`: `IsTamer &&
+// EqualsCardName("Owen Dreadnought") && CanPlayAsNewPermanent(cardSource,
+// payCost: false, activateClass)` -- a free battle-area frame and no play
+// prohibition. The same predicate gates `CanActivateCondition` (38-48). CR 4.3
+// 1-3-11-1: a card that can't be played can't be declared for "play"; CR 4.3
+// 1-3-2.
+
+/// Fire Dimetromon's (BT21-017) [When Digivolving] with Owen in hand and return
+/// the non-PASS hand-pick action ids (empty when no hand pick installs).
+fn owen_picks(runner: &mut DebugRunner) -> Vec<u16> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    let dimetro = runner.place_on_field(0, "BT21-017", Some(0));
+    fire_when_digivolving(runner, dimetro);
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    view.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS && id >= PLAY_HAND_START)
+        .collect()
+}
+
+fn owen_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .from_dsl_yaml(DIMETROMON_YAML)
+        .expect("BT21-017 YAML parses")
+        .add_card(make_owen("OWEN-1"))
+        .add_card(make_filler("FILLER-DECK"))
+        .hand(0, &["OWEN-1"])
+        .deck(0, &["FILLER-DECK", "FILLER-DECK", "FILLER-DECK"])
+        .memory(10)
+        .start()
+}
+
+/// "You can't play Tamers by effects" (DCGO `CanPlayAsNewPermanent` false):
+/// Owen Dreadnought is not offered and stays in hand.
+#[test]
+fn bt21_017_owen_not_offered_when_tamer_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = owen_runner();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let picks = owen_picks(&mut runner);
+    assert!(picks.is_empty(), "Owen can't be played by an effect, so it is not offered: {picks:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "Owen stays in hand");
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs an empty frame):
+/// Owen Dreadnought is not offered.
+#[test]
+fn bt21_017_owen_not_offered_when_battle_area_full() {
+    let mut runner = owen_runner();
+    // Dimetromon alone fills a 1-slot battle area.
+    runner.game.rules.field_slots = 1;
+    let picks = owen_picks(&mut runner);
+    assert!(picks.is_empty(), "no free slot, so Owen is not offered: {picks:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "Owen stays in hand");
+}
+
+/// Positive control for the two tests above: with a free slot and no
+/// prohibition Owen IS offered.
+#[test]
+fn bt21_017_owen_offered_with_free_slot_and_no_prohibition() {
+    let mut runner = owen_runner();
+    assert_eq!(owen_picks(&mut runner).len(), 1);
+}

@@ -42,10 +42,12 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             play_cost_gte,
             play_or_use_cost_lte,
             affordable_with_cost_reduce,
+            affordable_with_cost,
             can_digivolve_from_source,
             can_digivolve_onto,
             can_digivolve_onto_with_cost,
             dna_hand_candidate,
+            dna_trash_candidate,
             dna_field_pair,
             can_move_from_breeding_by_effect,
             dp_eq,
@@ -341,6 +343,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             &format!("{}.affordable_with_cost_reduce", path),
             "UNCLASSIFIED_STRING",
         );
+        affordable_with_cost.walk(c, &format!("{}.affordable_with_cost", path), role);
         can_digivolve_from_source.walk(
             c,
             &format!("{}.can_digivolve_from_source", path),
@@ -353,6 +356,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         );
         can_digivolve_onto_with_cost.walk(c, &format!("{}.can_digivolve_onto_with_cost", path), role);
         dna_hand_candidate.walk(c, &format!("{}.dna_hand_candidate", path), role);
+        dna_trash_candidate.walk(c, &format!("{}.dna_trash_candidate", path), role);
         dna_field_pair.walk(c, &format!("{}.dna_field_pair", path), role);
         can_move_from_breeding_by_effect.walk(c, &format!("{}.can_move_from_breeding_by_effect", path), role);
         dp_eq.walk(c, &format!("{}.dp_eq", path), "UNCLASSIFIED_STRING");
@@ -1734,10 +1738,12 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             play_cost_eq,
             play_or_use_cost_lte,
             affordable_with_cost_reduce,
+            affordable_with_cost,
             can_digivolve_from_source,
             can_digivolve_onto,
             can_digivolve_onto_with_cost,
             dna_hand_candidate,
+            dna_trash_candidate,
             dna_field_pair,
             can_move_from_breeding_by_effect,
             dp_eq,
@@ -2021,6 +2027,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             &format!("{}.affordable_with_cost_reduce", path),
             "UNCLASSIFIED_STRING",
         );
+        affordable_with_cost.walk(c, &format!("{}.affordable_with_cost", path), role);
         can_digivolve_from_source.walk(
             c,
             &format!("{}.can_digivolve_from_source", path),
@@ -2035,6 +2042,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         dp_lte.walk(c, &format!("{}.dp_lte", path), "UNCLASSIFIED_STRING");
         can_digivolve_onto_with_cost.walk(c, &format!("{}.can_digivolve_onto_with_cost", path), role);
         dna_hand_candidate.walk(c, &format!("{}.dna_hand_candidate", path), role);
+        dna_trash_candidate.walk(c, &format!("{}.dna_trash_candidate", path), role);
         dna_field_pair.walk(c, &format!("{}.dna_field_pair", path), role);
         can_move_from_breeding_by_effect.walk(c, &format!("{}.can_move_from_breeding_by_effect", path), role);
         dp_lte_deletion_cap.walk(
@@ -2775,18 +2783,22 @@ impl Walk for digimon_dsl::predicate::DnaFieldPairRole {
 }
 impl Walk for digimon_dsl::predicate::DnaFieldPairPredicate {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
-        let Self { role: stage, result, first } = self;
+        let Self { role: stage, result, first, second, cost } = self;
         stage.walk(c, &format!("{}.role", path), role);
         result.walk(c, &format!("{}.result", path), "EXISTING_INSTANCE_BINDING");
         first.walk(c, &format!("{}.first", path), "EXISTING_INSTANCE_BINDING");
+        second.walk(c, &format!("{}.second", path), "EXISTING_INSTANCE_BINDING");
+        cost.walk(c, &format!("{}.cost", path), role);
     }
 }
 impl Walk for digimon_dsl::compiled::CompiledDnaFieldPair {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
-        let Self { role: stage, result, first } = self;
+        let Self { role: stage, result, first, second, cost } = self;
         stage.walk(c, &format!("{}.role", path), role);
         result.walk(c, &format!("{}.result", path), "EXISTING_INSTANCE_BINDING");
         first.walk(c, &format!("{}.first", path), "EXISTING_INSTANCE_BINDING");
+        second.walk(c, &format!("{}.second", path), "EXISTING_INSTANCE_BINDING");
+        cost.walk(c, &format!("{}.cost", path), role);
     }
 }
 impl Walk for digimon_dsl::predicate::DnaHandCandidateRole {

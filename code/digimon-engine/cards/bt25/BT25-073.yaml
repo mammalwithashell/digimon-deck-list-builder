@@ -94,6 +94,13 @@ effects:
             all_of:
               - trait_has: TS
               - play_or_use_cost_lte: 5
+              # DCGO BT25_073.cs:131-138: `(IsOption && !CanNotPlayThisOption)
+              # || (HasPlayCost && CanPlayAsNewPermanent(card, false, ...))` --
+              # never a Digi-Egg (CR 4.3 7-1-1); a Digimon/Tamer needs a free
+              # frame and no play prohibition; an Option/DUAL (used, CR 4.3
+              # 4-6-2) needs no "can't use Options" lock and its colour
+              # requirement or <Use Req.> met (CR 4.3 4-22; Q1500, Q2785).
+              - can_play_or_use_from_effect: true
           prompt: "Play or use 1 [TS] card (play/use cost <=5) from your hand without paying the cost"
       - play_or_use_from_hand:
           of: you

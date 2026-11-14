@@ -15,7 +15,12 @@
 //! Digivolve: Black Lv.5 / 5; Yellow Lv.5 / 5; [Grademon]/Lv.5 w/[Chronicle]: 4.
 //!
 //! # DCGO C# reference
-//! None at the submodule (no EX13_060.cs); printed text governs.
+//! `DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_060.cs`. The [End of Your
+//! Turn] hand pick (`CanSelectCardCondition`, EX13_060.cs:291-294) offers
+//! `HasChronicleTraits && !ContainsCardName("Alphamon") &&
+//! CanPlayAsNewPermanent(card, payCost: true, activateClass, fixedCost:
+//! Math.Max(0, cost - 6))` — a non-Option card (GameContextDeterminarion.cs:428)
+//! with an empty frame, no play prohibition and an affordable reduced cost.
 //!
 //! # Patterns this test covers
 //! - D1-adjacent: mandatory -DP then a memory-gated memory gain (opponent ≥5).
@@ -441,6 +446,52 @@ fn ex13_060_end_of_turn_with_only_unpayable_cards_prompts_nothing() {
 #[test]
 fn ex13_060_end_of_turn_with_no_eligible_hand_card_prompts_nothing() {
     let runner = end_turn_with(&["ALLY"]);
+    assert_ne!(runner.pending_kind(), Some(SelectionKind::Hand));
+}
+
+// ─── Candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY) ───────────────
+// DCGO EX13_060.cs:291-294 `CanPlayAsNewPermanent`: an empty frame and no play
+// prohibition; CR 4.3 1-3-2 (an impossible play is not carried out, so it is
+// not a legal pick).
+
+fn end_turn_with_setup(hand: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut runner = builder()
+        .hand(0, hand)
+        .deck(0, &["FILL"; 4])
+        .deck(1, &["FILL"; 4])
+        .memory(2)
+        .start();
+    runner.skip_mulligan();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    setup(&mut runner);
+    runner.end_turn();
+    runner
+}
+
+/// "You can't play Digimon by effects": the [Chronicle] Digimon is not offered,
+/// the [Chronicle] Tamer still is.
+#[test]
+fn ex13_060_end_of_turn_excludes_digimon_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let runner = end_turn_with_setup(&["CHR-L3", "CHR-TAMER"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    assert!(hand_action(&runner, "CHR-L3").is_none(), "Digimon play by effect is prohibited");
+    assert!(hand_action(&runner, "CHR-TAMER").is_some());
+}
+
+/// A full battle area: neither the Digimon nor the Tamer can be played, so no
+/// hand pick is offered at all.
+#[test]
+fn ex13_060_end_of_turn_full_battle_area_prompts_nothing() {
+    let runner = end_turn_with_setup(&["CHR-L3", "CHR-TAMER"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
     assert_ne!(runner.pending_kind(), Some(SelectionKind::Hand));
 }
 

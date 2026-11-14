@@ -120,6 +120,10 @@ effects:
               - any_of:
                   - kind: digimon
                   - kind: tamer
+              # Only a card the effect can actually play (DCGO
+              # BT26_102.cs:304-306 `CanPlayAsNewPermanent(cardSource, false,
+              # activateClass)`). CR 4.3 1-3-11-1.
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 play cost 5 or lower [Appmon] trait card from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: app_play }
       - add_this_option_to_hand: {}

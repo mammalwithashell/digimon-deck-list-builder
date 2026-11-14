@@ -180,3 +180,74 @@ fn bt25_023_inherited_both_players_draw_on_attack() {
     assert_eq!(runner.deck_size(0), p0_before - 1, "controller draws 1");
     assert_eq!(runner.deck_size(1), p1_before - 1, "opponent draws 1");
 }
+
+// ─── Section 4 — Hand-pick legality: only a Thomas that can actually be played ─
+//
+// DCGO BT25_023.cs:53-57 `HasTamerInHand`: `EqualsCardName("Thomas H. Norstein")
+// && CanPlayAsNewPermanent(cardSource, false, activateClass)` — a free battle-area
+// frame (GameContextDeterminarion.cs:419-432) and no effect-play lock
+// (CardSource.CanEnterField). CR 4.3 1-3-2: an impossible play is not carried
+// out, so a Thomas the play would refuse is not a legal choice.
+
+/// Fire Gaogamon's [On Play] (played from hand), accept the optional clause and
+/// return the non-PASS hand-pick candidates' card ids (empty when no pick
+/// installs). `setup` runs after Gaogamon is on the field, before the clause
+/// resolves.
+fn offered_after_play(setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    let mut runner = base().hand(0, &[CARD_ID, "THOMAS"]).memory(10).start();
+    runner.play(0, 0);
+    setup(&mut runner);
+    for _ in 0..4 {
+        let Some(v) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        if v.kind == SelectionKind::Hand {
+            let hand: Vec<String> = runner.game.players[0]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            return v
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&id| id != PASS)
+                .map(|id| hand[(id - PLAY_HAND_START) as usize].clone())
+                .collect();
+        }
+        runner.accept_optional_trigger().expect("accept the optional clause");
+    }
+    Vec::new()
+}
+
+/// Regression guard: with a free slot and no lock, Thomas is the one candidate.
+#[test]
+fn bt25_023_hand_pick_offers_playable_thomas() {
+    assert_eq!(offered_after_play(|_| {}), vec!["THOMAS".to_string()]);
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs an empty frame):
+/// Thomas can't be played, so it is not offered.
+#[test]
+fn bt25_023_hand_pick_excludes_thomas_when_battle_area_full() {
+    let offered = offered_after_play(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "no free slot ⇒ Thomas not offered: {offered:?}");
+}
+
+/// "You can't play Tamers by effects": Thomas is not offered.
+#[test]
+fn bt25_023_hand_pick_excludes_thomas_under_tamer_effect_play_lock() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = offered_after_play(|r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "Tamer effect-play lock ⇒ Thomas not offered: {offered:?}");
+}

@@ -636,3 +636,65 @@ fn bt26_097_security_can_play_a_cost_five_or_lower_ts_tamer_free() {
 
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;
+
+// ─── [Security] candidate legality (G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE) ────────
+// DCGO BT26_097.cs:296-298 CanSelectCardCondition: `HasPlayCost &&
+// GetCostItself <= 5 && HasTSTraits && CanPlayAsNewPermanent(card, false,
+// activateClass, isPlayOption: true)`. CR 4.3 1-3-2 (an impossible action is
+// not carried out), 7-1-1 (playing places a new card with a play cost), 4-6-2
+// (a DUAL is digivolved or used, never played).
+
+fn security_offered(r: &DebugRunner) -> Vec<String> {
+    if r.game.pending_selection.is_none() {
+        return Vec::new();
+    }
+    let mut ids: Vec<String> = physical_menu::commits(&r.game)
+        .into_iter()
+        .filter_map(|row| row.card_id)
+        .collect();
+    ids.sort();
+    ids
+}
+
+/// "You can't play Digimon by effects": the [TS] Digimon is not offered, the
+/// [TS] Tamer still is.
+#[test]
+fn bt26_097_security_effect_play_prohibition_excludes_digimon() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup();
+    push_hand(&mut r, 0, "TS5");
+    push_hand(&mut r, 0, "DAN");
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    reveal_from_security(&mut r);
+    assert_eq!(security_offered(&r), vec!["DAN".to_string()]);
+}
+
+/// A full battle area: nothing can be played, so nothing is offered; the card
+/// still goes to the hand ("Then, add this card to the hand").
+#[test]
+fn bt26_097_security_full_battle_area_offers_nothing() {
+    let mut r = setup();
+    push_hand(&mut r, 0, "TS5");
+    r.place_on_field(0, "FILLER", Some(0));
+    r.game.rules.field_slots = 1;
+    reveal_from_security(&mut r);
+    assert!(security_offered(&r).is_empty(), "offered {:?}", security_offered(&r));
+    let _ = r.auto_resolve();
+    assert!(hand_ids(&r, 0).contains(&"TS5".to_string()));
+    assert!(hand_ids(&r, 0).contains(&CARD_ID.to_string()));
+}
+
+/// Regression guard: a [TS] DUAL card (Jupitermon BT26-033, stored cost 2) has
+/// no play cost and can't be played (CR 4.3 7-1-1, 4-6-2), so it is not offered.
+#[test]
+fn bt26_097_security_dual_ts_card_not_offered() {
+    let mut r = setup_full(0, &["BT26-033"]);
+    push_hand(&mut r, 0, "BT26-033");
+    push_hand(&mut r, 0, "TS5");
+    reveal_from_security(&mut r);
+    assert_eq!(security_offered(&r), vec!["TS5".to_string()]);
+}

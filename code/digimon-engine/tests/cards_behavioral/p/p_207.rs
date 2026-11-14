@@ -1046,3 +1046,142 @@ fn p_207_beastkin_alt_path_requires_exact_trait_not_substring() {
          [Beastkin] alt-path (DCGO EqualsTraits, not ContainsTraits)"
     );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 9 — Candidate legality (select-hand audit)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// DCGO P_207.cs:40-46 (shared by the hand and the trash picks) offers only
+// `IsDigimon && Level <= 4 && (Avian/Beast/Animal || TS) &&
+// CanPlayAsNewPermanent(card, false, activateClass)`: a card the free play
+// would refuse (no free battle-area frame, a "can't play Digimon by effects"
+// or "can't play from the trash" lock) is never a choice. CR 4.3 1-3-2 /
+// 1-3-11-1. The YAML picks carry `can_play_from_effect_without_cost: true`
+// (zone-aware for the trash pick).
+
+fn p207_lock(runner: &mut DebugRunner, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Digivolve Minervamon from a Yellow Lv.5 base with a level-4 [Beast]
+/// candidate in hand; `setup` runs right before the digivolve. Returns the
+/// runner at the [When Digivolving] pick (if any).
+fn p207_digivolve_with(setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("parses")
+        .add_card(yellow_lv5_base("YBASE"))
+        .add_card(candidate("CAND", 4, &["Beast"]))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID, "CAND"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    let base = runner.place_on_field(0, "YBASE", Some(0));
+    setup(&mut runner);
+    let hand_idx = runner.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == CARD_ID)
+        .expect("Minervamon in hand");
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand));
+    runner
+}
+
+/// "You can't play Digimon by effects": the [Beast] candidate is not offered.
+#[test]
+fn p_207_on_play_not_offered_when_effect_play_is_prohibited() {
+    let runner = p207_digivolve_with(|r| {
+        p207_lock(r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect)
+    });
+    assert!(
+        runner.pending_selection().is_none(),
+        "a Digimon that can't be played by effects must not be offered"
+    );
+    assert!(hand_contains(&runner, 0, "CAND"));
+}
+
+/// A full battle area (the digivolved Minervamon fills the only frame): the
+/// candidate is not offered.
+#[test]
+fn p_207_on_play_not_offered_when_battle_area_is_full() {
+    let runner = p207_digivolve_with(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(runner.pending_selection().is_none());
+    assert!(hand_contains(&runner, 0, "CAND"));
+}
+
+/// Regression guard: with no lock and a free frame the same setup offers it.
+#[test]
+fn p_207_on_play_offered_without_lock_control() {
+    let runner = p207_digivolve_with(|_| {});
+    let view = runner.pending_selection_view().expect("candidate offered");
+    assert_eq!(view.kind, SelectionKind::Hand);
+}
+
+/// Attack with Minervamon and a level-4 [Beast] card in the trash; `setup`
+/// runs right before the attack.
+fn p207_attack_with(setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("parses")
+        .add_card(candidate("TCAND", 4, &["Beast"]))
+        .add_card(filler("FILL"))
+        .hand(0, &[])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .security(1, &["FILL"])
+        .memory(12)
+        .start();
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "TCAND")
+        .unwrap();
+    let next = runner.game.next_card_index();
+    runner.game.players[0]
+        .trash
+        .push(digimon_engine::card_source::CardSource::new(data_idx, 0, next));
+    let mine = runner.place_on_field(0, CARD_ID, Some(0));
+    setup(&mut runner);
+    runner.attack_player(mine, 1, false);
+    runner
+}
+
+/// "You can't play cards from the trash": the trash candidate is not offered.
+#[test]
+fn p_207_when_attacking_not_offered_when_trash_play_is_locked() {
+    let runner = p207_attack_with(|r| {
+        p207_lock(r, digimon_engine::enums::ModifierType::CannotPlayFromTrash)
+    });
+    assert!(runner.pending_selection().is_none());
+    assert!(trash_contains(&runner, 0, "TCAND"));
+}
+
+/// "You can't play Digimon by effects": the trash candidate is not offered.
+#[test]
+fn p_207_when_attacking_not_offered_when_effect_play_is_prohibited() {
+    let runner = p207_attack_with(|r| {
+        p207_lock(r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect)
+    });
+    assert!(runner.pending_selection().is_none());
+}
+
+/// A full battle area: the trash candidate is not offered.
+#[test]
+fn p_207_when_attacking_not_offered_when_battle_area_is_full() {
+    let runner = p207_attack_with(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(runner.pending_selection().is_none());
+}

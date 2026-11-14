@@ -811,3 +811,95 @@ fn ex11_022_effect_initiated_digivolve_onto_nonmatching_base_is_rejected() {
 
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_choice;
+
+// ─── Candidate legality (DCGO candidate filter) ──────────────────────────────
+// DCGO EX11_022.cs:53-59 `CanSelectCardCondition` = IsDigimon && HasDP &&
+// CardDP <= 4000 && EqualsTraits("Puppet") && CanPlayAsNewPermanent(cardSource,
+// false, activateClass), applied to both the hand pick (EX11_022.cs:112) and the
+// trash pick (EX11_022.cs:136). A card the effect could not then play (no free
+// slot, an effect-play prohibition, a "can't play from trash" lock) is not
+// offered. The pick is optional, so this changes no outcome (CR 4.3 1-3-2 only
+// says the play is not carried out); the slot cap is the engine's
+// `rules.field_slots`, not a CR limit (CR 4.3 3-4-8-2).
+
+fn add_player_lock(runner: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Play Karakurumon (EX11-022) from hand with PUPPET-HAND in hand and
+/// PUPPET-TRASH in trash, after `setup`; return the (card_id, zone-is-trash)
+/// rows the [On Play] union pick offers (empty when no prompt installs).
+fn on_play_candidates(setup: impl FnOnce(&mut DebugRunner)) -> Vec<(String, bool)> {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-022")
+        .expect("EX11-022 YAML loads")
+        .add_card(digimon("PUPPET-HAND", 4, 3000, &["Puppet"]))
+        .add_card(digimon("PUPPET-TRASH", 4, 4000, &["Puppet"]))
+        .hand(0, &["EX11-022", "PUPPET-HAND"])
+        .memory(10)
+        .start();
+    runner
+        .game
+        .stage_inject_card(0, "PUPPET-TRASH", "trash")
+        .expect("inject PUPPET-TRASH into the trash");
+    setup(&mut runner);
+    runner.play(0, 0).expect("EX11-022 plays from hand");
+    if runner.game.pending_selection.is_none() {
+        return Vec::new();
+    }
+    let mut rows: Vec<(String, bool)> = physical_choice::commits(&runner.game)
+        .into_iter()
+        .map(|row| {
+            (
+                row.card_id.clone().unwrap_or_default(),
+                matches!(row.zone, Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash)),
+            )
+        })
+        .collect();
+    rows.sort();
+    rows
+}
+
+/// Regression guard: with nothing in the way both Puppets are offered.
+#[test]
+fn ex11_022_union_pick_offers_hand_and_trash_puppet_when_playable() {
+    assert_eq!(
+        on_play_candidates(|_| {}),
+        vec![("PUPPET-HAND".to_string(), false), ("PUPPET-TRASH".to_string(), true)]
+    );
+}
+
+/// Karakurumon itself fills a 1-slot battle area: no Puppet can be played, so
+/// none is offered.
+#[test]
+fn ex11_022_union_pick_offers_nothing_when_battle_area_full() {
+    let offered = on_play_candidates(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8 + 1;
+    });
+    assert!(offered.is_empty(), "no Puppet is offered into a full battle area: {offered:?}");
+}
+
+/// "You can't play Digimon by effects": no Puppet is offered.
+#[test]
+fn ex11_022_union_pick_offers_nothing_when_effect_digimon_play_prohibited() {
+    let offered = on_play_candidates(|r| {
+        add_player_lock(r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    });
+    assert!(offered.is_empty(), "a Digimon-play prohibition removes every candidate: {offered:?}");
+}
+
+/// "You can't play cards from your trash": only the hand Puppet is offered.
+#[test]
+fn ex11_022_union_pick_excludes_trash_puppet_when_trash_play_locked() {
+    assert_eq!(
+        on_play_candidates(|r| {
+            add_player_lock(r, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+        }),
+        vec![("PUPPET-HAND".to_string(), false)]
+    );
+}

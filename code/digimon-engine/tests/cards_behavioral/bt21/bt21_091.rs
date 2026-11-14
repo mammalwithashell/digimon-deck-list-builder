@@ -561,6 +561,116 @@ fn bt21_091_security_without_candidates_adds_self() {
     assert!(hand_ids(&r, 1).contains(&CARD_ID.to_string()));
 }
 
+// ─── [Security] candidate legality ──────────────────────────────────────────
+// DCGO BT21_091.cs:276-285 `CanSelectCardCondition` = `IsTamer &&
+// HasInheritedEffect` only, then `PlayPermanentCards(payCost: false)`
+// (BT21_091.cs:374), which refuses a card that can't be played. The pick is
+// for "play", so a Tamer the play would refuse is not a legal choice (CR 4.3
+// 1-3-11-1: a card can be declared for play only if it can be played). The
+// filter adds
+// `can_play_from_effect_without_cost` (free slot, no effect-play prohibition,
+// and for a trash copy no "can't play from the trash" lock).
+
+/// The (zone, card id) rows the [Security] union pick offers (empty when no
+/// pick installs). `true` = trash.
+fn union_offered(r: &DebugRunner, owner: u8) -> Vec<(bool, String)> {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let Some(pending) = r.game.pending_selection.as_ref() else {
+        return Vec::new();
+    };
+    let Some(choice) = pending.card_choice.as_ref() else {
+        return Vec::new();
+    };
+    let mut rows: Vec<(bool, String)> = choice
+        .view(&r.game, owner)
+        .rows
+        .iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .filter_map(|row| {
+            let trash = matches!(row.zone, Some(CardChoiceZone::Trash));
+            row.card_id.clone().map(|id| (trash, id))
+        })
+        .collect();
+    rows.sort();
+    rows
+}
+
+fn lock_player(r: &mut DebugRunner, p: u8, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game.modifiers.add_player_modifier(
+        p,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1 - p),
+    );
+}
+
+/// Full battle area (DCGO `CanPlayAsNewPermanent` needs an empty frame): the
+/// Tamer with inherited effects is not offered, and it stays in hand.
+#[test]
+fn bt21_091_security_excludes_tamer_when_battle_area_full() {
+    let mut r = security_runner();
+    push_hand(&mut r, 1, "RED-TAMER-INH");
+    r.place_on_field(1, "FILLER", Some(0));
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    r.game.rules.field_slots = 1;
+    r.attack_player(atk, 1, false);
+    assert!(
+        union_offered(&r, 1).is_empty(),
+        "no free slot: the Tamer can't be played, so it is not offered"
+    );
+    let _ = r.auto_resolve();
+    assert!(hand_ids(&r, 1).contains(&"RED-TAMER-INH".to_string()));
+    assert!(hand_ids(&r, 1).contains(&CARD_ID.to_string()), "still adds itself");
+}
+
+/// "You can't play Tamers by effects": nothing is offered.
+#[test]
+fn bt21_091_security_excludes_tamer_under_effect_play_prohibition() {
+    let mut r = security_runner();
+    push_hand(&mut r, 1, "RED-TAMER-INH");
+    push_trash(&mut r, 1, "BLUE-TAMER-INH");
+    lock_player(&mut r, 1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    r.attack_player(atk, 1, false);
+    assert!(union_offered(&r, 1).is_empty(), "{:?}", union_offered(&r, 1));
+    let _ = r.auto_resolve();
+    assert!(!field_ids(&r, 1).contains(&"RED-TAMER-INH".to_string()));
+}
+
+/// "You can't play cards from the trash" (BT23-014-style lock): the trash copy
+/// is not offered, the hand copy still is.
+#[test]
+fn bt21_091_security_excludes_trash_tamer_while_trash_play_locked() {
+    let mut r = security_runner();
+    push_hand(&mut r, 1, "RED-TAMER-INH");
+    push_trash(&mut r, 1, "BLUE-TAMER-INH");
+    lock_player(&mut r, 1, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    r.attack_player(atk, 1, false);
+    assert_eq!(
+        union_offered(&r, 1),
+        vec![(false, "RED-TAMER-INH".to_string())],
+        "only the hand Tamer is offered"
+    );
+}
+
+/// Regression guard: with both copies playable, both zones are offered.
+#[test]
+fn bt21_091_security_offers_hand_and_trash_tamers() {
+    let mut r = security_runner();
+    push_hand(&mut r, 1, "RED-TAMER-INH");
+    push_trash(&mut r, 1, "BLUE-TAMER-INH");
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    r.attack_player(atk, 1, false);
+    assert_eq!(
+        union_offered(&r, 1),
+        vec![
+            (false, "RED-TAMER-INH".to_string()),
+            (true, "BLUE-TAMER-INH".to_string())
+        ]
+    );
+}
+
 // ─── Local fixtures ─────────────────────────────────────────────────────────
 
 fn digimon(

@@ -908,6 +908,129 @@ fn ex8_028_wd_free_play_decline_is_legal() {
     );
 }
 
+// ─── WD free-play candidates must be playable ────────────────────────────────
+// DCGO EX8_028.cs:66-77 `CanSelectCardCondition` = IsDigimon &&
+// `CardEffectCommons.CanPlayAsNewPermanent(cardSource, payCost: false, ...)`
+// (:70) && EqualsTraits("Ice-Snow") && Level <= MaxLevel(): a card the play
+// would refuse is never offered. CR 4.3 7-1-1, 4-6-1/4-6-2 (a DUAL card is
+// digivolved or used, never played), 1-3-2.
+
+/// A level 3 [Ice-Snow] DUAL card (Digimon face Lv.3, 3000 DP).
+fn ice_snow_dual(id: &str) -> CardData {
+    use digimon_engine::card_data::{DualCardData, DualDigimonFace, DualOptionFace};
+    let mut c = make_test_card(id, "IceSnow Dual");
+    c.card_kind = CardKind::Dual;
+    c.level = Some(3);
+    c.dp = Some(3000);
+    c.play_cost = 4;
+    c.colors = vec![CardColor::Blue];
+    c.traits = vec!["Ice-Snow".to_string()];
+    c.dual = Some(DualCardData {
+        digimon: DualDigimonFace {
+            level: 3,
+            dp: 3000,
+            colors: vec![CardColor::Blue],
+            traits: vec!["Ice-Snow".to_string()],
+            evo_costs: vec![],
+            effect_text: String::new(),
+            inherited_text: String::new(),
+            keywords: vec![],
+        },
+        option: DualOptionFace {
+            use_cost: 4,
+            colors: vec![CardColor::Blue],
+            effect_text: String::new(),
+            security_text: String::new(),
+            keywords: vec![],
+        },
+    });
+    c
+}
+
+/// Skadimon (sourced) with `hand` in hand; fire [When Digivolving], resolve
+/// trigger-order prompts, and return the hand ids the free-play pick offers
+/// (empty when it installs no pick). No sourceless Digimon exists, so the
+/// pay-unsuspend clause never prompts.
+fn wd_free_play_offer(hand: &[&str], prep: impl FnOnce(&mut DebugRunner)) -> (DebugRunner, Vec<String>) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX8-028 found in embedded DSL pack")
+        .add_card(ice_snow_digimon("ICE-4", 4))
+        .add_card(ice_snow_dual("ICE-DUAL"))
+        .add_card(source_filler("SRC-A"))
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+    let skadimon = runner.place_stack(0, &["SRC-A", CARD_ID]);
+    for id in hand {
+        put_in_hand(&mut runner, 0, id);
+    }
+    prep(&mut runner);
+    fire_when_digivolving(&mut runner, skadimon);
+    for _ in 0..8 {
+        let Some(view) = runner.pending_selection_view() else {
+            return (runner, Vec::new());
+        };
+        match view.kind {
+            SelectionKind::Hand => {
+                let ids: Vec<String> = runner.game.players[0]
+                    .hand
+                    .iter()
+                    .map(|c| c.card_id(&runner.game.card_data).to_string())
+                    .collect();
+                let offered = view
+                    .valid_action_ids
+                    .iter()
+                    .copied()
+                    .filter(|&a| a != PASS)
+                    .map(|a| ids[a as usize].clone())
+                    .collect();
+                return (runner, offered);
+            }
+            SelectionKind::TriggerOrder => {
+                runner
+                    .execute_action(0, view.valid_action_ids[0])
+                    .expect("resolve trigger-order prompt");
+            }
+            other => panic!("unexpected selection kind {other:?}"),
+        }
+    }
+    panic!("prompts never drained");
+}
+
+/// A level 3 [Ice-Snow] DUAL card can't be played (CR 4.3 4-6-2): only the
+/// Digimon card is offered.
+#[test]
+fn ex8_028_wd_free_play_excludes_dual_card() {
+    let (_, offered) = wd_free_play_offer(&["ICE-DUAL", "ICE-4"], |_| {});
+    assert_eq!(offered, vec!["ICE-4".to_string()]);
+}
+
+/// "You can't play Digimon by effects": no pick.
+#[test]
+fn ex8_028_wd_free_play_offers_nothing_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (runner, offered) = wd_free_play_offer(&["ICE-4"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+    assert_eq!(runner.battle_area_size(0), 1);
+}
+
+/// A full battle area (no empty frame): no pick.
+#[test]
+fn ex8_028_wd_free_play_offers_nothing_when_battle_area_full() {
+    let (runner, offered) = wd_free_play_offer(&["ICE-4"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+    assert_eq!(runner.battle_area_size(0), 1);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION 5 — [WD][WA][Once Per Turn] pay-unsuspend
 // ─────────────────────────────────────────────────────────────────────────────

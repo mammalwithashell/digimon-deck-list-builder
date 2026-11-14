@@ -13,6 +13,12 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 3, color_is: yellow }
     cost: 4
+  # Printed "Digivolve: 3 from [Veemon]" (card image + official bundle; DCGO
+  # BT13_040.cs:15-20 AddSelfDigivolutionRequirementStaticEffect, exact name
+  # CardNames.Contains("Veemon"), cost 3). cards.json evo_costs drops it.
+  - kind: digivolve
+    from: { name_is: "Veemon" }
+    cost: 3
 
 effects:
   - kind: grant_keyword
@@ -26,7 +32,13 @@ effects:
       - select_union_zone:
           of: you
           zones: [hand, material]
-          filter: { name_contains: "Veemon" }
+          # [Veemon] in brackets = the exact name (CR 4.3 2-3-1-2; DCGO
+          # BT13_040.cs:41-51 CardNames.Contains("Veemon")), and only a card the
+          # free play accepts (CanPlayAsNewPermanent(payCost:false)).
+          filter:
+            all_of:
+              - name_is: "Veemon"
+              - can_play_from_effect_without_cost: true
           bind_as: veemon_pick
           optional: true
           prompt: "You may play 1 [Veemon] from hand or this Digimon's sources"

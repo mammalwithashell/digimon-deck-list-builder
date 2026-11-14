@@ -14,7 +14,12 @@
 //! [Digivolve] While you have 3 or fewer security cards, [Rie Kishibe]: Cost 5.
 //!
 //! # DCGO C# reference
-//! None at the submodule (no EX13_064.cs); printed text governs.
+//! `DCGO/Assets/Scripts/CardEffect/EX13/Purple/EX13_064.cs`. The [When
+//! Digivolving] candidates (EX13_064.cs:51-61) are `HasText("Knightmon") &&
+//! GetCostItself <= 8 && CardEffectCommons.CanPlayOrUse(card, activateClass,
+//! Root.Hand | Root.Trash)`; `CanPlayOrUse` (PlayEffects.cs:286-292) =
+//! `(IsOption && !CanNotPlayThisOption) || (HasPlayCost &&
+//! CanPlayAsNewPermanent(card, payCost: false, ..., root))`.
 //!
 //! # Patterns this test covers
 //! - Conditional Tamer-sourced digivolve route (security-count gate).
@@ -100,6 +105,13 @@ fn builder() -> DebugRunnerBuilder {
         .add_card(digimon("PLAIN", "Plain", 4, 4, CardColor::Purple))
         .add_card(digimon("PURPLE5", "Purple Five", 5, 7, CardColor::Purple))
         .add_card(option("KNIGHT-OPT", 4, "[Main] ... [Knightmon] ..."))
+        .add_card({
+            // A red [Knightmon]-text Option: no red Digimon/Tamer of player 0
+            // meets its colour requirement (CR 4.3 4-22-2).
+            let mut o = option("KNIGHT-OPT-RED", 3, "[Main] ... [Knightmon] ...");
+            o.colors = vec![CardColor::Red];
+            o
+        })
         .add_card(digimon("OPP", "Opp", 4, 4, CardColor::Red))
         .deck(0, &["PAD"; 8])
         .deck(1, &["PAD"; 8])
@@ -281,6 +293,134 @@ fn ex13_064_wd_decline_plays_nothing() {
     assert_eq!(field_ids(&runner, 0), vec![CARD_ID.to_string()]);
 }
 
+// ─── [When Digivolving] candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY)
+// DCGO EX13_064.cs:51-61 `CanPlayOrUse` per root; CR 4.3 1-3-2 (an impossible
+// play/use is not carried out, so it is not a legal pick); CR 4.3 4-22-1/4-22-2
+// (an Option is used only with its colour requirement met, also by an effect:
+// official rulings Q1500 / Q2785).
+
+/// Offered rows of the pending hand-or-trash union pick as `"hand:<id>"` /
+/// `"trash:<id>"`; empty when no physical pick is pending.
+fn offered_union(runner: &DebugRunner) -> Vec<String> {
+    use digimon_engine::owned_card_choice::CardChoiceZone;
+    if runner
+        .game
+        .pending_selection
+        .as_ref()
+        .and_then(|p| p.card_choice.as_ref())
+        .is_none()
+    {
+        return Vec::new();
+    }
+    let mut v: Vec<String> = physical_menu::commits(&runner.game)
+        .into_iter()
+        .filter_map(|row| {
+            let zone = match row.zone? {
+                CardChoiceZone::Hand => "hand",
+                CardChoiceZone::Trash => "trash",
+                _ => "other",
+            };
+            Some(format!("{zone}:{}", row.card_id?))
+        })
+        .collect();
+    v.sort();
+    v
+}
+
+/// LordKnightmon (EX13-064) with `hand` and `trash`, `setup` applied, then its
+/// [When Digivolving] fired. Returns the offered rows.
+fn wd_offered(hand: &[&str], trash: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut runner = builder().hand(0, hand).memory(3).start();
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    for id in trash {
+        runner.inject_trash(0, id);
+    }
+    setup(&mut runner);
+    fire(&mut runner, EffectTiming::WhenDigivolving, me);
+    offered_union(&runner)
+}
+
+fn add_player_lock(runner: &mut DebugRunner, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner
+        .game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1));
+}
+
+/// A red [Knightmon]-text Option can't be used with only purple/black on the
+/// field, in the hand or in the trash; the purple one can.
+#[test]
+fn ex13_064_wd_excludes_option_whose_colour_requirement_is_unmet() {
+    assert_eq!(
+        wd_offered(&["KNIGHT-OPT-RED", "KNIGHT-OPT"], &["KNIGHT-OPT-RED"], |_| {}),
+        vec!["hand:KNIGHT-OPT".to_string()]
+    );
+}
+
+/// "You can't use Option cards": the Option is not offered, the Digimon is.
+#[test]
+fn ex13_064_wd_excludes_option_when_options_cannot_be_used() {
+    use digimon_engine::enums::ModifierType;
+    assert_eq!(
+        wd_offered(&["KNIGHT-OPT"], &["KNIGHT"], |r| add_player_lock(r, ModifierType::CannotUseOptionCards)),
+        vec!["trash:KNIGHT".to_string()]
+    );
+}
+
+/// "You can't play Digimon by effects": neither Digimon is offered.
+#[test]
+fn ex13_064_wd_excludes_digimon_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::ModifierType;
+    assert_eq!(
+        wd_offered(&["KNIGHT", "KNIGHT-OPT"], &["KNIGHT"], |r| {
+            add_player_lock(r, ModifierType::CannotPlayDigimonByEffect)
+        }),
+        vec!["hand:KNIGHT-OPT".to_string()]
+    );
+}
+
+/// A full battle area: no Digimon can be played; the Option is still usable.
+#[test]
+fn ex13_064_wd_excludes_digimon_when_battle_area_full() {
+    assert_eq!(
+        wd_offered(&["KNIGHT", "KNIGHT-OPT"], &["KNIGHT"], |r| {
+            r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+        }),
+        vec!["hand:KNIGHT-OPT".to_string()]
+    );
+}
+
+/// Gallantmon (BT23-014)'s "their effects can't play Digimon or Tamers from
+/// the trash" (`CannotPlayFromTrash`): the trash Digimon is not offered, the
+/// hand copy still is.
+#[test]
+fn ex13_064_wd_excludes_trash_cards_when_playing_from_trash_is_locked() {
+    use digimon_engine::enums::ModifierType;
+    assert_eq!(
+        wd_offered(&["KNIGHT"], &["KNIGHT"], |r| add_player_lock(r, ModifierType::CannotPlayFromTrash)),
+        vec!["hand:KNIGHT".to_string()]
+    );
+}
+
+/// Gallantmon (BT23-014)'s lock is "their effects can't play Digimon or Tamers
+/// from the trash"; DCGO BT23_014.cs:48-49 limits it to `IsDigimon ||
+/// IsTamer`, and `CanPlayOrUse`'s Option arm (PlayEffects.cs:286-292) ignores
+/// the zone, so a usable [Knightmon]-text Option in the trash is still offered.
+/// Ignored until the engine stops applying `CannotPlayFromTrash` to Options
+/// (`trash_play_locked` in `dsl_cards/predicate.rs`, `use_option_from` /
+/// `play_option_from_trash` in `game_actions/options.rs`).
+#[test]
+#[ignore = "engine over-block: CannotPlayFromTrash also refuses Options (trash_play_locked / use_option_from)"]
+fn ex13_064_wd_still_offers_a_trash_option_under_the_digimon_tamer_trash_lock() {
+    use digimon_engine::enums::ModifierType;
+    assert_eq!(
+        wd_offered(&[], &["KNIGHT", "KNIGHT-OPT"], |r| add_player_lock(r, ModifierType::CannotPlayFromTrash)),
+        vec!["trash:KNIGHT-OPT".to_string()]
+    );
+}
+
 // ─── Section 2/3 — [Your Turn] aura ──────────────────────────────────────────
 
 #[test]
@@ -381,3 +521,6 @@ fn ex13_064_played_trigger_is_once_per_turn() {
     runner.play(0, slot).expect("plain plays");
     assert!(runner.pending_selection().is_none(), "OPT spent");
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

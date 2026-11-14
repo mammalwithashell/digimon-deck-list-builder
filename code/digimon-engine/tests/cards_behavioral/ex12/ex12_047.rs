@@ -1,4 +1,6 @@
-use digimon_engine::enums::{CardColor, Keyword, ModifierType};
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_END, PLAY_HAND_START};
+use digimon_engine::enums::{CardColor, Expiry, Keyword, ModifierType};
+use digimon_engine::modifiers::PlayerModifierEntry;
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::SelectionKind;
 
@@ -8,6 +10,98 @@ use super::support::{
 };
 
 const CARD_ID: &str = "EX12-047";
+
+/// Walk the prompts (accepting each non-hand prompt with its first non-PASS
+/// action) to the hand pick and return the card ids it offers, sorted. Empty
+/// when no hand pick installs.
+fn offered_hand_ids(runner: &mut DebugRunner, player: u8) -> Vec<String> {
+    for _ in 0..8 {
+        let Some(view) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        if view.kind == SelectionKind::Hand {
+            let hand: Vec<String> = runner.game.players[player as usize]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            let mut ids: Vec<String> = view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&a| a != PASS)
+                .map(|a| {
+                    let slot = if a < PLAY_HAND_END { a - PLAY_HAND_START } else { a - HAND_EFFECT_START };
+                    hand[slot as usize].clone()
+                })
+                .collect();
+            ids.sort();
+            return ids;
+        }
+        let Some(action) = view.valid_action_ids.iter().copied().find(|&a| a != PASS) else {
+            return Vec::new();
+        };
+        runner.execute_action(view.selecting_player, action).expect("advance prompt");
+    }
+    panic!("never reached the hand pick");
+}
+
+/// Amaterasumon (EX12-047) plus a filler on the field, TB-PLAY in hand,
+/// TB-RETURN in the trash; returns the runner and Amaterasumon's handle.
+fn on_deletion_runner() -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-047 YAML loads")
+        .add_card(tb_digimon("TB-RETURN", CardColor::Yellow, 4, 5000))
+        .add_card(tb_digimon("TB-PLAY", CardColor::Yellow, 5, 7000))
+        .add_card(plain_digimon("FILLER", CardColor::Yellow, 3, 3000))
+        .hand(0, &["TB-PLAY"])
+        .memory(10)
+        .start();
+    push_to_trash(&mut runner, 0, "TB-RETURN");
+    let amaterasumon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "FILLER", Some(0));
+    (runner, amaterasumon)
+}
+
+// ── [On Deletion] free play: candidate legality ──────────────────────────────
+// DCGO EX12_047.cs:212-219 `CanSelectPlayCardCondition`: IsDigimon, Lv.5 or
+// lower, [TB], AND `CardEffectCommons.CanPlayAsNewPermanent(cardSource,
+// payCost: false, activateClass)` (GameContextDeterminarion.cs:419-432): not an
+// Option (never a DUAL, CR 4.3 4-6-2), an empty battle-area frame, no play
+// prohibition. A card the free play would refuse is not a legal choice
+// (CR 4.3 1-3-2). DCGO also skips the play pick entirely when no card
+// qualifies (EX12_047.cs:248).
+
+/// "You can't play Digimon by effects": the returned and the held [TB] Digimon
+/// can't be played, so neither is offered.
+#[test]
+fn ex12_047_on_deletion_play_pick_offers_nothing_under_effect_play_prohibition() {
+    let (mut runner, amaterasumon) = on_deletion_runner();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    runner
+        .game
+        .delete_permanents_batch(vec![amaterasumon], ReplacementCause::OpponentEffect);
+    assert!(offered_hand_ids(&mut runner, 0).is_empty());
+    assert!(hand_contains(&runner, 0, "TB-PLAY"));
+}
+
+/// A full battle area (the filler fills a 1-slot area once Amaterasumon is
+/// gone): nothing can be played, so nothing is offered.
+#[test]
+fn ex12_047_on_deletion_play_pick_offers_nothing_when_battle_area_full() {
+    let (mut runner, amaterasumon) = on_deletion_runner();
+    runner.game.rules.field_slots = 1;
+    runner
+        .game
+        .delete_permanents_batch(vec![amaterasumon], ReplacementCause::OpponentEffect);
+    assert!(offered_hand_ids(&mut runner, 0).is_empty());
+    assert!(hand_contains(&runner, 0, "TB-PLAY"));
+    assert!(!field_contains(&runner, 0, "TB-PLAY"));
+}
 
 fn resolve_first_action(runner: &mut DebugRunner) {
     let (player, action) = {

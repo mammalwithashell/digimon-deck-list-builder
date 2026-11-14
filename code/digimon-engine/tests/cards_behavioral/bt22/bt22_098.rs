@@ -1059,3 +1059,172 @@ fn bt22_098_security_activates_main_union_play_then_places_self() {
 
 #[path="../../support/owned_union_fixture.rs"]
 mod owned_union_fixture;
+
+// ─── Union-pick candidate legality (select-hand playability audit, 2026-11-13) ─
+// "You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand or trash without
+// paying the cost." DCGO BT22_098.cs:33-37 `CanSelectCardCondition` =
+// `EqualsCardName("Shoemon") || EqualsCardName("Arisa Kinosaki") &&
+// CanPlayAsNewPermanent(card, false, …)` — C# `&&` binds tighter than `||`, so
+// DCGO checks playability for Arisa only and offers an unplayable Shoemon (a
+// choice whose play then does nothing). CR 4.3 1-3-2 / 15-1-3: a card that
+// can't be played (prohibition, no free slot, trash play locked) is not a
+// "play" choice; the rules govern over DCGO's precedence slip, so both names
+// are filtered by `can_play_from_effect_without_cost`.
+
+fn union_lock(runner: &mut DebugRunner, player: u8, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner
+        .game
+        .modifiers
+        .add_player_modifier(player, PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1));
+}
+
+fn push_trash(runner: &mut DebugRunner, player: u8, card_id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .expect("card registered");
+    let card_index = runner.game.next_card_index();
+    runner.game.players[player as usize]
+        .trash
+        .push(CardSource::new(data_idx, player, card_index));
+}
+
+fn union_runner(hand: &[&str]) -> DebugRunner {
+    DebugRunner::builder()
+        .from_dsl_yaml(&yaml())
+        .expect("BT22-098 YAML parses")
+        .add_card(shoemon("SHOE"))
+        .add_card(arisa("ARISA"))
+        .add_card(filler("FILL"))
+        .hand(0, hand)
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start()
+}
+
+fn union_candidate_count(runner: &DebugRunner) -> usize {
+    runner
+        .pending_selection_view()
+        .filter(|v| matches!(v.kind, SelectionKind::UnionZone { .. }))
+        .map(|v| v.valid_action_ids.iter().filter(|&&a| a != PASS).count())
+        .unwrap_or(0)
+}
+
+/// "You can't play Digimon by effects": [Shoemon] is not offered, [Arisa
+/// Kinosaki] (a Tamer) still is.
+#[test]
+fn bt22_098_main_union_excludes_shoemon_when_digimon_effect_play_is_prohibited() {
+    let mut runner = union_runner(&["BT22-098", "SHOE", "ARISA"]);
+    union_lock(&mut runner, 0, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(union_candidate_count(&runner), 1, "only Arisa Kinosaki is playable");
+    assert!(owned_union_fixture::action(&runner.game, 0, "ARISA", false).is_some());
+    assert!(owned_union_fixture::action(&runner.game, 0, "SHOE", false).is_none());
+}
+
+/// "You can't play cards from the trash" (CannotPlayFromTrash): a [Shoemon] in
+/// the trash is not offered; the [Arisa Kinosaki] in hand still is.
+#[test]
+fn bt22_098_main_union_excludes_trash_shoemon_when_trash_play_is_locked() {
+    let mut runner = union_runner(&["BT22-098", "ARISA"]);
+    push_trash(&mut runner, 0, "SHOE");
+    union_lock(&mut runner, 0, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(union_candidate_count(&runner), 1, "the trash Shoemon can't be played");
+    assert!(owned_union_fixture::action(&runner.game, 0, "ARISA", false).is_some());
+    assert!(owned_union_fixture::action(&runner.game, 0, "SHOE", true).is_none());
+}
+
+/// A full battle area: neither card can be played, so nothing is offered.
+#[test]
+fn bt22_098_main_union_offers_nothing_when_battle_area_full() {
+    let mut runner = union_runner(&["BT22-098", "SHOE", "ARISA"]);
+    runner.place_on_field(0, "FILL", Some(0));
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    let _ = runner.game.activate_hand_main(0, 0);
+    assert_eq!(union_candidate_count(&runner), 0, "no free slot: nothing is playable");
+    assert!(!battle_area_contains(&runner, 0, "SHOE"));
+    assert!(!battle_area_contains(&runner, 0, "ARISA"));
+}
+
+/// The [Security] mirror filters the same way: under "you can't play Tamers by
+/// effects" the defender's [Arisa Kinosaki] is not offered.
+#[test]
+fn bt22_098_security_union_excludes_arisa_when_tamer_effect_play_is_prohibited() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml())
+        .expect("BT22-098 YAML parses")
+        .add_card(shoemon("ATTACKER"))
+        .add_card(arisa("ARISA_HAND"))
+        .add_card(filler("FILL"))
+        .hand(1, &["ARISA_HAND"])
+        .security(1, &["BT22-098"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(0)
+        .start();
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    union_lock(&mut runner, 1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    let _ = runner.attack_player(attacker, 1, false);
+    assert_eq!(union_candidate_count(&runner), 0, "Arisa can't be played by an effect");
+    assert!(!battle_area_contains(&runner, 1, "ARISA_HAND"));
+}
+
+/// Regression guard for the <Delay> hand digivolve (eff[2]): a [Puppet] +
+/// [LIBERATOR] card that can't digivolve onto the chosen base (its only
+/// requirement is Lv.5) is not offered. DCGO `DigivolveIntoHandOrTrashCard`
+/// (CardEffectCommons.cs:858-878) filters with `CanPlayCardTargetFrame(target)`;
+/// the DSL compile pass `digivolve_candidates.rs` adds `can_digivolve_onto:
+/// target` because the base is bound by the earlier step.
+#[test]
+fn bt22_098_delay_hand_pick_excludes_card_that_cannot_digivolve_onto_base() {
+    let mut lv6 = puppet_liberator_evo("EVO-LV6");
+    lv6.level = Some(6);
+    lv6.evo_costs = vec![EvoCost { card_color: CardColor::Yellow as u8, level: 5, memory_cost: 3 }];
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml())
+        .expect("BT22-098 YAML parses")
+        .add_card(arisa("ARISA"))
+        .add_card(puppet_base("BASE"))
+        .add_card(puppet_liberator_evo("EVO"))
+        .add_card(lv6)
+        .add_card(filler("FILL"))
+        .hand(0, &["BT22-098", "EVO", "EVO-LV6"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "BASE", Some(0));
+    runner.game.enter_main_phase();
+    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Trashed);
+    let arisa = runner.place_on_field(0, "ARISA", Some(0));
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.game.suspend(arisa);
+    let view = runner.pending_selection_view().expect("Delay activation");
+    runner.execute_action(view.selecting_player, REPLACEMENT_ACCEPT).unwrap();
+    let view = runner.pending_selection_view().expect("Puppet base pick");
+    runner.execute_action(view.selecting_player, view.valid_action_ids[0]).unwrap();
+    let view = runner.pending_selection_view().expect("hand evolution pick");
+    assert_eq!(view.kind, SelectionKind::Hand);
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[(a - digimon_engine::action::space::PLAY_HAND_START) as usize].clone())
+        .collect();
+    assert_eq!(offered, vec!["EVO".to_string()], "the Lv.6 can't digivolve onto a Lv.3 base");
+}

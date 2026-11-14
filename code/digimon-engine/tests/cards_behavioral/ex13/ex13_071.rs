@@ -516,3 +516,77 @@ fn ex13_071_main_is_once_per_turn() {
     );
     assert!(!main_offered(&r, richard), "[Once Per Turn]");
 }
+
+// ─── Candidate legality of the [Kentaurosmon] pick ──────────────────────────
+// DCGO EX13_071.cs:357-361 offers a [Kentaurosmon] only when
+// `CanPlayCardTargetFrame(selectedKudamon.PermanentFrame, true, activateClass,
+// root, -1, false, IgnoreRequirement.Level)` holds: the card must be able to
+// digivolve onto THAT [Kudamon] with only the level waived (colour circle
+// kept). Official ruling Q7449 (2026-09-18) is the direct authority: only a
+// [Kentaurosmon] that meets the digivolution requirements, its Lv. being the
+// sole exception, may be digivolved into. A card that
+// fails it is refused at commit (CR 4.3 8-1-2-6), so offering it is a dead
+// choice (CR 4.3 1-3-2).
+//
+// Not fixable in YAML today: the compile pass that adds `can_digivolve_onto`
+// (`code/digimon-dsl/src/digivolve_candidates.rs`) skips `ignore_level`
+// digivolves, and neither `can_digivolve_onto` nor
+// `can_digivolve_onto_with_cost` can waive the level gate.
+// G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL (qa/dsl-vocab-gaps.md).
+
+/// A [Kentaurosmon] whose only circle is RED Lv.5: with the level waived it
+/// still needs a red base, and [Kudamon] is yellow, so it can't digivolve and
+/// must not be offered. The yellow one still is.
+#[test]
+#[ignore = "G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL: no level-waiving can_digivolve_onto leaf"]
+fn ex13_071_kentaurosmon_pick_excludes_a_card_that_cannot_digivolve_ignoring_level() {
+    let mut ken_red = kentaurosmon("KEN-RED");
+    ken_red.evo_costs = vec![EvoCost {
+        card_color: 0,
+        level: 5,
+        memory_cost: 3,
+    }];
+    let mut r = builder()
+        .add_card(holy_beast("KUDA", "Kudamon", 3))
+        .add_card(holy_beast("HB4", "Reppamon", 4))
+        .add_card(holy_beast("HB5", "Chirinmon", 5))
+        .add_card(kentaurosmon("KEN"))
+        .add_card(ken_red)
+        .hand(0, &["KEN", "KEN-RED"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .security(0, &["FILL"; 3])
+        .security(1, &["FILL"; 3])
+        .memory(5)
+        .start();
+    let richard = r.place_on_field(0, CARD_ID, Some(0));
+    for _ in 0..3 {
+        r.push_source(richard, "FILL");
+    }
+    {
+        let perm = &mut r.game.players[0].battle_area[richard.index as usize];
+        let n = perm.card_sources.len();
+        for c in perm.card_sources[..n - 1].iter_mut() {
+            c.face_down = true;
+        }
+    }
+    r.place_on_field(0, "KUDA", Some(0));
+    r.inject_trash(0, "HB4");
+    r.inject_trash(0, "HB5");
+    r.game.current_phase = GamePhase::Main;
+    assert!(r.game.activate_field_main(0, richard.index as usize));
+    for _ in 0..30 {
+        let Some(v) = r.pending_selection_view() else { break };
+        if v.prompt.contains("Kentaurosmon") {
+            let candidates = v.valid_action_ids.iter().filter(|&&a| a != PASS).count();
+            assert_eq!(candidates, 1, "only the yellow [Kentaurosmon]: {v:?}");
+            return;
+        }
+        if v.effect_choices.is_some() {
+            r.execute_branch(0).expect("order choice");
+        } else {
+            r.execute_action(v.selecting_player, first_non_pass(&v)).expect("pick");
+        }
+    }
+    panic!("the [Kentaurosmon] pick never surfaced");
+}

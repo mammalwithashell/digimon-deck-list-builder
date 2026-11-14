@@ -507,3 +507,145 @@ fn bt21_025_clause3_decline_does_nothing() {
 fn bt21_025_clause3_opt_blocks_second_activation() {
     // Body deferred — substrate ready; sibling regression coverage exists.
 }
+
+// ─── §5 Clause 3 candidate legality (real security-removal dispatch) ──────────
+//
+// DCGO BT21_025.cs:131-145 `CanSelectCardCondition`: `IsDigimon &&
+// (Reptile || Dragonkin) && CanPlayAsNewPermanent(cardSource, payCost: false,
+// activateClass) && CardDP <= 5000` -- a free battle-area frame and no play
+// prohibition; the same predicate gates `CanUseCondition` (98-111). CR 4.3
+// 1-3-11-1 / 1-3-2: a card that can't be played is not a "play" choice.
+//
+// These tests drive the inherited clause through a real attack that removes
+// the opponent's security (the BT21-017 inherited-test shape), replacing the
+// `TriggerSource::PlayerBattleArea(1)` fixture the ignored test above uses.
+
+fn sec_tamer(card_id: &str) -> CardData {
+    let mut c = plain_digimon(card_id);
+    c.card_kind = CardKind::Tamer;
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c
+}
+
+/// Lamiamon (BT21-025) under a plain carrier, `hand` in p0's hand, a Tamer in
+/// p1's security (no battle, the carrier survives).
+fn lamiamon_source_runner(hand: &[&str]) -> (DebugRunner, PermanentHandle) {
+    let mut big = reptile_digimon("REPTILE-6K", 6000);
+    big.card_name = "Big Reptile".to_string();
+    let mut dragon = reptile_digimon("DRAGON-4K", 4000);
+    dragon.traits = vec!["Dragonkin".to_string()];
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT21_025_YAML)
+        .expect("BT21-025 YAML must parse and compile")
+        .add_card(reptile_digimon("REPTILE-5K", 5000))
+        .add_card(big)
+        .add_card(dragon)
+        .add_card(plain_digimon("CARRIER"))
+        .add_card(sec_tamer("SEC-TAMER"))
+        .security(1, &["SEC-TAMER", "SEC-TAMER"])
+        .deck(0, &["CARRIER"; 3])
+        .deck(1, &["CARRIER"; 3])
+        .memory(5)
+        .start();
+    runner.set_first_player(0);
+    let carrier = runner.place_stack(0, &["BT21-025", "CARRIER"]);
+    for h in hand {
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == *h)
+            .unwrap();
+        let next = runner.game.next_card_index();
+        runner.game.players[0]
+            .hand
+            .push(digimon_engine::card_source::CardSource::new(idx, 0, next));
+    }
+    (runner, carrier)
+}
+
+/// Attack the player with the carrier, accept the optional inherited trigger
+/// if it is asked separately, and return the hand-pick candidates' card ids
+/// (empty when no hand pick installs).
+fn security_removed_offered(runner: &mut DebugRunner, carrier: PermanentHandle) -> Vec<String> {
+    use digimon_engine::action::space::PLAY_HAND_START;
+    use digimon_engine::selection::SelectionKind;
+    runner.attack_player(carrier, 1, false);
+    for _ in 0..4 {
+        let Some(view) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        if view.kind == SelectionKind::Hand {
+            let ids: Vec<String> = runner.game.players[0]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            let mut offered: Vec<String> = view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&id| id != PASS && id >= PLAY_HAND_START)
+                .map(|id| ids[(id - PLAY_HAND_START) as usize].clone())
+                .collect();
+            offered.sort();
+            return offered;
+        }
+        runner
+            .accept_optional_trigger()
+            .expect("accept the optional inherited trigger");
+    }
+    Vec::new()
+}
+
+/// Positive: the inherited clause offers the <=5000 DP [Reptile] and the
+/// [Dragonkin], not the 6000 DP [Reptile], and plays the pick for free.
+#[test]
+fn bt21_025_clause3_security_removal_plays_reptile_free() {
+    use digimon_engine::action::space::PLAY_HAND_START;
+    let (mut runner, carrier) =
+        lamiamon_source_runner(&["REPTILE-6K", "REPTILE-5K", "DRAGON-4K"]);
+    let offered = security_removed_offered(&mut runner, carrier);
+    assert_eq!(offered, vec!["DRAGON-4K".to_string(), "REPTILE-5K".to_string()]);
+    let mem = runner.memory();
+    runner
+        .execute_action(0, PLAY_HAND_START + 1)
+        .expect("play REPTILE-5K");
+    let _ = runner.auto_resolve();
+    assert!(runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "REPTILE-5K"));
+    assert_eq!(runner.memory(), mem, "without paying the cost");
+}
+
+/// "You can't play Digimon by effects" (DCGO `CanPlayAsNewPermanent` false):
+/// nothing is offered and the hand is unchanged.
+#[test]
+fn bt21_025_clause3_excludes_reptile_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, carrier) = lamiamon_source_runner(&["REPTILE-5K"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = security_removed_offered(&mut runner, carrier);
+    assert!(offered.is_empty(), "no playable candidate: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "REPTILE-5K stays in hand");
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs an empty frame):
+/// nothing is offered.
+#[test]
+fn bt21_025_clause3_excludes_reptile_when_battle_area_full() {
+    let (mut runner, carrier) = lamiamon_source_runner(&["REPTILE-5K"]);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    let offered = security_removed_offered(&mut runner, carrier);
+    assert!(offered.is_empty(), "no free slot: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "REPTILE-5K stays in hand");
+}

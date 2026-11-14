@@ -503,12 +503,10 @@ fn p193_delay_deleting_millenniummon_offers_free_wicked_god_play_from_hand() {
         "the <Delay> must be activatable after the placing turn"
     );
 
-    // The body installs a selection (the Millenniummon delete pick), so the
-    // outer "trash this card" activation cost is DEFERRED until the whole
-    // body resolves (`activate_delayed_option_main`'s documented
-    // MainPhaseActivation resume behavior) — P-193 is still physically on
-    // the field at this point; it trashes once the body (including the
-    // nested free-play tail) finishes.
+    // The "trash this card" activation cost is paid FIRST (CR 4.3 16-17-1;
+    // G-ENGINE-DELAY-BODY-BEFORE-TRASH, resolved 70694334d: the lowered
+    // `DelayEffect` trashes the carrier before running the body, as DCGO
+    // does). The body then installs the Millenniummon delete pick.
     let view = runner
         .pending_selection_view()
         .expect("Millenniummon delete pick must install");
@@ -540,9 +538,8 @@ fn p193_delay_deleting_millenniummon_offers_free_wicked_god_play_from_hand() {
 
     runner.game.drain_effect_queue();
 
-    // Now that the body has fully resolved, the deferred trash-self
-    // activation cost has been paid: P-193 is no longer a Delay permanent
-    // on the field.
+    // The trash-self activation cost was paid before the body ran: P-193 is
+    // no longer a Delay permanent on the field.
     assert!(
         find_delayed_p193(&runner, 0).is_none(),
         "P-193 must have been trashed as the <Delay> activation cost"
@@ -914,5 +911,147 @@ fn p193_security_no_eligible_fodder_skips_activation() {
             .iter()
             .any(|c| c.card_id(&runner.game.card_data) == "FILL"),
         "the filler hand card must remain untouched (no trash-cost pick fired)"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 5 — Clause B free-play candidate legality (select-hand audit)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// DCGO P_193.cs:100-103 filters the hand-or-trash pick with
+// `IsDigimon && EqualsTraits("Wicked God") && CanPlayAsNewPermanent(card,
+// false, activateClass)`, and only offers a zone that holds such a card
+// (P_193.cs:159-160). A card the free play would then refuse is not a legal
+// choice (CR 4.3 1-3-2: an impossible action is not carried out; 1-3-11-1: a
+// card can only be declared for play if it can be played) — so the YAML's
+// union pick carries `can_play_from_effect_without_cost: true`.
+
+/// Seat P-193 as a matured Delay with a Millenniummon on the field, activate
+/// it and delete the Millenniummon, returning the runner at the free-play
+/// union pick (if one installs). `hand` / `trash` are P0's Wicked God cards.
+fn p193_delete_millenniummon_then(
+    hand: &[&str],
+    trash: &[&str],
+    setup: impl FnOnce(&mut DebugRunner),
+) -> DebugRunner {
+    let mut builder = DebugRunner::builder()
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML parses")
+        .add_card(make_millenniummon("P193-MILL"))
+        .add_card(make_filler("FILL"));
+    for id in hand.iter().chain(trash.iter()) {
+        builder = builder.add_card(make_wicked_god_digimon(id, id));
+    }
+    let mut runner = builder
+        .memory(10)
+        .hand(0, hand)
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    for id in trash {
+        seed_trash(&mut runner, 0, id);
+    }
+
+    let delay_idx = seat_p193_as_delay(&mut runner, 0);
+    runner.place_on_field(0, "P193-MILL", Some(0));
+    advance_past_placing_turn(&mut runner, 0, delay_idx);
+    setup(&mut runner);
+
+    let delay_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: delay_idx as u8,
+    };
+    assert!(runner.game.activate_delayed_option_main(delay_handle));
+    let view = runner
+        .pending_selection_view()
+        .expect("Millenniummon delete pick must install");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+    let action = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != PASS)
+        .expect("the Millenniummon is a delete candidate");
+    runner
+        .game
+        .resolve_selection(view.selecting_player, action)
+        .expect("delete the Millenniummon");
+    runner
+}
+
+fn p193_union_candidates(runner: &DebugRunner) -> usize {
+    match runner.pending_selection_view() {
+        Some(v) if matches!(v.kind, SelectionKind::UnionZone { .. }) => v
+            .valid_action_ids
+            .iter()
+            .filter(|&&id| id != PASS)
+            .count(),
+        _ => 0,
+    }
+}
+
+/// Control: with no prohibition, a Wicked God card in hand and one in trash
+/// are both offered.
+#[test]
+fn p193_delay_free_play_offers_hand_and_trash_wicked_god_control() {
+    let runner = p193_delete_millenniummon_then(&["P193-WG-H"], &["P193-WG-T"], |_| {});
+    assert_eq!(p193_union_candidates(&runner), 2);
+}
+
+/// "You can't play Digimon by effects" (DCGO `CanPlayAsNewPermanent` false):
+/// neither Wicked God card is a candidate, so no free-play pick installs and
+/// both cards stay where they are.
+#[test]
+fn p193_delay_free_play_not_offered_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = p193_delete_millenniummon_then(&["P193-WG-H"], &["P193-WG-T"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(
+                ModifierType::CannotPlayDigimonByEffect,
+                0,
+                Expiry::Permanent,
+                None,
+                1,
+            ),
+        );
+    });
+    assert_eq!(
+        p193_union_candidates(&runner),
+        0,
+        "a Digimon that can't be played by effects must not be offered"
+    );
+    runner.game.drain_effect_queue();
+    assert!(runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "P193-WG-H"));
+}
+
+/// "You can't play cards from the trash" (BT23-014 lock, DCGO
+/// `CanPlayAsNewPermanent` with the trash root): the trash Wicked God card is
+/// not offered; the hand one still is.
+#[test]
+fn p193_delay_trash_wicked_god_not_offered_when_trash_play_is_locked() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let runner = p193_delete_millenniummon_then(&["P193-WG-H"], &["P193-WG-T"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(
+                ModifierType::CannotPlayFromTrash,
+                0,
+                Expiry::Permanent,
+                None,
+                1,
+            ),
+        );
+    });
+    assert_eq!(
+        p193_union_candidates(&runner),
+        1,
+        "only the hand Wicked God card can be played"
     );
 }

@@ -38,6 +38,7 @@ fn contains_cost_predicate(value: &Value) -> bool {
         Value::Object(fields) => {
             fields.contains_key("can_digivolve_onto_with_cost")
                 || fields.contains_key("dna_hand_candidate")
+                || fields.contains_key("dna_trash_candidate")
                 || fields
                     .get("has_digivolve_candidate")
                     .is_some_and(|v| v.get("cost").is_some())
@@ -70,9 +71,13 @@ impl Audit<'_, '_> {
                 // cost_assignment deserialize alias serializes canonically.
                 let reducer =
                     reducer || fields.get("kind").and_then(Value::as_str) == Some("cost_reduction");
-                if let Some(value) = fields.get("dna_hand_candidate") {
+                // `dna_trash_candidate` (G-DSL-DNA-TRASH-PARTNER-CANDIDATE)
+                // shares the payload and its stage/binding/cost contract.
+                for key in ["dna_hand_candidate", "dna_trash_candidate"] {
+                let Some(value) = fields.get(key) else { continue };
+                {
                     if let Ok(probe) = serde_json::from_value::<DnaHandCandidatePredicate>(value.clone()) {
-                        let leaf = field_path(path, "dna_hand_candidate");
+                        let leaf = field_path(path, key);
                         for (name, binding, required) in [
                             ("result", &probe.result, probe.role != DnaHandCandidateRole::Result),
                             ("field", &probe.field, probe.role == DnaHandCandidateRole::Partner),
@@ -97,6 +102,7 @@ impl Audit<'_, '_> {
                         }
                         self.cost(&probe.cost, &format!("{leaf}.cost"), scope, reducer);
                     }
+                }
                 }
                 if let Some(value) = fields.get("can_digivolve_onto_with_cost") {
                     if let Ok(probe) =

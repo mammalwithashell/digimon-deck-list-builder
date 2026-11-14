@@ -53,6 +53,17 @@ effects:
             all_of:
               - kind: option
               - trait_has: TS
+              # DCGO BT26_090.cs:54-62 `!CanNotPlayThisOption && MaxMemoryCost
+              # >= GetCostItself - Enemy.MemoryForPlayer`: usable (colour
+              # requirement / <Use Req.> met, no Option lock; CR 4.3 4-22) and
+              # payable at the reduced cost. The `affordable_with_cost` value
+              # is the verb's `cost` below. Select-hand audit 2026-11-13.
+              - can_play_or_use_from_effect: true
+              - affordable_with_cost:
+                  reduce:
+                    base: 0
+                    per: { player_memory: { of: opponent } }
+                    delta: 1
           prompt: "You may use 1 Option card with the [TS] trait from your hand (cost reduced by 1 for each memory your opponent has)"
       # USE only (G-DSL-USE-OPTION-ONLY): a DUAL [TS] card is used as its
       # Option face; its Digimon face is never offered.

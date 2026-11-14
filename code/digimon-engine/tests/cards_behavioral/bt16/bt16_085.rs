@@ -1620,3 +1620,71 @@ fn choose_wd_before_observer(runner: &mut DebugRunner) {
     assert!(digimon_engine::action::mask::build_action_mask(&runner.game,actor)[action as usize]>0.5);
     runner.game.resolve_selection(actor,action).unwrap();
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Clause 0 hand-pick legality (2026-11-13 select-hand audit)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// DCGO BT16_085.cs:32-43 CanSelectCardCondition = `CardNames.Contains("Veemon")
+// || CardNames.Contains("Wormmon")` AND `CanPlayAsNewPermanent(cardSource,
+// payCost: false, activateClass)` (an empty battle-area frame, no play
+// prohibition). CR 4.3 1-3-2: an impossible play is not carried out, so a card
+// the free play would refuse is not a legal pick. Guards for the
+// `can_play_from_effect_without_cost` leaf.
+
+/// Non-PASS candidates of a pending HAND selection (0 when none is pending).
+fn offered_hand_count(runner: &DebugRunner) -> usize {
+    runner
+        .pending_selection_view()
+        .filter(|view| view.kind == SelectionKind::Hand)
+        .map(|view| {
+            view.valid_action_ids
+                .iter()
+                .filter(|&&id| id != digimon_engine::action::space::PASS)
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+/// "You can't play Digimon by effects": Veemon is not offered.
+#[test]
+fn bt16_085_start_of_main_does_not_offer_veemon_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = base_runner();
+    runner.place_on_field(0, "BT16-085", Some(0));
+    push_to_hand(&mut runner, 0, "VEEMON");
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+
+    runner.game.enter_main_phase();
+
+    assert_eq!(
+        offered_hand_count(&runner),
+        0,
+        "a Veemon that can't be played by an effect must not be offered"
+    );
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.battle_area_size(0), 1, "only the Tamer is on the field");
+}
+
+/// A full battle area: Veemon is not offered.
+#[test]
+fn bt16_085_start_of_main_does_not_offer_veemon_when_battle_area_full() {
+    let mut runner = base_runner();
+    runner.place_on_field(0, "BT16-085", Some(0));
+    push_to_hand(&mut runner, 0, "VEEMON");
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+
+    runner.game.enter_main_phase();
+
+    assert_eq!(
+        offered_hand_count(&runner),
+        0,
+        "no free battle-area slot: Veemon must not be offered"
+    );
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.battle_area_size(0), 1, "only the Tamer is on the field");
+}

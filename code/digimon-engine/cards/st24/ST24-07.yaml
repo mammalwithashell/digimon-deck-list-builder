@@ -116,6 +116,12 @@ dual:
                 all_of:
                   - kind: tamer
                   - play_cost_lte: 5
+                  # Only a Tamer that can actually be played from its zone
+                  # (free slot, no play prohibition, no trash-play lock for a
+                  # trash card). DCGO ST24_07.cs:60-66 PlayableTamerCard ->
+                  # CanPlayAsNewPermanent(cardSource, false, activateClass).
+                  # CR 4.3 1-3-2.
+                  - can_play_from_effect_without_cost: true
               prompt: "You may play 1 Tamer with a play cost of 5 or less from your hand or trash without paying the cost"
           - play_union_bound_free: { binding: tamer_pick }
           # "Then, 1 of your opponent's Digimon gets -9000 DP for the turn." —

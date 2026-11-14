@@ -13,8 +13,16 @@
 #   Assembly -5: 3 [Huckmon] text Digimon cards w/different names
 #   Digivolve: Black Lv.5 / cost 5; Lv.5 w/[Huckmon] in text: cost 4.
 #
-# DCGO C# reference: none at the submodule (no EX13_061.cs). Printed text and
-# general_rule.pdf govern.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_061.cs.
+# The suspend observer's candidates (`IsUsableHuckmonOption`,
+# EX13_061.cs:182-186) are `IsOption && HasText("Huckmon") && GetCostItself
+# <= 5 && !CanNotPlayThisOption` (an unmet colour requirement or a "can't use
+# Options" lock refuses the use: CR 4.3 4-22, Q1500/Q2785), and
+# `CanActivateCondition` (EX13_061.cs:199-202: one in the hand OR among this
+# Digimon's digivolution cards; `CanUseCondition` at :195-197 is only the
+# white-Digimon-suspended trigger check) activates it only when one exists --
+# so the pick filter AND the clause condition carry
+# `can_play_or_use_from_effect: true` (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY).
 #
 # DSL notes:
 #   - [OP][WD]: the token play is a mid-clause "you may" → explicit yes/no
@@ -109,12 +117,14 @@ effects:
               kind: option
               play_cost_lte: 5
               in_text_contains: Huckmon
+              can_play_or_use_from_effect: true
             n: 1
         - self_source_count:
             filter:
               kind: option
               play_cost_lte: 5
               in_text_contains: Huckmon
+              can_play_or_use_from_effect: true
             op: gte
             value: 1
     trigger_if:
@@ -134,6 +144,7 @@ effects:
               - kind: option
               - play_cost_lte: 5
               - in_text_contains: Huckmon
+              - can_play_or_use_from_effect: true
           bind_as: huckmon_option
           prompt: "Use 1 use cost 5 or lower Option card with [Huckmon] in its text from your hand or this Digimon's digivolution cards without paying the cost"
       - use_option_bound:

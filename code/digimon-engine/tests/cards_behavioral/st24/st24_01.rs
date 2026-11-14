@@ -402,3 +402,192 @@ fn st24_01_inherited_digivolve_is_once_per_turn() {
         "[Once Per Turn] ⇒ the second [When Attacking] must not re-offer the digivolve"
     );
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 3 — Hand-pick legality: only cards THIS Digimon can digivolve into,
+// at the reduced cost, are offered.
+// DCGO ST24_01.cs:100-111 calls `DigivolveIntoHandOrTrashCard(payCost: true,
+// reduceCost 2, isHand: true)`, whose own `CanSelectCardCondition`
+// (CardEffectCommons.cs:860-883) offers a hand card when `IsDigimon`, the
+// card filter, `!CanNotEvolve(target)` and `CanPlayCardTargetFrame(frame,
+// PayCost: true, …)` hold. That frame check covers the route and the
+// digivolve lock but NOT memory: for an occupied frame it skips the cost test
+// (CardSource.cs:1151-1162) and goes to `CanEvolve`/`EvoCosts`. So DCGO
+// OFFERS an unpayable card and only fails the digivolve afterwards in
+// `PlayCardClass` (CardController.cs:1008-1014, `playFailed`).
+// We exclude it from the pick per CR 4.3 1-3-11-1 (a player can't declare a
+// digivolve whose cost they can't pay), 8-1-2-6 (the refused digivolve) and
+// 1-3-2 (an impossible action is not carried out). Known candidate-set
+// difference from DCGO: a recording that picks an unpayable card replays here
+// as an illegal action, and that is expected.
+// ════════════════════════════════════════════════════════════════════════════
+
+/// A Lv.4 Yellow [DATA SQUAD] Digimon whose Lv.3 digivolution cost is 13: with
+/// the reduction it costs 11, more than the 10 a player at 0 memory can pay.
+fn ds_pricey(id: &str) -> CardData {
+    let mut c = ds_target(id);
+    c.card_name = "DS Pricey".to_string();
+    c.evo_costs = vec![EvoCost {
+        card_color: 2,
+        level: 3,
+        memory_cost: 13,
+    }];
+    c
+}
+
+/// A Lv.6 Yellow [DATA SQUAD] Digimon with only a Lv.5 route: no route from
+/// the Lv.3 carrier.
+fn ds_lv6(id: &str) -> CardData {
+    let mut c = ds_target(id);
+    c.card_name = "DS Lv6".to_string();
+    c.level = Some(6);
+    c.evo_costs = vec![EvoCost {
+        card_color: 2,
+        level: 5,
+        memory_cost: 3,
+    }];
+    c
+}
+
+fn legality_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST24-01 in embedded DSL pack")
+        .add_card(carrier_lv3("CARRIER"))
+        .add_card(ds_target("DS-TARGET"))
+        .add_card(ds_pricey("DS-PRICEY"))
+        .add_card(ds_lv6("DS-LV6"))
+        .add_card(tamer("TAMER"))
+        .add_card(filler("FILLER"))
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(10)
+        .start()
+}
+
+/// Fire the inherited [When Attacking] and return the hand-pick candidates'
+/// card ids (empty when no hand pick installs).
+fn offered_digivolve_picks(r: &mut DebugRunner, carrier: PermanentHandle) -> Vec<String> {
+    use digimon_engine::action::space::PLAY_HAND_START;
+    fire(r, EffectTiming::WhenAttacking, carrier);
+    let Some(v) = r.pending_selection_view() else {
+        return Vec::new();
+    };
+    let hand: Vec<String> = r.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    let mut out: Vec<String> = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| hand[(id - PLAY_HAND_START) as usize].clone())
+        .collect();
+    out.sort();
+    out
+}
+
+/// At 0 memory the cost-11 digivolve can't be paid (memory can't pass 10 on the
+/// opponent's side), so only the cost-2 [DATA SQUAD] card is offered.
+#[test]
+fn st24_01_hand_pick_excludes_unaffordable_data_squad_digimon() {
+    let mut r = legality_runner();
+    r.set_first_player(0);
+    let carrier = carrier_over_egg(&mut r);
+    let _tamer = tamer_with_face_down(&mut r);
+    push_to_hand(&mut r, 0, "DS-TARGET");
+    push_to_hand(&mut r, 0, "DS-PRICEY");
+    r.game.memory = 0;
+    let offered = offered_digivolve_picks(&mut r, carrier);
+    assert_eq!(
+        offered,
+        vec!["DS-TARGET".to_string()],
+        "the unpayable cost-11 digivolve is not offered"
+    );
+}
+
+/// Only the unaffordable card in hand: no pick installs and the Tamer's
+/// face-down source is not trashed for nothing.
+/// Known difference from DCGO (pre-existing, not from the pick filter): DCGO
+/// trashes the Tamer's face-down card before it looks at the hand
+/// (ST24_01.cs:93-100), so it would pay that cost here and then fail the
+/// digivolve. This test locks in our cost-after-pick ordering.
+#[test]
+fn st24_01_only_unaffordable_card_offers_no_pick_and_pays_nothing() {
+    let mut r = legality_runner();
+    r.set_first_player(0);
+    let carrier = carrier_over_egg(&mut r);
+    let tamer = tamer_with_face_down(&mut r);
+    push_to_hand(&mut r, 0, "DS-PRICEY");
+    r.game.memory = 0;
+    let before = r.game.players[0].battle_area[tamer.index as usize].card_sources.len();
+    let offered = offered_digivolve_picks(&mut r, carrier);
+    assert!(offered.is_empty(), "no candidate offered: {offered:?}");
+    let _ = r.auto_resolve();
+    assert_eq!(
+        r.game.players[0].battle_area[tamer.index as usize].card_sources.len(),
+        before,
+        "no digivolve ⇒ no face-down source trashed"
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[carrier.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "CARRIER"
+    );
+}
+
+/// Regression guard: with enough memory the same card IS offered (the filter
+/// prices the reduced cost, not the printed one).
+#[test]
+fn st24_01_hand_pick_offers_pricey_card_when_affordable() {
+    let mut r = legality_runner();
+    r.set_first_player(0);
+    let carrier = carrier_over_egg(&mut r);
+    let _tamer = tamer_with_face_down(&mut r);
+    push_to_hand(&mut r, 0, "DS-TARGET");
+    push_to_hand(&mut r, 0, "DS-PRICEY");
+    r.game.memory = 1; // 1 - 11 = -10: payable
+    let offered = offered_digivolve_picks(&mut r, carrier);
+    assert_eq!(offered, vec!["DS-PRICEY".to_string(), "DS-TARGET".to_string()]);
+}
+
+/// Regression guard: a [DATA SQUAD] Digimon with no route from the Lv.3
+/// carrier is not offered.
+#[test]
+fn st24_01_hand_pick_excludes_card_without_a_route() {
+    let mut r = legality_runner();
+    r.set_first_player(0);
+    let carrier = carrier_over_egg(&mut r);
+    let _tamer = tamer_with_face_down(&mut r);
+    push_to_hand(&mut r, 0, "DS-TARGET");
+    push_to_hand(&mut r, 0, "DS-LV6");
+    let offered = offered_digivolve_picks(&mut r, carrier);
+    assert_eq!(offered, vec!["DS-TARGET".to_string()]);
+}
+
+/// "Can't digivolve by effects" (DCGO `CanNotEvolve`): nothing is offered.
+#[test]
+fn st24_01_hand_pick_empty_when_effect_digivolve_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = legality_runner();
+    r.set_first_player(0);
+    let carrier = carrier_over_egg(&mut r);
+    let _tamer = tamer_with_face_down(&mut r);
+    push_to_hand(&mut r, 0, "DS-TARGET");
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotDigivolveDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+    let offered = offered_digivolve_picks(&mut r, carrier);
+    assert!(offered.is_empty(), "no candidate under the lock: {offered:?}");
+}

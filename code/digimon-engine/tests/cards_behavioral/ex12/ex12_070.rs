@@ -217,3 +217,204 @@ fn ex12_070_parked_delay_option_offers_no_main_phase_activation() {
         "an event-window <Delay> must not expose a [Main]-phase activation action"
     );
 }
+
+// ─── <Delay> hand pick: only [Sanmyojin] Digimon the free play can place ─────
+//
+// DCGO EX12_070.cs:108-114 offers `IsDigimon && HasPlayCost &&
+// EqualsTraits("Sanmyojin") && CanPlayAsNewPermanent(payCost: false)` and plays
+// through `PlayByEffect(canTargetCondition: CanSelectCardCondition, ...)`
+// (EX12_070.cs:126-131), so a Digimon the play would refuse (an effect-play
+// prohibition, no free battle-area frame) is never a candidate, and a hand with
+// no candidate opens no pick. CR 4.3 7-1-1: a Digi-Egg is never played from the
+// hand. A pick the play would then refuse is an illegal RL choice.
+
+/// A [Sanmyojin] Lv.5 Digimon (play cost 7) — a legal free-play target.
+fn sanmyojin(id: &str) -> digimon_engine::card_data::CardData {
+    super::support::digimon(id, CardColor::Yellow, 5, 7, 7000, &["Sanmyojin"])
+}
+
+/// A [Sanmyojin] Digi-Egg: no play cost, never playable from the hand.
+fn sanmyojin_egg(id: &str) -> digimon_engine::card_data::CardData {
+    let mut egg = super::support::digimon(id, CardColor::Yellow, 2, 0, 0, &["Sanmyojin"]);
+    egg.card_kind = digimon_engine::enums::CardKind::DigiEgg;
+    egg.dp = None;
+    egg
+}
+
+/// Seat EX12-070 through its real [Main], advance to the owner's next turn
+/// (CR 4.3 16-17-3: not on the placing turn), put a Lv.5 [TB] Digimon in the
+/// battle area and push `hand` into P0's hand. Returns the [TB] Digimon.
+fn delay_board(
+    hand: &[&str],
+) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-070 YAML loads")
+        .add_card(tb_digimon("TB-DISCARD", CardColor::Blue, 4, 5000))
+        .add_card(tb_digimon("FILL", CardColor::Blue, 3, 3000))
+        .add_card(tb_digimon("TB-LV5", CardColor::Yellow, 5, 7000))
+        .add_card(sanmyojin("SANMYO"))
+        .add_card(sanmyojin_egg("SANMYO-EGG"))
+        .hand(0, &[CARD_ID, "TB-DISCARD"])
+        .deck(0, &["FILL"; 12])
+        .deck(1, &["FILL"; 12])
+        .memory(3)
+        .start();
+    place_via_main(&mut runner);
+    runner.end_turn();
+    runner.auto_resolve().expect("no selection owed");
+    runner.end_turn();
+    runner.auto_resolve().expect("no selection owed");
+    assert_eq!(runner.game.turn_player(), 0);
+    let tb = runner.place_on_field(0, "TB-LV5", None);
+    for id in hand {
+        runner.add_to_hand(0, id);
+    }
+    (runner, tb)
+}
+
+/// The [TB] Digimon would leave the battle area: accept the optional <Delay>.
+fn leave_and_accept_delay(runner: &mut DebugRunner, tb: digimon_engine::permanent::PermanentHandle) {
+    runner
+        .game
+        .delete_permanent_with_cause(tb, digimon_engine::replacement::ReplacementCause::OwnEffect);
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional <Delay> replacement is offered");
+    let accept = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .expect("an accept action");
+    runner
+        .execute_action(view.selecting_player, accept)
+        .expect("accept the <Delay>");
+}
+
+/// The (non-PASS) entries of a pending replacement-body hand pick, which the
+/// replacement flow surfaces as an `EffectChoice` labelled by card id.
+fn effect_choice_entries(runner: &DebugRunner) -> Vec<(String, u16)> {
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::selection::SelectionKind;
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind != SelectionKind::EffectChoice {
+        return Vec::new();
+    }
+    view.effect_choices
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|e| e.action_id != PASS && view.valid_action_ids.contains(&e.action_id))
+        .map(|e| (e.label.clone(), e.action_id))
+        .collect()
+}
+
+/// Hand card ids offered at a pending hand pick, or empty when none is pending.
+fn offered_hand_pick(runner: &DebugRunner) -> Vec<String> {
+    use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind == SelectionKind::EffectChoice {
+        let mut out: Vec<String> = effect_choice_entries(runner).into_iter().map(|(l, _)| l).collect();
+        out.sort();
+        return out;
+    }
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut out: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .filter(|&&a| a != PASS)
+        .filter_map(|&a| {
+            [PLAY_HAND_START, HAND_EFFECT_START]
+                .iter()
+                .filter_map(|&s| a.checked_sub(s))
+                .find(|&i| (i as usize) < hand.len() && i < 30)
+        })
+        .map(|i| hand[i as usize].clone())
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Positive guard: a playable [Sanmyojin] Digimon is offered and played free.
+#[test]
+fn ex12_070_delay_offers_and_plays_a_sanmyojin_digimon_free() {
+    let (mut runner, tb) = delay_board(&["SANMYO"]);
+    leave_and_accept_delay(&mut runner, tb);
+    assert_eq!(offered_hand_pick(&runner), vec!["SANMYO".to_string()]);
+    let memory_before = runner.memory();
+    let (_, action) = effect_choice_entries(&runner)
+        .into_iter()
+        .find(|(label, _)| label == "SANMYO")
+        .expect("SANMYO is an entry");
+    runner.execute_action(0, action).expect("pick SANMYO");
+    let _ = runner.auto_resolve();
+    assert!(field_contains(&runner, 0, "SANMYO"), "played without paying the cost");
+    assert_eq!(runner.memory(), memory_before, "without paying the cost");
+}
+
+/// "You can't play Digimon by effects" (DCGO `CanPlayAsNewPermanent` false):
+/// the only [Sanmyojin] Digimon is not a candidate, so no pick opens.
+#[test]
+fn ex12_070_delay_offers_no_sanmyojin_digimon_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, tb) = delay_board(&["SANMYO"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    leave_and_accept_delay(&mut runner, tb);
+    assert!(
+        offered_hand_pick(&runner).is_empty(),
+        "a prohibited play is not offered: {:?}",
+        runner.pending_selection_view()
+    );
+    let _ = runner.auto_resolve();
+    assert!(hand_contains(&runner, "SANMYO"), "SANMYO stays in hand");
+}
+
+/// No free battle-area frame once the <Delay> card is trashed (DCGO
+/// `CanPlayAsNewPermanent` needs an empty frame): no pick opens.
+#[test]
+fn ex12_070_delay_offers_no_sanmyojin_digimon_when_battle_area_full() {
+    let (mut runner, tb) = delay_board(&["SANMYO"]);
+    // EX12-070 + TB-LV5 occupy the area; the <Delay> trashes EX12-070, after
+    // which TB-LV5 (still in the area: it only WOULD leave) fills a 1-slot area.
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8 - 1;
+    leave_and_accept_delay(&mut runner, tb);
+    assert!(
+        offered_hand_pick(&runner).is_empty(),
+        "no free frame: nothing is offered: {:?}",
+        runner.pending_selection_view()
+    );
+    let _ = runner.auto_resolve();
+    assert!(hand_contains(&runner, "SANMYO"), "SANMYO stays in hand");
+}
+
+/// Regression guard (CR 4.3 7-1-1): a [Sanmyojin] Digi-Egg is never offered.
+#[test]
+fn ex12_070_delay_never_offers_a_sanmyojin_digi_egg() {
+    let (mut runner, tb) = delay_board(&["SANMYO-EGG", "SANMYO"]);
+    leave_and_accept_delay(&mut runner, tb);
+    assert_eq!(offered_hand_pick(&runner), vec!["SANMYO".to_string()]);
+}
+
+fn hand_contains(runner: &DebugRunner, card_id: &str) -> bool {
+    runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == card_id)
+}

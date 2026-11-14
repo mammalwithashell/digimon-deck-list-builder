@@ -309,8 +309,13 @@ effects:
           of: you
           bind_as: picked_tamer
           optional: true
+          # DCGO ST20_15.cs:93-97: IsTamer && CanPlayAsNewPermanent(payCost:
+          # false) -- a free slot and no effect-play lock (CR 4.3 1-3-11-1).
+          # Select-hand audit 2026-11-13.
           filter:
-            kind: tamer
+            all_of:
+              - kind: tamer
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 Tamer card from your hand without paying its cost"
       - play_from_hand_free:
           of: you

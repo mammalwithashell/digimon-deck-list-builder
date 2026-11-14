@@ -306,6 +306,77 @@ fn bt13_020_when_digivolving_no_marcus_in_hand_installs_no_prompt() {
     );
 }
 
+// ─── Candidate legality: only a Marcus Damon the free play would accept ─────
+// DCGO BT13_020.cs:111-122 `CanSelectCardCondition`: CardNames ∋ "Marcus
+// Damon" && `CanPlayAsNewPermanent(cardSource, payCost:false, activateClass)`
+// — no free battle-area frame or a "can't play Tamers by effects" lock removes
+// the card from the pick. CR 4.3 1-3-11-1: only a card that can be played may
+// be declared for play.
+
+fn fire_with_marcus_after(setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT13-020")
+        .expect("BT13-020 in pack")
+        .add_card(make_tamer("MARCUS", "Marcus Damon"))
+        .hand(0, &["MARCUS"])
+        .memory(10)
+        .start();
+    let carrier = runner.place_on_field(0, "BT13-020", Some(0));
+    setup(&mut runner);
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(carrier),
+    );
+    runner.game.drain_effect_queue();
+    runner
+}
+
+fn non_pass_candidates(runner: &DebugRunner) -> Vec<u16> {
+    runner
+        .game
+        .pending_selection
+        .as_ref()
+        .map(|p| p.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect())
+        .unwrap_or_default()
+}
+
+#[test]
+fn bt13_020_marcus_not_offered_when_battle_area_full() {
+    let runner = fire_with_marcus_after(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(
+        non_pass_candidates(&runner).is_empty(),
+        "no free slot → Marcus Damon can't be played, so not offered; got {:?}",
+        runner.game.pending_selection
+    );
+    assert!(marcus_handle(&runner).is_none());
+    assert_eq!(runner.game.players[0].hand.len(), 1, "Marcus stays in hand");
+}
+
+#[test]
+fn bt13_020_marcus_not_offered_under_tamer_play_prohibition() {
+    let runner = fire_with_marcus_after(|r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            digimon_engine::modifiers::PlayerModifierEntry::simple(
+                ModifierType::CannotPlayTamerByEffect,
+                0,
+                Expiry::Permanent,
+                None,
+                1,
+            ),
+        );
+    });
+    assert!(
+        non_pass_candidates(&runner).is_empty(),
+        "\"can't play Tamers by effects\" → not offered; got {:?}",
+        runner.game.pending_selection
+    );
+    assert!(marcus_handle(&runner).is_none());
+    assert_eq!(runner.game.players[0].hand.len(), 1, "Marcus stays in hand");
+}
+
 #[test]
 fn bt13_020_when_digivolving_plays_marcus_and_grants_synth_identity() {
     let mut runner = DebugRunner::builder()

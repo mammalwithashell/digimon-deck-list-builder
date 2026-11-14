@@ -110,6 +110,12 @@ effects:
               - any_of:
                   - trait_has: "D-Brigade"
                   - trait_has: ACCEL
+              # DCGO DigivolveIntoHandOrTrashCard filter (CardEffectCommons.cs
+              # :861-886): a route onto THIS Digimon AND the cost payable
+              # (`CanPlayCardTargetFrame(..., PayCost: true)` with the -2).
+              # The compile pass adds the route-only `can_digivolve_onto:
+              # source`; this adds the payment. CR 4.3 1-3-2.
+              - can_digivolve_onto_with_cost: { target: source, cost: { reduce: 2 } }
           prompt: "Digivolve into a [D-Brigade] or [ACCEL] Digimon in hand (cost reduced by 2)"
       - effect_initiated_digivolve:
           target: source

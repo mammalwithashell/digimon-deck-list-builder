@@ -57,8 +57,20 @@ effects:
     # DCGO EX12_034.cs ActivateCoroutine: offers "Play from hand" only when the
     # hand holds a playable card, "Play from this Digimon's Digivolution Cards"
     # only when its sources do, plus "Don't play"; if nothing is played the
-    # [Once Per Turn] use is refunded (RemoveUse). Deck audit 2026-11-10: both
+    # [Once Per Turn] use is refunded (RemoveUse). Known difference: DCGO's
+    # RemoveUse sits inside `if (validHandCard || validDigivolutionCard)`
+    # (EX12_034.cs:161-219), and DCGO activates this effect without a yes/no
+    # prompt, so when NO zone holds a playable card DCGO spends the use with
+    # nothing played. Here the clause is `optional: true` ("you may play",
+    # CR 4.3 15-9-2) and with no playable card only "Don't play" remains, so
+    # the use is refunded — the same outcome as declining the optional
+    # effect, which doesn't spend it. A later "would leave" in that turn can
+    # still use it here but not in DCGO. Deck audit 2026-11-10: both
     # zones were always offered and the OPT was spent on an empty pick.
+    # Both the zone offer and the pick use DCGO's CanSelectCardCondition
+    # (EX12_034.cs:146-152), which requires CanPlayAsNewPermanent(payCost:
+    # false): a card under a play prohibition or with no free frame is never
+    # offered, and a zone holding only such cards is not offered.
     # The card pick inside a zone is mandatory: DCGO lets you decline it
     # (PlayByEffect canNoSelect) and then refunds, which is the same outcome
     # as "Don't play"; an optional pick here ended the clause before the
@@ -76,6 +88,7 @@ effects:
                     - kind: digimon
                     - level_lte: 5
                     - trait_has: SW
+                    - can_play_from_effect_without_cost: true
                 n: 1
             - count_gte:
                 filter:
@@ -85,6 +98,7 @@ effects:
                     - kind: digimon
                     - level_lte: 5
                     - trait_has: SW
+                    - can_play_from_effect_without_cost: true
                 n: 1
             - all_turns: true
           prompt: "Play a level 5 or lower [SW] card from hand or this Digimon's digivolution cards?"
@@ -99,6 +113,7 @@ effects:
                     - kind: digimon
                     - level_lte: 5
                     - trait_has: SW
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 level 5 or lower [SW] Digimon from hand without paying the cost"
             - play_from_hand_free: { of: you, hand_index: sw_hand }
       - if:
@@ -112,6 +127,7 @@ effects:
                     - kind: digimon
                     - level_lte: 5
                     - trait_has: SW
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 level 5 or lower [SW] Digimon from this Digimon's sources without paying the cost"
             - play_from_materials:
                 target: source

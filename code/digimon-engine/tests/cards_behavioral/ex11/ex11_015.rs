@@ -576,3 +576,79 @@ fn ex11_015_baseline_carrier_without_frigimon_dies_vs_security_digimon() {
     );
     assert_eq!(runner.battle_area_size(0), 0, "the carrier is deleted");
 }
+
+// ─── Candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY) ──────────────
+// DCGO EX11_015.cs:49-54 IsTamerCardCondition = IsTamer &&
+// EqualsCardName("Suzune Kazuki") && CanPlayAsNewPermanent(payCost: false):
+// only a [Suzune Kazuki] this effect can actually play is offered (CR 4.3
+// 1-3-2: an impossible action is not carried out; 7-1-1).
+
+/// Non-PASS hand candidates after [When Digivolving] (empty when no hand pick
+/// installs).
+fn suzune_candidates(runner: &mut DebugRunner) -> usize {
+    let handle = runner.place_on_field(0, CARD_ID, Some(0));
+    fire_when_digivolving(runner, handle);
+    runner
+        .pending_selection_view()
+        .filter(|v| v.kind == digimon_engine::selection::SelectionKind::Hand)
+        .map(|v| v.valid_action_ids.iter().filter(|&&a| a != PASS).count())
+        .unwrap_or(0)
+}
+
+/// A full battle area: [Suzune Kazuki] can't be played, so it is not offered.
+#[test]
+fn ex11_015_suzune_not_offered_when_battle_area_full() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX11-015 YAML loads from embedded DSL pack")
+        .add_card(suzune("SUZ-1"))
+        .add_card(filler("PAD"))
+        .hand(0, &["SUZ-1"])
+        .deck(0, &["PAD", "PAD", "PAD"])
+        .memory(10)
+        .start();
+    // Frigimon alone fills a 1-slot battle area.
+    runner.game.rules.field_slots = 1;
+    assert_eq!(suzune_candidates(&mut runner), 0, "no playable candidate is offered");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "Suzune Kazuki stays in hand");
+}
+
+/// "You can't play Tamers by effects": not offered.
+#[test]
+fn ex11_015_suzune_not_offered_under_tamer_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX11-015 YAML loads from embedded DSL pack")
+        .add_card(suzune("SUZ-1"))
+        .add_card(filler("PAD"))
+        .hand(0, &["SUZ-1"])
+        .deck(0, &["PAD", "PAD", "PAD"])
+        .memory(10)
+        .start();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    assert_eq!(suzune_candidates(&mut runner), 0, "no playable candidate is offered");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "Suzune Kazuki stays in hand");
+}
+
+/// Regression guard: with a free slot and no lock the same card is offered.
+#[test]
+fn ex11_015_suzune_offered_when_playable() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX11-015 YAML loads from embedded DSL pack")
+        .add_card(suzune("SUZ-1"))
+        .add_card(filler("PAD"))
+        .hand(0, &["SUZ-1"])
+        .deck(0, &["PAD", "PAD", "PAD"])
+        .memory(10)
+        .start();
+    runner.game.rules.field_slots = 2;
+    assert_eq!(suzune_candidates(&mut runner), 1);
+}

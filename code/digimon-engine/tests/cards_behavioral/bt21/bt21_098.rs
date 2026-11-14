@@ -466,5 +466,108 @@ fn bt21_098_security_trash_origin_and_decline_still_adds_to_hand() {
     assert!(in_hand(&r, 1, CARD_ID), "Cannon still added to hand");
 }
 
+// ─── [Security] candidate legality ───────────────────────────────────────────
+// DCGO BT21_098.cs:220-226 `CanSelectCardCondition` = `HasText("Vemmon") &&
+// HasPlayCost && GetCostItself <= 6 && !IsDigiEgg &&
+// CanPlayAsNewPermanent(payCost: false)`: a card the free play would refuse
+// (no free slot, an effect-play prohibition) is not offered. The engine's
+// `can_play_from_effect_without_cost` is that check, and it also refuses a
+// trash copy while the player can't play from the trash (CR 4.3 1-3-11-1).
+
+fn union_offered(r: &DebugRunner, owner: u8) -> Vec<(bool, String)> {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let Some(choice) = r
+        .game
+        .pending_selection
+        .as_ref()
+        .and_then(|pending| pending.card_choice.as_ref())
+    else {
+        return Vec::new();
+    };
+    let mut rows: Vec<(bool, String)> = choice
+        .view(&r.game, owner)
+        .rows
+        .iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .filter_map(|row| {
+            let trash = matches!(row.zone, Some(CardChoiceZone::Trash));
+            row.card_id.clone().map(|id| (trash, id))
+        })
+        .collect();
+    rows.sort();
+    rows
+}
+
+fn lock_player(r: &mut DebugRunner, p: u8, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game.modifiers.add_player_modifier(
+        p,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1 - p),
+    );
+}
+
+/// VEM-6 in hand and VEM-T (a second cost-6 [Vemmon]-text Digimon) in trash.
+fn security_legality_runner() -> DebugRunner {
+    let mut r = base_runner()
+        .add_card(vemmon_text_digimon("VEM-6", 6))
+        .add_card(vemmon_text_digimon("VEM-T", 5))
+        .add_card(digimon("ATK", "Attacker", 4, 4, 4000, CardColor::Red))
+        .hand(1, &["VEM-6"])
+        .security(1, &[CARD_ID])
+        .deck(0, &["FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(0)
+        .start();
+    r.inject_trash(1, "VEM-T");
+    r
+}
+
+/// Regression guard: both zones offered when both plays are possible.
+#[test]
+fn bt21_098_security_offers_hand_and_trash_candidates() {
+    let mut r = security_legality_runner();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    r.attack_player(atk, 1, false);
+    assert_eq!(
+        union_offered(&r, 1),
+        vec![(false, "VEM-6".to_string()), (true, "VEM-T".to_string())]
+    );
+}
+
+/// Full battle area: nothing can be played, so nothing is offered.
+#[test]
+fn bt21_098_security_excludes_all_when_battle_area_full() {
+    let mut r = security_legality_runner();
+    r.place_on_field(1, "FILL", Some(0));
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    r.game.rules.field_slots = 1;
+    r.attack_player(atk, 1, false);
+    assert!(union_offered(&r, 1).is_empty(), "{:?}", union_offered(&r, 1));
+    let _ = r.auto_resolve();
+    assert!(in_hand(&r, 1, "VEM-6") && in_trash(&r, 1, "VEM-T"));
+    assert!(in_hand(&r, 1, CARD_ID), "Cannon still added to hand");
+}
+
+/// "Can't play Digimon by effects": nothing is offered.
+#[test]
+fn bt21_098_security_excludes_digimon_under_effect_play_prohibition() {
+    let mut r = security_legality_runner();
+    lock_player(&mut r, 1, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    r.attack_player(atk, 1, false);
+    assert!(union_offered(&r, 1).is_empty(), "{:?}", union_offered(&r, 1));
+}
+
+/// "Can't play cards from the trash": the trash copy is not offered.
+#[test]
+fn bt21_098_security_excludes_trash_card_while_trash_play_locked() {
+    let mut r = security_legality_runner();
+    lock_player(&mut r, 1, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    r.attack_player(atk, 1, false);
+    assert_eq!(union_offered(&r, 1), vec![(false, "VEM-6".to_string())]);
+}
+
 #[path="../../support/owned_union_fixture.rs"]
 mod owned_union_fixture;

@@ -155,3 +155,120 @@ fn ex13_005_once_per_turn_second_attack_gets_no_prompt() {
     r.attack_player(h, 1, false);
     assert!(r.pending_selection().is_none(), "OPT spent this turn");
 }
+
+// ─── Section 6 — Candidate legality ("play or use" what can be played/used) ──
+//
+// DCGO EX13_005.cs:28-30 offers `HasText(...) && CanPlayOrUse(cardSource,
+// activateClass, fixedCost: max(0, cost − 1))`, which is
+// (PlayEffects.cs:286-294) `IsOption && !CanNotPlayThisOption && MaxMemoryCost
+// >= fixedCost` || `HasPlayCost && CanPlayAsNewPermanent(payCost, fixedCost)`
+// (an empty frame, no play prohibition, cost ≤ MaxMemoryCost). So a Digi-Egg
+// (CR 4.3 7-1-1: never played from the hand), an Option whose colour
+// requirement is unmet (CR 4.3 4-22-1..3; `CanNotPlayThisOption` includes
+// `!MatchColorRequirement`) or that "can't be used", a prohibited or frameless
+// play, and a card the player can't pay for at cost − 1 are never offered. With
+// memory 6 the player pays at most 16 (CR 4.3 memory floor −10).
+
+fn legality_builder() -> DebugRunnerBuilder {
+    builder()
+        .add_card({
+            let mut egg = named("DRACO-EGG", "Dracomon Egg", CardColor::Green, 2, 0);
+            egg.card_kind = digimon_engine::enums::CardKind::DigiEgg;
+            egg.play_cost = 0;
+            egg.dp = None;
+            egg
+        })
+        .add_card({
+            let mut o = option("EXA-PURPLE", CardColor::Purple, 2);
+            o.card_name = "Examon Purple Strike".into();
+            o
+        })
+        .add_card(with_cost(named("DRACO-17", "Dracomon Seventeen", CardColor::Green, 6, 9000), 17))
+        .add_card(with_cost(named("DRACO-18", "Dracomon Eighteen", CardColor::Green, 6, 9000), 18))
+}
+
+fn legality_offers(hand: &[&str], prepare: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut r = legality_builder()
+        .hand(0, hand)
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
+        .security(0, &["SEC", "SEC", "SEC"])
+        .security(1, &["SEC", "SEC", "SEC"])
+        .memory(6)
+        .start();
+    let h = r.place_stack(0, &[CARD_ID, "CARRIER"]);
+    prepare(&mut r);
+    r.attack_player(h, 1, false);
+    if r
+        .pending_selection_view()
+        .is_some_and(|v| v.kind == digimon_engine::selection::SelectionKind::Hand)
+    {
+        offered_hand_ids(&r)
+    } else {
+        Vec::new()
+    }
+}
+
+/// CR 4.3 7-1-1: a [Dracomon]-text Digi-Egg is never offered.
+#[test]
+fn ex13_005_excludes_a_dracomon_digi_egg() {
+    assert_eq!(
+        legality_offers(&["DRACO-EGG", "DRACO"], |_| {}),
+        vec!["DRACO".to_string()]
+    );
+}
+
+/// A purple Option with only green cards in play can't be used (CR 4.3 4-22).
+#[test]
+fn ex13_005_excludes_an_option_whose_colour_requirement_is_unmet() {
+    assert_eq!(
+        legality_offers(&["EXA-PURPLE", "EXA-OPT"], |_| {}),
+        vec!["EXA-OPT".to_string()]
+    );
+}
+
+/// "You can't use Option cards": the Option is not offered, the Digimon is.
+#[test]
+fn ex13_005_excludes_options_when_options_cannot_be_used() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = legality_offers(&["EXA-OPT", "DRACO"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(offered, vec!["DRACO".to_string()]);
+}
+
+/// "You can't play Digimon by effects": the Digimon is not offered, the Option is.
+#[test]
+fn ex13_005_excludes_digimon_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = legality_offers(&["EXA-OPT", "DRACO"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(offered, vec!["EXA-OPT".to_string()]);
+}
+
+/// A full battle area: the Digimon is not offered, the Option is.
+#[test]
+fn ex13_005_excludes_digimon_when_battle_area_full() {
+    let offered = legality_offers(&["EXA-OPT", "DRACO"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert_eq!(offered, vec!["EXA-OPT".to_string()]);
+}
+
+/// DRACO-17 costs 16 after the −1 (payable); DRACO-18 costs 17 (not).
+#[test]
+fn ex13_005_offers_only_cards_affordable_after_the_reduction() {
+    assert_eq!(
+        legality_offers(&["DRACO-17", "DRACO-18"], |_| {}),
+        vec!["DRACO-17".to_string()]
+    );
+}

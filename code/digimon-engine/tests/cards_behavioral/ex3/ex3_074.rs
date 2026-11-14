@@ -6,9 +6,15 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, GamePhase};
 const ID: &str = "EX3-074";
 fn setup(hand: &[&str]) -> DebugRunner {
+    setup_extra(hand, Vec::new())
+}
+fn setup_extra(hand: &[&str], extra: Vec<digimon_engine::card_data::CardData>) -> DebugRunner {
     let mut b = DebugRunner::builder()
         .from_dsl_yaml(include_str!("../../../cards/ex3/EX3-074.yaml"))
         .unwrap();
+    for c in extra {
+        b = b.add_card(c);
+    }
     for (id, name, lv, color, dp) in [
         ("G", "Groundramon", 6, CardColor::Green, 12000),
         ("B", "Wingdramon", 6, CardColor::Blue, 11000),
@@ -209,4 +215,104 @@ fn opt_resets_and_inherited_copy_does_not_trigger() {
     let other = r.place_stack(0, &[ID, "G"]);
     r.game.suspend(other);
     assert!(r.game.players[0].battle_area[other.index as usize].is_suspended);
+}
+
+// ─── DNA free-play candidates must be playable (G-DSL-PLAY-CANDIDATE-LEGALITY) ──
+// DCGO EX3_074.cs:137-162 `CanSelectCardCondition1` adds
+// `CardEffectCommons.CanPlayAsNewPermanent(cardSource, payCost: false, ...)`
+// (:151) to the name/colour/DP gates: a card the play would refuse is never
+// offered. CR 4.3 7-1-1 (playing places a card with a play cost onto the
+// field), 4-6-1/4-6-2 (a DUAL card is digivolved or used, never played) and
+// 1-3-2 (an impossible action is not carried out).
+
+/// A green DUAL card with [Dramon] in its name whose Digimon face has 7000 DP.
+fn dual_dramon(id: &str) -> digimon_engine::card_data::CardData {
+    use digimon_engine::card_data::{DualCardData, DualDigimonFace, DualOptionFace};
+    let mut c = make_test_card(id, "DualDramon");
+    c.card_kind = CardKind::Dual;
+    c.colors = vec![CardColor::Green];
+    c.level = Some(5);
+    c.dp = Some(7000);
+    c.play_cost = 4;
+    c.dual = Some(DualCardData {
+        digimon: DualDigimonFace {
+            level: 5,
+            dp: 7000,
+            colors: vec![CardColor::Green],
+            traits: vec![],
+            evo_costs: vec![],
+            effect_text: String::new(),
+            inherited_text: String::new(),
+            keywords: vec![],
+        },
+        option: DualOptionFace {
+            use_cost: 4,
+            colors: vec![CardColor::Green],
+            effect_text: String::new(),
+            security_text: String::new(),
+            keywords: vec![],
+        },
+    });
+    c
+}
+
+/// DNA digivolve, PASS the optional tuck, and return the card ids the DNA
+/// free-play pick offers (empty when no pick installs).
+fn dna_free_play_offer(r: &mut DebugRunner) -> Vec<String> {
+    dna_free_play_offer_after(r, |_| {})
+}
+fn dna_free_play_offer_after(r: &mut DebugRunner, after_evolve: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    evolve(r, true);
+    after_evolve(r);
+    // The tuck pick (optional) comes first; decline it.
+    if r.pending_selection().is_some() {
+        choose(r, PASS);
+    }
+    let Some(v) = r.pending_selection_view() else {
+        return Vec::new();
+    };
+    let hand: Vec<String> = r.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    v.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[a as usize].clone())
+        .collect()
+}
+
+/// A DUAL card can't be played (CR 4.3 4-6-2; DCGO `CanPlayAsNewPermanent`
+/// requires `!IsOption`): only Wingdramon is offered.
+#[test]
+fn dna_free_play_excludes_dual_card() {
+    let mut r = setup_extra(&[ID, "DUAL", "B"], vec![dual_dramon("DUAL")]);
+    assert_eq!(dna_free_play_offer(&mut r), vec!["B".to_string()]);
+}
+
+/// "You can't play Digimon by effects": no free-play pick installs.
+#[test]
+fn dna_free_play_offers_nothing_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup(&[ID, "B"]);
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    assert!(dna_free_play_offer(&mut r).is_empty());
+    assert_eq!(r.game.players[0].battle_area.len(), 1);
+}
+
+/// A full battle area (no empty frame, DCGO `CanPlayAsNewPermanent`): no pick.
+#[test]
+fn dna_free_play_offers_nothing_when_battle_area_full() {
+    let mut r = setup(&[ID, "B"]);
+    // After the DNA digivolve only Examon remains; cap the area at 1 slot
+    // before the free-play pick builds its candidates.
+    let offered = dna_free_play_offer_after(&mut r, |r| r.game.rules.field_slots = 1);
+    assert!(offered.is_empty(), "{offered:?}");
+    assert_eq!(r.game.players[0].battle_area.len(), 1);
 }

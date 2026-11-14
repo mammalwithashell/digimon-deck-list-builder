@@ -515,3 +515,227 @@ fn base_runner_with_hand(hand: &[&str]) -> DebugRunner {
         .memory(10)
         .start()
 }
+
+// ─── Hand-pick candidate legality (select-hand playability audit, 2026-11-13) ──
+// "You may play 1 play cost 5 or lower [CS] trait card from your hand." DCGO
+// BT23_101.cs:74-78 `CanSelectHandCardCondition` = `HasPlayCost && BasePlayCost
+// <= 5 && HasCSTraits`, where `HasPlayCost` (CEntity_Base.cs:340) is false for an
+// Option (and a DUAL, whose kinds include Option) and for a Digi-Egg (no play
+// cost). CR 4.3 7-1-1: playing places "a new card with a play cost" onto the
+// field — a Digi-Egg (Wanyamon BT22-004) has none and an Option (Kuremi
+// Detective Agency BT22-099) is used, not played; a DUAL can't be played
+// (4-6-2). DCGO does not re-check the free frame or play prohibitions here
+// (`PlayPermanentCards` then refuses), which offers a choice that does nothing;
+// CR 4.3 1-3-2 / 15-1-3 decide — those cards are not offered either.
+
+fn cs_egg(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = None;
+    c.play_cost = 0;
+    c.traits = vec!["CS".to_string()];
+    c
+}
+
+fn cs_option(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Option;
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c.colors = vec![CardColor::Green];
+    c.traits = vec!["CS".to_string()];
+    c
+}
+
+fn pick_runner(hand: &[&str]) -> (DebugRunner, PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-101")
+        .expect("BT23-101 in pack")
+        .add_card(digimon_traits("CS-5", CardColor::Green, 4, 4000, 5, &["CS"]))
+        .add_card(digimon_traits("OPP", CardColor::Blue, 6, 11000, 11, &[]))
+        .add_card(tamer_traits("CS-TAMER", CardColor::Green, &["CS"]))
+        .add_card(cs_egg("CS-EGG"))
+        .add_card(cs_option("CS-OPT"))
+        .add_card(digimon_traits("FILLER", CardColor::Blue, 4, 3000, 4, &[]))
+        .hand(0, hand)
+        .deck(0, &["FILLER"; 20])
+        .deck(1, &["FILLER"; 20])
+        .memory(10)
+        .start();
+    let h = runner.place_on_field(0, "BT23-101", Some(0));
+    runner.place_on_field(1, "OPP", Some(0));
+    (runner, h)
+}
+
+/// Fire [On Play] and return the hand-pick candidates' card ids (`None` when the
+/// first prompt is not the hand pick, i.e. no candidate exists).
+fn offered_on_play(runner: &mut DebugRunner, h: PermanentHandle) -> Option<Vec<String>> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    fire(runner, EffectTiming::OnPlay, h);
+    let view = runner.pending_selection_view()?;
+    if view.kind != digimon_engine::selection::SelectionKind::Hand {
+        return None;
+    }
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut ids: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[(a - PLAY_HAND_START) as usize].clone())
+        .collect();
+    ids.sort();
+    Some(ids)
+}
+
+/// Regression guard: a [CS] Digimon and a [CS] Tamer are both playable picks.
+#[test]
+fn bt23_101_on_play_offers_cs_digimon_and_cs_tamer() {
+    let (mut runner, h) = pick_runner(&["CS-5", "CS-TAMER"]);
+    assert_eq!(
+        offered_on_play(&mut runner, h),
+        Some(vec!["CS-5".to_string(), "CS-TAMER".to_string()])
+    );
+}
+
+/// A [CS] Digi-Egg (e.g. Wanyamon BT22-004) has no play cost: never offered.
+#[test]
+fn bt23_101_on_play_excludes_cs_digi_egg() {
+    let (mut runner, h) = pick_runner(&["CS-EGG", "CS-5"]);
+    assert_eq!(offered_on_play(&mut runner, h), Some(vec!["CS-5".to_string()]));
+}
+
+/// A [CS] Option (e.g. Kuremi Detective Agency BT22-099) is used, not played:
+/// never offered.
+#[test]
+fn bt23_101_on_play_excludes_cs_option() {
+    let (mut runner, h) = pick_runner(&["CS-OPT", "CS-5"]);
+    assert_eq!(offered_on_play(&mut runner, h), Some(vec!["CS-5".to_string()]));
+}
+
+/// "You can't play Digimon by effects": the [CS] Digimon is not offered, the
+/// [CS] Tamer still is.
+#[test]
+fn bt23_101_on_play_excludes_digimon_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, h) = pick_runner(&["CS-5", "CS-TAMER"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    assert_eq!(offered_on_play(&mut runner, h), Some(vec!["CS-TAMER".to_string()]));
+}
+
+/// A full battle area: nothing can be played, so no hand pick is offered and
+/// the effect goes straight on to the -DP target.
+#[test]
+fn bt23_101_on_play_offers_no_hand_pick_when_battle_area_full() {
+    let (mut runner, h) = pick_runner(&["CS-5", "CS-TAMER"]);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    let offered = offered_on_play(&mut runner, h).unwrap_or_default();
+    assert!(offered.is_empty(), "no playable candidate in a full battle area: {offered:?}");
+}
+
+/// The [When Attacking] re-activation runs its own inline copy of the [On Play]
+/// body, so its hand pick needs the same filter: after returning the [CS] Tamer,
+/// a [CS] Digi-Egg and a [CS] Option are still not offered (CR 4.3 7-1-1), while
+/// the [CS] Digimon and the just-returned [CS] Tamer are.
+#[test]
+fn bt23_101_when_attacking_reactivated_pick_excludes_cs_egg_and_option() {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    let (mut runner, h) = pick_runner(&["CS-EGG", "CS-OPT", "CS-5"]);
+    runner.place_on_field(0, "CS-TAMER", Some(0));
+    fire(&mut runner, EffectTiming::WhenAttacking, h);
+    // Accept the activation and pay its cost (return the [CS] Tamer) until the
+    // re-activated body's hand pick is up.
+    let mut guard = 0;
+    let view = loop {
+        let view = runner
+            .pending_selection_view()
+            .expect("the re-activated [On Play] reaches its hand pick");
+        if view.kind == SelectionKind::Hand {
+            break view;
+        }
+        let pick = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .expect("a non-pass option");
+        runner
+            .execute_action(view.selecting_player, pick)
+            .expect("drive the activation cost");
+        guard += 1;
+        assert!(guard < 8, "never reached the hand pick");
+    };
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut ids: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[(a - PLAY_HAND_START) as usize].clone())
+        .collect();
+    ids.sort();
+    assert_eq!(ids, vec!["CS-5".to_string(), "CS-TAMER".to_string()]);
+}
+
+// ─── -DP count: "each of your [Hudie] trait Digimon" (Tamers excluded) ───────
+// DCGO BT23_101.cs `HudieDigimonAmount` filters
+// `IsPermanentExistsOnOwnerBattleAreaDigimon && HasHudieTraits`, and the card
+// prints "[Hudie] trait Digimon": a [Hudie] Tamer (the Erika Mishima line) is a
+// permanent in the battle area but not a Digimon, so it adds nothing.
+
+fn hudie_tamer_runner() -> (DebugRunner, PermanentHandle, PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-101")
+        .expect("BT23-101 in pack")
+        .add_card(digimon_traits("OPP", CardColor::Blue, 6, 11000, 11, &[]))
+        .add_card(tamer_traits("HUDIE-TAMER", CardColor::Green, &["Hudie"]))
+        .add_card(digimon_traits("FILLER", CardColor::Blue, 4, 3000, 4, &[]))
+        .deck(0, &["FILLER"; 20])
+        .deck(1, &["FILLER"; 20])
+        .memory(10)
+        .start();
+    let h = runner.place_on_field(0, "BT23-101", Some(0));
+    runner.place_on_field(0, "HUDIE-TAMER", Some(0));
+    let opp = runner.place_on_field(1, "OPP", Some(0));
+    (runner, h, opp)
+}
+
+#[test]
+fn bt23_101_on_play_debuff_does_not_count_hudie_tamers() {
+    let (mut runner, h, opp) = hudie_tamer_runner();
+    fire(&mut runner, EffectTiming::OnPlay, h);
+    // No [CS] card in hand: the first prompt is the -DP target.
+    let (player, action) = {
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("debuff target select");
+        assert!(!p.is_optional, "no hand pick without a [CS] candidate");
+        (p.selecting_player, first_action(p))
+    };
+    runner
+        .execute_action(player, action)
+        .expect("pick opp target");
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        runner.effective_dp(opp),
+        Some(8000),
+        "11000 - 3000 (Hudiemon only; the [Hudie] Tamer is not a Digimon) = 8000"
+    );
+}

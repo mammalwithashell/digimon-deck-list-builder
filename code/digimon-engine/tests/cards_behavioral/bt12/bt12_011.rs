@@ -299,6 +299,61 @@ fn bt12_011_on_play_no_named_tamer_no_play() {
     assert_eq!(r.hand_size(0), 1);
 }
 
+// ─── Section 2b — candidate legality: only a Tamer the play would accept ────
+// DCGO BT12_011.cs:36-57 (On Play) and :130-151 (When Digivolving):
+// `CanSelectCardCondition` requires `CanPlayAsNewPermanent(cardSource,
+// payCost:false, activateClass)` before the name check, so a named Tamer the
+// free play would refuse (no free battle-area frame, or a "can't play Tamers
+// by effects" lock) is never offered, and with no such card the effect asks
+// nothing (`HandCards.Count(CanSelectCardCondition) >= 1`, :79 / :173).
+// CR 4.3 1-3-11-1: a card can be declared for play only if it can be played.
+
+fn add_player_lock(r: &mut DebugRunner, lock: digimon_engine::enums::ModifierType) {
+    r.game.modifiers.add_player_modifier(
+        0,
+        digimon_engine::modifiers::PlayerModifierEntry::simple(
+            lock,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+}
+
+#[test]
+fn bt12_011_named_tamer_not_offered_when_battle_area_full() {
+    let mut r = base(&["TAIKI"]);
+    let shout = r.place_on_field(0, CARD_ID, Some(0));
+    // Shoutmon fills the battle area: the Tamer has no frame to enter.
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    fire(&mut r, EffectTiming::OnPlay, shout);
+    assert!(
+        non_pass(&r).is_empty(),
+        "no free battle-area slot → Taiki Kudo can't be played, so not offered; got {:?}",
+        non_pass(&r)
+    );
+    let _ = r.auto_resolve();
+    assert!(!on_field(&r, 0, "TAIKI"));
+    assert_eq!(r.hand_size(0), 1, "Taiki Kudo stays in hand");
+}
+
+#[test]
+fn bt12_011_named_tamer_not_offered_under_tamer_play_prohibition() {
+    let mut r = base(&["YUU", "TAGIRU"]);
+    let shout = r.place_stack(0, &["RED-LV3", CARD_ID]);
+    add_player_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    fire(&mut r, EffectTiming::WhenDigivolving, shout);
+    assert!(
+        non_pass(&r).is_empty(),
+        "\"can't play Tamers by effects\" → neither named Tamer is offered; got {:?}",
+        non_pass(&r)
+    );
+    let _ = r.auto_resolve();
+    assert!(!on_field(&r, 0, "YUU") && !on_field(&r, 0, "TAGIRU"));
+    assert_eq!(r.hand_size(0), 2);
+}
+
 // ─── Section 3 — [On Deletion] <Save>. Then, trash → under Tamer ────────────
 
 fn delete_shoutmon(r: &mut DebugRunner, shout: PermanentHandle) {

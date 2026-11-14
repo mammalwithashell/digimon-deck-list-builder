@@ -18,8 +18,14 @@
 #     opponent's Digimon, <De-Digivolve 1> for each of your Digimon.
 #   <Arts Digivolve>
 #
-# DCGO C# reference: none at the submodule (no EX13_066.cs at b9a0638cd).
-# Printed text + general_rule.pdf govern.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/White/EX13_066.cs.
+# The Option's candidates (`CanPlaySistermon`, EX13_066.cs:135-142) are
+# `HasPlayCost && GetCostItself <= 4 && ContainsCardName("Sistermon") &&
+# CanPlayAsNewPermanent(card, payCost: false, ..., root)`, so the pick carries
+# `can_play_from_effect_without_cost: true` (empty frame, no play prohibition,
+# no trash-play lock for a trash card; CR 4.3 1-3-2;
+# G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY). Printed text + general_rule.pdf
+# govern the rest.
 #
 # ── Clause notes ─────────────────────────────────────────────────────────────
 # Digivolve: no standard colour circles — only the two special conditions.
@@ -126,6 +132,7 @@ dual:
                       - kind: tamer
                   - name_contains: Sistermon
                   - play_cost_lte: 4
+                  - can_play_from_effect_without_cost: true
               prompt: "You may play 1 play cost 4 or lower card with [Sistermon] in its name from your hand or trash without paying the cost"
           - play_union_bound_free:
               binding: sistermon_free

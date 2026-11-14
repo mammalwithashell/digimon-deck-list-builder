@@ -162,3 +162,108 @@ fn bt26_090_security_plays_itself() {
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 1).contains(&CARD_ID.to_string()));
 }
+
+// ─── Use-candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY +
+// G-DSL-AFFORDABLE-WITH-COST) ─────────────────────────────────────────────────
+// DCGO BT26_090.cs:54-62 CanSelectOptionCardCondition: `IsOption && HasTSTraits
+// && !CanNotPlayThisOption && Owner.MaxMemoryCost >= GetCostItself -
+// Enemy.MemoryForPlayer`. CR 4.3 1-3-2 (an impossible action is not carried
+// out), 4-22 (an Option's colour requirement must be met to use it; Q1500 /
+// Q2785), 7-1-2-3 (memory doesn't move when the cost can't be paid; the use is
+// paid, so the card must be payable down to the memory floor).
+
+/// Kanan Yuki (green) on the field; my gauge at `memory` (opponent has
+/// `-memory`); [TS] Options of several costs / colours available.
+fn legality_runner(memory: i16, hand: &[&str]) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut red = option("TS-RED", 1, &["TS"]);
+    red.colors = vec![CardColor::Red];
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT26-090")
+        .add_card(filler("FILLER"))
+        .add_card(option("TS-OPT", 5, &["TS"]))
+        .add_card(option("TS-10", 10, &["TS"]))
+        .add_card(option("TS-11", 11, &["TS"]))
+        .add_card(red)
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(memory)
+        .start();
+    r.set_first_player(0);
+    r.game.players[0].hand.clear();
+    let t = r.place_on_field(0, CARD_ID, Some(0));
+    for id in hand {
+        push_hand(&mut r, 0, id);
+    }
+    (r, t)
+}
+
+/// Sorted card ids of the non-PASS candidates of the pending hand pick.
+fn offered(r: &DebugRunner) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    let Some(pending) = r.game.pending_selection.as_ref() else {
+        return Vec::new();
+    };
+    let mut ids: Vec<String> = if pending.card_choice.is_some() {
+        physical_menu::commits(&r.game)
+            .into_iter()
+            .filter_map(|row| row.card_id)
+            .collect()
+    } else {
+        let p = pending.selecting_player as usize;
+        r.pending_selection_view()
+            .map(|v| v.valid_action_ids)
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|&a| a != PASS)
+            .filter_map(|a| a.checked_sub(PLAY_HAND_START))
+            .filter_map(|i| r.game.players[p].hand.get(i as usize))
+            .map(|c| c.card_id(&r.game.card_data).to_string())
+            .collect()
+    };
+    ids.sort();
+    ids
+}
+
+fn activate(r: &mut DebugRunner, t: digimon_engine::permanent::PermanentHandle) {
+    fire(r, EffectTiming::EndOfYourTurn, t);
+    r.accept_optional_trigger().expect("accept");
+}
+
+/// Opponent has 2 memory (reduce 2), my gauge at -2, floor -10: a cost-10 [TS]
+/// Option pays 8 (→ -10, payable), a cost-11 one pays 9 (→ -11, not payable)
+/// and is not offered.
+#[test]
+fn bt26_090_unaffordable_ts_option_not_offered() {
+    let (mut r, t) = legality_runner(-2, &["TS-OPT", "TS-10", "TS-11"]);
+    activate(&mut r, t);
+    assert_eq!(offered(&r), vec!["TS-10".to_string(), "TS-OPT".to_string()]);
+}
+
+/// A red [TS] Option with only green Kanan Yuki on the field: its colour
+/// requirement is unmet, so it can't be used and is not offered.
+#[test]
+fn bt26_090_ts_option_with_unmet_colour_requirement_not_offered() {
+    let (mut r, t) = legality_runner(-2, &["TS-OPT", "TS-RED"]);
+    activate(&mut r, t);
+    assert_eq!(offered(&r), vec!["TS-OPT".to_string()]);
+}
+
+/// "You can't use Option cards": no [TS] Option is offered.
+#[test]
+fn bt26_090_option_lock_offers_nothing() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, t) = legality_runner(-2, &["TS-OPT"]);
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+    );
+    activate(&mut r, t);
+    assert!(offered(&r).is_empty(), "offered {:?}", offered(&r));
+    let _ = r.auto_resolve();
+    assert_eq!(hand_ids(&r, 0), vec!["TS-OPT".to_string()]);
+}
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

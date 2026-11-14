@@ -24,10 +24,10 @@
 #   → `when: main_on_field` + once_per_turn + condition (a [TB] card in hand);
 #   optional `select_hand` (non-cost: decline still runs the tail) → `play_or_use_from_hand
 #   { cost_delta: { reduce: 2 } }` (kind-routing verb, G-PLAY-OR-USE-FROM-HAND;
-#   DUAL cards surface the play/use face choice). No OPT refund on decline.
-#   DCGO additionally pre-filters candidates by CanPlayOrUse(fixedCost); the
-#   play/use verb itself enforces playability at resolution (same as the
-#   shipped BT26-032 / BT25-041 play-or-use clauses).
+#   DUAL cards are used as Options, CR 4.3 4-6-2). No OPT refund on decline.
+#   DCGO pre-filters candidates (and the activation) by CanPlayOrUse(fixedCost);
+#   mirrored by `can_play_or_use_from_effect` + `affordable_with_cost` on both
+#   the pick and the condition (select-hand audit 2026-11-13).
 # Inherited WA OPT (OnAllyAttack, not optional): if an opp Digimon exists,
 #   mandatory pick → ChangeDigimonDP(-2000, UntilEachTurnEnd).
 #   → scope: inherited, when_attacking, once_per_turn; mandatory
@@ -56,12 +56,17 @@ effects:
   # ─── [Main][OPT] You may play or use 1 [TB] card from hand, cost -2 ────────
   - when: main_on_field
     once_per_turn: true
+    # DCGO BT26_012.cs:38-40 CanUseCondition: a SELECTABLE [TB] hand card
+    # (the same CanPlayOrUse filter as the pick below) — a [TB] Digi-Egg such
+    # as Onibimon (EX12-004) alone does not make the [Main] declarable.
     condition:
       count_gte:
         filter:
           of: you
           zone: [hand]
           trait_has: "TB"
+          can_play_or_use_from_effect: true
+          affordable_with_cost: { reduce: 2 }
         n: 1
     summary: "[Main][OPT] You may play or use 1 [TB] trait card from your hand with the cost reduced by 2"
     process:
@@ -71,7 +76,17 @@ effects:
           optional: true
           # Choosing this Main effect already spent its once-per-turn use.
           # Declining its optional processing does not undo that activation.
-          filter: { trait_has: "TB" }
+          # DCGO BT26_012.cs:42-44 `EqualsTraits("TB") && CanPlayOrUse(card,
+          # fixedCost: Max(0, cost - 2))` (PlayEffects.cs:286-294): a usable
+          # Option (no "can't use Options" lock, colour requirement met, CR
+          # 4.3 4-22) or a card with a play cost (never a Digi-Egg, CR 4.3
+          # 7-1-1) with a free slot and no prohibition; reduced cost payable
+          # either way (CR 4.3 7-1-2-3). Audit 2026-11-13.
+          filter:
+            all_of:
+              - trait_has: "TB"
+              - can_play_or_use_from_effect: true
+              - affordable_with_cost: { reduce: 2 }
           prompt: "You may play or use 1 [TB] trait card from your hand with the cost reduced by 2"
       - if:
           condition: { binding_present: pick }

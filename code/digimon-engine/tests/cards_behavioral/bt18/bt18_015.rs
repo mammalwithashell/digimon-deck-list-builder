@@ -848,3 +848,110 @@ fn bt18_015_standalone_does_not_self_grant_security_attack_plus() {
         "a standalone BT18-015 checks the base 1 security card"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 7 — [On Deletion] candidates: only a DNA digivolution that can happen
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Official Q&A on this card: "the DNA digivolution requirements have to be
+// met. In addition, DNA digivolution can't be performed unless the
+// [Millenniummon] has DNA digivolution." DCGO BT18_015.cs:260-265 offers a
+// [Millenniummon] only with `jogressCondition.Count > 0`; it does not check
+// the (field, trash) pair, the "can't digivolve by effects" lock or memory,
+// and lets `CanPlayJogress(true)` (:391) fail after the picks. A result no
+// pair can complete is a choice with no legal outcome (CR 4.3 1-3-2;
+// DNA by effect is still a digivolution, CR 4.3 8-2-2-5), so the result pick
+// offers only a card some (field Machinedramon, trash Kimeramon) pair can DNA
+// digivolve into at its printed cost, and the clause isn't offered when no
+// such card exists.
+
+/// A Digimon named exactly "Millenniummon" with no DNA digivolution.
+fn make_millenniummon_without_dna(id: &str) -> CardData {
+    make_named_digimon(id, "Millenniummon", 7, 13000)
+}
+
+/// Delete Kimeramon with Machinedramon on the field and `hand` in hand.
+fn delete_kimeramon(hand: &[&str], extra: &[CardData], setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut b = kimeramon_runner();
+    for c in extra {
+        b = b.add_card(c.clone());
+    }
+    let mut runner = b.memory(10).start();
+    let kimeramon = runner.place_on_field(0, "BT18-015", Some(0));
+    runner.place_on_field(0, "ST5-12", None);
+    for id in hand {
+        push_to_hand(&mut runner, 0, id);
+    }
+    setup(&mut runner);
+    runner.game.delete_permanent_with_cause(
+        kimeramon,
+        digimon_engine::replacement::ReplacementCause::OwnEffect,
+    );
+    runner.game.drain_effect_queue();
+    runner
+}
+
+/// Accept the outer "may" and return the hand cards the result pick offers.
+fn accept_and_offered_results(runner: &mut DebugRunner) -> Vec<String> {
+    let sel = runner.game.pending_selection.as_ref().expect("outer accept prompt");
+    let accept = sel.valid_action_ids.iter().copied().find(|&a| a != PASS).expect("accept");
+    let player = sel.selecting_player;
+    runner.game.resolve_selection(player, accept).expect("accept");
+    runner.game.drain_effect_queue();
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let sel = runner.game.pending_selection.as_ref().expect("result pick");
+    assert_eq!(sel.kind, SelectionKind::Hand);
+    sel.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[a as usize].clone())
+        .collect()
+}
+
+/// A [Millenniummon] without DNA digivolution is not offered as the result;
+/// BT18-019 (DNA [Kimeramon] + [Machinedramon]) is. DCGO agrees
+/// (`jogressCondition.Count > 0`).
+#[test]
+fn bt18_015_on_deletion_result_pick_excludes_millenniummon_without_dna() {
+    let mut runner = delete_kimeramon(
+        &["BT18-019", "MILLENNIUM-NODNA"],
+        &[make_millenniummon_without_dna("MILLENNIUM-NODNA")],
+        |_| {},
+    );
+    assert_eq!(accept_and_offered_results(&mut runner), vec!["BT18-019".to_string()]);
+}
+
+/// Only a [Millenniummon] without DNA digivolution in hand: no DNA
+/// digivolution can happen, so the [On Deletion] isn't offered.
+#[test]
+fn bt18_015_on_deletion_not_offered_with_only_a_millenniummon_without_dna() {
+    let runner = delete_kimeramon(
+        &["MILLENNIUM-NODNA"],
+        &[make_millenniummon_without_dna("MILLENNIUM-NODNA")],
+        |_| {},
+    );
+    assert!(runner.game.pending_selection.is_none(), "no prompt");
+    assert!(has_named_on_field(&runner, 0, "Machinedramon"));
+}
+
+/// "Can't digivolve by effects" (the commit refuses the DNA digivolution):
+/// the [On Deletion] isn't offered and nothing moves.
+#[test]
+fn bt18_015_on_deletion_not_offered_when_digivolving_by_effect_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let runner = delete_kimeramon(&["BT18-019"], &[], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotDigivolveDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(runner.game.pending_selection.is_none(), "no prompt");
+    assert_eq!(runner.game.players[0].hand.len(), 1, "Millenniummon stays in hand");
+    assert!(has_named_on_field(&runner, 0, "Machinedramon"));
+}

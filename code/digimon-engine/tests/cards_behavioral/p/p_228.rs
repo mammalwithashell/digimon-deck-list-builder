@@ -43,7 +43,7 @@ use digimon_dsl::compiled::{
     CompiledPlayerRef, CompiledPredicate, CompiledScope, CompiledStackPosition, CompiledStep,
     CompiledTiming,
 };
-use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
+use digimon_engine::action::space::{encode_attack, PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
@@ -1269,4 +1269,228 @@ fn p_228_delay_trashes_self_as_cost_even_when_digivolve_is_declined() {
         !battle_area_contains(&runner, 0, "P-228"),
         "P-228 must leave the battle area once the Delay activation cost is paid"
     );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Candidate legality of the <Delay> hand pick (select-hand audit)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// DCGO P_228.cs:111-117 + 165-176 hands `CardCondition` (Digimon, level <= 6,
+// [LIBERATOR]) to `CardEffectCommons.DigivolveIntoHandOrTrashCard(payCost:
+// true, reduceCost: 3)`, whose own pick filter (CardEffectCommons.cs:859-883)
+// keeps only cards with `!CanNotEvolve(target)` and `CanPlayCardTargetFrame(
+// target.PermanentFrame, PayCost: true, ...)` — a digivolution route onto the
+// chosen Digimon AND a payable reduced cost. CR 4.3 1-3-11-1: a card can't be
+// declared for digivolution if its cost can't be paid. The YAML pick carries
+// `can_digivolve_onto_with_cost: { target: target, cost: { reduce: 3 } }`.
+
+/// A level-4 [LIBERATOR] Digimon whose Blue Lv.3 digivolve circle costs
+/// `memory_cost`, or (when `routed` is false) a Red Lv.3 circle that has no
+/// route onto the Blue base.
+fn p228_evo(id: &str, memory_cost: u16, routed: bool) -> CardData {
+    let mut card = liberator_evo(id);
+    card.evo_costs = vec![EvoCost {
+        card_color: (if routed { CardColor::Blue } else { CardColor::Red }) as u8,
+        level: 3,
+        memory_cost,
+    }];
+    card
+}
+
+/// Seat P-228 as a matured event-gated Delay, set memory to 0, play the
+/// gating Tamer, accept the Delay and choose the base. Returns the number of
+/// hand cards offered by the digivolve pick.
+fn p228_delay_hand_candidates(hand_evos: Vec<CardData>) -> usize {
+    let ids: Vec<String> = hand_evos.iter().map(|c| c.card_id.clone()).collect();
+    let mut builder = DebugRunner::builder()
+        .from_dsl_yaml(&p_228_yaml())
+        .expect("P-228 YAML parses")
+        .add_card(suzune("SUZUNE"))
+        .add_card(base_digimon("BASE"))
+        .add_card(filler("FILL"));
+    for c in hand_evos {
+        builder = builder.add_card(c);
+    }
+    let mut hand: Vec<&str> = vec!["SUZUNE"];
+    hand.extend(ids.iter().map(String::as_str));
+    let mut runner = builder
+        .hand(0, &hand)
+        .deck(0, &["FILL"; 10])
+        .deck(1, &["FILL"; 10])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "BASE", Some(0));
+    let opt = runner.place_on_field(0, "P-228", Some(0));
+    runner.game.players[0].battle_area[opt.index as usize].option_state = OptionState::Delayed {
+        owner: 0,
+        trash_on_turn: u16::MAX,
+        trigger: DelayTrigger::OnEvent(EffectTiming::OnAllyPlayed),
+        placed_on_turn: 0,
+    };
+    for _ in 0..4 {
+        if runner.game.turn_count > 0 && runner.game.turn_player() == 0 {
+            break;
+        }
+        runner.end_turn();
+        runner.game.enter_main_phase();
+    }
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.game.set_memory(0);
+
+    let tamer_idx = hand_index_of(&runner, 0, "SUZUNE");
+    assert!(runner.game.play_from_hand(0, tamer_idx).is_some());
+    let view = runner
+        .pending_selection_view()
+        .expect("the gating play offers the Delay activation");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept the Delay");
+    let view = runner
+        .pending_selection_view()
+        .expect("the digivolve-base pick installs");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+    let base = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != PASS)
+        .expect("BASE is a candidate");
+    runner
+        .execute_action(view.selecting_player, base)
+        .expect("choose the base");
+    match runner.pending_selection_view() {
+        Some(v) if v.kind == SelectionKind::Hand => v
+            .valid_action_ids
+            .iter()
+            .filter(|&&id| id != PASS)
+            .count(),
+        _ => 0,
+    }
+}
+
+/// Memory 0: a cost-13 circle costs 10 after the -3 (exactly the floor, so
+/// payable); a cost-14 circle would cost 11 and can't be paid, so it is not
+/// offered.
+#[test]
+fn p_228_delay_unaffordable_liberator_card_not_offered() {
+    let n = p228_delay_hand_candidates(vec![
+        p228_evo("EVO-PAY", 13, true),
+        p228_evo("EVO-DEAR", 14, true),
+    ]);
+    assert_eq!(n, 1, "only the payable [LIBERATOR] card may be offered");
+}
+
+/// Regression guard: a [LIBERATOR] card with no digivolution route onto the
+/// chosen base is not offered (the compile pass's route leaf).
+#[test]
+fn p_228_delay_liberator_card_without_route_not_offered() {
+    let n = p228_delay_hand_candidates(vec![
+        p228_evo("EVO-PAY", 4, true),
+        p228_evo("EVO-OFFROUTE", 4, false),
+    ]);
+    assert_eq!(n, 1);
+}
+
+/// The digivolve-base pick: DCGO P_228.cs:106-109 (`PermanentCondition`)
+/// offers every Digimon of yours, including one no [LIBERATOR] hand card can
+/// digivolve onto. Choosing it is legal; the digivolve is then simply not
+/// carried out (CR 4.3 1-3-2), as DCGO's `DigivolveIntoHandOrTrashCard` finds
+/// no candidate. Here BASE (Blue Lv.3) has a candidate and RED-BASE (Red
+/// Lv.3) has none: both are offered, and choosing RED-BASE offers no hand card
+/// and digivolves nothing.
+#[test]
+fn p_228_delay_base_without_a_liberator_candidate_is_offered_and_digivolves_nothing() {
+    let mut red_base = base_digimon("RED-BASE");
+    red_base.colors = vec![CardColor::Red];
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&p_228_yaml())
+        .expect("P-228 YAML parses")
+        .add_card(suzune("SUZUNE"))
+        .add_card(base_digimon("BASE"))
+        .add_card(red_base)
+        .add_card(p228_evo("EVO-PAY", 4, true))
+        .add_card(filler("FILL"))
+        .hand(0, &["SUZUNE", "EVO-PAY"])
+        .deck(0, &["FILL"; 10])
+        .deck(1, &["FILL"; 10])
+        .memory(10)
+        .start();
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    let red = runner.place_on_field(0, "RED-BASE", Some(0));
+    let opt = runner.place_on_field(0, "P-228", Some(0));
+    runner.game.players[0].battle_area[opt.index as usize].option_state = OptionState::Delayed {
+        owner: 0,
+        trash_on_turn: u16::MAX,
+        trigger: DelayTrigger::OnEvent(EffectTiming::OnAllyPlayed),
+        placed_on_turn: 0,
+    };
+    for _ in 0..4 {
+        if runner.game.turn_count > 0 && runner.game.turn_player() == 0 {
+            break;
+        }
+        runner.end_turn();
+        runner.game.enter_main_phase();
+    }
+    let tamer_idx = hand_index_of(&runner, 0, "SUZUNE");
+    assert!(runner.game.play_from_hand(0, tamer_idx).is_some());
+    let view = runner.pending_selection_view().expect("Delay activation");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept the Delay");
+    let view = runner
+        .pending_selection_view()
+        .expect("the digivolve-base pick installs");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+    let red_id = encode_attack(0, red.index as u16);
+    assert!(
+        view.valid_action_ids.contains(&encode_attack(0, base.index as u16)),
+        "BASE (has a [LIBERATOR] candidate) is offered"
+    );
+    assert!(
+        view.valid_action_ids.contains(&red_id),
+        "RED-BASE (no candidate) is still offered, as in DCGO PermanentCondition"
+    );
+    assert_eq!(
+        view.valid_action_ids
+            .iter()
+            .filter(|&&id| id != PASS)
+            .count(),
+        2,
+        "exactly the two Digimon are offered"
+    );
+    runner
+        .execute_action(view.selecting_player, red_id)
+        .expect("choose RED-BASE");
+    if let Some(v) = runner.pending_selection_view() {
+        if v.kind == SelectionKind::Hand {
+            assert!(
+                v.valid_action_ids.iter().all(|&id| id == PASS),
+                "no hand card can digivolve onto RED-BASE, so none is offered"
+            );
+            runner
+                .execute_action(v.selecting_player, PASS)
+                .expect("pass the empty hand pick");
+        }
+    }
+    runner.auto_resolve().expect("settle the Delay");
+    assert!(
+        hand_contains(&runner, 0, "EVO-PAY"),
+        "nothing digivolved: EVO-PAY stays in hand"
+    );
+    let red_perm = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| {
+            p.card_sources
+                .iter()
+                .any(|s| s.card_id(&runner.game.card_data) == "RED-BASE")
+        })
+        .expect("RED-BASE stays on the field");
+    assert_eq!(red_perm.card_sources.len(), 1, "RED-BASE was not digivolved");
+    assert!(trash_contains(&runner, 0, "P-228"), "the <Delay> cost trashed P-228");
 }

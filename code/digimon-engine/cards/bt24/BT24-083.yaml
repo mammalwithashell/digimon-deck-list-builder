@@ -16,7 +16,10 @@ effects:
           of: you
           bind_as: pick
           optional: true
+          # DCGO BT24_083.cs:37-45: (name || Digimon/TS/DP<=5000) &&
+          # CanPlayAsNewPermanent(payCost: false).
           filter:
+            can_play_from_effect_without_cost: true
             any_of:
               - name_is: "Hiroko Sagisaka"
               - all_of:

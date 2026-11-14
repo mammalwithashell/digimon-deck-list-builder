@@ -1,5 +1,159 @@
 # DSL Vocabulary Gaps Tracker
 
+## Hand-or-trash zone choice offered with no candidate in the zone [G-DSL-ZONE-CHOICE-CANDIDATE-GATE] — CLOSED 2026-11-13 (no new vocabulary; both drivers fixed)
+
+- **Driver:** Future Potential! (P-156) [Main]. DCGO P_156.cs:126-150 offers
+  the "From hand / From trash" choice only when BOTH zones hold a candidate
+  (`SelectDigimonCondition`, which includes the chosen Tamer's colours), and
+  sets the zone automatically when only one does; with none it does nothing.
+- **Gap:** an always-offered `select_effect_choice ["From hand", "From
+  trash"]` makes a zone with no playable candidate a dead choice in the action
+  space (CR 4.3 1-3-11-1: a card can be declared for play only if it can be
+  played). Gating each label needs a `count_gte` whose filter reads a binding;
+  the vocabulary-free fix is one `select_union_zone { zones: [hand, trash] }`
+  pick (the BT25-083 / P-170 / P-189 idiom), which drops the zone choice.
+- **P-156: RESOLVED 2026-11-13** — the [Main] is now one optional
+  `select_union_zone` pick whose filter carries `color_matches_binding:
+  chosen_tamer` + `can_play_from_effect_without_cost`, then
+  `play_union_bound_free` (`p_156_main_offers_no_zone_choice_*`,
+  `p_156_main_asks_nothing_*`, `p_156_main_offers_hand_and_trash_candidates_in_one_optional_pick`
+  in `tests/cards_behavioral/p/p_156.rs`; a binding-reading filter inside a
+  union pick is now verified).
+- **Matt Ishida & Tai Kamiya (EX4-061): RESOLVED 2026-11-13** with existing
+  vocabulary. DCGO EX4_061.cs:175-196 asks "From hand / From trash" only when
+  both zones hold a `CanSelectCardCondition` card, else `SetBool(canSelectHand)`
+  (no prompt), and does nothing when neither does. The YAML's
+  `select_effect_choice` now carries a per-label `legal_when` (the
+  G-DSL-EFFECT-CHOICE-BRANCH-LEGALITY mechanism already used by EX10-069,
+  EX12-034, P-206): each label is a `count_gte` over that zone of the same
+  filter its pick uses (`name_is` [Gabumon] / [Agumon] keyed by
+  `event_target_name_contains` [Greymon] / [Garurumon], plus
+  `can_play_from_effect_without_cost`). Tests `ex4_061_clause2_zone_choice_*`,
+  `ex4_061_clause2_no_zone_choice_*`,
+  `ex4_061_clause2_trash_lock_leaves_only_hand_zone`. The gap's premise
+  ("gating each label needs a binding-reading filter") held for neither
+  driver: `legal_when` predicates can read the event target, and a union pick
+  covers the binding case.
+
+## `can_digivolve_onto` that waives only the level [G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL] — OPEN, added 2026-11-13
+
+- **Driver:** Richard Sampson (EX13-071) [Main]: "it may digivolve into
+  [Kentaurosmon] in the hand or trash, ignoring level and with the cost
+  reduced by 1". DCGO EX13_071.cs:357-361 offers a [Kentaurosmon] only when
+  `CanPlayCardTargetFrame(selectedKudamon.PermanentFrame, true, ...,
+  IgnoreRequirement.Level)` holds (route onto THAT [Kudamon] with the level
+  waived; colour circle kept). Official ruling Q7449 (2026-09-18,
+  `data/card_qa.json`) is the direct authority: only a [Kentaurosmon] that
+  meets the digivolution requirements, with its Lv. as the sole exception,
+  may be chosen.
+- **Gap:** the compile pass `code/digimon-dsl/src/digivolve_candidates.rs`
+  skips `effect_initiated_digivolve { ignore_level: true }`, and neither
+  `can_digivolve_onto` (route-only, level honoured) nor
+  `can_digivolve_onto_with_cost` (`Game::can_effect_digivolve_from_source_with_cost`,
+  `waiver: DigivolveRequirementWaiver::None`) can waive the level gate. So the
+  pick offers a [Kentaurosmon] the commit refuses (CR 4.3 8-1-2-6; a dead
+  choice, 1-3-2), e.g. one whose only circle is a colour [Kudamon] lacks, or
+  any card while the [Kudamon] is under a digivolve lock.
+- **Proposed fix:** an `ignore_level: bool` on `DigivolveCostPredicate`
+  (`can_digivolve_onto_with_cost { target, cost, ignore_level: true }`)
+  probing `digivolve_routes_ignoring_level` with
+  `DigivolveRequirementWaiver::Level`, and the compile pass emitting it for
+  `ignore_level` digivolves. For EX13-071 the leaf must carry
+  `cost: { reduce: 1 }` so the probe applies both the level waiver and the
+  printed reduction (payment checked at the reduced cost, CR 4.3 1-3-11-1).
+- **Pinned by:** `ex13_071_kentaurosmon_pick_excludes_a_card_that_cannot_digivolve_ignoring_level`
+  (`code/digimon-engine/tests/cards_behavioral/ex13/ex13_071.rs`, `#[ignore]`
+  until the leaf lands; run with `--ignored`).
+
+## G-DSL-MOVE-SOURCES-COUNT-BINDING-SCOPE — CLOSED 2026-11-13 (validator)
+
+`move_matching_sources_under_tamer { bind_count_as: X }` binds the moved count
+at runtime, but the validator (`code/digimon-dsl/src/validator.rs`, step
+binding-scope walk) had no arm for the step, so it never declared `X`. A later
+`binding_value: X` inside a predicate (`affordable_with_cost: {reduce:
+{binding_value: moved_count}}`, BT21-092 Can't Turn My Back!) failed `dsl-lint`
+with "undeclared binding referenced before declaration" although the engine
+resolved it. Fix: the step's arm now declares `bind_count_as`. Driver:
+BT21-092 (`tests/cards_behavioral/bt21/bt21_092.rs`
+`bt21_092_main_affordability_counts_moved_cards`).
+
+## Effect-pick candidate legality, round 2 — added 2026-11-13 (select_hand / union playability audit)
+
+Follow-up to G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY below. The audit of
+`select_hand` / `select_union_zone` picks feeding a play, use or digivolve verb
+found four shapes existing leaves could not say. Principle: a pick offers only
+cards the follow-up verb would accept (CR 4.3 1-3-2: an impossible action is
+not carried out, so an unacceptable pick is a dead choice in the RL action
+space); DCGO filters the selection itself (e.g. ST24_06.cs:159-162,
+AD1_019.cs:56, BT26_090.cs:61, BT17_097.cs:137).
+
+1. **`affordable_with_cost: <CostDelta>` [G-DSL-AFFORDABLE-WITH-COST].** The
+   general form of `affordable_with_cost_reduce: N`: the card's owner can pay
+   the cost the verb charges, written with the verb's own `CostDelta`
+   (`{reduce: N}`, `{reduce: <formula>}` evaluated with the effect's
+   bindings, a fixed literal, `free`, `printed`). Base = play cost
+   (Digimon/Tamer) or effective use cost (Option, DUAL). Drivers: AD1-019,
+   BT21-092 (formula), BT26-090 (opponent memory), EX13-043 (4 + suspended).
+   Like the hand-play mask, optional "before paying" reducers are not
+   credited. Engine fix in the same change: `affordable_with_cost_reduce`
+   priced a DUAL at its stored play cost instead of its use cost (CR 4.3
+   4-6-2; a DUAL is used, never played) — Ceresmon (BT26-032) / Jupitermon
+   (BT26-033) through the TS / Glowing Dawn pools. Shared helper
+   `card_cost_affordable` (`code/digimon-engine/src/dsl_cards/predicate.rs`).
+   Finding for card fixers: BT21-021 authors `cost_delta: -5`, which is a
+   FIXED cost (clamped to 0, i.e. free), not "reduced by 5"; it should be
+   `cost_delta: {reduce: 5}`.
+2. **Origin-zone-aware play leaves [G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE].** No new
+   key: `can_play_from_effect_without_cost` and `can_play_or_use_from_effect`
+   now fail for a card in its owner's trash while that player has
+   `CannotPlayFromTrash` (BT23-014), the refusal `Game::trash_play_refusal` /
+   `Game::use_option_from` make. One filter serves both origins of ~50
+   hand+trash union picks (ST19-08, EX11-022, BT22-098, ...).
+3. **DNA candidates.**
+   a. `dna_field_pair { role: result, first: <binding|source>, second:
+      <binding|source>, cost }` [G-DSL-DNA-FIELD-PAIR-FIXED-MATERIALS]: the
+      result must fit exactly the materials bound before it (BT20-036,
+      EX3-008 bind `source` + `dna_partner` first). `cost` (any stage,
+      optional, default `printed`) mirrors the consuming step, so a `cost:
+      free` DNA no longer requires the printed cost to be payable.
+   b. `dna_trash_candidate { role: result|field|partner, result, field,
+      field_filter, partner_filter, cost, ignore_requirements }`
+      [G-DSL-DNA-TRASH-PARTNER-CANDIDATE]: the field + TRASH sibling of
+      `dna_hand_candidate` for `effect_initiated_dna_digivolve_trash_partner`
+      (BT18-015, BT18-073). Mirrors the commit: no
+      `CannotDigivolveDigimonByEffect`, recipe (unless ignored), memory.
+      DCGO BT18_015.cs offers every [Millenniummon] (name + `jogressCondition`
+      only), so applying it narrows past DCGO; that is the no-dead-choice
+      principle, decide per card.
+4. **`can_digivolve_onto: replacement_subject`**
+   [G-DSL-CAN-DIGIVOLVE-ONTO-REPLACEMENT-SUBJECT]: the Delay hand-digivolve
+   replacement flow (`DelayHandDigivolveFlow`,
+   `code/digimon-engine/src/dsl_cards/lower_replacement.rs`) now evaluates
+   `choose.card_filter` with `replacement_subject` bound, as the generic
+   replacement process already did. Driver BT17-097 eff[1]. Caveats for the
+   fixer: the compiled replacement `digivolve_without_cost` sets
+   `ignore_requirements: true` (DCGO applies requirements,
+   `ignoreDigivolutionRequirementFixedCost: -1`), so the filter is the only
+   requirement check; the existing BT17-097 tests in
+   `tests/option_flow/replacement_integration.rs` use cards with empty
+   `evo_costs` and would need real requirements; and the trigger is still
+   offered when no card qualifies (DCGO's `CanUseCondition` refuses it).
+
+Already covered (no vocabulary): a digivolve pick whose target is `source`,
+`event_target` or bound by an earlier step gets `can_digivolve_onto: <target>`
+added at compile time (`code/digimon-dsl/src/digivolve_candidates.rs`) for
+every requirement-honouring `effect_initiated_digivolve`; author
+`can_digivolve_onto_with_cost` only when payment matters.
+
+Not fixed: `can_play_from_effect_without_cost` checks one free slot per
+candidate, not N slots for a multi-card simultaneous play (BT26-081,
+AD1-015, BT18-097). The 14-slot field is an engine limit, not a CR 4.3 rule.
+
+Mechanics tests: `code/digimon-engine/tests/dsl/constructs/`
+`affordable_with_cost.rs`, `play_candidate_origin_zone.rs`,
+`dna_candidate_fixed_pair_and_trash.rs`,
+`digivolve_onto_replacement_subject.rs`.
+
 ## Play-or-use hand candidate legality [G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY] — added 2026-11-13 (ST24-06)
 
 Surfaced by the DCGO PvP replay of Data Squad (ST24-06 RizeGreymon). The

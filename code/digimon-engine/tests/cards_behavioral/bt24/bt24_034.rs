@@ -326,3 +326,51 @@ fn bt24_034_barrier_not_offered_when_opponents_digimon_is_deleted_in_battle() {
     );
     assert_eq!(runner.security_count(0), 1, "Barrier did not trash security");
 }
+
+// ─── The Tamer pick offers only Tamers the free play will accept ─────────────
+// DCGO BT24_034.cs:47-63 `ValidTamer` = `IsTamer && HasTSTraits && no name
+// shared with your Tamers && CanPlayAsNewPermanent(cardSource, false,
+// activateClass)` (empty frame, no "can't play" lock). CR 4.3 1-3-11-1: a card
+// can't be declared for a play it can't undergo. The "By adding..." cost is
+// still payable with no playable Tamer (15-7-5, DCGO `SharedCanActivateCondition`
+// checks only the security count). YAML: `can_play_from_effect_without_cost: true`.
+
+fn aegiomon_after_gate(prepare: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut runner = aegiomon_runner()
+        .add_card(ts_tamer("TS-TAMER", "Fresh TS Tamer"))
+        .add_card(filler("SEC"))
+        .hand(0, &[CARD_ID, "TS-TAMER"])
+        .security(0, &["SEC", "SEC"])
+        .memory(10)
+        .start();
+    runner.play(0, 0).expect("play Aegiomon");
+    prepare(&mut runner);
+    accept_gate(&mut runner);
+    runner
+}
+
+#[test]
+fn bt24_034_tamer_pick_not_offered_under_tamer_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = aegiomon_after_gate(|r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(runner.security_count(0), 1, "the cost is still paid (15-7-5)");
+    assert!(runner.pending_selection().is_none(), "no playable [TS] Tamer -> no pick");
+    runner.auto_resolve().expect("settle");
+    assert!(runner.game.player(0).hand.iter().any(|c| c.card_id(&runner.game.card_data) == "TS-TAMER"));
+}
+
+#[test]
+fn bt24_034_tamer_pick_not_offered_when_battle_area_full() {
+    let mut runner = aegiomon_after_gate(|r| {
+        r.game.rules.field_slots = r.game.player(0).battle_area.len() as u8;
+    });
+    assert!(runner.pending_selection().is_none(), "no free slot -> no pick");
+    runner.auto_resolve().expect("settle");
+    assert!(runner.game.player(0).hand.iter().any(|c| c.card_id(&runner.game.card_data) == "TS-TAMER"));
+}

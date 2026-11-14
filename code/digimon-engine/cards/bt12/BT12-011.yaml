@@ -90,11 +90,15 @@ effects:
           of: you
           bind_as: tamer_pick
           optional: true
+          # DCGO BT12_011.cs:36-57 / :130-151: CanPlayAsNewPermanent(payCost:false)
+          # gates the pick, so only a Tamer the free play accepts is offered.
           filter:
-            any_of:
-              - name_is: "Taiki Kudo"
-              - name_is: "Yuu Amano"
-              - name_is: "Tagiru Akashi"
+            all_of:
+              - can_play_from_effect_without_cost: true
+              - any_of:
+                  - name_is: "Taiki Kudo"
+                  - name_is: "Yuu Amano"
+                  - name_is: "Tagiru Akashi"
           prompt: "You may play 1 [Taiki Kudo], [Yuu Amano], or [Tagiru Akashi] from your hand without paying the cost"
       - play_from_hand_free:
           of: you

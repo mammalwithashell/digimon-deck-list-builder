@@ -167,6 +167,8 @@ dual:
                   any_of:
                     - trait_has: "Three Musketeers"
                     - trait_has: TS
+                  # DCGO IsTraitedOption `!CanNotPlayThisOption` (BT25_085.cs:58-70).
+                  can_play_or_use_from_effect: true
                 n: 1
             - self_source_count:
                 filter:
@@ -174,6 +176,7 @@ dual:
                   any_of:
                     - trait_has: "Three Musketeers"
                     - trait_has: TS
+                  can_play_or_use_from_effect: true
                 op: gte
                 value: 1
         summary: "[WD][WA][OPT] You may use 1 [Three Musketeers] or [TS] Option from your hand or this Digimon's digivolution cards without paying the cost"
@@ -192,6 +195,10 @@ dual:
                   - any_of:
                       - trait_has: "Three Musketeers"
                       - trait_has: TS
+                  # Usable only: no "can't use Option cards" lock and the colour
+                  # requirement met (CR 4.3 4-22-1..3; Q1500 / Q2785). DCGO
+                  # IsTraitedOption `!CanNotPlayThisOption` (BT25_085.cs:58-64).
+                  - can_play_or_use_from_effect: true
               bind_as: picked_option
               prompt: "Use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost"
           - use_option_bound:

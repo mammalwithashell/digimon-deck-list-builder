@@ -345,3 +345,149 @@ fn bt25_096_security_clause_plays_union_zone_and_adds_self() {
         "[Security] adds this Option to the hand"
     );
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 4 — [Security] candidate legality (select-hand playability audit)
+// ════════════════════════════════════════════════════════════════════════════
+//
+// DCGO BT25_096.cs:359-363 offers `(EqualsCardName("Gaomon") ||
+// EqualsCardName("Thomas H. Norstein")) && CardEffectCommons.
+// CanPlayAsNewPermanent(cardSource, false, activateClass)`: a free
+// battle-area slot, no play prohibition (Digimon or Tamer by effect), not in a
+// trash its owner can't play from. CR 4.3 1-3-2: an impossible play is not
+// carried out, so offering it is a dead choice.
+
+fn lock(runner: &mut DebugRunner, player: u8, modifier: digimon_engine::enums::ModifierType) {
+    runner.game.modifiers.add_player_modifier(
+        player,
+        digimon_engine::modifiers::PlayerModifierEntry::simple(
+            modifier,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            None,
+            player,
+        ),
+    );
+}
+
+/// Seat Mirage Beast Knight as player 0's only security card, run `prepare`,
+/// then player 1 attacks player 0.
+fn security_check(
+    hand: &[&str],
+    trash: &[&str],
+    prepare: impl FnOnce(&mut DebugRunner),
+) -> DebugRunner {
+    let mut runner = base();
+    for id in hand {
+        push_to_hand(&mut runner, 0, id);
+    }
+    for id in trash {
+        push_to_trash(&mut runner, 0, id);
+    }
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == CARD_ID)
+        .unwrap();
+    let next_idx = runner.game.next_card_index();
+    runner.game.players[0]
+        .security
+        .push(CardSource::new(data_idx, 0, next_idx));
+    runner.game.tick_declarative_effects();
+    prepare(&mut runner);
+    let atk = runner.place_on_field(1, "FILLER", Some(0));
+    runner.set_first_player(1);
+    let _ = runner.attack_player(atk, 0, false);
+    runner
+}
+
+/// The [Security] pick's legal (card id, zone) rows; empty when no physical
+/// card pick is installed.
+fn security_offered(runner: &DebugRunner) -> Vec<(String, &'static str)> {
+    if !runner
+        .game
+        .pending_selection
+        .as_ref()
+        .is_some_and(|p| p.card_choice.is_some())
+    {
+        return Vec::new();
+    }
+    let mut rows: Vec<(String, &'static str)> = physical_choice::commits(&runner.game)
+        .into_iter()
+        .map(|row| {
+            let zone = match row.zone {
+                Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand) => "hand",
+                Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash) => "trash",
+                _ => "other",
+            };
+            (row.card_id.unwrap_or_default(), zone)
+        })
+        .collect();
+    rows.sort();
+    rows
+}
+
+fn in_zone(runner: &DebugRunner, zone: &str, id: &str) -> bool {
+    let player = &runner.game.players[0];
+    let cards = match zone {
+        "hand" => &player.hand,
+        "trash" => &player.trash,
+        _ => unreachable!(),
+    };
+    cards.iter().any(|c| c.card_id(&runner.game.card_data) == id)
+}
+
+/// Regression guard: a [Gaomon] in trash and a [Thomas H. Norstein] in hand
+/// are both offered.
+#[test]
+fn bt25_096_security_offers_hand_and_trash_candidates() {
+    let runner = security_check(&["Thomas H. Norstein"], &["Gaomon"], |_| {});
+    assert_eq!(
+        security_offered(&runner),
+        vec![
+            ("Gaomon".to_string(), "trash"),
+            ("Thomas H. Norstein".to_string(), "hand")
+        ]
+    );
+}
+
+/// "You can't play Tamers by effects": [Thomas H. Norstein] is not offered,
+/// [Gaomon] still is.
+#[test]
+fn bt25_096_security_does_not_offer_a_tamer_under_a_tamer_play_prohibition() {
+    let runner = security_check(&["Gaomon", "Thomas H. Norstein"], &[], |r| {
+        lock(r, 0, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect)
+    });
+    assert_eq!(security_offered(&runner), vec![("Gaomon".to_string(), "hand")]);
+}
+
+/// "You can't play cards from the trash": the trash [Gaomon] is not offered.
+#[test]
+fn bt25_096_security_trash_candidate_not_offered_when_trash_play_is_locked() {
+    let runner = security_check(&["Thomas H. Norstein"], &["Gaomon"], |r| {
+        lock(r, 0, digimon_engine::enums::ModifierType::CannotPlayFromTrash)
+    });
+    assert_eq!(
+        security_offered(&runner),
+        vec![("Thomas H. Norstein".to_string(), "hand")]
+    );
+}
+
+/// No free battle-area slot: nothing is offered; "Then, add this card to the
+/// hand" still happens.
+#[test]
+fn bt25_096_security_offers_nothing_with_a_full_battle_area() {
+    let mut runner = security_check(&["Gaomon", "Thomas H. Norstein"], &[], |r| {
+        r.place_on_field(0, "FILLER", Some(0));
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(security_offered(&runner).is_empty());
+    let _ = runner.auto_resolve();
+    assert!(in_zone(&runner, "hand", "Gaomon"));
+    assert!(in_zone(&runner, "hand", "Thomas H. Norstein"));
+    assert!(in_zone(&runner, "hand", CARD_ID), "this card is added to the hand");
+}
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

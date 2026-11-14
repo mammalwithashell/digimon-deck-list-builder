@@ -30,7 +30,15 @@ effects:
           of: you
           bind_as: mirai
           optional: true
-          filter: { name_contains: "Mirai Kinosaki" }
+          # DCGO EX11_021.cs:46-50: EqualsCardName("Mirai Kinosaki") &&
+          # CanPlayAsNewPermanent(source, false, activateClass): DCGO does not
+          # offer a card the free play would refuse (no free slot -- engine
+          # rules.field_slots, not a CR limit, CR 4.3 3-4-8-2 -- or a Tamer-play
+          # prohibition). The pick is optional, so this changes no outcome.
+          filter:
+            all_of:
+              - name_is: "Mirai Kinosaki"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 Mirai Kinosaki from hand"
       - play_from_hand_free: { of: you, hand_index: mirai }
 

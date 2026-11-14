@@ -476,3 +476,144 @@ fn st24_15_security_places_self_in_battle_area_rose_rave_audit() {
         "DNA Charge must not be trashed after its [Security] effect"
     );
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 5 — Play-pick legality ([Main] and [Security] hand + trash union)
+// DCGO ST24_15.cs:47-55 `CanSelectPlayCondition`: `(IsDigimon || IsTamer) &&
+// HasPlayCost && EqualsTraits("DATA SQUAD") && GetCostItself <= 4 &&
+// CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)`;
+// `CanPlayAsNewPermanent` (GameContextDeterminarion.cs:419-432) needs an empty
+// battle-area frame the card can be played into. CR 4.3 7-1-1: only a card
+// with a play cost is played (a Digi-Egg has none); CR 4.3 1-3-2: a play that
+// can't happen is not carried out, so it is not a legal choice.
+// ════════════════════════════════════════════════════════════════════════════
+
+const DS_PICK_PROMPT: &str = "You may play 1 [DATA SQUAD]";
+
+/// Non-PASS candidates of the pending [DATA SQUAD] play pick (0 when it is not
+/// pending).
+fn ds_pick_count(r: &DebugRunner) -> usize {
+    match r.pending_selection_view() {
+        Some(v) if v.prompt.starts_with(DS_PICK_PROMPT) => {
+            v.valid_action_ids.iter().filter(|&&id| id != PASS).count()
+        }
+        _ => 0,
+    }
+}
+
+/// Use DNA Charge from hand (p0) with `hand` beside it and `trash` in the
+/// trash; `stage` runs before the use. Returns the pick's candidate count.
+fn main_pick_count(hand: &[&str], trash: &[&str], stage: impl FnOnce(&mut DebugRunner)) -> usize {
+    let mut cards = vec![CARD_ID];
+    cards.extend_from_slice(hand);
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST24-15 in embedded pack")
+        .add_card(ds_digimon("DSD"))
+        .add_card(ds_tamer("DST"))
+        .add_card(card_data_from_compiled("ST24-01"))
+        .add_card(filler("FILLER"))
+        .hand(0, &cards)
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    for t in trash {
+        runner.inject_trash(0, t);
+    }
+    stage(&mut runner);
+    use_fixture_option(&mut runner, "FILLER");
+    ds_pick_count(&runner)
+}
+
+fn lock(r: &mut DebugRunner, p: u8, m: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game
+        .modifiers
+        .add_player_modifier(p, PlayerModifierEntry::simple(m, 0, Expiry::Permanent, None, 1));
+}
+
+/// Regression guard: a hand Digimon, a hand Tamer and a trash Digimon are all
+/// offered.
+#[test]
+fn st24_15_main_pick_offers_hand_and_trash_candidates() {
+    assert_eq!(main_pick_count(&["DSD", "DST"], &["DSD"], |_| {}), 3);
+}
+
+/// Regression guard: Koromon (ST24-01), a [DATA SQUAD] Digi-Egg with no play
+/// cost, is never offered (CR 4.3 7-1-1).
+#[test]
+fn st24_15_main_pick_excludes_data_squad_digi_egg() {
+    assert_eq!(main_pick_count(&["DSD", "ST24-01"], &["ST24-01"], |_| {}), 1);
+}
+
+/// "You can't play Digimon by effects": only the Tamer is offered.
+#[test]
+fn st24_15_main_pick_excludes_digimon_under_effect_play_lock() {
+    use digimon_engine::enums::ModifierType;
+    let n = main_pick_count(&["DSD", "DST"], &["DSD"], |r| {
+        lock(r, 0, ModifierType::CannotPlayDigimonByEffect)
+    });
+    assert_eq!(n, 1, "only the [DATA SQUAD] Tamer can be played");
+}
+
+/// "Can't play cards from the trash": only the hand card is offered.
+#[test]
+fn st24_15_main_pick_excludes_trash_card_under_trash_play_lock() {
+    use digimon_engine::enums::ModifierType;
+    let n = main_pick_count(&["DSD"], &["DSD"], |r| lock(r, 0, ModifierType::CannotPlayFromTrash));
+    assert_eq!(n, 1, "the trash Digimon can't be played");
+}
+
+/// A full battle area: nothing can be played, so nothing is offered.
+#[test]
+fn st24_15_main_pick_empty_when_battle_area_full() {
+    let n = main_pick_count(&["DSD", "DST"], &["DSD"], |r| {
+        r.place_on_field(0, "FILLER", Some(0));
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert_eq!(n, 0);
+}
+
+/// Security DNA Charge (p1 owns it) with a [DATA SQUAD] Digimon in p1's hand;
+/// returns p1's pick candidate count after p0's attack checks it.
+fn security_pick_count(stage: impl FnOnce(&mut DebugRunner)) -> usize {
+    let mut attacker = make_test_card("ATTACKER", "Attacker");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(5);
+    attacker.dp = Some(9000);
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST24-15 YAML loads")
+        .add_card(attacker)
+        .add_card(ds_digimon("DSD"))
+        .add_card(filler("FILLER"))
+        .hand(1, &["DSD"])
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .security(1, &[CARD_ID])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    stage(&mut runner);
+    let atk = runner.place_on_field(0, "ATTACKER", Some(0));
+    let _ = runner.attack_player(atk, 1, false);
+    ds_pick_count(&runner)
+}
+
+/// Regression guard: the [Security] [Main] offers p1's [DATA SQUAD] Digimon.
+#[test]
+fn st24_15_security_pick_offers_owner_hand_digimon() {
+    assert_eq!(security_pick_count(|_| {}), 1);
+}
+
+/// The [Security] copy filters the same way: under "can't play Digimon by
+/// effects" p1's Digimon is not offered.
+#[test]
+fn st24_15_security_pick_empty_under_effect_play_lock() {
+    use digimon_engine::enums::ModifierType;
+    assert_eq!(security_pick_count(|r| lock(r, 1, ModifierType::CannotPlayDigimonByEffect)), 0);
+}

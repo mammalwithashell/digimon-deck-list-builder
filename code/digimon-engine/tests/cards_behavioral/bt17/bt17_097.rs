@@ -28,7 +28,8 @@
 //!   - Structural: timing, optional, scope.
 //!   - Behavioral: activating Main places self as Delay-Option on field.
 //!
-//! - Clause B (All Turns Delay replacement): `kind: replacement`, mandatory,
+//! - Clause B (All Turns Delay replacement): `kind: replacement`, optional
+//!   (CR 4.3 16-17-2: accept / PASS before the Delay cost is paid),
 //!   `timing: when_would_be_deleted`. Subject filter: `trait_has: "Free"` +
 //!   `replacement_subject_is_mine: true`. Cause filter: `none_of:
 //!   [replacement_cause: own_effect]`. Delay cost: `cost: delay_self: true`.
@@ -68,7 +69,7 @@ use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
@@ -143,7 +144,9 @@ fn make_non_free_lv5_evo(id: &str) -> CardData {
     c
 }
 
-/// A Digimon whose name contains "Imperialdramon" (for the Delay hand pick).
+/// A Digimon whose name contains "Imperialdramon" (for the Delay hand pick),
+/// digivolving from a blue Lv.5 so it can digivolve onto `make_free_digimon`
+/// (the <Delay> offers only such a card, DCGO BT17_097.cs:126-137).
 fn make_imperialdramon_hand_card(id: &str) -> CardData {
     let mut c = make_test_card(id, "Imperialdramon Test");
     c.card_kind = CardKind::Digimon;
@@ -152,6 +155,11 @@ fn make_imperialdramon_hand_card(id: &str) -> CardData {
     c.play_cost = 10;
     c.colors = vec![CardColor::Blue];
     c.traits = vec!["Free".to_string()];
+    c.evo_costs = vec![EvoCost {
+        card_color: CardColor::Blue as u8,
+        level: 5,
+        memory_cost: 4,
+    }];
     c
 }
 
@@ -976,6 +984,13 @@ fn bt17_097_digivolved_when_digivolving_waits_for_the_deleting_effect() {
     runner
         .execute_action(victim.selecting_player, victim.valid_action_ids[0])
         .expect("deletion target");
+    let accept = runner
+        .pending_selection_view()
+        .expect("P0's optional <Delay> accept prompt (CR 4.3 16-17-2)");
+    assert_eq!(accept.selecting_player, 0, "{accept:?}");
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("activate the <Delay>");
     let pick = runner
         .pending_selection_view()
         .expect("the Delay replacement's hand pick");
@@ -1017,3 +1032,460 @@ fn bt17_097_digivolved_when_digivolving_waits_for_the_deleting_effect() {
 
 #[path = "../../support/owned_union_fixture.rs"]
 mod owned_union_fixture;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 5 — Candidate legality: no pick the digivolve / play would refuse
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// A pick that offers a card the follow-up digivolve or play then refuses is a
+// choice with no legal outcome in the action space (CR 4.3 1-3-2: an
+// impossible action is not carried out). DCGO filters every candidate set:
+//   * [Main] hand pick: `DigivolveIntoHandOrTrashCard` (CardEffectCommons.cs
+//     :859-881) offers only cards passing `CanPlayCardTargetFrame(frame,
+//     PayCost: true, ...)` with the -4 reducer installed: route AND payment.
+//   * [Main] own-Digimon pick: BT17_097.cs:39-43 offers only a Digimon that
+//     some Lv.5+ [Free] hand card can digivolve onto.
+//   * <Delay> hand pick: BT17_097.cs:126-137 + `DigivolveIntoHandOrTrashCard`
+//     offer only an [Imperialdramon] card that can digivolve onto the
+//     would-be-deleted Digimon (requirements apply: official Q&A on this card,
+//     "you can only digivolve into a card that meets the digivolution
+//     requirements"); and `CanUseCondition` (BT17_097.cs:113-137) refuses the
+//     <Delay> outright when no such card exists.
+//   * [Security] Tamer pick: BT17_097.cs:221-227 `CanPlayAsNewPermanent`.
+
+/// A Lv.5 [Free] blue Digimon whose blue Lv.4 digivolution costs `evo_cost`.
+fn make_free_lv5_evo_costing(id: &str, evo_cost: u16) -> CardData {
+    let mut c = make_free_lv5_evo(id);
+    c.evo_costs[0].memory_cost = evo_cost;
+    c
+}
+
+/// An [Imperialdramon] card that digivolves from a blue level `from_level`.
+fn make_imperialdramon_from(id: &str, from_level: u8) -> CardData {
+    let mut c = make_imperialdramon_hand_card(id);
+    c.evo_costs = vec![EvoCost {
+        card_color: CardColor::Blue as u8,
+        level: from_level,
+        memory_cost: 4,
+    }];
+    c
+}
+
+fn hand_ids(runner: &DebugRunner, p: u8) -> Vec<String> {
+    runner.game.players[p as usize]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect()
+}
+
+/// The hand cards a pending `Hand` pick offers (PASS excluded).
+fn offered_hand_cards(runner: &DebugRunner, p: u8) -> Vec<String> {
+    let hand = hand_ids(runner, p);
+    let Some(sel) = runner.game.pending_selection.as_ref() else {
+        return Vec::new();
+    };
+    if sel.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let mut ids: Vec<String> = sel
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[a as usize].clone())
+        .collect();
+    ids.sort();
+    ids
+}
+
+/// The [Main] runner: BT17-097 + `others` in P0's hand, a blue Lv.4 base on
+/// the field, memory 0 (a cost of at most 10 is payable).
+fn main_runner(others: &[CardData], hand: &[&str]) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(BT17_097_YAML)
+        .expect("BT17-097 YAML parses")
+        .add_card(make_blue_lv4_base("BT17097-BASE"))
+        .add_card(make_filler("FILL"));
+    for c in others {
+        b = b.add_card(c.clone());
+    }
+    let mut hand_all = vec!["BT17-097"];
+    hand_all.extend_from_slice(hand);
+    let mut runner = b
+        .memory(0)
+        .hand(0, &hand_all)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    let base = runner.place_on_field(0, "BT17097-BASE", Some(0));
+    (runner, base)
+}
+
+/// [Main] hand pick: a Lv.5+ [Free] card whose digivolution cost stays
+/// unpayable after the -4 reduction (15 - 4 = 11 > the 10 memory can pay) is
+/// not offered; the payable one (5 - 4 = 1) is. DCGO
+/// `CanPlayCardTargetFrame(PayCost: true)` with the reducer installed.
+#[test]
+fn bt17_097_main_hand_pick_excludes_free_card_unpayable_after_reduction() {
+    let (mut runner, _base) = main_runner(
+        &[
+            make_free_lv5_evo_costing("BT17097-PAYABLE", 5),
+            make_free_lv5_evo_costing("BT17097-UNPAYABLE", 15),
+        ],
+        &["BT17097-PAYABLE", "BT17097-UNPAYABLE"],
+    );
+    assert!(runner.game.activate_hand_main(0, 0));
+    let field = runner.pending_selection_view().expect("own Digimon pick");
+    runner
+        .execute_action(0, field.valid_action_ids.iter().copied().find(|&a| a != PASS).unwrap())
+        .expect("pick the base");
+    assert_eq!(
+        offered_hand_cards(&runner, 0),
+        vec!["BT17097-PAYABLE".to_string()],
+        "only the card whose reduced digivolution cost is payable is offered"
+    );
+}
+
+/// [Main] hand pick: a Lv.5 [Free] card that can't digivolve onto the chosen
+/// Digimon (its only requirement is green Lv.4; the base is blue) is not
+/// offered (official Q&A: this [Main] doesn't ignore requirements).
+/// Regression guard (the compile pass's `can_digivolve_onto` already holds it).
+#[test]
+fn bt17_097_main_hand_pick_excludes_free_card_without_a_route_onto_the_target() {
+    let mut green_only = make_free_lv5_evo("BT17097-GREEN-ONLY");
+    green_only.evo_costs[0].card_color = CardColor::Green as u8;
+    let (mut runner, _base) = main_runner(
+        &[make_free_lv5_evo("BT17097-ROUTE"), green_only],
+        &["BT17097-ROUTE", "BT17097-GREEN-ONLY"],
+    );
+    assert!(runner.game.activate_hand_main(0, 0));
+    let field = runner.pending_selection_view().expect("own Digimon pick");
+    runner
+        .execute_action(0, field.valid_action_ids.iter().copied().find(|&a| a != PASS).unwrap())
+        .expect("pick the base");
+    assert_eq!(offered_hand_cards(&runner, 0), vec!["BT17097-ROUTE".to_string()]);
+}
+
+/// [Main] own-Digimon pick: a Digimon no Lv.5+ [Free] hand card can
+/// digivolve onto (a red Lv.3) is not offered; the blue Lv.4 base is.
+/// DCGO BT17_097.cs:39-43.
+#[test]
+fn bt17_097_main_field_pick_excludes_digimon_with_no_digivolve_candidate() {
+    let (mut runner, base) = main_runner(&[make_free_lv5_evo("BT17097-ROUTE")], &["BT17097-ROUTE"]);
+    let other = runner.place_on_field(0, "FILL", Some(0)); // red Lv.3
+    assert!(runner.game.activate_hand_main(0, 0));
+    let field = runner.pending_selection_view().expect("own Digimon pick");
+    assert_eq!(field.kind, SelectionKind::OwnField);
+    let offered: Vec<u16> = field.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect();
+    assert_eq!(offered.len(), 1, "only the base is offered: {offered:?} (other = {other:?})");
+    runner.execute_action(0, offered[0]).expect("pick the only offered Digimon");
+    assert_eq!(offered_hand_cards(&runner, 0), vec!["BT17097-ROUTE".to_string()]);
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        runner.game.players[0].battle_area[base.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BT17097-ROUTE",
+        "the offered Digimon was the base"
+    );
+}
+
+/// [Main] own-Digimon pick: when the only Lv.5+ [Free] hand card is
+/// unpayable even after the -4, no Digimon is a legal pick (choosing one
+/// would lead to a digivolve that can't happen); the Option still places
+/// itself in the battle area.
+#[test]
+fn bt17_097_main_field_pick_offers_nothing_when_only_candidate_is_unpayable() {
+    let (mut runner, base) = main_runner(
+        &[make_free_lv5_evo_costing("BT17097-UNPAYABLE", 15)],
+        &["BT17097-UNPAYABLE"],
+    );
+    assert!(runner.game.activate_hand_main(0, 0));
+    let offered: Vec<u16> = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .filter(|s| s.kind == SelectionKind::OwnField)
+        .map(|s| s.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect())
+        .unwrap_or_default();
+    assert!(offered.is_empty(), "no Digimon offered: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        runner.game.players[0].battle_area[base.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BT17097-BASE"
+    );
+    assert!(hand_ids(&runner, 0).contains(&"BT17097-UNPAYABLE".to_string()));
+    assert!(runner.game.players[0].battle_area.iter().any(|p| {
+        p.top_card().card_id(&runner.game.card_data) == "BT17-097"
+            && matches!(p.option_state, OptionState::Delayed { .. })
+    }));
+}
+
+/// <Delay> runner: a Lv.5 blue [Free] Digimon threatened with deletion by an
+/// opponent's effect, BT17-097 seated as a usable Delay, `hand` in P0's hand.
+fn delay_runner(cards: &[CardData], hand: &[&str]) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(BT17_097_YAML)
+        .expect("BT17-097 YAML parses")
+        .add_card(make_free_digimon("BT17097-FREE"))
+        .add_card(make_filler("FILL"));
+    for c in cards {
+        b = b.add_card(c.clone());
+    }
+    let mut runner = b
+        .memory(10)
+        .hand(0, hand)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    let free = runner.place_on_field(0, "BT17097-FREE", Some(0));
+    let _delay = place_as_delay(&mut runner, 0);
+    (runner, free)
+}
+
+/// <Delay> hand pick: an [Imperialdramon] card that can't digivolve onto the
+/// threatened Lv.5 (it needs a Lv.6) is not offered; one that can (from a
+/// blue Lv.5) is.
+#[test]
+fn bt17_097_delay_hand_pick_excludes_imperialdramon_that_cannot_digivolve_onto_subject() {
+    let (mut runner, free) = delay_runner(
+        &[
+            make_imperialdramon_from("BT17097-IMP-OK", 5),
+            make_imperialdramon_from("BT17097-IMP-LV6", 6),
+        ],
+        &["BT17097-IMP-OK", "BT17097-IMP-LV6"],
+    );
+    runner
+        .game
+        .delete_permanent_with_cause(free, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the optional <Delay> (CR 4.3 16-17-2)");
+    let sel = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("the <Delay> hand pick");
+    let offered: Vec<u16> = sel.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect();
+    assert_eq!(
+        offered,
+        vec![HAND_EFFECT_START],
+        "only BT17097-IMP-OK (hand index 0) can digivolve onto the Lv.5 subject"
+    );
+    runner
+        .game
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("digivolve into the offered card");
+    let top = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.card_sources.iter().any(|s| s.card_id(&runner.game.card_data) == "BT17097-FREE"))
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string());
+    assert_eq!(top.as_deref(), Some("BT17097-IMP-OK"), "deletion prevented by the digivolve");
+}
+
+/// <Delay> activation: with no [Imperialdramon] card that can digivolve onto
+/// the threatened Digimon, the <Delay> is not offered at all (DCGO
+/// `CanUseCondition`, BT17_097.cs:113-137): BT17-097 stays on the field and
+/// the deletion proceeds, rather than trashing the Option for nothing.
+#[test]
+fn bt17_097_delay_not_offered_when_no_imperialdramon_can_digivolve_onto_subject() {
+    let (mut runner, free) = delay_runner(
+        &[make_imperialdramon_from("BT17097-IMP-LV6", 6)],
+        &["BT17097-IMP-LV6"],
+    );
+    runner
+        .game
+        .delete_permanent_with_cause(free, ReplacementCause::OpponentEffect);
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no <Delay> prompt: {:?}",
+        runner.game.pending_selection.as_ref().map(|s| (&s.kind, &s.valid_action_ids))
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-097"),
+        "the Delay Option was not trashed"
+    );
+    assert!(
+        !runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17097-FREE"),
+        "the deletion proceeded"
+    );
+}
+
+/// <Delay> is optional (CR 4.3 16-17-2; DCGO BT17_097.cs:105
+/// `SetUpActivateClass(..., isOptional: true)`): the threatened deletion first
+/// asks whether to activate, and BT17-097 is still on the field (its <Delay>
+/// cost unpaid) while that question is open.
+#[test]
+fn bt17_097_delay_asks_before_paying_its_cost() {
+    let (mut runner, free) = delay_runner(
+        &[make_imperialdramon_from("BT17097-IMP-OK", 5)],
+        &["BT17097-IMP-OK"],
+    );
+    runner
+        .game
+        .delete_permanent_with_cause(free, ReplacementCause::OpponentEffect);
+    let sel = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("the optional <Delay> accept prompt");
+    assert_eq!(sel.kind, SelectionKind::Replacement, "first decision is whether to activate the <Delay>");
+    assert!(sel.valid_action_ids.contains(&REPLACEMENT_ACCEPT));
+    assert!(sel.is_optional, "the <Delay> can be declined (PASS)");
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-097"),
+        "the <Delay> cost is not paid before the player accepts"
+    );
+}
+
+/// Declining the optional <Delay> keeps BT17-097 on the field (no cost paid)
+/// and lets the deletion proceed.
+#[test]
+fn bt17_097_delay_declined_keeps_option_and_deletion_proceeds() {
+    let (mut runner, free) = delay_runner(
+        &[make_imperialdramon_from("BT17097-IMP-OK", 5)],
+        &["BT17097-IMP-OK"],
+    );
+    runner
+        .game
+        .delete_permanent_with_cause(free, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .resolve_selection(0, PASS)
+        .expect("decline the optional <Delay>");
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-097"),
+        "declining the <Delay> does not trash BT17-097"
+    );
+    assert!(
+        !runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17097-FREE"),
+        "the deletion proceeded"
+    );
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT17097-IMP-OK"),
+        "the Imperialdramon card stays in hand"
+    );
+}
+
+/// [Security] runner: P1 holds BT17-097 in security and `davis_zone` decides
+/// where the Davis Tamer sits ("hand" / "trash"); P0 attacks P1.
+fn security_runner(davis_in_trash: bool) -> DebugRunner {
+    let mut attacker = make_filler("BT17097-ATK-SEC");
+    attacker.dp = Some(6000);
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(BT17_097_YAML)
+        .expect("BT17-097 YAML parses")
+        .add_card(attacker)
+        .add_card(make_davis_tamer("BT17097-DAVIS-SEC"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-097"]);
+    if !davis_in_trash {
+        b = b.hand(1, &["BT17097-DAVIS-SEC"]);
+    }
+    let mut runner = b.start();
+    if davis_in_trash {
+        let data = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BT17097-DAVIS-SEC")
+            .unwrap();
+        let next = runner.game.next_card_index();
+        runner.game.players[1]
+            .trash
+            .push(digimon_engine::card_source::CardSource::new(data, 1, next));
+    }
+    runner
+}
+
+fn lock(runner: &mut DebugRunner, player: u8, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        player,
+        PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1 - player),
+    );
+}
+
+/// The Tamer actions the [Security] union pick offers right after the attack.
+fn attack_and_offered_union_cards(runner: &mut DebugRunner) -> Vec<u16> {
+    let attacker = runner.place_on_field(0, "BT17097-ATK-SEC", Some(0));
+    let _ = runner.attack_player(attacker, 1, false);
+    runner
+        .game
+        .pending_selection
+        .as_ref()
+        .filter(|s| matches!(s.kind, SelectionKind::UnionZone { .. }))
+        .map(|s| s.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect())
+        .unwrap_or_default()
+}
+
+/// Control: the Davis Tamer in hand is offered.
+#[test]
+fn bt17_097_security_offers_davis_in_hand_when_playable() {
+    let mut runner = security_runner(false);
+    assert_eq!(attack_and_offered_union_cards(&mut runner).len(), 1);
+}
+
+/// [Security]: under "can't play Tamers by effects" the Davis Tamer is not
+/// offered (DCGO `CanPlayAsNewPermanent`, BT17_097.cs:226).
+#[test]
+fn bt17_097_security_excludes_davis_when_tamer_effect_play_is_prohibited() {
+    let mut runner = security_runner(false);
+    lock(&mut runner, 1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    let offered = attack_and_offered_union_cards(&mut runner);
+    assert!(offered.is_empty(), "no Tamer offered: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert!(hand_ids(&runner, 1).contains(&"BT17097-DAVIS-SEC".to_string()), "Davis stays in hand");
+}
+
+/// [Security]: a full battle area leaves no room for the Tamer, so it is not
+/// offered (DCGO `CanPlayAsNewPermanent` needs an empty frame).
+#[test]
+fn bt17_097_security_excludes_davis_when_battle_area_full() {
+    let mut runner = security_runner(false);
+    runner.place_on_field(1, "FILL", Some(0));
+    runner.game.rules.field_slots = 1;
+    let offered = attack_and_offered_union_cards(&mut runner);
+    assert!(offered.is_empty(), "no Tamer offered: {offered:?}");
+}
+
+/// [Security]: a Davis Tamer in the trash is not offered while its owner
+/// can't play cards from the trash (the play from the trash would be refused).
+#[test]
+fn bt17_097_security_excludes_trash_davis_when_trash_play_is_locked() {
+    let mut control = security_runner(true);
+    assert_eq!(attack_and_offered_union_cards(&mut control).len(), 1, "control: trash Davis offered");
+    let mut runner = security_runner(true);
+    lock(&mut runner, 1, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    let offered = attack_and_offered_union_cards(&mut runner);
+    assert!(offered.is_empty(), "no Tamer offered: {offered:?}");
+}

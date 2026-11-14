@@ -112,9 +112,17 @@
 #   - Hand-or-trash zone selection: P-189 / DCGO idiom. Use
 #     `select_effect_choice` ("From hand" / "From trash") then branch with
 #     `if equals: [zone, 0|1]`. Each branch runs a `select_hand` /
-#     `select_trash` over name_contains: Gabumon / Agumon, then
+#     `select_trash` over name_is: Gabumon / Agumon, then
 #     `play_from_hand_free` / `play_from_trash_free`. The inner `select_*`
 #     is `optional: true` to mirror DCGO's `canNoSelect: true`.
+#   - The zone choice carries `legal_when` (one predicate per label): a zone
+#     is offered only when it holds a card its pick would offer. DCGO
+#     EX4_061.cs:175-196 computes canSelectHand / canSelectTrash with the
+#     pick's own `CanSelectCardCondition`: both → "From hand / From trash"
+#     prompt; one → `SetBool(canSelectHand)` (no prompt); none → nothing.
+#     `select_effect_choice` does the same (selections.rs, SelectEffectChoice:
+#     no legal label binds nothing, one legal label binds it without a prompt).
+#     A zone with no acceptable card is a dead choice (CR 4.3 1-3-2).
 #
 # Clause 3 (DSL): `when: on_security`, `play_from_security: {}` — standard
 # tamer security pattern (BT17-081, BT22-084, etc.).
@@ -232,6 +240,58 @@ effects:
       # inside another `select_*`'s outer scope.
       - select_effect_choice:
           labels: ["From hand", "From trash"]
+          # Each label is legal only when its zone holds a card the matching
+          # branch's pick below offers (same filter, keyed by the digivolving
+          # Digimon's name). DCGO EX4_061.cs:175-196.
+          legal_when:
+            # "From hand"
+            - any_of:
+                - all_of:
+                    - event_target_name_contains: "Greymon"
+                    - count_gte:
+                        filter:
+                          of: you
+                          zone: [hand]
+                          all_of:
+                            - kind: digimon
+                            - name_is: "Gabumon"
+                            - can_play_from_effect_without_cost: true
+                        n: 1
+                - all_of:
+                    - event_target_name_contains: "Garurumon"
+                    - count_gte:
+                        filter:
+                          of: you
+                          zone: [hand]
+                          all_of:
+                            - kind: digimon
+                            - name_is: "Agumon"
+                            - can_play_from_effect_without_cost: true
+                        n: 1
+            # "From trash"
+            - any_of:
+                - all_of:
+                    - event_target_name_contains: "Greymon"
+                    - count_gte:
+                        filter:
+                          of: you
+                          zone: [trash]
+                          all_of:
+                            - kind: digimon
+                            - name_is: "Gabumon"
+                            - can_play_from_effect_without_cost: true
+                        n: 1
+                - all_of:
+                    - event_target_name_contains: "Garurumon"
+                    - count_gte:
+                        filter:
+                          of: you
+                          zone: [trash]
+                          all_of:
+                            - kind: digimon
+                            - name_is: "Agumon"
+                            - can_play_from_effect_without_cost: true
+                        n: 1
           bind_as: zone
           prompt: "From which area do you play a card?"
       # Branch 1: zone=hand AND the digivolving Digimon has [Greymon] in
@@ -250,7 +310,12 @@ effects:
                 filter:
                   all_of:
                     - kind: digimon
-                    - name_contains: "Gabumon"
+                    # "[Gabumon]" is the card NAME (DCGO EX4_061.cs:105/113
+                    # `CardNames.Contains`), not a substring (SnowAgumon, ...).
+                    - name_is: "Gabumon"
+                    # DCGO :97 CanPlayAsNewPermanent(payCost: false): only a
+                    # card the free play accepts (CR 4.3 7-1-1, 1-3-2).
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 [Gabumon] from hand free"
             - play_from_hand_free: { of: you, hand_index: gabu_hand }
       # Branch 2: zone=trash AND the digivolving Digimon has [Greymon] in
@@ -268,7 +333,12 @@ effects:
                 filter:
                   all_of:
                     - kind: digimon
-                    - name_contains: "Gabumon"
+                    # "[Gabumon]" is the card NAME (DCGO EX4_061.cs:105/113
+                    # `CardNames.Contains`), not a substring (SnowAgumon, ...).
+                    - name_is: "Gabumon"
+                    # DCGO :97 CanPlayAsNewPermanent(payCost: false): only a
+                    # card the free play accepts (CR 4.3 7-1-1, 1-3-2).
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 [Gabumon] from trash free"
             - play_from_trash_free: { of: you, hand_index: gabu_trash }
       # Branch 3: zone=hand AND the digivolving Digimon has [Garurumon] in
@@ -290,7 +360,12 @@ effects:
                 filter:
                   all_of:
                     - kind: digimon
-                    - name_contains: "Agumon"
+                    # "[Agumon]" is the card NAME (DCGO EX4_061.cs:105/113
+                    # `CardNames.Contains`), not a substring (SnowAgumon, ...).
+                    - name_is: "Agumon"
+                    # DCGO :97 CanPlayAsNewPermanent(payCost: false): only a
+                    # card the free play accepts (CR 4.3 7-1-1, 1-3-2).
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 [Agumon] from hand free"
             - play_from_hand_free: { of: you, hand_index: agu_hand }
       # Branch 4: zone=trash AND the digivolving Digimon has [Garurumon]
@@ -308,7 +383,12 @@ effects:
                 filter:
                   all_of:
                     - kind: digimon
-                    - name_contains: "Agumon"
+                    # "[Agumon]" is the card NAME (DCGO EX4_061.cs:105/113
+                    # `CardNames.Contains`), not a substring (SnowAgumon, ...).
+                    - name_is: "Agumon"
+                    # DCGO :97 CanPlayAsNewPermanent(payCost: false): only a
+                    # card the free play accepts (CR 4.3 7-1-1, 1-3-2).
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 [Agumon] from trash free"
             - play_from_trash_free: { of: you, hand_index: agu_trash }
 

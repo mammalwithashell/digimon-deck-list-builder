@@ -35,7 +35,7 @@ use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledCostDelta, CompiledDeclarativeClause,
     CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
+use digimon_engine::action::space::{PASS, PLAY_HAND_START, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
@@ -230,39 +230,26 @@ fn has_select_trash(steps: &[CompiledStep]) -> bool {
 
 // ---------- placement helper ------------------------------------------------
 
-/// Play EX10-069 via `play_option_from_hand` and drive through the
-/// `select_effect_choice` → `auto_resolve` path so that the card ends up
-/// placed in the battle area as a Delayed Option.
+/// Play EX10-069 via `play_option_from_hand` and settle the [Main] so that
+/// the card ends up placed in the battle area as a Delayed Option.
 ///
-/// EX10-069's [Main] clause starts with `select_effect_choice`, so
-/// `play_option_from_hand` always returns `Pending`. This helper:
-///   1. asserts `Pending`
-///   2. picks "From hand" (choice 0) at the zone-choice prompt
-///   3. calls `auto_resolve` to settle any remaining steps and place the card
-///
-/// After the zone-choice is resolved, the hand sub-selection auto-skips
-/// (no Sunarizamon/Close in hand), so `advance_pending_option` fires
-/// immediately and `dispose_option` places EX10-069 as a Delayed Option.
+/// The [Main] zone choice ("From hand" / "From trash") offers only a zone
+/// holding a [Sunarizamon] / [Close] this effect can play (`legal_when`, DCGO
+/// EX10_069.cs:41-71). These fixtures hold none, so no zone qualifies: the
+/// choice binds nothing, both picks are skipped, and the pipeline places the
+/// card without parking. If a zone did qualify, its first branch is taken and
+/// its optional pick resolved by `auto_resolve`.
 ///
 /// After this call EX10-069 is in the battle area as
 /// `OptionState::Delayed { trigger: OnEvent(OnSuspend), .. }`.
 fn place_ex10_069_via_pipeline(runner: &mut DebugRunner, hand_index: usize) {
-    assert_eq!(
-        runner.game.play_option_from_hand(0, hand_index),
-        OptionPlayResult::Pending,
-        "EX10-069 [Main] select_effect_choice must park the pipeline"
-    );
-    // Zone-choice selection (effect_choice): pick "From hand" (choice 0).
-    let view = runner
-        .pending_selection_view()
-        .expect("zone-choice selection must be pending");
-    runner
-        .execute_action(view.selecting_player, view.valid_action_ids[0])
-        .expect("choose zone");
-    // After the zone-choice resolves, the hand sub-selection is auto-skipped
-    // (empty filter match), advance_pending_option fires synchronously, and
-    // dispose_option places EX10-069 in the battle area. No second selection
-    // should be pending, but auto_resolve settles any residual drains.
+    let result = runner.game.play_option_from_hand(0, hand_index);
+    assert_ne!(result, OptionPlayResult::Invalid, "EX10-069 must be usable");
+    if let Some(view) = runner.pending_selection_view() {
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("choose zone");
+    }
     runner
         .auto_resolve()
         .expect("resolve [Main] and battle-area placement");
@@ -779,4 +766,293 @@ fn ex10_069_delay_trashes_self_as_cost_even_when_digivolve_is_declined() {
         !battle_area_contains(&runner, 0, "EX10-069"),
         "EX10-069 must leave the battle area once the Delay activation cost is paid"
     );
+}
+
+// ============================================================================
+// Candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY)
+//
+// [Main] / [Security]: only a [Sunarizamon] / [Close] this effect can actually
+// play (CR 4.3 1-3-2: an impossible action is not carried out; 7-1-1). DCGO
+// EX10_069.cs:33-37 binds CanPlayAsNewPermanent to [Close] only (C# `||` /
+// `&&` precedence) and so offers an unplayable [Sunarizamon]; the rules
+// govern both names. The zone choice offers only a zone holding such a card
+// and is skipped when one zone does (DCGO :41-71 canSelectHand /
+// canSelectTrash, SetBool for a single legal zone).
+// <Delay>: the hand pick offers only a card that can digivolve onto the
+// chosen Digimon with its cost reduced by 3 payable (DCGO :243-253 payCost:
+// true → CardEffectCommons.cs:858-880 CanPlayCardTargetFrame(PayCost: true)).
+// ============================================================================
+
+/// A [Sunarizamon] Digimon card.
+fn sunarizamon_card(id: &str) -> CardData {
+    let mut card = make_test_card(id, "Sunarizamon");
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(3);
+    card.dp = Some(1000);
+    card.play_cost = 4;
+    card.colors = vec![CardColor::Black];
+    card.traits = vec!["Mineral".to_string()];
+    card
+}
+
+/// What the [Main] offered: whether the zone-choice prompt was shown, the
+/// hand-pick card ids, and the trash-pick card ids (empty when that pick did
+/// not install). The zone choice picks `zone` ("From hand" / "From trash")
+/// when it is shown; every card pick is declined.
+#[derive(Default, Debug)]
+struct MainOffers {
+    zone_prompt_labels: Option<Vec<String>>,
+    hand: Vec<String>,
+    trash: Vec<String>,
+}
+
+fn drive_main(runner: &mut DebugRunner, option_hand_index: usize, zone: &str) -> MainOffers {
+    let result = runner.game.play_option_from_hand(0, option_hand_index);
+    assert_ne!(result, OptionPlayResult::Invalid, "EX10-069 must be usable");
+    let mut offers = MainOffers::default();
+    for _ in 0..10 {
+        let Some(view) = runner.pending_selection_view() else { break };
+        let concrete: Vec<u16> = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&id| id != PASS)
+            .collect();
+        let action = if let Some(choices) = view
+            .effect_choices
+            .as_ref()
+            .filter(|c| c.iter().any(|e| e.label.starts_with("From ")))
+        {
+            offers.zone_prompt_labels = Some(choices.iter().map(|e| e.label.clone()).collect());
+            choices
+                .iter()
+                .find(|e| e.label == zone)
+                .map(|e| e.action_id)
+                .unwrap_or(choices[0].action_id)
+        } else {
+            match view.kind {
+                SelectionKind::Hand => {
+                    offers.hand = concrete
+                        .iter()
+                        .map(|&id| {
+                            runner.game.players[0].hand[(id - PLAY_HAND_START) as usize]
+                                .card_id(&runner.game.card_data)
+                                .to_string()
+                        })
+                        .collect();
+                    PASS
+                }
+                SelectionKind::Trash => {
+                    offers.trash = runner.game.players[0]
+                        .trash
+                        .iter()
+                        .map(|c| c.card_id(&runner.game.card_data).to_string())
+                        .filter(|_| !concrete.is_empty())
+                        .collect();
+                    PASS
+                }
+                _ => concrete.first().copied().unwrap_or(view.valid_action_ids[0]),
+            }
+        };
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("drive pending selection");
+    }
+    let _ = runner.auto_resolve();
+    offers
+}
+
+fn main_runner(hand: &[&str], trash: &[&str]) -> DebugRunner {
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(&yaml())
+        .expect("EX10-069 YAML parses")
+        .add_card(close_card("CLOSE"))
+        .add_card(sunarizamon_card("SUNARI"))
+        .add_card(black_anchor("ANCHOR"))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10);
+    let mut all_hand = vec!["EX10-069"];
+    all_hand.extend_from_slice(hand);
+    b = b.hand(0, &all_hand);
+    let mut runner = b.start();
+    for id in trash {
+        let data_idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == *id)
+            .unwrap();
+        let idx = runner.game.next_card_index();
+        runner.game.players[0]
+            .trash
+            .push(digimon_engine::card_source::CardSource::new(data_idx, 0, idx));
+    }
+    runner.place_on_field(0, "ANCHOR", Some(0));
+    runner.game.enter_main_phase();
+    runner
+}
+
+fn lock(runner: &mut DebugRunner, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner
+        .game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1));
+}
+
+/// "You can't play Tamers by effects": [Close] is not offered from the hand;
+/// [Sunarizamon] still is. The trash holds nothing, so the zone choice is not
+/// a choice (only the hand qualifies) and no prompt is shown.
+#[test]
+fn ex10_069_main_hand_pick_excludes_close_under_tamer_play_lock() {
+    let mut runner = main_runner(&["CLOSE", "SUNARI"], &[]);
+    lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    let offers = drive_main(&mut runner, 0, "From hand");
+    assert_eq!(offers.hand, vec!["SUNARI".to_string()], "{offers:?}");
+    assert!(offers.zone_prompt_labels.is_none(), "single legal zone: no prompt: {offers:?}");
+}
+
+/// "You can't play Digimon by effects": [Sunarizamon] is not offered from the
+/// hand; [Close] still is. (DCGO offers [Sunarizamon] here: its playability
+/// check binds only to [Close]; CR 4.3 1-3-2 governs.)
+#[test]
+fn ex10_069_main_hand_pick_excludes_sunarizamon_under_digimon_play_lock() {
+    let mut runner = main_runner(&["CLOSE", "SUNARI"], &[]);
+    lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    let offers = drive_main(&mut runner, 0, "From hand");
+    assert_eq!(offers.hand, vec!["CLOSE".to_string()], "{offers:?}");
+}
+
+/// Only the trash holds a playable card ([Close] in hand is locked): the zone
+/// choice is skipped and the trash pick offers [Sunarizamon].
+#[test]
+fn ex10_069_main_zone_choice_skipped_when_only_trash_qualifies() {
+    let mut runner = main_runner(&["CLOSE"], &["SUNARI"]);
+    lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    let offers = drive_main(&mut runner, 0, "From hand");
+    assert!(offers.zone_prompt_labels.is_none(), "no zone prompt: {offers:?}");
+    assert!(offers.hand.is_empty(), "{offers:?}");
+    assert_eq!(offers.trash, vec!["SUNARI".to_string()], "{offers:?}");
+}
+
+/// Both zones hold a playable card: the zone choice offers both.
+#[test]
+fn ex10_069_main_zone_choice_offers_both_when_both_qualify() {
+    let mut runner = main_runner(&["CLOSE"], &["SUNARI"]);
+    let offers = drive_main(&mut runner, 0, "From trash");
+    assert_eq!(
+        offers.zone_prompt_labels,
+        Some(vec!["From hand".to_string(), "From trash".to_string()]),
+        "{offers:?}"
+    );
+    assert_eq!(offers.trash, vec!["SUNARI".to_string()], "{offers:?}");
+}
+
+/// Nothing playable anywhere (both card types locked): no zone prompt, no
+/// pick; the cards stay where they are and EX10-069 is still placed.
+#[test]
+fn ex10_069_main_offers_nothing_when_nothing_is_playable() {
+    let mut runner = main_runner(&["CLOSE"], &["SUNARI"]);
+    lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    let offers = drive_main(&mut runner, 0, "From hand");
+    assert!(offers.zone_prompt_labels.is_none(), "{offers:?}");
+    assert!(offers.hand.is_empty() && offers.trash.is_empty(), "{offers:?}");
+    assert!(hand_contains(&runner, 0, "CLOSE"));
+    assert!(battle_area_contains(&runner, 0, "EX10-069"), "Delay Option placed");
+}
+
+/// A full battle area: neither card can be played from either zone.
+#[test]
+fn ex10_069_main_offers_nothing_when_battle_area_full() {
+    let mut runner = main_runner(&["CLOSE"], &["SUNARI"]);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    let offers = drive_main(&mut runner, 0, "From hand");
+    assert!(offers.zone_prompt_labels.is_none(), "{offers:?}");
+    assert!(offers.hand.is_empty() && offers.trash.is_empty(), "{offers:?}");
+    assert!(hand_contains(&runner, 0, "CLOSE"));
+}
+
+/// A [Mineral]+[LIBERATOR] Digimon card with an explicit Black Lv.`from`
+/// digivolve cost.
+fn mineral_liberator_evo_with(id: &str, level: u8, from: u8, cost: u16) -> CardData {
+    let mut card = mineral_liberator_evo(id);
+    card.level = Some(level);
+    card.evo_costs = vec![EvoCost {
+        card_color: CardColor::Black as u8,
+        level: from,
+        memory_cost: cost,
+    }];
+    card
+}
+
+/// <Delay> hand pick: only a card that can digivolve onto the chosen Lv.3
+/// Mineral Digimon AND whose cost reduced by 3 is payable. With 0 memory,
+/// EVO-CHEAP (3 - 3 = 0) qualifies; EVO-DEAR (14 - 3 = 11 → memory -11, past
+/// the -10 floor) can't be paid; EVO-LV6 (from Lv.5) can't digivolve onto a
+/// Lv.3 at all.
+#[test]
+fn ex10_069_delay_hand_pick_offers_only_payable_legal_digivolutions() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml())
+        .expect("EX10-069 YAML parses")
+        .add_card(close_card("CLOSE"))
+        .add_card(black_anchor("ANCHOR"))
+        .add_card(mineral_base("BASE"))
+        .add_card(mineral_liberator_evo_with("EVO-CHEAP", 4, 3, 3))
+        .add_card(mineral_liberator_evo_with("EVO-DEAR", 4, 3, 14))
+        .add_card(mineral_liberator_evo_with("EVO-LV6", 6, 5, 3))
+        .add_card(filler("FILL"))
+        .hand(0, &["EX10-069", "EVO-CHEAP", "EVO-DEAR", "EVO-LV6"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "BASE", Some(0));
+    runner.place_on_field(0, "ANCHOR", Some(0));
+    runner.game.enter_main_phase();
+    place_ex10_069_via_pipeline(&mut runner, 0);
+    let close = runner.place_on_field(0, "CLOSE", Some(0));
+
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.game.enter_main_phase();
+    runner.game.set_memory(0);
+
+    runner.game.suspend(close);
+    let view = runner.pending_selection_view().expect("Delay activation offered");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept the Delay activation");
+    let view = runner.pending_selection_view().expect("base selection");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+    let base = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .expect("the Mineral base is selectable");
+    runner.execute_action(view.selecting_player, base).expect("choose base");
+
+    let view = runner.pending_selection_view().expect("hand evolution selection");
+    assert_eq!(view.kind, SelectionKind::Hand);
+    let offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| {
+            runner.game.players[0].hand[(id - PLAY_HAND_START) as usize]
+                .card_id(&runner.game.card_data)
+                .to_string()
+        })
+        .collect();
+    assert_eq!(offered, vec!["EVO-CHEAP".to_string()]);
 }

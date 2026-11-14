@@ -505,6 +505,111 @@ fn bt21_102_main_opt_play_adventure_hero_with_dynamic_cap() {
     assert_eq!(deck_ids.first().map(String::as_str), Some("BT21-102"));
 }
 
+// ─── Clause (c) candidate legality ───────────────────────────────────────────
+// DCGO BT21_102.cs:77-80 `CanSelectCard` = `HasPlayCost &&
+// BasePlayCostFromEntity <= AdjustedPlayCostMax && (HasAdventureTraits ||
+// HasHeroTraits)`. `HasPlayCost` is false for an Option and for a Digi-Egg
+// (CEntity_Base.cs:340; a Digi-Egg has no play cost, CR 4.3 7-1-1), so
+// neither is a "play" candidate (e.g. Gurimon BT21-002, Our Courage United
+// ST20-14). DCGO does not check `CanPlayAsNewPermanent` before
+// `PlayPermanentCards(payCost: false)` (BT21_102.cs:113-116); the rules do: a
+// card that can't be played is not a legal choice for "play" (CR 4.3
+// 1-3-11-1).
+
+fn hero_card(id: &str, kind: CardKind, cost: u16, trait_name: &str) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = kind;
+    c.play_cost = cost;
+    c.traits = vec![trait_name.to_string()];
+    if matches!(kind, CardKind::Digimon) {
+        c.level = Some(4);
+        c.dp = Some(5000);
+    } else {
+        c.level = None;
+        c.dp = None;
+    }
+    c
+}
+
+/// Tai + a red Tamer (white + red = cap 4) on the field, `hand` in hand.
+fn tai_main_runner(hand: &[&str]) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let filler = make_test_card("DECK-PAD", "Filler");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(TAI_YAML)
+        .expect("BT21-102 YAML parses")
+        .add_card(make_tamer("RED-TAMER", CardColor::Red))
+        .add_card(hero_card("ADV-EGG", CardKind::DigiEgg, 0, "ADVENTURE"))
+        .add_card(hero_card("HERO-OPT", CardKind::Option, 2, "Hero"))
+        .add_card(hero_card("HERO-DIGI", CardKind::Digimon, 4, "Hero"))
+        .add_card(hero_card("ADV-TAMER", CardKind::Tamer, 3, "ADVENTURE"))
+        .add_card(filler)
+        .hand(0, hand)
+        .deck(0, &["DECK-PAD"])
+        .deck(1, &["DECK-PAD"])
+        .memory(5)
+        .start();
+    let tai = runner.place_on_field(0, "BT21-102", None);
+    runner.place_on_field(0, "RED-TAMER", None);
+    (runner, tai)
+}
+
+/// Activate the [Main] and return the offered hand card ids (sorted; empty
+/// when no pick installs).
+fn tai_main_offered(runner: &mut DebugRunner, tai: digimon_engine::permanent::PermanentHandle) -> Vec<String> {
+    use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
+    let _ = runner.game.activate_field_main(0, tai.index as usize);
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .filter(|&&a| a != PASS && a < HAND_EFFECT_START + hand.len() as u16)
+        .map(|&a| {
+            let i = if a < HAND_EFFECT_START { a } else { a - HAND_EFFECT_START };
+            hand[i as usize].clone()
+        })
+        .collect();
+    offered.sort();
+    offered
+}
+
+/// A Digi-Egg and an Option with the trait and a low cost are not offered.
+#[test]
+fn bt21_102_main_excludes_digi_egg_and_option() {
+    let (mut runner, tai) = tai_main_runner(&["ADV-EGG", "HERO-OPT", "HERO-DIGI", "ADV-TAMER"]);
+    assert_eq!(
+        tai_main_offered(&mut runner, tai),
+        vec!["ADV-TAMER".to_string(), "HERO-DIGI".to_string()]
+    );
+}
+
+/// Full battle area: nothing is offered.
+#[test]
+fn bt21_102_main_excludes_all_when_battle_area_full() {
+    let (mut runner, tai) = tai_main_runner(&["HERO-DIGI", "ADV-TAMER"]);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    assert!(tai_main_offered(&mut runner, tai).is_empty());
+}
+
+/// "Can't play Digimon by effects": only the Tamer is offered.
+#[test]
+fn bt21_102_main_excludes_digimon_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, tai) = tai_main_runner(&["HERO-DIGI", "ADV-TAMER"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    assert_eq!(tai_main_offered(&mut runner, tai), vec!["ADV-TAMER".to_string()]);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 5 — Clause (d): [Security] play self free
 // ═══════════════════════════════════════════════════════════════════════════════

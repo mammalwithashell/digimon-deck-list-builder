@@ -673,3 +673,180 @@ fn steps_lead_with_activation_cost_suspend_self_then_draw(steps: &[CompiledStep]
     }
     matches!(iter.next(), Some(CompiledStep::Draw { count: 1, .. }))
 }
+
+// ─── [Start of Your Main Phase] pick legality ────────────────────────────────
+// DCGO BT22_088.cs:40-45 `IsArisaKinosaki` = IsExistOnHand &&
+// EqualsCardName("Arisa Kinosaki") && CanPlayAsNewPermanent(cardSource, false,
+// activateClass), and :47-52 `IsShoemon` = IsExistOnTrash &&
+// EqualsCardName("Shoemon") && CanPlayAsNewPermanent(..., Root.Trash).
+// CanPlayAsNewPermanent (GameContextDeterminarion.cs:419-432) needs an empty
+// frame and a play the card may make (no prohibition). CR 4.3 1-3-2 / 15-10-2-1:
+// only cards the play can perform are chosen. YAML: both picks carry
+// `can_play_from_effect_without_cost: true`.
+
+fn arisa_copy() -> CardData {
+    let mut c = make_test_card("ARISA-COPY-LEGAL", "Arisa Kinosaki");
+    c.card_kind = CardKind::Tamer;
+    c.play_cost = 3;
+    c
+}
+
+fn shoemon_card() -> CardData {
+    let mut c = make_test_card("SHOEMON-LEGAL", "Shoemon");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(3);
+    c.dp = Some(2000);
+    c.play_cost = 3;
+    c
+}
+
+fn tamer_filler() -> CardData {
+    let mut c = make_test_card("TAMER-FILLER-LEGAL", "Filler Tamer");
+    c.card_kind = CardKind::Tamer;
+    c.play_cost = 2;
+    c
+}
+
+fn arisa_runner(hand: &[&str], trash: &[&str]) -> DebugRunner {
+    let filler = {
+        let mut c = make_test_card("FILLER-LEGAL", "Filler");
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(3);
+        c.dp = Some(1000);
+        c
+    };
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT22-088")
+        .expect("BT22-088 YAML loads")
+        .add_card(arisa_copy())
+        .add_card(shoemon_card())
+        .add_card(tamer_filler())
+        .add_card(filler)
+        .hand(0, hand)
+        .deck(0, &["FILLER-LEGAL"; 3])
+        .deck(1, &["FILLER-LEGAL"; 3])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "BT22-088", Some(0));
+    for id in trash {
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == *id)
+            .expect("trash card registered");
+        let next = runner.game.next_card_index();
+        runner.game.players[0]
+            .trash
+            .push(digimon_engine::card_source::CardSource::new(idx, 0, next));
+    }
+    runner
+}
+
+/// Enter the main phase, accept the trigger, and return the card ids offered by
+/// the first hand pick (`Hand`) or trash pick (`Trash`) of `want`, or empty when
+/// that pick never installs. Earlier picks of the other kind are passed.
+fn offered_pick(runner: &mut DebugRunner, want: SelectionKind) -> Vec<String> {
+    use digimon_engine::action::space::PLAY_HAND_START;
+    runner.game.enter_main_phase();
+    for _ in 0..8 {
+        let Some(kind) = runner.pending_kind() else {
+            return Vec::new();
+        };
+        if kind == want {
+            let view = runner.pending_selection_view().expect("pick");
+            let zone: Vec<String> = match kind {
+                SelectionKind::Hand => runner.game.players[0]
+                    .hand
+                    .iter()
+                    .map(|c| c.card_id(&runner.game.card_data).to_string())
+                    .collect(),
+                _ => runner.game.players[0]
+                    .trash
+                    .iter()
+                    .map(|c| c.card_id(&runner.game.card_data).to_string())
+                    .collect(),
+            };
+            let base = match kind {
+                SelectionKind::Hand => PLAY_HAND_START,
+                _ => digimon_engine::action::space::TRASH_EFFECT_START,
+            };
+            return view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&id| id != PASS)
+                .map(|id| zone[(id - base) as usize].clone())
+                .collect();
+        }
+        match kind {
+            SelectionKind::TriggerOrder => {
+                let action = runner.pending_selection().unwrap().valid_action_ids[0];
+                runner.execute_action(0, action).expect("pick the trigger");
+            }
+            SelectionKind::Hand | SelectionKind::Trash => {
+                runner.execute_action(0, PASS).expect("pass the other pick");
+            }
+            _ if runner.pending_is_optional() => {
+                runner.accept_optional_trigger().expect("accept optional prompt")
+            }
+            _ => return Vec::new(),
+        }
+    }
+    Vec::new()
+}
+
+/// "You can't play Tamers by effects": the [Arisa Kinosaki] in hand is not
+/// offered (the return-to-deck cost is still paid).
+#[test]
+fn bt22_088_hand_pick_excludes_arisa_when_tamer_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = arisa_runner(&["ARISA-COPY-LEGAL"], &[]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = offered_pick(&mut runner, SelectionKind::Hand);
+    assert!(offered.is_empty(), "Tamer play prohibited ⇒ no candidate: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "the Arisa copy stays in hand");
+}
+
+/// A full battle area (after Arisa leaves, the filler Tamer fills a 1-slot
+/// area): the [Arisa Kinosaki] in hand is not offered.
+#[test]
+fn bt22_088_hand_pick_excludes_arisa_when_battle_area_full() {
+    let mut runner = arisa_runner(&["ARISA-COPY-LEGAL"], &[]);
+    runner.place_on_field(0, "TAMER-FILLER-LEGAL", Some(0));
+    runner.game.rules.field_slots = 1;
+    let offered = offered_pick(&mut runner, SelectionKind::Hand);
+    assert!(offered.is_empty(), "full battle area ⇒ no candidate: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "the Arisa copy stays in hand");
+}
+
+/// "You can't play Digimon by effects": the [Shoemon] in trash is not offered
+/// by the no-Digimon branch.
+#[test]
+fn bt22_088_trash_pick_excludes_shoemon_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = arisa_runner(&[], &["SHOEMON-LEGAL"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = offered_pick(&mut runner, SelectionKind::Trash);
+    assert!(offered.is_empty(), "Digimon play prohibited ⇒ no candidate: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.game.players[0].trash.len(), 1, "Shoemon stays in trash");
+}
+
+/// Positive guard for the trash pick helper: with no lock, [Shoemon] is offered.
+#[test]
+fn bt22_088_trash_pick_offers_shoemon_without_lock() {
+    let mut runner = arisa_runner(&[], &["SHOEMON-LEGAL"]);
+    let offered = offered_pick(&mut runner, SelectionKind::Trash);
+    assert_eq!(offered, vec!["SHOEMON-LEGAL".to_string()]);
+}

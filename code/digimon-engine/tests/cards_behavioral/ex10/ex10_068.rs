@@ -499,3 +499,181 @@ impl ResolveOne for DebugRunner {
         self.execute_action(player, action_id)
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 5 — Play-candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY)
+//
+// DCGO EX10_068.cs:183-197 CanSelectCardCondition = IsDigimon && Level <= 4 &&
+// CanPlayAsNewPermanent(payCost: false) && colour overlap with the returned
+// card. CanPlayAsNewPermanent needs a free frame, no play prohibition and
+// `!IsOption` (so never a DUAL, CR 4.3 4-6-2). CR 4.3 1-3-2 / 7-1-1.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// A Blue DUAL card whose Digimon information is Lv.4.
+fn blue_dual_lv4(id: &str) -> CardData {
+    use digimon_engine::card_data::{DualCardData, DualDigimonFace, DualOptionFace};
+    let mut c = make_test_card(id, &format!("{id} DUAL"));
+    c.card_kind = CardKind::Dual;
+    c.colors = vec![CardColor::Blue];
+    c.level = Some(4);
+    c.dp = Some(5000);
+    c.play_cost = 4;
+    c.dual = Some(DualCardData {
+        digimon: DualDigimonFace {
+            level: 4,
+            dp: 5000,
+            colors: vec![CardColor::Blue],
+            traits: vec![],
+            evo_costs: vec![],
+            effect_text: String::new(),
+            inherited_text: String::new(),
+            keywords: vec![],
+        },
+        option: DualOptionFace {
+            use_cost: 4,
+            colors: vec![CardColor::Blue],
+            effect_text: String::new(),
+            security_text: String::new(),
+            keywords: vec![],
+        },
+    });
+    c
+}
+
+/// Build the [On Play] scenario: opponent VICTIM-L on field and RET-BLUE-L in
+/// the opponent's trash; `hand` / `trash` go to the controller.
+fn legality_runner(extra: Vec<CardData>, hand: &[&str], trash: &[&str]) -> DebugRunner {
+    let mut b = DebugRunner::builder()
+        .dsl_card("EX10-068")
+        .expect("EX10-068 YAML parses and compiles")
+        .add_card(make_digimon("VICTIM-L", CardColor::Green, 4, 4))
+        .add_card(make_digimon("RET-BLUE-L", CardColor::Blue, 5, 6))
+        .memory(10);
+    for c in extra {
+        b = b.add_card(c);
+    }
+    let mut runner = b.build();
+    runner.place_on_field(1, "VICTIM-L", Some(0));
+    push_to_trash(&mut runner, 1, "RET-BLUE-L");
+    for id in hand {
+        push_to_hand(&mut runner, 0, id);
+    }
+    for id in trash {
+        push_to_trash(&mut runner, 0, id);
+    }
+    runner
+}
+
+/// Fire [On Play], resolve the delete and return the Blue card, then report
+/// the number of concrete (non-PASS) candidates of the union play pick (0 when
+/// no pick installs).
+fn union_play_candidates(
+    runner: &mut DebugRunner,
+    setup: impl FnOnce(&mut DebugRunner),
+) -> usize {
+    let emperor = runner.place_on_field(0, "EX10-068", None);
+    setup(runner);
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(emperor));
+    runner.game.drain_effect_queue();
+    runner.auto_resolve_one().expect("resolve delete");
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Trash));
+    let pick = runner
+        .pending_selection_view()
+        .unwrap()
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .expect("the Blue card can be returned");
+    runner.execute_action(0, pick).expect("return the Blue card");
+    match runner.pending_kind() {
+        Some(SelectionKind::UnionZone { .. }) => runner
+            .pending_selection_view()
+            .unwrap()
+            .valid_action_ids
+            .iter()
+            .filter(|&&a| a != digimon_engine::action::space::PASS)
+            .count(),
+        _ => 0,
+    }
+}
+
+/// A Blue Lv.4 DUAL card in hand matches `kind: digimon` + level + colour by
+/// its Digimon information, but a DUAL is never played (CR 4.3 4-6-2): only
+/// the Blue Lv.4 Digimon is offered.
+#[test]
+fn ex10_068_play_pick_excludes_dual_card() {
+    let mut runner = legality_runner(
+        vec![
+            make_digimon("HAND-BLUE-L", CardColor::Blue, 4, 4),
+            blue_dual_lv4("HAND-DUAL-L"),
+        ],
+        &["HAND-BLUE-L", "HAND-DUAL-L"],
+        &[],
+    );
+    assert_eq!(union_play_candidates(&mut runner, |_| {}), 1);
+}
+
+/// A full battle area: nothing can be played, so nothing is offered.
+#[test]
+fn ex10_068_play_pick_empty_when_battle_area_full() {
+    let mut runner = legality_runner(
+        vec![
+            make_digimon("HAND-BLUE-F", CardColor::Blue, 4, 4),
+            make_digimon("TRASH-BLUE-F", CardColor::Blue, 3, 3),
+        ],
+        &["HAND-BLUE-F"],
+        &["TRASH-BLUE-F"],
+    );
+    let n = union_play_candidates(&mut runner, |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert_eq!(n, 0, "no candidate in a full battle area");
+}
+
+/// "You can't play Digimon by effects": nothing is offered.
+#[test]
+fn ex10_068_play_pick_empty_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = legality_runner(
+        vec![
+            make_digimon("HAND-BLUE-P", CardColor::Blue, 4, 4),
+            make_digimon("TRASH-BLUE-P", CardColor::Blue, 3, 3),
+        ],
+        &["HAND-BLUE-P"],
+        &["TRASH-BLUE-P"],
+    );
+    let n = union_play_candidates(&mut runner, |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(n, 0, "no candidate under a Digimon effect-play prohibition");
+}
+
+/// "You can't play cards from the trash": the trash card is not offered, the
+/// hand card still is (the trash-origin play would be refused).
+#[test]
+fn ex10_068_play_pick_excludes_trash_card_when_trash_play_is_locked() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = legality_runner(
+        vec![
+            make_digimon("HAND-BLUE-T", CardColor::Blue, 4, 4),
+            make_digimon("TRASH-BLUE-T", CardColor::Blue, 3, 3),
+        ],
+        &["HAND-BLUE-T"],
+        &["TRASH-BLUE-T"],
+    );
+    let n = union_play_candidates(&mut runner, |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(n, 1, "only the hand card is offered");
+}

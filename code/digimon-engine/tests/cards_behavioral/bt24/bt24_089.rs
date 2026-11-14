@@ -1074,13 +1074,20 @@ fn bt24_089_delay_body_digivolves_reptile_dragonkin_with_cost_reduction() {
             .pending_selection_view()
             .expect("choosing the base should expose the hand evolution selection");
         assert_eq!(view.kind, SelectionKind::Hand);
+        assert!(view.is_optional, "'may digivolve': the hand pick is declinable");
+        let picks: Vec<u16> = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&a| a != digimon_engine::action::space::PASS)
+            .collect();
         assert_eq!(
-            view.valid_action_ids.len(),
+            picks.len(),
             1,
             "only the Reptile+LIBERATOR hand card should be legal"
         );
         runner
-            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .execute_action(view.selecting_player, picks[0])
             .expect("choose Reptile+LIBERATOR evolution");
     }
 
@@ -1184,3 +1191,291 @@ fn bt24_089_security_clause_fires_union_zone_selection() {
 
 #[path="../../support/late_owned_fixture.rs"]
 mod owned_fixture;
+
+// ─── §4 Candidate legality ───────────────────────────────────────────────────
+//
+// [Main] / [Security]: DCGO BT24_089.cs:34-39 `CanSelectCardCondition` =
+// (`EqualsCardName("Elizamon")` || `EqualsCardName("Owen Dreadnought")`) &&
+// `CanPlayAsNewPermanent(cardSource, false, activateClass)`; it gates both the
+// hand pick (BT24_089.cs:88-100) and the trash pick (BT24_089.cs:113-129), and
+// `AddActivateMainOptionSecurityEffect` (BT24_089.cs:267-270) re-runs the same
+// [Main]. So a card the free play would refuse (full battle area, an
+// effect-play lock) is never offered. DCGO passes the default `Root.Hand` for
+// the trash candidates too, so it would still offer a trash card under "can't
+// play cards from the trash" and then the trash play refuses it; the engine's
+// trash play refuses it (CR 4.3 1-3-11-1: a card can't be declared for a play it
+// can't make), so it is not offered here either.
+//
+// <Delay>: DCGO BT24_089.cs:188-194 `CardCondition` (Digimon, [Reptile] or
+// [Dragonkin], [LIBERATOR]) goes to `DigivolveIntoHandOrTrashCard(payCost:
+// true, reduceCostTuple: (3, ...))` (BT24_089.cs:243-255), whose selection
+// filter (CardEffectCommons.cs:859-882) adds `!CanNotEvolve(target)` and
+// `CanPlayCardTargetFrame(target, PayCost: true, ...)`: the card must have a
+// route onto the chosen Digimon. DCGO's filter does NOT check cost here:
+// `CanPlayCardTargetFrame` only checks memory when the target frame is empty
+// (CardSource.cs:1150-1161), so for a digivolve onto an existing Digimon DCGO
+// still offers an unaffordable card and fails the digivolve at commit
+// (CardController.cs:1008-1014, `playFailed`). DCGO is looser than the rules
+// here. The engine also requires the reduced cost to be payable, because a
+// digivolve that can't be paid can't be declared (CR 4.3 1-3-11-1; the memory
+// floor is 10 on the opponent's side, 1-4-2-2), which matches the engine's own
+// commit-time refusal.
+
+/// (card id, zone) of every card the pending physical card choice offers.
+fn offered_rows(runner: &DebugRunner) -> Vec<(String, &'static str)> {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    let Some(choice) = &view.card_choice else {
+        return Vec::new();
+    };
+    choice
+        .rows
+        .iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .filter_map(|row| {
+            let zone = match row.zone {
+                Some(CardChoiceZone::Hand) => "hand",
+                Some(CardChoiceZone::Trash) => "trash",
+                _ => "other",
+            };
+            row.card_id.clone().map(|id| (id, zone))
+        })
+        .collect()
+}
+
+fn push_trash(runner: &mut DebugRunner, player: u8, id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == id)
+        .expect("card registered");
+    let card_index = runner.game.next_card_index();
+    runner.game.players[player as usize]
+        .trash
+        .push(CardSource::new(data_idx, player, card_index));
+}
+
+fn lock(runner: &mut DebugRunner, player: u8, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        player,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1 - player),
+    );
+}
+
+fn main_runner(hand: &[&str]) -> DebugRunner {
+    DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_elizamon())
+        .add_card(make_owen())
+        .add_card(make_non_target("OTHER"))
+        .add_card(make_filler("FILL"))
+        .hand(0, hand)
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start()
+}
+
+/// "You can't play Tamers by effects": [Owen Dreadnought] is not offered, the
+/// [Elizamon] still is.
+#[test]
+fn bt24_089_main_excludes_owen_when_tamer_effect_play_prohibited() {
+    let mut runner = main_runner(&["BT24-089", "OWEN", "ELIZAMON"]);
+    lock(&mut runner, 0, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(offered_rows(&runner), vec![("ELIZAMON".to_string(), "hand")]);
+}
+
+/// "You can't play cards from the trash": the [Elizamon] in trash is not
+/// offered, the [Owen Dreadnought] in hand still is.
+#[test]
+fn bt24_089_main_excludes_trash_elizamon_when_trash_play_locked() {
+    let mut runner = main_runner(&["BT24-089", "OWEN"]);
+    push_trash(&mut runner, 0, "ELIZAMON");
+    lock(&mut runner, 0, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(offered_rows(&runner), vec![("OWEN".to_string(), "hand")]);
+}
+
+/// Full battle area: neither card can be played, so nothing is offered and both
+/// stay where they are.
+#[test]
+fn bt24_089_main_offers_nothing_when_battle_area_full() {
+    let mut runner = main_runner(&["BT24-089", "OWEN"]);
+    push_trash(&mut runner, 0, "ELIZAMON");
+    runner.place_on_field(0, "OTHER", Some(0));
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    assert!(runner.game.activate_hand_main(0, 0));
+    let offered = offered_rows(&runner);
+    assert!(offered.is_empty(), "full battle area: nothing offered, got {offered:?}");
+    let _ = runner.auto_resolve();
+    assert!(hand_contains(&runner, 0, "OWEN"));
+    assert!(trash_contains(&runner, 0, "ELIZAMON"));
+}
+
+/// Regression guard: both a hand and a trash candidate are offered when
+/// playable.
+#[test]
+fn bt24_089_main_offers_hand_and_trash_candidates_when_playable() {
+    let mut runner = main_runner(&["BT24-089", "OWEN"]);
+    push_trash(&mut runner, 0, "ELIZAMON");
+    assert!(runner.game.activate_hand_main(0, 0));
+    let mut offered = offered_rows(&runner);
+    offered.sort();
+    assert_eq!(
+        offered,
+        vec![("ELIZAMON".to_string(), "trash"), ("OWEN".to_string(), "hand")]
+    );
+}
+
+/// [Security] re-runs [Main]: under "you can't play Digimon by effects" the
+/// security owner's [Elizamon] is not offered, the [Owen Dreadnought] still is.
+#[test]
+fn bt24_089_security_excludes_elizamon_when_digimon_effect_play_prohibited() {
+    let mut attacker = make_test_card("ATTACKER", "Attacker");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.level = Some(4);
+    attacker.dp = Some(9000);
+    attacker.play_cost = 4;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_elizamon())
+        .add_card(make_owen())
+        .add_card(attacker)
+        .add_card(make_filler("FILL"))
+        .hand(1, &["ELIZAMON", "OWEN"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .security(1, &["BT24-089"])
+        .memory(10)
+        .start();
+    lock(&mut runner, 1, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    let _ = runner.attack_player(attacker, 1, false);
+    let mut seen = Vec::new();
+    for _ in 0..10 {
+        let Some(view) = runner.pending_selection_view() else {
+            break;
+        };
+        if matches!(view.kind, SelectionKind::UnionZone { .. }) {
+            seen = offered_rows(&runner);
+            break;
+        }
+        let action = view.valid_action_ids[0];
+        runner.execute_action(view.selecting_player, action).expect("advance");
+    }
+    assert_eq!(seen, vec![("OWEN".to_string(), "hand")]);
+}
+
+/// A Reptile + LIBERATOR card whose reduced digivolution cost can't be paid
+/// (cost 14 - 3 = 11 from 0 memory would pass 10 on the opponent's side).
+fn make_pricey_evo(id: &str) -> CardData {
+    let mut c = make_reptile_liberator_evo(id);
+    c.evo_costs = vec![EvoCost {
+        card_color: CardColor::Red as u8,
+        level: 3,
+        memory_cost: 14,
+    }];
+    c
+}
+
+/// A Reptile + LIBERATOR card with no route onto the Lv.3 red base.
+fn make_unroutable_evo(id: &str) -> CardData {
+    let mut c = make_reptile_liberator_evo(id);
+    c.evo_costs = vec![EvoCost {
+        card_color: CardColor::Red as u8,
+        level: 5,
+        memory_cost: 3,
+    }];
+    c
+}
+
+/// Drive the <Delay> to its hand pick (after choosing the base) at `memory`;
+/// returns the offered hand card ids, or `None` if no hand pick is asked.
+fn delay_hand_pick(hand_extra: &[&str], memory: i16) -> (DebugRunner, Option<Vec<String>>) {
+    let mut hand = vec!["BT24-089"];
+    hand.extend_from_slice(hand_extra);
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_owen())
+        .add_card(make_reptile_base("BASE"))
+        .add_card(make_reptile_liberator_evo("EVO"))
+        .add_card(make_pricey_evo("PRICEY"))
+        .add_card(make_unroutable_evo("NOROUTE"))
+        .add_card(make_filler("FILL"))
+        .hand(0, &hand)
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "BASE", Some(0));
+    runner.game.enter_main_phase();
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Trashed
+    );
+    let owen = runner.place_on_field(0, "OWEN", Some(0));
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.game.enter_main_phase();
+    runner.game.set_memory(memory);
+
+    runner.game.suspend(owen);
+    let view = runner.pending_selection_view().expect("Delay activation");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept the Delay");
+    let view = runner.pending_selection_view().expect("base pick");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("choose base");
+    let offered = runner.pending_selection_view().and_then(|view| {
+        (view.kind == SelectionKind::Hand).then(|| {
+            let hand = &runner.game.players[0].hand;
+            view.valid_action_ids
+                .iter()
+                .filter(|&&a| a != digimon_engine::action::space::PASS)
+                .map(|&a| hand[a as usize].card_id(&runner.game.card_data).to_string())
+                .collect()
+        })
+    });
+    (runner, offered)
+}
+
+/// The reduced cost must be payable: the 11-memory card is not offered at 0
+/// memory, the 0-memory card is.
+#[test]
+fn bt24_089_delay_hand_pick_excludes_unaffordable_digivolution() {
+    let (_, offered) = delay_hand_pick(&["PRICEY", "EVO"], 0);
+    assert_eq!(offered, Some(vec!["EVO".to_string()]));
+}
+
+/// Regression guard: with memory to spare, the same card is offered.
+#[test]
+fn bt24_089_delay_hand_pick_offers_affordable_digivolution() {
+    let (_, offered) = delay_hand_pick(&["PRICEY", "EVO"], 3);
+    let mut offered = offered.expect("hand pick");
+    offered.sort();
+    assert_eq!(offered, vec!["EVO".to_string(), "PRICEY".to_string()]);
+}
+
+/// Regression guard: a card with no route onto the chosen base is not offered
+/// (compile pass `can_digivolve_onto`, now `can_digivolve_onto_with_cost`).
+#[test]
+fn bt24_089_delay_hand_pick_excludes_card_without_a_route() {
+    let (_, offered) = delay_hand_pick(&["NOROUTE", "EVO"], 3);
+    assert_eq!(offered, Some(vec!["EVO".to_string()]));
+}

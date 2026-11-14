@@ -138,6 +138,10 @@ effects:
               - any_of:
                   - name_is: "Gazimon"
                   - name_is: "Gizamon"
+              # DCGO EX11_055.cs:137-141 CanPlayAsNewPermanent(cardSource,
+              # false, activateClass): DCGO offers no unplayable pick (slot cap
+              # = engine rules.field_slots, not a CR limit, CR 4.3 3-4-8-2).
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [Gazimon]/[Gizamon] from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: pick }
 

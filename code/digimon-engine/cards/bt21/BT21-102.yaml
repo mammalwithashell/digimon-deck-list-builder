@@ -147,6 +147,15 @@ effects:
               - any_of:
                   - trait_has: ADVENTURE
                   - trait_has: Hero
+              # "play 1 ... card": only a card with a play cost (DCGO
+              # BT21_102.cs:78 HasPlayCost — false for Options, and a Digi-Egg
+              # has none, CR 4.3 7-1-1) that the free play can place (free
+              # slot, no effect-play prohibition; DCGO omits this check,
+              # the rules require it, CR 4.3 1-3-11-1).
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - can_play_from_effect_without_cost: true
               - play_cost_lte:
                   formula:
                     base: 2

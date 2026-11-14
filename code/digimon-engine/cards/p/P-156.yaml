@@ -30,36 +30,33 @@ effects:
           filter:
             kind: tamer
           prompt: "Choose 1 Tamer"
-      - select_effect_choice:
-          labels: ["From hand", "From trash"]
-          bind_as: zone_choice
-          prompt: "Play from hand or trash?"
-      - if:
-          condition: { equals: [zone_choice, 0] }
-          then:
-            - select_hand:
-                of: you
-                bind_as: picked_hand
-                optional: true
-                filter:
-                  kind: digimon
-                  play_cost_lte: 3
-                  color_matches_binding: chosen_tamer
-                prompt: "You may play 1 Digimon with the same color as the chosen Tamer from your hand"
-            - play_from_hand_free: { of: you, hand_index: picked_hand }
-      - if:
-          condition: { equals: [zone_choice, 1] }
-          then:
-            - select_trash:
-                of: you
-                bind_as: picked_trash
-                optional: true
-                filter:
-                  kind: digimon
-                  play_cost_lte: 3
-                  color_matches_binding: chosen_tamer
-                prompt: "You may play 1 Digimon with the same color as the chosen Tamer from your trash"
-            - play_from_trash_free: { of: you, hand_index: picked_trash }
+      # "You may play 1 Digimon card ... from your hand or trash": ONE card
+      # chosen from the two zones together, so the engine asks one optional
+      # pick over hand + trash (the AvengeKidmon (P-170) / Dimetromon (P-189)
+      # idiom). DCGO P_156.cs:124-150 shows its "From hand / From trash" prompt
+      # only when BOTH zones hold a candidate, fixes the zone when only one
+      # does, and asks nothing when neither does; a separate always-offered
+      # zone choice would be a dead option in the action space, so it is not
+      # modelled (the zone choice is a UI step over the same single pick).
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: picked
+          optional: true
+          # DCGO P_156.cs:58-75 `SelectDigimonCondition`: IsDigimon &&
+          # CanPlayAsNewPermanent && cost <= 3 && shares a colour with the
+          # chosen Tamer. `can_play_from_effect_without_cost` is zone-aware (a
+          # trash card fails while the trash can't be played from); CR 4.3
+          # 1-3-11-1: a card can be declared for play only if it can be played.
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte: 3
+              - color_matches_binding: chosen_tamer
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 Digimon with the same color as the chosen Tamer and a play cost of 3 or less from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked
 
   # "[Security] You may play 1 Tamer card from your hand without paying the
   #  cost. Then, add this card to your hand."
@@ -85,10 +82,13 @@ effects:
       - if:
           condition:
             count_gte:
+              # DCGO P_156.cs:243-249 / 258: HasMatchConditionOwnersHand(
+              # CanPlayAsNewPermanent && IsTamer) gates the optional play.
               filter:
                 of: you
                 zone: [hand]
                 kind: tamer
+                can_play_from_effect_without_cost: true
               n: 1
           then:
             - select_effect_choice:
@@ -103,6 +103,7 @@ effects:
                       bind_as: picked_tamer
                       filter:
                         kind: tamer
+                        can_play_from_effect_without_cost: true
                       prompt: "Choose 1 Tamer card to play from your hand"
                   - play_from_hand_free: { of: you, hand_index: picked_tamer }
       # "Then, add this card to your hand." — mandatory tail.

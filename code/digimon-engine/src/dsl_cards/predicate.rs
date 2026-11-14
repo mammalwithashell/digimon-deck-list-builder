@@ -19,7 +19,7 @@ use crate::trigger_context::AttackTargetChangeReason;
 
 #[path = "predicate_dna.rs"]
 mod dna;
-use dna::{dna_field_pair, dna_hand_candidate};
+use dna::{dna_field_pair, dna_hand_candidate, dna_trash_candidate};
 
 /// The subject a predicate is applied to.
 #[derive(Debug, Clone, Copy)]
@@ -211,6 +211,11 @@ fn eval_predicate_ref_known(
     }
     if let Some(spec) = &pred.dna_hand_candidate {
         if !dna_hand_candidate(spec, rctx, original_subject, bindings) {
+            return false;
+        }
+    }
+    if let Some(spec) = &pred.dna_trash_candidate {
+        if !dna_trash_candidate(spec, rctx, original_subject, bindings) {
             return false;
         }
     }
@@ -1687,6 +1692,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.can_change_orientation.is_none()
         && pred.can_play_from_effect_without_cost.is_none()
         && pred.can_play_or_use_from_effect.is_none()
+        && pred.affordable_with_cost.is_none()
         && pred.can_play_to_breeding_from_hand.is_none()
         && pred.can_move_from_breeding_by_effect.is_none()
         && pred.can_digivolve_onto_with_cost.is_none()
@@ -3366,7 +3372,7 @@ printed_card_information_constraints!(
     name_not_shared_by_field_tamer, name_not_in_binding, card_number_is,
     effect_text_contains, in_text_contains, printed_keyword, has_keyword,
     has_inherited, has_on_deletion_effect, play_cost_lte, play_cost_gte,
-    play_cost_eq, play_cost_eq_binding, play_or_use_cost_lte, affordable_with_cost_reduce,
+    play_cost_eq, play_cost_eq_binding, play_or_use_cost_lte, affordable_with_cost_reduce, affordable_with_cost,
     dp_eq, dp_lte, dp_gte, self_color_count_gte, self_color_count_lte,
 );
 
@@ -3472,7 +3478,8 @@ fn eval_card_fields(
     // field — the owner is the player who uses it.
     // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
     if let Some(want) = pred.can_play_or_use_from_effect {
-        let can = rctx
+        let can = !trash_play_locked(rctx, card)
+            && rctx
             .game
             .card_source_for_handle(card)
             .is_some_and(|source| match data.card_kind {
@@ -3494,7 +3501,8 @@ fn eval_card_fields(
         }
     }
     if let Some(want) = pred.can_play_from_effect_without_cost {
-        let can = rctx
+        let can = !trash_play_locked(rctx, card)
+            && rctx
             .game
             .card_source_for_handle(card)
             .is_some_and(|source| {
@@ -3866,23 +3874,21 @@ fn eval_card_fields(
         }
     }
     if let Some(reduce) = pred.affordable_with_cost_reduce {
-        // BT26-084 â€” "play or use ... with the cost reduced by N": the
-        // controller's own memory must stay at or above the floor after paying
-        // max(0, cost - N). Option â†’ use cost; otherwise play cost.
-        let cost = if data.card_kind == crate::enums::CardKind::Option {
-            effective_use_cost(rctx, card)
-                .map(|c| c as u16)
-                .unwrap_or(data.option_use_cost().unwrap_or(data.play_cost))
-        } else {
-            data.play_cost
-        };
-        let pay = i32::from(cost.saturating_sub(u16::from(reduce)));
-        let own = if rctx.game.turn_player() == rctx.player {
-            i32::from(rctx.game.memory)
-        } else {
-            -i32::from(rctx.game.memory)
-        };
-        if own - pay < i32::from(rctx.game.rules.memory_range.0) {
+        // BT26-084 -- "play or use ... with the cost reduced by N".
+        if !card_cost_affordable(rctx, card, data, crate::enums::CostDelta::Reduce(i16::from(reduce))) {
+            return false;
+        }
+    }
+    if let Some(cost) = &pred.affordable_with_cost {
+        // G-DSL-AFFORDABLE-WITH-COST: the same CostDelta the consuming verb
+        // carries, lowered exactly as the verb lowers it (formula reductions
+        // read the effect's bindings).
+        let delta = crate::dsl_cards::step::play_digivolve::lower_cost_delta_read(
+            Some(cost),
+            rctx,
+            bindings,
+        );
+        if !card_cost_affordable(rctx, card, data, delta) {
             return false;
         }
     }
@@ -5405,6 +5411,52 @@ fn color_matches(want: CompiledColor, got: CardColor) -> bool {
             | (CompiledColor::Black, CardColor::Black)
             | (CompiledColor::Purple, CardColor::Purple)
             | (CompiledColor::White, CardColor::White)
+    )
+}
+
+/// The memory the card's owner pays to play (Digimon / Tamer: play cost) or
+/// use (Option, or a DUAL, which is used and never played -- CR 4.3 4-6-2,
+/// its Digimon face prints no play cost) `card` under `delta`, and whether
+/// that payment keeps memory at or above the floor. The payer is the effect
+/// controller, as in the play / use verbs. Reducers the player may choose at
+/// payment ("before paying" effects) are not credited, matching the action
+/// mask's hand-play check. Shared by `affordable_with_cost_reduce` and
+/// `affordable_with_cost` (G-DSL-AFFORDABLE-WITH-COST). Before 2026-11-13 the
+/// reduce leaf priced a DUAL at its stored play cost without the use-cost
+/// modifiers (`Game::option_use_cost`).
+fn card_cost_affordable(
+    rctx: &EffectReadContext<'_>,
+    card: CardHandle,
+    data: &crate::card_data::CardData,
+    delta: crate::enums::CostDelta,
+) -> bool {
+    let base = if matches!(data.card_kind, CardKind::Option | CardKind::Dual) {
+        effective_use_cost(rctx, card)
+            .map(|c| c.clamp(0, i32::from(u16::MAX)) as u16)
+            .unwrap_or(data.option_use_cost().unwrap_or(data.play_cost))
+    } else {
+        data.play_cost
+    };
+    let pay = i32::from(delta.resolve(base));
+    let own = if rctx.game.turn_player() == rctx.player {
+        i32::from(rctx.game.memory)
+    } else {
+        -i32::from(rctx.game.memory)
+    };
+    own - pay >= i32::from(rctx.game.rules.memory_range.0)
+}
+
+/// G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE: `card` lies in its owner's trash and
+/// that player can't play cards from the trash (`CannotPlayFromTrash`,
+/// BT23-014). The trash-origin play (`Game::trash_play_refusal`) and Option
+/// use (`Game::use_option_from` with a trash origin) refuse it, so a play /
+/// use candidate leaf must too. A hand or digivolution-card origin is never
+/// locked by it.
+fn trash_play_locked(rctx: &EffectReadContext<'_>, card: CardHandle) -> bool {
+    matches!(
+        rctx.game.locate_card_source_ref(card),
+        Some(crate::enums::CardSourceRef::Trash(owner, _))
+            if rctx.game.modifiers.player_has(owner, crate::enums::ModifierType::CannotPlayFromTrash)
     )
 }
 

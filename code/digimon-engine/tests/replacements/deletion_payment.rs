@@ -323,6 +323,21 @@ fn recorded_medusamon_immune_token_payment_does_not_loop() {
     // into a [Reptile]/[Dragonkin] card in the hand" after choosing Lv.6 Medusamon,
     // a card that could not digivolve onto it, so the digivolve did nothing. No
     // hand card qualifies now, so that pick is no longer asked.
+    // Rows 26 and 49 were removed on 2026-11-13 for the same reason one stage
+    // earlier: they were BT21-001's permanent pick choosing that Medusamon.
+    // DCGO BT21_001.cs:44-53 offers a Digimon only if some [Reptile]/
+    // [Dragonkin] hand card can digivolve onto it (:68 `maxCount = Min(1,
+    // count)`), so with no such card no Digimon is asked for at all. That
+    // pass no longer uses the [Once Per Turn] (Q1818), so the security
+    // later security removals offer it again, now with a legal digivolve
+    // (Digimon slot 3). A decline (action 62, PASS) was inserted at each such
+    // offer (after steps 58 and 60). At step 65 the unused trigger now also
+    // fires beside EX11-008, so a trigger-order row (action 30: BT21-001
+    // first; it then finds no legal digivolve and does nothing) follows step
+    // 65, and EX11-008's +1 memory moved from step 65's memory_after (now 2)
+    // to that row (2 -> 3). An inserted row repeats the step number of the
+    // row before it, so no recorded step is renumbered; the game's outcome
+    // is unchanged.
     let recording: serde_json::Value = serde_json::from_str(include_str!(
         "../fixtures/training/medusamon-immune-token-payment.json"
     ))
@@ -345,8 +360,13 @@ fn recorded_medusamon_immune_token_payment_does_not_loop() {
         assert_eq!(
             build_action_mask(&replay.game, player)[action as usize],
             1.0,
-            "row {}",
-            row["step"]
+            "row {}: pending {:?}",
+            row["step"],
+            replay.game.pending_selection.as_ref().map(|p| (
+                p.kind,
+                p.prompt.clone(),
+                p.valid_action_ids.clone()
+            ))
         );
         if row["step"] == 93 {
             let mut clone = replay.game.clone();
@@ -362,11 +382,26 @@ fn recorded_medusamon_immune_token_payment_does_not_loop() {
                 .is_some_and(|s| s.prompt.contains("Delete 1 Token")));
             return;
         }
+        let prompt_before = replay
+            .game
+            .pending_selection
+            .as_ref()
+            .map(|p| (p.selecting_player, p.prompt.clone()));
         let step = replay.step();
         assert!(
             step.divergences.is_empty(),
-            "row {}: {:?}",
+            "row {} (answering {:?}; now pending {:?}): {:?}",
             row["step"],
+            prompt_before,
+            replay.game.pending_selection.as_ref().map(|p| (
+                p.selecting_player,
+                p.prompt.clone(),
+                p.valid_action_ids.clone(),
+                p.effect_choices.as_ref().map(|c| c
+                    .iter()
+                    .map(|e| (e.action_id, e.label.clone()))
+                    .collect::<Vec<_>>())
+            )),
             step.divergences
         );
     }

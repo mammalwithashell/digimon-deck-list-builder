@@ -137,10 +137,10 @@ effects:
   # ─── [When Digivolving] free-play + security trim ───────────────────────────
   #
   # (a) "You may play 1 level 5 or lower yellow or purple card from your hand or
-  #     trash without paying the cost." — optional area choice (Decline / From
-  #     hand / From trash), then a free play of a Lv.5-or-lower yellow/purple
-  #     Digimon. Each branch's select is optional so an empty-candidate area
-  #     declines cleanly; the leading "Decline" branch models the printed "may".
+  #     trash without paying the cost." — area choice (From hand / From
+  #     trash, each offered only with a playable candidate), then a free play
+  #     of a Lv.5-or-lower yellow/purple Digimon. The printed "may" is the
+  #     optional card pick (DCGO canNoSelect: true), not an area-level Decline.
   #
   # (b) "Then, if this Digimon's stack has 2 or more same-level cards, trash the
   #     top cards of both players' security stacks so that they have 3 cards
@@ -155,12 +155,41 @@ effects:
       - select_effect_choice:
           bind_as: area
           labels:
-            - "Decline"
             - "From hand"
             - "From trash"
+          # DCGO BT23_102.cs:193-218: the area prompt is a two-element
+          # SetBoolSelection (hand / trash) with no decline element, shown only
+          # when BOTH areas hold a CanSelectCard candidate. With one area legal
+          # it is bound with no prompt (SetBool); with neither, nothing binds,
+          # both branch `if`s fail and the security trim still runs.
+          legal_when:
+            - count_gte:
+                filter:
+                  of: you
+                  zone: [hand]
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                    - any_of:
+                        - color_is: yellow
+                        - color_is: purple
+                    - can_play_from_effect_without_cost: true
+                n: 1
+            - count_gte:
+                filter:
+                  of: you
+                  zone: [trash]
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                    - any_of:
+                        - color_is: yellow
+                        - color_is: purple
+                    - can_play_from_effect_without_cost: true
+                n: 1
           prompt: "Play 1 Lv.5 or lower yellow/purple card free?"
       - if:
-          condition: { equals: [area, 1] }
+          condition: { equals: [area, 0] }
           then:
             - select_hand:
                 of: you
@@ -173,10 +202,14 @@ effects:
                     - any_of:
                         - color_is: yellow
                         - color_is: purple
+                    # Only cards the free play accepts (DCGO BT23_102.cs:184-190
+                    # CanPlayAsNewPermanent): no DUAL (CR 4.3 4-6-2), a free
+                    # slot, no "can't play" lock (CR 4.3 1-3-11-1).
+                    - can_play_from_effect_without_cost: true
                 prompt: "Select a Lv.5 or lower yellow/purple card from your hand to play free"
             - play_from_hand_free: { of: you, hand_index: pick }
       - if:
-          condition: { equals: [area, 2] }
+          condition: { equals: [area, 1] }
           then:
             - select_trash:
                 of: you
@@ -189,6 +222,9 @@ effects:
                     - any_of:
                         - color_is: yellow
                         - color_is: purple
+                    # Same CanSelectCard as the hand pick; also refuses a trash
+                    # card while the trash-play lock (CannotPlayFromTrash) holds.
+                    - can_play_from_effect_without_cost: true
                 prompt: "Select a Lv.5 or lower yellow/purple card from your trash to play free"
             - play_from_trash_free: { of: you, hand_index: pick }
 

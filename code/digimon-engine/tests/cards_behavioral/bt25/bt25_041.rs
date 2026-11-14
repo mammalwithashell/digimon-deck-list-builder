@@ -511,3 +511,341 @@ fn bt25_041_no_glowing_dawn_card_in_hand_no_play() {
         "no GD card available → nothing played"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 4 — Hand-pick legality: only cards that can actually be played/used
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// DCGO BT25_041.cs:54-55 `isGlowingDawnCard` = `HasGlowingDawnTraits` only, and
+// the pick (BT25_041.cs:138-151, `SelectHandEffect.Mode.Custom`) offers every
+// [Glowing Dawn] card in hand; the chosen card is then handed to
+// `PlayOptionCards` / `PlayPermanentCards(payCost: true)` (BT25_041.cs:229-248),
+// which refuse a Digi-Egg, a card with no free frame / under a play lock, an
+// Option whose colour requirement is unmet, or a cost the player can't pay.
+// DCGO is looser than the rules here: CR 4.3 1-3-2 (an impossible action is not
+// carried out), 7-1-1 (only a card with a play cost is "played" — never a
+// Digi-Egg such as Frimon BT25-003), 4-22-1..3 (an Option can't be used without
+// meeting its colour requirement; an effect use is still a use, Q1500 / Q2785).
+// The engine follows the rules: only cards the play/use would accept, at the
+// reduced cost, are offered.
+
+fn gd_egg(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::DigiEgg;
+    c.colors = vec![CardColor::Yellow];
+    c.level = Some(2);
+    c.dp = None;
+    c.play_cost = 0;
+    c.traits = vec!["Glowing Dawn".to_string()];
+    c
+}
+
+/// A green [Glowing Dawn] Option — unusable with only yellow cards on the field.
+fn gd_option_green(id: &str) -> CardData {
+    let mut c = gd_option(id);
+    c.colors = vec![CardColor::Green];
+    c
+}
+
+/// A [Glowing Dawn] Digimon whose reduced cost (22 − 3 = 19) is unpayable from
+/// memory 8 (8 − 19 = −11, past the opponent's 10).
+fn gd_digimon_expensive(id: &str) -> CardData {
+    let mut c = gd_digimon(id);
+    c.play_cost = 22;
+    c
+}
+
+fn legality_pool(b: digimon_engine::debug_runner::DebugRunnerBuilder) -> digimon_engine::debug_runner::DebugRunnerBuilder {
+    b.add_card(gd_egg("GD-EGG"))
+        .add_card(gd_option_green("GD-OPT-GREEN"))
+        .add_card(gd_digimon_expensive("GD-EXP"))
+}
+
+fn offered_ids(runner: &DebugRunner) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    let Some(v) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if v.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut out: Vec<String> = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| ids[(id - PLAY_HAND_START) as usize].clone())
+        .collect();
+    out.sort();
+    out
+}
+
+/// Branch B (trash a face-down card under a Tamer): `hand` in hand, `setup` run
+/// before the trigger. Returns the sorted hand-pick candidates.
+fn offered_trash_branch(hand: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut b = legality_pool(
+        DebugRunner::builder()
+            .add_card(murasamemon())
+            .add_card(make_tamer("TAMER"))
+            .add_card(make_filler("FILLER"))
+            .add_card(gd_digimon("GD-DIGI"))
+            .add_card(gd_option("GD-OPT"))
+            .add_card(sec_filler("SEC")),
+    )
+    .deck(0, &["FILLER"; 8])
+    .deck(1, &["FILLER"; 8]);
+    b = b.memory(8);
+    let mut runner = b.start();
+    runner.set_first_player(0);
+    let murasame = runner.place_on_field(0, CARD_ID, Some(0));
+    let _tamer = add_tamer_with_face_down(&mut runner);
+    for h in hand {
+        push_to_hand(&mut runner, 0, h);
+    }
+    setup(&mut runner);
+    fire_when_digivolving(&mut runner, murasame);
+    runner.execute_branch(1).expect("choose trash-FD-under-Tamer");
+    let v = runner.pending_selection_view().expect("Tamer pick");
+    runner
+        .execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
+    offered_ids(&runner)
+}
+
+/// Regression guard: a playable GD Digimon and a usable (yellow) GD Option are
+/// both offered.
+#[test]
+fn bt25_041_hand_pick_offers_playable_digimon_and_usable_option() {
+    assert_eq!(
+        offered_trash_branch(&["GD-DIGI", "GD-OPT"], |_| {}),
+        vec!["GD-DIGI".to_string(), "GD-OPT".to_string()]
+    );
+}
+
+/// A [Glowing Dawn] Digi-Egg (Frimon BT25-003 shape) has no play cost: not offered.
+#[test]
+fn bt25_041_hand_pick_excludes_glowing_dawn_digi_egg() {
+    assert_eq!(
+        offered_trash_branch(&["GD-EGG", "GD-DIGI"], |_| {}),
+        vec!["GD-DIGI".to_string()]
+    );
+}
+
+/// A green [Glowing Dawn] Option with only yellow cards on the field: its
+/// colour requirement is unmet (CR 4.3 4-22), so it can't be used — not offered.
+#[test]
+fn bt25_041_hand_pick_excludes_option_whose_colour_requirement_is_unmet() {
+    assert_eq!(
+        offered_trash_branch(&["GD-OPT-GREEN", "GD-DIGI"], |_| {}),
+        vec!["GD-DIGI".to_string()]
+    );
+}
+
+/// No affordability filter, as in DCGO: BT25_041.cs:138-151 offers every
+/// [Glowing Dawn] card (`HasGlowingDawnTraits`) and lets PlayPermanentCards /
+/// PlayOptionCards charge the cost. The cost is only settled at payment — the
+/// payer may still opt into "before paying" reducers such as Kyo Sawashiro
+/// (BT25-088) — so a card whose cost − 3 is past the floor is still a legal
+/// pick. If it can't be paid, CR 4.3 7-1-2-3 (9-1-8 for an Option) returns
+/// it to the hand and memory doesn't move.
+#[test]
+fn bt25_041_hand_pick_offers_card_whose_reduced_cost_is_unpayable() {
+    assert_eq!(
+        offered_trash_branch(&["GD-EXP", "GD-DIGI"], |_| {}),
+        vec!["GD-DIGI".to_string(), "GD-EXP".to_string()]
+    );
+}
+
+/// Picking a card whose reduced cost can't be paid (22 − 3 = 19 from memory 8,
+/// no reducer available) plays nothing: the card stays in hand and memory
+/// doesn't move (CR 4.3 7-1-2-3).
+#[test]
+fn bt25_041_unpayable_pick_returns_card_and_memory_does_not_move() {
+    let mut runner = legality_pool(
+        DebugRunner::builder()
+            .add_card(murasamemon())
+            .add_card(make_tamer("TAMER"))
+            .add_card(make_filler("FILLER"))
+            .add_card(gd_digimon("GD-DIGI"))
+            .add_card(gd_option("GD-OPT"))
+            .add_card(sec_filler("SEC")),
+    )
+    .deck(0, &["FILLER"; 8])
+    .deck(1, &["FILLER"; 8])
+    .memory(8)
+    .start();
+    runner.set_first_player(0);
+    let murasame = runner.place_on_field(0, CARD_ID, Some(0));
+    let _tamer = add_tamer_with_face_down(&mut runner);
+    push_to_hand(&mut runner, 0, "GD-EXP");
+    fire_when_digivolving(&mut runner, murasame);
+    runner.execute_branch(1).expect("choose trash-FD-under-Tamer");
+    let v = runner.pending_selection_view().expect("Tamer pick");
+    runner
+        .execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
+    assert_eq!(offered_ids(&runner), vec!["GD-EXP".to_string()]);
+    let memory_before = runner.memory();
+    let field_before = runner.game.players[0].battle_area.len();
+    let v = runner.pending_selection_view().expect("hand pick");
+    let pick = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != digimon_engine::action::space::PASS)
+        .unwrap();
+    runner.execute_action(0, pick).expect("pick GD-EXP");
+    assert_eq!(runner.memory(), memory_before, "an unpayable play moves no memory");
+    assert_eq!(runner.game.players[0].battle_area.len(), field_before, "nothing was played");
+    assert_eq!(hand_index_of(&runner, 0, "GD-EXP"), 0, "GD-EXP returned to the hand");
+}
+
+/// Kyo Sawashiro (BT25-088): "[Your Turn][Once Per Turn] When a card with the
+/// [Glowing Dawn] trait would be played, by trashing the bottom face-down card
+/// under any of your Tamers, reduce the play cost by 1." With Kyo on the field
+/// and a face-down card left to trash, a [Glowing Dawn] Digimon whose cost − 3
+/// is ONE past the floor (22 − 3 = 19 from memory 8 → −11) is payable at
+/// 22 − 3 − 1 = 18 (→ −10), so it must be offered.
+#[test]
+fn bt25_041_hand_pick_offers_card_payable_only_with_kyo_sawashiro_reduction() {
+    let mut runner = legality_pool(
+        DebugRunner::builder()
+            .add_card(murasamemon())
+            .add_card(make_tamer("TAMER"))
+            .add_card(make_filler("FILLER"))
+            .add_card(gd_digimon("GD-DIGI"))
+            .add_card(gd_option("GD-OPT"))
+            .add_card(sec_filler("SEC"))
+            .dsl_card("BT25-088")
+            .expect("BT25-088 Kyo Sawashiro compiles"),
+    )
+    .deck(0, &["FILLER"; 8])
+    .deck(1, &["FILLER"; 8])
+    .memory(8)
+    .start();
+    runner.set_first_player(0);
+    let murasame = runner.place_on_field(0, CARD_ID, Some(0));
+    // Kyo Sawashiro is the only Tamer, with two face-down cards under it: one
+    // for Murasamemon's cost, one left for Kyo's own reducer.
+    let kyo = runner.place_stack(0, &["FILLER", "FILLER", "BT25-088"]);
+    for i in 0..2 {
+        runner.game.players[0].battle_area[kyo.index as usize].card_sources[i].face_down = true;
+    }
+    push_to_hand(&mut runner, 0, "GD-EXP");
+    fire_when_digivolving(&mut runner, murasame);
+    runner.execute_branch(1).expect("choose trash-FD-under-Tamer");
+    let v = runner.pending_selection_view().expect("Tamer pick");
+    runner
+        .execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
+    assert_eq!(
+        offered_ids(&runner),
+        vec!["GD-EXP".to_string()],
+        "payable at 18 with Kyo Sawashiro's -1, so it is offered"
+    );
+    // The pick goes through with Kyo's reduction: walk the reducer prompts,
+    // always accepting / taking the first option.
+    let v = runner.pending_selection_view().expect("hand pick");
+    let pick = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != digimon_engine::action::space::PASS)
+        .unwrap();
+    runner.execute_action(0, pick).expect("pick GD-EXP");
+    let mut guard = 0;
+    while let Some(v) = runner.pending_selection_view() {
+        guard += 1;
+        assert!(guard < 10, "reducer prompts did not settle: {:?}", v.kind);
+        if runner.game.players[0].battle_area.iter().any(|p| p.top_card().card_id(&runner.game.card_data) == "GD-EXP") {
+            break;
+        }
+        let action = v
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != digimon_engine::action::space::PASS)
+            .unwrap_or(v.valid_action_ids[0]);
+        runner.execute_action(v.selecting_player, action).unwrap();
+    }
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "GD-EXP"),
+        "GD-EXP was played with Kyo Sawashiro's reduction"
+    );
+    // `game.memory` is from the turn player's side; the turn may already have
+    // passed to p1 now that p0 is at -10.
+    let p0_memory = if runner.game.turn_player() == 0 { runner.memory() } else { -runner.memory() };
+    assert_eq!(p0_memory, -10, "8 - (22 - 3 - 1) = -10 (Kyo Sawashiro's -1 was taken)");
+}
+
+/// A full battle area: the GD Digimon can't be played; the GD Option can still
+/// be used.
+#[test]
+fn bt25_041_hand_pick_excludes_digimon_when_battle_area_full() {
+    assert_eq!(
+        offered_trash_branch(&["GD-DIGI", "GD-OPT"], |r| {
+            r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+        }),
+        vec!["GD-OPT".to_string()]
+    );
+}
+
+/// "You can't use Option cards": the GD Option is not offered; the Digimon is.
+#[test]
+fn bt25_041_hand_pick_excludes_option_when_options_cannot_be_used() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    assert_eq!(
+        offered_trash_branch(&["GD-DIGI", "GD-OPT"], |r| {
+            r.game.modifiers.add_player_modifier(
+                0,
+                PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+            );
+        }),
+        vec!["GD-DIGI".to_string()]
+    );
+}
+
+/// Branch A (add the top security card to the hand): the card added is a
+/// [Glowing Dawn] Digi-Egg — it joins the hand but is not offered; the GD
+/// Option already in hand is.
+#[test]
+fn bt25_041_add_security_branch_excludes_added_digi_egg() {
+    let mut runner = legality_pool(
+        DebugRunner::builder()
+            .add_card(murasamemon())
+            .add_card(make_tamer("TAMER"))
+            .add_card(make_filler("FILLER"))
+            .add_card(gd_digimon("GD-DIGI"))
+            .add_card(gd_option("GD-OPT"))
+            .add_card(sec_filler("SEC")),
+    )
+    .deck(0, &["FILLER"; 8])
+    .deck(1, &["FILLER"; 8])
+    // Last element = top security card.
+    .security(0, &["SEC", "GD-EGG"])
+    .memory(8)
+    .start();
+    runner.set_first_player(0);
+    let murasame = runner.place_on_field(0, CARD_ID, Some(0));
+    push_to_hand(&mut runner, 0, "GD-OPT");
+    fire_when_digivolving(&mut runner, murasame);
+    runner.execute_branch(0).expect("choose add-top-security");
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "GD-EGG"),
+        "the GD Digi-Egg was added to the hand as the cost"
+    );
+    assert_eq!(offered_ids(&runner), vec!["GD-OPT".to_string()]);
+}

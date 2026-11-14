@@ -487,6 +487,79 @@ fn bt13_015_when_digivolving_no_marcus_in_hand_installs_nothing() {
     );
 }
 
+// ─── Candidate legality: only a Marcus Damon the free play would accept ─────
+// DCGO BT13_015.cs:36-47 `CanSelectCardCondition`: CardNames ∋ "Marcus Damon"
+// && `CanPlayAsNewPermanent(cardSource, payCost:false, activateClass)` — no
+// free battle-area frame or a "can't play Tamers by effects" lock removes the
+// card from the pick. CR 4.3 1-3-11-1: only a card that can be played may be
+// declared for play.
+
+/// RizeGreymon digivolved onto GeoGreymon with Marcus Damon in hand, `setup`
+/// applied before [When Digivolving] fires.
+fn digivolve_rize_after(setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut runner = rizegreymon_runner();
+    add_marcus_to_hand(&mut runner, 0, "MARCUS-Y");
+    let rize = runner.place_stack(0, &["GEO", "BT13-015"]);
+    setup(&mut runner);
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(rize),
+    );
+    runner.game.drain_effect_queue();
+    runner
+}
+
+fn marcus_candidates(runner: &DebugRunner) -> Vec<u16> {
+    runner
+        .game
+        .pending_selection
+        .as_ref()
+        .map(|p| p.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect())
+        .unwrap_or_default()
+}
+
+fn marcus_in_hand(runner: &DebugRunner) -> bool {
+    runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "MARCUS-Y")
+}
+
+#[test]
+fn bt13_015_marcus_not_offered_when_battle_area_full() {
+    let runner = digivolve_rize_after(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(
+        marcus_candidates(&runner).is_empty(),
+        "no free slot → Marcus Damon can't be played, so not offered; got {:?}",
+        runner.game.pending_selection
+    );
+    assert!(marcus_in_hand(&runner));
+}
+
+#[test]
+fn bt13_015_marcus_not_offered_under_tamer_play_prohibition() {
+    let runner = digivolve_rize_after(|r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            digimon_engine::modifiers::PlayerModifierEntry::simple(
+                digimon_engine::enums::ModifierType::CannotPlayTamerByEffect,
+                0,
+                digimon_engine::enums::Expiry::Permanent,
+                None,
+                1,
+            ),
+        );
+    });
+    assert!(
+        marcus_candidates(&runner).is_empty(),
+        "\"can't play Tamers by effects\" → not offered; got {:?}",
+        runner.game.pending_selection
+    );
+    assert!(marcus_in_hand(&runner));
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // Section 3 — Clause 2/3 [All Turns][OPT] deletion -> trash -> security
 //              (MANDATORY placement, FACE DOWN)

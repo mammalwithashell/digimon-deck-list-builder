@@ -264,3 +264,78 @@ fn st20_08_on_play_does_not_fire() {
     runner.play(0, 0).expect("Kabuterimon plays");
     assert!(runner.pending_selection().is_none(), "no [On Play] effect");
 }
+
+// ─── Section 3 — candidate legality (select-hand audit 2026-11-13) ───────────
+// DCGO ST20_08.cs:45-50 offers `IsTamer && HasAdventureTraits &&
+// CanPlayAsNewPermanent(payCost: false)`: an [ADVENTURE] Tamer the effect can't
+// play is never a candidate (CR 4.3 1-3-11-1: a card can't be declared for play
+// if it can't be played). Regression guards for `can_play_from_effect_without_cost`.
+
+/// Digivolve Kabuterimon onto an ADVENTURE Lv.3 after `setup` runs on the staged
+/// board (Tamers + the Lv.3 base already in play).
+fn digivolve_after(tamers: &[&str], hand: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut all = vec![CARD_ID];
+    all.extend_from_slice(hand);
+    let mut runner = builder()
+        .hand(0, &all)
+        .deck(0, &["FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(10)
+        .start();
+    runner.skip_mulligan();
+    for t in tamers {
+        runner.place_on_field(0, t, None);
+    }
+    let base = runner.place_on_field(0, "ADV-LV3", Some(0));
+    setup(&mut runner);
+    let slot = hand_index(&runner, CARD_ID) as u16;
+    runner.game.decode_action(encode_digivolve(slot, base.index as u16), 0);
+    runner
+}
+
+fn adv_tamer_offered(runner: &mut DebugRunner) -> bool {
+    match runner.pending_selection_view() {
+        None => false,
+        Some(view) => hand_actions(runner, "ADV-TAMER")
+            .iter()
+            .any(|a| view.valid_action_ids.contains(a)),
+    }
+}
+
+/// "You can't play Tamers by effects" (DCGO `CanPlayAsNewPermanent` false): the
+/// [ADVENTURE] Tamer is not offered and stays in hand.
+#[test]
+fn st20_08_adventure_tamer_not_offered_when_effect_tamer_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = digivolve_after(&[], &["ADV-TAMER"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(!adv_tamer_offered(&mut runner), "a Tamer the effect can't play is not offered");
+    let _ = runner.auto_resolve();
+    assert!(!on_field(&runner, "ADV-TAMER"));
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs an empty frame): the
+/// [ADVENTURE] Tamer is not offered.
+#[test]
+fn st20_08_adventure_tamer_not_offered_when_battle_area_full() {
+    let mut runner = digivolve_after(&[], &["ADV-TAMER"], |r| {
+        // The Lv.3 base is the only permanent; digivolving keeps it at one.
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(!adv_tamer_offered(&mut runner), "no free slot: the Tamer can't be played");
+    let _ = runner.auto_resolve();
+    assert!(!on_field(&runner, "ADV-TAMER"));
+}
+
+/// Control for the two guards above: with a free slot and no lock the same
+/// staging offers the Tamer.
+#[test]
+fn st20_08_adventure_tamer_offered_with_free_slot_and_no_lock() {
+    let mut runner = digivolve_after(&[], &["ADV-TAMER"], |_| {});
+    assert!(adv_tamer_offered(&mut runner));
+}

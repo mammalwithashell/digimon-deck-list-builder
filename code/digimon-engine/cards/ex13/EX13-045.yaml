@@ -25,7 +25,9 @@
 #     CanTriggerWhenWinBattle(this): choose hand vs digivolution cards vs
 #     "Don't play or use"; canNoSelect: true; Option → PlayOptionCards(payCost:
 #     false), else PlayPermanentCards(payCost: false); `RemoveUse` when nothing
-#     was picked.
+#     was picked. Pick filter :192-195 = text && GetCostItself <= 12 &&
+#     `CanPlayOrUse(card, activateClass)` (PlayEffects.cs:286-294) for both
+#     roots → `can_play_or_use_from_effect` (CR 4.3 1-3-2, 7-1-1, 4-22).
 #
 # DSL notes:
 #   - DNA gate is a step-level `if { dna_origin: true }` (EX6-011 idiom) so the
@@ -140,6 +142,7 @@ effects:
           filter:
             all_of:
               - play_or_use_cost_lte: 12
+              - can_play_or_use_from_effect: true
               - any_of:
                   - in_text_contains: Dracomon
                   - in_text_contains: Examon

@@ -35,8 +35,15 @@ effects:
           of: you
           bind_as: close_pick
           optional: true
+          # Only a [Close] this effect can actually play (free battle-area
+          # slot, no play prohibition). DCGO EX10_063.cs:38-42 IsClose =
+          # EqualsCardName("Close") && CanPlayAsNewPermanent(source,
+          # payCost:false, activateClass). CR 4.3 1-3-2 / 7-1-1.
+          # G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY.
           filter:
-            name_is: "Close"
+            all_of:
+              - name_is: "Close"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Close] from your hand without paying the cost"
       - play_from_hand_free:
           of: you
@@ -51,8 +58,13 @@ effects:
                 of: you
                 bind_as: sunari_pick
                 optional: true
+                # DCGO EX10_063.cs:44-48 IsSunarizamon =
+                # EqualsCardName("Sunarizamon") && CanPlayAsNewPermanent(...,
+                # Root.Trash); zone-aware, so refused under CannotPlayFromTrash.
                 filter:
-                  name_is: "Sunarizamon"
+                  all_of:
+                    - name_is: "Sunarizamon"
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 [Sunarizamon] from your trash without paying the cost"
             - play_from_trash_free:
                 of: you

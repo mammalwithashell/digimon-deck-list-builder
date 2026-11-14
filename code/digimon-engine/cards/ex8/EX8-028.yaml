@@ -196,6 +196,10 @@ effects:
                             - kind: digimon
                             - materials_count_lte: 0
                     delta: 1
+              # DCGO EX8_028.cs:70 CanPlayAsNewPermanent(payCost: false): only
+              # a card the free play accepts (no DUAL, CR 4.3 4-6-2; free
+              # frame; no effect-play prohibition; CR 4.3 7-1-1, 1-3-2).
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Ice-Snow] trait Digimon card from your hand without paying the cost (level max 4, +1 per opponent Digimon with no digivolution cards)"
       - play_from_hand_free: { of: you, hand_index: pick }
 

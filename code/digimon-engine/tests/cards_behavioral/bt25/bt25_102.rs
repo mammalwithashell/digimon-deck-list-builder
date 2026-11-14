@@ -535,3 +535,228 @@ fn bt25_102_security_effect_is_optional() {
         "no memory spent when declining"
     );
 }
+
+// ─── Section 5 — Pick legality (select-hand audit 2026-11-13) ─────────────────
+//
+// [Main] DCGO BT25_102.cs:103-108 `CanSelectCardCondition`: `(HasDigimonColor(Black)
+// || HasDigimonColor(Red)) && HasTSTraits && CanPlayAsNewPermanent(card, payCost: true,
+// activateClass, fixedCost: GetCostItself - 3)`. [Security] BT25_102.cs:147-153
+// `CanPlayCondition`: `(Black || Red) && Level <= 4 && TS &&
+// CanPlayAsNewPermanent(card, payCost: false, activateClass)`, checked against
+// the hand and the trash separately. `CanPlayAsNewPermanent`
+// (GameContextDeterminarion.cs:419-432) refuses an Option-kind card (a DUAL's
+// kinds include Option: it is digivolved or used, never played, CR 4.3 4-6-2,
+// 7-1-1), and needs an empty frame, no play prohibition, and (when paying) the
+// reduced cost payable (CardSource.cs:1150-1160). A card that can't be played
+// stays where it is (CR 4.3 7-1-2-3, 1-3-2). YAML: [Main]
+// `can_play_from_effect_without_cost` + `affordable_with_cost: {reduce: 3}`;
+// [Security] `can_play_from_effect_without_cost` (zone-aware: a trash copy
+// fails under "can't play from the trash").
+
+fn ts_with_cost(id: &str, cost: u16) -> CardData {
+    let mut card = ts_digimon_leveled(id, CardColor::Black, 5);
+    card.play_cost = cost;
+    card
+}
+
+/// The non-PASS hand candidates of the pending pick, as sorted card ids; empty
+/// when no hand pick is pending.
+fn offered_hand_ids(runner: &DebugRunner, p: u8) -> Vec<String> {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    let hand = &runner.game.players[p as usize].hand;
+    let id_at = |i: usize| hand.get(i).map(|c| c.card_id(&runner.game.card_data).to_string());
+    let mut ids: Vec<String> = match view.card_choice {
+        Some(choice) => choice
+            .rows
+            .iter()
+            .filter(|row| {
+                matches!(row.operation, CardChoiceOperation::CommitCard)
+                    && matches!(row.zone, Some(CardChoiceZone::Hand))
+            })
+            .filter_map(|row| row.position.as_deref()?.parse::<usize>().ok())
+            .filter_map(id_at)
+            .collect(),
+        None => view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&a| a != PASS)
+            .filter_map(|a| a.checked_sub(digimon_engine::action::space::PLAY_HAND_START))
+            .filter_map(|i| id_at(i as usize))
+            .collect(),
+    };
+    ids.sort();
+    ids
+}
+
+/// The non-PASS rows of the pending hand-or-trash union pick, as sorted
+/// `"hand:<id>"` / `"trash:<id>"`; empty when no union pick is pending.
+fn offered_union(runner: &DebugRunner, p: u8) -> Vec<String> {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if !matches!(view.kind, SelectionKind::UnionZone { .. }) {
+        return Vec::new();
+    }
+    let Some(choice) = view.card_choice else {
+        return Vec::new();
+    };
+    let player = &runner.game.players[p as usize];
+    let mut ids: Vec<String> = choice
+        .rows
+        .iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .filter_map(|row| {
+            let pos: usize = row.position.as_deref()?.parse().ok()?;
+            let (zone, cards) = match row.zone.as_ref()? {
+                CardChoiceZone::Hand => ("hand", &player.hand),
+                CardChoiceZone::Trash => ("trash", &player.trash),
+                _ => return None,
+            };
+            Some(format!("{zone}:{}", cards.get(pos)?.card_id(&runner.game.card_data)))
+        })
+        .collect();
+    ids.sort();
+    ids
+}
+
+/// Use BT25-102 from hand (with `extra` also in hand) at `memory`, run `setup`
+/// first, and return the reduced-play hand candidates.
+fn main_offered(extra: &[&str], memory: i16, setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut hand = vec![CARD_ID];
+    hand.extend_from_slice(extra);
+    let mut runner = builder()
+        .dsl_card("BT25-085")
+        .expect("BeelStarmon (BT25-085) loads")
+        .add_card(filler("BOTTOM"))
+        .add_card(filler("TOP"))
+        .add_card(filler("FIELD"))
+        .add_card(ts_digimon_leveled("BLACK-TS", CardColor::Black, 6))
+        .add_card(ts_with_cost("TS-13", 13))
+        .add_card(ts_with_cost("TS-14", 14))
+        .hand(0, &hand)
+        .security(0, &["BOTTOM", "TOP"])
+        .memory(memory)
+        .start();
+    runner.game.enter_main_phase();
+    setup(&mut runner);
+    let _ = runner.game.play_option_from_hand(0, 0);
+    offered_hand_ids(&runner, 0)
+}
+
+/// BeelStarmon (BT25-085) is a black [TS] DUAL card: it is never played (CR 4.3
+/// 4-6-2 + 7-1-1), so the reduced play offers only the Digimon card.
+#[test]
+fn bt25_102_main_pick_excludes_dual_card() {
+    assert_eq!(
+        main_offered(&["BT25-085", "BLACK-TS"], 10, |_| {}),
+        vec!["BLACK-TS".to_string()]
+    );
+}
+
+/// Memory 3 pays the Option (3) down to 0; the reduced play must still be
+/// payable (down to -10): TS-13 (13 - 3 = 10) yes, TS-14 (11) no.
+#[test]
+fn bt25_102_main_pick_excludes_unaffordable_digimon() {
+    assert_eq!(
+        main_offered(&["TS-13", "TS-14"], 3, |_| {}),
+        vec!["TS-13".to_string()]
+    );
+}
+
+/// "You can't play Digimon by effects": nothing is offered.
+#[test]
+fn bt25_102_main_pick_excludes_digimon_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = main_offered(&["BLACK-TS"], 10, |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+}
+
+/// A full battle area: nothing is offered.
+#[test]
+fn bt25_102_main_pick_excludes_digimon_when_battle_area_full() {
+    let offered = main_offered(&["BLACK-TS"], 10, |r| {
+        r.place_on_field(0, "FIELD", None);
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+}
+
+/// Trigger BT25-102's [Security] for player 1 (HAND-TS in hand, TRASH-TS in
+/// trash, both level 4 [TS]), after `setup`; return the union rows.
+fn security_offered(setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut runner = builder()
+        .add_card(ts_digimon_leveled("HAND-TS", CardColor::Red, 4))
+        .add_card(ts_digimon_leveled("TRASH-TS", CardColor::Black, 4))
+        .add_card(attacker("ATTACKER"))
+        .add_card(filler("FILL"))
+        .hand(1, &["HAND-TS"])
+        .deck(1, &["TRASH-TS"])
+        .security(1, &[CARD_ID])
+        .memory(10)
+        .start();
+    let trash_card = runner.game.players[1].deck.pop().expect("trash seed");
+    runner.game.players[1].trash.push(trash_card);
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    setup(&mut runner);
+    let _ = runner.attack_player(attacker, 1, false);
+    offered_union(&runner, 1)
+}
+
+/// Regression guard: with nothing in the way both copies are offered.
+#[test]
+fn bt25_102_security_union_offers_hand_and_trash_copies() {
+    assert_eq!(
+        security_offered(|_| {}),
+        vec!["hand:HAND-TS".to_string(), "trash:TRASH-TS".to_string()]
+    );
+}
+
+/// "Can't play Digimon from the trash" (BT23-014 style lock): only the hand
+/// copy is offered.
+#[test]
+fn bt25_102_security_union_excludes_trash_copy_under_trash_play_lock() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = security_offered(|r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(offered, vec!["hand:HAND-TS".to_string()]);
+}
+
+/// A full battle area: no copy is offered.
+#[test]
+fn bt25_102_security_union_offers_nothing_when_battle_area_full() {
+    let offered = security_offered(|r| {
+        r.place_on_field(1, "FILL", None);
+        r.game.rules.field_slots = r.game.players[1].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+}
+
+/// "You can't play Digimon by effects": no copy is offered.
+#[test]
+fn bt25_102_security_union_offers_nothing_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = security_offered(|r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+}

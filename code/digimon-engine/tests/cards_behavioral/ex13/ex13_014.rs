@@ -87,6 +87,16 @@ fn builder() -> DebugRunnerBuilder {
         .add_card(option("HUCK-OPT", 5, "[Main] ... 1 [Huckmon] ..."))
         .add_card(option("HUCK-OPT-6", 6, "[Main] ... 1 [Huckmon] ..."))
         .add_card(option("PLAIN-OPT", 2, "[Main] Draw 1."))
+        .add_card({
+            let mut o = option("BLUE-HUCK-OPT", 3, "[Main] ... 1 [Huckmon] ...");
+            o.colors = vec![CardColor::Blue];
+            o
+        })
+        .add_card({
+            let mut d = digimon("BLUE-ALLY", 3, 3000, "");
+            d.colors = vec![CardColor::Blue];
+            d
+        })
         .add_card(digimon("H5", 5, 7000, "[On Play] ... [Huckmon] ..."))
         .add_card(digimon("H4", 4, 5000, "[On Play] ... [Huckmon] ..."))
         .add_card(digimon("H3", 3, 3000, "[On Play] ... [Huckmon] ..."))
@@ -385,6 +395,78 @@ fn ex13_014_assembly_huckmon_text_line_for_7() {
     let _ = runner.auto_resolve();
     assert_eq!(runner.game.players[0].battle_area[0].card_sources.len(), 4);
     assert_eq!(mem0 - runner.game.memory, 7);
+}
+
+// ─── Candidate legality — only Options the free use can carry out ────────────
+// DCGO EX13_014.cs:36-40 `IsUsableHuckmonOption = IsOption && HasText("Huckmon")
+// && GetCostItself <= 5 && !CanNotPlayThisOption`, used for the activation gate
+// (:48-50), both zones (:53-54) and both picks (:82, :103).
+// `CanNotPlayThisOption` (CardSource.cs:184-246) is a "can't use Options" lock
+// OR an unmet colour requirement. Rules: an effect-driven use is still a use,
+// so the colour requirement applies even though no cost is paid (CR 4.3
+// 4-22-1/4-22-2; official rulings Q1500, Q2785); an impossible action is not
+// carried out (CR 4.3 1-3-2).
+
+fn add_player_lock(runner: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+fn offered_option_ids(runner: &DebugRunner) -> Vec<String> {
+    let mut v: Vec<String> = physical_fixture::commits(&runner.game)
+        .into_iter()
+        .filter_map(|row| row.card_id)
+        .collect();
+    v.sort();
+    v
+}
+
+/// Jesmon (EX13-014) is red/white: a blue [Huckmon] Option in hand is unusable,
+/// so the clause does not offer it (and with nothing else, nothing prompts).
+#[test]
+fn ex13_014_blue_option_in_hand_not_offered_without_blue_permanent() {
+    let (mut runner, me) = use_runner(&["BLUE-HUCK-OPT"], &[]);
+    fire(&mut runner, EffectTiming::WhenDigivolving, me);
+    assert!(runner.pending_selection().is_none(), "colour requirement unmet");
+    assert_eq!(runner.hand_size(0), 1);
+}
+
+#[test]
+fn ex13_014_blue_option_in_sources_not_offered_without_blue_permanent() {
+    let (mut runner, me) = use_runner(&[], &["H5", "BLUE-HUCK-OPT"]);
+    fire(&mut runner, EffectTiming::WhenAttacking, me);
+    assert!(runner.pending_selection().is_none(), "colour requirement unmet");
+}
+
+#[test]
+fn ex13_014_only_colour_usable_options_offered() {
+    let (mut runner, me) = use_runner(&["HUCK-OPT", "BLUE-HUCK-OPT"], &[]);
+    fire(&mut runner, EffectTiming::WhenDigivolving, me);
+    assert_eq!(offered_option_ids(&runner), vec!["HUCK-OPT".to_string()]);
+}
+
+/// Regression guard: a blue Digimon on the field meets the blue requirement.
+#[test]
+fn ex13_014_blue_option_offered_with_a_blue_permanent() {
+    let (mut runner, me) = use_runner(&["HUCK-OPT", "BLUE-HUCK-OPT"], &[]);
+    runner.place_on_field(0, "BLUE-ALLY", Some(0));
+    fire(&mut runner, EffectTiming::WhenDigivolving, me);
+    assert_eq!(
+        offered_option_ids(&runner),
+        vec!["BLUE-HUCK-OPT".to_string(), "HUCK-OPT".to_string()]
+    );
+}
+
+#[test]
+fn ex13_014_no_option_offered_when_options_cannot_be_used() {
+    let (mut runner, me) = use_runner(&["HUCK-OPT"], &["H5", "HUCK-OPT"]);
+    add_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotUseOptionCards);
+    fire(&mut runner, EffectTiming::WhenDigivolving, me);
+    assert!(runner.pending_selection().is_none(), "can't use Option cards");
 }
 
 #[path="../../support/owned_card_choice.rs"]

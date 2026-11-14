@@ -92,8 +92,13 @@ effects:
           of: you
           bind_as: rei
           optional: true
+          # DCGO BT24_067.cs:104-117: IsTamer && EqualsCardName("Rei Katsura")
+          # && CanPlayAsNewPermanent(payCost: false) -- only a Rei Katsura the
+          # free play would accept (free slot, no Tamer effect-play lock).
           filter:
+            kind: tamer
             name_is: "Rei Katsura"
+            can_play_from_effect_without_cost: true
           prompt: "Play 1 [Rei Katsura] from your hand without paying the cost"
       - if:
           condition: { binding_present: rei }

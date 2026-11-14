@@ -652,3 +652,212 @@ fn bt24_082_security_clause_structural_play_from_security() {
         "on_security must have FaceUp scope"
     );
 }
+
+// ─── SECTION 5 — Clause 1 candidate legality ─────────────────────────────────
+//
+// DCGO BT24_082.cs:40-52: `IsOwenDreadnought` = in hand && `EqualsCardName(
+// "Owen Dreadnought")` && `CanPlayAsNewPermanent(cardSource, false,
+// activateClass)`; `IsElizamon` = in trash && `EqualsCardName("Elizamon")` &&
+// `CanPlayAsNewPermanent(cardSource, false, activateClass, Root.Trash)`. Both
+// feed the hand pick (BT24_082.cs:72-85) and trash pick (BT24_082.cs:113-129)
+// as `canTargetCondition`, so a card the free play would refuse (full battle
+// area, an effect-play lock, "can't play cards from the trash") is never
+// offered.
+
+fn make_owen_copy(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Owen Dreadnought");
+    c.card_kind = digimon_engine::enums::CardKind::Tamer;
+    c.play_cost = 3;
+    c
+}
+
+fn make_elizamon(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Elizamon");
+    c.card_kind = digimon_engine::enums::CardKind::Digimon;
+    c.level = Some(3);
+    c.dp = Some(3000);
+    c.play_cost = 3;
+    c.traits = vec!["Reptile".to_string()];
+    c
+}
+
+fn put_in_trash(runner: &mut DebugRunner, player: u8, id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == id)
+        .expect("card registered");
+    let card_index = runner.game.next_card_index();
+    runner.game.players[player as usize]
+        .trash
+        .push(digimon_engine::card_source::CardSource::new(data_idx, player, card_index));
+}
+
+/// Card ids the pending selection offers.
+fn offered_ids(runner: &DebugRunner) -> Vec<String> {
+    use digimon_engine::action::space::{PLAY_HAND_END, TRASH_EFFECT_END, TRASH_EFFECT_START};
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    use digimon_engine::selection::SelectionKind;
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if let Some(choice) = &view.card_choice {
+        return choice
+            .rows
+            .iter()
+            .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+            .filter_map(|row| row.card_id.clone())
+            .collect();
+    }
+    let player = &runner.game.players[view.selecting_player as usize];
+    let data = &runner.game.card_data;
+    match view.kind {
+        SelectionKind::Hand => view
+            .valid_action_ids
+            .iter()
+            .filter(|&&id| id < PLAY_HAND_END)
+            .filter_map(|&id| player.hand.get(id as usize))
+            .map(|c| c.card_id(data).to_string())
+            .collect(),
+        SelectionKind::Trash => view
+            .valid_action_ids
+            .iter()
+            .filter(|&&id| (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&id))
+            .filter_map(|&id| player.trash.get((id - TRASH_EFFECT_START) as usize))
+            .map(|c| c.card_id(data).to_string())
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// Fire clause 1 on `tamer`, accept the optional activation, and walk every
+/// later prompt, PASSing each card pick. Returns every card id any pick offered.
+fn fire_clause1_and_collect_offers(runner: &mut DebugRunner, tamer: PermanentHandle) -> Vec<String> {
+    use digimon_engine::selection::SelectionKind;
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourMainPhase,
+        TriggerSource::Permanent(tamer),
+    );
+    runner.game.drain_effect_queue();
+    let mut seen = Vec::new();
+    for _ in 0..20 {
+        let Some(view) = runner.pending_selection_view() else {
+            break;
+        };
+        let action = match view.kind {
+            SelectionKind::Replacement | SelectionKind::TriggerOrder => view.valid_action_ids[0],
+            _ => {
+                seen.extend(offered_ids(runner));
+                if view.is_optional {
+                    PASS
+                } else {
+                    view.valid_action_ids[0]
+                }
+            }
+        };
+        runner
+            .game
+            .resolve_selection(view.selecting_player, action)
+            .expect("resolve");
+        runner.game.drain_effect_queue();
+    }
+    seen
+}
+
+fn zone_has(cards: &[digimon_engine::card_source::CardSource], runner: &DebugRunner, id: &str) -> bool {
+    cards.iter().any(|c| c.card_id(&runner.game.card_data) == id)
+}
+
+fn clause1_runner(hand: &[&str]) -> DebugRunner {
+    DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-082 YAML parses")
+        .add_card(make_filler("FILL"))
+        .add_card(make_owen_copy("OWEN-2"))
+        .add_card(make_elizamon("ELIZA"))
+        .add_card(make_digimon_card("DIGTEST", 3000))
+        .hand(0, hand)
+        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start()
+}
+
+/// Regression guard: an [Owen Dreadnought] in hand and an [Elizamon] in trash
+/// (no Digimon) are both offered when playable.
+#[test]
+fn bt24_082_clause1_offers_playable_owen_and_elizamon() {
+    let mut runner = clause1_runner(&["OWEN-2"]);
+    let tamer = runner.place_on_field(0, "BT24-082", Some(0));
+    put_in_trash(&mut runner, 0, "ELIZA");
+    let seen = fire_clause1_and_collect_offers(&mut runner, tamer);
+    assert!(seen.iter().any(|id| id == "OWEN-2"), "Owen offered: {seen:?}");
+    assert!(seen.iter().any(|id| id == "ELIZA"), "Elizamon offered: {seen:?}");
+}
+
+/// "You can't play Tamers by effects": the [Owen Dreadnought] in hand is not
+/// offered.
+#[test]
+fn bt24_082_clause1_owen_not_offered_when_tamer_effect_play_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = clause1_runner(&["OWEN-2"]);
+    let tamer = runner.place_on_field(0, "BT24-082", Some(0));
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let seen = fire_clause1_and_collect_offers(&mut runner, tamer);
+    assert!(!seen.iter().any(|id| id == "OWEN-2"), "Owen must not be offered: {seen:?}");
+    assert!(zone_has(&runner.game.players[0].hand, &runner, "OWEN-2"));
+}
+
+/// Full battle area after the return-to-deck cost (Owen's own slot is freed,
+/// a Digimon fills the only slot): the [Owen Dreadnought] in hand is not
+/// offered.
+#[test]
+fn bt24_082_clause1_owen_not_offered_when_battle_area_full() {
+    let mut runner = clause1_runner(&["OWEN-2"]);
+    let tamer = runner.place_on_field(0, "BT24-082", Some(0));
+    runner.place_on_field(0, "DIGTEST", Some(0));
+    runner.game.rules.field_slots = 1;
+    let seen = fire_clause1_and_collect_offers(&mut runner, tamer);
+    assert!(!seen.iter().any(|id| id == "OWEN-2"), "Owen must not be offered: {seen:?}");
+    assert!(zone_has(&runner.game.players[0].hand, &runner, "OWEN-2"));
+}
+
+/// "You can't play Digimon by effects": the [Elizamon] in trash is not offered.
+#[test]
+fn bt24_082_clause1_elizamon_not_offered_when_digimon_effect_play_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = clause1_runner(&[]);
+    let tamer = runner.place_on_field(0, "BT24-082", Some(0));
+    put_in_trash(&mut runner, 0, "ELIZA");
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let seen = fire_clause1_and_collect_offers(&mut runner, tamer);
+    assert!(!seen.iter().any(|id| id == "ELIZA"), "Elizamon must not be offered: {seen:?}");
+    assert!(zone_has(&runner.game.players[0].trash, &runner, "ELIZA"));
+}
+
+/// "You can't play cards from the trash" (DCGO `Root.Trash` in `IsElizamon`):
+/// the [Elizamon] in trash is not offered.
+#[test]
+fn bt24_082_clause1_elizamon_not_offered_when_trash_play_locked() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = clause1_runner(&[]);
+    let tamer = runner.place_on_field(0, "BT24-082", Some(0));
+    put_in_trash(&mut runner, 0, "ELIZA");
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+    );
+    let seen = fire_clause1_and_collect_offers(&mut runner, tamer);
+    assert!(!seen.iter().any(|id| id == "ELIZA"), "Elizamon must not be offered: {seen:?}");
+    assert!(zone_has(&runner.game.players[0].trash, &runner, "ELIZA"));
+}

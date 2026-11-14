@@ -47,10 +47,15 @@ effects:
           of: you
           bind_as: tamer_pick
           optional: true
+          # DCGO BT11_052.cs:25-40 (WD copy :115-130): `IsTamer &&
+          # GetCostItself <= 3 && HasPlayCost && CanPlayAsNewPermanent(card,
+          # payCost: false, activateClass)` — only a Tamer the effect can place
+          # (free slot, no "can't play Tamers by effects" lock). CR 4.3 1-3-11-1.
           filter:
             all_of:
               - kind: tamer
               - play_cost_lte: 3
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 Tamer card with a play cost of 3 or less from your hand without paying the cost"
       - if:
           condition: { binding_present: tamer_pick }

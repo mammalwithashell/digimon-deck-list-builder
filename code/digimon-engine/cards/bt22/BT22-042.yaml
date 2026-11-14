@@ -56,10 +56,14 @@ effects:
               filter:
                 of: you
                 zone: [hand]
+                # DCGO BT22_042.cs:67-73,82: the pick opens only if a hand card
+                # passes IsPuppetDigimon, which includes CanPlayAsNewPermanent
+                # (no DUAL — CR 4.3 7-1-1 no play cost + 4-6-2 — free slot, no play prohibition).
                 all_of:
                   - kind: digimon
                   - level_lte: 4
                   - trait_has: Puppet
+                  - can_play_from_effect_without_cost: true
               n: 1
           then:
             - select_effect_choice:
@@ -77,6 +81,7 @@ effects:
                           - kind: digimon
                           - level_lte: 4
                           - trait_has: Puppet
+                          - can_play_from_effect_without_cost: true
                       prompt: "Play 1 level 4 or lower [Puppet] Digimon from hand"
                   - play_from_hand_free: { of: you, hand_index: puppet }
       - select_opponent_permanent:

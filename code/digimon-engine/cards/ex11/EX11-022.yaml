@@ -79,6 +79,12 @@ effects:
               - kind: digimon
               - trait_has: Puppet
               - dp_lte: 4000
+              # DCGO EX11_022.cs:53-59 CanPlayAsNewPermanent(cardSource, false,
+              # activateClass): no unplayable pick (full area, effect-play
+              # prohibition, "can't play from trash" for the trash half).
+              # The slot cap is the engine's rules.field_slots, not a CR limit
+              # (CR 4.3 3-4-8-2); the pick is optional, so no outcome changes.
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 Puppet Digimon (DP 4000 or less) from your hand or trash without paying the cost"
       # Play the picked card free from its true origin zone; bind the result.
       - play_union_bound_free:

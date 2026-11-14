@@ -64,6 +64,8 @@ fn builder() -> DebugRunnerBuilder {
         .expect("EX13-019 YAML parses, compiles and is in the embedded pack")
         .add_card(tamer("VEE-TAMER", "[Start of Your Main Phase] If you have [Veedramon]...", 4))
         .add_card(tamer("PLAIN-TAMER", "", 4))
+        .add_card(tamer("VEE-TAMER-17", "[Veedramon] costly", 17))
+        .add_card(tamer("VEE-TAMER-18", "[Veedramon] too costly", 18))
         .add_card({
             let mut c = make_test_card("VEE-DIGI", "Text Digimon");
             c.effect_text = "[Veedramon]".to_string();
@@ -304,4 +306,75 @@ fn ex13_019_when_attacking_is_once_per_turn() {
     assert!(hand_prompt(&mut runner).is_none(), "[Once Per Turn] used");
     let _ = runner.auto_resolve();
     assert_eq!(hand_ids(&runner, 0), vec!["VEE-TAMER"]);
+}
+
+// ─── Candidate legality — only Tamers the reduced-cost play can carry out ────
+// DCGO EX13_019.cs:47-54 `IsTamer && HasText("Veedramon") &&
+// CanPlayAsNewPermanent(cardSource, payCost: true, activateClass, fixedCost:
+// max(0, GetCostItself - 2))`, the gate of both CanActivate and the pick. Rules:
+// a card whose cost can't be paid can't be played (CR 4.3 7-1-2-3); an
+// impossible action is not carried out (CR 4.3 1-3-2).
+
+fn add_player_lock(runner: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Memory 5: cost 17 − 2 = 15 is payable (5 − 15 = −10), cost 18 − 2 = 16 is not.
+#[test]
+fn ex13_019_tamer_whose_reduced_cost_cannot_be_paid_is_not_offered() {
+    let (mut runner, veed) = attack_setup(&["VEE-TAMER-17", "VEE-TAMER-18"]);
+    runner.attack_player(veed, 1, false);
+    let view = hand_prompt(&mut runner).expect("the payable Tamer is offered");
+    assert!(offered(&runner, &view, "VEE-TAMER-17"), "boundary: lands exactly at -10");
+    assert!(!offered(&runner, &view, "VEE-TAMER-18"), "cost − 2 = 16 can't be paid from 5");
+}
+
+#[test]
+fn ex13_019_only_unpayable_tamer_installs_no_prompt() {
+    let (mut runner, veed) = attack_setup(&["VEE-TAMER-18"]);
+    runner.attack_player(veed, 1, false);
+    assert!(hand_prompt(&mut runner).is_none(), "nothing payable");
+    let _ = runner.auto_resolve();
+    assert_eq!(hand_ids(&runner, 0), vec!["VEE-TAMER-18"]);
+}
+
+#[test]
+fn ex13_019_tamer_not_offered_when_battle_area_full() {
+    let (mut runner, veed) = attack_setup(&["VEE-TAMER"]);
+    runner.game.rules.field_slots = 1;
+    runner.attack_player(veed, 1, false);
+    assert!(hand_prompt(&mut runner).is_none(), "no free slot");
+    let _ = runner.auto_resolve();
+    assert_eq!(hand_ids(&runner, 0), vec!["VEE-TAMER"]);
+}
+
+#[test]
+fn ex13_019_tamer_not_offered_under_tamer_effect_play_prohibition() {
+    let (mut runner, veed) = attack_setup(&["VEE-TAMER"]);
+    add_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    runner.attack_player(veed, 1, false);
+    assert!(hand_prompt(&mut runner).is_none(), "effect play of Tamers prohibited");
+    let _ = runner.auto_resolve();
+    assert_eq!(hand_ids(&runner, 0), vec!["VEE-TAMER"]);
+}
+
+/// Regression guard: with nothing legal the [Once Per Turn] is not spent (DCGO
+/// CanActivate false), so a later attack with a free slot still offers it.
+#[test]
+fn ex13_019_full_area_does_not_spend_the_once_per_turn() {
+    let (mut runner, veed) = attack_setup(&["VEE-TAMER"]);
+    let slots = runner.game.rules.field_slots;
+    runner.game.rules.field_slots = 1;
+    runner.attack_player(veed, 1, false);
+    assert!(hand_prompt(&mut runner).is_none());
+    let _ = runner.auto_resolve();
+    runner.game.rules.field_slots = slots;
+    runner.game.players[0].battle_area[veed.index as usize].is_suspended = false;
+    runner.attack_player(veed, 1, false);
+    assert!(hand_prompt(&mut runner).is_some(), "OPT still available");
 }

@@ -160,12 +160,19 @@ effects:
           zones: [hand, trash]
           optional: true
           bind_as: picked
+          # DCGO BT17_095.cs:35-46: CanPlayAsNewPermanent(payCost: false) &&
+          # IsDigimon && (EqualsCardName("Agumon") || EqualsCardName("Gabumon")).
+          # [Agumon]/[Gabumon] are exact names (EqualsCardName, CardSource.cs:
+          # 1484-1500), so ToyAgumon / Agumon Expert / "Agumon - Bond of
+          # Bravery" are NOT candidates (was `name_contains`, fixed 2026-11-13).
+          # `can_play_from_effect_without_cost` offers only a card the free play
+          # can place: free slot, no play prohibition, and, for a trash card, no
+          # "can't play from the trash" lock (CR 4.3 1-3-2).
           filter:
             all_of:
               - kind: digimon
-              - any_of:
-                  - name_contains: "Agumon"
-                  - name_contains: "Gabumon"
+              - name_in: ["Agumon", "Gabumon"]
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Agumon] or [Gabumon] from hand or trash (free)"
       # `play_union_bound_free` replays the bound card from its true origin
       # zone (hand or trash) without paying the cost.
@@ -269,12 +276,18 @@ effects:
   # card with [Tai Kamiya] or [Matt Ishida] in its name from your hand or trash
   # without paying the cost. Then, add this card to the hand."
   #
-  # Same `select_effect_choice` workaround for G-DSL-UNION-PLAY-FREE as
-  # Clause A. The eligibility predicate is the printed name filter (Tai Kamiya
-  # OR Matt Ishida). DCGO restricts further to `IsTamer`, but the printed text
-  # says "card with [Tai Kamiya] or [Matt Ishida] in its name" — there are no
-  # non-Tamer cards in the legal pool with these names, so the name filter is
-  # equivalent in practice. Mirrored as a pure name filter to match printed.
+  # Same union pick as Clause A. The eligibility predicate is the printed name
+  # filter (Tai Kamiya OR Matt Ishida) restricted to cards that can actually be
+  # played (2026-11-13 select-hand audit). DCGO BT17_095.cs:510-521 is
+  # `CanPlayAsNewPermanent(payCost: false) && IsTamer && (ContainsCardName(
+  # "Tai Kamiya") || ContainsCardName("Matt Ishida"))`. CR 4.3 7-1-1: only a
+  # card with a play cost is played — Digimon or Tamer — so an Option with such
+  # a name is never a candidate. DCGO's `IsTamer` would also exclude a Digimon,
+  # which the printed "1 card" and the rules allow; every such name in the
+  # current pool is a Tamer, so `kind: digimon | tamer` is equivalent to DCGO
+  # today and follows the text for any future Digimon. The playability leaf
+  # adds DCGO's CanPlayAsNewPermanent (free slot, no play prohibition, trash
+  # play not locked; CR 4.3 1-3-2).
   #
   # `add_this_option_to_hand: {}` (RESOLVED 2026-05-02) handles the printed
   # tail "Then, add this card to the hand."
@@ -292,9 +305,14 @@ effects:
           optional: true
           bind_as: picked
           filter:
-            any_of:
-              - name_contains: "Tai Kamiya"
-              - name_contains: "Matt Ishida"
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - any_of:
+                  - name_contains: "Tai Kamiya"
+                  - name_contains: "Matt Ishida"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Tai Kamiya] or [Matt Ishida] from hand or trash (free)"
       - play_union_bound_free:
           binding: picked

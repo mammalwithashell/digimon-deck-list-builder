@@ -143,3 +143,91 @@ fn ex12_002_inherited_does_not_trigger_for_non_sw_play() {
         "non-SW play should not leave an EX12-002 selection pending"
     );
 }
+
+// --- Hand-pick candidate legality (select-hand playability audit) ---
+// DCGO EX12_002.cs:53-64 calls `CardEffectCommons.DigivolveIntoHandOrTrashCard
+// (targetPermanent: this Digimon, cardCondition: EqualsTraits("SW"), payCost:
+// true, reduceCostTuple: (2, null), isHand: true)`, whose candidate filter
+// (CardEffectCommons.cs:858-882) is `IsDigimon && cardCondition &&
+// !CanNotEvolve(target) && CanPlayCardTargetFrame(target, PayCost: true, ...)`
+// with the -2 already installed (CardEffectCommons.cs:887-929): only an [SW]
+// Digimon this Digimon can digivolve into (requirements met, CR 4.3 8-1) and
+// whose reduced cost can be paid (CR 4.3 1-3-11-1).
+
+/// Mococomon (EX12-002) under a red level 3 [SW] carrier, with `hand` in hand.
+/// SW-ALLY is placed and its play event fired with memory `memory`; returns the
+/// hand cards the digivolve pick offers (sorted; empty if no pick installs).
+fn ex12_002_offered(extra: Vec<CardData>, hand: &[&str], memory: i16) -> Vec<String> {
+    let mut builder = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-002 YAML loads")
+        .add_card(red_sw_digimon("CARRIER", 3, 3))
+        .add_card(red_sw_digimon("SW-ALLY", 3, 3))
+        .add_card(red_sw_evo("SW-EVO"));
+    for card in extra {
+        builder = builder.add_card(card);
+    }
+    let mut runner = builder.hand(0, hand).memory(10).start();
+    runner.place_stack(0, &[CARD_ID, "CARRIER"]);
+    let ally = runner.place_on_field(0, "SW-ALLY", Some(0));
+    runner.game.memory = memory;
+    runner.fire_play_event_triggers(ally.player, ally.index as usize, false, false);
+
+    for _ in 0..8 {
+        let Some(view) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        if view.kind == SelectionKind::Hand {
+            let hand_ids: Vec<String> = runner.game.players[0]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            let mut offered: Vec<String> = view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&id| id != PASS)
+                .map(|id| {
+                    let slot = if id >= HAND_EFFECT_START {
+                        id - HAND_EFFECT_START
+                    } else {
+                        id - PLAY_HAND_START
+                    };
+                    hand_ids[slot as usize].clone()
+                })
+                .collect();
+            offered.sort();
+            return offered;
+        }
+        let Some(action) = view.valid_action_ids.iter().copied().find(|a| *a != PASS) else {
+            return Vec::new();
+        };
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("advance EX12-002 prompt");
+    }
+    panic!("EX12-002 never reached the hand selection");
+}
+
+/// A level 6 [SW] Digimon can't digivolve onto the level 3 carrier (no
+/// digivolution requirement met), so it isn't offered. Regression guard: the
+/// compile pass adds the requirement check to requirement-honouring digivolves.
+#[test]
+fn ex12_002_pick_excludes_sw_card_whose_requirement_is_unmet() {
+    let mut lv6 = red_sw_digimon("SW-LV6", 6, 12);
+    lv6.evo_costs = vec![EvoCost { card_color: 0, level: 5, memory_cost: 3 }];
+    let offered = ex12_002_offered(vec![lv6], &["SW-EVO", "SW-LV6"], 10);
+    assert_eq!(offered, vec!["SW-EVO".to_string()]);
+}
+
+/// At memory -10 (10 on the opponent's side) a digivolution cost of 3 reduced
+/// to 1 can't be paid, but one of 2 reduced to 0 can: only the latter is
+/// offered (DCGO `CanPlayCardTargetFrame(PayCost: true)`; CR 4.3 1-3-11-1).
+#[test]
+fn ex12_002_pick_excludes_unaffordable_digivolution() {
+    let mut cheap = red_sw_digimon("SW-EVO-CHEAP", 4, 4);
+    cheap.evo_costs = vec![EvoCost { card_color: 0, level: 3, memory_cost: 2 }];
+    let offered = ex12_002_offered(vec![cheap], &["SW-EVO", "SW-EVO-CHEAP"], -10);
+    assert_eq!(offered, vec!["SW-EVO-CHEAP".to_string()]);
+}

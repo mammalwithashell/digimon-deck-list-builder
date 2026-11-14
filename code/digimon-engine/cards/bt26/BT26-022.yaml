@@ -68,6 +68,13 @@ effects:
     summary: "[End of Your Turn] If you have a red or purple Digimon, by placing this Digimon as the bottom security card, you may play 1 blue or red [Iliad] Digimon card from your hand with the cost reduced by 4"
     process:
       - activation_cost: { place_self_at_security_bottom: true }
+      # Only cards the play below can actually play are offered (CR 4.3
+      # 1-3-2). DCGO BT26_022.cs:75-79 `IsDigimon && EqualsTraits("Iliad") &&
+      # (blue || red) && CanPlayAsNewPermanent(card, payCost: true, ...,
+      # fixedCost: max(0, GetCostItself - 4))`: a play cost, never a DUAL (used,
+      # never played: CR 4.3 4-6-2 — e.g. Jupitermon BT26-033) or Digi-Egg
+      # (CR 4.3 7-1-1), a free battle-area slot, no play lock, and the reduced
+      # cost payable.
       - select_hand:
           of: you
           bind_as: iliad_pick
@@ -79,6 +86,8 @@ effects:
               - any_of:
                   - color_is: blue
                   - color_is: red
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 4 }
           prompt: "You may play 1 blue or red [Iliad] trait Digimon card from your hand with the cost reduced by 4"
       - play_from_hand:
           of: you

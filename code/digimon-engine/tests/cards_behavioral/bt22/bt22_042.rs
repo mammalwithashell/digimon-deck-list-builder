@@ -595,3 +595,100 @@ fn make_tamer(id: &str, name: &str) -> CardData {
     card.card_kind = CardKind::Tamer;
     card
 }
+
+// ─── [When Digivolving] hand-pick legality ───────────────────────────────────
+// DCGO BT22_042.cs:67-73 `IsPuppetDigimon` = IsDigimon && Level <= 4 &&
+// HasPuppetTraits && CanPlayAsNewPermanent(cardSource, false, activateClass);
+// the pick installs only `if (HasMatchConditionOwnersHand(card,
+// IsPuppetDigimon))` (:82). CanPlayAsNewPermanent
+// (GameContextDeterminarion.cs:419-432) requires `!IsOption` (a DUAL is out —
+// CR 4.3 7-1-1: playing needs a play cost, a DUAL prints "D"; 4-6-2), an empty frame and
+// no play prohibition. So the "play a Puppet?" choice and the pick both read
+// `can_play_from_effect_without_cost: true`.
+
+fn nyaboot_runner(hand: &[&str]) -> (DebugRunner, PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT22-042")
+        .expect("BT22-042 YAML loads")
+        .dsl_card("EX13-065")
+        .expect("EX13-065 YAML loads")
+        .add_card(make_digimon("BASE", 6, 11000, CardColor::Yellow, &[]))
+        .add_card(make_digimon("PUPPET-L4", 4, 4000, CardColor::Yellow, &["Puppet"]))
+        .add_card(make_digimon("OPPONENT", 5, 14000, CardColor::Red, &[]))
+        .hand(0, hand)
+        .start();
+    let nyabootmon = runner.place_stack(0, &["BASE", "BT22-042"]);
+    runner.place_on_field(1, "OPPONENT", Some(0));
+    (runner, nyabootmon)
+}
+
+fn hand_card_ids(runner: &DebugRunner) -> Vec<String> {
+    runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect()
+}
+
+/// Sistermon Blanc (Awakened) (EX13-065) is a level 3 [Puppet] DUAL: it can't be
+/// played, so the pick offers only the plain level 4 Puppet.
+#[test]
+fn bt22_042_when_digivolving_does_not_offer_dual_puppet() {
+    let (mut runner, nyabootmon) = nyaboot_runner(&["EX13-065", "PUPPET-L4"]);
+    trigger_when_digivolving(&mut runner, nyabootmon);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
+    runner.execute_branch(0).expect("choose to play a Puppet");
+    let view = runner.pending_selection_view().expect("Puppet hand pick");
+    assert_eq!(view.kind, SelectionKind::Hand);
+    let hand = hand_card_ids(&runner);
+    let offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| hand[(id - PLAY_HAND_START) as usize].clone())
+        .collect();
+    assert_eq!(
+        offered,
+        vec!["PUPPET-L4".to_string()],
+        "the DUAL Sistermon Blanc (Awakened) (EX13-065) must not be offered for a play"
+    );
+}
+
+/// Only the DUAL in hand: DCGO never opens the pick (no `IsPuppetDigimon`
+/// candidate), so no "play a Puppet?" choice is offered; the -3000 DP tail
+/// still resolves.
+#[test]
+fn bt22_042_when_digivolving_dual_only_hand_skips_to_dp_tail() {
+    let (mut runner, nyabootmon) = nyaboot_runner(&["EX13-065"]);
+    trigger_when_digivolving(&mut runner, nyabootmon);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OppField),
+        "no playable Puppet ⇒ no play choice; straight to the DP target"
+    );
+}
+
+/// "You can't play Digimon by effects": no play choice is offered.
+#[test]
+fn bt22_042_when_digivolving_no_play_choice_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::enums::ModifierType;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, nyabootmon) = nyaboot_runner(&["PUPPET-L4"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    trigger_when_digivolving(&mut runner, nyabootmon);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
+}
+
+/// A full battle area: no play choice is offered.
+#[test]
+fn bt22_042_when_digivolving_no_play_choice_when_battle_area_full() {
+    let (mut runner, nyabootmon) = nyaboot_runner(&["PUPPET-L4"]);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    trigger_when_digivolving(&mut runner, nyabootmon);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
+}

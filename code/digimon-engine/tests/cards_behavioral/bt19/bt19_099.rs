@@ -1353,3 +1353,164 @@ fn bt19_099_replacement_not_offered_the_turn_it_was_placed() {
         "the Option stays in the battle area"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 5 — Candidate legality: no pick the play would refuse
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// A pick that offers a card the follow-up play refuses is a choice with no
+// legal outcome (CR 4.3 1-3-2). <Delay> reward: DCGO BT19_099.cs:255-273
+// offers a [Wicked God] only when `CanPlayAsNewPermanent(cardSource,
+// payCost: false, activateClass)` (free frame, no effect-play prohibition);
+// a trash card is also refused while its owner can't play from the trash.
+// [Main]: DCGO BT19_099.cs:29-35 offers every [Composite] Digimon and lets
+// the paid play (`PlayPermanentCards(payCost: true)`, :162-168) fail; the
+// rules side (CR 4.3 1-3-2; 7-1-2-3 returns a card whose cost can't be paid)
+// makes such a pick a no-op, so the engine offers only a card the paid,
+// -4 play can actually make: this narrows past DCGO.
+
+fn lock(runner: &mut DebugRunner, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner
+        .game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1));
+}
+
+/// The non-PASS actions of the pending selection, or none.
+fn offered_actions(runner: &DebugRunner) -> Vec<u16> {
+    runner
+        .game
+        .pending_selection
+        .as_ref()
+        .map(|s| s.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect())
+        .unwrap_or_default()
+}
+
+/// <Delay> fixture: a cost-10 Millenniummon about to leave, BT19-099 seated
+/// as a usable Delay, a cost-11 [Wicked God] in the hand (or the trash).
+/// `setup` runs before the leave; returns the offers right after accepting.
+fn reward_offers(wg_in_trash: bool, setup: impl FnOnce(&mut DebugRunner)) -> (DebugRunner, Vec<u16>) {
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(BT19_099_YAML)
+        .expect("BT19-099 YAML parses")
+        .add_card(make_millenniummon_named("BT19099-MM-L", 10))
+        .add_card(make_wicked_god_digimon("BT19099-WG-L", "Armageddemon", 11))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5]);
+    if !wg_in_trash {
+        b = b.hand(0, &["BT19099-WG-L"]);
+    }
+    let mut runner = b.start();
+    if wg_in_trash {
+        seed_trash(&mut runner, 0, "BT19099-WG-L");
+    }
+    let bt19_099 = runner.place_on_field(0, "BT19-099", Some(0));
+    seat_as_delay_option(&mut runner, bt19_099);
+    let mm = runner.place_on_field(0, "BT19099-MM-L", None);
+    setup(&mut runner);
+    runner
+        .game
+        .delete_permanent_with_cause(mm, ReplacementCause::OwnEffect);
+    runner
+        .game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the <Delay> response");
+    let offered = offered_actions(&runner);
+    (runner, offered)
+}
+
+/// Control: the hand and trash [Wicked God] are each offered when playable.
+#[test]
+fn bt19_099_reward_offers_playable_wicked_god_in_hand_and_trash() {
+    assert_eq!(reward_offers(false, |_| {}).1.len(), 1, "hand");
+    assert_eq!(reward_offers(true, |_| {}).1.len(), 1, "trash");
+}
+
+/// "Can't play Digimon by effects": the [Wicked God] is not offered, and it
+/// stays in the hand.
+#[test]
+fn bt19_099_reward_excludes_wicked_god_when_effect_play_is_prohibited() {
+    let (mut runner, offered) = reward_offers(false, |r| {
+        lock(r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect)
+    });
+    assert!(offered.is_empty(), "no candidate: {offered:?}");
+    drive_to_completion(&mut runner, 10);
+    assert!(in_hand(&runner, 0, "BT19099-WG-L"));
+    assert!(!on_field(&runner, 0, "BT19099-WG-L"));
+}
+
+/// "Can't play cards from the trash": the trash [Wicked God] is not offered.
+#[test]
+fn bt19_099_reward_excludes_trash_wicked_god_when_trash_play_is_locked() {
+    let (mut runner, offered) = reward_offers(true, |r| {
+        lock(r, digimon_engine::enums::ModifierType::CannotPlayFromTrash)
+    });
+    assert!(offered.is_empty(), "no candidate: {offered:?}");
+    drive_to_completion(&mut runner, 10);
+    assert!(in_trash(&runner, 0, "BT19099-WG-L"));
+}
+
+/// [Main] fixture: BT19-099 in hand, `trash` [Composite] cards in the trash.
+fn main_offers(trash: &[CardData], setup: impl FnOnce(&mut DebugRunner)) -> (DebugRunner, Vec<String>) {
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(BT19_099_YAML)
+        .expect("BT19-099 YAML parses")
+        .add_card(make_filler("FILL"));
+    for c in trash {
+        b = b.add_card(c.clone());
+    }
+    let mut runner = b
+        .memory(10)
+        .hand(0, &["BT19-099"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    for c in trash {
+        seed_trash(&mut runner, 0, &c.card_id);
+    }
+    setup(&mut runner);
+    assert!(runner.game.activate_hand_main(0, 0));
+    let trash_ids: Vec<String> = runner.game.players[0]
+        .trash
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let offered = offered_actions(&runner)
+        .into_iter()
+        .map(|a| trash_ids[(a - TRASH_EFFECT_START) as usize].clone())
+        .collect();
+    (runner, offered)
+}
+
+/// [Main]: a [Composite] whose play cost stays unpayable after the -4
+/// (30 - 4 = 26, more than the memory gauge can pay) is not offered; the
+/// payable one (9 - 4 = 5) is.
+#[test]
+fn bt19_099_main_excludes_composite_unpayable_after_reduction() {
+    let mut expensive = make_composite_digimon("BT19099-COMP-HIGH", "Expensivemon");
+    expensive.play_cost = 30;
+    let (_, offered) = main_offers(
+        &[make_composite_digimon("BT19099-COMP-OK", "Diablomon"), expensive],
+        |_| {},
+    );
+    assert_eq!(offered, vec!["BT19099-COMP-OK".to_string()]);
+}
+
+/// [Main]: "can't play Digimon by effects" leaves no [Composite] to offer; the
+/// Option still places itself in the battle area.
+#[test]
+fn bt19_099_main_excludes_composite_when_effect_play_is_prohibited() {
+    let (mut runner, offered) = main_offers(
+        &[make_composite_digimon("BT19099-COMP-OK", "Diablomon")],
+        |r| lock(r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect),
+    );
+    assert!(offered.is_empty(), "no candidate: {offered:?}");
+    drive_to_completion(&mut runner, 10);
+    assert!(in_trash(&runner, 0, "BT19099-COMP-OK"));
+    assert!(on_field(&runner, 0, "BT19-099"));
+}

@@ -34,10 +34,12 @@ effects:
           of: you
           bind_as: shoemon
           optional: true
+          # DCGO P_136.cs:26-41: name + CanPlayAsNewPermanent(payCost: false).
           filter:
             all_of:
               - kind: digimon
               - name_is: Shoemon
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Shoemon] from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: shoemon }
 

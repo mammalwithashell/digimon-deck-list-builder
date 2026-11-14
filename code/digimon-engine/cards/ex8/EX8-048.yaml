@@ -34,8 +34,14 @@ effects:
           of: you
           bind_as: pick
           optional: true
+          # DCGO EX8_048.cs:31-35 `HasClose` = name "Close" &&
+          # CanPlayAsNewPermanent(source, false, ...): a [Close] that can't be
+          # played (full battle area, "can't play Tamers by effects") is not
+          # offered (CR 4.3 1-3-11-1).
           filter:
-            name_is: "Close"
+            all_of:
+              - name_is: "Close"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Close] from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: pick }
   - scope: inherited

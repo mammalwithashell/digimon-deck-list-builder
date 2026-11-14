@@ -94,7 +94,22 @@ effects:
                 of: you
                 bind_as: gd_pick
                 optional: true
-                filter: { trait_has: "Glowing Dawn" }
+                # DCGO ST23_04.cs:128-134: EqualsTraits("Glowing Dawn") &&
+                # ((IsOption && !CanNotPlayThisOption) || (HasPlayCost &&
+                # CanPlayAsNewPermanent(card, true, …, fixedCost: cost - 3))):
+                # no Digi-Egg (CR 4.3 7-1-1), a placeable + affordable Digimon /
+                # Tamer (placeable = no effect-play lock + a free frame under the
+                # engine's rules.field_slots cap, mirroring DCGO's frame limit;
+                # CR 4.3 3-4-8-2 itself sets no battle-area limit), a usable
+                # Option (lock, colour / <Use Req.>, CR 4.3
+                # 4-22). DCGO skips memory on the Option half; CR 4.3 1-3-11-1
+                # / 9-1-8 don't, so the reduced use cost must be payable too
+                # (DUAL priced at its use cost, 4-6-2).
+                filter:
+                  all_of:
+                    - trait_has: "Glowing Dawn"
+                    - can_play_or_use_from_effect: true
+                    - affordable_with_cost: { reduce: 3 }
                 prompt: "You may play or use 1 [Glowing Dawn] card from your hand with the cost reduced by 3"
             - play_or_use_from_hand:
                 of: you

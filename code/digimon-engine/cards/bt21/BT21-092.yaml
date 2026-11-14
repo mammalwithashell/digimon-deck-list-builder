@@ -1,3 +1,33 @@
+# BT21-092 Can't Turn My Back! — Option, Red, Cost 2. Traits: [Xros Heart]
+#
+# Printed text (official bundle data/card_bundles/BT21-092.md; card image):
+#   While you have a Digimon with the [Xros Heart] trait, you can ignore this
+#   card's color requirements.
+#   [Main] Place all Digimon cards in 1 of your [Xros Heart] trait Digimon's
+#   digivolution cards under 1 of your Tamers. Then, you may play 1 Digimon
+#   card with the [Xros Heart] trait from your hand with the play cost reduced
+#   by 1 for each card this effect placed.
+#   [Security] You may play 1 [Xros Heart] trait card with a play cost of 5 or
+#   less from your hand or trash without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Red/BT21_092.cs
+#
+# Colour bypass: BT21_092.cs:24-25 `CanUseCondition =
+#   HasMatchConditionOwnersPermanent(TopCard.IsDigimon && EqualsTraits("Xros
+#   Heart"))` → card-level `use_requirement` (BT21-091 precedent).
+# [Main] hand pick: BT21_092.cs:52-61 `IsDigimon && EqualsTraits("Xros
+#   Heart")`, then PlayPermanentCards(payCost: true, fixedCost:
+#   BasePlayCostFromEntity - cardsMoved) (:176-187). DCGO offers cards that
+#   play then refuses; a player can declare playing a card only if it can be
+#   played and they can pay its cost (CR 4.3 1-3-11-1), so the pick adds
+#   `can_play_from_effect_without_cost` (slot / prohibition) and
+#   `affordable_with_cost` with the verb's own cost_delta.
+# [Security] pick: BT21_092.cs:231-245 `HasPlayCost && BasePlayCostFromEntity
+#   <= 5 && EqualsTraits("Xros Heart") && !IsDigiEgg` — `HasPlayCost` is false
+#   for Options (CEntity_Base.cs:340) and a Digi-Egg has no play cost (CR 4.3
+#   7-1-1), so only Digimon / Tamers; plus the playability check DCGO omits
+#   (CR 4.3 1-3-11-1).
+
 card: BT21-092
 name: "Can't Turn My Back!"
 kind: option
@@ -5,18 +35,29 @@ color: [red]
 cost: 2
 traits: [Xros Heart]
 
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+    trait_has: "Xros Heart"
+
 effects:
   - when: main_from_hand
     summary: "[Main] Move all Digimon sources from a Xros Heart Digimon under a Tamer, then play Xros Heart from hand cost reduced by moved count"
     process:
       - select_own_permanent:
           bind_as: host
+          # "1 of your [Xros Heart] trait Digimon" -- no source requirement
+          # (printed text; DCGO BT21_092.cs:64-74 CanSelectDigimonCondition
+          # checks only the trait). A host with no Digimon sources places 0
+          # cards, so the player may keep a stack's sources and forgo the
+          # reduction.
           filter:
             all_of:
               - kind: digimon
               - trait_has: "Xros Heart"
-              - materials_count_gte: 1
-          prompt: "Choose 1 Xros Heart Digimon with digivolution cards"
+          prompt: "Choose 1 Xros Heart Digimon whose Digimon digivolution cards go under a Tamer"
       - select_own_permanent:
           bind_as: tamer
           filter: { kind: tamer }
@@ -34,6 +75,11 @@ effects:
             all_of:
               - kind: digimon
               - trait_has: "Xros Heart"
+              - can_play_from_effect_without_cost: true
+              # Same cost the play below charges (printed - moved_count).
+              - affordable_with_cost:
+                  reduce:
+                    binding_value: moved_count
           prompt: "Play 1 Xros Heart Digimon from hand with cost reduced by moved cards"
       - play_from_hand:
           of: you
@@ -54,6 +100,10 @@ effects:
             all_of:
               - trait_has: "Xros Heart"
               - play_cost_lte: 5
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 Xros Heart card with play cost 5 or less from hand or trash"
       - play_union_bound_free:
           binding: play_pick

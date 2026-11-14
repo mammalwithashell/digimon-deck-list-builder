@@ -175,7 +175,19 @@ effects:
           zones: [hand, trash]
           bind_as: cannon_pick
           optional: true
-          filter: { name_is: "Ragnarok Cannon" }
+          # DCGO BT21_062.cs:76-89: HasUseCost && !CanNotPlayThisOption (no
+          # Option-use lock, colour requirement met; CR 4.3 1-3-11-1, 4-22).
+          # Known engine over-block (not card behaviour): `CannotPlayFromTrash`
+          # (installed only by BT23-014, which prints "can't play Digimon or
+          # Tamers from the trash"; DCGO gates on IsDigimon || IsTamer) also
+          # refuses an Option use from trash, so a trash copy is wrongly
+          # excluded while it is active. Fix belongs in the engine lock
+          # (`trash_play_locked` / `use_option_from`), not here.
+          filter:
+            all_of:
+              - name_is: "Ragnarok Cannon"
+              - kind: option
+              - can_play_or_use_from_effect: true
           prompt: "You may use 1 [Ragnarok Cannon] from your hand or trash without paying the cost"
       - use_option_bound:
           binding: cannon_pick

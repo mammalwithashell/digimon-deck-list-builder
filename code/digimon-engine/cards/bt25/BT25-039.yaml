@@ -169,10 +169,29 @@ effects:
           of: you
           bind_as: ceresmon_pick
           optional: true
+          # Only a Ceresmon the reduced-cost play would accept (DCGO
+          # BT25_039.cs:50-55 `HasPlayCost && EqualsCardName("Ceresmon") &&
+          # CanPlayAsNewPermanent(cardSource, true, …, fixedCost:
+          # GetCostItself - 7)`): a play cost — never the DUAL Ceresmon
+          # BT26-032 (CR 4.3 4-6-2, 7-1-1) — a free slot and no effect-play
+          # lock (CR 4.3 1-3-2), and the cost reduced by 7 payable (DCGO
+          # `MaxMemoryCost < cost` refuses; CR 4.3 7-1-2-3).
+          # KNOWN GAP (G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT): DCGO's
+          # availability cost credits Ceresmon BT25-059's own mandatory
+          # "2+ suspended Digimon: -5" (MandatorySelfPlayCostReduction,
+          # isCheckAvailability false; Q6306 "reduced by a total of 12"), and
+          # our play_from_hand verb credits it too, but `affordable_with_cost`
+          # prices the card at 12 - 7 = 5. So with 2+ suspended Digimon at
+          # memory -6..-10 this filter drops a Ceresmon the play would accept
+          # for 0. The fix is widening the shared leaf to credit mandatory
+          # before-pay-cost reducers; pinned by the ignored test
+          # bt25_039_ceresmon_pick_credits_real_ceresmons_own_cost_reduction.
           filter:
             all_of:
               - kind: digimon
               - name_is: "Ceresmon"
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 7 }
           prompt: "You may play 1 [Ceresmon] from your hand with the cost reduced by 7"
       - if:
           condition: { binding_present: ceresmon_pick }

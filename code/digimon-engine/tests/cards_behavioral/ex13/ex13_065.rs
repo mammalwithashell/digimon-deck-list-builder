@@ -22,8 +22,12 @@
 //!   digivolve into this card without paying the cost.)
 //!
 //! # DCGO C# reference
-//! None at the submodule (no EX13_065.cs at b9a0638cd). Printed text +
-//! general_rule.pdf (16-36 <Decode>, 16-45 <Guard>) govern.
+//! `DCGO/Assets/Scripts/CardEffect/EX13/White/EX13_065.cs`. The Option's
+//! hand-or-trash candidates (`CanPlaySistermon`, EX13_065.cs:88-95) are
+//! `HasPlayCost && GetCostItself <= 4 && ContainsCardName("Sistermon") &&
+//! CanPlayAsNewPermanent(card, payCost: false, activateClass, root)` (an empty
+//! frame, no play prohibition, the root's own play restrictions). Printed text +
+//! general_rule.pdf (16-36 <Decode>, 16-45 <Guard>) govern the rest.
 //!
 //! # Pattern rows
 //! - G-DSL-DUAL-PER-FACE-EFFECTS, G-DSL-ARTS-DIGIVOLVE (ST23-09 / BT25-043 idiom)
@@ -402,6 +406,108 @@ fn ex13_065_option_play_is_declinable_and_dp_still_applies() {
     r.execute_action(0, encode_attack(0, opp.index as u16)).unwrap();
     // Only WHITE-ALLY → -3000.
     assert_eq!(r.effective_dp(opp), Some(12000 - 3000));
+}
+
+// ─── Option [Main] candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY) ──
+// DCGO EX13_065.cs:88-95 `CanPlayAsNewPermanent(card, payCost: false, ...,
+// root)`; CR 4.3 1-3-2: a play that can't be carried out is not a legal pick.
+
+/// Offered rows of the pending hand-or-trash union pick as `"hand:<id>"` /
+/// `"trash:<id>"`; empty when no union pick is pending.
+fn offered_union(r: &DebugRunner) -> Vec<String> {
+    use digimon_engine::owned_card_choice::CardChoiceZone;
+    if !matches!(r.pending_kind(), Some(SelectionKind::UnionZone { .. })) {
+        return Vec::new();
+    }
+    let mut v: Vec<String> = physical_menu::commits(&r.game)
+        .into_iter()
+        .filter_map(|row| {
+            let zone = match row.zone? {
+                CardChoiceZone::Hand => "hand",
+                CardChoiceZone::Trash => "trash",
+                _ => "other",
+            };
+            Some(format!("{zone}:{}", row.card_id?))
+        })
+        .collect();
+    v.sort();
+    v
+}
+
+fn add_player_lock(r: &mut DebugRunner, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1));
+}
+
+/// Use the Option with SIS-CIEL in hand and SIS-BLANC in the trash after
+/// `setup` and an opponent Digimon (OPP-A, 12000 DP) to aim the follow-up at;
+/// returns the offered rows and that opponent Digimon.
+fn option_offered(
+    setup: impl FnOnce(&mut DebugRunner),
+) -> (DebugRunner, Vec<String>, PermanentHandle) {
+    let mut r = option_runner(&[CARD_ID, "SIS-CIEL"], &["SIS-BLANC"]);
+    let opp = r.place_on_field(1, "OPP-A", Some(0));
+    setup(&mut r);
+    let idx = hand_pos(&r, 0, CARD_ID);
+    let _ = r.game.play_option_from_hand(0, idx);
+    let offered = offered_union(&r);
+    (r, offered, opp)
+}
+
+/// The Option resolved past the empty play step: the next prompt is its
+/// follow-up target pick, the follow-up lands for 1 own Digimon (WHITE-ALLY
+/// only, nothing was played), and the Option has left the hand. Guards the
+/// "offers nothing" tests against passing because the Option never resolved.
+fn assert_option_resolved_without_play(r: &mut DebugRunner, opp: PermanentHandle) {
+    assert!(
+        !matches!(r.pending_kind(), Some(SelectionKind::UnionZone { .. })),
+        "no play pick with no playable card"
+    );
+    let view = r.pending_selection_view().expect("follow-up target pick");
+    assert_eq!(view.kind, SelectionKind::OppField);
+    r.execute_action(0, encode_attack(0, opp.index as u16)).unwrap();
+    assert_eq!(r.effective_dp(opp), Some(12000 - 3000), "-3000 x 1 own Digimon");
+    assert!(
+        !r.game.player(0).hand.iter().any(|c| c.card_id(&r.game.card_data) == CARD_ID),
+        "the Option was used"
+    );
+}
+
+/// A full battle area: no [Sistermon] card can be played, so none is offered
+/// and SIS-CIEL stays in hand.
+#[test]
+fn ex13_065_option_offers_nothing_when_battle_area_full() {
+    let (mut r, offered, opp) = option_offered(|r| {
+        r.game.rules.field_slots = r.game.player(0).battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+    assert_option_resolved_without_play(&mut r, opp);
+    assert!(r.game.player(0).hand.iter().any(|c| c.card_id(&r.game.card_data) == "SIS-CIEL"));
+}
+
+/// "You can't play Digimon by effects": nothing is offered.
+#[test]
+fn ex13_065_option_offers_nothing_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::ModifierType;
+    let (mut r, offered, opp) =
+        option_offered(|r| add_player_lock(r, ModifierType::CannotPlayDigimonByEffect));
+    assert!(offered.is_empty(), "{offered:?}");
+    assert_option_resolved_without_play(&mut r, opp);
+    assert!(r.game.player(0).hand.iter().any(|c| c.card_id(&r.game.card_data) == "SIS-CIEL"));
+}
+
+/// Gallantmon (BT23-014)'s lock, "their effects can't play Digimon or Tamers
+/// from the trash" (`CannotPlayFromTrash`): the trash [Sistermon] Digimon is
+/// not offered, the hand card still is.
+#[test]
+fn ex13_065_option_excludes_trash_cards_when_playing_from_trash_is_locked() {
+    use digimon_engine::enums::ModifierType;
+    let (_r, offered, _) =
+        option_offered(|r| add_player_lock(r, ModifierType::CannotPlayFromTrash));
+    assert_eq!(offered, vec!["hand:SIS-CIEL".to_string()]);
 }
 
 // ─── <Arts Digivolve> ────────────────────────────────────────────────────────

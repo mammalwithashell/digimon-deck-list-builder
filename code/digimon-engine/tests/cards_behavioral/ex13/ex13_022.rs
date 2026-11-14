@@ -455,3 +455,67 @@ fn ex13_022_unsuspend_is_once_per_turn_and_resets_next_turn() {
     runner.game.suspend(h);
     assert!(runner.pending_selection().is_some(), "fresh turn, fresh use");
 }
+
+// ─── Candidate legality — only Tamers the free play can actually place ───────
+// DCGO EX13_022.cs:31-34 `IsTamer && HasText("Veedramon") &&
+// CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)`, the gate of
+// the shared clause's CanActivate and the pick filter. A Tamer the play would
+// refuse is not a legal choice (CR 4.3 1-3-2).
+
+fn add_player_lock(runner: &mut DebugRunner, modifier: ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Digivolve CS-L4 into AeroVeedramon (EX13-022) after `setup`.
+fn digivolve_with(setup: impl FnOnce(&mut DebugRunner)) -> (DebugRunner, PermanentHandle) {
+    let mut runner = base(&[CARD_ID, "VEE-TAMER"], 10);
+    let lv4 = runner.place_on_field(0, "CS-L4", Some(0));
+    setup(&mut runner);
+    let slot = hand_index(&runner, CARD_ID) as u16;
+    runner.game.decode_action(encode_digivolve(slot, lv4.index as u16), 0);
+    (runner, lv4)
+}
+
+#[test]
+fn ex13_022_tamer_not_offered_when_battle_area_full() {
+    let (mut runner, _) = digivolve_with(|r| r.game.rules.field_slots = 1);
+    assert!(hand_prompt(&mut runner).is_none(), "no free slot");
+    let _ = runner.auto_resolve();
+    // (The digivolve also drew 1 card.)
+    assert!(hand_ids(&runner, 0).contains(&"VEE-TAMER".to_string()), "Tamer stays in hand");
+    assert!(!field_ids(&runner, 0).contains(&"VEE-TAMER".to_string()));
+}
+
+#[test]
+fn ex13_022_tamer_not_offered_under_tamer_effect_play_prohibition() {
+    let (mut runner, _) =
+        digivolve_with(|r| add_player_lock(r, ModifierType::CannotPlayTamerByEffect));
+    assert!(hand_prompt(&mut runner).is_none(), "effect play of Tamers prohibited");
+    let _ = runner.auto_resolve();
+    // (The digivolve also drew 1 card.)
+    assert!(hand_ids(&runner, 0).contains(&"VEE-TAMER".to_string()), "Tamer stays in hand");
+    assert!(!field_ids(&runner, 0).contains(&"VEE-TAMER".to_string()));
+}
+
+/// Regression guard: with nothing legal the shared [Once Per Turn] is not spent
+/// (DCGO CanActivate false), so [When Attacking] with a free slot still offers it.
+#[test]
+fn ex13_022_full_area_does_not_spend_the_shared_once_per_turn() {
+    let mut slots = 0;
+    let (mut runner, aero) = digivolve_with(|r| {
+        slots = r.game.rules.field_slots;
+        r.game.rules.field_slots = 1;
+    });
+    assert!(hand_prompt(&mut runner).is_none());
+    let _ = runner.auto_resolve();
+    runner.game.rules.field_slots = slots;
+    runner.game.players[0].battle_area[aero.index as usize].turn_played = 0;
+    runner.attack_player(aero, 1, false);
+    let view = hand_prompt(&mut runner).expect("OPT still available");
+    assert!(offered(&runner, &view, "VEE-TAMER"));
+}

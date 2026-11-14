@@ -12,9 +12,10 @@
 //! ```
 //!
 //! # DCGO C# reference
-//! None — DCGO has no `EX13_003.cs` at `b9a0638cd` (see
-//! `.claude/plans/author-set-ex13.md` open item 1). Printed text + the
-//! ST24-01 Koromon / BT21-001 Gigimon inherited-digivolve idiom are the refs.
+//! DCGO/Assets/Scripts/CardEffect/EX13/Yellow/EX13_003.cs (absent at
+//! `b9a0638cd`, present in the current submodule): `SelectSourceCard`
+//! (:30-35) is both the pick filter and the CanActivate gate (:44-48). The
+//! ST24-01 Koromon / BT21-001 Gigimon inherited-digivolve idiom is the DSL ref.
 //!
 //! # Patterns (RUST_DSL_TEST_API §4.3)
 //! - G4 inherited trigger on a Digi-Egg (`on_own_security_removed`).
@@ -276,5 +277,142 @@ fn ex13_003_once_per_turn_blocks_second_trigger_and_clears_next_turn() {
         r.pending_kind(),
         Some(SelectionKind::Hand),
         "OPT lockout clears on the next turn"
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 6 — Candidate legality (paid digivolve, cost reduced by 1)
+// ════════════════════════════════════════════════════════════════════════════
+//
+// DCGO EX13_003.cs:30-35 `SelectSourceCard` = IsDigimon && ([Holy Beast] ||
+// [Kentaurosmon] name) && `CanPlayCardTargetFrame(carrier.PermanentFrame,
+// PayCost: true, ...)`, used both as the hand-pick filter
+// (`DigivolveIntoHandOrTrashCard(payCost: true, reduceCost: 1)`, :52-61, with the
+// −1 installed before the pick, CardEffectCommons.cs:888-925) and as the
+// activation gate (`CanActivateCondition`, :44-48). For the occupied carrier
+// frame `CanPlayCardTargetFrame` is ROUTE-ONLY: its `MaxMemoryCost < cost`
+// refusal (CardSource.cs:1150-1162) sits inside `if (PayCost &&
+// frame.GetFramePermanent() == null)` (empty-frame plays only), and `CanEvolve`
+// (CardSource.cs:1269-1290) / `EvoCosts` never compare cost to memory. So in
+// DCGO a card with no route onto the carrier is excluded from both gate and
+// pick (we match this), but an unaffordable card IS offered, and a hand holding
+// only unaffordable cards still activates the effect.
+//
+// We deliberately diverge on affordability (rules over DCGO): CR 4.3 1-3-11-1
+// forbids declaring a digivolve whose cost can't be paid, and our effect
+// digivolve refuses it (`Game::can_effect_digivolve_from_source_with_cost`,
+// game_actions/digivolve.rs). So we price both the gate and the pick at the
+// reduced cost the digivolve charges: an unaffordable card is not offered, and
+// with no payable card the effect does not activate and its [Once Per Turn] is
+// not used. A DCGO recording that activates/offers on an unaffordable-only hand
+// is a known `dcgo_quirk`, not an engine bug.
+
+/// A Lv.4 yellow [Holy Beast] digivolving from a yellow Lv.3 for `cost`.
+fn hb_costing(id: &str, cost: u8) -> CardData {
+    let mut c = digimon(id, "Holy Beast Target", 4, &["Holy Beast"]);
+    c.evo_costs = vec![EvoCost {
+        card_color: 2,
+        level: 3,
+        memory_cost: cost.into(),
+    }];
+    c
+}
+
+/// A Lv.6 [Holy Beast] that needs a Lv.5: no route onto the Lv.3 carrier.
+fn hb_needing_lv5(id: &str) -> CardData {
+    let mut c = digimon(id, "Holy Beast Six", 6, &["Holy Beast"]);
+    c.evo_costs = vec![EvoCost {
+        card_color: 2,
+        level: 5,
+        memory_cost: 3,
+    }];
+    c
+}
+
+/// Memory 6 pays at most 16 (CR 4.3 memory floor −10).
+fn legality_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX13-003 YAML loads")
+        .add_card(digimon("CARRIER", "Carrier", 3, &["DATA SQUAD"]))
+        .add_card(target("HB-TARGET", "Holy Beast Target", &["Holy Beast"]))
+        .add_card(hb_costing("HB-17", 17))
+        .add_card(hb_costing("HB-18", 18))
+        .add_card(hb_needing_lv5("HB-LV6"))
+        .add_card(digimon("FILL", "Fill", 3, &[]))
+        .add_card(digimon("SEC", "Security", 3, &[]))
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .security(0, &["SEC", "SEC", "SEC"])
+        .memory(6)
+        .start()
+}
+
+/// HB-17 costs 16 after the −1 (payable); HB-18 costs 17 (not).
+#[test]
+fn ex13_003_hand_pick_offers_only_cards_affordable_after_the_reduction() {
+    let mut r = legality_runner();
+    carrier_over_egg(&mut r);
+    r.add_to_hand(0, "HB-18");
+    r.add_to_hand(0, "HB-17");
+    trash_p0_security(&mut r, 0);
+    let view = r.pending_selection_view().expect("HB-17 is a legal pick");
+    let picks: Vec<u16> = view.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect();
+    let hb17 = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "HB-17")
+        .unwrap() as u16;
+    assert_eq!(picks.len(), 1, "only HB-17 is payable: {picks:?}");
+    assert!(
+        picks[0] % 30 == hb17,
+        "the one pick is HB-17 (slot {hb17}): {picks:?}"
+    );
+}
+
+/// Only an unaffordable [Holy Beast] card in hand: the effect does not
+/// activate, and its [Once Per Turn] is still available the same turn.
+/// Asserts the rules-over-DCGO behaviour (CR 4.3 1-3-11-1), NOT DCGO parity:
+/// DCGO's route-only gate would activate here and offer the card (see the
+/// Section 6 header).
+#[test]
+fn ex13_003_unaffordable_only_hand_does_not_prompt_or_spend_the_opt() {
+    let mut r = legality_runner();
+    carrier_over_egg(&mut r);
+    r.add_to_hand(0, "HB-18");
+    trash_p0_security(&mut r, 0);
+    assert!(
+        r.pending_selection().is_none(),
+        "HB-18 can't be paid for: {:?}",
+        r.pending_selection_view()
+    );
+    r.add_to_hand(0, "HB-TARGET");
+    trash_p0_security(&mut r, 0);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Hand),
+        "the OPT was not used by the empty activation"
+    );
+}
+
+/// A [Holy Beast] card with no route onto the Lv.3 carrier: no prompt, and the
+/// [Once Per Turn] stays available.
+#[test]
+fn ex13_003_routeless_only_hand_does_not_prompt_or_spend_the_opt() {
+    let mut r = legality_runner();
+    carrier_over_egg(&mut r);
+    r.add_to_hand(0, "HB-LV6");
+    trash_p0_security(&mut r, 0);
+    assert!(
+        r.pending_selection().is_none(),
+        "HB-LV6 can't digivolve onto a Lv.3: {:?}",
+        r.pending_selection_view()
+    );
+    r.add_to_hand(0, "HB-TARGET");
+    trash_p0_security(&mut r, 0);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Hand),
+        "the OPT was not used by the empty activation"
     );
 }

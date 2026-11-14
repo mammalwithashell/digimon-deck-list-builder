@@ -379,5 +379,82 @@ fn ex13_067_security_plays_itself_for_free() {
     assert_eq!(runner.memory(), 3, "without paying the cost");
 }
 
+// ─── Candidate legality: only cards the free play can actually play ─────────
+// DCGO EX13_067.cs:96-100 filters both the hand and the trash pick with
+// `EqualsCardName(cardName) && CanPlayAsNewPermanent(cardSource, payCost: false,
+// activateClass)`, and skips the pick when neither zone has one (:102-108). CR
+// 4.3 1-3-11-1: a card that can't be played can't be declared for the play;
+// 1-3-2: the impossible play is not carried out, so offering it is a dead
+// choice. The clause gate counts the same filter, so with nothing playable the
+// Tamer is never suspended for nothing.
+
+fn add_player_lock(runner: &mut DebugRunner, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner
+        .game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1));
+}
+
+/// "You can't play Digimon by effects": [Gabumon] can't be played, so nothing
+/// is offered and the Tamer is not suspended.
+#[test]
+fn ex13_067_effect_play_prohibition_offers_nothing() {
+    let (mut runner, nokia, base) = setup(&["GREYMON-EVO", "GABUMON"], &[]);
+    add_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    digivolve(&mut runner, "GREYMON-EVO", base);
+    assert!(
+        runner.pending_selection().is_none(),
+        "no playable [Gabumon]: {:?}",
+        runner.pending_selection_view()
+    );
+    assert!(!suspended(&runner, nokia));
+    assert!(!field_ids(&runner, 0).contains(&"GABUMON".to_string()));
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs an empty frame):
+/// nothing can be played, so nothing is offered.
+#[test]
+fn ex13_067_full_battle_area_offers_nothing() {
+    let (mut runner, nokia, base) = setup(&["GREYMON-EVO", "GABUMON"], &["GABUMON"]);
+    // Nokia + the digivolving Digimon fill a 2-slot battle area.
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    digivolve(&mut runner, "GREYMON-EVO", base);
+    assert!(
+        runner.pending_selection().is_none(),
+        "no free slot: {:?}",
+        runner.pending_selection_view()
+    );
+    assert!(!suspended(&runner, nokia));
+}
+
+/// "You can't play cards from the trash": the trash [Gabumon] is not offered,
+/// the hand copy still is.
+#[test]
+fn ex13_067_trash_copy_not_offered_when_playing_from_trash_is_prohibited() {
+    let (mut runner, _nokia, base) = setup(&["GREYMON-EVO", "GABUMON"], &["GABUMON"]);
+    add_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    digivolve(&mut runner, "GREYMON-EVO", base);
+    accept_confirm(&mut runner);
+    let rows = physical_menu::commits(&runner.game);
+    assert_eq!(rows.len(), 1, "one candidate, not both copies: {rows:?}");
+    assert!(
+        matches!(rows[0].zone, Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand)),
+        "only the hand [Gabumon] is playable: {rows:?}"
+    );
+}
+
+/// Only a trash [Gabumon] while playing from the trash is prohibited: nothing
+/// is playable, so the effect is not offered.
+#[test]
+fn ex13_067_trash_only_copy_under_trash_lock_offers_nothing() {
+    let (mut runner, nokia, base) = setup(&["GREYMON-EVO"], &["GABUMON"]);
+    add_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    digivolve(&mut runner, "GREYMON-EVO", base);
+    assert!(runner.pending_selection().is_none());
+    assert!(!suspended(&runner, nokia));
+}
+
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;
