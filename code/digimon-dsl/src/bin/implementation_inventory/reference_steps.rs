@@ -2181,6 +2181,7 @@ impl Walk for digimon_dsl::step::PermanentProperty {
             serde_json::Value::Null,
         );
         match self {
+            digimon_dsl::step::PermanentProperty::ColorCount => c.node(path, "digimon_dsl::step::PermanentProperty", "ENUM_SCALAR", serde_json::json!("ColorCount")),
             digimon_dsl::step::PermanentProperty::Level => c.node(
                 path,
                 "digimon_dsl::step::PermanentProperty",
@@ -2333,11 +2334,13 @@ impl Walk for digimon_dsl::step::ForceAttackArgs {
         );
         let digimon_dsl::step::ForceAttackArgs {
             attacker,
+            affects_player,
             targets,
             without_suspending,
             prompt,
             cost_upgrade,
         } = self;
+        affects_player.walk(c, &format!("{}.affects_player", path), "UNCLASSIFIED_STRING");
         attacker.walk(c, &format!("{}.attacker", path), "UNCLASSIFIED_STRING");
         targets.walk(c, &format!("{}.targets", path), "UNCLASSIFIED_STRING");
         without_suspending.walk(
@@ -5715,7 +5718,7 @@ digimon_dsl::compiled::CompiledStep::RelinkSelfToOwnDigimon{host_filter,prompt} 
 digimon_dsl::compiled::CompiledStep::Optional(f0) => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("Optional"));f0.walk(c,&format!("{}@Optional.0",path),role);},
 digimon_dsl::compiled::CompiledStep::Battle{attacker,defender,compare} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("Battle"));attacker.walk(c, &format!("{}.attacker", &format!("{}@Battle",path)), "UNCLASSIFIED_STRING");defender.walk(c, &format!("{}.defender", &format!("{}@Battle",path)), "UNCLASSIFIED_STRING");compare.walk(c, &format!("{}.compare", &format!("{}@Battle",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::MayAttackNow{attacker,targets,without_suspending,ignore_summoning_sickness,optional,windowed,prompt,cost_upgrade} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("MayAttackNow"));attacker.walk(c, &format!("{}.attacker", &format!("{}@MayAttackNow",path)), "UNCLASSIFIED_STRING");targets.walk(c, &format!("{}.targets", &format!("{}@MayAttackNow",path)), "UNCLASSIFIED_STRING");without_suspending.walk(c, &format!("{}.without_suspending", &format!("{}@MayAttackNow",path)), "UNCLASSIFIED_STRING");ignore_summoning_sickness.walk(c, &format!("{}.ignore_summoning_sickness", &format!("{}@MayAttackNow",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@MayAttackNow",path)), "UNCLASSIFIED_STRING");windowed.walk(c, &format!("{}.windowed", &format!("{}@MayAttackNow",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@MayAttackNow",path)), "METADATA_NO_EXECUTABLE_REFERENCE");cost_upgrade.walk(c, &format!("{}.cost_upgrade", &format!("{}@MayAttackNow",path)), "UNCLASSIFIED_STRING");},
-digimon_dsl::compiled::CompiledStep::ForceAttack{attacker,targets,without_suspending,prompt,cost_upgrade} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ForceAttack"));attacker.walk(c, &format!("{}.attacker", &format!("{}@ForceAttack",path)), "UNCLASSIFIED_STRING");targets.walk(c, &format!("{}.targets", &format!("{}@ForceAttack",path)), "UNCLASSIFIED_STRING");without_suspending.walk(c, &format!("{}.without_suspending", &format!("{}@ForceAttack",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@ForceAttack",path)), "METADATA_NO_EXECUTABLE_REFERENCE");cost_upgrade.walk(c, &format!("{}.cost_upgrade", &format!("{}@ForceAttack",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::ForceAttack{attacker,affects_player,targets,without_suspending,prompt,cost_upgrade} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ForceAttack"));affects_player.walk(c, &format!("{}@ForceAttack.affects_player",path), "UNCLASSIFIED_STRING");attacker.walk(c, &format!("{}.attacker", &format!("{}@ForceAttack",path)), "UNCLASSIFIED_STRING");targets.walk(c, &format!("{}.targets", &format!("{}@ForceAttack",path)), "UNCLASSIFIED_STRING");without_suspending.walk(c, &format!("{}.without_suspending", &format!("{}@ForceAttack",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@ForceAttack",path)), "METADATA_NO_EXECUTABLE_REFERENCE");cost_upgrade.walk(c, &format!("{}.cost_upgrade", &format!("{}@ForceAttack",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::RedirectAttackTarget{new_target,player,targets,optional,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RedirectAttackTarget"));new_target.walk(c, &format!("{}.new_target", &format!("{}@RedirectAttackTarget",path)), "UNCLASSIFIED_STRING");player.walk(c, &format!("{}.player", &format!("{}@RedirectAttackTarget",path)), "UNCLASSIFIED_STRING");targets.walk(c, &format!("{}.targets", &format!("{}@RedirectAttackTarget",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@RedirectAttackTarget",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@RedirectAttackTarget",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
 digimon_dsl::compiled::CompiledStep::CancelAttack => c.node(path,"digimon_dsl::compiled::CompiledStep","ENUM_SCALAR",serde_json::json!("CancelAttack")),
 digimon_dsl::compiled::CompiledStep::OpenCounterWindow => c.node(path,"digimon_dsl::compiled::CompiledStep","ENUM_SCALAR",serde_json::json!("OpenCounterWindow")),

@@ -1,0 +1,61 @@
+# Official Bandai card face and committed bundle; Royal Knights qualification.
+card: BT9-098
+name: Awakening of the Golden Knight
+kind: option
+color:
+- blue
+cost: 3
+use_requirement:
+  any_permanent:
+    of: you
+    kind: digimon
+    trait_has: Armor Form
+effects:
+- when: main_from_hand
+  process:
+  - select_own_permanent:
+      bind_as: host
+      filter:
+        kind: digimon
+        trait_has: Armor Form
+      optional: true
+      prompt: Choose a Digimon
+  - if:
+      condition:
+        binding_present: host
+      then:
+      - select_hand:
+          of: you
+          bind_as: evolution
+          optional: true
+          filter:
+            kind: digimon
+            name_contains: Magnamon
+          prompt: You may digivolve into a Magnamon
+      - effect_initiated_digivolve:
+          target: host
+          from_hand: evolution
+          cost: free
+          ignore_requirements: true
+      - if:
+          condition:
+            effect_digivolved_any_digimon: true
+          then:
+          - add_modifier:
+              target: host
+              modifier: ImmuneFromDPMinus
+              value: 1
+              expiry: end_of_opponents_turn
+              opponent_only: true
+- when: on_security
+  process:
+  - select_trash:
+      of: you
+      bind_as: recover
+      filter:
+        name_contains: Magnamon
+      prompt: Return a Magnamon card to hand
+  - add_to_hand_from_trash:
+      of: you
+      card: recover
+  - add_this_option_to_hand: {}

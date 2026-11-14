@@ -231,3 +231,5 @@ mod permanent_security_receipt;
 
 mod quantumon_primitives;
 mod plutomon_admission_constructs;
+
+mod royal_knights_training_gate;

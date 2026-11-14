@@ -91,12 +91,14 @@ effects:
                 then:
                   - select_materials:
                       of_permanent: breeding_digimon
-                      max: 12
+                      max: 255
                       filter:
                         all_of:
                           - kind: digimon
                           - trait_has: "Royal Knight"
                       uniqueness: name
+                      # Official Q2367: all eligible different names or none.
+                      require_max: true
                       optional_zero: true
                       bind_as: royal_knights
                       prompt: "Choose Royal Knight sources with different names to play"

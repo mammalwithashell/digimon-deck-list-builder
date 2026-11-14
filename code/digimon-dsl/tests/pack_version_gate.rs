@@ -9,16 +9,16 @@ fn current_pack_layout_roundtrips() {
 #[test]
 fn previous_layout_pack_is_rejected_even_when_empty() {
     let mut pack = CardPack::new("legacy", vec![]);
-    pack.manifest.pack_version = "0.19.0".into();
+    pack.manifest.pack_version = "0.32.0".into();
     let err = CardPack::from_bytes(&pack.to_bytes().unwrap()).unwrap_err();
     assert!(err.contains("unsupported pack format"), "{err}");
-    assert!(err.contains("0.19.0") && err.contains(PACK_FORMAT_VERSION), "{err}");
+    assert!(err.contains("0.32.0") && err.contains(PACK_FORMAT_VERSION), "{err}");
 }
 
 #[test]
 fn layout_version_is_checked_before_decoding_card_payload() {
     let mut pack = CardPack::new("legacy", vec![]);
-    pack.manifest.pack_version = "0.19.0".into();
+    pack.manifest.pack_version = "0.32.0".into();
     // The manifest is the first serialized field, stable across these layouts.
     // No card-vector bytes follow: a layout mismatch must win over a payload error.
     let bytes = bincode::serialize(&pack.manifest).unwrap();
@@ -39,4 +39,27 @@ fn corrupt_manifest_length_returns_error_without_allocating_from_prefix() {
     let bytes = u64::MAX.to_le_bytes();
     let err = CardPack::from_bytes(&bytes).unwrap_err();
     assert!(err.contains("manifest deserialize failed"), "{err}");
+}
+
+#[test]
+fn royal_knights_ir_fields_roundtrip_in_current_pack() {
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(r#"
+card: PACK-RK
+name: Royal Knights pack witness
+kind: digimon
+level: 6
+color: [black]
+cost: 13
+dp: 13000
+effects:
+  - when: on_play
+    condition: { can_digivolve_into_source_card: true }
+    process:
+      - bind_permanent_property: { from: source, property: color_count, bind_as: colors }
+      - force_attack: { attacker: source, affects_player: true }
+"#).unwrap();
+    let card = digimon_dsl::compile::compile(&spec).unwrap();
+    let pack = CardPack::new("royal-knights", vec![card]);
+    assert_eq!(pack.manifest.pack_version, "0.33.0");
+    assert_eq!(CardPack::from_bytes(&pack.to_bytes().unwrap()).unwrap(), pack);
 }

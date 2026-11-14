@@ -33,3 +33,10 @@ fn named_group_authoring_rejects_ambiguous_or_incompatible_constraints(){
 fn named_groups_accept_distinct_names_with_optional_zero_and_require_max(){
  assert!(compiles("          named_groups: [SkullKnightmon, DeadlyAxemon]\n          require_max: true\n          optional_zero: true"));
 }
+
+#[test]
+fn require_max_accepts_distinct_name_sources_but_rejects_other_unnamed_modes() {
+ assert!(compiles("          uniqueness: name\n          require_max: true\n          optional_zero: true"));
+ assert!(!compiles("          uniqueness: level\n          require_max: true"));
+ assert!(!compiles("          same_by: level\n          require_max: true"));
+}

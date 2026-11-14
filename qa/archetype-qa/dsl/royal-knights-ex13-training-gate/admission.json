@@ -1,0 +1,1938 @@
+{
+  "base_commit": "6b1a4fce13a06c33d776c5f4cda39cfa34ce605d",
+  "scope": "Royal Knights; deck_library.json format exactly EX13",
+  "total_lists": 16,
+  "admitted_lists": 16,
+  "core_card_ids": [
+    "AD1-017",
+    "AD1-018",
+    "AD1-025",
+    "BT13-007",
+    "BT13-019",
+    "BT13-040",
+    "BT13-075",
+    "BT13-077",
+    "BT13-087",
+    "BT13-093",
+    "BT13-102",
+    "BT13-110",
+    "BT13-112",
+    "BT16-102",
+    "BT17-018",
+    "BT19-023",
+    "BT19-072",
+    "BT20-017",
+    "BT20-021",
+    "BT20-026",
+    "BT20-056",
+    "BT20-060",
+    "BT20-083",
+    "BT20-091",
+    "BT20-100",
+    "BT20-102",
+    "BT21-032",
+    "BT22-041",
+    "BT22-052",
+    "BT23-014",
+    "BT23-035",
+    "BT23-047",
+    "BT23-054",
+    "BT23-057",
+    "BT23-058",
+    "BT23-072",
+    "BT25-020",
+    "BT4-104",
+    "BT8-094",
+    "BT8-095",
+    "BT8-097",
+    "BT9-098",
+    "BT9-109",
+    "EX1-072",
+    "EX11-053",
+    "EX11-060",
+    "EX11-071",
+    "EX13-014",
+    "EX13-015",
+    "EX13-016",
+    "EX13-020",
+    "EX13-023",
+    "EX13-036",
+    "EX13-037",
+    "EX13-043",
+    "EX13-060",
+    "EX13-061",
+    "EX13-062",
+    "EX13-070",
+    "EX13-076",
+    "EX8-074",
+    "LM-028",
+    "LM-034",
+    "LM-056",
+    "LM-057",
+    "LM-058",
+    "P-104",
+    "P-117",
+    "P-238",
+    "P-248",
+    "ST12-15",
+    "ST15-16",
+    "ST17-13",
+    "ST21-15",
+    "ST22-08"
+  ],
+  "lists": [
+    {
+      "deck_id": "dcg_nexus_e61d64ca35e1",
+      "source_url": "https://dcg-nexus.com/decklist/a3762f11-884d-4edb-ad0c-15336e209d0d",
+      "format": "EX13",
+      "event_date": "2026-10-05",
+      "cards": [
+        "BT20-017",
+        "BT20-017",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX13-036",
+        "EX13-036",
+        "AD1-018",
+        "AD1-018",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-060",
+        "BT20-060",
+        "AD1-017",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT20-056",
+        "EX13-076",
+        "BT13-019",
+        "EX13-062",
+        "EX13-062",
+        "EX13-023",
+        "EX13-015",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "EX11-071",
+        "EX11-071",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT13-110",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "EX13-020",
+        "EX13-020",
+        "EX13-037",
+        "BT22-052"
+      ],
+      "before_blockers": {
+        "AD1-018": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:event_card_text_contains"
+          ]
+        },
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        },
+        "EX13-062": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:printed_keyword"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "dcg_nexus_627d76f178c6",
+      "source_url": "https://dcg-nexus.com/decklist/c2d771a7-4c98-4e02-8b65-3ba091d58a38",
+      "format": "EX13",
+      "event_date": "2026-10-03",
+      "cards": [
+        "P-238",
+        "P-238",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "EX11-060",
+        "EX11-060",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT20-056",
+        "BT20-056",
+        "BT13-110",
+        "BT20-017",
+        "BT20-017",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "BT23-035",
+        "BT23-035",
+        "BT13-077",
+        "BT13-077",
+        "BT19-072",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-060",
+        "BT20-060",
+        "BT20-060",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT23-072",
+        "BT23-072",
+        "BT22-041"
+      ],
+      "before_blockers": {
+        "BT13-077": {
+          "admissible": false,
+          "dsl": false,
+          "has_card_test": false,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": []
+        },
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        },
+        "P-238": {
+          "admissible": false,
+          "dsl": false,
+          "has_card_test": false,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": []
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_4f1d8c6eb111",
+      "source_url": "https://digimon.digilab.cards/api/decklist/130117",
+      "format": "EX13",
+      "event_date": "2026-10-26",
+      "cards": [
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "EX13-016",
+        "BT13-110",
+        "EX13-036",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "EX13-062",
+        "EX13-062",
+        "BT20-017",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "EX13-023",
+        "BT20-060",
+        "BT20-060",
+        "BT13-093",
+        "BT13-093",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT19-072",
+        "BT19-072",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "EX13-037",
+        "EX13-037",
+        "EX13-015",
+        "EX13-015",
+        "EX13-015",
+        "EX13-020",
+        "EX13-020",
+        "EX13-020",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100"
+      ],
+      "before_blockers": {
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        },
+        "EX13-062": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:printed_keyword"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_4a1bcbf64b20",
+      "source_url": "https://digimon.digilab.cards/api/decklist/130288",
+      "format": "EX13",
+      "event_date": "2026-10-26",
+      "cards": [
+        "BT13-110",
+        "EX13-023",
+        "EX13-023",
+        "AD1-025",
+        "BT23-072",
+        "BT23-057",
+        "BT13-075",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT20-017",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "EX11-060",
+        "EX11-060",
+        "EX13-020",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "EX13-036",
+        "EX13-036",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "EX13-043",
+        "EX13-043",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "EX1-072",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX13-037",
+        "EX13-037",
+        "EX13-037",
+        "EX13-015",
+        "EX13-015"
+      ],
+      "before_blockers": {
+        "BT13-075": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_85bac646d1d2",
+      "source_url": "https://digimon.digilab.cards/api/decklist/127575",
+      "format": "EX13",
+      "event_date": "2026-10-25",
+      "cards": [
+        "BT13-110",
+        "EX13-043",
+        "EX13-043",
+        "AD1-025",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "EX13-023",
+        "EX13-023",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-017",
+        "BT23-054",
+        "BT23-054",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "EX13-015",
+        "EX13-015",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX11-060",
+        "EX11-060",
+        "BT13-075",
+        "EX1-072",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT13-087",
+        "EX13-037",
+        "EX13-037",
+        "EX13-037",
+        "EX13-036",
+        "BT23-072",
+        "BT23-072",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "EX13-020",
+        "EX13-020",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100"
+      ],
+      "before_blockers": {
+        "BT13-075": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_88213ba950e5",
+      "source_url": "https://digimon.digilab.cards/api/decklist/127920",
+      "format": "EX13",
+      "event_date": "2026-10-24",
+      "cards": [
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "EX13-037",
+        "EX13-037",
+        "EX13-037",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "BT13-110",
+        "BT23-047",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-060",
+        "BT20-060",
+        "BT13-019",
+        "AD1-018",
+        "BT13-102",
+        "BT13-102",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "EX13-023",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "EX13-015",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX13-062",
+        "EX13-060",
+        "BT8-094",
+        "BT8-094",
+        "EX13-036",
+        "EX13-036",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112"
+      ],
+      "before_blockers": {
+        "AD1-018": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:event_card_text_contains"
+          ]
+        },
+        "BT13-102": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "failed_verdict",
+          "reasons": [
+            "failed_verdict"
+          ],
+          "untested_constructs": []
+        },
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        },
+        "BT8-094": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:event_target_level_lte"
+          ]
+        },
+        "EX13-062": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:printed_keyword"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_33472d7a76b0",
+      "source_url": "https://digimon.digilab.cards/api/decklist/126924",
+      "format": "EX13",
+      "event_date": "2026-10-24",
+      "cards": [
+        "EX13-036",
+        "EX13-036",
+        "EX13-020",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "EX13-062",
+        "EX13-015",
+        "EX13-015",
+        "BT13-110",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-060",
+        "BT20-060",
+        "BT20-060",
+        "BT20-017",
+        "BT20-017",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT8-097",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "EX13-037",
+        "EX13-037",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "EX13-023",
+        "EX13-023",
+        "AD1-018",
+        "AD1-018"
+      ],
+      "before_blockers": {
+        "AD1-018": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:event_card_text_contains"
+          ]
+        },
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        },
+        "EX13-062": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:printed_keyword"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_c38f97987b51",
+      "source_url": "https://digimon.digilab.cards/api/decklist/125672",
+      "format": "EX13",
+      "event_date": "2026-10-18",
+      "cards": [
+        "BT20-060",
+        "BT20-060",
+        "BT20-060",
+        "AD1-017",
+        "BT23-054",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT13-093",
+        "BT22-052",
+        "BT22-052",
+        "BT22-052",
+        "BT22-052",
+        "BT20-017",
+        "BT13-110",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "EX13-036",
+        "EX13-036",
+        "EX13-036",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "EX13-015",
+        "EX13-015",
+        "EX13-015",
+        "BT25-020",
+        "EX13-037",
+        "EX13-037",
+        "EX13-037",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "BT8-097",
+        "BT8-097",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053"
+      ],
+      "before_blockers": {
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_982a99ca1dc7",
+      "source_url": "https://digimon.digilab.cards/api/decklist/124718",
+      "format": "EX13",
+      "event_date": "2026-10-17",
+      "cards": [
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT8-094",
+        "BT8-094",
+        "EX13-062",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-019",
+        "BT20-060",
+        "BT20-060",
+        "EX13-036",
+        "EX13-036",
+        "BT13-102",
+        "BT13-102",
+        "BT13-102",
+        "BT13-102",
+        "EX13-060",
+        "EX11-071",
+        "BT13-110",
+        "BT13-040",
+        "BT13-040",
+        "AD1-018",
+        "EX13-023",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "EX13-037",
+        "EX13-037",
+        "EX13-043",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT23-047",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX13-015"
+      ],
+      "before_blockers": {
+        "AD1-018": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:event_card_text_contains"
+          ]
+        },
+        "BT13-102": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "failed_verdict",
+          "reasons": [
+            "failed_verdict"
+          ],
+          "untested_constructs": []
+        },
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        },
+        "BT8-094": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:event_target_level_lte"
+          ]
+        },
+        "EX13-062": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:printed_keyword"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_6f4ed3591fea",
+      "source_url": "https://digimon.digilab.cards/api/decklist/124187",
+      "format": "EX13",
+      "event_date": "2026-10-17",
+      "cards": [
+        "EX13-014",
+        "EX13-014",
+        "BT13-110",
+        "EX13-062",
+        "EX13-061",
+        "BT22-052",
+        "BT17-018",
+        "EX8-074",
+        "EX8-074",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT19-072",
+        "BT19-072",
+        "EX13-076",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-019",
+        "BT13-019",
+        "BT13-019",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "EX13-043",
+        "EX13-036",
+        "BT23-035",
+        "EX13-037",
+        "EX13-023",
+        "BT20-060",
+        "BT20-060",
+        "EX11-071",
+        "EX11-071",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "EX13-015"
+      ],
+      "before_blockers": {
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        },
+        "EX13-062": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:printed_keyword"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_e901ea91dc8d",
+      "source_url": "https://digimon.digilab.cards/api/decklist/124181",
+      "format": "EX13",
+      "event_date": "2026-10-17",
+      "cards": [
+        "BT20-060",
+        "BT20-060",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "EX11-071",
+        "EX11-071",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "EX8-074",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT22-052",
+        "BT22-052",
+        "EX13-043",
+        "BT19-072",
+        "AD1-018",
+        "AD1-018",
+        "EX13-076",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "EX13-037",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "EX13-036",
+        "BT13-019",
+        "BT13-019",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "EX13-023",
+        "EX13-023",
+        "EX13-062",
+        "BT13-110",
+        "BT23-014",
+        "EX13-014",
+        "EX13-014"
+      ],
+      "before_blockers": {
+        "AD1-018": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:event_card_text_contains"
+          ]
+        },
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        },
+        "EX13-062": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:printed_keyword"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_86ac35c55b06",
+      "source_url": "https://digimon.digilab.cards/api/decklist/119273",
+      "format": "EX13",
+      "event_date": "2026-10-10",
+      "cards": [
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "EX13-015",
+        "EX13-015",
+        "BT23-072",
+        "BT23-072",
+        "BT20-017",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "EX13-037",
+        "EX13-037",
+        "EX13-037",
+        "EX13-020",
+        "EX13-020",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "EX13-023",
+        "EX13-023",
+        "EX11-060",
+        "EX11-060",
+        "BT19-072",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT13-075",
+        "BT13-075",
+        "EX13-036",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "EX13-043",
+        "EX13-043",
+        "BT13-110",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100"
+      ],
+      "before_blockers": {
+        "BT13-075": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_74337565e586",
+      "source_url": "https://digimon.digilab.cards/api/decklist/119763",
+      "format": "EX13",
+      "event_date": "2026-10-10",
+      "cards": [
+        "LM-056",
+        "BT19-023",
+        "BT19-023",
+        "BT4-104",
+        "EX13-020",
+        "EX13-020",
+        "EX13-020",
+        "EX13-020",
+        "BT20-021",
+        "P-117",
+        "P-117",
+        "P-248",
+        "P-248",
+        "P-248",
+        "P-248",
+        "BT8-095",
+        "BT8-095",
+        "BT8-095",
+        "LM-028",
+        "LM-057",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT20-026",
+        "LM-058",
+        "BT9-098",
+        "LM-034",
+        "LM-034",
+        "LM-034",
+        "LM-034",
+        "ST21-15",
+        "BT9-109",
+        "BT9-109",
+        "ST22-08",
+        "BT21-032",
+        "BT21-032",
+        "BT21-032",
+        "BT21-032",
+        "BT16-102",
+        "BT16-102",
+        "BT16-102",
+        "BT16-102",
+        "P-104",
+        "BT20-102",
+        "BT20-102",
+        "ST17-13",
+        "ST17-13",
+        "ST17-13",
+        "EX13-070",
+        "EX13-070"
+      ],
+      "before_blockers": {
+        "BT16-102": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT19-023": {
+          "admissible": false,
+          "dsl": false,
+          "has_card_test": false,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": []
+        },
+        "BT20-026": {
+          "admissible": false,
+          "dsl": false,
+          "has_card_test": false,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": []
+        },
+        "BT21-032": {
+          "admissible": false,
+          "dsl": false,
+          "has_card_test": false,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": []
+        },
+        "BT9-098": {
+          "admissible": false,
+          "dsl": false,
+          "has_card_test": false,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": []
+        },
+        "BT9-109": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "failed_verdict",
+          "reasons": [
+            "failed_verdict"
+          ],
+          "untested_constructs": []
+        },
+        "LM-028": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "failed_verdict",
+          "reasons": [
+            "failed_verdict"
+          ],
+          "untested_constructs": []
+        },
+        "ST17-13": {
+          "admissible": false,
+          "dsl": false,
+          "has_card_test": false,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": []
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_3e6637ced747",
+      "source_url": "https://digimon.digilab.cards/api/decklist/117509",
+      "format": "EX13",
+      "event_date": "2026-10-06",
+      "cards": [
+        "BT13-110",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "EX13-037",
+        "EX13-037",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX13-015",
+        "EX13-015",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-017",
+        "BT20-017",
+        "BT20-017",
+        "EX13-062",
+        "EX13-062",
+        "EX13-062",
+        "BT22-052",
+        "BT22-052",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "EX11-071",
+        "EX11-071",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT19-072",
+        "BT19-072",
+        "BT8-097",
+        "BT8-097",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT20-060",
+        "BT20-060",
+        "ST15-16",
+        "ST15-16"
+      ],
+      "before_blockers": {
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        },
+        "EX13-062": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:printed_keyword"
+          ]
+        },
+        "ST15-16": {
+          "admissible": false,
+          "dsl": false,
+          "has_card_test": false,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": []
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_0cd2f2d05ba0",
+      "source_url": "https://digimon.digilab.cards/api/decklist/115136",
+      "format": "EX13",
+      "event_date": "2026-10-02",
+      "cards": [
+        "BT22-052",
+        "EX13-036",
+        "EX13-036",
+        "BT20-060",
+        "BT20-060",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "BT13-110",
+        "EX13-020",
+        "EX13-020",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT23-054",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT20-017",
+        "BT20-017",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX13-076",
+        "EX11-071",
+        "EX11-071",
+        "AD1-018",
+        "AD1-018",
+        "EX13-037",
+        "EX13-037",
+        "EX13-015",
+        "BT13-019",
+        "EX13-062",
+        "EX13-062",
+        "EX13-023",
+        "BT20-056",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100"
+      ],
+      "before_blockers": {
+        "AD1-018": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:event_card_text_contains"
+          ]
+        },
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        },
+        "EX13-062": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:printed_keyword"
+          ]
+        }
+      },
+      "after_blockers": {}
+    },
+    {
+      "deck_id": "digilab_api_4da08db9b52f",
+      "source_url": "https://digimon.digilab.cards/api/decklist/114092",
+      "format": "EX13",
+      "event_date": "2026-09-28",
+      "cards": [
+        "EX8-074",
+        "BT22-052",
+        "BT22-052",
+        "BT22-052",
+        "BT23-058",
+        "ST12-15",
+        "BT23-072",
+        "BT23-072",
+        "BT20-017",
+        "BT20-017",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT20-100",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "BT13-007",
+        "EX13-037",
+        "BT23-054",
+        "BT23-054",
+        "BT20-083",
+        "BT20-083",
+        "BT20-083",
+        "AD1-017",
+        "EX13-062",
+        "EX13-015",
+        "EX13-015",
+        "EX11-071",
+        "EX11-071",
+        "EX11-071",
+        "BT13-093",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT20-091",
+        "BT13-110",
+        "BT20-102",
+        "BT20-102",
+        "BT20-102",
+        "BT25-020",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX11-053",
+        "EX13-023",
+        "EX13-023",
+        "BT20-060",
+        "BT20-060",
+        "EX13-036",
+        "BT13-112",
+        "BT13-112",
+        "BT13-112",
+        "AD1-018"
+      ],
+      "before_blockers": {
+        "AD1-018": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:event_card_text_contains"
+          ]
+        },
+        "BT13-110": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:self_digivolution_sources_trait_has"
+          ]
+        },
+        "BT13-112": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": false,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "verb:trash_breeding_permanent"
+          ]
+        },
+        "EX13-062": {
+          "admissible": false,
+          "dsl": true,
+          "has_card_test": true,
+          "needs_card_test": true,
+          "reason": "untested_lowering",
+          "reasons": [
+            "untested_lowering"
+          ],
+          "untested_constructs": [
+            "predicate:printed_keyword"
+          ]
+        }
+      },
+      "after_blockers": {}
+    }
+  ]
+}
