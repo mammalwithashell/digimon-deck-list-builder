@@ -9072,6 +9072,8 @@ pins that the turn scan does not trash such a marker.
 
 ### Effect-driven digivolution cost choice [G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE] — RESOLVED (2026-10-10)
 
+LM-028 follow-up (2026-11-13): all 22 existing Blue Scramble regressions pass on current main, including actual paid Option use, both reduced 0/1 routes after clone, and declining either selection before the mandatory Delay placement. Its stale BLOCKED ledger row is requalified; no shared-runtime or admission-policy change. Evidence: `qa/archetype-qa/dsl/ulforce-exact-training-gate-2026-11-13.md`.
+
 - Repair: distinct payable routes use a cloneable effect-cost continuation with stable result/host identity, original reduction/source context and deferred result/tail execution. Affordability previews the existing synchronous reducer/observer flow on a clone, without charging the live game early. Free/fixed/duplicate costs do not create a false choice. Shared suite 10/10 (`shared-neighbors-green.log`); BT20-023/040 reduced-evolution clauses confirmed by live DCGO in `oracle/repair-20261010T234036Z-2674e4168a`. DCGO's printed-cost input and the engine's payable-cost input are explicitly translated in the scenarios. Original diagnosis follows.
 
 - Drivers: BT20-023 and BT20-040. Their real Wingdramon/Groundramon BT20-025/042 targets have both named Coredramon cost 3 and standard level/color cost 4 routes; reducing by 2 leaves legal costs 1 and 2. The engine must expose both.

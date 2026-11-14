@@ -14063,21 +14063,21 @@
     },
     "LM-028": {
       "card_name": "Blue Scramble",
-      "validated_date": "2026-10-10",
-      "report": "examon-2026-10-10",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "validated_date": "2026-11-13",
+      "report": "ulforce-exact-training-gate-2026-11-13",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-028.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_028.rs",
-      "test_count": 19,
+      "test_count": 22,
       "patterns": [
         "option-digivolve-reduce",
         "delay-start-of-turn",
         "trash-to-deck-top",
         "security-play-from-trash"
       ],
-      "notes": "Blocked by G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "notes": "Requalified against main 6b1a4fce1: all 22 LM-028 tests pass, including paid Main host/hand decline and both reduced-cost 0/1 choices after cloning. G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE is resolved in the shared runtime; the old BLOCKED verdict was stale. No YAML or gate-policy change. See qa/archetype-qa/dsl/ulforce-exact-training-gate-2026-11-13.md.",
       "prior_authoring_status": "IMPLEMENTED"
     },
     "P-118": {

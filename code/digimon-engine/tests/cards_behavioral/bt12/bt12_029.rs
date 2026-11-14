@@ -159,3 +159,31 @@ fn bt12_029_triggers_on_opponents_turn() {
     pick(&mut r, 0, 1);
     assert_eq!(r.battle_area_size(1), 0);
 }
+
+#[test]
+fn bt12_029_unsuspend_excludes_locked_targets_and_preserves_cloned_choice() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    for locked_index in 0..2 {
+        let mut r = base().hand(0, &[ID]).start();
+        let host = r.place_on_field(0, "LV5", Some(0));
+        let tamer = r.place_on_field(0, "TAMER", Some(0));
+        for p in &mut r.game.players[0].battle_area {
+            p.is_suspended = true;
+        }
+        r.game.modifiers.add(
+            [host, tamer][locked_index],
+            ModifierEntry::simple(ModifierType::CannotUnsuspend, 0, Expiry::Permanent, 0),
+        );
+        let a = encode_digivolve(0, 0);
+        assert_eq!(build_action_mask(&r.game, 0)[a as usize], 1.0);
+        r.game.decode_action(a, 0);
+        let saved = r.game.clone();
+        for _ in 0..2 {
+            r.game = saved.clone();
+            pick(&mut r, 0, 1);
+            assert!(r.game.players[0].battle_area[locked_index].is_suspended);
+            assert!(!r.game.players[0].battle_area[1 - locked_index].is_suspended);
+        }
+    }
+}

@@ -1823,7 +1823,7 @@
    ]
   },
   "BT12-029": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:return_to_hand",
@@ -1848,12 +1848,10 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:can_unsuspend"
-   ]
+   "untested_constructs": []
   },
   "BT12-030": {
    "behaviourally_covered": true,
@@ -6530,7 +6528,7 @@
    "untested_constructs": []
   },
   "BT20-027": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 8,
    "constructs": [
     "verb:delete_permanent",
@@ -6568,7 +6566,7 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:replacement",
@@ -6576,9 +6574,7 @@
     "predicate:replacement_subject_is_mine",
     "trigger:when_would_leave_battle_area"
    ],
-   "untested_constructs": [
-    "predicate:can_unsuspend"
-   ]
+   "untested_constructs": []
   },
   "BT20-036": {
    "behaviourally_covered": true,
@@ -9195,7 +9191,7 @@
    "untested_constructs": []
   },
   "BT22-023": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 5,
    "constructs": [
     "verb:return_to_deck",
@@ -9221,12 +9217,10 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:can_unsuspend"
-   ]
+   "untested_constructs": []
   },
   "BT22-025": {
    "behaviourally_covered": true,
@@ -40773,16 +40767,17 @@
   "predicate:can_unsuspend": {
    "kind": "predicate",
    "name": "can_unsuspend",
-   "near_miss_files": [
-    "src/dsl_cards/formula_eval.rs",
-    "src/dsl_cards/lower_replacement.rs",
-    "src/dsl_cards/predicate.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::can_unsuspend.rs::can_unsuspend_matches_permanent_and_player_locks_for_both_polarities": [
+     "variant"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::can_unsuspend.rs::can_unsuspend_matches_permanent_and_player_locks_for_both_polarities"
+   ]
   },
   "predicate:card_number_is": {
    "kind": "predicate",
@@ -80176,11 +80171,11 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2218,
+  "behavioural_tests": 2219,
   "cards": {
-   "behaviourally_covered": 1162,
-   "lowering_covered": 1179,
-   "not_covered": 54,
+   "behaviourally_covered": 1165,
+   "lowering_covered": 1182,
+   "not_covered": 51,
    "total": 1233
   },
   "constructs": {
@@ -80195,12 +80190,12 @@
    },
    "predicate": {
     "parsed_only": 7,
-    "tested": 197,
-    "tested_behaviourally": 190,
+    "tested": 198,
+    "tested_behaviourally": 191,
     "total": 224,
-    "untested": 27,
+    "untested": 26,
     "used_by_cards": 198,
-    "used_untested": 20
+    "used_untested": 19
    },
    "timing": {
     "parsed_only": 2,
@@ -80338,14 +80333,9 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 410,
-  "scanned_tests": 2625,
+  "scanned_files": 411,
+  "scanned_tests": 2626,
   "top_untested": [
-   {
-    "cards_blocked": 3,
-    "construct": "predicate:can_unsuspend",
-    "ex13_lists_blocked": 76
-   },
    {
     "cards_blocked": 6,
     "construct": "predicate:self_digivolution_sources_trait_has",
