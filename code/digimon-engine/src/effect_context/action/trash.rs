@@ -313,6 +313,13 @@ impl<'a> EffectContext<'a> {
             return false;
         };
 
+        // CR 4.3 3-4-6 / 4-19 and BT13-112 Q2369: breeding is field;
+        // ACE cards leaving its stack or links pay Overflow as well.
+        // card_sources includes the top card; do not charge it a second time.
+        let mut overflow_sources = perm.card_sources.clone();
+        overflow_sources.extend(perm.linked_cards.iter().cloned());
+        self.game.apply_ace_overflow_for_sources(&overflow_sources);
+
         if !perm.card_sources.is_empty() && !perm.top_card().is_token {
             for card in perm.card_sources {
                 let owner = card.owner;

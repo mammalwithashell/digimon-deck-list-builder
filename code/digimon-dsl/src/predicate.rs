@@ -301,6 +301,9 @@ pub struct PredicateSpec {
     /// semantics. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST (BT25-092).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_digivolve_candidate: Option<DigivolveCandidatePredicate>,
+    /// Battle-area permanent can legally digivolve into the exact effect-source card.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_digivolve_into_source_card: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_inherited: Option<Box<PredicateSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]

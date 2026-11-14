@@ -385,3 +385,84 @@ fn bt13_112_both_branches_legal_prompts_with_two_options() {
 
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;
+
+#[test]
+fn bt13_112_q2367_cannot_stop_after_only_some_distinct_names() {
+    let mut runner = runner();
+    install_breeding_stack(&mut runner);
+    let omnimon = runner.place_on_field(0, "BT13-112", None);
+    runner.fire_on_play(0, omnimon.index as usize);
+    accept_you_may(&mut runner);
+    runner.execute_action(0, encode_breeding_select(0).unwrap()).unwrap();
+    assert!(runner.pending_is_optional(), "Q2367 permits playing none");
+    let alpha = source_action(&runner, "RK-ALPHA");
+    runner.execute_action(0, alpha).unwrap();
+    assert!(!runner.pending_is_optional(), "Q2367 requires all distinct names after the first pick");
+    assert!(!runner.pending_selection_view().unwrap().valid_action_ids.contains(&PASS));
+}
+
+#[test]
+fn bt13_112_q2367_plays_more_than_twelve_distinct_names() {
+    let ids: Vec<String> = (0..13).map(|i| format!("DISTINCT-{i}")).collect();
+    let mut builder = DebugRunner::builder().dsl_card("BT13-112").unwrap()
+        .add_card(test_digimon("KING", "Breeding Host", 2000)).memory(5);
+    for id in &ids { builder = builder.add_card(royal_knight(id, id)); }
+    let mut runner = builder.start();
+    let mut stack: Vec<&str> = ids.iter().map(String::as_str).collect();
+    stack.push("KING");
+    let h = runner.place_stack(0, &stack);
+    runner.game.players[0].breeding_area = Some(runner.game.players[0].battle_area.remove(h.index as usize));
+    let omnimon = runner.place_on_field(0, "BT13-112", None);
+    runner.fire_on_play(0, omnimon.index as usize);
+    accept_you_may(&mut runner);
+    runner.execute_action(0, encode_breeding_select(0).unwrap()).unwrap();
+    for (n, id) in ids.iter().enumerate() {
+        let action = source_action(&runner, id);
+        runner.execute_action(0, action).unwrap();
+        if n < 12 { assert!(runner.game.players[0].breeding_area.is_some()); }
+    }
+    assert!(runner.game.players[0].breeding_area.is_none());
+    assert_eq!(runner.battle_area_size(0), 14);
+}
+
+#[test]
+fn bt13_112_q2367_pages_more_than_24_eligible_sources_and_resumes_clone() {
+    use digimon_engine::action::build_action_mask;
+    use digimon_engine::card_choice_page::CARD_CHOICE_NEXT;
+    let ids: Vec<String> = (0..13).map(|i| format!("PAGED-{i}")).collect();
+    let mut builder = DebugRunner::builder().dsl_card("BT13-112").unwrap()
+        .add_card(test_digimon("KING", "Breeding Host", 2000)).memory(5);
+    for id in &ids { builder = builder.add_card(royal_knight(id, id)); }
+    let mut r = builder.start();
+    // 29 physical eligible sources, 13 distinct names: cross the 28-row page
+    // boundary without exceeding the ordinary 14-permanent battle area.
+    let mut stack: Vec<&str> = (0..29).map(|i| ids[i % 13].as_str()).collect();
+    stack.push("KING");
+    let h = r.place_stack(0, &stack);
+    r.game.players[0].breeding_area = Some(r.game.players[0].battle_area.remove(h.index as usize));
+    let omnimon = r.place_on_field(0, "BT13-112", None);
+    r.fire_on_play(0, omnimon.index as usize);
+    accept_you_may(&mut r);
+    r.execute_action(0, encode_breeding_select(0).unwrap()).unwrap();
+    assert_eq!(build_action_mask(&r.game, 0)[CARD_CHOICE_NEXT as usize], 1.0);
+    r.execute_action(0, CARD_CHOICE_NEXT).unwrap();
+    let mut cloned = DebugRunner::wrap(r.game.clone());
+    for game in [&mut r, &mut cloned] {
+        let host = PermanentHandle { player: 0, index: digimon_engine::action::space::BREEDING_TARGET as u8 };
+        let last = physical_menu::source_action(&game.game, host, 28);
+        assert_eq!(build_action_mask(&game.game, 0)[last as usize], 1.0);
+        game.execute_action(0, last).unwrap();
+        for (i, id) in ids.iter().enumerate() {
+            if i == 2 { continue; } // physical index 28 already selected this name
+            let action = source_action(game, id);
+            assert_eq!(build_action_mask(&game.game, 0)[action as usize], 1.0);
+            game.execute_action(0, action).unwrap();
+        }
+        assert!(game.game.players[0].breeding_area.is_none());
+        assert_eq!(game.battle_area_size(0), 14);
+        for id in &ids {
+            assert_eq!(game.game.players[0].battle_area.iter()
+                .filter(|p| p.top_card().card_id(&game.game.card_data) == id).count(), 1);
+        }
+    }
+}
