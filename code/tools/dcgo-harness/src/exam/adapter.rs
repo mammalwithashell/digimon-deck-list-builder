@@ -2008,7 +2008,7 @@ fn resolve_target_ref(
     reference: &str,
 ) -> Result<(FrameTarget, String), String> {
     if reference == "opp.security" {
-        return Ok((FrameTarget { player: (1 - actor) as u8, frame: -1 }, String::new()));
+        return Ok((FrameTarget { player: (1 - actor) as u8, frame: -1, card_index: None }, String::new()));
     }
     let parts: Vec<&str> = reference.split('.').collect();
     let err = |why: &str| {
@@ -2039,6 +2039,7 @@ fn resolve_target_ref(
         FrameTarget {
             player: player as u8,
             frame: slot as i32,
+            card_index: None,
         },
         top,
     ))
@@ -2096,7 +2097,7 @@ fn field_targets_for_card_ids(
         if top.face_down || top.is_opaque_placeholder || top.is_token {
             continue;
         }
-        let target = FrameTarget { player: owner, frame: slot as i32 };
+        let target = FrameTarget { player: owner, frame: slot as i32, card_index: None };
         if !candidates.iter().any(|(_, previous): &(String, FrameTarget)| {
             previous.player == target.player && previous.frame == target.frame
         }) {
@@ -2259,6 +2260,7 @@ fn build_selection_row(
         phase: game.current_phase.py_name().to_string(),
         targets: None,
         card_ids: None,
+        card_indexes: None,
         indexes: None,
         count: None,
         candidates: None,

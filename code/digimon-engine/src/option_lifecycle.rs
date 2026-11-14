@@ -541,10 +541,20 @@ impl Game {
             return false;
         }
 
+        // The Option's slot leaves the battle area: clear its identity and
+        // re-key every later slot's modifiers, pending attack and queued
+        // effects (the canonical removal sequence; see the orphan relink
+        // above). G-PERMANENT-HANDLE-POSITIONAL-STALENESS.
+        self.clear_permanent_full(option_handle);
+        self.modifiers.expire_player_on_permanent_leave(option_handle);
         let permanent = self
             .player_mut(owner)
             .battle_area
             .remove(option_handle.index as usize);
+        self.modifiers
+            .shift_after_battle_area_remove(owner, option_handle.index);
+        self.shift_pending_attack_after_battle_area_remove(owner, option_handle.index);
+        self.shift_effect_queue_after_battle_area_remove(owner, option_handle.index);
         let mut cards = permanent.card_sources;
         let Some(top) = cards.pop() else {
             return false;

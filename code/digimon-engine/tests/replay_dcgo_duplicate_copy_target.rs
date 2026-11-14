@@ -183,6 +183,47 @@ fn copies_the_rows_cannot_tell_apart_stop_the_replay() {
 }
 
 
+/// Two copies identical as permanents, but a granted effect elsewhere names
+/// the second copy's card as its grantor (`GrantedTriggeredEffect::
+/// source_card`, modifiers.rs:866 - `EffectContext::source_card` when it
+/// fires, DCGO `EffectSourceCard`). Swapping the copies changes which one the
+/// grant comes from, so they are not interchangeable: the replay stops
+/// instead of taking the first. Nothing keys on either SLOT here, so a check
+/// that only searches for `PermanentHandle`s misses it.
+#[test]
+fn copies_one_of_which_a_granted_effect_names_are_not_interchangeable() {
+    use digimon_engine::enums::{EffectSourceKind, EffectTiming, Expiry};
+    use digimon_engine::modifiers::GrantedTriggeredEffect;
+    let mut game = staged(None);
+    let grantor = game.players[0].battle_area[2].top_card().handle();
+    let carrier = digimon_engine::permanent::PermanentHandle { player: 1, index: 0 };
+    game.modifiers.add_granted_triggered(
+        carrier,
+        GrantedTriggeredEffect {
+            timing: EffectTiming::OnDeletion,
+            source_card: grantor,
+            source_player: 0,
+            source_kind: EffectSourceKind::Digimon,
+            source_identity: None,
+            expiry: Expiry::EndOfOpponentsTurn,
+            body_id: 9_999,
+            body: std::sync::Arc::new(|_| {}),
+        },
+    );
+    let s = session(game, dcgo_rows());
+    assert!(s.is_paused(), "the replay stops; notes {:?}", s.replay_notes());
+    assert!(!s.replay_notes().iter().any(|n| n.contains("interchangeable")), "{:?}", s.replay_notes());
+    let reason = s
+        .divergences()
+        .iter()
+        .find_map(|d| match &d.kind {
+            DivergenceKind::SelectionResolution { reason } => Some(reason.clone()),
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("a SelectionResolution divergence: {:?}", s.divergences()));
+    assert!(reason.contains("copies"), "{reason}");
+}
+
 /// Two copies identical in every respect (same stack, both unsuspended, both
 /// in play since the same turn, no effect on either): which one DCGO picked
 /// cannot change the game, so the first is taken, with a note.

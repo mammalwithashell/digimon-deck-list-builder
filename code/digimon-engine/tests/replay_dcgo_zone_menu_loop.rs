@@ -309,6 +309,38 @@ fn ex12_018_same_card_id_from_the_same_zone_in_two_passes_is_a_divergence() {
     assert!(reason.contains("EX12-018") && reason.contains("VB-A"), "{reason}");
 }
 
+/// A playback menu row stamped with an engine action the parked pick does not
+/// take: the stamp was realised against an OLDER EX12-018 script (sim1b's
+/// host/join playback, row 25: `generic_int` 1 stamped 30, from the days the
+/// engine asked DCGO's zone menu itself), and the YAML now asks ONE
+/// `select_zone_cards` pick. The stamp names nothing here, so the card fold
+/// reads DCGO's own int and card ids instead, with a note - it never answers
+/// a playback row whose stamp the prompt DOES accept (round-4 finding 7).
+#[test]
+fn ex12_018_menu_row_with_a_stale_stamp_is_read_by_the_fold_with_a_note() {
+    const STALE: u16 = 30;
+    let game = sirius_when_digivolving();
+    let p = game.pending_selection.as_ref().expect("the up-to-2 pick");
+    assert!(!p.valid_action_ids.contains(&STALE), "30 is not an answer of {:?}", p.valid_action_ids);
+    let mut s = session_over(
+        game,
+        vec![
+            sel(0, serde_json::json!({"prompt": "generic_int", "int_value": 1, "engine_action": STALE})),
+            hand_pick(1, "VB-A"),
+            menu(2, 1),
+            hand_pick(3, "VB-B"),
+            top_bottom(4, false),
+        ],
+    );
+    replay_all(&mut s);
+    assert_eq!(sources(&s.game), vec!["VB-B", "VB-A", "BASE", "EX12-018"]);
+    assert!(
+        s.replay_notes().iter().any(|n| n.contains("engine action 30") && n.contains("stale")),
+        "{:?}",
+        s.replay_notes()
+    );
+}
+
 // ── RYUGUMON (EX12-036): DCGO's no-op unsuspend pick ─────────────────────────
 //
 // EX12_036.cs:136-160: after placing the hand card as the bottom source, DCGO

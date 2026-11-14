@@ -273,3 +273,124 @@ fn decline_all_leaves_the_outer_mandatory_order_parked() {
     assert_eq!(p.valid_action_ids.len(), 2, "{}", p.prompt);
     let _ = DivergenceKind::SelectionResolution { reason: String::new() };
 }
+
+// ── -1 against a FORCED order (round-5 review, finding 11) ──────────────────
+//
+// DCGO's -1 skips every stacked effect, a non-optional one included when it
+// is `SetIsSkippable(true)` (`IsSkippable`, ICardEffect.cs:364-367; -1 is
+// offered when every effect is skippable, MultipleSkills.cs:393). The engine
+// holds those as mandatory and has to run them. Converging orders do not make
+// that the same game: the engine resolved effects DCGO skipped. So the replay
+// halts when the forced effects did anything (an effect's memory change,
+// target, reveal or play, or any change to the zones, memory or modifiers),
+// and goes on with a note only when they provably did nothing.
+
+fn gain_one(id: &str) -> String {
+    format!(
+        r#"
+card: {id}
+name: Test Gain {id}
+kind: tamer
+color: [yellow]
+cost: 3
+traits: [Test]
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] Gain 1 memory"
+    process:
+      - gain_memory: 1
+"#
+    )
+}
+
+fn gain_if_full_hand(id: &str) -> String {
+    format!(
+        r#"
+card: {id}
+name: Test Full Hand {id}
+kind: tamer
+color: [yellow]
+cost: 3
+traits: [Test]
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If you have 10 or more cards in hand, gain 1 memory"
+    process:
+      - if:
+          condition:
+            count_gte:
+              filter: {{ of: you, zone: [hand] }}
+              n: 10
+          then:
+            - gain_memory: 1
+"#
+    )
+}
+
+/// P0's main phase with the two Tamers' mandatory [Start of Your Main Phase]
+/// triggers ordered (the forced order prompt is parked).
+fn forced_order_of(a: &str, b: &str) -> Game {
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(a)
+        .expect("fixture compiles")
+        .from_dsl_yaml(b)
+        .expect("fixture compiles")
+        .add_card(digimon("FILL", &[]))
+        .hand(0, &["FILL"])
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 6])
+        .start();
+    r.set_first_player(0);
+    r.skip_mulligan();
+    r.game.enter_main_phase();
+    let ids: Vec<String> = [a, b]
+        .iter()
+        .map(|y| y.lines().find_map(|l| l.strip_prefix("card: ")).unwrap().trim().to_string())
+        .collect();
+    let handles: Vec<_> = ids.iter().map(|id| r.place_on_field(0, id, Some(0))).collect();
+    for t in handles {
+        r.game.enqueue_triggered(EffectTiming::StartOfYourMainPhase, TriggerSource::Permanent(t));
+    }
+    r.game.drain_effect_queue();
+    let p = r.game.pending_selection.as_ref().expect("the order is parked");
+    assert!(matches!(p.kind, SelectionKind::TriggerOrder) && !p.is_optional, "{:?}", p.kind);
+    r.game
+}
+
+/// Both orders of two mandatory "gain 1 memory" converge, but each gains
+/// memory DCGO's -1 skipped: the replay halts instead of passing through.
+#[test]
+fn decline_all_against_a_forced_order_whose_effects_act_halts() {
+    let game = forced_order_of(&gain_one("GAIN-A"), &gain_one("GAIN-B"));
+    let memory = game.memory;
+    let mut s = staged(game, vec![sel(serde_json::json!({"prompt": "MultipleSkills", "int_value": -1}))]);
+    s.step();
+    assert!(s.is_paused(), "the replay stops; notes {:?}", s.replay_notes());
+    let reason = match s.divergences() {
+        [d] => match &d.kind {
+            DivergenceKind::SelectionResolution { reason } => reason.clone(),
+            other => panic!("{other:?}"),
+        },
+        other => panic!("expected one divergence, got {other:?}"),
+    };
+    assert!(reason.contains("MultipleSkills -1") && reason.contains("memory +1"), "{reason}");
+    assert_eq!(s.game.memory, memory, "nothing was applied");
+}
+
+/// Two mandatory triggers whose condition fails ("if you have 10 or more
+/// cards in hand"): the engine runs them and nothing changes, so the game is
+/// the one DCGO's -1 left. The row applies, with a note.
+#[test]
+fn decline_all_against_a_forced_order_whose_effects_do_nothing_is_a_note() {
+    let game = forced_order_of(&gain_if_full_hand("NOOP-A"), &gain_if_full_hand("NOOP-B"));
+    let memory = game.memory;
+    let mut s = staged(game, vec![sel(serde_json::json!({"prompt": "MultipleSkills", "int_value": -1}))]);
+    replay_all(&mut s);
+    assert_eq!(s.game.memory, memory);
+    assert!(s.game.pending_selection.is_none(), "{:?}", source_card_id(&s.game));
+    assert!(
+        s.replay_notes().iter().any(|n| n.contains("MultipleSkills -1") && n.contains("forced")),
+        "{:?}",
+        s.replay_notes()
+    );
+}

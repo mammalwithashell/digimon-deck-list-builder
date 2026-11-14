@@ -492,6 +492,7 @@ mod tests {
                     board_p1: None,
                     memory: None,
                     card_id: None,
+                    card_index: None,
                     memory_before: None,
                 }),
                 Row::Action(crate::recording::ActionRow {
@@ -505,6 +506,7 @@ mod tests {
                     board_p1: None,
                     memory: None,
                     card_id: None,
+                    card_index: None,
                     memory_before: None,
                 }),
             ],
@@ -560,6 +562,7 @@ mod tests {
                     board_p1: None,
                     memory: None,
                     card_id: None,
+                    card_index: None,
                     memory_before: None,
                 }),
             ],

@@ -36923,6 +36923,9 @@
     "keyword_phase_f::mind_link.rs::mind_link_pick_cannot_be_declined": [
      "keyword"
     ],
+    "keyword_phase_f::mind_link.rs::mind_link_rekeys_later_permanents_modifiers_after_tamer_removal": [
+     "keyword"
+    ],
     "keyword_phase_f::mind_link.rs::mind_link_skips_digimon_with_existing_tamer_source": [
      "keyword"
     ],
@@ -36951,6 +36954,7 @@
    "tests": [
     "keyword_phase_f::mind_link.rs::mind_link_attaches_tamer_to_digimon_with_no_tamer_source",
     "keyword_phase_f::mind_link.rs::mind_link_pick_cannot_be_declined",
+    "keyword_phase_f::mind_link.rs::mind_link_rekeys_later_permanents_modifiers_after_tamer_removal",
     "keyword_phase_f::mind_link.rs::mind_link_skips_digimon_with_existing_tamer_source",
     "keyword_phase_f::mind_link.rs::mind_link_target_prompt_clones_faithfully",
     "keyword_phase_f::mind_link.rs::mind_link_targets_digimon_with_only_facedown_tamer_source",
@@ -80481,7 +80485,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2230,
+  "behavioural_tests": 2231,
   "cards": {
    "behaviourally_covered": 1162,
    "lowering_covered": 1179,
@@ -80644,7 +80648,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 411,
-  "scanned_tests": 2637,
+  "scanned_tests": 2638,
   "top_untested": [
    {
     "cards_blocked": 3,

@@ -25,6 +25,10 @@ _spec.loader.exec_module(convert_raw)
 YOU = 0
 
 
+# The burst's Tamer pick must name a Tamer (convert_raw.is_tamer): Marcus Damon & Thomas H. Norstein (ST24-13).
+TAMERS = {"ST24-13": {"card_kind": 1}}
+
+
 def _be32(n):
     n &= 0xFFFFFFFF
     return [(n >> 24) & 0xFF, (n >> 16) & 0xFF, (n >> 8) & 0xFF, n & 0xFF]
@@ -91,7 +95,7 @@ def test_local_burst_tamer_pick_is_written_after_the_digivolve_action():
         _tamer_pick(YOU, 3),
         _queue_play(YOU, card_index=82, frame=4, burst_frame=11),
         _resolve_digivolve(YOU, slot=2, played_index=82, card="BT25-104", target_slot=0),
-    ), cards={})
+    ), cards=TAMERS)
     rows = _decisions(out)
     kinds = [(r["type"], r.get("action_id", r.get("prompt"))) for r in rows]
     at = kinds.index(("action", DIGIVOLVE))
@@ -110,7 +114,7 @@ def test_ordinary_digivolve_keeps_an_earlier_own_pick_in_front():
         _tamer_pick(YOU, 3),
         _queue_play(YOU, card_index=82, frame=4, burst_frame=-1),
         _resolve_digivolve(YOU, slot=2, played_index=82, card="BT25-104", target_slot=0),
-    ), cards={})
+    ), cards=TAMERS)
     rows = _decisions(out)
     kinds = [(r["type"], r.get("action_id", r.get("prompt"))) for r in rows]
     assert kinds.index(("selection", "SelectPermanentEffect")) < kinds.index(("action", DIGIVOLVE)), kinds
@@ -122,7 +126,7 @@ def test_local_burst_with_no_tamer_pick_logged_stops():
         YOU,
         _queue_play(YOU, card_index=82, frame=4, burst_frame=11),
         _resolve_digivolve(YOU, slot=2, played_index=82, card="BT25-104", target_slot=0),
-    ), cards={}, allow_truncated=True)
+    ), cards=TAMERS, allow_truncated=True)
     assert not any(r.get("action_id") == DIGIVOLVE for r in _decisions(out))
     assert "Burst" in (convert_raw.LAST_TRUNCATION or ""), convert_raw.LAST_TRUNCATION
 
@@ -133,6 +137,6 @@ def test_remote_burst_stops_instead_of_replaying_an_ordinary_digivolve():
         seat,
         _queue_play(seat, card_index=82, frame=4, burst_frame=11),
         _resolve_digivolve(seat, slot=2, played_index=82, card="BT25-104", target_slot=0),
-    ), cards={}, allow_truncated=True)
+    ), cards=TAMERS, allow_truncated=True)
     assert not any(r.get("action_id") == DIGIVOLVE and r.get("actor") == seat for r in _decisions(out))
     assert "Burst" in (convert_raw.LAST_TRUNCATION or ""), convert_raw.LAST_TRUNCATION

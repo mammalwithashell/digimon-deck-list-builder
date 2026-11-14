@@ -281,10 +281,13 @@ fn bool_true_from_hand_before_a_hand_pick_against_a_hand_and_material_pick() {
 
 /// <De-Digivolve 1> with one card to trash: the engine trashes it without a
 /// prompt (CR 4.3 16-12-1, the number is forced), DCGO still records its
-/// `SelectCountEffect` with candidates [1] (CardController.cs:5281-5297). The
-/// row is consumed with a note, not halted as a decision that met no prompt.
+/// `SelectCountEffect` with candidates [1] (CardController.cs:5281-5297). A
+/// forced count is consumed with a note only when the engine resolved that
+/// effect since the last decision (round-5 review, finding 3:
+/// `replay_dcgo_review_r5.rs`); here nothing resolved at all, so the count
+/// is an effect DCGO ran and the engine did not - it halts.
 #[test]
-fn forced_single_value_count_with_nothing_parked_is_a_note() {
+fn forced_single_value_count_with_nothing_parked_and_nothing_resolved_halts() {
     let r = DebugRunner::builder()
         .add_card(make_test_card("MON", "MON"))
         .deck(0, &["MON"; 5])
@@ -295,12 +298,9 @@ fn forced_single_value_count_with_nothing_parked_is_a_note() {
         r.game,
         vec![row(serde_json::json!({"prompt": "SelectCountEffect", "count": 1, "candidates": [1]}))],
     );
-    replay_all(&mut s);
-    assert!(
-        s.replay_notes().iter().any(|n| n.contains("SelectCountEffect") && n.contains("forced")),
-        "{:?}",
-        s.replay_notes()
-    );
+    s.step();
+    let reason = halted_at(&s, 0);
+    assert!(reason.contains("SelectCountEffect") && reason.contains("forced"), "{reason}");
 }
 
 /// Regression guard: a count with a real choice (two candidates) that meets

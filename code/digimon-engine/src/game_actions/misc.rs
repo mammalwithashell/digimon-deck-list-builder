@@ -609,6 +609,16 @@ impl Game {
                 .map(|t| t.selected_cost_delta() as i32)
                 .unwrap_or(0),
         );
+        // "Play ... without paying the cost" pays nothing, DigiXros or not, on
+        // this commit path too (DCGO `PlayPermanentCards(payCost: false)`;
+        // the same rule `commit_play_from_hand_after_reductions` applies before
+        // the leave windows). Without it a free effect play of a DigiXros card
+        // was re-priced at its printed cost here (paid, or refused as unpayable).
+        let effective_cost = if matches!(total_reduction.effect_cost, crate::enums::CostDelta::Free) {
+            0
+        } else {
+            effective_cost
+        };
 
         // Declare-then-pay re-check (judge Q26/Q27): the play is unpayable — and
         // returns to hand for 0 memory — if EITHER the recomputed memory cost

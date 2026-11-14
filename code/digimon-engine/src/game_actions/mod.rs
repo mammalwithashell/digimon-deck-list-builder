@@ -560,8 +560,24 @@ impl Game {
             return PlayFromHandCostResult::Failed;
         }
 
+        // DigiXros (and the cast-time assembly that shares its transaction)
+        // is offered on EVERY single-card play, not only the main-phase play
+        // from hand: DCGO `PlayCardClass.PlayCard` runs
+        // `SelectDigiXrosClass.Select` for any single non-digivolve play
+        // (CardController.cs:917-922) whatever zone the card came from, and
+        // official Q&A Q2352 / Q2104 rule that an effect play may DigiXros.
+        // Effect plays from trash and reveal park the card in hand first, so
+        // the hand-index lookup finds it (a failed or declined play restores
+        // it through `origin`). Still unoffered (G-DIGIXROS-ON-SOURCE-PLAY,
+        // docs/RUST_ENGINE_GAPS.md): a security play, because the DigiXros
+        // commit (`finalize_digixros_play_after_leave_windows`) does not carry
+        // the security origin's provisional-hand bookkeeping (`from_security`);
+        // and a prepared source play (`PendingWouldPlayOrigin::Source`,
+        // `hand_index == usize::MAX`), which never reaches this function.
         self.pending_digixros_transaction = match origin {
-            PendingWouldPlayOrigin::Hand => {
+            PendingWouldPlayOrigin::Hand
+            | PendingWouldPlayOrigin::Trash { .. }
+            | PendingWouldPlayOrigin::Reveal { .. } => {
                 self.build_digixros_transaction_for_hand_card(player_id, hand_index)
             }
             _ => None,

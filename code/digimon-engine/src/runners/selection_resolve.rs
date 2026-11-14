@@ -2353,8 +2353,9 @@ mod tests {
             actor: player,
             prompt: "SelectAttackEffect".to_string(),
             phase: "Main".to_string(),
-            targets: Some(vec![FrameTarget { player, frame }]),
+            targets: Some(vec![FrameTarget { player, frame, card_index: None }]),
             card_ids: None,
+            card_indexes: None,
             indexes: None,
             count: None,
             candidates: None,
@@ -2424,6 +2425,7 @@ mod tests {
             phase: String::new(),
             targets: None,
             card_ids: Some(vec![card_id.to_string()]),
+            card_indexes: None,
             indexes: None,
             count: None,
             candidates: None,
@@ -2515,6 +2517,7 @@ mod tests {
         row.targets = Some(vec![FrameTarget {
             player: 0,
             frame: 1,
+            card_index: None,
         }]);
         assert_eq!(resolve_next(&runner.game, &row, 0), Ok(Some(y)));
     }
@@ -2550,6 +2553,7 @@ mod tests {
         row.targets = Some(vec![FrameTarget {
             player: 0,
             frame: 1,
+            card_index: None,
         }]);
         assert_eq!(resolve_next(&runner.game, &row, 0), Ok(Some(y)));
     }
@@ -2832,6 +2836,7 @@ mod tests {
             phase: "Main".to_string(),
             targets: None,
             card_ids: Some(vec![card_id.to_string()]),
+            card_indexes: None,
             indexes: None,
             count: None,
             candidates: None,

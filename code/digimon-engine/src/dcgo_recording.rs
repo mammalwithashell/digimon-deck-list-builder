@@ -180,6 +180,14 @@ pub struct ActionRow {
     /// intended as a same-source cross-check).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card_id: Option<String>,
+    /// DCGO's own identity of the played card (`CardSource.CardIndex`, unique
+    /// per game), when the row plays one: the MelonLoader converter reads it
+    /// from the resolve row's hand listing (`convert_raw.py`). The replay pairs
+    /// it with the engine card the action moved, so a later target naming the
+    /// same index finds that card (`ReplayDriver::record_dcgo_card_indexes`).
+    /// `None` in recordings without it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_index: Option<i32>,
     /// [Diagnostic, added post-v1] Identical read to `memory`, under its
     /// own key — see `memory`'s doc for the perspective convention. Exists
     /// so a reader never has to know that, specifically for an `action`
@@ -300,6 +308,14 @@ pub struct SelectionRow {
     /// Card identities picked (hand/trash/reveal prompts).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card_ids: Option<Vec<String>>,
+    /// DCGO's own identity (`CardSource.CardIndex`) of each picked card,
+    /// parallel to `card_ids`: `SelectHandEffect.SetTargetHandCards` and
+    /// `SelectCardEffect.SetTargetCardAndIndicies` name their picks by it. The
+    /// replay pairs each with the engine card the row moved
+    /// (`ReplayDriver::record_dcgo_card_indexes`). `None` in recordings
+    /// without it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_indexes: Option<Vec<i32>>,
     /// Zone positions picked, when DCGO knows them (hand indexes etc.).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub indexes: Option<Vec<i32>>,
@@ -399,6 +415,13 @@ pub struct SelectionRow {
 pub struct FrameTarget {
     pub player: u8,
     pub frame: i32,
+    /// DCGO's own identity (`CardSource.CardIndex`) of the target permanent's
+    /// top card, when the converter could ground it (a Burst Digivolve's Tamer:
+    /// the returned card's index in its owner's next hand listing). It tells
+    /// apart copies of one card that `frame` (a position in a board of card ids)
+    /// cannot (`ReplayDriver::duplicate_copy_target`). `None` otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_index: Option<i32>,
 }
 
 /// An unencodable decision — the recorder saw it happen but couldn't map
