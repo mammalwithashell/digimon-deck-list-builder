@@ -56,3 +56,6 @@ jobs:
         run: |
           cargo run -q -p dsl-schema-export \
             | python code/tools/dsl-doc-export/emit_markdown.py --check
+
+      - name: Pack format and inventory compatibility
+        run: cargo test -p digimon-dsl --test pack_version_gate --test implementation_inventory_cli

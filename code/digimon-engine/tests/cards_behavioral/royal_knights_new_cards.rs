@@ -440,7 +440,10 @@ fn golden_knight_security_recovers_any_magnamon_card_and_itself_even_without_mat
         let mut c = digi("MAGNA", 4, &[]);
         c.card_name = "Magnamon Option".into();
         c.card_kind = CardKind::Option;
-        let mut r = setup_extra("BT9-098", vec![c]);
+        let mut r = setup_extra("BT9-098", vec![c, digi("NOT-MAGNA", 4, &[])]);
+        r.add_to_hand(0, "NOT-MAGNA");
+        let decoy = r.game.players[0].hand.pop().unwrap();
+        r.game.players[0].trash.push(decoy);
         if matched {
             r.add_to_hand(0, "MAGNA");
             let c = r.game.players[0].hand.pop().unwrap();
@@ -448,8 +451,12 @@ fn golden_knight_security_recovers_any_magnamon_card_and_itself_even_without_mat
         }
         security(&mut r, "BT9-098");
         if matched {
+            assert_eq!(r.pending_selection_view().unwrap().valid_action_ids.len(), 1);
             pick(&mut r, 0);
+            assert!(r.game.players[0].hand.iter().any(|c| c.card_id(&r.game.card_data) == "MAGNA"));
         }
+        assert!(r.game.players[0].trash.iter().any(|c| c.card_id(&r.game.card_data) == "NOT-MAGNA"));
+        assert!(!r.game.players[0].hand.iter().any(|c| c.card_id(&r.game.card_data) == "NOT-MAGNA"));
         assert_eq!(r.hand_size(0), if matched { 2 } else { 1 });
         assert!(r.game.players[0]
             .hand

@@ -28,6 +28,10 @@ family-wide rules or Oracle certification.
   Veemon and its metadata;
   this PR retains that implementation and all existing registry assignments.
   The action/tensor contracts are unchanged.
+- Compiled pack format is now 0.33.0 for the added IR fields. External packs
+  must be rebuilt; the loader rejects 0.32.0 before decoding its incompatible
+  payload, following the existing pack-version policy. Inventory walkers
+  retain the new fields in both authored and compiled reference graphs.
 - ST17-13 uses three tested generic capabilities: selected-permanent rules-color
   count, exact effect-source-card evolution eligibility, and the existing
   end-of-battle scheduled continuation. Real security battles verify exact card
@@ -42,7 +46,11 @@ family-wide rules or Oracle certification.
   statuses predated already-implemented shared primitives. Verdict updates are
   supported by production-card tests, not policy exemptions.
 
-## Validation
+## Initial qualification
+
+The full-run counts below record the initial qualification before review
+follow-ups. See [Sourcery review follow-up](sourcery-review.md) for the later
+compatibility fixes and focused regression results.
 
 Six focused targets reuse canonical card tests and cover all 75 admitted cards,
 plus the unchanged EX3-024 regressions. Results:

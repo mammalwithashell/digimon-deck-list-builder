@@ -46,7 +46,9 @@ use std::collections::BTreeSet;
 // 0.30.0 adds top-security placement success bindings and owner destinations. Rebuild packs.
 // 0.31.0 extends selected-source security placements with receipts and owner destinations.
 // 0.32.0 adds controller-relative security-add eligibility to predicates.
-pub const PACK_FORMAT_VERSION: &str = "0.32.0";
+// 0.33.0 adds exact-source evolution predicates, player-directed ForceAttack,
+// and selected-permanent color count. Rebuild packs; bincode layouts differ.
+pub const PACK_FORMAT_VERSION: &str = "0.33.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

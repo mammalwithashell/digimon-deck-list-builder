@@ -171,18 +171,20 @@ effects:
           prompt: Choose breeding Digimon
       - trash_breeding_permanent: { target: chosen }
 "#;
-    let mut ace = card("ACE", &[]);
-    ace.ace_overflow = Some(-4);
-    let mut runner = DebugRunner::builder().from_dsl_yaml(yaml).unwrap()
-        .add_card(ace).add_card(card("TOP", &[])).memory(8).start();
-    let h = runner.place_stack(0, &["ACE", "TOP"]);
-    let p = runner.game.players[0].battle_area.remove(h.index as usize);
-    runner.game.players[0].breeding_area = Some(p);
-    let probe = runner.place_on_field(0, "RK-OVERFLOW", None);
-    runner.fire_on_play(0, probe.index as usize);
-    runner.execute_action(0, encode_breeding_select(0).unwrap()).unwrap();
-    assert_eq!(runner.game.memory, 4, "ACE leaving from under breeding must pay Overflow");
-    assert_eq!(runner.game.players[0].trash.len(), 2);
+    for ids in [["ACE", "TOP"], ["TOP", "ACE"]] {
+        let mut ace = card("ACE", &[]);
+        ace.ace_overflow = Some(-4);
+        let mut runner = DebugRunner::builder().from_dsl_yaml(yaml).unwrap()
+            .add_card(ace).add_card(card("TOP", &[])).memory(8).start();
+        let h = runner.place_stack(0, &ids);
+        let p = runner.game.players[0].battle_area.remove(h.index as usize);
+        runner.game.players[0].breeding_area = Some(p);
+        let probe = runner.place_on_field(0, "RK-OVERFLOW", None);
+        runner.fire_on_play(0, probe.index as usize);
+        runner.execute_action(0, encode_breeding_select(0).unwrap()).unwrap();
+        assert_eq!(runner.game.memory, 4, "the ACE pays Overflow exactly once, whether top or underneath");
+        assert_eq!(runner.game.players[0].trash.len(), 2);
+    }
 }
 
 #[test]
@@ -222,12 +224,17 @@ effects:
             runner.execute_action(0, a).unwrap();
             assert!(!runner.pending_is_optional());
             assert!(!runner.pending_selection_view().unwrap().valid_action_ids.contains(&PASS));
-            let untouched = runner.game.clone();
-            runner.game = runner.game.clone();
+            let mut cloned = DebugRunner::wrap(runner.game.clone());
             let b = physical_menu::source_action(&runner.game, host, 2);
             runner.execute_action(0, b).unwrap();
-            assert!(untouched.pending_selection.is_some(), "clone resolution must not mutate original");
-            assert_eq!(untouched.memory, 5);
+            assert!(cloned.pending_selection_view().is_some(), "original resolution must not mutate clone");
+            assert_eq!(cloned.memory(), 5);
+            let cloned_b = physical_menu::source_action(&cloned.game, host, 2);
+            cloned.execute_action(0, cloned_b).unwrap();
+            assert!(cloned.pending_selection_view().is_none());
+            assert_eq!(cloned.memory(), 6);
+            assert!(runner.pending_selection_view().is_none());
+            assert_eq!(runner.memory(), 6);
         }
         assert!(runner.pending_selection_view().is_none());
         assert_eq!(runner.game.memory, 6);
@@ -301,10 +308,18 @@ fn can_digivolve_into_source_card_checks_exact_source_routes_and_prohibitions() 
     use digimon_engine::modifiers::ModifierEntry;
     let mut evo=card("EVOLUTION",&[]);evo.evo_costs=vec![EvoCost{card_color:1,level:3,memory_cost:4}];
     let mut legal=card("LEGAL",&[]);legal.colors=vec![CardColor::Blue];legal.level=Some(3);
-    let mut r=DebugRunner::builder().add_card(evo).add_card(legal).add_card(card("WRONG",&[])).hand(0,&["EVOLUTION"]).build();
+    let mut other = evo.clone(); other.card_id = "OTHER-EVOLUTION".into();
+    other.card_name = "Other evolution".into();
+    other.evo_costs = vec![EvoCost { card_color: CardColor::White as u8, level: 4, memory_cost: 0 }];
+    let mut r=DebugRunner::builder().add_card(evo).add_card(other).add_card(legal).add_card(card("WRONG",&[])).hand(0,&["EVOLUTION", "OTHER-EVOLUTION"]).build();
     let h=r.place_on_field(0,"LEGAL",None);let wrong=r.place_on_field(0,"WRONG",None);let source=r.game.players[0].hand[0].handle();
     let p=CompiledPredicate{can_digivolve_into_source_card:Some(true),..Default::default()};
     let check=|r:&DebugRunner,h| {let c=EffectReadContext::new(&r.game,source,None,0);eval_predicate_with_bindings(&p,&c,PredicateSubject::Permanent(h),None)};
     assert!(check(&r,h));assert!(!check(&r,wrong));
+    let other_source = r.game.players[0].hand[1].handle();
+    let other_context = EffectReadContext::new(&r.game, other_source, None, 0);
+    assert!(eval_predicate_with_bindings(&p, &other_context, PredicateSubject::Permanent(wrong), None),
+        "the competing card must really have a compatible route");
+    assert!(!check(&r, wrong), "a competing compatible card must not substitute for the exact source");
     r.game.modifiers.add(h,ModifierEntry::simple(ModifierType::CannotDigivolve,1,Expiry::Permanent,0));assert!(!check(&r,h));
 }
