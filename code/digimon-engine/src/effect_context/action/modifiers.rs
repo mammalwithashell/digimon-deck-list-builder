@@ -131,7 +131,11 @@ impl<'a> EffectContext<'a> {
             .with_pending_skips(pending_skips)
             .with_affecting_source_kind(self.source_kind)
                 .with_affecting_source_identity(self.source_identity);
-        if opponent_only {
+        if opponent_only && modifier == ModifierType::ImmuneFromDPMinus {
+            entry = entry.with_effect_immunity_filter(EffectImmunityFilter {
+                source_kind: None, controller: EffectControllerFilter::OpponentOnly,
+            });
+        } else if opponent_only {
             entry = entry.opponent_only();
         }
         self.game.modifiers.add(target, entry);

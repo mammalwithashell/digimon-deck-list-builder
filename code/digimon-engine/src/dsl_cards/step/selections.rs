@@ -5055,7 +5055,25 @@ pub fn try_install(
             // A required floor (`min > 0`) the pool can't reach is an
             // unpayable cost: nothing is picked and the rest of the body is
             // skipped (the closure install never fires its tail callback).
-            let min_value = (*min).min(max_value);
+            // BT13-112 Q2367: all eligible distinct names, or no picks.
+            // Preserve every physical duplicate as a choice; only the floor
+            // counts names. Name uniqueness is a partition constraint, so
+            // every legal prefix can still reach this floor.
+            let min_value = if *require_max && matches!(mode, Some(DistinctByMode::Name)) {
+                let indices = count_capped_card_candidate_indices(
+                    ctx.game, perm.player, CountCappedZone::Material(perm),
+                    filter, &bindings, ctx.source_card, ctx.source_permanent,
+                    ctx.source_kind, ctx.player, mode, 0,
+                );
+                let names: std::collections::HashSet<_> =
+                    crate::effect_context::selections::material_zone_slice(ctx.game, perm)
+                        .into_iter().flat_map(|stack| indices.iter().filter_map(move |&i| stack.get(i)))
+                        .filter_map(|card| ctx.game.card_data_for_handle(card.handle()))
+                        .map(|data| data.card_name.as_str()).collect();
+                names.len().min(max_value as usize) as u8
+            } else {
+                (*min).min(max_value)
+            };
             let unpayable_min = min_value > 0
                 && material_candidate_count(ctx, perm, filter, &bindings, mode, min_value)
                     < min_value as usize;

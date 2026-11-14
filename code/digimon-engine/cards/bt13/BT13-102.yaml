@@ -66,7 +66,7 @@
 #
 # ─── Implementation status (faithfulness diff) ──────────────────────────────
 # | [On Play] opp-may-trash Tamer/Option; if not, gain 1 mem + Draw 1 | IMPLEMENTED |
-# | [Opponent's Turn] effect-play → suspend self → gain 1 memory       | BLOCKED (G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN) |
+# | [Opponent's Turn] effect-play → suspend self → gain 1 memory       | IMPLEMENTED |
 # | [Security] play without paying the cost                            | IMPLEMENTED |
 
 card: BT13-102
@@ -105,42 +105,18 @@ effects:
 
   # ─── Clause 2 — [Opponent's Turn] effect-play → suspend self → +1 memory ─────
   #
-  # STUBBED — engine gap `G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN`.
-  #
-  # The faithful authoring would be (all shipped vocabulary, verified to compile):
-  #
-  #   - when: on_any_digimon_played
-  #     optional: true
-  #     summary: "[Opponent's Turn] When an effect plays a Digimon, by suspending this Tamer, gain 1 memory"
-  #     condition:
-  #       all_of:
-  #         - opponents_turn: true
-  #         - event_target_kind: digimon
-  #         - event_is_effect_initiated: true
-  #         - source_is_unsuspended: true
-  #     process:
-  #       - activation_cost: { suspend_self: true }
-  #       - gain_memory: 1
-  #
-  # The clause fires correctly on the opponent's turn (the optional pre-cost
-  # TriggerOrder prompt installs for P0 and `gain_memory` resolves), but the
-  # SUSPEND-SELF activation cost silently no-ops whenever the effect's
-  # controller is NOT the turn player (i.e. on the opponent's turn). Empirically
-  # (this worktree): on the controller's OWN turn the suspend works for any
-  # `effect_initiated`/playing-player combination; on the OPPONENT's turn it
-  # no-ops with no `OnSuspend` event — even though `Game::suspend_with_cause`
-  # called directly DOES suspend the carrier, and both `progress_excludes` and
-  # `permanent_is_unaffected_by_effect` return false for the carrier under
-  # either player id (so `EffectContext::can_affect_permanent` would pass). The
-  # no-op lives in the live cost-resolution context's source-permanent /
-  # controller threading for an `OnEnterFieldAnyone` observer fired on the
-  # opponent's turn — an engine fix, not a card-authoring change.
-  #
-  # Shipping the clause with the cost silently unpaid (free memory each opponent
-  # effect-play) is an approximation and is disallowed (CLAUDE.md §17/§18), so
-  # the whole clause is omitted until the gap closes. Behavioral test
-  # `bt13_102_observer_effect_play_opp_turn_accept_suspends_and_gains` is
-  # `#[ignore]`-gated on this gap_id.
+  - when: on_any_digimon_played
+    optional: true
+    summary: "[Opponent's Turn] When an effect plays a Digimon, by suspending this Tamer, gain 1 memory"
+    condition:
+      all_of:
+        - opponents_turn: true
+        - event_target_kind: digimon
+        - event_is_effect_initiated: true
+        - source_is_unsuspended: true
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
 
   # ─── Clause 3 — [Security] play this card without paying the cost ────────────
   - when: on_security

@@ -1003,11 +1003,11 @@ pub(crate) fn validate_scoped_step_modes(
             if args.opponent_only && !matches!(args.modifier.as_str(),
                 "CannotBeDestroyed" | "CannotBeDestroyedByEffect" |
                 "CannotBeReturnedToDeck" | "CannotBeReturnedToHand" |
-                "CannotBeTrashedByEffect" | "CannotBeDeDigivolved") {
+                "CannotBeTrashedByEffect" | "CannotBeDeDigivolved" | "ImmuneFromDPMinus") {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
                     path: format!("{prefix}.opponent_only"),
-                    message: "opponent_only requires a modifier with an effect-cause replacement consult".into(),
+                    message: "opponent_only requires a supported opponent-effect protection modifier".into(),
                 });
             }
         }
@@ -1410,6 +1410,7 @@ fn validate_step(
                 .map(|s| s.to_ascii_lowercase())
                 .collect();
             if args.require_max && args.named_groups.is_empty()
+                && args.uniqueness != Some(crate::alt_path::DistinctBy::Name)
                 || !args.named_groups.is_empty()
                     && (args.uniqueness.is_some() || args.same_by.is_some())
                 || args.named_groups.iter().any(|s| s.trim().is_empty())
@@ -1418,7 +1419,7 @@ fn validate_step(
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.named_groups"),
-                    message: "named_groups must contain distinct nonempty names, cannot combine with uniqueness/same_by, and is required by require_max".to_string(),
+                    message: "named_groups must contain distinct nonempty names, cannot combine with uniqueness/same_by, and require_max needs named_groups or uniqueness: name".to_string(),
                 });
             }
             if let crate::step::CountBound::Formula { formula } = &args.max {

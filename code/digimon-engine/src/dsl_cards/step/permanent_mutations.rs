@@ -316,6 +316,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let value = match resolve_binding_ref(from, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => permanent_property(ctx, h, *property),
                 Some(ResolvedBinding::Card(card)) => match property {
+                    CompiledPermanentProperty::ColorCount => ctx.game.card_data_for_handle(card).map(|data| data.colors.len() as i64),
                     CompiledPermanentProperty::Level => ctx.game.card_data_for_handle(card)
                         .and_then(|data| data.level).map(i64::from),
                 },
@@ -344,6 +345,7 @@ fn permanent_property(
             .get(handle.index as usize)?
     };
     match property {
+        CompiledPermanentProperty::ColorCount => Some(permanent.colors_for_rules(&ctx.game.card_data, &ctx.game.modifiers, handle).len() as i64),
         CompiledPermanentProperty::Level => permanent.level(&ctx.game.card_data).map(i64::from),
     }
 }

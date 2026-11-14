@@ -2181,6 +2181,7 @@ impl Walk for digimon_dsl::step::PermanentProperty {
             serde_json::Value::Null,
         );
         match self {
+            digimon_dsl::step::PermanentProperty::ColorCount => c.node(path, "digimon_dsl::step::PermanentProperty", "ENUM_SCALAR", serde_json::json!("ColorCount")),
             digimon_dsl::step::PermanentProperty::Level => c.node(
                 path,
                 "digimon_dsl::step::PermanentProperty",

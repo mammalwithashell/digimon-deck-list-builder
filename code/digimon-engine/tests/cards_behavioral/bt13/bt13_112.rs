@@ -385,3 +385,42 @@ fn bt13_112_both_branches_legal_prompts_with_two_options() {
 
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;
+
+#[test]
+fn bt13_112_q2367_cannot_stop_after_only_some_distinct_names() {
+    let mut runner = runner();
+    install_breeding_stack(&mut runner);
+    let omnimon = runner.place_on_field(0, "BT13-112", None);
+    runner.fire_on_play(0, omnimon.index as usize);
+    accept_you_may(&mut runner);
+    runner.execute_action(0, encode_breeding_select(0).unwrap()).unwrap();
+    assert!(runner.pending_is_optional(), "Q2367 permits playing none");
+    let alpha = source_action(&runner, "RK-ALPHA");
+    runner.execute_action(0, alpha).unwrap();
+    assert!(!runner.pending_is_optional(), "Q2367 requires all distinct names after the first pick");
+    assert!(!runner.pending_selection_view().unwrap().valid_action_ids.contains(&PASS));
+}
+
+#[test]
+fn bt13_112_q2367_plays_more_than_twelve_distinct_names() {
+    let ids: Vec<String> = (0..13).map(|i| format!("DISTINCT-{i}")).collect();
+    let mut builder = DebugRunner::builder().dsl_card("BT13-112").unwrap()
+        .add_card(test_digimon("KING", "Breeding Host", 2000)).memory(5);
+    for id in &ids { builder = builder.add_card(royal_knight(id, id)); }
+    let mut runner = builder.start();
+    let mut stack: Vec<&str> = ids.iter().map(String::as_str).collect();
+    stack.push("KING");
+    let h = runner.place_stack(0, &stack);
+    runner.game.players[0].breeding_area = Some(runner.game.players[0].battle_area.remove(h.index as usize));
+    let omnimon = runner.place_on_field(0, "BT13-112", None);
+    runner.fire_on_play(0, omnimon.index as usize);
+    accept_you_may(&mut runner);
+    runner.execute_action(0, encode_breeding_select(0).unwrap()).unwrap();
+    for (n, id) in ids.iter().enumerate() {
+        let action = source_action(&runner, id);
+        runner.execute_action(0, action).unwrap();
+        if n < 12 { assert!(runner.game.players[0].breeding_area.is_some()); }
+    }
+    assert!(runner.game.players[0].breeding_area.is_none());
+    assert_eq!(runner.battle_area_size(0), 14);
+}

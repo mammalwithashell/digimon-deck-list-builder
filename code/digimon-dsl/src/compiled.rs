@@ -487,6 +487,7 @@ pub struct CompiledPredicate {
     /// `has_digivolve_candidate`. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
     #[serde(default)]
     pub has_digivolve_candidate: Option<CompiledDigivolveCandidate>,
+    pub can_digivolve_into_source_card: Option<bool>,
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
@@ -842,6 +843,7 @@ pub struct CompiledPredicate {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CompiledPermanentProperty {
     Level,
+    ColorCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3051,6 +3053,7 @@ pub enum CompiledStep {
     },
     ForceAttack {
         attacker: CompiledBindingRef,
+        affects_player: bool,
         targets: CompiledAttackTargetSpec,
         without_suspending: bool,
         prompt: Option<String>,

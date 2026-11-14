@@ -600,7 +600,7 @@
    "untested_constructs": []
   },
   "AD1-018": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 5,
    "constructs": [
     "verb:de_digivolve",
@@ -627,14 +627,12 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "verb:grant_effect_immunity"
    ],
-   "untested_constructs": [
-    "predicate:event_card_text_contains"
-   ]
+   "untested_constructs": []
   },
   "AD1-019": {
    "behaviourally_covered": true,
@@ -2519,7 +2517,7 @@
    "untested_constructs": []
   },
   "BT13-075": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:add_modifier",
@@ -2548,7 +2546,7 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:replacement",
@@ -2557,9 +2555,31 @@
     "trigger:when_would_leave_battle_area",
     "verb:cancel_replacement"
    ],
-   "untested_constructs": [
-    "predicate:self_digivolution_sources_trait_has"
-   ]
+   "untested_constructs": []
+  },
+  "BT13-077": {
+   "behaviourally_covered": true,
+   "clause_count": 4,
+   "constructs": [
+    "verb:force_attack",
+    "verb:grant_effect_immunity",
+    "verb:select_opponent_permanent",
+    "predicate:color_is",
+    "predicate:kind",
+    "predicate:level_eq",
+    "timing:end_of_opponents_turn",
+    "timing:on_play",
+    "timing:when_digivolving",
+    "keyword:Blocker"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "verb:grant_effect_immunity"
+   ],
+   "untested_constructs": []
   },
   "BT13-083": {
    "behaviourally_covered": true,
@@ -2831,8 +2851,9 @@
   },
   "BT13-102": {
    "behaviourally_covered": true,
-   "clause_count": 2,
+   "clause_count": 3,
    "constructs": [
+    "verb:activation_cost",
     "verb:as_selecting_player",
     "verb:draw",
     "verb:gain_memory",
@@ -2840,13 +2861,19 @@
     "verb:play_from_security",
     "verb:select_hand",
     "verb:trash_from_hand_by_index",
+    "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_absent",
+    "predicate:event_is_effect_initiated",
+    "predicate:event_target_kind",
     "predicate:kind",
+    "predicate:opponents_turn",
+    "predicate:source_is_unsuspended",
+    "timing:on_any_digimon_played",
     "timing:on_play",
     "timing:on_security"
    ],
-   "effect_clause_count": 2,
+   "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -2906,7 +2933,7 @@
    "untested_constructs": []
   },
   "BT13-110": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:draw",
@@ -2933,12 +2960,10 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:self_digivolution_sources_trait_has"
-   ]
+   "untested_constructs": []
   },
   "BT13-111": {
    "behaviourally_covered": true,
@@ -2970,7 +2995,7 @@
    "untested_constructs": []
   },
   "BT13-112": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 2,
    "constructs": [
     "verb:delete_permanent",
@@ -3002,12 +3027,10 @@
    ],
    "effect_clause_count": 1,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "verb:trash_breeding_permanent"
-   ]
+   "untested_constructs": []
   },
   "BT14-001": {
    "behaviourally_covered": true,
@@ -3804,7 +3827,7 @@
    "untested_constructs": []
   },
   "BT16-101": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 6,
    "constructs": [
     "verb:for_each",
@@ -3832,17 +3855,15 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "keyword:ArmorPurge"
    ],
-   "untested_constructs": [
-    "predicate:self_digivolution_sources_trait_has"
-   ]
+   "untested_constructs": []
   },
   "BT16-102": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
@@ -3864,15 +3885,13 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "keyword:ArmorPurge",
     "verb:grant_effect_immunity"
    ],
-   "untested_constructs": [
-    "predicate:self_digivolution_sources_trait_has"
-   ]
+   "untested_constructs": []
   },
   "BT17-007": {
    "behaviourally_covered": true,
@@ -5341,6 +5360,29 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT19-023": {
+   "behaviourally_covered": true,
+   "clause_count": 4,
+   "constructs": [
+    "verb:add_modifier",
+    "verb:select_own_permanent",
+    "predicate:color_is",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:your_turn",
+    "timing:on_play",
+    "timing:when_digivolving",
+    "keyword:Blocker"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "modifier:CannotBeDestroyedByBattle"
+   ],
+   "untested_constructs": []
+  },
   "BT19-026": {
    "behaviourally_covered": true,
    "clause_count": 4,
@@ -6523,6 +6565,32 @@
     "keyword:SecurityAttackPlus"
    ],
    "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT20-026": {
+   "behaviourally_covered": true,
+   "clause_count": 4,
+   "constructs": [
+    "verb:add_modifier",
+    "verb:if",
+    "verb:return_to_deck",
+    "verb:select_opponent_permanent",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:level_lte",
+    "predicate:name_is",
+    "predicate:self_source_count",
+    "predicate:your_turn",
+    "timing:on_play",
+    "timing:when_digivolving"
+   ],
+   "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -7808,6 +7876,27 @@
     "timing:on_play",
     "timing:when_attacking",
     "timing:when_digivolving"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT21-032": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:cost_target",
+    "predicate:level_eq",
+    "predicate:name_is",
+    "predicate:source_is_cost_target_permanent",
+    "predicate:trait_has",
+    "predicate:your_turn"
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
@@ -13481,7 +13570,7 @@
    "untested_constructs": []
   },
   "BT25-038": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 7,
    "constructs": [
     "verb:add_dp_modifier",
@@ -13513,12 +13602,10 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:self_digivolution_sources_trait_has"
-   ]
+   "untested_constructs": []
   },
   "BT25-039": {
    "behaviourally_covered": true,
@@ -19307,7 +19394,7 @@
    "untested_constructs": []
   },
   "BT7-073": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:grant_keyword",
@@ -19322,12 +19409,10 @@
    ],
    "effect_clause_count": 1,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:self_digivolution_sources_trait_has"
-   ]
+   "untested_constructs": []
   },
   "BT7-090": {
    "behaviourally_covered": true,
@@ -19481,7 +19566,7 @@
    "untested_constructs": []
   },
   "BT8-094": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -19502,12 +19587,10 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:event_target_level_lte"
-   ]
+   "untested_constructs": []
   },
   "BT8-095": {
    "behaviourally_covered": true,
@@ -19756,6 +19839,37 @@
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT9-098": {
+   "behaviourally_covered": true,
+   "clause_count": 2,
+   "constructs": [
+    "verb:add_modifier",
+    "verb:add_this_option_to_hand",
+    "verb:add_to_hand_from_trash",
+    "verb:effect_initiated_digivolve",
+    "verb:if",
+    "verb:select_hand",
+    "verb:select_own_permanent",
+    "verb:select_trash",
+    "predicate:any_permanent",
+    "predicate:binding_present",
+    "predicate:effect_digivolved_any_digimon",
+    "predicate:kind",
+    "predicate:name_contains",
+    "predicate:owner",
+    "predicate:trait_has",
+    "timing:main_from_hand",
+    "timing:on_security"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "modifier:ImmuneFromDPMinus"
+   ],
    "untested_constructs": []
   },
   "BT9-103": {
@@ -24779,7 +24893,7 @@
    "untested_constructs": []
   },
   "EX13-047": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 5,
    "constructs": [
     "verb:lose_memory",
@@ -24795,12 +24909,10 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:printed_keyword"
-   ]
+   "untested_constructs": []
   },
   "EX13-048": {
    "behaviourally_covered": true,
@@ -25030,7 +25142,7 @@
    "untested_constructs": []
   },
   "EX13-056": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 5,
    "constructs": [
     "verb:if",
@@ -25061,12 +25173,10 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:printed_keyword"
-   ]
+   "untested_constructs": []
   },
   "EX13-057": {
    "behaviourally_covered": true,
@@ -25272,7 +25382,7 @@
    "untested_constructs": []
   },
   "EX13-062": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 7,
    "constructs": [
     "verb:add_dp_modifier",
@@ -25297,14 +25407,12 @@
    ],
    "effect_clause_count": 5,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "verb:grant_effect_immunity"
    ],
-   "untested_constructs": [
-    "predicate:printed_keyword"
-   ]
+   "untested_constructs": []
   },
   "EX13-063": {
    "behaviourally_covered": true,
@@ -31102,6 +31210,33 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "P-238": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:delete_permanent",
+    "verb:place_self_as_delay_option",
+    "verb:select_opponent_permanent",
+    "predicate:all_of",
+    "predicate:any_field_permanent",
+    "predicate:any_of",
+    "predicate:event_target_owner",
+    "predicate:event_target_trait_has",
+    "predicate:kind",
+    "predicate:level_lte",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "timing:main_from_hand",
+    "timing:on_security"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "P-240": {
    "behaviourally_covered": true,
    "clause_count": 11,
@@ -31753,6 +31888,25 @@
    ],
    "untested_constructs": []
   },
+  "ST15-16": {
+   "behaviourally_covered": true,
+   "clause_count": 2,
+   "constructs": [
+    "verb:de_digivolve",
+    "verb:force_attack",
+    "verb:grant_triggered_effect",
+    "verb:select_opponent_permanent",
+    "predicate:kind",
+    "timing:main_from_hand",
+    "timing:on_security"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": false,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "ST16-14": {
    "behaviourally_covered": true,
    "clause_count": 3,
@@ -31801,6 +31955,40 @@
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "ST17-13": {
+   "behaviourally_covered": true,
+   "clause_count": 7,
+   "constructs": [
+    "verb:bind_permanent_property",
+    "verb:de_digivolve",
+    "verb:effect_initiated_digivolve",
+    "verb:return_to_hand",
+    "verb:schedule_delayed",
+    "verb:select_any_permanent",
+    "verb:select_opponent_permanent",
+    "verb:select_own_permanent",
+    "verb:trash_top_stacked_sources",
+    "predicate:can_digivolve_into_source_card",
+    "predicate:color_is",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:materials_count_lte",
+    "predicate:name_is",
+    "timing:end_of_battle",
+    "timing:on_security",
+    "timing:when_digivolving",
+    "keyword:ArmorPurge",
+    "keyword:Blocker"
+   ],
+   "effect_clause_count": 4,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "keyword:ArmorPurge"
+   ],
    "untested_constructs": []
   },
   "ST18-14": {
@@ -35906,6 +36094,9 @@
     "dsl::phase2c_modifiers.rs::grant_keyword_unknown_name_is_noop": [
      "keyword"
     ],
+    "dsl::royal_knights_training_gate.rs::printed_keyword_requires_main_face_not_inherited_security_or_reminder_text": [
+     "literal"
+    ],
     "dsl::validator.rs::validate_overclock_cost_filter_on_non_overclock_grant_keyword_fails": [
      "yaml_key"
     ],
@@ -35979,6 +36170,7 @@
     "dsl::phase1c_lowering.rs::keyword_map_covers_aura_grants_used_by_examples",
     "dsl::phase2c_modifiers.rs::grant_keyword_blocker_is_queryable",
     "dsl::phase2c_modifiers.rs::grant_keyword_unknown_name_is_noop",
+    "dsl::royal_knights_training_gate.rs::printed_keyword_requires_main_face_not_inherited_security_or_reminder_text",
     "dsl::validator.rs::validate_overclock_cost_filter_on_non_overclock_grant_keyword_fails",
     "keyword_phase_f::keyword_type.rs::has_keyword_type_is_false_for_tamer_token_and_missing_handle",
     "keyword_phase_f::keyword_type.rs::has_keyword_type_matches_every_value_of_the_keyword",
@@ -40300,6 +40492,21 @@
     "dsl::constructs/play_digivolve_link.rs::can_digivolve_from_source_routes_inversion_and_prohibition"
    ]
   },
+  "predicate:can_digivolve_into_source_card": {
+   "kind": "predicate",
+   "name": "can_digivolve_into_source_card",
+   "parsed_only": false,
+   "signals": {
+    "dsl::royal_knights_training_gate.rs::can_digivolve_into_source_card_checks_exact_source_routes_and_prohibitions": [
+     "variant"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::royal_knights_training_gate.rs::can_digivolve_into_source_card_checks_exact_source_routes_and_prohibitions"
+   ]
+  },
   "predicate:can_digivolve_onto": {
    "kind": "predicate",
    "name": "can_digivolve_onto",
@@ -41112,6 +41319,9 @@
     "dsl::predicate_leaves_ii.rs::binding_card_color_compiles_from_yaml": [
      "yaml_key"
     ],
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources": [
+     "fixture"
+    ],
     "dsl::zone_movement_verbs.rs::move_trash_card_to_deck_top_feeds_returned_card_matching": [
      "variant"
     ],
@@ -41673,6 +41883,7 @@
     "dsl::group7_alt_path_registration.rs::alt_path_direction_from_defaults_when_omitted",
     "dsl::phase2e_select_material.rs::select_material_filter_narrows_by_source_card_fields",
     "dsl::predicate_leaves_ii.rs::binding_card_color_compiles_from_yaml",
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources",
     "dsl::zone_movement_verbs.rs::move_trash_card_to_deck_top_feeds_returned_card_matching",
     "dsl::zone_movement_verbs.rs::returned_card_matching_does_not_fire_without_a_matching_card",
     "dsl::zone_movement_verbs.rs::returned_card_matching_fires_when_a_matching_card_was_returned",
@@ -43316,14 +43527,17 @@
   "predicate:event_card_text_contains": {
    "kind": "predicate",
    "name": "event_card_text_contains",
-   "near_miss_files": [
-    "src/dsl_cards/predicate.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::royal_knights_training_gate.rs::event_card_text_contains_reads_played_card_not_observer_or_unrelated_field": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::royal_knights_training_gate.rs::event_card_text_contains_reads_played_card_not_observer_or_unrelated_field"
+   ]
   },
   "predicate:event_card_trait_has": {
    "kind": "predicate",
@@ -44195,14 +44409,17 @@
   "predicate:event_target_level_lte": {
    "kind": "predicate",
    "name": "event_target_level_lte",
-   "near_miss_files": [
-    "src/dsl_cards/predicate.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::royal_knights_training_gate.rs::event_target_level_lte_uses_deleted_snapshot_not_observer_level": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::royal_knights_training_gate.rs::event_target_level_lte_uses_deleted_snapshot_not_observer_level"
+   ]
   },
   "predicate:event_target_name_contains": {
    "kind": "predicate",
@@ -46710,6 +46927,15 @@
     "dsl::reveal_buckets.rs::select_reveal_buckets_compiles_named_buckets": [
      "yaml_key"
     ],
+    "dsl::royal_knights_training_gate.rs::bind_permanent_property_color_count_reads_selected_top_not_its_sources_or_observer": [
+     "yaml_key"
+    ],
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources": [
+     "yaml_key"
+    ],
+    "dsl::royal_knights_training_gate.rs::trash_breeding_permanent_trashes_whole_selected_stack_and_preserves_other_zones": [
+     "yaml_key"
+    ],
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up": [
      "yaml_key"
     ],
@@ -47769,6 +47995,9 @@
     "dsl::protect_others_leave_replacement.rs::bt25_039_other_gate_self_leave_does_not_fire",
     "dsl::protect_others_leave_replacement.rs::bt25_039_protects_an_other_tamer_subject",
     "dsl::reveal_buckets.rs::select_reveal_buckets_compiles_named_buckets",
+    "dsl::royal_knights_training_gate.rs::bind_permanent_property_color_count_reads_selected_top_not_its_sources_or_observer",
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources",
+    "dsl::royal_knights_training_gate.rs::trash_breeding_permanent_trashes_whole_selected_stack_and_preserves_other_zones",
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up",
     "dsl::royal_knights_union_source_flows.rs::hand_or_trash_source_cost_places_card_before_success_body",
     "dsl::royal_knights_union_source_flows.rs::optional_hand_or_trash_source_cost_decline_skips_success_body",
@@ -48248,6 +48477,9 @@
     ],
     "dsl::phase2e_select_material.rs::select_material_filter_narrows_by_source_card_fields": [
      "variant"
+    ],
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources": [
+     "fixture"
     ],
     "dsl::source_stack_aggregates.rs::source_stack_count_formula_counts_matching_source_cards": [
      "yaml_key"
@@ -48925,6 +49157,7 @@
     "dsl::group7_alt_path_registration.rs::alt_path_direction_from_defaults_when_omitted",
     "dsl::parse_alt_paths.rs::parse_burst_digivolve_with_extra_cost_and_teardown",
     "dsl::phase2e_select_material.rs::select_material_filter_narrows_by_source_card_fields",
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources",
     "dsl::source_stack_aggregates.rs::source_stack_count_formula_counts_matching_source_cards",
     "dsl::source_stack_aggregates.rs::source_stack_count_formula_lowers_inside_count_capped_multi_bound",
     "dsl::validator.rs::validate_source_stack_count_unknown_target_fails",
@@ -52371,14 +52604,17 @@
   "predicate:printed_keyword": {
    "kind": "predicate",
    "name": "printed_keyword",
-   "near_miss_files": [
-    "src/dsl_cards/predicate.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::royal_knights_training_gate.rs::printed_keyword_requires_main_face_not_inherited_security_or_reminder_text": [
+     "variant"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::royal_knights_training_gate.rs::printed_keyword_requires_main_face_not_inherited_security_or_reminder_text"
+   ]
   },
   "predicate:replacement_cause": {
    "kind": "predicate",
@@ -52923,6 +53159,7 @@
     "tests/dsl/constructs/plural_security_prevention.rs",
     "tests/dsl/constructs/security_stack.rs",
     "tests/dsl/effect_battle.rs",
+    "tests/dsl/effect_granted_attack.rs",
     "tests/dsl/option_security_disposition.rs",
     "tests/dsl/permanent_security_receipt.rs",
     "tests/dsl/phase3b_replacement_process.rs",
@@ -53133,14 +53370,17 @@
   "predicate:self_digivolution_sources_trait_has": {
    "kind": "predicate",
    "name": "self_digivolution_sources_trait_has",
-   "near_miss_files": [
-    "src/dsl_cards/predicate.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::royal_knights_training_gate.rs::self_digivolution_sources_trait_has_excludes_top_and_other_stacks_in_both_zones": [
+     "variant"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::royal_knights_training_gate.rs::self_digivolution_sources_trait_has_excludes_top_and_other_stacks_in_both_zones"
+   ]
   },
   "predicate:self_same_level_source_pairs_gte": {
    "kind": "predicate",
@@ -57642,6 +57882,9 @@
     "dsl::predicate_leaves_ii.rs::event_target_source_count_leaves_compile_from_yaml": [
      "yaml_key"
     ],
+    "dsl::royal_knights_training_gate.rs::event_target_level_lte_uses_deleted_snapshot_not_observer_level": [
+     "yaml_key"
+    ],
     "rules_conformance::ch15_04_effect_states.rs::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first": [
      "fixture"
     ],
@@ -57695,6 +57938,7 @@
     "dsl::name_standardization.rs::permanent_effective_name_and_deleted_snapshot_apply_exclusions",
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event",
     "dsl::predicate_leaves_ii.rs::event_target_source_count_leaves_compile_from_yaml",
+    "dsl::royal_knights_training_gate.rs::event_target_level_lte_uses_deleted_snapshot_not_observer_level",
     "rules_conformance::ch15_04_effect_states.rs::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first",
     "rules_conformance::ch15_04_effect_states.rs::derived_trigger_resolves_before_pending_siblings",
     "rules_conformance::ch15_04_effect_states.rs::effect_battle_triggers_wait_for_the_effect_and_pool_with_it",
@@ -57756,6 +58000,9 @@
     "dsl::phase3d_event_context.rs::on_any_digimon_played_alias_uses_enter_field_payload": [
      "yaml_key"
     ],
+    "dsl::royal_knights_training_gate.rs::event_card_text_contains_reads_played_card_not_observer_or_unrelated_field": [
+     "yaml_key"
+    ],
     "rules_conformance::ch15_04_effect_states.rs::pending_effect_whose_trigger_condition_lapsed_cannot_activate": [
      "fixture"
     ],
@@ -57815,6 +58062,7 @@
     "dsl::in_text_contains.rs::parse_and_compile_event_card_in_text_contains_leaf",
     "dsl::phase3d_event_context.rs::event_card_level_predicates_branch_on_played_digimon_level",
     "dsl::phase3d_event_context.rs::on_any_digimon_played_alias_uses_enter_field_payload",
+    "dsl::royal_knights_training_gate.rs::event_card_text_contains_reads_played_card_not_observer_or_unrelated_field",
     "rules_conformance::ch15_04_effect_states.rs::pending_effect_whose_trigger_condition_lapsed_cannot_activate",
     "rules_conformance::ch15_04_effect_states.rs::pending_on_play_lost_when_card_leaves_before_activation",
     "rules_conformance::ch15_04_effect_states.rs::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes",
@@ -60399,6 +60647,18 @@
     "dsl::reveal_search.rs::reveal_search_two_buckets_dedup_routes_distinctly": [
      "yaml_key"
     ],
+    "dsl::royal_knights_training_gate.rs::bind_permanent_property_color_count_reads_selected_top_not_its_sources_or_observer": [
+     "yaml_key"
+    ],
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources": [
+     "yaml_key"
+    ],
+    "dsl::royal_knights_training_gate.rs::select_materials_require_max_name_allows_zero_or_all_distinct_names": [
+     "yaml_key"
+    ],
+    "dsl::royal_knights_training_gate.rs::trash_breeding_permanent_trashes_whole_selected_stack_and_preserves_other_zones": [
+     "yaml_key"
+    ],
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up": [
      "yaml_key"
     ],
@@ -61071,6 +61331,10 @@
     "dsl::reveal_search.rs::reveal_search_remainder_choose_is_player_elected",
     "dsl::reveal_search.rs::reveal_search_short_pool_adds_nothing_returns_remainder",
     "dsl::reveal_search.rs::reveal_search_two_buckets_dedup_routes_distinctly",
+    "dsl::royal_knights_training_gate.rs::bind_permanent_property_color_count_reads_selected_top_not_its_sources_or_observer",
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources",
+    "dsl::royal_knights_training_gate.rs::select_materials_require_max_name_allows_zero_or_all_distinct_names",
+    "dsl::royal_knights_training_gate.rs::trash_breeding_permanent_trashes_whole_selected_stack_and_preserves_other_zones",
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up",
     "dsl::royal_knights_union_source_flows.rs::hand_or_trash_source_cost_places_card_before_success_body",
     "dsl::royal_knights_union_source_flows.rs::optional_hand_or_trash_source_cost_decline_skips_success_body",
@@ -64584,6 +64848,9 @@
     ],
     "dsl::phase2d_for_each.rs::bind_permanent_level_filters_for_each_same_level_permanents": [
      "variant"
+    ],
+    "dsl::royal_knights_training_gate.rs::bind_permanent_property_color_count_reads_selected_top_not_its_sources_or_observer": [
+     "yaml_key"
     ]
    },
    "tested": true,
@@ -64593,7 +64860,8 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::parse_steps.rs::parse_bind_permanent_level_property_step",
-    "dsl::phase2d_for_each.rs::bind_permanent_level_filters_for_each_same_level_permanents"
+    "dsl::phase2d_for_each.rs::bind_permanent_level_filters_for_each_same_level_permanents",
+    "dsl::royal_knights_training_gate.rs::bind_permanent_property_color_count_reads_selected_top_not_its_sources_or_observer"
    ]
   },
   "verb:bounce_self": {
@@ -68539,6 +68807,18 @@
     "dsl::reveal_buckets.rs::select_reveal_buckets_empty_nested_body_runs_tail_synchronously": [
      "variant"
     ],
+    "dsl::royal_knights_training_gate.rs::bind_permanent_property_color_count_reads_selected_top_not_its_sources_or_observer": [
+     "yaml_key"
+    ],
+    "dsl::royal_knights_training_gate.rs::event_card_text_contains_reads_played_card_not_observer_or_unrelated_field": [
+     "yaml_key"
+    ],
+    "dsl::royal_knights_training_gate.rs::event_target_level_lte_uses_deleted_snapshot_not_observer_level": [
+     "yaml_key"
+    ],
+    "dsl::royal_knights_training_gate.rs::select_materials_require_max_name_allows_zero_or_all_distinct_names": [
+     "yaml_key"
+    ],
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up": [
      "yaml_key"
     ],
@@ -69614,6 +69894,10 @@
     "dsl::quantumon_primitives.rs::own_and_opponent_start_effects_share_turn_player_priority_before_ordinary_draw",
     "dsl::real_cards_json.rs::real_adapter_loads_cards_json",
     "dsl::reveal_buckets.rs::select_reveal_buckets_empty_nested_body_runs_tail_synchronously",
+    "dsl::royal_knights_training_gate.rs::bind_permanent_property_color_count_reads_selected_top_not_its_sources_or_observer",
+    "dsl::royal_knights_training_gate.rs::event_card_text_contains_reads_played_card_not_observer_or_unrelated_field",
+    "dsl::royal_knights_training_gate.rs::event_target_level_lte_uses_deleted_snapshot_not_observer_level",
+    "dsl::royal_knights_training_gate.rs::select_materials_require_max_name_allows_zero_or_all_distinct_names",
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up",
     "dsl::royal_knights_union_source_flows.rs::hand_or_trash_source_cost_places_card_before_success_body",
     "dsl::royal_knights_union_source_flows.rs::optional_hand_or_trash_source_cost_decline_skips_success_body",
@@ -75631,6 +75915,9 @@
    "name": "select_materials",
    "parsed_only": false,
    "signals": {
+    "dsl::royal_knights_training_gate.rs::select_materials_require_max_name_allows_zero_or_all_distinct_names": [
+     "yaml_key"
+    ],
     "dsl::select_materials.rs::play_from_materials_can_suppress_on_play_for_picked_breeding_sources": [
      "variant"
     ],
@@ -75679,6 +75966,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::royal_knights_training_gate.rs::select_materials_require_max_name_allows_zero_or_all_distinct_names",
     "dsl::select_materials.rs::play_from_materials_can_suppress_on_play_for_picked_breeding_sources",
     "dsl::select_materials.rs::select_materials_batch_play_from_materials_plays_every_picked_source",
     "dsl::select_materials.rs::select_materials_breeding_carrier_distinct_by_exercises_recursive_path",
@@ -75921,6 +76209,9 @@
     ],
     "dsl::predicate_leaves_ii.rs::level_lte_binding_compiles_from_yaml": [
      "variant",
+     "yaml_key"
+    ],
+    "dsl::royal_knights_training_gate.rs::bind_permanent_property_color_count_reads_selected_top_not_its_sources_or_observer": [
      "yaml_key"
     ],
     "dsl::selection_dp_extrema.rs::dp_lte_selection_sees_same_effect_dp_modifier": [
@@ -76414,6 +76705,7 @@
     "dsl::phase2d_run_steps_propagation.rs::outer_steps_wait_for_inner_park",
     "dsl::phase3b_replacement_process.rs::replacement_body_with_nested_selection_resumes_and_sets_outcome",
     "dsl::predicate_leaves_ii.rs::level_lte_binding_compiles_from_yaml",
+    "dsl::royal_knights_training_gate.rs::bind_permanent_property_color_count_reads_selected_top_not_its_sources_or_observer",
     "dsl::selection_dp_extrema.rs::dp_lte_selection_sees_same_effect_dp_modifier",
     "dsl::selection_dp_extrema.rs::selector_extreme_ignores_progress_excluded_opponent_targets",
     "dsl::selection_dp_extrema.rs::selector_highest_dp_recomputes_after_prior_suspend_step",
@@ -76750,6 +77042,12 @@
     "dsl::phase2g_breeding_selection.rs::select_own_breeding_permanent_filter_rejects_non_matching_name": [
      "variant"
     ],
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources": [
+     "yaml_key"
+    ],
+    "dsl::royal_knights_training_gate.rs::trash_breeding_permanent_trashes_whole_selected_stack_and_preserves_other_zones": [
+     "yaml_key"
+    ],
     "dsl::royal_knights_union_source_flows.rs::select_union_zone_can_offer_trash_or_breeding_sources_in_one_prompt": [
      "yaml_key"
     ]
@@ -76775,6 +77073,8 @@
     "dsl::phase2g_breeding_selection.rs::select_own_breeding_permanent_binds_selected_ref",
     "dsl::phase2g_breeding_selection.rs::select_own_breeding_permanent_filter_accepts_matching_name",
     "dsl::phase2g_breeding_selection.rs::select_own_breeding_permanent_filter_rejects_non_matching_name",
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources",
+    "dsl::royal_knights_training_gate.rs::trash_breeding_permanent_trashes_whole_selected_stack_and_preserves_other_zones",
     "dsl::royal_knights_union_source_flows.rs::select_union_zone_can_offer_trash_or_breeding_sources_in_one_prompt"
    ]
   },
@@ -78980,14 +79280,21 @@
     "code/digimon-engine/src/dsl_cards/step/permanent_mutations.rs"
    ],
    "name": "trash_breeding_permanent",
-   "near_miss_files": [
-    "src/dsl_cards/step/permanent_mutations.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources": [
+     "yaml_key"
+    ],
+    "dsl::royal_knights_training_gate.rs::trash_breeding_permanent_trashes_whole_selected_stack_and_preserves_other_zones": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources",
+    "dsl::royal_knights_training_gate.rs::trash_breeding_permanent_trashes_whole_selected_stack_and_preserves_other_zones"
+   ]
   },
   "verb:trash_from_hand_by_index": {
    "kind": "verb",
@@ -80176,12 +80483,12 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2218,
+  "behavioural_tests": 2228,
   "cards": {
-   "behaviourally_covered": 1162,
-   "lowering_covered": 1179,
-   "not_covered": 54,
-   "total": 1233
+   "behaviourally_covered": 1182,
+   "lowering_covered": 1199,
+   "not_covered": 42,
+   "total": 1241
   },
   "constructs": {
    "keyword": {
@@ -80195,12 +80502,12 @@
    },
    "predicate": {
     "parsed_only": 7,
-    "tested": 197,
-    "tested_behaviourally": 190,
-    "total": 224,
-    "untested": 27,
-    "used_by_cards": 198,
-    "used_untested": 20
+    "tested": 202,
+    "tested_behaviourally": 195,
+    "total": 225,
+    "untested": 23,
+    "used_by_cards": 199,
+    "used_untested": 16
    },
    "timing": {
     "parsed_only": 2,
@@ -80208,17 +80515,17 @@
     "tested_behaviourally": 58,
     "total": 66,
     "untested": 6,
-    "used_by_cards": 57,
+    "used_by_cards": 58,
     "used_untested": 4
    },
    "verb": {
     "parsed_only": 5,
-    "tested": 181,
-    "tested_behaviourally": 176,
+    "tested": 182,
+    "tested_behaviourally": 177,
     "total": 186,
-    "untested": 5,
+    "untested": 4,
     "used_by_cards": 174,
-    "used_untested": 5
+    "used_untested": 4
    }
   },
   "ex13_lists": 1552,
@@ -80338,18 +80645,13 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 410,
-  "scanned_tests": 2625,
+  "scanned_files": 411,
+  "scanned_tests": 2635,
   "top_untested": [
    {
     "cards_blocked": 3,
     "construct": "predicate:can_unsuspend",
     "ex13_lists_blocked": 76
-   },
-   {
-    "cards_blocked": 6,
-    "construct": "predicate:self_digivolution_sources_trait_has",
-    "ex13_lists_blocked": 55
    },
    {
     "cards_blocked": 3,
@@ -80377,21 +80679,6 @@
     "ex13_lists_blocked": 20
    },
    {
-    "cards_blocked": 3,
-    "construct": "predicate:printed_keyword",
-    "ex13_lists_blocked": 19
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:event_target_level_lte",
-    "ex13_lists_blocked": 18
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:event_card_text_contains",
-    "ex13_lists_blocked": 16
-   },
-   {
     "cards_blocked": 4,
     "construct": "predicate:has_alt_path",
     "ex13_lists_blocked": 15
@@ -80409,11 +80696,6 @@
    {
     "cards_blocked": 2,
     "construct": "verb:effect_initiated_dna_digivolve_trash_partner",
-    "ex13_lists_blocked": 15
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "verb:trash_breeding_permanent",
     "ex13_lists_blocked": 15
    },
    {

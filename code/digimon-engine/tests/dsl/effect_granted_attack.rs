@@ -119,6 +119,7 @@ effects:
     };
     let CompiledStep::ForceAttack {
         attacker,
+        affects_player,
         targets,
         without_suspending,
         prompt,
@@ -128,6 +129,7 @@ effects:
         panic!("expected force_attack step");
     };
     assert_eq!(*attacker, CompiledBindingRef::Named("forced".to_string()));
+    assert!(!*affects_player);
     assert_eq!(*targets, CompiledAttackTargetSpec::Player);
     assert!(*without_suspending);
     assert_eq!(prompt, &None);
@@ -821,4 +823,71 @@ effects:
     assert!(pending.valid_action_ids.contains(&action));
     assert!(pending.is_optional);
     assert_eq!(build_action_mask(&runner.game, 0)[PASS as usize], 1.0);
+}
+
+#[test]
+fn force_attack_affects_player_distinguishes_q2320_from_digimon_directed_immunity() {
+    use digimon_engine::{
+        enums::{EffectSourceKind, Expiry},
+        modifiers::ModifierEntry,
+    };
+    for affects_player in [false, true] {
+        let yaml = format!(
+            r#"
+card: TEST-FORCE-SCOPE
+name: Force scope witness
+kind: digimon
+level: 6
+color: [black]
+cost: 13
+dp: 13000
+effects:
+  - when: on_play
+    process:
+      - select_opponent_permanent:
+          bind_as: chosen
+          filter: {{ kind: digimon }}
+          prompt: Choose the attacker
+      - force_attack:
+          attacker: chosen
+          affects_player: {affects_player}
+"#
+        );
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(&yaml)
+            .unwrap()
+            .add_card(make_test_card("PAD", "Padding"))
+            .security(0, &["PAD"; 5])
+            .deck(0, &["PAD"; 20])
+            .deck(1, &["PAD"; 20])
+            .start();
+        // CR 11-1-2: the forced attacker must be the turn player.
+        r.set_first_player(1);
+        let source = r.place_on_field(0, "TEST-FORCE-SCOPE", Some(0));
+        let attacker = r.place_on_field(1, "PAD", Some(0));
+        r.game.modifiers.add(
+            attacker,
+            ModifierEntry::cannot_be_affected_by_opponents_source_kind(
+                EffectSourceKind::Digimon,
+                Expiry::Permanent,
+                1,
+            ),
+        );
+        r.fire_on_play(0, source.index as usize);
+        r.execute_action(0, encode_attack(0, 0)).unwrap();
+        assert_eq!(r.pending_selection().is_some(), affects_player);
+        if affects_player {
+            let mut clone = DebugRunner::wrap(r.game.clone());
+            for game in [&mut r, &mut clone] {
+                assert_eq!(game.pending_selection().unwrap().selecting_player, 1);
+                assert!(!game.pending_selection().unwrap().is_optional);
+                assert_eq!(build_action_mask(&game.game, 1)[PASS as usize], 0.0);
+                game.execute_action(1, encode_attack(0, SECURITY_TARGET))
+                    .unwrap();
+                assert_eq!(game.security_count(0), 4);
+            }
+        } else {
+            assert_eq!(r.security_count(0), 5);
+        }
+    }
 }
