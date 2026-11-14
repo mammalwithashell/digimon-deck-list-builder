@@ -177,6 +177,13 @@ fn eval_predicate_ref_known(
     bindings: Option<&Bindings>,
     inherited_ref: DualRef,
 ) -> bool {
+    if let Some(want) = pred.can_digivolve_into_source_card {
+        let possible = match subject {
+            PredicateSubject::Permanent(handle) => can_card_digivolve_onto(rctx, rctx.source_card, handle),
+            _ => false,
+        };
+        if possible != want { return false; }
+    }
     // A node's own category (its `kind` or an `all_of` conjunct) wins over the
     // one inherited from an enclosing node. A `Source` subject (a digivolution
     // card) reads like any card in a card zone: a DUAL card lying in the

@@ -526,12 +526,35 @@ impl<'a> EffectContext<'a> {
         prompt: &str,
         cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
     ) -> Result<(), AttackError> {
-        // A forced attack affects its selected attacker (EX3-024;
+        self.force_attack_with_scope(
+            attacker,
+            false,
+            targets,
+            without_suspending,
+            prompt,
+            cost_upgrade,
+        )
+    }
+
+    /// Preserve Digimon-directed processing by default. BT13-077 Q2320
+    /// explicitly directs the player instead, so attacker immunity does not
+    /// prevent that instruction. Both paths retain the same attack legality,
+    /// mandatory target choice, and clone-safe BeginAttack continuation.
+    pub(crate) fn force_attack_with_scope(
+        &mut self,
+        attacker: PermanentHandle,
+        affects_player: bool,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        prompt: &str,
+        cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
+    ) -> Result<(), AttackError> {
+        // A Digimon-directed forced attack affects its selected attacker (EX3-024;
         // general_rule.pdf 15-15-5-1). Selection can still include immune
         // Digimon, but they do not perform this effect's attack. Check the
         // originating controller/source kind, never the player choosing the
         // attacker or target, which may be the opponent.
-        if !self.can_affect_permanent(attacker) {
+        if !affects_player && !self.can_affect_permanent(attacker) {
             return Ok(());
         }
         let previous_override = self.override_selecting_player;

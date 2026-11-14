@@ -58,6 +58,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             source_count,
             link_card_count,
             has_digivolve_candidate,
+            can_digivolve_into_source_card,
             has_inherited,
             is_suspended,
             is_unsuspended,
@@ -383,6 +384,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             &format!("{}.link_card_count", path),
             "UNCLASSIFIED_STRING",
         );
+        can_digivolve_into_source_card.walk(c, &format!("{}.can_digivolve_into_source_card", path), "UNCLASSIFIED_STRING");
         has_digivolve_candidate.walk(
             c,
             &format!("{}.has_digivolve_candidate", path),
@@ -1751,6 +1753,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             source_count,
             link_card_count,
             has_digivolve_candidate,
+            can_digivolve_into_source_card,
             has_inherited,
             is_suspended,
             is_unsuspended,
@@ -2072,6 +2075,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             &format!("{}.link_card_count", path),
             "UNCLASSIFIED_STRING",
         );
+        can_digivolve_into_source_card.walk(c, &format!("{}.can_digivolve_into_source_card", path), "UNCLASSIFIED_STRING");
         has_digivolve_candidate.walk(
             c,
             &format!("{}.has_digivolve_candidate", path),

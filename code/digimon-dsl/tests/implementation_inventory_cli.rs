@@ -173,3 +173,22 @@ fn create_new_refuses_existing_output_without_truncation_in_both_modes() {
         assert_eq!(fs::read(&path).unwrap(), original);
     }
 }
+
+#[test]
+fn royal_knights_fields_are_walked_in_both_parsed_and_compiled_references() {
+    let f = Fixture::new(&["BT13-077", "ST17-13"]);
+    f.card("bt13/BT13-077.yaml", include_bytes!("../../digimon-engine/cards/bt13/BT13-077.yaml"));
+    f.card("st17/ST17-13.yaml", include_bytes!("../../digimon-engine/cards/st17/ST17-13.yaml"));
+    let output = f.root.join("royal-knights.json");
+    success(&f.run(&output, true, false));
+    let result = read(&output);
+    let files = result["reference_graph"]["files"].as_array().unwrap();
+    for (id, field) in [("BT13-077", "affects_player"), ("ST17-13", "can_digivolve_into_source_card")] {
+        let file = files.iter().find(|x| x["owner_id"] == id).unwrap();
+        for representation in ["authored", "compiled"] {
+            assert!(file[representation]["nodes"].as_array().unwrap().iter()
+                .any(|n| n["path"].as_str().unwrap().contains(field)),
+                "{id}: {representation} must retain the {field} field");
+        }
+    }
+}

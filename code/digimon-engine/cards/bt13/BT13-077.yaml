@@ -1,0 +1,39 @@
+# Official face, Q2315–Q2320; pinned DCGO BT13_077 corroborates player scope.
+card: BT13-077
+name: Craniamon
+kind: digimon
+level: 6
+color: [black]
+cost: 13
+dp: 13000
+form: Mega
+attribute: Vaccine
+traits: [Holy Warrior, Royal Knight]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 5
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+  - when: [on_play, when_digivolving]
+    process:
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+  - when: end_of_opponents_turn
+    process:
+      # Q2316/2317: choice is optional despite older printed wording.
+      # Q2318: include Digimon that cannot legally attack.
+      - select_opponent_permanent:
+          bind_as: chosen
+          filter: { kind: digimon }
+          optional: true
+          prompt: Choose an opponent's Digimon to attack
+      # Q2320: the instruction affects the player, not the chosen Digimon.
+      - force_attack:
+          affects_player: true
+          attacker: chosen
+          targets: any

@@ -1,3 +1,60 @@
+## Player-directed forced attacks — resolved 2026-11-09
+
+`force_attack.affects_player: true` implements an instruction to the selected
+attacker's controller (BT13-077 official Q2320). Its default is false: existing
+Digimon-directed processing, including EX3-024 face and inherited effects,
+still checks source-scoped immunity under CR 4.3 15-15-5-1/3. Do not infer
+player scope from superficially similar wording; the card-specific ruling
+and pinned DCGO implementations distinguish these two cards.
+
+Both modes share ordinary attack legality and the mandatory opponent target
+selection / clone-safe BeginAttack continuation. Neither permits an attack
+while one is pending, bypasses sickness or suspension, or ignores attack
+prohibitions. Q2316/2317 make Craniamon's initial selection optional; Q2318
+allows selecting an unable attacker, which then performs no attack.
+
+Proof: `tests/cards_behavioral/bt13/bt13_077.rs`, unchanged
+`tests/cards_behavioral/ex3/ex3_024.rs`, and
+`tests/dsl/effect_granted_attack.rs::force_attack_affects_player_distinguishes_q2320_from_digimon_directed_immunity`.
+Authority: https://world.digimoncard.com/rule/?card_no=BT13-077 ; pinned DCGO
+`02922babedf58c83b0687eeb91e2377cc977c58e`, BT13/Black/BT13_077.cs versus
+EX3/Blue/EX3_024.cs. The pinned EX3 face checks attacker immunity; its inherited
+branch lacks that check. This pre-existing reference inconsistency is not
+silently promoted into a global semantic change: both existing repository
+EX3 immunity regressions remain unchanged under CR 4.3 15-15-5, and only the
+explicit BT13-077 Q2320 instruction opts into player scope.
+No action/tensor or admission-policy change.
+
+## 2026-11-09 Royal Knights remaining-card primitives — resolved
+
+- `G-SELECTED-PERMANENT-RULES-COLOR-COUNT`: `bind_permanent_property` now
+  supports `color_count`, reading the chosen permanent's current rules colors,
+  not its sources or the effect carrier. ST17-13 trashes one source per color.
+- `G-EXACT-SOURCE-CARD-EVOLUTION-ELIGIBILITY`: the permanent predicate
+  `can_digivolve_into_source_card` checks normal routes and prohibitions against
+  the exact effect-source card. ST17-13 schedules its security evolution at
+  end of battle, retains that physical card through the existing scheduled VM,
+  and exposes only legal optional hosts. Real security-battle tests cover
+  acceptance, decline, no legal host, physical identity and cloned continuation.
+- `G-OPPONENT-DP-MINUS-PROTECTION-ONLY`: `add_modifier` with
+  `ImmuneFromDPMinus` and `opponent_only: true` now installs the DP consult's
+  controller filter. It does not confer De-Digivolve protection. BT9-098 tests
+  distinguish opponent and own DP reduction and declined evolution.
+
+Proof: `tests/dsl/royal_knights_training_gate.rs` and the canonical
+`tests/cards_behavioral/royal_knights_new_cards.rs`. No action/tensor change.
+
+## Breeding-stack trash must process ACE Overflow — resolved 2026-11-09
+
+Official BT13-112 Q2369 and CR 4.3 sections 3-4-6 / 4-19 require Overflow
+when ACE cards leave a breeding stack. `trash_breeding_permanent` previously
+moved those cards directly into trash without processing it. It now uses the
+existing owner-relative Overflow handler for the removed stack and link cards.
+The regression observed memory 8 instead of 4 before the repair and passes
+afterward; ordinary breeding trash, unrelated battle and opponent breeding
+zones, and the missing-target no-op remain covered by the DSL tests.
+See `qa/archetype-qa/dsl/royal-knights-ex13-training-gate/` for exact-list scope.
+
 # Rust Engine Gaps
 
 ## Cross-source immunity-grant suppression [G-ENGINE-CROSS-SOURCE-IMMUNITY-GRANT-SUPPRESSION] — open outside the scoped pool

@@ -1847,6 +1847,8 @@ pub struct TrashBottomSourcesArgs {
 #[serde(rename_all = "snake_case")]
 pub enum PermanentProperty {
     Level,
+    /// Current rules colors of the chosen permanent.
+    ColorCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1934,6 +1936,10 @@ pub struct MayAttackNowArgs {
 #[serde(deny_unknown_fields)]
 pub struct ForceAttackArgs {
     pub attacker: BindingRef,
+    /// Player-directed instruction (BT13-077 Q2320), rather than an effect
+    /// on the attacker (EX3-024). Does not waive ordinary attack legality.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub affects_player: bool,
     #[serde(default)]
     pub targets: AttackTargetSpec,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -3141,7 +3147,8 @@ pub struct AddDpModifierArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AddModifierArgs {
-    /// Restrict this modifier's replacement cause to an opponent effect.
+    /// Scope protection to opponent effects. DP-minus immunity uses the
+    /// affecting effect's controller; replacement protection uses its cause.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub opponent_only: bool,
     pub target: ModifierTarget,
@@ -3617,7 +3624,7 @@ pub struct SelectMaterialsArgs {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub named_groups: Vec<String>,
     /// Require the largest feasible named-group set up to max (or zero when
-    /// optional_zero permits declining). Requires named_groups.
+    /// optional_zero permits declining). Requires named_groups or uniqueness: name.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub require_max: bool,
     /// Carrier permanent whose digivolution sources are the candidate pool.

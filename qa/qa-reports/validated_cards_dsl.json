@@ -4828,22 +4828,23 @@
     },
     "BT13-102": {
       "card_name": "Keenan Crier",
-      "validated_date": "2026-06-15",
-      "report": "royal-knights-author-remaining-2026-06-15",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-11-09",
+      "report": "royal-knights-ex13-training-gate",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-102.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_102.rs",
-      "test_count": 2,
-      "tests_passing": 1,
-      "tests_ignored": 1,
+      "test_count": 11,
+      "tests_passing": 11,
+      "tests_ignored": 0,
       "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
+        "opponent-hand-choice",
+        "effect-play-suspend-cost",
+        "security-play-self"
       ],
-      "notes": "On Play opponent-may-trash / on-decline gain+draw authored; remaining: [Opponent's Turn] effect-play observer with opponent's-turn suspend cost (G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN).",
-      "audit_note": "Authored 2026-06-15; one clause on a genuine residual gap."
+      "notes": "Restored the printed opponent-turn observer. The former suspend failure was a zero-memory fixture ending the opponent turn and unsuspending normally; acceptance at memory 3, decline, hard-play exclusion and suspended-cost exclusion pass.",
+      "audit_note": "All canonical tests run in royal_knights_remaining; no admission policy change."
     },
     "BT13-111": {
       "card_name": "Gallantmon",
@@ -14063,22 +14064,24 @@
     },
     "LM-028": {
       "card_name": "Blue Scramble",
-      "validated_date": "2026-10-10",
-      "report": "examon-2026-10-10",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "validated_date": "2026-11-09",
+      "report": "royal-knights-ex13-training-gate",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-028.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_028.rs",
-      "test_count": 19,
+      "test_count": 22,
       "patterns": [
         "option-digivolve-reduce",
         "delay-start-of-turn",
         "trash-to-deck-top",
         "security-play-from-trash"
       ],
-      "notes": "Blocked by G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE. No readiness or training promotion; existing YAML retained with documented blocker.",
-      "prior_authoring_status": "IMPLEMENTED"
+      "notes": "Current production YAML verified against official card face and bundle; all canonical card tests pass in royal_knights_blocker_audit, including the previously blocked source-protection or effect-evolution-cost behavior. Prior BLOCKED verdict predated the implemented shared primitive. Simulator validation only; no new Oracle claim.",
+      "prior_authoring_status": "IMPLEMENTED",
+      "tests_passing": 22,
+      "tests_ignored": 0
     },
     "P-118": {
       "card_name": "Wormmon",
@@ -14387,12 +14390,17 @@
     },
     "BT9-109": {
       "card_name": "X Antibody",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "validated_date": "2026-10-10",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-09",
       "archetype": "Examon",
-      "report": "examon-2026-10-10",
-      "notes": "Blocked by G-DSL-SOURCE-CARD-TRASH-PROTECTION. No readiness or training promotion; unsupported new candidate withdrawn."
+      "report": "royal-knights-ex13-training-gate",
+      "notes": "Current production YAML verified against official card face and bundle; all canonical card tests pass in royal_knights_blocker_audit, including the previously blocked source-protection or effect-evolution-cost behavior. Prior BLOCKED verdict predated the implemented shared primitive. Simulator validation only; no new Oracle claim.",
+      "test_count": 15,
+      "tests_passing": 15,
+      "tests_ignored": 0,
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-109.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_109.rs"
     },
     "BT11-022": {
       "card_name": "Dracomon",
@@ -16751,6 +16759,97 @@
       "yaml_path": "code/digimon-engine/cards/p/P-248.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_248.rs",
       "test_count": 6
+    },
+    "P-238": {
+      "card_name": "Destruction Cannon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-11-09",
+      "report": "royal-knights-ex13-training-gate",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/p/P-238.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/royal_knights_new_cards.rs",
+      "test_count": 4,
+      "tests_passing": 4,
+      "tests_ignored": 0,
+      "notes": "Official card face and bundle verified; runtime tests in royal_knights_new_cards cover printed effects and choice/negative branches. Shared matrix tests count for each covered card. Simulator qualification only; no Oracle certification."
+    },
+    "BT19-023": {
+      "card_name": "Huankunmon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-11-09",
+      "report": "royal-knights-ex13-training-gate",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/royal_knights_new_cards.rs",
+      "test_count": 3,
+      "tests_passing": 3,
+      "tests_ignored": 0,
+      "notes": "Official card face and bundle verified; runtime tests in royal_knights_new_cards cover printed effects and choice/negative branches. Shared matrix tests count for each covered card. Simulator qualification only; no Oracle certification."
+    },
+    "BT20-026": {
+      "card_name": "MegaSeadramon (X Antibody)",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-11-09",
+      "report": "royal-knights-ex13-training-gate",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-026.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/royal_knights_new_cards.rs",
+      "test_count": 2,
+      "tests_passing": 2,
+      "tests_ignored": 0,
+      "notes": "Official card face and bundle verified; runtime tests in royal_knights_new_cards cover printed effects and choice/negative branches. Shared matrix tests count for each covered card. Simulator qualification only; no Oracle certification."
+    },
+    "BT21-032": {
+      "card_name": "Veemon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-11-09",
+      "report": "royal-knights-ex13-training-gate",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-032.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/royal_knights_new_cards.rs",
+      "test_count": 1,
+      "tests_passing": 1,
+      "tests_ignored": 0,
+      "notes": "Official card face and bundle verified; runtime tests in royal_knights_new_cards cover printed effects and choice/negative branches. Shared matrix tests count for each covered card. Simulator qualification only; no Oracle certification."
+    },
+    "BT9-098": {
+      "card_name": "Awakening of the Golden Knight",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-11-09",
+      "report": "royal-knights-ex13-training-gate",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/royal_knights_new_cards.rs",
+      "test_count": 3,
+      "tests_passing": 3,
+      "tests_ignored": 0,
+      "notes": "Official card face and bundle verified; runtime tests in royal_knights_new_cards cover printed effects and choice/negative branches. Shared matrix tests count for each covered card. Simulator qualification only; no Oracle certification."
+    },
+    "ST17-13": {
+      "card_name": "Magnamon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-11-09",
+      "report": "royal-knights-ex13-training-gate",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/st17/ST17-13.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/royal_knights_new_cards.rs",
+      "test_count": 4,
+      "tests_passing": 4,
+      "tests_ignored": 0,
+      "notes": "Official card face and bundle verified; runtime tests in royal_knights_new_cards cover printed effects and choice/negative branches. Shared matrix tests count for each covered card. Simulator qualification only; no Oracle certification."
+    },
+    "BT13-077": {
+      "card_name": "Craniamon",
+      "status": "IMPLEMENTED",
+      "validated_date": "2026-11-09",
+      "report": "royal-knights-ex13-training-gate",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-077.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_077.rs",
+      "test_count": 8,
+      "tests_passing": 8,
+      "tests_ignored": 0,
+      "notes": "Official Q2315-Q2320 and pinned DCGO BT13_077: optional controller selection, player-directed mandatory attack if legal, source-kind immunity and expiry, Blocker, attack target ownership, both owners, cloned continuations and nested-attack rejection. Existing EX3-024 face/inherited immunity behavior preserved. Simulator qualification, not Oracle certification."
     }
   }
 }
