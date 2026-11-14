@@ -1,7 +1,7 @@
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
+use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::enums::{CardColor, EffectTiming, Keyword};
 use digimon_engine::selection::SelectionKind;
 
@@ -132,4 +132,136 @@ fn ex12_016_shared_on_play_when_digivolving_clause_grants_forced_attack_body() {
         CompiledStep::GrantTriggeredEffect { body, .. }
             if body.iter().any(|nested| matches!(nested, CompiledStep::ForceAttack { .. }))
     )));
+}
+
+// ── <Assembly> on an effect play (CR 4.3 7-3-2-10) ──────────────────────
+//
+// MetalGreymon (EX12-016) prints `<Assembly -2: 1 Lv.4 or lower [Agumon]/
+// [Greymon] name or [ME]/[VB] trait card>`. CR 4.3 7-3-2-10: "Assembly can be
+// performed even when an effect is used to play a Digimon card with Assembly
+// requirements." DCGO asks it on every non-digivolve play, effect plays
+// included: `PlayCardClass.PlayCard` runs `SelectAssemblyClass.Select` for a
+// single played card with `HasAssembly && !isEvolution` (CardController.cs:
+// 926-933); the pick is a trash `SelectCardEffect` with `canNoSelect: true`
+// and no separate yes/no gate (SelectAssemblyClass.cs:166-201, 215-245); the
+// picks go to the bottom of the new Digimon's stack before its [On Play]
+// (SelectAssemblyClass.cs:283-302, CardController.cs:1868-1869).
+//
+// Real game: raw-20261113T025510Z#g4 file step 127 — MetalGarurumon (EX12-035)
+// was being deleted by Amaterasumon (EX12-047); its <Decode> played MetalGreymon
+// (EX12-016) from its digivolution cards, and DCGO then asked P1 to pick
+// Gammamon (EX12-007) from the trash for MetalGreymon's Assembly.
+
+/// MetalGarurumon whose only digivolution card is MetalGreymon, with one
+/// Assembly-eligible card (Lv.3 [VB]) in its owner's trash.
+fn decode_into_metalgreymon_runner() -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-016 YAML loads")
+        .dsl_card("EX12-035")
+        .expect("EX12-035 YAML loads")
+        .add_card(super::support::vb_digimon("VB-ASM", CardColor::Blue, 3, 2000))
+        .add_card(plain_digimon("FILL-016A", CardColor::Red, 3, 2000))
+        .deck(0, &["FILL-016A", "FILL-016A", "FILL-016A"])
+        .deck(1, &["FILL-016A", "FILL-016A", "FILL-016A"])
+        .memory(10)
+        .start();
+    let metalgarurumon = runner.place_stack(0, &[CARD_ID, "EX12-035"]);
+    super::support::push_to_trash(&mut runner, 0, "VB-ASM");
+    (runner, metalgarurumon)
+}
+
+/// Leave MetalGarurumon by effect and accept its own Decode on MetalGreymon,
+/// answering only the Decode prompts. Stops at the first prompt that is not
+/// part of the Decode (or when nothing is pending).
+fn decode_metalgreymon_out(runner: &mut DebugRunner, metalgarurumon: digimon_engine::permanent::PermanentHandle) {
+    runner.game.return_to_hand_from_effect(metalgarurumon, 1);
+    for _ in 0..6 {
+        let Some(view) = runner.pending_selection_view() else { return };
+        if view.prompt.contains("Assembly") {
+            return;
+        }
+        select_first_non_pass(runner);
+        if field_contains(runner, 0, CARD_ID) {
+            return;
+        }
+    }
+}
+
+#[test]
+fn ex12_016_assembly_is_offered_when_decode_plays_it_from_digivolution_cards() {
+    let (mut runner, metalgarurumon) = decode_into_metalgreymon_runner();
+    decode_metalgreymon_out(&mut runner, metalgarurumon);
+
+    let view = runner
+        .pending_selection_view()
+        .unwrap_or_else(|| {
+            panic!(
+                "CR 7-3-2-10: the effect play of MetalGreymon must ask its Assembly \
+                 (MetalGreymon on field without it: {}, VB-ASM still in trash: {})",
+                field_contains(&runner, 0, CARD_ID),
+                super::support::trash_contains(&runner, 0, "VB-ASM")
+            )
+        });
+    assert!(
+        view.prompt.contains("Assembly"),
+        "the next prompt is MetalGreymon's Assembly trash pick, got {view:?}"
+    );
+    assert_eq!(view.selecting_player, 0);
+    assert!(
+        view.is_optional || view.valid_action_ids.contains(&PASS),
+        "Assembly is not mandatory (CR 7-3-2-9; DCGO canNoSelect: true): {view:?}"
+    );
+
+    select_first_non_pass(&mut runner);
+    if runner
+        .pending_selection_view()
+        .is_some_and(|v| v.prompt.contains("Assembly"))
+    {
+        // A count-capped pick may need an explicit confirm after the exact count.
+        let v = runner.pending_selection_view().unwrap();
+        if v.valid_action_ids.contains(&PASS) {
+            runner.execute_action(v.selecting_player, PASS).expect("confirm pick");
+        }
+    }
+
+    assert!(
+        field_contains(&runner, 0, CARD_ID),
+        "Decode still plays MetalGreymon"
+    );
+    let slot = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .expect("MetalGreymon on field");
+    assert_eq!(
+        super::support::source_count(&runner, 0, slot),
+        1,
+        "the Assembly card is placed under MetalGreymon (CR 7-3-3-3)"
+    );
+    assert_eq!(super::support::bottom_source_id(&runner, 0, slot), "VB-ASM");
+    assert!(!super::support::trash_contains(&runner, 0, "VB-ASM"));
+}
+
+#[test]
+fn ex12_016_assembly_on_decode_play_may_be_declined() {
+    let (mut runner, metalgarurumon) = decode_into_metalgreymon_runner();
+    decode_metalgreymon_out(&mut runner, metalgarurumon);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("CR 7-3-2-10: the effect play of MetalGreymon must ask its Assembly");
+    assert!(view.prompt.contains("Assembly"), "got {view:?}");
+    runner
+        .execute_action(view.selecting_player, PASS)
+        .expect("decline Assembly");
+
+    assert!(field_contains(&runner, 0, CARD_ID), "declining still plays MetalGreymon");
+    let slot = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .expect("MetalGreymon on field");
+    assert_eq!(super::support::source_count(&runner, 0, slot), 0);
+    assert!(super::support::trash_contains(&runner, 0, "VB-ASM"));
 }

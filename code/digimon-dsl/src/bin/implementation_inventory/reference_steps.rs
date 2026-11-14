@@ -1297,6 +1297,15 @@ impl Walk for digimon_dsl::step::StepSpec {
                 );
                 f0.walk(c, &format!("{}@PlaceCardsAsBottomSources.0", path), role);
             }
+            digimon_dsl::step::StepSpec::PlaceCardsAsTopSources(f0) => {
+                c.node(
+                    path,
+                    "digimon_dsl::step::StepSpec",
+                    "VARIANT",
+                    serde_json::json!("PlaceCardsAsTopSources"),
+                );
+                f0.walk(c, &format!("{}@PlaceCardsAsTopSources.0", path), role);
+            }
             digimon_dsl::step::StepSpec::ReturnTopStackedToDeck(f0) => {
                 c.node(
                     path,
@@ -4797,6 +4806,19 @@ impl Walk for digimon_dsl::step::PlayCardsFreeArgs {
         cards.walk(c, &format!("{}.cards", path), "UNCLASSIFIED_STRING");
     }
 }
+impl Walk for digimon_dsl::step::PlaceCardsAsTopSourcesArgs {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(
+            path,
+            "digimon_dsl::step::PlaceCardsAsTopSourcesArgs",
+            "COMPOSITE",
+            serde_json::Value::Null,
+        );
+        let digimon_dsl::step::PlaceCardsAsTopSourcesArgs { cards, target } = self;
+        cards.walk(c, &format!("{}.cards", path), "UNCLASSIFIED_STRING");
+        target.walk(c, &format!("{}.target", path), "EXISTING_INSTANCE_BINDING");
+    }
+}
 impl Walk for digimon_dsl::step::PlaceCardsAsBottomSourcesArgs {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
         c.node(
@@ -5683,6 +5705,7 @@ digimon_dsl::compiled::CompiledStep::SelectOpponentDpBudget{dp_budget,min_picks,
 digimon_dsl::compiled::CompiledStep::SelectZoneCards{of,zones,filter,min,max,optional_zero,distinct_by,play_cost_budget,exclude,bind_as,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectZoneCards"));of.walk(c, &format!("{}.of", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");zones.walk(c, &format!("{}.zones", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");max.walk(c, &format!("{}.max", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");optional_zero.walk(c, &format!("{}.optional_zero", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");distinct_by.walk(c, &format!("{}.distinct_by", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");play_cost_budget.walk(c, &format!("{}.play_cost_budget", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");exclude.walk(c, &format!("{}.exclude", &format!("{}@SelectZoneCards",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectZoneCards",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectZoneCards",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
 digimon_dsl::compiled::CompiledStep::PlayCardsFree{cards} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayCardsFree"));cards.walk(c, &format!("{}.cards", &format!("{}@PlayCardsFree",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::PlaceCardsAsBottomSources{cards,target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlaceCardsAsBottomSources"));cards.walk(c, &format!("{}.cards", &format!("{}@PlaceCardsAsBottomSources",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlaceCardsAsBottomSources",path)), "EXISTING_INSTANCE_BINDING");},
+digimon_dsl::compiled::CompiledStep::PlaceCardsAsTopSources{cards,target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlaceCardsAsTopSources"));cards.walk(c, &format!("{}.cards", &format!("{}@PlaceCardsAsTopSources",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlaceCardsAsTopSources",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::ReturnTopStackedToDeck{targets,count,position,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnTopStackedToDeck"));targets.walk(c, &format!("{}.targets", &format!("{}@ReturnTopStackedToDeck",path)), "UNCLASSIFIED_STRING");count.walk(c, &format!("{}.count", &format!("{}@ReturnTopStackedToDeck",path)), "UNCLASSIFIED_STRING");position.walk(c, &format!("{}.position", &format!("{}@ReturnTopStackedToDeck",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@ReturnTopStackedToDeck",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
 digimon_dsl::compiled::CompiledStep::SelectOpponentPlayCostBudget{play_cost_budget,min_picks,filter,bind_as,prompt,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectOpponentPlayCostBudget"));play_cost_budget.walk(c, &format!("{}.play_cost_budget", &format!("{}@SelectOpponentPlayCostBudget",path)), "UNCLASSIFIED_STRING");min_picks.walk(c, &format!("{}.min_picks", &format!("{}@SelectOpponentPlayCostBudget",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectOpponentPlayCostBudget",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectOpponentPlayCostBudget",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectOpponentPlayCostBudget",path)), "METADATA_NO_EXECUTABLE_REFERENCE");then.walk(c, &format!("{}.then", &format!("{}@SelectOpponentPlayCostBudget",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::SelectOwnBreedingPermanent{bind_as,prompt,optional,filter,then} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectOwnBreedingPermanent"));bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectOwnBreedingPermanent",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectOwnBreedingPermanent",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@SelectOwnBreedingPermanent",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectOwnBreedingPermanent",path)), "UNCLASSIFIED_STRING");then.walk(c, &format!("{}.then", &format!("{}@SelectOwnBreedingPermanent",path)), "UNCLASSIFIED_STRING");},

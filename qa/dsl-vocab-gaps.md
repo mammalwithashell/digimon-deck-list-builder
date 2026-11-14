@@ -1,5 +1,42 @@
 # DSL Vocabulary Gaps Tracker
 
+## Place a card list as TOP digivolution cards [G-DSL-PLACE-CARDS-AS-TOP-SOURCES] — added 2026-11-13 (EX12-018)
+
+Surfaced by the DCGO PvP replay of Virus Busters (raw-20261113T025510Z#g4).
+Siriusmon (EX12-018) "[When Digivolving][When Attacking][Once Per Turn] You may
+place up to 2 Digimon cards with [Gammamon] in their texts or the [VB] trait
+from your hand or trash as this Digimon's top or bottom digivolution cards"
+was authored as DCGO's UI: a "From Hand / From Trash / Don't place any" menu,
+then ONE up-to-2 pick in that one zone. So 1 hand card + 1 trash card - legal
+by the printed text and in DCGO (EX12_018.cs:84-164 loops the menu while fewer
+than 2 are chosen) - could not be placed, and the replay halted there as an
+engine gap.
+
+The pick itself needed no new vocabulary: `select_zone_cards` already picks
+over `zones: [hand, trash]` with one combined `max` (the Light Hybrid
+G-DSL-MIXED-ZONE-DISTINCT-PICKS picker). What was missing was placing the
+picked LIST on top in DCGO's order. CR 4.3 3-1-3-3 / 3-1-3-4: the cards are
+placed at the same time, in the order the effect's player chooses; DCGO takes
+that order from the picks - on top it reverses them before
+`AddDigivolutionCardsTop` (EX12_018.cs:183-192), which inserts each at index 1
+under the top card (Permanent.cs:1145), so the FIRST pick is topmost; at the
+bottom `AddDigivolutionCardsBottom` appends in pick order (Permanent.cs:1247).
+`per_selected` + `place_as_top_source` placed the LAST pick topmost.
+
+New verb `place_cards_as_top_sources: { cards, target }`, the top sibling of
+`place_cards_as_bottom_sources` (list order top-down in both):
+`code/digimon-dsl/src/step.rs` (`PlaceCardsAsTopSourcesArgs`), `compiled.rs`,
+`compile.rs`, `src/bin/implementation_inventory/reference_steps.rs`; engine
+`code/digimon-engine/src/dsl_cards/step/mod.rs` and
+`dsl_cards/step/zone_cards.rs::place_cards_as_top_sources`, which places the
+list last card first through the shared `continue_source_placement_batch`
+(now `top: bool`; `ResumeFrame::FieldTopSourceBatch` carries it, so a field
+top card that parks a leave window resumes as a top placement). Construct test:
+`tests/dsl/constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost`.
+Card tests: `tests/cards_behavioral/ex12/ex12_018.rs`; replay fold
+(`runners/replay.rs::ex12_018_zone_loop_fold`) and its tests in
+`tests/replay_dcgo_zone_menu_loop.rs`.
+
 ## Play-or-use hand candidate legality [G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY] — added 2026-11-13 (ST24-06)
 
 Surfaced by the DCGO PvP replay of Data Squad (ST24-06 RizeGreymon). The

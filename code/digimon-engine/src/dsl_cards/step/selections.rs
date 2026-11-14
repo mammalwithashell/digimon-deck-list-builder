@@ -1404,6 +1404,7 @@ pub(crate) fn run_resume(
             source_anchor,
             target,
             remaining,
+            top,
             target_binding,
             mut outer_conts,
         } => {
@@ -1414,6 +1415,7 @@ pub(crate) fn run_resume(
                 source_anchor,
                 target,
                 remaining,
+                top,
                 target_binding.clone(),
             );
             for cont in &mut outer_conts {

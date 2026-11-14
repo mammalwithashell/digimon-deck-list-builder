@@ -21967,9 +21967,8 @@
     "verb:delete_permanent",
     "verb:if",
     "verb:may_attack_now",
-    "verb:per_selected",
-    "verb:place_as_top_source",
     "verb:place_cards_as_bottom_sources",
+    "verb:place_cards_as_top_sources",
     "verb:select_effect_choice",
     "verb:select_opponent_permanent",
     "verb:select_own_permanent",
@@ -21987,7 +21986,6 @@
     "predicate:level_eq",
     "predicate:owner",
     "predicate:trait_has",
-    "predicate:zone",
     "timing:main",
     "timing:when_attacking",
     "timing:when_digivolving",
@@ -22942,17 +22940,17 @@
    "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
-    "verb:activation_cost",
     "verb:effect_initiated_digivolve",
     "verb:if",
     "verb:play_from_security",
     "verb:select_effect_choice",
     "verb:select_hand",
     "verb:set_memory",
+    "verb:suspend",
     "verb:use_option_bound",
     "predicate:all_of",
     "predicate:any_of",
-    "predicate:count_gte",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:equals",
     "predicate:event_target_in_text_contains",
     "predicate:event_target_owner",
@@ -33867,6 +33865,7 @@
     "verb:cancel_replacement",
     "verb:if",
     "verb:play_or_use_from_hand",
+    "verb:select_effect_choice",
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "verb:trash_bottom_face_down_source_under_tamer",
@@ -33874,19 +33873,18 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
-    "predicate:count_gte",
+    "predicate:can_play_or_use_from_effect",
+    "predicate:equals",
     "predicate:face_down_sources_under_tamers_gte",
     "predicate:is_source",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
-    "predicate:owner",
     "predicate:play_or_use_cost_lte",
     "predicate:replacement_subject_is_mine",
     "predicate:source_name_contains",
     "predicate:source_permanent_trait_has",
     "predicate:trait_has",
-    "predicate:zone",
     "timing:on_play",
     "timing:when_attacking",
     "timing:when_digivolving"
@@ -39987,6 +39985,9 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt": [
      "yaml_key"
     ],
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
      "yaml_key"
     ],
@@ -40154,6 +40155,7 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
@@ -53882,6 +53884,9 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt": [
      "yaml_key"
     ],
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
      "yaml_key"
     ],
@@ -54618,6 +54623,7 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
@@ -59788,6 +59794,9 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt": [
      "yaml_key"
     ],
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
     "dsl::constructs/option_security_suppression.rs::a_sibling_attacker_does_not_borrow_the_sources_restriction": [
      "yaml_key"
     ],
@@ -60961,6 +60970,7 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
     "dsl::constructs/option_security_suppression.rs::a_sibling_attacker_does_not_borrow_the_sources_restriction",
     "dsl::constructs/option_security_suppression.rs::a_top_card_or_face_down_source_does_not_supply_the_inherited_restriction",
     "dsl::constructs/option_security_suppression.rs::an_off_turn_effect_attack_does_not_enable_a_your_turn_restriction",
@@ -70625,6 +70635,9 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt": [
      "yaml_key"
     ],
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
     "dsl::constructs/option_security_suppression.rs::live_restriction_is_rechecked_between_security_clauses_after_a_cloned_choice": [
      "yaml_key"
     ],
@@ -71082,6 +71095,7 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
     "dsl::constructs/option_security_suppression.rs::live_restriction_is_rechecked_between_security_clauses_after_a_cloned_choice",
     "dsl::constructs/option_security_suppression.rs::moving_the_checked_option_to_hand_does_not_erase_its_activation_restriction",
     "dsl::constructs/option_security_suppression.rs::suppressed_option_security_does_not_offer_its_choice_but_sibling_does",
@@ -72058,6 +72072,42 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "lib::src/dsl_cards/step/mod.rs::first_typed_tail_reparks_then_second_sees_both_bindings_in_clones",
+    "lib::src/dsl_cards/step/mod.rs::optional_security_accept_executes_bound_enclosing_tail_in_clones",
+    "lib::src/dsl_cards/step/mod.rs::optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection",
+    "lib::src/dsl_cards/step/mod.rs::resume_without_pending_selection_preserves_enclosing_tail",
+    "lib::src/dsl_cards/step/mod.rs::two_typed_outer_continuations_both_receive_inner_binding_and_clone"
+   ]
+  },
+  "verb:place_cards_as_top_sources": {
+   "kind": "verb",
+   "lowering_files": [],
+   "name": "place_cards_as_top_sources",
+   "parsed_only": false,
+   "signals": {
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
+    "lib::src/dsl_cards/step/mod.rs::first_typed_tail_reparks_then_second_sees_both_bindings_in_clones": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/mod.rs::optional_security_accept_executes_bound_enclosing_tail_in_clones": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/mod.rs::optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/mod.rs::resume_without_pending_selection_preserves_enclosing_tail": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/mod.rs::two_typed_outer_continuations_both_receive_inner_binding_and_clone": [
+     "variant"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
     "lib::src/dsl_cards/step/mod.rs::first_typed_tail_reparks_then_second_sees_both_bindings_in_clones",
     "lib::src/dsl_cards/step/mod.rs::optional_security_accept_executes_bound_enclosing_tail_in_clones",
     "lib::src/dsl_cards/step/mod.rs::optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection",
@@ -78539,6 +78589,9 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt": [
      "yaml_key"
     ],
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound": [
      "yaml_key"
     ],
@@ -78572,6 +78625,7 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound",
     "dsl::constructs/zone_moves.rs::count_below_minimum_and_optional_zero_do_not_move_cards",
     "dsl::constructs/zone_moves.rs::count_top_return_keeps_first_pick_topmost",
@@ -80427,7 +80481,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2229,
+  "behavioural_tests": 2230,
   "cards": {
    "behaviourally_covered": 1162,
    "lowering_covered": 1179,
@@ -80450,7 +80504,7 @@
     "tested_behaviourally": 191,
     "total": 225,
     "untested": 27,
-    "used_by_cards": 198,
+    "used_by_cards": 199,
     "used_untested": 20
    },
    "timing": {
@@ -80464,11 +80518,11 @@
    },
    "verb": {
     "parsed_only": 5,
-    "tested": 181,
-    "tested_behaviourally": 176,
-    "total": 186,
+    "tested": 182,
+    "tested_behaviourally": 177,
+    "total": 187,
     "untested": 5,
-    "used_by_cards": 174,
+    "used_by_cards": 175,
     "used_untested": 5
    }
   },
@@ -80590,7 +80644,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 411,
-  "scanned_tests": 2636,
+  "scanned_tests": 2637,
   "top_untested": [
    {
     "cards_blocked": 3,

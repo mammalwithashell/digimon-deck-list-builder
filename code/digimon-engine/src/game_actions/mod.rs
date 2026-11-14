@@ -716,7 +716,12 @@ impl Game {
             CompiledAltPathKind, CompiledCost, CompiledRepeat, CompiledZone,
         };
 
-        let card_id = {
+        let card_id = if hand_index == usize::MAX {
+            // A prepared source play (the card is still in its carrier's
+            // digivolution cards; see `try_begin_assembly_flow`, which admits
+            // `usize::MAX` only for `is_source_preparation`). CR 4.3 7-3-2-10.
+            self.card_data_for_handle(target_card)?.card_id.clone()
+        } else {
             let card = self.player(player_id).hand.get(hand_index)?;
             if card.handle() != target_card {
                 return None;
@@ -4828,15 +4833,19 @@ fn assembly_finish(
     params: AssemblyPlayParams,
     total_reduction: crate::game_actions::PlayCostAdjustments,
 ) -> PlayFromHandCostResult {
-    let Some(hand_index) = game
+    // A prepared source play keeps its card in the carrier (`usize::MAX`,
+    // see `try_begin_assembly_flow`); every other play parked it in hand.
+    let hand_index = match game
         .player(player)
         .hand
         .iter()
         .position(|c| c.handle() == target_card)
-    else {
-        return PlayFromHandCostResult::Failed;
+    {
+        Some(index) => index,
+        None if game.is_source_preparation(params.origin) => usize::MAX,
+        None => return PlayFromHandCostResult::Failed,
     };
-    game.with_play_declaration_controller(params.effect_controller, |game| {
+    let result = game.with_play_declaration_controller(params.effect_controller, |game| {
         game.finish_play_from_hand_after_reductions(
             player,
             hand_index,
@@ -4847,7 +4856,24 @@ fn assembly_finish(
             params.suppress_on_play,
             total_reduction,
         )
-    })
+    });
+    // The Assembly pick is always answered after the play's origin caller
+    // has returned, so nobody else rolls back a failed effect play: restore
+    // the parked card to its origin zone exactly as a resumed cost chain
+    // does (`continue_resumed_play_cost_chain`). A hand origin is a no-op.
+    if matches!(result, PlayFromHandCostResult::Failed) && hand_index != usize::MAX {
+        let play_controller = params.effect_controller.unwrap_or(player);
+        game.restore_pending_would_play_origin(crate::game::PendingWouldPlayResume {
+            player,
+            card: target_card,
+            effective_cost: 0,
+            origin: params.origin,
+            effect_initiated: params.source == PlaySource::ByEffect,
+            play_controller,
+            suppress_on_play: params.suppress_on_play,
+        });
+    }
+    result
 }
 
 #[cfg(test)]

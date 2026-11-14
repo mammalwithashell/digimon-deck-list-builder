@@ -4234,6 +4234,10 @@ fn compile_step(
             cards: compile_binding_ref(&a.cards),
             target: compile_binding_ref(&a.target),
         },
+        S::PlaceCardsAsTopSources(a) => CompiledStep::PlaceCardsAsTopSources {
+            cards: compile_binding_ref(&a.cards),
+            target: compile_binding_ref(&a.target),
+        },
         S::ReturnTopStackedToDeck(a) => CompiledStep::ReturnTopStackedToDeck {
             targets: compile_binding_ref(&a.targets),
             count: compile_formula(&a.count, &format!("{prefix}.count"), card_id, errors),

@@ -220,7 +220,11 @@ fn ambiguous_cardless_order_index_is_a_divergence_not_a_guess() {
     match s.divergences() {
         [d] => match &d.kind {
             DivergenceKind::SelectionResolution { reason } => {
-                assert!(reason.contains("ambiguous"), "{reason}");
+                // The int row is never read positionally, so it refutes BOTH
+                // orders: since round 4 that is reported as such ("... refute
+                // each of them") rather than as an ambiguity. Either way the
+                // index is not guessed.
+                assert!(reason.contains("ambiguous") || reason.contains("refute each of them"), "{reason}");
                 assert!(reason.contains("no chosen_effect_card"), "{reason}");
             }
             other => panic!("expected SelectionResolution, got {other:?}"),
@@ -302,10 +306,13 @@ fn unstamped_true_against_a_folded_gate_leaves_the_pick_for_the_next_row() {
 }
 
 /// The same row with no optional gate parked (the engine asks no such
-/// question here) is consumed without touching the game, whatever its value.
+/// question here) is consumed without touching the game when it is a decline
+/// and the engine resolved no effect. (A `true` with no engine effect since the
+/// last decision halts instead: DCGO used an effect the engine never offered,
+/// `replay_dcgo_review_r4b.rs`.)
 #[test]
 fn unstamped_bool_without_a_parked_gate_is_a_no_op() {
-    for value in [false, true] {
+    for value in [false] {
         let runner = DebugRunner::builder()
             .add_card(digimon("CARRIER", 6, 9000, &[]))
             .hand(0, &["CARRIER"])
@@ -356,9 +363,10 @@ fn unstamped_bool_that_answers_a_gate_leaves_no_note() {
     assert!(s.replay_notes().is_empty(), "{:?}", s.replay_notes());
 }
 
-/// An unstamped answer that meets no gate is consumed with a NON-halting note
-/// naming the row, so a later divergence can be traced to it (e.g. a trigger
-/// the engine never offered).
+/// An unstamped decline that meets no gate (and no engine effect since the
+/// last decision) is consumed with a NON-halting note naming the row, so a
+/// later divergence can be traced to it. (A yes there halts: see
+/// `replay_dcgo_review_r4b.rs`.)
 #[test]
 fn unstamped_bool_without_a_gate_is_noted() {
     let runner = DebugRunner::builder()
@@ -368,7 +376,7 @@ fn unstamped_bool_without_a_gate_is_noted() {
         .start();
     let mut s = session(
         runner,
-        vec![row(serde_json::json!({"step":0,"actor":0,"prompt":"generic_bool","bool_value":true,"unstamped":true}))],
+        vec![row(serde_json::json!({"step":0,"actor":0,"prompt":"generic_bool","bool_value":false,"unstamped":true}))],
     );
     s.step();
     assert!(s.divergences().is_empty() && !s.is_paused(), "{:?}", s.divergences());
@@ -376,7 +384,7 @@ fn unstamped_bool_without_a_gate_is_noted() {
     match s.replay_notes() {
         [note] => {
             assert!(note.contains("row 0"), "{note}");
-            assert!(note.contains("unstamped generic_bool true"), "{note}");
+            assert!(note.contains("unstamped generic_bool false"), "{note}");
             assert!(note.contains("no prompt"), "{note}");
         }
         other => panic!("expected one note, got {other:?}"),

@@ -2761,6 +2761,11 @@ pub enum CompiledStep {
         cards: CompiledBindingRef,
         target: CompiledBindingRef,
     },
+    /// `place_cards_as_top_sources` (first card of the list topmost).
+    PlaceCardsAsTopSources {
+        cards: CompiledBindingRef,
+        target: CompiledBindingRef,
+    },
     /// `return_top_stacked_to_deck`.
     ReturnTopStackedToDeck {
         targets: CompiledBindingRef,

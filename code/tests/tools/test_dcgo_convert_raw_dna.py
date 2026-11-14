@@ -373,3 +373,126 @@ def test_play_packet_without_a_readable_jogress_list_stops_instead_of_guessing()
     assert "no readable jogress list" in convert_raw.LAST_TRUNCATION
     assert not any(r["type"] == "action" and r.get("card_id") == "BT1-084" for r in out)
     assert not any(r["type"] == "game_end" for r in out)
+
+
+# --- Which SelectPermanentEffect rows are a DNA's materials ------------------------------------------------------------
+# DCGO asks the two roots with SelectJogressEffect on the DECIDING client only (`isLocal: true`) and queues the play from
+# its end coroutine (TurnStateMachine.cs:2969-2983): the local seat's picks come right before its play packet, a remote
+# seat's never run on this client.
+
+
+def _own_pick(seat, turn, frame):
+    return {"method": "SelectPermanentEffect.SetTargetFrames", "tp": seat, "turn": turn, "args": [seat, [True], [frame]]}
+
+
+def test_remote_seat_dna_does_not_take_its_earlier_own_side_picks_as_materials():
+    # The remote seat (P1) picked two of its own Digimon for an earlier effect. Its DNA's roots were never selected on
+    # this client, so those picks are not the materials: they stay where DCGO logged them and the materials come from
+    # the packet's jogress roots ([3, 4] at TargetFrameID 4 / slot 1 -> slots [0, 1]).
+    board = ["EX12-042", "EX12-010", "EX12-066", "EX12-073"]
+    out, _ = convert_raw.convert(_remote_turn(
+        _own_pick(REMOTE, 2, 2),
+        _own_pick(REMOTE, 2, 3),
+        _remote_queue_play(card_index=10, frame=4, roots=[3, 4]),
+        _remote_resolve_dna(slot=9, played_index=10, card="EX12-044", target_slot=1, board=board),
+    ), cards={})
+    rows = _decisions(out)
+    kinds = [(r["type"], r.get("action_id", r.get("prompt"))) for r in rows]
+    assert kinds == [
+        ("action", convert_raw.ACTION_KEEP),
+        ("action", convert_raw.ACTION_KEEP),
+        ("action", convert_raw.ACTION_PASS),  # breeding
+        ("selection", "SelectPermanentEffect"),  # the earlier effect's picks, in place
+        ("selection", "SelectPermanentEffect"),
+        ("action", convert_raw.DNA_DIGIVOLVE_START + 9),
+        ("selection", "SelectPermanentEffect"),  # materials from the jogress roots
+        ("selection", "SelectPermanentEffect"),
+        ("action", convert_raw.ACTION_PASS),
+        ("action", convert_raw.ACTION_CONCEDE),
+    ], kinds
+    assert [r["targets"][0]["frame"] for r in rows[3:5]] == [2, 3]
+    assert not any("synthesized" in r for r in rows[3:5])
+    assert [r["targets"][0]["frame"] for r in rows[6:8]] == [0, 1]
+    assert all(r["synthesized"] == "jogress_roots" for r in rows[6:8])
+    assert [r["step"] for r in rows] == list(range(len(rows)))
+    assert out[-1]["type"] == "game_end"
+
+
+def test_local_dna_keeps_its_picks_when_a_row_is_logged_between_the_play_packet_and_the_resolve():
+    # The picks are the two rows right before the play packet; a row logged after the packet (before DCGO resolves the
+    # play) does not hide them, and no material is synthesised on top of them.
+    out, _ = convert_raw.convert(_raw_game(
+        _material(0),
+        _material(1),
+        _queue_play(card_index=77, frame=0, roots=[3, 4]),
+        {"method": "SelectCountEffect.SetCount", "tp": YOU, "turn": 1, "args": [YOU, 0]},
+        _resolve_play(slot=2, played_index=77, card="BT1-084"),
+    ), cards={})
+    rows = _decisions(out)
+    kinds = [(r["type"], r.get("action_id", r.get("prompt"))) for r in rows]
+    assert kinds == [
+        ("action", convert_raw.ACTION_KEEP),
+        ("action", convert_raw.ACTION_KEEP),
+        ("action", convert_raw.ACTION_PASS),  # breeding
+        ("action", convert_raw.DNA_DIGIVOLVE_START + 2),
+        ("selection", "SelectPermanentEffect"),
+        ("selection", "SelectPermanentEffect"),
+        ("selection", "SelectCountEffect"),  # logged after the packet: after the DNA and its materials
+        ("action", convert_raw.ACTION_PASS),
+        ("action", convert_raw.ACTION_CONCEDE),
+    ], kinds
+    assert not any("synthesized" in r for r in rows)
+    assert [r["step"] for r in rows] == list(range(len(rows)))
+    assert out[-1]["type"] == "game_end"
+
+
+def test_local_dna_does_not_take_an_own_side_pick_from_before_its_previous_action():
+    # Only rows after the seat's previous action can be this DNA's picks: one pick before an earlier play plus one
+    # after it is not a pair of materials.
+    out, _ = convert_raw.convert(_raw_game(
+        _material(0),
+        _queue_play(card_index=70, frame=2, roots=[]),
+        _resolve_play(slot=0, played_index=70, card="BT1-010"),
+        _material(1),
+        _queue_play(card_index=77, frame=0, roots=[3, 4]),
+        _resolve_play(slot=2, played_index=77, card="BT1-084"),
+    ), cards={}, allow_truncated=True)
+    assert convert_raw.LAST_TRUNCATION is not None and "single material pick" in convert_raw.LAST_TRUNCATION, \
+        convert_raw.LAST_TRUNCATION
+    assert not any(r["type"] == "action" and r.get("card_id") == "BT1-084" for r in out)
+
+
+def _bytes_not_logged(row, drop_arg=False):
+    """An older recorder build: the PlayCardAction payload is not logged as a byte list."""
+    if drop_arg:
+        del row["args"][2]
+    else:
+        row["args"][2] = "Il2CppStructArray`1:Il2CppStructArray`1[System.Byte]"
+    return row
+
+
+def test_play_packet_whose_bytes_were_not_logged_is_an_ordinary_play_with_a_warning():
+    for drop_arg in (False, True):
+        out, inferred = convert_raw.convert(_raw_game(
+            _bytes_not_logged(_queue_play(card_index=78, frame=1, roots=[]), drop_arg),
+            _resolve_play(slot=3, played_index=78, card="BT1-030", target="perm", target_slot=1),
+        ), cards={})
+        plays = [r for r in _decisions(out) if r["type"] == "action" and r.get("card_id") == "BT1-030"]
+        assert [p["action_id"] for p in plays] == [convert_raw.DIGIVOLVE_START + 3 * convert_raw.FIELDS_PER_HAND + 1]
+        assert any("not logged" in note and "BT1-030" in note for note in inferred), inferred
+        assert out[-1]["type"] == "game_end"
+
+
+def test_play_packet_whose_bytes_were_not_logged_after_two_material_picks_stops():
+    # The same older build, but the local seat picked two of its own Digimon right before the packet - what a DNA's
+    # root selection logs. The packet cannot say whether this play is that DNA, so the conversion stops there.
+    out, _ = convert_raw.convert(_raw_game(
+        _material(0),
+        _material(1),
+        _bytes_not_logged(_queue_play(card_index=77, frame=0, roots=[])),
+        _resolve_play(slot=2, played_index=77, card="BT1-084", target="perm", target_slot=0),
+    ), cards={}, allow_truncated=True)
+    assert convert_raw.LAST_TRUNCATION is not None and "not logged" in convert_raw.LAST_TRUNCATION, \
+        convert_raw.LAST_TRUNCATION
+    assert not any(r["type"] == "action" and r.get("card_id") == "BT1-084" for r in out)
+    assert not any(r["type"] == "game_end" for r in out)
