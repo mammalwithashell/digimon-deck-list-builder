@@ -379,7 +379,7 @@ pub(crate) fn try_install(
 /// to the deck by this effect's controller, is skipped.
 fn stack_return_blocked(ctx: &EffectContext<'_>, target: PermanentHandle) -> bool {
     use crate::replacement::ReplacementCause;
-    if !ctx.can_affect_permanent(target) {
+    if !ctx.can_affect_permanent(target) || ctx.stack_return_blocked(target) {
         return true;
     }
     let from_opponent = ctx.player != target.player;

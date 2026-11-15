@@ -50,6 +50,9 @@ steps:
   - actor: 0
     do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
+  # The simulator exposes the activation separately; DCGO wire remains folded.
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
   - actor: 0
     do: { select: { cards: [BT24-034] } }
     expect: { prompt: OptionalSkill }

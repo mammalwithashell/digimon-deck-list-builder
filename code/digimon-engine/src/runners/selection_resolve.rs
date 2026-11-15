@@ -638,6 +638,24 @@ pub fn resolve_next(
     payload: &SelectionRow,
     picks_done: usize,
 ) -> Result<Option<u16>, String> {
+    resolve_next_with_provenance(game, payload, picks_done, false)
+}
+
+/// Resolve a DCGO recording, where count rows name printed evolution costs.
+pub(super) fn resolve_next_dcgo(
+    game: &Game,
+    payload: &SelectionRow,
+    picks_done: usize,
+) -> Result<Option<u16>, String> {
+    resolve_next_with_provenance(game, payload, picks_done, true)
+}
+
+fn resolve_next_with_provenance(
+    game: &Game,
+    payload: &SelectionRow,
+    picks_done: usize,
+    dcgo_recording: bool,
+) -> Result<Option<u16>, String> {
     let n_picks = payload_pick_count(payload);
 
     let pending = match game.pending_selection.as_ref() {
@@ -1349,9 +1367,9 @@ pub fn resolve_next(
         // DCGO selects the printed digivolution route before an effect's
         // cost reduction is applied. The engine labels this prompt with the
         // payable cost, so match the retained route, not its display label.
-        if let Some(crate::resume::ResumeFrame::EffectDigivolveCostChoice(state)) = game
-            .pending_selection_resume.as_ref().and_then(|s| s.frames.last())
-        {
+        if let (true, "SelectCountEffect", Some(crate::resume::ResumeFrame::EffectDigivolveCostChoice(state))) = (
+            dcgo_recording, payload.prompt.as_str(), game.pending_selection_resume.as_ref().and_then(|s| s.frames.last())
+        ) {
             let matches: Vec<_> = state.printed_costs.iter().enumerate()
                 .filter(|(_, route)| i64::from(route.memory_cost) == i64::from(c))
                 .filter_map(|(i, _)| pending.effect_choices.as_ref()?.get(i))

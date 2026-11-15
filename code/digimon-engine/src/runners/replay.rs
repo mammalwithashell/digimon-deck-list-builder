@@ -1933,8 +1933,6 @@ impl ReplayDriver {
         game: &mut Game,
         payload: &crate::dcgo_recording::SelectionRow,
     ) -> ReplayStepResult {
-        use super::selection_resolve::resolve_next;
-
         // Selection `targets` carry DCGO board slots, which need the same
         // frame-order -> play-order remap as action operands.
         let remapped;
@@ -1956,6 +1954,11 @@ impl ReplayDriver {
         // prompts exactly as parked: folding there consumes or auto-answers the
         // prompt its own row was written for and shifts every later row.
         let dcgo_folds = !self.source.answers_engine_only_prompts();
+        let resolve_next = if dcgo_folds {
+            super::selection_resolve::resolve_next_dcgo
+        } else {
+            super::selection_resolve::resolve_next
+        };
 
         // A remote MultipleSkills index is ordered by DCGO, so it cannot be
         // interpreted as an engine trigger-order index. A following named pick
