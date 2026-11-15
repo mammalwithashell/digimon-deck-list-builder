@@ -78,6 +78,10 @@ effects:
   #     a bottom face-down card under a Tamer, reduce the cost by 1 ────────────
   - kind: cost_reduction
     active_when: { your_turn: true }
+    # "would be PLAYED": a play cost only. Using an Option is not playing it
+    # (CR 4.3 7-1-1 vs 9-1-1), and DCGO requires `HasPlayCost` (BT25_088.cs:98-
+    # 103), false for any Option (CEntity_Base.cs:340), so the lowering scopes
+    # `when_any_ally_played` to plays.
     when_any_ally_played: { trait_has: "Glowing Dawn" }
     optional: true
     once_per_turn: true

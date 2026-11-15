@@ -11,7 +11,8 @@
 #   [Security] Play this card without paying the cost.
 #   Official Q&A: the card is placed on the bottom of the cards under the Tamer.
 #
-# DCGO: no EX13_071.cs at b9a0638cd.
+# DCGO: no EX13_071.cs at b9a0638cd; the current submodule has
+# EX13/Yellow/EX13_071.cs (the [Kentaurosmon] pick filter is at :357-361).
 #
 # ─── Status: IMPLEMENTED (2026-10-01) ────────────────────────────────────────
 # The [Main] clause landed with G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST:
@@ -163,10 +164,19 @@ effects:
           zones: [hand, trash]
           optional: true
           bind_as: kentaurosmon
+          # Only a [Kentaurosmon] that can digivolve onto THAT [Kudamon] with
+          # just the level waived, payable at the reduced cost: DCGO
+          # EX13_071.cs:357-361 `CanPlayCardTargetFrame(kudamon, true, ...,
+          # IgnoreRequirement.Level)`; ruling Q7449.
+          # G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL.
           filter:
             all_of:
               - kind: digimon
               - name_is: Kentaurosmon
+              - can_digivolve_onto_with_cost:
+                  target: kudamon
+                  cost: { reduce: 1 }
+                  ignore_level: true
           prompt: "That [Kudamon] may digivolve into a [Kentaurosmon] in your hand or trash, ignoring level, with the cost reduced by 1"
       - effect_initiated_digivolve:
           target: kudamon

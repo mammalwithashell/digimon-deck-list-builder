@@ -47,6 +47,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:has_inherited",
@@ -540,6 +541,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:dp_lte",
     "predicate:event_card_name_contains",
     "predicate:event_target_owner",
@@ -645,8 +647,10 @@
     "verb:play_from_hand",
     "verb:play_from_security",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
@@ -1087,6 +1091,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:effect_suspended_any_own_digimon",
@@ -1124,6 +1129,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:effect_suspended_any_own_digimon",
@@ -1440,6 +1446,7 @@
     "predicate:all_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -1659,6 +1666,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:effect_text_contains",
@@ -1694,6 +1702,7 @@
     "verb:select_opponent_permanent",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:effect_deleted_any_opponent_digimon",
@@ -1955,6 +1964,7 @@
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:event_target_color_any_of",
     "predicate:event_target_kind",
@@ -2298,6 +2308,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:event_target_color_any_of",
     "predicate:event_target_kind",
@@ -2354,6 +2365,7 @@
     "verb:trash_top_security",
     "verb:trash_top_source",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
@@ -2446,9 +2458,11 @@
     "verb:draw",
     "verb:play_union_bound_free",
     "verb:select_union_zone",
+    "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:level_eq",
-    "predicate:name_contains",
+    "predicate:name_is",
     "keyword:Blocker"
    ],
    "effect_clause_count": 2,
@@ -2809,6 +2823,7 @@
     "verb:select_hand",
     "predicate:all_of",
     "predicate:all_turns",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_card_color_count",
     "predicate:event_card_color_only",
     "predicate:event_target_kind",
@@ -3338,14 +3353,14 @@
     "verb:play_from_hand",
     "verb:reveal_top_deck",
     "verb:select_hand",
-    "verb:select_own_permanent",
     "verb:select_reveal_buckets",
     "verb:trash_from_reveal",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:kind",
     "predicate:level_gte",
-    "predicate:play_cost_lte",
     "predicate:trait_has",
     "timing:main_from_hand",
     "timing:on_security"
@@ -3781,6 +3796,7 @@
     "verb:suspend",
     "verb:trash_selected_sources",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:dna_origin",
     "predicate:event_card_color_has",
@@ -3910,6 +3926,7 @@
     "verb:select_reveal_buckets",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:has_inherited",
     "predicate:kind",
@@ -4271,6 +4288,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:is_unsuspended",
     "predicate:kind",
@@ -4303,9 +4321,11 @@
     "verb:select_union_zone",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
+    "predicate:name_in",
     "predicate:none_of",
     "predicate:replacement_cause",
     "predicate:replacement_subject_is_mine",
@@ -4338,13 +4358,19 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_digivolve_onto",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:can_play_from_effect_without_cost",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:level_gte",
     "predicate:name_contains",
     "predicate:none_of",
+    "predicate:owner",
     "predicate:replacement_cause",
     "predicate:replacement_subject_is_mine",
     "predicate:trait_has",
+    "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
    ],
@@ -4374,6 +4400,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:equals",
@@ -4456,6 +4483,7 @@
     "predicate:any_permanent",
     "predicate:color_is",
     "predicate:count_gte",
+    "predicate:dna_trash_candidate",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
@@ -4840,6 +4868,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:count_gte",
+    "predicate:dna_trash_candidate",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
@@ -5997,7 +6026,9 @@
     "verb:play_union_bound_free",
     "verb:select_trash",
     "verb:select_union_zone",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:kind",
     "predicate:name_contains",
     "predicate:play_cost_eq_binding",
@@ -6084,6 +6115,7 @@
     "verb:select_hand",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -6583,14 +6615,18 @@
     "verb:add_dp_modifier",
     "verb:de_digivolve",
     "verb:effect_initiated_dna_digivolve",
+    "verb:if",
     "verb:may_attack_now",
     "verb:redirect_attack_target",
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "verb:select_own_permanent",
     "predicate:all_of",
+    "predicate:binding_present",
     "predicate:color_is",
     "predicate:count_gte",
+    "predicate:dna_field_pair",
+    "predicate:effect_digivolved_any_digimon",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
@@ -7069,6 +7105,7 @@
     "predicate:event_target_kind",
     "predicate:kind",
     "predicate:name_is",
+    "predicate:this_card_can_digivolve_onto",
     "timing:end_of_opponents_turn",
     "timing:end_of_your_turn",
     "timing:on_ally_played",
@@ -7134,6 +7171,7 @@
     "verb:suspend",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
@@ -7173,8 +7211,10 @@
     "verb:select_dna_pair",
     "verb:select_hand",
     "verb:select_union_zone",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:in_text_contains",
     "predicate:kind",
     "predicate:name_contains",
@@ -7243,20 +7283,16 @@
     "verb:add_to_hand_from_reveal",
     "verb:cancel_replacement",
     "verb:delete_permanent",
-    "verb:if",
     "verb:place_remainder_on_deck",
     "verb:place_self_as_delay_option",
-    "verb:play_from_hand_free",
-    "verb:play_from_trash_free",
+    "verb:play_union_bound_free",
     "verb:reveal_top_deck",
-    "verb:select_effect_choice",
-    "verb:select_hand",
     "verb:select_reveal_buckets",
-    "verb:select_trash",
+    "verb:select_union_zone",
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
-    "predicate:equals",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:kind",
     "predicate:name_contains",
     "predicate:name_is",
@@ -7322,6 +7358,8 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:trait_has",
     "predicate:your_turn",
@@ -7437,6 +7475,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_lte",
     "predicate:kind",
@@ -7494,6 +7533,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:card_number_is",
     "predicate:color_is",
     "predicate:equals",
@@ -7544,11 +7584,13 @@
     "verb:gain_memory",
     "verb:play_from_hand_free",
     "verb:select_hand",
+    "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_lte",
     "predicate:kind",
     "predicate:level_eq",
-    "predicate:name_contains",
+    "predicate:name_is",
     "predicate:owner",
     "predicate:your_turn",
     "predicate:zone",
@@ -7596,9 +7638,11 @@
     "verb:select_hand",
     "verb:select_own_permanent",
     "verb:select_trash",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_exists",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:equals",
     "predicate:kind",
@@ -7678,6 +7722,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:dp_lte",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
@@ -8261,6 +8306,8 @@
     "verb:select_trash",
     "verb:select_union_zone",
     "verb:use_option_bound",
+    "predicate:all_of",
+    "predicate:can_play_or_use_from_effect",
     "predicate:count_gte",
     "predicate:in_text_contains",
     "predicate:kind",
@@ -8565,6 +8612,8 @@
     "predicate:any_of",
     "predicate:binding_present",
     "predicate:can_digivolve_onto",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:has_digivolve_candidate",
     "predicate:kind",
@@ -8719,6 +8768,7 @@
     "predicate:any_permanent",
     "predicate:binding_present",
     "predicate:can_digivolve_onto",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_target_has_inherited",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
@@ -8750,11 +8800,16 @@
     "verb:select_hand",
     "verb:select_own_permanent",
     "verb:select_union_zone",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
+    "predicate:any_of",
+    "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:kind",
-    "predicate:materials_count_gte",
+    "predicate:owner",
     "predicate:play_cost_lte",
     "predicate:trait_has",
+    "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
    ],
@@ -8857,6 +8912,7 @@
     "verb:trash_top_security",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:effect_deleted_any_opponent_digimon",
     "predicate:event_target_name_contains",
     "predicate:event_target_owner",
@@ -8914,6 +8970,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:is_unsuspended",
     "predicate:kind",
@@ -9050,6 +9107,7 @@
     "predicate:name_is",
     "predicate:owner",
     "predicate:source_name_contains",
+    "predicate:this_card_can_digivolve_onto",
     "predicate:trait_has",
     "predicate:zone",
     "timing:main_from_hand",
@@ -9165,6 +9223,7 @@
     "verb:suspend_and_cancel_all_matching_leaves",
     "predicate:binding_present",
     "predicate:can_change_orientation",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_lte",
     "predicate:in_text_contains",
@@ -9236,6 +9295,7 @@
     "verb:select_opponent_permanent",
     "verb:unsuspend",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:equals",
     "predicate:kind",
@@ -9278,6 +9338,7 @@
     "predicate:name_is",
     "predicate:owner",
     "predicate:source_name_contains",
+    "predicate:this_card_can_digivolve_onto",
     "predicate:trait_has",
     "predicate:zone",
     "timing:main_from_hand",
@@ -9325,6 +9386,7 @@
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -9457,6 +9519,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:equals",
@@ -9491,6 +9554,7 @@
     "verb:play_from_hand_free",
     "verb:select_hand",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:kind",
@@ -9524,12 +9588,15 @@
     "verb:play_from_security",
     "verb:select_hand",
     "verb:set_memory",
+    "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_lte",
     "predicate:kind",
     "predicate:memory_lte",
     "predicate:name_contains",
+    "predicate:name_is",
     "predicate:owner",
     "predicate:zone",
     "timing:on_play",
@@ -9594,6 +9661,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
@@ -9625,10 +9693,11 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:count_gte",
     "predicate:kind",
-    "predicate:name_contains",
+    "predicate:name_is",
     "predicate:owner",
     "predicate:play_cost_gte",
     "predicate:trait_has",
@@ -9685,6 +9754,7 @@
     "verb:select_union_zone",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_card_name_contains",
     "predicate:event_target_owner",
     "predicate:kind",
@@ -9781,8 +9851,10 @@
     "verb:place_top_source_as_bottom",
     "verb:play_from_hand",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -9814,6 +9886,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dp_gte",
     "predicate:equals",
@@ -9874,8 +9947,10 @@
     "verb:place_top_source_as_bottom",
     "verb:play_from_hand",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -10026,6 +10101,7 @@
     "verb:schedule_delete_played_at_turn_end",
     "verb:select_hand",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:cost_target",
     "predicate:kind",
@@ -10432,6 +10508,7 @@
     "verb:select_opponent_permanent",
     "verb:select_own_permanent",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:kind",
     "predicate:level_eq",
@@ -10468,13 +10545,16 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:equals",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:level_lte",
     "predicate:name_is",
+    "predicate:owner",
     "predicate:trait_has",
+    "predicate:zone",
     "timing:on_lose_security",
     "timing:when_digivolving",
     "keyword:Barrier"
@@ -10518,6 +10598,7 @@
     "verb:select_hand",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:kind",
     "predicate:trait_has",
     "predicate:your_turn",
@@ -10799,11 +10880,11 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:dp_lte",
     "predicate:kind",
     "predicate:level_eq",
-    "predicate:name_contains",
     "predicate:name_is",
     "predicate:owner",
     "predicate:trait_has",
@@ -11010,8 +11091,10 @@
    "constructs": [
     "verb:play_from_hand",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -11172,6 +11255,7 @@
     "verb:play_from_hand_free",
     "verb:select_hand",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:event_permanent_is_source",
     "predicate:kind",
@@ -11332,6 +11416,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -11691,6 +11776,7 @@
     "verb:select_hand",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_lte",
     "predicate:kind",
@@ -11882,10 +11968,11 @@
     "verb:suspend",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
     "predicate:kind",
-    "predicate:name_contains",
+    "predicate:name_is",
     "predicate:no_permanent",
     "predicate:owner",
     "predicate:your_turn",
@@ -11915,6 +12002,7 @@
     "verb:select_reveal_buckets",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:dp_lte",
     "predicate:kind",
     "predicate:memory_lte",
@@ -12067,6 +12155,8 @@
     "verb:select_union_zone",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_card_name_contains",
     "predicate:event_target_owner",
     "predicate:kind",
@@ -12094,10 +12184,12 @@
     "verb:play_union_bound_free",
     "verb:select_hand",
     "verb:select_union_zone",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:color_is",
     "predicate:face_up_security_count_lte",
@@ -12161,7 +12253,9 @@
     "verb:play_union_bound_free",
     "verb:recover",
     "verb:select_union_zone",
+    "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:name_is",
     "timing:main_from_hand",
     "timing:on_security"
@@ -12183,10 +12277,12 @@
     "verb:play_union_bound_free",
     "verb:select_hand",
     "verb:select_union_zone",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:color_is",
     "predicate:face_up_security_count_lte",
@@ -12277,6 +12373,7 @@
     "verb:trash_from_hand_by_index",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_card_trait_has",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
@@ -12465,13 +12562,10 @@
     "verb:if",
     "verb:select_hand",
     "verb:trash_top_security",
-    "predicate:all_of",
     "predicate:binding_present",
-    "predicate:count_gte",
-    "predicate:owner",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:security_count_gte",
     "predicate:trait_has",
-    "predicate:zone",
     "timing:when_attacking"
    ],
    "effect_clause_count": 1,
@@ -12716,6 +12810,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
     "predicate:event_card_color_has",
     "predicate:event_target_kind",
@@ -12845,13 +12940,14 @@
     "verb:trash_from_hand_by_index",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:event_card_color_has",
     "predicate:event_target_owner",
     "predicate:kind",
     "predicate:level_eq",
-    "predicate:name_contains",
+    "predicate:name_is",
     "predicate:trait_has",
     "predicate:your_turn",
     "timing:on_digivolve",
@@ -13024,6 +13120,8 @@
     "verb:draw",
     "verb:play_from_hand_free",
     "verb:select_hand",
+    "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_lte",
     "predicate:kind",
     "predicate:level_eq",
@@ -13367,6 +13465,7 @@
     "verb:select_hand",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -13528,9 +13627,11 @@
     "verb:select_effect_choice",
     "verb:select_hand",
     "verb:select_own_permanent",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:equals",
     "predicate:is_suspended",
@@ -13575,6 +13676,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:equals",
     "predicate:kind",
@@ -13606,7 +13708,9 @@
     "verb:select_hand",
     "verb:trash_bottom_face_down_source_under_tamer",
     "verb:unsuspend",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
+    "predicate:can_play_or_use_from_effect",
     "predicate:equals",
     "predicate:level_eq",
     "predicate:security_count_gte",
@@ -13641,6 +13745,7 @@
     "verb:trash_top_security",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:equals",
     "predicate:kind",
     "predicate:level_eq",
@@ -13722,6 +13827,7 @@
     "predicate:any_permanent",
     "predicate:binding_absent",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:kind",
@@ -13927,7 +14033,9 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
+    "predicate:count_gte",
     "predicate:count_lte",
     "predicate:kind",
     "predicate:level_eq",
@@ -14036,6 +14144,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:dp_lte",
     "predicate:event_target_is_source",
@@ -14044,6 +14153,7 @@
     "predicate:level_eq",
     "predicate:opponents_turn",
     "predicate:owner",
+    "predicate:trait_contains",
     "predicate:trait_has",
     "predicate:zone",
     "timing:on_opponent_attack",
@@ -14377,6 +14487,7 @@
     "verb:select_hand",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
     "predicate:event_card_trait_has",
     "predicate:event_target_kind",
@@ -14539,6 +14650,7 @@
     "verb:select_hand",
     "verb:trash_link_card_of_own_digimon",
     "predicate:all_of",
+    "predicate:can_play_or_use_from_effect",
     "predicate:level_eq",
     "predicate:play_or_use_cost_lte",
     "predicate:trait_has",
@@ -14601,6 +14713,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:event_is_effect_initiated",
@@ -14729,6 +14842,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_exists",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:count_lte",
     "predicate:effect_text_contains",
@@ -14841,6 +14955,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_absent",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:in_text_contains",
@@ -14991,14 +15106,11 @@
     "verb:set_memory",
     "verb:suspend",
     "verb:trash_bottom_face_down_source_under_tamer",
-    "predicate:all_of",
     "predicate:all_turns",
     "predicate:equals",
     "predicate:event_target_kind",
-    "predicate:kind",
     "predicate:memory_lte",
     "predicate:source_is_unsuspended",
-    "predicate:trait_has",
     "predicate:your_turn",
     "timing:on_security",
     "timing:on_suspend",
@@ -15128,10 +15240,12 @@
     "verb:play_union_bound_free",
     "verb:select_hand",
     "verb:select_union_zone",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:color_is",
     "predicate:face_up_security_count_lte",
@@ -15163,10 +15277,12 @@
     "verb:play_union_bound_free",
     "verb:select_hand",
     "verb:select_union_zone",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:color_is",
     "predicate:face_up_security_count_lte",
@@ -15204,6 +15320,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:name_is",
     "predicate:owner",
@@ -15228,10 +15345,12 @@
     "verb:play_union_bound_free",
     "verb:select_hand",
     "verb:select_union_zone",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:face_up_security_count_lte",
     "predicate:kind",
@@ -15266,8 +15385,11 @@
     "verb:select_hand",
     "verb:select_reveal",
     "verb:trash_from_reveal",
+    "predicate:affordable_with_cost",
+    "predicate:all_of",
     "predicate:any_field_permanent",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:kind",
     "predicate:owner",
@@ -15292,10 +15414,12 @@
     "verb:play_union_bound_free",
     "verb:select_hand",
     "verb:select_union_zone",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:color_is",
     "predicate:face_up_security_count_lte",
@@ -15388,10 +15512,12 @@
     "verb:play_union_bound_free",
     "verb:select_hand",
     "verb:select_union_zone",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:color_is",
     "predicate:face_up_security_count_lte",
@@ -15462,6 +15588,7 @@
     "predicate:all_of",
     "predicate:any_field_permanent",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_is",
@@ -15725,8 +15852,10 @@
     "verb:play_or_use_from_hand",
     "verb:select_hand",
     "verb:select_opponent_permanent",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_play_or_use_from_effect",
     "predicate:count_gte",
     "predicate:kind",
     "predicate:level_eq",
@@ -15787,6 +15916,7 @@
     "verb:select_trash",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:dp_lte",
     "predicate:kind",
     "predicate:level_eq",
@@ -15998,9 +16128,11 @@
     "verb:play_from_hand",
     "verb:recover",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_field_permanent",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -16064,8 +16196,10 @@
     "verb:trash_bottom_face_down_source_under_tamer",
     "verb:trash_top_security",
     "verb:use_option_bound",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_or_use_from_effect",
     "predicate:equals",
     "predicate:face_down_sources_under_tamers_gte",
     "predicate:kind",
@@ -16212,10 +16346,12 @@
     "verb:select_count_capped_multi",
     "verb:select_hand",
     "verb:suspend",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_field_permanent",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_or_use_from_effect",
     "predicate:is_suspended",
     "predicate:is_unsuspended",
     "predicate:kind",
@@ -16249,9 +16385,11 @@
     "verb:recover",
     "verb:security_place_top_card",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_field_permanent",
     "predicate:any_of",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -16459,6 +16597,7 @@
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:count_lte",
     "predicate:kind",
@@ -16594,6 +16733,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:count_lte",
     "predicate:kind",
@@ -16668,6 +16808,7 @@
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_or_use_from_effect",
     "predicate:count_gte",
     "predicate:event_host_is_own_tamer",
     "predicate:event_target_kind",
@@ -17300,6 +17441,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:effect_deleted_any_own_digimon",
@@ -17571,6 +17713,7 @@
     "predicate:all_of",
     "predicate:any_field_permanent",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:kind",
     "predicate:level_eq",
@@ -17880,9 +18023,12 @@
     "verb:play_from_security",
     "verb:select_hand",
     "verb:use_option_bound",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
+    "predicate:can_play_or_use_from_effect",
     "predicate:kind",
     "predicate:memory_lte",
+    "predicate:owner",
     "predicate:source_is_unsuspended",
     "predicate:trait_has",
     "timing:end_of_your_turn",
@@ -18087,8 +18233,10 @@
     "verb:return_to_deck",
     "verb:select_union_zone",
     "verb:set_memory",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:in_text_contains",
     "predicate:kind",
     "predicate:memory_lte",
@@ -18121,6 +18269,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:kind",
     "predicate:name_contains",
@@ -18156,6 +18305,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:face_down_sources_under_tamers_gte",
     "predicate:kind",
@@ -18184,6 +18334,7 @@
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:face_up_security_count_lte",
     "predicate:kind",
@@ -18221,6 +18372,7 @@
     "predicate:any_field_permanent",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:dp_lte",
     "predicate:equals",
@@ -18258,6 +18410,7 @@
     "predicate:any_field_permanent",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:kind",
     "predicate:name_is",
     "predicate:owner",
@@ -18774,6 +18927,7 @@
     "verb:suspend",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:cost_target_from_hand",
     "predicate:kind",
     "predicate:name_contains",
@@ -19643,6 +19797,7 @@
     "verb:select_opponent_permanent",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:kind",
@@ -20505,6 +20660,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:event_target_owner",
     "predicate:host_permanent_trait_has",
@@ -20539,6 +20695,7 @@
     "verb:select_union_zone",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_matches_returned_card",
     "predicate:kind",
     "predicate:level_lte",
@@ -20571,11 +20728,14 @@
     "verb:select_trash",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:equals",
     "predicate:event_card_name_contains",
     "predicate:event_target_owner",
     "predicate:kind",
     "predicate:name_is",
+    "predicate:owner",
     "predicate:trait_has",
     "predicate:your_turn",
     "predicate:zone",
@@ -20746,6 +20906,7 @@
     "verb:play_from_hand_free",
     "verb:select_hand",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_lte",
     "predicate:kind",
@@ -20821,6 +20982,7 @@
     "predicate:all_turns",
     "predicate:any_field_permanent",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:event_permanent_is_source",
@@ -20887,15 +21049,16 @@
     "verb:select_own_permanent",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:event_cause",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
+    "predicate:name_is",
     "predicate:not",
     "predicate:opponents_turn",
     "predicate:other",
-    "predicate:trait_has",
     "timing:on_deletion",
     "timing:on_opponent_attack"
    ],
@@ -20918,11 +21081,12 @@
     "verb:select_own_permanent",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_lte",
     "predicate:kind",
     "predicate:level_eq",
-    "predicate:name_contains",
+    "predicate:name_is",
     "predicate:opponents_turn",
     "predicate:other",
     "predicate:owner",
@@ -20951,6 +21115,7 @@
     "verb:substitute_replacement",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:is_source",
@@ -21037,6 +21202,7 @@
     "verb:select_opponent_permanent",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:equals",
     "predicate:kind",
@@ -21199,6 +21365,7 @@
     "verb:select_own_permanent",
     "verb:select_union_zone",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:kind",
     "predicate:name_is",
@@ -21261,6 +21428,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
@@ -21326,6 +21494,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:equals",
     "predicate:event_cause",
     "predicate:event_target_kind",
@@ -21359,6 +21528,7 @@
     "verb:select_hand",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
@@ -21504,8 +21674,10 @@
     "verb:reveal_top_deck",
     "verb:select_hand",
     "verb:select_reveal_buckets",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:name_is",
     "predicate:play_cost_gte",
     "predicate:trait_has",
@@ -21567,6 +21739,7 @@
     "verb:select_hand",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:event_target_is_source",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
@@ -21780,7 +21953,10 @@
    "constructs": [
     "verb:play_or_use_from_hand",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
+    "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:in_text_contains",
@@ -22328,6 +22504,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:binding_absent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:equals",
     "predicate:event_target_kind",
@@ -22561,6 +22738,9 @@
    "constructs": [
     "verb:play_or_use_from_hand",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
+    "predicate:all_of",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:level_eq",
@@ -22592,6 +22772,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:kind",
@@ -22629,8 +22810,10 @@
     "verb:recover",
     "verb:select_hand",
     "verb:select_opponent_permanent",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:in_text_contains",
     "predicate:kind",
@@ -22662,6 +22845,7 @@
     "verb:select_opponent_permanent",
     "predicate:all_of",
     "predicate:can_digivolve_onto_with_cost",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:kind",
@@ -22698,6 +22882,7 @@
     "verb:select_trash",
     "predicate:all_of",
     "predicate:binding_count_eq",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -22946,8 +23131,11 @@
     "verb:select_hand",
     "verb:set_memory",
     "verb:use_option_bound",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:can_play_or_use_from_effect",
     "predicate:count_gte",
     "predicate:equals",
     "predicate:event_target_in_text_contains",
@@ -22984,9 +23172,11 @@
     "verb:play_from_hand",
     "verb:play_from_hand_free",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_field_permanent",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:count_gte",
     "predicate:event_target_level_gte",
@@ -23025,6 +23215,7 @@
     "predicate:any_field_permanent",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:kind",
     "predicate:level_gte",
     "predicate:owner",
@@ -23062,9 +23253,11 @@
     "predicate:binding_present",
     "predicate:event_card_trait_has",
     "predicate:event_target_owner",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:owner",
     "predicate:trait_has",
+    "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
    ],
@@ -23114,10 +23307,12 @@
     "verb:play_union_bound_free",
     "verb:select_hand",
     "verb:select_union_zone",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_field_permanent",
     "predicate:any_of",
     "predicate:can_digivolve_onto_with_cost",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
     "predicate:kind",
@@ -23247,6 +23442,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:event_target_color_any_of",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
@@ -23294,6 +23490,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:count_gte",
     "predicate:kind",
     "predicate:name_contains",
@@ -23342,8 +23539,11 @@
     "verb:play_or_use_from_hand",
     "verb:refund_opt",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
+    "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_or_use_from_effect",
     "predicate:in_text_contains",
     "timing:when_attacking"
    ],
@@ -23494,6 +23694,7 @@
     "verb:select_hand",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_lte",
     "predicate:in_text_contains",
@@ -23522,8 +23723,10 @@
     "verb:play_or_use_from_hand",
     "verb:refund_opt",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:binding_present",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:in_text_contains",
     "predicate:level_eq",
@@ -23552,6 +23755,7 @@
     "verb:trash_top_security",
     "predicate:all_of",
     "predicate:all_turns",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dp_lte",
     "predicate:effect_deleted_any_opponent_digimon",
@@ -23593,6 +23797,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_absent",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:equals",
@@ -23779,8 +23984,10 @@
     "verb:play_from_hand",
     "verb:refund_opt",
     "verb:select_hand",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:binding_absent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:in_text_contains",
@@ -23888,6 +24095,7 @@
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:binding_absent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:event_permanent_is_source",
@@ -24192,6 +24400,8 @@
     "verb:play_union_bound_free",
     "verb:select_union_zone",
     "verb:trash_top_security",
+    "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:level_eq",
     "predicate:name_is",
@@ -24385,6 +24595,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_count_eq",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:equals",
@@ -24604,6 +24815,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -24637,15 +24849,18 @@
     "verb:select_own_permanent",
     "verb:suspend",
     "verb:unsuspend",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:is_suspended",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_is",
     "predicate:none_of",
+    "predicate:owner",
     "predicate:replacement_cause",
     "predicate:replacement_subject_is_mine",
     "predicate:trait_has",
@@ -24724,6 +24939,7 @@
     "predicate:any_of",
     "predicate:binding_absent",
     "predicate:binding_card_kind",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:dna_origin",
     "predicate:event_winner_is_source",
@@ -25120,6 +25336,7 @@
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:binding_present",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:event_target_in_text_contains",
     "predicate:event_target_kind",
@@ -25199,6 +25416,7 @@
     "predicate:any_of",
     "predicate:binding_present",
     "predicate:can_attack",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
@@ -25239,6 +25457,7 @@
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:binding_absent",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:equals",
@@ -25355,6 +25574,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_card_kind",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:event_target_is_source",
     "predicate:event_target_kind",
@@ -25363,7 +25583,6 @@
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_is",
-    "predicate:none_of",
     "predicate:owner",
     "predicate:play_or_use_cost_lte",
     "predicate:security_count_lte",
@@ -25394,6 +25613,7 @@
     "verb:select_union_zone",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:in_text_contains",
     "predicate:kind",
     "predicate:level_eq",
@@ -25430,6 +25650,7 @@
     "verb:select_union_zone",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:in_text_contains",
     "predicate:kind",
     "predicate:level_eq",
@@ -25465,6 +25686,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:count_lte",
     "predicate:event_target_name_contains",
@@ -25498,6 +25720,7 @@
     "verb:select_hand",
     "verb:select_trash",
     "verb:set_memory",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_lte",
     "predicate:kind",
     "predicate:memory_lte",
@@ -25605,6 +25828,7 @@
     "verb:trash_bottom_face_down_sources_under_tamers",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:equals",
@@ -25638,8 +25862,10 @@
     "verb:select_hand",
     "verb:trash_from_hand_by_index",
     "verb:use_option_bound",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_or_use_from_effect",
     "predicate:count_gte",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
@@ -25950,6 +26176,7 @@
     "predicate:all_of",
     "predicate:attribute_is",
     "predicate:color_is",
+    "predicate:dna_field_pair",
     "predicate:equals",
     "predicate:kind",
     "predicate:level_eq",
@@ -26217,6 +26444,7 @@
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "predicate:all_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
     "predicate:dna_origin",
     "predicate:kind",
@@ -26281,6 +26509,7 @@
     "verb:suspend",
     "verb:unsuspend",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:dna_origin",
     "predicate:dp_lte",
@@ -26517,6 +26746,7 @@
     "verb:suspend",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_lte",
     "predicate:equals",
     "predicate:event_card_name_contains",
@@ -26524,7 +26754,7 @@
     "predicate:event_target_name_contains",
     "predicate:event_target_owner",
     "predicate:kind",
-    "predicate:name_contains",
+    "predicate:name_is",
     "predicate:owner",
     "predicate:your_turn",
     "predicate:zone",
@@ -27271,11 +27501,12 @@
    "constructs": [
     "verb:play_from_hand_free",
     "verb:select_hand",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_lte",
     "predicate:kind",
     "predicate:level_eq",
-    "predicate:name_contains",
+    "predicate:name_is",
     "predicate:owner",
     "predicate:your_turn",
     "predicate:zone",
@@ -27323,6 +27554,7 @@
     "verb:select_own_permanent",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:is_source",
     "predicate:kind",
@@ -27751,7 +27983,10 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:owner",
     "predicate:play_cost_lte",
@@ -27908,6 +28143,7 @@
     "verb:unsuspend",
     "predicate:all_of",
     "predicate:binding_owner",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -28048,6 +28284,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_lte",
     "predicate:event_target_owner",
@@ -28894,11 +29131,14 @@
     "verb:select_trash",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
     "predicate:dp_lte",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:no_permanent",
     "predicate:owner",
+    "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
    ],
@@ -28955,11 +29195,14 @@
     "verb:select_trash",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
     "predicate:dp_lte",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:no_permanent",
     "predicate:owner",
+    "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
    ],
@@ -28984,8 +29227,10 @@
     "verb:select_trash",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
     "predicate:dp_lte",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:not",
     "predicate:owner",
@@ -29245,8 +29490,10 @@
     "verb:select_reveal",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:card_number_is",
     "predicate:color_is",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:no_permanent",
     "predicate:owner",
@@ -29307,8 +29554,10 @@
     "verb:select_reveal",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:card_number_is",
     "predicate:color_is",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:no_permanent",
     "predicate:owner",
@@ -29683,8 +29932,11 @@
     "verb:select_own_permanent",
     "verb:select_reveal",
     "predicate:all_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
+    "predicate:owner",
     "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
@@ -29708,8 +29960,13 @@
     "verb:select_hand",
     "verb:select_own_permanent",
     "verb:select_reveal",
+    "predicate:all_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
+    "predicate:owner",
+    "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
    ],
@@ -29732,8 +29989,13 @@
     "verb:select_hand",
     "verb:select_own_permanent",
     "verb:select_reveal",
+    "predicate:all_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
+    "predicate:owner",
+    "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
    ],
@@ -29757,8 +30019,11 @@
     "verb:select_own_permanent",
     "verb:select_reveal",
     "predicate:all_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
+    "predicate:owner",
     "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
@@ -29782,8 +30047,13 @@
     "verb:select_hand",
     "verb:select_own_permanent",
     "verb:select_reveal",
+    "predicate:all_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
+    "predicate:owner",
+    "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
    ],
@@ -29809,8 +30079,12 @@
     "verb:select_reveal_buckets",
     "predicate:all_of",
     "predicate:binding_exists",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:color_is",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
+    "predicate:owner",
+    "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
    ],
@@ -29912,7 +30186,9 @@
     "verb:select_hand",
     "verb:select_own_permanent",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:equals",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:name_is",
     "predicate:owner",
@@ -29989,6 +30265,7 @@
     "verb:play_from_security",
     "verb:select_hand",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
     "predicate:kind",
@@ -30065,6 +30342,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:kind",
     "predicate:owner",
@@ -30126,13 +30404,15 @@
     "verb:add_this_option_to_hand",
     "verb:if",
     "verb:play_from_hand_free",
-    "verb:play_from_trash_free",
+    "verb:play_union_bound_free",
     "verb:select_any_permanent",
     "verb:select_effect_choice",
     "verb:select_hand",
-    "verb:select_trash",
+    "verb:select_union_zone",
+    "predicate:all_of",
     "predicate:any_field_permanent",
     "predicate:any_permanent",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_matches_binding",
     "predicate:count_gte",
     "predicate:equals",
@@ -30280,6 +30560,7 @@
     "verb:select_count_capped_multi",
     "verb:select_union_zone",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:in_text_contains",
@@ -30422,6 +30703,9 @@
     "verb:play_union_bound_free",
     "verb:select_union_zone",
     "predicate:all_of",
+    "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
+    "predicate:kind",
     "predicate:level_eq",
     "predicate:play_cost_lte",
     "predicate:trait_has",
@@ -30453,6 +30737,7 @@
     "verb:trash_from_hand_by_index",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_gte",
     "predicate:kind",
     "predicate:name_is",
@@ -30678,9 +30963,11 @@
     "verb:select_hand",
     "verb:select_reveal",
     "verb:select_trash",
+    "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:color_matches_any_field_digimon",
     "predicate:count_gte",
@@ -30710,6 +30997,7 @@
     "verb:select_trash",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -30999,6 +31287,7 @@
     "verb:select_own_permanent",
     "verb:select_reveal_buckets",
     "predicate:all_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:event_card_name_contains",
     "predicate:event_target_owner",
     "predicate:kind",
@@ -31029,6 +31318,7 @@
     "verb:select_own_permanent",
     "verb:select_reveal_buckets",
     "predicate:all_of",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:event_card_name_contains",
     "predicate:event_target_owner",
     "predicate:kind",
@@ -31115,6 +31405,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:in_text_contains",
@@ -31183,6 +31474,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:can_digivolve_onto",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:event_added_card_any",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
@@ -31283,16 +31575,15 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
-    "predicate:card_number_is",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:count_lte",
-    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_is",
     "predicate:owner",
     "predicate:play_cost_lte",
+    "predicate:this_card_can_digivolve_onto",
     "predicate:trait_has",
     "predicate:zone",
     "timing:end_of_your_turn",
@@ -31958,6 +32249,7 @@
     "verb:select_union_zone",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -31981,6 +32273,7 @@
     "verb:play_from_hand_free",
     "verb:select_hand",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -32574,6 +32867,7 @@
     "verb:play_from_hand_free",
     "verb:select_hand",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_lte",
     "predicate:kind",
@@ -32745,6 +33039,7 @@
     "predicate:all_of",
     "predicate:any_field_permanent",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:kind",
     "predicate:level_gte",
     "predicate:level_lte",
@@ -32773,6 +33068,8 @@
     "verb:place_on_security",
     "verb:play_from_hand_free",
     "verb:select_hand",
+    "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:card_number_is",
     "predicate:kind",
     "predicate:level_gte",
@@ -32900,6 +33197,7 @@
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
     "predicate:count_lte",
     "predicate:kind",
@@ -33291,7 +33589,7 @@
     "predicate:all_of",
     "predicate:any_permanent",
     "predicate:binding_present",
-    "predicate:count_gte",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:has_face_down_source",
     "predicate:kind",
     "predicate:owner",
@@ -33365,6 +33663,9 @@
     "verb:select_opponent_permanent",
     "verb:trash_bottom_face_down_source_under_tamer",
     "verb:unsuspend",
+    "predicate:affordable_with_cost",
+    "predicate:all_of",
+    "predicate:can_play_or_use_from_effect",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:source_permanent_trait_has",
@@ -33458,6 +33759,7 @@
     "verb:play_from_hand_free",
     "verb:select_hand",
     "predicate:all_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_lte",
     "predicate:kind",
     "predicate:level_eq",
@@ -33485,6 +33787,9 @@
     "verb:select_hand",
     "verb:trash_bottom_face_down_source_under_tamer",
     "verb:unsuspend",
+    "predicate:affordable_with_cost",
+    "predicate:all_of",
+    "predicate:can_play_or_use_from_effect",
     "predicate:level_eq",
     "predicate:source_permanent_trait_has",
     "predicate:trait_has",
@@ -33692,6 +33997,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:kind",
     "predicate:owner",
     "predicate:play_cost_lte",
@@ -33719,6 +34025,7 @@
     "predicate:all_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:count_gte",
     "predicate:has_face_down_source",
     "predicate:kind",
@@ -33837,6 +34144,7 @@
     "verb:select_hand",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:count_lte",
     "predicate:kind",
     "predicate:level_eq",
@@ -33863,6 +34171,7 @@
     "verb:cancel_replacement",
     "verb:if",
     "verb:play_or_use_from_hand",
+    "verb:select_effect_choice",
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "verb:trash_bottom_face_down_source_under_tamer",
@@ -33870,19 +34179,18 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
-    "predicate:count_gte",
+    "predicate:can_play_or_use_from_effect",
+    "predicate:equals",
     "predicate:face_down_sources_under_tamers_gte",
     "predicate:is_source",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
-    "predicate:owner",
     "predicate:play_or_use_cost_lte",
     "predicate:replacement_subject_is_mine",
     "predicate:source_name_contains",
     "predicate:source_permanent_trait_has",
     "predicate:trait_has",
-    "predicate:zone",
     "timing:on_play",
     "timing:when_attacking",
     "timing:when_digivolving"
@@ -33913,6 +34221,7 @@
     "predicate:any_field_permanent",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:dp_lte",
     "predicate:kind",
     "predicate:level_eq",
@@ -34164,6 +34473,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
     "predicate:kind",
     "predicate:owner",
     "predicate:play_cost_lte",
@@ -38045,6 +38355,12 @@
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_rejects_conflicting_cost_host_flags": [
      "yaml_key"
     ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour": [
+     "yaml_key"
+    ],
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_decline_preserves_hand_and_memory": [
      "yaml_key"
     ],
@@ -38111,7 +38427,13 @@
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance": [
      "yaml_key"
     ],
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures": [
@@ -38215,6 +38537,18 @@
     ],
     "dsl::constructs/tamer_color_predicates.rs::distinct_colors_gte_counts_only_permanents_matching_the_filter": [
      "variant"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
+     "yaml_key"
     ],
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound": [
      "yaml_key"
@@ -38808,6 +39142,8 @@
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_preserves_hand_origin_for_effect_routes",
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_reads_actual_base_for_both_seats",
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_rejects_conflicting_cost_host_flags",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_decline_preserves_hand_and_memory",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_mask_inherited_text_and_payable_reduced_cost",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_paid_choice_and_zero_floor_use_real_payment",
@@ -38830,7 +39166,9 @@
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_hand_mask_accepts_both_kinds_and_distinct_physical_duplicates_for_both_owners",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_prohibitions_discriminate_digimon_and_tamer_for_both_owners",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance",
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures",
     "dsl::constructs/plural_security_prevention.rs::empty_security_cannot_offer_atomic_payment_even_without_authored_security_guard",
     "dsl::constructs/plural_security_prevention.rs::no_matching_departure_never_offers_or_pays_plural_prevention",
@@ -38865,6 +39203,10 @@
     "dsl::constructs/tamer_color_predicates.rs::distinct_colors_gte_compiles_from_yaml",
     "dsl::constructs/tamer_color_predicates.rs::distinct_colors_gte_counts_gained_colours",
     "dsl::constructs/tamer_color_predicates.rs::distinct_colors_gte_counts_only_permanents_matching_the_filter",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template",
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound",
     "dsl::constructs/zone_moves.rs::count_below_minimum_and_optional_zero_do_not_move_cards",
     "dsl::constructs/zone_moves.rs::count_top_return_keeps_first_pick_topmost",
@@ -39673,6 +40015,18 @@
     "dsl::constructs/security_stack.rs::owner_can_add_security_true_without_restrictions": [
      "yaml_key"
     ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
+     "yaml_key"
+    ],
     "dsl::name_standardization.rs::permanent_effective_name_and_deleted_snapshot_apply_exclusions": [
      "yaml_key"
     ],
@@ -39724,6 +40078,10 @@
     "dsl::constructs/security_stack.rs::owner_can_add_security_ignores_the_acting_player",
     "dsl::constructs/security_stack.rs::owner_can_add_security_reads_the_top_cards_owner_not_the_controller",
     "dsl::constructs/security_stack.rs::owner_can_add_security_true_without_restrictions",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template",
     "dsl::name_standardization.rs::permanent_effective_name_and_deleted_snapshot_apply_exclusions",
     "dsl::option_source_use_cluster.rs::dsl_use_option_from_revealed_mid_body_park_resolves_before_outer_tail",
     "dsl::parse_declarative.rs::parse_cost_reduction_static",
@@ -40106,7 +40464,7 @@
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
      "yaml_key"
     ],
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
@@ -40284,7 +40642,7 @@
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies",
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
@@ -40541,6 +40899,12 @@
     "dsl::constructs/meta_effect_affordability.rs::selected_host_identity_survives_compaction_and_a_removed_host_never_retargets": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/plural_security_prevention.rs::plural_security_permits_subject_source_global_and_literal_predicates": [
      "yaml_key"
     ],
@@ -40631,6 +40995,8 @@
     "dsl::constructs/meta_effect_affordability.rs::one_payable_route_keeps_candidate_but_does_not_offer_an_unpayable_route",
     "dsl::constructs/meta_effect_affordability.rs::optional_reducer_is_probed_without_spending_and_remains_an_explicit_choice",
     "dsl::constructs/meta_effect_affordability.rs::selected_host_identity_survives_compaction_and_a_removed_host_never_retargets",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment",
     "dsl::constructs/plural_security_prevention.rs::plural_security_permits_subject_source_global_and_literal_predicates",
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_declared_local_binding_dependencies",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_composite_filter_rejects_wrong_trait_kind_and_route",
@@ -40653,6 +41019,19 @@
     "rules_conformance::ch15_08_effect_categories.rs::processing_condition_is_still_read_at_activation",
     "rules_conformance::ch15_08_effect_categories.rs::trigger_reference_tied_to_condition_uses_trigger_time_state"
    ]
+  },
+  "predicate:can_digivolve_onto_ignoring_level": {
+   "kind": "predicate",
+   "name": "can_digivolve_onto_ignoring_level",
+   "near_miss_files": [
+    "src/dsl_cards/predicate.rs",
+    "tests/dsl/constructs/ignore_level_digivolve_candidate.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
   },
   "predicate:can_digivolve_onto_with_cost": {
    "kind": "predicate",
@@ -40711,6 +41090,12 @@
      "yaml_key"
     ],
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_reads_actual_base_for_both_seats": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour": [
      "yaml_key"
     ],
     "dsl::constructs/meta_effect_affordability.rs::an_unpayable_reducer_cannot_make_a_candidate_legal": [
@@ -40774,6 +41159,8 @@
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_obeys_reduction_prohibitions",
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_preserves_hand_origin_for_effect_routes",
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_reads_actual_base_for_both_seats",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour",
     "dsl::constructs/meta_effect_affordability.rs::an_unpayable_reducer_cannot_make_a_candidate_legal",
     "dsl::constructs/meta_effect_affordability.rs::both_payable_routes_remain_visible_after_candidate_selection",
     "dsl::constructs/meta_effect_affordability.rs::cost_aware_hand_filter_uses_printed_free_reduced_and_fixed_costs",
@@ -40915,7 +41302,7 @@
    "name": "can_play_or_use_from_effect",
    "parsed_only": false,
    "signals": {
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy": [
@@ -40946,7 +41333,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg",
@@ -41325,6 +41712,18 @@
      "yaml_key"
     ],
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_declared_local_binding_dependencies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
      "yaml_key"
     ],
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards": [
@@ -41906,6 +42305,10 @@
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_rejects_conflicting_cost_host_flags",
     "dsl::constructs/meta_effect_payment.rs::security_digivolution_draw_precedes_when_digivolving_and_empty_deck_still_evolves",
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_declared_local_binding_dependencies",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template",
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards",
     "dsl::digivolve_target_predicates.rs::compile_lowers_both_leaves",
     "dsl::digivolve_target_predicates.rs::has_digivolve_candidate_only_offers_permanents_with_a_routable_result",
@@ -46102,6 +46505,21 @@
     "dsl::constructs/identity_state.rs::tail_name_not_shared_by_field_tamer_scope_alias_and_no_tamers": [
      "yaml_key"
     ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_respects_the_effect_digivolve_prohibition": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_emits_the_level_waiving_cost_leaf": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_inside_pay_cost_emits_the_route_only_level_waiving_leaf": [
+     "yaml_key"
+    ],
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_decline_preserves_hand_and_memory": [
      "yaml_key"
     ],
@@ -46222,10 +46640,16 @@
     "dsl::constructs/option_security_suppression.rs::digimon_and_tamer_security_effects_still_activate_with_the_same_source": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
      "yaml_key"
     ],
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
@@ -46473,6 +46897,18 @@
     ],
     "dsl::constructs/tamer_color_predicates.rs::distinct_colors_gte_counts_only_permanents_matching_the_filter": [
      "variant"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
+     "yaml_key"
     ],
     "dsl::constructs/zone_moves.rs::delete_batch_collapses_duplicates_with_both_bindings_present": [
      "yaml_key"
@@ -47807,6 +48243,11 @@
     "dsl::constructs/identity_state.rs::source_count_no_matching_permanent_installs_no_prompt",
     "dsl::constructs/identity_state.rs::source_count_reads_a_dual_source_as_an_option",
     "dsl::constructs/identity_state.rs::tail_name_not_shared_by_field_tamer_scope_alias_and_no_tamers",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_respects_the_effect_digivolve_prohibition",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_emits_the_level_waiving_cost_leaf",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_inside_pay_cost_emits_the_route_only_level_waiving_leaf",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_decline_preserves_hand_and_memory",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_mask_inherited_text_and_payable_reduced_cost",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_paid_choice_and_zero_floor_use_real_payment",
@@ -47847,8 +48288,10 @@
     "dsl::constructs/meta_source_keyword.rs::top_source_from_hand_or_trash_preserves_exact_stack_and_physical_identity",
     "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material",
     "dsl::constructs/option_security_suppression.rs::digimon_and_tamer_security_effects_still_activate_with_the_same_source",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment",
     "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::link_card_count_filtered_empty_filter_and_unreachable",
@@ -47931,6 +48374,10 @@
     "dsl::constructs/tamer_color_predicates.rs::distinct_colors_gte_compiles_from_yaml",
     "dsl::constructs/tamer_color_predicates.rs::distinct_colors_gte_counts_gained_colours",
     "dsl::constructs/tamer_color_predicates.rs::distinct_colors_gte_counts_only_permanents_matching_the_filter",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template",
     "dsl::constructs/zone_moves.rs::delete_batch_collapses_duplicates_with_both_bindings_present",
     "dsl::constructs/zone_moves.rs::delete_batch_ignores_unset_binding",
     "dsl::constructs/zone_moves.rs::delete_batch_skips_a_bound_target_that_became_immune",
@@ -48525,6 +48972,18 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_missing_delta_full_cost": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
      "yaml_key"
     ],
     "dsl::constructs/zone_moves.rs::delete_batch_collapses_duplicates_with_both_bindings_present": [
@@ -49253,6 +49712,10 @@
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_declined_unchanged",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_dual_is_used_as_an_option",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_missing_delta_full_cost",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template",
     "dsl::constructs/zone_moves.rs::delete_batch_collapses_duplicates_with_both_bindings_present",
     "dsl::constructs/zone_moves.rs::delete_batch_ignores_unset_binding",
     "dsl::constructs/zone_moves.rs::delete_batch_skips_a_bound_target_that_became_immune",
@@ -51903,6 +52366,18 @@
     "dsl::constructs/tamer_color_predicates.rs::distinct_colors_gte_compiles_from_yaml": [
      "yaml_key"
     ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
+     "yaml_key"
+    ],
     "dsl::constructs/zone_moves.rs::departed_inherited_source_keeps_controller_tail_without_retargeting_new_slot": [
      "yaml_key"
     ],
@@ -52372,6 +52847,10 @@
     "dsl::constructs/security_top_placement_receipt.rs::source_carrier_is_pinned_after_prior_synchronous_field_compaction",
     "dsl::constructs/selected_source_security_receipt.rs::a_bound_card_outside_the_carrier_cannot_pay_its_source_cost",
     "dsl::constructs/tamer_color_predicates.rs::distinct_colors_gte_compiles_from_yaml",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template",
     "dsl::constructs/zone_moves.rs::departed_inherited_source_keeps_controller_tail_without_retargeting_new_slot",
     "dsl::constructs/zone_moves.rs::group_return_filters_owner_kind_level_and_immunity_and_single_needs_no_order",
     "dsl::constructs/zone_moves.rs::inherited_loop_continuation_re_resolves_compacted_carrier_and_keeps_actor",
@@ -53910,6 +54389,33 @@
    "tested_behaviourally": false,
    "tests": []
   },
+  "predicate:this_card_can_digivolve_onto": {
+   "kind": "predicate",
+   "name": "this_card_can_digivolve_onto",
+   "parsed_only": false,
+   "signals": {
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template"
+   ]
+  },
   "predicate:total_security_count_eq": {
    "kind": "predicate",
    "name": "total_security_count_eq",
@@ -55315,6 +55821,9 @@
     "dsl::constructs/cost_target_event.rs::ordinary_digivolve_never_addition_event": [
      "yaml_key"
     ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_inside_pay_cost_emits_the_route_only_level_waiving_leaf": [
+     "yaml_key"
+    ],
     "dsl::constructs/option_security_suppression.rs::a_sibling_attacker_does_not_borrow_the_sources_restriction": [
      "yaml_key"
     ],
@@ -55484,6 +55993,7 @@
     "dsl::constructs/cost_target_event.rs::cost_target_matches_digivolve_and_play",
     "dsl::constructs/cost_target_event.rs::deletion_cost_reduction_credits_only_completed_payment",
     "dsl::constructs/cost_target_event.rs::ordinary_digivolve_never_addition_event",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_inside_pay_cost_emits_the_route_only_level_waiving_leaf",
     "dsl::constructs/option_security_suppression.rs::a_sibling_attacker_does_not_borrow_the_sources_restriction",
     "dsl::constructs/option_security_suppression.rs::a_top_card_or_face_down_source_does_not_supply_the_inherited_restriction",
     "dsl::constructs/option_security_suppression.rs::an_off_turn_effect_attack_does_not_enable_a_your_turn_restriction",
@@ -55665,6 +56175,18 @@
      "yaml_key"
     ],
     "dsl::constructs/security_stack.rs::owner_can_add_security_true_without_restrictions": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
      "yaml_key"
     ],
     "dsl::constructs/zone_moves.rs::departed_inherited_source_keeps_controller_tail_without_retargeting_new_slot": [
@@ -55875,6 +56397,10 @@
     "dsl::constructs/security_stack.rs::owner_can_add_security_ignores_the_acting_player",
     "dsl::constructs/security_stack.rs::owner_can_add_security_reads_the_top_cards_owner_not_the_controller",
     "dsl::constructs/security_stack.rs::owner_can_add_security_true_without_restrictions",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template",
     "dsl::constructs/zone_moves.rs::departed_inherited_source_keeps_controller_tail_without_retargeting_new_slot",
     "dsl::constructs/zone_moves.rs::group_return_filters_owner_kind_level_and_immunity_and_single_needs_no_order",
     "dsl::constructs/zone_moves.rs::inherited_loop_continuation_re_resolves_compacted_carrier_and_keeps_actor",
@@ -56529,6 +57055,18 @@
     "dsl::constructs/identity_state.rs::on_field_false_for_an_option_used_from_hand": [
      "yaml_key"
     ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
+     "yaml_key"
+    ],
     "dsl::cross_check.rs::cross_check_matches": [
      "fixture"
     ],
@@ -57133,6 +57671,10 @@
     "dsl::constructs/evolution_candidate_cost.rs::reduced_boundary_host_and_hand_choices_agree_and_clone_commit",
     "dsl::constructs/face_up_security_named.rs::no_face_up_security_named_compiles_from_yaml_in_use_requirement_and_condition",
     "dsl::constructs/identity_state.rs::on_field_false_for_an_option_used_from_hand",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template",
     "dsl::cross_check.rs::cross_check_matches",
     "dsl::cross_check.rs::cross_check_mismatched_kind",
     "dsl::cross_check.rs::cross_check_mismatched_name",
@@ -59990,6 +60532,18 @@
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast": [
      "yaml_key"
     ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_respects_the_effect_digivolve_prohibition": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_emits_the_level_waiving_cost_leaf": [
+     "yaml_key"
+    ],
     "dsl::constructs/light_hybrid_predicates.rs::count_capped_trash_literal_can_choose_thirteen_existing_actions": [
      "yaml_key"
     ],
@@ -60185,7 +60739,7 @@
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
      "yaml_key"
     ],
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
@@ -61288,6 +61842,10 @@
     "dsl::constructs/identity_state.rs::trait_contains_matches_substrings_case_insensitively",
     "dsl::constructs/identity_state.rs::trait_contains_reads_granted_traits_on_permanents",
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_respects_the_effect_digivolve_prohibition",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_emits_the_level_waiving_cost_leaf",
     "dsl::constructs/light_hybrid_predicates.rs::count_capped_trash_literal_can_choose_thirteen_existing_actions",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_decline_preserves_hand_and_memory",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_mask_inherited_text_and_payable_reduced_cost",
@@ -61353,7 +61911,7 @@
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies",
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
@@ -67129,6 +67687,22 @@
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_reads_actual_base_for_both_seats": [
      "yaml_key"
     ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_respects_the_effect_digivolve_prohibition": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_emits_the_level_waiving_cost_leaf": [
+     "variant",
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_inside_pay_cost_emits_the_route_only_level_waiving_leaf": [
+     "yaml_key"
+    ],
     "dsl::constructs/meta_effect_affordability.rs::an_unpayable_reducer_cannot_make_a_candidate_legal": [
      "yaml_key"
     ],
@@ -67165,6 +67739,15 @@
     "dsl::constructs/meta_effect_affordability.rs::selected_host_identity_survives_compaction_and_a_removed_host_never_retargets": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::compile_pass_emits_the_payment_leaf_with_the_steps_cost": [
+     "variant"
+    ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_composite_filter_rejects_wrong_trait_kind_and_route": [
      "yaml_key"
     ],
@@ -67187,6 +67770,18 @@
      "yaml_key"
     ],
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidates_surface_two_hosts_and_two_results_for_either_controller": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
      "yaml_key"
     ],
     "dsl::digivolve_ignore_level_and_tamer_base.rs::dsl_ignore_level_parses_and_compiles": [
@@ -67301,6 +67896,11 @@
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_obeys_reduction_prohibitions",
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_preserves_hand_origin_for_effect_routes",
     "dsl::constructs/hand_target_digivolve_reduction.rs::hand_target_digivolve_reduction_reads_actual_base_for_both_seats",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_respects_the_effect_digivolve_prohibition",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_emits_the_level_waiving_cost_leaf",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_inside_pay_cost_emits_the_route_only_level_waiving_leaf",
     "dsl::constructs/meta_effect_affordability.rs::an_unpayable_reducer_cannot_make_a_candidate_legal",
     "dsl::constructs/meta_effect_affordability.rs::both_payable_routes_remain_visible_after_candidate_selection",
     "dsl::constructs/meta_effect_affordability.rs::cost_aware_hand_filter_uses_printed_free_reduced_and_fixed_costs",
@@ -67313,6 +67913,9 @@
     "dsl::constructs/meta_effect_affordability.rs::one_payable_route_keeps_candidate_but_does_not_offer_an_unpayable_route",
     "dsl::constructs/meta_effect_affordability.rs::optional_reducer_is_probed_without_spending_and_remains_an_explicit_choice",
     "dsl::constructs/meta_effect_affordability.rs::selected_host_identity_survives_compaction_and_a_removed_host_never_retargets",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::compile_pass_emits_the_payment_leaf_with_the_steps_cost",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_composite_filter_rejects_wrong_trait_kind_and_route",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_does_not_search_hand_trash_deck_security_or_field_sources",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_never_borrows_a_result_owned_by_the_other_player",
@@ -67321,6 +67924,10 @@
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_retains_legacy_hand_and_trash_zone_support",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_routes_exclude_wrong_level_color_and_breeding_hosts",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidates_surface_two_hosts_and_two_results_for_either_controller",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::dsl_ignore_level_parses_and_compiles",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::dsl_ignore_level_step_lowers_to_the_ignore_level_digivolve",
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards",
@@ -71078,7 +71685,7 @@
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
      "yaml_key"
     ],
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
@@ -71540,7 +72147,7 @@
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies",
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
@@ -75749,6 +76356,22 @@
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast": [
      "yaml_key"
     ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_respects_the_effect_digivolve_prohibition": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour": [
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_emits_the_level_waiving_cost_leaf": [
+     "variant",
+     "yaml_key"
+    ],
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_inside_pay_cost_emits_the_route_only_level_waiving_leaf": [
+     "yaml_key"
+    ],
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_decline_preserves_hand_and_memory": [
      "yaml_key"
     ],
@@ -75817,6 +76440,12 @@
     ],
     "dsl::constructs/meta_predicates.rs::play_cost_gte_hand_filter_uses_printed_cost_before_a_reduced_payment": [
      "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::compile_pass_emits_the_payment_leaf_with_the_steps_cost": [
+     "variant"
     ],
     "dsl::constructs/play_digivolve_link.rs::can_digivolve_from_source_routes_inversion_and_prohibition": [
      "yaml_key"
@@ -76149,6 +76778,11 @@
     "dsl::constructs/identity_state.rs::tail_name_not_shared_by_field_tamer_scope_alias_and_no_tamers",
     "dsl::constructs/identity_state.rs::trait_contains_matches_substrings_case_insensitively",
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_checks_payment_at_the_reduced_cost",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_respects_the_effect_digivolve_prohibition",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_candidate_waives_only_the_level_not_the_colour",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_emits_the_level_waiving_cost_leaf",
+    "dsl::constructs/ignore_level_digivolve_candidate.rs::ignore_level_compile_pass_inside_pay_cost_emits_the_route_only_level_waiving_leaf",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_decline_preserves_hand_and_memory",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_mask_inherited_text_and_payable_reduced_cost",
     "dsl::constructs/light_hybrid_predicates.rs::light_hybrid_predicates_paid_choice_and_zero_floor_use_real_payment",
@@ -76172,6 +76806,8 @@
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_hand_mask_accepts_both_kinds_and_distinct_physical_duplicates_for_both_owners",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_prohibitions_discriminate_digimon_and_tamer_for_both_owners",
     "dsl::constructs/meta_predicates.rs::play_cost_gte_hand_filter_uses_printed_cost_before_a_reduced_payment",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::compile_pass_emits_the_payment_leaf_with_the_steps_cost",
     "dsl::constructs/play_digivolve_link.rs::can_digivolve_from_source_routes_inversion_and_prohibition",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_bound_digimon_reduced",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_bound_option_main_and_trash",
@@ -77859,6 +78495,9 @@
     "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::link_card_count_filtered_empty_filter_and_unreachable": [
      "yaml_key"
     ],
@@ -77890,6 +78529,18 @@
      "yaml_key"
     ],
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidates_surface_two_hosts_and_two_results_for_either_controller": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable": [
+     "yaml_key"
+    ],
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
      "yaml_key"
     ],
     "dsl::constructs/zone_moves.rs::field_option_before_host_preserves_identity_after_compaction": [
@@ -78180,6 +78831,7 @@
     "dsl::constructs/meta_source_keyword.rs::top_source_declining_material_or_host_leaves_both_origins_and_stacks_untouched",
     "dsl::constructs/meta_source_keyword.rs::top_source_from_hand_or_trash_preserves_exact_stack_and_physical_identity",
     "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
     "dsl::constructs/play_digivolve_link.rs::link_card_count_filtered_empty_filter_and_unreachable",
     "dsl::constructs/protection.rs::own_selected_source_trash_and_return_allowed",
     "dsl::constructs/protection.rs::plural_chosen_payer_excludes_unpayable_and_unqualified",
@@ -78191,6 +78843,10 @@
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_retains_legacy_hand_and_trash_zone_support",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_routes_exclude_wrong_level_color_and_breeding_hosts",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidates_surface_two_hosts_and_two_results_for_either_controller",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::a_digimon_that_cannot_digivolve_is_no_target",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
+    "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template",
     "dsl::constructs/zone_moves.rs::field_option_before_host_preserves_identity_after_compaction",
     "dsl::constructs/zone_moves.rs::field_option_moves_facedown_and_faceup",
     "dsl::constructs/zone_moves.rs::field_option_pass_and_nonfield_source_do_not_move",
@@ -78889,6 +79545,9 @@
     "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
      "yaml_key"
     ],
@@ -78901,7 +79560,7 @@
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
      "yaml_key"
     ],
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::constructs/zone_moves.rs::sequential_union_picks_define_top_order": [
@@ -79034,11 +79693,12 @@
     "dsl::constructs/meta_source_keyword.rs::top_source_declining_material_or_host_leaves_both_origins_and_stacks_untouched",
     "dsl::constructs/meta_source_keyword.rs::top_source_from_hand_or_trash_preserves_exact_stack_and_physical_identity",
     "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material",
+    "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment",
     "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies",
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/zone_moves.rs::sequential_union_picks_define_top_order",
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards",
     "dsl::delay_union_play_flow.rs::delay_union_flow_comparator_uses_pre_leave_subject_cost_snapshot",
@@ -80836,7 +81496,7 @@
    "name": "use_option_bound",
    "parsed_only": false,
    "signals": {
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash": [
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
     "dsl::option_source_use_cluster.rs::dsl_use_option_bound_uses_union_picked_option_free_from_trash": [
@@ -80846,7 +81506,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
-    "dsl::constructs/play_candidate_origin_zone.rs::union_use_drops_the_trash_option_under_cannot_play_from_trash",
+    "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash",
     "dsl::option_source_use_cluster.rs::dsl_use_option_bound_uses_union_picked_option_free_from_trash"
    ]
   },
@@ -81019,7 +81679,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2253,
+  "behavioural_tests": 2271,
   "cards": {
    "behaviourally_covered": 1164,
    "lowering_covered": 1181,
@@ -81038,11 +81698,11 @@
    },
    "predicate": {
     "parsed_only": 7,
-    "tested": 200,
-    "tested_behaviourally": 193,
-    "total": 227,
-    "untested": 27,
-    "used_by_cards": 198,
+    "tested": 201,
+    "tested_behaviourally": 194,
+    "total": 229,
+    "untested": 28,
+    "used_by_cards": 202,
     "used_untested": 20
    },
    "timing": {
@@ -81181,8 +81841,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 415,
-  "scanned_tests": 2660,
+  "scanned_files": 418,
+  "scanned_tests": 2688,
   "top_untested": [
    {
     "cards_blocked": 3,

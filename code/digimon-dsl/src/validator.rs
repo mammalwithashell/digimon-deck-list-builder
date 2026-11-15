@@ -120,6 +120,15 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         &mut errors,
                                     );
                                 }
+                                if let Some(pred) = &b.when_any_ally_used {
+                                    validate_predicate(
+                                        pred,
+                                        &format!("{prefix}.when_any_ally_used"),
+                                        &spec.card,
+                                        ctx,
+                                        &mut errors,
+                                    );
+                                }
                                 if let Some(pred) = &b.condition {
                                     validate_predicate(
                                         pred,
@@ -1740,7 +1749,7 @@ fn validate_post_payment_plural_filter(
                         | "binding_dp" | "binding_play_cost" | "binding_value" => true,
                         // `source` has an explicit carrier fallback in the
                         // evaluator; other names require the local binding map.
-                        "can_digivolve_onto" => {
+                        "can_digivolve_onto" | "can_digivolve_onto_ignoring_level" => {
                             !matches!(value.as_str(), Some("source" | "event_target"))
                         }
                         "can_digivolve_onto_with_cost" => !matches!(
@@ -2603,12 +2612,16 @@ fn validate_predicate_binding_scope(
         ("binding_present", &pred.binding_present),
         ("binding_absent", &pred.binding_absent),
         ("can_digivolve_onto", &pred.can_digivolve_onto),
+        // G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL-ROUTE-ONLY: same target names.
+        ("can_digivolve_onto_ignoring_level", &pred.can_digivolve_onto_ignoring_level),
     ] {
         if let Some(binding) = binding {
             // `can_digivolve_onto: source` names the effect's own carrier
             // permanent ("THIS Digimon may digivolve into ..."), a magic name
             // that is never a `bind_as`. G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE.
-            if field == "can_digivolve_onto" && (binding == "source" || binding == "event_target") {
+            if matches!(field, "can_digivolve_onto" | "can_digivolve_onto_ignoring_level")
+                && (binding == "source" || binding == "event_target")
+            {
                 continue;
             }
             report_if_undeclared_binding(

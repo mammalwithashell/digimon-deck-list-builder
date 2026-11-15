@@ -647,26 +647,26 @@ fn bt25_041_hand_pick_excludes_option_whose_colour_requirement_is_unmet() {
     );
 }
 
-/// No affordability filter, as in DCGO: BT25_041.cs:138-151 offers every
-/// [Glowing Dawn] card (`HasGlowingDawnTraits`) and lets PlayPermanentCards /
-/// PlayOptionCards charge the cost. The cost is only settled at payment — the
-/// payer may still opt into "before paying" reducers such as Kyo Sawashiro
-/// (BT25-088) — so a card whose cost − 3 is past the floor is still a legal
-/// pick. If it can't be paid, CR 4.3 7-1-2-3 (9-1-8 for an Option) returns
-/// it to the hand and memory doesn't move.
+/// A card whose cost − 3 can't be paid even with every reducer the payment
+/// could take (22 − 3 = 19 from memory 8, no reducer on the field) can't be
+/// declared (CR 4.3 1-3-11-1), so it is not offered. DCGO BT25_041.cs:138-151
+/// offers every [Glowing Dawn] card and lets PlayPermanentCards refuse it
+/// (CR 4.3 7-1-2-3); the engine drops that dead choice, as for ST23-04 / ST23-08
+/// (G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT -- the reducers that made BT25-041
+/// skip the leaf are now credited by it).
 #[test]
-fn bt25_041_hand_pick_offers_card_whose_reduced_cost_is_unpayable() {
+fn bt25_041_hand_pick_excludes_card_whose_reduced_cost_is_unpayable() {
     assert_eq!(
         offered_trash_branch(&["GD-EXP", "GD-DIGI"], |_| {}),
-        vec!["GD-DIGI".to_string(), "GD-EXP".to_string()]
+        vec!["GD-DIGI".to_string()]
     );
 }
 
-/// Picking a card whose reduced cost can't be paid (22 − 3 = 19 from memory 8,
-/// no reducer available) plays nothing: the card stays in hand and memory
-/// doesn't move (CR 4.3 7-1-2-3).
+/// With only an unpayable card in hand (22 − 3 = 19 from memory 8, no reducer
+/// available) nothing can be played: no hand pick is offered, the card stays in
+/// hand and memory doesn't move.
 #[test]
-fn bt25_041_unpayable_pick_returns_card_and_memory_does_not_move() {
+fn bt25_041_unpayable_card_is_not_offered_and_memory_does_not_move() {
     let mut runner = legality_pool(
         DebugRunner::builder()
             .add_card(murasamemon())
@@ -690,18 +690,11 @@ fn bt25_041_unpayable_pick_returns_card_and_memory_does_not_move() {
     runner
         .execute_action(v.selecting_player, v.valid_action_ids[0])
         .unwrap();
-    assert_eq!(offered_ids(&runner), vec!["GD-EXP".to_string()]);
+    assert!(offered_ids(&runner).is_empty(), "GD-EXP is not offered");
     let memory_before = runner.memory();
     let field_before = runner.game.players[0].battle_area.len();
-    let v = runner.pending_selection_view().expect("hand pick");
-    let pick = v
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&id| id != digimon_engine::action::space::PASS)
-        .unwrap();
-    runner.execute_action(0, pick).expect("pick GD-EXP");
-    assert_eq!(runner.memory(), memory_before, "an unpayable play moves no memory");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.memory(), memory_before, "nothing was paid");
     assert_eq!(runner.game.players[0].battle_area.len(), field_before, "nothing was played");
     assert_eq!(hand_index_of(&runner, 0, "GD-EXP"), 0, "GD-EXP returned to the hand");
 }

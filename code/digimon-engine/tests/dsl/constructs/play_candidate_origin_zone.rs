@@ -1,14 +1,16 @@
 //! Zone-aware play / use candidate leaves (G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE).
 //!
 //! `can_play_from_effect_without_cost` and `can_play_or_use_from_effect` now
-//! read the candidate's zone: a card in its owner's trash fails while that
-//! player can't play cards from the trash (`CannotPlayFromTrash`, e.g. BT23-014
-//! "can't play Digimon or Tamers from the trash"), because the trash-origin
-//! play (`Game::trash_play_refusal`) and Option use (`Game::use_option_from`)
-//! refuse it. A "from your hand or trash" union pick (`select_union_zone`, ~50
-//! cards: ST19-08, EX11-022, BT22-098, ...) shares one filter across both
-//! origins, so without this the trash copy would be a dead choice (CR 4.3
-//! 1-3-2). The hand copy is unaffected.
+//! read the candidate's zone: a Digimon / Tamer / DUAL in its owner's trash
+//! fails while that player can't play Digimon or Tamers from the trash
+//! (`CannotPlayFromTrash`, BT23-014), because the trash-origin play
+//! (`Game::trash_play_refusal`) refuses it. A "from your hand or trash" union
+//! pick (`select_union_zone`, ~50 cards: ST19-08, EX11-022, BT22-098, ...)
+//! shares one filter across both origins, so without this the trash copy
+//! would be a dead choice (CR 4.3 1-3-2). The hand copy is unaffected. An
+//! Option USE from the trash is NOT locked: using is not playing (CR 4.3
+//! 7-1-1 vs 9-1-1), and DCGO's lock is `IsDigimon || IsTamer`
+//! (BT23_014.cs:46-49).
 use digimon_engine::{
     action::space::{PLAY_HAND_START, TRASH_EFFECT_START},
     debug_runner::{make_test_card, DebugRunner},
@@ -160,12 +162,16 @@ fn the_commit_refuses_the_locked_trash_copy_the_filter_now_drops() {
         .any(|c| c.card_id(&r.game.card_data) == "ZP-DIGIMON"));
 }
 
+/// Corrected 2026-11-14: this test used to assert the trash Option was dropped
+/// under `CannotPlayFromTrash` -- the engine over-block. BT23-014 prints "can't
+/// play Digimon or Tamers from the trash"; an Option use is not a play (CR 4.3
+/// 9-1-1), so both copies stay offered.
 #[test]
-fn union_use_drops_the_trash_option_under_cannot_play_from_trash() {
+fn union_use_keeps_the_trash_option_under_cannot_play_from_trash() {
     let (mut r, source) = fixture(UNION_USE, "ZP-OPTION");
     let trash = TRASH_EFFECT_START + (r.game.players[0].trash.len() as u16 - 1);
     let mut unlocked = DebugRunner::wrap(r.game.clone());
     assert_eq!(offered(&mut unlocked, source), vec![PLAY_HAND_START, trash]);
     lock_trash(&mut r);
-    assert_eq!(offered(&mut r, source), vec![PLAY_HAND_START]);
+    assert_eq!(offered(&mut r, source), vec![PLAY_HAND_START, trash]);
 }

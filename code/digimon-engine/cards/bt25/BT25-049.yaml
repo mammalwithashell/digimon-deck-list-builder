@@ -30,11 +30,11 @@
 #   DCGO's skippable/can-no-select decline, exposed to the RL action space).
 #   maxCountPerTurn 1 → once_per_turn. Payoff ChangeCost -3 over the Glowing-Dawn
 #   Option being used.
-#   → kind: cost_reduction + when_any_ally_played { kind: option, trait_has:
+#   → kind: cost_reduction + when_any_ally_used { kind: option, trait_has:
 #     Glowing Dawn } + active_when { your_turn } + optional + once_per_turn +
-#     amount 3 + pay_cost [trash_bottom_face_down_source_under_tamer]. The
-#     `kind: option` filter scopes the trigger to Option-USE (a digivolve/play
-#     of a Digimon never carries an Option cost-target). The interactive pay_cost
+#     amount 3 + pay_cost [trash_bottom_face_down_source_under_tamer].
+#     `when_any_ally_used` scopes the trigger to an Option-USE cost (a play or
+#     digivolve never takes it). The interactive pay_cost
 #     parks; the engine credits the -3 behind the parked pay_cost on the
 #     Option-use path (game_actions/options.rs::
 #     try_prompt_interactive_option_use_cost_reducer,
@@ -81,7 +81,9 @@ effects:
   - kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when: { your_turn: true }
-    when_any_ally_played:
+    # "would USE": an Option-use cost only (CR 4.3 9-1-1; DCGO HasUseCost,
+    # BT25_049.cs:77-82 / BT25_090.cs:103-108), never a play.
+    when_any_ally_used:
       all_of:
         - kind: option
         - trait_has: "Glowing Dawn"

@@ -49,3 +49,6 @@ mod tamer_color_predicates;
 
 mod face_up_security_named;
 mod hand_shuffle_return_and_name_match;
+mod ignore_level_digivolve_candidate;
+mod paid_digivolve_candidate_payment;
+mod this_card_can_digivolve_onto;

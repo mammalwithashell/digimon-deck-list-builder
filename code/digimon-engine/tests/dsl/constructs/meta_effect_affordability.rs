@@ -383,12 +383,16 @@ fn existing_route_only_predicate_keeps_free_reduced_and_unpayable_compatibility(
     for cost in ["free", "{ reduce: 18 }", "printed"] {
         let (mut r, h) = fixture(0, 0, 8, &[19], cost, true, false);
         fire(&mut r, h);
-        hand_choice(&r, 0);
-        choose(&mut r, 0, PLAY_HAND_START);
         if cost == "printed" {
+            // The authored route-only leaf keeps its meaning, but a PAID digivolve's pick also gets the payment
+            // check from the compile pass (G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT): 19 can't be paid from 8 (CR 4.3
+            // 1-3-11-1, 8-1-2-6), so the dead choice is no longer offered.
+            assert!(r.game.pending_selection.is_none(), "an unpayable card is not offered");
             assert_eq!(top(&r, h), "AFFORD-HOST");
             assert_eq!(r.memory(), 8);
         } else {
+            hand_choice(&r, 0);
+            choose(&mut r, 0, PLAY_HAND_START);
             assert_eq!(top(&r, h), "AFFORD-RESULT");
             assert_eq!(r.memory(), if cost == "free" { 8 } else { 7 });
         }

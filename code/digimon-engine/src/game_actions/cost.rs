@@ -191,12 +191,25 @@ impl Game {
             }
 
             let key = candidate.key.clone();
+            // CR 4.3 1-3-11-3: an optional reducer the declared play needs
+            // (no other remaining reducer could pay instead) must be
+            // performed, so it is offered without a decline.
+            // G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT.
+            let optional = candidate.optional
+                && !self.play_cost_reducer_needed(
+                    player_id,
+                    target,
+                    cost_delta,
+                    accumulated_reduction,
+                    &processed,
+                    &key,
+                );
             let source_kind = self.effect_source_kind_for_handle(key.source_card);
             let accept_key = key.clone();
             let decline_key = key.clone();
             let accept_processed = processed.clone();
             let decline_processed = processed.clone();
-            let on_decline = candidate.optional.then(|| {
+            let on_decline = optional.then(|| {
                 Box::new(move |game: &mut Game| {
                     game.with_play_declaration_controller(effect_controller, |game| {
                         let mut processed = decline_processed;
@@ -224,7 +237,7 @@ impl Game {
                 selecting_player: player_id,
                 previous_phase,
                 valid_action_ids: vec![crate::action::space::HAND_EFFECT_START],
-                is_optional: candidate.optional,
+                is_optional: optional,
                 prompt: match candidate.assignment {
                     Some(value) => format!("Set play cost to {value} using {}?", candidate.label),
                     None => format!("Use {} to reduce play cost?", candidate.label),
@@ -239,7 +252,7 @@ impl Game {
                     source_card: Some(key.source_card),
                     source_kind: Some(source_kind),
                     timing: Some(crate::enums::EffectTiming::BeforePayCost),
-                    is_optional: candidate.optional,
+                    is_optional: optional,
                     keyword: None,
                     observation_metadata: Default::default(),
                 }]),
@@ -1280,8 +1293,199 @@ impl Game {
         total
     }
 
+    /// The cost reduction a declaration of `card` by `player` can count on,
+    /// read-only: a play (`CostReductionKind::Play`) or an Option / DUAL use
+    /// (`OptionUse`) from the card's current zone.
+    ///
+    /// CR 4.3 1-3-11-1..3: a card can be declared only if its (alternate) cost
+    /// can be paid, counting "when this card would be played / used, reduce
+    /// the cost" effects whose processing conditions are met -- the card's
+    /// own (1-3-11-2's example is exactly that: Ceresmon BT25-059's "if there
+    /// are 2 or more suspended Digimon, reduce the cost by 5") and any other
+    /// card's -- optional ones included (1-3-11-3: their processing is then
+    /// performed as far as needed, see [`Self::play_cost_reducer_needed`]).
+    /// DCGO prices a play the same way: `CanPlayAsNewPermanent(.., payCost:
+    /// true, fixedCost)` -> `PayingCost(checkAvailability: true)`
+    /// (CardSource.cs:1150-1162, 668-686, 925-986) applies every static cost
+    /// change -- `MandatorySelfPlayCostReduction` (ChangePlayCost.cs:123-143)
+    /// and the hidden `isCheckAvailability: () => true` ChangeCostClass an
+    /// optional reducer keeps while its cost is payable (Kyo Sawashiro
+    /// BT25_088.cs:246-275, Armalizamon BT25_049.cs:226-255).
+    ///
+    /// Credits exactly what the payment would take:
+    /// - `Play`: every reducer `collect_before_pay_cost_reducers` returns (the
+    ///   play chain applies the mandatory ones and offers the rest), except a
+    ///   "set the cost to N" assignment, which replaces the base instead of
+    ///   reducing it and is not credited (G-ENGINE-AFFORDABILITY-COST-ASSIGNMENT).
+    /// - `OptionUse`: the synchronous scan's non-optional reducers plus EVERY
+    ///   interactive pay-cost reducer (`play_option_core` offers each in turn,
+    ///   as DCGO applies each [Once Per Turn] reducer's own BeforePayCost
+    ///   activation and availability ChangeCostClass, BT25_049.cs:226-255);
+    ///   a non-interactive optional Option-use reducer is never applied by the
+    ///   use, so it is not credited (G-ENGINE-OPTION-USE-SYNC-OPTIONAL-REDUCER).
+    /// - Only the reducers answering this cost kind: a "would be played"
+    ///   reducer never credits an Option use (CR 4.3 7-1-1 vs 9-1-1,
+    ///   `Effect::reducer_cost_scope`).
+    /// - Each reducer's "by X" is checked on its own: two reducers paying from
+    ///   one shared resource (Armalizamon + Tomoro Tenma, one face-down card
+    ///   left) are both credited although only one can be paid
+    ///   (G-ENGINE-AFFORDABILITY-SHARED-REDUCER-RESOURCE, as DCGO's
+    ///   availability classes do).
+    /// - A variable reducer whose amount is only known at payment (Akihiro
+    ///   Kurata BT13-103's `delete_for_cost_reduction`) is credited as 0
+    ///   (G-ENGINE-AFFORDABILITY-VARIABLE-REDUCER-CREDIT).
+    ///
+    /// G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT.
+    pub(crate) fn declarable_cost_reduction(
+        &self,
+        player: PlayerId,
+        card: CardHandle,
+        kind: CostReductionKind,
+    ) -> i32 {
+        let target = CostTargetContext {
+            card,
+            from_hand: self.player(player).hand.iter().any(|c| c.handle() == card),
+            is_digivolve: false,
+            target_permanents: [None, None],
+        };
+        let mut total = 0;
+        for c in self.collect_before_pay_cost_reducers(player, Some(target), &[], kind) {
+            if c.assignment.is_some() {
+                continue;
+            }
+            if kind == CostReductionKind::OptionUse
+                && c.optional
+                && !(c.pay_cost_interactive && c.has_pay_cost)
+            {
+                continue;
+            }
+            total += c.amount;
+        }
+        total
+    }
+
+    /// Whether `payer` (the declaring player, or the effect controller for an
+    /// effect-driven play / use) can pay `cost` from the memory gauge.
+    pub(crate) fn payer_can_pay(&self, payer: PlayerId, cost: i32) -> bool {
+        let own = if self.turn_player() == payer {
+            i32::from(self.memory)
+        } else {
+            -i32::from(self.memory)
+        };
+        own - cost >= i32::from(self.rules.memory_range.0)
+    }
+
+    /// CR 4.3 1-3-11-3: once a card is declared, the player "must perform as
+    /// much of the processing as needed in order to pay the cost", so an
+    /// optional "by X, reduce the cost" reducer whose reduction the play needs
+    /// is offered WITHOUT a decline. Needed = the play stays unpayable with
+    /// the reductions already taken plus every other reducer still available,
+    /// so a reducer is forced only when no other remaining choice could pay
+    /// instead, AND it can pay with this reducer too: 1-3-11-3 forces the
+    /// processing only "as needed in order to pay the cost", so a reducer that
+    /// can't make the cost payable keeps its decline (forcing it would spend
+    /// its "by X" on a play that then fails, CR 4.3 7-1-2-3). DCGO:
+    /// `CanNoSelect` (BT25_088.cs:155-171) refuses the decline while the cost
+    /// is unpayable. A free play never needs one.
+    /// G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT.
+    pub(crate) fn play_cost_reducer_needed(
+        &self,
+        player_id: PlayerId,
+        target: CostTargetContext,
+        cost_delta: crate::enums::CostDelta,
+        accumulated: crate::game_actions::PlayCostAdjustments,
+        processed: &[CostReductionKey],
+        key: &CostReductionKey,
+    ) -> bool {
+        if matches!(cost_delta, crate::enums::CostDelta::Free) {
+            return false;
+        }
+        let Some(card) = self.card_source_for_handle(target.card) else {
+            return false;
+        };
+        let base = i32::from(cost_delta.resolve(card.play_cost(&self.card_data)));
+        let base = self
+            .pending_digixros_transaction
+            .as_ref()
+            .map(|transaction| transaction.final_cost() as i32)
+            .unwrap_or(base);
+        let mut done = processed.to_vec();
+        done.push(key.clone());
+        let others: i32 = self
+            .collect_before_pay_cost_reducers(player_id, Some(target), &done, CostReductionKind::Play)
+            .iter()
+            .filter(|c| c.assignment.is_none())
+            .map(|c| c.amount)
+            .sum();
+        let cost = i32::from(accumulated.final_cost(base, 0)) - others;
+        let payer = self.effect_source_player.unwrap_or(player_id);
+        if self.payer_can_pay(payer, cost.max(0)) {
+            return false;
+        }
+        let own = self
+            .inspect_cost_reduction_candidate(key, Some(target))
+            .unwrap_or(0);
+        self.payer_can_pay(payer, (cost - own).max(0))
+    }
+
+    /// The Option-use sibling of [`Self::play_cost_reducer_needed`]: the
+    /// interactive reducer `key` is needed when the use stays unpayable with
+    /// the reductions already taken (`pending_interactive_option_use_reduction`)
+    /// plus every other reducer the use would still apply (the synchronous
+    /// scan's non-optional ones and the interactive ones not yet offered), and
+    /// becomes payable with `key`'s own reduction (CR 4.3 1-3-11-3). Only a
+    /// paid use (`Pay`) or a reduced one (`Reduce(n)`) takes reducers at all.
+    pub(crate) fn option_use_reducer_needed(
+        &self,
+        player_id: PlayerId,
+        cost_target: CostTargetContext,
+        cost_policy: OptionCostPolicy,
+        key: &CostReductionKey,
+    ) -> bool {
+        let Some(card) = self.card_source_for_handle(cost_target.card) else {
+            return false;
+        };
+        let printed = i32::from(self.option_use_cost(card, player_id));
+        let base = match cost_policy {
+            OptionCostPolicy::Pay => printed,
+            OptionCostPolicy::Reduce(n) => printed - i32::from(n),
+            OptionCostPolicy::Free | OptionCostPolicy::Fixed(_) => return false,
+        };
+        let mut done = self.interactive_option_use_reducers_processed.clone();
+        if !done.contains(key) {
+            done.push(key.clone());
+        }
+        let others: i32 = self
+            .collect_before_pay_cost_reducers(
+                player_id,
+                Some(cost_target),
+                &done,
+                CostReductionKind::OptionUse,
+            )
+            .iter()
+            .filter(|c| {
+                c.assignment.is_none()
+                    && if c.pay_cost_interactive && c.has_pay_cost {
+                        true
+                    } else {
+                        !c.optional && !c.pay_cost_interactive
+                    }
+            })
+            .map(|c| c.amount)
+            .sum();
+        let cost = base - self.pending_interactive_option_use_reduction - others;
+        let payer = self.effect_source_player.unwrap_or(player_id);
+        if self.payer_can_pay(payer, cost.max(0)) {
+            return false;
+        }
+        let own = self
+            .inspect_cost_reduction_candidate(key, Some(cost_target))
+            .unwrap_or(0);
+        self.payer_can_pay(payer, (cost - own).max(0))
+    }
+
     pub(crate) fn collect_before_pay_cost_reducers(
-        &mut self,
+        &self,
         acting_player: PlayerId,
         cost_target: Option<CostTargetContext>,
         processed: &[CostReductionKey],
@@ -1330,6 +1534,15 @@ impl Game {
             let Some(effect) = effects.get(key.effect_slot as usize) else {
                 continue;
             };
+            // CR 4.3 7-1-1 vs 9-1-1: a "would be played" reducer never
+            // answers an Option use, a "would use" reducer never a play.
+            // G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (review).
+            match (effect.reducer_cost_scope, cost_kind) {
+                (crate::effect::ReducerCostScope::PlayOnly, CostReductionKind::Play)
+                | (crate::effect::ReducerCostScope::OptionUseOnly, CostReductionKind::OptionUse)
+                | (crate::effect::ReducerCostScope::Any, _) => {}
+                _ => continue,
+            }
             // §15-7-4 (Ver. 4.3): an optional reducer whose "by X" condition
             // can't be executed can't be chosen -- it is not a candidate at
             // all (no "Cost reduction" choice, no accept prompt).

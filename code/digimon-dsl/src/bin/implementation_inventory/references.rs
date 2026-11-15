@@ -1864,6 +1864,7 @@ impl Walk for digimon_dsl::clause::CostReductionBody {
             when_playing_this,
             when_digivolving_this,
             when_any_ally_played,
+            when_any_ally_used,
             when_any_ally_digivolves_into,
             condition,
             optional,
@@ -1887,6 +1888,11 @@ impl Walk for digimon_dsl::clause::CostReductionBody {
         when_any_ally_played.walk(
             c,
             &format!("{}.when_any_ally_played", path),
+            "UNCLASSIFIED_STRING",
+        );
+        when_any_ally_used.walk(
+            c,
+            &format!("{}.when_any_ally_used", path),
             "UNCLASSIFIED_STRING",
         );
         when_any_ally_digivolves_into.walk(
@@ -3410,11 +3416,12 @@ impl Walk for digimon_dsl::compiled::CompiledDigivolveCandidate {
             "COMPOSITE",
             serde_json::Value::Null,
         );
-        let digimon_dsl::compiled::CompiledDigivolveCandidate { of, zones, filter, cost } = self;
+        let digimon_dsl::compiled::CompiledDigivolveCandidate { of, zones, filter, cost, ignore_level } = self;
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
         zones.walk(c, &format!("{}.zones", path), "UNCLASSIFIED_STRING");
         filter.walk(c, &format!("{}.filter", path), "UNCLASSIFIED_STRING");
         cost.walk(c, &format!("{}.cost", path), "UNCLASSIFIED_STRING");
+        ignore_level.walk(c, &format!("{}.ignore_level", path), "UNCLASSIFIED_STRING");
     }
 }
 impl Walk for digimon_dsl::compiled::CompiledFaceUpSecurityNamed {
@@ -3937,6 +3944,7 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 when_playing_this,
             when_digivolving_this,
                 when_any_ally_played,
+                when_any_ally_used,
                 when_any_ally_digivolves_into,
                 condition,
                 optional,
@@ -3979,6 +3987,14 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                     c,
                     &format!(
                         "{}.when_any_ally_played",
+                        &format!("{}@CostReduction", path)
+                    ),
+                    "UNCLASSIFIED_STRING",
+                );
+                when_any_ally_used.walk(
+                    c,
+                    &format!(
+                        "{}.when_any_ally_used",
                         &format!("{}@CostReduction", path)
                     ),
                     "UNCLASSIFIED_STRING",

@@ -1489,3 +1489,37 @@ fn bt17_097_security_excludes_trash_davis_when_trash_play_is_locked() {
     let offered = attack_and_offered_union_cards(&mut runner);
     assert!(offered.is_empty(), "no Tamer offered: {offered:?}");
 }
+
+/// <Delay> activation under a digivolve lock: an [Imperialdramon] card with a
+/// route is not enough when the threatened Digimon can't digivolve (DCGO
+/// `IsOwnerPermanentCondition` → `CanPlayCardTargetFrame`, BT17_097.cs:133-137),
+/// so the <Delay> is not offered and BT17-097 is not trashed for nothing.
+#[test]
+fn bt17_097_delay_not_offered_when_the_subject_cannot_digivolve() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    let (mut runner, free) = delay_runner(
+        &[make_imperialdramon_from("BT17097-IMP-OK", 5)],
+        &["BT17097-IMP-OK"],
+    );
+    runner
+        .game
+        .modifiers
+        .add(free, ModifierEntry::simple(ModifierType::CannotDigivolve, 0, Expiry::Permanent, 0));
+    runner
+        .game
+        .delete_permanent_with_cause(free, ReplacementCause::OpponentEffect);
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no <Delay> prompt: {:?}",
+        runner.game.pending_selection.as_ref().map(|s| (&s.kind, &s.valid_action_ids))
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-097"),
+        "the Delay Option was not trashed"
+    );
+}

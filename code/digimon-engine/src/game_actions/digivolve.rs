@@ -1762,6 +1762,38 @@ impl Game {
         target: PermanentHandle,
         cost_delta: CostDelta,
     ) -> bool {
+        self.can_effect_digivolve_from_source_with_cost_waiving(
+            acting_player, source_ref, target, cost_delta, DigivolveRequirementWaiver::None,
+        )
+    }
+
+    /// `can_effect_digivolve_from_source_with_cost` for an effect that waives
+    /// part of the digivolution requirements. Only `None` and `Level` are
+    /// candidate filters today: `Level` searches the same routes the
+    /// `ignore_level` commit uses (`digivolve_routes_ignoring_level` -- a
+    /// printed circle of the target's colour at any level, or a level-stripped
+    /// alt-path; DCGO `CanPlayCardTargetFrame(..., IgnoreRequirement.Level)`,
+    /// EX13_071.cs:357-361; ruling Q7449), with the same payment search.
+    /// G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL. `All` searches the single
+    /// requirement-free route the `ignore_requirements` commit uses (a
+    /// digivolution cost of 0 before the effect's fixed cost / delta), so a
+    /// fixed-cost "ignoring digivolution requirements" pick (EX13-074 /
+    /// P-092) offers only a card whose cost can be paid (CR 4.3 1-3-11-1).
+    /// G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT.
+    pub(crate) fn can_effect_digivolve_from_source_with_cost_waiving(
+        &self,
+        acting_player: PlayerId,
+        source_ref: CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: CostDelta,
+        waiver: DigivolveRequirementWaiver,
+    ) -> bool {
+        debug_assert!(matches!(
+            waiver,
+            DigivolveRequirementWaiver::None
+                | DigivolveRequirementWaiver::Level
+                | DigivolveRequirementWaiver::All
+        ));
         if !self.effect_digivolve_source_supported(source_ref, target) {
             return false;
         }
@@ -1776,8 +1808,18 @@ impl Game {
         let Some(card) = self.card_source_ref_peek(source_ref) else { return false; };
         let result_card = card.handle();
         let target_top = host.top_card().handle();
-        let routes: Vec<_> = self.all_digivolve_routes_for_card(card, target).into_iter()
-            .filter(|route| !route.app_fusion).collect();
+        let routes: Vec<_> = if waiver == DigivolveRequirementWaiver::All {
+            // Same single route the ignore-requirements commit uses.
+            vec![crate::dna_digivolve::DigivolveRouteMatch::digivolve(0)]
+        } else if waiver == DigivolveRequirementWaiver::Level {
+            // Same route set the ignore-level commit searches.
+            self.digivolve_routes_ignoring_level(card, target)
+        } else {
+            self.all_digivolve_routes_for_card(card, target)
+        }
+        .into_iter()
+        .filter(|route| !route.app_fusion)
+        .collect();
         if routes.is_empty() { return false; }
 
         let mut probe = self.clone();
@@ -1802,7 +1844,7 @@ impl Game {
             acting_player, source_ref, result_card, source_carrier_top, source_carrier_identity,
             target_player: target.player, target_zone: Self::effect_digivolve_target_zone(target), target_identity, target_top,
             dna_origin: probe.current_dna_origin, cost_delta,
-            waiver: DigivolveRequirementWaiver::None, source: PlaySource::ByEffect,
+            waiver, source: PlaySource::ByEffect,
             printed_costs: Vec::new(), effect_source_player: probe.effect_source_player,
             trigger_context: probe.current_trigger_context.clone(), result_clause: None,
             outer_conts: Vec::new(),

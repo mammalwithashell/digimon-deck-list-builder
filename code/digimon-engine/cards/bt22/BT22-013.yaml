@@ -203,6 +203,21 @@ effects:
   # precondition — which the alt-path `condition:` could not enforce — is the
   # `main_from_hand` `condition:` gate here, so the action is offered ONLY when
   # Nokia Shiramine is on your battle area AND an [Agumon] target exists.
+  #
+  # The [Agumon] target is the DCGO `PermanentCondition` (BT22_013.cs:63-68),
+  # used by both `CanUseCondition` (BT22_013.cs:50-55) and the pick:
+  #   * `EqualsCardName("Agumon")` — "1 of your [Agumon]" is the card name, not
+  #     "with [Agumon] in its name" (CR 4.3 2-3-1-2), so `name_is`.
+  #   * `card.CanPlayCardTargetFrame(frame, true, ..., fixedCost: 6,
+  #     ignore: All)` — onto a Digimon this is `CanEvolve` (CardSource.cs:1166,
+  #     1269-1290): THIS card can digivolve onto it, requirements ignored (no
+  #     `CannotDigivolve`, no "can't digivolve by effects").
+  #   * Payment (rules, not DCGO): the 6 must be payable (CR 4.3 1-3-11-1,
+  #     1-4-2-2). KNOWN DCGO DIVERGENCE (rules over DCGO): DCGO compares cost
+  #     to memory only for an EMPTY frame (CardSource.cs:1150-1162) and never
+  #     passes `fixedCost` to `CanEvolve`, so it offers this with 6 unpayable.
+  #   Both are `this_card_can_digivolve_onto` with the step's own cost and
+  #   waiver. G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO.
   - when: main_from_hand
     summary: "[Hand][Main] If you have Nokia Shiramine: 1 of your Agumon digivolves into this card for cost 6, ignoring reqs"
     condition:
@@ -216,14 +231,16 @@ effects:
             of: you
             zone: [battle_area]
             kind: digimon
-            name_contains: "Agumon"
+            name_is: "Agumon"
+            this_card_can_digivolve_onto: { cost: 6, ignore_requirements: true }
     process:
       - select_own_permanent:
           bind_as: base
           filter:
             all_of:
               - kind: digimon
-              - name_contains: "Agumon"
+              - name_is: "Agumon"
+              - this_card_can_digivolve_onto: { cost: 6, ignore_requirements: true }
           prompt: "Choose an Agumon to digivolve into WarGreymon (cost 6, ignore reqs)"
       - effect_initiated_digivolve:
           target: base
@@ -259,14 +276,16 @@ effects:
       - if:
           condition: { equals: [branch, 0] }
           then:
+            # [Gabumon] / [MetalGarurumon] are card names (CR 4.3 2-3-1-2;
+            # DCGO `EqualsCardName`), not "in its name".
             - select_own_permanent:
                 bind_as: base
-                filter: { name_contains: "Gabumon" }
+                filter: { name_is: "Gabumon" }
                 prompt: "Choose your Gabumon"
             - select_hand:
                 of: you
                 bind_as: evo
-                filter: { name_contains: "MetalGarurumon" }
+                filter: { name_is: "MetalGarurumon" }
                 prompt: "Digivolve into MetalGarurumon (free, ignore reqs)"
             - effect_initiated_digivolve:
                 target: base

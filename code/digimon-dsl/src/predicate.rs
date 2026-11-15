@@ -214,8 +214,12 @@ pub struct PredicateSpec {
     /// (AD1_019.cs:56) and `Owner.MaxMemoryCost >= GetCostItself - reduce`
     /// (BT26_090.cs:61) in the pick filter, so a card the verb can't pay for is
     /// never offered (CR 4.3 1-3-2: an impossible action is not carried out).
-    /// Like the action mask's own hand-play check, it does not credit optional
-    /// "before paying" cost reducers. Note that a bare negative integer is a
+    /// The "before paying" reducers the payment would take are credited (CR
+    /// 4.3 1-3-11-2/3, G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT): the card's
+    /// own mandatory one ("when this card would be played, reduce the cost")
+    /// and the optional "by X, reduce the cost" ones whose X can be paid, as
+    /// DCGO's `PayingCost(checkAvailability: true)` does; none on a `free`
+    /// delta or a fixed Option use. Note that a bare negative integer is a
     /// fixed cost (`cost_delta: -5` is a fixed cost of 0), not a reduction.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub affordable_with_cost: Option<crate::step::CostDelta>,
@@ -247,6 +251,18 @@ pub struct PredicateSpec {
     /// declared by the consuming effect (printed, free, fixed or reduced).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_digivolve_onto_with_cost: Option<DigivolveCostPredicate>,
+    /// Route-only sibling of `can_digivolve_onto` that waives ONLY the
+    /// target's level, matching a consuming `effect_initiated_digivolve
+    /// { ignore_level: true }` (DCGO `CanPlayCardTargetFrame(...,
+    /// IgnoreRequirement.Level)`, EX13_071.cs:357-361; ruling Q7449): a
+    /// printed circle of the target's colour at any level, or an alt-path
+    /// with its level leaves dropped. No payment check: prefer
+    /// `can_digivolve_onto_with_cost { ..., ignore_level: true }`, and use
+    /// this only where that payment probe is forbidden (inside a
+    /// `cost_reduction` clause). Same target names as `can_digivolve_onto`.
+    /// G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL-ROUTE-ONLY.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_digivolve_onto_ignoring_level: Option<String>,
     /// A result, field or hand-material pick with at least one complete,
     /// payable hand-partner DNA declaration. Prior picks are physical bindings.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -275,9 +291,10 @@ pub struct PredicateSpec {
     /// Whether this physical candidate can be played free into its owner's
     /// battle area by the effect controller. Checks the owner's field capacity
     /// and the causing controller's effect-play prohibition independently.
-    /// Zone-aware: a card in its owner's trash fails while that player can't
-    /// play cards from the trash (`CannotPlayFromTrash`, BT23-014), the same
-    /// refusal the trash-origin play makes, so a hand-or-trash union pick
+    /// Zone-aware: a Digimon / Tamer / DUAL in its owner's trash fails while
+    /// that player can't play Digimon or Tamers from the trash
+    /// (`CannotPlayFromTrash`, BT23-014), the same refusal the trash-origin
+    /// play makes, so a hand-or-trash union pick
     /// (`select_union_zone`) offers a trash card only when the play from the
     /// trash can happen. G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -295,9 +312,10 @@ pub struct PredicateSpec {
     /// !CanNotPlayThisOption) || (HasPlayCost && CanPlayAsNewPermanent(...))`.
     /// It does not check memory affordability: pair it with
     /// `affordable_with_cost` (or `affordable_with_cost_reduce`) for a
-    /// cost-paying play. Zone-aware like `can_play_from_effect_without_cost`:
-    /// a trash card fails under `CannotPlayFromTrash`, which also refuses an
-    /// Option use from the trash.
+    /// cost-paying play. Zone-aware like `can_play_from_effect_without_cost`
+    /// for the play arm only: a trash Digimon / Tamer fails under
+    /// `CannotPlayFromTrash`; an Option (or DUAL) use from the trash does not,
+    /// since using is not playing (CR 4.3 7-1-1 vs 9-1-1).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_play_or_use_from_effect: Option<bool>,
     /// Candidate is a physical hand Digimon/Dual whose owner's breeding is empty;
@@ -363,6 +381,25 @@ pub struct PredicateSpec {
     /// semantics. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST (BT25-092).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_digivolve_candidate: Option<DigivolveCandidatePredicate>,
+    /// Permanent-subject leaf: THIS card (the effect's own card, wherever it
+    /// is: hand for a `[Hand] [Main]`, trash for a `{Trash}` effect) can
+    /// digivolve onto the subject permanent through the consuming
+    /// `effect_initiated_digivolve { from_hand: self | source: self, cost,
+    /// ignore_level | ignore_requirements }`: the same route set, the
+    /// "can't digivolve" / "can't digivolve by effects" prohibitions, and the
+    /// payment at `cost` (CR 4.3 1-3-11-1; 1-4-2-2). DCGO gates the
+    /// activation and the target pick on `card.CanPlayCardTargetFrame(
+    /// permanent.PermanentFrame, payCost, ..., fixedCost, ignore)`
+    /// (BT22_013.cs:50-68, BT22_026.cs:43-60, P_250.cs:54-59,
+    /// BT20_084.cs:76-90), which onto a Digimon checks only the route and the
+    /// prohibitions (`CanEvolve`, CardSource.cs:1166); its memory check runs
+    /// for an empty frame only (CardSource.cs:1150-1162), so the payment half
+    /// is a KNOWN DCGO DIVERGENCE (rules over DCGO). Author it where the printed text makes the
+    /// digivolve the whole effect; a "By placing ..., it digivolves" effect
+    /// can be activated even when the digivolve can't happen (CR 4.3 15-7-5).
+    /// G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub this_card_can_digivolve_onto: Option<ThisCardDigivolvePredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_inherited: Option<Box<PredicateSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1621,6 +1658,31 @@ pub struct DigivolveCandidatePredicate {
     /// matters. Omit to preserve the route-only gate used by free effects.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost: Option<crate::step::CostDelta>,
+    /// Waive ONLY the level, matching a consuming `effect_initiated_digivolve
+    /// { ignore_level: true }` ("your level 4 Digimon can digivolve into ...
+    /// ignoring level", the BT12-089 shape; DCGO `IgnoreRequirement.Level`).
+    /// Same route set as `can_digivolve_onto_with_cost.ignore_level`.
+    /// G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-LEVEL.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_level: bool,
+}
+
+/// Payload for the `this_card_can_digivolve_onto` permanent-subject leaf:
+/// mirror the consuming `effect_initiated_digivolve` of THIS card exactly.
+/// G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ThisCardDigivolvePredicate {
+    /// The consuming step's cost (`free`, `printed`, a fixed N, `{ reduce: N }`).
+    /// `free` checks the route and prohibitions only.
+    pub cost: crate::step::CostDelta,
+    /// The step waives only the level (`ignore_level: true`).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_level: bool,
+    /// The step waives every digivolution requirement
+    /// (`ignore_requirements: true`). Exclusive with `ignore_level`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_requirements: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1634,6 +1696,25 @@ pub struct DigivolveCostPredicate {
     /// cannot occur inside cost_reduction/cost_assignment clauses, including
     /// free or fixed-zero requests: affordability itself evaluates reducers.
     pub cost: crate::step::CostDelta,
+    /// Waive ONLY the target's level requirement, matching a consuming
+    /// `effect_initiated_digivolve { ignore_level: true }` ("digivolve into
+    /// [X] ... ignoring level"; DCGO `CanPlayCardTargetFrame(...,
+    /// IgnoreRequirement.Level)`, EX13_071.cs:357-361; ruling Q7449). A
+    /// printed circle of the target's colour at any level, or an alt-path
+    /// with its level leaves dropped, is a route; colour, trait and name
+    /// gates, prohibitions and payment still apply.
+    /// G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_level: bool,
+    /// Waive EVERY digivolution requirement, matching a consuming
+    /// `effect_initiated_digivolve { ignore_requirements: true }` ("digivolve
+    /// into [X] ... for a digivolution cost of 3, ignoring digivolution
+    /// requirements", EX13-074 / P-092). The route is the requirement-free one
+    /// the commit uses; prohibitions and the payment still apply (CR 4.3
+    /// 1-3-11-1, 8-1-2-6). Exclusive with `ignore_level`.
+    /// G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_requirements: bool,
 }
 
 /// Stage of a both-on-field DNA choice (G-DSL-DNA-FIELD-PAIR-CANDIDATE).

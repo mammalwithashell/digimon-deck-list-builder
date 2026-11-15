@@ -85,6 +85,7 @@ pub fn lower_with_formula(
 ) -> Effect {
     let active_when = active_when.map(Arc::new);
     let condition = condition.map(Arc::new);
+    let play_only = when_any_ally_played.is_some();
     let when_any_ally_played = when_any_ally_played.map(Arc::new);
     let when_any_ally_digivolves_into = when_any_ally_digivolves_into.map(Arc::new);
     let amount_fn = amount_fn.map(Arc::new);
@@ -320,6 +321,13 @@ pub fn lower_with_formula(
         }
     }
     let mut effect = builder.build();
+    // "would be PLAYED" answers a play cost only, never an Option use (CR 4.3
+    // 7-1-1 vs 9-1-1). The DSL lowering re-scopes a `when_any_ally_used`
+    // reducer (passed here as the same target predicate) to Option uses.
+    // G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (review).
+    if play_only {
+        effect.reducer_cost_scope = crate::effect::ReducerCostScope::PlayOnly;
+    }
     // Data twin of the suspend-self pay_cost: lets the digivolve-path optional
     // reducer prompt ask "is this cost payable?" WITHOUT paying it, so an
     // already-suspended (or CannotSuspend) Tamer is never offered (DCGO

@@ -3,7 +3,7 @@
 //! new read-only cost contract wherever a typed predicate/formula is embedded.
 
 use super::*;
-use crate::predicate::{DigivolveCandidatePredicate, DigivolveCostPredicate, DnaHandCandidatePredicate, DnaHandCandidateRole, PredicateSpec};
+use crate::predicate::{DigivolveCandidatePredicate, DigivolveCostPredicate, DnaHandCandidatePredicate, DnaHandCandidateRole, PredicateSpec, ThisCardDigivolvePredicate};
 use crate::step::CostDelta;
 use serde_json::Value;
 
@@ -37,6 +37,7 @@ fn contains_cost_predicate(value: &Value) -> bool {
     match value {
         Value::Object(fields) => {
             fields.contains_key("can_digivolve_onto_with_cost")
+                || fields.contains_key("this_card_can_digivolve_onto")
                 || fields.contains_key("dna_hand_candidate")
                 || fields.contains_key("dna_trash_candidate")
                 || fields
@@ -103,6 +104,16 @@ impl Audit<'_, '_> {
                         self.cost(&probe.cost, &format!("{leaf}.cost"), scope, reducer);
                     }
                 }
+                }
+                // G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO: the same read-only cost
+                // contract, and no reducer may ask it (it prices the reducers).
+                if let Some(value) = fields.get("this_card_can_digivolve_onto") {
+                    if let Ok(probe) =
+                        serde_json::from_value::<ThisCardDigivolvePredicate>(value.clone())
+                    {
+                        let leaf = field_path(path, "this_card_can_digivolve_onto");
+                        self.cost(&probe.cost, &format!("{leaf}.cost"), scope, reducer);
+                    }
                 }
                 if let Some(value) = fields.get("can_digivolve_onto_with_cost") {
                     if let Ok(probe) =

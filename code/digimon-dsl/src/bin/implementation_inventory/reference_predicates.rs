@@ -46,6 +46,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             can_digivolve_from_source,
             can_digivolve_onto,
             can_digivolve_onto_with_cost,
+            can_digivolve_onto_ignoring_level,
             dna_hand_candidate,
             dna_trash_candidate,
             dna_field_pair,
@@ -60,6 +61,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             source_count,
             link_card_count,
             has_digivolve_candidate,
+            this_card_can_digivolve_onto,
             has_inherited,
             is_suspended,
             is_unsuspended,
@@ -355,6 +357,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             "EXISTING_INSTANCE_BINDING",
         );
         can_digivolve_onto_with_cost.walk(c, &format!("{}.can_digivolve_onto_with_cost", path), role);
+        can_digivolve_onto_ignoring_level.walk(
+            c,
+            &format!("{}.can_digivolve_onto_ignoring_level", path),
+            "EXISTING_INSTANCE_BINDING",
+        );
         dna_hand_candidate.walk(c, &format!("{}.dna_hand_candidate", path), role);
         dna_trash_candidate.walk(c, &format!("{}.dna_trash_candidate", path), role);
         dna_field_pair.walk(c, &format!("{}.dna_field_pair", path), role);
@@ -392,6 +399,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             c,
             &format!("{}.has_digivolve_candidate", path),
             "UNCLASSIFIED_STRING",
+        );
+        this_card_can_digivolve_onto.walk(
+            c,
+            &format!("{}.this_card_can_digivolve_onto", path),
+            role,
         );
         has_inherited.walk(c, &format!("{}.has_inherited", path), "UNCLASSIFIED_STRING");
         is_suspended.walk(c, &format!("{}.is_suspended", path), "UNCLASSIFIED_STRING");
@@ -1509,27 +1521,50 @@ impl Walk for digimon_dsl::predicate::DigivolveCandidatePredicate {
             "COMPOSITE",
             serde_json::Value::Null,
         );
-        let digimon_dsl::predicate::DigivolveCandidatePredicate { of, zone, filter, cost } = self;
+        let digimon_dsl::predicate::DigivolveCandidatePredicate { of, zone, filter, cost, ignore_level } = self;
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
         zone.walk(c, &format!("{}.zone", path), "UNCLASSIFIED_STRING");
         filter.walk(c, &format!("{}.filter", path), "UNCLASSIFIED_STRING");
         cost.walk(c, &format!("{}.cost", path), "UNCLASSIFIED_STRING");
+        ignore_level.walk(c, &format!("{}.ignore_level", path), "UNCLASSIFIED_STRING");
+    }
+}
+impl Walk for digimon_dsl::predicate::ThisCardDigivolvePredicate {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::predicate::ThisCardDigivolvePredicate", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::predicate::ThisCardDigivolvePredicate { cost, ignore_level, ignore_requirements } = self;
+        cost.walk(c, &format!("{path}.cost"), role);
+        ignore_level.walk(c, &format!("{path}.ignore_level"), "UNCLASSIFIED_STRING");
+        ignore_requirements.walk(c, &format!("{path}.ignore_requirements"), "UNCLASSIFIED_STRING");
+    }
+}
+impl Walk for digimon_dsl::compiled::CompiledThisCardDigivolve {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::compiled::CompiledThisCardDigivolve", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::compiled::CompiledThisCardDigivolve { cost, ignore_level, ignore_requirements } = self;
+        cost.walk(c, &format!("{path}.cost"), role);
+        ignore_level.walk(c, &format!("{path}.ignore_level"), "UNCLASSIFIED_STRING");
+        ignore_requirements.walk(c, &format!("{path}.ignore_requirements"), "UNCLASSIFIED_STRING");
     }
 }
 impl Walk for digimon_dsl::predicate::DigivolveCostPredicate {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
         c.node(path, "digimon_dsl::predicate::DigivolveCostPredicate", "COMPOSITE", serde_json::Value::Null);
-        let digimon_dsl::predicate::DigivolveCostPredicate { target, cost } = self;
+        let digimon_dsl::predicate::DigivolveCostPredicate { target, cost, ignore_level, ignore_requirements } = self;
         target.walk(c, &format!("{path}.target"), "EXISTING_INSTANCE_BINDING");
         cost.walk(c, &format!("{path}.cost"), role);
+        ignore_level.walk(c, &format!("{path}.ignore_level"), "UNCLASSIFIED_STRING");
+        ignore_requirements.walk(c, &format!("{path}.ignore_requirements"), "UNCLASSIFIED_STRING");
     }
 }
 impl Walk for digimon_dsl::compiled::CompiledDigivolveCostPredicate {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
         c.node(path, "digimon_dsl::compiled::CompiledDigivolveCostPredicate", "COMPOSITE", serde_json::Value::Null);
-        let digimon_dsl::compiled::CompiledDigivolveCostPredicate { target, cost } = self;
+        let digimon_dsl::compiled::CompiledDigivolveCostPredicate { target, cost, ignore_level, ignore_requirements } = self;
         target.walk(c, &format!("{path}.target"), "EXISTING_INSTANCE_BINDING");
         cost.walk(c, &format!("{path}.cost"), role);
+        ignore_level.walk(c, &format!("{path}.ignore_level"), "UNCLASSIFIED_STRING");
+        ignore_requirements.walk(c, &format!("{path}.ignore_requirements"), "UNCLASSIFIED_STRING");
     }
 }
 impl Walk for digimon_dsl::predicate::CanAttackPredicate {
@@ -1742,6 +1777,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             can_digivolve_from_source,
             can_digivolve_onto,
             can_digivolve_onto_with_cost,
+            can_digivolve_onto_ignoring_level,
             dna_hand_candidate,
             dna_trash_candidate,
             dna_field_pair,
@@ -1759,6 +1795,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             source_count,
             link_card_count,
             has_digivolve_candidate,
+            this_card_can_digivolve_onto,
             has_inherited,
             is_suspended,
             is_unsuspended,
@@ -2041,6 +2078,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         dp_eq.walk(c, &format!("{}.dp_eq", path), "UNCLASSIFIED_STRING");
         dp_lte.walk(c, &format!("{}.dp_lte", path), "UNCLASSIFIED_STRING");
         can_digivolve_onto_with_cost.walk(c, &format!("{}.can_digivolve_onto_with_cost", path), role);
+        can_digivolve_onto_ignoring_level.walk(
+            c,
+            &format!("{}.can_digivolve_onto_ignoring_level", path),
+            "EXISTING_INSTANCE_BINDING",
+        );
         dna_hand_candidate.walk(c, &format!("{}.dna_hand_candidate", path), role);
         dna_trash_candidate.walk(c, &format!("{}.dna_trash_candidate", path), role);
         dna_field_pair.walk(c, &format!("{}.dna_field_pair", path), role);
@@ -2087,6 +2129,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             c,
             &format!("{}.has_digivolve_candidate", path),
             "UNCLASSIFIED_STRING",
+        );
+        this_card_can_digivolve_onto.walk(
+            c,
+            &format!("{}.this_card_can_digivolve_onto", path),
+            role,
         );
         has_inherited.walk(c, &format!("{}.has_inherited", path), "UNCLASSIFIED_STRING");
         is_suspended.walk(c, &format!("{}.is_suspended", path), "UNCLASSIFIED_STRING");

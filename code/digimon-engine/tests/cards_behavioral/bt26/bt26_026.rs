@@ -314,3 +314,70 @@ fn bt26_026_when_attacking_is_not_inherited() {
     fire(&mut r, EffectTiming::WhenAttacking, h);
     assert!(r.game.pending_selection.is_none());
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (reducer credit)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// CR 4.3 1-3-11-1..3: a card can be declared for play / use only if its
+// (alternate) cost can be paid, counting "when this card would be played,
+// reduce the cost" effects whose processing conditions are met (1-3-11-2) --
+// optional ones included, which the player must then perform as far as needed
+// to pay (1-3-11-3). DCGO prices a play the same way: `CanPlayAsNewPermanent(
+// card, true, ..., fixedCost)` -> `PayingCost(checkAvailability: true)`
+// (CardSource.cs:1150-1162, 668-686, 925-986) applies every static cost change,
+// including the hidden `isCheckAvailability: () => true` ChangeCostClass an
+// optional "by trashing a face-down card, reduce the cost" reducer keeps while
+// that cost is payable (Kyo Sawashiro BT25_088.cs:246-275, Armalizamon
+// BT25_049.cs:226-255), and the reducer itself refuses to be declined while it
+// is needed (`CanNoSelect`, BT25_088.cs:155-171).
+//
+// DCGO's BT26-026 pick reads `MaxMemoryCost >= GetCostItself - 2`
+// (BT26_026.cs:56), and `GetCostItself` (CardSource.cs:775) applies no
+// payment-time reduction at all, so it would drop an Option payable only with
+// Armalizamon's -3. That contradicts CR 4.3 1-3-11-3 and DCGO's own general
+// availability model above; the engine follows the rule.
+
+/// The use is judged on the cost it pays: GD-15 (15 - 2 = 13 from memory 3) is
+/// used and p0 ends at -10 (CR 4.3 1-3-11-1, 4-2-3-1).
+#[test]
+fn bt26_026_option_payable_only_after_the_reduction_is_used() {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    let mut r = setup();
+    assert_eq!(offered_after_paying(&mut r, 1, &["GD-15"]), vec!["GD-15".to_string()]);
+    let idx = hand_ids(&r, 0).iter().position(|c| c == "GD-15").unwrap();
+    r.execute_action(0, PLAY_HAND_START + idx as u16).unwrap();
+    for _ in 0..8 {
+        let Some(v) = r.pending_selection_view() else { break };
+        let a = v.valid_action_ids.iter().copied().find(|&a| a != PASS).unwrap_or(v.valid_action_ids[0]);
+        r.execute_action(v.selecting_player, a).unwrap();
+    }
+    assert!(!hand_ids(&r, 0).contains(&"GD-15".to_string()), "GD-15 left the hand");
+    let p0 = if r.game.turn_player() == 0 { r.memory() } else { -r.memory() };
+    assert_eq!(p0, -10, "3 - (15 - 2) = -10");
+}
+
+/// Armalizamon (BT25-049) on the field with a Tamer face-down card to pay its
+/// reducer: GD-16 (16 - 2 = 14 from memory 3 -> -11) is payable at 11 with
+/// Armalizamon's -3, so it is offered.
+#[test]
+fn bt26_026_hand_pick_credits_armalizamon_option_reducer() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT26-026")
+        .dsl_card("BT25-049")
+        .expect("Armalizamon")
+        .add_card(filler("FILLER"))
+        .add_card(tamer("SECT", "SecTamer", CardColor::Red, &[]))
+        .add_card(tamer("GDT", "GD Tamer", CardColor::Yellow, &["Glowing Dawn"]))
+        .add_card(gd_option("GD-16", 16))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .security(0, &["SECT", "SECT", "SECT"])
+        .security(1, &["SECT", "SECT", "SECT"])
+        .memory(3)
+        .start();
+    r.set_first_player(0);
+    r.place_on_field(0, "BT25-049", Some(0));
+    assert_eq!(offered_after_paying(&mut r, 1, &["GD-16"]), vec!["GD-16".to_string()]);
+}

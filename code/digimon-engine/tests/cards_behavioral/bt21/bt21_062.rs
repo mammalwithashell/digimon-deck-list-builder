@@ -847,17 +847,14 @@ fn bt21_062_cannon_not_offered_when_options_cannot_be_used() {
     assert_eq!(runner.game.players[0].hand.len(), 1, "the hand copy stays in hand");
 }
 
-/// BT23-014's lock is printed "their effects can't play Digimon or Tamers from
-/// the trash", and DCGO's `CanNotPutFieldClass` (BT23_014.cs:49) gates on
-/// `IsDigimon || IsTamer`, so it never restricts an Option use: both Ragnarok
-/// Cannon copies stay offered. Our `CannotPlayFromTrash` modifier is not
-/// kind-discriminating (`trash_play_locked` in dsl_cards/predicate.rs and
-/// `use_option_from` / `play_option_from_trash` in game_actions/options.rs
-/// refuse the trash Option too), so today the trash copy is excluded. This
-/// asserts the faithful target and is ignored until the engine lock is
-/// narrowed to Digimon/Tamer plays.
+/// Gallantmon (BT23-014)'s lock is printed "their effects can't play Digimon
+/// or Tamers from the trash", and DCGO's `CanNotPutFieldClass`
+/// (BT23_014.cs:46-49) gates on `IsDigimon || IsTamer` and is consulted only
+/// by `CardSource.CanEnterField` (CardSource.cs:1214-1260) -- never by an
+/// Option use (`CanNotPlayThisOption`, CardSource.cs:184). Using an Option is
+/// not playing a card (CR 4.3 7-1-1 vs 9-1-1), so both Ragnarok Cannon copies
+/// stay offered.
 #[test]
-#[ignore = "engine over-block: CannotPlayFromTrash also refuses Option use from trash (BT23-014 prints Digimon or Tamers only)"]
 fn bt21_062_trash_cannon_still_offered_under_bt23_014_digimon_tamer_trash_lock() {
     use digimon_engine::enums::{Expiry, ModifierType};
     use digimon_engine::modifiers::PlayerModifierEntry;
@@ -868,4 +865,56 @@ fn bt21_062_trash_cannon_still_offered_under_bt23_014_digimon_tamer_trash_lock()
         );
     });
     assert_eq!(cannon_rows(&runner), (true, true));
+}
+
+/// Option body for the use-path witness: [Main] gain 2 memory.
+struct CannonMainGainTwo;
+
+impl digimon_engine::CardEffect for CannonMainGainTwo {
+    fn effects(
+        &self,
+        card: digimon_engine::card_source::CardHandle,
+    ) -> Vec<digimon_engine::Effect> {
+        vec![digimon_engine::Effect::on_play(card)
+            .name("Ragnarok Cannon fixture: gain 2 memory")
+            .option_main()
+            .process(|ctx| {
+                ctx.gain_memory(2);
+            })
+            .build()]
+    }
+}
+
+/// The use path, not only the offer: under the same Digimon/Tamer trash lock
+/// the trash Ragnarok Cannon is actually USED (its [Main] resolves, CR 4.3
+/// 9-1-9-3) for free and then trashed (9-1-5).
+#[test]
+fn bt21_062_trash_cannon_is_used_under_bt23_014_digimon_tamer_trash_lock() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = cannon_pick_runner(false, true, |r| {
+        r.register_effect("CANNON", std::sync::Arc::new(CannonMainGainTwo));
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    let memory_before = runner.game.memory;
+    let row = owned_union_fixture::action(&runner.game, 0, "CANNON", true)
+        .expect("the trash Ragnarok Cannon is offered under the Digimon/Tamer trash lock");
+    runner.execute_action(0, row).expect("use the trash Ragnarok Cannon");
+    runner.auto_resolve().expect("finish resolution");
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 2,
+        "the Cannon's [Main] resolved (free use: no memory paid, +2 gained)"
+    );
+    assert!(runner.game.pending_option.is_none());
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "CANNON"),
+        "the used Option is trashed after its [Main] resolves"
+    );
 }

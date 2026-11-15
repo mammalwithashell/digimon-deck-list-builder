@@ -23,6 +23,17 @@ effects:
     summary: "[Trash] When any of your Digimon are played, may digivolve 1 Sistermon Ciel into this card for free"
     trigger_if:
       event_target_kind: digimon
+    # "without paying the cost" waives the cost, not the digivolution
+    # requirements: DCGO BT20_084.cs:156-166 passes `payCost: false,
+    # ignoreDigivolutionRequirementFixedCost: -1` and the default
+    # `IgnoreRequirement.None` (CardEffectCommons.cs:832, 842), so the route is
+    # the printed "[Digivolve] [Sistermon Ciel]: Cost 1" alt-path, paid at 0.
+    # The pick (BT20_084.cs:76-90) and the activation (`CanActivateCondition`,
+    # BT20_084.cs:107-118) need `card.CanPlayCardTargetFrame(frame, false, ...,
+    # root: Trash)`: `this_card_can_digivolve_onto { cost: free }` (route +
+    # "can't digivolve" prohibitions; free, so no payment). With no such
+    # [Sistermon Ciel] the pick is empty and nothing is asked.
+    # G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO.
     process:
       - select_own_permanent:
           bind_as: target
@@ -31,12 +42,12 @@ effects:
             all_of:
               - kind: digimon
               - name_is: "Sistermon Ciel"
+              - this_card_can_digivolve_onto: { cost: free }
           prompt: "Choose a Sistermon Ciel to digivolve into this card"
       - effect_initiated_digivolve:
           target: target
           source: self
           cost: free
-          ignore_requirements: true
 
   - when: [on_play, when_digivolving]
     summary: "1 opponent Digimon or Tamer can't suspend until the end of their turn"

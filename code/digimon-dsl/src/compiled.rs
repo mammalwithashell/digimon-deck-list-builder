@@ -442,6 +442,10 @@ pub struct CompiledPredicate {
     pub can_digivolve_onto: Option<String>,
     #[serde(default)]
     pub can_digivolve_onto_with_cost: Option<CompiledDigivolveCostPredicate>,
+    /// See `PredicateSpec::can_digivolve_onto_ignoring_level`.
+    /// G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL-ROUTE-ONLY.
+    #[serde(default)]
+    pub can_digivolve_onto_ignoring_level: Option<String>,
     pub dna_hand_candidate: Option<CompiledDnaHandCandidate>,
     /// See `PredicateSpec::dna_trash_candidate`. G-DSL-DNA-TRASH-PARTNER-CANDIDATE.
     #[serde(default)]
@@ -497,6 +501,11 @@ pub struct CompiledPredicate {
     /// `has_digivolve_candidate`. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
     #[serde(default)]
     pub has_digivolve_candidate: Option<CompiledDigivolveCandidate>,
+    /// Permanent-subject leaf: THIS card can digivolve onto the subject the
+    /// way the consuming effect digivolve would. Compiled form of
+    /// `this_card_can_digivolve_onto`. G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO.
+    #[serde(default)]
+    pub this_card_can_digivolve_onto: Option<CompiledThisCardDigivolve>,
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
@@ -988,12 +997,36 @@ pub struct CompiledDigivolveCandidate {
     pub zones: Vec<CompiledZone>,
     pub filter: Option<Box<CompiledPredicate>>,
     pub cost: Option<CompiledCostDelta>,
+    /// See `DigivolveCandidatePredicate::ignore_level`.
+    /// G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-LEVEL.
+    #[serde(default)]
+    pub ignore_level: bool,
+}
+
+/// Compiled form of `this_card_can_digivolve_onto` — THIS card can digivolve
+/// onto the subject permanent at `cost` with the given waiver.
+/// G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledThisCardDigivolve {
+    pub cost: CompiledCostDelta,
+    #[serde(default)]
+    pub ignore_level: bool,
+    #[serde(default)]
+    pub ignore_requirements: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledDigivolveCostPredicate {
     pub target: String,
     pub cost: CompiledCostDelta,
+    /// See `DigivolveCostPredicate::ignore_level`.
+    /// G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL.
+    #[serde(default)]
+    pub ignore_level: bool,
+    /// See `DigivolveCostPredicate::ignore_requirements`.
+    /// G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT.
+    #[serde(default)]
+    pub ignore_requirements: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1360,6 +1393,11 @@ pub enum CompiledDeclarativeClause {
         when_playing_this: bool,
         when_digivolving_this: bool,
         when_any_ally_played: Option<CompiledPredicate>,
+        /// Option-use-keyed trigger -- fires only for an Option-use cost whose
+        /// card matches this predicate. Absent in packs built before it
+        /// existed. G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (review).
+        #[serde(default)]
+        when_any_ally_used: Option<CompiledPredicate>,
         /// Digivolution-target-keyed trigger — fires only for a DIGIVOLVE
         /// cost whose target card matches this predicate.
         /// `G-COST-REDUCTION-DIGIVOLVE-INTO`.

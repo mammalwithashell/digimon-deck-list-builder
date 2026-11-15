@@ -1228,3 +1228,67 @@ fn bt22_098_delay_hand_pick_excludes_card_that_cannot_digivolve_onto_base() {
         .collect();
     assert_eq!(offered, vec!["EVO".to_string()], "the Lv.6 can't digivolve onto a Lv.3 base");
 }
+
+/// The <Delay> digivolve is paid ("with the digivolution cost reduced by 3"; DCGO BT22_098.cs:243-249, `payCost:
+/// true`, `reduceCost: 3`). A card whose cost can't be paid can't be digivolved (CR 4.3 1-3-11-1, 8-1-2-6; 4-2-2 /
+/// 1-4-2-2: the gauge stops at 10): from -5 at most 5 can be paid, so a printed 8 (8-3=5) is offered and a printed 9
+/// (9-3=6) is not. The compile pass gives the hand pick the payment leaf at the step's cost
+/// (G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT).
+#[test]
+fn bt22_098_delay_hand_pick_offers_only_cards_whose_reduced_cost_can_be_paid() {
+    let mut cost8 = puppet_liberator_evo("EVO-8");
+    cost8.evo_costs[0].memory_cost = 8;
+    let mut cost9 = puppet_liberator_evo("EVO-9");
+    cost9.evo_costs[0].memory_cost = 9;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml())
+        .expect("BT22-098 YAML parses")
+        .add_card(arisa("ARISA"))
+        .add_card(puppet_base("BASE"))
+        .add_card(cost8)
+        .add_card(cost9)
+        .add_card(filler("FILL"))
+        .hand(0, &["BT22-098", "EVO-8", "EVO-9"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "BASE", Some(0));
+    runner.game.enter_main_phase();
+    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Trashed);
+    let arisa = runner.place_on_field(0, "ARISA", Some(0));
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.game.set_memory(-5);
+    runner.game.suspend(arisa);
+    let view = runner.pending_selection_view().expect("Delay activation");
+    runner.execute_action(view.selecting_player, REPLACEMENT_ACCEPT).unwrap();
+    let view = runner.pending_selection_view().expect("Puppet base pick");
+    runner.execute_action(view.selecting_player, view.valid_action_ids[0]).unwrap();
+    let view = runner.pending_selection_view().expect("hand evolution pick");
+    assert_eq!(view.kind, SelectionKind::Hand);
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[(a - digimon_engine::action::space::PLAY_HAND_START) as usize].clone())
+        .collect();
+    assert_eq!(offered, vec!["EVO-8".to_string()], "9-3=6 can't be paid from -5 (CR 4.3 1-3-11-1)");
+    let pick = *view.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+    runner.execute_action(view.selecting_player, pick).unwrap();
+    let top = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "EVO-8");
+    assert!(top.is_some(), "the base digivolved into EVO-8");
+    let mine = if runner.game.turn_player() == 0 { runner.memory() } else { -runner.memory() };
+    assert_eq!(mine, -10, "5 paid from -5");
+}

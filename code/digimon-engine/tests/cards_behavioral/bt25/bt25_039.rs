@@ -1191,11 +1191,11 @@ fn bt25_039_ceresmon_pick_excludes_ceresmon_under_digimon_effect_play_lock() {
 /// (`isCheckAvailability: () => false`, ChangePlayCost.cs:123-143). Our
 /// `play_from_hand` verb credits it too (the before-pay-cost chain).
 ///
-/// KNOWN GAP (G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT): the
-/// `affordable_with_cost` leaf (`card_cost_affordable`, predicate.rs) prices the
-/// card at its printed cost and credits no before-pay-cost reducer, so it
-/// computes 12 − 7 = 5 → −11 and drops the pick. Fixing it means widening that
-/// shared leaf (engine code outside this card's files). Un-ignore when it lands.
+/// G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (closed 2026-11-14): the
+/// `affordable_with_cost` leaf (`card_cost_affordable`, predicate.rs) credits
+/// the reducers the payment would take (`Game::declarable_cost_reduction`,
+/// CR 4.3 1-3-11-2 -- whose own example is a "when this card would be played,
+/// reduce the cost by 5" card), so it prices this play at 0, not 12 − 7 = 5.
 /// The play verb half of the gap: an effect play of the real Ceresmon
 /// (BT25-059) "with the cost reduced by 7" from memory −6 with 2 suspended
 /// Digimon succeeds and costs 0 — the before-pay-cost chain credits its
@@ -1223,7 +1223,6 @@ fn bt25_039_reduced_play_verb_credits_real_ceresmons_own_cost_reduction() {
 }
 
 #[test]
-#[ignore = "G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT: affordable_with_cost ignores Ceresmon BT25-059's mandatory self cost reduction"]
 fn bt25_039_ceresmon_pick_credits_real_ceresmons_own_cost_reduction() {
     let mut runner = base()
         .dsl_card("BT25-059")
@@ -1253,4 +1252,28 @@ fn bt25_039_ceresmon_pick_credits_real_ceresmons_own_cost_reduction() {
     runner.execute_action(0, pick).expect("pick Ceresmon BT25-059");
     assert_eq!(runner.memory(), memory_before, "BT25-059 plays for 0 (reduced by a total of 12)");
     assert!(field_contains(&runner, 0, "BT25-059"), "Ceresmon BT25-059 was played");
+}
+
+/// G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (reducer credit) guard: with only
+/// ONE suspended Digimon, Ceresmon BT25-059's own reduction doesn't apply, so
+/// the play costs 12 − 7 = 5 and at memory −6 (→ −11) it is not offered.
+#[test]
+fn bt25_039_ceresmon_pick_excludes_real_ceresmon_with_one_suspended_digimon() {
+    let mut runner = base()
+        .dsl_card("BT25-059")
+        .expect("BT25-059 Ceresmon compiles")
+        .hand(0, &["BT25-059"])
+        .security(0, &["FILL", CARD_ID])
+        .start();
+    mark_security_face_up(&mut runner, CARD_ID);
+    let h = runner.place_on_field(0, "FILL", Some(0));
+    runner.game.players[0].battle_area[h.index as usize].is_suspended = true;
+    runner.game.set_memory(-6);
+    runner.end_turn();
+    let offered = runner
+        .pending_selection_view()
+        .filter(|v| v.kind == SelectionKind::Hand)
+        .map(|v| v.valid_action_ids.iter().copied().filter(|&id| id != PASS).count())
+        .unwrap_or(0);
+    assert_eq!(offered, 0, "12 - 7 = 5 at memory -6 is unpayable without the -5");
 }

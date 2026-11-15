@@ -880,3 +880,49 @@ fn st23_08_hand_pick_offers_dual_priced_at_its_use_cost() {
     runner.game.memory = 0;
     assert_eq!(offered_after_paying(&mut runner, source), vec!["BT25-043"]);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (reducer credit)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// CR 4.3 1-3-11-1..3: a card can be declared for play / use only if its
+// (alternate) cost can be paid, counting "when this card would be played,
+// reduce the cost" effects whose processing conditions are met (1-3-11-2) --
+// optional ones included, which the player must then perform as far as needed
+// to pay (1-3-11-3). DCGO prices a play the same way: `CanPlayAsNewPermanent(
+// card, true, ..., fixedCost)` -> `PayingCost(checkAvailability: true)`
+// (CardSource.cs:1150-1162, 668-686, 925-986) applies every static cost change,
+// including the hidden `isCheckAvailability: () => true` ChangeCostClass an
+// optional "by trashing a face-down card, reduce the cost" reducer keeps while
+// that cost is payable (Kyo Sawashiro BT25_088.cs:246-275, Armalizamon
+// BT25_049.cs:226-255), and the reducer itself refuses to be declined while it
+// is needed (`CanNoSelect`, BT25_088.cs:155-171).
+
+/// Kyo Sawashiro (BT25-088) with a face-down card left after Monarchlizamon's
+/// own cost: a cost-14 [Glowing Dawn] Digimon (14 - 3 = 11 from memory 0) is
+/// payable at 10 with Kyo's -1, so it is offered (ST23_08.cs:98-104).
+#[test]
+fn st23_08_hand_pick_credits_kyo_sawashiro_play_reducer() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST23-08 in embedded DSL pack")
+        .dsl_card("BT25-088")
+        .expect("Kyo Sawashiro in embedded DSL pack")
+        .add_card(gd_card("GD-BIG", CardKind::Digimon, CardColor::Green, 14))
+        .add_card(make_tamer("TAMER"))
+        .add_card(filler("FILLER"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(8)
+        .start();
+    runner.set_first_player(0);
+    tamer_with_face_down(&mut runner);
+    let kyo = runner.place_stack(0, &["FILLER", "FILLER", "BT25-088"]);
+    for i in 0..2 {
+        runner.game.players[0].battle_area[kyo.index as usize].card_sources[i].face_down = true;
+    }
+    push_to_hand(&mut runner, 0, "GD-BIG");
+    let source = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.memory = 0;
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-BIG"]);
+}

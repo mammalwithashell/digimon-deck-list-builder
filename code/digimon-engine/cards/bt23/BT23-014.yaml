@@ -55,9 +55,12 @@ effects:
   # expiry. This blocks effect-initiated plays from the opponent's trash —
   # zone-faithful to the printed "from the trash". (The broad
   # `CannotPlayDigimonByEffect` / `CannotPlayTamerByEffect` modifiers also block
-  # HAND plays, a much larger over-block.) `CannotPlayFromTrash` is not
-  # kind-discriminating, so it also blocks the vanishingly rare effect-initiated
-  # Option play from trash — a far narrower residual than the all-zones path.
+  # HAND plays, a much larger over-block.) The engine reads `CannotPlayFromTrash`
+  # for Digimon / Tamer / DUAL plays only (`Game::trash_play_lock_applies`), so
+  # an Option USE from the trash stays legal (CR 4.3 7-1-1 vs 9-1-1;
+  # G-ENGINE-TRASH-LOCK-OPTION-OVERBLOCK). Open residual: the engine keys the
+  # lock on the trash owner, DCGO on the effect's owner over any trash
+  # (G-ENGINE-TRASH-PLAY-LOCK-SCOPE, docs/RUST_ENGINE_GAPS.md).
   - when: [on_play, when_digivolving]
     summary: "Until opp's turn ends, their effects can't play Digimon/Tamers from trash"
     process:

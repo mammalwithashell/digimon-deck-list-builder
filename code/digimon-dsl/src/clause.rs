@@ -733,8 +733,20 @@ pub struct CostReductionBody {
     /// becomes a digivolution. Never a play reducer or a field observer.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub when_digivolving_this: bool,
+    /// "When one of your [X] cards would be PLAYED": fires for a play cost
+    /// (Digimon / Tamer, CR 4.3 7-1-1) of the controller's card matching this
+    /// predicate -- never for a digivolve cost or an Option use (using is not
+    /// playing, CR 4.3 9-1-1; DCGO `HasPlayCost` is false for every Option,
+    /// CEntity_Base.cs:340). Kyo Sawashiro (BT25-088).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub when_any_ally_played: Option<PredicateSpec>,
+    /// "When you would USE a [X] Option card": fires only for an Option-use
+    /// cost (CR 4.3 9-1-1, a DUAL used as an Option included) of the
+    /// controller's card matching this predicate. Armalizamon (BT25-049),
+    /// Tomoro Tenma (BT25-090). Mutually exclusive with `when_any_ally_played`.
+    /// G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (review).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub when_any_ally_used: Option<PredicateSpec>,
     /// Digivolution-target-keyed cost-reduction trigger. When set, the
     /// reduction fires only for a DIGIVOLVE cost (not a play) whose target
     /// card — the card being digivolved INTO — matches this predicate. The

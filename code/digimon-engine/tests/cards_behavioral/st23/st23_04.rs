@@ -1148,3 +1148,278 @@ fn st23_04_hand_pick_offers_dual_priced_at_its_use_cost() {
     runner.game.memory = 0;
     assert_eq!(offered_after_paying(&mut runner, source), vec!["BT25-043"]);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 7 — G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (reducer credit)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// CR 4.3 1-3-11-1..3: a card can be declared for play / use only if its
+// (alternate) cost can be paid, counting "when this card would be played,
+// reduce the cost" effects whose processing conditions are met (1-3-11-2) --
+// optional ones included, which the player must then perform as far as needed
+// to pay (1-3-11-3). DCGO prices a play the same way: `CanPlayAsNewPermanent(
+// card, true, ..., fixedCost)` -> `PayingCost(checkAvailability: true)`
+// (CardSource.cs:1150-1162, 668-686, 925-986) applies every static cost change,
+// including the hidden `isCheckAvailability: () => true` ChangeCostClass an
+// optional "by trashing a face-down card, reduce the cost" reducer keeps while
+// that cost is payable (Kyo Sawashiro BT25_088.cs:246-275, Armalizamon
+// BT25_049.cs:226-255), and the reducer itself refuses to be declined while it
+// is needed (`CanNoSelect`, BT25_088.cs:155-171).
+
+/// Murasamemon (ST23-04) on the field, a Tamer with ONE face-down card (the
+/// cost this effect pays), a high-DP opponent Digimon, `hand` in p0's hand and
+/// memory 0. Registers the real Kyo Sawashiro (BT25-088) and Armalizamon
+/// (BT25-049); neither is on the field until a test places it.
+fn reducer_runner(hand: &[&str]) -> (DebugRunner, PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST23-04 in embedded DSL pack")
+        .dsl_card("BT25-088")
+        .expect("Kyo Sawashiro in embedded DSL pack")
+        .dsl_card("BT25-049")
+        .expect("Armalizamon in embedded DSL pack")
+        .dsl_card("BT25-090")
+        .expect("Tomoro Tenma in embedded DSL pack")
+        .add_card(opp_digimon("OPP"))
+        .add_card(gd_card("GD-14", CardKind::Digimon, CardColor::Yellow, 14))
+        .add_card(gd_card("GD-OPT-13", CardKind::Option, CardColor::Yellow, 13))
+        .add_card(gd_card("GD-OPT-14", CardKind::Option, CardColor::Yellow, 14))
+        .add_card(gd_card("GD-OPT-16", CardKind::Option, CardColor::Yellow, 16))
+        .add_card(gd_card("GD-OPT-17", CardKind::Option, CardColor::Yellow, 17))
+        .add_card(make_tamer("TAMER"))
+        .add_card(filler("FILLER"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(8)
+        .start();
+    runner.set_first_player(0);
+    runner.place_on_field(1, "OPP", Some(0));
+    tamer_with_face_down(&mut runner);
+    for h in hand {
+        push_to_hand(&mut runner, 0, h);
+    }
+    let source = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.memory = 0;
+    (runner, source)
+}
+
+/// Kyo Sawashiro (BT25-088) on p0's field with `n` face-down cards under it.
+fn kyo_with_face_down(runner: &mut DebugRunner, n: usize) -> PermanentHandle {
+    let mut ids: Vec<&str> = vec!["FILLER"; n];
+    ids.push("BT25-088");
+    let kyo = runner.place_stack(0, &ids);
+    for s in runner.game.players[0].battle_area[kyo.index as usize].card_sources[..n].iter_mut() {
+        s.face_down = true;
+    }
+    kyo
+}
+
+/// p0's memory, whichever player's turn it now is.
+fn p0_memory(runner: &DebugRunner) -> i16 {
+    if runner.game.turn_player() == 0 {
+        runner.memory()
+    } else {
+        -runner.memory()
+    }
+}
+
+/// Pick `card` at the pending hand pick, then take the first non-decline
+/// action at every later prompt until `card` leaves the hand and nothing is
+/// pending.
+fn pick_and_settle(runner: &mut DebugRunner, card: &str) {
+    let v = runner.pending_selection_view().expect("hand pick");
+    let want = PLAY_HAND_START + hand_index_of(runner, 0, card) as u16;
+    assert!(v.valid_action_ids.contains(&want), "{card} must be offered: {:?}", v.valid_action_ids);
+    runner.execute_action(0, want).unwrap();
+    for _ in 0..12 {
+        let Some(v) = runner.pending_selection_view() else {
+            return;
+        };
+        let action = v
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .unwrap_or(v.valid_action_ids[0]);
+        runner.execute_action(v.selecting_player, action).unwrap();
+    }
+    panic!("prompts did not settle");
+}
+
+fn on_field(runner: &DebugRunner, card: &str) -> bool {
+    runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == card)
+}
+
+fn in_trash(runner: &DebugRunner, card: &str) -> bool {
+    runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == card)
+}
+
+/// Kyo Sawashiro (BT25-088) with a face-down card left after Murasamemon's own
+/// cost: a cost-14 [Glowing Dawn] Digimon (14 - 3 = 11 from memory 0, one past
+/// the 10 limit) is payable at 10 with Kyo's -1, so it is offered (DCGO: the
+/// hidden availability -1, BT25_088.cs:246-275).
+#[test]
+fn st23_04_hand_pick_credits_kyo_sawashiro_play_reducer() {
+    let (mut runner, source) = reducer_runner(&["GD-14"]);
+    kyo_with_face_down(&mut runner, 2);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-14"]);
+}
+
+/// Kyo with no face-down card under any Tamer once Murasamemon has paid can't
+/// pay its reducer (BT25_088.cs:258 `TamerWithOneFaceDownSource`), so nothing
+/// is credited and the cost-14 Digimon is not offered.
+#[test]
+fn st23_04_hand_pick_does_not_credit_kyo_without_a_face_down_card() {
+    let (mut runner, source) = reducer_runner(&["GD-14"]);
+    kyo_with_face_down(&mut runner, 0);
+    assert!(offered_after_paying(&mut runner, source).is_empty());
+}
+
+/// The credited pick resolves: Kyo's reducer is paid and the Digimon is
+/// played for 14 - 3 - 1 = 10.
+#[test]
+fn st23_04_kyo_credited_pick_plays_for_the_credited_cost() {
+    let (mut runner, source) = reducer_runner(&["GD-14"]);
+    kyo_with_face_down(&mut runner, 2);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-14"]);
+    pick_and_settle(&mut runner, "GD-14");
+    assert!(on_field(&runner, "GD-14"), "GD-14 was played");
+    assert_eq!(p0_memory(&runner), -10, "0 - (14 - 3 - 1) = -10");
+}
+
+/// CR 4.3 1-3-11-3: once GD-14 is declared, Kyo's reducer is needed to pay, so
+/// the player must perform it -- its prompt carries no decline (DCGO
+/// `CanNoSelect` false, BT25_088.cs:155-171).
+#[test]
+fn st23_04_needed_kyo_reducer_cannot_be_declined() {
+    let (mut runner, source) = reducer_runner(&["GD-14"]);
+    kyo_with_face_down(&mut runner, 2);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-14"]);
+    let want = PLAY_HAND_START + hand_index_of(&runner, 0, "GD-14") as u16;
+    runner.execute_action(0, want).unwrap();
+    let v = runner.pending_selection_view().expect("Kyo's reducer prompt");
+    assert!(!v.is_optional, "a needed reducer can't be declined: {} {:?}", v.prompt, v.valid_action_ids);
+}
+
+/// A reducer that ISN'T needed stays optional: GD-14 at memory 5 (14 - 3 = 11
+/// -> -6) is payable without Kyo, so Kyo's prompt may be declined and the play
+/// still goes through at 11.
+#[test]
+fn st23_04_unneeded_kyo_reducer_stays_declinable() {
+    let (mut runner, source) = reducer_runner(&["GD-14"]);
+    kyo_with_face_down(&mut runner, 2);
+    runner.game.memory = 5;
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-14"]);
+    let want = PLAY_HAND_START + hand_index_of(&runner, 0, "GD-14") as u16;
+    runner.execute_action(0, want).unwrap();
+    let v = runner.pending_selection_view().expect("Kyo's reducer prompt");
+    assert!(v.is_optional, "an unneeded reducer stays optional: {} {:?}", v.prompt, v.valid_action_ids);
+    runner.execute_action(0, PASS).unwrap();
+    assert!(on_field(&runner, "GD-14"), "GD-14 was played without Kyo's reducer");
+    assert_eq!(p0_memory(&runner), -6, "5 - (14 - 3) = -6");
+}
+
+/// Armalizamon (BT25-049) on the field and a Tamer face-down card left: a
+/// use-cost-16 [Glowing Dawn] Option (16 - 3 = 13 from memory 0) is payable at
+/// 10 with Armalizamon's -3, so it is offered.
+#[test]
+fn st23_04_hand_pick_credits_armalizamon_option_reducer() {
+    let (mut runner, source) = reducer_runner(&["GD-OPT-16"]);
+    runner.place_on_field(0, "BT25-049", Some(0));
+    tamer_with_face_down(&mut runner);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-OPT-16"]);
+}
+
+/// The credited Option use resolves: Armalizamon's reducer is paid and the
+/// Option is used for 16 - 3 - 3 = 10.
+#[test]
+fn st23_04_armalizamon_credited_option_use_pays_the_credited_cost() {
+    let (mut runner, source) = reducer_runner(&["GD-OPT-16"]);
+    runner.place_on_field(0, "BT25-049", Some(0));
+    tamer_with_face_down(&mut runner);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-OPT-16"]);
+    pick_and_settle(&mut runner, "GD-OPT-16");
+    assert!(in_trash(&runner, "GD-OPT-16"), "GD-OPT-16 was used");
+    assert_eq!(p0_memory(&runner), -10, "0 - (16 - 3 - 3) = -10");
+}
+
+/// An Option payable only at the effect's reduced cost (13 - 3 = 10 from
+/// memory 0) is used: the use is judged on the cost it pays, not on its
+/// unreduced use cost (CR 4.3 1-3-11-1, 4-2-3-1).
+#[test]
+fn st23_04_option_payable_only_after_the_reduction_is_used() {
+    let (mut runner, source) = reducer_runner(&["GD-OPT-13"]);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-OPT-13"]);
+    pick_and_settle(&mut runner, "GD-OPT-13");
+    assert!(in_trash(&runner, "GD-OPT-13"), "GD-OPT-13 was used");
+    assert_eq!(p0_memory(&runner), -10, "0 - (13 - 3) = -10");
+}
+
+// ─── Review follow-ups: which reducers the credit counts ────────────────────
+
+/// Kyo Sawashiro (BT25-088) reduces a [Glowing Dawn] card that "would be
+/// PLAYED". Using an Option is not playing it (CR 4.3 7-1-1 vs 9-1-1), and
+/// DCGO's reducer requires `cardSource.HasPlayCost` (BT25_088.cs:98-103), which
+/// is false for every Option (`HasPlayCost => !cardKind.Contains(Option) && ..`,
+/// CEntity_Base.cs:340). So a use-cost-14 Option (14 - 3 = 11 from memory 0,
+/// one past the limit) is NOT made payable by Kyo's -1 and is not offered.
+#[test]
+fn st23_04_kyo_play_reducer_is_not_credited_on_an_option_use() {
+    let (mut runner, source) = reducer_runner(&["GD-OPT-14"]);
+    kyo_with_face_down(&mut runner, 2);
+    assert!(
+        offered_after_paying(&mut runner, source).is_empty(),
+        "Kyo's play reducer must not make an Option use payable"
+    );
+}
+
+/// Kyo's reducer is not offered on an Option use either: the use of a
+/// use-cost-13 Option (13 - 3 = 10 from memory 0) goes through at 10 with no
+/// Kyo prompt and Kyo's face-down cards untouched.
+#[test]
+fn st23_04_kyo_play_reducer_is_not_offered_on_an_option_use() {
+    let (mut runner, source) = reducer_runner(&["GD-OPT-13"]);
+    let kyo = kyo_with_face_down(&mut runner, 2);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-OPT-13"]);
+    let want = PLAY_HAND_START + hand_index_of(&runner, 0, "GD-OPT-13") as u16;
+    runner.execute_action(0, want).unwrap();
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no Kyo reducer prompt on an Option use: {:?}",
+        runner.pending_selection_view().map(|v| v.prompt)
+    );
+    assert!(in_trash(&runner, "GD-OPT-13"), "GD-OPT-13 was used");
+    assert_eq!(p0_memory(&runner), -10, "0 - (13 - 3) = -10, no Kyo -1");
+    let face_down = runner.game.players[0].battle_area[kyo.index as usize]
+        .card_sources
+        .iter()
+        .filter(|c| c.face_down)
+        .count();
+    assert!(face_down >= 1, "Kyo's reducer cost was not paid on the Option use");
+}
+
+/// Two Option-use reducers apply separately, as in DCGO, where each of
+/// Armalizamon (BT25-049) and Tomoro Tenma (BT25-090) keeps its own
+/// [Once Per Turn] BeforePayCost activation and its own hidden availability
+/// ChangeCostClass (BT25_049.cs:226-255; BT25_090 the same shape), so
+/// `PayingCost(checkAvailability: true)` counts -4. A use-cost-17 Option
+/// (17 - 3 = 14 from memory 0) is payable at 10 only with both; Tomoro comes
+/// first in battle-area order, so crediting only the first reducer drops it.
+#[test]
+fn st23_04_two_option_use_reducers_are_both_credited_and_paid() {
+    let (mut runner, source) = reducer_runner(&["GD-OPT-17"]);
+    runner.place_on_field(0, "BT25-090", Some(0));
+    runner.place_on_field(0, "BT25-049", Some(0));
+    tamer_with_face_down(&mut runner);
+    tamer_with_face_down(&mut runner);
+    assert_eq!(offered_after_paying(&mut runner, source), vec!["GD-OPT-17"]);
+    pick_and_settle(&mut runner, "GD-OPT-17");
+    assert!(in_trash(&runner, "GD-OPT-17"), "GD-OPT-17 was used");
+    assert_eq!(p0_memory(&runner), -10, "0 - (17 - 3 - 3 - 1) = -10");
+}

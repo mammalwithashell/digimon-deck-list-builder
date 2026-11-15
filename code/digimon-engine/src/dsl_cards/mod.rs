@@ -371,6 +371,7 @@ impl CardEffect for DslCardEffect {
                         when_playing_this,
                         when_digivolving_this,
                         when_any_ally_played,
+                        when_any_ally_used,
                         when_any_ally_digivolves_into,
                         condition,
                         optional,
@@ -398,6 +399,7 @@ impl CardEffect for DslCardEffect {
                         if !*when_playing_this
                             && !*when_digivolving_this
                             && when_any_ally_played.is_none()
+                            && when_any_ally_used.is_none()
                             && when_any_ally_digivolves_into.is_none()
                             && active_when.is_none()
                             && condition.is_none()
@@ -459,10 +461,19 @@ impl CardEffect for DslCardEffect {
                                     self.raw.clone(),
                                     *optional,
                                     *when_playing_this,
-                                    when_any_ally_played.clone(),
+                                    // `when_any_ally_used` shares the
+                                    // target-card predicate machinery and is
+                                    // then re-scoped to Option uses.
+                                    when_any_ally_played
+                                        .clone()
+                                        .or_else(|| when_any_ally_used.clone()),
                                     when_any_ally_digivolves_into.clone(),
                                     shared_opt_group,
                                 );
+                                if when_any_ally_used.is_some() {
+                                    effect.reducer_cost_scope =
+                                        crate::effect::ReducerCostScope::OptionUseOnly;
+                                }
                                 effect.when_digivolving_this = *when_digivolving_this;
                                 effect.cost_assignment = *set_cost;
                                 if let Some(value) = set_cost {

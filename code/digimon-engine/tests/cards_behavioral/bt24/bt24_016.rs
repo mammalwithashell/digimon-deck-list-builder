@@ -1154,3 +1154,61 @@ fn bt24_016_inherited_not_offered_when_battle_area_full() {
     );
     assert_eq!(runner.hand_size(0), hand_before);
 }
+
+// ─── Clause 1 names cards, not name parts ─────────────────────────────────────
+//
+// "[Hand] [Main] If you have [Owen Dreadnought], by placing 1 [Dimetromon] from
+// your trash as any of your [Elizamon]'s bottom digivolution card, ..." —
+// bracketed names with no "in its name" reference the card name only (CR 4.3
+// 2-3-1-2; 2-3-1-3 is the "in its name" form). DCGO BT24_016.cs:43-52 uses
+// `EqualsCardName("Elizamon")` / `EqualsCardName("Dimetromon")`. No printed card
+// today merely CONTAINS either name, so the fixtures below use made-up names
+// that do, to pin the rule rather than the current card pool.
+
+fn clause1_runner_with(elizamon_name: &str, dimetromon_name: &str) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT24-016")
+        .expect("BT24-016 in embedded DSL pack")
+        .add_card(make_named_tamer("OWEN", "Owen Dreadnought"))
+        .add_card(make_named_digimon("ELIZAMON", elizamon_name))
+        .add_card(make_named_digimon("DIMETROMON", dimetromon_name))
+        .add_card(make_filler("FILL"))
+        .hand(0, &["BT24-016"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "OWEN", Some(0));
+    runner.place_on_field(0, "ELIZAMON", Some(1));
+    push_to_trash(&mut runner, "DIMETROMON");
+    runner
+}
+
+/// Control: exact names make the hand-main available.
+#[test]
+fn bt24_016_hand_main_offered_for_exact_elizamon_and_dimetromon() {
+    let mut runner = clause1_runner_with("Elizamon", "Dimetromon");
+    assert!(runner.game.activate_hand_main(0, 0));
+}
+
+/// A Digimon whose name only contains "Elizamon" is no [Elizamon].
+#[test]
+fn bt24_016_hand_main_not_offered_for_a_digimon_only_containing_elizamon() {
+    let mut runner = clause1_runner_with("Elizamon (X Antibody)", "Dimetromon");
+    assert!(
+        !runner.game.activate_hand_main(0, 0),
+        "no Digimon named [Elizamon]: the [Hand][Main] must not be offered"
+    );
+    assert!(runner.pending_selection_view().is_none());
+}
+
+/// A trash card whose name only contains "Dimetromon" can't pay the placement.
+#[test]
+fn bt24_016_hand_main_not_offered_for_a_trash_card_only_containing_dimetromon() {
+    let mut runner = clause1_runner_with("Elizamon", "Dimetromon (X Antibody)");
+    assert!(
+        !runner.game.activate_hand_main(0, 0),
+        "no [Dimetromon] in the trash: the [Hand][Main] must not be offered (CR 4.3 15-7-4)"
+    );
+    assert!(runner.pending_selection_view().is_none());
+}

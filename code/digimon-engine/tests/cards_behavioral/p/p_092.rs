@@ -231,3 +231,36 @@ fn native_routes_and_exact_bebydomon_zero_cost_route_expose_legal_masks() {
         }
     }
 }
+
+/// Dracomon (P-092)'s own effect digivolves "for a digivolution cost of 3, ignoring digivolution requirements" (DCGO
+/// P_092.cs:75-81, `payCost: true`, `ignoreDigivolutionRequirementFixedCost: 3`). A card whose cost can't be paid
+/// can't be digivolved (CR 4.3 1-3-11-1, 8-1-2-6): from -8 at most 2 can be paid, so [Wingdramon] is not offered;
+/// from -7 it is, and the gauge stops at -10. Reachable: a Groundramon whose play cost took memory to -8 leaves -8
+/// when this [Your Turn] trigger resolves. The inherited effect digivolves without paying the cost (P_092.cs:138-144,
+/// `payCost: false`), so it checks no payment. G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT.
+#[test]
+fn face_fixed_three_offers_wingdramon_only_when_three_can_be_paid() {
+    let mut r = setup(false);
+    r.game.set_memory(-8);
+    event(&mut r, 0, "GROUND");
+    assert!(r.pending_selection().is_none(), "3 can't be paid from -8: nothing to choose");
+    assert_eq!(r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data), ID);
+    let mut r = setup(false);
+    r.game.set_memory(-7);
+    event(&mut r, 0, "GROUND");
+    let pick = r.pending_selection_view().expect("3 is payable from -7").valid_action_ids[0];
+    r.execute_action(0, pick).unwrap();
+    assert_eq!(r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data), "WING");
+    let mine = if r.game.turn_player() == 0 { r.memory() } else { -r.memory() };
+    assert_eq!(mine, -10);
+}
+
+#[test]
+fn inherited_free_digivolve_checks_no_payment() {
+    let mut r = setup(true);
+    r.game.set_memory(-10);
+    event(&mut r, 0, "GROUND");
+    let pick = r.pending_selection_view().expect("nothing to pay: still offered at -10").valid_action_ids[0];
+    r.execute_action(0, pick).unwrap();
+    assert_eq!(r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data), "WING");
+}

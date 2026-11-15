@@ -300,6 +300,57 @@ fn p_250_trash_end_of_turn_ogremon_route_costs_1() {
     assert_eq!(r.memory(), -4, "paid 1 of 5 ⇒ player 1 sees -4");
 }
 
+// ─── {Trash}[End of Your Turn]: only a payable digivolve is offered ──────────
+//
+// "1 of your [Demon] trait Digimon may digivolve into this card" pays the
+// printed digivolution cost (DCGO P_250.cs:86-93 `payCost: true`). The turn
+// often ends with the memory already on the opponent's side, and a cost the
+// gauge can't absorb can't be paid (CR 4.3 1-4-2-2: memory never passes 10;
+// 1-3-11-1: a card whose cost can't be paid can't be digivolved), so a [Demon]
+// P-250 can't be paid onto is not offered. At memory -8 the colour route
+// (cost 3) would take the gauge to -11; the [Ogremon] route (cost 1) to -9.
+// KNOWN DCGO DIVERGENCE (rules over DCGO): DCGO filters the pick with
+// `card.CanPlayCardTargetFrame(frame, true, activateClass)` (P_250.cs:58), but
+// its memory refusal (CardSource.cs:1150-1162) runs only for an EMPTY frame;
+// onto a Digimon it checks only `CanEvolve` (CardSource.cs:1166, 1269-1290),
+// which never compares cost to memory. DCGO would offer DEMON3 here; a DCGO
+// exam of this case should read `diverged`, triaged `dcgo_quirk`.
+
+#[test]
+fn p_250_trash_end_of_turn_offers_only_a_demon_whose_cost_can_be_paid() {
+    let mut r = setup();
+    let demon = r.place_on_field(0, "DEMON3", Some(0));
+    let ogre = r.place_on_field(0, "OGREMON", Some(0));
+    push_trash(&mut r, 0, CARD_ID);
+    r.game.memory = -8;
+    r.end_turn();
+    r.pending_selection_view().expect("{Trash}[End of Your Turn] pick");
+    assert_eq!(
+        non_pass(&r).len(),
+        1,
+        "only OGREMON (cost 1 ⇒ -9) is payable; DEMON3 (cost 3 ⇒ -11) is not"
+    );
+    pick_side_field(&mut r, 0, ogre);
+    drain_first(&mut r);
+    assert_eq!(top_id(&r, ogre), CARD_ID);
+    assert_eq!(top_id(&r, demon), "DEMON3");
+}
+
+#[test]
+fn p_250_trash_end_of_turn_not_offered_when_no_demon_can_pay() {
+    let mut r = setup();
+    let demon = r.place_on_field(0, "DEMON3", Some(0));
+    push_trash(&mut r, 0, CARD_ID);
+    r.game.memory = -8;
+    r.end_turn();
+    assert!(
+        r.pending_selection_view().is_none(),
+        "the only [Demon] needs 3 at memory -8: nothing to offer"
+    );
+    assert_eq!(top_id(&r, demon), "DEMON3");
+    assert!(trash_ids(&r, 0).contains(&CARD_ID.to_string()));
+}
+
 // ─── Section 4 — [On Play][When Digivolving][When Attacking][OPT] ────────────
 
 #[test]

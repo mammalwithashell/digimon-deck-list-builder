@@ -593,3 +593,107 @@ fn has_cannot_suspend_entry(runner: &DebugRunner, handle: PermanentHandle, expir
         .iter()
         .any(|entry| entry.modifier == ModifierType::CannotSuspend && entry.expiry == expiry)
 }
+
+// ─── [Trash] digivolve: requirements apply, and only a legal target is offered ─
+//
+// Printed: "1 of your [Sistermon Ciel]s may digivolve into this card without
+// paying the cost" — free, but the digivolution requirements are NOT ignored
+// (no "ignoring digivolution requirements"). DCGO BT20_084.cs:156-166 calls
+// `DigivolveIntoHandOrTrashCard(..., payCost: false,
+// ignoreDigivolutionRequirementFixedCost: -1, ...)` with the default
+// `IgnoreRequirement.None` (CardEffectCommons.cs:832, 842), so the route is the
+// printed "[Digivolve] [Sistermon Ciel]: Cost 1" alt-path, paid at 0. The pick
+// (BT20_084.cs:76-90) and the activation (`CanActivateCondition`,
+// BT20_084.cs:107-118) need `card.CanPlayCardTargetFrame(frame, false,
+// activateClass, root: Trash)`: a [Sistermon Ciel] this card can't digivolve
+// onto is no target, and with none the effect asks nothing.
+
+#[test]
+fn bt20_084_trash_digivolve_keeps_the_digivolution_requirements() {
+    let runner = bt20_084_runner().start();
+    let compiled = runner.compiled_card("BT20-084").expect("BT20-084 compiled");
+    let trash_clause = compiled
+        .effects
+        .iter()
+        .find_map(|effect| match effect {
+            CompiledClause::Triggered(clause)
+                if clause.when.contains(&CompiledTiming::OnAllyPlayed) =>
+            {
+                Some(clause)
+            }
+            _ => None,
+        })
+        .expect("trash on_ally_played clause");
+    let digivolve = trash_clause
+        .process
+        .iter()
+        .find_map(|s| match s {
+            CompiledStep::EffectInitiatedDigivolve { ignore_requirements, ignore_level, .. } => {
+                Some((*ignore_requirements, *ignore_level))
+            }
+            _ => None,
+        })
+        .expect("effect_initiated_digivolve");
+    assert_eq!(
+        digivolve,
+        (false, false),
+        "\"without paying the cost\" waives the cost, not the requirements"
+    );
+}
+
+#[test]
+fn bt20_084_trash_observer_no_prompt_when_the_sistermon_ciel_cannot_digivolve() {
+    let mut runner = bt20_084_runner()
+        .hand(0, &["ALLY-DIGIMON"])
+        .memory(10)
+        .start();
+    let base = runner.place_on_field(0, "SISTERMON-CIEL-BASE", Some(0));
+    runner.game.modifiers.add(
+        base,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            ModifierType::CannotDigivolve,
+            0,
+            Expiry::Permanent,
+            0,
+        ),
+    );
+    let bt20_084 = push_to_trash(&mut runner, 0, "BT20-084");
+
+    runner.play(0, 0).expect("play allied Digimon");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "the only [Sistermon Ciel] can't digivolve: no prompt"
+    );
+    assert!(
+        runner.game.players[0].trash.iter().any(|c| c.handle() == bt20_084),
+        "BT20-084 stays in the trash"
+    );
+}
+
+#[test]
+fn bt20_084_trash_observer_no_prompt_under_effect_digivolve_lock() {
+    let mut runner = bt20_084_runner()
+        .hand(0, &["ALLY-DIGIMON"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "SISTERMON-CIEL-BASE", Some(0));
+    runner.game.modifiers.add_player_modifier(
+        0,
+        digimon_engine::modifiers::PlayerModifierEntry::simple(
+            ModifierType::CannotDigivolveDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+    push_to_trash(&mut runner, 0, "BT20-084");
+
+    runner.play(0, 0).expect("play allied Digimon");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "can't digivolve by effects: no prompt"
+    );
+}

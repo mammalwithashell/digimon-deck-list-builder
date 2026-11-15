@@ -1696,6 +1696,8 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.can_play_to_breeding_from_hand.is_none()
         && pred.can_move_from_breeding_by_effect.is_none()
         && pred.can_digivolve_onto_with_cost.is_none()
+        && pred.this_card_can_digivolve_onto.is_none()
+        && pred.can_digivolve_onto_ignoring_level.is_none()
         && pred.level_eq.is_none()
         && pred.level_eq_binding.is_none()
         && pred.level_lte_binding.is_none()
@@ -3478,22 +3480,29 @@ fn eval_card_fields(
     // field — the owner is the player who uses it.
     // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
     if let Some(want) = pred.can_play_or_use_from_effect {
-        let can = !trash_play_locked(rctx, card)
-            && rctx
+        // The trash lock (`CannotPlayFromTrash`, BT23-014 "can't play Digimon
+        // or Tamers from the trash") gates only the PLAY arm: using an Option
+        // (or a DUAL as one) is not playing it (CR 4.3 7-1-1 vs 9-1-1), and
+        // DCGO's `CanPlayOrUse` Option arm never reads the lock
+        // (`CanNotPlayThisOption`, CardSource.cs:184).
+        let can = rctx
             .game
             .card_source_for_handle(card)
             .is_some_and(|source| match data.card_kind {
                 crate::enums::CardKind::Option | crate::enums::CardKind::Dual => rctx
                     .game
                     .option_use_available_from_effect(source.owner, source),
-                crate::enums::CardKind::Digimon | crate::enums::CardKind::Tamer => rctx
-                    .game
-                    .can_play_card_from_effect_without_cost_for_controller(
-                        source.owner,
-                        card,
-                        1,
-                        rctx.player,
-                    ),
+                crate::enums::CardKind::Digimon | crate::enums::CardKind::Tamer => {
+                    !trash_play_locked(rctx, card, data.card_kind)
+                        && rctx
+                            .game
+                            .can_play_card_from_effect_without_cost_for_controller(
+                                source.owner,
+                                card,
+                                1,
+                                rctx.player,
+                            )
+                }
                 crate::enums::CardKind::DigiEgg | crate::enums::CardKind::Token => false,
             });
         if can != want {
@@ -3501,7 +3510,7 @@ fn eval_card_fields(
         }
     }
     if let Some(want) = pred.can_play_from_effect_without_cost {
-        let can = !trash_play_locked(rctx, card)
+        let can = !trash_play_locked(rctx, card, data.card_kind)
             && rctx
             .game
             .card_source_for_handle(card)
@@ -3952,32 +3961,23 @@ fn eval_card_fields(
     // Absent / non-permanent binding â†’ false (no target, no route).
     // G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
     if let Some(binding) = &pred.can_digivolve_onto {
-        // `source` (when not shadowed by a real binding) is the effect's own
-        // carrier permanent â€” "THIS Digimon may digivolve into ..." (EX13-055 /
-        // EX13-057). G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE.
-        let target = if bindings.is_some_and(|b| b.selected_identity_pin(binding).is_some()
-            || b.get_breeding_permanent_ref(binding).is_some()) {
-            // Match the consuming step after an observer or payment compacts
-            // the field. A departed pinned host must not fall back to its old
-            // slot, including when the binding shadows `source`.
-            resolve_cost_probe_target(rctx, bindings, binding)
-        } else {
-            // Keep legacy unpinned bindings and the implicit source fallback
-            // unchanged. This remains a route-only probe, with no cost check.
-            bindings.and_then(|b| b.get_permanent(binding)).or_else(|| {
-                if binding == "source" {
-                    rctx.source_permanent
-                } else if binding == "event_target" {
-                    resolve_cost_probe_target(rctx, bindings, binding)
-                } else {
-                    None
-                }
-            })
-        };
-        let Some(target) = target else {
+        let Some(target) = resolve_can_digivolve_onto_target(rctx, bindings, binding) else {
             return false;
         };
         if !can_card_digivolve_onto(rctx, card, target) {
+            return false;
+        }
+    }
+    // `can_digivolve_onto_ignoring_level: <binding>` -- the same route-only
+    // probe with ONLY the level waived (DCGO `CanPlayCardTargetFrame(...,
+    // IgnoreRequirement.Level)`, EX13_071.cs:357-361; ruling Q7449), for an
+    // `ignore_level` pick where the payment probe is forbidden (inside a
+    // cost_reduction). G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL-ROUTE-ONLY.
+    if let Some(binding) = &pred.can_digivolve_onto_ignoring_level {
+        let Some(target) = resolve_can_digivolve_onto_target(rctx, bindings, binding) else {
+            return false;
+        };
+        if !can_card_digivolve_onto_waiving(rctx, card, target, true) {
             return false;
         }
     }
@@ -3991,8 +3991,22 @@ fn eval_card_fields(
         let cost = crate::dsl_cards::step::play_digivolve::lower_cost_delta_read(
             Some(&spec.cost), rctx, bindings,
         );
-        if !rctx.game.can_effect_digivolve_from_source_with_cost(
-            target.player, source_ref, target, cost,
+        // `ignore_level` mirrors the consuming
+        // `effect_initiated_digivolve { ignore_level: true }`.
+        // G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL.
+        // `ignore_requirements` mirrors `effect_initiated_digivolve {
+        // ignore_requirements: true }` with a paid cost ("for a digivolution
+        // cost of 3, ignoring digivolution requirements", EX13-074 / P-092).
+        // G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT.
+        let waiver = if spec.ignore_requirements {
+            crate::game_actions::digivolve::DigivolveRequirementWaiver::All
+        } else if spec.ignore_level {
+            crate::game_actions::digivolve::DigivolveRequirementWaiver::Level
+        } else {
+            crate::game_actions::digivolve::DigivolveRequirementWaiver::None
+        };
+        if !rctx.game.can_effect_digivolve_from_source_with_cost_waiving(
+            target.player, source_ref, target, cost, waiver,
         ) {
             return false;
         }
@@ -4116,6 +4130,37 @@ fn resolve_cost_probe_target(
     }
 }
 
+/// The permanent a `can_digivolve_onto` / `can_digivolve_onto_ignoring_level`
+/// leaf names. Absent / non-permanent binding -> None (no target, no route).
+fn resolve_can_digivolve_onto_target(
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+    binding: &str,
+) -> Option<PermanentHandle> {
+    // `source` (when not shadowed by a real binding) is the effect's own
+    // carrier permanent â€” "THIS Digimon may digivolve into ..." (EX13-055 /
+    // EX13-057). G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE.
+    if bindings.is_some_and(|b| b.selected_identity_pin(binding).is_some()
+        || b.get_breeding_permanent_ref(binding).is_some()) {
+        // Match the consuming step after an observer or payment compacts
+        // the field. A departed pinned host must not fall back to its old
+        // slot, including when the binding shadows `source`.
+        resolve_cost_probe_target(rctx, bindings, binding)
+    } else {
+        // Keep legacy unpinned bindings and the implicit source fallback
+        // unchanged. This remains a route-only probe, with no cost check.
+        bindings.and_then(|b| b.get_permanent(binding)).or_else(|| {
+            if binding == "source" {
+                rctx.source_permanent
+            } else if binding == "event_target" {
+                resolve_cost_probe_target(rctx, bindings, binding)
+            } else {
+                None
+            }
+        })
+    }
+}
+
 /// Shared route probe behind `can_digivolve_from_source` (target = the
 /// effect's source permanent) and `can_digivolve_onto` / `has_digivolve_candidate`
 /// (target = an arbitrary bound permanent): true when `card` has at least one
@@ -4128,6 +4173,20 @@ fn can_card_digivolve_onto(
     rctx: &EffectReadContext<'_>,
     card: CardHandle,
     target: PermanentHandle,
+) -> bool {
+    can_card_digivolve_onto_waiving(rctx, card, target, false)
+}
+
+/// `can_card_digivolve_onto`, optionally with ONLY the level waived: the
+/// routes are then the ones the `ignore_level` commit searches
+/// (`Game::digivolve_routes_ignoring_level`). Prohibitions still apply.
+/// G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL-ROUTE-ONLY,
+/// G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-LEVEL.
+fn can_card_digivolve_onto_waiving(
+    rctx: &EffectReadContext<'_>,
+    card: CardHandle,
+    target: PermanentHandle,
+    ignore_level: bool,
 ) -> bool {
     if permanent_for_handle(rctx, target).is_none() {
         return false;
@@ -4155,10 +4214,50 @@ fn can_card_digivolve_onto(
     let Some(candidate) = rctx.game.card_source_for_handle(card) else {
         return false;
     };
-    rctx.game
-        .all_digivolve_routes_for_card(candidate, target)
-        .iter()
-        .any(|route| !route.app_fusion)
+    let routes = if ignore_level {
+        rctx.game.digivolve_routes_ignoring_level(candidate, target)
+    } else {
+        rctx.game.all_digivolve_routes_for_card(candidate, target)
+    };
+    routes.iter().any(|route| !route.app_fusion)
+}
+
+/// `this_card_can_digivolve_onto` — permanent-subject probe: can the effect's
+/// own card (`rctx.source_card`, in the hand for a `[Hand] [Main]`, in the trash
+/// for a `{Trash}` effect) digivolve onto `handle` the way the consuming
+/// `effect_initiated_digivolve { from_hand: self, cost, ignore_* }` would?
+/// Same probe as `can_digivolve_onto_with_cost`, with the card fixed and the
+/// permanent free: route set by the waiver, `CannotDigivolve` /
+/// `CannotDigivolveDigimonByEffect` (for the target's controller, the player
+/// the commit digivolves for), and the payment at `cost` (CR 4.3 1-3-11-1,
+/// 1-4-2-2). DCGO `card.CanPlayCardTargetFrame(permanent.PermanentFrame,
+/// payCost, activateClass, fixedCost, ignore)` (BT22_013.cs:63-68) gives the
+/// route + prohibition half (`CanEvolve`, CardSource.cs:1166); it compares cost
+/// to memory only for an empty frame (CardSource.cs:1150-1162), so the payment
+/// half is a KNOWN DCGO DIVERGENCE (rules over DCGO), as on EX12-074.
+/// G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO.
+fn this_card_can_digivolve_onto(
+    spec: &digimon_dsl::compiled::CompiledThisCardDigivolve,
+    rctx: &EffectReadContext<'_>,
+    handle: PermanentHandle,
+    bindings: Option<&Bindings>,
+) -> bool {
+    let Some(source_ref) = rctx.game.locate_card_source_ref(rctx.source_card) else {
+        return false;
+    };
+    let cost = crate::dsl_cards::step::play_digivolve::lower_cost_delta_read(
+        Some(&spec.cost), rctx, bindings,
+    );
+    let waiver = if spec.ignore_requirements {
+        crate::game_actions::digivolve::DigivolveRequirementWaiver::All
+    } else if spec.ignore_level {
+        crate::game_actions::digivolve::DigivolveRequirementWaiver::Level
+    } else {
+        crate::game_actions::digivolve::DigivolveRequirementWaiver::None
+    };
+    rctx.game.can_effect_digivolve_from_source_with_cost_waiving(
+        handle.player, source_ref, handle, cost, waiver,
+    )
 }
 
 /// `has_digivolve_candidate` â€” permanent-subject probe: does any card in the
@@ -4220,11 +4319,17 @@ fn permanent_has_digivolve_candidate(
                     let delta = crate::dsl_cards::step::play_digivolve::lower_cost_delta_read(
                         Some(cost), rctx, bindings,
                     );
-                    rctx.game.can_effect_digivolve_from_source_with_cost(
-                        handle.player, source_ref, handle, delta,
+                    let waiver = if spec.ignore_level {
+                        crate::game_actions::digivolve::DigivolveRequirementWaiver::Level
+                    } else {
+                        crate::game_actions::digivolve::DigivolveRequirementWaiver::None
+                    };
+                    rctx.game.can_effect_digivolve_from_source_with_cost_waiving(
+                        handle.player, source_ref, handle, delta, waiver,
                     )
                 } else {
-                    can_card_digivolve_onto(rctx, h, handle)
+                    // G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-LEVEL.
+                    can_card_digivolve_onto_waiving(rctx, h, handle, spec.ignore_level)
                 };
                 if can_digivolve {
                     return true;
@@ -4968,6 +5073,13 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    // `this_card_can_digivolve_onto` — THIS card can digivolve onto this
+    // permanent. G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO.
+    if let Some(spec) = &pred.this_card_can_digivolve_onto {
+        if !this_card_can_digivolve_onto(spec, rctx, handle, bindings) {
+            return false;
+        }
+    }
     if !pred.zone.is_empty()
         && !pred.zone.contains(if in_breeding {
             &CompiledZone::Breeding
@@ -5325,6 +5437,17 @@ fn eval_breeding_permanent_fields(
             return false;
         }
     }
+    // `this_card_can_digivolve_onto` on a breeding permanent — same sentinel
+    // handle. G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO.
+    if let Some(spec) = &pred.this_card_can_digivolve_onto {
+        let sentinel = PermanentHandle {
+            player,
+            index: crate::action::space::BREEDING_TARGET as u8,
+        };
+        if !this_card_can_digivolve_onto(spec, rctx, sentinel, bindings) {
+            return false;
+        }
+    }
     if let Some(want) = pred.in_breeding {
         if !want {
             return false;
@@ -5418,45 +5541,79 @@ fn color_matches(want: CompiledColor, got: CardColor) -> bool {
 /// use (Option, or a DUAL, which is used and never played -- CR 4.3 4-6-2,
 /// its Digimon face prints no play cost) `card` under `delta`, and whether
 /// that payment keeps memory at or above the floor. The payer is the effect
-/// controller, as in the play / use verbs. Reducers the player may choose at
-/// payment ("before paying" effects) are not credited, matching the action
-/// mask's hand-play check. Shared by `affordable_with_cost_reduce` and
-/// `affordable_with_cost` (G-DSL-AFFORDABLE-WITH-COST). Before 2026-11-13 the
-/// reduce leaf priced a DUAL at its stored play cost without the use-cost
-/// modifiers (`Game::option_use_cost`).
+/// controller, as in the play / use verbs. Shared by
+/// `affordable_with_cost_reduce` and `affordable_with_cost`
+/// (G-DSL-AFFORDABLE-WITH-COST). Before 2026-11-13 the reduce leaf priced a
+/// DUAL at its stored play cost without the use-cost modifiers
+/// (`Game::option_use_cost`).
+///
+/// The "before paying" reducers the payment would take are credited
+/// (`Game::declarable_cost_reduction`; CR 4.3 1-3-11-1..3): the card's own
+/// mandatory one (Ceresmon BT25-059 "if there are 2 or more suspended Digimon,
+/// reduce the cost by 5", CR 4.3 1-3-11-2's own example) and the optional
+/// "by X, reduce the cost" ones whose X can be paid (Kyo Sawashiro BT25-088,
+/// Armalizamon BT25-049, Tomoro Tenma BT25-090), as DCGO's
+/// `PayingCost(checkAvailability: true)` does (CardSource.cs:668-686,
+/// 925-986; BT25_088.cs:246-275). A play's reducers apply after the delta
+/// (`PlayCostAdjustments::final_cost` on the `CostDelta` base, DCGO
+/// `fixedCost` then `GetChangedPayingCost`); an Option use takes them only
+/// when it pays (`Reduce`), never on a `Free` or `Fixed` use
+/// (`play_option_core`). Before 2026-11-14 no reducer was credited
+/// (G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT): Sirenmon (BT25-039) dropped a
+/// Ceresmon (BT25-059) its play would make for 0.
 fn card_cost_affordable(
     rctx: &EffectReadContext<'_>,
     card: CardHandle,
     data: &crate::card_data::CardData,
     delta: crate::enums::CostDelta,
 ) -> bool {
-    let base = if matches!(data.card_kind, CardKind::Option | CardKind::Dual) {
+    let is_use = matches!(data.card_kind, CardKind::Option | CardKind::Dual);
+    let base = if is_use {
         effective_use_cost(rctx, card)
             .map(|c| c.clamp(0, i32::from(u16::MAX)) as u16)
             .unwrap_or(data.option_use_cost().unwrap_or(data.play_cost))
     } else {
         data.play_cost
     };
-    let pay = i32::from(delta.resolve(base));
-    let own = if rctx.game.turn_player() == rctx.player {
-        i32::from(rctx.game.memory)
-    } else {
-        -i32::from(rctx.game.memory)
+    let credit = match delta {
+        crate::enums::CostDelta::Free => 0,
+        crate::enums::CostDelta::Fixed(_) if is_use => 0,
+        _ => rctx
+            .game
+            .card_source_for_handle(card)
+            .map(|source| {
+                rctx.game.declarable_cost_reduction(
+                    source.owner,
+                    card,
+                    if is_use {
+                        crate::game_actions::CostReductionKind::OptionUse
+                    } else {
+                        crate::game_actions::CostReductionKind::Play
+                    },
+                )
+            })
+            .unwrap_or(0),
     };
-    own - pay >= i32::from(rctx.game.rules.memory_range.0)
+    let pay = (i32::from(delta.resolve(base)) - credit).max(0);
+    rctx.game.payer_can_pay(rctx.player, pay)
 }
 
-/// G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE: `card` lies in its owner's trash and
-/// that player can't play cards from the trash (`CannotPlayFromTrash`,
-/// BT23-014). The trash-origin play (`Game::trash_play_refusal`) and Option
-/// use (`Game::use_option_from` with a trash origin) refuse it, so a play /
-/// use candidate leaf must too. A hand or digivolution-card origin is never
-/// locked by it.
-fn trash_play_locked(rctx: &EffectReadContext<'_>, card: CardHandle) -> bool {
+/// G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE: `card` (of `kind`) lies in its owner's
+/// trash and that player's `CannotPlayFromTrash` lock covers playing it
+/// (`Game::trash_play_lock_applies`: Digimon / Tamer / DUAL only; BT23-014
+/// prints "can't play Digimon or Tamers from the trash"). The trash-origin
+/// play (`Game::trash_play_refusal`) refuses it, so a PLAY candidate leaf
+/// must too. An Option use from the trash is never locked by it (CR 4.3
+/// 9-1-1), nor is a hand or digivolution-card origin.
+fn trash_play_locked(
+    rctx: &EffectReadContext<'_>,
+    card: CardHandle,
+    kind: crate::enums::CardKind,
+) -> bool {
     matches!(
         rctx.game.locate_card_source_ref(card),
         Some(crate::enums::CardSourceRef::Trash(owner, _))
-            if rctx.game.modifiers.player_has(owner, crate::enums::ModifierType::CannotPlayFromTrash)
+            if rctx.game.trash_play_lock_applies(owner, kind)
     )
 }
 

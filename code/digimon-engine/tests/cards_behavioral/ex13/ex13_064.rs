@@ -408,11 +408,8 @@ fn ex13_064_wd_excludes_trash_cards_when_playing_from_trash_is_locked() {
 /// from the trash"; DCGO BT23_014.cs:48-49 limits it to `IsDigimon ||
 /// IsTamer`, and `CanPlayOrUse`'s Option arm (PlayEffects.cs:286-292) ignores
 /// the zone, so a usable [Knightmon]-text Option in the trash is still offered.
-/// Ignored until the engine stops applying `CannotPlayFromTrash` to Options
-/// (`trash_play_locked` in `dsl_cards/predicate.rs`, `use_option_from` /
-/// `play_option_from_trash` in `game_actions/options.rs`).
+/// Using an Option is not playing a card (CR 4.3 7-1-1 vs 9-1-1).
 #[test]
-#[ignore = "engine over-block: CannotPlayFromTrash also refuses Options (trash_play_locked / use_option_from)"]
 fn ex13_064_wd_still_offers_a_trash_option_under_the_digimon_tamer_trash_lock() {
     use digimon_engine::enums::ModifierType;
     assert_eq!(

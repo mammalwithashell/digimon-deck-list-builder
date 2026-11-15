@@ -136,6 +136,7 @@ fn bt25_049_cost_reduction_clause_present_with_pay_cost() {
     });
     let CompiledDeclarativeClause::CostReduction {
         when_any_ally_played,
+        when_any_ally_used,
         when_any_ally_digivolves_into,
         pay_cost,
         once_per_turn,
@@ -145,8 +146,12 @@ fn bt25_049_cost_reduction_clause_present_with_pay_cost() {
         unreachable!()
     };
     assert!(
-        when_any_ally_played.is_some(),
-        "the reducer must be keyed on using an Option (when_any_ally_played)"
+        when_any_ally_used.is_some(),
+        "the reducer must be keyed on using an Option (when_any_ally_used)"
+    );
+    assert!(
+        when_any_ally_played.is_none(),
+        "\"would use\" is not \"would be played\" (CR 4.3 7-1-1 vs 9-1-1)"
     );
     assert!(
         when_any_ally_digivolves_into.is_none(),
