@@ -67,6 +67,7 @@
       "raw_rust",
       "refund_opt",
       "place_cards_as_bottom_sources",
+      "place_cards_as_top_sources",
       "play_cards_free"
     ],
     "code/digimon-engine/src/dsl_cards/step/modifiers.rs": [

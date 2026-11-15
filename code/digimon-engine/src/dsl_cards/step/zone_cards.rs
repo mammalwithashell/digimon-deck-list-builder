@@ -10,7 +10,8 @@
 //!   top 5 stacked cards of 3 of your opponent's Digimon to the top of the deck",
 //!   G-ENGINE-RETURN-TOP-N-STACKED-TO-DECK); an ORDERED pick over the cards still
 //!   on the field, then the ordered return.
-//! - `play_cards_free` / `place_cards_as_bottom_sources` — the synchronous actions
+//! - `play_cards_free` / `place_cards_as_bottom_sources` /
+//!   `place_cards_as_top_sources` — the synchronous actions
 //!   that consume a picked card list.
 //!
 //! ## Action space
@@ -661,13 +662,31 @@ pub(crate) fn place_cards_as_bottom_sources(
     let source_anchor=ctx.source_permanent.and_then(|h|ctx.game.source_move_anchor(h));
     let prov=crate::resume::ResumeProvenance {source_card:ctx.source_card,source_permanent:ctx.source_permanent,
         source_kind:ctx.source_kind,controller:ctx.player,override_pin:ctx.override_selecting_player()};
-    continue_source_placement_batch(ctx.game,prov,source_anchor,target_anchor,cards.to_vec(),target_binding);
+    continue_source_placement_batch(ctx.game,prov,source_anchor,target_anchor,cards.to_vec(),false,target_binding);
+    ctx.game.resolve_source_move_anchor(target_anchor,false)
+}
+
+/// `place_cards_as_top_sources` — place the listed cards on `target` as its
+/// TOP digivolution cards, the list's FIRST card topmost (EX12-018: DCGO
+/// reverses the picks before `AddDigivolutionCardsTop`, which inserts each at
+/// index 1 under the top card, EX12_018.cs:186-192 / Permanent.cs:1145).
+/// Each card goes in directly under the top card, so they are placed LAST card
+/// first. Returns the host's handle afterwards, or `None` if it left the field.
+pub(crate) fn place_cards_as_top_sources(
+    ctx: &mut EffectContext<'_>, cards: &[CardHandle], target: PermanentHandle, target_binding: Option<String>,
+) -> Option<PermanentHandle> {
+    let target_anchor=ctx.game.source_move_anchor(target)?;
+    let source_anchor=ctx.source_permanent.and_then(|h|ctx.game.source_move_anchor(h));
+    let prov=crate::resume::ResumeProvenance {source_card:ctx.source_card,source_permanent:ctx.source_permanent,
+        source_kind:ctx.source_kind,controller:ctx.player,override_pin:ctx.override_selecting_player()};
+    let last_first:Vec<CardHandle>=cards.iter().rev().copied().collect();
+    continue_source_placement_batch(ctx.game,prov,source_anchor,target_anchor,last_first,true,target_binding);
     ctx.game.resolve_source_move_anchor(target_anchor,false)
 }
 
 pub(crate) fn continue_source_placement_batch(
     game:&mut crate::game::Game, prov:crate::resume::ResumeProvenance,
-    source_anchor:Option<(PlayerId,u64)>, target:(PlayerId,u64), cards:Vec<CardHandle>, target_binding:Option<String>,
+    source_anchor:Option<(PlayerId,u64)>, target:(PlayerId,u64), cards:Vec<CardHandle>, top:bool, target_binding:Option<String>,
 ) {
     let mut next=0;
     while game.pending_selection.is_none() && next<cards.len() {
@@ -677,13 +696,13 @@ pub(crate) fn continue_source_placement_batch(
         let source_permanent=source_anchor.and_then(|a|game.resolve_source_move_anchor(a,false));
         let mut ctx=EffectContext::new_with_source_kind_and_override(game,prov.source_card,source_permanent,
             prov.source_kind,prov.controller,prov.override_pin);
-        let _=ctx.place_as_bottom_source(src,host,false);
+        let _=if top {ctx.place_as_top_source(src,host,false)} else {ctx.place_as_bottom_source(src,host,false)};
     }
     if game.pending_selection.is_some() {
         // Include an empty remainder: it still pins the named target for the outer tail.
         let inner=game.pending_selection_resume.take().expect("field-source movement selections are resumable");
         game.pending_selection_resume=Some(crate::resume::ResumeStack { frames:vec![crate::resume::ResumeFrame::FieldTopSourceBatch {
-            inner:Box::new(inner),prov,source_anchor,target,remaining:cards[next..].to_vec(),target_binding,outer_conts:Vec::new(),
+            inner:Box::new(inner),prov,source_anchor,target,remaining:cards[next..].to_vec(),top,target_binding,outer_conts:Vec::new(),
         }]});
     }
 }

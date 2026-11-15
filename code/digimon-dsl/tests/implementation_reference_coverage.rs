@@ -17,6 +17,7 @@ fn has(nodes: &[Node], role: &str, value: &str) -> bool {
 fn new_predicate_fields_visit_nested_bindings_and_name_matches_in_both_forms() {
     let authored: digimon_dsl::predicate::PredicateSpec = serde_yml::from_str(r#"
 can_play_from_effect_without_cost: true
+can_play_or_use_from_effect: true
 can_play_to_breeding_from_hand: false
 can_unsuspend: true
 owner_can_add_security: true
@@ -27,7 +28,8 @@ event_card_kind: tamer
 event_battle_surviving_deleter: { binding_exists: ST1-04 }
 "#).unwrap();
     let compiled = digimon_dsl::compiled::CompiledPredicate {
-        can_play_from_effect_without_cost: Some(true), can_play_to_breeding_from_hand: Some(false),
+        can_play_from_effect_without_cost: Some(true), can_play_or_use_from_effect: Some(true),
+        can_play_to_breeding_from_hand: Some(false),
         can_unsuspend: Some(true), owner_can_add_security: Some(true), controller_can_add_security: Some(false),
         source_name_is: Some("ST1-02".into()), event_card_name_is: Some("ST1-03".into()),
         event_card_kind: Some(digimon_dsl::compiled::CompiledCardKind::Tamer),
@@ -36,7 +38,8 @@ event_battle_surviving_deleter: { binding_exists: ST1-04 }
         })), ..Default::default()
     };
     for rows in [nodes(&authored), nodes(&compiled)] {
-        for field in ["can_play_from_effect_without_cost", "can_play_to_breeding_from_hand", "can_unsuspend",
+        for field in ["can_play_from_effect_without_cost", "can_play_or_use_from_effect",
+            "can_play_to_breeding_from_hand", "can_unsuspend",
             "owner_can_add_security", "controller_can_add_security", "event_card_kind"] {
             assert!(rows.iter().any(|node| node.path == format!("root.{field}")), "{field}");
         }

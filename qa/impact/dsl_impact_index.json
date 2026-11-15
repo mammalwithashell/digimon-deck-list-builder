@@ -18684,8 +18684,7 @@
         "kind",
         "level_eq",
         "owner",
-        "trait_has",
-        "zone"
+        "trait_has"
       ],
       "timings": [
         "main",
@@ -18697,9 +18696,8 @@
         "delete_permanent",
         "if",
         "may_attack_now",
-        "per_selected",
-        "place_as_top_source",
         "place_cards_as_bottom_sources",
+        "place_cards_as_top_sources",
         "select_effect_choice",
         "select_opponent_permanent",
         "select_own_permanent",
@@ -19474,7 +19472,7 @@
       "predicates": [
         "all_of",
         "any_of",
-        "count_gte",
+        "can_digivolve_onto_with_cost",
         "equals",
         "event_target_in_text_contains",
         "event_target_owner",
@@ -19495,13 +19493,13 @@
         "start_of_your_turn"
       ],
       "verbs": [
-        "activation_cost",
         "effect_initiated_digivolve",
         "if",
         "play_from_security",
         "select_effect_choice",
         "select_hand",
         "set_memory",
+        "suspend",
         "use_option_bound"
       ]
     },
@@ -28773,19 +28771,18 @@
         "all_of",
         "any_of",
         "binding_present",
-        "count_gte",
+        "can_play_or_use_from_effect",
+        "equals",
         "face_down_sources_under_tamers_gte",
         "is_source",
         "kind",
         "level_eq",
         "name_contains",
-        "owner",
         "play_or_use_cost_lte",
         "replacement_subject_is_mine",
         "source_name_contains",
         "source_permanent_trait_has",
-        "trait_has",
-        "zone"
+        "trait_has"
       ],
       "timings": [
         "on_play",
@@ -28797,6 +28794,7 @@
         "cancel_replacement",
         "if",
         "play_or_use_from_hand",
+        "select_effect_choice",
         "select_hand",
         "select_opponent_permanent",
         "trash_bottom_face_down_source_under_tamer",
@@ -32507,6 +32505,7 @@
       "BT18-076",
       "BT20-087",
       "EX12-046",
+      "EX12-066",
       "EX12-074",
       "EX5-070",
       "P-176",
@@ -32549,6 +32548,9 @@
       "EX5-060",
       "EX8-050",
       "P-249"
+    ],
+    "can_play_or_use_from_effect": [
+      "ST24-06"
     ],
     "can_play_to_breeding_from_hand": [
       "BT20-015",
@@ -33514,7 +33516,6 @@
       "EX12-043",
       "EX12-044",
       "EX12-061",
-      "EX12-066",
       "EX12-069",
       "EX12-077",
       "EX13-003",
@@ -33575,7 +33576,6 @@
       "ST24-01",
       "ST24-02",
       "ST24-03",
-      "ST24-06",
       "ST24-09",
       "ST24-13",
       "ST24-14",
@@ -33984,6 +33984,7 @@
       "ST23-05",
       "ST23-13",
       "ST23-14",
+      "ST24-06",
       "ST24-10",
       "ST24-13",
       "ST24-14"
@@ -38542,7 +38543,6 @@
       "ST24-03",
       "ST24-04",
       "ST24-05",
-      "ST24-06",
       "ST24-07",
       "ST24-09",
       "ST24-13",
@@ -40607,7 +40607,6 @@
       "EX12-006",
       "EX12-012",
       "EX12-013",
-      "EX12-018",
       "EX12-020",
       "EX12-021",
       "EX12-022",
@@ -40800,7 +40799,6 @@
       "ST24-03",
       "ST24-04",
       "ST24-05",
-      "ST24-06",
       "ST24-09",
       "ST24-13",
       "ST24-14",
@@ -43620,7 +43618,6 @@
       "EX11-066",
       "EX11-069",
       "EX11-071",
-      "EX12-066",
       "EX13-067",
       "EX13-068",
       "EX13-069",
@@ -46021,7 +46018,6 @@
       "EX1-066",
       "EX10-033",
       "EX11-066",
-      "EX12-018",
       "EX13-016",
       "EX13-028",
       "EX13-031",
@@ -46130,7 +46126,6 @@
       "BT13-088",
       "BT26-097",
       "BT7-063",
-      "EX12-018",
       "EX12-077",
       "EX9-074"
     ],
@@ -46149,6 +46144,9 @@
       "EX2-055",
       "EX8-055",
       "P-240"
+    ],
+    "place_cards_as_top_sources": [
+      "EX12-018"
     ],
     "place_on_security": [
       "BT13-015",
@@ -47598,6 +47596,7 @@
       "ST23-05",
       "ST23-13",
       "ST23-14",
+      "ST24-06",
       "ST24-10",
       "ST24-13",
       "ST24-14"
@@ -49388,6 +49387,7 @@
       "EX11-060",
       "EX11-065",
       "EX12-063",
+      "EX12-066",
       "EX13-017",
       "EX13-023",
       "EX13-040",

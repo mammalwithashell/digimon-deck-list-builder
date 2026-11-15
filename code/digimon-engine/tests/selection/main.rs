@@ -14,6 +14,7 @@ mod kinds_exist;
 mod material;
 mod opponent_permanent;
 mod opponent_selector;
+mod optional_activation_mark;
 mod ordered_permutation;
 mod place_remainder;
 mod reveal_buckets;

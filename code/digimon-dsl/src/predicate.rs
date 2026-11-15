@@ -238,6 +238,21 @@ pub struct PredicateSpec {
     /// and the causing controller's effect-play prohibition independently.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_play_from_effect_without_cost: Option<bool>,
+    /// Card-subject leaf for "play or use 1 ... card from your hand" picks
+    /// (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY, ST24-06 RizeGreymon). True when
+    /// the effect controller could actually play or use the physical card by
+    /// an effect right now: a Digimon / Tamer must pass the same check as
+    /// `can_play_from_effect_without_cost` (a play cost — so never a Digi-Egg,
+    /// CR 4.3 7-1-1 — a free battle-area slot, and no play prohibition); an
+    /// Option (or a DUAL, which is used, never played) must be usable: no
+    /// "can't use Option cards" lock, and its colour requirement / `<Use
+    /// Req.>` met even though no cost is paid (CR 4.3 4-22; Q1500, Q2785).
+    /// Mirrors DCGO `(IsOption &&
+    /// !CanNotPlayThisOption) || (HasPlayCost && CanPlayAsNewPermanent(...))`.
+    /// It does not check memory affordability: pair it with
+    /// `affordable_with_cost_reduce` for a cost-paying play.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_play_or_use_from_effect: Option<bool>,
     /// Candidate is a physical hand Digimon/Dual whose owner's breeding is empty;
     /// checks the effect controller's play prohibition, not battle-area capacity.
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -958,6 +958,9 @@ pub(crate) fn end_of_turn_keyword_attack_process(ctx: &mut EffectContext<'_>, ke
             return;
         }
         let carrier_identity = ctx.game.capture_digivolve_host_identity(carrier);
+        // The offer is this effect's first decision, made later: it stays
+        // its "you may" activation decision (`game::optional_activation`).
+        let optional_activation = ctx.game.defer_first_decision();
         ctx.game
             .deferred_end_of_turn_attack_offers
             .push(crate::game::DeferredEndOfTurnAttackOffer {
@@ -966,6 +969,7 @@ pub(crate) fn end_of_turn_keyword_attack_process(ctx: &mut EffectContext<'_>, ke
                 keyword,
                 source_card,
                 source_kind,
+                optional_activation,
             });
         return;
     }
@@ -1477,6 +1481,11 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // is gone from the field by the time OnDeletion handlers fire.
         Keyword::Save => vec![Effect::on_deletion(card)
             .name("<Save>")
+            // DCGO `KeyWordEffects/Save.cs:14` (`isOptional: true`): an
+            // OptionalSkill, then the Tamer pick (`CardEffectCommons/
+            // KeyWordEffects/Save.cs:31-42`, `canNoSelect: true`). The pick's
+            // PASS is that may (`game::optional_activation`).
+            .optional_activation_folded()
             .process(|ctx| {
                 // Read the carrier's identity from the snapshot, not from
                 // the field. `deleted_object` is threaded in by
@@ -2263,6 +2272,11 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         Keyword::Execute => vec![
             Effect::end_of_your_turn(card)
                 .name("<Execute>")
+                // DCGO `CardEffectFactory/KeyWordEffects/Execute.cs:36`
+                // (`isOptional: true`): an OptionalSkill, then the attack
+                // (`CardEffectCommons/KeyWordEffects/Execute.cs:60-68`). The
+                // offer's decline is that may (`game::optional_activation`).
+                .optional_activation_folded()
                 .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Execute))
                 .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Execute))
                 .build(),
@@ -2300,6 +2314,9 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // `Engage.cs` / `EngageProcess`.
         Keyword::Engage => vec![Effect::end_of_your_turn(card)
             .name("<Engage>")
+            // DCGO `KeyWordEffects/Engage.cs:37` (`isOptional: true`), then
+            // `SelectAttackEffect` (`CardEffectCommons/KeyWordEffects/Engage.cs:20`).
+            .optional_activation_folded()
             .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Engage))
             .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Engage))
             .build()],
@@ -2316,6 +2333,9 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // `CanActivateVortex`).
         Keyword::Vortex => vec![Effect::end_of_your_turn(card)
             .name("<Vortex>")
+            // DCGO `KeyWordEffects/Vortex.cs:36` (`isOptional: true`), then
+            // `SelectAttackEffect` (`CardEffectCommons/KeyWordEffects/Vortex.cs:64`).
+            .optional_activation_folded()
             .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Vortex))
             .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Vortex))
             .build()],
@@ -2334,6 +2354,10 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // as the other three keywords' `CanActivate*`.
         Keyword::Overclock => vec![Effect::end_of_your_turn(card)
             .name("<Overclock>")
+            // DCGO `KeyWordEffects/Overclock.cs:37` (`isOptional: true`), then
+            // the deletion pick (`CardEffectCommons/KeyWordEffects/Overclock.cs`
+            // `OverclockProcess`, `SelectPermanentEffect` `canNoSelect: true`).
+            .optional_activation_folded()
             .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Overclock))
             .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Overclock))
             .build()],
@@ -2792,6 +2816,11 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // processing offers the attack or PASS (Â§16-16-3).
         Keyword::Blitz => vec![Effect::when_digivolving(card)
             .name("<Blitz>")
+            // DCGO `KeyWordEffects/Blitz.cs:53` (`isOptional: true`): an
+            // OptionalSkill, then `BlitzProcess`'s `SelectAttackEffect`
+            // (`CardEffectCommons/KeyWordEffects/Blitz.cs:35-45`). The
+            // decision's decline is that may (`game::optional_activation`).
+            .optional_activation_folded()
             .process(|ctx| {
                 if let Some(carrier) = ctx.source_permanent {
                     blitz_process(ctx, carrier);

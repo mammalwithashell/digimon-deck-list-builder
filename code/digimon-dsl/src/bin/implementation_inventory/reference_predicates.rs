@@ -228,6 +228,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             event_target_level,
             extra,
             can_play_from_effect_without_cost,
+            can_play_or_use_from_effect,
             can_play_to_breeding_from_hand,
             can_unsuspend,
             owner_can_add_security,
@@ -1059,6 +1060,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         );
         extra.walk(c, &format!("{}.extra", path), "UNCLASSIFIED_STRING");
             can_play_from_effect_without_cost.walk(c, &format!("{}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
+        can_play_or_use_from_effect.walk(c, &format!("{}.can_play_or_use_from_effect", path), "UNCLASSIFIED_STRING");
         can_play_to_breeding_from_hand.walk(c, &format!("{}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
         can_unsuspend.walk(c, &format!("{}.can_unsuspend", path), "UNCLASSIFIED_STRING");
         owner_can_add_security.walk(c, &format!("{}.owner_can_add_security", path), "UNCLASSIFIED_STRING");
@@ -1916,6 +1918,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             source_is_cost_target_permanent,
             cost_target_from_hand,
             can_play_from_effect_without_cost,
+            can_play_or_use_from_effect,
             can_play_to_breeding_from_hand,
             can_unsuspend,
             owner_can_add_security,
@@ -2754,6 +2757,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             "UNCLASSIFIED_STRING",
         );
             can_play_from_effect_without_cost.walk(c, &format!("{}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
+        can_play_or_use_from_effect.walk(c, &format!("{}.can_play_or_use_from_effect", path), "UNCLASSIFIED_STRING");
         can_play_to_breeding_from_hand.walk(c, &format!("{}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
         can_unsuspend.walk(c, &format!("{}.can_unsuspend", path), "UNCLASSIFIED_STRING");
         owner_can_add_security.walk(c, &format!("{}.owner_can_add_security", path), "UNCLASSIFIED_STRING");

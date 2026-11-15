@@ -18747,5 +18747,9 @@
         "memory_cost": 0
       }
     ]
-  }
+  },
+  "EX12-069": {
+    "inherited_effect_description_eng": "[Security] You may play 1 level 5 or lower [VB] trait Digimon card from your hand without paying the cost."
+  },
+  "_note_EX12-069": "EX12-069 Virus Busters security box: the card image (DCGO_Application/Assets/Textures/Card/EX12-069.webp) and DCGO EX12_069.cs:113 print 'play 1 level 5 or lower [VB] trait Digimon card from your hand without paying the cost'. The digimoncard.io API serves 'play cost 5 or lower [VB] trait card from your hand or trash' (wrong gate, kind and zone). The card is absent from card_official.json, so the image is the authority."
 }

@@ -212,6 +212,9 @@ pub(crate) struct DeferredEndOfTurnAttackOffer {
     /// The card whose keyword triggered (printed, inherited or granted).
     pub(crate) source_card: CardHandle,
     pub(crate) source_kind: crate::enums::EffectSourceKind,
+    /// The keyword effect whose first decision this offer is, when that
+    /// effect folds its "you may" into it (`game::optional_activation`).
+    pub(crate) optional_activation: Option<optional_activation::OptionalActivationEffect>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -803,6 +806,19 @@ pub struct Game {
     /// `is_optional` (DSL choose-one, `<Ascension>` Yes/No); consumed when the
     /// next decision resolves. See `game::infinite_loop::OptionalDecisionMark`.
     pub(crate) optional_decision_mark: Option<infinite_loop::OptionalDecisionMark>,
+    /// Marks the pending prompt as the "you may" ACTIVATION decision of an
+    /// optional effect whose may is folded into its FIRST decision (no outer
+    /// accept/decline, so that decision's PASS declines the effect). Names
+    /// the prompt and the queued effect; set when the effect body parks its
+    /// first decision, dropped once that prompt resolves or is no longer the
+    /// pending one. Read by the DCGO replay to tell a "use this optional
+    /// effect?" gate from a choice inside an effect body. See
+    /// `game::optional_activation`.
+    pub(crate) optional_activation_mark: Option<optional_activation::OptionalActivationMark>,
+    /// The first-decision tracker of the effect body running right now (see
+    /// `game::optional_activation`). Lives only while a body runs
+    /// synchronously; `None` otherwise.
+    pub(crate) optional_activation_window: Option<optional_activation::OptionalActivationWindow>,
     /// Last §15-4-5 trigger-batch id handed out by the drainer (see
     /// `QueuedEffect::trigger_batch`). Monotonic within a game.
     pub(crate) trigger_batch_seq: u32,
@@ -1605,6 +1621,7 @@ pub struct Game {
 // Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md §3).
 mod handles;
 pub mod infinite_loop;
+pub mod optional_activation;
 mod lifecycle;
 mod memory;
 mod opt;

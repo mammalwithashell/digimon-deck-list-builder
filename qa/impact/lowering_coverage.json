@@ -22075,9 +22075,8 @@
     "verb:delete_permanent",
     "verb:if",
     "verb:may_attack_now",
-    "verb:per_selected",
-    "verb:place_as_top_source",
     "verb:place_cards_as_bottom_sources",
+    "verb:place_cards_as_top_sources",
     "verb:select_effect_choice",
     "verb:select_opponent_permanent",
     "verb:select_own_permanent",
@@ -22095,7 +22094,6 @@
     "predicate:level_eq",
     "predicate:owner",
     "predicate:trait_has",
-    "predicate:zone",
     "timing:main",
     "timing:when_attacking",
     "timing:when_digivolving",
@@ -23050,17 +23048,17 @@
    "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
-    "verb:activation_cost",
     "verb:effect_initiated_digivolve",
     "verb:if",
     "verb:play_from_security",
     "verb:select_effect_choice",
     "verb:select_hand",
     "verb:set_memory",
+    "verb:suspend",
     "verb:use_option_bound",
     "predicate:all_of",
     "predicate:any_of",
-    "predicate:count_gte",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:equals",
     "predicate:event_target_in_text_contains",
     "predicate:event_target_owner",
@@ -34049,6 +34047,7 @@
     "verb:cancel_replacement",
     "verb:if",
     "verb:play_or_use_from_hand",
+    "verb:select_effect_choice",
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "verb:trash_bottom_face_down_source_under_tamer",
@@ -34056,19 +34055,18 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
-    "predicate:count_gte",
+    "predicate:can_play_or_use_from_effect",
+    "predicate:equals",
     "predicate:face_down_sources_under_tamers_gte",
     "predicate:is_source",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
-    "predicate:owner",
     "predicate:play_or_use_cost_lte",
     "predicate:replacement_subject_is_mine",
     "predicate:source_name_contains",
     "predicate:source_permanent_trait_has",
     "predicate:trait_has",
-    "predicate:zone",
     "timing:on_play",
     "timing:when_attacking",
     "timing:when_digivolving"
@@ -37111,6 +37109,9 @@
     "keyword_phase_f::mind_link.rs::mind_link_pick_cannot_be_declined": [
      "keyword"
     ],
+    "keyword_phase_f::mind_link.rs::mind_link_rekeys_later_permanents_modifiers_after_tamer_removal": [
+     "keyword"
+    ],
     "keyword_phase_f::mind_link.rs::mind_link_skips_digimon_with_existing_tamer_source": [
      "keyword"
     ],
@@ -37139,6 +37140,7 @@
    "tests": [
     "keyword_phase_f::mind_link.rs::mind_link_attaches_tamer_to_digimon_with_no_tamer_source",
     "keyword_phase_f::mind_link.rs::mind_link_pick_cannot_be_declined",
+    "keyword_phase_f::mind_link.rs::mind_link_rekeys_later_permanents_modifiers_after_tamer_removal",
     "keyword_phase_f::mind_link.rs::mind_link_skips_digimon_with_existing_tamer_source",
     "keyword_phase_f::mind_link.rs::mind_link_target_prompt_clones_faithfully",
     "keyword_phase_f::mind_link.rs::mind_link_targets_digimon_with_only_facedown_tamer_source",
@@ -40173,6 +40175,9 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt": [
      "yaml_key"
     ],
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
      "yaml_key"
     ],
@@ -40195,6 +40200,33 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option": [
      "yaml_key"
     ],
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_declared_local_binding_dependencies": [
@@ -40313,6 +40345,7 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
@@ -40321,6 +40354,15 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option",
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_declared_local_binding_dependencies",
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound",
     "dsl::constructs/zone_moves.rs::field_option_before_host_preserves_identity_after_compaction",
@@ -40914,6 +40956,49 @@
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_hand_mask_accepts_both_kinds_and_distinct_physical_duplicates_for_both_owners",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_prohibitions_discriminate_digimon_and_tamer_for_both_owners",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance"
+   ]
+  },
+  "predicate:can_play_or_use_from_effect": {
+   "kind": "predicate",
+   "name": "can_play_or_use_from_effect",
+   "parsed_only": false,
+   "signals": {
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option"
    ]
   },
   "predicate:can_play_to_breeding_from_hand": {
@@ -46120,6 +46205,15 @@
     "dsl::constructs/play_digivolve_link.rs::link_card_count_filtered_empty_filter_and_unreachable": [
      "yaml_key"
     ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_hand_does_not_offer_an_off_colour_option": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_trash_does_not_offer_an_off_colour_option": [
+     "yaml_key"
+    ],
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures": [
      "yaml_key"
     ],
@@ -47723,6 +47817,9 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::link_card_count_filtered_empty_filter_and_unreachable",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option",
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_hand_does_not_offer_an_off_colour_option",
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_trash_does_not_offer_an_off_colour_option",
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures",
     "dsl::constructs/plural_security_prevention.rs::empty_security_cannot_offer_atomic_payment_even_without_authored_security_guard",
     "dsl::constructs/plural_security_prevention.rs::no_matching_departure_never_offers_or_pays_plural_prevention",
@@ -54026,6 +54123,9 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt": [
      "yaml_key"
     ],
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
      "yaml_key"
     ],
@@ -54762,6 +54862,7 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
@@ -59940,6 +60041,9 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt": [
      "yaml_key"
     ],
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
     "dsl::constructs/option_security_suppression.rs::a_sibling_attacker_does_not_borrow_the_sources_restriction": [
      "yaml_key"
     ],
@@ -60127,6 +60231,39 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::would_link_window_before_payment_accept_decline_and_floor": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_hand_does_not_offer_an_off_colour_option": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_trash_does_not_offer_an_off_colour_option": [
      "yaml_key"
     ],
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures": [
@@ -61092,6 +61229,7 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
     "dsl::constructs/option_security_suppression.rs::a_sibling_attacker_does_not_borrow_the_sources_restriction",
     "dsl::constructs/option_security_suppression.rs::a_top_card_or_face_down_source_does_not_supply_the_inherited_restriction",
     "dsl::constructs/option_security_suppression.rs::an_off_turn_effect_attack_does_not_enable_a_your_turn_restriction",
@@ -61155,6 +61293,17 @@
     "dsl::constructs/play_digivolve_link.rs::would_link_different_host_no_prompt",
     "dsl::constructs/play_digivolve_link.rs::would_link_trait_any_of_and_case_sensitive",
     "dsl::constructs/play_digivolve_link.rs::would_link_window_before_payment_accept_decline_and_floor",
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option",
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_hand_does_not_offer_an_off_colour_option",
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_trash_does_not_offer_an_off_colour_option",
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures",
     "dsl::constructs/plural_security_prevention.rs::empty_security_cannot_offer_atomic_payment_even_without_authored_security_guard",
     "dsl::constructs/plural_security_prevention.rs::no_matching_departure_never_offers_or_pays_plural_prevention",
@@ -70769,6 +70918,9 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt": [
      "yaml_key"
     ],
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
     "dsl::constructs/option_security_suppression.rs::live_restriction_is_rechecked_between_security_clauses_after_a_cloned_choice": [
      "yaml_key"
     ],
@@ -70800,6 +70952,33 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option": [
      "yaml_key"
     ],
     "dsl::constructs/scoped_protection_security_tail.rs::cross_owner_security_and_selecting_override_keep_nested_tail_once": [
@@ -71199,6 +71378,7 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
     "dsl::constructs/option_security_suppression.rs::live_restriction_is_rechecked_between_security_clauses_after_a_cloned_choice",
     "dsl::constructs/option_security_suppression.rs::moving_the_checked_option_to_hand_does_not_erase_its_activation_restriction",
     "dsl::constructs/option_security_suppression.rs::suppressed_option_security_does_not_offer_its_choice_but_sibling_does",
@@ -71210,6 +71390,15 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option",
     "dsl::constructs/scoped_protection_security_tail.rs::cross_owner_security_and_selecting_override_keep_nested_tail_once",
     "dsl::constructs/security_stack.rs::add_top_security_to_hand_records_the_added_card",
     "dsl::constructs/security_stack.rs::on_lose_security_and_on_opponent_security_removed_are_disjoint",
@@ -72173,6 +72362,44 @@
     "lib::src/dsl_cards/step/mod.rs::two_typed_outer_continuations_both_receive_inner_binding_and_clone"
    ]
   },
+  "verb:place_cards_as_top_sources": {
+   "kind": "verb",
+   "lowering_files": [
+    "code/digimon-engine/src/dsl_cards/step/mod.rs"
+   ],
+   "name": "place_cards_as_top_sources",
+   "parsed_only": false,
+   "signals": {
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
+    "lib::src/dsl_cards/step/mod.rs::first_typed_tail_reparks_then_second_sees_both_bindings_in_clones": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/mod.rs::optional_security_accept_executes_bound_enclosing_tail_in_clones": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/mod.rs::optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/mod.rs::resume_without_pending_selection_preserves_enclosing_tail": [
+     "variant"
+    ],
+    "lib::src/dsl_cards/step/mod.rs::two_typed_outer_continuations_both_receive_inner_binding_and_clone": [
+     "variant"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
+    "lib::src/dsl_cards/step/mod.rs::first_typed_tail_reparks_then_second_sees_both_bindings_in_clones",
+    "lib::src/dsl_cards/step/mod.rs::optional_security_accept_executes_bound_enclosing_tail_in_clones",
+    "lib::src/dsl_cards/step/mod.rs::optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection",
+    "lib::src/dsl_cards/step/mod.rs::resume_without_pending_selection_preserves_enclosing_tail",
+    "lib::src/dsl_cards/step/mod.rs::two_typed_outer_continuations_both_receive_inner_binding_and_clone"
+   ]
+  },
   "verb:place_on_security": {
    "kind": "verb",
    "lowering_files": [
@@ -72874,6 +73101,33 @@
     ],
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_missing_delta_full_cost": [
      "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option": [
+     "yaml_key"
     ]
    },
    "tested": true,
@@ -72883,7 +73137,16 @@
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_bound_option_main_and_trash",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_declined_unchanged",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_dual_is_used_as_an_option",
-    "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_missing_delta_full_cost"
+    "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_missing_delta_full_cost",
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option"
    ]
   },
   "verb:play_or_use_from_sources": {
@@ -75406,6 +75669,33 @@
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_missing_delta_full_cost": [
      "yaml_key"
     ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option": [
+     "yaml_key"
+    ],
     "dsl::constructs/scoped_protection_security_tail.rs::unsupported_decline_and_cause_modes_fail_validation": [
      "yaml_key"
     ],
@@ -75711,6 +76001,15 @@
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_declined_unchanged",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_dual_is_used_as_an_option",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_missing_delta_full_cost",
+    "dsl::constructs/play_or_use_candidate_legality.rs::effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option",
     "dsl::constructs/scoped_protection_security_tail.rs::unsupported_decline_and_cause_modes_fail_validation",
     "dsl::constructs/selected_source_security_receipt.rs::a_bound_card_outside_the_carrier_cannot_pay_its_source_cost",
     "dsl::dna_field_pair_masks.rs::first_and_second_choices_are_correlated_with_the_result_and_each_other",
@@ -78591,6 +78890,9 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt": [
      "yaml_key"
     ],
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost": [
+     "yaml_key"
+    ],
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound": [
      "yaml_key"
     ],
@@ -78624,6 +78926,7 @@
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_preflight_only_counts_currently_encodable_cards",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_uses_color_matching_rank",
     "dsl::constructs/mixed_zone_distinct.rs::mixed_zone_distinct_required_floor_with_insufficient_distinct_names_does_not_prompt",
+    "dsl::constructs/mixed_zone_distinct.rs::place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost",
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound",
     "dsl::constructs/zone_moves.rs::count_below_minimum_and_optional_zero_do_not_move_cards",
     "dsl::constructs/zone_moves.rs::count_top_return_keeps_first_pick_topmost",
@@ -80325,6 +80628,9 @@
    "name": "use_option_from_hand",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_hand_does_not_offer_an_off_colour_option": [
+     "yaml_key"
+    ],
     "dsl::option_effect_use.rs::use_option_from_hand_filters_by_trait_and_opponent_memory_ceiling": [
      "variant"
     ],
@@ -80342,6 +80648,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_hand_does_not_offer_an_off_colour_option",
     "dsl::option_effect_use.rs::use_option_from_hand_filters_by_trait_and_opponent_memory_ceiling",
     "dsl::parse_steps.rs::use_option_from_hand_step_parses_filter_and_cost_ceiling",
     "rules_conformance::ch15_04_effect_states.rs::option_disposal_triggers_wait_for_the_using_effect",
@@ -80404,6 +80711,9 @@
    "name": "use_option_from_trash",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_trash_does_not_offer_an_off_colour_option": [
+     "yaml_key"
+    ],
     "dsl::option_lifecycle_cluster.rs::gap2_dsl_use_option_from_trash_installs_trash_selection_over_matching_options": [
      "variant"
     ],
@@ -80414,6 +80724,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_or_use_candidate_legality.rs::use_option_from_trash_does_not_offer_an_off_colour_option",
     "dsl::option_lifecycle_cluster.rs::gap2_dsl_use_option_from_trash_installs_trash_selection_over_matching_options",
     "rules_conformance::ch16_new_keywords.rs::dual_digivolution_card_referenced_as_option_card_for_digivolution_card_search"
    ]
@@ -80478,7 +80789,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2229,
+  "behavioural_tests": 2242,
   "cards": {
    "behaviourally_covered": 1185,
    "lowering_covered": 1202,
@@ -80497,11 +80808,11 @@
    },
    "predicate": {
     "parsed_only": 7,
-    "tested": 203,
-    "tested_behaviourally": 196,
-    "total": 225,
+    "tested": 204,
+    "tested_behaviourally": 197,
+    "total": 226,
     "untested": 22,
-    "used_by_cards": 199,
+    "used_by_cards": 200,
     "used_untested": 15
    },
    "timing": {
@@ -80515,11 +80826,11 @@
    },
    "verb": {
     "parsed_only": 5,
-    "tested": 182,
-    "tested_behaviourally": 177,
-    "total": 186,
+    "tested": 183,
+    "tested_behaviourally": 178,
+    "total": 187,
     "untested": 4,
-    "used_by_cards": 174,
+    "used_by_cards": 175,
     "used_untested": 4
    }
   },
@@ -80640,8 +80951,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 412,
-  "scanned_tests": 2636,
+  "scanned_files": 413,
+  "scanned_tests": 2649,
   "top_untested": [
    {
     "cards_blocked": 3,

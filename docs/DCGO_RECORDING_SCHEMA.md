@@ -345,6 +345,204 @@ Exactly one payload field is present, keyed by prompt kind:
 A `cancel: true` field replaces the payload when the player backed out of
 the prompt.
 
+### DCGO card identity (`card_index`, `card_indexes`) — MelonLoader converter
+
+DCGO numbers every card of a game with `CardSource.CardIndex`; the raw
+MelonLoader rows carry it wherever DCGO resolved a card, and
+`code/dcgo-melon-recorder/convert_raw.py` passes it on:
+
+| Row | Field | Source in the raw row |
+|---|---|---|
+| `action` (play / digivolve / DNA) | `card_index` | the played card: its slot in the resolve row's hand listing (`PlayCardClass.PlayCard` `hand`) |
+| `selection` `SelectHandEffect` / `SelectCardEffect` | `card_indexes` (parallel to `card_ids`) | the setter's `int[] cardIndexes` argument |
+| `selection` burst Tamer pick (`mechanic: "burst"`) | `targets[0].card_index` | the returned Tamer: the one card of the picked id that is new in its owner's next hand listing (same turn) and was last listed when it was played out of the hand; omitted unless exactly one card qualifies (`card_index_source: "hand_listing"`) |
+| `selection` `SelectPermanentEffect` whose board holds several copies of the target's card | `targets[i].card_index` | a recorder 0.2.0 row's `board_indexes[player][frame]`; `card_index_source: "recorder"`; otherwise the frame model (`frame_model.py`), only when it is certain (`"frame_model"`) |
+
+**Provenance (`targets[i].card_index_source`).** A target's `card_index` is DCGO's own number only when the recorder
+logged it; the converter also derives some. Every target that carries a `card_index` therefore carries
+`card_index_source` (Rust: `FrameTarget::card_index_source`, `CardIndexSource`, `snake_case`):
+
+| Value | Meaning | Observation or inference |
+|---|---|---|
+| `recorder` | a recorder 0.2.0 row's `board_indexes[player][frame]` (Core.cs `BoardsJson`) | observation |
+| `frame_model` | the frame model named the occupant (`frame_model.py`: DCGO's frame placement followed from the logged plays and checked against every recorded board) | inference |
+| `hand_listing` | a Burst Digivolve's returned Tamer, read from the owner's next hand listing (`returned_tamer_index`) | inference |
+
+A target with no `card_index` carries no source; recordings predating the field have neither. A replay that resolves a
+copy by a `frame_model` or `hand_listing` index is relying on the converter's inference, not on something DCGO logged,
+and should say so where it reports the resolution. `dcgo-replay` does (`ReplayDriver::duplicate_copy_target`): a copy
+identified through such an index adds a replay note "copy identity inferred by frame model, not recorded" (or "by hand
+listing"); an index with no `card_index_source` (a recording predating the field) adds "provenance not recorded"; a
+`recorder` index stays silent. The notes never change whether the replay halts.
+
+A played card's `card_index` (the `action` row) is taken from the resolve row's hand listing unless the listing NAMES a
+card at the played slot and that card is not the played card (`hand.cards[slot].card_id` present, `cards[0]` present and
+different; `frame_model._played_index` is stricter and also needs the listed id to equal the played id). Then the action
+carries no `card_index` and the conversion notes name the row's seq. A listing with no `card_id` (an older recorder build)
+or a row with a hand but no `cards` names nothing to compare, so the index is kept and the queued-play gate decides
+whether the row is a main-phase play.
+
+### Unstamped optional answers (`OptionalSkill.SetUseOptional`)
+
+An agent-played seat's menu answers are stamped with the engine action (`engine_action`; Core.cs). It stamps a decline
+as 62 and leaves only the agent's "Use" answer unstamped, so on a seat that is stamped anywhere in the raw:
+
+* an unstamped **true** is the agent's own "Use" and is dropped (the engine asked nothing). Each drop is a conversion
+  note naming the seq, so the set is auditable;
+* an unstamped **false** did not come from the agent: it came from DCGO's AI, a StallWatch timeout or a human (Core.cs
+  also stamps -1 on an agent click of "decline" for an effect the engine resolved without a choice, Core.cs:2184-2187,
+  which is divergence evidence, and `ReadStamp` returns -1 after its 0.5 s timeout while advancing the stamp index,
+  Core.cs:718-736, so a slow remote answer shifts later stamps). It is kept as a `generic_bool` row with
+  `unstamped: true` for the replay to judge (`ReplayDriver::classify_unstamped_answer`).
+
+A seat with no stamps anywhere (a human, or the remote seat with no stamp file) keeps both answers, marked unstamped.
+
+**The frame model** (`code/dcgo-melon-recorder/frame_model.py`). A board
+lists a seat's permanents in frame order (`GetFieldPermanents()` walks
+`FieldPermanents` by FrameID, Player.cs:669-684), and a permanent keeps its
+frame while it stays: a fresh play - main-phase too, PlayCardClass hands it to
+PlayPermanentClass, which never reads the packet's TargetFrameID
+(CardController.cs:1221, :1533-1541) - takes `CardSource.PreferredFrame()`,
+the first empty battle frame in an order fixed by the card kind, the seat and
+the scene layout (CardSource.cs:2340-2410; frame positions from
+BattleScene.unity's YourPermanentFrame / OpponentPermanentFrame children, whose
+GridLayoutGroup is disabled); a digivolve keeps the root's frame; only the
+post-play re-row (CardController.cs:1811-1856) and the breeding move
+(CardObjectController.cs:1149-1197) move a permanent, again to
+PreferredFrame. The model follows each seat's frames from the logged plays
+(tagging a permanent with its CardIndex when the play packet, a 0.2.0
+`card_indexes` or the played hand slot names it), keeps every hypothesis the
+next board allows (which copy left, a breeding move, a Digimon's top changed in
+place), and checks EVERY board of that seat. A pick is named only when every
+hypothesis puts the same tagged permanent at that position. A board no
+hypothesis explains, more than 4096 hypotheses, a card of unknown kind or a
+DNA / App Fusion packet (those place by TargetFrameID,
+DNADigivolveEffects.cs:33) turns the model off for that seat for the rest of
+the game.
+
+The replay pairs each index with the engine card its own applied row moved
+(`ReplayDriver::record_dcgo_card_indexes`: one named index and one moved
+engine card of that id). A target carrying `card_index` then resolves to the
+permanent whose top card is that engine card instead of to a board position,
+which is what tells copies of one card apart (`duplicate_copy_target`). All
+three fields are optional; recordings without them replay as before.
+
+### Raw recorder identity fields (`board_indexes`, Snapshot `breeding_indexes` / `battle_indexes`, PlayCard `card_indexes` / `root`) — recorder 0.2.0
+
+These are fields of the **raw** MelonLoader stream (`raw-<session>.jsonl`,
+written by `code/dcgo-melon-recorder/Core.cs`), not of the converted
+recording. They close two identity holes: a raw `boards` list names each
+permanent by card id and position only, so two copies of one card on a
+field cannot be told apart; and a `PlayCardClass.PlayCard` row named the
+played card's `CardIndex` only through the `hand` listing, so a play out of
+security, the deck, the trash or a Digimon's digivolution cards carried no
+identity at all. All these fields are **optional and additive**: a raw file
+from recorder 0.1.0 lacks them, and every existing field is unchanged.
+
+**What a `CardIndex` is.** DCGO numbers every `CardSource` from one
+game-wide counter (`GManager.instance.CardIndex`, reset to 0 at game setup
+and incremented in `CardObjectController.CreateCardSource`,
+`CardObjectController.cs:395-438`): seat 0's deck, then seat 0's DigiEgg
+deck, then seat 1's deck and DigiEgg deck, then every token as it is created
+(`CardEffectCommons.cs:157`, `:231`, `:238` also go through
+`CreateCardSource`). So an index is unique across **both** seats for the whole
+game and never changes when the card changes zone. It is a plain property
+(`CardSource.cs:31`), so a face-down card still has one.
+
+**Version stamp.** Every `Snapshot.<hook>` row now carries
+`"recorder": "0.2.0"` (`Core.RecorderVersion`, also the MelonInfo version).
+A raw file whose snapshots lack `recorder` was written by 0.1.0, so a missing
+`board_indexes` there means "not recorded", not "no permanents".
+
+**`board_indexes`** sits beside every raw `boards` payload, with the same
+shape: `[seat0_list, seat1_list]`, entry `[p][i]` the `CardIndex` of the top
+card (`Permanent.TopCard`) of the permanent `boards[p][i]` names (`null`
+exactly where `boards` has `null`). Both fields are written from one fetch of
+each seat's list (`Core.BoardsJson`), so they are always aligned. Which list
+depends on the row, exactly as for `boards`:
+
+| Raw row | List (both seats) | Includes the breeding area? |
+|---|---|---|
+| `TurnStateMachine.QueueMainPhaseAction_Internal` attack (kind 0) / activate (kind 2, incl. the `activate_link` variant) | `GetFieldPermanents()` | **yes** |
+| `SelectPermanentEffect.SetTargetFrames` | `GetFieldPermanents()` | **yes** |
+| `TurnStateMachine.QueueMainPhaseAction_Internal` play packet (kind 4, after the `play` object) | `GetBattleAreaPermanents()` | no |
+| `TurnStateMachine.SetAttackingPermaent` | `GetBattleAreaPermanents()` | no |
+| `PlayCardClass.PlayCard` (when it has a `target`) | `GetBattleAreaPermanents()` | no |
+
+`GetFieldPermanents()` (`Player.cs:669-680`) walks all 16 `FieldPermanents`
+frames with no area filter, so on the three field-list rows a breeding-area
+permanent appears in `boards` and `board_indexes` at its frame position (the
+breeding frame is the last one: `isBattleAreaFrameID` is
+`0 <= id <= fieldCardFrames.Count - 2`, `Player.cs:1561-1563`).
+`GetBattleAreaPermanents()` (`Player.cs:621-640`) keeps only battle-area
+frames, so the battle-area rows never list it. Either way the two fields come
+from the same list and stay aligned.
+
+**`Snapshot.<hook>` rows** keep their `breeding` / `battle` card-id lists and
+gain `breeding_indexes` / `battle_indexes` beside them in each `players[]`
+entry: the top-card `CardIndex` of each permanent in
+`GetBreedingAreaPermanents()` / `GetBattleAreaPermanents()`, each list
+fetched once and written into both fields, so `battle_indexes[i]` names the
+copy `battle[i]` names.
+
+**`PlayCardClass.PlayCard`** rows gain:
+
+- `card_indexes` — the `CardIndex` of every card in `PlayCardClass.CardSources`,
+  parallel to the row's `cards` list (`null` where `cards` has `null`). Logged
+  for every play, whatever zone it came from.
+- `root` — `PlayCardClass.Root` as its enum name (DCGO
+  `SelectCardEffect.Root`: `Library`, `Trash`, `Clock`, `Security`, `Custom`,
+  `Hand`, `Recollection`, `Execution`, `DigivolutionCards`, `LinkedCards`,
+  `None`). It is the root the *calling effect* passed to the constructor
+  (`CardController.cs:122-145`), not a zone the recorder observed. A
+  main-phase hand play reads `Hand` (`TurnStateMachine.cs:1831`); effect
+  plays mostly pass `Trash`, `Hand`, `Custom` or `DigivolutionCards`, and a
+  play out of a reveal usually passes `Library` or `Custom` (`Execution` is
+  rare: about 10 call sites, plus the default of
+  `CardEffectCommons.PlaceDelayOptionCards`). Token plays pass `None`.
+  **Prefer `card_indexes` to `root` for where a card came from:** when the
+  coroutine runs, `PlayCard()` re-derives `Root` per card from the zone the
+  card is actually in (trash, hand, deck, digivolution cards, linked cards,
+  security, executing area; `CardController.cs:486-519`), and the row is
+  written before that, so `root` can differ from the root DCGO finally uses.
+
+The hook is a postfix on `PlayCardClass.PlayCard()`, which returns the
+coroutine before it runs, so the cards are still in their source zones.
+`PlayPermanentClass.PlayPermanent` is not hooked. Its DCGO callers are:
+
+- `PlayCardClass.PlayCard()` itself (`CardController.cs:1221`): covered by
+  the `PlayCardClass.PlayCard` row.
+- `HatchDigiEggClass.Hatch()` (`CardController.cs:1292-1309`, `Root.Library`,
+  breeding area): a hatch writes **no** `PlayCardClass.PlayCard` row and so no
+  `card_indexes`. Hatching is not a play; the hatched egg is the top
+  (`DigitamaLibraryCards[0]`) of the egg deck and its index shows up in the
+  next snapshot's `breeding_indexes`.
+- `CardEffectCommons.PlaceDelayOptionCards` (`CardEffectCommons.cs:114-118`,
+  placing a `<Delay>` Option): the Option permanent enters the battle area
+  with no `PlayCardClass.PlayCard` row.
+
+So every Digimon/Tamer *play* is covered by the `PlayCardClass.PlayCard`
+row; hatches and `<Delay>` placements are not.
+
+```jsonc
+// attack packet (kind 0): field order, both seats
+{"seq":412,"method":"TurnStateMachine.QueueMainPhaseAction_Internal","args":[0,0,[0,0,0,1,0,0,0,0]],"tp":0,"turn":7,
+ "boards":[["EX13-020","EX13-020","BT21-037"],["BT16-082"]],
+ "board_indexes":[[14,22,31],[67]]}
+
+// a play from security: no `hand` slot, identity from card_indexes
+{"seq":530,"method":"PlayCardClass.PlayCard","cards":["P-117"],"card_indexes":[9],"root":"Security",
+ "pay_cost":false,"breeding_area":false,"target":null,"hand":{"player":-1,"slot":-1},"tp":1,"turn":8}
+
+// snapshot: each players[] entry gains breeding_indexes / battle_indexes (other keys elided)
+{"seq":4,"method":"Snapshot.SetRedraw","recorder":"0.2.0","is_ai":false,"you":0,"turn_count":7,
+ "players":[{"id":0,"breeding":["BT16-001"],"battle":["EX13-020","EX13-020"],
+             "breeding_indexes":[52],"battle_indexes":[14,22],"memory":3}, ...]}
+```
+
+`convert_raw.py` does not read these fields yet; they are recorded so the
+converter can name which copy a board operand or an off-hand play is.
+
 ### `mechanic` / `zone` (Assembly/DigiXros material-declaration tags)
 
 Two further OPTIONAL diagnostic fields, added for the

@@ -38,6 +38,10 @@ pub fn try_run(
             // forcing subsequent mandatory steps.
             if let Some(CompiledStep::SelectHand { of, filter, .. }) = body.first() {
                 if select_hand_candidate_count(ctx, *of, filter, bindings) == 0 {
+                    // That skipped pick was a decision: when it is an optional
+                    // effect's first, no later pick inherits its "you may"
+                    // (`game::optional_activation`).
+                    ctx.game.spend_first_decision();
                     return Some(RunOutcome::Synchronous);
                 }
             }

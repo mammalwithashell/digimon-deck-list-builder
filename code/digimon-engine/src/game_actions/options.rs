@@ -304,6 +304,52 @@ impl Game {
             .player_has(player_id, crate::enums::ModifierType::CannotUseOptionCards)
     }
 
+    /// Whether `player_id` may USE `card` (an Option card, or a DUAL card used
+    /// as an Option) through a card effect right now -- the candidate-side
+    /// mirror of the card checks `play_option_core` applies to an
+    /// effect-driven use, so a pick never offers a card the commit refuses:
+    ///
+    /// - no "can't use Option cards" lock (`option_use_blocked`);
+    /// - an authored Option has a `[Main]` body to resolve
+    ///   (`option_has_active_main_effect`; an implementation-completeness
+    ///   guard, not a rules gate);
+    /// - the colour requirement is met (CR 4.3 4-22-1..3), or a `<Use Req.>`
+    ///   / "ignore colour requirements" grant satisfies it
+    ///   (`option_use_requirement_or_color_available`).
+    ///
+    /// Cost affordability and timing are the caller's concern (an effect may
+    /// waive the cost, and the effect-driven use lifts the Main-phase gate).
+    /// DCGO `CardSource.CanNotPlayThisOption` (CardSource.cs:184-246): a
+    /// player / permanent / own `ICanNotPlayCardEffect`, or
+    /// `!MatchColorRequirement` (CardSource.cs:253-309). The engine's only
+    /// shipped Option "can't use" restriction is the player-wide
+    /// `CannotUseOptionCards` (EX1-072, BT8-057).
+    /// `G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT`.
+    pub(crate) fn option_use_available_from_effect(
+        &self,
+        player_id: PlayerId,
+        card: &crate::card_source::CardSource,
+    ) -> bool {
+        if !matches!(
+            card.card_kind(&self.card_data),
+            CardKind::Option | CardKind::Dual
+        ) {
+            return false;
+        }
+        if self.option_use_blocked(player_id) {
+            return false;
+        }
+        let authored = self
+            .effects_for_card(card.card_id(&self.card_data), card.handle())
+            .unwrap_or_default();
+        if !authored.is_empty()
+            && !crate::action::mask::option_has_active_main_effect(card, self, player_id)
+        {
+            return false;
+        }
+        crate::action::mask::option_use_requirement_or_color_available(card, self, player_id)
+    }
+
     /// Shared Option-play pipeline. Forks on source zone (hand vs trash)
     /// and on the resolved play mode (Standard / Delay / Link / Training).
     ///
@@ -413,11 +459,21 @@ impl Game {
                     return OptionPlayResult::Invalid;
                 }
             }
-            if cost_policy == OptionCostPolicy::Pay
-                && !crate::action::mask::option_use_requirement_or_color_available(
-                    card, self, player_id,
-                )
-            {
+            // Colour requirement (CR 4.3 4-22-1..3), satisfied by a true
+            // `<Use Req.>` or an "ignore colour requirements" grant. Checked for
+            // EVERY cost policy: an effect-driven use ("use … without paying
+            // the cost", "with the cost reduced by N") is still a use; only
+            // activating an Option's effect without using it is exempt
+            // (4-22-5). Official rulings Q1500 (BT6-112) and Q2785 (BT17-035).
+            // DCGO `PlayOptionCards` (CardEffectCommons.cs:67-69) drops every
+            // card with `CanNotPlayThisOption`, which includes
+            // `!MatchColorRequirement` (CardSource.cs:238-243), whatever
+            // `payCost` is. The check used to run only for
+            // `OptionCostPolicy::Pay`, so a free/reduced effect-driven use
+            // ignored colour. `G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT`.
+            if !crate::action::mask::option_use_requirement_or_color_available(
+                card, self, player_id,
+            ) {
                 return OptionPlayResult::Invalid;
             }
             (

@@ -418,3 +418,47 @@ fn trash_field_option_fires_on_option_trashed_with_last_state() {
     );
     assert_eq!(r.trash_size(0), 1);
 }
+
+/// G-PERMANENT-HANDLE-POSITIONAL-STALENESS: trashing a field Option removes
+/// its slot from `battle_area` (a Vec), so every LATER permanent's positional
+/// handle drops by one. Modifier state must follow the permanents, as in the
+/// sibling DNA-Charge path (`option_lifecycle.rs` place-under-host commit).
+#[test]
+fn trash_field_option_rekeys_later_permanents_modifiers() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    use digimon_engine::permanent::PermanentHandle;
+
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("DELAY"))
+        .add_card(digimon_card("LATER"))
+        .hand(0, &["DELAY"])
+        .start();
+    let delay_card = r.game.player_mut(0).hand.remove(0);
+    let placed_turn = r.game.turn_count as u32;
+    let delay = r
+        .game
+        .install_field_option_as_delay(delay_card, 0, placed_turn);
+    let later = r.place_on_field(0, "LATER", Some(0));
+    assert!(delay.index < later.index, "the Option sits before the Digimon");
+    r.game.modifiers.add(
+        later,
+        ModifierEntry::simple(ModifierType::ChangeDp, 1000, Expiry::EndOfTurn, 0),
+    );
+    let dp_before = r.effective_dp(later).unwrap();
+
+    assert!(r.game.trash_field_option(delay, OptionTrashCause::Effect));
+
+    let later_now = PermanentHandle { player: 0, index: later.index - 1 };
+    assert_eq!(
+        r.game.player(0).battle_area[later_now.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "LATER"
+    );
+    assert_eq!(
+        r.effective_dp(later_now),
+        Some(dp_before),
+        "the +1000 must follow LATER into its compacted slot"
+    );
+}

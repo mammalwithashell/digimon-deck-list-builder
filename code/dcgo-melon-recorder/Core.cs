@@ -8,7 +8,7 @@ using HarmonyLib;
 using MelonLoader;
 using MelonLoader.Utils;
 
-[assembly: MelonInfo(typeof(DcgoRecorder.Core), "DCGO Recorder", "0.1.0", "digimon-deck-list-builder")]
+[assembly: MelonInfo(typeof(DcgoRecorder.Core), "DCGO Recorder", DcgoRecorder.Core.RecorderVersion, "digimon-deck-list-builder")]
 [assembly: MelonGame("DCGO", "DCGO")]
 
 namespace DcgoRecorder
@@ -24,6 +24,11 @@ namespace DcgoRecorder
     /// </summary>
     public class Core : MelonMod
     {
+        // Raw-stream format version, written into every Snapshot row as "recorder" (and the MelonInfo version).
+        // 0.2.0: `board_indexes` beside every `boards`; `card_indexes` + `root` on PlayCardClass.PlayCard rows.
+        // Rows of an older recorder simply lack these fields (and the stamp): every addition is optional.
+        public const string RecorderVersion = "0.2.0";
+
         // Types the Unity-project recorder hooks or reads (CLAUDE.md rule 27, docs/DCGO_RECORDING_SCHEMA.md).
         static readonly string[] DumpTypes =
         {
@@ -1079,8 +1084,7 @@ namespace DcgoRecorder
                             {
                                 var nm = effs[skill].EffectName;
                                 return ",\"activate_link\":" + ((nm != null && nm.StartsWith("Link (Cost:")) ? "true" : "false")
-                                       + ",\"boards\":[" + PermIds(Il2Cpp.GManager.instance?.GetPlayerFromID(0)?.GetFieldPermanents()) + ","
-                                       + PermIds(Il2Cpp.GManager.instance?.GetPlayerFromID(1)?.GetFieldPermanents()) + "]";
+                                       + BoardsJson(true);
                             }
                         }
                     }
@@ -1098,11 +1102,7 @@ namespace DcgoRecorder
                      && (Convert.ToInt32(args[1]) == 0 || Convert.ToInt32(args[1]) == 2))
                     // a permanent pick's UnitIndex is a GetFieldPermanents() position too (DCGO's own order)
                     || key == "SelectPermanentEffect.SetTargetFrames")
-                {
-                    var gm = Il2Cpp.GManager.instance;
-                    return ",\"boards\":[" + PermIds(gm?.GetPlayerFromID(0)?.GetFieldPermanents()) + "," +
-                           PermIds(gm?.GetPlayerFromID(1)?.GetFieldPermanents()) + "]";
-                }
+                    return BoardsJson(true);
             }
             catch { }
             try
@@ -1145,14 +1145,7 @@ namespace DcgoRecorder
                 if (key == "TurnStateMachine.SetAttackingPermaent")
                 {
                     // both battle areas, for the replay's slot remap (DCGO compact order -> engine play order)
-                    var gm = Il2Cpp.GManager.instance;
-                    var sb = new StringBuilder(",\"boards\":[");
-                    for (int pid = 0; pid < 2; pid++)
-                    {
-                        if (pid > 0) sb.Append(',');
-                        sb.Append(PermIds(gm?.GetPlayerFromID(pid)?.GetBattleAreaPermanents()));
-                    }
-                    return sb.Append(']').ToString();
+                    return BoardsJson(false);
                 }
             }
             catch { }
@@ -1238,13 +1231,7 @@ namespace DcgoRecorder
                 sb.Append(",\"target_breeding\":").Append(breeding && target != null ? "true" : "false");
                 sb.Append(",\"target\":").Append(target == null ? "null" : CardJson(target.TopCard));
             }
-            sb.Append("},\"boards\":[");
-            for (int pid = 0; pid < 2; pid++)
-            {
-                if (pid > 0) sb.Append(',');
-                sb.Append(PermIds(gm?.GetPlayerFromID(pid)?.GetBattleAreaPermanents()));
-            }
-            return sb.Append(']').ToString();
+            return sb.Append('}').Append(BoardsJson(false)).ToString();
         }
 
         static int TurnPlayerId()
@@ -1324,13 +1311,7 @@ namespace DcgoRecorder
                     for (int i = 0; i < bt.Count; i++)
                         if (bt[i] != null && bt[i].Pointer == t.Pointer) slot = i;
                 sb.Append(",\"target_slot\":").Append(slot).Append(",\"target_breeding\":").Append(breeding ? "true" : "false");
-                sb.Append(",\"boards\":[");
-                for (int p = 0; p < 2; p++)
-                {
-                    if (p > 0) sb.Append(',');
-                    sb.Append(PermIds(gm.GetPlayerFromID(p)?.GetBattleAreaPermanents()));
-                }
-                return sb.Append(']').ToString();
+                return sb.Append(BoardsJson(false)).ToString();
             }
             catch { return ""; }
         }
@@ -1344,6 +1325,11 @@ namespace DcgoRecorder
                 sb.Append("{\"seq\":").Append(System.Threading.Interlocked.Increment(ref _seq))
                   .Append(",\"t\":\"").Append(DateTime.UtcNow.ToString("o"))
                   .Append("\",\"method\":\"PlayCardClass.PlayCard\",\"cards\":").Append(pc == null ? "null" : Ids(pc.CardSources))
+                  // CardIndex of every played card, parallel to `cards` (null where `cards` is null): the identity of
+                  // a card played from security, deck, trash or digivolution cards, which no hand listing carries.
+                  // `root` is DCGO's SelectCardEffect.Root naming the zone the play came from (PlayCardClass.Root).
+                  .Append(",\"card_indexes\":").Append(pc == null ? "null" : CardIndexes(pc.CardSources))
+                  .Append(",\"root\":").Append(PlayRoot(pc))
                   .Append(",\"pay_cost\":").Append(pc != null && pc.PayCost ? "true" : "false")
                   .Append(",\"breeding_area\":").Append(pc != null && pc._isBreedingArea ? "true" : "false")
                   .Append(",\"target\":").Append(pc == null || pc._targetPermanent == null ? "null" : CardJson(pc._targetPermanent.TopCard))
@@ -1375,6 +1361,7 @@ namespace DcgoRecorder
         }
 
         static int _snapshots;
+        static int _redrawSnapshots; // pre-mulligan (SetRedraw) snapshots written in the current game
         static bool _gameEnded;
 
         // ---- agent seat: one of our trained models plays the local seat (docs/DCGO_MELONLOADER.md) ------------------
@@ -2414,6 +2401,58 @@ namespace DcgoRecorder
             return sb.Append(']').ToString();
         }
 
+        // The top card's CardIndex of each permanent, in list order: parallel to PermIds of the SAME list (null where
+        // PermIds writes null), so it names which copy each board entry is.
+        static string PermIndexes(Il2CppSystem.Collections.Generic.List<Il2Cpp.Permanent> list)
+        {
+            var sb = new StringBuilder("[");
+            if (list != null)
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (i > 0) sb.Append(',');
+                    var top = list[i]?.TopCard;
+                    sb.Append(top == null ? "null" : top.CardIndex.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
+            return sb.Append(']').ToString();
+        }
+
+        // `,"boards":[p0,p1],"board_indexes":[p0,p1]` - both seats' GetFieldPermanents() (field) or
+        // GetBattleAreaPermanents() (!field). Each seat's list is fetched ONCE and both fields are written from it, so
+        // board_indexes[p][i] is always the top card of the permanent boards[p][i] names.
+        static string BoardsJson(bool field)
+        {
+            var gm = Il2Cpp.GManager.instance;
+            var lists = new Il2CppSystem.Collections.Generic.List<Il2Cpp.Permanent>[2];
+            for (int p = 0; p < 2; p++)
+            {
+                var pl = gm?.GetPlayerFromID(p);
+                lists[p] = pl == null ? null : field ? pl.GetFieldPermanents() : pl.GetBattleAreaPermanents();
+            }
+            return ",\"boards\":[" + PermIds(lists[0]) + "," + PermIds(lists[1]) + "]"
+                 + ",\"board_indexes\":[" + PermIndexes(lists[0]) + "," + PermIndexes(lists[1]) + "]";
+        }
+
+        // CardIndex of each card, parallel to Ids of the same list (null where Ids writes null)
+        static string CardIndexes(Il2CppSystem.Collections.Generic.List<Il2Cpp.CardSource> list)
+        {
+            var sb = new StringBuilder("[");
+            if (list != null)
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (i > 0) sb.Append(',');
+                    var c = list[i];
+                    sb.Append(c == null ? "null" : c.CardIndex.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
+            return sb.Append(']').ToString();
+        }
+
+        // PlayCardClass.Root (DCGO CardController.cs) as its enum name, e.g. "Hand", "Security", "Library", "Trash"
+        static string PlayRoot(Il2Cpp.PlayCardClass pc)
+        {
+            try { return pc == null ? "null" : Quote(pc.Root.ToString()); }
+            catch { return "null"; }
+        }
+
         static string Ids(Il2CppSystem.Collections.Generic.List<Il2Cpp.CardSource> list)
         {
             var sb = new StringBuilder("[");
@@ -2446,7 +2485,8 @@ namespace DcgoRecorder
                 var sb = new StringBuilder();
                 sb.Append("{\"seq\":").Append(System.Threading.Interlocked.Increment(ref _seq))
                   .Append(",\"t\":\"").Append(DateTime.UtcNow.ToString("o"))
-                  .Append("\",\"method\":\"Snapshot.").Append(tag).Append("\",\"is_ai\":").Append(gm.IsAI ? "true" : "false")
+                  .Append("\",\"method\":\"Snapshot.").Append(tag).Append("\",\"recorder\":").Append(Quote(RecorderVersion))
+                  .Append(",\"is_ai\":").Append(gm.IsAI ? "true" : "false")
                   .Append(",\"you\":").Append(gm.You.PlayerID).Append(",\"turn_count\":").Append(gm.turnStateMachine != null ? gm.turnStateMachine.TurnCount : -1);
                 try
                 {
@@ -2464,14 +2504,19 @@ namespace DcgoRecorder
                 {
                     var p = seats[i];
                     if (i > 0) sb.Append(',');
+                    // Each area list is fetched ONCE so breeding_indexes / battle_indexes stay parallel to breeding / battle.
+                    var breedingList = p.GetBreedingAreaPermanents();
+                    var battleList = p.GetBattleAreaPermanents();
                     sb.Append("{\"id\":").Append(p.PlayerID)
                       .Append(",\"library\":").Append(Ids(p.LibraryCards))
                       .Append(",\"hand\":").Append(Ids(p.HandCards))
                       .Append(",\"security\":").Append(Ids(p.SecurityCards))
                       .Append(",\"egg_library\":").Append(Ids(p.DigitamaLibraryCards))
                       .Append(",\"trash\":").Append(Ids(p.TrashCards))
-                      .Append(",\"breeding\":").Append(PermIds(p.GetBreedingAreaPermanents()))
-                      .Append(",\"battle\":").Append(PermIds(p.GetBattleAreaPermanents()));
+                      .Append(",\"breeding\":").Append(PermIds(breedingList))
+                      .Append(",\"battle\":").Append(PermIds(battleList))
+                      .Append(",\"breeding_indexes\":").Append(PermIndexes(breedingList))
+                      .Append(",\"battle_indexes\":").Append(PermIndexes(battleList));
                     try { sb.Append(",\"memory\":").Append(p.MemoryForPlayer); } catch { }
                     sb.Append('}');
                 }
@@ -2507,7 +2552,13 @@ namespace DcgoRecorder
                 {
                     File.AppendAllText(Path.Combine(_dir, "raw-" + _session + ".jsonl"), sb.ToString() + "\n");
                 }
-                if (__originalMethod.Name == "Init" || (__originalMethod.Name == "SetRedraw" && _snapshots < 2)
+                // The pre-mulligan snapshots (one per seat's SetRedraw) are counted PER GAME: Init starts a new game.
+                // A session-wide count (the old `_snapshots < 2`) left every game after a launch's first without
+                // its pre-mulligan zones.
+                if (__originalMethod.Name == "Init") _redrawSnapshots = 0;
+                bool redrawSnap = __originalMethod.Name == "SetRedraw" && _redrawSnapshots < 2;
+                if (redrawSnap) _redrawSnapshots++;
+                if (__originalMethod.Name == "Init" || redrawSnap
                     || __originalMethod.Name == "PassTurn" || __originalMethod.Name == "EndGame")
                     WriteSnapshot(__originalMethod.Name);
             }

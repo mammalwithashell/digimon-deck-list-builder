@@ -543,6 +543,16 @@ pub struct Effect {
     /// pre-evaluated). `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub outer_optional_guard: Option<ConditionFn>,
 
+    /// This effect's FIRST decision is its "you may" activation decision
+    /// even though the effect itself is not `optional`: a keyword body that
+    /// DCGO activates as an `IsOptional` `ActivateClass` (an `OptionalSkill`
+    /// "use this effect?" before the body) while the engine asks that may
+    /// and the body's pick as one declinable decision (e.g. `<Execute>`'s
+    /// attack offer). Marks that decision as the optional activation
+    /// (`game::optional_activation`); changes nothing else. Set by
+    /// `.optional_activation_folded()`.
+    pub optional_activation_folded: bool,
+
     /// The payability of the effect's optional processing condition (its
     /// leading "by X" cost steps; DSL-derived by
     /// `dsl_cards::lower_triggered::leading_cost_guard`). §15-7-4 (Ver. 4.3):
@@ -1021,6 +1031,7 @@ impl EffectBuilder {
                 when_digivolving_this: false,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
+                optional_activation_folded: false,
                 optional_condition_guard: None,
                 pay_cost_self_gated: false,
                 pay_cost_interactive: false,
@@ -1186,6 +1197,13 @@ impl EffectBuilder {
     /// `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub fn needs_outer_optional_prompt(mut self) -> Self {
         self.inner.needs_outer_optional_prompt = true;
+        self
+    }
+
+    /// Mark this effect's first decision as its folded "you may"
+    /// activation decision. See `Effect::optional_activation_folded`.
+    pub fn optional_activation_folded(mut self) -> Self {
+        self.inner.optional_activation_folded = true;
         self
     }
 

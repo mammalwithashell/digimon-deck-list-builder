@@ -416,6 +416,11 @@ fn gap2_use_option_from_trash_free_disposes_and_pays_nothing() {
         .hand(1, &["SRC"])
         .memory(3)
         .start();
+    // CR 4.3 4-22-2: the using player needs a permanent of the Option's colour
+    // (red) on the field; an effect-driven use is still a use (Q1500/Q2785).
+    // The fixture used to rely on effect-driven uses skipping the check.
+    // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+    runner.place_on_field(1, "SRC", None);
     seed_trash(&mut runner, 1, "RAGNAROK");
     runner.register_effect("RAGNAROK", Arc::new(OptMainNoop));
 
@@ -453,6 +458,11 @@ fn gap2_use_option_from_trash_cost_reduced_pays_delta() {
         .hand(1, &["SRC"])
         .memory(6)
         .start();
+    // CR 4.3 4-22-2: the using player needs a permanent of the Option's colour
+    // (red) on the field; an effect-driven use is still a use (Q1500/Q2785).
+    // The fixture used to rely on effect-driven uses skipping the check.
+    // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+    runner.place_on_field(1, "SRC", None);
     seed_trash(&mut runner, 1, "TM-OPT-5");
     runner.register_effect("TM-OPT-5", Arc::new(OptMainNoop));
 
@@ -483,6 +493,11 @@ fn gap2_use_option_from_revealed_free_uses_and_clears_reveal_pool() {
         .hand(1, &["SRC"])
         .memory(3)
         .start();
+    // CR 4.3 4-22-2: the using player needs a permanent of the Option's colour
+    // (red) on the field; an effect-driven use is still a use (Q1500/Q2785).
+    // The fixture used to rely on effect-driven uses skipping the check.
+    // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+    runner.place_on_field(1, "SRC", None);
     runner.register_effect("REV-OPT", Arc::new(OptMainNoop));
 
     let source_card = runner.game.players[1].hand[0].handle();
@@ -592,6 +607,11 @@ fn gap2_dsl_use_option_from_trash_installs_trash_selection_over_matching_options
         .hand(1, &["SRC"])
         .memory(6)
         .start();
+    // CR 4.3 4-22-2: the using player needs a permanent of the Option's colour
+    // (red) on the field; an effect-driven use is still a use (Q1500/Q2785).
+    // The fixture used to rely on effect-driven uses skipping the check.
+    // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+    runner.place_on_field(1, "SRC", None);
     seed_trash(&mut runner, 1, "TM-OPT-5"); // trash[0] — matching
     seed_trash(&mut runner, 1, "OFF-OPT"); // trash[1] — wrong trait
     seed_trash(&mut runner, 1, "DIGI"); // trash[2] — wrong kind

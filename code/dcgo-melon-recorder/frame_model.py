@@ -1,0 +1,290 @@
+"""Which permanent a recorded board position holds, from DCGO's own frame placement (raw rows only).
+
+A recorded board (`boards`, Core.cs BoardsJson) lists a seat's permanents by card id, in `GetFieldPermanents()` order:
+`FieldPermanents` walked by frame index (Player.cs:669-684). Two copies of a card are told apart only by their frames,
+and a permanent keeps its frame while it stays on the field:
+
+* a fresh play takes `CardSource.PreferredFrame()` - main-phase plays too: PlayCardClass hands the card to
+  PlayPermanentClass, which never reads the packet's TargetFrameID (CardController.cs:1221, :1533-1541);
+* PreferredFrame is the first EMPTY battle-area frame in an order fixed by the card's kind, the seat (local or not)
+  and the scene layout (CardSource.cs:2340-2410). The frame parents are BattleAreaFrameParent's children in order
+  (Player.cs:15-56); their positions are BattleScene.unity's YourPermanentFrame / OpponentPermanentFrame children
+  (anchoredPosition, anchors and pivot all centred, the parents' GridLayoutGroup disabled, and no script moves them);
+* a digivolve keeps the root's frame; the hybrid re-row after a play (CardController.cs:1811-1856) and the breeding
+  -> battle move (CardObjectController.cs:1149-1197) move a permanent, both to PreferredFrame;
+* anything else that changes a board (a deletion, a bounce, a card trashed off the top) shows up as the next board.
+
+The model follows each seat's frames from the plays the raw logged (each permanent tagged with DCGO's CardIndex when a
+row names it: the play packet, a 0.2.0 `card_indexes`, or the played hand slot) and checks EVERY recorded board of
+that seat against it, keeping each hypothesis a board allows (which copy left, whether the breeding area moved, a
+Digimon's top card changed in place). A pick's position is named only when every hypothesis puts the same tagged
+permanent there. When a board matches no hypothesis, the hypotheses outgrow a bound, a card's kind is unknown, or a
+DNA / App Fusion packet places a permanent by TargetFrameID (DNADigivolveEffects.cs:33, not modelled), the model is
+off for that seat for the rest of the game: it never guesses.
+"""
+
+BREEDING_FRAME = 16  # Player.cs:15-56: the battle frames are 0..15, the breeding frame follows them
+MAX_HYPOTHESES = 4096
+
+# BattleScene.unity: YourPermanentFrame (the local seat, Player.isYou) / OpponentPermanentFrame children, in child
+# (= FrameID) order: anchoredPosition (x, y).
+YOU_LAYOUT = [(-640, -151), (-480, -151), (-320, -151), (-160, -151), (0, -151), (160, -151), (320, -151),
+              (480, -151), (640, -151), (-330, -342.66), (-160, -342.66), (0, -342.66), (160, -342.66),
+              (330, -342.66), (490, -342.66), (650, -342.66)]
+OPP_LAYOUT = [(640, 171), (480, 171), (320, 171), (160, 171), (0, 171), (-160, 171), (-320, 171), (-480, 171),
+              (-640, 171), (310, 350.2), (160, 350.2), (0, 350.2), (-160, 350.2), (-310, 350.2), (-470, 350.2),
+              (-630, 350.2)]
+# CardSource.cs:2368: the other seat's Digimon / Digi-Egg order is this fixed FrameID list
+OPP_DIGIMON_ORDER = [4, 3, 5, 2, 6, 1, 7, 0, 8, 11, 10, 12, 9, 13, 14, 15]
+
+# cards.json card_kind (CEntity_Base.cs:347 CardKind order: Digimon, Tamer, Option, DigiEgg); 4 is a Digimon-side
+# variant there. Anything else is unknown to the model.
+DIGIMON_KINDS, TAMER_KINDS, EGG_KIND = (0, 4), (1, 2), 3
+
+
+def preferred_order(is_you, tamer_side):
+    """The FrameIDs PreferredFrame tries, first to last (CardSource.cs:2340-2410). `tamer_side`: a Tamer or Option."""
+    frames = range(len(YOU_LAYOUT))
+    if is_you:
+        lay = YOU_LAYOUT
+        if tamer_side:   # OrderBy y, ThenBy |x|, ThenBy x
+            return sorted(frames, key=lambda f: (lay[f][1], abs(lay[f][0]), lay[f][0]))
+        return sorted(frames, key=lambda f: (-lay[f][1], abs(lay[f][0]), lay[f][0]))  # OrderByDescending y
+    lay = OPP_LAYOUT
+    if tamer_side:       # OrderByDescending y, ThenBy |x|, ThenByDescending x
+        return sorted(frames, key=lambda f: (-lay[f][1], abs(lay[f][0]), -lay[f][0]))
+    return list(OPP_DIGIMON_ORDER)
+
+
+def _be32(b, at):
+    if len(b) < at + 4 or not all(isinstance(x, int) for x in b[at:at + 4]):
+        return None
+    n = (b[at] << 24) | (b[at + 1] << 16) | (b[at + 2] << 8) | b[at + 3]
+    return n - (1 << 32) if n & 0x80000000 else n
+
+
+class _Seat:
+    """One seat's frame hypotheses: frozensets of (frame, card_id, card_index or None)."""
+
+    def __init__(self, cards, is_you):
+        self.cards = cards
+        self.is_you = is_you
+        self.hyps = {frozenset()}
+        self.alive = True
+        self.packet = None  # (card_id, card_index, target_breeding) of the seat's latest queued play packet
+
+    def kill(self):
+        self.alive = False
+        self.hyps = set()
+
+    def kind(self, card_id):
+        k = (self.cards.get(card_id) or {}).get("card_kind")
+        if k in DIGIMON_KINDS:
+            return "digimon"
+        if k in TAMER_KINDS:
+            return "tamer"
+        if k == EGG_KIND:
+            return "egg"
+        return None
+
+    def preferred(self, h, card_id):
+        taken = {f for f, _, _ in h}
+        side = self.kind(card_id)
+        for f in preferred_order(self.is_you, side == "tamer"):
+            if f not in taken:
+                return f
+        return None
+
+    def _rerow(self, h, frame):
+        """CardController.cs:1811-1856: after a play, move to an empty PreferredFrame on the kind's own row."""
+        cur = next(x for x in h if x[0] == frame)
+        side = self.kind(cur[1])
+        rest = h - {cur}
+        p = self.preferred(rest | {cur}, cur[1])
+        if p is None or p == frame or frame == BREEDING_FRAME:
+            return h
+        lay = YOU_LAYOUT if self.is_you else OPP_LAYOUT
+        py, fy = lay[p][1], lay[frame][1]
+        if side == "digimon":
+            move = py > fy + 5 if self.is_you else py < fy - 5
+        else:
+            move = py < fy - 5 if self.is_you else py > fy + 5
+        return rest | {(p, cur[1], cur[2])} if move else h
+
+    def play(self, card_id, index, target_id, to_breeding, owner_known):
+        """A PlayCardClass resolve of `card_id`: fresh (target None) or onto a permanent whose top is `target_id`."""
+        if not self.alive:
+            return
+        if self.kind(card_id) is None:
+            return self.kill()
+        new = set(self.hyps) if not owner_known else set()
+        for h in self.hyps:
+            if target_id is not None and to_breeding:
+                # a digivolve in the breeding area: its egg may have hatched unseen (no row logs a hatch's card)
+                breed = next((x for x in h if x[0] == BREEDING_FRAME), None)
+                if breed is None or breed[1] == target_id:
+                    new.add((h - ({breed} if breed else set())) | {(BREEDING_FRAME, card_id, index)})
+            elif target_id is not None:
+                for x in h:
+                    if x[1] == target_id:
+                        g = (h - {x}) | {(x[0], card_id, index)}
+                        new.add(g if x[0] == BREEDING_FRAME else self._rerow(g, x[0]))
+            elif to_breeding:
+                if all(f != BREEDING_FRAME for f, _, _ in h):
+                    new.add(h | {(BREEDING_FRAME, card_id, index)})
+            else:
+                f = self.preferred(h, card_id)
+                if f is not None:
+                    new.add(self._rerow(h | {(f, card_id, index)}, f))
+        self._set(new)
+
+    def _set(self, hyps):
+        if not hyps or len(hyps) > MAX_HYPOTHESES:
+            return self.kill()
+        self.hyps = hyps
+
+    def check(self, listing, full):
+        """Keep the hypotheses that explain `listing` (battle area, plus the breeding area when `full`)."""
+        if not self.alive:
+            return
+        if any(not isinstance(c, str) or not c for c in listing):
+            return self.kill()
+        out = set()
+        for h in self.hyps:
+            bases = [h]
+            breed = next((x for x in h if x[0] == BREEDING_FRAME), None)
+            if breed is not None:
+                rest = h - {breed}
+                f = self.preferred(rest, breed[1])  # CardObjectController.cs:1160 MovePermanent -> PreferredFrame
+                if f is not None:
+                    bases.append(rest | {(f, breed[1], breed[2])})
+            if full and listing and self.kind(listing[-1]) == "egg":
+                bases += [b | {(BREEDING_FRAME, listing[-1], None)} for b in bases
+                          if all(x[0] != BREEDING_FRAME for x in b)]
+            for b in bases:
+                seq = sorted(b)
+                kept_breed = None
+                if not full:
+                    kept_breed = next((x for x in seq if x[0] == BREEDING_FRAME), None)
+                    seq = [x for x in seq if x[0] != BREEDING_FRAME]
+                for keep in self._align(seq, listing):
+                    g = frozenset(keep) | ({kept_breed} if kept_breed else set())
+                    out.add(g)
+                    if len(out) > MAX_HYPOTHESES:
+                        return self.kill()
+        self._set(out)
+
+    def _align(self, seq, listing):
+        """Every way `seq` (frame order) yields `listing`: an entry stays (same id, or a Digimon whose top changed in
+        place to another Digimon, its index then unknown) or has left the field."""
+        res = []
+
+        def rec(i, j, kept):
+            if j == len(listing):
+                res.append(list(kept))
+                return
+            if len(seq) - i < len(listing) - j:
+                return
+            f, c, k = seq[i]
+            if c == listing[j]:
+                rec(i + 1, j + 1, kept + [(f, c, k)])
+            elif f != BREEDING_FRAME and self.kind(c) == "digimon" and self.kind(listing[j]) == "digimon":
+                rec(i + 1, j + 1, kept + [(f, listing[j], None)])
+            rec(i + 1, j, kept)
+
+        rec(0, 0, [])
+        return res
+
+    def occupant(self, position, full):
+        """DCGO's CardIndex of the permanent at listing `position`, when every hypothesis agrees; else None."""
+        if not self.alive or not self.hyps:
+            return None
+        seen = set()
+        for h in self.hyps:
+            seq = [x for x in sorted(h) if full or x[0] != BREEDING_FRAME]
+            if not 0 <= position < len(seq):
+                return None
+            seen.add(seq[position][2])
+            if len(seen) > 1:
+                return None
+        k = seen.pop()
+        return k if isinstance(k, int) and not isinstance(k, bool) else None
+
+
+def _full_listing(r):
+    """Core.cs: SetTargetFrames and the attack / activate packets log GetFieldPermanents() (battle + breeding);
+    play packets, play resolves and SetAttackingPermaent log GetBattleAreaPermanents()."""
+    m = r.get("method")
+    if m == "SelectPermanentEffect.SetTargetFrames":
+        return True
+    a = r.get("args") or []
+    return m == "TurnStateMachine.QueueMainPhaseAction_Internal" and len(a) >= 2 and a[1] in (0, 2)
+
+
+def _played_index(r, seat, packet, card_id, pos):
+    ks = r.get("card_indexes")
+    if isinstance(ks, list) and pos < len(ks) and isinstance(ks[pos], int):
+        return ks[pos]
+    if pos == 0 and packet is not None and packet[0] == card_id and isinstance(packet[1], int):
+        return packet[1]
+    hand = r.get("hand") or {}
+    cards = hand.get("cards")
+    slot = hand.get("slot", -1)
+    if pos == 0 and hand.get("player") == seat and isinstance(cards, list) and isinstance(slot, int) \
+            and 0 <= slot < len(cards) and (cards[slot] or {}).get("card_id") == card_id:
+        k = cards[slot].get("card_index")
+        return k if isinstance(k, int) else None
+    return None
+
+
+def pick_identities(rows, cards, you):
+    """{raw row index: {(player, position): DCGO CardIndex}} for each SetTargetFrames board position whose card id
+    occurs more than once on that seat's board and whose occupant the frame model names."""
+    seats = [_Seat(cards, s == you) for s in (0, 1)]
+    found = {}
+    for ridx, r in enumerate(rows):
+        m = r.get("method")
+        if m == "TurnStateMachine.QueueMainPhaseAction_Internal":
+            a = r.get("args") or []
+            if len(a) >= 3 and a[0] in (0, 1) and a[1] == 4:
+                b = a[2] if isinstance(a[2], list) else []
+                n_roots = _be32(b, 8)
+                n_apps = _be32(b, 16 + 4 * n_roots) if n_roots is not None and n_roots >= 0 else None
+                if n_roots is None or n_roots != 0 or n_apps is None or n_apps != 0:
+                    seats[a[0]].kill()  # DNA / App Fusion: CreateNewPermanent at a TargetFrameID (not modelled)
+                play = r.get("play") or {}
+                seats[a[0]].packet = (play.get("card_id"), play.get("card_index"), bool(play.get("target_breeding")))
+        boards = r.get("boards")
+        if isinstance(boards, list) and len(boards) == 2:
+            full = _full_listing(r)
+            for p in (0, 1):
+                if isinstance(boards[p], list):
+                    seats[p].check(boards[p], full)
+            if m == "SelectPermanentEffect.SetTargetFrames":
+                named = {}
+                for p in (0, 1):
+                    board = boards[p] if isinstance(boards[p], list) else []
+                    for i, c in enumerate(board):
+                        if board.count(c) >= 2:
+                            k = seats[p].occupant(i, full)
+                            if k is not None:
+                                named[(p, i)] = k
+                if named:
+                    found[ridx] = named
+        if m == "PlayCardClass.PlayCard":
+            hand = r.get("hand") or {}
+            owner = hand.get("player")
+            tgt = r.get("target")
+            tgt_id = tgt.get("card_id") if isinstance(tgt, dict) else None
+            for s, seat in enumerate(seats):
+                if owner in (0, 1) and owner != s:
+                    continue
+                known = owner == s
+                packet = seat.packet if known else None
+                to_breeding = bool(r.get("breeding_area") or r.get("target_breeding")
+                                   or (packet is not None and packet[0] == (r.get("cards") or [None])[0] and packet[2]))
+                for pos, c in enumerate(r.get("cards") or []):
+                    seat.play(c, _played_index(r, s, packet, c, pos) if known else None,
+                              tgt_id if pos == 0 else None, to_breeding, known)
+                seat.packet = None if known else seat.packet
+    return found

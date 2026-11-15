@@ -139,14 +139,18 @@ fn dual_emits_digivolve_bit_using_digimon_face() {
 /// CR 4.3 4-6-2: a DUAL card can't be played to the field, so "play or use"
 /// on a DUAL card can only use it as an Option -- no play/use choice is
 /// offered (engine fix 716c6e291; this test used to play it as a Digimon).
-/// The same call on a clone must end in the same state.
+/// The same call on a clone must end in the same state. Using the Option face
+/// by effect still needs its colour requirement (CR 4.3 4-22-1/4-22-2, rulings
+/// Q1500 / Q2785), so a purple Digimon is on the field.
 #[test]
 fn play_or_use_dual_uses_it_as_an_option_and_clones_faithfully() {
     let mut r = DebugRunner::builder()
         .add_card(dual_card())
+        .add_card(color_anchor("PURPLE-ANCHOR", CardColor::Purple))
         .hand(0, &["DUAL-MASK"])
         .memory(0)
         .start();
+    r.place_on_field(0, "PURPLE-ANCHOR", Some(0));
     advance_to_main(&mut r);
     let mut cloned = r.game.clone();
 

@@ -5,6 +5,32 @@ color: [red]
 cost: 4
 traits: [VB]
 
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX12/Red/EX12_066.cs
+#
+# [Your Turn] attack clause (EX12_066.cs:22-209). "By suspending this Tamer,
+# activate 1 of the effects below" is an optional processing condition (CR 4.3
+# 15-7-1) that can be chosen only while this Tamer can be suspended (15-7-4;
+# DCGO CanActivateCondition = CanActivateSuspendCostEffect, :43-47) and may be
+# executed whatever follows (15-7-5). Both bullets are themselves "may". DCGO
+# asks it as ONE int menu, numbered from 1 (EX12_066.cs:84-100; activation is
+# NOT optional, SetUpActivateClass isOptional=false, :26):
+#   1 "Attacking Digimon Digivolves" - only when a hand card passes
+#     HasDigivolveCondition (:73-82: level 6 or lower, [Gammamon] text or [VB],
+#     and a payable digivolve cost onto the attacker once reduced by 1);
+#   2 "Use an Option" - only when a hand card passes CanSelectOptionCondition
+#     (:64-69: Option with [Gammamon] text or [VB]);
+#   3 "Suspend only"; 4 "Do not use".
+# Any value but 4 suspends this Tamer (:104-106), then 1 runs
+# DigivolveIntoHandOrTrashCard (an optional pick of a card that can actually
+# digivolve onto the attacker at the reduced cost, CardEffectCommons.cs:820-880)
+# and 2 runs a canNoSelect hand pick (:117-129) and uses the card with its
+# cost reduced by 2 (:140-198).
+#
+# The engine had modelled this as an optional trigger whose body was a
+# 2-branch choice behind a lifted `activation_cost: suspend_self`; it asked no
+# "Suspend only" / "Do not use", offered illegal branches, and its hand picks
+# were mandatory (found by DCGO PvP playback raw-20261113T025510Z#g3).
+
 effects:
   - when: start_of_your_turn
     summary: "[Start of Your Turn] If memory ≤ 2, set it to 3"
@@ -13,7 +39,6 @@ effects:
       - set_memory: 3
 
   - when: on_ally_attack
-    optional: true
     active_when:
       all_of:
         - your_turn: true
@@ -24,78 +49,88 @@ effects:
         - any_of:
             - event_target_in_text_contains: Gammamon
             - event_target_trait_has: VB
-    summary: "[Your Turn] When your [Gammamon]-text or [VB] Digimon attacks, suspend this Tamer to activate 1 of 2 effects"
+    summary: "[Your Turn] When your [Gammamon]-text or [VB] Digimon attacks, by suspending this Tamer, activate 1 of 2 effects"
     process:
-      - activation_cost: { suspend_self: true }
       - select_effect_choice:
           bind_as: branch
           labels:
-            - "Digivolve into a level 6 or lower [Gammamon]-text/[VB] card"
-            - "Use a [Gammamon]-text/[VB] Option"
-          prompt: "Activate 1 of Hiro Amanokawa's effects"
+            - "Attacking Digimon Digivolves"
+            - "Use an Option"
+            - "Suspend only"
+            - "Do not use"
+          legal_when:
+            - count_gte:
+                filter:
+                  of: you
+                  zone: [hand]
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 6
+                    - any_of:
+                        - in_text_contains: Gammamon
+                        - trait_has: VB
+                    - can_digivolve_onto_with_cost: { target: event_target, cost: { reduce: 1 } }
+                n: 1
+            - count_gte:
+                filter:
+                  of: you
+                  zone: [hand]
+                  all_of:
+                    - kind: option
+                    - any_of:
+                        - in_text_contains: Gammamon
+                        - trait_has: VB
+                n: 1
+            - {}
+            - {}
+          prompt: "Which effect will you activate?"
+      - if:
+          condition:
+            any_of:
+              - equals: [branch, 0]
+              - equals: [branch, 1]
+              - equals: [branch, 2]
+          then:
+            - suspend: { target: source }
       - if:
           condition: { equals: [branch, 0] }
           then:
-            - if:
-                condition:
-                  count_gte:
-                    filter:
-                      of: you
-                      zone: [hand]
-                      all_of:
-                        - kind: digimon
-                        - level_lte: 6
-                        - any_of:
-                            - in_text_contains: Gammamon
-                            - trait_has: VB
-                    n: 1
-                then:
-                  - select_hand:
-                      of: you
-                      bind_as: evo
-                      filter:
-                        all_of:
-                          - kind: digimon
-                          - level_lte: 6
-                          - any_of:
-                              - in_text_contains: Gammamon
-                              - trait_has: VB
-                      prompt: "Digivolve the attacking Digimon into a level 6 or lower [Gammamon]-text/[VB] card with the cost reduced by 1"
-                  - effect_initiated_digivolve:
-                      target: event_target
-                      from_hand: evo
-                      cost: { reduce: 1 }
-                      ignore_requirements: false
+            - select_hand:
+                of: you
+                bind_as: evo
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 6
+                    - any_of:
+                        - in_text_contains: Gammamon
+                        - trait_has: VB
+                    - can_digivolve_onto_with_cost: { target: event_target, cost: { reduce: 1 } }
+                prompt: "Digivolve the attacking Digimon into a level 6 or lower [Gammamon]-text/[VB] card with the cost reduced by 1"
+            - effect_initiated_digivolve:
+                target: event_target
+                from_hand: evo
+                cost: { reduce: 1 }
+                ignore_requirements: false
       - if:
           condition: { equals: [branch, 1] }
           then:
-            - if:
-                condition:
-                  count_gte:
-                    filter:
-                      of: you
-                      zone: [hand]
-                      all_of:
-                        - kind: option
-                        - any_of:
-                            - in_text_contains: Gammamon
-                            - trait_has: VB
-                    n: 1
-                then:
-                  - select_hand:
-                      of: you
-                      bind_as: option_pick
-                      filter:
-                        all_of:
-                          - kind: option
-                          - any_of:
-                              - in_text_contains: Gammamon
-                              - trait_has: VB
-                      prompt: "Use 1 [Gammamon]-text or [VB] Option card from your hand with the cost reduced by 2"
-                  # USE only (G-DSL-USE-OPTION-ONLY) — no DUAL Digimon face.
-                  - use_option_bound:
-                      binding: option_pick
-                      cost: { reduce: 2 }
+            - select_hand:
+                of: you
+                bind_as: option_pick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: option
+                    - any_of:
+                        - in_text_contains: Gammamon
+                        - trait_has: VB
+                prompt: "Use 1 [Gammamon]-text or [VB] Option card from your hand with the cost reduced by 2"
+            # USE only (G-DSL-USE-OPTION-ONLY) — no DUAL Digimon face.
+            - use_option_bound:
+                binding: option_pick
+                cost: { reduce: 2 }
 
   - when: on_security
     summary: "[Security] Play this card without paying the cost"

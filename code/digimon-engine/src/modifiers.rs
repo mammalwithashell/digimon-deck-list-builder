@@ -963,6 +963,39 @@ impl ModifierRegistry {
         Self::default()
     }
 
+    /// Replay-only: the fields of the installed entries that their hand-written `Debug` leaves out
+    /// (`ModifierEntry`: `pending_skips`, the presence of `replacement_condition`; `PlayerModifierEntry`:
+    /// `replacement_condition`'s presence), one sorted line per entry keyed by its install order. The replay compares
+    /// games by `{:?}` text (`runners::replay::effect_footprint_parts`, `copies_have_one_shape`), which cannot see
+    /// them; this is the typed projection that can. The closures themselves are opaque (only their presence shows),
+    /// as is `DynamicTriggeredGrant::predicate`.
+    pub(crate) fn debug_omitted_fields(&self) -> String {
+        let mut lines: Vec<String> = Vec::new();
+        for (handle, entries) in &self.permanent_modifiers {
+            for e in entries {
+                lines.push(format!(
+                    "perm {}.{} #{} pending_skips={} replacement_condition={}",
+                    handle.player,
+                    handle.index,
+                    e.install_order,
+                    e.pending_skips,
+                    e.replacement_condition.is_some()
+                ));
+            }
+        }
+        for (player, entries) in &self.player_modifiers {
+            for e in entries {
+                lines.push(format!(
+                    "player {player} #{} replacement_condition={}",
+                    e.install_order,
+                    e.replacement_condition.is_some()
+                ));
+            }
+        }
+        lines.sort();
+        lines.join("\n")
+    }
+
     // ── Incremental declarative-materialization memo ─────────────────────
     //
     // `Game::tick_declarative_effects` clears and rebuilds the whole board's

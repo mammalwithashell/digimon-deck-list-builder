@@ -476,3 +476,57 @@ fn st24_15_security_places_self_in_battle_area_rose_rave_audit() {
         "DNA Charge must not be trashed after its [Security] effect"
     );
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 5 — the relocate compacts the battle area like any other field exit
+// ════════════════════════════════════════════════════════════════════════════
+//
+// DNA Charge leaving the battle area (ST24_15.cs:182 AddDigivolutionCardsBottom
+// moves the card out of its field frame) removes a slot from the engine's
+// `battle_area` Vec. A permanent in a LATER slot is the same permanent with a
+// new index: its modifiers and its pending effects must follow it. DCGO keeps
+// permanents in a sparse frame array, so nothing there moves. Found from DCGO
+// PvP game raw-20261113T025510Z#g6 (ST24-13's pending [Start of Your Main
+// Phase] effect was dropped; that half is tested in st24_13.rs Section 5).
+
+/// A +2000 DP effect on a [DATA SQUAD] Digimon in a slot ABOVE DNA Charge still
+/// applies to that Digimon after DNA Charge relocates under the Tamer.
+#[test]
+fn st24_15_somp_relocate_keeps_a_later_slot_digimons_modifier() {
+    let mut runner = DebugRunner::builder()
+        .add_card(dna_charge())
+        .add_card(ds_tamer("DST"))
+        .add_card(ds_digimon("DSD"))
+        .add_card(filler("FILLER"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(5)
+        .start();
+    runner.set_first_player(0);
+    let option = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.player_mut(0).battle_area[option.index as usize].option_state =
+        digimon_engine::permanent::OptionState::OrdinaryFieldOption;
+    runner.place_on_field(0, "DST", Some(0));
+    let digimon = runner.place_on_field(0, "DSD", Some(0));
+    runner.game.modifiers.add(
+        digimon,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::ChangeDp,
+            2000,
+            digimon_engine::enums::Expiry::EndOfTurn,
+            0,
+        ),
+    );
+    assert_eq!(runner.effective_dp(digimon), Some(6000), "4000 + 2000 before");
+
+    fire_start_of_main(&mut runner);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(runner.battle_area_size(0), 2, "DNA Charge left the battle area");
+    let digimon = tamer_handle(&runner, "DSD");
+    assert_eq!(
+        runner.effective_dp(digimon),
+        Some(6000),
+        "the +2000 follows the Digimon to its new slot"
+    );
+}

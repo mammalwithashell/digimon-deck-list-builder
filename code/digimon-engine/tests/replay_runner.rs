@@ -530,6 +530,7 @@ fn dcgo_bot_recording() -> RecordingV1 {
                 board_p1: None,
                 memory: None,
                 card_id: None,
+                card_index: None,
                 memory_before: None,
             }),
             Row::Action(ActionRow {
@@ -543,6 +544,7 @@ fn dcgo_bot_recording() -> RecordingV1 {
                 board_p1: None,
                 memory: None,
                 card_id: None,
+                card_index: None,
                 memory_before: None,
             }),
         ],
@@ -715,6 +717,7 @@ fn dcgo_bot_recording_with_redraw() -> RecordingV1 {
                 board_p1: None,
                 memory: None,
                 card_id: None,
+                card_index: None,
                 memory_before: None,
             }),
             Row::Action(ActionRow {
@@ -728,6 +731,7 @@ fn dcgo_bot_recording_with_redraw() -> RecordingV1 {
                 board_p1: None,
                 memory: None,
                 card_id: None,
+                card_index: None,
                 memory_before: None,
             }),
         ],
