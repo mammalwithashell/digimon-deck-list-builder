@@ -370,11 +370,17 @@ logged it; the converter also derives some. Every target that carries a `card_in
 
 A target with no `card_index` carries no source; recordings predating the field have neither. A replay that resolves a
 copy by a `frame_model` or `hand_listing` index is relying on the converter's inference, not on something DCGO logged,
-and should say so where it reports the resolution.
+and should say so where it reports the resolution. `dcgo-replay` does (`ReplayDriver::duplicate_copy_target`): a copy
+identified through such an index adds a replay note "copy identity inferred by frame model, not recorded" (or "by hand
+listing"); an index with no `card_index_source` (a recording predating the field) adds "provenance not recorded"; a
+`recorder` index stays silent. The notes never change whether the replay halts.
 
-A played card's `card_index` (the `action` row) is taken from the resolve row's hand listing only when the listed card at
-the played slot IS the played card (`hand.cards[slot].card_id == cards[0]`, as `frame_model._played_index` checks);
-otherwise the action carries no `card_index` and the conversion notes name the row's seq.
+A played card's `card_index` (the `action` row) is taken from the resolve row's hand listing unless the listing NAMES a
+card at the played slot and that card is not the played card (`hand.cards[slot].card_id` present, `cards[0]` present and
+different; `frame_model._played_index` is stricter and also needs the listed id to equal the played id). Then the action
+carries no `card_index` and the conversion notes name the row's seq. A listing with no `card_id` (an older recorder build)
+or a row with a hand but no `cards` names nothing to compare, so the index is kept and the queued-play gate decides
+whether the row is a main-phase play.
 
 ### Unstamped optional answers (`OptionalSkill.SetUseOptional`)
 

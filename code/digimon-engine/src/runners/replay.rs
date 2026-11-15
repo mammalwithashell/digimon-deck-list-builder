@@ -2013,21 +2013,39 @@ enum LookaheadVerdict {
 ///   the cards linked to it - as a `CardHandle(n)` or a `card_index: n`;
 /// * its battle identity, in every field whose name carries `identity`
 ///   (`host_identity`, `target_identity`, `source_carrier_identity`,
-///   `field_identity`, a count host's `battle_identity`, ...) and in
-///   `immunity_excluded_source`, whatever the value's shape: a bare `u64`, a
-///   `Some(n)` or the `(player, n)` pair modifiers and grants carry
-///   (`identity_references`). Counters (`next_*`) and install orders
+///   `field_identity`, a count host's `battle_identity`, ...), in
+///   `immunity_excluded_source` and in `stable_subject*`, when the value is a
+///   bare `u64`, a `Some(n)`, or a tuple whose last number is the identity
+///   (the `(player, n)` pair modifiers and grants carry, the `(player, card,
+///   n)` triple of `OptionalReplacementState::source_identity`;
+///   `identity_references`). A value of any other shape (a struct, a list, a
+///   nested enum) is not read. Counters (`next_*`) and install orders
 ///   (`treated_identity_orders`) are not references.
 /// Left out: the prompt being answered (`pending_selection`, which offers every
 /// copy alike), the event log (history, not state) and the logger, and each
 /// player's per-card bookkeeping of trash / security entries and security
 /// effect activations (where a card WAS, not what it is now).
 ///
-/// Not seen: a reference that carries the number under a name with no
-/// `identity` in it and is neither a slot nor a card handle (an unlabelled
-/// tuple field). Such a reference would make the answer a false "yes"; none is
-/// known in the engine today, and the corpus only reaches this check after the
-/// branch digests and the lookahead failed to tell the copies apart.
+/// Not seen (each would make the answer a false "yes"; the corpus only reaches
+/// this check after the branch digests and the lookahead failed to tell the
+/// copies apart):
+/// * a reference that carries the number under a name with none of the
+///   markers above and is neither a slot nor a card handle (an unlabelled
+///   tuple field); the round-6 review found `stable_subject_card`, now read -
+///   others may exist, the search is by field name, not by type;
+/// * a reference held by an opaque closure: a modifier's
+///   `replacement_condition` / `until_condition`, `DynamicTriggeredGrant::
+///   predicate`, a granted effect's body or qualifier capture whatever they
+///   like and no text of the game can show it;
+/// * a field a hand-written `Debug` omits that holds a reference:
+///   `ModifierEntry`'s `finish_non_exhaustive` leaves out only `pending_skips`
+///   and the closures, `PlayerModifierEntry`'s only the closure,
+///   `PlayCostAdjustments::pending_reduction` (a plain number in a parked
+///   declaration; its `Debug` is frozen for the archival verification
+///   protocols) and `Permanent::{face_generation, native_play_incarnation,
+///   placed_by_effect}` hold no reference (the permanent fields that matter
+///   for copy identity are compared as a typed projection,
+///   `omitted_debug_fields`).
 ///
 /// This is a text search, not the swap-and-compare-digests test the round-5
 /// review proposed, because that test cannot work here: the verification digest
@@ -2085,16 +2103,47 @@ fn number_references(text: &str, prefix: &str, value: u64) -> usize {
     n
 }
 
+/// The last element of a tuple body (`tuple` is the text after its opening
+/// paren) that is a bare number: the battle identity of `(player, id)` and of
+/// `(player, CardHandle(card), id)`. `None` when no element is one.
+fn last_tuple_number(tuple: &str) -> Option<u64> {
+    let mut depth = 0i32;
+    let mut start = 0;
+    let mut elements: Vec<&str> = Vec::new();
+    for (i, c) in tuple.char_indices() {
+        match c {
+            '(' | '[' | '{' => depth += 1,
+            ')' | ']' | '}' => {
+                if depth == 0 {
+                    elements.push(&tuple[start..i]);
+                    break;
+                }
+                depth -= 1;
+            }
+            ',' if depth == 0 => {
+                elements.push(&tuple[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    elements.iter().rev().find_map(|e| e.trim().parse::<u64>().ok())
+}
+
 /// How many times `text` holds a battle-identity reference to `id`: a field
-/// whose name carries `identity` (or `immunity_excluded_source`) whose value
-/// is the bare number, `Some(number)`, or a `(player, number)` pair (the
-/// number is the second element). See `interchangeable_copies`.
+/// named `*identity*`, `immunity_excluded_source` or `stable_subject*`
+/// (`stable_subject_card` / `stable_subject` hold `(player, card, identity)`
+/// under a name without `identity`) whose value is the bare number,
+/// `Some(number)`, or a tuple whose LAST bare-number element is the identity:
+/// `(player, number)` and `(player, CardHandle(card), number)`, behind any
+/// number of `Some(`. A value of any other shape (a struct, a list, a nested
+/// enum) is not read. See `interchangeable_copies`.
 fn identity_references(text: &str, id: u64) -> usize {
     fn is_name_char(c: char) -> bool {
         c.is_ascii_lowercase() || c == '_'
     }
     let mut n = 0;
-    for needle in ["identity", "immunity_excluded_source"] {
+    for needle in ["identity", "immunity_excluded_source", "stable_subject"] {
         let mut from = 0;
         while let Some(found) = text[from..].find(needle) {
             let at = from + found;
@@ -2117,8 +2166,8 @@ fn identity_references(text: &str, id: u64) -> usize {
             }
             let number = |s: &str| s.chars().take_while(char::is_ascii_digit).collect::<String>().parse::<u64>().ok();
             let referenced = match value.strip_prefix('(') {
-                // `(player, id)`: the number after the comma
-                Some(pair) => pair.split_once(',').and_then(|(_, id)| number(id.trim_start())),
+                // `(player, id)` or `(player, CardHandle(card), id)`: the last number
+                Some(tuple) => last_tuple_number(tuple),
                 None => number(value),
             };
             if referenced == Some(id) {
@@ -2165,6 +2214,36 @@ fn card_named_by_engine_state(game: &Game, handle: crate::card_source::CardHandl
         .any(|prefix| number_references(&text, prefix, value) > number_references(&own, prefix, value))
 }
 
+/// The fields of one permanent that `Permanent`'s hand-written `Debug` leaves
+/// out and that tell two copies apart or a forced run's trace: `face_generation`
+/// (which face incarnation a pending face effect belongs to) and
+/// `placed_by_effect` (the breeding-area rule-check exemption). Not
+/// `native_play_incarnation`: an opaque harness marker, left out of every replay
+/// hash on purpose (permanent.rs).
+fn permanent_omitted_fields(perm: &crate::permanent::Permanent) -> String {
+    format!("face_generation={} placed_by_effect={}", perm.face_generation, perm.placed_by_effect)
+}
+
+/// A typed projection of the state the replay's `{game:?}` comparisons cannot
+/// see because a hand-written `Debug` omits it: every permanent's
+/// `permanent_omitted_fields` and the modifier entries' omitted fields
+/// (`ModifierRegistry::debug_omitted_fields`). Appended to the text digests of
+/// `effect_footprint_parts`; not used for reference searches (the omitted
+/// fields hold no reference; see `interchangeable_copies`).
+fn omitted_debug_fields(game: &Game) -> String {
+    let mut out = String::new();
+    for (p, player) in game.players.iter().enumerate() {
+        for (i, perm) in player.battle_area.iter().enumerate() {
+            out.push_str(&format!("{p}.battle[{i}] {}\n", permanent_omitted_fields(perm)));
+        }
+        for (i, perm) in player.breeding_area.iter().enumerate() {
+            out.push_str(&format!("{p}.breeding[{i}] {}\n", permanent_omitted_fields(perm)));
+        }
+    }
+    out.push_str(&game.modifiers.debug_omitted_fields());
+    out
+}
+
 /// The shape test of `interchangeable_copies`: the permanents in `slots` are
 /// equal in every field but card identity.
 fn copies_have_one_shape(game: &Game, player: PlayerId, slots: &[u16]) -> bool {
@@ -2186,7 +2265,9 @@ fn copies_have_one_shape(game: &Game, player: PlayerId, slots: &[u16]) -> bool {
         out
     }
     let area = &game.player(player).battle_area;
-    let shape = |j: u16| area.get(j as usize).map(|p| blank_identity(&format!("{p:?}")));
+    let shape = |j: u16| {
+        area.get(j as usize).map(|p| format!("{}|{}", blank_identity(&format!("{p:?}")), permanent_omitted_fields(p)))
+    };
     let Some(first) = slots.first().and_then(|j| shape(*j)) else {
         return false;
     };
@@ -2595,6 +2676,35 @@ fn forced_run_residue(reference: &Game, after: &Game) -> Vec<String> {
 /// The event log, the logger and the order prompt itself are left out: the
 /// prompt and the stack's queue entries leaving are the run itself, judged
 /// against `decline_reference`.
+///
+/// "No known false accept within the fields it reads", not a proof. Fields
+/// read (round-6 review audit of `Game`'s fields): the players (zones,
+/// permanents), memory, modifiers, floating mass modifiers, revealed cards,
+/// `scheduled_effects`, `scheduled_provenance_deletions(_opp)`,
+/// `pending_added_sources`, `active_digixros_wildcards`,
+/// `effect_digivolve_scopes`, `effect_dna_would_scopes`, the player digivolve
+/// cost reducers, the granted-effect registry (bodies, qualifier ids, next id,
+/// pending fires), the attack / security / option in progress, the replacement
+/// state, the turn counters (`n_digivolutions`, `n_dna_digivolutions`,
+/// `n_digivolve_driven_attacks`, `digimon_attacks_this_turn`, the turn
+/// player), `public_security_reveals`, `security_shuffle_generations`, the
+/// random state (one draw from a clone of `rng`), the phase / turn / result,
+/// plus a typed projection of the fields hand-written `Debug` impls omit
+/// (`omitted_debug_fields`).
+///
+/// Audited and NOT read, with the reason: the receipts and `next_*_receipt`
+/// counters (bookkeeping of an effect already visible in the zones),
+/// `pending_*` slots that only live inside one effect's synchronous run
+/// (`pending_security_moves`, `pending_hand_discard`, ...: empty between
+/// prompts, and a parked prompt is judged separately), `parked_overclock_attacks`
+/// / `declined_overclock_this_eot` / `end_of_turn_attack_*` (an Overclock offer
+/// shows as a parked prompt or a changed attack), `loop_watch*` and the
+/// optional-activation marks (loop-guard memory), `native_play_observation`
+/// (harness), the card store / registries / token registry / formula
+/// extensions (static for the game), and `PlayCostAdjustments::
+/// pending_reduction` (inside a parked declaration; its `Debug` is frozen).
+/// Opaque closures (`DynamicTriggeredGrant::predicate`, a granted body) show
+/// only as presence / count.
 fn effect_footprint_parts(game: &Game) -> Vec<(&'static str, u64)> {
     use std::hash::{Hash, Hasher};
     fn digest(text: String) -> u64 {
@@ -2602,24 +2712,69 @@ fn effect_footprint_parts(game: &Game) -> Vec<(&'static str, u64)> {
         text.hash(&mut h);
         h.finish()
     }
+    use rand::RngCore;
     let mut fired: Vec<String> = game.replacement_fired.iter().map(|f| format!("{f:?}")).collect();
     fired.sort();
+    // `GrantedEffectBodyRegistry`'s `Debug` prints only the body COUNT: the ids and the qualifier ids are read here.
+    let (mut body_ids, mut qualifier_ids): (Vec<u64>, Vec<u64>) =
+        (game.granted_effect_bodies.bodies.keys().copied().collect(), game.granted_effect_bodies.qualifiers.keys().copied().collect());
+    body_ids.sort_unstable();
+    qualifier_ids.sort_unstable();
+    let random_state = game.rng.clone().next_u64();
     vec![
         (
             "the zones, memory, permanents or modifiers",
             digest(format!(
-                "{:?}|{}|{:?}|{:?}|{:?}",
-                game.players, game.memory, game.modifiers, game.floating_mass_modifiers, game.revealed_cards
+                "{:?}|{}|{:?}|{:?}|{:?}|{}",
+                game.players,
+                game.memory,
+                game.modifiers,
+                game.floating_mass_modifiers,
+                game.revealed_cards,
+                omitted_debug_fields(game)
             )),
         ),
         ("the player's digivolution cost reducers", digest(format!("{:?}", game.player_digivolve_cost_reducers))),
         (
             "the granted effects",
             digest(format!(
-                "{:?}|{}|{:?}",
+                "{:?}|{}|{:?}|{body_ids:?}|{qualifier_ids:?}",
                 game.granted_effect_bodies, game.next_granted_effect_id, game.pending_granted_fires
             )),
         ),
+        (
+            "the scheduled (delayed) effects",
+            digest(format!(
+                "{:?}|{:?}|{:?}",
+                game.scheduled_effects, game.scheduled_provenance_deletions, game.scheduled_provenance_deletions_opp
+            )),
+        ),
+        (
+            "the added digivolution cards, DigiXros wildcards or digivolution declarations in progress",
+            digest(format!(
+                "{:?}|{:?}|{:?}|{:?}",
+                game.pending_added_sources,
+                game.active_digixros_wildcards,
+                game.effect_digivolve_scopes,
+                game.effect_dna_would_scopes
+            )),
+        ),
+        (
+            "the turn counters",
+            digest(format!(
+                "{:?}|{:?}|{:?}|{:?}|{}",
+                game.n_digivolutions,
+                game.n_dna_digivolutions,
+                game.n_digivolve_driven_attacks,
+                game.digimon_attacks_this_turn,
+                game.turn_player_idx
+            )),
+        ),
+        (
+            "the public security reveals or shuffles",
+            digest(format!("{:?}|{:?}", game.public_security_reveals, game.security_shuffle_generations)),
+        ),
+        ("the random state", digest(format!("{random_state}"))),
         (
             "the attack, security check or option in progress",
             digest(format!(
@@ -4410,6 +4565,11 @@ impl ReplayDriver {
                                 break;
                             }
                             Err(why) => {
+                                // This arm also runs with a prompt parked (`is_forced_count_row` above): say which.
+                                let prompt = match game.pending_selection.as_ref() {
+                                    Some(p) => format!("the engine's own '{}' is parked (not this count)", p.prompt),
+                                    None => "met no prompt".to_string(),
+                                };
                                 self.divergences.push(Divergence {
                                     step: self.cursor,
                                     action_id: 0,
@@ -4418,7 +4578,7 @@ impl ReplayDriver {
                                     kind: DivergenceKind::SelectionResolution {
                                         reason: format!(
                                             "row {}: P{actor}'s SelectCountEffect {} has one candidate (a forced \
-                                             count, CardController.cs:5281-5297) and met no prompt, but {why}: DCGO \
+                                             count, CardController.cs:5281-5297) and {prompt}, but {why}: DCGO \
                                              counted an effect the engine did not resolve",
                                             self.cursor,
                                             payload.count.unwrap_or_default()
@@ -5340,6 +5500,24 @@ impl ReplayDriver {
         // engine card by the rows that moved it: that copy, and only it.
         if let Some(k) = t.card_index {
             if let Some(slot) = self.dcgo_identity_slot(game, t.player, k, &copies) {
+                if let Ok(j) = &slot {
+                    // Only a recorder index is DCGO's own value; the converter's frame model and hand-listing
+                    // indexes are inferences (docs/DCGO_RECORDING_SCHEMA.md, `card_index_source`): say so.
+                    use crate::dcgo_recording::CardIndexSource;
+                    let provenance = match t.card_index_source {
+                        Some(CardIndexSource::Recorder) => None,
+                        Some(CardIndexSource::FrameModel) => Some("inferred by frame model, not recorded"),
+                        Some(CardIndexSource::HandListing) => Some("inferred by hand listing, not recorded"),
+                        None => Some("taken from a card index of unknown source (provenance not recorded: a recording predating card_index_source)"),
+                    };
+                    if let Some(provenance) = provenance {
+                        self.notes.push(format!(
+                            "row {}: P{}'s {} names {want} by DCGO card index {k}; copy identity {provenance} \
+                             (took slot {j})",
+                            self.cursor, payload.actor, payload.prompt
+                        ));
+                    }
+                }
                 let named = slot.and_then(|j| {
                     let mut row = payload.clone();
                     row.board_p0 = None;
@@ -9823,5 +10001,231 @@ effects:
         assert!(effect_activity(window, 0).is_empty(), "a draw leaves no attributable event: {window:?}");
         let verdict = ReplayDriver::classify_unstamped_answer(&r.game, 0, false, None, 0, window);
         assert!(matches!(verdict, UnstampedAnswer::Note(_)), "blind spot: a draw-only effect is not seen");
+    }
+
+    // ── Round-6 review: the forced-run footprint, the typed hidden fields, ──
+    // ── 3-tuple identity references ─────────────────────────────────────────
+
+    /// Whether `mutate` changes `effect_footprint_parts` of the two-copy game.
+    fn footprint_differs(mutate: impl FnOnce(&mut Game)) -> bool {
+        let (game, _) = two_copies(false);
+        let before = effect_footprint_parts(&game);
+        let mut changed = game.clone();
+        mutate(&mut changed);
+        effect_footprint_parts(&changed) != before
+    }
+
+    /// Guard (green on the old code too): a clone of the game has the same
+    /// footprint, so every "differs" test below measures its own mutation.
+    #[test]
+    fn footprint_of_an_unchanged_clone_is_equal() {
+        assert!(!footprint_differs(|_| {}));
+    }
+
+    /// Round-6 review, finding 1: a forced trigger whose only effect SCHEDULES
+    /// a delayed effect (`EffectContext::schedule_delayed`) left something
+    /// behind that DCGO's skip would not have.
+    #[test]
+    fn footprint_reads_the_scheduled_delayed_effects() {
+        assert!(footprint_differs(|g| {
+            let source_card = g.players[0].hand[0].handle();
+            g.scheduled_effects.push(crate::scheduled_effects::ScheduledEffect {
+                when: crate::enums::EffectTiming::EndOfYourTurn,
+                body: Vec::new(),
+                source_card,
+                source_permanent: None,
+                source_kind: crate::enums::EffectSourceKind::Digimon,
+                controller: 0,
+                captured_bindings: crate::dsl_cards::bindings::Bindings::default(),
+                scheduled_at_turn: g.turn_count,
+                runtime: crate::dsl_cards::step::StepRuntime::default(),
+            });
+        }));
+    }
+
+    /// `EffectContext::schedule_delete_at_end_of_turn` and
+    /// `..._of_opponents_turn` keep their entries in two further lists.
+    #[test]
+    fn footprint_reads_the_scheduled_provenance_deletions() {
+        let entry = |g: &Game| crate::scheduled_effects::ScheduledProvenanceDeletion {
+            token: crate::trigger_context::ProvenanceToken(1),
+            controller: 0,
+            source_card: g.players[0].hand[0].handle(),
+            source_kind: crate::enums::EffectSourceKind::Digimon,
+        };
+        assert!(footprint_differs(|g| {
+            let e = entry(g);
+            g.scheduled_provenance_deletions.push(e);
+        }));
+        assert!(footprint_differs(|g| {
+            let e = entry(g);
+            g.scheduled_provenance_deletions_opp.push(e);
+        }));
+    }
+
+    #[test]
+    fn footprint_reads_the_pending_added_sources() {
+        assert!(footprint_differs(|g| {
+            let card = g.players[0].hand[0].handle();
+            g.pending_added_sources.push(crate::game::PendingAddedSources {
+                host_card: card,
+                cause: crate::trigger_context::EffectAttribution {
+                    controller: 0,
+                    source_card: Some(card).into(),
+                    source_permanent: None,
+                },
+                cards: vec![card],
+            });
+        }));
+    }
+
+    #[test]
+    fn footprint_reads_the_digixros_wildcard_substitutions() {
+        assert!(footprint_differs(|g| {
+            let card = g.players[0].hand[0].handle();
+            g.active_digixros_wildcards.push(crate::digixros::ActiveDigiXrosWildcardSubstitution::for_current_turn(
+                0, card, None, 0,
+            ));
+        }));
+    }
+
+    /// Counters a forced effect can move without leaving a zone change
+    /// (the digivolution counts and the attack count feed "this turn" conditions).
+    #[test]
+    fn footprint_reads_the_turn_counters() {
+        assert!(footprint_differs(|g| g.n_digivolutions[0] += 1));
+        assert!(footprint_differs(|g| g.n_dna_digivolutions[1] += 1));
+        assert!(footprint_differs(|g| g.n_digivolve_driven_attacks[0] += 1));
+        assert!(footprint_differs(|g| g.digimon_attacks_this_turn[0] += 1));
+    }
+
+    /// An effect that only looked at (revealed) a security card changed what
+    /// the opponent knows, and the shuffle generation is part of that record.
+    #[test]
+    fn footprint_reads_the_public_security_reveals() {
+        assert!(footprint_differs(|g| {
+            let card = g.players[0].hand[0].handle();
+            g.public_security_reveals.push((0, card, 0, 0));
+        }));
+        assert!(footprint_differs(|g| g.security_shuffle_generations[0] += 1));
+    }
+
+    /// `GrantedEffectBodyRegistry`'s `Debug` prints only the body COUNT: a
+    /// changed qualifier set (or a replaced body) is invisible to it.
+    #[test]
+    fn footprint_reads_the_granted_effect_qualifiers() {
+        assert!(footprint_differs(|g| {
+            g.granted_effect_bodies.insert_qualifier(7, std::sync::Arc::new(|_| true));
+        }));
+    }
+
+    /// Round-6 review, finding 2: `Permanent`'s `Debug` omits `face_generation`
+    /// and `placed_by_effect`, so a forced effect that only changed one of
+    /// them left the footprint (and `copies_have_one_shape`) unchanged.
+    #[test]
+    fn footprint_reads_the_permanent_fields_debug_omits() {
+        assert!(footprint_differs(|g| g.players[0].battle_area[0].placed_by_effect = true));
+        assert!(footprint_differs(|g| g.players[0].battle_area[0].face_generation += 1));
+    }
+
+    /// `ModifierEntry`'s `Debug` omits `pending_skips` (and the replacement
+    /// condition's presence); `PlayerModifierEntry`'s omits the replacement
+    /// condition. The same visible entry with a different hidden field is a
+    /// different game.
+    #[test]
+    fn footprint_reads_the_modifier_fields_debug_omits() {
+        use crate::enums::{Expiry, ModifierType};
+        use crate::modifiers::{ModifierEntry, PlayerModifierEntry};
+        let permanent = crate::permanent::PermanentHandle { player: 0, index: 0 };
+        let with_skips = |skips: u8| {
+            let (mut g, _) = two_copies(false);
+            let mut entry = ModifierEntry::simple(ModifierType::ChangeDp, 1000, Expiry::EndOfTurn, 0);
+            entry.pending_skips = skips;
+            g.modifiers.add(permanent, entry);
+            g
+        };
+        assert_ne!(effect_footprint_parts(&with_skips(0)), effect_footprint_parts(&with_skips(1)));
+
+        let with_condition = |on: bool| {
+            let (mut g, _) = two_copies(false);
+            let mut entry = ModifierEntry::simple(ModifierType::ChangeDp, 1000, Expiry::EndOfTurn, 0);
+            if on {
+                entry.replacement_condition = Some(std::sync::Arc::new(|_, _| true));
+            }
+            g.modifiers.add(permanent, entry);
+            g
+        };
+        assert_ne!(effect_footprint_parts(&with_condition(false)), effect_footprint_parts(&with_condition(true)));
+
+        let player_with_condition = |on: bool| {
+            let (mut g, _) = two_copies(false);
+            let mut entry = PlayerModifierEntry::simple(ModifierType::CannotGainMemoryByEffect, 0, Expiry::EndOfTurn, None, 0);
+            if on {
+                entry.replacement_condition = Some(std::sync::Arc::new(|_, _| true));
+            }
+            g.modifiers.add_player_modifier(0, entry);
+            g
+        };
+        assert_ne!(
+            effect_footprint_parts(&player_with_condition(false)),
+            effect_footprint_parts(&player_with_condition(true))
+        );
+    }
+
+    /// Round-6 review, finding 2: two copies that differ only in a field
+    /// `Permanent`'s `Debug` omits are not "equal in every field but card
+    /// identity".
+    #[test]
+    fn copies_differing_in_a_field_debug_omits_are_not_interchangeable() {
+        let (mut game, slots) = two_copies(false);
+        let slots: Vec<u16> = slots.iter().map(|h| u16::from(h.index)).collect();
+        assert!(interchangeable_copies(&game, 0, &slots), "baseline");
+        game.players[0].battle_area[1].face_generation += 1;
+        assert!(!interchangeable_copies(&game, 0, &slots), "face_generation");
+        let (mut game, slots) = two_copies(false);
+        let slots: Vec<u16> = slots.iter().map(|h| u16::from(h.index)).collect();
+        game.players[0].battle_area[1].placed_by_effect = true;
+        assert!(!interchangeable_copies(&game, 0, &slots), "placed_by_effect");
+    }
+
+    /// Round-6 review, finding 3: a 3-tuple identity such as
+    /// `OptionalReplacementState::source_identity: Option<(PlayerId,
+    /// CardHandle, u64)>` prints `Some((0, CardHandle(5), 7))`; the
+    /// battle identity is its last number.
+    #[test]
+    fn identity_references_reads_the_last_number_of_a_three_tuple() {
+        assert_eq!(identity_references("source_identity: Some((0, CardHandle(5), 7))", 7), 1);
+        assert_eq!(identity_references("source_identity: Some((0, CardHandle(7), 5))", 7), 0, "7 is the card, not the identity");
+        assert_eq!(identity_references("source_identity: (1, CardHandle(5), 7)", 7), 1);
+    }
+
+    /// `stable_subject_card` / `stable_subject` (replacement.rs, replacement_window.rs) are
+    /// `(PlayerId, CardHandle, battle identity)` under a name with no `identity` in it: the
+    /// round-6 reference search never read them.
+    #[test]
+    fn identity_references_reads_the_stable_subject_fields() {
+        assert_eq!(identity_references("stable_subject_card: Some((0, CardHandle(5), 7))", 7), 1);
+        assert_eq!(identity_references("stable_subject: Some((1, CardHandle(5), 7))", 7), 1);
+        assert_eq!(identity_references("stable_subject_card: None", 7), 0);
+    }
+
+    /// A forced effect that only consumed randomness (a shuffle with no visible reorder, a random
+    /// pick) left the game in another state than DCGO's skip.
+    #[test]
+    fn footprint_reads_the_random_state() {
+        use rand::RngCore;
+        assert!(footprint_differs(|g| {
+            g.rng.next_u64();
+        }));
+    }
+
+    /// Guard (green on the old code): the shapes the search already read.
+    #[test]
+    fn identity_references_still_reads_bare_some_and_pair_shapes() {
+        assert_eq!(identity_references("host_identity: 7", 7), 1);
+        assert_eq!(identity_references("target_identity: Some(7)", 7), 1);
+        assert_eq!(identity_references("attack_attacker_identity: Some((1, 7))", 7), 1);
+        assert_eq!(identity_references("next_battle_identity: 7", 7), 0, "a counter is not a reference");
+        assert_eq!(identity_references("host_identity: 71", 7), 0, "not a longer number");
     }
 }

@@ -642,13 +642,18 @@ def convert(rows, cards, allow_truncated=False):
             hand_cards = (r.get("hand") or {}).get("cards") or []
             slot = (r.get("hand") or {}).get("slot", -1)
             played_index = hand_cards[slot].get("card_index") if 0 <= slot < len(hand_cards) else None
-            if played_index is not None and (hand_cards[slot].get("card_id") != (r.get("cards") or [None])[0]):
-                # The listed card at the slot is not the played card (frame_model._played_index checks the same): that
-                # index belongs to another card, so the play is positional only.
+            listed_card = hand_cards[slot].get("card_id") if 0 <= slot < len(hand_cards) else None
+            played_card = (r.get("cards") or [None])[0]
+            if played_index is not None and listed_card is not None and played_card is not None \
+                    and listed_card != played_card:
+                # The listing NAMES a card at the slot and it is not the played card (frame_model._played_index checks
+                # the same): that index belongs to another card, so the play is positional only. A listing with no
+                # card_id (an older recorder build) or a row with a hand but no `cards` names nothing to compare, so
+                # the index stays and the queued-play gate below decides (dropping it sent the row past that gate as
+                # a positional play and left its queued index in the set).
                 inferred.append("P%s play of %s (seq %s): hand slot %s lists %s, not the played card, so its card index "
-                                "%s is not taken (positional only)" % (actor, (r.get("cards") or [None])[0],
-                                                                       r.get("seq"), slot, hand_cards[slot].get("card_id"),
-                                                                       played_index))
+                                "%s is not taken (positional only)" % (actor, played_card, r.get("seq"), slot,
+                                                                       listed_card, played_index))
                 played_index = None
             if played_index is not None and played_index not in queued_play_indexes:
                 continue
