@@ -1,0 +1,80 @@
+{
+  "baseline": "6b1a4fce13a06c33d776c5f4cda39cfa34ce605d",
+  "deck_id": "dcg_nexus_b760a865ce88",
+  "source_url": "https://dcg-nexus.com/decklist/6cc52111-a017-48db-a22d-c277535a326d",
+  "format": "EX13",
+  "counts": {
+    "EX13-002": 4,
+    "EX13-017": 4,
+    "BT11-023": 4,
+    "BT22-019": 4,
+    "P-138": 4,
+    "EX13-019": 4,
+    "BT22-022": 1,
+    "EX13-022": 4,
+    "BT22-023": 3,
+    "EX13-023": 4,
+    "BT12-029": 2,
+    "EX13-069": 4,
+    "BT11-112": 4,
+    "BT22-085": 1,
+    "P-104": 2,
+    "LM-034": 2,
+    "LM-028": 1,
+    "LM-057": 1,
+    "LM-058": 1
+  },
+  "unique_cards": 19,
+  "main_count": 50,
+  "egg_count": 4,
+  "before_admitted_cards": 16,
+  "before_blockers": {
+    "BT12-029": [
+      "untested_lowering:predicate:can_unsuspend"
+    ],
+    "BT22-023": [
+      "untested_lowering:predicate:can_unsuspend"
+    ],
+    "LM-028": [
+      "failed_verdict"
+    ]
+  },
+  "after_admitted_cards": 19,
+  "after_blockers": {},
+  "mechanics_ready": true,
+  "mechanics_counts": {
+    "gap_blocking": 0,
+    "gap_nonblocking": 314,
+    "not_testable": 152,
+    "proven": 249,
+    "total": 715
+  },
+  "gate_policy_changed": false,
+  "scope": "exact original deck only; see companion report for runtime verification and limitations",
+  "validation": {
+    "focused_checks_with_passing_evidence": 235,
+    "focused_evidence_mode": "combined process plus corrected-test and P-138 reruns; SIGKILL prevented combined completion",
+    "lm_028_tests_passed": 22,
+    "gate_regressions_passed": 103,
+    "gate_regressions_skipped": 1,
+    "tier0": "PASS",
+    "tier0_verification_tool_tests_passed": 183,
+    "full_card_suite": "not run",
+    "full_dsl_suite": "not run",
+    "live_dcgo": "not run",
+    "smoke_games_passed": 8,
+    "smoke_games_failed": 0,
+    "smoke_steps_by_seed": {
+      "0": 257,
+      "1": 622,
+      "2": 314,
+      "3": 311,
+      "4": 228,
+      "5": 304,
+      "6": 295,
+      "7": 208
+    },
+    "smoke_step_limit": 4000,
+    "compiled_runtime_and_metadata": "PASS: exact original 50+4 list, all 19 IDs"
+  }
+}

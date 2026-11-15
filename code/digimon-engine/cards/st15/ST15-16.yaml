@@ -1,0 +1,34 @@
+# Official ST15-16 card face and bundle. The second target is an independent choice.
+card: ST15-16
+name: Trident Arm
+kind: option
+color: [black]
+cost: 6
+effects:
+  - when: main_from_hand
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigivolve_target
+          filter: { kind: digimon }
+          prompt: Choose 1 opponent Digimon to De-Digivolve 3
+      - de_digivolve: { target: dedigivolve_target, amount: 3, stop_at_level: 3 }
+      - select_opponent_permanent:
+          bind_as: forced_target
+          filter: { kind: digimon }
+          prompt: Choose 1 opponent Digimon to gain the mandatory attack effect
+      - grant_triggered_effect:
+          target: forced_target
+          timing: start_of_your_main_phase
+          expiry: end_of_opponents_turn
+          body:
+            - force_attack:
+                attacker: carrier
+                targets: any
+                prompt: This Digimon attacks
+  - when: on_security
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigivolve_target
+          filter: { kind: digimon }
+          prompt: Choose 1 opponent Digimon to De-Digivolve 3
+      - de_digivolve: { target: dedigivolve_target, amount: 3, stop_at_level: 3 }

@@ -1,0 +1,51 @@
+# Official Bandai card face and committed bundle; Royal Knights qualification.
+card: BT21-032
+name: Veemon
+kind: digimon
+color:
+- blue
+- red
+level: 3
+cost: 3
+dp: 1000
+traits:
+- Mini Dragon
+- Hero
+form: Rookie
+attribute: Free
+alt_paths:
+- kind: digivolve
+  from:
+    level_eq: 2
+    color_is: blue
+  cost: 1
+- kind: digivolve
+  from:
+    level_eq: 2
+    color_is: red
+  cost: 1
+- kind: digivolve
+  from:
+    any_of:
+    - name_is: DemiVeemon
+    - level_eq: 2
+      trait_has: Hero
+  cost: 0
+effects:
+- kind: cost_reduction
+  reduction_timing: before_pay_cost
+  active_when:
+    all_of:
+    - your_turn: true
+    - source_is_cost_target_permanent: true
+    - cost_target:
+        any_of:
+        - trait_has: Armor Form
+        - trait_has: Hero
+  amount: 1
+- scope: inherited
+  kind: aura
+  active_when:
+    your_turn: true
+  target: {}
+  dp_modifier: 2000

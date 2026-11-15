@@ -197,6 +197,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
         }
         CompiledStep::ForceAttack {
             attacker,
+            affects_player,
             targets,
             without_suspending,
             prompt,
@@ -213,8 +214,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             }
             let prompt = prompt.as_deref().unwrap_or("Attack with this Digimon");
             let lowered_upgrade = lower_attack_cost_upgrade(*cost_upgrade);
-            let _ = ctx.force_opponent_attack_with_upgrade(
+            let _ = ctx.force_attack_with_scope(
                 attacker,
+                *affects_player,
                 lower_attack_target_restriction(*targets),
                 *without_suspending,
                 prompt,

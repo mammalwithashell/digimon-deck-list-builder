@@ -1,3 +1,51 @@
+## Player-directed forced attacks — resolved 2026-11-09
+
+`force_attack.affects_player: true` implements an instruction to the selected
+attacker's controller (BT13-077 official Q2320). Its default is false: existing
+Digimon-directed processing, including EX3-024 face and inherited effects,
+still checks source-scoped immunity under CR 4.3 15-15-5-1/3. Do not infer
+player scope from superficially similar wording; the card-specific ruling
+and pinned DCGO implementations distinguish these two cards.
+
+Both modes share ordinary attack legality and the mandatory opponent target
+selection / clone-safe BeginAttack continuation. Neither permits an attack
+while one is pending, bypasses sickness or suspension, or ignores attack
+prohibitions. Q2316/2317 make Craniamon's initial selection optional; Q2318
+allows selecting an unable attacker, which then performs no attack.
+
+Proof: `tests/cards_behavioral/bt13/bt13_077.rs`, unchanged
+`tests/cards_behavioral/ex3/ex3_024.rs`, and
+`tests/dsl/effect_granted_attack.rs::force_attack_affects_player_distinguishes_q2320_from_digimon_directed_immunity`.
+Authority: https://world.digimoncard.com/rule/?card_no=BT13-077 ; pinned DCGO
+`02922babedf58c83b0687eeb91e2377cc977c58e`, BT13/Black/BT13_077.cs versus
+EX3/Blue/EX3_024.cs. The pinned EX3 face checks attacker immunity; its inherited
+branch lacks that check. This pre-existing reference inconsistency is not
+silently promoted into a global semantic change: both existing repository
+EX3 immunity regressions remain unchanged under CR 4.3 15-15-5, and only the
+explicit BT13-077 Q2320 instruction opts into player scope.
+No action/tensor or admission-policy change.
+
+## 2026-11-09 Royal Knights: opponent-turn suspend cost verified
+
+`G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN` is resolved as a test-fixture error,
+not a runtime defect. BT13-102's zero-memory fixture gained memory across the
+turn boundary, then observed the normal unsuspend phase. With memory 3, accepting
+suspends Keenan and moves memory to 2; decline leaves both unchanged. The faithful
+printed observer is restored and canonical card tests are active. Historical
+entries below preserve the original diagnosis.
+
+## Distinct-name source selection must be all-or-none — resolved 2026-11-09
+
+`select_materials` now accepts `require_max: true` with `uniqueness: name`,
+as well as its existing named-group mode. The required floor counts eligible
+distinct printed names, retaining every duplicate physical copy as a choice.
+`optional_zero` permits declining before the first pick, not a partial commit.
+BT13-112 consumes this surface for official Q2367; its old 12-card cap is removed.
+The existing resumable multi-pick VM preserves the floor through cloning.
+Runtime positive/negative and clone coverage: `tests/dsl/royal_knights_training_gate.rs`;
+production regressions: `tests/cards_behavioral/bt13/bt13_112.rs`.
+This does not change action IDs, observation tensors, or admission policy.
+
 # DSL Vocabulary Gaps Tracker
 
 ## Place a card list as TOP digivolution cards [G-DSL-PLACE-CARDS-AS-TOP-SOURCES] — added 2026-11-13 (EX12-018)
@@ -9166,6 +9214,8 @@ pins that the turn scan does not trash such a marker.
 - EX3-041 candidate tests: 5 passed, 1 failed when the actual Examon moved from hand to trash and incorrectly retained the level-6 material identity. Candidate YAML and evidence archived outside the active pack; EX3-020 likewise blocked. Cover hand/trash/opponent hand, simultaneous copies, movement and clone/resume. Independent reviewer confirmed no faithful existing composition.
 
 ### Effect-driven digivolution cost choice [G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE] — RESOLVED (2026-10-10)
+
+LM-028 follow-up (2026-11-13): all 22 existing Blue Scramble regressions pass on current main, including actual paid Option use, both reduced 0/1 routes after clone, and declining either selection before the mandatory Delay placement. Its stale BLOCKED ledger row is requalified; no shared-runtime or admission-policy change. Evidence: `qa/archetype-qa/dsl/ulforce-exact-training-gate-2026-11-13.md`.
 
 - Repair: distinct payable routes use a cloneable effect-cost continuation with stable result/host identity, original reduction/source context and deferred result/tail execution. Affordability previews the existing synchronous reducer/observer flow on a clone, without charging the live game early. Free/fixed/duplicate costs do not create a false choice. Shared suite 10/10 (`shared-neighbors-green.log`); BT20-023/040 reduced-evolution clauses confirmed by live DCGO in `oracle/repair-20261010T234036Z-2674e4168a`. DCGO's printed-cost input and the engine's payable-cost input are explicitly translated in the scenarios. Original diagnosis follows.
 
