@@ -1,0 +1,17 @@
+{
+  "total_recordings": 1,
+  "pass": 0,
+  "partial_pass": 0,
+  "fail": 1,
+  "quirk": 0,
+  "by_quirk": {},
+  "quirk_games": [],
+  "by_kind": {
+    "actor_mismatch": 1
+  },
+  "per_card": {},
+  "failed_games": [
+    "73be93954c104572bf7b2f9d8533f102"
+  ],
+  "skipped_actions": 0
+}

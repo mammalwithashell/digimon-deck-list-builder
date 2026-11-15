@@ -1,0 +1,203 @@
+{
+  "status": "diverged_incomplete",
+  "winner": null,
+  "fixture": "qa/dcgo-mod-recordings/playback/sim_gd_dna.json",
+  "run": "/workspace/dcgo-cloud/pvp-next",
+  "display": ":102",
+  "client_version": "1.19.3",
+  "transport": "Photon WSS via standard .NET ClientWebSocket",
+  "oracle_clauses_promoted": 0,
+  "seats": {
+    "host": {
+      "seat": 0,
+      "raw_rows": 199,
+      "conversion_exit_code": 0,
+      "replay_exit_code": 0,
+      "game_end": null,
+      "final_turn": 6,
+      "is_ai": false,
+      "persistent_zone_mismatches": 4,
+      "script_divergences": 5,
+      "first_script_divergence": {
+        "expected": "t6 EffectChoice m3 | p0 h[ST23-14,ST23-15,ST23-12] d[ST23-09,ST23-04,ST23-04,ST23-13,BT25-041,ST23-03,ST23-15,BT25-032,ST23-09,ST23-06,BT25-043,BT25-090,P-236,ST23-06,P-236,ST23-15,BT25-041,ST23-06,ST23-02,P-236,BT25-057,ST23-13,ST23-03,ST23-02,ST23-09,ST23-13,ST23-13,BT25-041] s[] e[ST23-01,ST23-01] tr[BT25-035,BT25-041,BT25-043,BT25-043,BT25-057,BT4-104,ST23-01,ST23-03,ST23-12] b[ST23-03/1 ST23-15/1 BT25-049/1s BT25-090/5s BT25-049/1s ] br[BT25-035/3] p1 h[BT17-015,EX9-066,BT22-026,BT22-008,BT17-095,BT22-013,BT17-078,EX9-021,BT17-095] d[ST2-13,EX9-021,BT22-008,BT17-081,BT17-095,BT17-019,BT22-084,P-206,BT17-015,BT22-017,BT17-095,BT22-013,BT17-027,BT22-017,EX9-021,BT22-026,BT22-017,BT17-081,BT22-084,BT22-017,BT17-027,BT17-007,BT17-078,BT22-015,BT22-008,BT17-027,P-206,BT17-015,BT22-008,BT22-084] s[BT22-015] e[BT14-001,BT14-001] tr[BT14-001,BT17-019,BT17-019,BT17-078,BT22-013,P-206] b[EX9-066/1 BT17-081/1 BT17-027/1 BT17-081/1 ] br[BT17-007/2] sel EffectChoice by 0 'Use Cost reduction to reduce Option-use cost?'",
+        "fingerprint": "t6 SelectTarget m3 | p0 h[ST23-14,ST23-15,ST23-12] d[ST23-09,ST23-04,ST23-04,ST23-13,BT25-041,ST23-03,ST23-15,BT25-032,ST23-09,ST23-06,BT25-043,BT25-090,P-236,ST23-06,P-236,ST23-15,BT25-041,ST23-06,ST23-02,P-236,BT25-057,ST23-13,ST23-03,ST23-02,ST23-09,ST23-13,ST23-13,BT25-041] s[] e[ST23-01,ST23-01] tr[BT25-035,BT25-041,BT25-043,BT25-043,BT25-057,BT4-104,ST23-01,ST23-03,ST23-12] b[ST23-03/1 ST23-15/1 BT25-049/1s BT25-090/5s BT25-049/1s ] br[BT25-035/3] p1 h[BT17-015,EX9-066,BT22-026,BT22-008,BT17-095,BT22-013,BT17-078,EX9-021,BT17-095] d[ST2-13,EX9-021,BT22-008,BT17-081,BT17-095,BT17-019,BT22-084,P-206,BT17-015,BT22-017,BT17-095,BT22-013,BT17-027,BT22-017,EX9-021,BT22-026,BT22-017,BT17-081,BT22-084,BT22-017,BT17-027,BT17-007,BT17-078,BT22-015,BT22-008,BT17-027,P-206,BT17-015,BT22-008,BT22-084] s[BT22-015] e[BT14-001,BT14-001] tr[BT14-001,BT17-019,BT17-019,BT17-078,BT22-013,P-206] b[EX9-066/1 BT17-081/1 BT17-027/1 BT17-081/1 ] br[BT17-007/2] sel OwnField by 0 'Choose a Tamer to trash a face-down card from under'",
+        "id": "0094-20261114T210728Z",
+        "message": "DCGO reached a state the sim recording never did",
+        "nearest": {
+          "action": [
+            0,
+            62
+          ],
+          "following": [
+            {
+              "action": [
+                0,
+                62
+              ],
+              "fp": "t6 SelectUnion m0 | p0 h[ST23-14,ST23-12] d[ST23-09,ST23-04,ST23-04,ST23-13,BT25-041,ST23-03,ST23-15,BT25-032,ST23-09,ST23-06,BT25-043,BT25-090,P-236,ST23-06,P-236,ST23-15,BT25-041,ST23-06,ST23-02,P-236,BT25-057,ST23-13,ST23-03,ST23-02,ST23-09,ST23-13,ST23-13,BT25-041] s[] e[ST23-01,ST23-01] tr[BT25-035,BT25-041,BT25-043,BT25-043,BT25-057,BT4-104,ST23-01,ST23-03,ST23-12] b[ST23-03/1 ST23-15/1 BT25-049/1s BT25-090/5s BT25-049/1s ] br[BT25-035/3] p1 h[BT17-015,EX9-066,BT22-026,BT22-008,BT17-095,BT22-013,BT17-078,EX9-021,BT17-095] d[ST2-13,EX9-021,BT22-008,BT17-081,BT17-095,BT17-019,BT22-084,P-206,BT17-015,BT22-017,BT17-095,BT22-013,BT17-027,BT22-017,EX9-021,BT22-026,BT22-017,BT17-081,BT22-084,BT22-017,BT17-027,BT17-007,BT17-078,BT22-015,BT22-008,BT17-027,P-206,BT17-015,BT22-008,BT22-084] s[BT22-015] e[BT14-001,BT14-001] tr[BT14-001,BT17-019,BT17-019,BT17-078,BT22-013,P-206] b[EX9-066/1 BT17-081/1 BT17-027/1 BT17-081/1 ] br[BT17-007/2] sel UnionZone { zones: UnionZoneSet(3) } by 0 'You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost'"
+            },
+            {
+              "action": [
+                0,
+                1
+              ],
+              "fp": "t6 Main m0 | p0 h[ST23-14,ST23-12] d[ST23-09,ST23-04,ST23-04,ST23-13,BT25-041,ST23-03,ST23-15,BT25-032,ST23-09,ST23-06,BT25-043,BT25-090,P-236,ST23-06,P-236,ST23-15,BT25-041,ST23-06,ST23-02,P-236,BT25-057,ST23-13,ST23-03,ST23-02,ST23-09,ST23-13,ST23-13,BT25-041] s[] e[ST23-01,ST23-01] tr[BT25-035,BT25-041,BT25-043,BT25-043,BT25-057,BT4-104,ST23-01,ST23-03,ST23-12] b[ST23-03/1 ST23-15/1 BT25-049/1s BT25-090/5s BT25-049/1s ST23-15/1 ] br[BT25-035/3] p1 h[BT17-015,EX9-066,BT22-026,BT22-008,BT17-095,BT22-013,BT17-078,EX9-021,BT17-095] d[ST2-13,EX9-021,BT22-008,BT17-081,BT17-095,BT17-019,BT22-084,P-206,BT17-015,BT22-017,BT17-095,BT22-013,BT17-027,BT22-017,EX9-021,BT22-026,BT22-017,BT17-081,BT22-084,BT22-017,BT17-027,BT17-007,BT17-078,BT22-015,BT22-008,BT17-027,P-206,BT17-015,BT22-008,BT22-084] s[BT22-015] e[BT14-001,BT14-001] tr[BT14-001,BT17-019,BT17-019,BT17-078,BT22-013,P-206] b[EX9-066/1 BT17-081/1 BT17-027/1 BT17-081/1 ] br[BT17-007/2]"
+            },
+            {
+              "action": [
+                0,
+                62
+              ],
+              "fp": "t6 EffectChoice m-3 | p0 h[ST23-14] d[ST23-09,ST23-04,ST23-04,ST23-13,BT25-041,ST23-03,ST23-15,BT25-032,ST23-09,ST23-06,BT25-043,BT25-090,P-236,ST23-06,P-236,ST23-15,BT25-041,ST23-06,ST23-02,P-236,BT25-057,ST23-13,ST23-03,ST23-02,ST23-09,ST23-13,ST23-13,BT25-041] s[] e[ST23-01,ST23-01] tr[BT25-035,BT25-041,BT25-043,BT25-043,BT25-057,BT4-104,ST23-01,ST23-03,ST23-12] b[ST23-03/1 ST23-15/1 BT25-049/1s BT25-090/5s BT25-049/1s ST23-15/1 ST23-12/1 ] br[BT25-035/3] p1 h[BT17-015,EX9-066,BT22-026,BT22-008,BT17-095,BT22-013,BT17-078,EX9-021,BT17-095] d[ST2-13,EX9-021,BT22-008,BT17-081,BT17-095,BT17-019,BT22-084,P-206,BT17-015,BT22-017,BT17-095,BT22-013,BT17-027,BT22-017,EX9-021,BT22-026,BT22-017,BT17-081,BT22-084,BT22-017,BT17-027,BT17-007,BT17-078,BT22-015,BT22-008,BT17-027,P-206,BT17-015,BT22-008,BT22-084] s[BT22-015] e[BT14-001,BT14-001] tr[BT14-001,BT17-019,BT17-019,BT17-078,BT22-013,P-206] b[EX9-066/1 BT17-081/1 BT17-027/1 BT17-081/1 ] br[BT17-007/2] sel Replacement by 0 'You may activate ST23-12's triggered effect'"
+            },
+            {
+              "action": [
+                1,
+                62
+              ],
+              "fp": "t7 Breeding m3 | p0 h[ST23-14] d[ST23-09,ST23-04,ST23-04,ST23-13,BT25-041,ST23-03,ST23-15,BT25-032,ST23-09,ST23-06,BT25-043,BT25-090,P-236,ST23-06,P-236,ST23-15,BT25-041,ST23-06,ST23-02,P-236,BT25-057,ST23-13,ST23-03,ST23-02,ST23-09,ST23-13,ST23-13,BT25-041] s[] e[ST23-01,ST23-01] tr[BT25-035,BT25-041,BT25-043,BT25-043,BT25-057,BT4-104,ST23-01,ST23-03,ST23-12] b[ST23-03/1 ST23-15/1 BT25-049/1s BT25-090/5s BT25-049/1s ST23-15/1 ST23-12/1 ] br[BT25-035/3] p1 h[BT17-015,EX9-066,BT22-026,BT22-008,BT17-095,BT22-013,BT17-078,EX9-021,BT17-095,BT22-084] d[ST2-13,EX9-021,BT22-008,BT17-081,BT17-095,BT17-019,BT22-084,P-206,BT17-015,BT22-017,BT17-095,BT22-013,BT17-027,BT22-017,EX9-021,BT22-026,BT22-017,BT17-081,BT22-084,BT22-017,BT17-027,BT17-007,BT17-078,BT22-015,BT22-008,BT17-027,P-206,BT17-015,BT22-008] s[BT22-015] e[BT14-001,BT14-001] tr[BT14-001,BT17-019,BT17-019,BT17-078,BT22-013,P-206] b[EX9-066/1 BT17-081/1 BT17-027/1 BT17-081/1 ] br[BT17-007/2]"
+            }
+          ],
+          "fp": "t6 EffectChoice m3 | p0 h[ST23-14,ST23-15,ST23-12] d[ST23-09,ST23-04,ST23-04,ST23-13,BT25-041,ST23-03,ST23-15,BT25-032,ST23-09,ST23-06,BT25-043,BT25-090,P-236,ST23-06,P-236,ST23-15,BT25-041,ST23-06,ST23-02,P-236,BT25-057,ST23-13,ST23-03,ST23-02,ST23-09,ST23-13,ST23-13,BT25-041] s[] e[ST23-01,ST23-01] tr[BT25-035,BT25-041,BT25-043,BT25-043,BT25-057,BT4-104,ST23-01,ST23-03,ST23-12] b[ST23-03/1 ST23-15/1 BT25-049/1s BT25-090/5s BT25-049/1s ] br[BT25-035/3] p1 h[BT17-015,EX9-066,BT22-026,BT22-008,BT17-095,BT22-013,BT17-078,EX9-021,BT17-095] d[ST2-13,EX9-021,BT22-008,BT17-081,BT17-095,BT17-019,BT22-084,P-206,BT17-015,BT22-017,BT17-095,BT22-013,BT17-027,BT22-017,EX9-021,BT22-026,BT22-017,BT17-081,BT22-084,BT22-017,BT17-027,BT17-007,BT17-078,BT22-015,BT22-008,BT17-027,P-206,BT17-015,BT22-008,BT22-084] s[BT22-015] e[BT14-001,BT14-001] tr[BT14-001,BT17-019,BT17-019,BT17-078,BT22-013,P-206] b[EX9-066/1 BT17-081/1 BT17-027/1 BT17-081/1 ] br[BT17-007/2] sel EffectChoice by 0 'Use Cost reduction to reduce Option-use cost?'",
+          "index": 48
+        },
+        "prev": "t6 Main m3 | p0 h[ST23-14,ST23-15,ST23-12] d[ST23-09,ST23-04,ST23-04,ST23-13,BT25-041,ST23-03,ST23-15,BT25-032,ST23-09,ST23-06,BT25-043,BT25-090,P-236,ST23-06,P-236,ST23-15,BT25-041,ST23-06,ST23-02,P-236,BT25-057,ST23-13,ST23-03,ST23-02,ST23-09,ST23-13,ST23-13,BT25-041] s[] e[ST23-01,ST23-01] tr[BT25-035,BT25-041,BT25-043,BT25-043,BT25-057,BT4-104,ST23-01,ST23-03,ST23-12] b[ST23-03/1 ST23-15/1 BT25-049/1s BT25-090/5s BT25-049/1s ] br[BT25-035/3] p1 h[BT17-015,EX9-066,BT22-026,BT22-008,BT17-095,BT22-013,BT17-078,EX9-021,BT17-095] d[ST2-13,EX9-021,BT22-008,BT17-081,BT17-095,BT17-019,BT22-084,P-206,BT17-015,BT22-017,BT17-095,BT22-013,BT17-027,BT22-017,EX9-021,BT22-026,BT22-017,BT17-081,BT22-084,BT22-017,BT17-027,BT17-007,BT17-078,BT22-015,BT22-008,BT17-027,P-206,BT17-015,BT22-008,BT22-084] s[BT22-015] e[BT14-001,BT14-001] tr[BT14-001,BT17-019,BT17-019,BT17-078,BT22-013,P-206] b[EX9-066/1 BT17-081/1 BT17-027/1 BT17-081/1 ] br[BT17-007/2]",
+        "prev2": "t6 CounterTiming m3 | p0 h[ST23-14,ST23-15,ST23-12] d[ST23-09,ST23-04,ST23-04,ST23-13,BT25-041,ST23-03,ST23-15,BT25-032,ST23-09,ST23-06,BT25-043,BT25-090,P-236,ST23-06,P-236,ST23-15,BT25-041,ST23-06,ST23-02,P-236,BT25-057,ST23-13,ST23-03,ST23-02,ST23-09,ST23-13,ST23-13,BT25-041] s[] e[ST23-01,ST23-01] tr[BT25-035,BT25-041,BT25-043,BT25-043,BT25-057,BT4-104,ST23-01,ST23-03,ST23-12] b[ST23-03/1 ST23-15/1 BT25-049/1s BT25-090/5s BT25-049/1s ] br[BT25-035/3] p1 h[BT17-015,EX9-066,BT22-026,BT22-008,BT17-095,BT22-013,BT17-078,EX9-021,BT17-095] d[ST2-13,EX9-021,BT22-008,BT17-081,BT17-095,BT17-019,BT22-084,P-206,BT17-015,BT22-017,BT17-095,BT22-013,BT17-027,BT22-017,EX9-021,BT22-026,BT22-017,BT17-081,BT22-084,BT22-017,BT17-027,BT17-007,BT17-078,BT22-015,BT22-008,BT17-027,P-206,BT17-015,BT22-008,BT22-084] s[BT22-015,BT17-081] e[BT14-001,BT14-001] tr[BT14-001,BT17-019,BT17-019,BT17-078,BT22-013,P-206] b[EX9-066/1 BT17-081/1 BT17-027/1 ] br[BT17-007/2] sel Hand by 1 'Counter (blast / option / field ability)'",
+        "prev_actions": [
+          [
+            0,
+            144
+          ],
+          [
+            1,
+            62
+          ],
+          [
+            0,
+            1
+          ]
+        ],
+        "script_cursor": 48,
+        "status": "diverged",
+        "steps": 49
+      },
+      "agent_errors": [
+        {
+          "message": "converter failed: FileNotFoundError: [Errno 2] No such file or directory: '/workspace/dcgo-cloud/pvp-next/host/client/DCGO_Standalone/Game/UserData/DcgoRecorder/raw-20261114T210728Z.jsonl'",
+          "status": "error"
+        }
+      ],
+      "offered_script_steps": [
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        14,
+        19,
+        20,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        30,
+        38,
+        39,
+        40,
+        41,
+        43,
+        44,
+        45,
+        47
+      ],
+      "windows_baseline_equal_except_identity_time": false,
+      "windows_baseline_different_rows": [
+        52
+      ],
+      "row_count": 53,
+      "windows_baseline_row_count": 59,
+      "replay_report": {
+        "total_recordings": 1,
+        "pass": 0,
+        "partial_pass": 1,
+        "fail": 0,
+        "quirk": 0,
+        "by_quirk": {},
+        "quirk_games": [],
+        "by_kind": {},
+        "per_card": {},
+        "failed_games": [],
+        "skipped_actions": 0
+      },
+      "tested_mod_sha256": "bf0e29af55a7ae152df14a298a81348ddddd05c5c4d7848cb9ecf359b984c3c4"
+    },
+    "join": {
+      "seat": 1,
+      "raw_rows": 193,
+      "conversion_exit_code": 0,
+      "replay_exit_code": 0,
+      "game_end": null,
+      "final_turn": 6,
+      "is_ai": false,
+      "persistent_zone_mismatches": 5,
+      "script_divergences": 0,
+      "first_script_divergence": null,
+      "agent_errors": [
+        {
+          "message": "converter failed: FileNotFoundError: [Errno 2] No such file or directory: '/workspace/dcgo-cloud/pvp-next/join/client/DCGO_Standalone/Game/UserData/DcgoRecorder/raw-20261114T210732Z.jsonl'",
+          "status": "error"
+        }
+      ],
+      "offered_script_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        12,
+        13,
+        15,
+        16,
+        17,
+        18,
+        21,
+        28,
+        29,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        42,
+        46
+      ],
+      "windows_baseline_equal_except_identity_time": false,
+      "windows_baseline_different_rows": [
+        52
+      ],
+      "row_count": 53,
+      "windows_baseline_row_count": 59,
+      "replay_report": {
+        "total_recordings": 1,
+        "pass": 0,
+        "partial_pass": 1,
+        "fail": 0,
+        "quirk": 0,
+        "by_quirk": {},
+        "quirk_games": [],
+        "by_kind": {},
+        "per_card": {},
+        "failed_games": [],
+        "skipped_actions": 0
+      },
+      "tested_mod_sha256": "bf0e29af55a7ae152df14a298a81348ddddd05c5c4d7848cb9ecf359b984c3c4"
+    }
+  },
+  "final_build_mod_sha256": "1867e45acb8f55630e22786d7b1077fd3421badede2957abb572fbcbe0051a7a",
+  "native_fixture_sha256": "f062447724f8bb7b7690001926bc97e8fe78b923ead1face6fb437805173b6b2"
+}

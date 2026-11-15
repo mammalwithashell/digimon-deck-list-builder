@@ -178,6 +178,7 @@ namespace DcgoRecorder
                         }
                     case 4:
                         {
+                            ConfigurePhotonTransport();
                             var sbm = UnityEngine.Object.FindObjectOfType<Il2Cpp.SelectBattleMode>();
                             if (sbm == null) throw new Exception("SelectBattleMode not found yet");
                             if (_autoMode == "host")
@@ -294,7 +295,9 @@ namespace DcgoRecorder
                             }
                             // Play on by pressing "Next Phase" (Btn_Skill00) until a few turns have passed; that walks the
                             // breeding / main / end phases against the bot with no card plays - enough to exercise the hooks.
-                            if (tsm.IsSelecting)
+                            // The bot also raises IsSelecting while hatching / resolving its own choices.
+                            // Let its turn finish; only a local-seat prompt needs a human answer here.
+                            if (tsm.IsSelecting && TurnPlayerId() == gm.You.PlayerID)
                                 LoggerInstance.Msg("auto: a selection prompt is open (turn " + tsm.TurnCount + "); the script cannot answer it, ending the game");
                             else if (tsm.TurnCount < 6 && _autoAttempts < 40)
                             {
@@ -491,6 +494,7 @@ namespace DcgoRecorder
 
         public override void OnUpdate()
         {
+            PhotonManagedSocket.Pump();
             var now = UnityEngine.Time.realtimeSinceStartup;
             try
             {
@@ -652,6 +656,30 @@ namespace DcgoRecorder
             _lastDumpSignature = signature;
             File.AppendAllText(Path.Combine(_dir, "scenes.txt"), body + "\n");
             LoggerInstance.Msg("dumped " + buttons.Length + " buttons for scene " + scene);
+        }
+
+        // Optional cloud transport: Photon UDP is unavailable on some hosts. This changes only
+        // the connection transport/region, not gameplay. No file means the game's normal settings.
+        void ConfigurePhotonTransport()
+        {
+            var file = Path.Combine(_dir, "photon.txt");
+            if (!File.Exists(file)) return;
+            var lines = File.ReadAllLines(file);
+            if (lines.Length == 0 || lines[0].Trim() != "wss")
+                throw new Exception("photon.txt: expected wss on the first line");
+            var settings = Il2CppPhoton.Pun.PhotonNetwork.PhotonServerSettings.AppSettings;
+            settings.Protocol = Il2CppExitGames.Client.Photon.ConnectionProtocol.WebSocketSecure;
+            settings.EnableProtocolFallback = false;
+            if (lines.Length > 1 && !string.IsNullOrWhiteSpace(lines[1]))
+                settings.FixedRegion = lines[1].Trim();
+            // DCGO's ConnectToRegionMaster path reuses the peer without ConnectUsingSettings.
+            var client = Il2CppPhoton.Pun.PhotonNetwork.NetworkingClient;
+            client.LoadBalancingPeer.TransportProtocol = settings.Protocol;
+            client.ProxyServerAddress = settings.ProxyServer;
+            client.EnableProtocolFallback = false;
+            if (Environment.GetEnvironmentVariable("DCGO_PHOTON_MANAGED_SOCKET") == "1")
+                PhotonManagedSocket.Install(HarmonyInstance);
+            LoggerInstance.Msg("photon: peer transport " + client.LoadBalancingPeer.TransportProtocol);
         }
 
         public override void OnInitializeMelon()

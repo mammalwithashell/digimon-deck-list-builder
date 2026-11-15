@@ -1,0 +1,86 @@
+{
+  "battle_area": [
+    {
+      "attacks_this_turn": 0,
+      "colors": [
+        "Yellow"
+      ],
+      "dp": 4000,
+      "handle": {
+        "index": 0,
+        "player": 0
+      },
+      "is_attacking": false,
+      "is_suspended": false,
+      "kind": "Digimon",
+      "level": 4,
+      "linked_card_ids": [],
+      "modifiers": [],
+      "stack_card_ids": [
+        "ST23-03"
+      ],
+      "top_card_id": "ST23-03",
+      "top_card_name": "Cougarmon",
+      "top_is_placeholder": false,
+      "turn_digivolved": 0,
+      "turn_played": 3
+    },
+    {
+      "attacks_this_turn": 0,
+      "colors": [
+        "White"
+      ],
+      "dp": null,
+      "handle": {
+        "index": 1,
+        "player": 0
+      },
+      "is_attacking": false,
+      "is_suspended": false,
+      "kind": "Option",
+      "level": null,
+      "linked_card_ids": [],
+      "modifiers": [],
+      "stack_card_ids": [
+        "ST23-15"
+      ],
+      "top_card_id": "ST23-15",
+      "top_card_name": "e-Pulse",
+      "top_is_placeholder": false,
+      "turn_digivolved": 0,
+      "turn_played": 3
+    },
+    {
+      "attacks_this_turn": 0,
+      "colors": [
+        "Yellow"
+      ],
+      "dp": 4000,
+      "handle": {
+        "index": 2,
+        "player": 0
+      },
+      "is_attacking": false,
+      "is_suspended": false,
+      "kind": "Digimon",
+      "level": 4,
+      "linked_card_ids": [],
+      "modifiers": [],
+      "stack_card_ids": [
+        "ST23-01",
+        "ST23-12",
+        "ST23-03"
+      ],
+      "top_card_id": "ST23-03",
+      "top_card_name": "Cougarmon",
+      "top_is_placeholder": false,
+      "turn_digivolved": 2,
+      "turn_played": 2
+    }
+  ],
+  "breeding": [],
+  "deck_count": 35,
+  "egg_deck_count": 3,
+  "player": 0,
+  "trash_count": 4
+}

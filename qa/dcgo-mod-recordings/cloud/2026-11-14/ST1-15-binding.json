@@ -1,0 +1,95 @@
+{
+  "generated_at": "2026-11-14T17:33:39.288292+00:00",
+  "card": {
+    "card_id": "ST1-15",
+    "total_clauses": 2,
+    "by_verdict": {
+      "confirmed": 0,
+      "diverged": 0,
+      "unreachable": 0,
+      "unavailable": 0,
+      "unmeasured": 2
+    },
+    "clauses": [
+      {
+        "clause_id": "ST1-15#effect#0",
+        "zone": "effect",
+        "label": "Effect",
+        "kind": "timing",
+        "text": "Delete up to 2 of your opponent's Digimon with 4000 DP or less.",
+        "source": "bundle",
+        "verdict": "unmeasured",
+        "stored_verdict": "confirmed",
+        "stored_record": {
+          "clause_id": "ST1-15#effect#0",
+          "card_id": "ST1-15",
+          "verdict": "confirmed",
+          "label": "Effect",
+          "text_sha256": "45873d5865b9972ea303c699455434309b9480e1d449bc0ee3f29a5a903dbc21",
+          "scenario_path": "qa/dcgo-exams/ST1/ST1-15-effect0.yaml",
+          "recorded_at": "2026-08-23T22:14:49.849919200+00:00"
+        },
+        "invalidated": true,
+        "reason": "stored 'confirmed' verdict invalidated: stored verdict belongs to an unbound historical container",
+        "scenarios": [
+          "qa/dcgo-exams/ST1/ST1-15-effect0-two-targets.yaml",
+          "qa/dcgo-exams/ST1/ST1-15-effect0.yaml"
+        ],
+        "recorded_at": "2026-08-23T22:14:49.849919200+00:00",
+        "dcgo_build": null,
+        "job_id": null,
+        "triage": null,
+        "citation": null
+      },
+      {
+        "clause_id": "ST1-15#security#0",
+        "zone": "security",
+        "label": "Security Effect",
+        "kind": "timing",
+        "text": "Activate this card's [Main] effect.",
+        "source": "bundle",
+        "verdict": "unmeasured",
+        "stored_verdict": "confirmed",
+        "stored_record": {
+          "clause_id": "ST1-15#security#0",
+          "card_id": "ST1-15",
+          "verdict": "confirmed",
+          "label": "Security Effect",
+          "text_sha256": "d6627b6f7acc8431f74514b83fc5c9f6f054e8cfdf034ec33d7d78d2773e0cfe",
+          "scenario_path": "qa/dcgo-exams/EX12/ST1-15-effect1.yaml",
+          "recorded_at": "2026-08-23T22:14:39.559693700+00:00"
+        },
+        "invalidated": true,
+        "reason": "stored 'confirmed' verdict invalidated: stored verdict belongs to an unbound historical container",
+        "scenarios": [
+          "qa/dcgo-exams/EX12/ST1-15-effect1.yaml"
+        ],
+        "recorded_at": "2026-08-23T22:14:39.559693700+00:00",
+        "dcgo_build": null,
+        "job_id": null,
+        "triage": null,
+        "citation": null
+      }
+    ]
+  },
+  "denominator": {
+    "total_clauses": 2,
+    "total_cards": 1,
+    "by_verdict": {
+      "confirmed": 0,
+      "diverged": 0,
+      "unreachable": 0,
+      "unavailable": 0,
+      "unmeasured": 2
+    },
+    "by_zone": {
+      "effect": 1,
+      "security": 1
+    }
+  },
+  "invalidated_clause_ids": [
+    "ST1-15#effect#0",
+    "ST1-15#security#0"
+  ],
+  "orphan_scenarios": []
+}

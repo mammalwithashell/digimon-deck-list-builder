@@ -1,0 +1,2 @@
+plan -> /workspace/dcgo-cloud/pvp-next/shared/plan.txt: first player seat 1, decks 50+4 / 50+4, mulligans [(1, 'keep'), (0, 'redraw')], 54 decisions after them
+Prepared /workspace/dcgo-cloud/pvp-next; start one dcgo-agent --script process per agent directory, then host and join.

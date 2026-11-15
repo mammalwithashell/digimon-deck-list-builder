@@ -1,0 +1,5 @@
+wrote 19 rows (16 decisions, 4 inferred) -> qa/dcgo-mod-recordings/cloud/2026-11-14/cloud-bot-fixed.jsonl
+  inferred: bot breeding HATCH (egg deck shrank), turn 2
+  inferred: bot main PASS (turn change), turn 2
+  inferred: bot breeding PASS, turn 4
+  inferred: bot main PASS (turn change), turn 4

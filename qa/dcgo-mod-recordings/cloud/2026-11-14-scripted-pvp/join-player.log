@@ -1,0 +1,2415 @@
+[Physics::Module] Initialized MultithreadedJobDispatcher with {0} workers.
+Initialize engine version: 2021.3.45f2 (88f88f591b2e)
+[Subsystems] Discovering subsystems at path Z:/workspace/dcgo-cloud/pvp-next/join/client/DCGO_Standalone/Game/DCGO_Data/UnitySubsystems
+GfxDevice: creating device client; threaded=1; jobified=1
+Direct3D:
+    Version:  Direct3D 11.0 [level 11.1]
+    Renderer: llvmpipe (LLVM 19.1.7, 256 bits) (ID=0x0)
+    Vendor:   Unknown (ID=10005)
+    VRAM:     18007 MB
+    Driver:   31.0.14051.5006
+FMOD failed to initialize any audio devices, running on emulated software output with no sound. Please check your audio drivers and/or hardware for malfunction.
+<RI> Initializing input.
+<RI> Input initialized.
+<RI> Initialized touch support.
+-------------------------------------------------------------------------------------------------------
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+
+~   This Game has been MODIFIED using MelonLoader. DO NOT report any issues to the Game Developers!   ~
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+
+-------------------------------------------------------------------------------------------------------
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+
+ERROR: Shader TextMeshPro/Mobile/Distance Field shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
+UnloadTime: 23.661900 ms
+Game Initialize - random number sequence initialization, GameRandom.Seed:8022783882983097012
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Init>d__126:MoveNext()
+System.Runtime.CompilerServices.AsyncVoidMethodBuilder:Start(TStateMachine&)
+<LoadCoroutine>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+[Loading] Banlist Attempt 1 of 3
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<LoadBanListOnline>d__122:MoveNext()
+System.Runtime.CompilerServices.AsyncTaskMethodBuilder:Start(TStateMachine&)
+ContinuousController:LoadBanListOnline()
+<Init>d__126:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+System.Threading.Tasks.AwaitTaskContinuation:RunCallback(ContextCallback, Object, Task&)
+System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run(Task, Boolean)
+System.Threading.Tasks.Task:FinishContinuations()
+System.Threading.Tasks.Task`1:TrySetResult(TResult)
+System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1:SetResult(TResult)
+<GetSprite>d__2:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+System.Threading.Tasks.AwaitTaskContinuation:RunCallback(ContextCallback, Object, Task&)
+System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run(Task, Boolean)
+System.Threading.Tasks.Task:FinishContinuations()
+System.Threading.Tasks.Task`1:TrySetResult(TResult)
+System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1:SetResult(TResult)
+<GetSpriteImage>d__3:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+System.Threading.Tasks.AwaitTaskContinuation:RunCallback(ContextCallback, Object, Task&)
+System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run(Task, Boolean)
+System.Threading.Tasks.Task:FinishContinuations()
+System.Threading.Tasks.Task`1:TrySetResult(TResult)
+System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1:SetResult(TResult)
+<ReadFile>d__0:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Create Deck From File: Script seat 1
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+ContinuousController:CreateDeckFromFile(String, String, Int32, String, Int32)
+ContinuousController:LoadDeckLists()
+<Init>d__126:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+System.Threading.Tasks.AwaitTaskContinuation:RunCallback(ContextCallback, Object, Task&)
+System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run(Task, Boolean)
+System.Threading.Tasks.Task:FinishContinuations()
+System.Threading.Tasks.Task`1:TrySetResult(TResult)
+System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1:SetResult(TResult)
+<LoadBanListOnline>d__122:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Modified: 54
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+DeckBuildingRule:<ModifiedDeckData>g__modifiedList|1_0(List`1)
+DeckBuildingRule:ModifiedDeckData(DeckData)
+DeckData:ModifiedDeckData()
+ContinuousController:CreateDeckFromFile(String, String, Int32, String, Int32)
+ContinuousController:LoadDeckLists()
+<Init>d__126:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+System.Threading.Tasks.AwaitTaskContinuation:RunCallback(ContextCallback, Object, Task&)
+System.Threading.Tasks.SynchronizationContextAwaitTaskContinuation:Run(Task, Boolean)
+System.Threading.Tasks.Task:FinishContinuations()
+System.Threading.Tasks.Task`1:TrySetResult(TResult)
+System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1:SetResult(TResult)
+<LoadBanListOnline>d__122:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:LateUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:LateUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:LateUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:LateUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT11-035.webp
+Result: Success
+HTTP status: 200
+Bytes received: 74864
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:LateUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:LateUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:LateUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:LateUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+Material Font Material doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Graphic:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+
+The character used for Underline is not available in font asset [digitalism SDF].
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+TMPro.TMP_Text:GetUnderlineSpecialCharacter(TMP_FontAsset)
+TMPro.TextMeshProUGUI:LoadFontAsset()
+TMPro.TextMeshProUGUI:Awake()
+
+The character used for Underline is not available in font asset [digitalism SDF].
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+TMPro.TMP_Text:GetUnderlineSpecialCharacter(TMP_FontAsset)
+TMPro.TextMeshProUGUI:LoadFontAsset()
+TMPro.TextMeshProUGUI:Awake()
+
+Battle Initialization
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<AwakeCoroutine>d__86:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+playername:None
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+TurnStateMachine:<Init>g__PlayerName|16_1(Player, <>c__DisplayClass16_0&)
+<Init>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+playername:None
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+TurnStateMachine:<Init>g__PlayerName|16_1(Player, <>c__DisplayClass16_0&)
+<Init>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+random number sequence initialization, GameRandom.Seed:-7008883690638766555
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<SetRandomCoroutine>d__246:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT22-013.webp
+Result: Success
+HTTP status: 200
+Bytes received: 103886
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/EX9-066.webp
+Result: Success
+HTTP status: 200
+Bytes received: 85616
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/P-206.webp
+Result: Success
+HTTP status: 200
+Bytes received: 86948
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT17-007.webp
+Result: Success
+HTTP status: 200
+Bytes received: 89960
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT17-019.webp
+Result: Success
+HTTP status: 200
+Bytes received: 81622
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+You (Player):Start Turn(1th Turn)
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivePhase>d__26:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<GameStateMachine>d__17:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT14-001.webp
+Result: Success
+HTTP status: 200
+Bytes received: 78658
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+You (Player):Main Phase
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT17-027.webp
+Result: Success
+HTTP status: 200
+Bytes received: 106818
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<UseOption>d__5:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Digital Gate Open
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<UseOption>d__5:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Reveal 3 was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<UseOption>d__5:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT17-081.webp
+Result: Success
+HTTP status: 200
+Bytes received: 75546
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT17-015.webp
+Result: Success
+HTTP status: 200
+Bytes received: 112966
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/ST2-13.webp
+Result: Success
+HTTP status: 200
+Bytes received: 58238
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+You (Player):End Phase
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<EndPhase>d__86:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<GameStateMachine>d__17:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Opponent (Player):Start Turn(2th Turn)
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivePhase>d__26:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<GameStateMachine>d__17:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/ST23-01.webp
+Result: Success
+HTTP status: 200
+Bytes received: 55262
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Opponent (Player):Main Phase
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/ST23-12.webp
+Result: Success
+HTTP status: 200
+Bytes received: 56336
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/ST23-03.webp
+Result: Success
+HTTP status: 200
+Bytes received: 69256
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT4-104.webp
+Result: Success
+HTTP status: 200
+Bytes received: 54404
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<UseOption>d__5:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Blinding Ray
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<UseOption>d__5:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Blinding Ray was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<UseOption>d__5:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT25-035.webp
+Result: Success
+HTTP status: 200
+Bytes received: 67604
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT25-043.webp
+Result: Success
+HTTP status: 200
+Bytes received: 90326
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<UseOption>d__5:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Habakirimon
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<UseOption>d__5:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+1 enemy Digimon gets -8K DP for turn, then by trashing your top sec, all enemy digimon get -5K DP for turn was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<UseOption>d__5:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT25-057.webp
+Result: Success
+HTTP status: 200
+Bytes received: 75688
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Opponent (Player):End Phase
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<EndPhase>d__86:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<GameStateMachine>d__17:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+You (Player):Start Turn(3th Turn)
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivePhase>d__26:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<GameStateMachine>d__17:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+You (Player):Main Phase
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Draw 1 Can't Activate
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Counter Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Block Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Battle Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/ST23-15.webp
+Result: Success
+HTTP status: 200
+Bytes received: 35278
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<SecurityCheck>d__11:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: e-Pulse
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<SecurityCheck>d__11:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+[Security] You may play 1 [DATA SQUAD] trait card with a play cost of 4 or less from your hand or trash without paying the cost. Then, place this card in the battle area. was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<SecurityCheck>d__11:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Effect Description: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+ICardEffect:get_IsOnPlay()
+System.Linq.Enumerable:Any(IEnumerable`1, Func`2)
+<PlayPermanent>d__28:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Can Trigger: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+ICardEffect:get_IsOnPlay()
+System.Linq.Enumerable:Any(IEnumerable`1, Func`2)
+<PlayPermanent>d__28:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Cougarmon
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Add your top security to hand. <Recovery +1> was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Koromon
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Draw 1 was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT22-026.webp
+Result: Success
+HTTP status: 200
+Bytes received: 95416
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Draw 1 Can't Activate
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, End Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, CleanUp Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Digital Gate Open
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Play 1 tamer with same colour as any of your digimon on the field, from your hand with 4 reduced cost was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Effect Description: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+ICardEffect:get_IsOnPlay()
+System.Linq.Enumerable:Any(IEnumerable`1, Func`2)
+<PlayPermanent>d__28:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Can Trigger: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+ICardEffect:get_IsOnPlay()
+System.Linq.Enumerable:Any(IEnumerable`1, Func`2)
+<PlayPermanent>d__28:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Tai Kamiya & Matt Ishida
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Return 1 card, or Draw 1. was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT22-008.webp
+Result: Success
+HTTP status: 200
+Bytes received: 89216
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Tai Kamiya & Matt Ishida
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Suspend this tamer to gain memory was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+You (Player):End Phase
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<EndPhase>d__86:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<GameStateMachine>d__17:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Opponent (Player):Start Turn(4th Turn)
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivePhase>d__26:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<GameStateMachine>d__17:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Opponent (Player):Main Phase
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Place this card under 1 [BEATBREAK] tamer face down to <Draw 1> and gain 1 memory Can't Activate
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Digivolve into [Glowing Dawn] for 2 less Can't Activate
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Counter Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Block Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Battle Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT17-095.webp
+Result: Success
+HTTP status: 200
+Bytes received: 61428
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<SecurityCheck>d__11:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Miraculous Mega Knight
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<SecurityCheck>d__11:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Play 1 [Tai Kamiya] or [Matt Ishida] from hand or trash and add this card to hand was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<SecurityCheck>d__11:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, End Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, CleanUp Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Counter Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Block Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Battle Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT17-078.webp
+Result: Success
+HTTP status: 200
+Bytes received: 82768
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Active Attack, End Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, CleanUp Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT25-049.webp
+Result: Success
+HTTP status: 200
+Bytes received: 69372
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Effect Description: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+ICardEffect:get_IsOnPlay()
+System.Linq.Enumerable:Any(IEnumerable`1, Func`2)
+<PlayPermanent>d__28:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Can Trigger: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+ICardEffect:get_IsOnPlay()
+System.Linq.Enumerable:Any(IEnumerable`1, Func`2)
+<PlayPermanent>d__28:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Armalizamon
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+You may suspend 1 enemy Digimon was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT25-090.webp
+Result: Success
+HTTP status: 200
+Bytes received: 49192
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Effect Description: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+ICardEffect:get_IsOnPlay()
+System.Linq.Enumerable:Any(IEnumerable`1, Func`2)
+<PlayPermanent>d__28:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Can Trigger: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+ICardEffect:get_IsOnPlay()
+System.Linq.Enumerable:Any(IEnumerable`1, Func`2)
+<PlayPermanent>d__28:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Armalizamon
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+You may suspend 1 enemy Digimon was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Opponent (Player):End Phase
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<EndPhase>d__86:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<GameStateMachine>d__17:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+You (Player):Start Turn(5th Turn)
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivePhase>d__26:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<GameStateMachine>d__17:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+You (Player):Main Phase
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Gabumon
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Draw 1 was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Tomoro Tenma
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Suspend to may place top 2 from deck face down under this tamer was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Counter Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Block Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Battle Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT25-041.webp
+Result: Success
+HTTP status: 200
+Bytes received: 76994
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Koromon
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Draw 1 was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/EX9-021.webp
+Result: Success
+HTTP status: 200
+Bytes received: 91096
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Active Attack, End Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, CleanUp Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Suspend to may place top 2 from deck face down under this tamer Can't Activate
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Counter Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Block Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Battle Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, End Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, CleanUp Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Effect Description: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+ICardEffect:get_IsOnPlay()
+System.Linq.Enumerable:Any(IEnumerable`1, Func`2)
+<PlayPermanent>d__28:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Can Trigger: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+ICardEffect:get_IsOnPlay()
+System.Linq.Enumerable:Any(IEnumerable`1, Func`2)
+<PlayPermanent>d__28:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: MetalGarurumon
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Choose 1 effect was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Material HandCardEvoCostBackground doesn't have _Stencil property
+UnityEngine.Logger:Log(LogType, Object, Object)
+UnityEngine.Debug:LogWarning(Object, Object)
+UnityEngine.UI.StencilMaterial:LogWarningWhenNotInBatchmode(String, Object)
+UnityEngine.UI.StencilMaterial:Add(Material, Int32, StencilOp, CompareFunction, ColorWriteMask, Int32, Int32)
+UnityEngine.UI.MaskableGraphic:GetModifiedMaterial(Material)
+UnityEngine.UI.Graphic:get_materialForRendering()
+UnityEngine.UI.Image:UpdateMaterial()
+UnityEngine.UI.Graphic:Rebuild(CanvasUpdate)
+UnityEngine.UI.CanvasUpdateRegistry:PerformUpdate()
+UnityEngine.UI.ScrollRect:SetNormalizedPosition(Single, Int32)
+<OpenSelectCardPanelCoroutine>d__34:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+1 of your [Omnimon] can attack a player Can't Activate
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+You (Player):End Phase
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<EndPhase>d__86:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<GameStateMachine>d__17:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Opponent (Player):Start Turn(6th Turn)
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivePhase>d__26:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<GameStateMachine>d__17:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Set Memory to 3 Can't Activate
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Opponent (Player):Main Phase
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: e-Pulse
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Place this card under 1 [BEATBREAK] tamer face down to <Draw 1> and gain 1 memory was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Tomoro Tenma
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Suspend to may place top 2 from deck face down under this tamer was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Counter Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Omnimon
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Block Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Battle Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, End Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, CleanUp Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Image request: https://raw.githubusercontent.com/Facundo-Villafane/dcg-cards/main/cards/BT25-032.webp
+Result: Success
+HTTP status: 200
+Bytes received: 68356
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<HandleCardImage>d__8:MoveNext()
+System.Threading.ExecutionContext:RunInternal(ExecutionContext, ContextCallback, Object, Boolean)
+System.Runtime.CompilerServices.MoveNextRunner:Run()
+UnityEngine.WorkRequest:Invoke()
+UnityEngine.UnitySynchronizationContext:Exec()
+
+Suspend to may place top 2 from deck face down under this tamer Can't Activate
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Counter Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Omnimon
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Block Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, Battle Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<SecurityCheck>d__11:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Tai Kamiya & Matt Ishida
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<SecurityCheck>d__11:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Play this card was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateEffectProcess>d__56:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<SecurityCheck>d__11:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, End Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Active Attack, CleanUp Step
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<MainPhase>d__72:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Trash 1 Face Down under a tamer to reduce cost by 3 is Cut In effect
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Trash 1 Face Down under a tamer to reduce cost by 3 is Cut In effect
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Trash 1 Face Down under a tamer to reduce cost by 1 is Cut In effect
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills>d__16:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<TriggeredSkillProcess>d__35:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: True
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Activate_Optional_Effect_Execute: Armalizamon
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+
+Trash 1 Face Down under a tamer to reduce cost by 3 was used
+UnityEngine.Logger:Log(LogType, Object)
+UnityEngine.Debug:Log(Object)
+<Activate_Effect_Execute>d__6:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<Activate_Optional_Effect_Execute>d__3:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<<ActivateMultipleSkills_OnePlayer>g__Activate|1>d:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+<ActivateMultipleSkills_OnePlayer>d__19:MoveNext()
+UnityEngine.SetupCoroutine:InvokeMoveNext(IEnumerator, IntPtr)
+

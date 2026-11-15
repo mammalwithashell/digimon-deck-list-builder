@@ -1,0 +1,32 @@
+{
+  "status": "interrupted_display_exit",
+  "winner": null,
+  "oracle_verdict": null,
+  "display": ":101",
+  "note": "Both clients lost X connection. Preserve this run as incomplete, not a card-effect failure.",
+  "seat0": {
+    "requests": 24,
+    "offered_script_steps": [
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "persistent_zone_warnings": 0,
+    "script_divergences": 0
+  },
+  "seat1": {
+    "requests": 21,
+    "offered_script_steps": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "persistent_zone_warnings": 0,
+    "script_divergences": 0
+  }
+}
