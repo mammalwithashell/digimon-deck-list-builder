@@ -163,3 +163,40 @@ fn bt22_023_end_turn_allows_already_unsuspended_target() {
         2
     );
 }
+
+#[test]
+fn bt22_023_end_turn_player_lock_excludes_digimon_but_keeps_tamer_choice() {
+    use digimon_engine::action::mask::build_action_mask;
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = base().start();
+    r.place_on_field(0, ID, Some(0));
+    r.place_on_field(0, "LOW", Some(0));
+    r.place_on_field(0, "TAMER", Some(0));
+    for p in &mut r.game.players[0].battle_area {
+        p.is_suspended = true;
+    }
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotUnsuspend, 0, Expiry::Permanent, None, 0),
+    );
+    r.pass_turn();
+    let v = r
+        .pending_selection_view()
+        .expect("Tamer remains selectable under Digimon lock");
+    assert_eq!(v.kind, digimon_engine::selection::SelectionKind::OwnField);
+    assert_eq!(v.valid_action_ids.len(), 1);
+    let saved = r.game.clone();
+    for _ in 0..2 {
+        r.game = saved.clone();
+        assert_eq!(
+            build_action_mask(&r.game, v.selecting_player)[v.valid_action_ids[0] as usize],
+            1.0
+        );
+        r.execute_action(v.selecting_player, v.valid_action_ids[0])
+            .unwrap();
+        assert!(r.game.players[0].battle_area[0].is_suspended);
+        assert!(r.game.players[0].battle_area[1].is_suspended);
+        assert!(!r.game.players[0].battle_area[2].is_suspended);
+    }
+}
