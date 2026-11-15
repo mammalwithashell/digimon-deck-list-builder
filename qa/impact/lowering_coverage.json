@@ -72364,7 +72364,9 @@
   },
   "verb:place_cards_as_top_sources": {
    "kind": "verb",
-   "lowering_files": [],
+   "lowering_files": [
+    "code/digimon-engine/src/dsl_cards/step/mod.rs"
+   ],
    "name": "place_cards_as_top_sources",
    "parsed_only": false,
    "signals": {

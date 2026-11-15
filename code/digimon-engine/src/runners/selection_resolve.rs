@@ -480,7 +480,7 @@ fn top_bottom_branches(pending: &crate::selection::PendingSelection) -> Option<(
 /// same code silently picks the wrong branch.
 ///
 /// Scans whole integer tokens so `"cost 2"` does not match `12` or `20`.
-fn label_mentions_value(label: &str, want: i64) -> bool {
+pub fn label_mentions_value(label: &str, want: i64) -> bool {
     if let Some(cost) = label.strip_prefix("Digivolve for cost ") {
         let number: String = cost.chars().take_while(|c| c.is_ascii_digit()).collect();
         return number.parse::<i64>().ok() == Some(want);

@@ -30010,7 +30010,7 @@
       ]
     }
   },
-  "cards_root": "C:/Users/james/Documents/digimon-deck-list-builder-1/code/digimon-engine/cards",
+  "cards_root": "code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost_reduce": [
       "BT17-020",

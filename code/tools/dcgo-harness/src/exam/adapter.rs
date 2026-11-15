@@ -539,9 +539,10 @@ impl ScenarioAdapter {
                         ));
                     }
                     select_sources.extend(select_source(&game, i));
-                    let (row, wire) =
+                    let (mut row, wire) =
                         build_selection_row_tracked(&game, i, actor, payload, step.expect.as_ref(), &native_plays)?;
                     let _ = wire;
+                    stamp_sim_only_engine_action(&game, payload, &mut row);
                     check_select_expectations(&game, i, payload, step.expect.as_ref())?;
                     steps.push(StepSpec {
                         actor,
@@ -2211,6 +2212,44 @@ fn select_source(game: &Game, step: usize) -> Option<SelectSource> {
     })
 }
 
+/// A `sim_only` select answers OUR prompt, so the value the author wrote is a
+/// branch of OUR engine's list, not a DCGO recording's menu value. Name that
+/// branch's action up front (`SelectionRow::engine_action`, taken first by
+/// `resolve_next`) so the recording-shaped readings -- a `MultipleSkills` index
+/// is a position in DCGO's own list of activatable effects, a count on an effect
+/// digivolve is a PRINTED cost -- are never applied to a number that was never
+/// a DCGO answer. Stamped only when the prompt names exactly one branch:
+///
+/// * a bare `value:` on an `EffectChoice`: the one branch whose label mentions
+///   that number (the same reading `choice:` uses, by number instead of text).
+///
+/// Anything else is left unstamped, so the replay's own honest readings (and
+/// refusals) still decide it.
+fn stamp_sim_only_engine_action(game: &Game, payload: &SelectPayload, row: &mut SelectionRow) {
+    if row.engine_action.is_some() {
+        return;
+    }
+    let Some(pending) = game.pending_selection.as_ref() else {
+        return;
+    };
+    let Some(entries) = pending.effect_choices.as_ref() else {
+        return;
+    };
+    match payload {
+        SelectPayload::Value(v) if pending.kind == SelectionKind::EffectChoice => {
+            let hits: Vec<u16> = entries
+                .iter()
+                .filter(|e| digimon_engine::runners::selection_resolve::label_mentions_value(&e.label, i64::from(*v)))
+                .map(|e| e.action_id)
+                .collect();
+            if let [only] = hits.as_slice() {
+                row.engine_action = Some(*only);
+            }
+        }
+        _ => {}
+    }
+}
+
 fn build_selection_row_tracked(
     game:&Game,i:usize,actor:PlayerId,payload:&SelectPayload,expect:Option<&Expect>,
     tracking:&native_play_tracking::NativePlayTracking,
@@ -2378,6 +2417,18 @@ fn build_selection_row(
                     // `int_value` is the branch-index payload `resolve_next`
                     // maps straight through `effect_choices`.
                     row.int_value = Some(pick as i64);
+                    // ...and name the branch's own action. Our side answers
+                    // from this row, and a `MultipleSkills` int read as a
+                    // recording's value is a position in DCGO's list of
+                    // activatable effects (`resolve_next` refuses to read it as
+                    // ours); the identity above already chose the branch, so
+                    // hand over the action it names.
+                    row.engine_action = game
+                        .pending_selection
+                        .as_ref()
+                        .and_then(|p| p.effect_choices.as_ref())
+                        .and_then(|entries| entries.get(pick))
+                        .map(|entry| entry.action_id);
                 }
                 // An ordinal over any other live prompt is an author using
                 // MultipleSkills vocabulary on a prompt that has no trigger
