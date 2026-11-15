@@ -451,3 +451,98 @@ fn mind_link_pick_cannot_be_declined() {
     );
     assert_eq!(digi_perm.top_card().card_id(&r.game.card_data), "DIGI");
 }
+
+// --- G-PERMANENT-HANDLE-POSITIONAL-STALENESS: Mind Link compaction ---
+
+/// `<Mind Link>` removes the Tamer's permanent from the battle area, which
+/// COMPACTS `battle_area` (a Vec): every later permanent's positional
+/// `PermanentHandle` drops by one. Modifier state keyed on those handles
+/// must follow the permanents (as every other removal path does via
+/// `ModifierRegistry::shift_after_battle_area_remove`), not stay on the slot.
+///
+/// Board: [0] Mind Link Tamer, [1] DIGI-A (+2000 DP), [2] DIGI-B (+1000 DP,
+/// carries a non-face-down Tamer source so it is not a Mind Link target).
+/// After Mind Link onto DIGI-A: [0] DIGI-A must still read +2000 and
+/// [1] DIGI-B must still read +1000. Without the shift, DIGI-A loses its
+/// buff and DIGI-B picks up DIGI-A's +2000 from the stale slot.
+#[test]
+fn mind_link_rekeys_later_permanents_modifiers_after_tamer_removal() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    use digimon_engine::permanent::PermanentHandle;
+
+    let mut r = DebugRunner::builder()
+        .add_card(mind_link_tamer("ML-TAMER"))
+        .add_card(plain_digimon("DIGI-A"))
+        .add_card(plain_digimon("DIGI-B"))
+        .add_card(plain_tamer("OLD-TAMER"))
+        .start();
+
+    let tamer = r.place_on_field(0, "ML-TAMER", None);
+    let a = r.place_on_field(0, "DIGI-A", None);
+    let b = r.place_on_field(0, "DIGI-B", None);
+    assert_eq!((tamer.index, a.index, b.index), (0, 1, 2));
+    // Plant a non-face-down Tamer source at the BOTTOM of DIGI-B's stack so
+    // DIGI-B is not a Mind Link candidate (DCGO MindLink.cs:25).
+    {
+        let data_idx = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "OLD-TAMER")
+            .unwrap();
+        let card_index = r.game.next_card_index();
+        r.game.players[0].battle_area[2]
+            .card_sources
+            .insert(0, CardSource::new(data_idx, 0, card_index));
+    }
+
+    r.game.modifiers.add(
+        a,
+        ModifierEntry::simple(ModifierType::ChangeDp, 2000, Expiry::EndOfTurn, 0),
+    );
+    r.game.modifiers.add(
+        b,
+        ModifierEntry::simple(ModifierType::ChangeDp, 1000, Expiry::EndOfTurn, 0),
+    );
+    let base = 3000;
+    assert_eq!(r.effective_dp(a), Some(base + 2000));
+    assert_eq!(r.effective_dp(b), Some(base + 1000));
+
+    r.game.enter_main_phase();
+    r.game.set_memory(0);
+    assert!(r.game.activate_field_main(0, tamer.index as usize));
+    let action = {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("MindLink target pick must be parked");
+        assert_eq!(pending.valid_action_ids.len(), 1, "only DIGI-A is a target");
+        pending.valid_action_ids[0]
+    };
+    r.game.resolve_selection(0, action).expect("pick DIGI-A");
+    assert!(r.game.pending_selection.is_none());
+
+    let a_now = PermanentHandle { player: 0, index: 0 };
+    let b_now = PermanentHandle { player: 0, index: 1 };
+    assert_eq!(r.game.players[0].battle_area.len(), 2);
+    assert_eq!(
+        r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data),
+        "DIGI-A"
+    );
+    assert_eq!(
+        r.game.players[0].battle_area[1].top_card().card_id(&r.game.card_data),
+        "DIGI-B"
+    );
+    assert_eq!(
+        r.effective_dp(a_now),
+        Some(base + 2000),
+        "DIGI-A's +2000 must follow it from slot 1 to slot 0"
+    );
+    assert_eq!(
+        r.effective_dp(b_now),
+        Some(base + 1000),
+        "DIGI-B's +1000 must follow it from slot 2 to slot 1 (not DIGI-A's +2000)"
+    );
+}

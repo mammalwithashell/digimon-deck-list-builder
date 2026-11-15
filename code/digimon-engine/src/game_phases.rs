@@ -1177,12 +1177,21 @@ impl Game {
         else {
             return false;
         };
-        self.offer_end_of_turn_keyword_attack(
+        let installed = self.offer_end_of_turn_keyword_attack(
             carrier,
             offer.keyword,
             offer.source_card,
             offer.source_kind,
-        )
+        );
+        if installed {
+            if let Some(effect) = offer.optional_activation {
+                let top = self.player(offer.player).battle_area[carrier.index as usize]
+                    .top_card()
+                    .handle();
+                self.mark_deferred_first_decision(effect, vec![offer.source_card, top]);
+            }
+        }
+        installed
     }
 
     pub(crate) fn run_overclock_selection_step(

@@ -409,3 +409,197 @@ fn st24_13_is_found_by_gaogamons_thomas_h_norstein_play() {
         .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID);
     assert!(on_field, "Marcus & Thomas is played as [Thomas H. Norstein]");
 }
+
+// ─── Section 5 — [Start of Your Main Phase] alongside DNA Charge (ST24-15) ───
+//
+// DCGO PvP game raw-20261113T025510Z#g6: at P1's Start of Main Phase both
+// Marcus Damon & Thomas H. Norstein (ST24-13)'s shared [On Play]/[Start of Your
+// Main Phase] effect (ST24_13.cs:37-45, optional:false) and DNA Charge
+// (ST24-15)'s [Start of Your Main Phase] (ST24_15.cs:113-190) trigger. They
+// trigger simultaneously (CR 4.3 §15-16-13-1, §15-4-3-2) and the turn player
+// picks the order (§15-4-3-5-1). DCGO picked DNA Charge first (MultipleSkills),
+// placed it face down under this Tamer (ST24_15.cs:182
+// AddDigivolutionCardsBottom), then still resolved this Tamer's Yes/No
+// (ST24_13.cs:54-64) and +1 memory (:75-77). The Tamer never left the battle
+// area, so it is not a new card and its pending effect can still activate
+// (§15-4-4-3 cancels only an effect whose card became a new card).
+//
+// The engine dropped it: DNA Charge's relocate removed the Option from
+// `battle_area` (a Vec) without re-keying the queued effects, so a Tamer in a
+// LATER slot kept its old index and `queued_effect_source_is_live` read it as
+// gone. The DNA-Charge-in-a-lower-slot shape is the g6 board.
+
+const DNA: &str = "ST24-15";
+
+/// ST24-13 and (optionally) DNA Charge (ST24-15) as an ordinary field Option on
+/// player 0's battle area, an opponent Digimon (the memory clause's condition),
+/// memory 0. `dna_first` puts DNA Charge in the LOWER slot (the g6 board).
+fn somp_board(with_dna: bool, dna_first: bool) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST24-13 compiles")
+        .dsl_card(DNA)
+        .expect("ST24-15 compiles")
+        .add_card(plain_digimon("OPP"))
+        .add_card(filler("DECKTOP"))
+        .deck(0, &["DECKTOP"; 6])
+        .deck(1, &["DECKTOP"; 6])
+        .memory(0)
+        .start();
+    runner.set_first_player(0);
+    runner.place_on_field(1, "OPP", Some(0));
+    let place_dna = |r: &mut DebugRunner| {
+        let h = r.place_on_field(0, DNA, Some(0));
+        r.game.player_mut(0).battle_area[h.index as usize].option_state =
+            digimon_engine::permanent::OptionState::OrdinaryFieldOption;
+    };
+    if with_dna && dna_first {
+        place_dna(&mut runner);
+    }
+    runner.place_on_field(0, CARD_ID, Some(0));
+    if with_dna && !dna_first {
+        place_dna(&mut runner);
+    }
+    runner
+}
+
+fn tamer_slot(runner: &DebugRunner) -> usize {
+    runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .expect("ST24-13 on the field")
+}
+
+const PLACE_PROMPT: &str = "Place the top card of your deck face down under this Tamer?";
+
+/// Enter the main phase and answer every prompt: the `TriggerOrder` picks
+/// `first`'s branch, ST24-13's Yes/No answers "Yes" (branch 0), DNA Charge's
+/// Tamer pick takes the only legal Tamer. Returns how many times ST24-13's
+/// Yes/No was asked.
+fn run_start_of_main(runner: &mut DebugRunner, first: &str) -> usize {
+    runner.game.enter_main_phase();
+    let mut asked = 0;
+    for _ in 0..16 {
+        let Some(v) = runner.pending_selection_view() else {
+            break;
+        };
+        if v.kind == digimon_engine::selection::SelectionKind::TriggerOrder {
+            let action = v
+                .effect_choices
+                .as_ref()
+                .expect("TriggerOrder branches")
+                .iter()
+                .find(|c| c.label.starts_with(&format!("{first} ")))
+                .unwrap_or_else(|| panic!("no {first} branch: {v:?}"))
+                .action_id;
+            runner.execute_action(v.selecting_player, action).unwrap();
+        } else if v.prompt == PLACE_PROMPT {
+            asked += 1;
+            runner.execute_branch(0).expect("Yes: place the top card");
+        } else {
+            let action = *v
+                .valid_action_ids
+                .first()
+                .unwrap_or_else(|| panic!("no legal action: {v:?}"));
+            runner.execute_action(v.selecting_player, action).unwrap();
+        }
+    }
+    assert!(
+        runner.pending_selection().is_none(),
+        "every Start of Main Phase prompt answered"
+    );
+    asked
+}
+
+/// Both effects resolved: ST24-13 asked once and gained 1 memory; DNA Charge
+/// drew 1, gained 1 memory and sits face down under the Tamer with the placed
+/// deck top card.
+fn assert_both_resolved(runner: &DebugRunner, asked: usize, hand_before: usize) {
+    assert_eq!(
+        asked, 1,
+        "ST24-13's [Start of Your Main Phase] Yes/No is asked exactly once (ST24_13.cs:54-64)"
+    );
+    assert_eq!(
+        runner.memory(),
+        2,
+        "DNA Charge +1 (ST24_15.cs:186) and ST24-13 +1 (ST24_13.cs:75-77)"
+    );
+    assert_eq!(runner.hand_size(0), hand_before + 1, "DNA Charge <Draw 1>");
+    assert_eq!(
+        runner.battle_area_size(0),
+        1,
+        "DNA Charge left the battle area; only the Tamer remains"
+    );
+    let tamer = &runner.game.players[0].battle_area[tamer_slot(runner)];
+    assert_eq!(
+        tamer.card_sources.len(),
+        3,
+        "Tamer + DNA Charge + the placed deck top card"
+    );
+    let ids: Vec<String> = tamer
+        .card_sources
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(ids.iter().any(|id| id == DNA), "DNA Charge under the Tamer: {ids:?}");
+    assert!(
+        ids.iter().any(|id| id == "DECKTOP"),
+        "the deck top card under the Tamer: {ids:?}"
+    );
+    assert!(
+        tamer.card_sources[..2].iter().all(|c| c.face_down),
+        "both placed cards are face down"
+    );
+}
+
+/// ST24-13 alone at the real Start of Main Phase entry (`enter_main_phase`):
+/// one trigger, no order prompt, Yes places the deck top card, +1 memory.
+#[test]
+fn st24_13_start_of_main_phase_alone_places_and_gains_memory() {
+    let mut runner = somp_board(false, false);
+    let asked = run_start_of_main(&mut runner, CARD_ID);
+    assert_eq!(asked, 1, "the Yes/No is asked");
+    assert_eq!(runner.memory(), 1, "opponent has a Digimon => +1 memory");
+    let tamer = &runner.game.players[0].battle_area[tamer_slot(&runner)];
+    assert_eq!(tamer.card_sources.len(), 2, "deck top card placed under the Tamer");
+    assert!(tamer.card_sources[0].face_down, "placed face down");
+}
+
+/// THE g6 SHAPE (raw-20261113T025510Z#g6, file steps 28-30): DNA Charge in the
+/// lower slot, resolved first. ST24-13's pending effect must still resolve.
+#[test]
+fn st24_13_start_of_main_survives_dna_charge_resolving_first_from_a_lower_slot() {
+    let mut runner = somp_board(true, true);
+    let hand_before = runner.hand_size(0);
+    let asked = run_start_of_main(&mut runner, DNA);
+    assert_both_resolved(&runner, asked, hand_before);
+}
+
+/// DNA Charge in the higher slot, resolved first: its removal shifts nothing
+/// below it.
+#[test]
+fn st24_13_start_of_main_survives_dna_charge_resolving_first_from_a_higher_slot() {
+    let mut runner = somp_board(true, false);
+    let hand_before = runner.hand_size(0);
+    let asked = run_start_of_main(&mut runner, DNA);
+    assert_both_resolved(&runner, asked, hand_before);
+}
+
+/// The other order: ST24-13 first, then DNA Charge (lower slot).
+#[test]
+fn st24_13_start_of_main_then_dna_charge_from_a_lower_slot() {
+    let mut runner = somp_board(true, true);
+    let hand_before = runner.hand_size(0);
+    let asked = run_start_of_main(&mut runner, CARD_ID);
+    assert_both_resolved(&runner, asked, hand_before);
+}
+
+/// The other order: ST24-13 first, then DNA Charge (higher slot).
+#[test]
+fn st24_13_start_of_main_then_dna_charge_from_a_higher_slot() {
+    let mut runner = somp_board(true, false);
+    let hand_before = runner.hand_size(0);
+    let asked = run_start_of_main(&mut runner, CARD_ID);
+    assert_both_resolved(&runner, asked, hand_before);
+}

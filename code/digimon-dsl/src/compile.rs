@@ -1061,6 +1061,7 @@ fn compile_predicate(
             first: spec.first.clone(),
         }),
         can_play_from_effect_without_cost: p.can_play_from_effect_without_cost,
+        can_play_or_use_from_effect: p.can_play_or_use_from_effect,
         can_play_to_breeding_from_hand: p.can_play_to_breeding_from_hand,
         can_move_from_breeding_by_effect: p.can_move_from_breeding_by_effect,
         dp_eq,
@@ -4232,6 +4233,10 @@ fn compile_step(
             cards: compile_binding_ref(&a.cards),
         },
         S::PlaceCardsAsBottomSources(a) => CompiledStep::PlaceCardsAsBottomSources {
+            cards: compile_binding_ref(&a.cards),
+            target: compile_binding_ref(&a.target),
+        },
+        S::PlaceCardsAsTopSources(a) => CompiledStep::PlaceCardsAsTopSources {
             cards: compile_binding_ref(&a.cards),
             target: compile_binding_ref(&a.target),
         },

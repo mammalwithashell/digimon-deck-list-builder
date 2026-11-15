@@ -145,6 +145,7 @@ impl Game {
         // cleanly even when concede fires mid-selection or with queued
         // triggered effects waiting to resolve.
         self.pending_selection = None;
+        self.optional_activation_mark = None;
         self.effect_queue.clear();
         // Emit the Concede event before declare_winner so its seq is
         // strictly less than the GameOver event's seq.
@@ -181,6 +182,7 @@ impl Game {
     /// game it belonged to is over.
     pub fn request_play_order_selection(&mut self, loser_id: PlayerId) {
         self.pending_selection = None;
+        self.optional_activation_mark = None;
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectPlayOrder;
         self.pending_selection = Some(crate::selection::PendingSelection {

@@ -25,15 +25,21 @@
 #      (UntilOwnerTurnEnd = the opponent/its-owner's turn). → select_opponent_
 #      permanent { any_of[kind:digimon, kind:tamer] } + suspend + add_modifier
 #      CannotUnsuspend expiry end_of_opponents_turn.
-#   2. THEN, gated on >=2 total face-down sources under your Tamers: "by trashing
-#      2 bottom face-down cards from under any of your Tamers, this Digimon may
-#      digivolve into a [DATA SQUAD] hand card without paying the cost." The
-#      trash-2 cost is trash_bottom_face_down_sources_under_tamers { count: 2 }
-#      (multi-Tamer, distributable). The "may" is the optional select_hand
-#      (ST23-01 / BT25-035 idiom): declining (PASS) leaves the binding unset → the
-#      trash-2 cost is NOT paid. On a real pick THIS Digimon (target: source)
-#      digivolves into the chosen [DATA SQUAD] hand card for FREE (payCost:false).
-#      Gated on BOTH >=2 face-down sources AND a [DATA SQUAD] card in hand.
+#   2. THEN, gated ONLY on >=2 total face-down sources under your Tamers: "by
+#      trashing 2 bottom face-down cards from under any of your Tamers, this
+#      Digimon may digivolve into a [DATA SQUAD] hand card without paying the
+#      cost." The trash is the optional processing condition, chosen and paid
+#      FIRST (CR 4.3 15-7-1 / 15-7-2): select_effect_choice ["Trash 2 face-down
+#      cards", "Don't"]; "Don't" trashes nothing. Paying runs
+#      trash_bottom_face_down_sources_under_tamers { count: 2 } (multi-Tamer,
+#      distributable) whether or not a digivolution follows (15-7-5; user ruling
+#      2026-11-10), so the Tamers' trash triggers fire either way, and NO hand
+#      card is required to pay. Then the optional select_hand offers only
+#      [DATA SQUAD] Digimon that can digivolve onto THIS Digimon
+#      (can_digivolve_onto: source); PASS keeps the trash paid. On a pick THIS
+#      Digimon digivolves into the chosen card for FREE (payCost:false).
+#      DCGO ST24_10.cs:127-173: the face-down gate, a canNoSelect Tamer pick
+#      (the decline), the trash, then `if (trashed)` the hand pick.
 # Inherited (WhenRemoveField, isInheritedEffect, maxPerTurn 1, optional): when a
 #   carrier with [Rosemon] in name OR the [DATA SQUAD] trait would leave, gated
 #   on a Tamer carrying a face-down source, by trashing 1 bottom face-down under a

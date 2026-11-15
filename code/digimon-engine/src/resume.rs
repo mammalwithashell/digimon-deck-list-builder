@@ -448,6 +448,8 @@ pub enum ResumeFrame {
         source_anchor: Option<(PlayerId, u64)>,
         target: (PlayerId, u64),
         remaining: Vec<CardHandle>,
+        /// Place each remaining card as the TOP digivolution card (else the bottom).
+        top: bool,
         target_binding: Option<String>,
         outer_conts: Vec<OuterContinuation>,
     },

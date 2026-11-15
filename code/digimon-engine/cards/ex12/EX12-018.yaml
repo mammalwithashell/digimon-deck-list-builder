@@ -46,66 +46,29 @@ dual:
       - when: [when_digivolving, when_attacking]
         once_per_turn: true
         summary: "[When Digivolving][When Attacking][OPT] Place up to 2 [Gammamon-text]/[VB] Digimon cards from hand/trash as top/bottom sources; if placed, -2000 DP per source"
-        # DCGO EX12_018.cs (behaviour authority, no official ruling on the shape): ask WHERE from first (only zones
-        # holding a candidate are offered, plus "Don't place any"), take up to 2 cards from that ONE zone in one
-        # selection, then choose top or bottom once for all of them.
+        # Printed: "place up to 2 Digimon cards ... from your hand or trash" - ONE choice of up to 2
+        # cards over both zones, so 1 from the hand and 1 from the trash is legal. DCGO EX12_018.cs:84-164
+        # reaches the same picks through a "Where from?" menu loop (hand / trash / don't place any, repeated
+        # while fewer than 2 are chosen, `maxCount = 2 - chosen`); the menu is DCGO UI, not card text, so the
+        # engine asks the one pick (min 0 = "you may"; the replay folds DCGO's loop onto it). Then top or
+        # bottom once for all of them (:166-180). Stacking order (CR 4.3 3-1-3-3 / 3-1-3-4: placed at the
+        # same time, in the order the player chooses) is the pick order top-down, as DCGO: on top it
+        # reverses the picks before AddDigivolutionCardsTop (:183-192, Permanent.cs:1145 inserts each at
+        # index 1), so the first pick is topmost; at the bottom it appends in pick order (:194-196,
+        # Permanent.cs:1247), so the last pick is bottommost.
         process:
-          - select_effect_choice:
-              bind_as: zone_choice
-              labels: ["From Hand", "From Trash", "Don't place any"]
-              legal_when:
-                - count_gte:
-                    filter:
-                      owner: you
-                      zone: [hand]
-                      all_of:
-                      - kind: digimon
-                      - any_of:
-                          - in_text_contains: Gammamon
-                          - trait_has: VB
-                    n: 1
-                - count_gte:
-                    filter:
-                      owner: you
-                      zone: [trash]
-                      all_of:
-                      - kind: digimon
-                      - any_of:
-                          - in_text_contains: Gammamon
-                          - trait_has: VB
-                    n: 1
-                - {}
-              prompt: "Where will you select cards from to place under this Digimon as digivolution sources?"
-          - if:
-              condition: { equals: [zone_choice, 0] }
-              then:
-                - select_zone_cards:
-                    zones: [hand]
-                    filter:
-                      all_of:
-                      - kind: digimon
-                      - any_of:
-                          - in_text_contains: Gammamon
-                          - trait_has: VB
-                    min: 0
-                    max: 2
-                    bind_as: placed
-                    prompt: "Select up to 2 Digimon cards with [Gammamon] in their text or the [VB] trait from your hand"
-          - if:
-              condition: { equals: [zone_choice, 1] }
-              then:
-                - select_zone_cards:
-                    zones: [trash]
-                    filter:
-                      all_of:
-                      - kind: digimon
-                      - any_of:
-                          - in_text_contains: Gammamon
-                          - trait_has: VB
-                    min: 0
-                    max: 2
-                    bind_as: placed
-                    prompt: "Select up to 2 Digimon cards with [Gammamon] in their text or the [VB] trait from your trash"
+          - select_zone_cards:
+              zones: [hand, trash]
+              filter:
+                all_of:
+                - kind: digimon
+                - any_of:
+                    - in_text_contains: Gammamon
+                    - trait_has: VB
+              min: 0
+              max: 2
+              bind_as: placed
+              prompt: "You may place up to 2 Digimon cards with [Gammamon] in their text or the [VB] trait from your hand or trash as this Digimon's top or bottom digivolution cards"
           - if:
               condition: { binding_present: placed }
               then:
@@ -116,13 +79,9 @@ dual:
                 - if:
                     condition: { equals: [position, 0] }
                     then:
-                      - per_selected:
-                          selection: placed
-                          bind_as: placed_card
-                          body:
-                            - place_as_top_source:
-                                source: placed_card
-                                target: source
+                      - place_cards_as_top_sources:
+                          cards: placed
+                          target: source
                     else:
                       - place_cards_as_bottom_sources:
                           cards: placed

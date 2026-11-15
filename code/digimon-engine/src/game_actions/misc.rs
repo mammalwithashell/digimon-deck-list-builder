@@ -22,7 +22,7 @@ use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
 impl Game {
-    fn is_source_preparation(&self,origin:PendingWouldPlayOrigin)->bool {
+    pub(crate) fn is_source_preparation(&self,origin:PendingWouldPlayOrigin)->bool {
         matches!(origin, PendingWouldPlayOrigin::Source { .. }) && origin.source_play_receipt().is_some_and(|id|self.prepared_source_plays.iter().any(|(r,_)|*r==id))
     }
     fn source_preparation_card(&self,origin:PendingWouldPlayOrigin,card:CardHandle)->Option<CardSource> {
@@ -609,6 +609,16 @@ impl Game {
                 .map(|t| t.selected_cost_delta() as i32)
                 .unwrap_or(0),
         );
+        // "Play ... without paying the cost" pays nothing, DigiXros or not, on
+        // this commit path too (DCGO `PlayPermanentCards(payCost: false)`;
+        // the same rule `commit_play_from_hand_after_reductions` applies before
+        // the leave windows). Without it a free effect play of a DigiXros card
+        // was re-priced at its printed cost here (paid, or refused as unpayable).
+        let effective_cost = if matches!(total_reduction.effect_cost, crate::enums::CostDelta::Free) {
+            0
+        } else {
+            effective_cost
+        };
 
         // Declare-then-pay re-check (judge Q26/Q27): the play is unpayable — and
         // returns to hand for 0 memory — if EITHER the recomputed memory cost
@@ -1069,11 +1079,29 @@ impl Game {
         suppress_on_play: bool,
         total_reduction: crate::game_actions::PlayCostAdjustments,
     ) -> Option<PlayFromHandCostResult> {
-        // Assembly is a hand-play mechanic; only attempt for genuine hand plays.
-        if !matches!(origin, PendingWouldPlayOrigin::Hand) {
+        // Assembly is offered on EVERY play of an Assembly card, not only a
+        // play from hand. CR 4.3 7-3-2-10: "Assembly can be performed even
+        // when an effect is used to play a Digimon card with Assembly
+        // requirements." DCGO agrees: `PlayCardClass.PlayCard` runs
+        // `SelectAssemblyClass.Select` for any single non-digivolve play
+        // (CardController.cs:926-933), whatever zone the card came from.
+        // Real case: raw-20261113T025510Z#g4 file step 127, MetalGreymon
+        // (EX12-016) played by MetalGarurumon (EX12-035)'s <Decode> from its
+        // digivolution cards, Assembly picking Gammamon (EX12-007) from trash.
+        //
+        // Effect plays from trash, reveal and security park the card in
+        // hand first, so the hand-index lookup finds it; a failed or
+        // declined play restores it through `origin`. A DSL source play
+        // (`play_from_materials`, e.g. <Decode>) is a prepared source play:
+        // the card stays in its carrier and `hand_index` is `usize::MAX`
+        // (`prepare_source_play_from_origin`). Its Assembly picks ride the
+        // prepared play (`prepare_source_play_if_registered` takes
+        // `pending_assembly_materials`) and are placed at commit. DCGO asks
+        // each played card's Assembly in that case too (CardController.cs:
+        // 1475-1481 for a multi-card play, 926-933 for a single card).
+        if hand_index == usize::MAX && !self.is_source_preparation(origin) {
             return None;
         }
-
         let (assembly_reduction, elements) =
             self.resolve_eligible_assembly(player_id, hand_index, target_card)?;
 

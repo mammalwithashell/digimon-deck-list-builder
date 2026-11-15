@@ -23,6 +23,7 @@ pub mod breeding_move_binding;
 pub mod evolution_candidate_cost;
 pub mod reveal_digivolve_candidate;
 pub mod meta_play_and_source_predicates;
+pub mod play_or_use_candidate_legality;
 
 pub mod mixed_zone_distinct;
 

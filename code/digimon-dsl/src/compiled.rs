@@ -445,6 +445,10 @@ pub struct CompiledPredicate {
     pub dna_field_pair: Option<CompiledDnaFieldPair>,
     #[serde(default)]
     pub can_play_from_effect_without_cost: Option<bool>,
+    /// See `PredicateSpec::can_play_or_use_from_effect`.
+    /// G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY.
+    #[serde(default)]
+    pub can_play_or_use_from_effect: Option<bool>,
     #[serde(default)]
     pub can_play_to_breeding_from_hand: Option<bool>,
     /// Subject must be an existing breeding permanent. Compare its real move
@@ -2756,6 +2760,11 @@ pub enum CompiledStep {
     },
     /// `place_cards_as_bottom_sources`.
     PlaceCardsAsBottomSources {
+        cards: CompiledBindingRef,
+        target: CompiledBindingRef,
+    },
+    /// `place_cards_as_top_sources` (first card of the list topmost).
+    PlaceCardsAsTopSources {
         cards: CompiledBindingRef,
         target: CompiledBindingRef,
     },

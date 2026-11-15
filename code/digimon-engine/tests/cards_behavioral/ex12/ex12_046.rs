@@ -207,3 +207,44 @@ fn ex12_046_security_removed_offers_no_pick_when_no_tb_in_hand_can_digivolve() {
     );
     assert_eq!(top_card_id(&runner, 0, 0), CARD_ID);
 }
+
+/// Kaguyamon (EX12-065) prints Purple/Green Lv.5 circles (cost 4) and the black
+/// text "[Digivolve] Lv.5 w/[Puppet]/[Shambala] trait: Cost 3". Onto the
+/// Yellow/Red Shishimamon (EX12-046) only the trait route applies, so DCGO's
+/// `CostList` holds just {3} and `DigivolveIntoHandOrTrashCard`'s reduce-by-2
+/// makes it cost 1 (CR 4.3 §8-1-2: the digivolution cost is the cost of the
+/// condition the card is digivolving by; a cost reduction lowers that cost).
+///
+/// Pinned from DCGO PvP game raw-20261113T025510Z#g4 (turn 5): DCGO declined
+/// Genshi Continent & Ashino Island (EX12-074)'s "-1" digivolve and took this
+/// "-2" one after the security check, paying 1. The replay applied the
+/// Kaguyamon pick to EX12-074's prompt instead (cost 2), so Toho Braves started
+/// turn 9 with 4 memory instead of DCGO's 5. The engine's cost here was already
+/// right; this test guards the 1-memory figure the replay evidence relies on.
+#[test]
+fn ex12_046_security_removed_digivolve_into_kaguyamon_uses_the_shambala_route_cost() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-046 YAML loads")
+        .dsl_card("EX12-065")
+        .expect("EX12-065 YAML loads")
+        .add_card(plain_digimon("SEC", CardColor::Yellow, 3, 3000))
+        .add_card(plain_digimon("DECKTOP", CardColor::Yellow, 3, 3000))
+        .hand(0, &["EX12-065"])
+        .deck(0, &["DECKTOP"])
+        .security(1, &["SEC"])
+        .memory(5)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+
+    fire_opponent_security_removed(&mut runner, 1);
+    select_hand_card(&mut runner, 0, "EX12-065");
+    runner.auto_resolve().expect("finish effect digivolve");
+
+    assert_eq!(top_card_id(&runner, 0, 0), "EX12-065", "the digivolve resolved");
+    assert_eq!(
+        runner.memory(),
+        4,
+        "Shambala route cost 3, reduced by 2, pays 1 (not the Purple/Green circle's 4)"
+    );
+}

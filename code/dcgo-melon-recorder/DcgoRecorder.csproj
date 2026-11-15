@@ -8,7 +8,7 @@
     generates. See docs/DCGO_MELONLOADER.md.
 
     Build:  dotnet build code/dcgo-melon-recorder -c Release -p:GamePath="D:\DCGO_mod_sandbox\Game"
-    The output DLL is copied to <GamePath>\Mods. Point GamePath at a SANDBOX COPY of Game/ until the
+    The output DLL is copied to <GamePath>\Mods (unless -p:SkipDeploy=true). Point GamePath at a SANDBOX COPY of Game/ until the
     mod is proven; the first boot of a MelonLoader-patched Game/ generates MelonLoader\Il2CppAssemblies.
 
     netstandard2.0 on purpose: MelonLoader hosts .NET 6 and this machine has no net6 targeting pack.
@@ -76,7 +76,9 @@
     </Reference>
   </ItemGroup>
 
-  <Target Name="DeployToMods" AfterTargets="Build" Condition="Exists('$(GamePath)')">
+  <!-- -p:SkipDeploy=true builds against GamePath's interop assemblies without copying into its Mods folder
+       (use it while DCGO is running, or to back up the installed DLL before replacing it by hand). -->
+  <Target Name="DeployToMods" AfterTargets="Build" Condition="Exists('$(GamePath)') And '$(SkipDeploy)' != 'true'">
     <MakeDir Directories="$(GamePath)\Mods" />
     <Copy SourceFiles="$(OutputPath)DcgoRecorder.dll" DestinationFolder="$(GamePath)\Mods" />
     <Message Importance="high" Text="DcgoRecorder.dll -> $(GamePath)\Mods" />

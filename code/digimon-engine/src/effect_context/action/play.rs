@@ -426,6 +426,12 @@ impl<'a> EffectContext<'a> {
     /// - `Dual` → used as an Option. A DUAL card prints "Can't play to the
     ///   field." (CR 4-6-2: it is digivolved or used, never played).
     ///
+    /// The Option/DUAL use keeps every use requirement: `play_option_core`
+    /// refuses an Option whose colour requirement (CR 4.3 4-22-1..3, or its
+    /// `<Use Req.>`) is unmet under every cost policy, so a free or reduced
+    /// use of an off-colour Option leaves it in hand
+    /// (`G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT`).
+    ///
     /// `G-PLAY-OR-USE-FROM-HAND`. Used by ST23-04 / ST23-08 / BT25-041
     /// ("you may play or use 1 [Glowing Dawn] trait card from your hand with
     /// the cost reduced by 3").

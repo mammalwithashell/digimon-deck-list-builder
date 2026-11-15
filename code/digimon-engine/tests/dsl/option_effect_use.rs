@@ -42,6 +42,11 @@ fn use_option_from_hand_filters_by_trait_and_opponent_memory_ceiling() {
         .hand(1, &["SRC-USE-OPT", "TS-LOW", "TS-HIGH"])
         .memory(3)
         .start();
+    // CR 4.3 4-22-2: the using player needs a permanent of the Option's colour
+    // (red) on the field; an effect-driven use is still a use (Q1500/Q2785).
+    // The fixture used to rely on effect-driven uses skipping the check.
+    // G-ENGINE-EFFECT-OPTION-USE-COLOR-REQUIREMENT.
+    runner.place_on_field(1, "SRC-USE-OPT", None);
     runner.register_effect("TS-LOW", Arc::new(OptionMainNoop));
     runner.register_effect("TS-HIGH", Arc::new(OptionMainNoop));
 

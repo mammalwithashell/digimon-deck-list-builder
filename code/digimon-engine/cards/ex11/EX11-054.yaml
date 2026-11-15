@@ -17,7 +17,9 @@ traits: [LIBERATOR]
 # Event context now carries the played/digivolved permanent as event_target, so
 # this clause can gate natively with event_target_owner/event_target_trait_has.
 # The +3000 DP tail still selects a Progress Digimon. If none exists, the
-# selection naturally has no candidates.
+# selection naturally has no candidates. The pick is MANDATORY: the printed
+# text has no "you may"/"up to", and DCGO EX11_054.cs:63-85 takes a lone
+# candidate outright and otherwise prompts with canNoSelect:false.
 #
 # Clause 3 — [Security] Play this card without paying the cost.
 # DSL: when: on_security, process: play_from_security: {}
@@ -56,7 +58,6 @@ effects:
       - draw: { of: you, count: 1 }
       - select_own_permanent:
           bind_as: progress_target
-          optional: true
           filter:
             all_of:
               - kind: digimon

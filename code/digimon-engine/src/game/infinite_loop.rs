@@ -254,6 +254,10 @@ impl Game {
     pub(crate) fn reset_loop_watch(&mut self) {
         self.loop_watch.clear();
         self.loop_watch_steps = 0;
+        // A decision boundary: an optional-activation mark whose prompt is no
+        // longer the pending one has nothing left to name
+        // (`game::optional_activation`).
+        self.sync_optional_activation_mark();
     }
 
     /// True once the game has ended in the §18-3-2 infinite-loop draw.
