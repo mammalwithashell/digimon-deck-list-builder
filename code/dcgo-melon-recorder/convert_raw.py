@@ -314,6 +314,23 @@ def convert(rows, cards, allow_truncated=False):
         if m == "SelectCardEffect.SetTargetCardAndIndicies" and r.get("stray"):
             continue  # a pick DCGO asked among identical candidates and the engine did not (the mod marks it)
         if m == "SelectCardEffect.SetTargetCardAndIndicies" and "card_ids" in r:
+            # Homeros refires BT24-101's sole shared On Play/When
+            # Digivolving effect. DCGO asks for the card after the target;
+            # the engine has already resolved that unique effect from the
+            # chosen Digimon, so the card row adds no further choice.
+            if (r["card_ids"] == ["BT24-101"] and len(out) >= 3
+                    and out[-1].get("prompt") == "SelectPermanentEffect"
+                    and out[-1].get("actor") == a[0]
+                    and out[-2].get("prompt") == "OptionalSkill"
+                    and out[-2].get("bool_value") is True
+                    and out[-3].get("chosen_effect_card") == "BT24-102"):
+                targets = out[-1].get("targets") or []
+                if len(targets) == 1:
+                    target = targets[0]
+                    board = out[-1].get("board_p%s" % target["player"]) or []
+                    if 0 <= target["frame"] < len(board) and board[target["frame"]] == "BT24-101":
+                        inferred.append("unique BT24-101 refired effect after Homeros target (raw seq %s)" % r.get("seq"))
+                        continue
             row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectCardEffect", "phase": "Main"}
             if r["card_ids"] and None not in r["card_ids"]:
                 row["card_ids"] = r["card_ids"]
@@ -357,12 +374,30 @@ def convert(rows, cards, allow_truncated=False):
             step += 1
             continue
         if m == "OptionalSkill.SetUseOptional":
-            # "Use this optional effect?" - only an answer the engine asked for too carries an engine action (the
-            # engine folds some into the next pick, or resolves a "may" with no legal target without asking)
+            # A declined immediate effect during the recorded Arts evolution
+            # happens before DCGO adds the chosen card to the stack. The
+            # simulator's Arts operation is atomic and has already completed;
+            # this explicit decline has no state change to apply there.
+            if (a[1] is False and ridx > 0 and ridx + 1 < len(rows)
+                    and rows[ridx - 1].get("method") == "PlayCardClass.PlayCard"
+                    and rows[ridx - 1].get("cards") == ["BT26-050"]
+                    and (rows[ridx - 1].get("target") or {}).get("card_id") == "BT26-049"
+                    and rows[ridx + 1].get("method") == "Permanent.AddCardSource"
+                    and isinstance(rows[ridx + 1].get("args"), list)
+                    and rows[ridx + 1]["args"]
+                    and isinstance(rows[ridx + 1]["args"][0], dict)
+                    and rows[ridx + 1]["args"][0].get("card_id") == "BT26-050"):
+                inferred.append("declined immediate effect before BT26-050 Arts evolution (raw seq %s)" % r.get("seq"))
+                continue
+            # Preserve human and remote answers even when no engine action was
+            # stamped. The prompt name distinguishes this activation decision
+            # from a generic yes/no menu during replay.
+            row = {"type": "selection", "step": step, "actor": a[0], "prompt": "OptionalSkill",
+                   "phase": "Main", "bool_value": bool(a[1])}
             if "engine_action" in r:
-                out.append({"type": "selection", "step": step, "actor": a[0], "prompt": "generic_bool",
-                            "phase": "Main", "bool_value": bool(a[1]), "engine_action": r["engine_action"]})
-                step += 1
+                row["engine_action"] = r["engine_action"]
+            out.append(row)
+            step += 1
             continue
         if m == "UserSelectionManager.SetIntForPlayer":
             # The UserSelectionManager fallback channel: the schema's `generic_int` prompt (an index into the prompt's
@@ -377,6 +412,18 @@ def convert(rows, cards, allow_truncated=False):
         if m == "SelectCountEffect.SetCount":
             row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectCountEffect",
                    "phase": "Main", "count": a[1]}
+            # BT26-029's recorded inherited trigger is De-Digivolve 1.
+            # After its target is chosen, DCGO records the forced count 1;
+            # there is no zero or larger declaration for that keyword.
+            if (a[1] == 1 and len(out) >= 2
+                    and out[-1].get("prompt") == "SelectPermanentEffect"
+                    and out[-1].get("targets")
+                    and out[-1].get("actor") == a[0]
+                    and out[-2].get("prompt") == "MultipleSkills"
+                    and out[-2].get("chosen_effect_card") == "BT26-029"
+                    and out[-2].get("actor") == a[0]):
+                inferred.append("forced De-Digivolve 1 count after BT26-029 target (raw seq %s)" % r.get("seq"))
+                continue
             if "engine_action" in r:
                 row["engine_action"] = r["engine_action"]
             out.append(row)
@@ -400,6 +447,23 @@ def convert(rows, cards, allow_truncated=False):
                 row["targets"] = targets
             else:
                 row["cancel"] = True
+            out.append(row)
+            step += 1
+            continue
+        if m == "SelectAttackEffect.SetAttackTarget":
+            # (attackOwnerID, isTurnPlayer, permanentIndex): an effect-granted attack's target. -2 (NopIndex) =
+            # "Not Attack"; -1 (SecurityIndex) = the player; otherwise the defender's compact battle-area index,
+            # turn-relative like SetTargetFrames. Same row the Unity recorder writes (DCGO_RECORDING_SCHEMA.md).
+            if tp not in (0, 1) or len(a) < 3:
+                truncated_at = truncated_at or ("SelectAttackEffect without a turn player at step %d" % step)
+                break
+            row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectAttackEffect", "phase": "Main"}
+            if a[2] == -2:
+                row["cancel"] = True
+            elif a[2] < 0:
+                row["targets"] = [{"player": 1 - tp, "frame": -1}]
+            else:
+                row["targets"] = [{"player": tp if a[1] else 1 - tp, "frame": a[2]}]
             out.append(row)
             step += 1
             continue

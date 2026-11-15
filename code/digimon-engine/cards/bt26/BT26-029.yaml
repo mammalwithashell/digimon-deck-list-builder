@@ -31,10 +31,8 @@
 #   → clause optional + `security_count_gte: 1`; trash_top_security; then
 #   grant_narrow_opponent_effect_protection (DP-minus + De-Digivolve, opp) +
 #   grant_stack_protection_from_opponent_effects (stack-trash + De-Digivolve +
-#   return-to-hand + return-to-deck, opp). DCGO does not consult its stack-
-#   return immunity on a plain bounce; the printed "return them [its stacked
-#   cards] to hands or decks" covers returning the Digimon's cards, so the
-#   bounce protection follows the printed text.
+#   individual stacked-card returns, opp). Returning the Digimon itself is
+#   distinct from returning individual stacked cards and remains legal.
 # All Turns OPT (OnLoseSecurity, own): mandatory pick of min(3, n) opponent
 #   Digimon → ChangeDigimonDP(-5000, UntilEachTurnEnd).
 #   → select_count_capped_multi { of: opponent, min/max 3, clamp }.

@@ -266,6 +266,32 @@ fn bt26_050_bounce_other_suspended_trashes_top_security() {
 }
 
 #[test]
+fn bt26_050_decode_return_completes_before_security_is_trashed() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID).unwrap()
+        .dsl_card("BT26-029").unwrap()
+        .dsl_card("BT25-033").unwrap()
+        .add_card(filler("FILLER"))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .security(1, &["FILLER"])
+        .memory(8)
+        .start();
+    r.set_first_player(0);
+    let rosemon = r.place_on_field(0, CARD_ID, Some(0));
+    let holy = r.place_stack(1, &["BT25-033", "BT26-029"]);
+    r.game.players[1].battle_area[holy.index as usize].is_suspended = true;
+    fire(&mut r, EffectTiming::WhenAttacking, rosemon);
+    pick_first(&mut r, 0);
+    r.accept_optional_trigger().expect("accept Decode");
+    pick_first(&mut r, 1);
+    assert_eq!(r.security_count(1), 0, "Decode does not prevent the return");
+    assert!(!field_ids(&r, 1).iter().any(|id| id == "BT26-029"));
+    assert!(field_ids(&r, 1).iter().any(|id| id == "BT25-033"));
+    assert!(r.pending_selection_view().is_none(), "no on-play cost is available after security is trashed");
+}
+
+#[test]
 fn bt26_050_bounce_declined_keeps_security() {
     let mut r = setup();
     let bm = r.place_on_field(0, CARD_ID, Some(0));

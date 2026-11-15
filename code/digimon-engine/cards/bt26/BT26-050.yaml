@@ -169,7 +169,10 @@ effects:
           condition: { binding_present: bounced }
           then:
             - return_to_deck: { target: bounced, position: bottom }
-            - trash_top_security: { of: opponent }
+            - if:
+                condition: { effect_returned_any_card: true }
+                then:
+                  - trash_top_security: { of: opponent }
 
   # ─── Option face [Main] suspend 2 opp; their suspended Digimon/Tamers can't
   #     digivolve or unsuspend until their turn ends ─────────────────────────

@@ -556,9 +556,7 @@ impl<'a> EffectContext<'a> {
     ///     controller's own source trashing still applies);
     ///   - `ImmuneFromStackReturn` for individual source returns, with the same filter;
     ///   - `CannotBeDeDigivolved` (de-digivolve trashes the top stacked card);
-    ///   - `CannotBeReturnedToHand` / `CannotBeReturnedToDeck`.
-    /// The three replacement modifiers use `passive_replacement()` so their
-    /// default `OpponentEffect` cause filter applies.
+    /// This does not prevent returning the Digimon itself to hand or deck.
     pub fn grant_stack_protection_from_opponent_effects(
         &mut self,
         target: PermanentHandle,
@@ -588,23 +586,17 @@ impl<'a> EffectContext<'a> {
                     controller: EffectControllerFilter::OpponentOnly,
                 }),
         );
-        for modifier in [
-            ModifierType::CannotBeDeDigivolved,
-            ModifierType::CannotBeReturnedToHand,
-            ModifierType::CannotBeReturnedToDeck,
-        ] {
-            self.game.modifiers.add(
-                target,
-                ModifierEntry::passive_replacement(modifier, expiry, self.player),
-            );
-        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::passive_replacement(ModifierType::CannotBeDeDigivolved, expiry, self.player),
+        );
         self.game.mark_until_condition_dirty();
     }
 
     /// G-DSL-STACK-TRASH-IMMUNITY-FROM-OPPONENT-EFFECTS (BT26-085 Giant
     /// Slayer) — "your opponent's effects can't ... trash its stacked cards".
     /// The stack-trash half of `grant_stack_protection_from_opponent_effects`
-    /// WITHOUT its return-to-hand / return-to-deck locks: opponent-scoped
+    /// without its individual stacked-card return protection: opponent-scoped
     /// `ImmuneFromStackTrashing` + `CannotBeDeDigivolved` (the official Q&A
     /// counts trashing the top stacked cards, i.e. de-digivolve).
     pub fn grant_stack_trash_immunity_from_opponent_effects(

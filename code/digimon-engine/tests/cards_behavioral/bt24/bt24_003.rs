@@ -187,10 +187,7 @@ fn bt24_003_process_uses_effect_initiated_digivolve_with_cost_reduction() {
             }
         )
     });
-    assert!(
-        any_step(&clause.process, &|s| matches!(s, CompiledStep::RefundOpt)),
-        "declining the pick refunds the [Once Per Turn] (Q1818)"
-    );
+    assert!(clause.outer_prompt, "activation is distinct from the hand pick");
     assert!(
         has_reduced_digivolve,
         "must digivolve via effect_initiated_digivolve with cost reduced by 1; got {:?}",
@@ -354,6 +351,7 @@ fn bt24_003_accepting_digivolves_into_shaman_hand_card() {
     );
     runner.game.drain_effect_queue();
 
+    runner.accept_optional_trigger().expect("accept the activation");
     let view = runner
         .pending_selection_view()
         .expect("the optional digivolve prompt installs");
@@ -529,6 +527,7 @@ fn remove_own_security(runner: &mut DebugRunner) {
 }
 
 fn pick_first_candidate(runner: &mut DebugRunner) {
+    runner.accept_optional_trigger().expect("accept the activation");
     let view = runner
         .pending_selection_view()
         .expect("the optional digivolve prompt installs");
@@ -592,6 +591,25 @@ fn bt24_003_declined_trigger_is_offered_again_same_turn_q1818() {
     );
 }
 
+/// Choosing to activate and then declining the digivolution is a distinct
+/// decision from declining activation. The activation consumes OPT even if
+/// the subsequent hand selection is cancelled (CR 4.3 15-14-1-4).
+#[test]
+fn bt24_003_accepted_trigger_then_cancelled_pick_uses_once_per_turn() {
+    let mut runner = base();
+    runner.place_stack(0, &["BT24-003", "ST3-02"]);
+    push_hand(&mut runner, "BT24-034");
+
+    remove_own_security(&mut runner);
+    runner.accept_optional_trigger().expect("accept the optional activation");
+    let pick = runner.pending_selection_view().expect("digivolution pick");
+    assert_eq!(pick.kind, SelectionKind::Hand);
+    runner.execute_action(pick.selecting_player, PASS).expect("decline digivolution");
+
+    remove_own_security(&mut runner);
+    assert!(runner.pending_selection().is_none(), "the activated OPT cannot be used again");
+}
+
 /// §15-14-1-4: once the player chooses to activate (digivolves), the use is
 /// counted, so a second own-security removal the same turn does not offer the
 /// effect again even with a legal [Shaman] target in hand (BT24-014
@@ -618,6 +636,7 @@ fn bt24_003_accepted_trigger_locks_out_second_activation_same_turn() {
 
     // First removal: accept -> digivolve into Aegiomon (BT24-034).
     remove_own_security(&mut runner);
+    runner.accept_optional_trigger().expect("accept the activation");
     let view = runner
         .pending_selection_view()
         .expect("the optional digivolve prompt installs");

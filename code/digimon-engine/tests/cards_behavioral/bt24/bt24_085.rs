@@ -126,6 +126,23 @@ fn bt24_085_start_of_main_gains_memory_at_four_or_less() {
 }
 
 #[test]
+fn bt24_085_suspended_tamer_has_no_end_of_turn_activation() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-085 YAML parses")
+        .add_card(ts_digimon("TS-ATTACKER"))
+        .memory(-2)
+        .start();
+    let tamer = runner.place_on_field(0, "BT24-085", Some(0));
+    runner.place_on_field(0, "TS-ATTACKER", Some(0));
+    runner.game.players[0].battle_area[tamer.index as usize].is_suspended = true;
+
+    enqueue_dan_kanan_eot(&mut runner, tamer);
+
+    assert!(runner.pending_selection().is_none(), "a suspended Tamer cannot pay the activation cost");
+}
+
+#[test]
 fn bt24_085_end_of_turn_uses_eligible_ts_option_then_opens_may_attack() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -231,6 +248,31 @@ fn bt24_085_end_of_turn_uses_eligible_ts_option_then_opens_may_attack() {
             .any(|action| decode_attack(*action).0 == attacker.index as u16),
         "attack target choices should be for the selected TS Digimon"
     );
+}
+
+#[test]
+fn bt24_085_arts_digivolve_waits_for_its_attack_follow_up() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML).unwrap()
+        .dsl_card("BT26-029").unwrap()
+        .dsl_card("BT26-033").unwrap()
+        .hand(0, &["BT26-033", "BT26-033"])
+        .deck(0, &["BT26-029"; 6])
+        .deck(1, &["BT26-029"; 6])
+        .memory(-3)
+        .start();
+    runner.game.turn_count = 1;
+    let tamer = runner.place_on_field(0, "BT24-085", Some(0));
+    let base = runner.place_on_field(0, "BT26-029", Some(0));
+    enqueue_dan_kanan_eot(&mut runner, tamer);
+    runner.accept_optional_trigger().unwrap();
+    runner.execute_action(0, PLAY_HAND_START).unwrap();
+    let arts = runner.pending_selection_view().expect("Arts Digivolve choice");
+    assert!(arts.prompt.contains("Arts Digivolve"));
+    runner.execute_action(0, encode_attack(0, base.index as u16)).unwrap();
+    let next = runner.pending_selection_view().expect("attack follow-up");
+    assert_eq!(next.kind, SelectionKind::OwnField);
+    assert!(next.prompt.contains("may attack"), "got {}", next.prompt);
 }
 
 /// G-ENGINE-TURN-END-MID-EFFECT: the real End-phase flow. Memory is already on
