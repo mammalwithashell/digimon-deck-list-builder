@@ -645,10 +645,10 @@ impl<'a> EffectContext<'a> {
             return;
         }
 
-        // Cleanup tamer-scoped modifiers BEFORE removal (modifier registry
-        // is keyed on PermanentHandle, which becomes invalid after the
-        // index shift caused by `Vec::remove`).
-        self.game.modifiers.clear_permanent(tamer);
+        // Clear the departing Tamer's identity (modifiers, keywords and the
+        // granted-trigger bodies it carries) BEFORE removal: the registry is
+        // keyed on the positional PermanentHandle.
+        self.game.clear_permanent_full(tamer);
         self.game.modifiers.expire_player_on_permanent_leave(tamer);
 
         // Remove the Tamer permanent from battle area. This shifts indices
@@ -658,6 +658,18 @@ impl<'a> EffectContext<'a> {
             .player_mut(controller)
             .battle_area
             .remove(tamer_idx);
+        // `battle_area` is a Vec, so the remove COMPACTS it: re-key every
+        // surviving later slot's modifiers, pending attack and queued effects
+        // (the canonical removal sequence, cf. game_actions/movement.rs and
+        // option_lifecycle.rs), BEFORE the source-trash events below can
+        // rebuild declarative state. G-PERMANENT-HANDLE-POSITIONAL-STALENESS.
+        self.game
+            .modifiers
+            .shift_after_battle_area_remove(controller, tamer.index);
+        self.game
+            .shift_pending_attack_after_battle_area_remove(controller, tamer.index);
+        self.game
+            .shift_effect_queue_after_battle_area_remove(controller, tamer.index);
 
         // Trash any sources below the top (DCGO DiscardEvoRoots). The top
         // is the card that rides under the target.

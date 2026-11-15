@@ -487,6 +487,15 @@ pub enum StepSpec {
     SelectZoneCards(SelectZoneCardsArgs),
     PlayCardsFree(PlayCardsFreeArgs),
     PlaceCardsAsBottomSources(PlaceCardsAsBottomSourcesArgs),
+    /// G-DSL-PLACE-CARDS-AS-TOP-SOURCES (2026-11-13): place every card of a
+    /// card-list binding on `target` as its TOP digivolution cards in one
+    /// placement, the list's FIRST card topmost (CR 4.3 3-1-3-3 / 3-1-3-4:
+    /// placed at the same time, in the order the player chose; DCGO
+    /// EX12_018.cs reverses its picks before `AddDigivolutionCardsTop`).
+    /// Top sibling of `place_cards_as_bottom_sources`. Consumer: EX12-018
+    /// Siriusmon ("up to 2 ... from your hand or trash as this Digimon's top
+    /// or bottom digivolution cards").
+    PlaceCardsAsTopSources(PlaceCardsAsTopSourcesArgs),
     ReturnTopStackedToDeck(ReturnTopStackedToDeckArgs),
     SelectOwnBreedingPermanent(SelectOwnBreedingPermanentArgs),
     SelectReveal(SelectZoneArgs),
@@ -814,6 +823,7 @@ impl Serialize for StepSpec {
             StepSpec::SelectZoneCards(v) => kv!(s, "select_zone_cards", v),
             StepSpec::PlayCardsFree(v) => kv!(s, "play_cards_free", v),
             StepSpec::PlaceCardsAsBottomSources(v) => kv!(s, "place_cards_as_bottom_sources", v),
+            StepSpec::PlaceCardsAsTopSources(v) => kv!(s, "place_cards_as_top_sources", v),
             StepSpec::ReturnTopStackedToDeck(v) => kv!(s, "return_top_stacked_to_deck", v),
             StepSpec::SelectOpponentPlayCostBudget(v) => {
                 kv!(s, "select_opponent_play_cost_budget", v)
@@ -1121,6 +1131,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_cards_as_bottom_sources" => {
                 StepSpec::PlaceCardsAsBottomSources(map.next_value()?)
             }
+            "place_cards_as_top_sources" => StepSpec::PlaceCardsAsTopSources(map.next_value()?),
             "return_top_stacked_to_deck" => StepSpec::ReturnTopStackedToDeck(map.next_value()?),
             "select_opponent_play_cost_budget" => {
                 StepSpec::SelectOpponentPlayCostBudget(map.next_value()?)
@@ -1847,6 +1858,8 @@ pub struct TrashBottomSourcesArgs {
 #[serde(rename_all = "snake_case")]
 pub enum PermanentProperty {
     Level,
+    /// Current rules colors of the chosen permanent.
+    ColorCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1934,6 +1947,10 @@ pub struct MayAttackNowArgs {
 #[serde(deny_unknown_fields)]
 pub struct ForceAttackArgs {
     pub attacker: BindingRef,
+    /// Player-directed instruction (BT13-077 Q2320), rather than an effect
+    /// on the attacker (EX3-024). Does not waive ordinary attack legality.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub affects_player: bool,
     #[serde(default)]
     pub targets: AttackTargetSpec,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -3141,7 +3158,8 @@ pub struct AddDpModifierArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AddModifierArgs {
-    /// Restrict this modifier's replacement cause to an opponent effect.
+    /// Scope protection to opponent effects. DP-minus immunity uses the
+    /// affecting effect's controller; replacement protection uses its cause.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub opponent_only: bool,
     pub target: ModifierTarget,
@@ -3617,7 +3635,7 @@ pub struct SelectMaterialsArgs {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub named_groups: Vec<String>,
     /// Require the largest feasible named-group set up to max (or zero when
-    /// optional_zero permits declining). Requires named_groups.
+    /// optional_zero permits declining). Requires named_groups or uniqueness: name.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub require_max: bool,
     /// Carrier permanent whose digivolution sources are the candidate pool.
@@ -3853,6 +3871,24 @@ pub struct PlayCardsFreeArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlaceCardsAsBottomSourcesArgs {
+    pub cards: BindingRef,
+    pub target: BindingRef,
+}
+
+/// `place_cards_as_top_sources:` — place every card of a card-list binding
+/// (hand / trash / a battle-area stack / a link card) on `target` as its TOP
+/// digivolution cards, as one placement: the list's FIRST card ends up the
+/// topmost digivolution card (right under the top card), the next one under
+/// it, and so on. CR 4.3 3-1-3-3 / 3-1-3-4: cards placed together are placed
+/// at the same time, in the order the effect's player chooses (a pick order).
+/// DCGO parity: EX12_018.cs reverses its picks before
+/// `Permanent.AddDigivolutionCardsTop`, which inserts each at index 1 under the
+/// top card (Permanent.cs:1145), so the first pick is topmost. Top-placement
+/// sibling of `place_cards_as_bottom_sources` (whose list order is also
+/// top-down). EX12-018 Siriusmon.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceCardsAsTopSourcesArgs {
     pub cards: BindingRef,
     pub target: BindingRef,
 }

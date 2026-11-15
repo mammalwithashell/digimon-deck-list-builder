@@ -288,29 +288,14 @@ fn observer_runner() -> (DebugRunner, PermanentHandle) {
     // Advance to the OPPONENT's (player 1's) turn by ending P0's turn.
     runner.end_turn();
     assert_eq!(runner.turn_player(), 1, "it must be the opponent's turn");
-    runner.game.memory = 0;
+    // Keep the turn on P1: at zero, the gain ends the turn and P0 unsuspends.
+    runner.game.memory = 3;
     (runner, keenan)
 }
 
 /// On the OPPONENT's turn, when an EFFECT plays a Digimon, the controller may
 /// suspend this Tamer to gain 1 memory. Accepting suspends + gains.
 ///
-/// IGNORED — pending engine gap `G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN`.
-/// The observer clause fires correctly on the opponent's turn (the optional
-/// pre-cost prompt installs and `gain_memory` resolves), but the suspend-self
-/// activation cost silently no-ops whenever the effect's controller is NOT the
-/// turn player. Verified empirically in this worktree:
-///   - own turn (any `effect_initiated`, any playing player) → suspend WORKS;
-///   - opponent's turn → suspend silently no-ops (no `OnSuspend` event), while
-///     `Game::suspend_with_cause(keenan, true)` called directly DOES suspend
-///     and both `progress_excludes(keenan, Some(0/1))` and
-///     `permanent_is_unaffected_by_effect(keenan, 0/1, Tamer)` return false.
-/// So `EffectContext::can_affect_permanent` would pass; the no-op lives deeper
-/// in the live cost-resolution context's source-permanent / controller
-/// threading for an `OnEnterFieldAnyone` observer fired on the opponent's turn.
-/// Shipping the clause with the cost silently unpaid (free memory) would be an
-/// approximation (CLAUDE.md §17/§18), so the clause is stubbed in the YAML.
-#[ignore = "pending: G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN — suspend-self activation cost silently no-ops when the effect's controller is not the turn player (opponent's turn); only the suspend half fails, gain_memory works"]
 #[test]
 fn bt13_102_observer_effect_play_opp_turn_accept_suspends_and_gains() {
     let (mut runner, keenan) = observer_runner();
@@ -346,21 +331,16 @@ fn bt13_102_observer_effect_play_opp_turn_accept_suspends_and_gains() {
         "accepting pays the suspend cost — the Tamer is suspended"
     );
     // Memory is stored from the turn player's (P1's) perspective. P0 gains 1
-    // memory on the opponent's turn, so the gauge moves toward P0: -1.
+    // memory on the opponent's turn, so the gauge moves from 3 to 2.
     assert_eq!(
         runner.memory(),
-        -1,
+        2,
         "accepting → the controller (P0) gains 1 memory on the opponent's turn"
     );
 }
 
 /// Declining the suspend prompt → the Tamer stays unsuspended and no memory.
 ///
-/// IGNORED on the same engine gap as the accept test
-/// (`G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN`): clause 2 is stubbed in the YAML
-/// until the gap closes, so no observer prompt installs. This test documents
-/// the intended decline semantics for when the clause is re-enabled.
-#[ignore = "pending: G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN — clause 2 stubbed; observer prompt does not install"]
 #[test]
 fn bt13_102_observer_decline_no_suspend_no_memory() {
     let (mut runner, keenan) = observer_runner();
@@ -379,28 +359,53 @@ fn bt13_102_observer_decline_no_suspend_no_memory() {
         !runner.game.players[0].battle_area[keenan.index as usize].is_suspended,
         "declining → the Tamer is NOT suspended"
     );
-    assert_eq!(runner.memory(), 0, "declining → no memory gain");
+    assert_eq!(runner.memory(), 3, "declining → no memory gain");
 }
 
-/// While clause 2 is stubbed (engine gap `G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN`),
-/// an effect-play of a Digimon on the opponent's turn installs NO prompt and
-/// gains NO memory — the [Opponent's Turn] observer is intentionally absent.
-/// (Keeps the gap honest: if the clause were re-added without the engine fix,
-/// this asserts the current stubbed state, and a future un-stub flips it.)
+/// A normal hand play does not pay or offer the effect-play cost.
 #[test]
-fn bt13_102_clause2_stubbed_no_observer_prompt() {
+fn bt13_102_hard_play_does_not_offer_observer() {
     let (mut runner, keenan) = observer_runner();
+    let opp = runner.place_on_field(1, "OPP-DIGI", Some(0));
+    runner.fire_play_event_triggers(1, opp.index as usize, false, false);
+    assert!(runner.pending_selection().is_none());
+    assert!(!runner.game.players[0].battle_area[keenan.index as usize].is_suspended);
+    assert_eq!(runner.memory(), 3);
+}
 
+#[test]
+fn bt13_102_suspended_observer_cannot_pay_again() {
+    let (mut runner, keenan) = observer_runner();
+    runner.game.players[0].battle_area[keenan.index as usize].is_suspended = true;
     let opp = runner.place_on_field(1, "OPP-DIGI", Some(0));
     runner.fire_play_event_triggers(1, opp.index as usize, true, false);
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(runner.memory(), 3);
+}
 
-    assert!(
-        runner.pending_selection().is_none(),
-        "clause 2 is stubbed (gap) — no [Opponent's Turn] suspend prompt installs"
-    );
-    assert!(
-        !runner.game.players[0].battle_area[keenan.index as usize].is_suspended,
-        "the Tamer stays unsuspended (clause stubbed)"
-    );
-    assert_eq!(runner.memory(), 0, "no memory gain (clause stubbed)");
+
+/// The old fixture observed the next turn's unsuspend, not an unpaid cost.
+#[test]
+fn bt13_102_zero_memory_gain_ends_opponent_turn_and_unsuspends_normally() {
+    let (mut runner, keenan) = observer_runner();
+    runner.game.memory = 0;
+    let opp = runner.place_on_field(1, "OPP-DIGI", Some(0));
+    runner.fire_play_event_triggers(1, opp.index as usize, true, false);
+    runner.accept_optional_trigger().unwrap();
+    runner.game.drain_effect_queue();
+    assert_eq!(runner.turn_player(), 0);
+    assert!(!runner.game.players[0].battle_area[keenan.index as usize].is_suspended);
+}
+
+#[test]
+fn bt13_102_own_turn_effect_play_does_not_offer_cost() {
+    let (mut runner, keenan) = observer_runner();
+    runner.end_turn();
+    assert_eq!(runner.turn_player(), 0);
+    let opp = runner.place_on_field(1, "OPP-DIGI", Some(0));
+    let before = runner.memory();
+    runner.fire_play_event_triggers(1, opp.index as usize, true, false);
+    assert!(runner.pending_selection().is_none());
+    assert!(!runner.game.players[0].battle_area[keenan.index as usize].is_suspended);
+    assert_eq!(runner.memory(), before);
 }

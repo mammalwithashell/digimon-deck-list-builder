@@ -180,6 +180,14 @@ pub struct ActionRow {
     /// intended as a same-source cross-check).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card_id: Option<String>,
+    /// DCGO's own identity of the played card (`CardSource.CardIndex`, unique
+    /// per game), when the row plays one: the MelonLoader converter reads it
+    /// from the resolve row's hand listing (`convert_raw.py`). The replay pairs
+    /// it with the engine card the action moved, so a later target naming the
+    /// same index finds that card (`ReplayDriver::record_dcgo_card_indexes`).
+    /// `None` in recordings without it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_index: Option<i32>,
     /// [Diagnostic, added post-v1] Identical read to `memory`, under its
     /// own key — see `memory`'s doc for the perspective convention. Exists
     /// so a reader never has to know that, specifically for an `action`
@@ -300,6 +308,14 @@ pub struct SelectionRow {
     /// Card identities picked (hand/trash/reveal prompts).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card_ids: Option<Vec<String>>,
+    /// DCGO's own identity (`CardSource.CardIndex`) of each picked card,
+    /// parallel to `card_ids`: `SelectHandEffect.SetTargetHandCards` and
+    /// `SelectCardEffect.SetTargetCardAndIndicies` name their picks by it. The
+    /// replay pairs each with the engine card the row moved
+    /// (`ReplayDriver::record_dcgo_card_indexes`). `None` in recordings
+    /// without it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_indexes: Option<Vec<i32>>,
     /// Zone positions picked, when DCGO knows them (hand indexes etc.).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub indexes: Option<Vec<i32>>,
@@ -399,6 +415,33 @@ pub struct SelectionRow {
 pub struct FrameTarget {
     pub player: u8,
     pub frame: i32,
+    /// DCGO's own identity (`CardSource.CardIndex`) of the target permanent's
+    /// top card, when the converter could ground it (a Burst Digivolve's Tamer:
+    /// the returned card's index in its owner's next hand listing). It tells
+    /// apart copies of one card that `frame` (a position in a board of card ids)
+    /// cannot (`ReplayDriver::duplicate_copy_target`). `None` otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_index: Option<i32>,
+    /// How the converter grounded `card_index` (`None` when it carries none, and
+    /// in recordings predating this field). A `Recorder` index is DCGO's own
+    /// value, logged per board entry (recorder 0.2.0 `board_indexes`); a
+    /// `FrameModel` one is DERIVED (DCGO's frame placement followed from the
+    /// logged plays and checked against every recorded board); a `HandListing`
+    /// one was read from the owner's next hand listing (a Burst Digivolve's
+    /// returned Tamer). Only `Recorder` is an observation: the other two are
+    /// the converter's inference, so a replay that resolves a copy by one of
+    /// them should say so (docs/DCGO_RECORDING_SCHEMA.md, `card_index_source`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_index_source: Option<CardIndexSource>,
+}
+
+/// Where a [`FrameTarget::card_index`] came from; see `FrameTarget::card_index_source`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CardIndexSource {
+    Recorder,
+    FrameModel,
+    HandListing,
 }
 
 /// An unencodable decision — the recorder saw it happen but couldn't map
@@ -1144,5 +1187,32 @@ this is not json
         // memory_pair favors player 0, recording is player 1's own —
         // sign flips.
         assert_eq!(memory_from_recording_perspective(-7, 0, 1), 7);
+    }
+
+    #[test]
+    fn frame_target_card_index_source_round_trips_each_provenance() {
+        // The converter's `targets[].card_index_source` (docs/DCGO_RECORDING_SCHEMA.md): which of the recorder, the
+        // frame model or a hand listing grounded `card_index`.
+        for (text, want) in [
+            ("recorder", CardIndexSource::Recorder),
+            ("frame_model", CardIndexSource::FrameModel),
+            ("hand_listing", CardIndexSource::HandListing),
+        ] {
+            let json = format!(
+                r#"{{"player":1,"frame":2,"card_index":65,"card_index_source":"{text}"}}"#
+            );
+            let t: FrameTarget = serde_json::from_str(&json).unwrap();
+            assert_eq!(t.card_index, Some(65));
+            assert_eq!(t.card_index_source, Some(want));
+            assert_eq!(serde_json::to_string(&t).unwrap(), json);
+        }
+    }
+
+    #[test]
+    fn frame_target_without_a_source_parses_and_writes_none() {
+        // A recording that predates the field (or a target with no card_index) has no source and writes none.
+        let t: FrameTarget = serde_json::from_str(r#"{"player":0,"frame":3}"#).unwrap();
+        assert_eq!(t.card_index_source, None);
+        assert_eq!(serde_json::to_string(&t).unwrap(), r#"{"player":0,"frame":3}"#);
     }
 }

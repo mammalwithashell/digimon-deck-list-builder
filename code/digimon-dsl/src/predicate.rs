@@ -400,6 +400,9 @@ pub struct PredicateSpec {
     /// G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub this_card_can_digivolve_onto: Option<ThisCardDigivolvePredicate>,
+    /// Battle-area permanent can legally digivolve into the exact effect-source card.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_digivolve_into_source_card: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_inherited: Option<Box<PredicateSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]

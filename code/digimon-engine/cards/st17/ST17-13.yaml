@@ -1,0 +1,83 @@
+# Official Bandai card face and committed bundle; Royal Knights qualification.
+card: ST17-13
+name: Magnamon
+kind: digimon
+color:
+- black
+- blue
+level: 4
+cost: 7
+dp: 7000
+traits:
+- Holy Warrior
+- Royal Knight
+form: Armor Form
+attribute: Free
+alt_paths:
+- kind: digivolve
+  from:
+    level_eq: 3
+    color_is: black
+  cost: 4
+- kind: digivolve
+  from:
+    level_eq: 3
+    color_is: blue
+  cost: 4
+- kind: digivolve
+  from:
+    name_is: Veemon
+  cost: 3
+effects:
+- kind: grant_keyword
+  keyword: Blocker
+- kind: grant_keyword
+  keyword: ArmorPurge
+- when: when_digivolving
+  process:
+  - select_opponent_permanent:
+      bind_as: strip
+      filter:
+        kind: digimon
+      prompt: Choose a Digimon
+  - bind_permanent_property:
+      from: strip
+      property: color_count
+      bind_as: colors
+  - trash_top_stacked_sources:
+      target: strip
+      count:
+        binding_value: colors
+  - select_opponent_permanent:
+      bind_as: bounce
+      filter:
+        kind: digimon
+        materials_count_lte: 0
+      prompt: Choose a Digimon
+  - return_to_hand:
+      target: bounce
+- when: on_security
+  process:
+  - select_any_permanent:
+      bind_as: dedigi
+      filter:
+        kind: digimon
+      prompt: Choose 1 Digimon to De-Digivolve 1
+  - de_digivolve:
+      target: dedigi
+      amount: 1
+      stop_at_level: 3
+  - schedule_delayed:
+      when: end_of_battle
+      body:
+      - select_own_permanent:
+          bind_as: host
+          filter:
+            kind: digimon
+            can_digivolve_into_source_card: true
+          optional: true
+          prompt: Choose a Digimon
+      - effect_initiated_digivolve:
+          target: host
+          source: self
+          cost: free

@@ -463,14 +463,137 @@ fn ex11_054_all_turns_does_not_trigger_without_reptile_or_dragonkin() {
     );
 }
 
+/// Owen on P0's field, `progress_count` vanilla Digimon with <Progress> on
+/// P0's field, and a Reptile Digimon in P0's hand. Returns the runner, the
+/// Progress Digimon handles, and the Reptile hand index.
+fn progress_observer_runner(
+    progress_count: usize,
+) -> (
+    DebugRunner,
+    Vec<digimon_engine::permanent::PermanentHandle>,
+    usize,
+) {
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::CardKind;
+    use digimon_engine::enums::Keyword;
+
+    let mut reptile = make_test_card("REPTILE-P", "ReptileDigimonP");
+    reptile.card_kind = CardKind::Digimon;
+    reptile.level = Some(4);
+    reptile.dp = Some(4000);
+    reptile.traits = vec!["Reptile".to_string()];
+    reptile.play_cost = 0;
+
+    let mut builder = DebugRunner::builder()
+        .dsl_card("EX11-054")
+        .expect("EX11-054 in embedded pack")
+        .add_card(reptile)
+        .add_card(make_test_card("DRAW-FILLER", "DrawFiller"))
+        .deck(0, &["DRAW-FILLER", "DRAW-FILLER"]);
+    for i in 0..progress_count {
+        let mut prog = make_test_card(&format!("PROG-{i}"), &format!("ProgressDigimon{i}"));
+        prog.card_kind = CardKind::Digimon;
+        prog.level = Some(5);
+        prog.dp = Some(5000);
+        prog.traits = vec!["Beast".to_string()];
+        prog.keywords = vec![Keyword::Progress];
+        builder = builder.add_card(prog);
+    }
+    let mut runner = builder.memory(10).start();
+
+    runner.place_on_field(0, "EX11-054", None);
+    let progs: Vec<_> = (0..progress_count)
+        .map(|i| runner.place_on_field(0, &format!("PROG-{i}"), Some(0)))
+        .collect();
+
+    let reptile_hand_idx = {
+        let data_idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "REPTILE-P")
+            .unwrap();
+        let card_index = runner.game.next_card_index();
+        runner.game.players[0]
+            .hand
+            .push(CardSource::new(data_idx, 0, card_index));
+        runner.game.players[0].hand.len() - 1
+    };
+    (runner, progs, reptile_hand_idx)
+}
+
+/// Play the Reptile and accept Owen's suspend-cost trigger.
+fn play_reptile_and_accept_owen(runner: &mut DebugRunner, reptile_hand_idx: usize) {
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::selection::SelectionKind;
+
+    runner.play(0, reptile_hand_idx);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::TriggerOrder));
+    let trigger_action = {
+        let sel = runner.pending_selection().unwrap();
+        assert_ne!(sel.valid_action_ids[0], PASS);
+        sel.valid_action_ids[0]
+    };
+    runner
+        .execute_action(0, trigger_action)
+        .expect("accept the activation cost");
+}
+
 #[test]
-#[ignore = "pending: entering_permanent_trigger_context + G-DECLARATIVE-KEYWORD"]
-fn ex11_054_all_turns_grants_3000_dp_to_progress_digimon() {
-    // After suspending Owen and drawing 1, the next step selects one of
-    // your Digimon with <Progress> and grants it +3000 DP until end of turn.
-    //
-    // Requires: (1) observer mechanism working, (2) Progress keyword active
-    // on Medusamon (G-DECLARATIVE-KEYWORD gap). Blocked by both gaps.
+fn ex11_054_all_turns_progress_dp_pick_is_mandatory() {
+    // Printed text: "After, 1 of your Digimon with <Progress> gets +3000 DP for
+    // the turn." -- no "you may", no "up to". DCGO EX11_054.cs:63-85 sets
+    // `canNoSelect: false, canEndNotMax: false` on the >1-candidate prompt and
+    // takes the lone candidate outright when there is exactly one, so the
+    // +3000 DP is never skippable while a <Progress> Digimon exists.
+    use digimon_engine::action::space::PASS;
+
+    let (mut runner, progs, reptile_hand_idx) = progress_observer_runner(2);
+    let dp_before: Vec<i32> = progs.iter().map(|h| runner.effective_dp(*h).unwrap()).collect();
+    play_reptile_and_accept_owen(&mut runner, reptile_hand_idx);
+
+    // Two <Progress> candidates -> a real choice, but not a skippable one.
+    let sel = runner
+        .pending_selection()
+        .expect("two Progress Digimon must surface the +3000 DP target choice");
+    assert!(
+        !sel.is_optional,
+        "the +3000 DP pick is mandatory (DCGO canNoSelect:false); it must not be optional"
+    );
+    assert!(
+        !sel.valid_action_ids.contains(&PASS),
+        "PASS must not be offered on the mandatory +3000 DP pick"
+    );
+    assert_eq!(sel.valid_action_ids.len(), 2, "both Progress Digimon are candidates");
+    let second = sel.valid_action_ids[1];
+    runner.execute_action(0, second).expect("pick the second Progress Digimon");
+    runner.auto_resolve().unwrap();
+
+    let dp_after: Vec<i32> = progs.iter().map(|h| runner.effective_dp(*h).unwrap()).collect();
+    assert_eq!(
+        dp_after.iter().zip(&dp_before).map(|(a, b)| a - b).sum::<i32>(),
+        3000,
+        "exactly one Progress Digimon gains +3000 DP"
+    );
+}
+
+#[test]
+fn ex11_054_all_turns_lone_progress_digimon_always_gets_3000_dp() {
+    // DCGO EX11_054.cs:66-69: with exactly one valid target it is selected
+    // outright. Our engine may surface the one-candidate pick, but it must be
+    // mandatory -- the +3000 DP lands whichever action the prompt offers.
+    let (mut runner, progs, reptile_hand_idx) = progress_observer_runner(1);
+    let dp_before = runner.effective_dp(progs[0]).unwrap();
+    play_reptile_and_accept_owen(&mut runner, reptile_hand_idx);
+
+    if let Some(sel) = runner.pending_selection() {
+        assert!(
+            !sel.is_optional,
+            "a lone Progress candidate must not be skippable"
+        );
+    }
+    runner.auto_resolve().unwrap();
+    assert_eq!(runner.effective_dp(progs[0]), Some(dp_before + 3000));
 }
 
 #[test]

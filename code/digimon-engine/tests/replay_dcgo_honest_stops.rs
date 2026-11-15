@@ -309,10 +309,13 @@ fn unstamped_true_with_nothing_parked_before_the_actors_selection_halts() {
     assert!(matches!(kind, DivergenceKind::SelectionResolution { .. }), "{kind:?}");
 }
 
-/// Regression guard: an unstamped `true` with nothing parked and no selection
-/// of that seat after it stays a non-halting note.
+/// An unstamped `true` with nothing parked and no selection of that seat
+/// after it, on a quiet board where the engine resolved no effect since the
+/// last decision: DCGO used an effect the engine never offered (review r4
+/// finding 13; it was a non-halting note). The note stays for a `true` that
+/// follows engine effect activity (`replay_dcgo_review_r4b.rs`).
 #[test]
-fn unstamped_true_with_nothing_parked_and_no_following_selection_is_a_note() {
+fn unstamped_true_with_nothing_parked_and_no_engine_effect_halts() {
     let r = quiet_board();
     let mut s = session(
         r.game,
@@ -322,9 +325,8 @@ fn unstamped_true_with_nothing_parked_and_no_following_selection_is_a_note() {
         ],
     );
     s.step();
-    assert!(s.divergences().is_empty() && !s.is_paused(), "{:?}", s.divergences());
-    assert_eq!(s.current_step(), 1);
-    assert_eq!(s.replay_notes().len(), 1, "{:?}", s.replay_notes());
+    let kind = halted_at(&s, 0);
+    assert!(matches!(kind, DivergenceKind::SelectionResolution { .. }), "{kind:?}");
 }
 
 // ── (4) an order DCGO never recorded ─────────────────────────────────────────

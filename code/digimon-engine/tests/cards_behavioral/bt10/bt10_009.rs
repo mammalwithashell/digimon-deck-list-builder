@@ -138,5 +138,64 @@ fn bt10_009_digixros_two_field_materials_reduce_cost_and_attach_sources() {
     );
 }
 
+#[test]
+fn bt10_009_digixros_is_offered_when_played_by_an_effect_from_trash() {
+    // DigiXros is offered on every single-card play, not only the main-phase
+    // play from hand. DCGO `PlayCardClass.PlayCard` runs
+    // `SelectDigiXrosClass.Select` for any single non-digivolve play
+    // (CardController.cs:917-922), whatever zone the card came from; the
+    // official Q&A agrees (Q2352: "The effect will activate if a DigiXros is
+    // performed when a Digimon is played by an effect"; Q2104 likewise), and
+    // CR 4.3 7-2-3 places the declaration inside the play procedure itself.
+    use digimon_engine::enums::{CostDelta, PlaySource};
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT10-009")
+        .expect("BT10-009 YAML loads")
+        .add_card(xros_material("BT10-008", "Shoutmon", 3))
+        .add_card(xros_material("BT10-049", "Ballistamon", 4))
+        .memory(15)
+        .start();
+    runner.inject_trash(0, "BT10-009");
+    let shoutmon = runner.place_on_field(0, "BT10-008", Some(0));
+    let trash_index = runner.game.players[0]
+        .trash
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "BT10-009")
+        .expect("BT10-009 in trash");
+    let memory_before = runner.memory();
+
+    let played = runner.game.play_from_trash_with_cost(
+        0,
+        trash_index,
+        CostDelta::Reduce(0),
+        PlaySource::ByEffect,
+    );
+    assert!(played.is_none(), "the play parks on the DigiXros material prompt");
+    let prompt = runner
+        .pending_selection()
+        .expect("an effect play from trash must offer DigiXros materials before paying cost");
+    assert!(prompt.is_optional, "DigiXros is not mandatory (CR 7-2-2-12)");
+    let shoutmon_action = physical_menu::battle_top_action(&runner.game, shoutmon);
+    assert!(prompt.valid_action_ids.contains(&shoutmon_action));
+    runner.execute_action(0, shoutmon_action).expect("pick Shoutmon");
+    if runner.pending_selection().is_some() {
+        runner.execute_action(0, PASS).expect("stop selecting materials");
+    }
+
+    assert_eq!(memory_before - runner.memory(), 7, "cost 9 reduced by one DigiXros -2");
+    assert_eq!(runner.battle_area_size(0), 1, "Shoutmon left the field as material");
+    let x4 = &runner.game.players[0].battle_area[0];
+    assert_eq!(x4.top_card().card_id(&runner.game.card_data), "BT10-009");
+    assert!(x4
+        .card_sources
+        .iter()
+        .any(|card| card.card_id(&runner.game.card_data) == "BT10-008"));
+    assert!(!runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "BT10-009"));
+}
+
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;

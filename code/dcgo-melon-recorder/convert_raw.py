@@ -26,6 +26,9 @@ import os
 import sys
 import uuid
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import frame_model  # noqa: E402
+
 SCHEMA_VERSION = 1  # recording-row version written by DCGO ActionSpace.SCHEMA_VERSION (the engine action-space constant is a separate, newer number)
 ACTION_KEEP, ACTION_REDRAW, ACTION_PASS, ACTION_HATCH, ACTION_CONCEDE = 0, 1, 62, 60, 93
 ACTION_MOVE = 61  # MOVE_FROM_BREEDING
@@ -60,6 +63,12 @@ def load_cards(path):
 def is_egg(cards, card_id):
     c = cards.get(card_id) or {}
     return "egg" in str(c.get("card_kind", "")).lower() or c.get("level") == 2 and (c.get("play_cost") in (0, None))
+
+
+def is_tamer(cards, card_id):
+    """Whether cards.json knows `card_id` as a Tamer (card_kind 1, the engine's CardKind::Tamer); unknown is False."""
+    k = (cards.get(card_id) or {}).get("card_kind")
+    return k == 1 or "tamer" in str(k).lower()
 
 
 def jogress_root_slots(roots, anchor_frame, anchor_slot, n_battle):
@@ -98,6 +107,75 @@ def jogress_root_slots(roots, anchor_frame, anchor_slot, n_battle):
             return None
         slots.append(lo)
     return slots if len(set(slots)) == 2 else None
+
+
+def pick_card_indexes(args, card_ids):
+    """DCGO's CardIndex of each picked card, parallel to `card_ids`, or None.
+
+    SelectHandEffect.SetTargetHandCards(playerID, int[] cardIndexes) and
+    SelectCardEffect.SetTargetCardAndIndicies(playerID, int[] cardIndexes, int[] ...) name the picks by CardIndex
+    (the mod resolves `card_ids` from those same indexes), so the two lists pair one to one."""
+    if len(args) < 2 or not isinstance(args[1], list) or len(args[1]) != len(card_ids):
+        return None
+    if not all(isinstance(k, int) and not isinstance(k, bool) for k in args[1]):
+        return None
+    return list(args[1])
+
+
+def _hand_listing(row, seat):
+    """The (card_id, card_index) list of `seat`'s hand that a PlayCardClass.PlayCard row logged (Core.cs OwnerHandJson:
+    the owner's HandCards in hand order, each with its CardIndex, taken BEFORE the played card leaves), or None."""
+    if row.get("method") != "PlayCardClass.PlayCard":
+        return None
+    hand = row.get("hand") or {}
+    cards = hand.get("cards")
+    if hand.get("player") != seat or not isinstance(cards, list):
+        return None
+    return [(c.get("card_id"), c.get("card_index")) for c in cards if isinstance(c, dict)]
+
+
+def returned_tamer_index(rows, ridx, seat, card_id):
+    """DCGO's CardIndex of the Tamer a Burst Digivolve returned to `seat`'s hand, or None when it is not certain.
+
+    `rows[ridx]` is the burst digivolve's own PlayCardClass.PlayCard row: DCGO returns the picked Tamer to its owner's
+    hand while it resolves that play (CardController.cs:942 BounceTamer returns it; CardController.cs:254-256 is only
+    the BurstTamer frame lookup; CR 4.3 8-3: the specified Tamer returns to the hand).
+    The returned card is a card of the picked id that is
+      * absent from the hand listing this row logged (taken before the play),
+      * present in the owner's NEXT hand listing in the same turn, and
+      * was taken out of the hand by a play earlier: its last listing before this row is the PlayCard row that
+        played it (the hand slot names it), so it went from the hand onto the field.
+    A copy drawn or searched in between was never played from the hand and does not qualify. Exactly one card must
+    qualify; two (another bounce before the next listing) or none leave the pick positional."""
+    before = _hand_listing(rows[ridx], seat)
+    if before is None:
+        return None
+    turn = rows[ridx].get("turn")
+    after = None
+    for r in rows[ridx + 1:]:
+        if r.get("method") in ("TurnStateMachine.Init", "TurnStateMachine.EndGame") or r.get("turn") != turn:
+            break
+        after = _hand_listing(r, seat)
+        if after is not None:
+            break
+    if after is None:
+        return None
+    had = {k for _, k in before}
+    new = [k for c, k in after if c == card_id and isinstance(k, int) and k not in had]
+
+    def played_from_hand(k):
+        for r in reversed(rows[:ridx]):
+            if r.get("method") == "TurnStateMachine.Init":
+                return False
+            listing = _hand_listing(r, seat)
+            if listing is None or all(x != k for _, x in listing):
+                continue
+            slot = (r.get("hand") or {}).get("slot", -1)
+            return 0 <= slot < len(listing) and listing[slot][1] == k
+        return False
+
+    qualified = [k for k in new if played_from_hand(k)]
+    return qualified[0] if len(qualified) == 1 else None
 
 
 def convert(rows, cards, allow_truncated=False):
@@ -157,11 +235,17 @@ def convert(rows, cards, allow_truncated=False):
     dna_play_indexes = set()  # card indexes whose LATEST queued play packet named DNA (jogress) roots
     dna_unknown_indexes = set()  # card indexes whose latest queued play packet's jogress list could not be read
     dna_roots = {}  # card index -> (jogress root FrameIDs or None when unreadable, the packet's TargetFrameID)
+    dna_picks = {}  # card index -> the material pick rows (in `out`) the local seat logged before its DNA packet
+    # card index -> (BurstTamerFrameID, the Tamer pick row in `out` the local seat logged just before the packet, or
+    # None when no such row exists - a remote seat's pick ran on its own client only)
+    burst_plays = {}
+    # card index -> whether a play packet logged with NO payload bytes (an older recorder build) looks like a DNA
+    dna_bytes_absent = {}
     winner = -1
     reason = ""
     inferred = []
 
-    def action(actor, action_id, phase, source, card_id=None, inferred_row=False, boards=None):
+    def action(actor, action_id, phase, source, card_id=None, inferred_row=False, boards=None, card_index=None):
         nonlocal step
         row = {"type": "action", "step": step, "actor": actor, "action_id": action_id,
                "phase": phase, "source": source}
@@ -171,6 +255,10 @@ def convert(rows, cards, allow_truncated=False):
             row["inferred"] = True  # synthesised by this converter, not observed by the recorder
         if card_id:
             row["card_id"] = card_id
+        if isinstance(card_index, int):
+            # DCGO's CardIndex of the played card (its hand slot in the resolve row's hand listing): the replay pairs
+            # it with the engine card this action moves (ReplayDriver::record_dcgo_card_indexes)
+            row["card_index"] = card_index
         out.append(row)
         step += 1
 
@@ -184,6 +272,49 @@ def convert(rows, cards, allow_truncated=False):
         for later in out[at:]:
             later["step"] += 1
         out.insert(at, row)
+
+    # id(out row) -> index in `rows` of the raw row that wrote it (`tag_sources`), so a row written out of raw order
+    # (a DNA / burst action moved ahead of its picks) is still placed by when DCGO logged it.
+    src_of = {}
+
+    def tag_sources(ridx):
+        for x in out:
+            src_of.setdefault(id(x), ridx)
+
+    def last_action_src(seat):
+        """Raw index of the row that wrote `seat`'s latest action in `out`, or -1."""
+        return max((src_of.get(id(x), -1) for x in out if x.get("type") == "action" and x.get("actor") == seat),
+                   default=-1)
+
+    def own_picks_before(seat, ridx, limit):
+        """The trailing run (at most `limit`, in logged order) of `seat`'s own-side SelectPermanentEffect rows that END
+        `out` right before the packet at rows[ridx]: contiguous, logged in the packet's turn with no turn boundary
+        between, and after the seat's previous action in raw order (a DNA's material picks, written after its action,
+        are not a later play's picks)."""
+        turn = rows[ridx].get("turn")
+        floor = last_action_src(seat)
+        found = []
+        for row in reversed(out):
+            if len(found) == limit:
+                break
+            src = src_of.get(id(row), -1)
+            if not (row.get("type") == "selection" and row.get("prompt") == "SelectPermanentEffect"
+                    and row.get("actor") == seat and not row.get("synthesized") and row.get("targets")
+                    and all(t.get("player") == seat for t in row["targets"])):
+                break
+            if src <= floor or rows[src].get("turn") != turn or any(
+                    ("turn" in x and x["turn"] != turn)
+                    or x.get("method") in ("TurnStateMachine.Init", "TurnStateMachine.SetBreedingPhase")
+                    for x in rows[src + 1:ridx]):
+                break
+            found.append(row)
+        return found[::-1]
+
+    def material_picks(seat, ridx):
+        """The rows a local seat's DNA root selection logged: DCGO asks both roots (SelectJogressEffect, own side) and
+        queues the play from that selection's end coroutine (TurnStateMachine.cs:2969-2983), so they are the seat's two
+        own-side SelectPermanentEffect rows immediately before its play packet (`own_picks_before`)."""
+        return own_picks_before(seat, ridx, 2)
 
     # Bot turns: the bot decides without any hooked setter, so its breeding PASS comes first on a turn and its
     # main-phase PASS closes the turn. Track which bot turns already had their breeding / pass synthesised.
@@ -238,55 +369,245 @@ def convert(rows, cards, allow_truncated=False):
         bot_bred = False
 
     started = False  # past the mulligans
-    # Breeding-area occupancy per seat, for SetBreedingPhase(doBreeding=true): hatch when empty, move when occupied
-    # (CR 4.3 6-4-1-1 / 6-4-1-2).
-    # Toggled by the breeding decisions themselves, and corrected by what the rows show of the area, because EFFECTS
-    # also fill and empty it (g6: BT20-095's <Delay> moved Ryudamon BT20-010 out during the other seat's turn).
-    breeding_occupied = {0: False, 1: False}
-    breeding_top = {0: None, 1: None}  # the breeding Digimon's top card id; "?" = occupied, card not known (a hatch)
+    # Breeding-area state per seat, for SetBreedingPhase(doBreeding=true): hatch when the area is empty, move its
+    # Digimon when occupied (CR 4.3 6-4-1-1 / 6-4-1-2; DCGO TurnStateMachine.cs:1058-1068 hatches when CanHatch, which
+    # needs an empty breeding area, Player.cs:1172, and moves otherwise). The decisions themselves fill and empty it, and
+    # so do EFFECTS (g6: BT20-095's <Delay> moved Ryudamon BT20-010 out during the other seat's turn), so the rows'
+    # boards correct it (`field_board`, `battle_board`, the play rows). The area holds at most one card (CR 4.3 3-4-7-2).
+    #   occ[p]     True / False, or None = unknown (unknown_why[p] says why; a doBreeding then needs `breeding_outcome`)
+    #   top[p]     the card ids the breeding card's top can be (several when a row cannot say which permanent it
+    #              changed); empty = not known (a hatched Digi-Egg)
+    #   copies[p]  {id: copies of that id in p's BATTLE area while the breeding area holds it}, or None when not
+    #              anchored: a battle board showing more copies than that is the breeding card having moved there or a
+    #              copy entering unseen, which no board tells apart
+    occ = {0: False, 1: False}
+    top = {0: set(), 1: set()}
+    copies = {0: None, 1: None}
+    unknown_why = {0: None, 1: None}
+    pending_owner = {}  # a breeding-area play whose row names no owner: {"card": id, "saved": {seat: state}}
 
-    def breeding_evidence(p, occupied, top, why):
-        if breeding_occupied[p] != occupied:
-            inferred.append("P%d breeding area %s: %s (the toggled flag said %s)" % (
-                p, "occupied" if occupied else "empty", why, "occupied" if breeding_occupied[p] else "empty"))
-        breeding_occupied[p], breeding_top[p] = occupied, top
+    def describe(v):
+        return "unknown" if v is None else ("occupied" if v else "empty")
+
+    def set_breeding(p, occupied, ids=(), why="", battle=None):
+        if occ[p] != occupied:
+            inferred.append("P%d breeding area %s: %s (it was %s)" % (p, describe(occupied), why, describe(occ[p])))
+        occ[p] = occupied
+        top[p] = set(ids) if occupied is not False else set()  # unknown: what it holds IF it is occupied
+        unknown_why[p] = why if occupied is None else None
+        copies[p] = {c: battle.count(c) for c in top[p]} if occupied and top[p] and isinstance(battle, list) else None
+
+    def field_board(p, fp, where):
+        """A GetFieldPermanents() board of seat p: battle AND breeding permanents in FrameID order (Player.cs:669-684),
+        the breeding frame being the last FrameID (Player.cs:41-54, isBattleAreaFrameID Player.cs:1561-1563). So the
+        breeding permanent, when there is one, is the board's LAST entry: a candidate top card elsewhere on the board
+        (a moved Digimon, another copy) says nothing."""
+        pend = pending_owner.get("card")
+        if pend is not None and p in pending_owner["saved"] and (not fp or fp[-1] != pend):
+            # not this seat's breeding card: the unnamed breeding-area play went to the other seat
+            occ[p], top[p], copies[p], unknown_why[p] = pending_owner["saved"].pop(p)
+            if len(pending_owner["saved"]) == 1:
+                (q,) = pending_owner["saved"]
+                set_breeding(q, True, {pend}, "%s, played into a breeding area of a seat the row does not name, is "
+                                              "not P%d's breeding card (%s)" % (pend, p, where))
+                pending_owner.clear()
+        if not fp:
+            if occ[p] is not False:
+                set_breeding(p, False, why="P%d's field is empty (%s)" % (p, where))
+            return
+        last = fp[-1]
+        if is_egg(cards, last):
+            # a Digi-Egg has no DP and is never moved (CR 4.3 4-17-2): it can only be the breeding card
+            if not (occ[p] is True and top[p] == {last}):
+                set_breeding(p, True, {last}, "Digi-Egg %s ends P%d's field board (%s)" % (last, p, where), [])
+            return
+        if occ[p] is not False and top[p]:
+            if last not in top[p]:
+                # (also settles an unknown area: the one way it could still be occupied is by one of these, last here)
+                set_breeding(p, False, why="%s is not the last permanent on P%d's field board, where the breeding one "
+                                           "is (%s)" % ("/".join(sorted(top[p])), p, where))
+            elif occ[p] is True:
+                # consistent: if the area holds it, the other copies on the board are in the battle area
+                top[p] = {last}
+                copies[p] = {last: fp.count(last) - 1}
+
+    def battle_board(p, b, where):
+        """A GetBattleAreaPermanents() board of seat p (no breeding permanent)."""
+        if occ[p] is not True or not top[p]:
+            return
+        if copies[p] is None:
+            seen = sorted(c for c in top[p] if c in b)
+            if not seen:
+                copies[p] = {c: 0 for c in top[p]}
+                return
+            set_breeding(p, None, top[p], why="%s is in P%d's battle area (%s) and no earlier board anchored how many copies of "
+                                      "it were there: the breeding one may have moved there" % (seen[0], p, where))
+            return
+        for c in sorted(top[p]):
+            n = b.count(c)
+            if n > copies[p].get(c, 0):
+                set_breeding(p, None, top[p], why="P%d's battle area shows %d %s (%s), more than the %d it held while its "
+                                          "breeding area held %s: the breeding one moved there (BT20-095's <Delay>, a "
+                                          "breeding-area effect) or another copy entered by a row that does not name "
+                                          "its owner; the boards cannot tell" % (p, n, c, where, copies[p].get(c, 0), c))
+                return
+            copies[p][c] = n
+
+    def entered_battle(p, card, replaced=None):
+        """A play of seat p's put `card` on top of a battle-area permanent (whose top was `replaced`) or into a new one."""
+        if p in (0, 1) and occ[p] is True and copies[p] is not None:
+            if replaced in copies[p] and copies[p][replaced] > 0:
+                copies[p][replaced] -= 1
+            if card in copies[p]:
+                copies[p][card] += 1
+
+    def play_row_breeding(r, tp):
+        """What a PlayCardClass row (logged at construction, before it resolves: its boards are the state before the
+        play) says of the breeding areas."""
+        where = "seq %s" % r.get("seq")
+        boards = r.get("boards")
+        boards = boards if isinstance(boards, list) and len(boards) == 2 and all(
+            isinstance(x, list) for x in boards) else None
+        if boards is not None:
+            for p in (0, 1):
+                battle_board(p, boards[p], where)
+        played = (r.get("cards") or [None])[0]
+        if not played:
+            return
+        tgt = r.get("target") if isinstance(r.get("target"), dict) else None
+        tid = tgt.get("card_id") if tgt else None
+        owner = (r.get("hand") or {}).get("player", -1)
+        if r.get("breeding_area") is True:
+            # PlayCardClass._isBreedingArea: the card is played INTO its owner's breeding area
+            if owner in (0, 1):
+                set_breeding(owner, True, {played}, "%s played into it (%s)" % (played, where))
+            else:
+                pending_owner.clear()
+                pending_owner.update({"card": played, "saved": {
+                    s: (occ[s], set(top[s]), copies[s], unknown_why[s]) for s in (0, 1)}})
+                for s in (0, 1):
+                    set_breeding(s, None, {played}, why="%s was played into a breeding area and the row does not name whose "
+                                              "(%s)" % (played, where))
+            return
+        if tgt is None or tp not in (0, 1):
+            entered_battle(owner, played)
+            return
+        if r.get("target_breeding") is True:
+            # the mod's TargetSlotJson found the target in the TURN player's breeding area: it stays, under a new top
+            set_breeding(tp, True, {played}, "%s digivolved in it (%s)" % (played, where),
+                         boards[tp] if boards else None)
+            return
+        if r.get("target_slot", -1) >= 0:
+            entered_battle(tp, played, tid)
+            return
+        # TargetSlotJson looks among the TURN player's permanents only (Core.cs, TurnPlayerId()): a target it did not find
+        # is the other seat's, in its battle area or its breeding area
+        o = 1 - tp
+        if boards is not None and tid not in boards[o]:
+            # not in that seat's battle area: the target is its breeding Digimon
+            set_breeding(o, True, {played}, "%s digivolved P%d's breeding %s during P%d's turn (%s)" % (
+                played, o, tid, tp, where), boards[o])
+        elif occ[o] is True and tid in top[o]:
+            # a breeding top card's id that is also in the battle area: either permanent may be the target; the area
+            # stays occupied either way, by one of the two
+            top[o] = {tid, played}
+            copies[o] = ({tid: boards[o].count(tid), played: boards[o].count(played) + 1}
+                         if boards is not None else None)
+        else:
+            entered_battle(o, played, tid)
+
+    def breeding_outcome(p, start):
+        """A doBreeding whose area's occupancy is unknown: HATCH when the rows after it show a Digi-Egg in p's breeding
+        area before anything else could have put one there. A Digi-Egg has no DP and is never moved (CR 4.3 4-17-2);
+        a MOVE leaves the area empty, and only a hatch or a play INTO the area fills it. Nothing here proves a MOVE:
+        that stays undecided.
+
+        A play INTO the area made by an effect goes through PlayPermanentClass, which the mod does not hook
+        (raw-20261113T025510Z#g5 seq 834: P1's field board ends with Pinamon (BT20-004), which no logged row put
+        there). So a Digi-Egg seen there proves the hatch only while no effect can have resolved since the decision:
+        the first row that shows effect activity (an effect's selection, "use?" answer, trigger order, a play - whose
+        [On Play] / [When Digivolving] effects follow it - a source placement, an attack or a [Main] activation) ends
+        the evidence. Queueing a play packet runs nothing; a forced effect that resolves with no row at all stays
+        invisible to this check."""
+        def effect_may_have_run(x, mm):
+            if mm == "TurnStateMachine.QueueMainPhaseAction_Internal":
+                return len(x.get("args", [])) >= 2 and x["args"][1] in (ATTACK_PACKET_ID, ACTIVATE_PERMANENT_PACKET_ID)
+            return (mm.startswith(("MultipleSkills.", "OptionalSkill.", "UserSelectionManager.", "SelectCardEffect.",
+                                   "SelectHandEffect.", "SelectCountEffect.", "SelectAttackEffect.",
+                                   "SelectPermanentEffect.", "Permanent.", "TurnStateMachine.SetAttackingPermaent"))
+                    or (mm in ("PlayCardClass.ctor", "PlayCardClass.PlayCard")))
+
+        for x in rows[start + 1:]:
+            mm = x.get("method", "")
+            if mm in ("TurnStateMachine.SetBreedingPhase", "TurnStateMachine.Init", "TurnStateMachine.EndGame"):
+                return None
+            if mm in ("PlayCardClass.ctor", "PlayCardClass.PlayCard"):
+                if x.get("breeding_area") is True:
+                    return None
+                tid = (x.get("target") or {}).get("card_id") if isinstance(x.get("target"), dict) else None
+                if x.get("target_breeding") is True and x.get("tp") == p:
+                    if tid and is_egg(cards, tid):
+                        return "%s digivolved onto Digi-Egg %s in P%d's breeding area (seq %s)" % (
+                            (x.get("cards") or ["?"])[0], tid, p, x.get("seq"))
+                    return None
+            elif mm.startswith("Snapshot."):
+                pl = next((q for q in x.get("players", []) if q.get("id") == p), None)
+                if pl is not None and "breeding" in pl:
+                    br = pl["breeding"]
+                    return ("snapshot shows Digi-Egg %s in P%d's breeding area (seq %s)" % (br[0], p, x.get("seq"))
+                            if br and is_egg(cards, br[0]) else None)
+            elif mm == "SelectPermanentEffect.SetTargetFrames" or (
+                    mm == "TurnStateMachine.QueueMainPhaseAction_Internal" and len(x.get("args", [])) >= 2
+                    and x["args"][1] in (ATTACK_PACKET_ID, ACTIVATE_PERMANENT_PACKET_ID)):
+                fb = x.get("boards")
+                if isinstance(fb, list) and len(fb) == 2 and isinstance(fb[p], list) and fb[p] and is_egg(cards, fb[p][-1]):
+                    return "Digi-Egg %s ends P%d's field board (seq %s)" % (fb[p][-1], p, x.get("seq"))
+            if effect_may_have_run(x, mm):
+                # an effect may now have resolved, and played a Digi-Egg into the area unlogged
+                return None
+        return None
 
     queued_play_indexes = set()  # card indexes of queued main-phase play packets not yet resolved
+    # Seats with an `engine_action` stamp anywhere in the raw: agent-played seats. The mod stamps EVERY menu answer of
+    # such a seat in order (Core.cs: AppendStamp for the local seat, ReadStamp from the stamp file for the other one),
+    # -1 - no stamp - meaning the engine asked nothing. A seat with none is a human (or the remote seat without the
+    # other client's stamp file).
+    stamped_seats = {x["args"][0] for x in rows
+                     if "engine_action" in x and isinstance(x.get("args"), list) and x["args"] and x["args"][0] in (0, 1)}
+    # Which copy a board-position pick names, where the board holds several of that card (`frame_model`): DCGO's
+    # frame placement followed from the logged plays and checked against every recorded board, or nothing.
+    frame_names = frame_model.pick_identities(rows, cards, you)
     for ridx, r in enumerate(rows):
+        tag_sources(ridx - 1)
         m, a = r["method"], r.get("args", [])
         tp, turn = r.get("tp", -1), r.get("turn", r.get("turn_count", -1))
         if m.startswith("Snapshot."):
+            pending_owner.clear()
             for pl in r.get("players", []):
                 if "breeding" in pl and pl.get("id") in (0, 1):
-                    # exact: the breeding area's permanents (top card ids)
-                    breeding_occupied[pl["id"]] = bool(pl["breeding"])
-                    breeding_top[pl["id"]] = pl["breeding"][0] if pl["breeding"] else None
+                    # exact: the breeding area's permanents (top card ids) and the battle area's
+                    br = pl["breeding"]
+                    set_breeding(pl["id"], bool(br), set(br[:1]), "snapshot (seq %s)" % r.get("seq"),
+                                 pl.get("battle"))
         elif (m == "SelectPermanentEffect.SetTargetFrames"
               or (m == "TurnStateMachine.QueueMainPhaseAction_Internal" and len(a) >= 2
                   and a[1] in (ATTACK_PACKET_ID, ACTIVATE_PERMANENT_PACKET_ID))):
-            # These rows' boards are GetFieldPermanents(): every permanent of the seat INCLUDING the breeding one
-            # (dcgo-melon-recorder Core.cs; Player.cs:669 walks all FieldPermanents, the breeding frame among them).
-            # A known breeding top card missing from its owner's whole field has left the breeding area.
+            # These rows' boards are GetFieldPermanents() of both seats (dcgo-melon-recorder Core.cs SelectionExtras)
             boards = r.get("boards")
             if isinstance(boards, list) and len(boards) == 2:
                 for p in (0, 1):
-                    top = breeding_top[p]
-                    if (breeding_occupied[p] and top not in (None, "?") and isinstance(boards[p], list)
-                            and top not in boards[p]):
-                        breeding_evidence(p, False, None, "%s is not on P%d's field (seq %s)" % (top, p, r.get("seq")))
+                    if isinstance(boards[p], list):
+                        field_board(p, boards[p], "seq %s" % r.get("seq"))
+        elif ((m == "TurnStateMachine.QueueMainPhaseAction_Internal" and len(a) >= 2 and a[1] == PLAY_PACKET_ID)
+              or m == "TurnStateMachine.SetAttackingPermaent"):
+            # These rows' boards are GetBattleAreaPermanents() of both seats (Core.cs PlayPacketJson / SelectionExtras)
+            boards = r.get("boards")
+            if isinstance(boards, list) and len(boards) == 2:
+                for p in (0, 1):
+                    if isinstance(boards[p], list):
+                        battle_board(p, boards[p], "seq %s" % r.get("seq"))
         elif m in ("PlayCardClass.ctor", "PlayCardClass.PlayCard"):
-            played = (r.get("cards") or [None])[0]
-            if played and r.get("target_breeding") is True and tp in (0, 1):
-                # a digivolution onto the turn player's breeding Digimon (the mod's TargetSlotJson): it stays, under
-                # a new top card
-                breeding_evidence(tp, True, played, "%s digivolved in it (seq %s)" % (played, r.get("seq")))
-            elif played and r.get("breeding_area") is True:
-                # PlayCardClass._isBreedingArea: the card is played INTO its player's breeding area
-                owner = (r.get("hand") or {}).get("player", tp)
-                if owner not in (0, 1):
-                    owner = tp
-                if owner in (0, 1):
-                    breeding_evidence(owner, True, played, "%s played into it (seq %s)" % (played, r.get("seq")))
+            play_row_breeding(r, tp)
 
         # entering a different turn than the bot's open one closes it
         if bot_turn_open is not None and tp != bot and turn != bot_turn_open and turn >= 0:
@@ -321,6 +642,19 @@ def convert(rows, cards, allow_truncated=False):
             hand_cards = (r.get("hand") or {}).get("cards") or []
             slot = (r.get("hand") or {}).get("slot", -1)
             played_index = hand_cards[slot].get("card_index") if 0 <= slot < len(hand_cards) else None
+            listed_card = hand_cards[slot].get("card_id") if 0 <= slot < len(hand_cards) else None
+            played_card = (r.get("cards") or [None])[0]
+            if played_index is not None and listed_card is not None and played_card is not None \
+                    and listed_card != played_card:
+                # The listing NAMES a card at the slot and it is not the played card (frame_model._played_index checks
+                # the same): that index belongs to another card, so the play is positional only. A listing with no
+                # card_id (an older recorder build) or a row with a hand but no `cards` names nothing to compare, so
+                # the index stays and the queued-play gate below decides (dropping it sent the row past that gate as
+                # a positional play and left its queued index in the set).
+                inferred.append("P%s play of %s (seq %s): hand slot %s lists %s, not the played card, so its card index "
+                                "%s is not taken (positional only)" % (actor, played_card, r.get("seq"), slot,
+                                                                       listed_card, played_index))
+                played_index = None
             if played_index is not None and played_index not in queued_play_indexes:
                 continue
             if played_index is not None:
@@ -352,6 +686,16 @@ def convert(rows, cards, allow_truncated=False):
             if not (0 <= slot < PLAY_HAND_END):
                 truncated_at = truncated_at or ("play of %s with no hand slot at step %d" % (card, step))
                 break
+            absent = dna_bytes_absent.pop(played_index, None) if played_index is not None else None
+            if absent is True:
+                truncated_at = truncated_at or (
+                    "play of %s whose play packet bytes were not logged (an older recorder build), right after two "
+                    "own-side picks of the kind a DNA's root selection logs: whether it is a DNA digivolve cannot be "
+                    "told at step %d" % (card, step))
+                break
+            if absent is False:
+                inferred.append("P%d play of %s at step %d: its play packet bytes were not logged (an older recorder "
+                                "build), so it is taken as an ordinary play with no DNA check" % (actor, card, step))
             if played_index is not None and played_index in dna_unknown_indexes:
                 truncated_at = truncated_at or ("play of %s whose play packet has no readable jogress list at step %d"
                                                 % (card, step))
@@ -368,12 +712,10 @@ def convert(rows, cards, allow_truncated=False):
                 if slot >= DNA_DIGIVOLVE_END - DNA_DIGIVOLVE_START:
                     truncated_at = truncated_at or ("DNA digivolve of %s from hand slot %d at step %d" % (card, slot, step))
                     break
-                picks = 0
-                while (picks < 2 and len(out) > picks and out[-1 - picks].get("type") == "selection"
-                       and out[-1 - picks].get("prompt") == "SelectPermanentEffect"
-                       and out[-1 - picks].get("actor") == actor
-                       and all(t.get("player") == actor for t in out[-1 - picks].get("targets") or [{}])):
-                    picks += 1
+                # The picks were found when the packet was queued (`material_picks`): rows logged between the packet
+                # and this resolve do not hide them, and a remote seat has none (its selection ran on its own client).
+                pick_rows = [x for x in dna_picks.pop(played_index, []) if any(x is y for y in out)]
+                picks = len(pick_rows)
                 # Place the packet's roots: anchored on its TargetFrameID, whose permanent this resolve row logs at
                 # compact `target_slot` in the resolution-time battle area `boards` (TurnStateMachine.cs:1819 reads
                 # the same frame; the roots resolve against the same frames, CardController.cs:540).
@@ -390,7 +732,7 @@ def convert(rows, cards, allow_truncated=False):
                         why = "jogress roots %s are not certain from TargetFrameID %s at slot %s of %d" % (
                             roots, anchor_frame, anchor_slot, len(boards[actor]))
                 if picks == 2:
-                    picked = [t.get("frame") for row in out[-2:] for t in row.get("targets") or []]
+                    picked = [t.get("frame") for row in pick_rows for t in row.get("targets") or []]
                     if placed is not None and picked != placed:
                         truncated_at = truncated_at or (
                             "DNA digivolve of %s: material picks %s contradict the jogress roots %s (slots %s) at step %d"
@@ -404,13 +746,18 @@ def convert(rows, cards, allow_truncated=False):
                     truncated_at = truncated_at or ("DNA digivolve of %s with no material picks: %s at step %d"
                                                     % (card, why, step))
                     break
+                at = next(i for i, x in enumerate(out) if x is pick_rows[0]) if picks else None
                 if infer and not bot_bred:
                     # the bot's inferred breeding decision comes before this play and the picks DCGO asked for it
                     breeding_for_bot(ridx, turn)
                     bot_bred = True
-                    move_last_before(picks)
-                action(actor, DNA_DIGIVOLVE_START + slot, "Main", "main_phase", card_id=card, boards=boards)
-                move_last_before(picks)
+                    if at is not None:
+                        move_last_before(len(out) - 1 - at)
+                        at += 1
+                action(actor, DNA_DIGIVOLVE_START + slot, "Main", "main_phase", card_id=card, boards=boards,
+                       card_index=played_index)
+                if at is not None:
+                    move_last_before(len(out) - 1 - at)  # ahead of its picks (and of rows logged after them)
                 if not picks:
                     for frame in placed:
                         out.append({"type": "selection", "step": step, "actor": actor, "prompt": "SelectPermanentEffect",
@@ -420,6 +767,17 @@ def convert(rows, cards, allow_truncated=False):
                     inferred.append("P%d DNA %s materials from its jogress roots %s -> slots %s" % (
                         actor, card, roots, placed))
                 continue
+            burst = burst_plays.pop(played_index, None) if played_index is not None else None
+            if burst is not None:
+                burst_frame, pick = burst
+                if pick is None or not any(pick is x for x in out) or digivolve_field is None:
+                    truncated_at = truncated_at or (
+                        "Burst Digivolve of %s (BurstTamerFrameID %d) at step %d: no pick of one of P%d's own Tamers "
+                        "right before the play packet and after P%d's previous action names the returned Tamer (a "
+                        "remote seat's SelectBurstDigivolutionEffect pick is local to its own client), and a raw FrameID "
+                        "does not name an engine slot; the recorder would need to log the Tamer's compact battle-area "
+                        "index" % (card, burst_frame, step, actor, actor))
+                    break
             if infer and not bot_bred:
                 breeding_for_bot(ridx, turn)
                 bot_bred = True
@@ -427,17 +785,49 @@ def convert(rows, cards, allow_truncated=False):
                 action_id = DIGIVOLVE_START + slot * FIELDS_PER_HAND + digivolve_field
             else:
                 action_id = PLAY_HAND_START + slot
-            action(actor, action_id, "Main", "main_phase", card_id=card, boards=r.get("boards"))
+            action(actor, action_id, "Main", "main_phase", card_id=card, boards=r.get("boards"), card_index=played_index)
+            if burst is not None:
+                # ahead of the Tamer pick, which answers the engine's burst cost route; `mechanic` marks the pick as
+                # the burst's Tamer (the schema's alt-cost declaration field), never an effect's own pick
+                burst[1]["mechanic"] = "burst"
+                # The pick names the Tamer by board position only, and a board can hold several copies of it
+                # (raw-20261113T025510Z#g6: three ST24-13). The returned card's DCGO CardIndex, read from the owner's
+                # next hand listing, names the copy (`returned_tamer_index`); the replay resolves it by identity.
+                t = burst[1]["targets"][0]
+                board = burst[1].get("board_p%d" % actor) or []
+                if 0 <= t.get("frame", -1) < len(board):
+                    k = returned_tamer_index(rows, ridx, actor, board[t["frame"]])
+                    if k is not None:
+                        t["card_index"] = k
+                        t["card_index_source"] = "hand_listing"  # derived from the owner's next hand listing
+                at = next(i for i, x in enumerate(out) if x is burst[1])
+                move_last_before(len(out) - 1 - at)
             continue
         if m == "TurnStateMachine.SetBreedingPhase":
             if a[1]:
                 # doBreeding: hatch when the breeding area is empty, otherwise move its Digimon to the battle area
-                # (DCGO's own rule in SetBreedingPhase). Occupancy: snapshots, field boards and breeding-area plays
-                # above, else the toggle.
-                moving = bool(breeding_occupied.get(a[0]))
-                action(a[0], ACTION_MOVE if moving else ACTION_HATCH, "Breeding", "breeding_action")
-                breeding_occupied[a[0]] = not moving
-                breeding_top[a[0]] = None if moving else "?"
+                # (DCGO's own rule in SetBreedingPhase). Occupancy: snapshots, boards and plays above, else the
+                # decisions' own effect.
+                p = a[0]
+                if occ.get(p) is None:
+                    seen = breeding_outcome(p, ridx)
+                    if seen is None:
+                        truncated_at = truncated_at or (
+                            "P%d's breeding decision at step %d (seq %s): HATCH or MOVE cannot be told - the breeding "
+                            "area's occupancy is unknown (%s) and no later row shows a Digi-Egg there before an effect "
+                            "could have resolved - an effect's play into the breeding area (PlayPermanentClass) is "
+                            "unlogged, so an egg seen after one proves nothing. The recorder "
+                            "would settle it by logging GetBreedingAreaPermanents() of both seats beside every `boards` "
+                            "payload (Core.cs SelectionExtras / TargetSlotJson / PlayPacketJson), and TargetSlotJson "
+                            "would place a non-turn player's target if it searched the target's owner instead of "
+                            "TurnPlayerId()" % (p, step, r.get("seq"), unknown_why.get(p)))
+                        break
+                    inferred.append("P%d breeding HATCH at step %d: its occupancy was unknown, then %s" % (p, step, seen))
+                    moving = False
+                else:
+                    moving = occ[p] is True
+                action(p, ACTION_MOVE if moving else ACTION_HATCH, "Breeding", "breeding_action")
+                occ[p], top[p], copies[p], unknown_why[p] = (not moving), set(), None, None
             else:
                 action(a[0], ACTION_PASS, "Breeding", "breeding_action")
             continue
@@ -450,15 +840,52 @@ def convert(rows, cards, allow_truncated=False):
                 # The queue logs ATTEMPTS (a DNA packet DCGO rejects never resolves), so the LATEST packet for a card
                 # decides: an empty list clears an earlier DNA flag, and a list that cannot be read leaves the play's
                 # kind unknown (the resolve then stops rather than guess).
-                b = a[2] if len(a) >= 3 and isinstance(a[2], list) else []
+                # Bytes ABSENT (older recorder builds logged the payload as a type name, or not at all) differ from
+                # bytes present but unreadable: the first is an ordinary play unless the rows before the packet look
+                # like a DNA's root picks, the second stops at the resolve.
+                bytes_logged = len(a) >= 3 and isinstance(a[2], list)
+                b = a[2] if bytes_logged else []
                 n_roots = (b[8] << 24) | (b[9] << 16) | (b[10] << 8) | b[11] if len(b) >= 12 else -1
+                seat = a[0] if a and a[0] in (0, 1) else tp
+                # DCGO asks the roots on the deciding client only (SetUp_SelectDigivolutionRoots isLocal: true,
+                # TurnStateMachine.cs:2969): this client logged them for its own seat (and both seats of an AI game)
+                roots_logged_here = is_ai or seat == you
                 dna_play_indexes.discard(ci)
                 dna_unknown_indexes.discard(ci)
                 dna_roots.pop(ci, None)
-                if a[1] != PLAY_PACKET_ID or not 0 <= n_roots < 0x80000000:
+                dna_picks.pop(ci, None)
+                dna_bytes_absent.pop(ci, None)
+                burst_plays.pop(ci, None)
+                # BurstTamerFrameID follows the jogress list (PlayCardAction: card index, TargetFrameID, int[] jogress,
+                # BurstTamerFrameID, int[] app fusion). A Burst Digivolve's Tamer is picked BEFORE the packet is
+                # queued: the human UI asks it (SelectBurstDigivolutionEffect.SelectTamer, a local
+                # SelectPermanentEffect over the seat's own Tamers, SelectBurstDigivolutionEffect.cs:107-190) and
+                # queues the play from that pick's end coroutine (TurnStateMachine.cs:3016-3030), so the pick is the
+                # seat's row right before the packet. The engine asks it AFTER the digivolve action, as one of its
+                # digivolution cost routes, so the resolve writes the action ahead of it. A remote seat's pick never
+                # ran on this client (SetIsLocal): only the raw FrameID is known.
+                burst_at = 12 + 4 * n_roots
+                if a[1] == PLAY_PACKET_ID and bytes_logged and 0 <= n_roots < 0x80000000 and len(b) >= burst_at + 4:
+                    burst = (b[burst_at] << 24) | (b[burst_at + 1] << 16) | (b[burst_at + 2] << 8) | b[burst_at + 3]
+                    burst = burst - (1 << 32) if burst & 0x80000000 else burst
+                    if burst >= 0:
+                        # The seat's own-side pick right before the packet, made after its previous action
+                        # (`own_picks_before`), naming one permanent that is a Tamer of that seat: the burst's Tamer
+                        # pick offers the seat's own Tamers only (SelectBurstDigivolutionEffect.cs:107-190).
+                        run = own_picks_before(seat, ridx, 1) if roots_logged_here else []
+                        last = run[0] if run else {}
+                        tgt = (last.get("targets") or [{}])[0] if len(last.get("targets") or []) == 1 else {}
+                        board = last.get("board_p%d" % seat) or []
+                        picked = board[tgt["frame"]] if 0 <= tgt.get("frame", -1) < len(board) else None
+                        pick = last if picked is not None and is_tamer(cards, picked) else None
+                        burst_plays[ci] = (burst, pick)
+                if a[1] == PLAY_PACKET_ID and not bytes_logged:
+                    dna_bytes_absent[ci] = roots_logged_here and len(material_picks(seat, ridx)) == 2
+                elif a[1] != PLAY_PACKET_ID or not 0 <= n_roots < 0x80000000:
                     dna_unknown_indexes.add(ci)
                 elif n_roots > 0:
                     dna_play_indexes.add(ci)
+                    dna_picks[ci] = material_picks(seat, ridx) if roots_logged_here else []
                     # the root FrameIDs follow the count; the packet's TargetFrameID (bytes 4-7) is their anchor
                     def s32(i):
                         v = (b[i] << 24) | (b[i + 1] << 16) | (b[i + 2] << 8) | b[i + 3]
@@ -511,6 +938,9 @@ def convert(rows, cards, allow_truncated=False):
             row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectCardEffect", "phase": "Main"}
             if r["card_ids"] and None not in r["card_ids"]:
                 row["card_ids"] = r["card_ids"]
+                indexes = pick_card_indexes(a, r["card_ids"])
+                if indexes is not None:
+                    row["card_indexes"] = indexes
             elif not r["card_ids"]:
                 row["cancel"] = True
             else:
@@ -557,14 +987,29 @@ def convert(rows, cards, allow_truncated=False):
                 out.append({"type": "selection", "step": step, "actor": a[0], "prompt": "generic_bool",
                             "phase": "Main", "bool_value": bool(a[1]), "engine_action": r["engine_action"]})
                 step += 1
-            elif a[0] == bot:
-                # The REMOTE seat's answer (no recorder there, so nothing tied it to an engine prompt): keep it, marked
-                # unstamped. The replay applies it only while an optional accept gate of that seat is parked and
-                # consumes it as a no-op otherwise - dropping it lost declines such as P0 refusing EX12-070's
-                # replacement, which the engine would otherwise have to guess.
+            elif a[0] in (0, 1) and (a[0] not in stamped_seats or not a[1]):
+                # An answer with no stamp that is NOT the agent's own "Use". Keep it, marked unstamped; the replay
+                # applies it only while an optional accept gate of that seat is parked, and otherwise consumes it with
+                # a note or halts where it would be lost (ReplayDriver::classify_unstamped_answer). Two cases:
+                #  * a seat that is never stamped (a human, or the REMOTE seat with no stamp file): both answers.
+                #    Dropping them lost declines - P0 refusing EX12-070's replacement - which the replay's
+                #    implied-accept folds then turned into a "yes".
+                #  * an UNSTAMPED FALSE of a stamped (agent) seat. Core.cs stamps an agent's decline as 62 and leaves
+                #    only its "Use" answer unstamped, so this "No" did not come from the agent: it came from DCGO's AI,
+                #    a StallWatch timeout or a human, and an agent click of "decline" on an effect the engine resolved
+                #    without a choice is stamped -1 (Core.cs:2184-2187), which is divergence evidence. ReadStamp also
+                #    returns -1 after its 0.5 s timeout while still advancing the stamp index (Core.cs:718-736), so a
+                #    slow remote answer shifts later stamps. Never drop a false.
                 out.append({"type": "selection", "step": step, "actor": a[0], "prompt": "generic_bool",
                             "phase": "Main", "bool_value": bool(a[1]), "unstamped": True})
                 step += 1
+            elif a[0] in (0, 1):
+                # An agent-played seat's unstamped TRUE: its agent's own "Use" (Core.cs stamps only the declines),
+                # which the engine folds into the next pick or resolved without a prompt. Not a decision to replay,
+                # but recorded with its seq so the drop is auditable.
+                inferred.append("P%d unstamped OptionalSkill answer %s (seq %s) dropped: P%d's answers are stamped "
+                                "elsewhere in this raw and only a decline is stamped, so this agent 'Use' is not a "
+                                "separate decision the engine asked" % (a[0], a[1], r.get("seq"), a[0]))
             continue
         if m == "UserSelectionManager.SetIntForPlayer":
             # The UserSelectionManager fallback channel: the schema's `generic_int` prompt (an index into the prompt's
@@ -598,6 +1043,28 @@ def convert(rows, cards, allow_truncated=False):
             if r.get("boards") and len(r["boards"]) == 2:
                 # DCGO's own field order at the pick (GetFieldPermanents); the replay maps it onto engine slots
                 row["board_p0"], row["board_p1"] = r["boards"][0], r["boards"][1]
+            for t in targets:
+                # A board can hold several copies of the picked card; DCGO's CardIndex names the copy. A recorder
+                # 0.2.0 row logs it per board entry (`board_indexes`, Core.cs BoardsJson); older rows get it from the
+                # frame model when that is certain. The replay resolves a named copy by identity.
+                board = (r.get("boards") or [None, None])[t["player"]] if r.get("boards") else None
+                if (not isinstance(board, list) or not 0 <= t["frame"] < len(board)
+                        or board.count(board[t["frame"]]) < 2):
+                    continue
+                exact = r.get("board_indexes")
+                k, source = None, None
+                if (isinstance(exact, list) and len(exact) == 2 and isinstance(exact[t["player"]], list)
+                        and len(exact[t["player"]]) == len(board)):
+                    k = exact[t["player"]][t["frame"]]
+                    source = "recorder"
+                if not isinstance(k, int) or isinstance(k, bool):
+                    k = frame_names.get(ridx, {}).get((t["player"], t["frame"]))
+                    source = "frame_model"
+                if k is not None:
+                    t["card_index"] = k
+                    # which of the two grounded it: a recorder-logged index is DCGO's own, a frame-model one is derived
+                    # (DCGO's frame placement followed from the logged plays)
+                    t["card_index_source"] = source
             if targets:
                 row["targets"] = targets
             else:
@@ -627,6 +1094,9 @@ def convert(rows, cards, allow_truncated=False):
                    "zone": "Hand"}
             if r["card_ids"] and None not in r["card_ids"]:
                 row["card_ids"] = r["card_ids"]
+                indexes = pick_card_indexes(a, r["card_ids"])
+                if indexes is not None:
+                    row["card_indexes"] = indexes
             elif not r["card_ids"]:
                 row["cancel"] = True
             else:

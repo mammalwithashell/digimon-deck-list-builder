@@ -3054,6 +3054,7 @@ impl Walk for digimon_dsl::compiled::CompiledPermanentProperty {
             serde_json::Value::Null,
         );
         match self {
+            digimon_dsl::compiled::CompiledPermanentProperty::ColorCount => c.node(path, "digimon_dsl::compiled::CompiledPermanentProperty", "ENUM_SCALAR", serde_json::json!("ColorCount")),
             digimon_dsl::compiled::CompiledPermanentProperty::Level => c.node(
                 path,
                 "digimon_dsl::compiled::CompiledPermanentProperty",

@@ -9,13 +9,12 @@
 //! bool "Top of digivolution sources" (true) / "Bottom ..." (false). One card
 //! from the hand is therefore recorded as: menu 1, hand pick, menu again.
 //!
-//! The engine asks the zone ONCE (an `EffectChoice`), then ONE up-to-2 pick in
-//! that zone, then top/bottom. The replay closed that pick after DCGO's first
-//! card (a trailing PASS) and read DCGO's second menu as the top/bottom
-//! answer. These tests pin the fold: further picks in the same zone feed the
-//! same engine pick, menu 3 closes it, and a pick from the OTHER zone - legal
-//! in DCGO and by the printed text ("from your hand or trash"), not expressible
-//! in the engine's one-zone pick - is an honest divergence.
+//! The engine asks ONE up-to-2 pick over the hand AND the trash
+//! (EX12-018.yaml `select_zone_cards`, as printed: "from your hand or trash"),
+//! then top/bottom. These tests pin the fold: the whole menu loop - from its
+//! first menu row - answers that one pick, card by card in the zone each pick
+//! row names (so a hand and a trash card mix, and a trash pick never takes a
+//! hand copy of the same card), and menu 3 closes it.
 
 use std::collections::HashMap;
 
@@ -84,30 +83,36 @@ fn vb(id: &str) -> CardData {
 }
 
 /// Siriusmon (EX12-018) on top of a Lv.5 VB Digimon, [When Digivolving]
-/// fired; VB-A and VB-B in hand, VB-T in trash; the opponent has no Digimon
-/// (no -DP target). Parked at the engine's zone menu.
-fn sirius_when_digivolving() -> Game {
+/// fired, with `hand` / `trash` holding VB Digimon; the opponent has no
+/// Digimon (no -DP target). Parked at the engine's up-to-2 pick.
+fn sirius_with(hand: &[&str], trash: &[&str]) -> Game {
     let mut base = vb("BASE");
     base.level = Some(5);
-    let mut r = DebugRunner::builder()
+    let mut b = DebugRunner::builder()
         .dsl_card("EX12-018")
         .expect("EX12-018 YAML")
         .add_card(base)
-        .add_card(vb("VB-A"))
-        .add_card(vb("VB-B"))
-        .add_card(vb("VB-T"))
-        .add_card(make_test_card("FILL", "FILL"))
-        .hand(0, &["VB-A", "VB-B"])
-        .deck(0, &["FILL"; 10])
-        .deck(1, &["FILL"; 10])
-        .memory(10)
-        .start();
-    r.inject_trash(0, "VB-T");
+        .add_card(make_test_card("FILL", "FILL"));
+    let mut ids: Vec<&str> = hand.iter().chain(trash).copied().collect();
+    ids.sort();
+    ids.dedup();
+    for id in ids {
+        b = b.add_card(vb(id));
+    }
+    let mut r = b.hand(0, hand).deck(0, &["FILL"; 10]).deck(1, &["FILL"; 10]).memory(10).start();
+    for id in trash {
+        r.inject_trash(0, id);
+    }
     let h = r.place_stack(0, &["BASE", "EX12-018"]);
     r.game.enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(h));
     r.game.drain_effect_queue();
-    assert!(r.game.pending_selection.is_some(), "the zone menu is parked");
+    assert!(r.game.pending_selection.is_some(), "the up-to-2 pick is parked");
     r.game
+}
+
+/// VB-A and VB-B in hand, VB-T in trash.
+fn sirius_when_digivolving() -> Game {
+    sirius_with(&["VB-A", "VB-B"], &["VB-T"])
 }
 
 fn menu(step: u32, v: i64) -> Row {
@@ -116,16 +121,25 @@ fn menu(step: u32, v: i64) -> Row {
 fn hand_pick(step: u32, id: &str) -> Row {
     sel(step, serde_json::json!({"prompt": "SelectHandEffect", "zone": "Hand", "card_ids": [id]}))
 }
+fn trash_pick(step: u32, id: &str) -> Row {
+    sel(step, serde_json::json!({"prompt": "SelectCardEffect", "card_ids": [id]}))
+}
 fn top_bottom(step: u32, top: bool) -> Row {
     sel(step, serde_json::json!({"prompt": "generic_bool", "bool_value": top}))
 }
 
+/// card_sources run bottom -> top card.
 fn sources(game: &Game) -> Vec<String> {
     game.players[0].battle_area[0]
         .card_sources
         .iter()
         .map(|c| c.card_id(&game.card_data).to_string())
         .collect()
+}
+
+fn zone(game: &Game, trash: bool) -> Vec<String> {
+    let z = if trash { &game.players[0].trash } else { &game.players[0].hand };
+    z.iter().map(|c| c.card_id(&game.card_data).to_string()).collect()
 }
 
 fn replay_all(s: &mut ReplaySession) {
@@ -139,6 +153,7 @@ fn replay_all(s: &mut ReplaySession) {
         );
         assert!(s.current_step() > before, "row {before} did not advance");
     }
+    assert!(s.game.pending_selection.is_none(), "nothing left to answer: {:?}", s.game.pending_selection.as_ref().map(|p| &p.prompt));
 }
 
 fn halted_at(s: &ReplaySession, at: u32) -> String {
@@ -159,6 +174,8 @@ fn halted_at(s: &ReplaySession, at: u32) -> String {
 
 /// Menu 1, VB-A, menu 1, VB-B, Bottom: both hand cards go under Siriusmon as
 /// bottom sources (the g4 Virus Busters vs Toho Braves shape, rows 28-32).
+/// DCGO `AddDigivolutionCardsBottom` appends in pick order (Permanent.cs:
+/// 1247): VB-A above VB-B, VB-B bottommost.
 #[test]
 fn ex12_018_two_hand_picks_across_the_menu_loop_place_both_at_the_bottom() {
     let mut s = session_over(
@@ -166,13 +183,7 @@ fn ex12_018_two_hand_picks_across_the_menu_loop_place_both_at_the_bottom() {
         vec![menu(0, 1), hand_pick(1, "VB-A"), menu(2, 1), hand_pick(3, "VB-B"), top_bottom(4, false)],
     );
     replay_all(&mut s);
-    let src = sources(&s.game);
-    assert_eq!(src.last().map(String::as_str), Some("EX12-018"), "{src:?}");
-    assert_eq!(src.len(), 4, "{src:?}");
-    let mut placed: Vec<_> = src[..2].to_vec();
-    placed.sort();
-    assert_eq!(placed, vec!["VB-A", "VB-B"], "both placed at the BOTTOM: {src:?}");
-    assert_eq!(src[2], "BASE", "{src:?}");
+    assert_eq!(sources(&s.game), vec!["VB-B", "VB-A", "BASE", "EX12-018"]);
     assert!(s.game.players[0].hand.is_empty());
 }
 
@@ -185,36 +196,78 @@ fn ex12_018_one_hand_pick_then_dont_place_any_closes_the_pick() {
         vec![menu(0, 1), hand_pick(1, "VB-A"), menu(2, 3), top_bottom(3, true)],
     );
     replay_all(&mut s);
-    let src = sources(&s.game);
-    // card_sources run bottom -> top card; a TOP digivolution card sits right
-    // under the top card.
-    assert_eq!(src, vec!["BASE", "VB-A", "EX12-018"], "{src:?}");
-    assert_eq!(s.game.players[0].hand.len(), 1, "VB-B stays in hand");
+    // A TOP digivolution card sits right under the top card.
+    assert_eq!(sources(&s.game), vec!["BASE", "VB-A", "EX12-018"]);
+    assert_eq!(zone(&s.game, false), vec!["VB-B"], "VB-B stays in hand");
 }
 
-/// Menu 1, VB-A, menu 2 (From Trash), VB-T: DCGO mixed the zones, which the
-/// engine's one-zone pick cannot express. Halt at the first pick.
+/// Menu 1, VB-A, menu 2 (From Trash), VB-T, Bottom: DCGO mixed the zones, as
+/// the printed text allows ("from your hand or trash"); the engine's one pick
+/// over both zones takes the same two cards.
 #[test]
-fn ex12_018_second_pick_from_the_other_zone_is_a_divergence() {
+fn ex12_018_hand_then_trash_pick_places_both() {
     let mut s = session_over(
         sirius_when_digivolving(),
-        vec![
-            menu(0, 1),
-            hand_pick(1, "VB-A"),
-            menu(2, 2),
-            sel(3, serde_json::json!({"prompt": "SelectCardEffect", "card_ids": ["VB-T"]})),
-            top_bottom(4, false),
-        ],
+        vec![menu(0, 1), hand_pick(1, "VB-A"), menu(2, 2), trash_pick(3, "VB-T"), top_bottom(4, false)],
     );
-    s.step();
-    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
-    s.step();
-    let reason = halted_at(&s, 1);
-    assert!(reason.contains("EX12-018"), "{reason}");
+    replay_all(&mut s);
+    assert_eq!(sources(&s.game), vec!["VB-T", "VB-A", "BASE", "EX12-018"]);
+    assert_eq!(zone(&s.game, false), vec!["VB-B"]);
+    assert!(zone(&s.game, true).iter().all(|c| c != "VB-T"));
+}
+
+/// Menu 2, VB-T, menu 1, VB-A, Top: DCGO reverses the picks and inserts each
+/// at index 1 under the top card (EX12_018.cs:186-192, Permanent.cs:
+/// 1145), so the FIRST pick (VB-T) is the topmost digivolution card.
+#[test]
+fn ex12_018_trash_then_hand_on_top_keeps_the_first_pick_topmost() {
+    let mut s = session_over(
+        sirius_when_digivolving(),
+        vec![menu(0, 2), trash_pick(1, "VB-T"), menu(2, 1), hand_pick(3, "VB-A"), top_bottom(4, true)],
+    );
+    replay_all(&mut s);
+    assert_eq!(sources(&s.game), vec!["BASE", "VB-A", "VB-T", "EX12-018"]);
+}
+
+/// Hand-only candidates: DCGO still asks its menu ("From Hand" / "Don't place
+/// any"); the loop answers the engine's hand-only pick.
+#[test]
+fn ex12_018_hand_only_menu_loop_answers_the_pick() {
+    let mut s = session_over(
+        sirius_with(&["VB-A", "VB-B"], &[]),
+        vec![menu(0, 1), hand_pick(1, "VB-A"), menu(2, 1), hand_pick(3, "VB-B"), top_bottom(4, true)],
+    );
+    replay_all(&mut s);
+    assert_eq!(sources(&s.game), vec!["BASE", "VB-B", "VB-A", "EX12-018"]);
+}
+
+/// "Don't place any" as the first answer: the engine's pick is declined, so
+/// nothing is placed and nothing more is asked.
+#[test]
+fn ex12_018_dont_place_any_first_declines_the_pick() {
+    let mut s = session_over(sirius_when_digivolving(), vec![menu(0, 3)]);
+    replay_all(&mut s);
+    assert_eq!(sources(&s.game), vec!["BASE", "EX12-018"]);
+    assert_eq!(zone(&s.game, false), vec!["VB-A", "VB-B"]);
+}
+
+/// The same card id in hand AND trash: DCGO's trash pick (`SelectCardEffect`
+/// after menu 2) is the TRASH copy; the hand copy stays.
+#[test]
+fn ex12_018_trash_pick_takes_the_trash_copy_not_the_hand_copy() {
+    let mut s = session_over(
+        sirius_with(&["VB-A"], &["VB-A"]),
+        vec![menu(0, 2), trash_pick(1, "VB-A"), menu(2, 3), top_bottom(3, true)],
+    );
+    replay_all(&mut s);
+    assert_eq!(sources(&s.game), vec!["BASE", "VB-A", "EX12-018"]);
+    assert_eq!(zone(&s.game, false), vec!["VB-A"], "the hand copy stays in hand");
+    assert!(zone(&s.game, true).iter().all(|c| c != "VB-A"), "the trash copy was placed");
 }
 
 /// One card picked and no menu after it: DCGO's loop always asks the menu
 /// again while fewer than 2 cards are chosen, so the recording contradicts.
+/// The fold starts at the loop's first menu row and applies nothing.
 #[test]
 fn ex12_018_one_pick_without_the_next_menu_is_a_divergence() {
     let mut s = session_over(
@@ -222,9 +275,77 @@ fn ex12_018_one_pick_without_the_next_menu_is_a_divergence() {
         vec![menu(0, 1), hand_pick(1, "VB-A"), top_bottom(2, false)],
     );
     s.step();
-    s.step();
-    let reason = halted_at(&s, 1);
+    let reason = halted_at(&s, 0);
     assert!(reason.contains("EX12-018"), "{reason}");
+}
+
+/// A trash pick after "From Hand": the pick row's prompt contradicts the
+/// menu (EX12_018.cs:113-155), so the fold halts.
+#[test]
+fn ex12_018_pick_prompt_contradicting_the_menu_is_a_divergence() {
+    let mut s = session_over(
+        sirius_when_digivolving(),
+        vec![menu(0, 1), trash_pick(1, "VB-T"), menu(2, 3), top_bottom(3, false)],
+    );
+    s.step();
+    let reason = halted_at(&s, 0);
+    assert!(reason.contains("EX12-018"), "{reason}");
+}
+
+/// The same card id picked from the same zone in two loop passes: DCGO's
+/// later pick does not exclude the cards already chosen (`SelectHandEffect`
+/// with only `CanSelectCardCondition`, EX12_018.cs:120-133, and the chosen
+/// card is still in the hand until placed), so it may be the SAME physical
+/// card again. With two copies in hand the replay cannot tell which, so it
+/// halts rather than place both.
+#[test]
+fn ex12_018_same_card_id_from_the_same_zone_in_two_passes_is_a_divergence() {
+    let mut s = session_over(
+        sirius_with(&["VB-A", "VB-A"], &[]),
+        vec![menu(0, 1), hand_pick(1, "VB-A"), menu(2, 1), hand_pick(3, "VB-A"), top_bottom(4, true)],
+    );
+    s.step();
+    let reason = halted_at(&s, 0);
+    assert!(reason.contains("EX12-018") && reason.contains("VB-A"), "{reason}");
+}
+
+/// A playback menu row stamped with an engine action the parked pick does not
+/// take: the stamp was realised against an OLDER EX12-018 script (sim1b's
+/// host/join playback, row 25: `generic_int` 1 stamped 30, from the days the
+/// engine asked DCGO's zone menu itself), and the YAML now asks ONE
+/// `select_zone_cards` pick. The stamp names nothing here, so the card fold
+/// reads DCGO's own int and card ids instead, with a note - it never answers
+/// a playback row whose stamp the prompt DOES accept (round-4 finding 7).
+#[test]
+fn ex12_018_menu_row_with_a_stale_stamp_is_read_by_the_fold_with_a_note() {
+    const STALE: u16 = 30;
+    let game = sirius_when_digivolving();
+    let p = game.pending_selection.as_ref().expect("the up-to-2 pick");
+    assert!(!p.valid_action_ids.contains(&STALE), "30 is not an answer of {:?}", p.valid_action_ids);
+    let mut s = session_over(
+        game,
+        vec![
+            sel(0, serde_json::json!({"prompt": "generic_int", "int_value": 1, "engine_action": STALE})),
+            hand_pick(1, "VB-A"),
+            menu(2, 1),
+            hand_pick(3, "VB-B"),
+            top_bottom(4, false),
+        ],
+    );
+    replay_all(&mut s);
+    assert_eq!(sources(&s.game), vec!["VB-B", "VB-A", "BASE", "EX12-018"]);
+    assert!(
+        s.replay_notes().iter().any(|n| n.contains("engine action 30") && n.contains("stale")),
+        "{:?}",
+        s.replay_notes()
+    );
+    // Round-5 review, finding 5: the note is an OBSERVATION. A prompt that
+    // does not accept the stamp cannot say WHY (an older script of the card,
+    // or a game that diverged), so the note must not assert the older-script
+    // cause it cannot see.
+    let note = s.replay_notes().iter().find(|n| n.contains("engine action 30")).cloned().unwrap_or_default();
+    assert!(note.contains("stale or diverged"), "{note}");
+    assert!(!note.contains("older script"), "the note asserts a cause it cannot observe: {note}");
 }
 
 // ── RYUGUMON (EX12-036): DCGO's no-op unsuspend pick ─────────────────────────

@@ -418,6 +418,26 @@ impl Game {
             .player_mut(owner)
             .battle_area
             .remove(option_handle.index as usize);
+        // The Option LEFT the battle area, and `battle_area` is a Vec: the
+        // remove above compacts it, so every permanent in a LATER slot is the
+        // same permanent at index - 1. Run the canonical removal sequence (as
+        // `game_actions/movement.rs` and `relink_plug_in` above do) so its
+        // modifiers, the pending attack and its QUEUED EFFECTS follow it.
+        // Without it a surviving permanent's pending trigger read as "source
+        // gone" in `queued_effect_source_is_live` and was silently dropped --
+        // DCGO PvP raw-20261113T025510Z#g6: DNA Charge (ST24-15) resolved
+        // first from slot 0 and Marcus Damon & Thomas H. Norstein (ST24-13)'s
+        // simultaneously-triggered mandatory [Start of Your Main Phase] effect
+        // (ST24_13.cs:37-78) vanished. That Tamer never became a new card, so
+        // it must still activate (CR 4.3 §15-4-3-5-1, §15-4-4-3). DCGO has no
+        // such hazard (sparse `FieldPermanents` frames).
+        // G-PERMANENT-HANDLE-POSITIONAL-STALENESS.
+        self.clear_permanent_full(option_handle);
+        self.modifiers.expire_player_on_permanent_leave(option_handle);
+        self.modifiers
+            .shift_after_battle_area_remove(owner, option_handle.index);
+        self.shift_pending_attack_after_battle_area_remove(owner, option_handle.index);
+        self.shift_effect_queue_after_battle_area_remove(owner, option_handle.index);
         let mut cards = permanent.card_sources;
         let Some(top) = cards.pop() else {
             return false;
@@ -521,10 +541,20 @@ impl Game {
             return false;
         }
 
+        // The Option's slot leaves the battle area: clear its identity and
+        // re-key every later slot's modifiers, pending attack and queued
+        // effects (the canonical removal sequence; see the orphan relink
+        // above). G-PERMANENT-HANDLE-POSITIONAL-STALENESS.
+        self.clear_permanent_full(option_handle);
+        self.modifiers.expire_player_on_permanent_leave(option_handle);
         let permanent = self
             .player_mut(owner)
             .battle_area
             .remove(option_handle.index as usize);
+        self.modifiers
+            .shift_after_battle_area_remove(owner, option_handle.index);
+        self.shift_pending_attack_after_battle_area_remove(owner, option_handle.index);
+        self.shift_effect_queue_after_battle_area_remove(owner, option_handle.index);
         let mut cards = permanent.card_sources;
         let Some(top) = cards.pop() else {
             return false;

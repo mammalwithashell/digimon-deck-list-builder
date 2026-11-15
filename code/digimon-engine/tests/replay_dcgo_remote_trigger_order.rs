@@ -198,13 +198,47 @@ fn cardless_order_index_is_resolved_by_the_next_card_row_not_by_position() {
     assert!(!in_hand(&s.game, 0, "TB-LOW"));
 }
 
-/// A card-less index followed by nothing that can tell the two effects apart
-/// (an int row matches every branch positionally) is not guessed: the replay
-/// stops with a SelectionResolution divergence that names the ambiguity.
+/// `(labels joined " | ", prompt)` of the parked order's entries, in the
+/// engine's order: the text the order divergences name them by.
+fn order_labels(game: &Game) -> (String, String) {
+    let p = game.pending_selection.as_ref().expect("an order prompt is parked");
+    let labels = p
+        .effect_choices
+        .as_ref()
+        .expect("trigger entries")
+        .iter()
+        .filter(|e| e.source_card.is_some() && p.valid_action_ids.contains(&e.action_id))
+        .map(|e| e.label.clone())
+        .collect::<Vec<_>>()
+        .join(" | ");
+    (labels, p.prompt.clone())
+}
+
+/// The one SelectionResolution reason of a replay that stopped at row 0 with
+/// nothing applied.
+fn stopped_at_the_order(s: &ReplaySession, before: u64) -> String {
+    assert!(s.is_paused(), "an unprovable order must stop the replay");
+    assert_eq!(s.current_step(), 0);
+    assert_eq!(s.game.verification_digest(), before, "nothing was applied");
+    match s.divergences() {
+        [d] => match &d.kind {
+            DivergenceKind::SelectionResolution { reason } => reason.clone(),
+            other => panic!("expected SelectionResolution, got {other:?}"),
+        },
+        other => panic!("expected one divergence, got {other:?}"),
+    }
+}
+
+/// A card-less index followed by an int row: an int proves nothing about the
+/// choice (every reading accepts it), so both entries qualify; the int is
+/// never read positionally, so replaying it under EITHER entry fails - the
+/// rows refute both orders (`LookaheadVerdict::AllRefuted`). The index is not
+/// guessed, and the divergence says the rows refute every entry.
 #[test]
 fn ambiguous_cardless_order_index_is_a_divergence_not_a_guess() {
     let runner = end_of_attack_with(&["TEST-EOA-DEBUFF", SHISHIMAMON]);
     let before = runner.game.verification_digest();
+    let (labels, prompt) = order_labels(&runner.game);
     let mut s = session(
         runner,
         vec![
@@ -212,21 +246,38 @@ fn ambiguous_cardless_order_index_is_a_divergence_not_a_guess() {
             row(serde_json::json!({"step":1,"actor":0,"prompt":"generic_int","int_value":0})),
         ],
     );
-
     s.step();
-    assert!(s.is_paused(), "an unprovable order must stop the replay");
-    assert_eq!(s.current_step(), 0);
-    assert_eq!(s.game.verification_digest(), before, "nothing was applied");
-    match s.divergences() {
-        [d] => match &d.kind {
-            DivergenceKind::SelectionResolution { reason } => {
-                assert!(reason.contains("ambiguous"), "{reason}");
-                assert!(reason.contains("no chosen_effect_card"), "{reason}");
-            }
-            other => panic!("expected SelectionResolution, got {other:?}"),
-        },
-        other => panic!("expected one divergence, got {other:?}"),
-    }
+    assert_eq!(
+        stopped_at_the_order(&s, before),
+        format!(
+            "card-less MultipleSkills index 0 (DCGO's own ordering, no chosen_effect_card): every entry [{labels}] of \
+             the {prompt:?} prompt fits the actor's next row (none of this actor names a card or target, or cancels, \
+             so nothing proves the choice), but the next 8 rows refute each of them"
+        )
+    );
+}
+
+/// A card-less index with NO row after it: nothing refutes or proves either
+/// entry, and they lead to different games - an ambiguity, reported as such.
+#[test]
+fn cardless_order_index_with_no_later_row_is_an_ambiguity() {
+    let runner = end_of_attack_with(&["TEST-EOA-DEBUFF", SHISHIMAMON]);
+    let before = runner.game.verification_digest();
+    let (labels, prompt) = order_labels(&runner.game);
+    let mut s = session(
+        runner,
+        vec![row(serde_json::json!({"step":0,"actor":0,"prompt":"MultipleSkills","int_value":0}))],
+    );
+    s.step();
+    assert_eq!(
+        stopped_at_the_order(&s, before),
+        format!(
+            "card-less MultipleSkills index 0 (DCGO's own ordering, no chosen_effect_card) is ambiguous: entries \
+             [{labels}] of the {prompt:?} prompt all fit the actor's next row (none of this actor names a card or \
+             target, or cancels, so nothing proves the choice), lead to different games and are not told apart by \
+             the next 8 rows; the recording does not say which effect DCGO activated"
+        )
+    );
 }
 
 /// A row that names a card is not evidence for a choice it cannot answer
@@ -302,10 +353,13 @@ fn unstamped_true_against_a_folded_gate_leaves_the_pick_for_the_next_row() {
 }
 
 /// The same row with no optional gate parked (the engine asks no such
-/// question here) is consumed without touching the game, whatever its value.
+/// question here) is consumed without touching the game when it is a decline
+/// and the engine resolved no effect. (A `true` with no engine effect since the
+/// last decision halts instead: DCGO used an effect the engine never offered,
+/// `replay_dcgo_review_r4b.rs`.)
 #[test]
 fn unstamped_bool_without_a_parked_gate_is_a_no_op() {
-    for value in [false, true] {
+    for value in [false] {
         let runner = DebugRunner::builder()
             .add_card(digimon("CARRIER", 6, 9000, &[]))
             .hand(0, &["CARRIER"])
@@ -356,9 +410,10 @@ fn unstamped_bool_that_answers_a_gate_leaves_no_note() {
     assert!(s.replay_notes().is_empty(), "{:?}", s.replay_notes());
 }
 
-/// An unstamped answer that meets no gate is consumed with a NON-halting note
-/// naming the row, so a later divergence can be traced to it (e.g. a trigger
-/// the engine never offered).
+/// An unstamped decline that meets no gate (and no engine effect since the
+/// last decision) is consumed with a NON-halting note naming the row, so a
+/// later divergence can be traced to it. (A yes there halts: see
+/// `replay_dcgo_review_r4b.rs`.)
 #[test]
 fn unstamped_bool_without_a_gate_is_noted() {
     let runner = DebugRunner::builder()
@@ -368,7 +423,7 @@ fn unstamped_bool_without_a_gate_is_noted() {
         .start();
     let mut s = session(
         runner,
-        vec![row(serde_json::json!({"step":0,"actor":0,"prompt":"generic_bool","bool_value":true,"unstamped":true}))],
+        vec![row(serde_json::json!({"step":0,"actor":0,"prompt":"generic_bool","bool_value":false,"unstamped":true}))],
     );
     s.step();
     assert!(s.divergences().is_empty() && !s.is_paused(), "{:?}", s.divergences());
@@ -376,7 +431,7 @@ fn unstamped_bool_without_a_gate_is_noted() {
     match s.replay_notes() {
         [note] => {
             assert!(note.contains("row 0"), "{note}");
-            assert!(note.contains("unstamped generic_bool true"), "{note}");
+            assert!(note.contains("unstamped generic_bool false"), "{note}");
             assert!(note.contains("no prompt"), "{note}");
         }
         other => panic!("expected one note, got {other:?}"),

@@ -396,3 +396,74 @@ fn mixed_zone_distinct_preflight_only_counts_currently_encodable_cards() {
     assert_eq!(r.game.players[0].hand.len(), 31);
     assert_eq!(r.memory(), 3);
 }
+
+const TOP_SOURCES: &str = r#"
+card: TEST-TOP-SOURCES
+name: Top sources probe
+kind: digimon
+color: [red]
+level: 5
+cost: 5
+dp: 5000
+effects:
+  - when: on_play
+    process:
+      - select_zone_cards:
+          zones: [hand, trash]
+          filter: {trait_has: Hybrid}
+          min: 0
+          max: 2
+          bind_as: picked
+          prompt: Choose up to 2 Hybrid cards
+      - if:
+          condition: {binding_present: picked}
+          then:
+            - place_cards_as_top_sources: {cards: picked, target: source}
+"#;
+
+/// `place_cards_as_top_sources` (EX12-018 Siriusmon) over ONE hand+trash
+/// pick: both cards go in directly under the top card, above the existing
+/// digivolution card, and the FIRST pick is the topmost (DCGO reverses its
+/// picks before `AddDigivolutionCardsTop`, EX12_018.cs:186-192, which inserts
+/// each at index 1, Permanent.cs:1145). CR 4.3 3-1-3-3 / 3-1-3-4: placed at
+/// the same time, in the order the player chose.
+#[test]
+fn place_cards_as_top_sources_places_a_mixed_zone_pick_on_top_first_pick_topmost() {
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(TOP_SOURCES)
+        .expect("top-sources probe YAML")
+        .add_card(make_test_card("TEST-BASE", "Base"));
+    for id in ["TEST-H", "TEST-T"] {
+        let mut c = make_test_card(id, id);
+        c.traits = vec!["Hybrid".into()];
+        b = b.add_card(c);
+    }
+    let mut r = b
+        .deck(0, &["TEST-BASE"; 12])
+        .deck(1, &["TEST-BASE"; 12])
+        .memory(3)
+        .start();
+    r.skip_mulligan();
+    r.game.current_phase = GamePhase::Main;
+    r.game.players[0].hand.clear();
+    r.add_to_hand(0, "TEST-H");
+    r.inject_trash(0, "TEST-T");
+    let host = r.place_stack(0, &["TEST-BASE", "TEST-TOP-SOURCES"]);
+    r.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::OnPlay,
+        digimon_engine::TriggerSource::Permanent(host),
+    );
+    r.game.drain_effect_queue();
+    let hand_h = digimon_engine::action::space::PLAY_HAND_START;
+    mask(&r, &[hand_h, TRASH_EFFECT_START, PASS]);
+    pick(&mut r, TRASH_EFFECT_START);
+    pick(&mut r, hand_h);
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(
+        sources(&r),
+        ["TEST-BASE", "TEST-H", "TEST-T", "TEST-TOP-SOURCES"],
+        "both on top of TEST-BASE, the first pick (trash TEST-T) topmost"
+    );
+    assert!(r.game.players[0].hand.is_empty());
+    assert!(r.game.players[0].trash.is_empty());
+}

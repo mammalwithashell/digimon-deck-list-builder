@@ -1,0 +1,42 @@
+# Official Bandai card face and committed bundle; Royal Knights qualification.
+card: BT19-023
+name: Huankunmon
+kind: digimon
+color:
+- blue
+level: 5
+cost: 7
+dp: 7000
+traits:
+- Aquatic
+form: Ultimate
+attribute: Vaccine
+alt_paths:
+- kind: digivolve
+  from:
+    level_eq: 4
+    color_is: blue
+  cost: 3
+effects:
+- kind: grant_keyword
+  keyword: Blocker
+- when:
+  - on_play
+  - when_digivolving
+  process:
+  - select_own_permanent:
+      bind_as: ally
+      filter:
+        kind: digimon
+      prompt: Choose a Digimon
+  - add_modifier:
+      target: ally
+      modifier: CannotBeDestroyedByBattle
+      value: 1
+      expiry: end_of_opponents_turn
+- scope: inherited
+  kind: aura
+  active_when:
+    your_turn: true
+  target: {}
+  modifier: CannotSwitchAttackTarget

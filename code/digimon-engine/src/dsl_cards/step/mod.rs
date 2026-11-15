@@ -1118,6 +1118,33 @@ pub fn run_step_with_runtime(
             }
             return;
         }
+        CompiledStep::PlaceCardsAsTopSources {
+            cards,
+            target: target_ref,
+        } => {
+            let target =
+                match crate::dsl_cards::binding_ref::resolve_binding_ref(target_ref, ctx, bindings)
+                {
+                    Some(crate::dsl_cards::binding_ref::ResolvedBinding::Permanent(h)) => Some(h),
+                    _ => None,
+                };
+            if let (Some(list), Some(target_handle)) =
+                (resolve_card_list(cards, ctx, bindings), target)
+            {
+                let name = match target_ref {
+                    digimon_dsl::compiled::CompiledBindingRef::Named(name) => Some(name.clone()),
+                    _ => None,
+                };
+                if let Some(host) =
+                    zone_cards::place_cards_as_top_sources(ctx, &list, target_handle, name.clone())
+                {
+                    if let Some(name) = name {
+                        bindings.insert_permanent(&name, host);
+                    }
+                }
+            }
+            return;
+        }
         CompiledStep::PlaceCardsAsBottomSources {
             cards,
             target: target_ref,

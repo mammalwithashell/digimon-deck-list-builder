@@ -1132,6 +1132,7 @@ fn compile_predicate(
                 sc.at_least,
             )
         }),
+        can_digivolve_into_source_card: p.can_digivolve_into_source_card,
         has_digivolve_candidate: p.has_digivolve_candidate.as_ref().map(|hdc| {
             crate::compiled::CompiledDigivolveCandidate {
                 of: compile_player_ref(hdc.of),
@@ -3478,6 +3479,7 @@ fn compile_step(
         S::BindPermanentProperty(a) => CompiledStep::BindPermanentProperty {
             from: compile_binding_ref(&a.from),
             property: match a.property {
+                crate::step::PermanentProperty::ColorCount => crate::compiled::CompiledPermanentProperty::ColorCount,
                 crate::step::PermanentProperty::Level => {
                     crate::compiled::CompiledPermanentProperty::Level
                 }
@@ -4310,6 +4312,10 @@ fn compile_step(
             cards: compile_binding_ref(&a.cards),
             target: compile_binding_ref(&a.target),
         },
+        S::PlaceCardsAsTopSources(a) => CompiledStep::PlaceCardsAsTopSources {
+            cards: compile_binding_ref(&a.cards),
+            target: compile_binding_ref(&a.target),
+        },
         S::ReturnTopStackedToDeck(a) => CompiledStep::ReturnTopStackedToDeck {
             targets: compile_binding_ref(&a.targets),
             count: compile_formula(&a.count, &format!("{prefix}.count"), card_id, errors),
@@ -4746,6 +4752,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
         },
         S::ForceAttack(a) => CompiledStep::ForceAttack {
+            affects_player: a.affects_player,
             attacker: compile_binding_ref(&a.attacker),
             targets: compile_attack_target_spec(a.targets),
             without_suspending: a.without_suspending,

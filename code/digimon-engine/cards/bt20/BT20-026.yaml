@@ -1,0 +1,64 @@
+# Official Bandai card face and committed bundle; Royal Knights qualification.
+card: BT20-026
+name: MegaSeadramon (X Antibody)
+kind: digimon
+color:
+- blue
+level: 5
+cost: 8
+dp: 8000
+traits:
+- Aquatic
+- X Antibody
+form: Ultimate
+attribute: Data
+alt_paths:
+- kind: digivolve
+  from:
+    level_eq: 4
+    color_is: blue
+  cost: 3
+- kind: digivolve
+  from:
+    name_is: MegaSeadramon
+  cost: 0
+effects:
+- when:
+  - on_play
+  - when_digivolving
+  process:
+  - select_opponent_permanent:
+      bind_as: bottom
+      filter:
+        kind: digimon
+        level_lte: 4
+      prompt: Choose a Digimon
+  - return_to_deck:
+      target: bottom
+      position: bottom
+  - if:
+      condition:
+        self_source_count:
+          filter:
+            any_of:
+            - name_is: MegaSeadramon
+            - name_is: X Antibody
+          op: gte
+          value: 1
+      then:
+      - select_opponent_permanent:
+          bind_as: locked
+          filter:
+            kind: digimon
+          prompt: Choose a Digimon
+      - add_modifier:
+          target: locked
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+- scope: inherited
+  kind: aura
+  active_when:
+    your_turn: true
+  target: {}
+  modifier: CannotSwitchAttackTarget

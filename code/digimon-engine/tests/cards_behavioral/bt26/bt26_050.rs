@@ -59,8 +59,11 @@ fn bt26_050_arts_digivolve_offers_when_digivolving_before_turn_end() {
         targets: Some(vec![FrameTarget {
             player: 0,
             frame: base.index as i32,
+            card_index: None,
+            card_index_source: None,
         }]),
         card_ids: None,
+        card_indexes: None,
         indexes: None,
         count: None,
         candidates: None,

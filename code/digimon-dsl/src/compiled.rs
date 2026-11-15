@@ -506,6 +506,7 @@ pub struct CompiledPredicate {
     /// `this_card_can_digivolve_onto`. G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO.
     #[serde(default)]
     pub this_card_can_digivolve_onto: Option<CompiledThisCardDigivolve>,
+    pub can_digivolve_into_source_card: Option<bool>,
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
@@ -861,6 +862,7 @@ pub struct CompiledPredicate {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CompiledPermanentProperty {
     Level,
+    ColorCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2812,6 +2814,11 @@ pub enum CompiledStep {
         cards: CompiledBindingRef,
         target: CompiledBindingRef,
     },
+    /// `place_cards_as_top_sources` (first card of the list topmost).
+    PlaceCardsAsTopSources {
+        cards: CompiledBindingRef,
+        target: CompiledBindingRef,
+    },
     /// `return_top_stacked_to_deck`.
     ReturnTopStackedToDeck {
         targets: CompiledBindingRef,
@@ -3106,6 +3113,7 @@ pub enum CompiledStep {
     },
     ForceAttack {
         attacker: CompiledBindingRef,
+        affects_player: bool,
         targets: CompiledAttackTargetSpec,
         without_suspending: bool,
         prompt: Option<String>,
