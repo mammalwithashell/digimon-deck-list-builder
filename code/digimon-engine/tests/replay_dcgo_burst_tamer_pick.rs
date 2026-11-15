@@ -7,7 +7,8 @@
 //! the seat's own Tamers that meet the burst condition, SelectBurstDigivolution
 //! Effect.cs:107-190) and queues the `PlayCardAction` with that Tamer's
 //! FrameID (TurnStateMachine.cs:3016-3030); the play returns exactly that
-//! Tamer (CardController.cs:254-256). CR 4.3 8-3-3: return the specified
+//! Tamer (`BurstTamer` looks it up by frame, CardController.cs:252-258;
+//! `BounceTamer` returns it, :942). CR 4.3 8-3-3: return the specified
 //! Tamer, pay the cost. The engine offers one "Burst Digivolve ... (return
 //! [X] in slot N to the hand)" route per eligible Tamer. `convert_raw.py`
 //! writes the pick right after the digivolve action, so it meets that route

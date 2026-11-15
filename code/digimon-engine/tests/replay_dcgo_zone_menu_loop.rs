@@ -339,6 +339,13 @@ fn ex12_018_menu_row_with_a_stale_stamp_is_read_by_the_fold_with_a_note() {
         "{:?}",
         s.replay_notes()
     );
+    // Round-5 review, finding 5: the note is an OBSERVATION. A prompt that
+    // does not accept the stamp cannot say WHY (an older script of the card,
+    // or a game that diverged), so the note must not assert the older-script
+    // cause it cannot see.
+    let note = s.replay_notes().iter().find(|n| n.contains("engine action 30")).cloned().unwrap_or_default();
+    assert!(note.contains("stale or diverged"), "{note}");
+    assert!(!note.contains("older script"), "the note asserts a cause it cannot observe: {note}");
 }
 
 // ── RYUGUMON (EX12-036): DCGO's no-op unsuspend pick ─────────────────────────

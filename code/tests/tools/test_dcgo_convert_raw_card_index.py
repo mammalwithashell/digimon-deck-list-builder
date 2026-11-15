@@ -8,7 +8,8 @@ index wherever DCGO resolved a card:
   hand listing with each card's `CardIndex`, and the played card's slot in it);
 * `SelectHandEffect.SetTargetHandCards(pid, int[] cardIndexes)` and
   `SelectCardEffect.SetTargetCardAndIndicies(pid, int[] cardIndexes, int[] ...)` name the picked cards by index;
-* a Burst Digivolve returns the picked Tamer to its owner's hand (CardController.cs:254-256; CR 4.3 8-3), so the
+* a Burst Digivolve returns the picked Tamer to its owner's hand (CardController.cs:942 BounceTamer; :254-256 is only
+  the BurstTamer frame lookup; CR 4.3 8-3), so the
   returned card's index is the one of the picked card's id that is new in the owner's next hand listing, and that
   was played onto the field from the hand earlier (its last listing is the play that took it out of the hand).
 
@@ -155,6 +156,7 @@ def test_burst_pick_names_the_returned_tamer_from_the_next_hand_listing():
         _effect_play("BT26-091", 1, [(BURST, 82), ("BT26-091", 94), (TAMER, 87)]),
     ]), cards=TAMERS)
     assert _burst_target(out)["card_index"] == 87
+    assert _burst_target(out)["card_index_source"] == "hand_listing"  # derived from a hand listing, not a recorder field
 
 
 def test_burst_pick_without_a_later_listing_stays_positional():

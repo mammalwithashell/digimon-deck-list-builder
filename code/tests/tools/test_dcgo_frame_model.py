@@ -126,8 +126,8 @@ def test_pick_names_each_copy_by_its_frame():
         _pick(2, [TAMER, OPTION, TAMER]),
     ), cards=CARDS)
     first, second = _picks(out)[1:]
-    assert first["targets"] == [{"player": YOU, "frame": 0, "card_index": 65}]
-    assert second["targets"] == [{"player": YOU, "frame": 2, "card_index": 89}]
+    assert first["targets"] == [{"player": YOU, "frame": 0, "card_index": 65, "card_index_source": "frame_model"}]
+    assert second["targets"] == [{"player": YOU, "frame": 2, "card_index": 89, "card_index_source": "frame_model"}]
 
 
 def test_a_copy_with_no_logged_index_stays_positional():
@@ -141,7 +141,7 @@ def test_a_copy_with_no_logged_index_stays_positional():
     ), cards=CARDS)
     unnamed, named = _picks(out)
     assert unnamed["targets"] == [{"player": YOU, "frame": 0}]
-    assert named["targets"] == [{"player": YOU, "frame": 1, "card_index": 65}]
+    assert named["targets"] == [{"player": YOU, "frame": 1, "card_index": 65, "card_index_source": "frame_model"}]
 
 
 def test_a_board_the_model_cannot_explain_turns_it_off():
@@ -164,7 +164,7 @@ def test_an_unknown_departure_among_copies_leaves_the_pick_positional():
         _pick(0, [TAMER, TAMER]),
     ), cards=CARDS)
     before, after = _picks(out)
-    assert before["targets"] == [{"player": YOU, "frame": 0, "card_index": 89}]
+    assert before["targets"] == [{"player": YOU, "frame": 0, "card_index": 89, "card_index_source": "frame_model"}]
     assert after["targets"] == [{"player": YOU, "frame": 0}]
 
 
@@ -173,7 +173,7 @@ def test_a_departure_the_boards_pin_down_keeps_the_names():
     out, _ = convert_raw.convert(_three_tamers(
         _pick(1, [TAMER, TAMER]),
     ), cards=CARDS)
-    assert _picks(out)[1]["targets"] == [{"player": YOU, "frame": 1, "card_index": 89}]
+    assert _picks(out)[1]["targets"] == [{"player": YOU, "frame": 1, "card_index": 89, "card_index_source": "frame_model"}]
 
 
 def test_board_indexes_name_the_copy_directly():
@@ -181,7 +181,7 @@ def test_board_indexes_name_the_copy_directly():
     out, _ = convert_raw.convert(_raw_game(
         _pick(1, [TAMER, TAMER], board_indexes=[[7, 9], []]),
     ), cards=CARDS)
-    assert _picks(out)[0]["targets"] == [{"player": YOU, "frame": 1, "card_index": 9}]
+    assert _picks(out)[0]["targets"] == [{"player": YOU, "frame": 1, "card_index": 9, "card_index_source": "recorder"}]
 
 
 def test_a_dna_packet_turns_the_model_off():

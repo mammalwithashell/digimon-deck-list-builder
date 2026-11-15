@@ -9,7 +9,8 @@
 //! (`card_index` on a play action, `card_indexes` on a hand / card pick) and on
 //! the burst pick's target (`targets[].card_index`, the returned Tamer read
 //! from the owner's next hand listing - DCGO returns the picked Tamer to the
-//! hand, CardController.cs:254-256; CR 4.3 8-3). The replay pairs each DCGO
+//! hand, `BounceTamer` at CardController.cs:942 - :254-256 is only the
+//! `BurstTamer` frame lookup; CR 4.3 8-3). The replay pairs each DCGO
 //! index with the engine card its own applied row moved, then resolves the
 //! target to the permanent whose top card is that engine card.
 //!

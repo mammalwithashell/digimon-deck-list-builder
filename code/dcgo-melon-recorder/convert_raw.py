@@ -138,7 +138,8 @@ def returned_tamer_index(rows, ridx, seat, card_id):
     """DCGO's CardIndex of the Tamer a Burst Digivolve returned to `seat`'s hand, or None when it is not certain.
 
     `rows[ridx]` is the burst digivolve's own PlayCardClass.PlayCard row: DCGO returns the picked Tamer to its owner's
-    hand while it resolves that play (CardController.cs:254-256; CR 4.3 8-3: the specified Tamer returns to the hand).
+    hand while it resolves that play (CardController.cs:942 BounceTamer returns it; CardController.cs:254-256 is only
+    the BurstTamer frame lookup; CR 4.3 8-3: the specified Tamer returns to the hand).
     The returned card is a card of the picked id that is
       * absent from the hand listing this row logged (taken before the play),
       * present in the owner's NEXT hand listing in the same turn, and
@@ -641,6 +642,14 @@ def convert(rows, cards, allow_truncated=False):
             hand_cards = (r.get("hand") or {}).get("cards") or []
             slot = (r.get("hand") or {}).get("slot", -1)
             played_index = hand_cards[slot].get("card_index") if 0 <= slot < len(hand_cards) else None
+            if played_index is not None and (hand_cards[slot].get("card_id") != (r.get("cards") or [None])[0]):
+                # The listed card at the slot is not the played card (frame_model._played_index checks the same): that
+                # index belongs to another card, so the play is positional only.
+                inferred.append("P%s play of %s (seq %s): hand slot %s lists %s, not the played card, so its card index "
+                                "%s is not taken (positional only)" % (actor, (r.get("cards") or [None])[0],
+                                                                       r.get("seq"), slot, hand_cards[slot].get("card_id"),
+                                                                       played_index))
+                played_index = None
             if played_index is not None and played_index not in queued_play_indexes:
                 continue
             if played_index is not None:
@@ -785,6 +794,7 @@ def convert(rows, cards, allow_truncated=False):
                     k = returned_tamer_index(rows, ridx, actor, board[t["frame"]])
                     if k is not None:
                         t["card_index"] = k
+                        t["card_index_source"] = "hand_listing"  # derived from the owner's next hand listing
                 at = next(i for i, x in enumerate(out) if x is burst[1])
                 move_last_before(len(out) - 1 - at)
             continue
@@ -972,20 +982,29 @@ def convert(rows, cards, allow_truncated=False):
                 out.append({"type": "selection", "step": step, "actor": a[0], "prompt": "generic_bool",
                             "phase": "Main", "bool_value": bool(a[1]), "engine_action": r["engine_action"]})
                 step += 1
-            elif a[0] in (0, 1) and a[0] not in stamped_seats:
-                # An answer of a seat whose answers are never stamped: a human seat, or the REMOTE seat with no stamp
-                # file. Keep it, marked unstamped. The replay applies it only while an optional accept gate of that
-                # seat is parked, and otherwise consumes it with a note or halts where it would be lost
-                # (ReplayDriver::classify_unstamped_answer). Dropping it lost declines - P0 refusing EX12-070's
-                # replacement - which the replay's implied-accept folds then turned into a "yes".
+            elif a[0] in (0, 1) and (a[0] not in stamped_seats or not a[1]):
+                # An answer with no stamp that is NOT the agent's own "Use". Keep it, marked unstamped; the replay
+                # applies it only while an optional accept gate of that seat is parked, and otherwise consumes it with
+                # a note or halts where it would be lost (ReplayDriver::classify_unstamped_answer). Two cases:
+                #  * a seat that is never stamped (a human, or the REMOTE seat with no stamp file): both answers.
+                #    Dropping them lost declines - P0 refusing EX12-070's replacement - which the replay's
+                #    implied-accept folds then turned into a "yes".
+                #  * an UNSTAMPED FALSE of a stamped (agent) seat. Core.cs stamps an agent's decline as 62 and leaves
+                #    only its "Use" answer unstamped, so this "No" did not come from the agent: it came from DCGO's AI,
+                #    a StallWatch timeout or a human, and an agent click of "decline" on an effect the engine resolved
+                #    without a choice is stamped -1 (Core.cs:2184-2187), which is divergence evidence. ReadStamp also
+                #    returns -1 after its 0.5 s timeout while still advancing the stamp index (Core.cs:718-736), so a
+                #    slow remote answer shifts later stamps. Never drop a false.
                 out.append({"type": "selection", "step": step, "actor": a[0], "prompt": "generic_bool",
                             "phase": "Main", "bool_value": bool(a[1]), "unstamped": True})
                 step += 1
             elif a[0] in (0, 1):
-                # An agent-played seat's answer with no stamp: its agent stamped -1, the engine asked nothing (it
-                # folds the "may" into the pick, or resolved it without a prompt). Not a decision to replay.
+                # An agent-played seat's unstamped TRUE: its agent's own "Use" (Core.cs stamps only the declines),
+                # which the engine folds into the next pick or resolved without a prompt. Not a decision to replay,
+                # but recorded with its seq so the drop is auditable.
                 inferred.append("P%d unstamped OptionalSkill answer %s (seq %s) dropped: P%d's answers are stamped "
-                                "elsewhere in this raw, so the engine asked nothing here" % (a[0], a[1], r.get("seq"), a[0]))
+                                "elsewhere in this raw and only a decline is stamped, so this agent 'Use' is not a "
+                                "separate decision the engine asked" % (a[0], a[1], r.get("seq"), a[0]))
             continue
         if m == "UserSelectionManager.SetIntForPlayer":
             # The UserSelectionManager fallback channel: the schema's `generic_int` prompt (an index into the prompt's
@@ -1024,16 +1043,23 @@ def convert(rows, cards, allow_truncated=False):
                 # 0.2.0 row logs it per board entry (`board_indexes`, Core.cs BoardsJson); older rows get it from the
                 # frame model when that is certain. The replay resolves a named copy by identity.
                 board = (r.get("boards") or [None, None])[t["player"]] if r.get("boards") else None
-                if not isinstance(board, list) or not 0 <= t["frame"] < len(board)                         or board.count(board[t["frame"]]) < 2:
+                if (not isinstance(board, list) or not 0 <= t["frame"] < len(board)
+                        or board.count(board[t["frame"]]) < 2):
                     continue
                 exact = r.get("board_indexes")
-                k = None
-                if isinstance(exact, list) and len(exact) == 2 and isinstance(exact[t["player"]], list)                         and len(exact[t["player"]]) == len(board):
+                k, source = None, None
+                if (isinstance(exact, list) and len(exact) == 2 and isinstance(exact[t["player"]], list)
+                        and len(exact[t["player"]]) == len(board)):
                     k = exact[t["player"]][t["frame"]]
+                    source = "recorder"
                 if not isinstance(k, int) or isinstance(k, bool):
                     k = frame_names.get(ridx, {}).get((t["player"], t["frame"]))
+                    source = "frame_model"
                 if k is not None:
                     t["card_index"] = k
+                    # which of the two grounded it: a recorder-logged index is DCGO's own, a frame-model one is derived
+                    # (DCGO's frame placement followed from the logged plays)
+                    t["card_index_source"] = source
             if targets:
                 row["targets"] = targets
             else:

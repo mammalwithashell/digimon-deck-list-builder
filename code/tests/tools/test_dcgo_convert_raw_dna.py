@@ -37,9 +37,11 @@ def _snapshot():
     ]}
 
 
-def _hand(slot_of_played, played_index):
-    cards = [{"card_index": 100 + i} for i in range(max(5, slot_of_played + 1))]
-    cards[slot_of_played] = {"card_index": played_index}
+def _hand(slot_of_played, played_index, card):
+    """The owner's hand listing as Core.cs OwnerHandJson logs it: every entry names its card (CardJson), and the
+    played slot's names the played card (convert_raw checks that, as frame_model._played_index does)."""
+    cards = [{"card_id": "ST1-03", "card_index": 100 + i} for i in range(max(5, slot_of_played + 1))]
+    cards[slot_of_played] = {"card_id": card, "card_index": played_index}
     return {"player": YOU, "slot": slot_of_played, "cards": cards}
 
 
@@ -55,7 +57,7 @@ def _queue_play(card_index, frame, roots):
 
 def _resolve_play(slot, played_index, card, **target):
     row = {"method": "PlayCardClass.PlayCard", "tp": YOU, "turn": 1, "cards": [card],
-           "hand": _hand(slot, played_index)}
+           "hand": _hand(slot, played_index, card)}
     row.update(target)
     return row
 
@@ -190,7 +192,7 @@ def _remote_queue_play(card_index, frame, roots):
 def _remote_resolve_dna(slot, played_index, card, target_slot, board):
     """PlayCardClass.PlayCard of the REMOTE seat's DNA play: the mod logs the resolution-time target_slot of the
     permanent in the play's TargetFrameID (GetBattleAreaPermanents order) and both battle areas."""
-    hand = _hand(slot, played_index)
+    hand = _hand(slot, played_index, card)
     hand["player"] = REMOTE
     return {"method": "PlayCardClass.PlayCard", "tp": REMOTE, "turn": 2, "cards": [card], "pay_cost": True,
             "hand": hand, "target": {"card_id": board[target_slot], "card_index": 500},
@@ -331,7 +333,7 @@ def test_bot_dna_gets_its_inferred_breeding_ahead_of_the_action_and_its_material
     def material(frame):
         return {"method": "SelectPermanentEffect.SetTargetFrames", "tp": bot, "turn": 2, "args": [bot, [True], [frame]]}
 
-    hand = _hand(4, 88)
+    hand = _hand(4, 88, "BT1-084")
     hand["player"] = bot
     rows = [
         snap,

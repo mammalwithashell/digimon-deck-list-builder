@@ -1316,8 +1316,8 @@ pub fn resolve_next(
         // A Burst Digivolve's returned Tamer (`mechanic: "burst"`, written by
         // `convert_raw.py` right after the digivolve action): DCGO's own pick of
         // the Tamer (SelectBurstDigivolutionEffect.cs:107-190) whose FrameID the
-        // play then returns (TurnStateMachine.cs:3016-3030, CardController.cs
-        // :254-256). It answers ONLY the engine's route prompt, with the burst
+        // play then returns (TurnStateMachine.cs:3016-3030; `BurstTamer` looks it up
+        // by frame, CardController.cs:252-258, and `BounceTamer` returns it, :942). It answers ONLY the engine's route prompt, with the burst
         // route that returns that permanent (CR 4.3 8-3-3).
         if payload.mechanic.as_deref() == Some("burst") {
             return burst_tamer_route(game, pending, t).map(Some);
@@ -2353,7 +2353,7 @@ mod tests {
             actor: player,
             prompt: "SelectAttackEffect".to_string(),
             phase: "Main".to_string(),
-            targets: Some(vec![FrameTarget { player, frame, card_index: None }]),
+            targets: Some(vec![FrameTarget { player, frame, card_index: None, card_index_source: None }]),
             card_ids: None,
             card_indexes: None,
             indexes: None,
@@ -2518,6 +2518,7 @@ mod tests {
             player: 0,
             frame: 1,
             card_index: None,
+            card_index_source: None,
         }]);
         assert_eq!(resolve_next(&runner.game, &row, 0), Ok(Some(y)));
     }
@@ -2554,6 +2555,7 @@ mod tests {
             player: 0,
             frame: 1,
             card_index: None,
+            card_index_source: None,
         }]);
         assert_eq!(resolve_next(&runner.game, &row, 0), Ok(Some(y)));
     }

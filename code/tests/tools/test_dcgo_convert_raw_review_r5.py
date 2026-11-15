@@ -76,28 +76,33 @@ def _bools(out):
             for r in out if r.get("type") == "selection" and r.get("prompt") == "generic_bool"]
 
 
-def test_agent_seats_unstamped_optional_answer_is_dropped():
-    # P0 is agent-played: its answers carry engine_action stamps. Its unstamped "use?" answer is a DCGO prompt the
-    # engine never asked (the agent stamped -1), so it is not a row to replay. P1 (no stamps anywhere: human, or the
-    # remote seat without a stamp file) keeps its unstamped answer.
-    out, _ = convert_raw.convert(_game(
+def test_agent_seats_unstamped_true_is_dropped_but_its_unstamped_false_is_kept():
+    # P0 is agent-played: its answers carry engine_action stamps. Core.cs stamps an agent's DECLINE as 62 and leaves only
+    # its "Use" answer unstamped, so an unstamped TRUE is the agent's own "Use" the engine asked nothing about (dropped,
+    # noted with its seq) while an unstamped FALSE did not come from the agent (DCGO's AI, a StallWatch timeout or a
+    # human; round 6) and is kept for the replay to judge. P1 (no stamps anywhere: human, or the remote seat without a
+    # stamp file) keeps its unstamped answer.
+    out, notes = convert_raw.convert(_game(
         P0,
         _breed(P0, 1),
         _optional(P0, True, engine_action=30),
         _optional(P0, False),
+        _optional(P0, True, seq=77),
         _optional(P1, False),
     ), cards={})
-    assert _bools(out) == [(P0, True, 30, False), (P1, False, None, True)], _bools(out)
+    assert _bools(out) == [(P0, True, 30, False), (P0, False, None, True), (P1, False, None, True)], _bools(out)
+    assert [n for n in notes if "dropped" in n and "seq 77" in n], notes
     steps = [r["step"] for r in _decisions(out)]
     assert steps == list(range(len(steps)))
 
 
 def test_agent_seat_is_known_from_a_stamp_on_any_menu_row():
     # The stamp that marks P0 as agent-played is on a later generic_int: the whole raw decides, not the rows so far.
+    # Its unstamped TRUE is dropped; (its unstamped false would be kept, see the test above).
     out, _ = convert_raw.convert(_game(
         P0,
         _breed(P0, 1),
-        _optional(P0, False),
+        _optional(P0, True),
         {"method": "UserSelectionManager.SetIntForPlayer", "tp": P0, "turn": 1, "args": [P0, 1], "engine_action": 31},
     ), cards={})
     assert _bools(out) == [], _bools(out)
@@ -124,7 +129,7 @@ def _digivolve_breeding(actor, turn, card, battle_p0, battle_p1, target):
     """An effect's digivolution onto the turn player's breeding card (pay_cost false), with both battle boards."""
     return {"method": "PlayCardClass.PlayCard", "tp": actor, "turn": turn, "cards": [card], "pay_cost": False,
             "breeding_area": False, "target": {"card_id": target, "card_index": 1}, "target_slot": -1,
-            "target_breeding": True, "hand": {"player": actor, "slot": 0, "cards": [{"card_index": 9}]},
+            "target_breeding": True, "hand": {"player": actor, "slot": 0, "cards": [{"card_id": card, "card_index": 9}]},
             "boards": [list(battle_p0), list(battle_p1)]}
 
 
@@ -217,8 +222,8 @@ def _queue(seat, turn, card_index, payload):
 
 
 def _resolve(seat, turn, slot, played_index, card, **extra):
-    cards = [{"card_index": 100 + i} for i in range(5)]
-    cards[slot] = {"card_index": played_index}
+    cards = [{"card_id": "ST1-03", "card_index": 100 + i} for i in range(5)]
+    cards[slot] = {"card_id": card, "card_index": played_index}
     row = {"method": "PlayCardClass.PlayCard", "tp": seat, "turn": turn, "cards": [card], "pay_cost": True,
            "hand": {"player": seat, "slot": slot, "cards": cards}}
     row.update(extra)

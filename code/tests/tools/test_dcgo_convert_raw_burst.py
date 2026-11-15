@@ -62,8 +62,8 @@ def _queue_play(seat, card_index, frame, burst_frame):
 
 
 def _resolve_digivolve(seat, slot, played_index, card, target_slot):
-    cards = [{"card_index": 100 + i} for i in range(5)]
-    cards[slot] = {"card_index": played_index}
+    cards = [{"card_id": "ST1-03", "card_index": 100 + i} for i in range(5)]
+    cards[slot] = {"card_id": card, "card_index": played_index}
     return {"method": "PlayCardClass.PlayCard", "tp": seat, "turn": 1, "cards": [card],
             "hand": {"player": seat, "slot": slot, "cards": cards}, "target": "perm", "target_slot": target_slot,
             "boards": BOARDS if seat == 0 else BOARDS[::-1]}

@@ -355,8 +355,41 @@ MelonLoader rows carry it wherever DCGO resolved a card, and
 |---|---|---|
 | `action` (play / digivolve / DNA) | `card_index` | the played card: its slot in the resolve row's hand listing (`PlayCardClass.PlayCard` `hand`) |
 | `selection` `SelectHandEffect` / `SelectCardEffect` | `card_indexes` (parallel to `card_ids`) | the setter's `int[] cardIndexes` argument |
-| `selection` burst Tamer pick (`mechanic: "burst"`) | `targets[0].card_index` | the returned Tamer: the one card of the picked id that is new in its owner's next hand listing (same turn) and was last listed when it was played out of the hand; omitted unless exactly one card qualifies |
-| `selection` `SelectPermanentEffect` whose board holds several copies of the target's card | `targets[i].card_index` | a recorder 0.2.0 row's `board_indexes[player][frame]`; otherwise the frame model (`frame_model.py`), only when it is certain |
+| `selection` burst Tamer pick (`mechanic: "burst"`) | `targets[0].card_index` | the returned Tamer: the one card of the picked id that is new in its owner's next hand listing (same turn) and was last listed when it was played out of the hand; omitted unless exactly one card qualifies (`card_index_source: "hand_listing"`) |
+| `selection` `SelectPermanentEffect` whose board holds several copies of the target's card | `targets[i].card_index` | a recorder 0.2.0 row's `board_indexes[player][frame]`; `card_index_source: "recorder"`; otherwise the frame model (`frame_model.py`), only when it is certain (`"frame_model"`) |
+
+**Provenance (`targets[i].card_index_source`).** A target's `card_index` is DCGO's own number only when the recorder
+logged it; the converter also derives some. Every target that carries a `card_index` therefore carries
+`card_index_source` (Rust: `FrameTarget::card_index_source`, `CardIndexSource`, `snake_case`):
+
+| Value | Meaning | Observation or inference |
+|---|---|---|
+| `recorder` | a recorder 0.2.0 row's `board_indexes[player][frame]` (Core.cs `BoardsJson`) | observation |
+| `frame_model` | the frame model named the occupant (`frame_model.py`: DCGO's frame placement followed from the logged plays and checked against every recorded board) | inference |
+| `hand_listing` | a Burst Digivolve's returned Tamer, read from the owner's next hand listing (`returned_tamer_index`) | inference |
+
+A target with no `card_index` carries no source; recordings predating the field have neither. A replay that resolves a
+copy by a `frame_model` or `hand_listing` index is relying on the converter's inference, not on something DCGO logged,
+and should say so where it reports the resolution.
+
+A played card's `card_index` (the `action` row) is taken from the resolve row's hand listing only when the listed card at
+the played slot IS the played card (`hand.cards[slot].card_id == cards[0]`, as `frame_model._played_index` checks);
+otherwise the action carries no `card_index` and the conversion notes name the row's seq.
+
+### Unstamped optional answers (`OptionalSkill.SetUseOptional`)
+
+An agent-played seat's menu answers are stamped with the engine action (`engine_action`; Core.cs). It stamps a decline
+as 62 and leaves only the agent's "Use" answer unstamped, so on a seat that is stamped anywhere in the raw:
+
+* an unstamped **true** is the agent's own "Use" and is dropped (the engine asked nothing). Each drop is a conversion
+  note naming the seq, so the set is auditable;
+* an unstamped **false** did not come from the agent: it came from DCGO's AI, a StallWatch timeout or a human (Core.cs
+  also stamps -1 on an agent click of "decline" for an effect the engine resolved without a choice, Core.cs:2184-2187,
+  which is divergence evidence, and `ReadStamp` returns -1 after its 0.5 s timeout while advancing the stamp index,
+  Core.cs:718-736, so a slow remote answer shifts later stamps). It is kept as a `generic_bool` row with
+  `unstamped: true` for the replay to judge (`ReplayDriver::classify_unstamped_answer`).
+
+A seat with no stamps anywhere (a human, or the remote seat with no stamp file) keeps both answers, marked unstamped.
 
 **The frame model** (`code/dcgo-melon-recorder/frame_model.py`). A board
 lists a seat's permanents in frame order (`GetFieldPermanents()` walks
