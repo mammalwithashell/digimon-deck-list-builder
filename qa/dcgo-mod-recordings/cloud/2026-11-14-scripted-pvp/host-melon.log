@@ -1,0 +1,370 @@
+[21:07:18.685] [MelonLoader.Bootstrap] Using HostFXR Path: C:\dotnet\host\fxr\6.0.36\hostfxr.dll
+[21:07:18.685] [MelonLoader.Bootstrap] Using .NET runtime: 'C:\dotnet\host\fxr\6.0.36\hostfxr.dll'
+
+[21:07:19.793] ------------------------------
+[21:07:19.794] MelonLoader v0.7.3 Open-Beta
+[21:07:19.794] OS: Wine/Proton 10.0
+[21:07:19.794] Hash Code: BDD43DC0F3893C208C95389B863AB61C967AE14204DA0DD8051647E754C8709B
+[21:07:19.794] ------------------------------
+[21:07:19.794] Game Type: Il2cpp
+[21:07:19.794] Game Arch: x64
+[21:07:19.795] ------------------------------
+[21:07:19.795] Command-Line: 
+[21:07:19.795] ------------------------------
+[21:07:19.795] Core::BasePath = Z:\workspace\dcgo-cloud\pvp-next\host\client\DCGO_Standalone\Game
+[21:07:19.805] Game::BasePath = Z:\workspace\dcgo-cloud\pvp-next\host\client\DCGO_Standalone\Game
+[21:07:19.805] Game::DataPath = Z:\workspace\dcgo-cloud\pvp-next\host\client\DCGO_Standalone\Game\DCGO_Data
+[21:07:19.805] Game::ApplicationPath = Z:\workspace\dcgo-cloud\pvp-next\host\client\DCGO_Standalone\Game\DCGO.exe
+[21:07:19.805] Runtime Type: net6
+[21:07:19.911] ------------------------------
+[21:07:19.911] Game Name: DCGO
+[21:07:19.912] Game Developer: DCGO
+[21:07:19.913] Unity Version: 2021.3.45f2
+[21:07:19.913] Game Version: 1.19.3
+[21:07:19.914] ------------------------------
+
+[21:07:20.510] Preferences Loaded!
+
+[21:07:20.547] Loading UserLibs...
+[21:07:20.552] 0 UserLibs loaded.
+
+[21:07:20.552] Loading Plugins...
+[21:07:20.560] 0 Plugins loaded.
+
+[21:07:21.538] Loading Il2CppAssemblyGenerator...
+[21:07:21.589] [Il2CppAssemblyGenerator] Contacting RemoteAPI...
+[21:07:22.102] [Il2CppAssemblyGenerator] Game Not Found on RemoteAPI Host (https://api.melonloader.com/api/v1/game/dcgo)
+[21:07:22.102] [Il2CppAssemblyGenerator] RemoteAPI.DumperVersion = null
+[21:07:22.102] [Il2CppAssemblyGenerator] RemoteAPI.ObfuscationRegex = null
+[21:07:22.102] [Il2CppAssemblyGenerator] RemoteAPI.MappingURL = null
+[21:07:22.102] [Il2CppAssemblyGenerator] RemoteAPI.MappingFileSHA512 = null
+[21:07:22.106] [Il2CppAssemblyGenerator] Using Cpp2IL Version: 2022.1.0-pre-release.21
+[21:07:22.106] [Il2CppAssemblyGenerator] Using Il2CppInterop Version = 1.5.1-ci.845+f03c8f4ae507d47ea814f3d11d1ec6b0391c1576
+[21:07:22.106] [Il2CppAssemblyGenerator] Using Unity Dependencies Version = 2021.3.45
+[21:07:22.106] [Il2CppAssemblyGenerator] Using Deobfuscation Regex = null
+[21:07:22.107] [Il2CppAssemblyGenerator] Cpp2IL is up to date.
+[21:07:22.107] [Il2CppAssemblyGenerator] Cpp2IL.Plugin.StrippedCodeRegSupport is up to date.
+[21:07:22.107] [Il2CppAssemblyGenerator] UnityDependencies is up to date.
+[21:07:22.107] [Il2CppAssemblyGenerator] Checking GameAssembly...
+[21:07:22.645] [Il2CppAssemblyGenerator] Assembly is up to date. No Generation Needed.
+
+[21:07:22.670] Loading Mods...
+[21:07:22.705] ------------------------------
+[21:07:22.746] Melon Assembly loaded: '.\Mods\DcgoRecorder.dll'
+[21:07:22.746] SHA256 Hash: 'BF0E29AF55A7AE152DF14A298A81348DDDDD05C5C4D7848CB9ECF359B984C3C4'
+
+[21:07:24.852] ------------------------------
+[21:07:24.852] DCGO Recorder v0.1.0
+[21:07:24.852] by digimon-deck-list-builder
+[21:07:24.852] Assembly: DcgoRecorder.dll
+[21:07:24.853] ------------------------------
+[21:07:24.853] ------------------------------
+[21:07:24.853] 1 Mod loaded.
+
+[21:07:28.521] [WARNING] [Il2CppInterop] Class::Init signatures have been exhausted, using a substitute!
+[21:07:28.560] [Il2CppInterop] Registered mono type MelonLoader.Support.MonoEnumeratorWrapper in il2cpp domain
+[21:07:28.623] Support Module Loaded: Z:\workspace\dcgo-cloud\pvp-next\host\client\DCGO_Standalone\Game\MelonLoader\Dependencies\SupportModules\Il2Cpp.dll
+[21:07:29.290] [DCGO_Recorder] wrote signatures.txt (318896 chars)
+[21:07:29.306] [DCGO_Recorder] probe patched TurnStateMachine.QueueMainPhaseAction
+[21:07:29.321] [DCGO_Recorder] probe patched TurnStateMachine.QueueMainPhaseAction_Internal
+[21:07:29.354] [DCGO_Recorder] probe patched TurnStateMachine.SetActSkill
+[21:07:29.373] [DCGO_Recorder] probe patched TurnStateMachine.SetActCardSkill
+[21:07:29.388] [DCGO_Recorder] probe patched TurnStateMachine.SetAttackingPermaent
+[21:07:29.414] [DCGO_Recorder] probe patched TurnStateMachine.SetBreedingPhase
+[21:07:29.430] [DCGO_Recorder] probe patched TurnStateMachine.StartGame
+[21:07:29.445] [DCGO_Recorder] probe patched TurnStateMachine.EndGame
+[21:07:29.472] [DCGO_Recorder] probe patched TurnStateMachine.Surrender
+[21:07:29.485] [DCGO_Recorder] probe patched TurnStateMachine.PassTurn
+[21:07:29.499] [DCGO_Recorder] probe patched TurnStateMachine.SetRedraw
+[21:07:29.530] [DCGO_Recorder] probe patched TurnStateMachine.set_PlayCard
+[21:07:29.550] [DCGO_Recorder] probe patched TurnStateMachine.set_AttackingPermanent
+[21:07:29.562] [DCGO_Recorder] probe patched TurnStateMachine.set_UseCardEffect
+[21:07:29.587] [DCGO_Recorder] probe patched TurnStateMachine.set_Passed
+[21:07:29.632] [DCGO_Recorder] probe patched TurnStateMachine.Init
+[21:07:29.652] [DCGO_Recorder] probe patched Permanent.AddCardSource
+[21:07:29.683] [DCGO_Recorder] probe patched TurnStateMachine.SetStartPlayer
+[21:07:29.703] [DCGO_Recorder] probe patched SelectCardEffect.SetTargetCardAndIndicies
+[21:07:29.774] [DCGO_Recorder] probe patched SelectHandEffect.SetTargetHandCards
+[21:07:29.791] [DCGO_Recorder] probe patched SelectPermanentEffect.SetTargetFrames
+[21:07:29.813] [DCGO_Recorder] probe patched SelectAttackEffect.SetAttackTarget
+[21:07:29.855] [DCGO_Recorder] probe patched SelectDigiXrosClass.SetTargetDigiXrossIndex
+[21:07:29.890] [DCGO_Recorder] probe patched UserSelectionManager.SetIntForPlayer
+[21:07:29.929] [DCGO_Recorder] probe patched MultipleSkills.SetTargetSkill
+[21:07:29.944] [DCGO_Recorder] probe patched UserSelectionManager.SetBoolForPlayer
+[21:07:29.958] [DCGO_Recorder] probe patched OptionalSkill.SetUseOptional
+[21:07:29.988] [DCGO_Recorder] probe patched PlayCardClass.PlayCard
+[21:07:30.002] [DCGO_Recorder] probe patched SelectCountEffect.SetCount (typed)
+[21:07:30.003] [DCGO_Recorder] probes applied: 29
+[21:07:30.134] [DCGO_Recorder] ai-ish types: 35
+[21:07:30.197] [DCGO_Recorder] playback: plan Z:\workspace\dcgo-cloud\pvp-next\shared\plan.txt (first player 1, decks 50/4/50/4), shuffles patched: 2
+[21:07:38.480] [Il2CppInterop] Registered mono type MelonLoader.Support.SM_Component in il2cpp domain
+[21:07:38.494] [DCGO_Recorder] scene loaded: Opening
+[21:07:39.095] [DCGO_Recorder] agent: model seat ON, requests in Z:\workspace\dcgo-cloud\pvp-next\agent0
+[21:07:39.897] [DCGO_Recorder] scene loaded: ContinuousControllerScene
+[21:07:44.013] [DCGO_Recorder] tree of ContinuousControllerScene: 34 objects
+[21:07:44.035] [DCGO_Recorder] dumped 0 buttons for scene ContinuousControllerScene
+[21:07:51.947] [DCGO_Recorder] auto: mode host, shared dir Z:\workspace\dcgo-cloud\pvp-next\shared
+[21:07:52.041] [DCGO_Recorder] auto: Title found = True
+[21:07:58.992] [DCGO_Recorder] dumped 0 buttons for scene ContinuousControllerScene
+[21:08:01.950] [DCGO_Recorder] auto: re-dumping tree after title click
+[21:08:02.001] [DCGO_Recorder] tree of Opening/after-title-click: 56 objects
+[21:08:04.015] [DCGO_Recorder] auto: click Opening/Main Menu/ModeButtons/BattleButton/Button -> found
+[21:08:12.037] [DCGO_Recorder] auto: re-dumping tree after battle click
+[21:08:12.042] [DCGO_Recorder] tree of Opening/after-battle-click: 48 objects
+[21:08:14.011] [DCGO_Recorder] dumped 4 buttons for scene ContinuousControllerScene
+[21:08:14.139] [DCGO Recorder] photon: managed WebSocket transport installed
+[21:08:14.139] [DCGO_Recorder] photon: peer transport WebSocketSecure
+[21:08:14.147] [DCGO_Recorder] auto: SelectBattleMode.StartCreateRoom()
+[21:08:14.195] [DCGO Recorder] photon: managed connect wss://ns.photonengine.io:19093/ protocol GpBinaryV18
+[21:08:14.821] [DCGO Recorder] photon: managed WebSocket connected
+[21:08:15.193] [DCGO Recorder] photon: managed connect wss://gcash1049.exitgames.com/Master/ protocol GpBinaryV18
+[21:08:15.712] [DCGO Recorder] photon: managed WebSocket connected
+[21:08:16.705] [DCGO Recorder] photon: managed connect wss://gcash2063.exitgames.com/game/ protocol GpBinaryV18
+[21:08:17.227] [DCGO Recorder] photon: managed WebSocket connected
+[21:08:20.413] [DCGO_Recorder] auto: photon inRoom=True room='31021-True' players=1 shown='31021'
+[21:08:20.413] [DCGO_Recorder] auto: room created, id '31021-True' -> Z:\workspace\dcgo-cloud\pvp-next\shared\room.txt
+[21:08:20.416] [DCGO_Recorder] tree of Opening/room-host: 127 objects
+[21:08:23.214] [DCGO_Recorder] auto: room: playback first player index 1 (0 = master)
+[21:08:23.219] [DCGO_Recorder] auto: room: OnClickSelectBattleDeckButton()
+[21:08:27.217] [DCGO_Recorder] auto: room: selecting deck Opening/Other panels/Random Match/SelectBattleDeck/Parent/YourDecks/DeckScrollView/Viewport/Content/DeckInfoPrefab(Clone)
+[21:08:29.188] [DCGO_Recorder] dumped 15 buttons for scene ContinuousControllerScene
+[21:08:30.223] [DCGO_Recorder] auto: invoking Opening/Other panels/Random Match/SelectBattleDeck/Parent/DeckInfoPanel/Parent/Buttons (1)/Select/SelectButton interactable=True
+[21:08:35.415] [DCGO_Recorder] auto: room: OnClickGetReadyButton()
+[21:08:35.445] [DCGO_Recorder] tree of Opening/room-ready-host: 143 objects
+[21:08:40.388] [DCGO_Recorder] auto: photon inRoom=True room='31021-True' players=2
+[21:08:40.393] [DCGO_Recorder] auto: waiting for the PvP battle (allReady=False)
+[21:08:44.282] [DCGO_Recorder] dumped 8 buttons for scene ContinuousControllerScene
+[21:08:53.496] [DCGO_Recorder] scene loaded: BattleScene
+[21:08:53.560] [WARNING] [DCGO Recorder] snapshot failed: Object reference not set to an instance of an object.
+[21:08:54.037] [WARNING] [DCGO Recorder] snapshot failed: Object reference not set to an instance of an object.
+[21:08:54.187] [DCGO_Recorder] agent: error  action - p=- v=- converter failed: FileNotFoundError: [Errno 2] No such file or directory: '/workspace/dcgo-cloud/pvp-next/host/client/DCGO_Standalone/Game/UserData/DcgoRecorder/raw-20261114T210728Z.jsonl'
+[21:08:54.611] playback: deck 0 (main of seat 0) <- plan, 50 cards (was 50)
+[21:08:54.719] playback: deck 1 (egg of seat 0) <- plan, 4 cards (was 4)
+[21:08:54.741] playback: deck 2 (main of seat 1) <- plan, 50 cards (was 50)
+[21:08:54.838] playback: deck 3 (egg of seat 1) <- plan, 4 cards (was 4)
+[21:08:55.636] [DCGO_Recorder] auto: PvP match is running; IsAI=False you=0
+[21:08:57.570] [DCGO_Recorder] tree of BattleScene: 461 objects
+[21:08:57.624] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:09:03.718] [DCGO_Recorder] auto: model seat playing (turn 0)
+[21:09:09.202] [DCGO_Recorder] agent: act mulligan_redraw action 1 p=- v=-
+[21:09:09.224] [DCGO_Recorder] auto: invoking Game UI/ Card selection panel/Parent/Buttons/EndSelectButton interactable=True
+[21:09:10.630] playback: mulligan reshuffle of seat 0 <- plan order
+[21:09:12.731] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:09:18.999] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:09:21.515] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:09:25.992] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:09:27.810] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:09:42.978] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:09:58.057] [DCGO_Recorder] dumped 4 buttons for scene BattleScene
+[21:10:06.360] [DCGO_Recorder] agent: act hatch action 60 p=- v=-
+[21:10:06.362] [WARNING] [DCGO_Recorder] agent: not our breeding phase yet
+[21:10:11.182] [DCGO_Recorder] agent: act hatch action 60 p=- v=-
+[21:10:12.217] [DCGO_Recorder] agent: act digivolve action 474 p=- v=-
+[21:10:12.219] [WARNING] [DCGO_Recorder] agent: DCGO is still resolving the previous action - digivolve held
+[21:10:13.087] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:10:17.711] [DCGO_Recorder] agent: act digivolve action 474 p=- v=-
+[21:10:17.756] [DCGO_Recorder] agent: digivolve ST23-12 (index 21) -> frame 16
+[21:10:19.410] [DCGO_Recorder] agent: act digivolve action 474 p=- v=-
+[21:10:22.681] [DCGO_Recorder] agent: act digivolve action 444 p=- v=-
+[21:10:22.682] [WARNING] [DCGO_Recorder] agent: DCGO is still resolving the previous action - digivolve held
+[21:10:27.400] [DCGO_Recorder] agent: act digivolve action 444 p=- v=-
+[21:10:27.400] [DCGO_Recorder] agent: digivolve ST23-03 (index 44) -> frame 16
+[21:10:28.123] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:10:28.499] [DCGO_Recorder] agent: act digivolve action 444 p=- v=-
+[21:10:31.644] [DCGO_Recorder] agent: act play action 4 p=- v=-
+[21:10:31.645] [WARNING] [DCGO_Recorder] agent: DCGO is still resolving the previous action - play held
+[21:10:36.543] [DCGO_Recorder] agent: act play action 4 p=- v=-
+[21:10:36.544] [DCGO_Recorder] agent: play BT4-104 (index 11) -> frame 0
+[21:10:37.645] [DCGO_Recorder] agent: act play action 4 p=- v=-
+[21:10:40.795] [DCGO_Recorder] agent: act play action 4 p=- v=-
+[21:10:40.797] [WARNING] [DCGO_Recorder] agent: DCGO is still resolving the previous action - play held
+[21:10:43.226] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:10:46.306] [DCGO_Recorder] agent: act play action 4 p=- v=-
+[21:10:46.373] [WARNING] [DCGO_Recorder] agent: DCGO is still resolving the previous action - play held
+[21:10:51.654] [DCGO_Recorder] agent: act play action 4 p=- v=-
+[21:10:51.654] [DCGO_Recorder] agent: play BT25-043 (index 5) -> frame 0
+[21:10:53.381] [DCGO_Recorder] agent: act play action 4 p=- v=-
+[21:10:56.721] [DCGO_Recorder] agent: act selection action 30 p=- v=-
+[21:10:56.743] [DCGO_Recorder] agent: answering effect_choice prompt 'Trash your top security card to give all opponent Digimon -5000 DP for the turn?' with 0
+[21:10:56.763] [WARNING] [DCGO_Recorder] agent: menu not open yet for 'Trash your top security card (all opponent Digimon -5000 DP)'
+[21:10:58.337] [DCGO_Recorder] dumped 5 buttons for scene BattleScene
+[21:11:02.245] [DCGO_Recorder] agent: act selection action 30 p=- v=-
+[21:11:02.245] [DCGO_Recorder] agent: answering effect_choice prompt 'Trash your top security card to give all opponent Digimon -5000 DP for the turn?' with 0
+[21:11:02.309] [WARNING] [DCGO_Recorder] agent: menu: no match in [yes | no]
+[21:11:02.376] [DCGO_Recorder] agent: menu: by position 0 'Yes' for 'Trash your top security card (all opponent Digimon -5000 DP)'
+[21:11:04.128] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:11:05.616] [DCGO_Recorder] auto: model seat playing (turn 2)
+[21:11:09.617] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:11:13.437] [DCGO_Recorder] dumped 4 buttons for scene BattleScene
+[21:11:15.026] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:11:19.553] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:11:26.107] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:11:28.518] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:11:31.745] [DCGO_Recorder] agent: act selection action 30 p=- v=-
+[21:11:31.745] [DCGO_Recorder] agent: answering card prompt 'You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost' with ST23-03
+[21:11:31.899] [WARNING] [DCGO_Recorder] agent: hand prompt not open yet
+[21:11:38.033] [DCGO_Recorder] agent: act selection action 30 p=- v=-
+[21:11:38.034] [DCGO_Recorder] agent: answering card prompt 'You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost' with ST23-03
+[21:11:38.138] [WARNING] [DCGO_Recorder] agent: hand prompt not open yet
+[21:11:43.523] [DCGO_Recorder] dumped 6 buttons for scene BattleScene
+[21:11:44.024] [DCGO_Recorder] agent: act selection action 30 p=- v=-
+[21:11:44.025] [DCGO_Recorder] agent: answering card prompt 'You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost' with ST23-03
+[21:11:44.073] [DCGO_Recorder] agent: menu: 'from hand' of [from hand | do not play]
+[21:11:44.078] [WARNING] [DCGO_Recorder] agent: zone menu answered (Hand) - the pick follows
+[21:11:49.792] [DCGO_Recorder] agent: act selection action 30 p=- v=-
+[21:11:49.793] [DCGO_Recorder] agent: answering card prompt 'You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost' with ST23-03
+[21:11:49.871] [DCGO_Recorder] agent: hand click ST23-03
+[21:11:49.893] [WARNING] [DCGO_Recorder] agent: hand card clicked - waiting for End Selection
+[21:11:55.897] [DCGO_Recorder] agent: act selection action 30 p=- v=-
+[21:11:55.905] [DCGO_Recorder] agent: answering card prompt 'You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost' with ST23-03
+[21:11:55.985] [WARNING] [DCGO_Recorder] agent: menu: no match in [end selection]
+[21:11:56.019] [DCGO_Recorder] agent: hand card ST23-03 already selected
+[21:11:56.057] [DCGO_Recorder] agent: menu: 'end selection' of [end selection]
+[21:11:58.423] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:11:58.596] [DCGO_Recorder] dumped 4 buttons for scene BattleScene
+[21:12:04.089] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:12:10.474] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:12:13.695] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:12:16.642] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:12:22.684] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:12:28.840] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:12:43.970] [DCGO_Recorder] dumped 4 buttons for scene BattleScene
+[21:12:58.873] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:12:59.138] [DCGO_Recorder] dumped 4 buttons for scene BattleScene
+[21:13:08.217] [DCGO_Recorder] auto: model seat playing (turn 3)
+[21:13:13.973] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:13:14.272] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:13:18.026] [DCGO_Recorder] agent: act move_from_breeding action 61 p=- v=-
+[21:13:18.030] [WARNING] [DCGO_Recorder] agent: not our breeding phase yet
+[21:13:26.172] [DCGO_Recorder] agent: act move_from_breeding action 61 p=- v=-
+[21:13:29.153] [DCGO_Recorder] agent: act attack action 114 p=- v=-
+[21:13:29.154] [WARNING] [DCGO_Recorder] agent: DCGO is still resolving the previous action - attack held
+[21:13:29.477] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:13:35.170] [DCGO_Recorder] agent: act attack action 114 p=- v=-
+[21:13:35.174] [WARNING] [DCGO_Recorder] agent: board settling - attack held
+[21:13:42.206] [DCGO_Recorder] agent: act attack action 114 p=- v=-
+[21:13:42.206] [WARNING] [DCGO_Recorder] agent: board settling - attack held
+[21:13:44.525] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:13:49.109] [DCGO_Recorder] agent: act attack action 114 p=- v=-
+[21:13:49.118] [DCGO_Recorder] agent: attack ST23-03 (0) -> -1
+[21:13:52.981] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:13:59.622] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:13:59.810] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:14:07.323] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:14:14.780] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:14:15.037] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:14:22.501] [DCGO_Recorder] agent: act attack action 144 p=- v=-
+[21:14:22.552] [WARNING] [DCGO_Recorder] agent: DCGO is still resolving the previous action - attack held
+[21:14:29.773] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:14:30.325] [DCGO_Recorder] agent: act attack action 144 p=- v=-
+[21:14:30.356] [WARNING] [DCGO_Recorder] agent: DCGO is still resolving the previous action - attack held
+[21:14:38.462] [DCGO_Recorder] agent: act attack action 144 p=- v=-
+[21:14:38.465] [WARNING] [DCGO_Recorder] agent: board settling - attack held
+[21:14:44.823] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:14:47.270] [DCGO_Recorder] agent: act attack action 144 p=- v=-
+[21:14:47.270] [DCGO_Recorder] agent: attack ST23-03 (1) -> -1
+[21:14:53.446] [DCGO_Recorder] agent: act play action 4 p=- v=-
+[21:14:53.509] [WARNING] [DCGO_Recorder] agent: DCGO is still resolving the previous action - play held
+[21:14:59.949] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:15:02.349] [DCGO_Recorder] agent: act play action 4 p=- v=-
+[21:15:02.385] [WARNING] [DCGO_Recorder] agent: DCGO is still resolving the previous action - play held
+[21:15:10.620] [DCGO_Recorder] auto: model seat playing (turn 4)
+[21:15:10.620] [DCGO_Recorder] agent: act play action 4 p=- v=-
+[21:15:10.621] [DCGO_Recorder] agent: play BT25-049 (index 3) -> frame 0
+[21:15:15.089] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:15:16.285] [DCGO_Recorder] agent: act play action 4 p=- v=-
+[21:15:24.789] [DCGO_Recorder] agent: act selection action 62 p=- v=-
+[21:15:24.789] [DCGO_Recorder] agent: answering permanent prompt 'You may suspend 1 of your opponent's Digimon' with no pick
+[21:15:30.271] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:15:31.444] [DCGO_Recorder] agent: act play action 0 p=- v=-
+[21:15:31.445] [DCGO_Recorder] agent: play BT25-090 (index 1) -> frame 0
+[21:15:37.239] [DCGO_Recorder] agent: act play action 0 p=- v=-
+[21:15:45.409] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:15:47.089] [DCGO_Recorder] agent: act play action 0 p=- v=-
+[21:15:47.091] [DCGO_Recorder] agent: play BT25-049 (index 14) -> frame 0
+[21:15:52.169] [DCGO_Recorder] agent: act play action 0 p=- v=-
+[21:16:00.629] [DCGO_Recorder] dumped 4 buttons for scene BattleScene
+[21:16:03.796] [DCGO_Recorder] agent: act selection action 62 p=- v=-
+[21:16:03.796] [DCGO_Recorder] agent: answering permanent prompt 'You may suspend 1 of your opponent's Digimon' with no pick
+[21:16:11.304] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:16:15.720] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:16:23.807] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:16:30.838] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:16:36.301] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:16:45.996] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:16:52.569] [DCGO_Recorder] agent: act selection action 30 p=- v=-
+[21:16:52.570] [DCGO_Recorder] agent: answering effect_choice prompt 'Will you suspend this Tamer to place the top 2 cards from your deck under this Tamer face down?' with BT25-090
+[21:16:52.607] [DCGO_Recorder] agent: menu: 'suspend and place 2 cards from deck under this card' of [suspend and place 2 cards from deck under this card | only suspend without placing cards | no]
+[21:17:01.084] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:17:04.141] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:17:12.648] [DCGO_Recorder] auto: model seat playing (turn 5)
+[21:17:16.148] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:17:18.632] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:17:31.308] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:17:32.441] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:18:08.008] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:18:16.941] [DCGO_Recorder] dumped 4 buttons for scene BattleScene
+[21:18:25.452] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:18:32.012] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:18:47.198] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:18:51.933] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:19:15.130] [DCGO_Recorder] auto: model seat playing (turn 5)
+[21:19:17.325] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:19:22.821] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:19:41.871] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:20:00.086] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:20:17.386] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:20:17.970] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:20:33.098] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:20:40.341] [DCGO_Recorder] agent: act hatch action 60 p=- v=-
+[21:20:48.073] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:20:56.141] [DCGO_Recorder] agent: act selection action 62 p=- v=-
+[21:20:56.142] [DCGO_Recorder] agent: answering permanent prompt 'Place this card face down under a [BEATBREAK] Tamer to draw 1 and gain 1 memory' with no pick
+[21:21:03.293] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:21:11.719] [DCGO_Recorder] agent: act attack action 174 p=- v=-
+[21:21:11.721] [WARNING] [DCGO_Recorder] agent: board settling - attack held
+[21:21:18.412] [DCGO_Recorder] auto: model seat playing (turn 6)
+[21:21:29.084] [DCGO_Recorder] agent: act attack action 174 p=- v=-
+[21:21:29.084] [DCGO_Recorder] agent: attack BT25-049 (2) -> -1
+[21:21:33.470] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:21:45.275] [DCGO_Recorder] agent: act selection action 30 p=- v=-
+[21:21:45.276] [DCGO_Recorder] agent: answering effect_choice prompt 'Will you suspend this Tamer to place the top 2 cards from your deck under this Tamer face down?' with BT25-090
+[21:21:45.337] [DCGO_Recorder] agent: menu: 'suspend and place 2 cards from deck under this card' of [suspend and place 2 cards from deck under this card | only suspend without placing cards | no]
+[21:21:48.494] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:21:59.570] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:22:03.826] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:22:19.077] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:22:23.318] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:22:34.140] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:22:45.327] [DCGO_Recorder] agent: act digivolve action 414 p=- v=-
+[21:22:45.328] [DCGO_Recorder] agent: digivolve BT25-032 (index 10) -> frame 16
+[21:23:03.426] [DCGO_Recorder] agent: act digivolve action 414 p=- v=-
+[21:23:04.500] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:23:21.799] [DCGO_Recorder] auto: model seat playing (turn 6)
+[21:23:22.906] [DCGO_Recorder] agent: act digivolve action 414 p=- v=-
+[21:23:22.906] [DCGO_Recorder] agent: digivolve BT25-035 (index 6) -> frame 16
+[21:23:34.801] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:23:41.546] [DCGO_Recorder] agent: act digivolve action 414 p=- v=-
+[21:24:03.284] [DCGO_Recorder] agent: act attack action 144 p=- v=-
+[21:24:03.285] [WARNING] [DCGO_Recorder] agent: board settling - attack held
+[21:24:24.357] [DCGO_Recorder] agent: act attack action 144 p=- v=-
+[21:24:24.359] [DCGO_Recorder] agent: attack BT25-049 (1) -> -1
+[21:24:35.354] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[21:24:42.505] [DCGO_Recorder] agent: wait  action - p=- v=- 1
+[21:25:05.687] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[21:25:07.406] [DCGO_Recorder] agent: act play action 1 p=- v=-
+[21:25:07.407] [DCGO_Recorder] agent: play ST23-15 (index 34) -> frame 0
+[21:25:20.904] [DCGO_Recorder] dumped 4 buttons for scene BattleScene
+[21:25:24.729] [DCGO_Recorder] auto: model seat playing (turn 6)
+[21:25:27.544] [DCGO_Recorder] agent: act play action 1 p=- v=-
+[21:25:27.558] [WARNING] [DCGO_Recorder] agent: DCGO asks a trigger order the engine did not - resolving BT25-049 first
+[21:25:27.563] [DCGO_Recorder] agent: card panel: pick BT25-049
+[21:25:27.564] [DCGO_Recorder] agent: card panel: End Selection
+[21:25:35.900] [DCGO_Recorder] dumped 4 buttons for scene BattleScene
+[21:25:52.525] [DCGO_Recorder] agent: diverged  action - p=- v=- DCGO reached a state the sim recording never did
+[21:26:16.478] [DCGO_Recorder] agent: diverged  action - p=- v=- DCGO reached a state the sim recording never did
+[21:26:39.650] [DCGO_Recorder] agent: diverged  action - p=- v=- DCGO reached a state the sim recording never did
+[21:27:04.281] [DCGO_Recorder] agent: diverged  action - p=- v=- DCGO reached a state the sim recording never did
+[21:27:28.172] [DCGO_Recorder] auto: model seat playing (turn 6)
+[21:27:29.283] [DCGO_Recorder] agent: diverged  action - p=- v=- DCGO reached a state the sim recording never did
+[21:28:18.645] [WARNING] [DCGO_Recorder] agent: no answer to request 0099-20261114T210728Z in 45 s - asking again

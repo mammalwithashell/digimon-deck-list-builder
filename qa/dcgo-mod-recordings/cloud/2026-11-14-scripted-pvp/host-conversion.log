@@ -1,0 +1,2 @@
+TRUNCATED: no game_end row written (see the converter's truncated_at reason below)
+wrote 53 rows (31 decisions, 0 inferred) -> /workspace/digimon-deck-list-builder/qa/dcgo-mod-recordings/cloud/2026-11-14-scripted-pvp/host.jsonl

@@ -1,0 +1,14 @@
+{
+  "event_seq": 107,
+  "game_over": true,
+  "memory": 3,
+  "memory_pair": [
+    1,
+    0
+  ],
+  "phase": "GameOver",
+  "terminal_outcome_reason": "security_attack",
+  "turn_count": 7,
+  "turn_player": 1,
+  "winner": 1
+}

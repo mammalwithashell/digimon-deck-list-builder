@@ -1,0 +1,13 @@
+{
+  "total_recordings": 1,
+  "pass": 1,
+  "partial_pass": 0,
+  "fail": 0,
+  "quirk": 0,
+  "by_quirk": {},
+  "quirk_games": [],
+  "by_kind": {},
+  "per_card": {},
+  "failed_games": [],
+  "skipped_actions": 0
+}

@@ -1,0 +1,141 @@
+[17:31:18.924] [MelonLoader.Bootstrap] Using HostFXR Path: C:\dotnet\host\fxr\6.0.36\hostfxr.dll
+[17:31:18.924] [MelonLoader.Bootstrap] Using .NET runtime: 'C:\dotnet\host\fxr\6.0.36\hostfxr.dll'
+
+[17:31:19.780] ------------------------------
+[17:31:19.782] MelonLoader v0.7.3 Open-Beta
+[17:31:19.782] OS: Wine/Proton 10.0
+[17:31:19.782] Hash Code: BDD43DC0F3893C208C95389B863AB61C967AE14204DA0DD8051647E754C8709B
+[17:31:19.782] ------------------------------
+[17:31:19.782] Game Type: Il2cpp
+[17:31:19.782] Game Arch: x64
+[17:31:19.782] ------------------------------
+[17:31:19.782] Command-Line: 
+[17:31:19.782] ------------------------------
+[17:31:19.782] Core::BasePath = Z:\workspace\dcgo-cloud\client\DCGO_Standalone\Game
+[17:31:19.791] Game::BasePath = Z:\workspace\dcgo-cloud\client\DCGO_Standalone\Game
+[17:31:19.791] Game::DataPath = Z:\workspace\dcgo-cloud\client\DCGO_Standalone\Game\DCGO_Data
+[17:31:19.791] Game::ApplicationPath = Z:\workspace\dcgo-cloud\client\DCGO_Standalone\Game\DCGO.exe
+[17:31:19.791] Runtime Type: net6
+[17:31:19.895] ------------------------------
+[17:31:19.896] Game Name: DCGO
+[17:31:19.896] Game Developer: DCGO
+[17:31:19.898] Unity Version: 2021.3.45f2
+[17:31:19.898] Game Version: 1.19.3
+[17:31:19.898] ------------------------------
+
+[17:31:20.599] Preferences Loaded!
+
+[17:31:20.630] Loading UserLibs...
+[17:31:20.632] 0 UserLibs loaded.
+
+[17:31:20.632] Loading Plugins...
+[17:31:20.641] 0 Plugins loaded.
+
+[17:31:21.155] Loading Il2CppAssemblyGenerator...
+[17:31:21.209] [Il2CppAssemblyGenerator] Contacting RemoteAPI...
+[17:31:21.590] [Il2CppAssemblyGenerator] Game Not Found on RemoteAPI Host (https://api.melonloader.com/api/v1/game/dcgo)
+[17:31:21.590] [Il2CppAssemblyGenerator] RemoteAPI.DumperVersion = null
+[17:31:21.590] [Il2CppAssemblyGenerator] RemoteAPI.ObfuscationRegex = null
+[17:31:21.590] [Il2CppAssemblyGenerator] RemoteAPI.MappingURL = null
+[17:31:21.590] [Il2CppAssemblyGenerator] RemoteAPI.MappingFileSHA512 = null
+[17:31:21.594] [Il2CppAssemblyGenerator] Using Cpp2IL Version: 2022.1.0-pre-release.21
+[17:31:21.594] [Il2CppAssemblyGenerator] Using Il2CppInterop Version = 1.5.1-ci.845+f03c8f4ae507d47ea814f3d11d1ec6b0391c1576
+[17:31:21.594] [Il2CppAssemblyGenerator] Using Unity Dependencies Version = 2021.3.45
+[17:31:21.594] [Il2CppAssemblyGenerator] Using Deobfuscation Regex = null
+[17:31:21.595] [Il2CppAssemblyGenerator] Cpp2IL is up to date.
+[17:31:21.595] [Il2CppAssemblyGenerator] Cpp2IL.Plugin.StrippedCodeRegSupport is up to date.
+[17:31:21.595] [Il2CppAssemblyGenerator] UnityDependencies is up to date.
+[17:31:21.595] [Il2CppAssemblyGenerator] Checking GameAssembly...
+[17:31:21.896] [Il2CppAssemblyGenerator] Assembly is up to date. No Generation Needed.
+
+[17:31:21.897] Loading Mods...
+[17:31:21.925] ------------------------------
+[17:31:21.948] Melon Assembly loaded: '.\Mods\DcgoRecorder.dll'
+[17:31:21.949] SHA256 Hash: '6A9E55B5E381814E7E174A438C184E33530ECFB20AC3F019E9768AA448F25C75'
+
+[17:31:24.064] ------------------------------
+[17:31:24.065] DCGO Recorder v0.1.0
+[17:31:24.065] by digimon-deck-list-builder
+[17:31:24.065] Assembly: DcgoRecorder.dll
+[17:31:24.066] ------------------------------
+[17:31:24.066] ------------------------------
+[17:31:24.066] 1 Mod loaded.
+
+[17:31:28.559] [WARNING] [Il2CppInterop] Class::Init signatures have been exhausted, using a substitute!
+[17:31:28.601] [Il2CppInterop] Registered mono type MelonLoader.Support.MonoEnumeratorWrapper in il2cpp domain
+[17:31:28.664] Support Module Loaded: Z:\workspace\dcgo-cloud\client\DCGO_Standalone\Game\MelonLoader\Dependencies\SupportModules\Il2Cpp.dll
+[17:31:29.274] [DCGO_Recorder] wrote signatures.txt (318896 chars)
+[17:31:29.291] [DCGO_Recorder] probe patched TurnStateMachine.QueueMainPhaseAction
+[17:31:29.299] [DCGO_Recorder] probe patched TurnStateMachine.QueueMainPhaseAction_Internal
+[17:31:29.308] [DCGO_Recorder] probe patched TurnStateMachine.SetActSkill
+[17:31:29.316] [DCGO_Recorder] probe patched TurnStateMachine.SetActCardSkill
+[17:31:29.328] [DCGO_Recorder] probe patched TurnStateMachine.SetAttackingPermaent
+[17:31:29.352] [DCGO_Recorder] probe patched TurnStateMachine.SetBreedingPhase
+[17:31:29.360] [DCGO_Recorder] probe patched TurnStateMachine.StartGame
+[17:31:29.368] [DCGO_Recorder] probe patched TurnStateMachine.EndGame
+[17:31:29.376] [DCGO_Recorder] probe patched TurnStateMachine.Surrender
+[17:31:29.389] [DCGO_Recorder] probe patched TurnStateMachine.PassTurn
+[17:31:29.414] [DCGO_Recorder] probe patched TurnStateMachine.SetRedraw
+[17:31:29.422] [DCGO_Recorder] probe patched TurnStateMachine.set_PlayCard
+[17:31:29.430] [DCGO_Recorder] probe patched TurnStateMachine.set_AttackingPermanent
+[17:31:29.439] [DCGO_Recorder] probe patched TurnStateMachine.set_UseCardEffect
+[17:31:29.452] [DCGO_Recorder] probe patched TurnStateMachine.set_Passed
+[17:31:29.475] [DCGO_Recorder] probe patched TurnStateMachine.Init
+[17:31:29.486] [DCGO_Recorder] probe patched Permanent.AddCardSource
+[17:31:29.493] [DCGO_Recorder] probe patched TurnStateMachine.SetStartPlayer
+[17:31:29.503] [DCGO_Recorder] probe patched SelectCardEffect.SetTargetCardAndIndicies
+[17:31:29.526] [DCGO_Recorder] probe patched SelectHandEffect.SetTargetHandCards
+[17:31:29.552] [DCGO_Recorder] probe patched SelectPermanentEffect.SetTargetFrames
+[17:31:29.562] [DCGO_Recorder] probe patched SelectAttackEffect.SetAttackTarget
+[17:31:29.576] [DCGO_Recorder] probe patched SelectDigiXrosClass.SetTargetDigiXrossIndex
+[17:31:29.602] [DCGO_Recorder] probe patched UserSelectionManager.SetIntForPlayer
+[17:31:29.612] [DCGO_Recorder] probe patched MultipleSkills.SetTargetSkill
+[17:31:29.620] [DCGO_Recorder] probe patched UserSelectionManager.SetBoolForPlayer
+[17:31:29.633] [DCGO_Recorder] probe patched OptionalSkill.SetUseOptional
+[17:31:29.659] [DCGO_Recorder] probe patched PlayCardClass.PlayCard
+[17:31:29.671] [DCGO_Recorder] probe patched SelectCountEffect.SetCount (typed)
+[17:31:29.672] [DCGO_Recorder] probes applied: 29
+[17:31:29.811] [DCGO_Recorder] ai-ish types: 35
+[17:31:38.033] [Il2CppInterop] Registered mono type MelonLoader.Support.SM_Component in il2cpp domain
+[17:31:38.043] [DCGO_Recorder] scene loaded: Opening
+[17:31:39.343] [DCGO_Recorder] scene loaded: ContinuousControllerScene
+[17:31:43.422] [DCGO_Recorder] tree of ContinuousControllerScene: 34 objects
+[17:31:43.440] [DCGO_Recorder] dumped 0 buttons for scene ContinuousControllerScene
+[17:31:51.358] [DCGO_Recorder] auto: mode bot, shared dir Z:\workspace\dcgo-cloud\client\DCGO_Standalone\Game\UserData\DcgoRecorder
+[17:31:51.385] [DCGO_Recorder] auto: Title found = True
+[17:31:58.457] [DCGO_Recorder] dumped 0 buttons for scene ContinuousControllerScene
+[17:32:01.370] [DCGO_Recorder] auto: re-dumping tree after title click
+[17:32:01.382] [DCGO_Recorder] tree of Opening/after-title-click: 56 objects
+[17:32:03.387] [DCGO_Recorder] auto: click Opening/Main Menu/ModeButtons/BattleButton/Button -> found
+[17:32:11.425] [DCGO_Recorder] auto: re-dumping tree after battle click
+[17:32:11.437] [DCGO_Recorder] tree of Opening/after-battle-click: 48 objects
+[17:32:13.455] [DCGO_Recorder] auto: SelectBattleMode.StartSelectBattleDeck(isAI: true)
+[17:32:13.484] [DCGO_Recorder] dumped 11 buttons for scene ContinuousControllerScene
+[17:32:21.486] [DCGO_Recorder] auto: re-dumping tree after bot-match click
+[17:32:21.498] [DCGO_Recorder] tree of Opening/after-botmatch-click: 110 objects
+[17:32:23.533] [DCGO_Recorder] auto: selecting deck Opening/Other panels/Random Match/SelectBattleDeck/Parent/YourDecks/DeckScrollView/Viewport/Content/DeckInfoPrefab(Clone) (EventTrigger=True)
+[17:32:26.543] [DCGO_Recorder] auto: invoking Opening/Other panels/Random Match/SelectBattleDeck/Parent/DeckInfoPanel/Parent/Buttons (1)/Select/SelectButton interactable=True
+[17:32:29.630] [DCGO_Recorder] scene loaded: BattleScene
+[17:32:29.682] [DCGO_Recorder] dumped 18 buttons for scene ContinuousControllerScene
+[17:32:30.086] [WARNING] [DCGO Recorder] snapshot failed: Object reference not set to an instance of an object.
+[17:32:33.654] [DCGO_Recorder] tree of BattleScene: 566 objects
+[17:32:33.686] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[17:32:34.572] [DCGO_Recorder] auto: match is running; IsAI=True you=0 turn=0
+[17:32:42.629] [DCGO_Recorder] auto: invoking Board UI/YourObject/YourFirstObject/LargeButton02Yellow interactable=True
+[17:32:48.738] [DCGO_Recorder] dumped 6 buttons for scene BattleScene
+[17:32:54.628] [DCGO_Recorder] auto: invoking Game UI/ Card selection panel/Parent/Buttons/NotSelectButton interactable=True
+[17:33:03.761] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[17:33:18.789] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[17:33:54.695] [DCGO_Recorder] auto: invoking Board UI/Next Phase/Btn_Skill00 interactable=True
+[17:33:59.750] [DCGO_Recorder] auto: invoking Board UI/Next Phase/Btn_Skill00 interactable=True
+[17:34:03.993] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[17:34:18.899] [DCGO_Recorder] dumped 2 buttons for scene BattleScene
+[17:34:19.841] [DCGO_Recorder] auto: invoking Board UI/Next Phase/Btn_Skill00 interactable=True
+[17:34:24.914] [DCGO_Recorder] auto: invoking Board UI/Next Phase/Btn_Skill00 interactable=True
+[17:34:33.943] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[17:34:48.978] [DCGO_Recorder] dumped 3 buttons for scene BattleScene
+[17:34:50.014] [DCGO_Recorder] auto: invoking Board UI/Next Phase/Btn_Skill00 interactable=True
+[17:34:55.035] [DCGO_Recorder] auto: invoking Board UI/Next Phase/Btn_Skill00 interactable=True
+[17:35:00.079] [DCGO_Recorder] auto: surrendering as player 0 (turn 6, ticks 13)
+[17:35:03.982] [DCGO_Recorder] dumped 5 buttons for scene BattleScene
+[17:35:15.144] [DCGO_Recorder] auto: done (BattleScene)

@@ -125,6 +125,56 @@ pub fn run(
     }
 }
 
+/// Wine's default Z: drive exposes the Unix root. Keep native paths untouched,
+/// including Unix filenames containing backslashes, and let other Wine drives
+/// fail explicitly instead of guessing their prefix mapping.
+fn native_raw_path(raw: &str) -> PathBuf {
+    #[cfg(unix)]
+    if raw.starts_with("Z:\\")
+        || raw.starts_with("z:\\")
+        || raw.starts_with("Z:/")
+        || raw.starts_with("z:/")
+    {
+        return PathBuf::from(raw[2..].replace('\\', "/"));
+    }
+    PathBuf::from(raw)
+}
+
+#[cfg(test)]
+mod wine_path_tests {
+    use super::native_raw_path;
+    use std::path::PathBuf;
+
+    #[test]
+    #[cfg(unix)]
+    fn maps_wine_root_drive_to_native_path() {
+        assert_eq!(
+            native_raw_path(r"Z:\workspace\seat 0\raw.jsonl"),
+            PathBuf::from("/workspace/seat 0/raw.jsonl")
+        );
+        assert_eq!(
+            native_raw_path("z:/workspace/raw.jsonl"),
+            PathBuf::from("/workspace/raw.jsonl")
+        );
+    }
+
+    #[test]
+    fn preserves_native_paths_and_unmapped_drives() {
+        assert_eq!(
+            native_raw_path("/workspace/raw.jsonl"),
+            PathBuf::from("/workspace/raw.jsonl")
+        );
+        assert_eq!(
+            native_raw_path(r"C:\game\raw.jsonl"),
+            PathBuf::from(r"C:\game\raw.jsonl")
+        );
+        assert_eq!(
+            native_raw_path(r"/workspace/a\b"),
+            PathBuf::from(r"/workspace/a\b")
+        );
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn handle(
     req: &Path,
@@ -140,14 +190,14 @@ fn handle(
     let text = std::fs::read_to_string(req).map_err(|e| format!("reading request: {e}"))?;
     let request: Value = serde_json::from_str(&text).map_err(|e| format!("bad request json: {e}"))?;
     let id = request["id"].as_str().unwrap_or("0").to_string();
-    let raw = request["raw"].as_str().ok_or("request has no raw path")?;
+    let raw = native_raw_path(request["raw"].as_str().ok_or("request has no raw path")?);
     let seat = request["seat"].as_u64().ok_or("request has no seat")? as u8;
 
     // 1. raw log -> DCGO recording (truncated is fine: the game is still running)
     let converted = dir.join(format!("converted-{id}.jsonl"));
     let status = std::process::Command::new(python)
         .arg(converter)
-        .arg(raw)
+        .arg(&raw)
         .arg(&converted)
         .arg("--allow-truncated")
         .output()
@@ -256,7 +306,7 @@ fn handle(
         use std::sync::Mutex;
         static LAST: Mutex<(String, u32)> = Mutex::new((String::new(), 0));
         let mut last = LAST.lock().unwrap();
-        match zone_mismatch(game, Path::new(raw)) {
+        match zone_mismatch(game, &raw) {
             Some(note) => {
                 if last.0 == note {
                     last.1 += 1;

@@ -1,5 +1,8 @@
 # Recording games from the installed DCGO client (MelonLoader)
 
+For the tested Wine/software-rendering setup and Linux build/record/replay commands,
+see [Running DCGO in Linux cloud sessions](runbooks/dcgo-linux-cloud.md).
+
 Goal: record games played in the **real, installed DCGO client** (including PvP) as the same
 JSONL the Unity-project recorder writes (`docs/DCGO_RECORDING_SCHEMA.md`), so they replay through
 `dcgo-replay` and can seed training data. The installed client is the official build, so PvP keeps
@@ -434,6 +437,13 @@ Three more cp8 sim games (seed 1, decks in `qa/dcgo-mod-recordings/playback/deck
 | Toho Braves vs TS Jupitermon (`sim_toho_jup`, 86 decisions) | Plays back to the same winner (seat 1, turn 11); both clients' recordings replay as a full PASS. Took ten runs. |
 | Medusamon vs Rocks (`sim_med_rocks`) | Blocked at DCGO step 58 by a DCGO bug: Sunarizamon EX8-047's rule-granted [Mineral] trait is missing in DCGO (`qa/rules/dcgo_quirks.md`, Q-DCGO-RULE-TRAIT-MISSING). |
 | Glowing Dawn vs DNA Omnimon (`sim_gd_dna`, re-recorded after each engine fix, last 56 steps) | Plays back to the same winner (seat 1); both clients' recordings replay as a full PASS. |
+
+These PASS results refer to action replay. The Linux cloud run on 2026-11-14 also
+logged a persistent trash discrepancy after the two `ST23-03` attacks: the engine
+had `ST23-01` and `ST23-12` in trash while DCGO did not. Those copies of `ST23-03`
+have different stacks, which top-card-only board labels cannot distinguish.
+Retain the zone audit and investigate physical permanent identity before treating
+this fixture as full state parity; see [the cloud playbook](runbooks/dcgo-linux-cloud.md).
 
 Engine bugs found and fixed:
 

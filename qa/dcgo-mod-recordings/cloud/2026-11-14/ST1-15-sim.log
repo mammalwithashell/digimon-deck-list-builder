@@ -1,0 +1,6 @@
+exam: qa/dcgo-exams/ST1/ST1-15-effect0-two-targets.yaml
+  lowered 15 step(s): [Action(60), Action(429), Action(62), Action(60), Action(414), Action(62), Action(61), Action(62), Action(61), NativePlay { action_id: 0, bind_play_ref: "native-play-9" }, Action(62), Action(62), NativePlay { action_id: 0, bind_play_ref: "native-play-12" }, Select(SelectWire { card_ids: [], permanent_targets: [PermanentTarget { version: 2, play_ref: None, owner: 1, card_id: "ST1-02", sources: ["ST1-01"], linked: [], suspended: false, has_dp: true, dp: 3000, attacker: false, attack_target: false }, PermanentTarget { version: 3, play_ref: Some("native-play-9"), owner: 1, card_id: "ST1-04", sources: [], linked: [], suspended: false, has_dp: true, dp: 4000, attacker: false, attack_target: false }], permanent_prompt: Some("SelectPermanentEffect"), unsupported_reason: None, ordinal: None, trigger: None, trigger_not: None, value: None, bool_answer: None, cancel: false, optional_gate_fold: false }), Action(62)]
+  emitted job /workspace/dcgo-cloud/oracle-evidence/jobs/exam-ST1-15-effect0-two-targets.json
+  assert: 6 check(s) over 2 assertion block(s), 0 failed
+exam: scenarios seen 1 / lowered 1 / run 1 / diffed 0 / failed 0
+exam: mode sim-only (no oracle: this can only re-check what a previous oracle run confirmed)

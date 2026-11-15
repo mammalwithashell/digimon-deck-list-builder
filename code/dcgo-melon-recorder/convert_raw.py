@@ -214,13 +214,13 @@ def convert(rows, cards, allow_truncated=False):
                 # an effect's play / digivolve step that played nothing (e.g. a "may digivolve" with no card chosen):
                 # no card moved, no decision
                 continue
-            # A main-phase play is always queued first (a play packet naming the card). A paid play with no such
-            # packet is an effect's play or digivolve ("may digivolve into ... with the cost reduced by 1"): the
-            # effect's own selection rows carry that decision, so it is not a main-phase action.
+            # Human/PvP main-phase plays are queued first. An unqueued paid play there is an effect's play or
+            # digivolve, whose selection rows carry the decision. The built-in bot bypasses the queue, so its
+            # paid plays must reach the existing bot reconstruction below instead of silently disappearing.
             hand_cards = (r.get("hand") or {}).get("cards") or []
             slot = (r.get("hand") or {}).get("slot", -1)
             played_index = hand_cards[slot].get("card_index") if 0 <= slot < len(hand_cards) else None
-            if played_index is not None and played_index not in queued_play_indexes:
+            if played_index is not None and played_index not in queued_play_indexes and not (is_ai and actor == bot):
                 continue
             if played_index is not None:
                 queued_play_indexes.discard(played_index)

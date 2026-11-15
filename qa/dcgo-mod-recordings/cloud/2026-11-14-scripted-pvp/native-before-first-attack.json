@@ -1,0 +1,14 @@
+{
+  "event_seq": 50,
+  "game_over": false,
+  "memory": 9,
+  "memory_pair": [
+    0,
+    1
+  ],
+  "phase": "Main",
+  "terminal_outcome_reason": null,
+  "turn_count": 4,
+  "turn_player": 0,
+  "winner": null
+}
