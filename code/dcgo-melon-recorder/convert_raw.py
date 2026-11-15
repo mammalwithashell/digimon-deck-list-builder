@@ -982,6 +982,8 @@ def convert(rows, cards, allow_truncated=False):
             # effects"); chosen_effect_card (the local seat's panel pick) lets the replay match the effect by card
             row = {"type": "selection", "step": step, "actor": a[0], "prompt": "MultipleSkills", "phase": "Main",
                    "int_value": a[1]}
+            if "engine_action" in r:
+                row["engine_action"] = r["engine_action"]
             if r.get("chosen_effect_card"):
                 row["chosen_effect_card"] = r["chosen_effect_card"]
             out.append(row)
