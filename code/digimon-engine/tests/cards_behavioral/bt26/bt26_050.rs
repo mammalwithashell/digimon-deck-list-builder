@@ -283,7 +283,9 @@ fn bt26_050_decode_return_completes_before_security_is_trashed() {
     r.game.players[1].battle_area[holy.index as usize].is_suspended = true;
     fire(&mut r, EffectTiming::WhenAttacking, rosemon);
     pick_first(&mut r, 0);
+    assert_eq!(r.security_count(1), 1, "security must remain while the return replacement is pending");
     r.accept_optional_trigger().expect("accept Decode");
+    assert_eq!(r.security_count(1), 1, "security must remain until the Decode source is chosen and the return completes");
     pick_first(&mut r, 1);
     assert_eq!(r.security_count(1), 0, "Decode does not prevent the return");
     assert!(!field_ids(&r, 1).iter().any(|id| id == "BT26-029"));

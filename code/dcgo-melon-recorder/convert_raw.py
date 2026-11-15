@@ -451,7 +451,8 @@ def convert(rows, cards, allow_truncated=False):
             step += 1
             continue
         if m == "SelectAttackEffect.SetAttackTarget":
-            # (attackOwnerID, isTurnPlayer, permanentIndex): an effect-granted attack's target. -2 (NopIndex) =
+            # (attackOwnerID, targetIsTurnPlayer, permanentIndex): the boolean identifies the TARGET owner,
+            # as set from selectedPermanent.TopCard.Owner in DCGO SelectAttackEffect.cs. -2 (NopIndex) =
             # "Not Attack"; -1 (SecurityIndex) = the player; otherwise the defender's compact battle-area index,
             # turn-relative like SetTargetFrames. Same row the Unity recorder writes (DCGO_RECORDING_SCHEMA.md).
             if tp not in (0, 1) or len(a) < 3:

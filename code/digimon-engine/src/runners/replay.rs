@@ -2033,6 +2033,29 @@ impl ReplayDriver {
                         };
                     }
                 }
+                // A negative OptionalSkill answer supplies no card or target
+                // identifying the chosen effect. DCGO's index is not an engine
+                // index; never decline a different queued trigger by guessing.
+                // Preserve the parked state and report the missing evidence.
+                if next.prompt == "OptionalSkill" && next.bool_value == Some(false)
+                    && game.pending_selection.as_ref().is_some_and(|p| {
+                        matches!(p.kind, crate::selection::SelectionKind::TriggerOrder)
+                            && p.valid_action_ids.iter().filter(|&&id| id != crate::action::space::PASS).count() > 1
+                    })
+                {
+                    self.divergences.push(Divergence {
+                        step: self.cursor,
+                        action_id: 0,
+                        actor,
+                        phase: payload.phase.clone(),
+                        kind: DivergenceKind::SelectionResolution {
+                            reason: "declined trigger cannot be identified from DCGO's ordering index".into(),
+                        },
+                        board: describe_board(game),
+                    });
+                    self.paused = true;
+                    return self.no_progress_result(game);
+                }
                 let remapped_next = remap_selection_targets(game, next);
                 let next = remapped_next.as_ref().unwrap_or(next);
                 if let Some((branch, false)) = self.probe_branch_for_row(game, next, actor) {
@@ -4899,6 +4922,59 @@ mod tests {
             reason: "test".into(),
             total_steps: 0,
         }
+    }
+
+    #[test]
+    fn remote_trigger_index_cannot_identify_a_declined_optional_effect() {
+        use crate::debug_runner::{make_test_card, DebugRunner};
+        use crate::enums::{EffectSourceKind, GamePhase};
+        use crate::selection::{PendingSelection, SelectionKind};
+
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("FILLER", "Filler"))
+            .deck(0, &["FILLER"; 6]).deck(1, &["FILLER"; 6]).start();
+        let source = runner.place_on_field(0, "FILLER", None);
+        let card = runner.game.players[0].battle_area[source.index as usize].top_card().handle();
+        runner.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::TriggerOrder,
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: vec![30, 31],
+            is_optional: false,
+            prompt: "Choose triggered effect".into(),
+            effect_choices: None,
+            source_card: card,
+            source_permanent: Some(source),
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| panic!("must not guess the declined trigger")),
+            on_decline: None,
+            card_choice: None,
+            zone_owner: None,
+        });
+        let order: crate::dcgo_recording::SelectionRow = serde_json::from_value(json!({
+            "step": 0, "actor": 0, "phase": "Main", "prompt": "MultipleSkills", "int_value": 0
+        })).unwrap();
+        let decline: crate::dcgo_recording::SelectionRow = serde_json::from_value(json!({
+            "step": 1, "actor": 0, "phase": "Main", "prompt": "OptionalSkill", "bool_value": false
+        })).unwrap();
+        let adapter = DcgoAdapter::from_recording(crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![crate::dcgo_recording::Row::Selection(order.clone()),
+                       crate::dcgo_recording::Row::Selection(decline)],
+            end: dcgo_game_end(),
+        }, &no_card_data()).unwrap();
+        let mut driver = ReplayDriver {
+            source: Box::new(adapter), cursor: 0, verify: false,
+            policy: StepPolicy::CheckThenApply, divergences: Vec::new(),
+            digivolve_operand_fallbacks: Vec::new(), inferred_skipped: Vec::new(),
+            raid_retarget: None, paused: false,
+        };
+        let result = driver.apply_selection_step(&mut runner.game, &order);
+        assert_eq!(result.step_number, 0);
+        assert!(driver.paused);
+        assert!(matches!(&driver.divergences()[0].kind,
+            DivergenceKind::SelectionResolution { reason } if reason.contains("cannot be identified")));
+        assert_eq!(runner.game.pending_selection.as_ref().unwrap().valid_action_ids, vec![30, 31]);
     }
 
     #[test]
