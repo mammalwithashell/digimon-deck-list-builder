@@ -46248,6 +46248,9 @@
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce": [
      "yaml_key"
     ],
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon": [
+     "yaml_key"
+    ],
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9": [
      "yaml_key"
     ],
@@ -47769,6 +47772,7 @@
     "dsl::constructs/protection.rs::stack_does_not_block_security_placement",
     "dsl::constructs/protection.rs::stack_own_source_activation_cost_payable",
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce",
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon",
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9",
     "dsl::constructs/protection.rs::stack_s3_selected_trash_s8_selected_return",
     "dsl::constructs/protection.rs::stack_s7_top_stacked_return",
@@ -50250,6 +50254,9 @@
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce": [
      "yaml_key"
     ],
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon": [
+     "yaml_key"
+    ],
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9": [
      "yaml_key"
     ],
@@ -50350,6 +50357,7 @@
     "dsl::constructs/protection.rs::stack_does_not_block_security_placement",
     "dsl::constructs/protection.rs::stack_own_source_activation_cost_payable",
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce",
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon",
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9",
     "dsl::constructs/protection.rs::stack_s3_selected_trash_s8_selected_return",
     "dsl::constructs/protection.rs::stack_s7_top_stacked_return",
@@ -60215,6 +60223,9 @@
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce": [
      "yaml_key"
     ],
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon": [
+     "yaml_key"
+    ],
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9": [
      "yaml_key"
     ],
@@ -61187,6 +61198,7 @@
     "dsl::constructs/protection.rs::stack_does_not_block_security_placement",
     "dsl::constructs/protection.rs::stack_own_source_activation_cost_payable",
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce",
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon",
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9",
     "dsl::constructs/protection.rs::stack_s3_selected_trash_s8_selected_return",
     "dsl::constructs/protection.rs::stack_s7_top_stacked_return",
@@ -61545,6 +61557,9 @@
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce": [
      "yaml_key"
     ],
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon": [
+     "yaml_key"
+    ],
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9": [
      "yaml_key"
     ],
@@ -61672,6 +61687,7 @@
     "dsl::constructs/protection.rs::stack_does_not_block_security_placement",
     "dsl::constructs/protection.rs::stack_own_source_activation_cost_payable",
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce",
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon",
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9",
     "dsl::constructs/protection.rs::stack_s3_selected_trash_s8_selected_return",
     "dsl::constructs/protection.rs::stack_s7_top_stacked_return",
@@ -63787,6 +63803,9 @@
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce": [
      "yaml_key"
     ],
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon": [
+     "yaml_key"
+    ],
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9": [
      "yaml_key"
     ],
@@ -64004,6 +64023,7 @@
     "dsl::constructs/protection.rs::stack_does_not_block_security_placement",
     "dsl::constructs/protection.rs::stack_own_source_activation_cost_payable",
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce",
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon",
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9",
     "dsl::constructs/protection.rs::stack_s3_selected_trash_s8_selected_return",
     "dsl::constructs/protection.rs::stack_s7_top_stacked_return",
@@ -70374,6 +70394,9 @@
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce": [
      "yaml_key"
     ],
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon": [
+     "yaml_key"
+    ],
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9": [
      "yaml_key"
     ],
@@ -70397,6 +70420,7 @@
     "dsl::constructs/protection.rs::stack_does_not_block_security_placement",
     "dsl::constructs/protection.rs::stack_own_source_activation_cost_payable",
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce",
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon",
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9",
     "dsl::constructs/protection.rs::stack_s3_selected_trash_s8_selected_return",
     "dsl::constructs/protection.rs::stack_s7_top_stacked_return",
@@ -73849,7 +73873,7 @@
     "dsl::constructs/protection.rs::narrow_adjacent_deck_suspend_and_restriction": [
      "yaml_key"
     ],
-    "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9": [
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon": [
      "yaml_key"
     ],
     "dsl::constructs/protection.rs::stack_source_return_expiry_and_own_deck": [
@@ -73884,7 +73908,7 @@
    "tested_behaviourally": true,
    "tests": [
     "dsl::constructs/protection.rs::narrow_adjacent_deck_suspend_and_restriction",
-    "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9",
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon",
     "dsl::constructs/protection.rs::stack_source_return_expiry_and_own_deck",
     "dsl::group4_zone_movement.rs::group4_zone_movement_return_to_deck_include_sources_preserves_stack",
     "dsl::group7_predicate_batch.rs::result_bound_returned_any_card_reads_current_effect_result_log",
@@ -73931,7 +73955,7 @@
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce": [
      "yaml_key"
     ],
-    "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9": [
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon": [
      "yaml_key"
     ],
     "dsl::constructs/zone_moves.rs::departed_inherited_source_keeps_controller_tail_without_retargeting_new_slot": [
@@ -74061,7 +74085,7 @@
     "dsl::constructs/chronomon_result_protection.rs::stack_trash_does_not_block_source_returns_or_whole_stack_return",
     "dsl::constructs/protection.rs::narrow_does_not_block_bounce_or_source_trash",
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce",
-    "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9",
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon",
     "dsl::constructs/zone_moves.rs::departed_inherited_source_keeps_controller_tail_without_retargeting_new_slot",
     "dsl::constructs/zone_moves.rs::inherited_loop_continuation_re_resolves_compacted_carrier_and_keeps_actor",
     "dsl::dp_deletion_max_modifier.rs::another_permanents_delta_does_not_apply",
@@ -74797,6 +74821,9 @@
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce": [
      "yaml_key"
     ],
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon": [
+     "yaml_key"
+    ],
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9": [
      "yaml_key"
     ],
@@ -74904,6 +74931,7 @@
     "dsl::constructs/protection.rs::stack_does_not_block_security_placement",
     "dsl::constructs/protection.rs::stack_own_source_activation_cost_payable",
     "dsl::constructs/protection.rs::stack_own_source_trash_and_bounce",
+    "dsl::constructs/protection.rs::stack_protection_allows_returning_the_whole_digimon",
     "dsl::constructs/protection.rs::stack_s1_s2_s4_s5_s6_s9",
     "dsl::constructs/protection.rs::stack_s3_selected_trash_s8_selected_return",
     "dsl::constructs/protection.rs::stack_s7_top_stacked_return",
@@ -80483,7 +80511,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2229,
+  "behavioural_tests": 2230,
   "cards": {
    "behaviourally_covered": 1185,
    "lowering_covered": 1202,
@@ -80646,7 +80674,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 412,
-  "scanned_tests": 2636,
+  "scanned_tests": 2637,
   "top_untested": [
    {
     "cards_blocked": 3,

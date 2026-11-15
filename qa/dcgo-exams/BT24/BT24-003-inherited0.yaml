@@ -6,7 +6,8 @@
 # DCGO BT25_030.cs asks OptionalSkill, then adds the forced top card and
 # gains memory without a card widget. BT24_003.cs asks OptionalSkill, then
 # DigivolveIntoHandOrTrashCard asks SelectHandEffect. The exam's optional
-# gate fold emits both from the single declinable hand-pick row below.
+# gate fold emits both from the hand-pick row; the simulator answers its
+# separate activation prompt in a sim-only step.
 # Aegiomon's yellow Lv.3 and Elecmon/TS routes both cost 2; DCGO
 # de-duplicates equal costs, so no SelectCountEffect is required.
 # BT24_034.cs asks OptionalSkill for its WD even with no opponent Digimon.

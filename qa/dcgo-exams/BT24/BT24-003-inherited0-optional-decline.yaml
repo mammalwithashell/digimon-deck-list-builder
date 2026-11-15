@@ -16,9 +16,9 @@
 # use up the [Once Per Turn], so the second removal (step 11) re-offers
 # Tsunomon in our engine as in DCGO. Before the fix our engine had no prompt
 # there and passed to turn 4.
-# Step 7 (0-indexed) folds DCGO's OptionalSkill gate into our live Hand pick
-# (two BT24-034 candidates) and declines it. Step 11 is the renewed
-# acceptance as ONE folded row (expect OptionalSkill over our live Hand pick):
+# The first decline answers the activation gate with two Shaman candidates.
+# The renewed acceptance uses a simulator-only activation followed by a
+# folded hand-pick row (expect OptionalSkill over our live Hand pick):
 # the emitter splits it into DCGO's OptionalSkill(yes) + the hand-pick wire
 # row, the same decision sequence the two explicit rows of the first
 # authoring sent. Lost in the fold: the pick row is emitted with no
