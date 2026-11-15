@@ -3341,10 +3341,23 @@ impl ReplayDriver {
             super::selection_resolve::resolve_next
         };
 
+        // A recorder playback stamp is already an engine action. Only a
+        // currently legal action of the recorded actor is trusted; stale stamps
+        // still go through evidence-based DCGO ordering.
+        let stamped_order_action = payload.engine_action.is_some_and(|action| {
+            game.pending_selection.as_ref().is_some_and(|pending| {
+                pending.selecting_player == actor
+                    && (matches!(pending.kind, crate::selection::SelectionKind::TriggerOrder)
+                        || (matches!(pending.kind, crate::selection::SelectionKind::EffectChoice)
+                            && pending.prompt == REPLACEMENT_ORDER_PROMPT))
+                    && pending.valid_action_ids.contains(&action)
+            })
+        });
+
         // A remote MultipleSkills index is ordered by DCGO, so it cannot be
         // interpreted as an engine trigger-order index. A following named pick
         // can identify the trigger when exactly one branch accepts that pick.
-        if dcgo_folds && payload.prompt == "MultipleSkills"
+        if dcgo_folds && !stamped_order_action && payload.prompt == "MultipleSkills"
             && payload.int_value.is_some_and(|v| v >= 0)
             && payload.chosen_effect_card.is_none()
             && game.pending_selection.as_ref().is_some_and(|p| p.selecting_player == actor)
@@ -3906,6 +3919,7 @@ impl ReplayDriver {
         // decides; see `remote_trigger_order_choice`. A row that does carry the
         // card keeps the path through `resolve_next`.
         if dcgo_folds
+            && !stamped_order_action
             && payload.prompt == "MultipleSkills"
             && payload.int_value.is_some_and(|v| v >= 0)
             && payload.chosen_effect_card.is_none()
@@ -3976,7 +3990,7 @@ impl ReplayDriver {
         // proof a card-less index gets), or the order is unobservable (every
         // entry leads to the same game), or the replay stops. Only when the
         // resolver cannot already single one entry out (by the effect's name).
-        if dcgo_folds && payload.prompt == "MultipleSkills" && payload.int_value.is_some_and(|v| v >= 0) {
+        if dcgo_folds && !stamped_order_action && payload.prompt == "MultipleSkills" && payload.int_value.is_some_and(|v| v >= 0) {
             if let Some(cid) = payload.chosen_effect_card.as_deref() {
                 let matching: Vec<u16> = game
                     .pending_selection
