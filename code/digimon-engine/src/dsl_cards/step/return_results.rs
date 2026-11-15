@@ -80,6 +80,11 @@ pub(super) fn try_run(
                 .iter()
                 .filter_map(|(p, id)| ctx.game.resolve_digivolve_host_identity(*p, *id))
                 .collect();
+            // A resumed DSL tail can run after the queue has restored its
+            // outer attribution. Preserve the effect controller just as the
+            // direct EffectContext return path does, including for the deck
+            // insertion observer and opponent-scoped replacement windows.
+            let previous = ctx.game.effect_source_player.replace(ctx.player);
             crate::replacement::start_departure_batch(
                 ctx.game,
                 targets,
@@ -87,6 +92,7 @@ pub(super) fn try_run(
                 position.map(super::map_stack_position),
                 *include_sources,
             );
+            ctx.game.effect_source_player = previous;
             true
         }
         CompiledStep::ReturnReceiptFinalize { receipt } => {
