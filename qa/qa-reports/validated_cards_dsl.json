@@ -14064,8 +14064,8 @@
     },
     "LM-028": {
       "card_name": "Blue Scramble",
-      "validated_date": "2026-11-09",
-      "report": "royal-knights-ex13-training-gate",
+      "validated_date": "2026-11-13",
+      "report": "ulforce-exact-training-gate-2026-11-13",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Examon",
@@ -14078,7 +14078,7 @@
         "trash-to-deck-top",
         "security-play-from-trash"
       ],
-      "notes": "Current production YAML verified against official card face and bundle; all canonical card tests pass in royal_knights_blocker_audit, including the previously blocked source-protection or effect-evolution-cost behavior. Prior BLOCKED verdict predated the implemented shared primitive. Simulator validation only; no new Oracle claim.",
+      "notes": "Requalified against main 6b1a4fce1: all 22 LM-028 tests pass, including paid Main host/hand decline and both reduced-cost 0/1 choices after cloning. G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE is resolved in the shared runtime; the old BLOCKED verdict was stale. No YAML or gate-policy change. See qa/archetype-qa/dsl/ulforce-exact-training-gate-2026-11-13.md. Independently qualified by the Royal Knights audit; retain its tests_passing=22 and tests_ignored=0 evidence.",
       "prior_authoring_status": "IMPLEMENTED",
       "tests_passing": 22,
       "tests_ignored": 0
