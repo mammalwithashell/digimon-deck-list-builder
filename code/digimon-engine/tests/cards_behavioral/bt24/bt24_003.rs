@@ -819,6 +819,15 @@ fn bt24_003_does_not_offer_a_shaman_card_whose_reduced_cost_cannot_be_paid() {
 
     remove_own_security(&mut runner);
 
+    // This test predates the activation prompt (37735487b, `outer_prompt`): the "you may digivolve" yes/no is offered
+    // first (the gate is route-only, like DCGO's: CardSource.cs:1150-1161 never checks payment on an occupied frame).
+    // Accept it; the hand pick that follows (which checks the payment, CR 4.3 1-3-11-1) must then offer nothing.
+    if runner
+        .pending_selection_view()
+        .is_some_and(|v| v.valid_action_ids.contains(&digimon_engine::action::space::REPLACEMENT_ACCEPT))
+    {
+        runner.accept_optional_trigger().expect("accept the activation");
+    }
     if let Some(view) = runner.pending_selection_view() {
         assert!(
             view.valid_action_ids.iter().all(|&a| a == PASS),
