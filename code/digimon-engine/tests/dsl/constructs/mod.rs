@@ -24,6 +24,10 @@ pub mod evolution_candidate_cost;
 pub mod reveal_digivolve_candidate;
 pub mod meta_play_and_source_predicates;
 pub mod play_or_use_candidate_legality;
+pub mod affordable_with_cost;
+pub mod play_candidate_origin_zone;
+pub mod dna_candidate_fixed_pair_and_trash;
+pub mod digivolve_onto_replacement_subject;
 
 pub mod mixed_zone_distinct;
 
@@ -45,3 +49,6 @@ mod tamer_color_predicates;
 
 mod face_up_security_named;
 mod hand_shuffle_return_and_name_match;
+mod ignore_level_digivolve_candidate;
+mod paid_digivolve_candidate_payment;
+mod this_card_can_digivolve_onto;

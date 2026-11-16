@@ -169,10 +169,27 @@ effects:
           of: you
           bind_as: ceresmon_pick
           optional: true
+          # Only a Ceresmon the reduced-cost play would accept (DCGO
+          # BT25_039.cs:50-55 `HasPlayCost && EqualsCardName("Ceresmon") &&
+          # CanPlayAsNewPermanent(cardSource, true, …, fixedCost:
+          # GetCostItself - 7)`): a play cost — never the DUAL Ceresmon
+          # BT26-032 (CR 4.3 4-6-2, 7-1-1) — a free slot and no effect-play
+          # lock (CR 4.3 1-3-2), and the cost reduced by 7 payable (DCGO
+          # `MaxMemoryCost < cost` refuses; CR 4.3 7-1-2-3).
+          # `affordable_with_cost` credits the reducers the payment takes
+          # (G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT, closed 2026-11-14;
+          # CR 4.3 1-3-11-2), as DCGO's availability cost does: Ceresmon
+          # BT25-059's own mandatory "2+ suspended Digimon: -5"
+          # (MandatorySelfPlayCostReduction, ChangePlayCost.cs:123-143,
+          # applied by `GetChangedPayingCost`; Q6306 "reduced by a total of
+          # 12") prices the play at 0, so the pick is offered down to memory
+          # -10. Test bt25_039_ceresmon_pick_credits_real_ceresmons_own_cost_reduction.
           filter:
             all_of:
               - kind: digimon
               - name_is: "Ceresmon"
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 7 }
           prompt: "You may play 1 [Ceresmon] from your hand with the cost reduced by 7"
       - if:
           condition: { binding_present: ceresmon_pick }

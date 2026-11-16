@@ -99,6 +99,102 @@ fn bt17_009_inherited_on_deletion_may_play_tamer_with_inherited_effect_from_hand
     );
 }
 
+// ─── Inherited [On Deletion] hand-pick legality (2026-11-13 select-hand audit).
+// DCGO BT17_009.cs:116-131 CanSelectCardCondition = `IsTamer && HasInheritedEffect
+// && CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)`, and
+// :133-145 CanActivateCondition needs >= 1 such card. CR 4.3 1-3-2: an
+// impossible play is not carried out, so a Tamer the free play would refuse is
+// not a legal pick. Guards for the `can_play_from_effect_without_cost` leaf.
+
+fn offered_hand_count(runner: &DebugRunner) -> usize {
+    runner
+        .pending_selection_view()
+        .map(|view| view.valid_action_ids.iter().filter(|&&id| id != PASS).count())
+        .unwrap_or(0)
+}
+
+fn delete_flamemon_carrier(fill_field: usize) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-009")
+        .expect("BT17-009 YAML loads")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("FILL", "Fill"))
+        .add_card(make_inherited_tamer("TAMER-INHERITED"))
+        .hand(0, &["TAMER-INHERITED"])
+        .memory(0)
+        .start();
+    for _ in 0..fill_field {
+        runner.place_on_field(0, "FILL", Some(0));
+    }
+    let carrier = runner.place_stack(0, &["BT17-009", "CARRIER"]);
+    if fill_field > 0 {
+        // After the carrier leaves, the fillers occupy every slot.
+        runner.game.rules.field_slots = fill_field as u8;
+    }
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    runner
+}
+
+fn tamer_on_field(runner: &DebugRunner) -> bool {
+    runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "TAMER-INHERITED")
+}
+
+/// "You can't play Tamers by effects": the inherited-effect Tamer is not offered.
+#[test]
+fn bt17_009_on_deletion_does_not_offer_tamer_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT17-009")
+        .expect("BT17-009 YAML loads")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_inherited_tamer("TAMER-INHERITED"))
+        .hand(0, &["TAMER-INHERITED"])
+        .memory(0)
+        .start();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let carrier = runner.place_stack(0, &["BT17-009", "CARRIER"]);
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+
+    assert_eq!(
+        offered_hand_count(&runner),
+        0,
+        "a Tamer that can't be played by an effect must not be offered"
+    );
+    let _ = runner.auto_resolve();
+    assert!(!tamer_on_field(&runner), "the Tamer stays in hand");
+}
+
+/// A full battle area (after the carrier left): the Tamer is not offered.
+#[test]
+fn bt17_009_on_deletion_does_not_offer_tamer_when_battle_area_full() {
+    let mut runner = delete_flamemon_carrier(2);
+    assert_eq!(
+        offered_hand_count(&runner),
+        0,
+        "no free battle-area slot: the Tamer must not be offered"
+    );
+    let _ = runner.auto_resolve();
+    assert!(!tamer_on_field(&runner), "the Tamer stays in hand");
+}
+
+/// Control for the full-area guard: with one slot free the Tamer is offered.
+#[test]
+fn bt17_009_on_deletion_offers_tamer_when_a_slot_is_free() {
+    let runner = delete_flamemon_carrier(0);
+    assert_eq!(offered_hand_count(&runner), 1, "the inherited-effect Tamer is offered");
+}
+
 fn assert_required_pending_pick(runner: &DebugRunner, label: &str) {
     let view = runner.pending_selection_view().expect(label);
     assert!(

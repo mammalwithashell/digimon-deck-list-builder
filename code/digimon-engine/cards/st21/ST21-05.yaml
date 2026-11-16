@@ -56,10 +56,17 @@ effects:
           of: you
           bind_as: adv_tamer
           optional: true
+          # DCGO ST21_05.cs:45-48 IsAdventureTamerCondition = IsTamer &&
+          # HasAdventureTraits && CanPlayAsNewPermanent(payCost: false): only a
+          # Tamer that can actually be placed is offered: no effect-play lock
+          # (CR 4.3 1-3-11-1) and a free frame — the engine's rules.field_slots
+          # cap, mirroring DCGO's frame limit (CR 4.3 3-4-8-2 itself sets no
+          # battle-area limit).
           filter:
             all_of:
               - kind: tamer
               - trait_has: ADVENTURE
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [ADVENTURE] Tamer card from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: adv_tamer }
 

@@ -11,8 +11,14 @@
 #   Official Q&A: if you don't return this card to the bottom of the deck,
 #   you can't process the part after "after".
 #
-# DCGO: none — DCGO b9a0638cd ships no EX13_068.cs. Authored from the printed
-# text + Q&A with the established idioms:
+# DCGO: EX13_068.cs now exists (it was absent at b9a0638cd). Its filters,
+# EX13_068.cs:35-41, are `EqualsCardName && CanPlayAsNewPermanent(payCost:
+# false, cardEffect)` (the [Guilmon] one with `root: Trash`), each play skipped
+# when nothing matches (:51, :60-61). Both picks carry the same check as
+# `can_play_from_effect_without_cost: true` (play cost, free slot after this
+# Tamer leaves, no Tamer/Digimon play-by-effect prohibition, no
+# CannotPlayFromTrash for [Guilmon]): CR 4.3 1-3-11-1 / 1-3-2.
+# Authored from the printed text + Q&A with the established idioms:
 #   - [Start of Your Turn] memory set-to-3 (EX12-066 / BT23-086).
 #   - optional clause + `activation_cost: return_self_to_deck_bottom`
 #     (BT24-088 / EX11-071): declining the clause = not paying the cost, which
@@ -46,7 +52,7 @@ effects:
           of: you
           bind_as: takato
           optional: true
-          filter: { name_is: "Takato Matsuki" }
+          filter: { name_is: "Takato Matsuki", can_play_from_effect_without_cost: true }
           prompt: "Play 1 [Takato Matsuki] from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: takato }
       - if:
@@ -62,7 +68,7 @@ effects:
                 of: you
                 bind_as: guilmon
                 optional: true
-                filter: { name_is: Guilmon }
+                filter: { name_is: Guilmon, can_play_from_effect_without_cost: true }
                 prompt: "Play 1 [Guilmon] from your trash without paying the cost"
             - play_from_trash_free: { of: you, hand_index: guilmon }
 

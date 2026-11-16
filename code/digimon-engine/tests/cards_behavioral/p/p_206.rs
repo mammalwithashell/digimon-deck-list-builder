@@ -1037,6 +1037,7 @@ fn p_206_inherited_security_cost_filter_excludes_high_cost_digimon() {
         .add_card(p206_card())
         .add_card(make_digimon_with_cost("DIG-CHEAP", 2))
         .add_card(make_digimon_with_cost("DIG-EXPENSIVE", 5))
+        .add_card(make_digimon_with_cost("DIG-TRASH", 1))
         .add_card(make_digimon("ATTACKER"))
         .add_card(filler("FILL"))
         .hand(1, &["DIG-CHEAP", "DIG-EXPENSIVE"])
@@ -1045,6 +1046,10 @@ fn p_206_inherited_security_cost_filter_excludes_high_cost_digimon() {
         .deck(1, &["FILL"])
         .memory(10)
         .start();
+    // A playable cost-1 Digimon in P1's trash too, so the "From hand / From
+    // trash" prompt is a real choice (DCGO P_206.cs:262-282 only asks when
+    // BOTH zones hold a candidate; otherwise `SetBool(canSelectHand)`).
+    p206_seed_trash(&mut runner, 1, "DIG-TRASH");
 
     let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
     runner.attack_player(attacker, 1, false);
@@ -1466,4 +1471,301 @@ fn p_206_delay_tamer_play_is_optional() {
             .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "TAM-BLUE"),
         "a declined Tamer must not reach the battle area"
     );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 6 — Candidate legality (select-hand audit)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// DCGO P_206.cs:104-111 ([Main] <Delay>) offers a Tamer only when
+// `IsTamer && <colour shared with a field Digimon> && CanPlayAsNewPermanent(
+// card, false, activateClass)`, and the play is cost-paying (`payCost: true`,
+// -4, P_206.cs:205-211). DCGO's filter does not check memory (`payCost:
+// false` in the candidate check), but CR 4.3 1-3-11-1 says a card can't be
+// declared for play if its cost can't be paid, and 1-3-2 that an impossible
+// action is not carried out — so a Tamer the reduced play can't pay for is not
+// offered either (`affordable_with_cost: {reduce: 4}`).
+//
+// DCGO P_206.cs:254-259 ([Security]) offers `IsDigimon && HasPlayCost &&
+// BasePlayCostFromEntity <= 3 && CanPlayAsNewPermanent(card, false, ...)`, and
+// asks "from hand or trash?" only when BOTH zones hold such a card (P_206.cs:
+// 262-282: `SetBool(canSelectHand)` otherwise).
+
+/// Seed a card straight into a player's trash.
+fn p206_seed_trash(runner: &mut DebugRunner, player: usize, card_id: &str) {
+    let data_index = runner
+        .game
+        .card_data
+        .iter()
+        .position(|d| d.card_id == card_id)
+        .unwrap_or_else(|| panic!("{card_id} card data registered"));
+    let card_index = runner.game.next_card_index();
+    runner.game.players[player]
+        .trash
+        .push(digimon_engine::card_source::CardSource::new(
+            data_index,
+            player as u8,
+            card_index,
+        ));
+}
+
+/// Activate P-206's [Main] <Delay> (its real `trigger: delayed` shape) with a
+/// blue Digimon on the field and the given blue Tamer in hand; `setup` runs
+/// right before activation. Returns the number of Tamer candidates offered.
+fn p206_delay_tamer_candidates(tamer_cost: u16, setup: impl FnOnce(&mut DebugRunner)) -> usize {
+    use digimon_engine::action::space::PASS;
+    let mut tamer = make_tamer_colored("TAM-BLUE-C", CardColor::Blue);
+    tamer.play_cost = tamer_cost;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(p206_card())
+        .add_card(make_digimon_colored("FIELD-BLUE", CardColor::Blue))
+        .add_card(tamer)
+        .add_card(filler("FILL"))
+        .hand(0, &["TAM-BLUE-C"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "FIELD-BLUE", Some(0));
+    let handle = runner.place_on_field(0, "P-206", Some(0));
+    runner.game.player_mut(0).battle_area[handle.index as usize].option_state =
+        OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: DelayTrigger::MainPhaseActivated,
+            placed_on_turn: 0,
+        };
+    for _ in 0..4 {
+        if runner.game.turn_count > 0 && runner.game.turn_player() == 0 {
+            break;
+        }
+        runner.end_turn();
+        runner.game.enter_main_phase();
+    }
+    assert_eq!(runner.game.turn_player(), 0);
+    let idx = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "P-206")
+        .expect("P-206 still seated");
+    setup(&mut runner);
+    assert!(
+        runner.game.activate_delayed_option_main(PermanentHandle {
+            player: 0,
+            index: idx as u8
+        }),
+        "the matured <Delay> must be activatable"
+    );
+    match runner.pending_selection_view() {
+        Some(v) if v.kind == digimon_engine::selection::SelectionKind::Hand => v
+            .valid_action_ids
+            .iter()
+            .filter(|&&id| id != PASS)
+            .count(),
+        _ => 0,
+    }
+}
+
+/// Control / regression guard: a cost-14 Tamer at memory 0 costs 10 after the
+/// -4, which lands exactly on the memory floor, so it is offered.
+#[test]
+fn p_206_delay_tamer_offered_when_reduced_cost_is_just_payable() {
+    let n = p206_delay_tamer_candidates(14, |r| r.game.set_memory(0));
+    assert_eq!(n, 1);
+}
+
+/// A cost-15 Tamer at memory 0 would cost 11 after the -4 — more than the
+/// player can pay (CR 4.3 1-3-11-1) — so it is not offered.
+#[test]
+fn p_206_delay_unaffordable_tamer_not_offered() {
+    let n = p206_delay_tamer_candidates(15, |r| r.game.set_memory(0));
+    assert_eq!(n, 0, "a Tamer the -4 play can't pay for must not be offered");
+}
+
+/// "You can't play Tamers by effects" (DCGO `CanPlayAsNewPermanent` false).
+#[test]
+fn p_206_delay_tamer_not_offered_when_tamer_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let n = p206_delay_tamer_candidates(3, |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(
+                ModifierType::CannotPlayTamerByEffect,
+                0,
+                Expiry::Permanent,
+                None,
+                1,
+            ),
+        );
+    });
+    assert_eq!(n, 0);
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs an empty frame).
+/// The area stays full even after the <Delay> cost trashes P-206 itself
+/// (DCGO P_206.cs:121-126 trashes it before the body runs): FIELD-BLUE alone
+/// fills the single frame.
+#[test]
+fn p_206_delay_tamer_not_offered_when_battle_area_is_full() {
+    let n = p206_delay_tamer_candidates(3, |r| {
+        r.game.rules.field_slots = (r.game.players[0].battle_area.len() - 1) as u8;
+    });
+    assert_eq!(n, 0);
+}
+
+/// Drive P-206's [Security] for P1 with the given P1 hand / trash cards;
+/// `setup` runs right before the attack.
+fn p206_security_runner(
+    hand: &[&str],
+    trash: &[&str],
+    setup: impl FnOnce(&mut DebugRunner),
+) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(p206_card())
+        .add_card(make_digimon_with_cost("DIG-LOW-H", 2))
+        .add_card(make_digimon_with_cost("DIG-LOW-T", 2))
+        .add_card(make_digimon("ATTACKER"))
+        .add_card(filler("FILL"))
+        .hand(1, hand)
+        .security(1, &["P-206"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    for id in trash {
+        p206_seed_trash(&mut runner, 1, id);
+    }
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    setup(&mut runner);
+    runner.attack_player(attacker, 1, false);
+    runner
+}
+
+fn p1_hand_has(runner: &DebugRunner, id: &str) -> bool {
+    runner
+        .game
+        .player(1)
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == id)
+}
+
+/// "You can't play Digimon by effects": no cost<=3 Digimon is playable, so the
+/// "you may play" prompt is not offered at all; the mandatory "add this card
+/// to the hand" tail still runs.
+#[test]
+fn p_206_security_no_play_offer_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = p206_security_runner(&["DIG-LOW-H"], &["DIG-LOW-T"], |r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(
+                ModifierType::CannotPlayDigimonByEffect,
+                0,
+                Expiry::Permanent,
+                None,
+                1,
+            ),
+        );
+    });
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no playable candidate in either zone: no Play/Decline or zone prompt"
+    );
+    let _ = runner.auto_resolve();
+    assert!(p1_hand_has(&runner, "P-206"), "the add-to-hand tail still runs");
+    assert!(p1_hand_has(&runner, "DIG-LOW-H"));
+}
+
+/// Only the hand holds a playable candidate (the trash copy is locked by
+/// "can't play cards from the trash"): DCGO `SetBool(canSelectHand)` — no
+/// "From hand / From trash" prompt; choosing to play goes straight to the hand
+/// pick.
+#[test]
+fn p_206_security_skips_zone_choice_when_only_hand_is_playable() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = p206_security_runner(&["DIG-LOW-H"], &["DIG-LOW-T"], |r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(
+                ModifierType::CannotPlayFromTrash,
+                0,
+                Expiry::Permanent,
+                None,
+                1,
+            ),
+        );
+    });
+    let play_choice = runner
+        .pending_selection_view()
+        .expect("the hand Digimon is playable: Play / Decline offered");
+    assert_eq!(
+        play_choice.kind,
+        digimon_engine::selection::SelectionKind::EffectChoice
+    );
+    runner.execute_branch(0).expect("choose 'Play Digimon'");
+    let next = runner
+        .pending_selection_view()
+        .expect("the hand pick must install");
+    assert_eq!(
+        next.kind,
+        digimon_engine::selection::SelectionKind::Hand,
+        "with only the hand playable there is no 'From hand / From trash' prompt"
+    );
+}
+
+/// Only the trash holds a candidate (no Digimon in hand): choosing to play goes
+/// straight to the trash pick — "From hand" would be a dead choice.
+#[test]
+fn p_206_security_skips_zone_choice_when_only_trash_has_a_candidate() {
+    let mut runner = p206_security_runner(&[], &["DIG-LOW-T"], |_| {});
+    runner.execute_branch(0).expect("choose 'Play Digimon'");
+    let next = runner
+        .pending_selection_view()
+        .expect("the trash pick must install");
+    assert_eq!(next.kind, digimon_engine::selection::SelectionKind::Trash);
+}
+
+/// Regression guard: both zones playable — the zone prompt is offered.
+#[test]
+fn p_206_security_offers_zone_choice_when_both_zones_are_playable() {
+    let mut runner = p206_security_runner(&["DIG-LOW-H"], &["DIG-LOW-T"], |_| {});
+    runner.execute_branch(0).expect("choose 'Play Digimon'");
+    let zone = runner
+        .pending_selection_view()
+        .expect("zone prompt must install");
+    assert_eq!(
+        zone.kind,
+        digimon_engine::selection::SelectionKind::EffectChoice
+    );
+}
+
+/// A full battle area: no Digimon can be played, so the play offer is skipped.
+#[test]
+fn p_206_security_no_play_offer_when_battle_area_is_full() {
+    let mut runner = p206_security_runner(&["DIG-LOW-H"], &["DIG-LOW-T"], |r| {
+        r.game.rules.field_slots = 0;
+    });
+    assert!(runner.pending_selection_view().is_none());
+    let _ = runner.auto_resolve();
+    assert!(p1_hand_has(&runner, "P-206"));
+}
+
+/// Regression guard (DCGO parity): the <Delay> cost trashes P-206 before the
+/// body runs (DCGO P_206.cs:121-126; engine `lower_delay.rs`, CR 4.3 16-17),
+/// so a battle area that is full only because of P-206 itself has a free
+/// frame by the time the Tamer pick is made — the Tamer IS offered.
+#[test]
+fn p_206_delay_tamer_offered_when_only_p206_filled_the_area() {
+    let n = p206_delay_tamer_candidates(3, |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert_eq!(n, 1);
 }

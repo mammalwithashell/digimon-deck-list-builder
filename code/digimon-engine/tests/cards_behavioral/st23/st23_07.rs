@@ -242,3 +242,90 @@ fn st23_07_non_glowing_dawn_tamer_is_not_a_legal_pick() {
         "a non-[Glowing Dawn] Tamer is not playable by this effect"
     );
 }
+
+// ─── Section 3 — pick legality ───────────────────────────────────────────────
+//
+// DCGO ST23_07.cs:54-59 `HasTamerInHand = EqualsTraits("Glowing Dawn") &&
+// IsTamer && CanPlayAsNewPermanent(source, false, activateClass)` is the
+// SelectHandEffect candidate filter (:64): only a [Glowing Dawn] Tamer that can
+// actually be placed is offered — a free frame and no "can't play Tamers by
+// effects" lock. CR 4.3 1-3-11-1: a card can be declared for play only if it
+// is able to be played (the lock). The frame cap is the engine's
+// `rules.field_slots`, mirroring DCGO's frame limit; CR 4.3 3-4-8-2 itself
+// sets no battle-area limit.
+
+/// Armalizamon on the field with a [Glowing Dawn] Tamer in hand; fire [On Play]
+/// and report whether GD-TAMER is offered at the hand pick.
+fn gd_tamer_offered(runner: &mut DebugRunner) -> bool {
+    let arma = runner
+        .game
+        .players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .expect("Armalizamon on the field");
+    runner.fire_on_play(0, arma);
+    let Some(view) = runner.pending_selection_view() else {
+        return false;
+    };
+    let slot = runner.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "GD-TAMER")
+        .expect("GD-TAMER in hand") as u16;
+    [
+        digimon_engine::action::space::PLAY_HAND_START + slot,
+        digimon_engine::action::space::HAND_EFFECT_START + slot,
+    ]
+    .iter()
+    .any(|a| view.valid_action_ids.contains(a))
+}
+
+fn armalizamon_with_gd_tamer_in_hand() -> DebugRunner {
+    let mut runner = base();
+    runner.set_first_player(0);
+    push_to_hand(&mut runner, 0, "GD-TAMER");
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner
+}
+
+fn tamer_on_field(runner: &DebugRunner) -> bool {
+    runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "GD-TAMER")
+}
+
+/// "You can't play Tamers by effects": the [Glowing Dawn] Tamer is not offered.
+#[test]
+fn st23_07_gd_tamer_not_offered_under_tamer_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = armalizamon_with_gd_tamer_in_hand();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    assert!(!gd_tamer_offered(&mut runner), "Tamer effect plays are locked");
+    let _ = runner.auto_resolve();
+    assert!(!tamer_on_field(&runner));
+}
+
+/// No free battle-area frame: the [Glowing Dawn] Tamer is not offered.
+/// The frame cap is the engine's `rules.field_slots` (mirroring DCGO's frame
+/// limit); CR 4.3 3-4-8-2 itself sets no battle-area limit.
+#[test]
+fn st23_07_gd_tamer_not_offered_when_battle_area_full() {
+    let mut runner = armalizamon_with_gd_tamer_in_hand();
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    assert!(!gd_tamer_offered(&mut runner), "no free frame for the Tamer");
+    let _ = runner.auto_resolve();
+    assert!(!tamer_on_field(&runner));
+}
+
+/// Regression guard: with a free frame and no lock the Tamer is offered.
+#[test]
+fn st23_07_gd_tamer_offered_with_free_frame_and_no_lock() {
+    let mut runner = armalizamon_with_gd_tamer_in_hand();
+    assert!(gd_tamer_offered(&mut runner));
+}

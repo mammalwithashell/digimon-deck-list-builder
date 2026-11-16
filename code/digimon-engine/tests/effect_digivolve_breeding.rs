@@ -329,7 +329,8 @@ fn breeding_evolution_rejects_unsupported_security_source_without_payment_or_mov
     for predicate in [
         CompiledPredicate { can_digivolve_onto: Some("host".into()), ..Default::default() },
         CompiledPredicate { can_digivolve_onto_with_cost: Some(CompiledDigivolveCostPredicate {
-            target: "host".into(), cost: CompiledCostDelta::Literal(2),
+            target: "host".into(), cost: CompiledCostDelta::Literal(2), ignore_level: false,
+            ignore_requirements: false,
         }), ..Default::default() },
     ] {
         assert!(!eval_predicate_with_bindings(&predicate, &ctx,

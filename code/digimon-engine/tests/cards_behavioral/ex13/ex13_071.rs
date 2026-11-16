@@ -516,3 +516,110 @@ fn ex13_071_main_is_once_per_turn() {
     );
     assert!(!main_offered(&r, richard), "[Once Per Turn]");
 }
+
+// ─── Candidate legality of the [Kentaurosmon] pick ──────────────────────────
+// DCGO EX13_071.cs:357-361 offers a [Kentaurosmon] only when
+// `CanPlayCardTargetFrame(selectedKudamon.PermanentFrame, true, activateClass,
+// root, -1, false, IgnoreRequirement.Level)` holds: the card must be able to
+// digivolve onto THAT [Kudamon] with only the level waived (colour circle
+// kept). Official ruling Q7449 (2026-09-18) is the direct authority: only a
+// [Kentaurosmon] that meets the digivolution requirements, its Lv. being the
+// sole exception, may be digivolved into. A card that
+// fails it is refused at commit (CR 4.3 8-1-2-6), so offering it is a dead
+// choice (CR 4.3 1-3-2). The pick also checks the cost: a card whose cost
+// can't be paid can't be declared (CR 4.3 1-3-11-1). DCGO's filter does not
+// (`CanPlayCardTargetFrame` checks payment only for an empty frame,
+// CardSource.cs:1150-1160); the rules manual governs.
+//
+// The pick carries `can_digivolve_onto_with_cost { target: kudamon, cost:
+// { reduce: 1 }, ignore_level: true }`: the level-waived routes onto that
+// [Kudamon], paid at the effect's reduced cost.
+// G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL (closed 2026-11-14).
+
+/// A [Kentaurosmon] whose only circle is RED Lv.5: with the level waived it
+/// still needs a red base, and [Kudamon] is yellow, so it can't digivolve and
+/// must not be offered. The yellow one still is.
+#[test]
+fn ex13_071_kentaurosmon_pick_excludes_a_card_that_cannot_digivolve_ignoring_level() {
+    let mut ken_red = kentaurosmon("KEN-RED");
+    ken_red.evo_costs = vec![EvoCost {
+        card_color: 0,
+        level: 5,
+        memory_cost: 3,
+    }];
+    let (mut r, kudamon) = kentaurosmon_pick(vec![kentaurosmon("KEN"), ken_red], &["KEN", "KEN-RED"]);
+    let v = r.pending_selection_view().unwrap();
+    let candidates: Vec<u16> = v.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect();
+    assert_eq!(candidates.len(), 1, "only the yellow [Kentaurosmon]: {v:?}");
+    r.execute_action(0, candidates[0]).expect("digivolve");
+    assert_eq!(stack(&r, kudamon).last().map(String::as_str), Some("KEN"));
+}
+
+/// "with the cost reduced by 1" is part of the payment check: printed 16
+/// reduced to 15 is payable from memory 5 (5 - 15 = -10, CR 4.3 1-3-11-1);
+/// printed 17 reduced to 16 is not, so it isn't offered.
+#[test]
+fn ex13_071_kentaurosmon_pick_checks_payment_at_the_reduced_cost() {
+    let mut ken16 = kentaurosmon("KEN-16");
+    ken16.evo_costs[0].memory_cost = 16;
+    let mut ken17 = kentaurosmon("KEN-17");
+    ken17.evo_costs[0].memory_cost = 17;
+    let (mut r, kudamon) = kentaurosmon_pick(vec![ken16, ken17], &["KEN-16", "KEN-17"]);
+    let v = r.pending_selection_view().unwrap();
+    let candidates: Vec<u16> = v.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect();
+    assert_eq!(candidates.len(), 1, "only the payable [Kentaurosmon]: {v:?}");
+    r.execute_action(0, candidates[0]).expect("digivolve");
+    assert_eq!(stack(&r, kudamon).last().map(String::as_str), Some("KEN-16"));
+    // 15 memory paid from 5: the gauge sits at the opponent's 10.
+    let mine = if r.game.turn_player() == 0 { r.memory() } else { -r.memory() };
+    assert_eq!(mine, -10, "printed 16 reduced by 1");
+}
+
+/// Richard + 3 face-down cards, a [Kudamon], the Lv.4 / Lv.5 materials in
+/// trash, `hand` in hand, memory 5; drives the [Main] to the [Kentaurosmon]
+/// pick and returns with that pick pending.
+fn kentaurosmon_pick(extra: Vec<CardData>, hand: &[&str]) -> (DebugRunner, PermanentHandle) {
+    let mut b = builder()
+        .add_card(holy_beast("KUDA", "Kudamon", 3))
+        .add_card(holy_beast("HB4", "Reppamon", 4))
+        .add_card(holy_beast("HB5", "Chirinmon", 5));
+    for c in extra {
+        b = b.add_card(c);
+    }
+    let mut r = b
+        .hand(0, hand)
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .security(0, &["FILL"; 3])
+        .security(1, &["FILL"; 3])
+        .memory(5)
+        .start();
+    let richard = r.place_on_field(0, CARD_ID, Some(0));
+    for _ in 0..3 {
+        r.push_source(richard, "FILL");
+    }
+    {
+        let perm = &mut r.game.players[0].battle_area[richard.index as usize];
+        let n = perm.card_sources.len();
+        for c in perm.card_sources[..n - 1].iter_mut() {
+            c.face_down = true;
+        }
+    }
+    let kudamon = r.place_on_field(0, "KUDA", Some(0));
+    r.inject_trash(0, "HB4");
+    r.inject_trash(0, "HB5");
+    r.game.current_phase = GamePhase::Main;
+    assert!(r.game.activate_field_main(0, richard.index as usize));
+    for _ in 0..30 {
+        let Some(v) = r.pending_selection_view() else { break };
+        if v.prompt.contains("Kentaurosmon") {
+            return (r, kudamon);
+        }
+        if v.effect_choices.is_some() {
+            r.execute_branch(0).expect("order choice");
+        } else {
+            r.execute_action(v.selecting_player, first_non_pass(&v)).expect("pick");
+        }
+    }
+    panic!("the [Kentaurosmon] pick never surfaced");
+}

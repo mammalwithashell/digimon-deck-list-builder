@@ -144,6 +144,11 @@ effects:
     # [Angel]/[Archangel]/[Iliad] card in hand OR trash -- without one the
     # effect cannot activate (and MultipleSkills.cs:216-220 does not offer it
     # for ordering). G-ENGINE-TRIGGER-ORDER-UNACTIVATABLE.
+    # "Playable" = BT25_044.cs:149-154 `HasPlayCost && ... &&
+    # CanPlayAsNewPermanent(cardSource, false, activateClass, root)`: a play
+    # cost (never a Digi-Egg or an Option / DUAL, CR 4.3 7-1-1), an empty
+    # frame, no play prohibition, and from the trash no "can't play from the
+    # trash" lock -- `can_play_from_effect_without_cost` (zone-aware).
     condition:
       count_gte:
         filter:
@@ -155,6 +160,7 @@ effects:
                 - trait_has: Angel
                 - trait_has: Archangel
                 - trait_has: Iliad
+            - can_play_from_effect_without_cost: true
         n: 1
     summary: "[All Turns][OPT] When your security stack is removed from, you may play 1 cost<=8 [Angel]/[Archangel]/[Iliad] card from hand or trash without paying the cost"
     process:
@@ -170,6 +176,8 @@ effects:
                   - trait_has: Angel
                   - trait_has: Archangel
                   - trait_has: Iliad
+              # Same candidate filter as DCGO (hand :157, trash :159).
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 cost 8 or lower [Angel]/[Archangel]/[Iliad] card from hand or trash (free)"
       - play_union_bound_free: { binding: pick }
       # DCGO BT25_044.cs:208 `if (!executed) activateClass.RemoveUse()`:

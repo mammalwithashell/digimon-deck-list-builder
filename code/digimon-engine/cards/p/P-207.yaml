@@ -127,6 +127,10 @@ effects:
                           - trait_contains: "Sea Animal"
                   - trait_contains: Sovereign
                   - trait_has: TS
+              # DCGO P_207.cs:40-46 (shared by both picks)
+              # `CanPlayAsNewPermanent(card, false, ...)`: free frame, no play
+              # lock; zone-aware for the trash pick. CR 4.3 1-3-11-1.
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 level 4 or lower Digimon card with [Avian]/[Bird]/[Beast]/[Animal](other than [Sea Animal])/[Sovereign] in any of its traits or the [TS] trait from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: op_wd_pick }
 
@@ -154,5 +158,9 @@ effects:
                           - trait_contains: "Sea Animal"
                   - trait_contains: Sovereign
                   - trait_has: TS
+              # DCGO P_207.cs:40-46 (shared by both picks)
+              # `CanPlayAsNewPermanent(card, false, ...)`: free frame, no play
+              # lock; zone-aware for the trash pick. CR 4.3 1-3-11-1.
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 level 4 or lower Digimon card with [Avian]/[Bird]/[Beast]/[Animal](other than [Sea Animal])/[Sovereign] in any of its traits or the [TS] trait from your trash without paying the cost"
       - play_from_trash_free: { of: you, hand_index: wa_pick }

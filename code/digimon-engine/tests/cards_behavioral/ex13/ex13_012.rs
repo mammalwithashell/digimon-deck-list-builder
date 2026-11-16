@@ -53,6 +53,23 @@ fn builder() -> DebugRunnerBuilder {
         .add_card(named("TOP", "Topmon", CardColor::Red, 6, 11000))
         .add_card(named("FILL", "Filler", CardColor::Red, 3, 3000))
         .add_card(named("SEC", "SecCard", CardColor::Red, 3, 1000))
+        // Candidate-legality fixtures (all white with [Huckmon] in their text).
+        .add_card({
+            let mut e = named("W-HUCK-EGG", "Huckmon Egg", CardColor::White, 2, 0);
+            e.card_kind = digimon_engine::enums::CardKind::DigiEgg;
+            e.dp = None;
+            e.play_cost = 0;
+            e
+        })
+        .add_card({
+            let mut o = option("WB-HUCK-OPT", CardColor::White, 4);
+            o.colors = vec![CardColor::White, CardColor::Black];
+            o.effect_text = "Search for 1 [Huckmon].".into();
+            o
+        })
+        .add_card(with_cost(named("W-HUCK-18", "Huckmon Eighteen", CardColor::White, 6, 12000), 18))
+        .add_card(with_cost(named("W-HUCK-19", "Huckmon Nineteen", CardColor::White, 6, 12000), 19))
+        .add_card(named("BLACK-ALLY", "Blackmon", CardColor::Black, 3, 3000))
 }
 
 fn start(hand: &[&str], mem: i16) -> DebugRunner {
@@ -201,5 +218,106 @@ fn ex13_012_declining_refunds_the_once_per_turn() {
         offered_hand_ids(&r),
         vec!["W-HUCK-OPT".to_string()],
         "nothing picked → DCGO RemoveUse(): the attack trigger is still available"
+    );
+}
+
+// ─── Candidate legality — only cards the play/use at cost − 3 can carry out ──
+// DCGO EX13_012.cs:46-52 `HasCardColor(White) && HasText("Huckmon") &&
+// CanPlayOrUse(cardSource, activateClass, fixedCost: max(0, GetCostItself - 3))`;
+// `CanPlayOrUse` (PlayEffects.cs:286-294) = `(IsOption && !CanNotPlayThisOption
+// && Owner.MaxMemoryCost >= fixedCost) || (HasPlayCost &&
+// CanPlayAsNewPermanent(payCost, fixedCost))`, and `CanNotPlayThisOption`
+// includes the colour requirement (CardSource.cs:238-243). Rules: a Digi-Egg
+// has no play cost so it is never "played" (CR 4.3 7-1-1); an Option needs
+// every colour's requirement met to be used (CR 4.3 4-22-2/4-22-3); a card whose
+// cost can't be paid can't be played (CR 4.3 7-1-2-3); an impossible action is
+// not carried out (CR 4.3 1-3-2).
+
+fn add_player_lock(r: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1));
+}
+
+/// SaviorHuckmon (EX13-012) alone on the field (red/white), memory 5, attacking
+/// → the [When Attacking] hand pick's offered cards.
+fn offered_when_attacking(hand: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut r = start(hand, 5);
+    let h = r.place_on_field(0, CARD_ID, Some(0));
+    setup(&mut r);
+    r.attack_player(h, 1, false);
+    offered_hand_ids(&r)
+}
+
+#[test]
+fn ex13_012_digi_egg_with_huckmon_text_is_not_offered() {
+    assert_eq!(
+        offered_when_attacking(&["W-HUCK-EGG", "W-HUCK"], |_| {}),
+        vec!["W-HUCK".to_string()],
+        "a Digi-Egg has no play cost (CR 4.3 7-1-1; DCGO HasPlayCost)"
+    );
+}
+
+#[test]
+fn ex13_012_option_with_unmet_colour_requirement_is_not_offered() {
+    assert_eq!(
+        offered_when_attacking(&["WB-HUCK-OPT", "W-HUCK-OPT"], |_| {}),
+        vec!["W-HUCK-OPT".to_string()],
+        "white/black Option needs a black Digimon or Tamer too (CR 4.3 4-22-3)"
+    );
+}
+
+/// Regression guard: with a black Digimon on the field the white/black Option
+/// meets both colour requirements and is offered.
+#[test]
+fn ex13_012_option_with_met_multicolour_requirement_is_offered() {
+    assert_eq!(
+        offered_when_attacking(&["WB-HUCK-OPT", "W-HUCK-OPT"], |r| {
+            r.place_on_field(0, "BLACK-ALLY", Some(0));
+        }),
+        vec!["W-HUCK-OPT".to_string(), "WB-HUCK-OPT".to_string()]
+    );
+}
+
+#[test]
+fn ex13_012_option_not_offered_when_options_cannot_be_used() {
+    assert_eq!(
+        offered_when_attacking(&["W-HUCK-OPT", "W-HUCK"], |r| {
+            add_player_lock(r, digimon_engine::enums::ModifierType::CannotUseOptionCards);
+        }),
+        vec!["W-HUCK".to_string()]
+    );
+}
+
+#[test]
+fn ex13_012_digimon_not_offered_under_effect_play_prohibition() {
+    assert_eq!(
+        offered_when_attacking(&["W-HUCK-OPT", "W-HUCK"], |r| {
+            add_player_lock(r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+        }),
+        vec!["W-HUCK-OPT".to_string()]
+    );
+}
+
+#[test]
+fn ex13_012_digimon_not_offered_when_battle_area_full() {
+    assert_eq!(
+        offered_when_attacking(&["W-HUCK-OPT", "W-HUCK"], |r| {
+            r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+        }),
+        vec!["W-HUCK-OPT".to_string()]
+    );
+}
+
+/// Memory 5: cost 18 − 3 = 15 is payable (5 − 15 = −10), cost 19 − 3 = 16 is
+/// not (DCGO `CanPlayAsNewPermanent(payCost: true, fixedCost)`).
+#[test]
+fn ex13_012_digimon_whose_reduced_cost_cannot_be_paid_is_not_offered() {
+    assert_eq!(
+        offered_when_attacking(&["W-HUCK-18", "W-HUCK-19"], |_| {}),
+        vec!["W-HUCK-18".to_string()],
+        "only the card whose cost − 3 is payable"
     );
 }

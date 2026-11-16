@@ -755,3 +755,75 @@ fn ex11_021_inherited_delete_cost_removes_exactly_the_chosen_digimon() {
         "the attack ended after the cost was paid"
     );
 }
+
+// ─── SECTION 5 — Candidate legality (DCGO candidate filter) ────────────
+// DCGO EX11_021.cs:46-50 offers only `EqualsCardName("Mirai Kinosaki") &&
+// CanPlayAsNewPermanent(source, false, activateClass)`, and the hand prompt
+// installs only when such a card exists (EX11_021.cs:68). A Mirai Kinosaki the
+// effect could not then play is not offered. CR 4.3 1-3-2 only says such a play
+// is not carried out; the pick is optional, so excluding it changes no outcome.
+// The slot cap is the engine's `rules.field_slots`, not a CR limit (3-4-8-2).
+
+fn add_player_lock(runner: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Kokeshimon (EX11-021) on the field with Mirai Kinosaki in hand; fire its
+/// [When Digivolving] and return the hand prompt, if one installs.
+fn mirai_prompt(
+    setup: impl FnOnce(&mut DebugRunner),
+) -> (DebugRunner, Option<digimon_engine::selection::PendingSelectionView>) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-021")
+        .expect("EX11-021 YAML loads")
+        .add_card(make_test_card("BASE", "Base"))
+        .add_card(make_tamer("MIRAI", "Mirai Kinosaki"))
+        .hand(0, &["MIRAI"])
+        .memory(10)
+        .start();
+    let koko = runner.place_stack(0, &["BASE", "EX11-021"]);
+    setup(&mut runner);
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(koko),
+    );
+    runner.game.drain_effect_queue();
+    let view = runner
+        .pending_selection_view()
+        .filter(|v| v.kind == SelectionKind::Hand);
+    (runner, view)
+}
+
+/// A full battle area: Mirai Kinosaki has no free slot to be played into, so it
+/// is not offered and stays in hand.
+#[test]
+fn ex11_021_mirai_not_offered_when_battle_area_full() {
+    let (runner, view) = mirai_prompt(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    let offered = view.map(|v| v.valid_action_ids.into_iter().filter(|&a| a != PASS).count());
+    assert!(
+        offered.unwrap_or(0) == 0,
+        "no Mirai Kinosaki is offered into a full battle area: {offered:?}"
+    );
+    assert_eq!(runner.hand_size(0), 1, "Mirai stays in hand");
+}
+
+/// "You can't play Tamers by effects": Mirai Kinosaki is not offered.
+#[test]
+fn ex11_021_mirai_not_offered_when_effect_tamer_play_prohibited() {
+    let (runner, view) = mirai_prompt(|r| {
+        add_player_lock(r, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    });
+    let offered = view.map(|v| v.valid_action_ids.into_iter().filter(|&a| a != PASS).count());
+    assert!(
+        offered.unwrap_or(0) == 0,
+        "a Tamer-play prohibition removes Mirai Kinosaki from the candidates: {offered:?}"
+    );
+    assert_eq!(runner.hand_size(0), 1, "Mirai stays in hand");
+}

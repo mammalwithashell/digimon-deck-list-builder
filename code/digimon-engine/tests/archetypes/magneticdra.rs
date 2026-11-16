@@ -300,7 +300,8 @@ fn c1_zofr_kabus_non_inherited_source_buffs_but_does_not_fan_out_delete() {
 /// C2 — "Gravel Hearts free-play → recur Sunarizamon search".
 ///
 /// - Cards: EX10-069 Unique Emblem: Gravel Hearts (Option, hand) + EX8-047
-///   Sunarizamon available **in trash** (the recursion branch).
+///   Sunarizamon available **in trash** (the recursion branch), plus a hand
+///   copy so both zones qualify and the zone choice is actually offered.
 /// - Expected mechanical outcome: play Gravel Hearts `[Main]`, choose "From
 ///   trash", then free-play 1 [Sunarizamon] from trash without paying its cost;
 ///   Gravel Hearts then places itself in the battle area as a Delay Option. The
@@ -338,7 +339,14 @@ fn c2_gravel_hearts_free_plays_sunarizamon_from_trash_and_searches() {
         .expect("BT23-005 (Elizamon) in embedded DSL pack")
         .dsl_card("ST1-04")
         .expect("ST1-04 (Dracomon) in embedded DSL pack")
-        .hand(0, &["EX10-069"])
+        // A second EX8-047 in hand keeps the HAND zone legal too, so the zone
+        // EffectChoice actually appears and this test exercises choosing
+        // "From trash". With an empty hand only the trash zone holds a playable
+        // [Sunarizamon]; EX10-069 then picks the trash with no prompt, as DCGO
+        // does (`EX10_069.cs:49-66`, `SetBool(canSelectHand)` when only one
+        // zone qualifies) -- pinned by
+        // `ex10_069_main_zone_choice_skipped_when_only_trash_qualifies`.
+        .hand(0, &["EX10-069", "EX8-047"])
         .deck(0, &["BT14-009", "BT23-005", "ST1-04"])
         .deck(1, &["ST1-04"])
         .memory(10)

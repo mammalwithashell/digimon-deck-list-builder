@@ -314,3 +314,92 @@ fn zone_ids(cards: &[CardSource], data: &[CardData]) -> Vec<String> {
         .map(|card| card.card_id(data).to_string())
         .collect()
 }
+
+// ─── Start-of-turn hand-pick candidate legality ──────────────────────────────
+// DCGO BT24_083.cs:37-45 `CanSelectCardCondition` = (`EqualsCardName("Hiroko
+// Sagisaka")` || (`IsDigimon && HasDP && CardDP <= 5000 && HasTSTraits`)) &&
+// `CanPlayAsNewPermanent(cardSource, false, activateClass)`, used as the
+// `SelectHandEffect` `canTargetCondition` (BT24_083.cs:62-75). A card the free
+// play would refuse (full battle area, a "can't play Digimon / Tamers by
+// effects" lock) is never offered.
+
+fn hiroko_candidate_runner() -> DebugRunner {
+    let mut runner = hiroko_runner()
+        .add_card(ts_digimon("TS-LOW", 5000))
+        .add_card(hiroko_copy("HIROKO-COPY"))
+        .add_card(non_ts_digimon("OTHER", 3000))
+        .add_card(filler("FILL"))
+        .hand(0, &["TS-LOW", "HIROKO-COPY"])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(4)
+        .start();
+    runner.game.set_memory(4);
+    runner
+}
+
+/// Fire the start-of-turn trigger on `hiroko`, accept it (the return-to-deck
+/// cost is paid), and return the hand cards the pick offers (empty if none).
+fn offered_after_accepting(runner: &mut DebugRunner, hiroko: digimon_engine::PermanentHandle) -> Vec<String> {
+    fire_start_of_turn(runner, hiroko);
+    runner.accept_optional_trigger().expect("accept Hiroko trigger");
+    if runner.pending_kind() != Some(SelectionKind::Hand) {
+        return Vec::new();
+    }
+    let hand = zone_ids(&runner.game.player(0).hand, &runner.game.card_data);
+    runner
+        .pending_selection()
+        .expect("hand pick")
+        .valid_action_ids
+        .iter()
+        .filter(|&&id| id != PASS)
+        .map(|&id| hand[(id - PLAY_HAND_START) as usize].clone())
+        .collect()
+}
+
+/// Full battle area after the return-to-deck cost (Hiroko's slot is freed, a
+/// Digimon fills the only slot): nothing can be played, nothing is offered.
+#[test]
+fn bt24_083_start_of_turn_offers_nothing_when_battle_area_full() {
+    let mut runner = hiroko_candidate_runner();
+    let hiroko = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "OTHER", Some(0));
+    runner.game.rules.field_slots = 1;
+    let offered = offered_after_accepting(&mut runner, hiroko);
+    assert!(offered.is_empty(), "full battle area: nothing offered, got {offered:?}");
+    runner.auto_resolve().expect("settle");
+    let hand = zone_ids(&runner.game.player(0).hand, &runner.game.card_data);
+    assert!(hand.contains(&"TS-LOW".to_string()) && hand.contains(&"HIROKO-COPY".to_string()));
+}
+
+/// "You can't play Digimon by effects": the TS Digimon is not offered, the
+/// [Hiroko Sagisaka] Tamer still is.
+#[test]
+fn bt24_083_start_of_turn_excludes_digimon_when_digimon_effect_play_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = hiroko_candidate_runner();
+    let hiroko = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = offered_after_accepting(&mut runner, hiroko);
+    assert_eq!(offered, vec!["HIROKO-COPY".to_string()]);
+}
+
+/// "You can't play Tamers by effects": [Hiroko Sagisaka] is not offered, the
+/// TS Digimon still is.
+#[test]
+fn bt24_083_start_of_turn_excludes_tamer_when_tamer_effect_play_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = hiroko_candidate_runner();
+    let hiroko = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = offered_after_accepting(&mut runner, hiroko);
+    assert_eq!(offered, vec!["TS-LOW".to_string()]);
+}

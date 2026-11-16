@@ -361,8 +361,13 @@ impl<'a> EffectContext<'a> {
     /// Effect-driven Option USE from `player`'s TRASH with `cost_delta` applied
     /// to the printed use cost, preserving the full Option lifecycle
     /// (`OnUseOption`, `OptionMain` / mode selection, subtype disposal). The
-    /// trash analogue of `use_option_from_hand_with_cost`; honors
-    /// `CannotPlayFromTrash`. Gap 2 (`G-DSL-USE-OPTION-FROM-SOURCES`). Drivers:
+    /// trash analogue of `use_option_from_hand_with_cost`. Not refused by
+    /// `CannotPlayFromTrash`: that lock (Gallantmon (BT23-014), "can't play
+    /// Digimon or Tamers from the trash") covers Digimon/Tamer plays only, and
+    /// using an Option is not playing it (CR 4.3 7-1-1 vs 9-1-1); see
+    /// `Game::trash_play_lock_applies`. The "can't use Option cards" lock is
+    /// still enforced in `play_option_core`. Gap 2
+    /// (`G-DSL-USE-OPTION-FROM-SOURCES`). Drivers:
     /// BT25-083 ("use 1 Option from your trash with the cost reduced by 3"),
     /// BT21-062 hand-or-trash union.
     pub fn use_option_from_trash(

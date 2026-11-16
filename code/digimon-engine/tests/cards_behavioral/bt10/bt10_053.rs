@@ -391,3 +391,100 @@ fn bt10_053_main_suspend_fires_a_buried_ajatarmons_inherited_gain() {
     assert!(suspended(&r, aja));
     assert_eq!(r.memory(), mem + 1, "buried Ajatarmon's inherited +1 memory");
 }
+
+// ─── SECTION 5 — hand-pick legality: only Digimon that can actually be played ─
+//
+// DCGO BT10_053.cs:43-60 CanSelectCardCondition opens with
+// `CardEffectCommons.CanPlayAsNewPermanent(cardSource, payCost: false,
+// activateClass)` before the DP / Digimon / trait tests: a card is offered only
+// if the effect can place it (a free battle-area slot, no effect-play lock).
+// CR 4.3 1-3-11-1: a card can be declared for play only if it is able to be
+// played; 1-3-2: an impossible action is not carried out.
+
+/// Non-PASS hand-pick candidates (card ids, sorted); empty when no hand pick
+/// is pending.
+fn offered_hand_ids(r: &DebugRunner) -> Vec<String> {
+    let Some(v) = r.pending_selection_view() else {
+        return Vec::new();
+    };
+    if v.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let hand: Vec<String> = r.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    let mut out: Vec<String> = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| hand[(id - PLAY_HAND_START) as usize].clone())
+        .collect();
+    out.sort();
+    out
+}
+
+fn add_player_lock(r: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType, value: i32) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(modifier, value, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Activate [Main] with `hand`, pay the suspend with Ajatarmon itself, and
+/// return the hand-pick candidates.
+fn main_offered_after_self_suspend(r: &mut DebugRunner, hand: &[&str], prepare: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let aja = ajatarmon_in_main(r, hand);
+    prepare(r);
+    r.game.decode_action(main_action(aja), 0);
+    r.execute_action(0, own_field_pick(aja)).unwrap();
+    assert!(suspended(r, aja), "the suspend is paid (§15-7-5)");
+    offered_hand_ids(r)
+}
+
+/// A full battle area: none of the matching Digimon can be placed.
+#[test]
+fn bt10_053_main_hand_pick_offers_nothing_when_battle_area_full() {
+    let mut r = runner();
+    let offered = main_offered_after_self_suspend(&mut r, &["PLANT3K", "FAIRY2K"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "no free slot → nothing can be chosen (got {offered:?})");
+    let _ = r.auto_resolve();
+    assert!(!on_field(&r, "PLANT3K"));
+    assert!(!on_field(&r, "FAIRY2K"));
+}
+
+/// "You can't play Digimon by effects": nothing is offered.
+#[test]
+fn bt10_053_main_hand_pick_offers_nothing_under_digimon_effect_play_prohibition() {
+    let mut r = runner();
+    let offered = main_offered_after_self_suspend(&mut r, &["PLANT3K", "FAIRY2K"], |r| {
+        add_player_lock(r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect, 0);
+    });
+    assert!(offered.is_empty(), "effect plays of Digimon are locked (got {offered:?})");
+}
+
+/// "You can't play Digimon with 2000 DP or less": the 2000 DP card is not
+/// offered, the 3000 DP one still is.
+#[test]
+fn bt10_053_main_hand_pick_excludes_digimon_under_dp_play_ceiling() {
+    let mut r = runner();
+    let offered = main_offered_after_self_suspend(&mut r, &["PLANT3K", "FAIRY2K"], |r| {
+        add_player_lock(r, digimon_engine::enums::ModifierType::CannotPlayDigimonWithDPAtMost, 2000);
+    });
+    assert_eq!(offered, vec!["PLANT3K".to_string()]);
+}
+
+/// Regression guard: with a free slot and no lock every matching Digimon is
+/// offered.
+#[test]
+fn bt10_053_main_hand_pick_offers_every_playable_match() {
+    let mut r = runner();
+    let offered = main_offered_after_self_suspend(&mut r, &["PLANT3K", "FAIRY2K", "VEGBIG", "BEAST"], |_| {});
+    assert_eq!(offered, vec!["FAIRY2K".to_string(), "PLANT3K".to_string()]);
+}

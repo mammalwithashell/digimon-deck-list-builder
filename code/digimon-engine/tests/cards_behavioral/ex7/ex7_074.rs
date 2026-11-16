@@ -1313,3 +1313,234 @@ fn ex7_074_security_decline_play_still_adds_self_to_hand() {
         "add_this_option_to_hand must fire even when the optional play is declined"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Section 6: candidate legality — every offered card can actually be
+// played / digivolved into (G-DSL-PLAY-CANDIDATE-LEGALITY)
+// ---------------------------------------------------------------------------
+//
+// [Security] DCGO EX7_074.cs:160-166 `CanSelectCardCondition` = LIBERATOR &&
+// `HasPlayCost` && `GetCostItself <= 4` && `!IsDigiEgg` &&
+// `CardEffectCommons.CanPlayAsNewPermanent(cardSource, payCost: false, ...)`
+// (which also requires `!IsOption`, GameContextDeterminarion.cs:428): a
+// Digi-Egg or an Option is never offered (CR 4.3 7-1-1: a play places a card
+// with a PLAY cost; Options are used, Digi-Eggs hatched), nor a card the play
+// would refuse (prohibition, no empty frame, trash-play lock; CR 4.3 1-3-2).
+//
+// [Main] DCGO :121-130 `DigivolveIntoHandOrTrashCard(payCost: true,
+// reduceCost: 4)` offers only hand Digimon with
+// `CanPlayCardTargetFrame(target.PermanentFrame, PayCost: true, ...)`
+// (CardEffectCommons.cs:858-880): a route onto the chosen Digimon AND the
+// reduced cost payable.
+
+/// A LIBERATOR Digi-Egg (no play cost).
+fn make_liberator_egg(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = None;
+    c.play_cost = 0;
+    c.traits = vec!["LIBERATOR".to_string()];
+    c.colors = vec![CardColor::Green];
+    c
+}
+
+/// A LIBERATOR Option with use cost 3.
+fn make_liberator_option(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Option;
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c.traits = vec!["LIBERATOR".to_string()];
+    c.colors = vec![CardColor::Green];
+    c
+}
+
+/// Defender (player 1) holds `hand` / `trash`, EX7-074 is the top security
+/// card; attack, and return the non-PASS actions of the union-zone pick (None
+/// when no union pick installs) together with the runner.
+fn security_union_offer(
+    hand: &[&str],
+    trash: &[&str],
+    prep: impl FnOnce(&mut DebugRunner),
+) -> (DebugRunner, Option<Vec<u16>>) {
+    let mut attacker = make_filler("EX7074-ATK-LEGAL");
+    attacker.dp = Some(8000);
+    let mut deck1: Vec<&str> = vec!["FILL"; 5];
+    deck1.extend_from_slice(trash);
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(EX7_074_YAML)
+        .expect("EX7-074 YAML must parse and compile")
+        .add_card(attacker)
+        .add_card(make_liberator_low_cost("LIB-LOW"))
+        .add_card(make_liberator_egg("LIB-EGG"))
+        .add_card(make_liberator_option("LIB-OPT"))
+        .add_card(make_filler("FILL"))
+        .hand(1, hand)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &deck1)
+        .security(1, &["EX7-074"])
+        .memory(10)
+        .start();
+    for _ in trash {
+        let card = runner.game.players[1].deck.pop().expect("trash seed");
+        runner.game.players[1].trash.push(card);
+    }
+    let attacker_handle = runner.place_on_field(0, "EX7074-ATK-LEGAL", Some(0));
+    prep(&mut runner);
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    let offer = runner.game.pending_selection.as_ref().and_then(|sel| {
+        matches!(sel.kind, SelectionKind::UnionZone { .. }).then(|| {
+            sel.valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&a| a != PASS)
+                .collect::<Vec<u16>>()
+        })
+    });
+    (runner, offer)
+}
+
+/// Neither the LIBERATOR Digi-Egg nor the LIBERATOR Option (use cost 3) has a
+/// play cost: only the Digimon is offered, and picking it plays it.
+#[test]
+fn ex7_074_security_excludes_digi_egg_and_option() {
+    let (mut runner, offer) = security_union_offer(&["LIB-EGG", "LIB-OPT", "LIB-LOW"], &[], |_| {});
+    let offer = offer.expect("the Digimon makes a union pick");
+    assert_eq!(offer.len(), 1, "only LIB-LOW is playable; got {offer:?}");
+    runner.execute_action(1, offer[0]).expect("pick the only candidate");
+    let _ = runner.auto_resolve();
+    assert!(runner.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "LIB-LOW"));
+}
+
+/// Only an egg and an Option: nothing can be played, no union pick.
+#[test]
+fn ex7_074_security_egg_and_option_only_offers_no_pick() {
+    let (runner, offer) = security_union_offer(&["LIB-EGG", "LIB-OPT"], &[], |_| {});
+    assert!(offer.is_none(), "no playable LIBERATOR card; got {offer:?}");
+    assert_eq!(runner.battle_area_size(1), 0);
+}
+
+/// "You can't play Digimon by effects": no union pick.
+#[test]
+fn ex7_074_security_offers_nothing_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (runner, offer) = security_union_offer(&["LIB-LOW"], &[], |r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offer.is_none(), "{offer:?}");
+    assert_eq!(runner.battle_area_size(1), 0);
+}
+
+/// "You can't play cards from the trash": the trash candidate is not offered.
+#[test]
+fn ex7_074_security_offers_nothing_from_locked_trash() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (runner, offer) = security_union_offer(&[], &["LIB-LOW"], |r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offer.is_none(), "{offer:?}");
+    assert_eq!(runner.battle_area_size(1), 0);
+}
+
+/// A full battle area (no empty frame): no union pick.
+#[test]
+fn ex7_074_security_offers_nothing_when_battle_area_full() {
+    let (runner, offer) = security_union_offer(&["LIB-LOW"], &[], |r| {
+        r.place_on_field(1, "FILL", Some(0));
+        r.game.rules.field_slots = r.game.players[1].battle_area.len() as u8;
+    });
+    assert!(offer.is_none(), "{offer:?}");
+    assert_eq!(runner.battle_area_size(1), 1);
+}
+
+/// [Main]: `hand` (after EX7-074) in hand, the red Lv.4 carrier on the field.
+/// Decline the reveal pick, then return whether the "1 of your Digimon" pick
+/// installed and, if so, the hand ids the digivolve pick offers after
+/// choosing the carrier.
+fn main_digivolve_offer(hand: &[&str]) -> (bool, Vec<String>) {
+    let mut cards = vec!["EX7-074"];
+    cards.extend_from_slice(hand);
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(EX7_074_YAML)
+        .expect("EX7-074 YAML must parse and compile")
+        .add_card(make_liberator_digimon("LIB"))
+        .add_card(make_carrier("CARRIER"))
+        .add_card(make_evo_target("EVO", 6))
+        .add_card(make_evo_target("EVO-BIG", 30))
+        .hand(0, &cards)
+        .deck(0, &["LIB", "LIB", "LIB", "LIB", "LIB", "LIB"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "CARRIER", Some(0));
+    runner.game.activate_hand_main(0, 0);
+    // Decline the optional reveal pick so the hand holds only `hand`.
+    let view = runner.pending_selection_view().expect("reveal pick");
+    runner.execute_action(view.selecting_player, PASS).expect("decline reveal pick");
+    resolve_required_until_optional_or_done(&mut runner);
+    let Some(view) = runner.pending_selection_view() else {
+        return (false, Vec::new());
+    };
+    assert_eq!(view.kind, SelectionKind::OwnField, "the digivolve-target pick");
+    let target = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .expect("the carrier is offered");
+    runner.execute_action(0, target).expect("choose the carrier");
+    let Some(view) = runner.pending_selection_view() else {
+        return (true, Vec::new());
+    };
+    assert_eq!(view.kind, SelectionKind::Hand);
+    let ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let offered = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| ids[a as usize].clone())
+        .collect();
+    (true, offered)
+}
+
+/// EVO-BIG's reduced cost (30 - 4 = 26) can't be paid: only EVO is offered.
+#[test]
+fn ex7_074_main_digivolve_pick_excludes_unaffordable_card() {
+    let (target_offered, offered) = main_digivolve_offer(&["EVO-BIG", "EVO"]);
+    assert!(target_offered);
+    assert_eq!(offered, vec!["EVO".to_string()]);
+}
+
+/// LIB (Lv.5, no route onto the red Lv.4 carrier) is never offered.
+/// Regression guard for the compile-pass `can_digivolve_onto: target`.
+#[test]
+fn ex7_074_main_digivolve_pick_excludes_card_without_route() {
+    let (target_offered, offered) = main_digivolve_offer(&["LIB", "EVO"]);
+    assert!(target_offered);
+    assert_eq!(offered, vec!["EVO".to_string()]);
+}
+
+/// With no hand Digimon that can digivolve onto the carrier at the reduced
+/// cost, "1 of your Digimon may digivolve" offers no Digimon.
+#[test]
+fn ex7_074_main_offers_no_target_without_a_payable_digivolve() {
+    let (target_offered, offered) = main_digivolve_offer(&["EVO-BIG", "LIB"]);
+    assert!(!target_offered, "no Digimon has a payable digivolve; got hand offer {offered:?}");
+}

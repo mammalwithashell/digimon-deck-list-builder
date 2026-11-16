@@ -43,6 +43,20 @@ effects:
               - any_of:
                   - name_contains: Growlmon
                   - name_contains: Gallantmon
+              # Route AND the reduced cost payable. KNOWN DCGO DIVERGENCE (rules
+              # over DCGO): DCGO DigivolveIntoHandOrTrashCard
+              # (CardEffectCommons.cs:858-882) filters by
+              # `CanPlayCardTargetFrame(carrier frame, PayCost: true)`, but its
+              # `MaxMemoryCost < cost` check (CardSource.cs:1150-1162) runs only
+              # for an EMPTY frame; for the occupied carrier frame only
+              # `CanEvolve` runs (CardSource.cs:1269-1290: route + "can't
+              # digivolve" lock; `EvoCosts` never compares cost to memory), so
+              # DCGO offers unaffordable cards. We exclude them: CR 4.3 1-3-11-1
+              # forbids declaring a digivolve whose cost can't be paid, and our
+              # effect digivolve refuses it (Game::can_effect_digivolve_from_
+              # source_with_cost, game_actions/digivolve.rs), so offering it
+              # would be an illegal choice in the action space.
+              - can_digivolve_onto_with_cost: { target: source, cost: { reduce: 2 } }
           prompt: "Digivolve into a Digimon card with [Growlmon] or [Gallantmon] in its name with the cost reduced by 2"
       - if:
           condition: { binding_present: evo }

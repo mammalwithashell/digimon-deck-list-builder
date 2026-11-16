@@ -56,41 +56,35 @@ effects:
       - cancel_replacement: {}
 
   # Security Effect: may play [Omekamon] or [Cool Boy] from hand or trash free;
-  # then place this card in the battle area. Branching mirrors existing union
-  # hand/trash play workarounds.
+  # then place this card in the battle area.
+  #
+  # DCGO BT20_100.cs (select-hand audit, fixed 2026-11-13): the clause is NOT
+  # optional (:161 `SetUpActivateClass(null, ..., -1, false, ...)`) — the
+  # "may" is the card pick (`canNoSelect: true`, :245 / :269) and the
+  # placement always happens (:304-306). `CanSelectCardCondition` (:170-191)
+  # = own card && CanPlayAsNewPermanent(payCost: false) && name [Omekamon] /
+  # [Cool Boy] = `can_play_from_effect_without_cost` (play cost, free frame,
+  # no play lock; zone-aware: a trash card under "can't play from trash" is
+  # refused). :201-222 the "From hand / From trash" choice is asked only when
+  # BOTH zones hold such a card; one hand-or-trash pick offers exactly the
+  # same set of plays without a zone choice that could lead nowhere (the old
+  # select_effect_choice offered "From trash" with an empty trash). The
+  # BT20-093 [Security] idiom.
   - scope: inherited
     when: on_security
-    optional: true
     summary: "[Security] You may play [Omekamon] or [Cool Boy] from hand or trash free; then place self in battle area"
     process:
-      - select_effect_choice:
-          labels: ["From hand", "From trash"]
-          bind_as: zone_choice
-          prompt: "From which area do you play [Omekamon] or [Cool Boy]?"
-      - if:
-          condition: { equals: [zone_choice, 0] }
-          then:
-            - select_hand:
-                of: you
-                bind_as: picked_hand
-                optional: true
-                filter:
-                  any_of:
-                    - name_is: "Omekamon"
-                    - name_is: "Cool Boy"
-                prompt: "Play [Omekamon] or [Cool Boy] from hand"
-            - play_from_hand_free: { of: you, hand_index: picked_hand }
-      - if:
-          condition: { equals: [zone_choice, 1] }
-          then:
-            - select_trash:
-                of: you
-                bind_as: picked_trash
-                optional: true
-                filter:
-                  any_of:
-                    - name_is: "Omekamon"
-                    - name_is: "Cool Boy"
-                prompt: "Play [Omekamon] or [Cool Boy] from trash"
-            - play_from_trash_free: { of: you, hand_index: picked_trash }
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: played
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - name_is: "Omekamon"
+                  - name_is: "Cool Boy"
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 [Omekamon] or [Cool Boy] from hand or trash without paying the cost"
+      - play_union_bound_free: { binding: played }
       - place_self_as_delay_option: {}

@@ -88,6 +88,48 @@ fn bt26_039_when_digivolving_also_offers() {
     assert!(r.pending_selection_view().is_some());
 }
 
+// ─── Hand-pick candidate legality (select-hand playability audit) ────────────
+// DCGO BT26_039.cs:33-36 offers only `IsTamer && EqualsCardName("Yoshino
+// Fujieda") && CanPlayAsNewPermanent(card, payCost: false, activateClass)`,
+// and the effect activates only when such a card is in hand
+// (`SharedAdditionalActivateCondition`, :38-40). A Yoshino the play would
+// refuse is never offered (CR 4.3 1-3-2).
+
+/// "You can't play Tamers by effects": Yoshino is not offered.
+#[test]
+fn bt26_039_not_offered_when_tamer_effect_play_is_prohibited() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, h) = setup();
+    push_hand(&mut r, 0, "YOSHINO");
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    r.fire_on_play(0, h.index as usize);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "no playable Yoshino → nothing offered"
+    );
+    let _ = r.auto_resolve();
+    assert_eq!(hand_ids(&r, 0), vec!["YOSHINO".to_string()]);
+}
+
+/// A full battle area (DCGO needs an empty frame): Yoshino is not offered.
+#[test]
+fn bt26_039_not_offered_when_battle_area_full() {
+    let (mut r, h) = setup();
+    push_hand(&mut r, 0, "YOSHINO");
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    fire(&mut r, EffectTiming::WhenDigivolving, h);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "no free slot → nothing offered"
+    );
+    let _ = r.auto_resolve();
+    assert_eq!(hand_ids(&r, 0), vec!["YOSHINO".to_string()]);
+}
+
 #[test]
 fn bt26_039_inherited_locks_unsuspend() {
     let (mut r, _) = setup();

@@ -8,7 +8,11 @@
 #   paying the cost.
 #   Inherited: <Alliance>
 #
-# DCGO C# reference: none at b9a0638cd (no EX13_042.cs). Printed text governs.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Green/EX13_042.cs
+#   Pick filter :44-49 `IsDigimon && HasPlayCost && GetCostItself <= 4 &&
+#   HasBeastTraits && CanPlayAsNewPermanent(card, false, activateClass)` →
+#   `can_play_from_effect_without_cost` (CR 4.3 1-3-2). The trait test stays
+#   on the printed text (below).
 #
 # DSL: shared-OPT `[when_digivolving, when_attacking]` clause; optional
 # `select_hand` → `play_from_hand_free`; decline refunds the OPT (EX13-012 /
@@ -46,6 +50,7 @@ effects:
           filter:
             all_of:
               - kind: digimon
+              - can_play_from_effect_without_cost: true
               - play_cost_lte: 4
               - any_of:
                   - trait_contains: Beast

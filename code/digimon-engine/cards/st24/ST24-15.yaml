@@ -72,6 +72,12 @@ effects:
                   - kind: tamer
               - trait_has: "DATA SQUAD"
               - play_cost_lte: 4
+              # Only a card that can actually be played from its zone (free
+              # slot, no play prohibition, no trash-play lock for a trash
+              # card). DCGO ST24_15.cs:47-55 CanSelectPlayCondition ->
+              # HasPlayCost && CanPlayAsNewPermanent(cardSource, false,
+              # activateClass). CR 4.3 7-1-1 / 1-3-2.
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [DATA SQUAD] cost 4 or less card from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: ds_pick }
       # "Then, place this card in the battle area." — persistence handled by the
@@ -126,6 +132,12 @@ effects:
                   - kind: tamer
               - trait_has: "DATA SQUAD"
               - play_cost_lte: 4
+              # Only a card that can actually be played from its zone (free
+              # slot, no play prohibition, no trash-play lock for a trash
+              # card). DCGO ST24_15.cs:47-55 CanSelectPlayCondition ->
+              # HasPlayCost && CanPlayAsNewPermanent(cardSource, false,
+              # activateClass). CR 4.3 7-1-1 / 1-3-2.
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [DATA SQUAD] cost 4 or less card from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: ds_pick_sec }
       # The [Main] ends "Then, place this card in the battle area"; DCGO

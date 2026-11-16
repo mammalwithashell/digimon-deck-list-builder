@@ -437,3 +437,62 @@ fn bt25_082_inherited_wa_opt_locks_second_attack() {
         "[Once Per Turn] must lock the inherited WA on the second attack this turn"
     );
 }
+
+// ─── Section 4 — Candidate legality (select-hand playability audit, 2026-11-13) ─
+//
+// DCGO BT25_082.cs:48-62 filters the hand pick with `IsTamer &&
+// HasText("Three Musketeers")` only and passes it to
+// `CardEffectCommons.PlayByEffect` (PlayEffects.cs:9-56), which adds no
+// playability check, so DCGO offers a Tamer it then can't play. That is looser
+// than the rules: CR 4.3 1-3-2 (an impossible action is not carried out) and
+// 7-1-2-3 (a card that can't be played goes back), so the engine offers only a
+// Tamer the effect can play (free slot, no "can't play Tamers by effects").
+
+fn lock(runner: &mut DebugRunner, player: u8, modifier: digimon_engine::enums::ModifierType) {
+    runner.game.modifiers.add_player_modifier(
+        player,
+        digimon_engine::modifiers::PlayerModifierEntry::simple(
+            modifier,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            None,
+            player,
+        ),
+    );
+}
+
+fn tm_tamer_in_hand(runner: &DebugRunner) -> bool {
+    runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "TM-TAMER")
+}
+
+/// "You can't play Tamers by effects": the TM-text Tamer is not offered.
+#[test]
+fn bt25_082_op_offers_no_tamer_under_a_tamer_play_prohibition() {
+    let mut runner = base().hand(0, &[CARD_ID, "TM-TAMER"]).memory(8).start();
+    lock(&mut runner, 0, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    let _bg = runner.play(0, 0).expect("play BlackGatomon");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no playable Tamer -> no pick: {:?}",
+        runner.pending_selection_view()
+    );
+    assert!(tm_tamer_in_hand(&runner));
+}
+
+/// BlackGatomon takes the only battle-area slot: the Tamer has nowhere to go.
+#[test]
+fn bt25_082_op_offers_no_tamer_with_a_full_battle_area() {
+    let mut runner = base().hand(0, &[CARD_ID, "TM-TAMER"]).memory(8).start();
+    runner.game.rules.field_slots = 1;
+    let _bg = runner.play(0, 0).expect("play BlackGatomon");
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+    assert!(
+        runner.pending_selection().is_none(),
+        "no free slot -> no pick: {:?}",
+        runner.pending_selection_view()
+    );
+    assert!(tm_tamer_in_hand(&runner));
+}

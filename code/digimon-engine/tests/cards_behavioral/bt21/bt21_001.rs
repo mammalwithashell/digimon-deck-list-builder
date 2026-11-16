@@ -30,20 +30,34 @@
 //! Structural tests (compiled card shape) are unaffected by these gaps and pass.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::card_data::CardData;
+use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::CardKind;
+use digimon_engine::enums::{CardColor, CardKind};
 use digimon_engine::selection::SelectionKind;
 
 // ─── Helper builders ─────────────────────────────────────────────────────────
 
-/// A Digimon with the [Reptile] trait — valid digivolve target.
-fn make_reptile(id: &str) -> CardData {
+/// A Lv.4 [Reptile] Digimon that digivolves from a red Lv.3 for `cost`.
+fn make_reptile_costing(id: &str, cost: u16) -> CardData {
     let mut c = make_test_card(id, id);
     c.traits = vec!["Reptile".to_string()];
     c.level = Some(4);
+    // A printed digivolve route onto the red Lv.3 CARRIER: the effect
+    // digivolve follows the normal digivolution requirements
+    // (`ignore_requirements: false`, DCGO `DigivolveIntoHandOrTrashCard`).
+    c.evo_costs = vec![EvoCost {
+        card_color: CardColor::Red as u8,
+        level: 3,
+        memory_cost: cost,
+    }];
     c
+}
+
+/// A Digimon with the [Reptile] trait — valid digivolve target (red Lv.3,
+/// digivolution cost 3).
+fn make_reptile(id: &str) -> CardData {
+    make_reptile_costing(id, 3)
 }
 
 /// A Digimon with the [Dragonkin] trait — valid digivolve target.
@@ -303,17 +317,10 @@ fn bt21_001_declining_permanent_selection_no_digivolve() {
 /// When the player selects a Digimon and then a Reptile/Dragonkin card from
 /// hand, an effect_initiated_digivolve fires with cost reduced by 1.
 ///
-/// G-INHERITED-DISPATCH was closed in Phase 2 Track D (2026-05-17); the
-/// inherited clause now fires from the stack source, installs both the
-/// own-permanent selection and the hand-card selection. The downstream
-/// effect-initiated-digivolve, however, fails to consume REPTILE-HAND in
-/// this test fixture because `make_reptile` synthesizes a Lv.4 with no
-/// `evo_costs` entries — the engine's digivolve route lookup rejects it
-/// even when the clause supplies cost: { reduce: 1 }. This is a test
-/// fixture gap (and possibly a DSL-driven-digivolve-from-hand gap when
-/// the source has empty evo_costs), not an inherited-dispatch gap.
+/// The fixture gap that kept this `#[ignore]`d (REPTILE-HAND had no
+/// `evo_costs`, so no route existed) is closed: `make_reptile` now prints a
+/// red Lv.3 route at cost 3, paid as 3 - 1 = 2.
 #[test]
-#[ignore = "pending: test fixture (REPTILE-HAND has empty evo_costs so digivolve route rejects). Inherited dispatch + selection installation are both confirmed working in Track D regression"]
 fn bt21_001_selecting_permanent_then_hand_card_triggers_digivolve_cost_minus_1() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-001")
@@ -359,14 +366,121 @@ fn bt21_001_selecting_permanent_then_hand_card_triggers_digivolve_cost_minus_1()
 
     let _ = runner.auto_resolve();
 
-    // After the digivolve, the carrier permanent should have grown its stack
-    // (the REPTILE-HAND card was placed as the new top digivolution).
-    // We verify the hand is now empty (card was spent).
+    // REPTILE-HAND is the carrier's new top card, and the digivolution cost
+    // 3 was paid reduced by 1.
     assert_eq!(
-        runner.hand_size(0),
-        0,
-        "REPTILE-HAND should have left P0's hand after the effect_initiated_digivolve"
+        runner.game.players[0].battle_area[carrier.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "REPTILE-HAND",
+        "the carrier digivolved into REPTILE-HAND"
     );
+    assert_eq!(runner.memory(), 8, "digivolution cost 3 reduced by 1");
+}
+
+// ─── Section 3b: candidate legality ─────────────────────────────────────────
+// DCGO BT21_001.cs:44-53 `CanSelectDigivolvePermanent`: a Digimon is offered
+// only if a [Reptile]/[Dragonkin] hand card satisfies
+// `CanPlayCardTargetFrame(permanent.PermanentFrame, payCost: true, ...)` (a
+// legal digivolve route that can be paid); :68 `maxCount = Min(1, count)`, so
+// with none the pick isn't made. :95-102 `DigivolveIntoHandOrTrashCard(...,
+// payCost: true, reduceCostTuple: (1, null), isHand: true)` then offers the
+// hand cards that can digivolve onto that Digimon. DCGO's permanent check
+// prices the full cost; the card's own reduction applies to that digivolve,
+// so the cost is priced reduced by 1 (CR 4.3 1-3-11-1: a digivolution whose
+// cost can't be paid can't be declared).
+
+fn security_removed_runner(field_extra: &[&str], hand: &[&str]) -> (DebugRunner, digimon_engine::permanent::PermanentHandle, Vec<digimon_engine::permanent::PermanentHandle>) {
+    let mut lv5 = make_test_card("LV5-BASE", "LV5-BASE");
+    lv5.level = Some(5);
+    let mut lv6 = make_test_card("REPTILE-LV6", "REPTILE-LV6");
+    lv6.traits = vec!["Reptile".to_string()];
+    lv6.level = Some(6);
+    lv6.evo_costs = vec![EvoCost { card_color: CardColor::Red as u8, level: 5, memory_cost: 3 }];
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-001")
+        .expect("BT21-001 in embedded DSL pack")
+        .add_card(make_filler("CARRIER"))
+        .add_card(lv5)
+        .add_card(make_non_digimon_security_filler("SEC-P1"))
+        .add_card(make_reptile("REPTILE-HAND"))
+        // 25 - 1 = 24 from 10 memory is -14, past the -10 floor.
+        .add_card(make_reptile_costing("REPTILE-PRICY", 25))
+        .add_card(lv6)
+        .security(1, &["SEC-P1", "SEC-P1"])
+        .hand(0, hand)
+        .deck(0, &["CARRIER"; 4])
+        .deck(1, &["CARRIER"; 4])
+        .memory(10)
+        .start();
+    let carrier = place_gigimon_as_source(&mut runner, "CARRIER");
+    let extra = field_extra
+        .iter()
+        .map(|id| runner.place_on_field(0, id, Some(0)))
+        .collect();
+    runner.attack_player(carrier, 1, false);
+    (runner, carrier, extra)
+}
+
+fn offered_ids(runner: &DebugRunner) -> Vec<u16> {
+    let mut v: Vec<u16> = runner
+        .pending_selection_view()
+        .expect("a pick is pending")
+        .valid_action_ids
+        .into_iter()
+        .filter(|&id| id != digimon_engine::action::space::PASS)
+        .collect();
+    v.sort();
+    v
+}
+
+/// A Digimon no [Reptile]/[Dragonkin] hand card can digivolve onto (the
+/// Lv.5) is not offered; the red Lv.3 carrier is.
+#[test]
+fn bt21_001_permanent_pick_excludes_a_digimon_without_a_legal_digivolve() {
+    let (runner, carrier, _extra) = security_removed_runner(&["LV5-BASE"], &["REPTILE-HAND"]);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
+    assert_eq!(
+        offered_ids(&runner),
+        vec![digimon_engine::action::space::encode_attack(0, carrier.index as u16)]
+    );
+}
+
+/// The only matching hand card can't be paid for even with the -1: no
+/// Digimon is offered, so no pick appears.
+#[test]
+fn bt21_001_unpayable_digivolve_offers_no_pick() {
+    let (runner, _carrier, _extra) = security_removed_runner(&[], &["REPTILE-PRICY"]);
+    assert!(
+        runner.pending_selection().is_none(),
+        "no payable digivolve: {:?}",
+        runner.pending_selection_view().map(|v| (v.kind, v.prompt))
+    );
+}
+
+/// After choosing the carrier, the hand pick offers only the card that can
+/// digivolve onto it at a payable cost: REPTILE-PRICY (unpayable) and
+/// REPTILE-LV6 (needs a Lv.5) are not offered.
+#[test]
+fn bt21_001_hand_pick_offers_only_payable_routes_onto_the_chosen_digimon() {
+    let (mut runner, carrier, _extra) = security_removed_runner(
+        &[],
+        &["REPTILE-PRICY", "REPTILE-LV6", "REPTILE-HAND"],
+    );
+    runner
+        .execute_action(0, digimon_engine::action::space::encode_attack(0, carrier.index as u16))
+        .unwrap();
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let offered: Vec<String> = offered_ids(&runner)
+        .into_iter()
+        .map(|id| hand[(id - digimon_engine::action::space::PLAY_HAND_START) as usize].clone())
+        .collect();
+    assert_eq!(offered, vec!["REPTILE-HAND".to_string()]);
 }
 
 // ─── Section 4: Cost firing / event assertions ───────────────────────────────

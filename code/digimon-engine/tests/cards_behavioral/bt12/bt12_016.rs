@@ -248,6 +248,131 @@ fn bt12_016_no_gallantmon_in_hand_clean_noop() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// Section 2b — candidate legality: only a card the digivolve would accept
+// ════════════════════════════════════════════════════════════════════════════
+//
+// DCGO BT12_016.cs:126-135 calls `CardEffectCommons.DigivolveIntoHandOrTrashCard
+// (targetPermanent: thisPermanent, cardCondition: CanSelectCardCondition [:38-55,
+// name contains "Gallantmon" && Level == 6 && IsDigimon], payCost: true,
+// reduceCostTuple: (1, null), isHand: true)`. That helper
+// (Script/CardEffectCommons.cs:859-882) filters the hand pick with
+// `!cardSource.CanNotEvolve(targetPermanent) && cardSource.CanPlayCardTargetFrame(
+// targetPermanent.PermanentFrame, PayCost: payCost, ...)`. For a frame that
+// holds a Digimon, `CanPlayCardTargetFrame` only calls `CanEvolve` (CardSource.cs
+// :1166) — digivolution requirements, never memory; its memory check sits under
+// `if (PayCost && frame.GetFramePermanent() == null)` (:1150), i.e. plays into
+// an EMPTY frame only. So DCGO filters on requirements but would still offer an
+// unaffordable Gallantmon.
+//
+// The affordability filter here is a deliberate rules-over-DCGO divergence:
+// CR 4.3 1-3-11-1 — a digivolution can't be declared if its cost can't be paid;
+// CR 4.3 4-2-2 — exactly the cost is paid, no less; CR 4.3 1-4-2-2 — the memory
+// gauge stops at 10 on the opponent's side. The cost is judged after the -1
+// (the printed reduction applies "when this Digimon would digivolve by this
+// effect"). A DCGO replay that offers an unaffordable Gallantmon here is a
+// `dcgo_quirk`, not an engine bug.
+
+/// A Lv.6 red Digimon named "Gallantmon" whose only digivolution route is
+/// `color` Lv.5 for `cost` memory.
+fn synthetic_gallantmon(id: &str, color: CardColor, cost: u16) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, "Gallantmon");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(6);
+    c.dp = Some(12000);
+    c.play_cost = 12;
+    c.colors = vec![CardColor::Red];
+    c.evo_costs = vec![digimon_engine::card_data::EvoCost {
+        card_color: color as u8,
+        level: 5,
+        memory_cost: cost,
+    }];
+    c
+}
+
+/// WarGrowlmon (BT12-016) alone on P0's field (nothing to delete), memory 5,
+/// with `hand` in P0's hand; fires [When Digivolving] and returns the
+/// non-PASS hand-pick candidates (empty when no pick installs).
+fn offered_after_fallback(hand: &[&str], setup: impl FnOnce(&mut DebugRunner, PermanentHandle)) -> (DebugRunner, Vec<u16>) {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT12-016 in embedded DSL pack")
+        .dsl_card("BT17-016")
+        .expect("BT17-016 Gallantmon loads")
+        // Cost 16 − 1 = 15: 5 − 15 = −10, still payable.
+        .add_card(synthetic_gallantmon("GALL-COST16", CardColor::Red, 16))
+        // Cost 17 − 1 = 16: 5 − 16 = −11, past the gauge — not payable.
+        .add_card(synthetic_gallantmon("GALL-COST17", CardColor::Red, 17))
+        // Only route is from a BLUE Lv.5: WarGrowlmon (red) can't host it.
+        .add_card(synthetic_gallantmon("GALL-BLUE-ROUTE", CardColor::Blue, 3))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(5)
+        .start();
+    r.set_first_player(0);
+    let war = r.place_on_field(0, CARD_ID, Some(0));
+    for h in hand {
+        push_to_hand(&mut r, 0, h);
+    }
+    setup(&mut r, war);
+    fire(&mut r, EffectTiming::WhenDigivolving, war);
+    let offered = r
+        .pending_selection_view()
+        .map(|v| {
+            v.valid_action_ids
+                .into_iter()
+                .filter(|&a| a != digimon_engine::action::space::PASS)
+                .collect()
+        })
+        .unwrap_or_default();
+    (r, offered)
+}
+
+/// The reduced cost (16) is not payable from memory 5: not offered, so no
+/// hand pick installs at all (DCGO asks nothing with no candidate).
+#[test]
+fn bt12_016_unaffordable_gallantmon_not_offered() {
+    let (r, offered) = offered_after_fallback(&["GALL-COST17"], |_, _| {});
+    assert!(offered.is_empty(), "cost 17−1 can't be paid from memory 5; got {offered:?}");
+    assert_eq!(r.game.players[0].hand.len(), 1, "the Gallantmon stays in hand");
+}
+
+/// Regression guard: the −1 is part of the affordability check. Cost 16 is
+/// payable only after the reduction (5 − 15 = −10), so it IS offered.
+#[test]
+fn bt12_016_affordability_counts_the_minus_1_reduction() {
+    let (_r, offered) = offered_after_fallback(&["GALL-COST16"], |_, _| {});
+    assert_eq!(offered.len(), 1, "cost 16−1 is payable from memory 5; got {offered:?}");
+}
+
+/// Regression guard: a Lv.6 [Gallantmon] whose digivolution requirements
+/// WarGrowlmon doesn't meet (official Q&A: ChaosGallantmon BT5-081 can't) is
+/// not offered.
+#[test]
+fn bt12_016_gallantmon_with_unmet_requirements_not_offered() {
+    let (_r, offered) = offered_after_fallback(&["GALL-BLUE-ROUTE"], |_, _| {});
+    assert!(offered.is_empty(), "no red Lv.5 route → not a candidate; got {offered:?}");
+}
+
+/// Regression guard: WarGrowlmon under "can't digivolve" offers nothing
+/// (DCGO `CanNotEvolve(targetPermanent)`).
+#[test]
+fn bt12_016_cannot_digivolve_host_offers_no_gallantmon() {
+    let (_r, offered) = offered_after_fallback(&["BT17-016"], |r, war| {
+        r.game.modifiers.add(
+            war,
+            digimon_engine::modifiers::ModifierEntry::simple(
+                digimon_engine::enums::ModifierType::CannotDigivolve,
+                0,
+                digimon_engine::enums::Expiry::Permanent,
+                1,
+            ),
+        );
+    });
+    assert!(offered.is_empty(), "the host can't digivolve; got {offered:?}");
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // Section 3 — inherited [End of Attack][OPT] gain 2 memory
 // ════════════════════════════════════════════════════════════════════════════
 

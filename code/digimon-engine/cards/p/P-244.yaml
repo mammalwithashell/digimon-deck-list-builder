@@ -60,6 +60,13 @@ effects:
           zones: [hand, trash]
           bind_as: pick
           optional: true
+          # Candidates (DCGO P_244.cs:32-37 `(EqualsCardName("Vemmon") ||
+          # EqualsCardName("Zenith")) && CanPlayAsNewPermanent(card, false,
+          # activateClass)`): `can_play_from_effect_without_cost` = a play cost
+          # (CR 4.3 7-1-1; no DUAL, 4-6-2), a free slot, no effect-play lock, and
+          # no "can't play from trash" lock for a trash card. CR 4.3 1-3-11-1: a
+          # card that can't be played can't be declared. Select-hand audit
+          # 2026-11-13.
           filter:
             all_of:
               - any_of:
@@ -68,6 +75,7 @@ effects:
               - any_of:
                   - kind: digimon
                   - kind: tamer
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [Vemmon] or [Zenith] from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: pick }
       - place_self_as_delay_option: {}
@@ -123,6 +131,8 @@ effects:
           zones: [hand, trash]
           bind_as: sec_pick
           optional: true
+          # Same candidates as [Main] (DCGO P_244.cs:32-37, re-used by the
+          # [Security] activation).
           filter:
             all_of:
               - any_of:
@@ -131,6 +141,7 @@ effects:
               - any_of:
                   - kind: digimon
                   - kind: tamer
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [Vemmon] or [Zenith] from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: sec_pick }
       - place_self_as_delay_option: {}

@@ -215,11 +215,15 @@ fn bt20_100_security_places_self_after_optional_hand_or_trash_play_branch() {
         })
         .expect("[Security] clause exists");
 
-    assert!(security.optional, "printed Security play says 'may'");
-    assert!(security
-        .process
-        .iter()
-        .any(|step| matches!(step, CompiledStep::SelectEffectChoice { .. })));
+    // "You may play ... Then, place this card in the battle area": the "may"
+    // is the optional hand-or-trash pick; the placement is mandatory (DCGO
+    // BT20_100.cs:161 `SetUpActivateClass(null, ..., -1, false, ...)`, not
+    // optional; :204-221 the zone choice exists only to reach a card pick).
+    assert!(!security.optional, "the clause itself is mandatory");
+    assert!(security.process.iter().any(|step| matches!(
+        step,
+        CompiledStep::SelectUnionZone { optional: true, .. }
+    )));
     assert!(security
         .process
         .iter()
@@ -356,3 +360,139 @@ fn bt20_100_unpaid_delay_cost_does_not_prevent_original_leave() {
     );
     assert!(!trash_contains(&r, 0, "BT20-100"));
 }
+
+// ─── [Security] hand-or-trash pick legality ──────────────────────────────────
+// DCGO BT20_100.cs:170-191 `CanSelectCardCondition`: own card &&
+// CanPlayAsNewPermanent(payCost: false) && name [Omekamon] / [Cool Boy]; the
+// hand / trash picks (:245, :269) use it; :201-222 the "From hand / From
+// trash" choice is asked only when both zones hold such a card, else the
+// zone with one is used, and with none no pick is made — the Option is
+// placed in the battle area either way (:304-306). A hand-or-trash union
+// pick offers exactly those cards. CR 4.3 1-3-2.
+
+fn named(card_id: &str, name: &str, kind: digimon_engine::enums::CardKind) -> digimon_engine::CardData {
+    let mut cd = make_test_card(card_id, name);
+    cd.card_kind = kind;
+    cd.colors = vec![CardColor::White];
+    if kind == digimon_engine::enums::CardKind::Tamer {
+        cd.level = None;
+        cd.dp = None;
+    }
+    cd
+}
+
+/// The Last Guardian as P1's only security card; P1's `hand` / `trash`; P0
+/// attacks with ATTACKER. Returns the runner once the security check ran.
+fn security_runner(hand: &[&str], trash: &[&str], prep: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    use digimon_engine::enums::CardKind;
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT20-100")
+        .expect("BT20-100 YAML loads")
+        .add_card(named("OMEKA", "Omekamon", CardKind::Digimon))
+        .add_card(named("COOL", "Cool Boy", CardKind::Tamer))
+        .add_card(named("T-OMEKA", "Omekamon", CardKind::Digimon))
+        .add_card(named("ATTACKER", "Attacker", CardKind::Digimon))
+        .add_card(named("FILL", "Filler", CardKind::Digimon))
+        .memory(10)
+        .hand(1, hand)
+        .security(1, &["BT20-100"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    r.skip_mulligan();
+    r.set_first_player(0);
+    for id in trash {
+        r.inject_trash(1, id);
+    }
+    prep(&mut r);
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    let _ = r.attack_player(attacker, 1, false);
+    r
+}
+
+/// Accept any outer "may" prompt, then return the committable rows of the
+/// hand-or-trash pick (panics if the pending prompt is not a card pick, e.g.
+/// a "From hand / From trash" zone choice).
+fn security_offered(r: &mut DebugRunner) -> Vec<String> {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    while r.pending_kind() == Some(SelectionKind::Replacement) {
+        r.accept_optional_trigger().unwrap();
+    }
+    let s = r.game.pending_selection.as_ref().expect("a card pick is pending");
+    assert!(s.effect_choices.is_none(), "a card pick, not a zone choice");
+    let page = s.card_choice.as_ref().expect("hand-or-trash card pick").view(&r.game, 1);
+    let mut v: Vec<String> = page
+        .rows
+        .iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .filter_map(|row| row.card_id.clone())
+        .collect();
+    v.sort();
+    v
+}
+
+fn delayed_on_field(r: &DebugRunner, player: u8) -> bool {
+    r.game.player(player).battle_area.iter().any(|p| {
+        p.top_card().card_id(&r.game.card_data) == "BT20-100"
+            && matches!(p.option_state, OptionState::Delayed { .. })
+    })
+}
+
+/// "Can't play Digimon by effects": the Omekamon in hand and in trash are not
+/// offered, the Cool Boy Tamer is.
+#[test]
+fn bt20_100_security_offers_only_playable_cards() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = security_runner(&["OMEKA", "COOL"], &["T-OMEKA"], |r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(security_offered(&mut r), vec!["COOL".to_string()]);
+}
+
+/// Only the hand holds a candidate: the card pick is offered directly, with
+/// no "From trash" zone choice leading nowhere; picking plays it free.
+#[test]
+fn bt20_100_security_single_zone_offers_the_card_pick_directly() {
+    let mut r = security_runner(&["OMEKA"], &[], |_| {});
+    assert_eq!(security_offered(&mut r), vec!["OMEKA".to_string()]);
+    let action = owned_union_fixture::action(&r.game, 1, "OMEKA", false).expect("hand row");
+    r.game.resolve_selection(1, action).unwrap();
+    let _ = r.auto_resolve();
+    assert!(field_contains(&r, 1, "OMEKA"), "Omekamon played");
+    assert_eq!(r.memory(), 10, "played without paying the cost");
+    assert!(delayed_on_field(&r, 1), "then the Option is placed");
+}
+
+/// Declining the play still places the Option in the battle area.
+#[test]
+fn bt20_100_security_decline_still_places_the_option() {
+    let mut r = security_runner(&["OMEKA"], &["T-OMEKA"], |_| {});
+    assert!(r.pending_selection().is_some(), "the optional play is offered");
+    r.game.resolve_selection(1, PASS).unwrap();
+    let _ = r.auto_resolve();
+    assert!(!field_contains(&r, 1, "OMEKA"));
+    assert!(delayed_on_field(&r, 1), "placement is not part of the 'may'");
+}
+
+/// P1's battle area at capacity: nothing can be played, so no card pick.
+#[test]
+fn bt20_100_security_full_battle_area_offers_no_pick() {
+    let r = security_runner(&["OMEKA", "COOL"], &["T-OMEKA"], |r| {
+        r.place_on_field(1, "FILL", None);
+        r.game.rules.field_slots = 1;
+    });
+    assert!(
+        r.game.pending_selection.as_ref().is_none_or(|s| s.card_choice.is_none()
+            && s.kind != SelectionKind::Hand
+            && s.kind != SelectionKind::Trash),
+        "no playable card: {:?}",
+        r.pending_selection_view().map(|v| (v.kind, v.prompt))
+    );
+}
+
+#[path = "../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

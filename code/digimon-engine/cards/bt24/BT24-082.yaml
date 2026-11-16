@@ -54,7 +54,9 @@ effects:
           of: you
           bind_as: owen
           optional: true
-          filter: { name_contains: "Owen Dreadnought" }
+          # DCGO BT24_082.cs:40-45 IsOwenDreadnought: EqualsCardName +
+          # CanPlayAsNewPermanent(payCost: false).
+          filter: { name_is: "Owen Dreadnought", can_play_from_effect_without_cost: true }
           prompt: "Play 1 Owen Dreadnought from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: owen }
       # Conditional: if you don't have a Digimon, play 1 Elizamon from trash.
@@ -69,7 +71,10 @@ effects:
                 of: you
                 bind_as: elz
                 optional: true
-                filter: { name_contains: "Elizamon" }
+                # DCGO BT24_082.cs:47-52 IsElizamon: EqualsCardName +
+                # CanPlayAsNewPermanent(payCost: false, Root.Trash) -- the
+                # zone-aware leaf also refuses a "can't play from trash" lock.
+                filter: { name_is: "Elizamon", can_play_from_effect_without_cost: true }
                 prompt: "Play 1 Elizamon from your trash without paying the cost"
             - play_from_trash_free: { of: you, hand_index: elz }
 

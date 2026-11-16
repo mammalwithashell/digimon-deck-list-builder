@@ -16,7 +16,11 @@
 //! Digivolve: Green Lv.5 / cost 3; [Leopardmon: Leopard Mode]: cost 1.
 //!
 //! # DCGO C# reference
-//! None at the submodule (no EX13_043.cs); printed text governs.
+//! `DCGO/Assets/Scripts/CardEffect/EX13/Green/EX13_043.cs` — [WD][WA]
+//! :143-162 calls `PlayOrUseByEffect(payCost: true, reducedCost: 4 +
+//! suspended count)`, whose hand filter (`PlayEffects.cs:352-357`) keeps only
+//! a usable, affordable Option or a `HasPlayCost && CanPlayAsNewPermanent`
+//! card. Printed text governs the trait wording.
 //!
 //! # Patterns this test covers
 //! - Optional any-side suspend + optional lowest-DP bottom-deck (independent).
@@ -344,4 +348,99 @@ fn ex13_043_assembly_green_mammal_beast_beastkin_line_for_7() {
     let _ = runner.auto_resolve();
     assert_eq!(runner.game.players[0].battle_area[0].card_sources.len(), 4);
     assert_eq!(mem0 - runner.game.memory, 7);
+}
+
+// ─── Candidate legality (select-hand playability audit, 2026-11-13) ──────────
+// DCGO EX13_043.cs:143-162 calls `CardEffectCommons.PlayOrUseByEffect(...,
+// payCost: true, reducedCost: 4 + suspended count)`, whose hand filter
+// (PlayEffects.cs:352-357 `validTarget`) is the trait test AND
+// `(IsOption && !CanNotPlayThisOption && MaxMemoryCost >= cost) ||
+// (HasPlayCost && CanPlayAsNewPermanent(cardSource, payCost: true, ...))`.
+// So the pick offers only a card that can actually be played (a Digimon/Tamer
+// with a play cost — never a Digi-Egg, CR 4.3 7-1-1 — a free slot and no
+// prohibition) or used (an Option meeting its colour requirement, CR 4.3
+// 4-22-1..3), and only when the reduced cost is payable (CR 4.3 1-3-2).
+
+fn audit_builder() -> DebugRunnerBuilder {
+    let mut egg = make_test_card("BEAST-EGG", "BEAST-EGG");
+    egg.card_kind = CardKind::DigiEgg;
+    egg.level = Some(2);
+    egg.dp = None;
+    egg.play_cost = 0;
+    egg.colors = vec![CardColor::Green];
+    egg.traits = vec!["Beast".to_string()];
+    let option = |id: &str, color: CardColor| {
+        let mut o = make_test_card(id, id);
+        o.card_kind = CardKind::Option;
+        o.level = None;
+        o.dp = None;
+        o.play_cost = 2;
+        o.colors = vec![color];
+        o.traits = vec!["Beast".to_string()];
+        o
+    };
+    builder()
+        .add_card(egg)
+        .add_card(option("GREEN-BEAST-OPT", CardColor::Green))
+        .add_card(option("RED-BEAST-OPT", CardColor::Red))
+        .add_card(digimon("RK20", 7, 15000, 20, CardColor::Green, &["Royal Knight"]))
+}
+
+/// A [Beast] Digi-Egg has no play cost: never offered (the Digimon still is).
+#[test]
+fn ex13_043_digi_egg_not_offered() {
+    let mut runner = audit_builder().hand(0, &["BEAST-EGG", "BEAST7"]).memory(10).start();
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    fire(&mut runner, EffectTiming::WhenAttacking, me);
+    assert!(hand_action(&runner, "BEAST7").is_some());
+    assert!(hand_action(&runner, "BEAST-EGG").is_none(), "Digi-Egg can't be played (CR 4.3 7-1-1)");
+}
+
+/// Only green on Leopardmon's side: the red [Beast] Option can't be used
+/// (colour requirement unmet), the green one can.
+#[test]
+fn ex13_043_option_with_unmet_colour_requirement_not_offered() {
+    let mut runner = audit_builder()
+        .hand(0, &["RED-BEAST-OPT", "GREEN-BEAST-OPT"])
+        .memory(10)
+        .start();
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    fire(&mut runner, EffectTiming::WhenAttacking, me);
+    assert!(hand_action(&runner, "GREEN-BEAST-OPT").is_some());
+    assert!(
+        hand_action(&runner, "RED-BEAST-OPT").is_none(),
+        "red Option unusable with only green on the field (CR 4.3 4-22-2)"
+    );
+}
+
+/// Memory 0, no suspended Digimon: a cost-20 [Royal Knight] still costs 16,
+/// which would take memory past the floor, so it is not offered; a cost-7
+/// [Beast] (pays 3) is.
+#[test]
+fn ex13_043_unaffordable_card_not_offered() {
+    let mut runner = audit_builder().hand(0, &["RK20", "BEAST7"]).memory(0).start();
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    fire(&mut runner, EffectTiming::WhenAttacking, me);
+    assert!(hand_action(&runner, "BEAST7").is_some());
+    assert!(hand_action(&runner, "RK20").is_none(), "20 - 4 = 16 can't be paid from 0");
+}
+
+/// "You can't play Digimon by effects": the Digimon is not offered, the
+/// usable Option still is.
+#[test]
+fn ex13_043_digimon_not_offered_while_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = audit_builder()
+        .hand(0, &["BEAST7", "GREEN-BEAST-OPT"])
+        .memory(10)
+        .start();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    fire(&mut runner, EffectTiming::WhenAttacking, me);
+    assert!(hand_action(&runner, "GREEN-BEAST-OPT").is_some());
+    assert!(hand_action(&runner, "BEAST7").is_none());
 }

@@ -888,3 +888,126 @@ fn _unused_silencer() {
     let _ = make_trait_digimon("C", "C", "Holy Beast");
     let _ = make_unrelated_digimon("D", "D");
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 5 — Clause 1 hand-pick legality
+//
+// DCGO BT22_089.cs:39-45 `CanSelectCardCondition` = IsExistOnHand &&
+// HasPlayCost && BasePlayCostFromEntity >= 4 && (EqualsCardName("Mirei
+// Mikagura") || (IsTamer && HasCSTraits)) && CanPlayAsNewPermanent(cardSource,
+// false, activateClass). CanPlayAsNewPermanent
+// (GameContextDeterminarion.cs:419-432) needs an empty frame and a play the
+// card may make (no "can't play Tamers by effects" lock). `EqualsCardName`
+// (CardSource.cs:1484-1500) is an exact-name match, as CR 4.3 2-3-1-2 reads the
+// bracket-only "[Mirei Mikagura]". YAML: `name_is` +
+// `can_play_from_effect_without_cost: true`.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fn mirei_runner(hand: &[&str]) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT22_089_YAML)
+        .expect("YAML parses")
+        .add_card(make_filler("FILLER"))
+        .add_card(make_cs_tamer_cost5("CS-TAMER-5", "Other CS Tamer"))
+        .add_card(make_other_tamer("TAMER-FILLER", "Filler Tamer"))
+        .hand(0, hand)
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(5)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner
+}
+
+/// Enter the main phase and return the card ids the clause-1 hand pick offers
+/// (empty when it never installs).
+fn offered_clause1(runner: &mut DebugRunner) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    runner.game.enter_main_phase();
+    for _ in 0..6 {
+        match runner.pending_kind() {
+            Some(SelectionKind::Hand) => {
+                let hand: Vec<String> = runner.game.players[0]
+                    .hand
+                    .iter()
+                    .map(|c| c.card_id(&runner.game.card_data).to_string())
+                    .collect();
+                let view = runner.pending_selection_view().expect("hand pick");
+                return view
+                    .valid_action_ids
+                    .iter()
+                    .copied()
+                    .filter(|&id| id != PASS)
+                    .map(|id| hand[(id - PLAY_HAND_START) as usize].clone())
+                    .collect();
+            }
+            Some(SelectionKind::TriggerOrder) => {
+                let action = runner.pending_selection().unwrap().valid_action_ids[0];
+                runner.execute_action(0, action).expect("pick the trigger");
+            }
+            Some(_) if runner.pending_is_optional() => {
+                runner.accept_optional_trigger().expect("accept optional prompt")
+            }
+            _ => return Vec::new(),
+        }
+    }
+    Vec::new()
+}
+
+/// Guard: an eligible CS Tamer (cost 5) is offered with no lock.
+#[test]
+fn bt22_089_clause1_hand_pick_offers_cs_tamer_without_lock() {
+    let mut runner = mirei_runner(&["CS-TAMER-5"]);
+    assert_eq!(offered_clause1(&mut runner), vec!["CS-TAMER-5".to_string()]);
+}
+
+/// "You can't play Tamers by effects": the CS Tamer is not offered.
+#[test]
+fn bt22_089_clause1_hand_pick_excludes_tamer_when_tamer_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = mirei_runner(&["CS-TAMER-5"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = offered_clause1(&mut runner);
+    assert!(offered.is_empty(), "Tamer play prohibited ⇒ no candidate: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "the CS Tamer stays in hand");
+}
+
+/// A full battle area (after Mirei leaves, the filler Tamer fills a 1-slot
+/// area): the CS Tamer is not offered.
+#[test]
+fn bt22_089_clause1_hand_pick_excludes_tamer_when_battle_area_full() {
+    let mut runner = mirei_runner(&["CS-TAMER-5"]);
+    runner.place_on_field(0, "TAMER-FILLER", Some(0));
+    runner.game.rules.field_slots = 1;
+    let offered = offered_clause1(&mut runner);
+    assert!(offered.is_empty(), "full battle area ⇒ no candidate: {offered:?}");
+}
+
+/// "[Mirei Mikagura]" is an exact name (CR 4.3 2-3-1-2): a non-CS cost-4 Tamer
+/// whose name merely contains it is not offered.
+#[test]
+fn bt22_089_clause1_hand_pick_mirei_arm_is_exact_name() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT22_089_YAML)
+        .expect("YAML parses")
+        .add_card(make_filler("FILLER"))
+        .add_card({
+            let mut c = make_other_tamer("MIREI-FAN", "Mirei Mikagura Fan");
+            c.play_cost = 4;
+            c
+        })
+        .add_card(make_mirei_tamer_cost4("MIREI-OTHER"))
+        .hand(0, &["MIREI-FAN", "MIREI-OTHER"])
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(5)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    assert_eq!(offered_clause1(&mut runner), vec!["MIREI-OTHER".to_string()]);
+}

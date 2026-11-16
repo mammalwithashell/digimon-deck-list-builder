@@ -77,10 +77,17 @@ effects:
           zones: [hand, trash]
           bind_as: tamer
           optional: true
+          # Candidates = DCGO EX13_013.cs:125-129 `IsTamer && HasText("Guilmon")
+          # && CanPlayAsNewPermanent(cardSource, false, activateClass)`: no free
+          # slot / "can't play Tamers by effects" → not offered; the leaf is
+          # zone-aware, so a trash copy is not offered while its owner can't
+          # play cards from the trash (the trash play would be refused).
+          # CR 4.3 1-3-11-1 / 1-3-2.
           filter:
             all_of:
               - kind: tamer
               - in_text_contains: Guilmon
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 Tamer card with [Guilmon] in its text from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: tamer }
 

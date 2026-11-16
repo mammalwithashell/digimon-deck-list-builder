@@ -10,7 +10,16 @@
 #   (The corpus JSON files the [Security] line under inherited text; the
 #   official bundle prints it as the Security Effect.)
 #
-# DCGO: no EX13_072.cs at b9a0638cd — printed text governs.
+# DCGO: EX13_072.cs now exists (absent at b9a0638cd). Its Option filter,
+# EX13_072.cs:98-105, is `IsOption && (name [X Antibody] || [Chronicle]
+# trait) && !CanNotPlayThisOption && MaxMemoryCost >= GetCostItself - 1`;
+# `CanNotPlayThisOption` (CardSource.cs:184-246) covers "can't use Options"
+# locks and an unmet colour requirement. The pick and the clause gate add
+# `can_play_or_use_from_effect: true` (use lock + colour / <Use Req.>, CR 4.3
+# 4-22-1..3, Q1500 / Q2785) and `affordable_with_cost: { reduce: 1 }` (the
+# verb's own cost; CR 4.3 1-3-11-1, gauge floor 1-4-2-2). DCGO gates
+# activation only on the suspend cost (:114-118) and lets the Tamer suspend
+# with nothing usable; the gate here keeps "nothing usable → no offer".
 #   1. BT18-092 idiom: optional clause whose first step is a declinable
 #      `select_hand { cost: true }` — declining aborts the whole clause.
 #      Then Draw 1 and gain 1 memory, in printed order.
@@ -69,6 +78,8 @@ effects:
             - any_of:
                 - name_is: X Antibody
                 - trait_has: Chronicle
+            - can_play_or_use_from_effect: true
+            - affordable_with_cost: { reduce: 1 }
         n: 1
     trigger_if:
       all_of:
@@ -86,6 +97,8 @@ effects:
               - any_of:
                   - name_is: X Antibody
                   - trait_has: Chronicle
+              - can_play_or_use_from_effect: true
+              - affordable_with_cost: { reduce: 1 }
           prompt: "Use 1 [X Antibody] or 1 Option card with the [Chronicle] trait from your hand with the cost reduced by 1"
       # USE only (G-DSL-USE-OPTION-ONLY) — no DUAL Digimon face.
       - use_option_bound:

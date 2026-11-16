@@ -690,6 +690,59 @@ fn bt25_052_when_linked_opt_blocks_second_link_same_turn() {
     );
 }
 
+/// Declining the pick does not spend the [Once Per Turn]: DCGO
+/// `BT25_052.cs` `AfterSelectCardCoroutine` calls `activateClass.RemoveUse()`
+/// when `cardSources.Count == 0`, so a second link the same turn offers
+/// Kazuki & Itsuki again. Our YAML needs no `refund_opt` for this: the
+/// clause is `optional: true` and its first step is the optional pick, so
+/// the "you may" folds into that pick and PASS is the activation decline
+/// (no use spent). Regression guard.
+#[test]
+fn bt25_052_when_linked_declined_pick_does_not_spend_once_per_turn() {
+    let mut r = base()
+        .hand(0, &["KAZ-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    advance_to_main(&mut r);
+    let logi = r.place_on_field(0, CARD_ID, Some(0));
+
+    fire_link_onto_host(&mut r, logi);
+    assert!(r.game.pending_selection.is_some(), "first link fires");
+    assert!(r.pending_is_optional(), "the pick is optional (you may)");
+    let _ = r.game.resolve_selection(0, PASS);
+    r.game.drain_effect_queue();
+    assert!(r.game.pending_selection.is_none(), "declined: nothing pending");
+    assert_eq!(r.hand_size(0), 1, "declined: Kazuki & Itsuki stays in hand");
+
+    fire_link_onto_host(&mut r, logi);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "declined pick refunded the [Once Per Turn]: the second link offers Kazuki & Itsuki again"
+    );
+    let action = r
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != PASS)
+        .expect("a play action");
+    let _ = r.game.resolve_selection(0, action);
+    r.game.drain_effect_queue();
+    assert_eq!(r.hand_size(0), 0, "Kazuki & Itsuki played on the second link");
+
+    // A real play spends the use: a third link the same turn is locked out.
+    push_to_hand(&mut r, 0, "KAZ-IN-HAND");
+    fire_link_onto_host(&mut r, logi);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "after a real play the [Once Per Turn] is spent"
+    );
+}
+
 /// OPT resets across turns: after an end-turn cycle the trigger fires again.
 #[test]
 fn bt25_052_when_linked_opt_resets_after_end_turn() {
@@ -717,6 +770,82 @@ fn bt25_052_when_linked_opt_resets_after_end_turn() {
     assert!(
         r.game.pending_selection.is_some(),
         "OPT must clear after end_turn cycle — the trigger fires again"
+    );
+}
+
+// ── Section 5b: the Kazuki & Itsuki pick offers only a playable card ─────────
+// DCGO BT25_052.cs:227-232 `CanSelectCardCondition`: `EqualsCardName("Kazuki &
+// Itsuki") && HasPlayCost && CanPlayAsNewPermanent(cardSource, false,
+// activateClass)` -- an empty frame and no "can't play Tamers by effects"
+// lock -- and the same filter gates `CanActivateCondition` (:218-223), so an
+// unplayable Kazuki & Itsuki neither appears in the pick nor activates the
+// effect (and so does not spend the [Once Per Turn]). CR 4.3 1-3-2.
+
+#[test]
+fn bt25_052_when_linked_kazuki_not_offered_when_battle_area_full() {
+    let mut r = base()
+        .hand(0, &["KAZ-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    advance_to_main(&mut r);
+    let logi = r.place_on_field(0, CARD_ID, Some(0));
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+
+    fire_link_onto_host(&mut r, logi);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no empty frame: Kazuki & Itsuki can't be played, so nothing is offered"
+    );
+    assert_eq!(r.hand_size(0), 1, "Kazuki & Itsuki stays in hand");
+}
+
+#[test]
+fn bt25_052_when_linked_kazuki_not_offered_under_tamer_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = base()
+        .hand(0, &["KAZ-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    advance_to_main(&mut r);
+    let logi = r.place_on_field(0, CARD_ID, Some(0));
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+
+    fire_link_onto_host(&mut r, logi);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "\"you can't play Tamers by effects\": Kazuki & Itsuki is not offered"
+    );
+}
+
+/// An unplayable-only hand does not activate the effect, so the [Once Per
+/// Turn] is still available for a later link the same turn.
+#[test]
+fn bt25_052_when_linked_unplayable_kazuki_does_not_spend_once_per_turn() {
+    let mut r = base()
+        .hand(0, &["KAZ-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    advance_to_main(&mut r);
+    let logi = r.place_on_field(0, CARD_ID, Some(0));
+    let open_slots = r.game.rules.field_slots;
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    fire_link_onto_host(&mut r, logi);
+    assert!(r.game.pending_selection.is_none(), "full field: not offered");
+
+    r.game.rules.field_slots = open_slots;
+    fire_link_onto_host(&mut r, logi);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "a free frame again: the unspent [Once Per Turn] lets the second link offer Kazuki & Itsuki"
     );
 }
 

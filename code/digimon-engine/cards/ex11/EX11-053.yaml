@@ -79,6 +79,10 @@ effects:
             all_of:
               - kind: digimon
               - name_is: "Omnimon (X Antibody)"
+              # DCGO EX11_053.cs:173-177 HasPlayCost && CanPlayAsNewPermanent
+              # (both halves): DCGO offers no unplayable pick (slot cap =
+              # engine rules.field_slots, not a CR limit, CR 4.3 3-4-8-2).
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [Omnimon (X Antibody)] from your hand or under a fielded King Drasil_7D6, without paying the cost"
       - play_union_bound_free: { binding: pick, bind_as: played }
       - place_as_bottom_source: { source: self, target: played }

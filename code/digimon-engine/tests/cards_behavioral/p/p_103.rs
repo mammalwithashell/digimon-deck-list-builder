@@ -1322,3 +1322,209 @@ fn p_103_security_places_self_in_battle_area() {
         "P-103 must not fall through to the trash — the [Security] clause placed it"
     );
 }
+
+// ─── <Delay> candidate legality (select-hand audit) ────────────────────────────
+//
+// DCGO P/Red/P_103.cs:68-76 `CanSelectPermanentCondition` offers only an own
+// battle-area Digimon for which SOME hand card passing `CanSelectCardCondition`
+// (`IsDigimon && HasCardColor(Red)`, :89) satisfies
+// `CanPlayCardTargetFrame(permanent.PermanentFrame, false, …)` (:76; the
+// `false` is `PayCost`, so DCGO's target check is route-only); the chosen Digimon then
+// goes to `CardEffectCommons.DigivolveIntoHandOrTrashCard` (payCost true,
+// reduceCost 2, :141), whose hand pick (CardEffectCommons.cs:859-880)
+// offers only cards with `!CanNotEvolve(target) && CanPlayCardTargetFrame(frame,
+// PayCost: true, …)` under the −2 reducer. CR 4.3 8-1-3-1: the revealed card
+// needs a digivolution requirement the chosen Digimon meets; CR 4.3 1-3-11-1: a
+// digivolution can't be declared when its cost can't be paid. So the hand pick
+// offers only cards that can digivolve onto the target for the reduced cost
+// (matches DCGO). The target pick offers only Digimon that have such a card:
+// deliberately STRICTER than DCGO's route-only target check (CR 4.3 1-3-11-1 —
+// a Digimon whose only candidates are unpayable can't digivolve). DCGO's extra
+// choice there leads to an empty hand pick, which resolves identically to PASS.
+mod delay_candidate_legality {
+    use std::path::Path;
+
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::card_data::{CardData, EvoCost};
+    use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+    use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
+    use digimon_engine::permanent::{OptionState, PermanentHandle};
+    use digimon_engine::selection::{SelectionKind, TriggerSource};
+
+    const CARD: &str = "P-103";
+    const COLOR: CardColor = CardColor::Red;
+    const OFF: CardColor = CardColor::Blue;
+
+    fn yaml() -> String {
+        std::fs::read_to_string(
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("cards/p/P-103.yaml"),
+        )
+        .expect("P-103 YAML")
+    }
+
+    fn digimon(id: &str, color: CardColor, level: u8) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.colors = vec![color];
+        c.level = Some(level);
+        c.play_cost = 3;
+        c
+    }
+
+    /// A Red Lv.`level` Digimon that digivolves from a Red Lv.`from` for `cost`.
+    fn evo(id: &str, level: u8, from: u8, cost: u16) -> CardData {
+        let mut c = digimon(id, COLOR, level);
+        c.evo_costs = vec![EvoCost {
+            card_color: COLOR as u8,
+            level: from,
+            memory_cost: cost,
+        }];
+        c
+    }
+
+    fn runner(hand: &[&str], memory: i16) -> DebugRunner {
+        DebugRunner::builder()
+            .from_dsl_yaml(&yaml())
+            .expect("P-103 YAML compiles")
+            .add_card(digimon("BASE", COLOR, 3))
+            .add_card(digimon("OFF-BASE", OFF, 5))
+            // Lv.4 from a Lv.3 for 4 (2 after the reduction): legal and payable.
+            .add_card(evo("EVO", 4, 3, 4))
+            // Lv.6 from a Lv.5: BASE (Lv.3) meets no requirement of it.
+            .add_card(evo("NO-ROUTE", 6, 5, 3))
+            // Lv.4 from a Lv.3 for 13: 11 after the reduction, more than the
+            // 10 memory payable from 0 (CR 4.3 1-4-2-2).
+            .add_card(evo("PRICEY", 4, 3, 13))
+            .add_card(make_test_card("FILL", "FILL"))
+            .hand(0, hand)
+            .deck(0, &["FILL"; 4])
+            .deck(1, &["FILL"; 4])
+            .memory(memory)
+            .start()
+    }
+
+    /// Seat the Option as a Delay permanent and activate its <Delay> body.
+    fn fire_delay(runner: &mut DebugRunner) {
+        let handle = runner.place_on_field(0, CARD, Some(0));
+        let placed_on_turn = runner.game.turn_count;
+        runner.game.player_mut(0).battle_area[handle.index as usize].option_state =
+            OptionState::Delayed {
+                owner: 0,
+                trash_on_turn: u16::MAX,
+                trigger: DelayTrigger::MainPhaseActivated,
+                placed_on_turn,
+            };
+        runner
+            .game
+            .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(handle));
+        runner.game.drain_effect_queue();
+    }
+
+    fn non_pass(runner: &DebugRunner) -> Vec<u16> {
+        runner
+            .pending_selection_view()
+            .map(|v| v.valid_action_ids.into_iter().filter(|&a| a != PASS).collect())
+            .unwrap_or_default()
+    }
+
+    fn hand_ids(runner: &DebugRunner) -> Vec<String> {
+        runner.game.players[0]
+            .hand
+            .iter()
+            .map(|c| c.card_id(&runner.game.card_data).to_string())
+            .collect()
+    }
+
+    fn top_id(runner: &DebugRunner, handle: PermanentHandle) -> String {
+        runner.game.players[0].battle_area[handle.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data)
+            .to_string()
+    }
+
+    /// Choose the single offered Digimon, then return the offered hand cards.
+    fn offered_hand_after_target(runner: &mut DebugRunner) -> Vec<String> {
+        assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
+        let targets = non_pass(runner);
+        assert_eq!(targets.len(), 1, "only BASE is offered as the Digimon to digivolve");
+        runner.execute_action(0, targets[0]).expect("choose BASE");
+        assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+        let hand = hand_ids(runner);
+        non_pass(runner)
+            .into_iter()
+            .map(|a| hand[(a - PLAY_HAND_START) as usize].clone())
+            .collect()
+    }
+
+    /// Regression guard: a Red Digimon card whose digivolution requirement the
+    /// chosen Digimon doesn't meet (CR 4.3 8-1-3-1) is not offered.
+    #[test]
+    fn p_103_delay_hand_pick_excludes_a_card_the_target_cannot_digivolve_into() {
+        let mut runner = runner(&["NO-ROUTE", "EVO"], 10);
+        let base = runner.place_on_field(0, "BASE", Some(0));
+        fire_delay(&mut runner);
+        assert_eq!(
+            offered_hand_after_target(&mut runner),
+            vec!["EVO".to_string()],
+            "NO-ROUTE (Lv.6 from Lv.5) can't digivolve onto a Lv.3"
+        );
+        let pick = non_pass(&runner)[0];
+        runner.execute_action(0, pick).expect("digivolve into EVO");
+        let _ = runner.auto_resolve();
+        assert_eq!(top_id(&runner, base), "EVO");
+        assert_eq!(runner.memory(), 8, "4 − 2 = 2 memory paid");
+    }
+
+    /// A Red Digimon card whose reduced digivolution cost can't be paid
+    /// (CR 4.3 1-3-11-1) is not offered; DCGO's hand pick checks `PayCost: true`.
+    #[test]
+    fn p_103_delay_hand_pick_excludes_a_card_whose_reduced_cost_cannot_be_paid() {
+        let mut runner = runner(&["PRICEY", "EVO"], 0);
+        let base = runner.place_on_field(0, "BASE", Some(0));
+        fire_delay(&mut runner);
+        assert_eq!(
+            offered_hand_after_target(&mut runner),
+            vec!["EVO".to_string()],
+            "PRICEY costs 11 after the reduction; only 10 memory is payable"
+        );
+        let pick = non_pass(&runner)[0];
+        runner.execute_action(0, pick).expect("digivolve into EVO");
+        let _ = runner.auto_resolve();
+        assert_eq!(top_id(&runner, base), "EVO");
+    }
+
+    /// DCGO's target pick offers only a Digimon that some Red hand card can
+    /// digivolve onto: OFF-BASE (a Lv.5) has none, so only BASE is offered.
+    #[test]
+    fn p_103_delay_target_pick_excludes_a_digimon_with_no_legal_hand_card() {
+        let mut runner = runner(&["EVO"], 10);
+        let base = runner.place_on_field(0, "BASE", Some(0));
+        let off = runner.place_on_field(0, "OFF-BASE", Some(0));
+        fire_delay(&mut runner);
+        assert!(runner.pending_is_optional(), "the printed 'may' keeps PASS");
+        assert_eq!(offered_hand_after_target(&mut runner), vec!["EVO".to_string()]);
+        let pick = non_pass(&runner)[0];
+        runner.execute_action(0, pick).expect("digivolve into EVO");
+        let _ = runner.auto_resolve();
+        assert_eq!(top_id(&runner, base), "EVO", "the offered Digimon was BASE");
+        assert_eq!(top_id(&runner, off), "OFF-BASE");
+    }
+
+    /// With only an unpayable Red card in hand no Digimon can digivolve, so no
+    /// Digimon is offered. Stricter than DCGO, whose target check is route-only
+    /// (`CanPlayCardTargetFrame(…, false, …)` = `PayCost: false`, P/Red/P_103.cs:76)
+    /// and would offer BASE here: CR 4.3 1-3-11-1 — a Digimon with only unpayable
+    /// candidates can't digivolve; DCGO's extra choice resolves identically to PASS.
+    #[test]
+    fn p_103_delay_with_only_an_unpayable_hand_card_offers_no_target() {
+        let mut runner = runner(&["PRICEY"], 0);
+        let base = runner.place_on_field(0, "BASE", Some(0));
+        fire_delay(&mut runner);
+        assert!(
+            runner.pending_selection_view().is_none(),
+            "no Digimon can digivolve, so nothing is asked"
+        );
+        assert_eq!(top_id(&runner, base), "BASE");
+        assert_eq!(hand_ids(&runner), vec!["PRICEY".to_string()]);
+    }
+}

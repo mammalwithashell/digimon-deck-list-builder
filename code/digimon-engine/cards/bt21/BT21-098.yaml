@@ -109,6 +109,10 @@ effects:
               - any_of:
                   - kind: digimon
                   - kind: tamer
+              # DCGO BT21_098.cs:226 CanPlayAsNewPermanent(payCost: false):
+              # free slot + no effect-play prohibition (+ no trash-play lock
+              # for a trash copy). CR 4.3 1-3-11-1.
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 card with [Vemmon] in its text and a play cost of 6 or less from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: vemmon_pick }
       - add_this_option_to_hand: {}

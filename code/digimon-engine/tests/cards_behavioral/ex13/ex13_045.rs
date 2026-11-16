@@ -358,3 +358,62 @@ fn ex13_045_win_trigger_is_once_per_turn() {
 
 #[path="../../support/owned_card_choice.rs"]
 mod physical_fixture;
+
+// ─── Candidate legality (select-hand playability audit, 2026-11-13) ──────────
+// DCGO EX13_045.cs:192-195 offers only `(HasText("Dracomon") ||
+// HasText("Examon")) && GetCostItself <= 12 && CardEffectCommons.CanPlayOrUse(
+// cardSource, activateClass)` — PlayEffects.cs:286-294 `(IsOption &&
+// !CanNotPlayThisOption) || (HasPlayCost && CanPlayAsNewPermanent(...))` —
+// for both the hand (:212, :254) and the digivolution cards (:197-199, :275).
+// A card that can't then be played or used is not a legal pick (CR 4.3 1-3-2;
+// 7-1-1; Option colour requirements 4-22-1..3).
+
+fn yellow_examon_option() -> CardData {
+    let mut c = option("EXA-YEL-OPT", 4, "[Main] ... [Examon] ...");
+    c.colors = vec![CardColor::Yellow];
+    c
+}
+
+fn offered_ids(runner: &DebugRunner) -> Vec<String> {
+    if runner.pending_selection().is_none() {
+        return Vec::new();
+    }
+    let mut ids: Vec<String> = physical_fixture::commits(&runner.game)
+        .into_iter()
+        .filter_map(|row| row.card_id)
+        .collect();
+    ids.sort();
+    ids
+}
+
+/// Examon is green/red/blue and nothing yellow is on its side: a yellow
+/// [Examon]-text Option can't be used, from the hand or the digivolution
+/// cards, so only the [Dracomon]-text Digimon is offered.
+#[test]
+fn ex13_045_option_with_unmet_colour_requirement_not_offered() {
+    let mut runner = builder()
+        .add_card(yellow_examon_option())
+        .hand(0, &["DRACO-D", "EXA-YEL-OPT"])
+        .memory(3)
+        .start();
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.push_source(me, "EXA-YEL-OPT");
+    let opp = runner.place_on_field(1, "OPP-WEAK", Some(0));
+    win_battle(&mut runner, me, opp);
+    assert_eq!(offered_ids(&runner), vec!["DRACO-D".to_string()]);
+}
+
+/// "You can't play Digimon by effects": the [Dracomon]-text Digimon is not
+/// offered; the usable green [Examon]-text Option still is.
+#[test]
+fn ex13_045_digimon_not_offered_while_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, me, opp) = win_runner(&["DRACO-D", "EXA-OPT"], &[]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    win_battle(&mut runner, me, opp);
+    assert_eq!(offered_ids(&runner), vec!["EXA-OPT".to_string()]);
+}

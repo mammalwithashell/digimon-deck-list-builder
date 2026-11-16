@@ -455,3 +455,137 @@ fn bt23_013_token_play_triggers_attack_once_per_turn() {
         "OPT consumed by first activation"
     );
 }
+
+// ─── Union-pick candidate legality (select-hand playability audit, 2026-11-13) ─
+// DCGO BT23_013.cs:86-102 `IsValidSistermon` = `IsDigimon && [Sistermon] in name
+// && no shared name with your Digimon && CanPlayAsNewPermanent(card, false, …)`,
+// used both for the branch's availability (`canSelectHand` / `canSelectTrash`,
+// :116-117) and the pick itself (:188, :218). `CanPlayAsNewPermanent`
+// (GameContextDeterminarion.cs:419-432) requires `!IsOption`, so a DUAL
+// [Sistermon] card — Sistermon Blanc (Awakened) EX13-065, whose Digimon face
+// prints no play cost — is never offered: CR 4.3 4-6-2 / 7-1-1, a DUAL is
+// digivolved or used, never played. A card the play can't perform (trash play
+// locked, prohibition, no free slot) is not a choice either (CR 4.3 1-3-2).
+
+fn sis_lock(runner: &mut DebugRunner, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner
+        .game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1));
+}
+
+fn sis_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card("BT23-013")
+        .expect("BT23-013 YAML loads")
+        .dsl_card("EX13-065")
+        .expect("EX13-065 YAML loads")
+        .add_card(digimon("SIS-HAND", "Sistermon Ciel", &[]))
+        .add_card(digimon("SIS-TRASH", "Sistermon Blanc", &[]))
+        .memory(20)
+        .start()
+}
+
+fn sis_fire(runner: &mut DebugRunner) {
+    let jesmon = find_field_card(runner, "BT23-013");
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(jesmon),
+    );
+    runner.game.drain_effect_queue();
+    accept_optional_prompt(runner);
+}
+
+/// The number of branches the "what does Jesmon play" choice offers. With the
+/// Sistermon branch unavailable the engine takes the token branch without
+/// asking, so 1 is reported only when the [Atho, René & Por] Token is on the
+/// field — proof the effect really resolved (no token reports 0). The token's
+/// play may leave Jesmon's own "this Digimon may attack" prompt up; that is a
+/// later effect, not the branch choice.
+fn sis_branch_count(runner: &DebugRunner) -> usize {
+    match runner.pending_selection_view() {
+        Some(v) if v.kind == SelectionKind::EffectChoice => {
+            v.valid_action_ids.iter().filter(|&&a| a != PASS).count()
+        }
+        _ => {
+            let token_played = runner.game.players[0]
+                .battle_area
+                .iter()
+                .any(|p| p.top_card().card_id(&runner.game.card_data) == "TOKEN_ATHO_RENE_POR");
+            usize::from(token_played)
+        }
+    }
+}
+
+/// Only the DUAL Sistermon Blanc (Awakened) EX13-065 in hand: it can't be
+/// played, so the Sistermon branch is unavailable.
+#[test]
+fn bt23_013_dual_sistermon_does_not_enable_sistermon_branch() {
+    let mut r = sis_runner();
+    r.place_on_field(0, "BT23-013", Some(0));
+    r.add_to_hand(0, "EX13-065");
+    sis_fire(&mut r);
+    assert_eq!(sis_branch_count(&r), 1, "only the token branch is legal");
+    assert!(
+        r.game.players[0].battle_area.iter().all(|p| p.top_card().card_id(&r.game.card_data) != "EX13-065"),
+        "the DUAL is never played"
+    );
+}
+
+/// The DUAL in hand beside a playable Sistermon in the trash: the pick offers
+/// only the trash Sistermon.
+#[test]
+fn bt23_013_union_pick_excludes_dual_sistermon() {
+    let mut r = sis_runner();
+    r.place_on_field(0, "BT23-013", Some(0));
+    r.add_to_hand(0, "EX13-065");
+    push_to_trash(&mut r, 0, "SIS-TRASH");
+    sis_fire(&mut r);
+    assert_eq!(sis_branch_count(&r), 2);
+    let branch = r.pending_selection().unwrap().valid_action_ids[1];
+    r.execute_action(0, branch).expect("choose Sistermon branch");
+    let view = r.pending_selection_view().expect("union prompt");
+    assert!(matches!(view.kind, SelectionKind::UnionZone { .. }));
+    assert_eq!(
+        view.valid_action_ids.iter().filter(|&&a| a != PASS).count(),
+        1,
+        "the DUAL Sistermon Blanc (Awakened) EX13-065 is not offered"
+    );
+    r.execute_action(0, view.valid_action_ids.iter().copied().find(|&a| a != PASS).unwrap()).unwrap();
+    r.auto_resolve().expect("play Sistermon");
+    find_field_card(&r, "SIS-TRASH");
+}
+
+/// "You can't play cards from the trash": the only Sistermon is in the trash,
+/// so the Sistermon branch is unavailable.
+#[test]
+fn bt23_013_trash_sistermon_does_not_enable_branch_when_trash_play_is_locked() {
+    let mut r = sis_runner();
+    r.place_on_field(0, "BT23-013", Some(0));
+    push_to_trash(&mut r, 0, "SIS-TRASH");
+    sis_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    sis_fire(&mut r);
+    assert_eq!(sis_branch_count(&r), 1, "the trash Sistermon can't be played");
+    assert!(r.game.players[0].trash.iter().any(|c| c.card_id(&r.game.card_data) == "SIS-TRASH"));
+}
+
+/// Hand + trash Sistermon with the trash locked: the pick offers only the hand one.
+#[test]
+fn bt23_013_union_pick_excludes_trash_sistermon_when_trash_play_is_locked() {
+    let mut r = sis_runner();
+    r.place_on_field(0, "BT23-013", Some(0));
+    r.add_to_hand(0, "SIS-HAND");
+    push_to_trash(&mut r, 0, "SIS-TRASH");
+    sis_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    sis_fire(&mut r);
+    let branch = r.pending_selection().unwrap().valid_action_ids[1];
+    r.execute_action(0, branch).expect("choose Sistermon branch");
+    let view = r.pending_selection_view().expect("union prompt");
+    assert_eq!(
+        view.valid_action_ids.iter().filter(|&&a| a != PASS).count(),
+        1,
+        "only the hand Sistermon Ciel is playable"
+    );
+}

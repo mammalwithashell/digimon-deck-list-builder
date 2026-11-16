@@ -82,18 +82,18 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.1, target: security } }
     expect: { prompt: main_phase }
-  # THE CLAUSE. optional_gate_fold: DCGO's optional ActivateClass asks
-  # OptionalSkill, our engine carries the "may" on the declinable hand pick.
-  # PROMPT-ORDER RISK: ours picks the hand card BEFORE paying the trash cost;
-  # DCGO pays the cost (Tamer pick) first, then DigivolveIntoHandOrTrashCard
-  # asks SelectHandEffect. If the oracle aborts here on "expected
-  # SelectPermanentEffect", that is this ordering, not the line.
+  # DCGO's optional ActivateClass asks OptionalSkill; ours asks the same optional
+  # yes/no (ST23-01.yaml `optional: true`), then the Tamer pick for the cost, then
+  # the hand pick -- DCGO's order (ST23_01.cs:56-96), so every row here is shared.
   - actor: 0
-    do: { select: { cards: [BT25-049] } }
+    do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [BT25-049] } }
+    expect: { prompt: SelectHandEffect }
   # Tomoro & Kyo's [Your Turn] trash trigger (ST23-13#effect#1, examined in
   # its own file) -- DECLINED here. RE-LOWERED 2026-10-19: it no longer
   # resolves mid-way through Kekkomon's effect; it waits until the effect
@@ -116,7 +116,7 @@ assert:
   # attack; the bottom face-down card (ST23-04) is the only card in the trash,
   # BT25-043 is the one left under the Tamer; the attack still checked P1's
   # security (BT1-009).
-  - at: 15
+  - at: 16
     that:
       turn: 3
       p0.memory: 3

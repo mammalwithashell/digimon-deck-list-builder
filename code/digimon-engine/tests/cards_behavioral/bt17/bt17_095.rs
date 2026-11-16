@@ -1177,5 +1177,194 @@ fn bt17_095_security_auto_collapses_zone_when_only_trash_eligible() {
     assert!(owned_union_fixture::is_zone(&runner.game, card_actions[0], true));
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Union-pick candidate legality (2026-11-13 select-hand audit)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// [Main] — DCGO BT17_095.cs:35-46 CanSelectCardCondition =
+// `CanPlayAsNewPermanent(cardSource, payCost: false, activateClass) &&
+// IsDigimon && (EqualsCardName("Agumon") || EqualsCardName("Gabumon"))`.
+// `EqualsCardName` (CardSource.cs:1484-1500) is whole-name equality, matching
+// the printed bracketed [Agumon] / [Gabumon] exact-name references — ToyAgumon
+// and Agumon Expert are NOT [Agumon].
+// [Security] — DCGO BT17_095.cs:510-521 = `CanPlayAsNewPermanent(...) &&
+// IsTamer && (ContainsCardName("Tai Kamiya") || ContainsCardName("Matt
+// Ishida"))`. CR 4.3 7-1-1: only a card with a play cost is played, so an
+// Option is never a "play" candidate; CR 4.3 1-3-2: an impossible play is not
+// carried out, so a card the free play would refuse (prohibition, full area,
+// trash play locked) is not a legal pick.
+
+fn make_named_option(id: &str, name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = CardKind::Option;
+    c.play_cost = 1;
+    c.colors = vec![CardColor::Red];
+    c
+}
+
+/// Non-PASS candidates of a pending union-zone pick (0 when none is pending).
+fn union_candidates(runner: &DebugRunner) -> usize {
+    runner
+        .game
+        .pending_selection
+        .as_ref()
+        .filter(|sel| matches!(sel.kind, SelectionKind::UnionZone { .. }))
+        .map(|sel| {
+            sel.valid_action_ids
+                .iter()
+                .filter(|&&a| a != digimon_engine::action::space::PASS)
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+fn main_builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
+    DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(make_named_red_digimon("BT17095-AGU", "Agumon"))
+        .add_card(make_named_red_digimon("BT17095-GAB", "Gabumon"))
+        .add_card(make_named_red_digimon("BT17095-TOY", "ToyAgumon"))
+        .add_card(make_named_red_digimon("BT17095-EXP", "Agumon Expert"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+}
+
+fn push_card(runner: &mut DebugRunner, p: usize, card_id: &str, to_trash: bool) {
+    let data_index = runner
+        .game
+        .card_data
+        .iter()
+        .position(|d| d.card_id == card_id)
+        .expect("card data registered");
+    let card_index = runner.game.next_card_index();
+    let card = CardSource::new(data_index, p as u8, card_index);
+    if to_trash {
+        runner.game.players[p].trash.push(card);
+    } else {
+        runner.game.players[p].hand.push(card);
+    }
+}
+
+/// [Agumon] / [Gabumon] are exact names: ToyAgumon and Agumon Expert are not
+/// offered.
+#[test]
+fn bt17_095_main_offers_only_exact_agumon_or_gabumon() {
+    let mut runner = main_builder()
+        .hand(0, &["BT17-095", "BT17095-AGU", "BT17095-GAB", "BT17095-TOY", "BT17095-EXP"])
+        .start();
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(
+        union_candidates(&runner),
+        2,
+        "only the exact-name [Agumon] and [Gabumon] are offered"
+    );
+}
+
+/// "You can't play Digimon by effects": neither the hand nor the trash card is
+/// offered.
+#[test]
+fn bt17_095_main_offers_nothing_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = main_builder().hand(0, &["BT17-095", "BT17095-AGU"]).start();
+    push_card(&mut runner, 0, "BT17095-GAB", true);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(union_candidates(&runner), 0, "no playable candidate is offered");
+}
+
+/// A full battle area: the Agumon is not offered.
+#[test]
+fn bt17_095_main_offers_nothing_when_battle_area_full() {
+    let mut runner = main_builder().hand(0, &["BT17-095", "BT17095-AGU"]).start();
+    runner.place_on_field(0, "FILL", Some(0));
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(union_candidates(&runner), 0, "no free slot: nothing is offered");
+}
+
+/// "You can't play cards from the trash" (CannotPlayFromTrash, BT23-014): the
+/// trash Gabumon is not offered; the hand Agumon still is.
+#[test]
+fn bt17_095_main_does_not_offer_trash_card_when_trash_play_is_locked() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = main_builder().hand(0, &["BT17-095", "BT17095-AGU"]).start();
+    push_card(&mut runner, 0, "BT17095-GAB", true);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+    );
+    assert!(runner.game.activate_hand_main(0, 0));
+    let sel = runner.game.pending_selection.as_ref().expect("union pick installs");
+    let card_actions: Vec<u16> = sel
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != digimon_engine::action::space::PASS)
+        .collect();
+    assert_eq!(card_actions.len(), 1, "only the hand Agumon: {card_actions:?}");
+    assert!(
+        owned_union_fixture::is_zone(&runner.game, card_actions[0], false),
+        "the remaining candidate is the hand card"
+    );
+}
+
+/// Run the defender's [Security] up to its union pick. `hand` goes to the
+/// defender's hand; `setup` runs before the attack.
+fn security_union_candidates(hand: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> usize {
+    let mut attacker = make_filler("BT17095-ATK-SEC");
+    attacker.dp = Some(6000);
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(attacker)
+        .add_card(make_named_tamer("BT17095-TAI", "Tai Kamiya"))
+        .add_card(make_named_option("BT17095-TAI-OPT", "Tai Kamiya's Crest"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .hand(1, hand)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-095"])
+        .start();
+    setup(&mut runner);
+    let atk = runner.place_on_field(0, "BT17095-ATK-SEC", Some(0));
+    let _ = runner.attack_player(atk, 1, false);
+    union_candidates(&runner)
+}
+
+/// An Option can't be played (CR 4.3 7-1-1; DCGO `IsTamer`): only the Tamer is
+/// offered.
+#[test]
+fn bt17_095_security_does_not_offer_option_with_tai_kamiya_in_name() {
+    assert_eq!(
+        security_union_candidates(&["BT17095-TAI", "BT17095-TAI-OPT"], |_| {}),
+        1,
+        "the Tai Kamiya Tamer is offered, the Option is not"
+    );
+}
+
+/// "You can't play Tamers by effects": the Tamer is not offered.
+#[test]
+fn bt17_095_security_does_not_offer_tamer_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = security_union_candidates(&["BT17095-TAI"], |runner| {
+        runner.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(offered, 0, "a prohibited Tamer is not offered");
+}
+
 #[path = "../../support/owned_union_fixture.rs"]
 mod owned_union_fixture;

@@ -213,3 +213,93 @@ fn bt25_034_effect_trash_moves_angemon_to_trash() {
         "Angemon must be in the controller's trash after the effect-trash"
     );
 }
+
+// ─── Section 3 — Hand-pick legality: only cards that can actually be played ──
+//
+// DCGO BT25_034.cs:45-52 `CanPlayCardCondition`: `HasPlayCost && HasLevel &&
+// Level <= 4 && (EqualsTraits("Angel") || EqualsTraits("Iliad")) &&
+// CanPlayAsNewPermanent(card, false, activateClass)` — a free battle-area frame
+// and no effect-play lock. (DCGO passes `card` — Angemon itself — rather than
+// the candidate `cardSource` to `CanPlayAsNewPermanent`; the slot / blanket-lock
+// checks agree either way, and the candidate is the card the play refuses, CR
+// 4.3 1-3-2, so the engine checks the candidate.) CR 4.3 7-1-1: a Digi-Egg has
+// no play cost and is never "played".
+
+fn angel_egg(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::DigiEgg;
+    card.level = Some(2);
+    card.dp = None;
+    card.play_cost = 0;
+    card.traits = vec!["Angel".to_string()];
+    card
+}
+
+/// Play the trasher (trashing Angemon from the top of security by effect) and
+/// return the non-PASS hand-pick candidates' ids (empty when no pick installs).
+/// `setup` runs before the trasher is played.
+fn offered_after_effect_trash(hand: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    let mut runner = base()
+        .add_card(angel_egg("ANGEL-EGG"))
+        .hand(0, hand)
+        .security(0, &["DECK-PAD", "DECK-PAD", CARD_ID])
+        .memory(8)
+        .start();
+    setup(&mut runner);
+    runner.play(0, 0).expect("play the trasher");
+    for _ in 0..4 {
+        let Some(v) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        if v.kind == SelectionKind::Hand {
+            let ids: Vec<String> = runner.game.players[0]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            return v
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&id| id != PASS)
+                .map(|id| ids[(id - PLAY_HAND_START) as usize].clone())
+                .collect();
+        }
+        runner.accept_optional_trigger().expect("accept the optional clause");
+    }
+    Vec::new()
+}
+
+/// Regression guard: the Lv.4 [Angel] Digimon is offered; a Lv.2 [Angel]
+/// Digi-Egg is not (no play cost, CR 4.3 7-1-1).
+#[test]
+fn bt25_034_hand_pick_offers_playable_angel_not_digi_egg() {
+    let offered =
+        offered_after_effect_trash(&["DSL-SEC-TRASHER", "ANGEL-HAND", "ANGEL-EGG"], |_| {});
+    assert_eq!(offered, vec!["ANGEL-HAND".to_string()]);
+}
+
+/// A full battle area (the trasher takes the last slot): no candidate.
+#[test]
+fn bt25_034_hand_pick_excludes_angel_when_battle_area_full() {
+    let offered = offered_after_effect_trash(&["DSL-SEC-TRASHER", "ANGEL-HAND"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8 + 1;
+    });
+    assert!(offered.is_empty(), "no free slot ⇒ nothing offered: {offered:?}");
+}
+
+/// "You can't play Digimon by effects": no candidate.
+#[test]
+fn bt25_034_hand_pick_excludes_angel_under_digimon_effect_play_lock() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = offered_after_effect_trash(&["DSL-SEC-TRASHER", "ANGEL-HAND"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "effect-play lock ⇒ nothing offered: {offered:?}");
+}

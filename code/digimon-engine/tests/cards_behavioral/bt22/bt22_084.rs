@@ -811,3 +811,120 @@ fn bt22_084_clause4_on_security_structural_present() {
         "BT22-084 must compile an on_security clause for the [Security] play-self effect"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 6 — Clause 2 hand-pick legality
+//
+// DCGO BT22_084.cs:84-89 `CanSelectCardCondition` = IsDigimon &&
+// (EqualsCardName("Agumon") || EqualsCardName("Gabumon")) &&
+// CanPlayAsNewPermanent(cardSource, false, activateClass). `EqualsCardName`
+// (CardSource.cs:1484-1500) is an EXACT name match (space/case-insensitive, plus
+// printed aliases) — and CR 4.3 2-3-1-2 agrees: a bracket-only reference
+// ("[Agumon]") references only cards with that name; "with [Agumon] in its name"
+// (2-3-1-3) is a different, broader wording this card does not use. So
+// ToyAgumon, Agumon (X Antibody) and the Tamer Marcus Damon & Agumon (AD1-021)
+// are not candidates. CanPlayAsNewPermanent adds an empty frame and no play
+// prohibition. YAML: `kind: digimon` + `name_is` + `can_play_from_effect_without_cost`.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Run Nokia's [Start of Your Main Phase] trigger (Nokia already on the field)
+/// and return the card ids its hand pick offers (empty when none installs).
+fn offered_at_start_of_main(runner: &mut DebugRunner) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    runner.game.enter_main_phase();
+    for _ in 0..6 {
+        match runner.pending_kind() {
+            Some(SelectionKind::Hand) => {
+                let hand: Vec<String> = runner.game.players[0]
+                    .hand
+                    .iter()
+                    .map(|c| c.card_id(&runner.game.card_data).to_string())
+                    .collect();
+                let view = runner.pending_selection_view().expect("hand pick");
+                return view
+                    .valid_action_ids
+                    .iter()
+                    .copied()
+                    .filter(|&id| id != PASS)
+                    .map(|id| hand[(id - PLAY_HAND_START) as usize].clone())
+                    .collect();
+            }
+            Some(SelectionKind::TriggerOrder) => {
+                let action = runner.pending_selection().unwrap().valid_action_ids[0];
+                runner.execute_action(0, action).expect("pick the trigger");
+            }
+            Some(_) if runner.pending_is_optional() => {
+                runner.accept_optional_trigger().expect("accept optional prompt")
+            }
+            _ => return Vec::new(),
+        }
+    }
+    Vec::new()
+}
+
+fn nokia_on_field(hand: &[&str]) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .add_card(nokia_card_data())
+        .add_card(card_data_from_compiled("AD1-021"))
+        .add_card(make_agumon("AGUMON-1"))
+        .add_card(make_gabumon("GABU-1"))
+        .add_card(make_other_digimon("TOY-AGUMON", "ToyAgumon"))
+        .add_card(make_other_digimon("AGUMON-X", "Agumon (X Antibody)"))
+        .add_card(make_other_digimon("GABUMON-BOND", "Gabumon - Bond of Friendship"))
+        .add_card(make_filler("FILLER-DECK"))
+        .deck(0, &["FILLER-DECK"; 4])
+        .deck(1, &["FILLER-DECK"; 4])
+        .hand(0, hand)
+        .memory(10)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner
+}
+
+/// Only the exact-named [Agumon] / [Gabumon] Digimon are offered: not
+/// ToyAgumon, Agumon (X Antibody), Gabumon - Bond of Friendship, nor the Tamer
+/// Marcus Damon & Agumon (AD1-021).
+#[test]
+fn bt22_084_clause2_offers_only_exact_named_agumon_or_gabumon_digimon() {
+    let mut runner = nokia_on_field(&[
+        "AD1-021",
+        "TOY-AGUMON",
+        "AGUMON-X",
+        "GABUMON-BOND",
+        "AGUMON-1",
+        "GABU-1",
+    ]);
+    let mut offered = offered_at_start_of_main(&mut runner);
+    offered.sort();
+    assert_eq!(
+        offered,
+        vec!["AGUMON-1".to_string(), "GABU-1".to_string()],
+        "a bracket-only [Agumon]/[Gabumon] reference is an exact name (CR 4.3 2-3-1-2), Digimon only"
+    );
+}
+
+/// "You can't play Digimon by effects": the Agumon is not offered.
+#[test]
+fn bt22_084_clause2_offers_nothing_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = nokia_on_field(&["AGUMON-1"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = offered_at_start_of_main(&mut runner);
+    assert!(offered.is_empty(), "play prohibited ⇒ no candidate: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.battle_area_size(0), 1, "only Nokia on the field");
+}
+
+/// A full battle area: the Agumon is not offered.
+#[test]
+fn bt22_084_clause2_offers_nothing_when_battle_area_full() {
+    let mut runner = nokia_on_field(&["AGUMON-1"]);
+    runner.game.rules.field_slots = 1;
+    let offered = offered_at_start_of_main(&mut runner);
+    assert!(offered.is_empty(), "full battle area ⇒ no candidate: {offered:?}");
+}

@@ -10,8 +10,12 @@ use digimon_dsl::CardSpec;
 // fixture is a frozen snapshot of an earlier revision (the Python diagnostics
 // pin it); 23c291417 then made the materials name-only, so the two differ.
 const TITA: &[u8] = include_bytes!("../../digimon-engine/cards/bt24/BT24-081.yaml");
-const AEGIO: &[u8] =
-    include_bytes!("../../tests/fixtures/card_data/assembly_recipe_binding/BT26-073.yaml");
+// BT26-073 likewise compiles from the live card file. Its frozen
+// assembly_recipe_binding snapshot stays at the pre-2026-11-13 revision (the
+// Python diagnostics pin its sha256); the select-hand audit then added a
+// `can_play_from_effect_without_cost` leaf to the [On Deletion] pick, which
+// leaves the alt paths this file checks untouched.
+const AEGIO: &[u8] = include_bytes!("../../digimon-engine/cards/bt26/BT26-073.yaml");
 
 fn compile(raw: &[u8]) -> CompiledCard {
     let spec: CardSpec = serde_yml::from_slice(raw).unwrap();
@@ -136,10 +140,12 @@ fn original_titamon_full_ordered_assembly_metadata() {
 
 #[test]
 fn original_aegiochusmon_nested_filter_and_separate_aegiomon_path() {
-    assert_eq!(
-        AEGIO,
-        include_bytes!("../../digimon-engine/cards/bt26/BT26-073.yaml")
-    );
+    // The frozen fixture's alt paths must still match the live card's, so the
+    // Python-pinned snapshot keeps describing the same recipe.
+    let frozen = compile(include_bytes!(
+        "../../tests/fixtures/card_data/assembly_recipe_binding/BT26-073.yaml"
+    ));
+    assert!(exact_paths(&frozen, &expected_aegio()));
     let c = compile(AEGIO);
     assert_eq!(c.card, "BT26-073");
     assert_eq!(c.kind, CompiledCardKind::Digimon);

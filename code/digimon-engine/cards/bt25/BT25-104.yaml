@@ -185,7 +185,13 @@ effects:
           of: you
           bind_as: tamer_pick
           optional: true
-          filter: { kind: tamer }
+          # DCGO BT25_104.cs:281-285 `IsTamer && CanPlayAsNewPermanent(card,
+          # payCost: false)`: a free battle-area slot and no "can't play
+          # Tamers by effects" lock (CR 4.3 7-1-2-3). Audit 2026-11-13.
+          filter:
+            all_of:
+              - kind: tamer
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 Tamer card from your hand without paying the cost"
       - play_from_hand_free:
           of: you
@@ -235,7 +241,11 @@ effects:
           of: you
           bind_as: tamer_pick
           optional: true
-          filter: { kind: tamer }
+          # DCGO BT25_104.cs:281-285 (same filter as the inline clause above).
+          filter:
+            all_of:
+              - kind: tamer
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 Tamer card from your hand without paying the cost"
       - play_from_hand_free:
           of: you

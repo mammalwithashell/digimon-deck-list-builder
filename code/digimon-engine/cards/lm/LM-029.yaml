@@ -78,19 +78,33 @@ effects:
       - select_own_permanent:
           bind_as: target
           optional: true
+          # DCGO CanSelectOwnPermanentCondition: a yellow Digimon some yellow
+          # Digimon in hand has a route onto (CanPlayCardTargetFrame(frame,
+          # false, ...): route only, no payment).
           filter:
             all_of:
               - kind: digimon
               - color_is: yellow
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - color_is: yellow
           prompt: "Choose 1 of your yellow Digimon to digivolve"
       # Step 2: choose the digivolve target from hand.
       - select_hand:
           of: you
           bind_as: evo
+          # DCGO DigivolveIntoHandOrTrashCard (CardEffectCommons.cs:859-885,
+          # payCost: true, reduceCost: 3): only a card that can digivolve onto
+          # `target` AND whose reduced cost can be paid (CR 4.3 1-3-11-1).
           filter:
             all_of:
               - kind: digimon
               - color_is: yellow
+              - can_digivolve_onto_with_cost: { target: target, cost: { reduce: 3 } }
           prompt: "Choose a yellow Digimon card to digivolve into"
       # Step 3: execute effect-initiated digivolve with cost -3.
       - effect_initiated_digivolve:

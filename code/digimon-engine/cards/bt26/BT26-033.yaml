@@ -118,14 +118,24 @@ effects:
       - if:
           condition: { your_turn: true }
           then:
+            # Only cards the play / use below can carry out are offered (CR 4.3
+            # 1-3-2). DCGO BT26_033.cs:101-105 `(Iliad || TS) &&
+            # CanPlayOrUse(card, ..., fixedCost: max(0, GetCostItself - 5))`
+            # (PlayEffects.cs:286-293): never a Digi-Egg (CR 4.3 7-1-1, e.g.
+            # Tokomon BT25-001); an Option / DUAL must be usable (CR 4.3 4-22,
+            # <Use Req.>), a Digimon / Tamer playable (free slot, no play lock);
+            # the reduced cost must be payable.
             - select_hand:
                 of: you
                 bind_as: iliad_pick
                 optional: true
                 filter:
-                  any_of:
-                    - trait_has: Iliad
-                    - trait_has: TS
+                  all_of:
+                    - any_of:
+                        - trait_has: Iliad
+                        - trait_has: TS
+                    - can_play_or_use_from_effect: true
+                    - affordable_with_cost: { reduce: 5 }
                 prompt: "You may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5"
             - play_or_use_from_hand:
                 of: you

@@ -60,6 +60,9 @@ effects:
               - kind: digimon
               - level_eq: 3
               - color_is: green
+              # DCGO BT2_047.cs:303 `CanPlayAsNewPermanent`: free frame, no
+              # effect-play prohibition.
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 level 3 green Digimon card from your hand suspended without paying its memory cost"
       - if:
           condition: { binding_present: play_pick }

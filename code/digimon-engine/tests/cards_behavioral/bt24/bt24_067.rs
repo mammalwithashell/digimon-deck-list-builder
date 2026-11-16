@@ -674,3 +674,110 @@ fn bt24_067_no_route_from_offcolor_traitless_lv2() {
     );
     assert_eq!(delta, 0, "refused digivolve must not spend memory");
 }
+
+// ── Section 7: hand-pick candidate legality ──────────────────────────────────
+// DCGO BT24_067.cs:104-117 `CanSelectCardCondition` = `IsTamer &&
+// EqualsCardName("Rei Katsura") && CanPlayAsNewPermanent(source, payCost: false,
+// activateClass)`, and `CanActivateCondition` (BT24_067.cs:87-101) refuses to
+// activate when no hand card passes it. `CanPlayAsNewPermanent`
+// (GameContextDeterminarion.cs:419-432) needs an empty battle-area frame and a
+// legal play. A [Rei Katsura] the play would refuse (full battle area; a "can't
+// play Tamers by effects" lock) is not a legal choice, so it is not offered.
+
+/// Card ids the pending selection offers (physical card-choice rows, or hand
+/// action ids for a plain hand pick).
+fn offered_ids(r: &DebugRunner) -> Vec<String> {
+    use digimon_engine::action::space::PLAY_HAND_END;
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    let Some(view) = r.pending_selection_view() else {
+        return Vec::new();
+    };
+    if let Some(choice) = &view.card_choice {
+        return choice
+            .rows
+            .iter()
+            .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+            .filter_map(|row| row.card_id.clone())
+            .collect();
+    }
+    let hand = &r.game.players[view.selecting_player as usize].hand;
+    view.valid_action_ids
+        .iter()
+        .filter(|&&id| id < PLAY_HAND_END)
+        .filter_map(|&id| hand.get(id as usize))
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect()
+}
+
+fn rei_in_hand(r: &DebugRunner) -> bool {
+    r.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "REI-IN-HAND")
+}
+
+/// Full battle area: [Rei Katsura] can't be played, so it is not offered and
+/// stays in hand.
+#[test]
+fn bt24_067_rei_not_offered_when_battle_area_full() {
+    let mut r = base()
+        .hand(0, &["REI-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    r.game.enter_main_phase();
+    let host = r.place_on_field(0, CARD_ID, Some(0));
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+
+    fire_link_onto_host(&mut r, host);
+
+    let offered = offered_ids(&r);
+    assert!(
+        !offered.iter().any(|id| id == "REI-IN-HAND"),
+        "a full battle area: Rei Katsura is not a legal pick, offered {offered:?}"
+    );
+    let _ = r.auto_resolve();
+    assert!(rei_in_hand(&r), "Rei Katsura stays in hand");
+}
+
+/// "You can't play Tamers by effects": [Rei Katsura] is not offered.
+#[test]
+fn bt24_067_rei_not_offered_when_tamer_effect_play_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = base()
+        .hand(0, &["REI-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    r.game.enter_main_phase();
+    let host = r.place_on_field(0, CARD_ID, Some(0));
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+
+    fire_link_onto_host(&mut r, host);
+
+    let offered = offered_ids(&r);
+    assert!(
+        !offered.iter().any(|id| id == "REI-IN-HAND"),
+        "a Tamer effect-play lock: Rei Katsura is not a legal pick, offered {offered:?}"
+    );
+    let _ = r.auto_resolve();
+    assert!(rei_in_hand(&r), "Rei Katsura stays in hand");
+}
+
+/// Regression guard: with a free slot and no lock, [Rei Katsura] is offered.
+#[test]
+fn bt24_067_rei_offered_when_playable() {
+    let mut r = base()
+        .hand(0, &["REI-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    r.game.enter_main_phase();
+    let host = r.place_on_field(0, CARD_ID, Some(0));
+    fire_link_onto_host(&mut r, host);
+    assert_eq!(offered_ids(&r), vec!["REI-IN-HAND".to_string()]);
+}

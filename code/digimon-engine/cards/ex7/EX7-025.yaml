@@ -24,7 +24,10 @@ effects:
           of: you
           bind_as: arisa
           optional: true
-          filter: { name_contains: "Arisa Kinosaki" }
+          # DCGO EX7_025.cs:33-38 `IsArisaCardCondition`: EqualsCardName (the
+          # card NAME, not a substring) && CanPlayAsNewPermanent(payCost:
+          # false) — only a card the free play accepts (CR 4.3 7-1-1, 1-3-2).
+          filter: { name_is: "Arisa Kinosaki", can_play_from_effect_without_cost: true }
           prompt: "Play 1 Arisa Kinosaki from hand"
       - play_from_hand_free: { of: you, hand_index: arisa }
 

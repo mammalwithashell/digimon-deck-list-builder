@@ -1093,10 +1093,42 @@ impl Game {
         player_id: PlayerId,
         source: OptionSource,
     ) -> Vec<OptionPlayMode> {
+        self.option_legal_play_modes_for_policy(card, player_id, source, OptionCostPolicy::Pay)
+    }
+
+    /// [`Self::option_legal_play_modes`] for a use that pays under
+    /// `cost_policy`: a use mode (Standard / Delay / Training) is judged on
+    /// the cost that use pays (CR 4.3 1-3-11-1, 4-2-3-1) -- 0 for `Free`, N
+    /// for `Fixed(N)`, and for `Reduce(N)` the use cost less N less the
+    /// reducers the use would take (`Game::declarable_cost_reduction`,
+    /// CR 4.3 1-3-11-2/3). `Pay` keeps the unreduced use cost the main-phase
+    /// mask uses (its missing reducer credit is
+    /// G-ENGINE-MAIN-PHASE-DECLARATION-REDUCER-CREDIT). The Link mode always
+    /// pays its link cost. G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT.
+    pub(crate) fn option_legal_play_modes_for_policy(
+        &self,
+        card: &CardSource,
+        player_id: PlayerId,
+        source: OptionSource,
+        cost_policy: OptionCostPolicy,
+    ) -> Vec<OptionPlayMode> {
         let effects = self
             .effects_for_card(card.card_id(&self.card_data), card.handle())
             .unwrap_or_default();
-        let use_cost = self.option_use_cost(card, player_id);
+        let printed_use_cost = i32::from(self.option_use_cost(card, player_id));
+        let use_cost = match cost_policy {
+            OptionCostPolicy::Pay => printed_use_cost,
+            OptionCostPolicy::Free => 0,
+            OptionCostPolicy::Fixed(n) => i32::from(n).max(0),
+            OptionCostPolicy::Reduce(n) => (printed_use_cost
+                - i32::from(n)
+                - self.declarable_cost_reduction(
+                    player_id,
+                    card.handle(),
+                    CostReductionKind::OptionUse,
+                ))
+            .max(0),
+        };
         let memory_min = self.rules.memory_range.0;
         let mut modes = classify_option_modes(&effects);
         modes.retain(|mode| {

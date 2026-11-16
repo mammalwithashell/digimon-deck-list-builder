@@ -627,3 +627,52 @@ fn bt21_009_no_route_from_offcolor_traitless_lv2() {
     );
     assert_eq!(delta, 0, "refused digivolve must not spend memory");
 }
+
+// ── Section 7: Haru Shinkai pick legality ───────────────────────────────────
+// DCGO BT21_009.cs:116-127 `CanSelectCardCondition`: EqualsCardName("Haru
+// Shinkai") && CanPlayAsNewPermanent(payCost: false); :103 the activation
+// needs `HasMatchConditionOwnersHand(CanSelectCardCondition)`. A Haru Shinkai
+// the play would refuse is not offered, and without one nothing is.
+// CR 4.3 1-3-2.
+
+fn linked_with_haru(prep: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut r = base()
+        .hand(0, &["HARU-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    r.game.enter_main_phase();
+    let host = r.place_on_field(0, CARD_ID, Some(0));
+    prep(&mut r);
+    fire_link_onto_host(&mut r, host);
+    r
+}
+
+/// "Can't play Tamers by effects": the only Haru Shinkai is unplayable.
+#[test]
+fn bt21_009_haru_not_offered_under_effect_tamer_play_lock() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let r = linked_with_haru(|r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no playable Haru Shinkai: no prompt"
+    );
+}
+
+/// A battle area at capacity has no frame for Haru Shinkai.
+#[test]
+fn bt21_009_haru_not_offered_with_a_full_battle_area() {
+    let r = linked_with_haru(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no free frame for Haru Shinkai: no prompt"
+    );
+}

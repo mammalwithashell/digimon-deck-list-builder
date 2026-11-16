@@ -326,3 +326,189 @@ fn ex12_074_security_digivolve_pick_lists_only_legal_digivolutions() {
         "only LEGAL-EVO can digivolve the Lv.4 attacker: {picks:?}"
     );
 }
+
+// ─── [Main] "play 1 [Shambala] card from hand with the play cost reduced by 3" ─
+//
+// DCGO EX12_074.cs:88-92 offers `EqualsTraits("Shambala") &&
+// CanPlayAsNewPermanent(cardSource, payCost: true, fixedCost: cost - 3)`
+// (GameContextDeterminarion.cs:419-433: not an Option, an empty frame, and
+// `CanPlayCardTargetFrame`, which refuses a play prohibition and a cost above
+// `MaxMemoryCost`, CardSource.cs:1150-1158). A pick the play would then refuse is
+// an illegal RL choice.
+
+fn shambala_digimon(id: &str, play_cost: u16) -> digimon_engine::card_data::CardData {
+    let mut card = tb_digimon(id, CardColor::Yellow, 5, 7000);
+    card.play_cost = play_cost;
+    card
+}
+
+fn shambala_tamer(id: &str) -> digimon_engine::card_data::CardData {
+    let mut card = super::support::tamer(id, CardColor::Yellow);
+    card.traits = vec!["Shambala".to_string()];
+    card
+}
+
+/// Use EX12-074's [Main] from hand (memory 10, use cost 3 → 7 left) with a white
+/// Digimon in the battle area and `hand` cards beside it; returns the hand pick's
+/// offered ids (empty when no pick opened). `prepare` runs before the use.
+fn main_play_offers(hand: &[&str], prepare: impl FnOnce(&mut DebugRunner)) -> (DebugRunner, Vec<String>) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-074 YAML loads")
+        .add_card(plain_digimon("WHITE", CardColor::White, 3, 1000))
+        .add_card(plain_digimon("BOTTOM", CardColor::Yellow, 3, 3000))
+        .add_card(shambala_digimon("SH-20", 20))
+        .add_card(shambala_digimon("SH-21", 21))
+        .add_card(shambala_digimon("SH-5", 5))
+        .add_card(shambala_tamer("SH-TAMER"))
+        .hand(0, &[CARD_ID])
+        .security(0, &["BOTTOM"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "WHITE", Some(0));
+    for id in hand {
+        runner.add_to_hand(0, id);
+    }
+    prepare(&mut runner);
+    let option_slot = hand_index(&runner, 0, CARD_ID);
+    // `Pending` when the hand pick parks; with no candidate the [Main] resolves
+    // straight through (the result is then not `Pending`).
+    let result = runner.game.play_option_from_hand(0, option_slot);
+    assert_ne!(result, OptionPlayResult::Invalid, "EX12-074 is usable");
+    let offered = offered_hand_pick(&runner);
+    (runner, offered)
+}
+
+fn offered_hand_pick(runner: &DebugRunner) -> Vec<String> {
+    use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let hand: Vec<String> = runner.game.players[view.selecting_player as usize]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut out: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .filter(|&&a| a != PASS)
+        .filter_map(|&a| {
+            [PLAY_HAND_START, HAND_EFFECT_START]
+                .iter()
+                .filter_map(|&s| a.checked_sub(s))
+                .find(|&i| (i as usize) < hand.len() && i < 30)
+        })
+        .map(|i| hand[i as usize].clone())
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// After the use cost, 7 memory pays at most 17 (CR 4.3 memory floor −10):
+/// SH-20 costs 17 after the −3 and is offered; SH-21 (18) is not.
+#[test]
+fn ex12_074_main_play_offers_only_shambala_cards_affordable_at_minus_3() {
+    let (_runner, offered) = main_play_offers(&["SH-20", "SH-21"], |_| {});
+    assert_eq!(offered, vec!["SH-20".to_string()]);
+}
+
+/// "You can't play Digimon by effects": the [Shambala] Digimon is not offered,
+/// the [Shambala] Tamer still is.
+#[test]
+fn ex12_074_main_play_excludes_shambala_digimon_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (_runner, offered) = main_play_offers(&["SH-5", "SH-TAMER"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert_eq!(offered, vec!["SH-TAMER".to_string()]);
+}
+
+/// A full battle area (no empty frame): nothing can be played, no pick opens.
+#[test]
+fn ex12_074_main_play_offers_nothing_when_battle_area_full() {
+    let (mut runner, offered) = main_play_offers(&["SH-5", "SH-TAMER"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "no free frame: {offered:?}");
+    runner.auto_resolve().expect("resolve EX12-074 main");
+    assert!(hand_contains(&runner, 0, "SH-5") && hand_contains(&runner, 0, "SH-TAMER"));
+    assert!(hand_contains(&runner, 0, "BOTTOM"), "the bottom security card was still added to hand");
+    assert_eq!(
+        runner.game.players[0].security[0].card_id(&runner.game.card_data),
+        CARD_ID,
+        "EX12-074 still became the bottom security card"
+    );
+}
+
+// ─── [Security] free play of a cost ≤5 [Shambala] card from hand or trash ────
+//
+// DCGO EX12_074.cs:129-135 `CanPlayCondition` = `HasPlayCost && cost <= 5 &&
+// [Shambala] && CanPlayAsNewPermanent(payCost: false)`, and the effect asks
+// nothing when neither zone has a candidate (EX12_074.cs:139-142).
+
+fn security_board(prepare: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-074 YAML loads")
+        .add_card(plain_digimon("ATTACKER", CardColor::Purple, 4, 6000))
+        .add_card(plain_digimon("P1-DIGI", CardColor::Purple, 3, 3000))
+        .add_card(tb_digimon("SEC-PLAY", CardColor::Yellow, 4, 5000))
+        .hand(1, &["SEC-PLAY"])
+        .security(1, &[CARD_ID])
+        .memory(0)
+        .start();
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    prepare(&mut runner);
+    runner.attack_player(attacker, 1, false);
+    runner
+}
+
+fn union_pick_pending(runner: &DebugRunner) -> bool {
+    runner
+        .pending_selection_view()
+        .is_some_and(|v| matches!(v.kind, SelectionKind::UnionZone { .. }))
+}
+
+/// "You can't play Digimon by effects" on the security owner: the only
+/// [Shambala] card is not playable, so no hand-or-trash pick opens.
+#[test]
+fn ex12_074_security_play_offers_nothing_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let runner = security_board(|r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(
+        !union_pick_pending(&runner),
+        "a prohibited play is not offered: {:?}",
+        runner.pending_selection_view()
+    );
+    assert!(!field_contains(&runner, 1, "SEC-PLAY"));
+}
+
+/// The security owner's battle area is full: no pick opens.
+#[test]
+fn ex12_074_security_play_offers_nothing_when_battle_area_full() {
+    let runner = security_board(|r| {
+        r.place_on_field(1, "P1-DIGI", Some(0));
+        r.game.rules.field_slots = 1;
+    });
+    assert!(
+        !union_pick_pending(&runner),
+        "no free frame: nothing is offered: {:?}",
+        runner.pending_selection_view()
+    );
+    assert!(!field_contains(&runner, 1, "SEC-PLAY"));
+}

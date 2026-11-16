@@ -622,3 +622,186 @@ fn p_151_security_clause_compiles_as_inherited_on_security() {
 
 // P-151 has no [Once Per Turn] clause. Option cards are single-use by nature;
 // no OPT lockout test is needed.
+
+// ---------------------------------------------------------------------------
+// Section 6 — Free-play candidate legality
+// ---------------------------------------------------------------------------
+//
+// "play 1 card with the [LIBERATOR] trait and a play cost of 3 or less":
+// DCGO P_151.cs:63-76 `SelectPlayTarget` = `HasPlayCost && GetCostItself <= 3
+// && CanPlayAsNewPermanent(cardSource, payCost: false, activateClass) &&
+// LIBERATOR`. `HasPlayCost` (CEntity_Base.cs:340) is false for an Option and a
+// DUAL (their kinds contain Option), and `CanPlayAsNewPermanent`
+// (GameContextDeterminarion.cs:419-432) needs an empty battle-area frame and no
+// play prohibition. CR 4.3 7-1-1: playing places "a new card with a play cost";
+// 2-6-1 / 2-7-1: an Option has a use cost, not a play cost; 2-8-1 / 4-18: a
+// Digi-Egg has no play cost (it is hatched). DCGO's own frame check no longer
+// rejects a Digi-Egg (CardSource.cs CanPlayCardTargetFrame, the egg branch is
+// commented out); the rules exclude it, so it is never offered here. CR 4.3
+// 1-3-11-1: a card can be declared for play only if it can be played, so a
+// card the follow-up play would refuse is never a legal pick.
+
+fn liberator_egg(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = None;
+    c.play_cost = 0;
+    c.traits = vec!["LIBERATOR".to_string()];
+    c
+}
+
+fn liberator_option(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Option;
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 2;
+    c.traits = vec!["LIBERATOR".to_string()];
+    c
+}
+
+fn liberator_tamer(id: &str) -> CardData {
+    let mut c = make_tamer(id);
+    c.play_cost = 3;
+    c.traits = vec!["LIBERATOR".to_string()];
+    c
+}
+
+fn liberator_cheap_digimon(id: &str) -> CardData {
+    let mut c = make_liberator_digimon(id);
+    c.play_cost = 3;
+    c
+}
+
+fn prohibit_digimon_effect_play(runner: &mut DebugRunner, player: u8) {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        player,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+}
+
+/// Drive every prompt before the free-play hand pick (the deck holds no
+/// [LIBERATOR] card, so the reveal adds nothing) and return the hand pick's
+/// non-PASS candidates' card ids — empty when no hand pick installs.
+fn offered_free_play(runner: &mut DebugRunner, player: u8) -> Vec<String> {
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::selection::SelectionKind;
+    for _ in 0..20 {
+        let Some(view) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        if view.kind == SelectionKind::Hand {
+            let hand: Vec<String> = runner.game.players[player as usize]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            let mut offered: Vec<String> = view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&id| id != PASS)
+                .map(|id| hand[(id - PLAY_HAND_START) as usize].clone())
+                .collect();
+            offered.sort();
+            return offered;
+        }
+        let action = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != PASS)
+            .unwrap_or(PASS);
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("drive pre-pick prompt");
+    }
+    panic!("free-play hand pick never reached");
+}
+
+fn main_runner(hand: &[&str]) -> DebugRunner {
+    let mut full_hand = vec!["P-151"];
+    full_hand.extend_from_slice(hand);
+    DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(liberator_cheap_digimon("LIB-DIGI"))
+        .add_card(liberator_tamer("LIB-TAMER"))
+        .add_card(liberator_egg("LIB-EGG"))
+        .add_card(liberator_option("LIB-OPT"))
+        .add_card(make_non_liberator_digimon("NONLIB"))
+        .hand(0, &full_hand)
+        .deck(0, &["NONLIB", "NONLIB", "NONLIB", "NONLIB", "NONLIB"])
+        .deck(1, &["NONLIB"])
+        .memory(10)
+        .start()
+}
+
+/// A [LIBERATOR] Digi-Egg has no play cost: never offered.
+#[test]
+fn p_151_main_free_play_excludes_liberator_digi_egg() {
+    let mut runner = main_runner(&["LIB-DIGI", "LIB-EGG"]);
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(offered_free_play(&mut runner, 0), vec!["LIB-DIGI".to_string()]);
+}
+
+/// A [LIBERATOR] Option has a use cost, not a play cost, and is never "played".
+#[test]
+fn p_151_main_free_play_excludes_liberator_option() {
+    let mut runner = main_runner(&["LIB-DIGI", "LIB-OPT"]);
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(offered_free_play(&mut runner, 0), vec!["LIB-DIGI".to_string()]);
+}
+
+/// "Can't play Digimon by effects": the Digimon is not offered, the Tamer is.
+#[test]
+fn p_151_main_free_play_excludes_digimon_under_effect_play_prohibition() {
+    let mut runner = main_runner(&["LIB-DIGI", "LIB-TAMER"]);
+    prohibit_digimon_effect_play(&mut runner, 0);
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(offered_free_play(&mut runner, 0), vec!["LIB-TAMER".to_string()]);
+}
+
+/// A full battle area: nothing can be played, so no hand pick installs.
+#[test]
+fn p_151_main_free_play_offers_nothing_when_battle_area_full() {
+    let mut runner = main_runner(&["LIB-DIGI", "LIB-TAMER"]);
+    runner.place_on_field(0, "NONLIB", Some(0));
+    runner.game.rules.field_slots = 1;
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert!(offered_free_play(&mut runner, 0).is_empty());
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.battle_area_size(0), 1);
+}
+
+/// The [Security] "activate this card's [Main] effects" copy uses the same
+/// filter: the Digi-Egg and the Option are not offered.
+#[test]
+fn p_151_security_free_play_excludes_digi_egg_and_option() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(liberator_cheap_digimon("LIB-DIGI"))
+        .add_card(liberator_egg("LIB-EGG"))
+        .add_card(liberator_option("LIB-OPT"))
+        .add_card(make_non_liberator_digimon("NONLIB"))
+        .add_card(make_test_card("ATTACKER", "Attacker"))
+        .hand(1, &["LIB-DIGI", "LIB-EGG", "LIB-OPT"])
+        .security(1, &["P-151"])
+        .deck(0, &["NONLIB"])
+        .deck(1, &["NONLIB", "NONLIB", "NONLIB", "NONLIB"])
+        .memory(10)
+        .start();
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    let _ = runner.attack_player(attacker, 1, false);
+    assert_eq!(offered_free_play(&mut runner, 1), vec!["LIB-DIGI".to_string()]);
+}

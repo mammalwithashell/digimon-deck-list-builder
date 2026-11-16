@@ -87,5 +87,9 @@ effects:
               - kind: digimon
               - trait_has: TB
               - dp_lte: 5000
+              # DCGO EX12_046.cs:203-210 `CanPlayAsNewPermanent(card, false,
+              # activateClass)`: never a DUAL, a free slot, no play
+              # prohibition (CR 4.3 4-6-2, 1-3-2). Free, so no memory check.
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [TB] Digimon with 5000 DP or less from hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: tb_play }

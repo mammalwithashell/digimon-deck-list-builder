@@ -86,18 +86,18 @@ steps:
     do: { attack: { attacker: field.1, target: security } }
     expect: { prompt: main_phase }
   # The trasher: Kekkomon's inherited (ST23-01#inherited#0). optional_gate_fold:
-  # DCGO's optional ActivateClass asks
-  # OptionalSkill, our engine carries the "may" on the declinable hand pick.
-  # PROMPT-ORDER RISK: ours picks the hand card BEFORE paying the trash cost;
-  # DCGO pays the cost (Tamer pick) first, then DigivolveIntoHandOrTrashCard
-  # asks SelectHandEffect. If the oracle aborts here on "expected
-  # SelectPermanentEffect", that is this ordering, not the line.
+  # DCGO's optional ActivateClass asks OptionalSkill; ours asks the same optional
+  # yes/no (ST23-01.yaml `optional: true`), then the Tamer pick for the cost, then
+  # the hand pick -- DCGO's order (ST23_01.cs:56-96), so every row here is shared.
   - actor: 0
-    do: { select: { cards: [BT25-049] } }
+    do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [BT25-049] } }
+    expect: { prompt: SelectHandEffect }
   # THE CLAUSE: the cost trash above fired Tomoro & Kyo's "[Your Turn] When
   # effects trash cards from under this Tamer". One declinable trigger ->
   # DCGO OptionalSkill (TriggerOrder at bundle length 1).
@@ -152,7 +152,7 @@ assert:
   # T3, attack resolved: Tomoro & Kyo suspended to pay the trigger; the
   # Chiropmon that got +3000 became Armalizamon mid-effect and the modifier
   # rode the permanent: 4000 + 3000 = 7000.
-  - at: 16
+  - at: 17
     that:
       turn: 3
       p0.memory: 3
@@ -167,7 +167,7 @@ assert:
           suspended: true
           sources: [BT25-043]
   # T4, during the opponent's turn: still 7000.
-  - at: 18
+  - at: 19
     that:
       turn: 4
       p0.field:
@@ -180,7 +180,7 @@ assert:
           suspended: true
           sources: [BT25-043]
   # T5, P0's breeding phase: "until your opponent's turn ends" has expired.
-  - at: 19
+  - at: 20
     that:
       turn: 5
       p0.field:

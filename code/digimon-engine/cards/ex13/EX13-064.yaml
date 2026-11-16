@@ -12,8 +12,23 @@
 #   Digivolve: Purple Lv.5 / 4; Black Lv.5 / 4; Lv.5 w/[Knightmon] in text: 3;
 #   [Digivolve] While you have 3 or fewer security cards, [Rie Kishibe]: Cost 5.
 #
-# DCGO C# reference: none at the submodule (no EX13_064.cs). Printed text and
-# general_rule.pdf govern.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Purple/EX13_064.cs.
+# The [When Digivolving] candidates (EX13_064.cs:51-61) are
+# `HasText("Knightmon") && GetCostItself <= 8 && CanPlayOrUse(card,
+# activateClass, Root.Hand | Root.Trash)` (PlayEffects.cs:286-292), so the pick
+# carries `can_play_or_use_from_effect: true`: a usable Option (colour
+# requirement met, no use lock) or a Digimon/Tamer with a play cost, an empty
+# frame and no play prohibition, a trash Digimon/Tamer only while Gallantmon
+# (BT23-014)'s "their effects can't play Digimon or Tamers from the trash" is
+# not on this player (CR 4.3 1-3-2, 4-22, 7-1-1;
+# G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY). The leaf also refuses Digi-Eggs.
+# Known engine over-block (not card behaviour): the leaf's trash check
+# (`trash_play_locked`) and `Game::use_option_from` also refuse an Option from
+# the trash under that lock, but DCGO BT23_014.cs:48-49 locks only
+# `IsDigimon || IsTamer` and `CanPlayOrUse`'s Option arm ignores the zone, so a
+# trash [Knightmon]-text Option should stay offered. Pinned by the ignored test
+# `ex13_064_wd_still_offers_a_trash_option_under_the_digimon_tamer_trash_lock`;
+# the fix belongs in the engine lock (BT21-062 notes the same), not here.
 #
 # DSL notes:
 #   - [Rie Kishibe] route: a `kind: digivolve` alt-path from a Tamer named
@@ -23,7 +38,8 @@
 #     trash]` pick, routed by `binding_card_kind` (Option → use_option_bound,
 #     else play_union_bound_free). "[Knightmon] text" = `in_text_contains`
 #     (official Q&A: name, traits, effects, requirements). Digi-Eggs can be
-#     neither played nor used from these zones, so they are excluded.
+#     neither played nor used from these zones; `can_play_or_use_from_effect`
+#     excludes them.
 #   - [Your Turn] aura over own Digimon whose card has [Knightmon] in its text
 #     (LordKnightmon itself qualifies via its name).
 #   - [Your Turn][OPT] other Digimon/Tamer played → optional own [Knightmon]
@@ -70,8 +86,7 @@ effects:
             all_of:
               - play_or_use_cost_lte: 8
               - in_text_contains: Knightmon
-              - none_of:
-                  - kind: digi_egg
+              - can_play_or_use_from_effect: true
           bind_as: knight_card
           prompt: "Play or use 1 play or use cost 8 or lower [Knightmon] text card from your hand or trash without paying the cost"
       - if:

@@ -23,10 +23,16 @@ effects:
           of: you
           bind_as: sw_evo
           optional: true
+          # Only a card this Digimon can digivolve into at the reduced cost
+          # (DCGO EX12_002.cs:53-64 -> CardEffectCommons.cs:858-882
+          # `!CanNotEvolve && CanPlayCardTargetFrame(PayCost: true)` with the
+          # -2 installed first): requirement met and cost payable (CR 4.3
+          # 1-3-11-1).
           filter:
             all_of:
               - kind: digimon
               - trait_has: SW
+              - can_digivolve_onto_with_cost: { target: source, cost: { reduce: 2 } }
           prompt: "Digivolve into an [SW] trait Digimon card in your hand with the cost reduced by 2"
       - if:
           condition: { binding_present: sw_evo }

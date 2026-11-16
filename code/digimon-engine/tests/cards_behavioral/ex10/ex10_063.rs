@@ -841,3 +841,158 @@ fn ex10_063_clause3_security_clause_is_inherited_and_mandatory() {
         "[Security] play-self clause must be mandatory"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY)
+//
+// DCGO EX10_063.cs:38-42 IsClose = EqualsCardName("Close") &&
+// CanPlayAsNewPermanent(payCost: false); :44-48 IsSunarizamon =
+// EqualsCardName("Sunarizamon") && CanPlayAsNewPermanent(..., Root.Trash).
+// Only a card this effect can actually play is offered (CR 4.3 1-3-2: an
+// impossible action is not carried out; 7-1-1).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// What the [Start of Your Main Phase] clause offered: the hand-pick card ids
+/// and the number of concrete trash-pick candidates (empty when the pick did
+/// not install). Every optional pick is declined; every other prompt is
+/// accepted.
+#[derive(Default)]
+struct MainPhaseOffers {
+    hand: Vec<String>,
+    trash: usize,
+}
+
+fn drive_start_of_main_phase(
+    runner: &mut DebugRunner,
+    lock: digimon_engine::enums::ModifierType,
+) -> MainPhaseOffers {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    use digimon_engine::selection::SelectionKind;
+    runner.place_on_field(0, "EX10-063", None);
+    runner
+        .game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(lock, 0, Expiry::Permanent, None, 1));
+    runner.end_turn(); // P0 → P1
+    runner.end_turn(); // P1 → P0; StartOfYourMainPhase fires for P0.
+
+    let mut offers = MainPhaseOffers::default();
+    for _ in 0..20 {
+        let Some(view) = runner.pending_selection_view() else { break };
+        let concrete: Vec<u16> = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&id| id != PASS)
+            .collect();
+        let action = match view.kind {
+            SelectionKind::Hand => {
+                let hand: Vec<String> = runner.game.players[0]
+                    .hand
+                    .iter()
+                    .map(|c| c.card_id(&runner.game.card_data).to_string())
+                    .collect();
+                offers.hand = concrete
+                    .iter()
+                    .map(|&id| hand[(id - PLAY_HAND_START) as usize].clone())
+                    .collect();
+                PASS
+            }
+            SelectionKind::Trash => {
+                offers.trash = concrete.len();
+                PASS
+            }
+            _ => concrete.first().copied().unwrap_or(view.valid_action_ids[0]),
+        };
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("drive pending selection");
+    }
+    let _ = runner.auto_resolve();
+    offers
+}
+
+fn close_lock_runner(hand: &[&str], trash: &[&str]) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-063")
+        .expect("EX10-063 YAML parses and compiles")
+        .add_card(make_close_tamer("CLOSE-L"))
+        .add_card(make_sunarizamon("SUNARI-L"))
+        .add_card(make_filler("FILL-L"))
+        .deck(0, &["FILL-L", "FILL-L", "FILL-L", "FILL-L", "FILL-L"])
+        .deck(1, &["FILL-L", "FILL-L", "FILL-L", "FILL-L", "FILL-L"])
+        .memory(5)
+        .start();
+    for id in hand {
+        push_to_hand(&mut runner, 0, id);
+    }
+    for id in trash {
+        push_to_trash(&mut runner, 0, id);
+    }
+    runner
+}
+
+/// "You can't play Tamers by effects": the [Close] in hand can't be played, so
+/// it is not offered and stays in hand.
+#[test]
+fn ex10_063_close_not_offered_under_tamer_effect_play_prohibition() {
+    let mut runner = close_lock_runner(&["CLOSE-L"], &[]);
+    let offers = drive_start_of_main_phase(
+        &mut runner,
+        digimon_engine::enums::ModifierType::CannotPlayTamerByEffect,
+    );
+    assert!(offers.hand.is_empty(), "[Close] must not be offered: {:?}", offers.hand);
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "CLOSE-L"),
+        "[Close] stays in hand"
+    );
+}
+
+/// "You can't play Digimon by effects": the [Sunarizamon] in the trash can't be
+/// played, so the trash pick is not offered.
+#[test]
+fn ex10_063_sunarizamon_not_offered_under_digimon_effect_play_prohibition() {
+    let mut runner = close_lock_runner(&[], &["SUNARI-L"]);
+    let offers = drive_start_of_main_phase(
+        &mut runner,
+        digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect,
+    );
+    assert_eq!(offers.trash, 0, "[Sunarizamon] must not be offered");
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "SUNARI-L"),
+        "[Sunarizamon] stays in the trash"
+    );
+}
+
+/// "You can't play cards from the trash": the trash play would be refused, so
+/// [Sunarizamon] is not offered.
+#[test]
+fn ex10_063_sunarizamon_not_offered_when_trash_play_is_locked() {
+    let mut runner = close_lock_runner(&[], &["SUNARI-L"]);
+    let offers = drive_start_of_main_phase(
+        &mut runner,
+        digimon_engine::enums::ModifierType::CannotPlayFromTrash,
+    );
+    assert_eq!(offers.trash, 0, "[Sunarizamon] must not be offered");
+}
+
+/// Regression guard: with no lock that blocks them, both picks are offered.
+#[test]
+fn ex10_063_close_and_sunarizamon_offered_when_playable() {
+    let mut runner = close_lock_runner(&["CLOSE-L"], &["SUNARI-L"]);
+    // A lock that touches neither pick.
+    let offers = drive_start_of_main_phase(
+        &mut runner,
+        digimon_engine::enums::ModifierType::CannotUseOptionCards,
+    );
+    assert_eq!(offers.hand, vec!["CLOSE-L".to_string()]);
+    assert_eq!(offers.trash, 1);
+}

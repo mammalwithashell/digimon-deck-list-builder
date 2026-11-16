@@ -44,6 +44,8 @@ color: [green]
 cost: 6
 dp: 6000
 traits: [Avian, Iliad, TS, Vegetation]
+# Card image + official bundle: "Form: Ultimate  Attribute: Data".
+attribute: Data
 
 # Alt-digivolve: Lv.4 with the [TS] trait / cost 3.
 alt_paths:
@@ -95,6 +97,18 @@ effects:
   # free-play of a hand Digimon with DP<=4000 and one of the named traits or
   # [TS]. The outer accept/decline is the printed "you may play"; declining
   # costs nothing.
+  #
+  # Candidates: "with [Vegetation], [Plant], [Avian] or [Bird] in any of its
+  # traits" is a substring match (`trait_contains`, DCGO BT25_055.cs:139-142
+  # `ContainsTraits`); "or the [TS] trait" is exact (`HasTSTraits`, :143).
+  # DCGO's filter (:134-144) has no `CanPlayAsNewPermanent`, so it offers a
+  # card the play then refuses (no empty frame / a "can't play Digimon by
+  # effects" lock). CR 4.3 1-3-2 + 7-1-1: a card that can't be played is not
+  # a "play" choice, so we filter by playability
+  # (`can_play_from_effect_without_cost`) -- a narrowing past DCGO -- and gate
+  # the activation on such a card (DCGO CanActivateCondition :128-132 uses
+  # the same pick filter). The outcome equals DCGO's "select nothing ->
+  # RemoveUse" path.
   - when: on_suspend
     once_per_turn: true
     optional: true
@@ -102,6 +116,22 @@ effects:
       all_turns: true
     trigger_if:
       event_target_is_source: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - kind: digimon
+            - dp_lte: 4000
+            - any_of:
+                - trait_contains: Vegetation
+                - trait_contains: Plant
+                - trait_contains: Avian
+                - trait_contains: Bird
+                - trait_has: TS
+            - can_play_from_effect_without_cost: true
+        n: 1
     summary: "[All Turns][OPT] When this suspends, you may play 1 DP<=4000 Vegetation/Plant/Avian/Bird/TS Digimon from hand free"
     process:
       - select_hand:
@@ -113,11 +143,12 @@ effects:
               - kind: digimon
               - dp_lte: 4000
               - any_of:
-                  - trait_has: Vegetation
-                  - trait_has: Plant
-                  - trait_has: Avian
-                  - trait_has: Bird
+                  - trait_contains: Vegetation
+                  - trait_contains: Plant
+                  - trait_contains: Avian
+                  - trait_contains: Bird
                   - trait_has: TS
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 DP 4000 or lower [Vegetation]/[Plant]/[Avian]/[Bird]/[TS] Digimon from hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: play_card }
 

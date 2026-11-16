@@ -619,3 +619,40 @@ fn bt25_077_cost_reduced_by_opponent_levels_alone() {
         "opponent's 12 levels count toward the total"
     );
 }
+
+// ─── [OP][WD] pick offers only a [TS] Digimon the play can take ─────────────
+//
+// DCGO BT25_077.cs:61-69 `CanPlayTSDigimonCondition`: `IsDigimon &&
+// HasPlayCost && HasTSTraits && HasDP && CardDP <= 6000 &&
+// CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)` -- an
+// empty frame and no play prohibition -- used by the pick (:79) and by
+// `AdditionalActivateCondition` (:71-74). CR 4.3 1-3-2.
+
+fn op_offers(setup: impl FnOnce(&mut DebugRunner)) -> bool {
+    let mut runner = base().hand(0, &["TS-LOW"]).memory(5).start();
+    let bac = runner.place_on_field(0, CARD_ID, Some(0));
+    setup(&mut runner);
+    runner.fire_on_play(0, bac.index as usize);
+    runner.pending_selection().is_some()
+}
+
+#[test]
+fn bt25_077_on_play_not_offered_when_battle_area_full() {
+    assert!(
+        !op_offers(|r| r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8),
+        "no empty frame: TS-LOW can't be played, so nothing is offered"
+    );
+    assert!(op_offers(|_| {}), "control: with a free frame TS-LOW is offered");
+}
+
+#[test]
+fn bt25_077_on_play_not_offered_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    assert!(!op_offers(|r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    }));
+}

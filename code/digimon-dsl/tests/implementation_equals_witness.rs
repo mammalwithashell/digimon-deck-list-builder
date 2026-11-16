@@ -117,7 +117,7 @@ fn foreign_compiled_owner_binding_and_path_refuse() {
     }
 }
 #[test]
-fn actual_eight_pairs_keep_distinct_occurrences() {
+fn actual_six_pairs_keep_distinct_occurrences() {
     let cases: [(&[u8], &str, Vec<IfLocation>); 3] = [
         (
             include_bytes!("../../digimon-engine/cards/bt25/BT25-078.yaml"),
@@ -151,9 +151,12 @@ fn actual_eight_pairs_keep_distinct_occurrences() {
         (
             include_bytes!("../../digimon-engine/cards/p/P-156.yaml"),
             "P-156",
+            // The [Main]'s two `equals: [zone_choice, N]` ifs are gone: the
+            // 2026-11-13 select-hand audit replaced the always-offered
+            // "From hand / From trash" choice with one optional
+            // `select_union_zone` pick (DCGO P_156.cs:124-150). Only the
+            // [Security] Play/Decline branch still carries an equals-if.
             vec![
-                IfLocation { step: 2, ..loc() },
-                IfLocation { step: 3, ..loc() },
                 IfLocation {
                     effect: 1,
                     ancestors: vec![(0, Branch::Then)],
@@ -174,7 +177,7 @@ fn actual_eight_pairs_keep_distinct_occurrences() {
             count += 1;
         }
     }
-    assert_eq!(count, 8);
+    assert_eq!(count, 6);
     if let Ok(path) = std::env::var("EQUALS_WITNESS_OUTPUT") {
         use std::io::Write;
         let mut f = std::fs::OpenOptions::new()

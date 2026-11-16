@@ -649,3 +649,146 @@ fn st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate
 
 #[path="../../support/owned_card_choice.rs"]
 mod physical_fixture;
+
+// ─── [Security] candidate legality (select-hand audit 2026-11-13) ────────────
+// DCGO ST19_08.cs:38-43 offers `ContainsTraits("LIBERATOR") && !IsDigiEgg &&
+// HasPlayCost && GetCostItself <= 4`. `HasPlayCost` (CEntity_Base.cs:340) is
+// false for any card whose kinds contain Option, so DCGO already refuses
+// Digi-Eggs, Options and DUALs — but it does NOT call `CanPlayAsNewPermanent`,
+// so it offers a card the following `PlayPermanentCards` then refuses (play
+// lock, no empty frame). CR 4.3 1-3-11-1: a card that can't be played can't be
+// declared for play; 7-1-1: playing places a new card WITH A PLAY COST (no
+// Digi-Egg — Puyoyomon (BT19-002) — and no Option — Black Sabbath (BT20-096) —
+// which is used); 4-6-2: a DUAL is digivolved or used, never played. The rules
+// govern where DCGO is looser: `can_play_from_effect_without_cost` covers all of
+// these. Regression guards.
+
+fn liberator_egg(id: &str) -> CardData {
+    let mut card = make_test_card(id, "LiberatorEgg");
+    card.card_kind = CardKind::DigiEgg;
+    card.level = Some(2);
+    card.dp = None;
+    card.play_cost = 0;
+    card.colors = vec![CardColor::Yellow];
+    card.traits = vec!["LIBERATOR".to_string()];
+    card
+}
+
+fn liberator_option(id: &str) -> CardData {
+    let mut card = make_test_card(id, "LiberatorOption");
+    card.card_kind = CardKind::Option;
+    card.level = None;
+    card.dp = None;
+    card.play_cost = 2;
+    card.colors = vec![CardColor::Yellow];
+    card.traits = vec!["LIBERATOR".to_string()];
+    card
+}
+
+fn liberator_dual(id: &str) -> CardData {
+    let mut card = liberator_cost4(id);
+    card.card_kind = CardKind::Dual;
+    card
+}
+
+/// Player 1 holds ST19-08 as its only security card, `hand` in hand and `trash`
+/// in trash; `setup` runs before player 0's attacker checks it. Returns the
+/// runner and the offered union-zone commits as "Hand:ID" / "Trash:ID".
+fn security_offered(
+    hand: &[&str],
+    trash: &[&str],
+    setup: impl FnOnce(&mut DebugRunner),
+) -> (DebugRunner, Vec<String>) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST19-08")
+        .expect("ST19-08 YAML loads")
+        .add_card(strong_attacker("ATK"))
+        .add_card(liberator_cost4("LIB_HAND"))
+        .add_card(liberator_cost4("LIB_TRASH"))
+        .add_card(liberator_egg("LIB_EGG"))
+        .add_card(liberator_option("LIB_OPT"))
+        .add_card(liberator_dual("LIB_DUAL"))
+        .hand(1, hand)
+        .deck(0, &[])
+        .deck(1, &[])
+        .security(1, &["ST19-08"])
+        .memory(5)
+        .start();
+    for id in trash {
+        push_to_trash(&mut runner, 1, id);
+    }
+    let atk = runner.place_on_field(0, "ATK", Some(0));
+    setup(&mut runner);
+    let _ = runner.attack_player(atk, 1, false);
+    let mut offered: Vec<String> = if runner.game.pending_selection.is_some() {
+        physical_fixture::commits(&runner.game)
+            .into_iter()
+            .map(|row| {
+                let zone = match row.zone {
+                    Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand) => "Hand",
+                    Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash) => "Trash",
+                    _ => "Other",
+                };
+                format!("{zone}:{}", row.card_id.unwrap_or_default())
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+    offered.sort();
+    (runner, offered)
+}
+
+/// A [LIBERATOR] Digi-Egg (play cost printed as none) is hatched, never played:
+/// not offered from hand or trash.
+#[test]
+fn st19_08_security_does_not_offer_liberator_digi_egg() {
+    let (_r, offered) = security_offered(&["LIB_EGG", "LIB_HAND"], &["LIB_EGG"], |_| {});
+    assert_eq!(offered, vec!["Hand:LIB_HAND".to_string()]);
+}
+
+/// A cost-2 [LIBERATOR] Option is used, never played: not offered.
+#[test]
+fn st19_08_security_does_not_offer_liberator_option() {
+    let (_r, offered) = security_offered(&["LIB_OPT", "LIB_HAND"], &["LIB_OPT"], |_| {});
+    assert_eq!(offered, vec!["Hand:LIB_HAND".to_string()]);
+}
+
+/// A [LIBERATOR] DUAL card is digivolved or used, never played: not offered.
+#[test]
+fn st19_08_security_does_not_offer_liberator_dual() {
+    let (_r, offered) = security_offered(&["LIB_DUAL", "LIB_HAND"], &["LIB_DUAL"], |_| {});
+    assert_eq!(offered, vec!["Hand:LIB_HAND".to_string()]);
+}
+
+/// "You can't play Digimon by effects" (DCGO offers these and the play then
+/// fails; the rules refuse the declaration): nothing is offered.
+#[test]
+fn st19_08_security_offers_nothing_when_effect_digimon_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, offered) = security_offered(&["LIB_HAND"], &["LIB_TRASH"], |r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 0),
+        );
+    });
+    assert!(offered.is_empty(), "nothing playable is offered: {offered:?}");
+    let _ = r.auto_resolve();
+    assert!(!in_battle_area(&r, 1, "LIB_HAND") && !in_battle_area(&r, 1, "LIB_TRASH"));
+}
+
+/// "You can't play cards from the trash" (BT23-014 `CannotPlayFromTrash`): the
+/// trash candidate is not offered; the hand one still is.
+#[test]
+fn st19_08_security_trash_candidate_not_offered_under_cannot_play_from_trash() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (_r, offered) = security_offered(&["LIB_HAND"], &["LIB_TRASH"], |r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 0),
+        );
+    });
+    assert_eq!(offered, vec!["Hand:LIB_HAND".to_string()]);
+}

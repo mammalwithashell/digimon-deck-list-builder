@@ -927,3 +927,108 @@ fn ad1_016_all_turns_observer_opt_blocks_second_marcus_play_same_turn() {
     );
     assert_eq!(opp_digimon_count(&runner), 1, "no second delete");
 }
+
+// ─── Section 4: WD/WA Marcus Damon pick legality ─────────────────────────────
+//
+// DCGO AD1_016.cs:50 `IsMarcusDamonCard = EqualsCardName("Marcus Damon")` is
+// the whole candidate filter: :63-64 gate the zone menu on a NAME match only,
+// and `CardEffectCommons.PlayByEffect` (PlayEffects.cs:9-57) hands that
+// condition to SelectHandEffect / SelectCardEffect unchanged — so DCGO offers
+// a Marcus Damon it can't then place (full battle area, Tamer effect-play
+// lock, trash-play lock), and the play silently does nothing. DCGO is looser
+// than the rules here: CR 4.3 1-3-11-1 (a card can be declared for play only
+// if it is able to be played) and 1-3-2 (an impossible action is not carried
+// out). We follow the rules — the same check DCGO itself applies on the
+// sibling cards (e.g. AD1_002.cs:165 `CanPlayAsNewPermanent(payCost: false)`).
+
+/// Fire [When Digivolving] and return the union-pick candidates as sorted
+/// "zone:card_id" strings (empty when no union pick installs).
+fn marcus_union_offered(runner: &mut DebugRunner, perm: PermanentHandle) -> Vec<String> {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(perm),
+    );
+    runner.game.drain_effect_queue();
+    let Some(pending) = runner.pending_selection() else {
+        return Vec::new();
+    };
+    if !matches!(pending.kind, SelectionKind::UnionZone { .. }) {
+        return Vec::new();
+    }
+    let owner = pending.card_choice.as_ref().expect("union pick owns a card-choice page");
+    let mut out: Vec<String> = owner
+        .view(&runner.game, pending.selecting_player)
+        .rows
+        .into_iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .map(|row| format!("{:?}:{}", row.zone.expect("zone"), row.card_id.unwrap_or_default()))
+        .collect();
+    out.sort();
+    out
+}
+
+/// ShineGreymon on the field, a Marcus Damon in hand (MD-HAND) and in trash
+/// (MD-TRASH); no opponent Digimon, so the trailing DP debuff installs nothing.
+fn shinegreymon_with_marcus() -> (DebugRunner, PermanentHandle) {
+    let mut runner = shinegreymon_runner()
+        .add_card(make_marcus_damon("MD-HAND"))
+        .add_card(make_marcus_damon("MD-TRASH"))
+        .memory(20)
+        .start();
+    let perm = runner.place_on_field(0, "AD1-016", Some(0));
+    push_to_hand(&mut runner, 0, "MD-HAND");
+    push_to_trash(&mut runner, 0, "MD-TRASH");
+    (runner, perm)
+}
+
+fn add_player_lock(runner: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Regression guard: both copies are offered with a free slot and no lock.
+#[test]
+fn ad1_016_when_digivolving_offers_marcus_from_hand_and_trash() {
+    let (mut runner, perm) = shinegreymon_with_marcus();
+    assert_eq!(
+        marcus_union_offered(&mut runner, perm),
+        vec!["Hand:MD-HAND".to_string(), "Trash:MD-TRASH".to_string()]
+    );
+}
+
+/// ShineGreymon fills the only slot: no Marcus Damon can be placed.
+#[test]
+fn ad1_016_when_digivolving_marcus_not_offered_when_battle_area_full() {
+    let (mut runner, perm) = shinegreymon_with_marcus();
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    let offered = marcus_union_offered(&mut runner, perm);
+    assert!(offered.is_empty(), "no free slot → nothing can be chosen (got {offered:?})");
+    let _ = runner.auto_resolve();
+    assert!(!has_marcus_on_field(&runner, 0));
+}
+
+/// "You can't play Tamers by effects": neither copy is offered.
+#[test]
+fn ad1_016_when_digivolving_marcus_not_offered_under_tamer_effect_play_prohibition() {
+    let (mut runner, perm) = shinegreymon_with_marcus();
+    add_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    let offered = marcus_union_offered(&mut runner, perm);
+    assert!(offered.is_empty(), "Tamer effect plays are locked (got {offered:?})");
+}
+
+/// "You can't play cards from the trash": the trash copy is dropped, the hand
+/// copy is still offered.
+#[test]
+fn ad1_016_when_digivolving_trash_marcus_not_offered_under_cannot_play_from_trash() {
+    let (mut runner, perm) = shinegreymon_with_marcus();
+    add_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    assert_eq!(
+        marcus_union_offered(&mut runner, perm),
+        vec!["Hand:MD-HAND".to_string()]
+    );
+}

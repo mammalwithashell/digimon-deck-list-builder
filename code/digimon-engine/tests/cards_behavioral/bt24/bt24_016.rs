@@ -1103,3 +1103,112 @@ fn bt24_016_inherited_does_not_fire_when_not_in_stack() {
         "hand unchanged — inherited clause did not fire"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// §4 Clause 3 candidates are playable cards only
+//
+// DCGO BT24_016.cs:318-334 `CanSelectCardCondition` = `IsDigimon && (Reptile ||
+// Dragonkin) && CanPlayAsNewPermanent(source, payCost: false, activateClass) &&
+// CardDP <= 5000`, and `CanUseCondition` (:285-298) needs such a card in hand
+// (`HasMatchConditionOwnersHand`), so with none the effect is not offered at
+// all. `CanPlayAsNewPermanent` (GameContextDeterminarion.cs:419-432) needs an
+// empty frame and no "can't play" lock (`CanEnterField`). CR 4.3 1-3-11-1: a
+// card can't be declared for a play it can't undergo. YAML:
+// `can_play_from_effect_without_cost: true` on the hand pick.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// "You can't play Digimon by effects": the qualifying Reptile is not a
+/// candidate, so the optional free play is not offered.
+#[test]
+fn bt24_016_inherited_not_offered_under_digimon_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, carrier) = clause3_runner(make_trait_digimon("REPTILE-3K", "Reptile", 3000));
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let hand_before = runner.hand_size(0);
+
+    runner.attack_player(carrier, 1, false);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no playable candidate -> the free play is not offered (DCGO CanUseCondition)"
+    );
+    assert_eq!(runner.hand_size(0), hand_before);
+}
+
+/// A full battle area: the qualifying Reptile is not a candidate.
+#[test]
+fn bt24_016_inherited_not_offered_when_battle_area_full() {
+    let (mut runner, carrier) = clause3_runner(make_trait_digimon("REPTILE-3K", "Reptile", 3000));
+    runner.game.rules.field_slots = runner.battle_area_size(0) as u8;
+    let hand_before = runner.hand_size(0);
+
+    runner.attack_player(carrier, 1, false);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no free battle-area slot -> the free play is not offered"
+    );
+    assert_eq!(runner.hand_size(0), hand_before);
+}
+
+// ─── Clause 1 names cards, not name parts ─────────────────────────────────────
+//
+// "[Hand] [Main] If you have [Owen Dreadnought], by placing 1 [Dimetromon] from
+// your trash as any of your [Elizamon]'s bottom digivolution card, ..." —
+// bracketed names with no "in its name" reference the card name only (CR 4.3
+// 2-3-1-2; 2-3-1-3 is the "in its name" form). DCGO BT24_016.cs:43-52 uses
+// `EqualsCardName("Elizamon")` / `EqualsCardName("Dimetromon")`. No printed card
+// today merely CONTAINS either name, so the fixtures below use made-up names
+// that do, to pin the rule rather than the current card pool.
+
+fn clause1_runner_with(elizamon_name: &str, dimetromon_name: &str) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT24-016")
+        .expect("BT24-016 in embedded DSL pack")
+        .add_card(make_named_tamer("OWEN", "Owen Dreadnought"))
+        .add_card(make_named_digimon("ELIZAMON", elizamon_name))
+        .add_card(make_named_digimon("DIMETROMON", dimetromon_name))
+        .add_card(make_filler("FILL"))
+        .hand(0, &["BT24-016"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "OWEN", Some(0));
+    runner.place_on_field(0, "ELIZAMON", Some(1));
+    push_to_trash(&mut runner, "DIMETROMON");
+    runner
+}
+
+/// Control: exact names make the hand-main available.
+#[test]
+fn bt24_016_hand_main_offered_for_exact_elizamon_and_dimetromon() {
+    let mut runner = clause1_runner_with("Elizamon", "Dimetromon");
+    assert!(runner.game.activate_hand_main(0, 0));
+}
+
+/// A Digimon whose name only contains "Elizamon" is no [Elizamon].
+#[test]
+fn bt24_016_hand_main_not_offered_for_a_digimon_only_containing_elizamon() {
+    let mut runner = clause1_runner_with("Elizamon (X Antibody)", "Dimetromon");
+    assert!(
+        !runner.game.activate_hand_main(0, 0),
+        "no Digimon named [Elizamon]: the [Hand][Main] must not be offered"
+    );
+    assert!(runner.pending_selection_view().is_none());
+}
+
+/// A trash card whose name only contains "Dimetromon" can't pay the placement.
+#[test]
+fn bt24_016_hand_main_not_offered_for_a_trash_card_only_containing_dimetromon() {
+    let mut runner = clause1_runner_with("Elizamon", "Dimetromon (X Antibody)");
+    assert!(
+        !runner.game.activate_hand_main(0, 0),
+        "no [Dimetromon] in the trash: the [Hand][Main] must not be offered (CR 4.3 15-7-4)"
+    );
+    assert!(runner.pending_selection_view().is_none());
+}

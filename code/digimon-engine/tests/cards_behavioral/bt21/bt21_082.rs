@@ -46,7 +46,16 @@ effects: []
 "#;
 
 fn setup() -> DebugRunner {
-    let mut r = DebugRunner::builder()
+    setup_with(Vec::new())
+}
+
+/// `setup()` plus extra card fixtures.
+fn setup_with(extra: Vec<CardData>) -> DebugRunner {
+    let mut b = DebugRunner::builder();
+    for c in extra {
+        b = b.add_card(c);
+    }
+    let mut r = b
         .add_card(filler("FILLER"))
         .add_card(digimon("BASE3", "Base", CardColor::Red, 3, 3, &[], None))
         .add_card(digimon(
@@ -485,4 +494,128 @@ fn pick_own_field(r: &mut DebugRunner, selector: u8, h: PermanentHandle) {
         v.valid_action_ids
     );
     r.execute_action(selector, action).unwrap();
+}
+
+// ─── Candidate legality ─────────────────────────────────────────────────────
+//
+// [Start of Your Main Phase]: DCGO BT21_082.cs:107-116 hands the hand pick to
+// `DigivolveIntoHandOrTrashCard(payCost: true, reduceCost: costReduction())`,
+// whose `CanSelectCardCondition` (CardEffectCommons.cs:859-883) requires
+// `CanPlayCardTargetFrame(frame, PayCost: true, ...)` with the reduction
+// registered first (920-930): a route AND a payable reduced cost. The
+// permanent pick (BT21_082.cs:28-48) calls `CanPlayCardTargetFrame(frame,
+// true, activateClass)` BEFORE the reducer exists, i.e. at the unreduced cost;
+// that is stricter than the rules (CR 4.3 1-3-11-1 asks only that the cost
+// actually charged can be paid), so the permanent gate prices the reduced
+// cost too and both picks agree.
+//
+// Inherited: DCGO BT21_082.cs:157-160 `CanPlayCondition`: `IsTamer && red &&
+// CanPlayAsNewPermanent(cardSource, false, activateClass)` -- a free
+// battle-area frame and no Tamer effect-play prohibition. CR 4.3 1-3-11-1 /
+// 1-3-2.
+
+/// Digivolution cost 25 from a red Lv.3 (24 after Takuya's -1): never payable
+/// from 10 memory (10 - 24 < -10).
+fn hero_pricey() -> CardData {
+    digimon("HERO-PRICEY", "Hero Pricey", CardColor::Red, 4, 5, &["Hero"], Some(25))
+}
+
+/// Digivolution cost 21 (20 after -1): payable from 10 memory ONLY with the
+/// reduction (10 - 20 = -10, the floor).
+fn hero_edge() -> CardData {
+    digimon("HERO-EDGE", "Hero Edge", CardColor::Red, 4, 5, &["Hero"], Some(21))
+}
+
+fn field_pickable(r: &DebugRunner, h: PermanentHandle) -> bool {
+    non_pass(r).contains(&space::encode_attack(0, h.index as u16))
+}
+
+/// Only an unpayable [Hero] in hand: no Digimon/Tamer has a payable
+/// digivolution, so the optional base pick never installs.
+#[test]
+fn bt21_082_somp_no_base_pick_when_only_unaffordable_hero_in_hand() {
+    let mut r = setup_with(vec![hero_pricey()]);
+    let t = r.place_on_field(0, CARD_ID, Some(0));
+    let base = r.place_on_field(0, "BASE3", Some(0));
+    push_hand(&mut r, 0, "HERO-PRICEY");
+    fire(&mut r, EffectTiming::StartOfYourMainPhase, t);
+    assert!(
+        !field_pickable(&r, base),
+        "BASE3 has no payable digivolution: {:?}",
+        non_pass(&r)
+    );
+    let _ = r.auto_resolve();
+    assert_eq!(top_id(&r, base), "BASE3");
+    assert!(hand_ids(&r, 0).contains(&"HERO-PRICEY".to_string()));
+}
+
+/// With a payable [Hero] beside it, the base is offered but the unpayable
+/// [Hero] is not a hand candidate.
+#[test]
+fn bt21_082_somp_unaffordable_hero_not_offered_beside_payable_one() {
+    let mut r = setup_with(vec![hero_pricey()]);
+    let t = r.place_on_field(0, CARD_ID, Some(0));
+    let base = r.place_on_field(0, "BASE3", Some(0));
+    push_hand(&mut r, 0, "HERO-PRICEY");
+    push_hand(&mut r, 0, "HERO4");
+    fire(&mut r, EffectTiming::StartOfYourMainPhase, t);
+    pick_own_field(&mut r, 0, base);
+    assert!(hand_pickable(&r, 0, "HERO4"));
+    assert!(!hand_pickable(&r, 0, "HERO-PRICEY"), "cost 24 can't be paid from 10 memory");
+}
+
+/// The reduction is priced in both picks: a [Hero] payable only after
+/// Takuya's -1 is offered and digivolves for 20. Regression guard.
+#[test]
+fn bt21_082_somp_hero_payable_only_after_reduction_is_offered() {
+    let mut r = setup_with(vec![hero_edge()]);
+    let t = r.place_on_field(0, CARD_ID, Some(0));
+    let base = r.place_on_field(0, "BASE3", Some(0));
+    push_hand(&mut r, 0, "HERO-EDGE");
+    fire(&mut r, EffectTiming::StartOfYourMainPhase, t);
+    pick_own_field(&mut r, 0, base);
+    pick_hand(&mut r, 0, "HERO-EDGE");
+    let _ = r.auto_resolve();
+    assert_eq!(top_id(&r, base), "HERO-EDGE");
+    // Paying 20 takes p0 to -10, which passes the turn; read memory from p0's
+    // side (the gauge is signed toward the turn player).
+    let p0_memory = if r.game.turn_player() == 0 { r.memory() } else { -r.memory() };
+    assert_eq!(p0_memory, 10 - 20, "cost 21 - 1");
+}
+
+/// Attack with the Takuya carrier and return whether RED-T2 is a legal pick of
+/// the inherited hand pick (false when no hand pick installs).
+fn inherited_red_tamer_offered(r: &mut DebugRunner, c: PermanentHandle) -> bool {
+    r.attack_player(c, 1, false);
+    r.pending_selection_view().is_some() && hand_pickable(r, 0, "RED-T2")
+}
+
+/// "You can't play Tamers by effects": the red Tamer is not offered and stays
+/// in hand.
+#[test]
+fn bt21_082_inherited_excludes_red_tamer_under_tamer_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup();
+    let c = carrier(&mut r);
+    push_hand(&mut r, 0, "RED-T2");
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    assert!(!inherited_red_tamer_offered(&mut r, c), "RED-T2 can't be played by an effect");
+    let _ = r.auto_resolve();
+    assert!(hand_ids(&r, 0).contains(&"RED-T2".to_string()));
+}
+
+/// A full battle area: the red Tamer is not offered.
+#[test]
+fn bt21_082_inherited_excludes_red_tamer_when_battle_area_full() {
+    let mut r = setup();
+    let c = carrier(&mut r);
+    push_hand(&mut r, 0, "RED-T2");
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    assert!(!inherited_red_tamer_offered(&mut r, c), "no free slot");
+    let _ = r.auto_resolve();
+    assert!(hand_ids(&r, 0).contains(&"RED-T2".to_string()));
 }

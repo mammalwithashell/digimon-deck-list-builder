@@ -68,18 +68,13 @@ fn ex11_024_on_play_may_play_level4_or_lower_puppet_then_tokens_per_opponent_dig
 
     runner.play(0, 0).expect("Cendrillmon plays from hand");
 
-    let puppet_choice = runner
-        .pending_selection_view()
-        .expect("optional Puppet play choice");
-    assert_eq!(puppet_choice.kind, SelectionKind::EffectChoice);
-    runner
-        .execute_action(0, puppet_choice.valid_action_ids[0])
-        .expect("choose to play a Puppet");
-
+    // DCGO EX11_024.cs:52-72: the "you may" is the hand pick itself (PASS
+    // declines); no separate "play a Puppet?" choice precedes it.
     let hand_pick = runner
         .pending_selection_view()
         .expect("level 4 or lower Puppet hand prompt");
     assert_eq!(hand_pick.kind, SelectionKind::Hand);
+    assert!(hand_pick.is_optional, "the Puppet play is optional (PASS declines)");
     assert_eq!(
         hand_pick.valid_action_ids,
         vec![0],
@@ -135,12 +130,12 @@ fn ex11_024_declining_hand_play_still_offers_token_generation() {
 
     runner.play(0, 0).expect("Cendrillmon plays from hand");
 
-    let puppet_choice = runner
+    let hand_pick = runner
         .pending_selection_view()
-        .expect("optional Puppet play choice");
-    assert_eq!(puppet_choice.kind, SelectionKind::EffectChoice);
+        .expect("optional Puppet hand pick");
+    assert_eq!(hand_pick.kind, SelectionKind::Hand);
     runner
-        .execute_action(0, puppet_choice.valid_action_ids[1])
+        .execute_action(0, digimon_engine::action::space::PASS)
         .expect("decline hand play");
 
     let token_choice = runner
@@ -189,14 +184,8 @@ fn ex11_024_when_digivolving_reduces_one_opponent_digimon_by_3000_per_own_digimo
         .execute_action(0, trigger_order.valid_action_ids[0])
         .expect("resolve hand/token trigger first");
 
-    let puppet_choice = runner
-        .pending_selection_view()
-        .expect("optional Puppet play choice");
-    assert_eq!(puppet_choice.kind, SelectionKind::EffectChoice);
-    runner
-        .execute_action(0, puppet_choice.valid_action_ids[1])
-        .expect("decline hand play");
-
+    // Empty hand: no Puppet can be played, so no hand pick opens (DCGO
+    // EX11_024.cs:52) and the clause goes straight to the token choice.
     let token_choice = runner
         .pending_selection_view()
         .expect("token choice resolves before DP clause");
@@ -253,5 +242,153 @@ fn ex11_024_when_attacking_reduces_one_opponent_digimon_by_3000_per_own_digimon(
         runner.effective_dp(target),
         Some(4000),
         "two own Digimon produce -6000 DP for the turn"
+    );
+}
+
+// ─── Candidate legality (CR 4.3 4-6-1..4-6-3 / 7-1-1 / 1-3-2) ────────────────
+// DCGO EX11_024.cs:42-48 offers IsDigimon && EqualsTraits("Puppet") && Level<=4
+// and opens the hand pick (canNoSelect: true) only when such a card is in hand
+// (EX11_024.cs:52); there is no separate "play a Puppet?" yes/no. DCGO's
+// `IsDigimon` is `CardKinds.Contains(Digimon)` (CardSource.cs:3519), true for a
+// DUAL card, so DCGO offers a [Puppet] DUAL that `PlayPermanentCards` then
+// refuses (`CanPlayAsNewPermanent` requires `!IsOption`). Under the rules a DUAL
+// card is digivolved or used as an Option (CR 4.3 4-6-1, 4-6-2), is a Digimon
+// only once on the field (4-6-3), and its play cost prints "Can't play to the
+// field" (7-1-1), so the play would not be carried out (1-3-2). The pick is
+// optional, so not offering it changes no outcome. Same for a Puppet with no free
+// battle-area slot (engine `rules.field_slots`, not a CR limit, CR 4.3 3-4-8-2).
+
+/// Play Cendrillmon (EX11-024) from hand index 0 with `others` in hand, after
+/// `setup`. Returns the card ids the Puppet hand pick offers (empty when none
+/// installs).
+fn puppet_pick_offers(others: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut hand = vec!["EX11-024"];
+    hand.extend_from_slice(others);
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-024")
+        .expect("EX11-024 YAML loads")
+        .dsl_card("EX13-065")
+        .expect("EX13-065 YAML loads")
+        .dsl_card("EX13-066")
+        .expect("EX13-066 YAML loads")
+        .add_card(make_digimon("PUPPET-L4", 4, 4000, &["Puppet"]))
+        .add_card(make_digimon("OPP-A", 3, 2000, &[]))
+        .hand(0, &hand)
+        .memory(10)
+        .start();
+    runner.place_on_field(1, "OPP-A", Some(0));
+    setup(&mut runner);
+    runner.play(0, 0).expect("Cendrillmon plays from hand");
+    let Some(view) = runner
+        .pending_selection_view()
+        .filter(|v| v.kind == SelectionKind::Hand)
+    else {
+        return Vec::new();
+    };
+    let ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != digimon_engine::action::space::PASS)
+        .map(|a| {
+            ids[(a - digimon_engine::action::space::PLAY_HAND_START) as usize].clone()
+        })
+        .collect();
+    offered.sort();
+    offered
+}
+
+/// Sistermon Blanc (Awakened) (EX13-065, Lv.3) and Sistermon Noir (Awakened)
+/// (EX13-066, Lv.4) are level 4 or lower [Puppet] DUAL cards: they cannot be
+/// played, so only the playable Puppet is offered.
+#[test]
+fn ex11_024_puppet_pick_excludes_dual_cards() {
+    assert_eq!(
+        puppet_pick_offers(&["EX13-065", "EX13-066", "PUPPET-L4"], |_| {}),
+        vec!["PUPPET-L4".to_string()]
+    );
+}
+
+/// Cendrillmon itself fills a 1-slot battle area: no Puppet is offered. The
+/// first decision must be the Familiar Token choice (not a Puppet hand pick and
+/// not a "play a Puppet?" yes/no), and the playable-by-text Puppet stays in hand.
+#[test]
+fn ex11_024_puppet_pick_offers_nothing_when_battle_area_full() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-024")
+        .expect("EX11-024 YAML loads")
+        .add_card(make_digimon("PUPPET-L4", 4, 4000, &["Puppet"]))
+        .add_card(make_digimon("OPP-A", 3, 2000, &[]))
+        .hand(0, &["EX11-024", "PUPPET-L4"])
+        .memory(10)
+        .start();
+    runner.place_on_field(1, "OPP-A", Some(0));
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8 + 1;
+    runner.play(0, 0).expect("Cendrillmon plays from hand");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("the Familiar Token choice is offered");
+    assert_eq!(
+        view.kind,
+        SelectionKind::EffectChoice,
+        "no Puppet hand pick opens into a full battle area"
+    );
+    assert!(
+        view.prompt.contains("Familiar"),
+        "the first decision is the Familiar Token choice, not a Puppet play: {:?}",
+        view.prompt
+    );
+    runner
+        .execute_action(0, view.valid_action_ids[1])
+        .expect("decline token generation");
+    runner
+        .auto_resolve_declining_end_of_turn_attacks()
+        .expect("finish On Play effect");
+
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(hand_ids, vec!["PUPPET-L4".to_string()], "the Puppet stays in hand");
+    assert!(
+        !runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "PUPPET-L4"),
+        "the Puppet is not played"
+    );
+}
+
+/// With only an unplayable Puppet (a DUAL) in hand there is nothing to play, so
+/// no "play a Puppet" decision is offered at all (DCGO EX11_024.cs:52 gates the
+/// pick on a candidate); the clause goes straight to the Familiar Token choice.
+#[test]
+fn ex11_024_no_playable_puppet_offers_no_puppet_decision() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-024")
+        .expect("EX11-024 YAML loads")
+        .dsl_card("EX13-065")
+        .expect("EX13-065 YAML loads")
+        .add_card(make_digimon("OPP-A", 3, 2000, &[]))
+        .hand(0, &["EX11-024", "EX13-065"])
+        .memory(10)
+        .start();
+    runner.place_on_field(1, "OPP-A", Some(0));
+    runner.play(0, 0).expect("Cendrillmon plays from hand");
+    let view = runner
+        .pending_selection_view()
+        .expect("the Familiar Token choice is offered");
+    assert_eq!(view.kind, SelectionKind::EffectChoice);
+    assert!(
+        view.prompt.contains("Familiar"),
+        "the first decision is the Familiar Token choice, not a Puppet play: {:?}",
+        view.prompt
     );
 }

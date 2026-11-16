@@ -439,3 +439,198 @@ fn p_128_security_plays_itself_without_paying_cost() {
         "Cody should leave security when played by the Security effect"
     );
 }
+
+// ─── Candidate legality ──────────────────────────────────────────────────────
+// DCGO P_128.cs:74-85 `CanSelectCardCondition` offers an [Armadillomon] only
+// when `CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)` (an
+// empty battle-area frame and no play prohibition). P_128.cs:87-104
+// `CanSelectPermanentCondition` offers a base Digimon only when some
+// [Ankylomon] in hand `CanPlayCardTargetFrame` onto it. CR 4.3 1-3-11-1: a
+// player can declare playing or digivolving a card only if that card can be
+// played / digivolved (7-1-1), so offering one that can't is an illegal
+// choice in the action space.
+
+fn yellow_base(id: &str) -> CardData {
+    non_free_digimon(id)
+}
+
+fn red_base(id: &str) -> CardData {
+    let mut card = non_free_digimon(id);
+    card.colors = vec![CardColor::Red];
+    card
+}
+
+/// Ankylomon whose only digivolve circle is Red Lv.3.
+fn red_route_ankylomon(id: &str) -> CardData {
+    let mut card = ankylomon(id);
+    card.evo_costs = vec![EvoCost {
+        card_color: CardColor::Red as u8,
+        level: 3,
+        memory_cost: 3,
+    }];
+    card
+}
+
+fn armadillomon_runner(slots_after_cody: bool, prohibit: bool) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&p_128_yaml())
+        .expect("P-128 YAML parses")
+        .add_card(armadillomon("ARMADILLOMON-HAND"))
+        .hand(0, &["P-128", "ARMADILLOMON-HAND"])
+        .memory(10)
+        .start();
+    if slots_after_cody {
+        // Cody Hida takes the only battle-area slot.
+        runner.game.rules.field_slots = 1;
+    }
+    if prohibit {
+        use digimon_engine::enums::{Expiry, ModifierType};
+        use digimon_engine::modifiers::PlayerModifierEntry;
+        runner.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(
+                ModifierType::CannotPlayDigimonByEffect,
+                0,
+                Expiry::Permanent,
+                None,
+                1,
+            ),
+        );
+    }
+    runner.play(0, 0).expect("play Cody Hida");
+    runner
+        .execute_branch(0)
+        .expect("choose Armadillomon branch");
+    runner
+}
+
+#[test]
+fn p_128_armadillomon_not_offered_when_battle_area_full() {
+    let mut runner = armadillomon_runner(true, false);
+    assert_ne!(
+        runner.pending_kind(),
+        Some(SelectionKind::Hand),
+        "a full battle area: Armadillomon can't be played, so no hand pick may offer it"
+    );
+    runner.auto_resolve().expect("finish On Play");
+    assert!(hand_contains_card(&runner, 0, "ARMADILLOMON-HAND"));
+}
+
+#[test]
+fn p_128_armadillomon_not_offered_under_effect_play_prohibition() {
+    let mut runner = armadillomon_runner(false, true);
+    assert_ne!(
+        runner.pending_kind(),
+        Some(SelectionKind::Hand),
+        "\"can't play Digimon by effects\": Armadillomon can't be played, so it is not offered"
+    );
+    runner.auto_resolve().expect("finish On Play");
+    assert!(hand_contains_card(&runner, 0, "ARMADILLOMON-HAND"));
+}
+
+#[test]
+fn p_128_ankylomon_branch_offers_only_bases_an_ankylomon_can_digivolve_onto() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&p_128_yaml())
+        .expect("P-128 YAML parses")
+        .add_card(red_base("RED-BASE"))
+        .add_card(yellow_base("YELLOW-BASE"))
+        .add_card(ankylomon("ANKYLOMON-HAND"))
+        .add_card(filler("FILL"))
+        .hand(0, &["P-128", "ANKYLOMON-HAND"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    let red = runner.place_on_field(0, "RED-BASE", Some(0));
+    let yellow = runner.place_on_field(0, "YELLOW-BASE", Some(1));
+    runner.play(0, 0).expect("play Cody Hida");
+    runner
+        .execute_branch(1)
+        .expect("choose Ankylomon digivolve branch");
+
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
+    assert_eq!(
+        runner.pending_action_count(),
+        1,
+        "only the yellow Lv.3 base has an Ankylomon route (the red base has none)"
+    );
+    let action = runner.pending_selection_view().unwrap().valid_action_ids[0];
+    runner.execute_action(0, action).expect("choose base");
+    runner.auto_resolve().expect("finish digivolve branch");
+    let top = |h: digimon_engine::permanent::PermanentHandle| {
+        runner.game.players[0].battle_area[h.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data)
+            .to_string()
+    };
+    assert_eq!(top(yellow), "ANKYLOMON-HAND");
+    assert_eq!(top(red), "RED-BASE");
+}
+
+#[test]
+fn p_128_ankylomon_branch_offers_no_base_when_no_route_exists() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&p_128_yaml())
+        .expect("P-128 YAML parses")
+        .add_card(red_base("RED-BASE"))
+        .add_card(ankylomon("ANKYLOMON-HAND"))
+        .add_card(filler("FILL"))
+        .hand(0, &["P-128", "ANKYLOMON-HAND"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "RED-BASE", Some(0));
+    runner.play(0, 0).expect("play Cody Hida");
+    runner
+        .execute_branch(1)
+        .expect("choose Ankylomon digivolve branch");
+    assert_ne!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField),
+        "no Digimon can digivolve into the Ankylomon in hand, so no base is offered"
+    );
+    runner.auto_resolve().expect("finish On Play");
+    assert!(hand_contains_card(&runner, 0, "ANKYLOMON-HAND"));
+}
+
+/// Regression guard: the Ankylomon hand pick offers only an Ankylomon that can
+/// digivolve onto the chosen base (compile-pass `can_digivolve_onto: base`).
+#[test]
+fn p_128_ankylomon_hand_pick_offers_only_routes_onto_chosen_base() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&p_128_yaml())
+        .expect("P-128 YAML parses")
+        .add_card(yellow_base("YELLOW-BASE"))
+        .add_card(red_route_ankylomon("ANKY-RED-ROUTE"))
+        .add_card(ankylomon("ANKY-YELLOW-ROUTE"))
+        .add_card(filler("FILL"))
+        .hand(0, &["P-128", "ANKY-RED-ROUTE", "ANKY-YELLOW-ROUTE"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "YELLOW-BASE", Some(0));
+    runner.play(0, 0).expect("play Cody Hida");
+    runner
+        .execute_branch(1)
+        .expect("choose Ankylomon digivolve branch");
+    let action = runner.pending_selection_view().unwrap().valid_action_ids[0];
+    runner.execute_action(0, action).expect("choose base");
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let offered: Vec<String> = runner
+        .pending_selection_view()
+        .unwrap()
+        .valid_action_ids
+        .iter()
+        .filter(|&&id| id != PASS)
+        .map(|&id| hand[(id - PLAY_HAND_START) as usize].clone())
+        .collect();
+    assert_eq!(offered, vec!["ANKY-YELLOW-ROUTE".to_string()]);
+}

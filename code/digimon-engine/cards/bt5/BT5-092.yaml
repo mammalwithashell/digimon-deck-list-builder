@@ -75,10 +75,15 @@ effects:
           of: you
           bind_as: pick
           optional: false
+          # Only a card the effect can actually play is offered (DCGO
+          # BT5_092.cs:27-44 `CanPlayAsNewPermanent(cardSource, payCost: false,
+          # activateClass)`). CR 4.3 1-3-11-1.
           filter:
-            any_of:
-              - name_is: "Agumon"
-              - name_is: "Gabumon"
+            all_of:
+              - any_of:
+                  - name_is: "Agumon"
+                  - name_is: "Gabumon"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Agumon] or [Gabumon] from hand for free"
       - play_from_hand_free: { of: you, hand_index: pick }
 

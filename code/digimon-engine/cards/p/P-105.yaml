@@ -38,6 +38,11 @@ effects:
           optional: true
           filter:
             kind: digimon
+            has_digivolve_candidate:
+              of: you
+              zone: [hand]
+              filter: { all_of: [{ kind: digimon }, { color_is: yellow }] }
+              cost: { reduce: 2 }
           prompt: "Choose 1 of your Digimon to digivolve"
       - select_hand:
           of: you
@@ -46,6 +51,10 @@ effects:
           filter:
             kind: digimon
             color_is: yellow
+            # DCGO CardEffectCommons.cs:859-880 (DigivolveIntoHandOrTrashCard):
+            # !CanNotEvolve && CanPlayCardTargetFrame(frame, PayCost: true) under the
+            # -2 reducer. CR 4.3 8-1-3-1 (requirement) + 1-3-11-1 (payable cost).
+            can_digivolve_onto_with_cost: { target: target, cost: { reduce: 2 } }
           prompt: "Choose a yellow Digimon card in your hand to digivolve into"
       - effect_initiated_digivolve:
           target: target

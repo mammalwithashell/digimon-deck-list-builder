@@ -843,3 +843,161 @@ fn bt21_013_inherited_dp_not_applied_to_top_card_slot() {
         "the top-card (carrier) slot must NOT carry Agunimon's inherited buff"
     );
 }
+
+// ─── Section 5: [When Attacking] candidate legality ──────────────────────────
+//
+// DCGO BT21_013.cs:313-323 hands the pick to
+// `CardEffectCommons.DigivolveIntoHandOrTrashCard` (CardEffectCommons.cs:820),
+// whose `CanSelectCardCondition` (859-883) offers only a Digimon that matches
+// the card condition, `!CanNotEvolve(targetPermanent)` and
+// `CanPlayCardTargetFrame(frame, PayCost: true, ...)` -- a digivolution route
+// onto Agunimon AND a cost the owner can pay, with the "-1" reducer already
+// registered (920-930) before the selection. CR 4.3 1-3-11-1: a player can't
+// declare digivolving a card they can't utilize or can't pay for; CR 4.3 1-3-2.
+
+/// Attack with Agunimon (BT21-013) and return the hand-pick candidates' ids.
+fn when_attacking_offered(runner: &mut DebugRunner) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    let attacker = runner.place_on_field(0, "BT21-013", Some(0));
+    let defender = runner.place_on_field(1, "DEFENDER", Some(0));
+    runner.attack_digimon(attacker, defender, false);
+    if runner.pending_kind() == Some(SelectionKind::Replacement) {
+        runner
+            .accept_optional_trigger()
+            .expect("accept the outer optional-trigger prompt");
+    }
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| hand[(id - PLAY_HAND_START) as usize].clone())
+        .collect();
+    offered.sort();
+    offered
+}
+
+/// A red [Hybrid] whose digivolution cost (12, reduced by 1 to 11) can't be
+/// paid from 0 memory (0 - 11 < -10, CR 4.3 1-4-2-2) is not offered; the
+/// payable one is.
+#[test]
+fn bt21_013_when_attacking_excludes_unaffordable_hybrid() {
+    let mut pricey = make_red_hybrid_evo_target("HYBRID-PRICEY");
+    pricey.evo_costs[0].memory_cost = 12;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(AGUNIMON_YAML)
+        .expect("BT21-013 YAML parses")
+        .add_card(make_red_hybrid_evo_target("HYBRID-EVO"))
+        .add_card(pricey)
+        .add_card(make_filler("DEFENDER"))
+        .hand(0, &["HYBRID-PRICEY", "HYBRID-EVO"])
+        .memory(0)
+        .start();
+    assert_eq!(
+        when_attacking_offered(&mut runner),
+        vec!["HYBRID-EVO".to_string()],
+        "the cost-11 Hybrid can't be paid from 0 memory, so it is not a digivolve candidate"
+    );
+}
+
+/// The reduction counts: a cost-11 Hybrid (reduced to 10) IS payable from 0
+/// memory (0 - 10 = -10, the memory floor). Regression guard that the filter
+/// prices the reduced cost, not the printed one.
+#[test]
+fn bt21_013_when_attacking_offers_hybrid_payable_only_after_reduction() {
+    let mut edge = make_red_hybrid_evo_target("HYBRID-EDGE");
+    edge.evo_costs[0].memory_cost = 11;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(AGUNIMON_YAML)
+        .expect("BT21-013 YAML parses")
+        .add_card(edge)
+        .add_card(make_filler("DEFENDER"))
+        .hand(0, &["HYBRID-EDGE"])
+        .memory(0)
+        .start();
+    assert_eq!(
+        when_attacking_offered(&mut runner),
+        vec!["HYBRID-EDGE".to_string()],
+        "11 - 1 = 10 is payable from 0 memory"
+    );
+}
+
+/// A red [Hybrid] with no digivolution route onto the red Lv.4 Agunimon (its
+/// only circle is blue Lv.4) is not offered. Regression guard for the
+/// compile-time `can_digivolve_onto: source` leaf.
+#[test]
+fn bt21_013_when_attacking_excludes_hybrid_without_route() {
+    let mut off_colour = make_red_hybrid_evo_target("HYBRID-BLUE-CIRCLE");
+    off_colour.evo_costs[0].card_color = 1; // blue
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(AGUNIMON_YAML)
+        .expect("BT21-013 YAML parses")
+        .add_card(make_red_hybrid_evo_target("HYBRID-EVO"))
+        .add_card(off_colour)
+        .add_card(make_filler("DEFENDER"))
+        .hand(0, &["HYBRID-BLUE-CIRCLE", "HYBRID-EVO"])
+        .memory(10)
+        .start();
+    assert_eq!(
+        when_attacking_offered(&mut runner),
+        vec!["HYBRID-EVO".to_string()]
+    );
+}
+
+/// "This Digimon can't digivolve" (DCGO `!CanNotEvolve(targetPermanent)`): no
+/// hand card is offered at all.
+#[test]
+fn bt21_013_when_attacking_offers_nothing_when_agunimon_cannot_digivolve() {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(AGUNIMON_YAML)
+        .expect("BT21-013 YAML parses")
+        .add_card(make_red_hybrid_evo_target("HYBRID-EVO"))
+        .add_card(make_filler("DEFENDER"))
+        .hand(0, &["HYBRID-EVO"])
+        .memory(10)
+        .start();
+    let attacker = runner.place_on_field(0, "BT21-013", Some(0));
+    runner.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(ModifierType::CannotDigivolve, 0, Expiry::Permanent, 0),
+    );
+    let defender = runner.place_on_field(1, "DEFENDER", Some(0));
+    runner.attack_digimon(attacker, defender, false);
+    if runner.pending_kind() == Some(SelectionKind::Replacement) {
+        runner
+            .accept_optional_trigger()
+            .expect("accept the outer optional-trigger prompt");
+    }
+    if let Some(view) = runner.pending_selection_view() {
+        if view.kind == SelectionKind::Hand {
+            let picks: Vec<u16> = view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&id| id != PASS && id >= PLAY_HAND_START)
+                .collect();
+            assert!(picks.is_empty(), "no digivolve candidate under CannotDigivolve: {picks:?}");
+        }
+    }
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        runner.game.players[0].battle_area[attacker.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BT21-013"
+    );
+}

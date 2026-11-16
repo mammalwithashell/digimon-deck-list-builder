@@ -260,3 +260,86 @@ fn st21_05_inherited_is_once_per_turn() {
     let _ = runner.auto_resolve();
     assert_eq!(runner.effective_dp(opp), Some(3000), "second attack: no further -2000");
 }
+
+// ─── Section 5 — [When Digivolving] pick legality ────────────────────────────
+//
+// DCGO ST21_05.cs:45-48 `IsAdventureTamerCondition = IsTamer &&
+// HasAdventureTraits && CanPlayAsNewPermanent(payCost: false)` is both the
+// SelectHandEffect candidate filter (:67) and part of CanActivate (:53): only
+// an [ADVENTURE] Tamer that can actually be placed is offered (a free frame,
+// no "can't play Tamers by effects" lock). CR 4.3 1-3-11-1: a card can be
+// declared for play only if it is able to be played (the lock). The frame
+// cap is the engine's `rules.field_slots`, mirroring DCGO's frame limit;
+// CR 4.3 3-4-8-2 itself sets no battle-area limit.
+
+fn adventure_tamer_offered(runner: &mut DebugRunner) -> bool {
+    let Some(view) = walk_to_hand_prompt(runner) else {
+        return false;
+    };
+    hand_actions(runner, "ADV-TAMER")
+        .iter()
+        .any(|a| view.valid_action_ids.contains(a))
+}
+
+/// Angemon in hand with an [ADVENTURE] Tamer, an [ADVENTURE] Lv.3 on the field.
+fn angemon_and_adventure_tamer() -> (DebugRunner, PermanentHandle) {
+    let mut runner = builder()
+        .hand(0, &[CARD_ID, "ADV-TAMER"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(10)
+        .start();
+    runner.skip_mulligan();
+    let base = runner.place_on_field(0, "ADV-LV3", Some(0));
+    (runner, base)
+}
+
+fn digivolve_angemon(runner: &mut DebugRunner, base: PermanentHandle) {
+    let slot = hand_index(runner, CARD_ID) as u16;
+    runner.game.decode_action(encode_digivolve(slot, base.index as u16), 0);
+    assert_eq!(
+        runner.game.players[0].battle_area[base.index as usize].top_card().card_id(&runner.game.card_data),
+        CARD_ID
+    );
+}
+
+/// "You can't play Tamers by effects": the [ADVENTURE] Tamer is not offered and
+/// stays in hand.
+#[test]
+fn st21_05_adventure_tamer_not_offered_under_tamer_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, base) = angemon_and_adventure_tamer();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    digivolve_angemon(&mut runner, base);
+    assert!(!adventure_tamer_offered(&mut runner), "Tamer effect plays are locked");
+    let _ = runner.auto_resolve();
+    assert!(!on_field(&runner, "ADV-TAMER"));
+}
+
+/// No free battle-area frame: the [ADVENTURE] Tamer can't be placed, so it is
+/// not offered.
+/// The frame cap is the engine's `rules.field_slots` (mirroring DCGO's frame
+/// limit); CR 4.3 3-4-8-2 itself sets no battle-area limit.
+#[test]
+fn st21_05_adventure_tamer_not_offered_when_battle_area_full() {
+    let (mut runner, base) = angemon_and_adventure_tamer();
+    // Angemon digivolves onto the only Digimon: the battle area stays at one
+    // permanent, which is now the frame limit.
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    digivolve_angemon(&mut runner, base);
+    assert!(!adventure_tamer_offered(&mut runner), "no free frame for the Tamer");
+    let _ = runner.auto_resolve();
+    assert!(!on_field(&runner, "ADV-TAMER"));
+}
+
+/// Regression guard: with a free frame and no lock the Tamer is offered.
+#[test]
+fn st21_05_adventure_tamer_offered_with_free_frame_and_no_lock() {
+    let (mut runner, base) = angemon_and_adventure_tamer();
+    digivolve_angemon(&mut runner, base);
+    assert!(adventure_tamer_offered(&mut runner));
+}

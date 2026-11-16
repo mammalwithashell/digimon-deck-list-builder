@@ -83,6 +83,12 @@ effects:
                   - trait_has: Three Great Angels
                   - trait_has: NSp
                   - trait_has: VB
+              # DCGO EX12_044.cs:188 `DigivolveIntoHandOrTrashCard(payCost:
+              # true, reduceCostTuple: (2, null))` offers only cards that
+              # `CanPlayCardTargetFrame` onto this Digimon (CardEffectCommons.cs
+              # :858-881): a real route AND the reduced cost payable (CR 4.3
+              # 8-1-3-2, 1-3-2). Same CostDelta as the digivolve below.
+              - can_digivolve_onto_with_cost: { target: source, cost: { reduce: 2 } }
           prompt: "Digivolve into an [Angel]/[Holy Dragon]/[Three Great Angels]/[NSp]/[VB] Digimon from your hand with the cost reduced by 2"
       - effect_initiated_digivolve:
           target: source

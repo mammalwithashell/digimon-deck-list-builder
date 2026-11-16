@@ -150,6 +150,11 @@ effects:
           of: you
           bind_as: picked_digimon
           optional: true
+          # DCGO BT24_094.cs:114-120: IsDigimon && green/yellow && TS &&
+          # CanPlayAsNewPermanent(payCost: true, fixedCost: cost - 3). The
+          # play leaf refuses DUAL cards (CR 4.3 4-6-2), a full battle area
+          # and effect-play prohibitions; the cost leaf mirrors the verb's
+          # cost_delta (CR 4.3 1-3-11-1).
           filter:
             all_of:
               - kind: digimon
@@ -157,6 +162,8 @@ effects:
               - any_of:
                   - color_is: green
                   - color_is: yellow
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 3 }
           prompt: "You may play 1 green or yellow [TS] Digimon card from hand with the play cost reduced by 3"
       - play_from_hand:
           of: you
@@ -182,6 +189,8 @@ effects:
               - any_of:
                   - color_is: green
                   - color_is: yellow
+              # DCGO BT24_094.cs:256-262 CanPlayAsNewPermanent(payCost: false).
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 level 4 or lower green or yellow [TS] Digimon from hand or trash without paying the cost"
       - play_union_bound_free:
           binding: picked

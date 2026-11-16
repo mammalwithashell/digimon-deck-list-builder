@@ -503,3 +503,31 @@ fn ex13_074_security_plays_itself_free() {
         .iter()
         .any(|p| p.top_card().card_id(&r.game.card_data) == CARD_ID));
 }
+
+/// Rie Kishibe (EX13-074) digivolves "for a digivolution cost of 3, ignoring digivolution requirements" (DCGO
+/// EX13_074.cs:234-240, `payCost: true`, `ignoreDigivolutionRequirementFixedCost: 3`). A card whose cost can't be
+/// paid can't be digivolved (CR 4.3 1-3-11-1, 8-1-2-6; 4-2-2 / 1-4-2-2: the gauge stops at 10): from -8 at most 2
+/// can be paid, so [LordKnightmon] is not offered; from -7 it is. The -8 gauge is NOT reachable in play today: a
+/// [Main] effect is activated and resolves with memory at 0 or above, where a fixed 3 is always payable, so this pins
+/// the mechanism on the card's own YAML, not a live game state. G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT.
+#[test]
+fn ex13_074_main_offers_lordknightmon_only_when_three_can_be_paid() {
+    let mut r = builder().hand(0, &["LKM"]).memory(5).start();
+    let rie = rie_with_knights(&mut r, 3);
+    r.game.set_memory(-8);
+    assert!(r.game.activate_field_main(0, rie.index as usize));
+    assert!(r.pending_selection().is_none(), "3 can't be paid from -8: nothing to choose");
+    assert_eq!(stack(&r, rie).last().map(|(id, _)| id.as_str()), Some(CARD_ID));
+    assert_eq!(r.hand_size(0), 1, "LordKnightmon stays in the hand");
+
+    let mut r = builder().hand(0, &["LKM"]).memory(5).start();
+    let rie = rie_with_knights(&mut r, 3);
+    r.game.set_memory(-7);
+    assert!(r.game.activate_field_main(0, rie.index as usize));
+    let a = first_non_pass(&r);
+    r.execute_action(0, a).expect("pick LordKnightmon");
+    r.auto_resolve().ok();
+    assert_eq!(stack(&r, rie).last().map(|(id, _)| id.as_str()), Some("LKM"));
+    let mine = if r.game.turn_player() == 0 { r.memory() } else { -r.memory() };
+    assert_eq!(mine, -10, "3 paid from -7");
+}

@@ -30,9 +30,12 @@
 #   EqualsCardName("Gabumon"))`; `mode: PlayForCost` with the cost fixed to
 #   0 (`play ... without paying the cost`). DSL collapses the two timings
 #   into one clause with `when: [start_of_your_main_phase, on_play]` (BT17-015
-#   / AD1-010 idiom). The printed bracketed `[Agumon]`/`[Gabumon]` is a
-#   conventional substring name reference (Comprehensive Rules §16) — the
-#   YAML uses `name_contains`, matching sibling cards BT17-007 / BT17-015.
+#   / AD1-010 idiom). The printed bracket-only `[Agumon]`/`[Gabumon]` is an
+#   EXACT name reference (CR 4.3 2-3-1-2; DCGO `EqualsCardName`,
+#   CardSource.cs:1484-1500) — `name_is`, not `name_contains` (which offered
+#   ToyAgumon, Agumon (X Antibody) and the Tamer AD1-021). The filter also
+#   carries `kind: digimon` and `can_play_from_effect_without_cost`
+#   (DCGO `CanPlayAsNewPermanent`, BT22_084.cs:88).
 #
 # Clause 3 — `ChangeDPStaticEffect`, `changeValue: 1000`, `permanentCondition`
 #   = owner's battle-area Digimon whose TopCard contains "Greymon" /
@@ -86,10 +89,17 @@ effects:
       - select_hand:
           of: you
           bind_as: pick
+          # DCGO BT22_084.cs:84-89: IsDigimon && (EqualsCardName("Agumon") ||
+          # EqualsCardName("Gabumon")) && CanPlayAsNewPermanent. Exact names
+          # (CR 4.3 2-3-1-2), Digimon only (not the Tamer Marcus Damon &
+          # Agumon AD1-021), free slot, no play prohibition.
           filter:
-            any_of:
-              - name_contains: "Agumon"
-              - name_contains: "Gabumon"
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: "Agumon"
+                  - name_is: "Gabumon"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Agumon] or [Gabumon] from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: pick }
 

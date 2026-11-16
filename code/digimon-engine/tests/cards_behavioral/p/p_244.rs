@@ -579,3 +579,117 @@ fn p_244_delay_not_offered_when_placed_card_is_not_vemmon() {
 
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_choice;
+
+// ═══ [Main] / [Security] candidate legality (select-hand audit 2026-11-13) ═══
+// DCGO P_244.cs:32-37 offers `(EqualsCardName("Vemmon") ||
+// EqualsCardName("Zenith")) && CanPlayAsNewPermanent(cardSource, false,
+// activateClass)` from the hand or the trash; `CanPlayAsNewPermanent`
+// (GameContextDeterminarion.cs:419-433) needs an empty frame and no play lock
+// (`CanPlayCardTargetFrame` also refuses a trash play under a "can't play from
+// trash" lock). CR 4.3 1-3-11-1: a card that can't be played can't be declared
+// for play. Regression guards for `can_play_from_effect_without_cost`.
+
+/// Play P-244 with [Vemmon] in hand and [Zenith] in trash after `setup`; returns
+/// the offered union commits as "Hand:ID" / "Trash:ID".
+fn main_offered(setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut r = builder()
+        .hand(0, &[CARD_ID, "VEM"])
+        .deck(0, &["FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(5)
+        .start();
+    r.inject_trash(0, "ZENITH");
+    r.place_on_field(0, "ANCHOR", Some(0));
+    r.game.enter_main_phase();
+    setup(&mut r);
+    let _ = r.game.play_option_from_hand(0, 0);
+    union_offered(&r)
+}
+
+fn union_offered(r: &DebugRunner) -> Vec<String> {
+    if r.game.pending_selection.is_none() {
+        return Vec::new();
+    }
+    let mut v: Vec<String> = physical_choice::commits(&r.game)
+        .into_iter()
+        .map(|row| {
+            let zone = match row.zone {
+                Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand) => "Hand",
+                Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash) => "Trash",
+                _ => "Other",
+            };
+            format!("{zone}:{}", row.card_id.unwrap_or_default())
+        })
+        .collect();
+    v.sort();
+    v
+}
+
+fn add_lock(r: &mut DebugRunner, player: u8, lock: digimon_engine::enums::ModifierType) {
+    r.game.modifiers.add_player_modifier(
+        player,
+        digimon_engine::modifiers::PlayerModifierEntry::simple(
+            lock,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            None,
+            1 - player,
+        ),
+    );
+}
+
+/// Control: both the hand [Vemmon] and the trash [Zenith] are offered.
+#[test]
+fn p_244_main_offers_vemmon_in_hand_and_zenith_in_trash() {
+    assert_eq!(
+        main_offered(|_| {}),
+        vec!["Hand:VEM".to_string(), "Trash:ZENITH".to_string()]
+    );
+}
+
+/// "You can't play Digimon by effects": [Vemmon] is not offered, the [Zenith]
+/// Tamer still is.
+#[test]
+fn p_244_main_vemmon_not_offered_when_effect_digimon_play_is_prohibited() {
+    let offered = main_offered(|r| add_lock(r, 0, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect));
+    assert_eq!(offered, vec!["Trash:ZENITH".to_string()]);
+}
+
+/// "You can't play cards from the trash": the trash [Zenith] is not offered.
+#[test]
+fn p_244_main_trash_zenith_not_offered_under_cannot_play_from_trash() {
+    let offered = main_offered(|r| add_lock(r, 0, digimon_engine::enums::ModifierType::CannotPlayFromTrash));
+    assert_eq!(offered, vec!["Hand:VEM".to_string()]);
+}
+
+/// A full battle area: neither card can be played, so nothing is offered (the
+/// card is still placed in the battle area — the "Then" is unconditional).
+#[test]
+fn p_244_main_offers_nothing_when_battle_area_full() {
+    let offered = main_offered(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "no free slot: nothing is offered: {offered:?}");
+}
+
+/// [Security] runs the same pick: "you can't play Tamers by effects" removes the
+/// hand [Zenith]; the hand [Vemmon] is still offered.
+#[test]
+fn p_244_security_zenith_not_offered_when_effect_tamer_play_is_prohibited() {
+    let mut atk = make_test_card("ATK", "Attacker");
+    atk.card_kind = CardKind::Digimon;
+    atk.level = Some(5);
+    atk.dp = Some(9000);
+    let mut r = builder()
+        .add_card(atk)
+        .hand(1, &["VEM", "ZENITH"])
+        .security(1, &[CARD_ID])
+        .deck(0, &["FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(0)
+        .start();
+    let a = r.place_on_field(0, "ATK", Some(0));
+    add_lock(&mut r, 1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    r.attack_player(a, 1, false);
+    assert_eq!(union_offered(&r), vec!["Hand:VEM".to_string()]);
+}

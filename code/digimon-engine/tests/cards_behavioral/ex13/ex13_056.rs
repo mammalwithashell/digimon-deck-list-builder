@@ -202,3 +202,67 @@ fn ex13_056_inherited_once_per_turn_after_a_play() {
     r.game.suspend(ally);
     assert!(r.pending_selection().is_none(), "OPT spent");
 }
+
+// ─── Candidate legality (select-hand playability audit, 2026-11-13) ──────────
+// DCGO EX13_056.cs:124-130 offers only `IsDigimon && Level <= 5 && HasBlocker
+// && CanPlayAsNewPermanent(cardSource, false, activateClass)` (:118-122 skips
+// the effect when none qualifies). A card the free play would refuse is not a
+// legal pick (CR 4.3 1-3-2; 7-1-1).
+
+const CERBERUS_WEREWOLF: &str = "BT26-056";
+
+/// Inherited setup on the opponent's turn, with Cerberusmon: Werewolf Mode
+/// (BT26-056) loadable.
+fn inherited_setup_with(hand: &[&str]) -> (DebugRunner, PermanentHandle) {
+    let mut r = builder()
+        .dsl_card(CERBERUS_WEREWOLF)
+        .expect("BT26-056 Cerberusmon: Werewolf Mode is in the embedded pack")
+        .hand(0, hand)
+        .deck(0, &["FILL"; 4])
+        .deck(1, &["FILL"; 6])
+        .memory(3)
+        .start();
+    let carrier = r.place_stack(0, &[CARD_ID, "TOP"]);
+    end_turn_declining(&mut r);
+    r.game.memory = 3;
+    (r, carrier)
+}
+
+/// Cerberusmon: Werewolf Mode (BT26-056) is a black Lv.5 DUAL card with printed
+/// <Blocker>, so its Digimon information matches the text (CR 4.3 4-6-5-2) —
+/// but a DUAL card is never played: it prints "Play cost: D" and is digivolved
+/// or used (CR 4.3 4-6-2; 7-1-1 needs a play cost). DCGO's
+/// `CanPlayAsNewPermanent` refuses it. Only the playable B5 is offered.
+///
+/// The embedded DSL pack leaves `CardData.effect_text` empty, so the card's
+/// production text (`cards.json` `effect_description_eng`, which carries
+/// ＜Blocker＞) is restored first; without it `printed_keyword: Blocker` never
+/// matches the DUAL and the test could not tell the old filter from the new.
+#[test]
+fn ex13_056_inherited_does_not_offer_a_dual_card() {
+    let (mut r, carrier) = inherited_setup_with(&["B5", CERBERUS_WEREWOLF]);
+    for cd in r.game.card_data.iter_mut().filter(|c| c.card_id == CERBERUS_WEREWOLF) {
+        cd.effect_text = "＜Jamming＞\n＜Reboot＞\n＜Blocker＞\n[On Deletion] You may play 1 level 4 \
+                          or lower Digimon card with the [Titan] trait from your trash without \
+                          paying the cost."
+            .to_string();
+    }
+    r.game.suspend(carrier);
+    assert_eq!(offered_hand_ids(&r), vec!["B5".to_string()]);
+}
+
+/// "You can't play Digimon by effects": no hand pick is offered.
+#[test]
+fn ex13_056_inherited_nothing_offered_while_digimon_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, carrier) = inherited_setup(&["B5"]);
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    r.game.suspend(carrier);
+    assert!(legal(&r).is_empty(), "B5 can't be played: {:?}", r.pending_selection_view());
+    let _ = r.auto_resolve();
+    assert!(hand_ids(&r, 0).contains(&"B5".to_string()));
+}

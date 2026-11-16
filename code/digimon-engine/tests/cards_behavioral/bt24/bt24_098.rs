@@ -680,3 +680,75 @@ effects:
 
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;
+
+// candidate legality marker (select-hand audit batch 12)
+
+// ─── [Security] pick offers only playable cards ──────────────────────────────
+//
+// DCGO BT24_098.cs:186-193 filters the hand AND trash candidates with
+// `IsDigimon && HasLevel && Level <= 4 && EqualsTraits("Titan") &&
+// CanPlayAsNewPermanent(cardSource, false, activateClass)`. CR 4.3 1-3-11-1: a
+// card can be declared for play only if it can be played; CR 4.3 1-3-2: an
+// impossible play is not carried out. "Then, add this card to the hand" still
+// happens with nothing offered.
+
+/// Player 1 holds this card in security with TITAN4 in `zone`; `setup` runs
+/// before player 0's attack. Returns the runner after the attack.
+fn security_pick_runner(in_trash: bool, setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut r = builder().security(1, &[CARD_ID]).memory(3).start();
+    r.set_first_player(0);
+    if in_trash {
+        push_trash(&mut r, 1, "TITAN4");
+    } else {
+        push_hand(&mut r, 1, "TITAN4");
+    }
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    setup(&mut r);
+    r.attack_player(atk, 1, false);
+    r
+}
+
+fn assert_no_pick_then_self_added(mut r: DebugRunner, why: &str) {
+    assert!(r.pending_selection().is_none(), "{why}");
+    let _ = r.auto_resolve();
+    assert!(!field_ids(&r, 1).contains(&"TITAN4".to_string()));
+    assert!(
+        hand_ids(&r, 1).contains(&CARD_ID.to_string()),
+        "then add this card to the hand"
+    );
+}
+
+#[test]
+fn bt24_098_security_pick_not_offered_when_battle_area_full() {
+    let r = security_pick_runner(false, |r| {
+        r.place_on_field(1, "FILLER", Some(0));
+        r.game.rules.field_slots = 1;
+    });
+    assert_no_pick_then_self_added(r, "no free slot: the [Titan] Digimon can't be played, so nothing is offered");
+}
+
+#[test]
+fn bt24_098_security_pick_not_offered_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let r = security_pick_runner(false, |r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 0),
+        );
+    });
+    assert_no_pick_then_self_added(r, "an effect-play prohibition: nothing is offered");
+}
+
+#[test]
+fn bt24_098_security_pick_not_offered_from_trash_when_trash_play_is_locked() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let r = security_pick_runner(true, |r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 0),
+        );
+    });
+    assert_no_pick_then_self_added(r, "the trash [Titan] can't be played from the trash: nothing is offered");
+}

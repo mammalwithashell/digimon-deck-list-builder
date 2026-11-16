@@ -150,6 +150,7 @@ effects:
           kind: digimon
           trait_has: "Three Musketeers"
           play_cost_lte: 12
+          can_play_from_effect_without_cost: true
         n: 1
     summary: "[On Deletion] You may play 1 [Three Musketeers] trait Digimon card with a play cost of 12 or less from your hand or trash without paying the cost"
     process:
@@ -157,11 +158,16 @@ effects:
           of: you
           zones: [hand, trash]
           bind_as: revive_pick
+          # DCGO P_170.cs:326-338: CanPlayAsNewPermanent && EqualsTraits(TM)
+          # && HasPlayCost && cost <= 12 (a DUAL has no play cost and fails
+          # play_cost_lte). Zone-aware: a trash card fails while the trash
+          # can't be played from.
           filter:
             all_of:
               - kind: digimon
               - trait_has: "Three Musketeers"
               - play_cost_lte: 12
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Three Musketeers] trait Digimon card with a play cost of 12 or less from your hand or trash without paying the cost"
       - play_union_bound_free:
           binding: revive_pick

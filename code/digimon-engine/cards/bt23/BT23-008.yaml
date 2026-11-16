@@ -140,14 +140,23 @@ effects:
           of: you
           bind_as: pick
           optional: true
+          # Only a card the play can perform: no play prohibition, a free slot
+          # (DCGO CanPlayAsNewPermanent(card, payCost: true)), and payable at
+          # the REDUCED cost the play charges (DCGO prices the unreduced cost
+          # there, stricter than the text; CR 4.3 1-3-2 governs, and
+          # 1-3-11-1/1-3-11-2 price a play at its cost after the reduction —
+          # the 1-3-11-2 example declares a cost-12 card reduced by 5 at 7).
           filter:
-            any_of:
-              - all_of:
-                  - kind: digimon
-                  - name_is: "Gabumon"
-              - all_of:
-                  - kind: tamer
-                  - name_is: "Nokia Shiramine"
+            all_of:
+              - any_of:
+                  - all_of:
+                      - kind: digimon
+                      - name_is: "Gabumon"
+                  - all_of:
+                      - kind: tamer
+                      - name_is: "Nokia Shiramine"
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 2 }
           prompt: "Play 1 [Gabumon] or [Nokia Shiramine] from hand (cost -2)"
       - play_from_hand:
           of: you
