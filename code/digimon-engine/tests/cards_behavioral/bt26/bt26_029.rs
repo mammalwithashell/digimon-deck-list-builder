@@ -141,15 +141,12 @@ fn bt26_029_on_play_trashes_security_and_protects_one_digimon() {
     assert!(r
         .modifiers()
         .has(mine, ModifierType::ImmuneFromStackTrashing));
-    assert!(r
-        .modifiers()
-        .has(mine, ModifierType::CannotBeReturnedToHand));
-    assert!(r
-        .modifiers()
-        .has(mine, ModifierType::CannotBeReturnedToDeck));
+    assert!(r.modifiers().has(mine, ModifierType::ImmuneFromStackReturn));
+    assert!(!r.modifiers().has(mine, ModifierType::CannotBeReturnedToHand));
+    assert!(!r.modifiers().has(mine, ModifierType::CannotBeReturnedToDeck));
     assert!(r.modifiers().has(mine, ModifierType::CannotBeDeDigivolved));
 
-    // Opponent's effects: DP reduction ignored, stack trash blocked, bounce blocked.
+    // Opponent's effects: DP reduction and individual stack moves are blocked.
     let base = r.effective_dp(mine).unwrap();
     as_player(&mut r, 1, opp, |ctx| {
         ctx.add_dp_modifier(mine, -3000, Expiry::EndOfTurn)
@@ -157,6 +154,9 @@ fn bt26_029_on_play_trashes_security_and_protects_one_digimon() {
     assert_eq!(r.effective_dp(mine).unwrap(), base, "opp DP-minus ignored");
     assert!(!as_player(&mut r, 1, opp, |ctx| ctx.trash_top_source(mine)));
     assert_eq!(sources(&r, mine), 1, "stacked card not trashed by opp");
+    let stacked = r.game.players[0].battle_area[mine.index as usize].card_sources[0].handle();
+    assert!(!as_player(&mut r, 1, opp, |ctx| ctx.return_card_source_to_hand(mine, stacked)));
+    assert!(!as_player(&mut r, 1, opp, |ctx| ctx.return_card_source_to_deck(mine, stacked, true)));
     // Own effects are unaffected.
     as_player(&mut r, 0, ae, |ctx| {
         ctx.add_dp_modifier(mine, -1000, Expiry::EndOfTurn)
@@ -172,13 +172,15 @@ fn bt26_029_on_play_trashes_security_and_protects_one_digimon() {
         0,
         "own effect may trash its stacked card"
     );
-    // Opponent's effects can't return it to the hand or deck.
-    assert!(as_player(&mut r, 1, opp, |ctx| ctx.return_to_hand(mine)).is_none());
-    assert!(!as_player(&mut r, 1, opp, |ctx| ctx.return_to_deck(
+    // Returning the Digimon itself is distinct from moving a stacked card.
+    let before_return = r.game.clone();
+    assert!(as_player(&mut r, 1, opp, |ctx| ctx.return_to_hand(mine)).is_some());
+    r.game = before_return;
+    assert!(as_player(&mut r, 1, opp, |ctx| ctx.return_to_deck(
         mine,
         digimon_engine::enums::StackPosition::Bottom
     )));
-    assert_eq!(r.game.players[0].battle_area.len(), 2, "still on the field");
+    assert_eq!(r.game.players[0].battle_area.len(), 1, "Digimon returned");
 }
 
 #[test]

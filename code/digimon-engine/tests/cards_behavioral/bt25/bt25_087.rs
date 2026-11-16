@@ -445,6 +445,19 @@ fn bt25_087_reducer_decline_pays_full_cost() {
 }
 
 #[test]
+fn bt25_087_reducer_can_cancel_tamer_pick_after_accepting() {
+    let (mut s, hand_idx) = dv_setup(true, false, "DS-LV5");
+    let mem_before = s.runner.memory();
+    s.runner.game.digivolve_from_hand(0, hand_idx, s.base.index as usize, PlaySource::ByHand);
+    s.runner.accept_optional_trigger().expect("accept reducer");
+    assert!(s.runner.pending_is_optional(), "the payment selection may be cancelled");
+    s.runner.decline_optional_trigger().expect("cancel payment");
+    let _ = s.runner.auto_resolve();
+    assert_eq!(face_down_sources(&s.runner, s.thomas), 1);
+    assert_eq!(mem_before - s.runner.memory(), 4, "unpaid reduction is not applied");
+}
+
+#[test]
 fn bt25_087_reducer_inactive_for_non_data_squad_target() {
     let (mut s, hand_idx) = dv_setup(true, false, "PLAIN-LV5");
     let mem_before = s.runner.memory();

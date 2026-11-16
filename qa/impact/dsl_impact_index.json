@@ -9056,11 +9056,16 @@
       "path": "bt24/BT24-003.yaml",
       "predicates": [
         "all_of",
+        "any_permanent",
         "binding_present",
         "can_digivolve_onto_with_cost",
+        "has_digivolve_candidate",
+        "is_source",
         "kind",
+        "owner",
         "trait_has",
-        "your_turn"
+        "your_turn",
+        "zone"
       ],
       "timings": [
         "on_own_security_removed"
@@ -9068,7 +9073,6 @@
       "verbs": [
         "effect_initiated_digivolve",
         "if",
-        "refund_opt",
         "select_hand"
       ]
     },
@@ -14371,6 +14375,7 @@
         "any_field_permanent",
         "any_of",
         "binding_present",
+        "effect_returned_any_card",
         "is_suspended",
         "kind",
         "level_eq",
@@ -32262,6 +32267,7 @@
       "BT23-064",
       "BT23-077",
       "BT23-096",
+      "BT24-003",
       "BT24-016",
       "BT24-018",
       "BT24-030",
@@ -34451,6 +34457,7 @@
       "BT22-085",
       "BT24-091",
       "BT26-016",
+      "BT26-050",
       "BT26-092"
     ],
     "effect_suspended_any_opponent_digimon": [
@@ -35351,6 +35358,7 @@
       "BT21-082",
       "BT21-091",
       "BT23-076",
+      "BT24-003",
       "BT25-092",
       "BT26-035",
       "BT26-038",
@@ -35572,6 +35580,7 @@
       "BT22-019",
       "BT22-022",
       "BT22-036",
+      "BT24-003",
       "BT25-027",
       "BT26-015",
       "BT26-044",
@@ -38728,6 +38737,7 @@
       "BT23-096",
       "BT23-101",
       "BT23-102",
+      "BT24-003",
       "BT24-008",
       "BT24-009",
       "BT24-013",
@@ -41058,6 +41068,7 @@
       "BT23-096",
       "BT23-101",
       "BT23-102",
+      "BT24-003",
       "BT24-008",
       "BT24-009",
       "BT24-013",
@@ -47641,7 +47652,6 @@
       "AD1-024",
       "BT19-001",
       "BT20-027",
-      "BT24-003",
       "BT24-007",
       "BT24-009",
       "BT24-013",

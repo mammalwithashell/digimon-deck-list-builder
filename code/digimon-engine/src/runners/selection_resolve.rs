@@ -806,6 +806,63 @@ fn active_selection_frame(stack: &crate::resume::ResumeStack) -> Option<&crate::
     }
 }
 
+/// DCGO's Lilamon (ST24-10) asks for the Tamers paying its trash-two cost in
+/// one panel. One Tamer means both cards come from it. The engine asks for the
+/// accept/decline first and then one Tamer per card (ST24_10.cs CanEndSelectCondition).
+pub(super) fn normalize_lilamon_payment(game: &Game, row: &SelectionRow) -> Option<SelectionRow> {
+    use crate::resume::{FieldPermanentPostAction, ResumeFrame, ResumeSelectKind};
+
+    if row.prompt != "SelectPermanentEffect"
+        || row.engine_action.is_some()
+        || row.card_ids.is_some()
+        || row.int_value.is_some()
+        || row.bool_value.is_some()
+        || row.count.is_some()
+    {
+        return None;
+    }
+    let pending = game.pending_selection.as_ref()?;
+    if pending.selecting_player != row.actor
+        || game.card_data_for_handle(pending.source_card)?.card_id != "ST24-10"
+    {
+        return None;
+    }
+    if row.cancel == Some(true) && row.targets.is_none() {
+        let (yes, no) = yes_no_branches(pending)?;
+        let accept = pending.effect_choices.as_ref()?.iter().find(|e| e.action_id == yes)?;
+        if accept.label == "Trash 2 face-down cards" {
+            let mut normalized = row.clone();
+            normalized.engine_action = Some(no);
+            return Some(normalized);
+        }
+        return None;
+    }
+    let [target] = row.targets.as_deref()? else {
+        return None;
+    };
+    let frame = active_selection_frame(game.pending_selection_resume.as_ref()?)?;
+    let ResumeFrame::RunTail {
+        select_kind: ResumeSelectKind::FieldPermanent {
+            of_player,
+            post: Some(FieldPermanentPostAction::TrashBottomFaceDownSourcesPick { remaining: 2, picked }),
+        },
+        ..
+    } = frame else {
+        return None;
+    };
+    if !picked.is_empty() || target.player != *of_player {
+        return None;
+    }
+    let index = u8::try_from(target.frame).ok()?;
+    let handle = crate::permanent::PermanentHandle { player: target.player, index };
+    if crate::dsl_cards::step::selections::face_down_cards_under(game, handle, *of_player) < 2 {
+        return None;
+    }
+    let mut normalized = row.clone();
+    normalized.targets = Some(vec![*target, *target]);
+    Some(normalized)
+}
+
 /// The live source-selection carrier, including selections parked inside a
 /// replacement or payment continuation. Suspended outer frames never supply
 /// identities for the active inner prompt. Shared with the exam adapter's
@@ -1135,6 +1192,24 @@ pub fn resolve_next(
     game: &Game,
     payload: &SelectionRow,
     picks_done: usize,
+) -> Result<Option<u16>, String> {
+    resolve_next_with_provenance(game, payload, picks_done, false)
+}
+
+/// Resolve a DCGO recording, where count rows name printed evolution costs.
+pub(super) fn resolve_next_dcgo(
+    game: &Game,
+    payload: &SelectionRow,
+    picks_done: usize,
+) -> Result<Option<u16>, String> {
+    resolve_next_with_provenance(game, payload, picks_done, true)
+}
+
+fn resolve_next_with_provenance(
+    game: &Game,
+    payload: &SelectionRow,
+    picks_done: usize,
+    dcgo_recording: bool,
 ) -> Result<Option<u16>, String> {
     let n_picks = payload_pick_count(payload);
 
@@ -1897,6 +1972,22 @@ pub fn resolve_next(
     // error; the dangerous half was `count: 0` resolving to branch 0 and
     // replaying clean while meaning something entirely different.
     if let Some(c) = payload.count {
+        // DCGO selects the printed digivolution route before an effect's
+        // cost reduction is applied. The engine labels this prompt with the
+        // payable cost, so match the retained route, not its display label.
+        if let (true, "SelectCountEffect", Some(crate::resume::ResumeFrame::EffectDigivolveCostChoice(state))) = (
+            dcgo_recording, payload.prompt.as_str(), game.pending_selection_resume.as_ref().and_then(|s| s.frames.last())
+        ) {
+            let matches: Vec<_> = state.printed_costs.iter().enumerate()
+                .filter(|(_, route)| i64::from(route.memory_cost) == i64::from(c))
+                .filter_map(|(i, _)| pending.effect_choices.as_ref()?.get(i))
+                .filter(|entry| pending.valid_action_ids.contains(&entry.action_id))
+                .collect();
+            return match matches.as_slice() {
+                [entry] => Ok(Some(entry.action_id)),
+                _ => Err(format!("recorded printed digivolution cost {c} matches {} legal routes", matches.len())),
+            };
+        }
         // Typed count rows carry the declared physical prefix separately from
         // what can actually be paid. Display text is not a semantic identifier.
         if let Some(entries) = &pending.effect_choices {

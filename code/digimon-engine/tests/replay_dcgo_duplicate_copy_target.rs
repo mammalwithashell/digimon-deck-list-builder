@@ -183,6 +183,32 @@ fn copies_the_rows_cannot_tell_apart_stop_the_replay() {
 }
 
 
+/// A legal playback stamp identifies the selected engine copy even when
+/// the recorded board contains indistinguishable card names.
+#[test]
+fn stamped_field_pick_selects_the_recorded_duplicate_copy() {
+    let mut rows = dcgo_rows();
+    rows[1].selection.as_mut().unwrap().engine_action = Some(
+        digimon_engine::action::space::ATTACK_START + 2,
+    );
+    let s = session(staged_with(None, true), rows);
+    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
+    assert!(s.is_complete());
+    assert!(s.game.players[0].battle_area[2].is_suspended, "stamped second copy attacked");
+    assert!(!s.game.players[0].battle_area[1].is_suspended, "other copy stayed unsuspended");
+}
+
+/// A stale action stamp cannot identify either physical copy.
+#[test]
+fn stale_field_pick_stamp_does_not_resolve_duplicate_identity() {
+    let mut rows = dcgo_rows();
+    rows[1].selection.as_mut().unwrap().engine_action = Some(2000);
+    let s = session(staged_with(None, true), rows);
+    assert!(s.is_paused());
+    assert!(matches!(&s.divergences()[0].kind,
+        DivergenceKind::SelectionResolution { reason } if reason.contains("copies")));
+}
+
 /// Two copies identical as permanents, but a granted effect elsewhere names
 /// the second copy's card as its grantor (`GrantedTriggeredEffect::
 /// source_card`, modifiers.rs:866 - `EffectContext::source_card` when it

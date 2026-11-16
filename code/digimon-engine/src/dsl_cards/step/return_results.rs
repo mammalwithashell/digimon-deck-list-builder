@@ -8,26 +8,39 @@ pub(super) fn expand(
     ctx: &mut EffectContext<'_>,
     bindings: &Bindings,
 ) -> Option<Vec<CompiledStep>> {
-    let (over, selector, position, include_sources) = match step {
-        CompiledStep::ReturnAllToHand { over, selector } => (over, selector, None, false),
+    let (mut targets, position, include_sources) = match step {
+        CompiledStep::ReturnToDeck { target, position, include_sources } => {
+            let targets = match crate::dsl_cards::binding_ref::resolve_binding_ref(target, ctx, bindings) {
+                Some(crate::dsl_cards::binding_ref::ResolvedBinding::Permanent(h)) => vec![h],
+                _ => Vec::new(),
+            };
+            (targets, Some(*position), *include_sources)
+        }
+        CompiledStep::ReturnAllToHand { over, selector } => {
+            let mut targets = super::permanent_scan::scan(ctx, over, Some(bindings));
+            if let Some(selector) = selector {
+                if let Some(extreme) = super::selections::selected_field_extreme(ctx.game, &targets, *selector) {
+                    targets.retain(|h| super::selections::field_value(ctx.game, *h, *selector) == Some(extreme));
+                }
+            }
+            (targets, None, false)
+        }
         CompiledStep::ReturnAllToDeck {
             over,
             selector,
             position,
             include_sources,
-        } => (over, selector, Some(*position), *include_sources),
+        } => {
+            let mut targets = super::permanent_scan::scan(ctx, over, Some(bindings));
+            if let Some(selector) = selector {
+                if let Some(extreme) = super::selections::selected_field_extreme(ctx.game, &targets, *selector) {
+                    targets.retain(|h| super::selections::field_value(ctx.game, *h, *selector) == Some(extreme));
+                }
+            }
+            (targets, Some(*position), *include_sources)
+        }
         _ => return None,
     };
-    let mut targets = super::permanent_scan::scan(ctx, over, Some(bindings));
-    if let Some(selector) = selector {
-        if let Some(extreme) =
-            super::selections::selected_field_extreme(ctx.game, &targets, *selector)
-        {
-            targets.retain(|h| {
-                super::selections::field_value(ctx.game, *h, *selector) == Some(extreme)
-            });
-        }
-    }
     targets.sort_by_key(|h| (h.player, h.index));
     targets.dedup();
     targets.retain(|h| ctx.can_affect_permanent(*h));
@@ -67,6 +80,11 @@ pub(super) fn try_run(
                 .iter()
                 .filter_map(|(p, id)| ctx.game.resolve_digivolve_host_identity(*p, *id))
                 .collect();
+            // A resumed DSL tail can run after the queue has restored its
+            // outer attribution. Preserve the effect controller just as the
+            // direct EffectContext return path does, including for the deck
+            // insertion observer and opponent-scoped replacement windows.
+            let previous = ctx.game.effect_source_player.replace(ctx.player);
             crate::replacement::start_departure_batch(
                 ctx.game,
                 targets,
@@ -74,6 +92,7 @@ pub(super) fn try_run(
                 position.map(super::map_stack_position),
                 *include_sources,
             );
+            ctx.game.effect_source_player = previous;
             true
         }
         CompiledStep::ReturnReceiptFinalize { receipt } => {

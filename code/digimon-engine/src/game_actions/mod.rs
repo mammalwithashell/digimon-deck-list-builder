@@ -1428,14 +1428,14 @@ impl Game {
                 arts_owner,
             );
         }
-        self.drain_effect_queue();
+        self.maybe_drain_effect_queue();
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
                 EffectTiming::OnDigivolve,
                 TriggerSource::PlayerBattleArea(pid as PlayerId),
             );
         }
-        self.drain_effect_queue();
+        self.maybe_drain_effect_queue();
         self.check_turn_end();
         true
     }

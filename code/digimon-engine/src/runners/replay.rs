@@ -3263,8 +3263,6 @@ impl ReplayDriver {
         game: &mut Game,
         payload: &crate::dcgo_recording::SelectionRow,
     ) -> ReplayStepResult {
-        use super::selection_resolve::resolve_next;
-
         // A target naming one of several copies of a card: the rows that
         // follow decide which copy (`duplicate_copy_target`).
         if !self.source.answers_engine_only_prompts() {
@@ -3337,6 +3335,164 @@ impl ReplayDriver {
         // prompts exactly as parked: folding there consumes or auto-answers the
         // prompt its own row was written for and shifts every later row.
         let dcgo_folds = !self.source.answers_engine_only_prompts();
+        let resolve_next = if dcgo_folds {
+            super::selection_resolve::resolve_next_dcgo
+        } else {
+            super::selection_resolve::resolve_next
+        };
+
+        // A recorder playback stamp is already an engine action. Only a
+        // currently legal action of the recorded actor is trusted; stale stamps
+        // still go through evidence-based DCGO ordering.
+        let stamped_order_action = payload.engine_action.is_some_and(|action| {
+            game.pending_selection.as_ref().is_some_and(|pending| {
+                pending.selecting_player == actor
+                    && (matches!(pending.kind, crate::selection::SelectionKind::TriggerOrder)
+                        || (matches!(pending.kind, crate::selection::SelectionKind::EffectChoice)
+                            && pending.prompt == REPLACEMENT_ORDER_PROMPT))
+                    && pending.valid_action_ids.contains(&action)
+            })
+        });
+
+        // A remote MultipleSkills index is ordered by DCGO, so it cannot be
+        // interpreted as an engine trigger-order index. A following named pick
+        // can identify the trigger when exactly one branch accepts that pick.
+        if dcgo_folds && !stamped_order_action && payload.prompt == "MultipleSkills"
+            && payload.int_value.is_some_and(|v| v >= 0)
+            && payload.chosen_effect_card.is_none()
+            && game.pending_selection.as_ref().is_some_and(|p| p.selecting_player == actor)
+        {
+            if let Some(next) = self.source.steps().get(self.cursor as usize + 1)
+                .and_then(|step| step.selection.as_ref())
+                .filter(|next| next.actor == actor)
+            {
+                // DCGO may ask to activate the chosen trigger before its
+                // identifying card/field pick. Probe that subsequent pick,
+                // but keep the recorded yes for the actual activation gate.
+                if next.prompt == "OptionalSkill" && next.bool_value == Some(true) {
+                    if let Some(pick) = self.source.steps().get(self.cursor as usize + 2)
+                        .and_then(|step| step.selection.as_ref())
+                        .filter(|pick| pick.actor == actor &&
+                            (pick.card_ids.as_ref().is_some_and(|ids| !ids.is_empty()) ||
+                             pick.targets.as_ref().is_some_and(|targets| !targets.is_empty())))
+                    {
+                        let remapped = remap_selection_targets(game, pick);
+                        if let Some((branch, false)) = self.probe_branch_for_row(game, remapped.as_ref().unwrap_or(pick), actor, self.cursor as usize + 2) {
+                            let phase_before = game.current_phase.py_name().to_string();
+                            let memory_before = game.memory;
+                            let turn_number = game.turn_count;
+                            game.decode_action(branch, actor);
+                            self.cursor += 1;
+                            return ReplayStepResult {
+                                step_number: self.cursor, player_id: actor, action_id: branch,
+                                phase_before, phase_after: game.current_phase.py_name().to_string(),
+                                memory_before, memory_after: game.memory, turn_number,
+                                is_game_over: game.game_over, winner_id: game.winner, divergences: Vec::new(),
+                            };
+                        }
+                    }
+                }
+                // Both ST24-14 copies expose DCGO's 1/2 place-or-decline
+                // menu. A following 2 identifies that menu, regardless of
+                // its position in DCGO's trigger-order panel.
+                if next.prompt == "generic_int" && next.int_value == Some(2)
+                    && self.source.steps().get(self.cursor as usize + 2)
+                        .and_then(|step| step.selection.as_ref())
+                        .is_some_and(|after| after.actor == actor &&
+                            (after.prompt == "MultipleSkills" || after.cancel == Some(true)))
+                {
+                    if let Some(branch) = game.pending_selection.as_ref()
+                        .filter(|p| matches!(p.kind, crate::selection::SelectionKind::TriggerOrder))
+                        .and_then(|p| p.effect_choices.as_ref())
+                        .filter(|entries| entries.iter().all(|e| e.source_card
+                            .and_then(|c| game.card_data_for_handle(c))
+                            .is_some_and(|d| matches!(d.card_id.as_str(), "ST24-14" | "ST24-15"))))
+                        .and_then(|entries| entries.iter().find(|e| {
+                            e.timing == Some(crate::enums::EffectTiming::StartOfYourMainPhase)
+                                && e.source_card.and_then(|c| game.card_data_for_handle(c))
+                                    .is_some_and(|d| d.card_id == "ST24-14")
+                        }))
+                        .map(|e| e.action_id)
+                    {
+                        let phase_before = game.current_phase.py_name().to_string();
+                        let memory_before = game.memory;
+                        let turn_number = game.turn_count;
+                        game.decode_action(branch, actor);
+                        self.cursor += 1;
+                        return ReplayStepResult {
+                            step_number: self.cursor, player_id: actor, action_id: branch,
+                            phase_before, phase_after: game.current_phase.py_name().to_string(),
+                            memory_before, memory_after: game.memory, turn_number,
+                            is_game_over: game.game_over, winner_id: game.winner, divergences: Vec::new(),
+                        };
+                    }
+                }
+                let remapped_next = remap_selection_targets(game, next);
+                let next = remapped_next.as_ref().unwrap_or(next);
+                if let Some((branch, false)) = self.probe_branch_for_row(game, next, actor, self.cursor as usize + 1) {
+                    game.decode_action(branch, actor);
+                    self.cursor += 1;
+                    return ReplayStepResult {
+                        step_number: self.cursor,
+                        player_id: actor,
+                        action_id: branch,
+                        phase_before: game.current_phase.py_name().to_string(),
+                        phase_after: game.current_phase.py_name().to_string(),
+                        memory_before: game.memory,
+                        memory_after: game.memory,
+                        turn_number: game.turn_count,
+                        is_game_over: game.game_over,
+                        winner_id: game.winner,
+                        divergences: Vec::new(),
+                    };
+                }
+            }
+        }
+
+        if let Some(pending) = game.pending_selection.as_ref() {
+            if pending.selecting_player != actor {
+                self.divergences.push(Divergence {
+                    step: self.cursor,
+                    action_id: 0,
+                    actor,
+                    phase: payload.phase.clone(),
+                    kind: DivergenceKind::Actor {
+                        expected: pending.selecting_player,
+                        recorded: actor,
+                    },
+                    board: describe_board(game),
+                });
+                self.paused = true;
+                return self.no_progress_result(game);
+            }
+        }
+
+        // DCGO's BT25-087 menu uses values 1 = suspend and place,
+        // 2 = suspend only, 3 = decline. The engine's optional trigger
+        // exposes the first and third choices; do not infer value 2.
+        if dcgo_folds && payload.prompt == "generic_int" && payload.int_value == Some(3)
+            && game.pending_selection.as_ref().is_some_and(|p| {
+                matches!(p.kind, crate::selection::SelectionKind::TriggerOrder)
+                    && p.is_optional && p.selecting_player == actor
+                    && p.effect_choices.as_ref().is_some_and(|entries| {
+                        entries.len() == 1 && entries[0].timing == Some(crate::enums::EffectTiming::OnAddToHand)
+                            && entries[0].source_card.and_then(|c| game.card_data_for_handle(c))
+                                .is_some_and(|d| d.card_id == "BT25-087")
+                    })
+            })
+        {
+            let phase_before = game.current_phase.py_name().to_string();
+            let memory_before = game.memory;
+            let turn_number = game.turn_count;
+            game.decode_action(crate::action::space::PASS, actor);
+            self.cursor += 1;
+            return ReplayStepResult {
+                step_number: self.cursor, player_id: actor, action_id: crate::action::space::PASS,
+                phase_before, phase_after: game.current_phase.py_name().to_string(),
+                memory_before, memory_after: game.memory, turn_number,
+                is_game_over: game.game_over, winner_id: game.winner, divergences: Vec::new(),
+            };
+        }
 
         // An UNSTAMPED yes/no (`SelectionRow::unstamped`): a remote seat's
         // "use this optional effect?" answer (DCGO `OptionalSkill.SetUseOptional`),
@@ -3763,6 +3919,7 @@ impl ReplayDriver {
         // decides; see `remote_trigger_order_choice`. A row that does carry the
         // card keeps the path through `resolve_next`.
         if dcgo_folds
+            && !stamped_order_action
             && payload.prompt == "MultipleSkills"
             && payload.int_value.is_some_and(|v| v >= 0)
             && payload.chosen_effect_card.is_none()
@@ -3771,6 +3928,23 @@ impl ReplayDriver {
             && payload.cancel != Some(true)
         {
             match self.remote_trigger_order_choice(game, actor, payload.int_value.unwrap_or(0)) {
+                None if game.pending_selection.as_ref().is_some_and(|p| {
+                    matches!(p.kind, crate::selection::SelectionKind::TriggerOrder)
+                        && p.valid_action_ids.iter().filter(|&&id| id != crate::action::space::PASS).count() > 1
+                }) && self.source.steps().get(self.cursor as usize + 1)
+                    .and_then(|s| s.selection.as_ref()).is_some_and(|next| {
+                        next.actor == actor && matches!(next.prompt.as_str(), "OptionalSkill" | "generic_bool")
+                            && next.bool_value == Some(false)
+                    }) => {
+                    self.divergences.push(Divergence {
+                        step: self.cursor, action_id: 0, actor, phase: payload.phase.clone(),
+                        kind: DivergenceKind::SelectionResolution { reason:
+                            "declined trigger cannot be identified from DCGO's ordering index".into() },
+                        board: describe_board(game),
+                    });
+                    self.paused = true;
+                    return self.no_progress_result(game);
+                }
                 None => {}
                 Some(Ok(entry)) => {
                     let (phase_before, memory_before) = (game.current_phase.py_name().to_string(), game.memory);
@@ -3816,7 +3990,7 @@ impl ReplayDriver {
         // proof a card-less index gets), or the order is unobservable (every
         // entry leads to the same game), or the replay stops. Only when the
         // resolver cannot already single one entry out (by the effect's name).
-        if dcgo_folds && payload.prompt == "MultipleSkills" && payload.int_value.is_some_and(|v| v >= 0) {
+        if dcgo_folds && !stamped_order_action && payload.prompt == "MultipleSkills" && payload.int_value.is_some_and(|v| v >= 0) {
             if let Some(cid) = payload.chosen_effect_card.as_deref() {
                 let matching: Vec<u16> = game
                     .pending_selection
@@ -4270,7 +4444,15 @@ impl ReplayDriver {
                                     && !optional_yes_gate
                                     && !link_host_yes_gate
                                     && !material_carrier_row)))
-                });
+                }) || (optional_yes_gate
+                    && game.pending_selection.as_ref().is_some_and(|p| matches!(p.kind, crate::selection::SelectionKind::UnionZone { .. }))
+                    && self.source.steps().get(self.cursor as usize + 1)
+                        .and_then(|s| s.selection.as_ref())
+                        .is_some_and(|n| n.actor == actor && n.prompt == "generic_int")
+                    && self.source.steps().get(self.cursor as usize + 2)
+                        .and_then(|s| s.selection.as_ref())
+                        .is_some_and(|n| n.actor == actor && n.card_ids.as_ref().is_some_and(|ids| !ids.is_empty())
+                            && matches!(super::selection_resolve::resolve_next(game, n, 0), Ok(Some(id)) if id != crate::action::space::PASS)));
             if next_names_card {
                 self.cursor += 1;
                 return ReplayStepResult {
@@ -4486,6 +4668,10 @@ impl ReplayDriver {
             }
         }
 
+        let normalized = dcgo_folds
+            .then(|| super::selection_resolve::normalize_lilamon_payment(game, payload))
+            .flatten();
+        let payload = normalized.as_ref().unwrap_or(payload);
         let n_picks = super::selection_resolve::payload_pick_count(payload);
         let mut picks_done = 0usize;
         let mut last_action: u16 = 0;
@@ -9408,6 +9594,153 @@ mod tests {
             winner: -1,
             reason: "test".into(),
             total_steps: 0,
+        }
+    }
+
+    #[test]
+    fn remote_trigger_index_cannot_identify_a_declined_optional_effect() {
+        use crate::debug_runner::{make_test_card, DebugRunner};
+        use crate::enums::{EffectSourceKind, GamePhase};
+        use crate::selection::{PendingSelection, SelectionKind};
+
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("FILLER", "Filler"))
+            .deck(0, &["FILLER"; 6]).deck(1, &["FILLER"; 6]).start();
+        let source = runner.place_on_field(0, "FILLER", None);
+        let card = runner.game.players[0].battle_area[source.index as usize].top_card().handle();
+        runner.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::TriggerOrder,
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: vec![30, 31],
+            is_optional: false,
+            prompt: "Choose triggered effect".into(),
+            effect_choices: None,
+            source_card: card,
+            source_permanent: Some(source),
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| panic!("must not guess the declined trigger")),
+            on_decline: None,
+            card_choice: None,
+            zone_owner: None,
+        });
+        let order: crate::dcgo_recording::SelectionRow = serde_json::from_value(json!({
+            "step": 0, "actor": 0, "phase": "Main", "prompt": "MultipleSkills", "int_value": 0
+        })).unwrap();
+        let decline: crate::dcgo_recording::SelectionRow = serde_json::from_value(json!({
+            "step": 1, "actor": 0, "phase": "Main", "prompt": "OptionalSkill", "bool_value": false
+        })).unwrap();
+        let adapter = DcgoAdapter::from_recording(crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![crate::dcgo_recording::Row::Selection(order.clone()),
+                       crate::dcgo_recording::Row::Selection(decline)],
+            end: dcgo_game_end(),
+        }, &no_card_data()).unwrap();
+        let mut driver = ReplayDriver {
+            source: Box::new(adapter), cursor: 0, verify: false,
+            policy: StepPolicy::CheckThenApply, divergences: Vec::new(),
+            digivolve_operand_fallbacks: Vec::new(), inferred_skipped: Vec::new(),
+            notes: Vec::new(), raid_retarget: None, paused: false, lookahead_depth: 0,
+            pick_zone_hint: None, zone_menu_row: None, unstamped_window_start: 0,
+            order_answer: None, dcgo_cards: HashMap::new(), count_evidence: None,
+        };
+        let result = driver.apply_selection_step(&mut runner.game, &order);
+        assert_eq!(result.step_number, 0);
+        assert!(driver.paused);
+        assert!(matches!(&driver.divergences()[0].kind,
+            DivergenceKind::SelectionResolution { reason } if reason.contains("cannot be identified")));
+        assert_eq!(runner.game.pending_selection.as_ref().unwrap().valid_action_ids, vec![30, 31]);
+    }
+
+    #[test]
+    fn dcgo_lilamon_payment_can_use_one_tamer_two_tamers_or_decline() {
+        use crate::debug_runner::{make_test_card, DebugRunner};
+        use crate::enums::{CardKind, EffectTiming};
+        use crate::selection::TriggerSource;
+
+        for (actor, targets, left, right) in [
+            (0, json!({ "targets": [{"player":0,"frame":0}] }), 0, 1),
+            (0, json!({ "targets": [{"player":0,"frame":0},{"player":0,"frame":1}] }), 1, 0),
+            (0, json!({ "cancel": true }), 2, 1),
+            (1, json!({ "targets": [{"player":0,"frame":0}] }), 2, 1),
+        ] {
+            let filler = make_test_card("FILLER", "Filler");
+            let mut tamer = make_test_card("TAMER", "Tamer");
+            tamer.card_kind = CardKind::Tamer;
+            let mut runner = DebugRunner::builder()
+                .dsl_card("ST24-10")
+                .unwrap()
+                .add_card(filler)
+                .add_card(tamer)
+                .deck(0, &["FILLER"; 6])
+                .deck(1, &["FILLER"; 6])
+                .start();
+            runner.set_first_player(0);
+            let left_tamer = runner.place_stack(0, &["FILLER", "FILLER", "TAMER"]);
+            let right_tamer = runner.place_stack(0, &["FILLER", "TAMER"]);
+            let lilamon = runner.place_on_field(0, "ST24-10", None);
+            for (tamer, count) in [(left_tamer, 2), (right_tamer, 1)] {
+                for source in &mut runner.game.players[0].battle_area[tamer.index as usize]
+                    .card_sources[..count]
+                {
+                    source.face_down = true;
+                }
+            }
+            runner.game.enqueue_triggered(
+                EffectTiming::WhenDigivolving,
+                TriggerSource::Permanent(lilamon),
+            );
+            runner.game.drain_effect_queue();
+
+            let mut row = json!({
+                "step": 0,
+                "actor": actor,
+                "phase": "Main",
+                "prompt": "SelectPermanentEffect",
+            });
+            row.as_object_mut()
+                .unwrap()
+                .extend(targets.as_object().unwrap().clone());
+            let payload: crate::dcgo_recording::SelectionRow = serde_json::from_value(row).unwrap();
+            let adapter = DcgoAdapter::from_recording(
+                crate::dcgo_recording::RecordingV1 {
+                    start: dcgo_game_start(vec![], Some(vec![])),
+                    rows: vec![crate::dcgo_recording::Row::Selection(payload.clone())],
+                    end: dcgo_game_end(),
+                },
+                &no_card_data(),
+            )
+            .unwrap();
+            let mut driver = ReplayDriver {
+                source: Box::new(adapter),
+                cursor: 0,
+                verify: false,
+                policy: StepPolicy::CheckThenApply,
+                divergences: Vec::new(),
+                digivolve_operand_fallbacks: Vec::new(),
+                inferred_skipped: Vec::new(), notes: Vec::new(),
+                raid_retarget: None, paused: false, lookahead_depth: 0,
+                pick_zone_hint: None, zone_menu_row: None, unstamped_window_start: 0,
+                order_answer: None, dcgo_cards: HashMap::new(), count_evidence: None,
+            };
+            let step = driver.apply_selection_step(&mut runner.game, &payload);
+            if actor == 0 {
+                assert_eq!(step.step_number, 1, "{:?}", driver.divergences());
+                assert!(runner.game.pending_selection.is_none());
+            } else {
+                assert_eq!(step.step_number, 0);
+                assert!(matches!(driver.divergences()[0].kind,
+                    DivergenceKind::Actor { expected: 0, recorded: 1 }));
+                assert!(runner.game.pending_selection.is_some());
+            }
+            for (tamer, expected) in [(left_tamer, left), (right_tamer, right)] {
+                assert_eq!(
+                    runner.game.players[0].battle_area[tamer.index as usize]
+                        .face_down_source_indices()
+                        .count(),
+                    expected
+                );
+            }
         }
     }
 

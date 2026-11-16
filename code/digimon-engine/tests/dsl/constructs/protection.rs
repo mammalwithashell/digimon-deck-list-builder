@@ -421,7 +421,7 @@ fn narrow_and_stack_do_not_block_deletion_or_battle() {
 }
 #[test]
 fn stack_s1_s2_s4_s5_s6_s9() {
-    for y in [ALL, TOP, DEDI, BOUNCE, DECK, SOURCES_DECK] {
+    for y in [ALL, TOP, DEDI, SOURCES_DECK] {
         let (mut r, h) = protected(STACK, "STACK", y);
         let deck = r.game.players[0].deck.len();
         attack(&mut r, y, 1);
@@ -436,6 +436,18 @@ fn stack_s1_s2_s4_s5_s6_s9() {
         assert!(r.game.players[0].trash.is_empty());
         assert!(r.game.players[0].hand.is_empty());
         assert_eq!(r.game.players[0].deck.len(), deck);
+    }
+}
+#[test]
+fn stack_protection_allows_returning_the_whole_digimon() {
+    for y in [BOUNCE, DECK] {
+        let (mut r, _) = protected(STACK, "STACK", y);
+        let deck = r.game.players[0].deck.len();
+        attack(&mut r, y, 1);
+        assert_eq!(r.battle_area_size(0), 1, "{y}");
+        assert_eq!(r.game.players[0].trash.len(), 2, "{y}");
+        assert_eq!(r.game.players[0].hand.len(), usize::from(y == BOUNCE), "{y}");
+        assert_eq!(r.game.players[0].deck.len(), deck + usize::from(y == DECK), "{y}");
     }
 }
 #[test]

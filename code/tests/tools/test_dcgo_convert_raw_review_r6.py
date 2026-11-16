@@ -52,6 +52,16 @@ def _bools(out):
     return [r for r in out if r.get("type") == "selection" and r.get("prompt") == "generic_bool"]
 
 
+def test_trigger_order_preserves_recorded_engine_action():
+    out, _ = convert_raw.convert(_game({
+        "method": "MultipleSkills.SetTargetSkill", "tp": YOU, "turn": 1,
+        "args": [YOU, 0], "engine_action": 31, "chosen_effect_card": TAMER,
+    }), cards={})
+    row = next(r for r in out if r.get("prompt") == "MultipleSkills")
+    assert row["engine_action"] == 31
+    assert row["chosen_effect_card"] == TAMER
+
+
 # ---- 1. unstamped answers on a stamped seat -------------------------------------------------------------------
 
 def test_an_agent_seats_unstamped_false_is_kept_for_judging():

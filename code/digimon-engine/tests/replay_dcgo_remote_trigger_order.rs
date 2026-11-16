@@ -257,6 +257,41 @@ fn ambiguous_cardless_order_index_is_a_divergence_not_a_guess() {
     );
 }
 
+/// A playback stamp is already an engine action, so a legal stamped choice
+/// must not be reinterpreted as DCGO's separately ordered integer index.
+#[test]
+fn stamped_trigger_order_uses_the_recorded_engine_action() {
+    let runner = end_of_attack_with(&["TEST-EOA-DEBUFF", SHISHIMAMON]);
+    let pending = runner.game.pending_selection.as_ref().unwrap();
+    let chosen = pending.valid_action_ids[1];
+    let mut expected = runner.game.clone();
+    expected.decode_action(chosen, 0);
+    let mut s = session(runner, vec![row(serde_json::json!({
+        "step": 0, "actor": 0, "prompt": "MultipleSkills", "int_value": 0,
+        "engine_action": chosen
+    }))]);
+    s.step();
+    assert!(!s.is_paused(), "{:?}", s.divergences());
+    assert_eq!(s.current_step(), 1);
+    assert_eq!(s.game.verification_digest(), expected.verification_digest());
+}
+
+/// A stale stamp is not evidence that the engine accepted that action.
+#[test]
+fn stale_stamped_trigger_order_still_reports_ambiguity() {
+    let runner = end_of_attack_with(&["TEST-EOA-DEBUFF", SHISHIMAMON]);
+    let before = runner.game.verification_digest();
+    let mut s = session(runner, vec![row(serde_json::json!({
+        "step": 0, "actor": 0, "prompt": "MultipleSkills", "int_value": 0,
+        "engine_action": 2000
+    }))]);
+    s.step();
+    assert!(s.is_paused());
+    assert_eq!(s.current_step(), 0);
+    assert_eq!(s.game.verification_digest(), before);
+    assert!(matches!(&s.divergences()[0].kind, DivergenceKind::SelectionResolution { reason } if reason.contains("ambiguous")));
+}
+
 /// A card-less index with NO row after it: nothing refutes or proves either
 /// entry, and they lead to different games - an ambiguity, reported as such.
 #[test]
