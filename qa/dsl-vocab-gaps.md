@@ -558,7 +558,10 @@ AD1_019.cs:56, BT26_090.cs:61, BT17_097.cs:137).
    2026-11-14 (G-ENGINE-TRASH-LOCK-OPTION-OVERBLOCK, `docs/RUST_ENGINE_GAPS.md`):
    the lock no longer refuses an Option USE from the trash (BT23-014 prints
    "Digimon or Tamers"; CR 4.3 9-1-1), so `can_play_or_use_from_effect` reads
-   it only in its play arm. Open follow-up: G-ENGINE-TRASH-PLAY-LOCK-SCOPE.
+   it only in its play arm. Resolved 2026-11-15 (G-ENGINE-TRASH-PLAY-LOCK-SCOPE):
+   both leaves read the lock against the playing effect's controller
+   (`rctx.player`), for a card in ANY trash, as DCGO does (BT23_014.cs:46-58),
+   not against the owner of the trash.
 3. **DNA candidates.**
    a. `dna_field_pair { role: result, first: <binding|source>, second:
       <binding|source>, cost }` [G-DSL-DNA-FIELD-PAIR-FIXED-MATERIALS]: the

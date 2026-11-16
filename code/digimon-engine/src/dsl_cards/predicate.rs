@@ -5605,13 +5605,18 @@ fn card_cost_affordable(
     rctx.game.payer_can_pay(rctx.player, pay)
 }
 
-/// G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE: `card` (of `kind`) lies in its owner's
-/// trash and that player's `CannotPlayFromTrash` lock covers playing it
-/// (`Game::trash_play_lock_applies`: Digimon / Tamer / DUAL only; BT23-014
-/// prints "can't play Digimon or Tamers from the trash"). The trash-origin
-/// play (`Game::trash_play_refusal`) refuses it, so a PLAY candidate leaf
-/// must too. An Option use from the trash is never locked by it (CR 4.3
-/// 9-1-1), nor is a hand or digivolution-card origin.
+/// G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE: `card` (of `kind`) lies in a trash and the
+/// `CannotPlayFromTrash` lock on the EFFECT'S controller (`rctx.player`) covers
+/// playing it (`Game::trash_play_lock_applies`: Digimon / Tamer / DUAL only;
+/// BT23-014 prints "their effects can't play Digimon or Tamers from the trash").
+/// The lock binds the locked player's effects, not the trash's owner: DCGO's
+/// condition is `IsExistInAnyTrash` plus `EffectSourceCard.Owner ==` the locked
+/// player (BT23_014.cs:46-58), so a locked player's effect that plays from the
+/// OTHER player's trash is refused and Gallantmon's controller's effect that
+/// plays from the locked player's trash is not (G-ENGINE-TRASH-PLAY-LOCK-SCOPE).
+/// The trash-origin play (`Game::trash_play_refusal`) refuses the same plays,
+/// so a PLAY candidate leaf must too. An Option use from the trash is never
+/// locked by it (CR 4.3 9-1-1), nor is a hand or digivolution-card origin.
 fn trash_play_locked(
     rctx: &EffectReadContext<'_>,
     card: CardHandle,
@@ -5619,9 +5624,8 @@ fn trash_play_locked(
 ) -> bool {
     matches!(
         rctx.game.locate_card_source_ref(card),
-        Some(crate::enums::CardSourceRef::Trash(owner, _))
-            if rctx.game.trash_play_lock_applies(owner, kind)
-    )
+        Some(crate::enums::CardSourceRef::Trash(_, _))
+    ) && rctx.game.trash_play_lock_applies(rctx.player, kind)
 }
 
 /// Effective Option use cost of the concrete card `card` (printed + its own
