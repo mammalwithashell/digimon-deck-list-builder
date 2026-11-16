@@ -710,3 +710,59 @@ fn offered_actions(r:&DebugRunner)->Vec<u16> {
     }
     actions
 }
+
+// ─── Host pick is route-only, like DCGO ───────────────────────────────────────────────────────────────────────
+//
+// "1 of your Digimon may digivolve into a [TS] ... card in the hand or trash with the digivolution cost reduced by 1."
+// DCGO's host condition is `CanPlayCardTargetFrame(permanent.PermanentFrame, false, activateClass, root)`
+// (BT25_092.cs:109: payCost false, and an occupied frame never checks payment, CardSource.cs:1150-1161), so a host with
+// a printed route is offered whether or not its result can be paid. CR 4.3 1-3-2 lets the player choose it, and 1-3-11-1
+// only forbids DECLARING a card whose cost can't be paid, which the result pick that follows checks. The Main can't be
+// activated with the gauge on the opponent's side, so the unaffordable result is the one whose cost is above 10:
+// EVO-PRICEY has a printed circle of 12, 11 once reduced: at most 10 can be paid from memory 0 and 11 from memory 1.
+// (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY, decided route-only 2026-11-16.)
+
+fn make_evo_pricey(id: &str) -> digimon_engine::CardData {
+    let mut card = make_evo_ts(id);
+    card.evo_costs = vec![EvoCost {
+        card_color: CardColor::Purple as u8,
+        level: 4,
+        memory_cost: 12,
+    }];
+    card
+}
+
+fn pricey_main(memory: i16) -> (DebugRunner, digimon_engine::permanent::PermanentHandle, digimon_engine::permanent::PermanentHandle) {
+    let mut runner = main_runner()
+        .add_card(make_evo_pricey("EVO-PRICEY"))
+        .hand(0, &["OPT-HAND", "EVO-PRICEY"])
+        .memory(memory)
+        .start();
+    let tamer = runner.place_on_field(0, "BT25-092", Some(0));
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    enter_main(&mut runner);
+    assert!(activate_main(&mut runner, tamer.index as usize));
+    let opt_action = owned_hand(&runner, "OPT-HAND");
+    runner.execute_action(0, opt_action).expect("trash Option");
+    (runner, tamer, base)
+}
+
+#[test]
+fn bt25_092_main_target_pick_is_route_only_and_an_unpayable_result_is_a_dead_choice() {
+    let (mut runner, _tamer, base) = pricey_main(0);
+    let view = runner.pending_selection_view().expect("the host has a printed route, so it is offered (DCGO)");
+    let host = *view.valid_action_ids.iter().find(|a| **a != PASS).expect("a host");
+    runner.execute_action(0, host).expect("choose the host");
+    runner.game.drain_effect_queue();
+    assert_eq!(
+        field_top_id(&runner, base.index as usize),
+        "BASE",
+        "the only result costs 12 - 1 = 11 and 10 is the most payable from memory 0: nothing digivolves"
+    );
+}
+
+#[test]
+fn bt25_092_main_target_pick_is_offered_when_the_reduced_cost_is_exactly_payable() {
+    let (runner, _tamer, _base) = pricey_main(1);
+    assert!(runner.pending_selection().is_some(), "11 is payable from memory 1: the host is offered");
+}

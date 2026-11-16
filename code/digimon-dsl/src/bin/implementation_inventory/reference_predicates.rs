@@ -1523,12 +1523,13 @@ impl Walk for digimon_dsl::predicate::DigivolveCandidatePredicate {
             "COMPOSITE",
             serde_json::Value::Null,
         );
-        let digimon_dsl::predicate::DigivolveCandidatePredicate { of, zone, filter, cost, ignore_level } = self;
+        let digimon_dsl::predicate::DigivolveCandidatePredicate { of, zone, filter, cost, ignore_level, ignore_requirements } = self;
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
         zone.walk(c, &format!("{}.zone", path), "UNCLASSIFIED_STRING");
         filter.walk(c, &format!("{}.filter", path), "UNCLASSIFIED_STRING");
         cost.walk(c, &format!("{}.cost", path), "UNCLASSIFIED_STRING");
         ignore_level.walk(c, &format!("{}.ignore_level", path), "UNCLASSIFIED_STRING");
+        ignore_requirements.walk(c, &format!("{}.ignore_requirements", path), "UNCLASSIFIED_STRING");
     }
 }
 impl Walk for digimon_dsl::predicate::ThisCardDigivolvePredicate {

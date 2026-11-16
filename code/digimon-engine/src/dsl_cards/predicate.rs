@@ -4284,6 +4284,14 @@ fn permanent_has_digivolve_candidate(
     handle: PermanentHandle,
     bindings: Option<&Bindings>,
 ) -> bool {
+    use crate::game_actions::digivolve::DigivolveRequirementWaiver;
+    let waiver = if spec.ignore_requirements {
+        DigivolveRequirementWaiver::All
+    } else if spec.ignore_level {
+        DigivolveRequirementWaiver::Level
+    } else {
+        DigivolveRequirementWaiver::None
+    };
     for player in resolve_predicate_players(spec.of, rctx) {
         let state = rctx.game.player(player);
         for zone in &spec.zones {
@@ -4326,13 +4334,22 @@ fn permanent_has_digivolve_candidate(
                     let delta = crate::dsl_cards::step::play_digivolve::lower_cost_delta_read(
                         Some(cost), rctx, bindings,
                     );
-                    let waiver = if spec.ignore_level {
-                        crate::game_actions::digivolve::DigivolveRequirementWaiver::Level
-                    } else {
-                        crate::game_actions::digivolve::DigivolveRequirementWaiver::None
-                    };
                     rctx.game.can_effect_digivolve_from_source_with_cost_waiving(
                         handle.player, source_ref, handle, delta, waiver,
+                    )
+                } else if spec.ignore_requirements {
+                    // "Ignoring digivolution requirements": no route is needed, only the prohibitions and a
+                    // payable (free) declaration (DCGO `CanPlayCardTargetFrame(.., IgnoreRequirement.All)`,
+                    // BT22_013.cs:145-150). G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS.
+                    let Some(source_ref) = rctx.game.locate_card_source_ref(h) else {
+                        continue;
+                    };
+                    rctx.game.can_effect_digivolve_from_source_with_cost_waiving(
+                        handle.player,
+                        source_ref,
+                        handle,
+                        crate::enums::CostDelta::Free,
+                        waiver,
                     )
                 } else {
                     // G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-LEVEL.
@@ -5605,13 +5622,18 @@ fn card_cost_affordable(
     rctx.game.payer_can_pay(rctx.player, pay)
 }
 
-/// G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE: `card` (of `kind`) lies in its owner's
-/// trash and that player's `CannotPlayFromTrash` lock covers playing it
-/// (`Game::trash_play_lock_applies`: Digimon / Tamer / DUAL only; BT23-014
-/// prints "can't play Digimon or Tamers from the trash"). The trash-origin
-/// play (`Game::trash_play_refusal`) refuses it, so a PLAY candidate leaf
-/// must too. An Option use from the trash is never locked by it (CR 4.3
-/// 9-1-1), nor is a hand or digivolution-card origin.
+/// G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE: `card` (of `kind`) lies in a trash and the
+/// `CannotPlayFromTrash` lock on the EFFECT'S controller (`rctx.player`) covers
+/// playing it (`Game::trash_play_lock_applies`: Digimon / Tamer / DUAL only;
+/// BT23-014 prints "their effects can't play Digimon or Tamers from the trash").
+/// The lock binds the locked player's effects, not the trash's owner: DCGO's
+/// condition is `IsExistInAnyTrash` plus `EffectSourceCard.Owner ==` the locked
+/// player (BT23_014.cs:46-58), so a locked player's effect that plays from the
+/// OTHER player's trash is refused and Gallantmon's controller's effect that
+/// plays from the locked player's trash is not (G-ENGINE-TRASH-PLAY-LOCK-SCOPE).
+/// The trash-origin play (`Game::trash_play_refusal`) refuses the same plays,
+/// so a PLAY candidate leaf must too. An Option use from the trash is never
+/// locked by it (CR 4.3 9-1-1), nor is a hand or digivolution-card origin.
 fn trash_play_locked(
     rctx: &EffectReadContext<'_>,
     card: CardHandle,
@@ -5619,9 +5641,8 @@ fn trash_play_locked(
 ) -> bool {
     matches!(
         rctx.game.locate_card_source_ref(card),
-        Some(crate::enums::CardSourceRef::Trash(owner, _))
-            if rctx.game.trash_play_lock_applies(owner, kind)
-    )
+        Some(crate::enums::CardSourceRef::Trash(_, _))
+    ) && rctx.game.trash_play_lock_applies(rctx.player, kind)
 }
 
 /// Effective Option use cost of the concrete card `card` (printed + its own

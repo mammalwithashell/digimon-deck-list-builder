@@ -328,3 +328,54 @@ fn one_card_binding_feeding_digivolves_with_different_costs_is_an_error() {
         assert_eq!(filter.can_digivolve_onto_with_cost.as_ref().map(|l| l.cost.clone()), Some(want));
     }
 }
+
+/// `has_digivolve_candidate` objects under `v`, and how many of them carry a `cost`.
+fn host_leaf_counts(v: &serde_json::Value) -> (usize, usize) {
+    let mut total = 0;
+    let mut with_cost = 0;
+    let mut stack = vec![v];
+    while let Some(v) = stack.pop() {
+        match v {
+            serde_json::Value::Object(m) => {
+                if let Some(leaf) = m.get("has_digivolve_candidate").and_then(|l| l.as_object()) {
+                    total += 1;
+                    if leaf.get("cost").is_some_and(|c| !c.is_null()) {
+                        with_cost += 1;
+                    }
+                }
+                stack.extend(m.values());
+            }
+            serde_json::Value::Array(a) => stack.extend(a.iter()),
+            _ => {}
+        }
+    }
+    (total, with_cost)
+}
+
+/// The HOST pick and the activation gate of a paid digivolve stay route-only unless the card authors a `cost`: DCGO's
+/// host / gate probes are `CanPlayCardTargetFrame(.., false | true, ..)` on an occupied frame, which never checks the
+/// payment (CardSource.cs:1150-1161), and CR 4.3 1-3-2 lets a player choose a host whose candidate can't be paid
+/// (1-3-11-1 only forbids declaring the CARD, which the card pick checks). So the pass must not add a cost to any
+/// authored `has_digivolve_candidate` leaf: the compiled card has exactly as many costed leaves as its YAML.
+/// G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY.
+#[test]
+fn the_pass_never_adds_a_cost_to_a_host_or_gate_leaf() {
+    let mut checked = 0;
+    for path in yaml_files() {
+        let Ok(spec) = crate::loader::load_file(&path) else { continue };
+        let Ok(card) = crate::compile::compile(&spec) else { continue };
+        let authored = host_leaf_counts(&serde_json::to_value(&spec).unwrap());
+        let compiled = host_leaf_counts(&serde_json::to_value(&card).unwrap());
+        if authored.0 == 0 {
+            continue;
+        }
+        checked += 1;
+        assert_eq!(
+            authored.1,
+            compiled.1,
+            "{}: the pass changed the number of costed has_digivolve_candidate leaves (authored {authored:?}, compiled {compiled:?})",
+            path.display()
+        );
+    }
+    assert!(checked > 20, "the sweep reached too few cards ({checked})");
+}

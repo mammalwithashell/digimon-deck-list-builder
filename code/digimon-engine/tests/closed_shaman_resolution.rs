@@ -6,7 +6,7 @@
 mod support;
 
 use digimon_engine::{
-    action::space::{PASS, PLAY_HAND_START},
+    action::space::{PASS, PLAY_HAND_START, REPLACEMENT_ACCEPT},
     card_source::{CardHandle, CardSource},
     determinize::{beliefs::*, closed::materialize_closed},
     enums::{EffectTiming, GamePhase, Zone},
@@ -118,6 +118,18 @@ fn run(owner: u8, seed: u64, decline: bool, prohibit: bool, outer: bool) {
     assert_eq!(c.affected_player, Some(owner));
     original.drain_effect_queue();
     projected.drain_effect_queue();
+    // BT24-003's clause-level "you may" (`outer_prompt`, 37735487b) is parked first. The outer-context
+    // variant needs the parked hand pick (its `RunTail` frame), so it accepts the activation here and
+    // `decline` then means declining the EVOLUTION at the hand pick.
+    let mut activation_answered = false;
+    if outer {
+        for game in [&mut original, &mut projected] {
+            let player = support::decision_player(game);
+            assert!(digimon_engine::build_action_mask(game, player)[REPLACEMENT_ACCEPT as usize] > 0.5);
+            game.decode_action(REPLACEMENT_ACCEPT, player);
+        }
+        activation_answered = true;
+    }
     if outer {
         // Each enclosing continuation owns a DIFFERENT captured context.
         // Restoring the inner Shaman context for either would change memory.
@@ -140,6 +152,7 @@ fn run(owner: u8, seed: u64, decline: bool, prohibit: bool, outer: bool) {
             }
         }
     }
+    let decline_prompt = decline && !outer;
     let mut first = true;
     let mut decisions = 0;
     while original.pending_selection.is_some() {
@@ -148,7 +161,15 @@ fn run(owner: u8, seed: u64, decline: bool, prohibit: bool, outer: bool) {
         let a = digimon_engine::build_action_mask(&original, player);
         let b = digimon_engine::build_action_mask(&projected, player);
         assert_eq!(a, b);
-        let action = if first && decline {
+        // BT24-003 carries `outer_prompt: true` (37735487b): the clause-level "you may" is offered as a
+        // yes/no BEFORE the hand pick. `decline` now declines THIS prompt (which is what refunds the OPT
+        // and leaves the hand untouched); otherwise the fixture accepts it and plays the hand pick.
+        let mut activation_now = false;
+        let action = if !activation_answered && a[REPLACEMENT_ACCEPT as usize] > 0.5 {
+            activation_answered = true;
+            activation_now = !decline_prompt;
+            if decline_prompt { PASS } else { REPLACEMENT_ACCEPT }
+        } else if first && decline {
             PASS
         } else if first {
             let i = original.players[owner as usize].hand.iter().position(|c| c.handle() == target).unwrap();
@@ -161,7 +182,7 @@ fn run(owner: u8, seed: u64, decline: bool, prohibit: bool, outer: bool) {
         assert!(a[action as usize] > 0.5, "fixture must expose requested action {action}");
         original.decode_action(action, player);
         projected.decode_action(action, player);
-        first = false;
+        first = first && activation_now;
         decisions += 1;
     }
     // Migrated 2026-11-12 for c6eda5678 (effect-digivolve candidates must be able to
@@ -186,11 +207,18 @@ fn run(owner: u8, seed: u64, decline: bool, prohibit: bool, outer: bool) {
     assert_eq!(a.activation_count(source, key), b.activation_count(source, key));
     if decline {
         assert_eq!(a.top_card().card_id(&original.card_data), "BT24-034");
-        assert_eq!(a.activation_count(source, key), 0, "declining refunds OPT");
-        // The real printed clause must be offered again after decline.
-        original.effect_queue.push_back(saved);
-        original.drain_effect_queue();
-        assert!(original.pending_selection.is_some());
+        if outer {
+            // The activation was accepted before the pick was declined: OPT stays consumed.
+            assert_eq!(a.activation_count(source, key), 1, "an accepted activation consumes OPT");
+        } else {
+            assert_eq!(a.activation_count(source, key), 0, "declining the activation refunds OPT");
+        }
+        if !outer {
+            // The real printed clause must be offered again after decline.
+            original.effect_queue.push_back(saved);
+            original.drain_effect_queue();
+            assert!(original.pending_selection.is_some());
+        }
     } else if prohibit {
         assert_eq!(a.top_card().card_id(&original.card_data), "BT24-034");
         assert_eq!(original.memory, 10, "prohibited evolution pays nothing");
@@ -234,6 +262,12 @@ fn printed_shaman_resolution_preserves_captured_context_for_opaque_cost_callback
         projected.effect_queue[0].trigger_context.as_mut().unwrap().event_card = (None).into();
         original.drain_effect_queue();
         projected.drain_effect_queue();
+        // BT24-003's clause-level "you may" (`outer_prompt`, 37735487b) comes before the hand pick.
+        let player = support::decision_player(&original);
+        if digimon_engine::build_action_mask(&original, player)[REPLACEMENT_ACCEPT as usize] > 0.5 {
+            original.decode_action(REPLACEMENT_ACCEPT, player);
+            projected.decode_action(REPLACEMENT_ACCEPT, player);
+        }
         let player = support::decision_player(&original);
         let mask = digimon_engine::build_action_mask(&original, player);
         assert_eq!(mask, digimon_engine::build_action_mask(&projected, player));

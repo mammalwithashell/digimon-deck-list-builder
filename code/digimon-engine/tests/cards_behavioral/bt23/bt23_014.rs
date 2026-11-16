@@ -445,3 +445,165 @@ fn bt23_014_dp_cap_with_3_opp_perms_is_14000() {
         "With 3 opp permanents and cap=14000, delete selection must fire"
     );
 }
+
+// ─── Section 6: The lock is read against the playing EFFECT's controller ─────
+//
+// G-ENGINE-TRASH-PLAY-LOCK-SCOPE. DCGO BT23_014.cs:46-58 installs a
+// `CanNotPutFieldClass` whose card condition is "in ANY trash and a Digimon
+// or Tamer" and whose effect condition is `EffectSourceCard.Owner ==
+// card.Owner.Enemy` — it is the locked player's EFFECTS that cannot play, not
+// the locked player's trash that cannot be played from. The printed text
+// agrees ("their effects can't play Digimon or Tamers from the trash", CR 4.3
+// 7-1-1 for what "play" means). The driver that plays from a trash that is not
+// its own controller's is Dragomon (EX5-060): "Your opponent plays 1 level 4
+// or lower Digimon card from their trash" — the effect's controller is the
+// card's owner's opponent.
+
+const OWN_LV4: &str = "BT23-014-X-LV4";
+
+fn lv4_digimon() -> CardData {
+    let mut card = make_test_card(OWN_LV4, "CrossTrashLv4");
+    card.card_kind = digimon_engine::enums::CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(4000);
+    card.colors = vec![digimon_engine::enums::CardColor::Purple];
+    card
+}
+
+/// Gallantmon (BT23-014) owned by player 0 has resolved its [On Play]
+/// floodgate, so player 1 carries `CannotPlayFromTrash` and player 0 does
+/// not. Player 1's field was empty when Gallantmon resolved, so the printed
+/// delete clause had nothing to take.
+fn gallantmon_lock_on_player_1() -> DebugRunner {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT23-014")
+        .expect("BT23-014 in pack")
+        .dsl_card("EX5-060")
+        .expect("EX5-060 Dragomon in pack")
+        .add_card(lv4_digimon())
+        .memory(12)
+        .start();
+    r.skip_mulligan();
+    r.set_first_player(0);
+    let gallantmon = r.place_on_field(0, "BT23-014", Some(0));
+    r.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::OnPlay,
+        digimon_engine::selection::TriggerSource::Permanent(gallantmon),
+    );
+    r.game.drain_effect_queue();
+    let _ = r.auto_resolve();
+    use digimon_engine::enums::ModifierType::CannotPlayFromTrash;
+    assert!(
+        r.game.modifiers.player_has(1, CannotPlayFromTrash),
+        "fixture: player 1 is the locked player"
+    );
+    assert!(
+        !r.game.modifiers.player_has(0, CannotPlayFromTrash),
+        "fixture: player 0 (Gallantmon's controller) is not locked"
+    );
+    r
+}
+
+/// The locked player's own effect plays from the OTHER player's trash: refused.
+/// Player 1 owns Dragomon (EX5-060), so its [On Play] makes player 0 -- the
+/// opponent -- play a Lv4 from player 0's trash. The effect belongs to the
+/// locked player, so DCGO blocks it (the card is in a trash and
+/// `EffectSourceCard.Owner` is the locked player).
+#[test]
+fn bt23_014_lock_refuses_a_locked_players_effect_playing_from_the_opponents_trash() {
+    let mut r = gallantmon_lock_on_player_1();
+    let dragomon = r.place_on_field(1, "EX5-060", Some(0));
+    r.inject_trash(0, OWN_LV4);
+    let p0_field_before = r.game.players[0].battle_area.len();
+
+    r.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::OnPlay,
+        digimon_engine::selection::TriggerSource::Permanent(dragomon),
+    );
+    r.game.drain_effect_queue();
+    // The candidate leaf (`trash_play_locked`) must already drop the Lv4, so no
+    // pick is offered. Without this the refusal could come only from the later
+    // trash-play gate (`trash_play_refusal`) and a leaf still keyed on the trash
+    // owner would go unnoticed.
+    assert!(
+        r.pending_selection_view().is_none(),
+        "the locked player's Dragomon must not be offered the opponent's trash Lv4"
+    );
+    let _ = r.auto_resolve();
+
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        p0_field_before,
+        "a locked player's effect cannot play a Digimon from the opponent's trash"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        1,
+        "the Lv4 stays in player 0's trash"
+    );
+}
+
+/// Gallantmon's controller's own effect plays from the locked player's trash:
+/// allowed. Player 0 owns both Gallantmon and Dragomon, so Dragomon's [On Play]
+/// makes the locked player 1 play from player 1's trash. The effect is player
+/// 0's, which the lock does not bind.
+#[test]
+fn bt23_014_lock_allows_the_gallantmon_controllers_effect_playing_from_the_locked_players_trash() {
+    let mut r = gallantmon_lock_on_player_1();
+    let dragomon = r.place_on_field(0, "EX5-060", Some(1));
+    r.inject_trash(1, OWN_LV4);
+
+    r.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::OnPlay,
+        digimon_engine::selection::TriggerSource::Permanent(dragomon),
+    );
+    r.game.drain_effect_queue();
+    let view = r
+        .pending_selection_view()
+        .expect("the Lv4 is a legal pick: the lock does not bind player 0's effect");
+    assert_eq!(view.selecting_player, 1);
+    r.execute_action(1, view.valid_action_ids[0])
+        .expect("player 1 picks the Lv4");
+    let _ = r.auto_resolve();
+
+    assert!(
+        r.game.players[1]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == OWN_LV4),
+        "player 0's effect played the Lv4 from player 1's trash onto player 1's field"
+    );
+    assert_eq!(r.trash_size(1), 0);
+}
+
+/// Engine-level pin of the same scope at the trash-play gate
+/// (`Game::trash_play_refusal`), independent of any card's selection flow: the
+/// lock is read against `effect_source_player`, the playing effect's controller.
+#[test]
+fn bt23_014_trash_play_gate_reads_the_effect_controller_not_the_trash_owner() {
+    use digimon_engine::enums::{CostDelta, PlaySource};
+
+    // (effect controller, trash owner, expect the play to happen)
+    for (effect_controller, trash_owner, allowed) in [
+        (1u8, 1u8, false), // locked player's effect, own trash
+        (1, 0, false),     // locked player's effect, opponent's trash
+        (0, 1, true),      // Gallantmon controller's effect, locked player's trash
+        (0, 0, true),      // Gallantmon controller's effect, own trash
+    ] {
+        let mut r = gallantmon_lock_on_player_1();
+        r.inject_trash(trash_owner, OWN_LV4);
+        r.game.set_effect_source_player_for_test(Some(effect_controller));
+        let played = r.game.play_from_trash_with_cost(
+            trash_owner,
+            0,
+            CostDelta::Free,
+            PlaySource::ByEffect,
+        );
+        r.game.set_effect_source_player_for_test(None);
+        assert_eq!(
+            played.is_some(),
+            allowed,
+            "effect of player {effect_controller} playing from player {trash_owner}'s trash"
+        );
+    }
+}

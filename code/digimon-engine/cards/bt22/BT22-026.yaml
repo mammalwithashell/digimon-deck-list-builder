@@ -285,6 +285,20 @@ effects:
   # FROM-HAND-WITH-PERMANENT-TARGET is RESOLVED: the full chain runs to
   # completion and branch 0 is exercised by the active behavioral test.
   #
+  # Branch 0's host pick is NAME-ONLY on purpose. DCGO's `IsAgumon` checks only
+  # that the permanent is an own Digimon whose top card is named Agumon
+  # (BT22_026.cs:156-160), and the `canDigivolve` that offers the branch is
+  # name-only too (BT22_026.cs:187); the route / prohibition probe
+  # (`CanPlayCardTargetFrame`, `CanNotEvolve`) runs only inside
+  # `DigivolveIntoHandOrTrashCard`'s card pick, so an [Agumon] that can't
+  # digivolve is still offered and the digivolve then finds no card. This is
+  # unlike BT22-013, whose host pick carries `CanPlayCardTargetFrame(...,
+  # IgnoreRequirement.All)` (BT22_013.cs:145-157) and so takes
+  # `has_digivolve_candidate { ignore_requirements: true }`. The printed text
+  # names no further condition; DCGO governs behaviour, so no leaf here.
+  # The card pick is `isOptional` (default true): `optional: true`.
+  # G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS.
+  #
   # Inner branch 1 uses `level_matches_aggregate { selector: lowest_level,
   # of: opponent }` — same pattern as AD1-012 (CresGarurumon) and BT24-040
   # (Karatenmon); the engine evaluates this predicate (not blocked).
@@ -309,6 +323,7 @@ effects:
             - select_hand:
                 of: you
                 bind_as: evo
+                optional: true
                 filter: { name_is: "WarGreymon" }
                 prompt: "Digivolve into WarGreymon (free, ignore reqs)"
             - effect_initiated_digivolve:

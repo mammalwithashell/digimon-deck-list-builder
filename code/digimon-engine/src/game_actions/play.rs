@@ -166,21 +166,36 @@ impl Game {
         self.play_from_trash_with_cost_suppress(player_id, trash_index, cost_delta, source, false)
     }
 
-    /// Whether `player_id`'s `CannotPlayFromTrash` lock covers playing a card
-    /// of `kind` from their trash. The lock's only producer is Gallantmon
-    /// (BT23-014), printed "their effects can't play Digimon or Tamers from
-    /// the trash"; DCGO installs a `CanNotPutFieldClass` gated on
-    /// `IsDigimon || IsTamer` (BT23_014.cs:46-49), so it covers Digimon,
-    /// Tamers and DUAL cards (a DUAL's card kinds include Digimon and are
-    /// fixed, so DCGO `IsDigimon` is always true for it: `CardKinds =>
-    /// _cEntity_Base.cardKind`, CardSource.cs:3606, `IsDigimon`,
-    /// CardSource.cs:3519) and never an Option USE (CR 4.3 9-1-1: using is
-    /// not playing, 7-1-1) nor a Digi-Egg.
-    pub(crate) fn trash_play_lock_applies(&self, player_id: PlayerId, kind: CardKind) -> bool {
+    /// Whether the `CannotPlayFromTrash` lock on `effect_controller` covers an
+    /// effect of theirs playing a card of `kind` from a trash. The lock's only
+    /// producer is Gallantmon (BT23-014), printed "THEIR EFFECTS can't play
+    /// Digimon or Tamers from the trash"; DCGO installs a `CanNotPutFieldClass`
+    /// whose card condition is "in ANY trash and `IsDigimon || IsTamer`" and
+    /// whose effect condition is `EffectSourceCard.Owner == card.Owner.Enemy`
+    /// (BT23_014.cs:46-58), i.e. it binds the locked player's EFFECTS, wherever
+    /// the played card lies. So `effect_controller` is the controller of the
+    /// playing effect, never the owner of the trash being played from: the
+    /// locked player's effect playing from the OTHER player's trash (Dragomon
+    /// (EX5-060): "Your opponent plays ... from their trash") is refused, and
+    /// Gallantmon's controller's effect playing from the locked player's trash
+    /// is allowed.
+    ///
+    /// Covers Digimon, Tamers and DUAL cards (a DUAL's card kinds include
+    /// Digimon and are fixed, so DCGO `IsDigimon` is always true for it:
+    /// `CardKinds => _cEntity_Base.cardKind`, CardSource.cs:3606, `IsDigimon`,
+    /// CardSource.cs:3519) and never an Option USE (CR 4.3 9-1-1: using is not
+    /// playing, 7-1-1) nor a Digi-Egg. No card in the pool plays a Digi-Egg from
+    /// a trash (cards.json effect-text search; BT26-005's revive excludes
+    /// Digi-Eggs), so the Digi-Egg exclusion has no driver and is DCGO-derived.
+    pub(crate) fn trash_play_lock_applies(
+        &self,
+        effect_controller: PlayerId,
+        kind: CardKind,
+    ) -> bool {
         matches!(kind, CardKind::Digimon | CardKind::Tamer | CardKind::Dual)
             && self
                 .modifiers
-                .player_has(player_id, ModifierType::CannotPlayFromTrash)
+                .player_has(effect_controller, ModifierType::CannotPlayFromTrash)
     }
 
     /// Why `player_id` can't play the card at `trash_index` of their trash
@@ -198,7 +213,16 @@ impl Game {
         let Some(card) = player.trash.get(trash_index) else {
             return Some("the card is no longer in the trash");
         };
-        if self.trash_play_lock_applies(player_id, card.card_kind(&self.card_data)) {
+        // The playing effect's controller: `player_id` is the player whose
+        // trash is played from and whose field receives the card, which is
+        // not the effect's controller when the effect makes the OPPONENT play
+        // from their own trash (EX5-060).
+        let controller = if source == PlaySource::ByEffect {
+            self.effect_source_player.unwrap_or(player_id)
+        } else {
+            player_id
+        };
+        if self.trash_play_lock_applies(controller, card.card_kind(&self.card_data)) {
             return Some("playing Digimon or Tamers from the trash is prohibited");
         }
         if player.battle_area.len() >= self.rules.field_slots as usize {
@@ -209,11 +233,6 @@ impl Game {
         {
             return Some("playing this kind of card by effects is prohibited");
         }
-        let controller = if source == PlaySource::ByEffect {
-            self.effect_source_player.unwrap_or(player_id)
-        } else {
-            player_id
-        };
         if self.card_play_is_prohibited(controller, card) {
             return Some("playing this card is prohibited");
         }
