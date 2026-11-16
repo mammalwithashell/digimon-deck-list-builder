@@ -4284,6 +4284,14 @@ fn permanent_has_digivolve_candidate(
     handle: PermanentHandle,
     bindings: Option<&Bindings>,
 ) -> bool {
+    use crate::game_actions::digivolve::DigivolveRequirementWaiver;
+    let waiver = if spec.ignore_requirements {
+        DigivolveRequirementWaiver::All
+    } else if spec.ignore_level {
+        DigivolveRequirementWaiver::Level
+    } else {
+        DigivolveRequirementWaiver::None
+    };
     for player in resolve_predicate_players(spec.of, rctx) {
         let state = rctx.game.player(player);
         for zone in &spec.zones {
@@ -4326,13 +4334,22 @@ fn permanent_has_digivolve_candidate(
                     let delta = crate::dsl_cards::step::play_digivolve::lower_cost_delta_read(
                         Some(cost), rctx, bindings,
                     );
-                    let waiver = if spec.ignore_level {
-                        crate::game_actions::digivolve::DigivolveRequirementWaiver::Level
-                    } else {
-                        crate::game_actions::digivolve::DigivolveRequirementWaiver::None
-                    };
                     rctx.game.can_effect_digivolve_from_source_with_cost_waiving(
                         handle.player, source_ref, handle, delta, waiver,
+                    )
+                } else if spec.ignore_requirements {
+                    // "Ignoring digivolution requirements": no route is needed, only the prohibitions and a
+                    // payable (free) declaration (DCGO `CanPlayCardTargetFrame(.., IgnoreRequirement.All)`,
+                    // BT22_013.cs:145-150). G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS.
+                    let Some(source_ref) = rctx.game.locate_card_source_ref(h) else {
+                        continue;
+                    };
+                    rctx.game.can_effect_digivolve_from_source_with_cost_waiving(
+                        handle.player,
+                        source_ref,
+                        handle,
+                        crate::enums::CostDelta::Free,
+                        waiver,
                     )
                 } else {
                     // G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-LEVEL.

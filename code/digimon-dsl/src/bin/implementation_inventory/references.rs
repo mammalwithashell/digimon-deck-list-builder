@@ -3417,12 +3417,13 @@ impl Walk for digimon_dsl::compiled::CompiledDigivolveCandidate {
             "COMPOSITE",
             serde_json::Value::Null,
         );
-        let digimon_dsl::compiled::CompiledDigivolveCandidate { of, zones, filter, cost, ignore_level } = self;
+        let digimon_dsl::compiled::CompiledDigivolveCandidate { of, zones, filter, cost, ignore_level, ignore_requirements } = self;
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
         zones.walk(c, &format!("{}.zones", path), "UNCLASSIFIED_STRING");
         filter.walk(c, &format!("{}.filter", path), "UNCLASSIFIED_STRING");
         cost.walk(c, &format!("{}.cost", path), "UNCLASSIFIED_STRING");
         ignore_level.walk(c, &format!("{}.ignore_level", path), "UNCLASSIFIED_STRING");
+        ignore_requirements.walk(c, &format!("{}.ignore_requirements", path), "UNCLASSIFIED_STRING");
     }
 }
 impl Walk for digimon_dsl::compiled::CompiledFaceUpSecurityNamed {

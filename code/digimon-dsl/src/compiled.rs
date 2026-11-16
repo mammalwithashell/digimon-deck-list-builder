@@ -1003,6 +1003,10 @@ pub struct CompiledDigivolveCandidate {
     /// G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-LEVEL.
     #[serde(default)]
     pub ignore_level: bool,
+    /// See `DigivolveCandidatePredicate::ignore_requirements`.
+    /// G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS.
+    #[serde(default)]
+    pub ignore_requirements: bool,
 }
 
 /// Compiled form of `this_card_can_digivolve_onto` — THIS card can digivolve

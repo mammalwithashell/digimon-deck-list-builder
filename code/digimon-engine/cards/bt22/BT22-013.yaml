@@ -152,17 +152,19 @@
 # the lowest-DP opponent Digimon. The YAML is correct against the spec, and the
 # behavioral test asserting lowest-DP-only behavior is active and green.
 #
-# ─── No-approximations note: branch 0 inner optionality ──────────────────────
+# ─── Branch 0 host pick and optionality ──────────────────────────────────────
 #
 # Per DCGO line 237 (`canNoSelect: true` on the Gabumon-pick), branch 0's
-# permanent pick is opt-out (the player MAY decline to digivolve, even after
-# choosing branch 0). The DSL `select_own_permanent` step does not natively
-# support `optional: true` on the permanent pick, so the branch 0 sub-pick
-# is encoded as mandatory; DCGO's "may" is folded into the branch-choice
-# itself (via `select_effect_choice`). Faithfulness micro-issue: a player
-# who chose branch 0 cannot back out without picking a Gabumon. Not test-
-# asserted; this is consistent with how BT17-015 encodes the equivalent
-# branch.
+# permanent pick is opt-out, and the MetalGarurumon pick is optional too
+# (`DigivolveIntoHandOrTrashCard` `isOptional` defaults to true): "may
+# digivolve". Both are `optional: true` here (the DSL gained optional permanent
+# picks after this card was first authored). The host pick offers only a
+# [Gabumon] some [MetalGarurumon] in the hand can digivolve onto, ignoring
+# digivolution requirements (BT22_013.cs:145-157) via
+# `has_digivolve_candidate { ignore_requirements: true }`
+# (G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS). BT22-026's mirror branch
+# is DIFFERENT in DCGO: its host pick checks the card name only
+# (BT22_026.cs:156-160), so it stays name-only there.
 
 card: BT22-013
 name: WarGreymon
@@ -278,20 +280,50 @@ effects:
           then:
             # [Gabumon] / [MetalGarurumon] are card names (CR 4.3 2-3-1-2;
             # DCGO `EqualsCardName`), not "in its name".
+            #
+            # Host pick (BT22_013.cs:145-157, 237): DCGO offers only a [Gabumon]
+            # that SOME [MetalGarurumon] in the hand can digivolve onto
+            # (`CanSelectOwnPermanentCondition`: top card named Gabumon &&
+            # `CanPlayCardTargetFrame(frame, false, ..., IgnoreRequirement.All)`
+            # on a hand card that is a Digimon named MetalGarurumon), and the pick
+            # is `canNoSelect: true`. Ignoring requirements waives the route, not
+            # the prohibitions (`CannotDigivolve`, CardSource.cs:1269-1290), so the
+            # leaf is `has_digivolve_candidate { ignore_requirements: true }`
+            # (G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS). The card pick is
+            # `DigivolveIntoHandOrTrashCard`'s default `isOptional: true` ("may").
             - select_own_permanent:
                 bind_as: base
-                filter: { name_is: "Gabumon" }
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_is: "Gabumon"
+                    - has_digivolve_candidate:
+                        of: you
+                        zone: [hand]
+                        ignore_requirements: true
+                        filter:
+                          all_of:
+                            - kind: digimon
+                            - name_is: "MetalGarurumon"
                 prompt: "Choose your Gabumon"
-            - select_hand:
-                of: you
-                bind_as: evo
-                filter: { name_is: "MetalGarurumon" }
-                prompt: "Digivolve into MetalGarurumon (free, ignore reqs)"
-            - effect_initiated_digivolve:
-                target: base
-                from_hand: evo
-                cost: 0
-                ignore_requirements: true
+            - if:
+                condition: { binding_present: base }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: evo
+                      optional: true
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - name_is: "MetalGarurumon"
+                      prompt: "Digivolve into MetalGarurumon (free, ignore reqs)"
+                  - effect_initiated_digivolve:
+                      target: base
+                      from_hand: evo
+                      cost: 0
+                      ignore_requirements: true
       - if:
           condition: { equals: [branch, 1] }
           then:

@@ -48,6 +48,26 @@
 //! (`ignore_level`, or `ignore_requirements` for a fixed-cost "ignoring digivolution requirements" digivolve,
 //! EX13-074 / P-092), unless it authored a cost leaf itself. A route-only leaf the card authored stays, in
 //! conjunction. G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT.
+//!
+//! The HOST pick of a paid digivolve ("1 of your Digimon may digivolve into a card in the hand ...") and the
+//! activation gate of a clause that digivolves its own `source` stay ROUTE-ONLY unless the card authors a `cost` on
+//! the `has_digivolve_candidate` / `can_digivolve_onto_with_cost` leaf: the pass never adds one to a host or gate.
+//! DCGO's host conditions are `CanPlayCardTargetFrame(frame, false, ...)` (LM_027.cs:42, BT25_092.cs:109,
+//! BT23_076.cs:78, AD1_021.cs:66: `payCost` false) and its gates pass `true` (BT20_012.cs:57, EX13_055.cs:109), but
+//! `CanPlayCardTargetFrame` honours `PayCost` only for an EMPTY frame (CardSource.cs:1150-1161), so every one of them
+//! checks the route alone. CR 4.3 does not contradict that: 1-3-2 says an impossible action simply isn't performed, so
+//! choosing a host whose candidate can't be paid is legal, and 1-3-11-1 / 8-1-2-6 are about DECLARING a card
+//! (the card pick above). The host / gate payment filter that a 2026-11-16 pass added cited those rules for host
+//! selection, which they don't cover, contradicted DCGO's offered choices, and applied a stricter standard than the
+//! BT22-026 host pick (DCGO name-only, kept). It was reverted the same day. G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY.
+//!
+//! `has_digivolve_candidate { ignore_requirements: true }` is the host-pick leaf of an `ignore_requirements`
+//! digivolve ("1 of your [Gabumon] may digivolve into [MetalGarurumon] in the hand, ignoring digivolution
+//! requirements", BT22-013; DCGO `CanPlayCardTargetFrame(.., IgnoreRequirement.All)`, BT22_013.cs:145-150): it
+//! waives the route and keeps the prohibitions (`CannotDigivolve`, `CannotDigivolveDigimonByEffect`; not DCGO's
+//! "players can't ignore digivolution requirements", BT8-059, G-ENGINE-CANNOT-IGNORE-DIGIVOLUTION-REQUIREMENTS, still
+//! open). It must agree with the digivolve's waiver like every other leaf.
+//! G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -379,6 +399,7 @@ fn bind_of(step: &CompiledStep) -> Option<&String> {
         | S::SelectUnionZone { bind_as, .. }
         | S::SelectOwnPermanent { bind_as, .. }
         | S::SelectOpponentPermanent { bind_as, .. }
+        | S::SelectOwnBreedingPermanent { bind_as, .. }
         | S::SelectAnyPermanent { bind_as, .. } => bind_as.as_ref(),
         _ => None,
     }
@@ -401,7 +422,8 @@ fn permanent_filter(step: &CompiledStep) -> Option<&CompiledPredicate> {
     match step {
         S::SelectOwnPermanent { filter, .. }
         | S::SelectOpponentPermanent { filter, .. }
-        | S::SelectAnyPermanent { filter, .. } => Some(filter),
+        | S::SelectAnyPermanent { filter, .. }
+        | S::SelectOwnBreedingPermanent { filter, .. } => Some(filter),
         _ => None,
     }
 }
@@ -435,7 +457,7 @@ fn has_cost_leaf(filter: &CompiledPredicate) -> bool {
 /// The `has_digivolve_candidate` leaves `filter` authors (itself or a conjunct), each as the requirements it waives.
 fn host_leaves(filter: &CompiledPredicate, out: &mut Vec<Waiver>) {
     if let Some(leaf) = &filter.has_digivolve_candidate {
-        out.push(Waiver::of(false, leaf.ignore_level));
+        out.push(Waiver::of(leaf.ignore_requirements, leaf.ignore_level));
     }
     for conjunct in &filter.all_of {
         host_leaves(conjunct, out);

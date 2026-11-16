@@ -997,3 +997,112 @@ fn bt22_013_hand_main_jump_pick_excludes_an_agumon_that_cannot_digivolve() {
     assert_eq!(top_id(&runner, hs[1]), "BT22-013", "WarGreymon digivolved onto AGU-FREE");
     assert_eq!(top_id(&runner, hs[0]), "AGU-LOCKED");
 }
+
+// ─── Section 7 — Branch 0 host pick (G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS) ──────────────────────────
+//
+// DCGO offers only a [Gabumon] that some [MetalGarurumon] in the hand can digivolve onto, ignoring digivolution
+// requirements: `CanSelectOwnPermanentCondition` = top card named Gabumon && any hand card matching
+// `CanSelectHandCardCondition` with `CanPlayCardTargetFrame(frame, false, activateClass, ignore: All)`
+// (BT22_013.cs:145-157). Ignoring requirements waives the route, so a Lv.3 Gabumon qualifies for a Lv.6 card, but
+// `CannotDigivolve` still applies (CardSource.cs:1269-1290). The host pick is `canNoSelect: true` (BT22_013.cs:237)
+// and the card pick is optional (`DigivolveIntoHandOrTrashCard` `isOptional` defaults to true): "may digivolve".
+
+fn branch_0_runner(gabumon: &[CardData], hand_has_metalgarurumon: bool) -> (DebugRunner, Vec<PermanentHandle>) {
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-013 YAML loads")
+        .add_card(make_metalgarurumon("MY-MG"));
+    for g in gabumon {
+        b = b.add_card(g.clone());
+    }
+    let hand: &[&str] = if hand_has_metalgarurumon { &["MY-MG"] } else { &[] };
+    let mut runner = b.hand(0, hand).memory(15).start();
+    let handles = gabumon
+        .iter()
+        .map(|g| runner.place_on_field(0, &g.card_id, None))
+        .collect();
+    let bt22 = place_bt22_on_field(&mut runner, 0);
+    trigger_when_digivolving(&mut runner, bt22);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
+    runner.execute_branch(0).expect("pick the Digivolve branch");
+    (runner, handles)
+}
+
+fn offered_non_pass(runner: &DebugRunner) -> usize {
+    runner
+        .pending_selection_view()
+        .map(|v| {
+            v.valid_action_ids
+                .iter()
+                .filter(|a| **a != digimon_engine::action::space::PASS)
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+/// A [Gabumon] that can't digivolve is not offered, even though requirements are ignored.
+#[test]
+fn bt22_013_branch_0_host_pick_skips_a_gabumon_that_cannot_digivolve() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    let locked = make_gabumon("GABU-LOCKED");
+    let free = make_gabumon("GABU-FREE");
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-013 YAML loads")
+        .add_card(locked)
+        .add_card(free)
+        .add_card(make_metalgarurumon("MY-MG"))
+        .hand(0, &["MY-MG"])
+        .memory(15)
+        .start();
+    let locked_h = b.place_on_field(0, "GABU-LOCKED", None);
+    let free_h = b.place_on_field(0, "GABU-FREE", None);
+    b.game
+        .modifiers
+        .add(locked_h, ModifierEntry::simple(ModifierType::CannotDigivolve, 0, Expiry::Permanent, 0));
+    let bt22 = place_bt22_on_field(&mut b, 0);
+    trigger_when_digivolving(&mut b, bt22);
+    b.execute_branch(0).expect("pick the Digivolve branch");
+    assert_eq!(offered_non_pass(&b), 1, "only the unlocked Gabumon can digivolve (CardSource.cs:1269-1290)");
+    let _ = b.auto_resolve();
+    let top = |h: PermanentHandle| {
+        b.game.players[0].battle_area[h.index as usize]
+            .top_card()
+            .card_id(&b.game.card_data)
+            .to_string()
+    };
+    assert_eq!(top(locked_h), "GABU-LOCKED");
+    assert_eq!(top(free_h), "MY-MG");
+}
+
+/// With no [MetalGarurumon] in the hand no [Gabumon] has a candidate, so no host is offered (BT22_013.cs:145-150).
+#[test]
+fn bt22_013_branch_0_offers_no_gabumon_without_a_metalgarurumon_in_hand() {
+    let (runner, _) = branch_0_runner(&[make_gabumon("MY-GABU")], false);
+    assert!(runner.pending_selection().is_none(), "no card to digivolve into: nothing to choose");
+}
+
+/// Requirements are ignored: the Lv.3 Gabumon has no route to the Lv.6 card, and is still offered.
+#[test]
+fn bt22_013_branch_0_offers_a_gabumon_with_no_printed_route() {
+    let (runner, _) = branch_0_runner(&[make_gabumon("MY-GABU")], true);
+    assert_eq!(offered_non_pass(&runner), 1, "ignoring digivolution requirements needs no route");
+}
+
+/// "[Gabumon] may digivolve": the player may decline both the host and the card (`canNoSelect: true`, `isOptional`).
+#[test]
+fn bt22_013_branch_0_digivolve_is_optional() {
+    let (mut runner, handles) = branch_0_runner(&[make_gabumon("MY-GABU")], true);
+    let view = runner.pending_selection_view().expect("host pick");
+    assert!(view.is_optional, "BT22_013.cs:237 `canNoSelect: true`");
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .expect("decline the host pick");
+    assert!(runner.pending_selection().is_none(), "declining the host ends the effect");
+    let top = runner.game.players[0].battle_area[handles[0].index as usize]
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(top, "MY-GABU");
+}

@@ -1134,6 +1134,15 @@ fn compile_predicate(
         }),
         can_digivolve_into_source_card: p.can_digivolve_into_source_card,
         has_digivolve_candidate: p.has_digivolve_candidate.as_ref().map(|hdc| {
+            if hdc.ignore_level && hdc.ignore_requirements {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.has_digivolve_candidate"),
+                    message: "`ignore_level` and `ignore_requirements` are exclusive: ignoring every \
+                              requirement already waives the level"
+                        .into(),
+                });
+            }
             crate::compiled::CompiledDigivolveCandidate {
                 of: compile_player_ref(hdc.of),
                 zones: hdc.zone.iter().map(|z| compile_zone(*z)).collect(),
@@ -1154,6 +1163,7 @@ fn compile_predicate(
                     )
                 }),
                 ignore_level: hdc.ignore_level,
+                ignore_requirements: hdc.ignore_requirements,
             }
         }),
         this_card_can_digivolve_onto: p.this_card_can_digivolve_onto.as_ref().map(|spec| {
