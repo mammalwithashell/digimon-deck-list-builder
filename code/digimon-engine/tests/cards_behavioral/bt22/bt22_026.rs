@@ -1003,3 +1003,80 @@ fn bt22_026_when_digivolving_branch_0_ignores_x_antibody_name_variants() {
         "WarGreymon (X Antibody) stays in hand"
     );
 }
+
+// ─── Branch 0 host pick (G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS) ──────────────────────────────────────
+//
+// Unlike BT22-013, DCGO's BT22-026 host pick checks the NAME only: `IsAgumon` = own Digimon whose top card is named
+// Agumon (BT22_026.cs:156-160) with no `CanPlayCardTargetFrame` / `CanNotEvolve` probe, and `canDigivolve` (which
+// offers the branch) is `HasMatchConditionOwnersPermanent(IsAgumon) && HasMatchConditionOwnersHand(IsWarGreymon)`,
+// also name-only (BT22_026.cs:187). The route and prohibition check happens only afterwards, inside
+// `DigivolveIntoHandOrTrashCard`'s card pick, so an Agumon that can't digivolve is still offered and the digivolve
+// then finds no card. That is DCGO's behaviour and the printed text (a bare "1 of your [Agumon]") names no further
+// condition, so the YAML keeps the host pick name-only: there is no `has_digivolve_candidate` on it (DCGO governs a
+// card's behaviour, general_rule.pdf has no rule that forbids choosing such a target). The card pick is
+// `isOptional` (the default) so "may digivolve" holds; the host pick is `canNoSelect: false`.
+
+fn branch_0_026(agumon: &CardData, wargreymon_in_hand: bool) -> (DebugRunner, PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-026 YAML loads")
+        .add_card(agumon.clone())
+        .add_card(make_wargreymon("MY-WG"))
+        .hand(0, if wargreymon_in_hand { &["MY-WG"] } else { &[] })
+        .memory(15)
+        .start();
+    let agu = runner.place_on_field(0, &agumon.card_id, None);
+    let bt22 = place_bt22_on_field(&mut runner, 0);
+    trigger_when_digivolving(&mut runner, bt22);
+    runner.execute_branch(0).expect("pick the Digivolve branch");
+    (runner, agu)
+}
+
+fn non_pass_actions(runner: &DebugRunner) -> usize {
+    runner
+        .pending_selection_view()
+        .map(|v| {
+            v.valid_action_ids
+                .iter()
+                .filter(|a| **a != digimon_engine::action::space::PASS)
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+#[test]
+fn bt22_026_branch_0_host_pick_is_name_only_like_dcgo() {
+    // No [WarGreymon] in the hand: DCGO still offers the [Agumon] (BT22_026.cs:156-160), then finds no card.
+    let (mut runner, agu) = branch_0_026(&make_agumon("MY-AGU"), false);
+    assert_eq!(non_pass_actions(&runner), 1, "the host pick checks only the name (DCGO IsAgumon)");
+    let _ = runner.auto_resolve();
+    let top = runner.game.players[0].battle_area[agu.index as usize]
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(top, "MY-AGU", "nothing to digivolve into: the digivolve does nothing");
+}
+
+#[test]
+fn bt22_026_branch_0_card_pick_is_optional() {
+    // `DigivolveIntoHandOrTrashCard(isOptional: true)`: the player may decline the [WarGreymon].
+    let (mut runner, agu) = branch_0_026(&make_agumon("MY-AGU"), true);
+    let host = *runner
+        .pending_selection_view()
+        .expect("host pick")
+        .valid_action_ids
+        .iter()
+        .find(|a| **a != digimon_engine::action::space::PASS)
+        .expect("an Agumon");
+    runner.execute_action(0, host).unwrap();
+    let view = runner.pending_selection_view().expect("card pick");
+    assert!(view.is_optional, "\"may digivolve\": the card pick is optional");
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .expect("decline the digivolve");
+    let top = runner.game.players[0].battle_area[agu.index as usize]
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(top, "MY-AGU");
+}

@@ -328,3 +328,337 @@ fn one_card_binding_feeding_digivolves_with_different_costs_is_an_error() {
         assert_eq!(filter.can_digivolve_onto_with_cost.as_ref().map(|l| l.cost.clone()), Some(want));
     }
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// The host pick and the activation gate of a paid digivolve (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY)
+// ---------------------------------------------------------------------------------------------------------------
+
+/// A paid digivolve's target as the leaf evaluates it, with the step's needs.
+#[derive(Debug, Clone, PartialEq)]
+struct PaidOnto {
+    target: String,
+    cost: CompiledCostDelta,
+    ignore_level: bool,
+    ignore_requirements: bool,
+}
+
+fn paid_ontos(body: &[CompiledStep]) -> Vec<PaidOnto> {
+    let mut out = Vec::new();
+    walk(body, &mut |s| {
+        if let CompiledStep::EffectInitiatedDigivolve { target, cost, ignore_requirements, ignore_level, .. } = s {
+            if !is_paid(cost) {
+                return;
+            }
+            let target = match target {
+                CompiledBindingRef::Named(n) | CompiledBindingRef::Permanent(n) | CompiledBindingRef::Binding(n) => {
+                    n.clone()
+                }
+                CompiledBindingRef::Source | CompiledBindingRef::SelfRef | CompiledBindingRef::Carrier => "source".into(),
+                CompiledBindingRef::EventTarget => "event_target".into(),
+                _ => return,
+            };
+            out.push(PaidOnto {
+                target,
+                cost: cost.clone(),
+                ignore_level: *ignore_level && !*ignore_requirements,
+                ignore_requirements: *ignore_requirements,
+            });
+        }
+    });
+    out
+}
+
+/// The `has_digivolve_candidate` leaves on `filter` itself or a conjunct.
+fn host_leaves<'a>(filter: &'a CompiledPredicate, out: &mut Vec<&'a crate::compiled::CompiledDigivolveCandidate>) {
+    if let Some(leaf) = &filter.has_digivolve_candidate {
+        out.push(leaf);
+    }
+    for c in &filter.all_of {
+        host_leaves(c, out);
+    }
+}
+
+/// The permanent picks that bind `binding`.
+fn host_pick_filters<'a>(body: &'a [CompiledStep], binding: &str) -> Vec<&'a CompiledPredicate> {
+    let mut out = Vec::new();
+    walk(body, &mut |s| {
+        use CompiledStep as S;
+        if let S::SelectOwnPermanent { bind_as: Some(b), filter, .. }
+        | S::SelectOpponentPermanent { bind_as: Some(b), filter, .. }
+        | S::SelectAnyPermanent { bind_as: Some(b), filter, .. }
+        | S::SelectOwnBreedingPermanent { bind_as: Some(b), filter, .. } = s
+        {
+            if b == binding {
+                out.push(filter);
+            }
+        }
+    });
+    out
+}
+
+/// Pool-wide: every `has_digivolve_candidate` leaf on a pick that binds the target of a PAID effect digivolve carries
+/// that digivolve's cost (the pass adds it unless the card authored one) and its waiver.
+#[test]
+fn every_paid_digivolve_host_pick_in_the_pool_checks_payment() {
+    let mut failures = Vec::new();
+    let mut checked = 0;
+    for path in yaml_files() {
+        let Some(card) = compile_path(&path) else {
+            failures.push(format!("{}: does not load or compile", path.display()));
+            continue;
+        };
+        for body in paid_bodies(&card) {
+            for d in paid_ontos(body) {
+                if d.target == "source" || d.target == "event_target" {
+                    continue;
+                }
+                for filter in host_pick_filters(body, &d.target) {
+                    let mut leaves = Vec::new();
+                    host_leaves(filter, &mut leaves);
+                    for leaf in leaves {
+                        checked += 1;
+                        if leaf.cost.as_ref() != Some(&d.cost) {
+                            failures.push(format!(
+                                "{} host pick `{}`: has_digivolve_candidate cost {:?}, the digivolve charges {:?}",
+                                card.card, d.target, leaf.cost, d.cost
+                            ));
+                        }
+                        let leaf_json = serde_json::to_value(leaf).unwrap();
+                        let leaf_requirements = leaf_json["ignore_requirements"].as_bool().unwrap_or(false);
+                        if leaf.ignore_level != d.ignore_level || leaf_requirements != d.ignore_requirements {
+                            failures.push(format!("{} host pick `{}`: waiver differs from the digivolve", card.card, d.target));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert!(checked > 30, "the walk found the host picks ({checked})");
+    failures.sort();
+    failures.dedup();
+    assert!(failures.is_empty(), "{} host picks that check the route only:\n{}", failures.len(), failures.join("\n"));
+}
+
+/// The route-only candidate leaves a gate counts or probes, as `(target, has a payment check)`: `can_digivolve_onto:
+/// T`, `can_digivolve_from_source: true` (onto the effect's source), and `has_digivolve_candidate` on an `is_source`
+/// permanent. Only `all_of` conjuncts and a `count_gte` / `any_permanent` filter are walked (a negated or
+/// disjunctive gate is left alone).
+fn gate_route_leaves(p: &CompiledPredicate, on_source_host: bool, out: &mut Vec<(String, bool)>) {
+    if let Some(t) = &p.can_digivolve_onto {
+        out.push((t.clone(), p.can_digivolve_onto_with_cost.is_some()));
+    }
+    if p.can_digivolve_from_source == Some(true) {
+        out.push(("source".into(), p.can_digivolve_onto_with_cost.is_some()));
+    }
+    let host = on_source_host || p.is_source == Some(true) || p.all_of.iter().any(|c| c.is_source == Some(true));
+    if host {
+        if let Some(h) = &p.has_digivolve_candidate {
+            out.push(("source".into(), h.cost.is_some()));
+        }
+    }
+    for c in &p.all_of {
+        gate_route_leaves(c, host, out);
+    }
+    if let Some(c) = &p.count_gte {
+        gate_route_leaves(&c.filter, false, out);
+    }
+    if let Some(e) = &p.any_permanent {
+        gate_route_leaves(&e.predicate, false, out);
+    }
+}
+
+/// Pool-wide: a clause gate (`condition` / `active_when`) that counts route-only candidates onto the effect's own
+/// source, in a clause whose body digivolves the source for a paid cost, also checks the payment.
+#[test]
+fn every_paid_digivolve_gate_in_the_pool_checks_payment() {
+    let mut failures = Vec::new();
+    let mut checked = 0;
+    for path in yaml_files() {
+        let Some(card) = compile_path(&path) else { continue };
+        for clause in &card.effects {
+            let (gates, body): (Vec<&CompiledPredicate>, &[CompiledStep]) = match clause {
+                CompiledClause::Triggered(t) => (t.condition.iter().chain(t.active_when.iter()).collect(), &t.process),
+                CompiledClause::Declarative(
+                    CompiledDeclarativeClause::Replacement { process, active_when, .. }
+                    | CompiledDeclarativeClause::Delay { process, active_when, .. },
+                ) => (active_when.iter().collect(), process),
+                _ => continue,
+            };
+            if !paid_ontos(body).iter().any(|d| d.target == "source") {
+                continue;
+            }
+            for gate in gates {
+                let mut leaves = Vec::new();
+                gate_route_leaves(gate, false, &mut leaves);
+                for (target, has_cost) in leaves {
+                    if target == "source" {
+                        checked += 1;
+                        if !has_cost {
+                            failures.push(format!("{}: a gate counts route-only candidates onto the source", card.card));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert!(checked >= 5, "the walk found the gates ({checked})");
+    failures.sort();
+    failures.dedup();
+    assert!(failures.is_empty(), "{} gates that check the route only:\n{}", failures.len(), failures.join("\n"));
+}
+
+/// The audit of the host picks (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY): every card whose host leaf was route-only
+/// before the pass gave it the digivolve's cost. Each is checked card by card, so a regression names the card.
+const AUDITED_HOSTS: &[&str] = &[
+    "AD1-021", "BT10-085", "BT23-076", "BT25-092", "BT26-035", "BT26-038", "BT26-066", "BT26-091", "EX13-069",
+    "LM-027", "LM-028", "LM-029", "LM-030", "LM-031", "LM-032", "LM-054", "LM-055", "LM-056", "LM-057", "LM-058",
+    "LM-059", "LM-060", "LM-061", "LM-062", "P-244",
+];
+
+/// The activation gates that counted route-only candidates onto the effect's own source.
+const AUDITED_GATES: &[&str] =
+    &["BT20-012", "BT24-003", "BT25-005", "BT26-001", "EX13-055", "EX13-057"];
+
+#[test]
+fn audited_host_picks_carry_the_digivolves_cost() {
+    let mut failures = Vec::new();
+    for id in AUDITED_HOSTS {
+        let card = compile_id(id);
+        let mut found = 0;
+        for body in paid_bodies(&card) {
+            for d in paid_ontos(body) {
+                for filter in host_pick_filters(body, &d.target) {
+                    let mut leaves = Vec::new();
+                    host_leaves(filter, &mut leaves);
+                    for leaf in leaves {
+                        found += 1;
+                        if leaf.cost.as_ref() != Some(&d.cost) {
+                            failures.push(format!("{id}: host leaf cost {:?}, digivolve {:?}", leaf.cost, d.cost));
+                        }
+                    }
+                }
+            }
+        }
+        if found == 0 {
+            failures.push(format!("{id}: no host leaf found on a paid digivolve's host pick"));
+        }
+    }
+    assert!(failures.is_empty(), "{} failures:\n{}", failures.len(), failures.join("\n"));
+}
+
+#[test]
+fn audited_gates_check_the_payment() {
+    let mut failures = Vec::new();
+    for id in AUDITED_GATES {
+        let card = compile_id(id);
+        let mut found = 0;
+        for clause in &card.effects {
+            let CompiledClause::Triggered(t) = clause else { continue };
+            if !paid_ontos(&t.process).iter().any(|d| d.target == "source") {
+                continue;
+            }
+            for gate in t.condition.iter().chain(t.active_when.iter()) {
+                let mut leaves = Vec::new();
+                gate_route_leaves(gate, false, &mut leaves);
+                for (target, has_cost) in leaves {
+                    if target == "source" {
+                        found += 1;
+                        if !has_cost {
+                            failures.push(format!("{id}: a route-only gate onto the source"));
+                        }
+                    }
+                }
+            }
+        }
+        if found == 0 {
+            failures.push(format!("{id}: no gate leaf found"));
+        }
+    }
+    assert!(failures.is_empty(), "{} failures:\n{}", failures.len(), failures.join("\n"));
+}
+
+/// Audited and left alone: BT22-098's <Delay> host pick authors no `has_digivolve_candidate` (DCGO offers every
+/// [Puppet] Digimon, BT22_098.cs:176-186), so the pass adds none; the card pick already checks the payment.
+/// BT22-026's branch-0 host pick is name-only in DCGO (BT22_026.cs:156-160) and stays so. The free digivolves
+/// (BT9-104, BT20-018, BT20-056, ST20-06, P-204, BT17-097's replacement) and fixed 0 ones (BT12-092, P-128, EX12-071)
+/// keep route-only host leaves: nothing is paid.
+#[test]
+fn audited_unchanged_cards_keep_their_host_leaves() {
+    for id in ["BT22-098", "BT22-026"] {
+        let card = compile_id(id);
+        let mut picks = 0;
+        walk_clauses(&card, &mut |s| {
+            if let CompiledStep::SelectOwnPermanent { filter, .. } = s {
+                picks += 1;
+                let mut leaves = Vec::new();
+                host_leaves(filter, &mut leaves);
+                assert!(leaves.is_empty(), "{id} authors no host leaf, the pass adds none");
+            }
+        });
+        assert!(picks > 0, "{id}: expected a host pick");
+    }
+    for id in ["BT9-104", "BT20-018", "BT20-056", "ST20-06", "P-204", "BT12-092", "P-128", "EX12-071"] {
+        let card = compile_id(id);
+        let mut seen = 0;
+        walk_clauses(&card, &mut |s| {
+            if let CompiledStep::SelectOwnPermanent { filter, .. } | CompiledStep::SelectOwnBreedingPermanent { filter, .. } = s {
+                let mut leaves = Vec::new();
+                host_leaves(filter, &mut leaves);
+                for leaf in leaves {
+                    seen += 1;
+                    assert!(leaf.cost.is_none(), "{id}: a free / fixed-0 digivolve keeps a route-only host leaf");
+                }
+            }
+        });
+        assert!(seen > 0, "{id}: expected a host leaf");
+    }
+}
+
+fn walk_clauses<'a>(card: &'a CompiledCard, f: &mut dyn FnMut(&'a CompiledStep)) {
+    for clause in &card.effects {
+        match clause {
+            CompiledClause::Triggered(t) => walk(&t.process, f),
+            CompiledClause::Declarative(
+                CompiledDeclarativeClause::Replacement { process, .. }
+                | CompiledDeclarativeClause::Partition { process, .. }
+                | CompiledDeclarativeClause::Delay { process, .. },
+            ) => walk(process, f),
+            _ => {}
+        }
+    }
+}
+
+/// A host binding feeding digivolves with different costs would give the host pick one of them: compile error.
+#[test]
+fn one_host_binding_feeding_digivolves_with_different_costs_is_an_error() {
+    let host = "      - select_own_permanent:\n          bind_as: host\n          optional: true\n          filter:\n            \
+                has_digivolve_candidate: {of: you, zone: [hand]}\n          prompt: pick\n";
+    let dig = |bind: &str, cost: &str| {
+        format!(
+            "      - select_hand:\n          of: you\n          bind_as: {bind}\n          optional: true\n          \
+             filter: {{kind: digimon}}\n          prompt: pick\n      - effect_initiated_digivolve:\n          target: host\n          \
+             from_hand: {bind}\n          cost: {cost}\n"
+        )
+    };
+    let errors = compile_yaml(&host_yaml(&format!("{host}{}{}", dig("a", "{reduce: 1}"), dig("b", "{reduce: 2}"))))
+        .err()
+        .expect("compiled, but the host pick would check one digivolve's payment for both");
+    assert!(errors.iter().any(|e| e.contains("`host`") && e.contains("different")), "{errors:?}");
+}
+
+/// A gate probing the source for a clause that digivolves it with two different costs can't tell which one it
+/// mirrors: compile error, author the payment leaf on the gate.
+#[test]
+fn gate_in_a_clause_with_two_different_source_digivolves_is_an_error() {
+    let dig = |bind: &str, cost: &str| pick_and_digivolve(bind, "{kind: digimon}", cost, "");
+    let yaml = format!(
+        "card: TEST-GATE-AMBIGUOUS\nname: Ambiguous gate\nkind: digimon\nlevel: 3\ncolor: [yellow]\ncost: 3\ndp: 3000\n\
+         effects:\n  - when: on_play\n    condition:\n      count_gte:\n        filter:\n          of: you\n          \
+         zone: [hand]\n          all_of:\n            - kind: digimon\n            - can_digivolve_onto: source\n        \
+         n: 1\n    process:\n{}{}",
+        dig("a", "{reduce: 1}"),
+        dig("b", "{reduce: 2}")
+    );
+    let errors = compile_yaml(&yaml).err().expect("compiled, but the gate can't tell which digivolve it mirrors");
+    assert!(errors.iter().any(|e| e.contains("gate") && e.contains("different")), "{errors:?}");
+}

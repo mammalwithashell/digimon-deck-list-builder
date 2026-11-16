@@ -48,7 +48,9 @@ use std::collections::BTreeSet;
 // 0.32.0 adds controller-relative security-add eligibility to predicates.
 // 0.33.0 adds exact-source evolution predicates, player-directed ForceAttack,
 // and selected-permanent color count. Rebuild packs; bincode layouts differ.
-pub const PACK_FORMAT_VERSION: &str = "0.33.0";
+// 0.34.0 adds `ignore_requirements` to the compiled `has_digivolve_candidate`
+// leaf. Rebuild packs; bincode layouts differ.
+pub const PACK_FORMAT_VERSION: &str = "0.34.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

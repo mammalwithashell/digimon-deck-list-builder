@@ -9184,8 +9184,10 @@
     "verb:trash_top_security",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:binding_present",
     "predicate:dp_lte",
     "predicate:equals",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
@@ -38626,6 +38628,21 @@
     "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash": [
      "yaml_key"
     ],
@@ -39361,6 +39378,11 @@
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance",
     "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
     "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment",
     "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures",
     "dsl::constructs/plural_security_prevention.rs::empty_security_cannot_offer_atomic_payment_even_without_authored_security_guard",
@@ -40184,6 +40206,12 @@
     "dsl::constructs/identity_state.rs::trait_contains_reads_granted_traits_on_permanents": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_nested_and_formula_binding_dependencies": [
      "yaml_key"
     ],
@@ -40263,6 +40291,8 @@
     "dsl::constructs/identity_state.rs::name_in_on_a_permanent_reads_the_overlay_name",
     "dsl::constructs/identity_state.rs::play_cost_on_a_permanent_reads_the_top_card_not_the_sum",
     "dsl::constructs/identity_state.rs::trait_contains_reads_granted_traits_on_permanents",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment",
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_nested_and_formula_binding_dependencies",
     "dsl::constructs/protection.rs::plural_authored_gates_unpayable",
     "dsl::constructs/protection.rs::plural_chosen_payer_excludes_unpayable_and_unqualified",
@@ -41010,6 +41040,12 @@
     "dsl::constructs/chronomon_result_protection.rs::replacement_is_canceled_only_after_successful_hand_or_trash_digivolution": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::can_digivolve_from_source_routes_inversion_and_prohibition": [
      "yaml_key"
     ]
@@ -41019,6 +41055,8 @@
    "tests": [
     "dsl::constructs/chronomon_result_protection.rs::replacement_decline_rejected_commit_or_absent_candidate_does_not_prevent_leave",
     "dsl::constructs/chronomon_result_protection.rs::replacement_is_canceled_only_after_successful_hand_or_trash_digivolution",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
     "dsl::constructs/play_digivolve_link.rs::can_digivolve_from_source_routes_inversion_and_prohibition"
    ]
   },
@@ -41117,6 +41155,15 @@
     "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
     "dsl::constructs/plural_security_prevention.rs::plural_security_permits_subject_source_global_and_literal_predicates": [
      "yaml_key"
     ],
@@ -41209,6 +41256,9 @@
     "dsl::constructs/meta_effect_affordability.rs::selected_host_identity_survives_compaction_and_a_removed_host_never_retargets",
     "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
     "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
     "dsl::constructs/plural_security_prevention.rs::plural_security_permits_subject_source_global_and_literal_predicates",
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_declared_local_binding_dependencies",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_composite_filter_rejects_wrong_trait_kind_and_route",
@@ -43015,6 +43065,18 @@
     "dsl::constructs/chronomon_result_protection.rs::replacement_is_canceled_only_after_successful_hand_or_trash_digivolution": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
     "dsl::constructs/plural_security_prevention.rs::plural_security_permits_subject_source_global_and_literal_predicates": [
      "yaml_key"
     ],
@@ -43030,6 +43092,10 @@
    "tests": [
     "dsl::constructs/chronomon_result_protection.rs::replacement_decline_rejected_commit_or_absent_candidate_does_not_prevent_leave",
     "dsl::constructs/chronomon_result_protection.rs::replacement_is_canceled_only_after_successful_hand_or_trash_digivolution",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
     "dsl::constructs/plural_security_prevention.rs::plural_security_permits_subject_source_global_and_literal_predicates",
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_nested_and_formula_binding_dependencies",
     "rules_conformance::ch18_pending_overwrite.rs::long_finite_chain_is_not_an_infinite_loop"
@@ -45963,6 +46029,12 @@
     "dsl::constructs/evolution_candidate_cost.rs::reduced_boundary_host_and_hand_choices_agree_and_clone_commit": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_composite_filter_rejects_wrong_trait_kind_and_route": [
      "yaml_key"
     ],
@@ -46013,6 +46085,8 @@
     "dsl::constructs/evolution_candidate_cost.rs::host_cost_probe_honors_player_prohibitions",
     "dsl::constructs/evolution_candidate_cost.rs::own_host_existence_does_not_substitute_other_hosts_route",
     "dsl::constructs/evolution_candidate_cost.rs::reduced_boundary_host_and_hand_choices_agree_and_clone_commit",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_composite_filter_rejects_wrong_trait_kind_and_route",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_does_not_search_hand_trash_deck_security_or_field_sources",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_never_borrows_a_result_owned_by_the_other_player",
@@ -46376,6 +46450,12 @@
    "name": "is_source",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/protection.rs::plural_authored_gates_unpayable": [
      "yaml_key"
     ],
@@ -46389,6 +46469,8 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment",
     "dsl::constructs/protection.rs::plural_authored_gates_unpayable",
     "dsl::predicate_leaves_ii.rs::distinct_named_count_gte_compiles_from_yaml",
     "rules_conformance::ch18_pending_overwrite.rs::dp_progress_chain_is_not_an_infinite_loop"
@@ -46867,6 +46949,21 @@
      "yaml_key"
     ],
     "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment": [
      "yaml_key"
     ],
     "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
@@ -48525,6 +48622,11 @@
     "dsl::constructs/option_security_suppression.rs::digimon_and_tamer_security_effects_still_activate_with_the_same_source",
     "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
     "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment",
     "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
     "dsl::constructs/play_candidate_origin_zone.rs::union_use_keeps_the_trash_option_under_cannot_play_from_trash",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
@@ -52487,6 +52589,21 @@
     "dsl::constructs/meta_source_keyword.rs::continuous_keyword_stops_affecting_a_host_that_digivolves_out_of_its_trait_filter": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::hatch_occupied_and_empty_noop": [
      "yaml_key"
     ],
@@ -53052,6 +53169,11 @@
     "dsl::constructs/meta_source_keyword.rs::continuous_keyword_covers_existing_and_new_hosts_and_exposes_both_real_block_choices",
     "dsl::constructs/meta_source_keyword.rs::continuous_keyword_expires_at_its_controllers_opponent_turn_end_on_either_side",
     "dsl::constructs/meta_source_keyword.rs::continuous_keyword_stops_affecting_a_host_that_digivolves_out_of_its_trait_filter",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment",
     "dsl::constructs/play_digivolve_link.rs::hatch_occupied_and_empty_noop",
     "dsl::constructs/play_digivolve_link.rs::hatch_opponent_breeding",
     "dsl::constructs/play_digivolve_link.rs::hatch_top_and_observer_after_enclosing_body",
@@ -56351,6 +56473,21 @@
     "dsl::constructs/meta_predicates.rs::level_sum_gte_sums_both_battle_areas_and_changes_the_actual_payment": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures": [
      "yaml_key"
     ],
@@ -56627,6 +56764,11 @@
     "dsl::constructs/identity_state.rs::trait_contains_reads_granted_traits_on_permanents",
     "dsl::constructs/meta_predicates.rs::level_sum_gte_does_not_count_sources_or_breeding_as_additional_digimon",
     "dsl::constructs/meta_predicates.rs::level_sum_gte_sums_both_battle_areas_and_changes_the_actual_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment",
     "dsl::constructs/plural_security_prevention.rs::declining_security_payment_preserves_security_and_prevents_no_departures",
     "dsl::constructs/plural_security_prevention.rs::empty_security_cannot_offer_atomic_payment_even_without_authored_security_guard",
     "dsl::constructs/plural_security_prevention.rs::no_matching_departure_never_offers_or_pays_plural_prevention",
@@ -68050,6 +68192,24 @@
     "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::compile_pass_gives_the_host_leaf_the_steps_cost": [
+     "variant"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_composite_filter_rejects_wrong_trait_kind_and_route": [
      "yaml_key"
     ],
@@ -68218,6 +68378,12 @@
     "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
     "dsl::constructs/paid_digivolve_candidate_payment.rs::compile_pass_emits_the_payment_leaf_with_the_steps_cost",
     "dsl::constructs/paid_digivolve_candidate_payment.rs::hand_or_trash_pick_at_the_printed_cost_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::compile_pass_gives_the_host_leaf_the_steps_cost",
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_composite_filter_rejects_wrong_trait_kind_and_route",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_does_not_search_hand_trash_deck_security_or_field_sources",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_never_borrows_a_result_owned_by_the_other_player",
@@ -69022,6 +69188,21 @@
      "yaml_key"
     ],
     "dsl::constructs/option_security_suppression.rs::security_precedes_check_observers_that_would_later_enable_suppression": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
@@ -70764,6 +70945,11 @@
     "dsl::constructs/option_security_suppression.rs::ordinary_security_trashing_keeps_its_discard_trigger_and_has_no_security_activation",
     "dsl::constructs/option_security_suppression.rs::removing_the_inherited_source_clears_its_live_restriction",
     "dsl::constructs/option_security_suppression.rs::security_precedes_check_observers_that_would_later_enable_suppression",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
@@ -76815,6 +77001,21 @@
     "dsl::constructs/paid_digivolve_candidate_payment.rs::compile_pass_emits_the_payment_leaf_with_the_steps_cost": [
      "variant"
     ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate": [
+     "yaml_key"
+    ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::can_digivolve_from_source_routes_inversion_and_prohibition": [
      "yaml_key"
     ],
@@ -77176,6 +77377,11 @@
     "dsl::constructs/meta_predicates.rs::play_cost_gte_hand_filter_uses_printed_cost_before_a_reduced_payment",
     "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
     "dsl::constructs/paid_digivolve_candidate_payment.rs::compile_pass_emits_the_payment_leaf_with_the_steps_cost",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_from_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::can_digivolve_onto_source_gate_checks_the_payment",
+    "dsl::constructs/paid_digivolve_host_pick.rs::free_digivolve_gate_stays_route_only",
+    "dsl::constructs/paid_digivolve_host_pick.rs::gate_still_opens_for_a_payable_candidate",
+    "dsl::constructs/paid_digivolve_host_pick.rs::is_source_host_leaf_gate_checks_the_payment",
     "dsl::constructs/play_digivolve_link.rs::can_digivolve_from_source_routes_inversion_and_prohibition",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_bound_digimon_reduced",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_bound_option_main_and_trash",
@@ -78882,6 +79088,9 @@
     "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon": [
      "yaml_key"
     ],
+    "dsl::constructs/paid_digivolve_host_pick.rs::compile_pass_gives_the_host_leaf_the_steps_cost": [
+     "variant"
+    ],
     "dsl::constructs/play_digivolve_link.rs::link_card_count_filtered_empty_filter_and_unreachable": [
      "yaml_key"
     ],
@@ -79216,6 +79425,7 @@
     "dsl::constructs/meta_source_keyword.rs::top_source_from_hand_or_trash_preserves_exact_stack_and_physical_identity",
     "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material",
     "dsl::constructs/paid_digivolve_candidate_payment.rs::bound_target_pick_checks_the_payment_onto_the_chosen_digimon",
+    "dsl::constructs/paid_digivolve_host_pick.rs::compile_pass_gives_the_host_leaf_the_steps_cost",
     "dsl::constructs/play_digivolve_link.rs::link_card_count_filtered_empty_filter_and_unreachable",
     "dsl::constructs/protection.rs::own_selected_source_trash_and_return_allowed",
     "dsl::constructs/protection.rs::plural_chosen_payer_excludes_unpayable_and_unqualified",
@@ -82074,7 +82284,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2285,
+  "behavioural_tests": 2298,
   "cards": {
    "behaviourally_covered": 1187,
    "lowering_covered": 1204,
@@ -82236,8 +82446,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 420,
-  "scanned_tests": 2702,
+  "scanned_files": 421,
+  "scanned_tests": 2718,
   "top_untested": [
    {
     "cards_blocked": 3,

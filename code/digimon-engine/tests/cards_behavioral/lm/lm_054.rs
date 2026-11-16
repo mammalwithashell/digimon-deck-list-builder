@@ -831,11 +831,12 @@ fn lm_054_delay_field_pick_excludes_digimon_without_a_hand_route() {
     );
 }
 
-/// Regression guard (DCGO parity): the field pick checks routes only, so the
-/// base is offered even when its only route card can't be paid for; the hand
-/// pick then has no candidate and nothing digivolves.
+/// The field pick checks the payment too (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY): the
+/// base is not offered when its only route card can't be paid for (CR 4.3 1-3-11-1), so
+/// no pick is asked and nothing digivolves. DCGO's host gate checks the route alone
+/// (CardSource.cs:1150-1161); the rules manual governs.
 #[test]
-fn lm_054_delay_field_pick_is_route_only_and_unpayable_hand_offers_nothing() {
+fn lm_054_delay_field_pick_checks_payment_so_an_unpayable_hand_offers_no_host() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(&lm_054_yaml())
         .expect("LM-054 YAML parses")
@@ -848,13 +849,10 @@ fn lm_054_delay_field_pick_is_route_only_and_unpayable_hand_offers_nothing() {
     let base = runner.place_on_field(0, "BASE", Some(0));
     lm_054_fire_delay(&mut runner, delay_perm);
 
-    let field = runner.pending_selection_view().expect("field pick");
-    assert_eq!(field.kind, SelectionKind::OwnField);
-    assert_eq!(field.valid_action_ids.len(), 1);
-    runner
-        .execute_action(0, field.valid_action_ids[0])
-        .expect("choose the base");
-    assert_ne!(runner.pending_kind(), Some(SelectionKind::Hand));
+    assert!(
+        runner.pending_selection().is_none(),
+        "the only hand card can't be paid for, so the base is not offered and no pick is asked"
+    );
     runner.game.drain_effect_queue();
     let _ = base;
     let top = runner

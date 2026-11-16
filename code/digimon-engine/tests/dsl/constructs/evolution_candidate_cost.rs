@@ -1,7 +1,10 @@
 //! Opt-in payable-result probes for prospective effect evolution hosts.
 //! CR 4.3 8-1-3 / 15-7: normal requirements and actual cost remain applicable.
-//! EX5-070 and EX13-004 use reduced paid evolution; existing free effects
-//! retain route-only semantics when this predicate's cost is omitted.
+//! EX5-070 and EX13-004 use reduced paid evolution. A free effect keeps
+//! route-only semantics when this predicate's cost is omitted; for a PAID
+//! digivolve the compile pass gives an omitted cost the step's own cost
+//! (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY), so the "route" mode below checks
+//! the payment too.
 use digimon_engine::action::{
     build_action_mask,
     space::{PASS, PLAY_HAND_START},
@@ -99,9 +102,12 @@ fn cost_aware_host_rejects_unpayable_result_and_keeps_route_only_compatibility()
     for mode in ["reduced", "route", "free"] {
         let mut r = setup(20, mode);
         use_option(&mut r);
+        // "route" omits the leaf's cost, but the digivolve is paid (reduce 1), so the pass supplies it: the host
+        // whose only result costs 20 - 1 from memory 8 (at most 18) is not offered. Only the free digivolve keeps the
+        // route-only host pick.
         assert_eq!(
             r.pending_kind() == Some(SelectionKind::OwnField),
-            mode != "reduced",
+            mode == "free",
             "{mode}"
         );
         assert_eq!(r.memory(), 8, "preflight never pays or mutates memory");

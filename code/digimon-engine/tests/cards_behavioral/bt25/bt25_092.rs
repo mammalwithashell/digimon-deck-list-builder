@@ -710,3 +710,53 @@ fn offered_actions(r:&DebugRunner)->Vec<u16> {
     }
     actions
 }
+
+// ─── Host pick checks the payment (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY) ────────────────────────────────────
+//
+// "1 of your Digimon may digivolve into a [TS] ... card in the hand or trash with the digivolution cost reduced by 1."
+// The result pick checks that the reduced cost can be paid, so the host pick must too: a Digimon whose only candidate
+// can't be paid would be a dead choice (CR 4.3 1-3-11-1, 8-1-2-6, 4-2-2). DCGO's host gate `CanDigivolveDigimon` checks
+// the route alone (CardSource.cs:1150-1161); the rules manual governs. The Main can't be activated with the gauge on
+// the opponent's side, so the unaffordable result is the one whose cost is above 10: EVO-PRICEY has a printed circle of
+// 12, 11 once reduced: at most 10 can be paid from memory 0 and 11 from memory 1.
+
+fn make_evo_pricey(id: &str) -> digimon_engine::CardData {
+    let mut card = make_evo_ts(id);
+    card.evo_costs = vec![EvoCost {
+        card_color: CardColor::Purple as u8,
+        level: 4,
+        memory_cost: 12,
+    }];
+    card
+}
+
+fn pricey_main(memory: i16) -> (DebugRunner, digimon_engine::permanent::PermanentHandle, digimon_engine::permanent::PermanentHandle) {
+    let mut runner = main_runner()
+        .add_card(make_evo_pricey("EVO-PRICEY"))
+        .hand(0, &["OPT-HAND", "EVO-PRICEY"])
+        .memory(memory)
+        .start();
+    let tamer = runner.place_on_field(0, "BT25-092", Some(0));
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    enter_main(&mut runner);
+    assert!(activate_main(&mut runner, tamer.index as usize));
+    let opt_action = owned_hand(&runner, "OPT-HAND");
+    runner.execute_action(0, opt_action).expect("trash Option");
+    (runner, tamer, base)
+}
+
+#[test]
+fn bt25_092_main_target_pick_offers_no_host_when_the_reduced_cost_cannot_be_paid() {
+    let (runner, _tamer, base) = pricey_main(0);
+    assert!(
+        runner.pending_selection().is_none(),
+        "the only result costs 12 - 1 = 11 and 10 is the most payable from memory 0: no host is offered"
+    );
+    assert_eq!(field_top_id(&runner, base.index as usize), "BASE");
+}
+
+#[test]
+fn bt25_092_main_target_pick_offers_the_host_when_the_reduced_cost_is_exactly_payable() {
+    let (runner, _tamer, _base) = pricey_main(1);
+    assert!(runner.pending_selection().is_some(), "11 is payable from memory 1: the host is offered");
+}
