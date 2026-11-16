@@ -460,20 +460,22 @@ so offering it is a dead choice. You do not need to author it; an authored
 `ignore_requirements: true` leaf on a requirement-keeping digivolve is a
 compile error. G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT.
 A host pick's `has_digivolve_candidate` and an activation gate that counts
-route-only candidates onto the effect's own `source` (`can_digivolve_onto:
-source` / `can_digivolve_from_source: true` in a `count_gte` filter, or a
-`has_digivolve_candidate` on the `is_source` permanent in a clause `condition` /
-`active_when`) get the same payment check from the compile pass: it gives the
-authored leaf the digivolve's `cost` and waiver unless you wrote a `cost`, so a
-host whose only candidate can't be paid is not offered and the effect is not
-offered with nothing payable (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY; free
-digivolves stay route-only). A host binding feeding digivolves with different
-costs, or a gate onto `source` in a clause that digivolves it with different
-costs, is a compile error: author the leaf's `cost` yourself.
+route-only candidates onto the effect's own `source` stay ROUTE-ONLY: the compile
+pass adds no `cost` to them. DCGO's host and gate probes check the route alone
+(`CanPlayCardTargetFrame` honours `PayCost` only for an empty frame,
+CardSource.cs:1150-1161; host probes pass `payCost: false`, e.g. LM_027.cs:42,
+BT25_092.cs:109), and CR 4.3 1-3-2 lets a player choose a host whose candidate
+can't be paid (1-3-11-1 forbids declaring the CARD, which the card pick checks).
+A card that wants a payment-aware host pick authors `cost` on the leaf
+(AD1-022, BT21-082, EX5-070); a host binding feeding digivolves with different
+costs or waivers is a compile error (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY).
 "Ignoring digivolution requirements" host picks take
 `has_digivolve_candidate { ..., ignore_requirements: true }` (BT22-013: no route
-is needed, only the prohibitions and, with a `cost`, the payment; exclusive with
-`ignore_level`; G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS).
+is needed, only the prohibitions (`CannotDigivolve`, `CannotDigivolveDigimonByEffect`; BT8-059's
+"players can't ignore digivolution requirements" is not modelled yet,
+G-ENGINE-CANNOT-IGNORE-DIGIVOLUTION-REQUIREMENTS) and, with a `cost`, the
+payment; exclusive with `ignore_level`;
+G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS).
 Use the same optional `cost` in `has_digivolve_candidate` to restrict a host
 pick to hosts with a payable result. Its `reveal` zone scans the shared revealed
 pool and checks each physical card's owner. Neither cost-aware predicate is

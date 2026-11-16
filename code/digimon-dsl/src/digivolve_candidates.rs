@@ -49,21 +49,24 @@
 //! EX13-074 / P-092), unless it authored a cost leaf itself. A route-only leaf the card authored stays, in
 //! conjunction. G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT.
 //!
-//! The HOST pick of a paid digivolve ("1 of your Digimon may digivolve into a card in the hand ...") filters its
-//! hosts with an authored `has_digivolve_candidate { zone, filter }`. That leaf is route-only unless it carries a
-//! `cost`, so a host whose only candidate can't be paid was offered and the card pick that followed was empty. The
-//! pass gives the authored leaf on the pick that binds a paid digivolve's target the step's `cost` (unless it
-//! authored one), exactly as the card pick gets its cost leaf. An activation gate (a clause's `condition` /
-//! `active_when`) that counts route-only candidates onto the effect's own `source` (`can_digivolve_onto: source` /
-//! `can_digivolve_from_source: true` in a `count_gte` filter, or a `has_digivolve_candidate` on the `is_source`
-//! permanent) gets the same check, so the effect is not offered with nothing payable. Free digivolves keep route-only
-//! gates. DCGO's gates check the route alone (`CanPlayCardTargetFrame` honours `PayCost` only for an empty frame,
-//! CardSource.cs:1150-1161); CR 4.3 1-3-11-1 governs. G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY.
+//! The HOST pick of a paid digivolve ("1 of your Digimon may digivolve into a card in the hand ...") and the
+//! activation gate of a clause that digivolves its own `source` stay ROUTE-ONLY unless the card authors a `cost` on
+//! the `has_digivolve_candidate` / `can_digivolve_onto_with_cost` leaf: the pass never adds one to a host or gate.
+//! DCGO's host conditions are `CanPlayCardTargetFrame(frame, false, ...)` (LM_027.cs:42, BT25_092.cs:109,
+//! BT23_076.cs:78, AD1_021.cs:66: `payCost` false) and its gates pass `true` (BT20_012.cs:57, EX13_055.cs:109), but
+//! `CanPlayCardTargetFrame` honours `PayCost` only for an EMPTY frame (CardSource.cs:1150-1161), so every one of them
+//! checks the route alone. CR 4.3 does not contradict that: 1-3-2 says an impossible action simply isn't performed, so
+//! choosing a host whose candidate can't be paid is legal, and 1-3-11-1 / 8-1-2-6 are about DECLARING a card
+//! (the card pick above). The host / gate payment filter that a 2026-11-16 pass added cited those rules for host
+//! selection, which they don't cover, contradicted DCGO's offered choices, and applied a stricter standard than the
+//! BT22-026 host pick (DCGO name-only, kept). It was reverted the same day. G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY.
 //!
 //! `has_digivolve_candidate { ignore_requirements: true }` is the host-pick leaf of an `ignore_requirements`
 //! digivolve ("1 of your [Gabumon] may digivolve into [MetalGarurumon] in the hand, ignoring digivolution
 //! requirements", BT22-013; DCGO `CanPlayCardTargetFrame(.., IgnoreRequirement.All)`, BT22_013.cs:145-150): it
-//! waives the route and keeps the prohibitions. It must agree with the digivolve's waiver like every other leaf.
+//! waives the route and keeps the prohibitions (`CannotDigivolve`, `CannotDigivolveDigimonByEffect`; not DCGO's
+//! "players can't ignore digivolution requirements", BT8-059, G-ENGINE-CANNOT-IGNORE-DIGIVOLUTION-REQUIREMENTS, still
+//! open). It must agree with the digivolve's waiver like every other leaf.
 //! G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -82,20 +85,15 @@ pub fn mark_card(card: &mut CompiledCard) -> Vec<ValidationError> {
     for (i, clause) in card.effects.iter_mut().enumerate() {
         let path = format!("effects[{i}]");
         match clause {
-            CompiledClause::Triggered(t) => {
-                let mut gates: Vec<&mut CompiledPredicate> =
-                    t.condition.iter_mut().chain(t.active_when.iter_mut()).collect();
-                ctx.mark_body(&mut t.process, true, &mut gates, &format!("{path}.process"))
-            }
+            CompiledClause::Triggered(t) => ctx.mark_body(&mut t.process, true, &format!("{path}.process")),
             CompiledClause::Declarative(d) => match d {
                 CompiledDeclarativeClause::CostReduction { pay_cost, .. } => {
-                    ctx.mark_body(pay_cost, false, &mut [], &format!("{path}.pay_cost"))
+                    ctx.mark_body(pay_cost, false, &format!("{path}.pay_cost"))
                 }
-                CompiledDeclarativeClause::Replacement { process, active_when, .. }
-                | CompiledDeclarativeClause::Partition { process, active_when, .. }
-                | CompiledDeclarativeClause::Delay { process, active_when, .. } => {
-                    let mut gates: Vec<&mut CompiledPredicate> = active_when.iter_mut().collect();
-                    ctx.mark_body(process, true, &mut gates, &format!("{path}.process"))
+                CompiledDeclarativeClause::Replacement { process, .. }
+                | CompiledDeclarativeClause::Partition { process, .. }
+                | CompiledDeclarativeClause::Delay { process, .. } => {
+                    ctx.mark_body(process, true, &format!("{path}.process"))
                 }
                 _ => {}
             },
@@ -186,29 +184,12 @@ fn is_paid(cost: &CompiledCostDelta) -> bool {
     !matches!(cost, CompiledCostDelta::Free | CompiledCostDelta::Literal(0))
 }
 
-/// What the pick that binds a digivolve's HOST must check.
-#[derive(Clone, PartialEq)]
-struct HostNeed {
-    waiver: Waiver,
-    /// The digivolve step's own cost delta, for the host leaf's payment check.
-    cost: CompiledCostDelta,
-}
-
-impl HostNeed {
-    fn paid(&self) -> bool {
-        is_paid(&self.cost)
-    }
-}
-
 #[derive(Default)]
 struct Collected {
     /// card binding -> what its pick must check.
     cards: BTreeMap<String, Wanted>,
-    /// target (host) binding -> what the pick that binds it must check.
-    hosts: BTreeMap<String, HostNeed>,
-    /// target name (`source`, `event_target` or a binding) -> the distinct PAID digivolves onto it, for the activation
-    /// gates that probe the same target before the body runs.
-    paid_onto: BTreeMap<String, Vec<(Waiver, CompiledCostDelta)>>,
+    /// target (host) binding -> the waiver of the digivolve onto it, and whether it is paid.
+    hosts: BTreeMap<String, (Waiver, bool)>,
     /// Bindings that feed digivolves needing different checks. The pass keys by binding name, so each pick would
     /// get one digivolve's target / cost / waiver; that is a compile error instead.
     conflicts: BTreeSet<String>,
@@ -227,7 +208,7 @@ impl Collected {
         }
     }
 
-    fn want_host(&mut self, binding: &str, need: HostNeed) {
+    fn want_host(&mut self, binding: &str, need: (Waiver, bool)) {
         match self.hosts.get(binding) {
             Some(prev) if *prev != need => {
                 self.conflicts.insert(binding.to_string());
@@ -280,16 +261,7 @@ fn collect(step: &CompiledStep, out: &mut Collected) {
             out.want_card(card, Wanted { target: t, waiver, cost: cost.clone() });
         }
         if let Some(host) = host_binding(target) {
-            out.want_host(host, HostNeed { waiver, cost: cost.clone() });
-        }
-        if is_paid(cost) {
-            if let Some(t) = target_name(target) {
-                let needs = out.paid_onto.entry(t).or_default();
-                let need = (waiver, cost.clone());
-                if !needs.contains(&need) {
-                    needs.push(need);
-                }
-            }
+            out.want_host(host, (waiver, is_paid(cost)));
         }
     }
     for body in child_bodies(step) {
@@ -307,18 +279,12 @@ struct Ctx {
 }
 
 impl Ctx {
-    fn mark_body(
-        &mut self,
-        steps: &mut [CompiledStep],
-        cost_probe_allowed: bool,
-        gates: &mut [&mut CompiledPredicate],
-        path: &str,
-    ) {
+    fn mark_body(&mut self, steps: &mut [CompiledStep], cost_probe_allowed: bool, path: &str) {
         let mut wanted = Collected::default();
         for s in steps.iter() {
             collect(s, &mut wanted);
         }
-        if wanted.cards.is_empty() && wanted.hosts.is_empty() && wanted.paid_onto.is_empty() {
+        if wanted.cards.is_empty() && wanted.hosts.is_empty() {
             return;
         }
         for b in &wanted.conflicts {
@@ -333,89 +299,8 @@ impl Ctx {
             });
         }
         self.cost_probe_allowed = cost_probe_allowed;
-        if cost_probe_allowed {
-            for gate in gates.iter_mut() {
-                self.mark_gate(gate, &wanted, false, path);
-            }
-        }
         let mut bound = BTreeSet::new();
         self.mark_seq(steps, &wanted, &mut bound, path);
-    }
-
-    /// The activation gate (`condition` / `active_when`) of a clause that digivolves for a cost: a route-only
-    /// candidate leaf onto the effect's own `source` / `event_target` (known before the body runs) gets the payment
-    /// check of the paid digivolve onto it. Only `all_of` conjuncts and a `count_gte` / `any_permanent` filter are
-    /// walked: a negated or disjunctive gate is not a "there is a payable candidate" test and is left alone.
-    fn mark_gate(&mut self, p: &mut CompiledPredicate, wanted: &Collected, on_source_host: bool, path: &str) {
-        let node_host =
-            on_source_host || p.is_source == Some(true) || p.all_of.iter().any(|c| c.is_source == Some(true));
-        // Card-subject route-only leaves: the card probed can digivolve onto `target`.
-        let route_target = match (&p.can_digivolve_onto, p.can_digivolve_from_source) {
-            (Some(t), _) => Some(t.clone()),
-            (None, Some(true)) => Some("source".to_string()),
-            _ => None,
-        };
-        if let Some(target) = route_target {
-            if p.can_digivolve_onto_with_cost.is_none() {
-                if let Some((waiver, cost)) = self.gate_need(&target, wanted, path) {
-                    self.check(waiver, Waiver::None, true, &target, &format!("{path}.gate"));
-                    p.can_digivolve_onto_with_cost = Some(CompiledDigivolveCostPredicate {
-                        target,
-                        cost,
-                        ignore_level: waiver == Waiver::Level,
-                        ignore_requirements: waiver == Waiver::All,
-                    });
-                }
-            }
-        }
-        // Permanent-subject leaf on the effect's own source: some card can digivolve onto this Digimon.
-        if node_host {
-            if let Some(leaf) = &mut p.has_digivolve_candidate {
-                if leaf.cost.is_none() {
-                    if let Some((waiver, cost)) = self.gate_need("source", wanted, path) {
-                        let leaf_waiver = Waiver::of(leaf.ignore_requirements, leaf.ignore_level);
-                        self.check(waiver, leaf_waiver, true, "source", &format!("{path}.gate.has_digivolve_candidate"));
-                        leaf.cost = Some(cost);
-                    }
-                }
-            }
-        }
-        for c in &mut p.all_of {
-            self.mark_gate(c, wanted, node_host, path);
-        }
-        if let Some(c) = &mut p.count_gte {
-            self.mark_gate(&mut c.filter, wanted, false, path);
-        }
-        if let Some(e) = &mut p.any_permanent {
-            self.mark_gate(&mut e.predicate, wanted, false, path);
-        }
-    }
-
-    /// The one paid digivolve a gate probing `target` stands for: its waiver and cost. None when no paid digivolve
-    /// goes onto `target` (the probe stays route-only). A gate can't tell which of two digivolves with different
-    /// costs or waivers it mirrors, so that is a compile error: author the payment leaf on the gate.
-    fn gate_need(&mut self, target: &str, wanted: &Collected, path: &str) -> Option<(Waiver, CompiledCostDelta)> {
-        // Only a target that exists before the body runs can be probed by a gate.
-        if target != "source" && target != "event_target" {
-            return None;
-        }
-        let needs = wanted.paid_onto.get(target)?;
-        match needs.as_slice() {
-            [] => None,
-            [one] => Some(one.clone()),
-            _ => {
-                self.errors.push(ValidationError {
-                    card_id: self.card_id.clone(),
-                    path: format!("{path}.gate"),
-                    message: format!(
-                        "the clause gate counts route-only candidates onto `{target}`, but the body digivolves it \
-                         with different costs or waivers; the pass can't tell which one the gate mirrors. Author \
-                         `can_digivolve_onto_with_cost` on the gate"
-                    ),
-                });
-                None
-            }
-        }
     }
 
     fn mark_seq(&mut self, steps: &mut [CompiledStep], wanted: &Collected, bound: &mut BTreeSet<String>, path: &str) {
@@ -428,18 +313,13 @@ impl Ctx {
                         self.mark_card_pick(filter, w, known, &b, &step_path);
                     }
                 }
-                if let Some(need) = wanted.hosts.get(&b) {
+                if let Some(&(waiver, paid)) = wanted.hosts.get(&b) {
                     if let Some(filter) = permanent_filter(step) {
                         let mut leaves = Vec::new();
                         host_leaves(filter, &mut leaves);
                         for leaf in leaves {
                             let at = format!("{step_path}.filter.has_digivolve_candidate");
-                            self.check(need.waiver, leaf, need.paid(), &b, &at);
-                        }
-                        // A paid digivolve's host leaf checks the payment too (G-DSL-PAID-DIGIVOLVE-HOST-PICK-
-                        // ROUTE-ONLY); the probe is forbidden inside a cost_reduction `pay_cost` body.
-                        if self.cost_probe_allowed && need.paid() {
-                            add_host_cost(filter, &need.cost);
+                            self.check(waiver, leaf, paid, &b, &at);
                         }
                     }
                 }
@@ -537,7 +417,7 @@ fn card_filter(step: &mut CompiledStep) -> Option<&mut CompiledPredicate> {
     }
 }
 
-fn permanent_filter(step: &mut CompiledStep) -> Option<&mut CompiledPredicate> {
+fn permanent_filter(step: &CompiledStep) -> Option<&CompiledPredicate> {
     use CompiledStep as S;
     match step {
         S::SelectOwnPermanent { filter, .. }
@@ -545,19 +425,6 @@ fn permanent_filter(step: &mut CompiledStep) -> Option<&mut CompiledPredicate> {
         | S::SelectAnyPermanent { filter, .. }
         | S::SelectOwnBreedingPermanent { filter, .. } => Some(filter),
         _ => None,
-    }
-}
-
-/// Give every authored `has_digivolve_candidate` leaf on `filter` (itself or a conjunct) that has no `cost` the
-/// digivolve's cost.
-fn add_host_cost(filter: &mut CompiledPredicate, cost: &CompiledCostDelta) {
-    if let Some(leaf) = &mut filter.has_digivolve_candidate {
-        if leaf.cost.is_none() {
-            leaf.cost = Some(cost.clone());
-        }
-    }
-    for conjunct in &mut filter.all_of {
-        add_host_cost(conjunct, cost);
     }
 }
 

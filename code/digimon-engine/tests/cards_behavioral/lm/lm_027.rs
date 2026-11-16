@@ -1475,12 +1475,15 @@ fn lm_027_real_play_wingdramon_on_coredramon_offers_reduced_0_and_1() {
     );
 }
 
-// ─── Host pick checks the payment (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY) ───────────────────────────────────
+// ─── Host pick is route-only, like DCGO ───────────────────────────────────────────────────────────────────────
 //
 // "1 of your red Digimon may digivolve into a red Digimon card in the hand with the digivolution cost reduced by 3."
-// The card pick checks that the (reduced) cost can be paid, so the host pick must too: a host whose only candidate
-// can't be paid would be a dead choice (CR 4.3 1-3-11-1, 8-1-2-6, 4-2-2). DCGO's host gate checks the route only
-// (CardSource.cs:1150-1161), the rules manual governs.
+// DCGO's host condition is `CanPlayCardTargetFrame(permanent.PermanentFrame, false, activateClass)` (LM_027.cs:42,
+// payCost false, and an occupied frame never checks payment anyway, CardSource.cs:1150-1161): a host with a printed
+// route is offered whether or not its candidate can be paid. CR 4.3 1-3-2 lets the player choose it (an impossible
+// action simply isn't performed), and 1-3-11-1 only forbids DECLARING a card whose cost can't be paid, which is what
+// the card pick that follows checks. So the host pick stays route-only and the card pick checks the payment.
+// (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY, decided route-only 2026-11-16.)
 
 fn lm_027_payment_runner() -> DebugRunner {
     // Lv.4 red result: a Lv.3 circle at 4 and a Lv.2 circle at 9.
@@ -1501,7 +1504,7 @@ fn lm_027_payment_runner() -> DebugRunner {
 }
 
 #[test]
-fn lm_027_host_pick_offers_only_hosts_whose_candidate_can_be_paid() {
+fn lm_027_host_pick_is_route_only_and_the_card_pick_checks_the_payment() {
     let mut r = lm_027_payment_runner();
     let cheap = r.place_on_field(0, "PAY-CHEAP", None);
     let costly = r.place_on_field(0, "PAY-COSTLY", None);
@@ -1510,27 +1513,42 @@ fn lm_027_host_pick_offers_only_hosts_whose_candidate_can_be_paid() {
     assert!(r.game.activate_hand_main(0, 0));
     let v = r.pending_selection_view().unwrap();
     assert_eq!(v.kind, SelectionKind::OwnField);
-    let hosts = v.valid_action_ids.iter().filter(|a| **a != digimon_engine::action::space::PASS).count();
-    assert_eq!(hosts, 1, "only the cheap host: the costly host can't pay 6 from -5");
-    let pick = *v.valid_action_ids.iter().find(|a| **a != digimon_engine::action::space::PASS).unwrap();
-    r.execute_action(0, pick).unwrap();
+    let pass = digimon_engine::action::space::PASS;
+    assert_eq!(
+        v.valid_action_ids.iter().filter(|a| **a != pass).count(),
+        2,
+        "both hosts have a printed route; the costly host is offered although its candidate can't be paid (DCGO)"
+    );
+    // Choosing the costly host is a dead choice: the card pick checks the payment (CR 4.3 1-3-11-1) and is empty.
+    let costly_action = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|a| *a != pass)
+        .nth(1)
+        .expect("a second host");
+    r.execute_action(0, costly_action).unwrap();
     let _ = r.auto_resolve();
     let top = |h: digimon_engine::permanent::PermanentHandle| {
         r.game.players[0].battle_area[h.index as usize].top_card().card_id(&r.game.card_data).to_string()
     };
-    assert_eq!(top(cheap), "PAY-EVO", "the cheap host digivolved");
-    assert_eq!(top(costly), "PAY-COSTLY");
+    assert_eq!(top(costly), "PAY-COSTLY", "nothing digivolved: the 6 can't be paid from -5");
+    assert_eq!(top(cheap), "PAY-CHEAP");
 }
 
 #[test]
-fn lm_027_host_pick_offers_the_costly_host_when_its_candidate_can_be_paid() {
+fn lm_027_costly_host_digivolves_when_its_candidate_can_be_paid() {
     let mut r = lm_027_payment_runner();
     r.place_on_field(0, "PAY-CHEAP", None);
-    r.place_on_field(0, "PAY-COSTLY", None);
-    // From -4 at most 6 can be paid: both hosts qualify.
+    let costly = r.place_on_field(0, "PAY-COSTLY", None);
+    // From -4 at most 6 can be paid: both hosts qualify and the costly host's card pick offers PAY-EVO.
     r.game.set_memory(-4);
     assert!(r.game.activate_hand_main(0, 0));
     let v = r.pending_selection_view().unwrap();
-    let hosts = v.valid_action_ids.iter().filter(|a| **a != digimon_engine::action::space::PASS).count();
-    assert_eq!(hosts, 2, "both hosts");
+    let pass = digimon_engine::action::space::PASS;
+    let hosts: Vec<u16> = v.valid_action_ids.iter().copied().filter(|a| *a != pass).collect();
+    assert_eq!(hosts.len(), 2, "both hosts");
+    r.execute_action(0, hosts[1]).unwrap();
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Hand), "the costly host's candidate is payable: the card pick opens");
+    let _ = costly;
 }

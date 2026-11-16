@@ -188,64 +188,74 @@ This does not change action IDs, observation tensors, or admission policy.
   EX13-074 per-card test's -8 gauge is unreachable from a [Main] activation (it
   pins the mechanism; the comment says so).
 
-## Host picks of a paid effect digivolve check only the route [G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY] — CLOSED 2026-11-15 (compile pass)
+## Host picks of a paid effect digivolve check only the route [G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY] — RESOLVED 2026-11-16 as NOT A GAP (route-only is the faithful behaviour)
 
-- **What was wrong:** a "1 of your Digimon may digivolve into a card in the hand"
-  host pick filtered by `has_digivolve_candidate { zone: [hand] }` without `cost`
-  offered a host whose only candidates can't be paid; after
-  G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT the card pick that followed was then empty,
-  a dead choice (CR 4.3 1-3-11-1, 8-1-2-6, 4-2-2). The activation gates that
-  counted route-only candidates onto the effect's own `source`
-  (`can_digivolve_onto: source` / `can_digivolve_from_source: true` in a
-  `count_gte` filter, or `has_digivolve_candidate` on the `is_source`
-  permanent) offered the effect with nothing payable. DCGO's gates have the same
-  shape (`CanPlayCardTargetFrame` on an occupied frame never checks payment,
-  CardSource.cs:1150-1161), so this was a rules-faithfulness gap, not a DCGO
-  divergence; the rules manual governs.
-- **Fix:** the compile pass (`digimon-dsl/src/digivolve_candidates.rs`)
-  (1) gives every authored `has_digivolve_candidate` leaf (itself or an `all_of`
-  conjunct) on the pick that binds a PAID digivolve's target the step's `cost`,
-  unless the leaf authored one (the leaf already checks route + payment at that
-  cost, with the leaf's own `ignore_level` / `ignore_requirements`); (2) gives a
-  clause gate (`condition` / `active_when`, Replacement / Partition / Delay
-  `active_when`) that counts route-only candidates onto `source` /
-  `event_target` the matching `can_digivolve_onto_with_cost` (card leaves) or
-  the step's `cost` on the `has_digivolve_candidate` (host leaf under
-  `is_source`). Free and fixed-0 digivolves keep route-only leaves (nothing is
-  paid). Compile errors: one host binding feeding digivolves with different
-  costs / waivers, and a gate onto `source` in a clause that digivolves it with
-  different costs (author the leaf cost yourself); a leaf waiver that disagrees
-  with the digivolve's is checked like the card pick's. Not touched: a gate under
-  `not` / `any_of` / `count_lte` (not a "there is a payable candidate" test), and
-  gates inside a step body (`if.condition`, `legal_when`): no pool card has a
-  route-only one (BT20-087 / EX12-066 author their cost leaf), and the pool
-  sweep below fails if a clause-level one appears.
-- **Audit (compiled output diffed before / after over all 1241 specs; 31 cards
-  change):** hosts, cost added: AD1-021 (-3), BT10-085 (printed), BT23-076 (-1),
-  BT25-092 (-1), BT26-035 (-1), BT26-038 (-1), BT26-066 (-2), BT26-091 (-1),
-  EX13-069 (-2), LM-027..LM-032 (-3), LM-054..LM-062 (-2), P-244 (-3); gates, cost
-  leaf added: BT20-012 (printed), BT24-003 (-1, host leaf on `is_source`),
-  BT25-005 (-2), BT26-001 (-1), EX13-055 / EX13-057 (printed). Unchanged on
-  purpose: BT22-098's <Delay> host pick authors no leaf and DCGO has none
-  (BT22_098.cs:176-186 offers every [Puppet] Digimon); BT22-026 branch 0 (below);
-  free / fixed-0 digivolves BT9-104, BT20-018, BT20-056, ST20-06, P-204, BT12-092,
-  P-128, EX12-071, BT17-097's replacement; hosts that already authored a cost
-  (AD1-022, BT17-097 digi_target, BT18-063, BT18-076, BT20-087, BT21-001,
-  BT21-082, EX5-070, EX7-074, EX12-066, P-103..P-108); BT26-034 / BT26-085 gates
-  (free digivolves).
+- **History:** an earlier pass (commit 6cbfa6c07, 2026-11-16 01:51) made the
+  compile pass give every authored `has_digivolve_candidate` host leaf the
+  digivolve's `cost` and every route-only clause gate onto `source` the matching
+  payment check (31 cards), citing CR 4.3 1-3-11-1, 8-1-2-6 and 4-2-2. Review
+  found the citations do not cover host selection, and that the same lane kept
+  BT22-026's DCGO name-only host pick because "CR 4.3 has no rule that forbids
+  choosing such a target": two opposite standards. The follow-up lane verified
+  and reverted it the same day.
+- **Evidence (read from the files, not the tracker):**
+  - CR 4.3 1-3-11-1: "A player can declare they are utilizing a card (playing,
+    digivolving, using, or linking) only if that card is able to be utilized.
+    They can't declare its utilization if they can't pay its cost". That is the
+    CARD pick (G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT keeps it). 8-1-2-6 is about a
+    card revealed during the digivolve procedure; 4-2-2 defines paying.
+    1-3-2: "If a player is requested to perform an impossible action, that
+    action will not be carried out": choosing a host whose candidate can't be
+    paid is legal and simply does nothing.
+  - DCGO host probes pass `payCost: false`: `CanPlayCardTargetFrame(
+    permanent.PermanentFrame, false, activateClass)` at LM_027.cs:42 (and
+    LM_028..032), BT25_092.cs:109, BT23_076.cs:78/80, AD1_021.cs:66,
+    LM_054..062 (line 109), P_244.cs:138. Even with `true` an occupied frame
+    never checks payment (`PayCost` is read only inside `frame.GetFramePermanent()
+    == null`, CardSource.cs:1150-1161; `CanEvolve` is route + prohibitions,
+    CardSource.cs:1269-1290, `EvoCosts` never reads memory). The gates of
+    BT20-012 / BT24-003 / EX13-055 / EX13-057 pass `true` (BT20_012.cs:57,
+    EX13_055.cs:109) but are equally route-only in effect. The DCGO exam /
+    replay oracle therefore offers these hosts and gates.
+  - So the filter removed legal choices the oracle offers, would raise
+    `illegal_action` in dcgo-replay if a DCGO game picked such a host, and had no
+    rule or DCGO behaviour behind it. Source priority (CLAUDE.md): DCGO governs
+    behaviour unless the manual contradicts it; 1-3-2 does not.
+- **Decision:** host picks and clause gates are ROUTE-ONLY. The compile pass
+  (`digimon-dsl/src/digivolve_candidates.rs`) adds no `cost` to a
+  `has_digivolve_candidate` host leaf or to a gate leaf; a card that wants a
+  payment-aware host pick authors `cost` on the leaf (AD1-022, BT21-082, EX5-070,
+  BT17-097 digi_target, BT18-063, BT20-087 ...). The CARD pick keeps the
+  payment check (`can_digivolve_onto_with_cost`, G-DSL-PAID-DIGIVOLVE-PICK-
+  PAYMENT), so an unpayable host is a dead choice, exactly like BT22-026
+  branch 0 and BT22-098's <Delay> (DCGO has no candidate probe there at all).
+  What survives from the reverted commit: the compile-error for a host binding
+  feeding digivolves with different waivers / paid-ness, `SelectOwnBreedingPermanent`
+  hosts being waiver-checked, and everything in the next section.
 - **Tests:** `digimon-dsl/src/digivolve_candidates_payment_tests.rs`
-  (`every_paid_digivolve_host_pick_in_the_pool_checks_payment`,
-  `every_paid_digivolve_gate_in_the_pool_checks_payment`,
-  `audited_host_picks_carry_the_digivolves_cost`, `audited_gates_check_the_payment`,
-  `audited_unchanged_cards_keep_their_host_leaves`, the two ambiguity errors);
-  `tests/dsl/constructs/paid_digivolve_host_pick.rs` (synthetic hosts and
-  gates, each shape); per card `lm_027.rs`, `lm_029.rs`, `lm_031.rs`, `lm_032.rs`,
-  `lm_054.rs`, `lm_056.rs`, `bt25_092.rs`. Two existing tests pinned the old gap
-  and were rewritten (`evolution_candidate_cost.rs` "route" mode; the five
-  `*_field_pick_is_route_only_and_unpayable_hand_offers_nothing` LM tests).
-- **Left open:** G-DSL-PAID-DIGIVOLVE-GATE-IN-BODY (a route-only candidate probe
-  in a step-body `if.condition` / `select_effect_choice.legal_when` is not
-  upgraded; none in the pool; the sweep covers clause-level gates only).
+  `the_pass_never_adds_a_cost_to_a_host_or_gate_leaf` (pool sweep: compiled and
+  authored costed leaves match for every card; red on the reverted pass at
+  AD1-021); `tests/dsl/constructs/paid_digivolve_host_pick.rs` (host and gate
+  pins: `route_only_host_leaf_offers_every_host_with_a_route_and_the_card_pick_
+  checks_the_payment`, `..._lets_the_payable_host_digivolve`, `..._offers_hosts_
+  when_no_candidate_is_payable`, `authored_host_cost_is_kept_and_filters`,
+  `compile_pass_leaves_the_authored_host_leaf_route_only`, the three
+  `*_gate_is_route_only`, `compile_pass_adds_no_cost_to_a_route_only_gate`);
+  `lm_029` / `lm_031` / `lm_032` / `lm_054` / `lm_056`
+  `*_field_pick_is_route_only_and_unpayable_hand_offers_nothing` (the original
+  DCGO-parity guards, restored); `lm_027.rs`
+  `lm_027_host_pick_is_route_only_and_the_card_pick_checks_the_payment`;
+  `bt25_092.rs` `bt25_092_main_target_pick_is_route_only_and_an_unpayable_result_
+  is_a_dead_choice`; `evolution_candidate_cost.rs` "route" mode restored.
+- **Resolved review findings:** the gate over-block / memory-gain-before-digivolve
+  hazards, the gate and host coverage gaps and the stale "omission keeps
+  route-only" doc comments all disappear with the revert (the doc comments are
+  accurate again). Not changed: BT22-098 / BT22-026 under-blocking is
+  DCGO-faithful and now consistent with every other host pick. The BT22-013
+  branch 0 MetalGarurumon hand pick (free, `ignore_requirements`) has no
+  candidate leaf, so a card-level prohibition on that card alone (DCGO
+  `CanNotEvolve(target, card)`) is not applied; the host leaf already applies
+  every host-level prohibition and no pool card prints a card-specific one.
 
 ## `has_digivolve_candidate` that waives every requirement [G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS] — CLOSED 2026-11-15 (new vocabulary)
 
@@ -267,8 +277,14 @@ This does not change action IDs, observation tensors, or admission policy.
   `CannotDigivolve`, `CannotDigivolveDigimonByEffect` and the payment (with a
   `cost`) apply. The compile pass checks the leaf against the digivolve's waiver
   like every other leaf (a requirement-waiving leaf on a requirement-keeping
-  digivolve is an error; a paid ignoring digivolve now takes this leaf, which
-  gets the step's cost). BT22-013 branch 0 uses it; the host pick is
+  digivolve is an error; a paid ignoring digivolve takes this leaf too, and its
+  payment is checked only when the leaf authors a `cost`, like every host leaf).
+  `CannotDigivolve` / `CannotDigivolveDigimonByEffect` are kept, but DCGO's
+  "players can't ignore digivolution requirements" (BT8-059 Kokuwamon,
+  Player.cs:1426 `CanIgnoreDigivolutionRequirement`, which makes the All waiver
+  fall back to the printed requirements) is NOT modelled: that is the open
+  G-ENGINE-CANNOT-IGNORE-DIGIVOLUTION-REQUIREMENTS (docs/RUST_ENGINE_GAPS.md),
+  and BT8-059 has no YAML spec yet. BT22-013 branch 0 uses it; the host pick is
   `optional: true` (DCGO `canNoSelect: true`, BT22_013.cs:237) and the
   MetalGarurumon pick is `optional: true` (`DigivolveIntoHandOrTrashCard`
   `isOptional` defaults to true).
@@ -286,7 +302,8 @@ This does not change action IDs, observation tensors, or admission policy.
 - **Tests:** `tests/dsl/constructs/paid_digivolve_host_pick.rs`
   (`ignore_requirements_host_leaf_needs_no_route_but_honours_prohibitions`,
   `..._offers_no_host_without_a_hand_card`,
-  `paid_ignore_requirements_host_pick_checks_the_payment`, the two compile
+  `paid_ignore_requirements_host_pick_is_route_waived_and_the_card_pick_checks_the_
+  payment`, the two compile
   errors); `bt22_013.rs`
   (`bt22_013_branch_0_host_pick_skips_a_gabumon_that_cannot_digivolve`,
   `..._offers_no_gabumon_without_a_metalgarurumon_in_hand`,

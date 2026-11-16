@@ -1673,8 +1673,10 @@ pub struct DigivolveCandidatePredicate {
     /// [Gabumon] may digivolve into [MetalGarurumon] in the hand, ignoring
     /// digivolution requirements", BT22-013; DCGO `CanPlayCardTargetFrame(...,
     /// IgnoreRequirement.All)`, BT22_013.cs:145-150). No route is needed;
-    /// prohibitions (`CannotDigivolve`, "can't digivolve by effects") still
-    /// apply. With `cost` the payment is checked too. Exclusive with
+    /// `CannotDigivolve` / `CannotDigivolveDigimonByEffect` still apply (BT8-059's
+    /// "players can't ignore digivolution requirements" is not modelled:
+    /// G-ENGINE-CANNOT-IGNORE-DIGIVOLUTION-REQUIREMENTS). With `cost` the
+    /// payment is checked too. Exclusive with
     /// `ignore_level`. G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,

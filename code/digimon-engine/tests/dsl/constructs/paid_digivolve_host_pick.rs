@@ -1,18 +1,18 @@
-//! The HOST pick (and the activation gate) of a PAID effect digivolve checks the payment, not only the route
-//! (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY).
+//! The HOST pick and the activation GATE of a PAID effect digivolve stay route-only, like DCGO
+//! (G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY, decided route-only 2026-11-16).
 //!
 //! "1 of your Digimon may digivolve into a card in the hand with the digivolution cost reduced by N" is authored as a
 //! host pick filtered by `has_digivolve_candidate { zone: [hand] }`, a card pick and an `effect_initiated_digivolve`.
-//! After G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT the card pick checks the payment, so a host whose only candidates can't be
-//! paid was still offered and choosing it left an empty card pick: a dead choice. A card whose cost can't be paid can't
-//! be declared (CR 4.3 1-3-11-1; 8-1-2-6: it goes back and memory doesn't move; 4-2-2 / 1-4-2-2: the gauge stops at
-//! 10). DCGO's gates have the same shape (`CanPlayCardTargetFrame` on an occupied frame never checks payment,
-//! CardSource.cs:1150-1161), so this is a rules fix, not a DCGO divergence; the rules manual governs.
-//!
-//! The compile pass (`digimon_dsl::digivolve_candidates`) now gives the host leaf the digivolve's `cost` and waiver, and
-//! does the same for a clause gate (`condition` / `active_when`) that counts route-only candidates onto the effect's
-//! own `source` (`can_digivolve_onto: source`, `can_digivolve_from_source: true`, a `has_digivolve_candidate` on the
-//! `is_source` permanent).
+//! The CARD pick checks the payment (G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT): a card whose cost can't be paid can't be
+//! declared (CR 4.3 1-3-11-1). The HOST pick does not: DCGO's host conditions are `CanPlayCardTargetFrame(frame,
+//! false, ...)` (LM_027.cs:42, BT25_092.cs:109, BT23_076.cs:78, AD1_021.cs:66; payCost false) and an occupied frame
+//! never checks payment anyway (CardSource.cs:1150-1161), and CR 4.3 has no rule that forbids choosing a host whose
+//! candidate can't be paid (1-3-2: an impossible action simply isn't performed; 1-3-11-1 is about declaring a CARD).
+//! Choosing such a host is a dead choice DCGO has too. The same holds for the gate of a clause that digivolves
+//! `source` (DCGO BT20_012.cs:57, EX13_055.cs:109 probe the route). A card that wants a payment-aware host leaf
+//! authors `cost` on `has_digivolve_candidate` (AD1-022, BT21-082, EX5-070 ...); the compile pass never adds one.
+//! An earlier pass that did (committed 2026-11-16 and reverted the same day) cited 1-3-11-1 / 8-1-2-6 / 4-2-2 for
+//! host selection, which they don't cover, and removed legal choices DCGO offers.
 //!
 //! `has_digivolve_candidate { ignore_requirements: true }` is the host-pick sibling of an `effect_initiated_digivolve
 //! { ignore_requirements: true }` ("1 of your [Gabumon] may digivolve into [MetalGarurumon] in the hand, ignoring
@@ -176,29 +176,50 @@ fn compile_errors(yaml: &str) -> Vec<String> {
 // ---------------------------------------------------------------------------------------------------------------
 
 /// The leaf is authored route-only (the LM-027 / LM-055 / BT25-092 shape). From -3 at most 7 can be paid: RES-A onto
-/// the yellow Digimon (and the yellow host itself) costs 9-1=8, onto the red one 2-1=1.
+/// the yellow Digimon (and the yellow host itself) costs 9-1=8, onto the red one 2-1=1. DCGO offers every host with a
+/// printed route; the card pick (which checks the payment) is what the unpayable choice dies on.
 #[test]
-fn route_only_host_leaf_offers_only_hosts_with_a_payable_candidate() {
+fn route_only_host_leaf_offers_every_host_with_a_route_and_the_card_pick_checks_the_payment() {
     let yaml = host_card("", &host_pick("{of: you, zone: [hand]}", "{reduce: 1}", ""));
     let mut r = runner(&yaml, &["RES-A"]);
     play_host(&mut r);
     assert_eq!(mine(&r), -3, "the play cost is paid before [On Play]");
-    assert_eq!(candidates(&r), 1, "only the red Digimon can afford its candidate (CR 4.3 1-3-11-1)");
+    assert_eq!(candidates(&r), 3, "yellow, red and the host itself all have a printed route: DCGO offers them all");
+    // The first host is the yellow Digimon (battle area 0): RES-A costs 8 onto it, one above the limit from -3, so the
+    // card pick is empty and nothing digivolves.
     pick_first(&mut r);
-    assert_eq!(candidates(&r), 1, "the card pick offers RES-A");
+    assert!(r.pending_selection().is_none(), "no payable card: the dead choice ends the effect (CR 4.3 1-3-2)");
+    assert_eq!(top_of(&r, 0), "YEL");
+    assert_eq!(top_of(&r, 1), "RED");
+    assert_eq!(mine(&r), -3, "nothing was paid");
+}
+
+#[test]
+fn route_only_host_leaf_lets_the_payable_host_digivolve() {
+    let yaml = host_card("", &host_pick("{of: you, zone: [hand]}", "{reduce: 1}", ""));
+    let mut r = runner(&yaml, &["RES-A"]);
+    play_host(&mut r);
+    // The red Digimon (battle area 1) is the second host.
+    let v = r.pending_selection_view().expect("a host pick");
+    let hosts: Vec<u16> = v.valid_action_ids.iter().copied().filter(|a| *a != space::PASS).collect();
+    r.execute_action(0, hosts[1]).unwrap();
+    assert_eq!(candidates(&r), 1, "the card pick offers RES-A: 2-1=1 is payable");
     pick_first(&mut r);
     assert_eq!(top_of(&r, 1), "RES-A", "the red Digimon digivolved");
-    assert_eq!(top_of(&r, 0), "YEL");
     assert_eq!(mine(&r), -4, "1 paid from -3");
 }
 
 #[test]
-fn route_only_host_leaf_offers_no_host_when_no_candidate_is_payable() {
+fn route_only_host_leaf_offers_hosts_when_no_candidate_is_payable() {
     let yaml = host_card("", &host_pick("{of: you, zone: [hand]}", "{reduce: 1}", ""));
-    // RES-FREE costs 9 onto either colour: 8 after the reduction, one above the limit from -3.
+    // RES-FREE costs 9 onto either colour: 8 after the reduction, one above the limit from -3. DCGO still offers the
+    // hosts (it never probes the payment on a host); the card pick is then empty.
     let mut r = runner(&yaml, &["RES-FREE"]);
     play_host(&mut r);
-    assert!(r.pending_selection().is_none(), "no host has a payable candidate: nothing to choose");
+    assert_eq!(candidates(&r), 3, "every host has a printed route");
+    pick_first(&mut r);
+    assert!(r.pending_selection().is_none(), "the card pick has no payable candidate");
+    assert_eq!(mine(&r), -3);
 }
 
 #[test]
@@ -212,16 +233,21 @@ fn free_digivolve_host_pick_keeps_checking_the_route_only() {
 }
 
 #[test]
-fn authored_host_cost_is_kept() {
-    // An explicit cost on the leaf wins over the pass (AD1-022 / BT21-082 shape): reduce 3 makes 9-3=6 payable too.
+fn authored_host_cost_is_kept_and_filters() {
+    // An explicit cost on the leaf wins (AD1-022 / BT21-082 shape): reduce 3 makes 9-3=6 payable too.
     let yaml = host_card("", &host_pick("{of: you, zone: [hand], cost: {reduce: 3}}", "{reduce: 3}", ""));
     let mut r = runner(&yaml, &["RES-FREE"]);
     play_host(&mut r);
     assert_eq!(candidates(&r), 3, "9-3=6 is payable from -3");
+    // The same leaf with reduce 1 (9-1=8) is a payment-aware host pick the card authored: no host is offered.
+    let yaml = host_card("", &host_pick("{of: you, zone: [hand], cost: {reduce: 1}}", "{reduce: 3}", ""));
+    let mut r = runner(&yaml, &["RES-FREE"]);
+    play_host(&mut r);
+    assert!(r.pending_selection().is_none(), "an authored payment-aware leaf is honoured: 8 can't be paid from -3");
 }
 
 #[test]
-fn compile_pass_gives_the_host_leaf_the_steps_cost() {
+fn compile_pass_leaves_the_authored_host_leaf_route_only() {
     let yaml = host_card("", &host_pick("{of: you, zone: [hand]}", "{reduce: 1}", ""));
     let spec: digimon_dsl::CardSpec = serde_yml::from_str(&yaml).expect("parses");
     let card = digimon_dsl::compile::compile(&spec).expect("compiles");
@@ -229,11 +255,7 @@ fn compile_pass_gives_the_host_leaf_the_steps_cost() {
     let CompiledStep::SelectOwnPermanent { filter, .. } = &t.process[0] else { panic!("host pick") };
     let json = serde_json::to_value(filter).unwrap();
     let leaf = &json["all_of"][1]["has_digivolve_candidate"];
-    let step_cost = match &t.process[2] {
-        CompiledStep::EffectInitiatedDigivolve { cost, .. } => serde_json::to_value(cost).unwrap(),
-        other => panic!("digivolve step, got {other:?}"),
-    };
-    assert_eq!(leaf["cost"], step_cost, "the host leaf carries the digivolve's own cost: {json}");
+    assert!(leaf["cost"].is_null(), "the pass adds no cost to a host leaf (DCGO host probes are route-only): {json}");
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -285,16 +307,20 @@ fn requirement_keeping_host_leaf_on_an_ignoring_free_digivolve_still_needs_a_rou
 }
 
 #[test]
-fn paid_ignore_requirements_host_pick_checks_the_payment() {
+fn paid_ignore_requirements_host_pick_is_route_waived_and_the_card_pick_checks_the_payment() {
     // "for a digivolution cost of 8, ignoring digivolution requirements": 8 is one above the limit from -3.
     let leaf = "{of: you, zone: [hand], ignore_requirements: true}";
     let step = "          ignore_requirements: true\n";
     let mut r = runner(&host_card("", &host_pick(leaf, "8", step)), &["IGNORER"]);
     play_host(&mut r);
-    assert!(r.pending_selection().is_none(), "8 can't be paid from -3 (CR 4.3 1-3-11-1)");
+    assert_eq!(candidates(&r), 3, "the host leaf waives the route and, with no authored cost, probes no payment");
+    pick_first(&mut r);
+    assert!(r.pending_selection().is_none(), "the card pick can't pay 8 from -3 (CR 4.3 1-3-11-1)");
     let mut r = runner(&host_card("", &host_pick(leaf, "7", step)), &["IGNORER"]);
     play_host(&mut r);
     assert_eq!(candidates(&r), 3, "7 is payable from -3");
+    pick_first(&mut r);
+    assert_eq!(candidates(&r), 1, "the card pick offers IGNORER");
 }
 
 #[test]
@@ -316,7 +342,7 @@ fn ignore_level_and_ignore_requirements_on_one_host_leaf_are_exclusive() {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// The activation gate of a paid digivolve onto `source`
+// The activation gate of a paid digivolve onto `source` (route-only, like DCGO)
 // ---------------------------------------------------------------------------------------------------------------
 
 /// "[On Play] This Digimon may digivolve into a card in the hand, cost -1", gated on a route-only candidate. The first
@@ -367,33 +393,56 @@ const GATE_HOST_LEAF: &str = "      any_permanent:
               zone: [hand]
               filter: {kind: digimon}";
 
-/// From -3 at most 7 can be paid. The host is yellow Lv.3, so RES-A costs 9-1=8 onto it: unpayable. RES-A's red
-/// circle is no route onto a yellow Digimon.
-fn assert_gate_needs_a_payable_candidate(gate: &str) {
+/// From -3 at most 7 can be paid. The host is yellow Lv.3, so RES-A costs 9-1=8 onto it: unpayable. DCGO's gate probes
+/// the route alone (BT20_012.cs:57, EX13_055.cs:109: `CanPlayCardTargetFrame` never checks payment on an occupied
+/// frame), so the gate opens and the first step runs; the card pick that follows checks the payment.
+fn assert_gate_is_route_only(gate: &str) {
     let yaml = gated(gate);
     let mut r = runner(&yaml, &["RES-A"]);
     play_host(&mut r);
-    assert_eq!(mine(&r), -3, "the effect was not offered: the only candidate costs 8 from -3 (CR 4.3 1-3-11-1)");
-    assert!(r.pending_selection().is_none());
+    assert_eq!(mine(&r), -2, "the gate opened (route-only) and the first step gained 1 memory ({gate})");
 }
 
 #[test]
-fn can_digivolve_onto_source_gate_checks_the_payment() {
-    assert_gate_needs_a_payable_candidate(GATE_ONTO);
+fn can_digivolve_onto_source_gate_is_route_only() {
+    assert_gate_is_route_only(GATE_ONTO);
 }
 
 #[test]
-fn can_digivolve_from_source_gate_checks_the_payment() {
-    assert_gate_needs_a_payable_candidate(GATE_FROM_SOURCE);
+fn can_digivolve_from_source_gate_is_route_only() {
+    assert_gate_is_route_only(GATE_FROM_SOURCE);
 }
 
 #[test]
-fn is_source_host_leaf_gate_checks_the_payment() {
-    assert_gate_needs_a_payable_candidate(GATE_HOST_LEAF);
+fn is_source_host_leaf_gate_is_route_only() {
+    assert_gate_is_route_only(GATE_HOST_LEAF);
+}
+
+/// Whether `key` holds a non-null value anywhere under `v` (a compiled predicate serialises every field, null or not).
+fn has_non_null(v: &serde_json::Value, key: &str) -> bool {
+    match v {
+        serde_json::Value::Object(m) => {
+            m.iter().any(|(k, c)| (k == key && !c.is_null()) || has_non_null(c, key))
+        }
+        serde_json::Value::Array(a) => a.iter().any(|c| has_non_null(c, key)),
+        _ => false,
+    }
 }
 
 #[test]
-fn gate_still_opens_for_a_payable_candidate() {
+fn compile_pass_adds_no_cost_to_a_route_only_gate() {
+    for gate in [GATE_ONTO, GATE_FROM_SOURCE, GATE_HOST_LEAF] {
+        let spec: digimon_dsl::CardSpec = serde_yml::from_str(&gated(gate)).expect("parses");
+        let card = digimon_dsl::compile::compile(&spec).expect("compiles");
+        let CompiledClause::Triggered(t) = &card.effects[0] else { panic!("triggered clause") };
+        let json = serde_json::to_value(&t.condition).unwrap();
+        assert!(!has_non_null(&json, "can_digivolve_onto_with_cost"), "no payment leaf was added: {json}");
+        assert!(!has_non_null(&json, "cost"), "no cost was added to the gate: {json}");
+    }
+}
+
+#[test]
+fn gate_opens_for_a_payable_candidate_too() {
     for gate in [GATE_ONTO, GATE_FROM_SOURCE, GATE_HOST_LEAF] {
         // A yellow circle of 8 printed, 7 after the reduction: exactly the limit from -3.
         let mut r = runner(&gated(gate), &["RES-B"]);
