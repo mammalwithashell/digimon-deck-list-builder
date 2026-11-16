@@ -52,15 +52,19 @@ effects:
   #
   # Implementation: `add_player_modifier` installs the trash-scoped
   # `CannotPlayFromTrash` modifier on the opponent with `end_of_opponents_turn`
-  # expiry. This blocks effect-initiated plays from the opponent's trash —
-  # zone-faithful to the printed "from the trash". (The broad
+  # expiry. This blocks the opponent's EFFECTS from playing Digimon / Tamers out
+  # of a trash — zone-faithful to the printed "from the trash". (The broad
   # `CannotPlayDigimonByEffect` / `CannotPlayTamerByEffect` modifiers also block
   # HAND plays, a much larger over-block.) The engine reads `CannotPlayFromTrash`
   # for Digimon / Tamer / DUAL plays only (`Game::trash_play_lock_applies`), so
   # an Option USE from the trash stays legal (CR 4.3 7-1-1 vs 9-1-1;
-  # G-ENGINE-TRASH-LOCK-OPTION-OVERBLOCK). Open residual: the engine keys the
-  # lock on the trash owner, DCGO on the effect's owner over any trash
-  # (G-ENGINE-TRASH-PLAY-LOCK-SCOPE, docs/RUST_ENGINE_GAPS.md).
+  # G-ENGINE-TRASH-LOCK-OPTION-OVERBLOCK). The lock is read against the playing
+  # effect's CONTROLLER, as DCGO does (`IsExistInAnyTrash` +
+  # `EffectSourceCard.Owner == card.Owner.Enemy`, BT23_014.cs:46-58): the
+  # locked player's effect that plays from the OTHER player's trash is refused,
+  # and this card's controller's effect that plays from the locked player's trash
+  # is allowed (Dragomon EX5-060 is the driver; G-ENGINE-TRASH-PLAY-LOCK-SCOPE,
+  # docs/RUST_ENGINE_GAPS.md).
   - when: [on_play, when_digivolving]
     summary: "Until opp's turn ends, their effects can't play Digimon/Tamers from trash"
     process:
