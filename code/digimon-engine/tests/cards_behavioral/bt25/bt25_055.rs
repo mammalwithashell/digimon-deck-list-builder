@@ -98,6 +98,9 @@ fn bt25_055_metadata() {
     assert_eq!(card.level, Some(5));
     assert_eq!(card.dp, Some(6000));
     assert_eq!(card.cost, Some(6));
+    // Card image + official bundle (data/card_bundles/BT25-055.md):
+    // "Form: Ultimate  Attribute: Data".
+    assert_eq!(card.attribute, ["Data"]);
 }
 
 #[test]
@@ -292,5 +295,156 @@ fn bt25_055_other_suspend_does_not_fire() {
     assert!(
         runner.pending_selection().is_none(),
         "Deramon's self-suspend clause must NOT fire when a different Digimon suspends"
+    );
+}
+
+// ─── Section 3 — the free-play pick offers only playable cards ───────────────
+//
+// DCGO BT25_055.cs:134-144 `CanSelectCardCondition` is `IsDigimon && HasDP &&
+// CardDP <= 4000 && traits` -- it does NOT call `CanPlayAsNewPermanent`, so
+// DCGO offers a card the play then refuses (no empty frame, or a "can't play
+// Digimon by effects" lock). The rules decide that case: CR 4.3 1-3-2 (an
+// impossible action is not carried out) and 7-1-1 (playing places a card on
+// the field) -- a card that can't be played is not a "play" choice, and
+// choosing it would only be a dead pick in the RL action space. We filter by
+// playability (`can_play_from_effect_without_cost`), and gate the trigger on a
+// playable candidate (DCGO `CanActivateCondition`, :128-132, with the same
+// filter), which is DCGO's own "select nothing -> RemoveUse" outcome.
+
+/// An [Avian] Digi-Egg (no DP, no play cost).
+fn avian_egg(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::DigiEgg;
+    card.level = Some(2);
+    card.dp = None;
+    card.play_cost = 0;
+    card.traits = vec!["Avian".to_string()];
+    card
+}
+
+/// Suspend Deramon (BT25-055) and return the hand-pick candidates, accepting
+/// an outer "you may" prompt if one opens. `None` = no prompt at all.
+fn offered_after_self_suspend(hand: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> Option<Vec<String>> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    let mut runner = base().add_card(avian_egg("AVIAN-EGG")).hand(0, hand).start();
+    let deramon = runner.place_on_field(0, CARD_ID, Some(0));
+    setup(&mut runner);
+    runner.game.suspend(deramon);
+    runner.pending_selection()?;
+    if runner.pending_kind() != Some(SelectionKind::Hand) {
+        runner.accept_optional_trigger().expect("accept the optional free-play");
+    }
+    let Some(view) = runner.pending_selection_view() else {
+        return Some(Vec::new());
+    };
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    Some(
+        view.valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&a| a != PASS)
+            .map(|a| hand_ids[(a - PLAY_HAND_START) as usize].clone())
+            .collect(),
+    )
+}
+
+#[test]
+fn bt25_055_self_suspend_not_offered_when_battle_area_full() {
+    assert_eq!(
+        offered_after_self_suspend(&["AVIAN"], |r| {
+            r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+        }),
+        None,
+        "no empty frame: the [Avian] Digimon can't be played, so the effect is not offered"
+    );
+}
+
+#[test]
+fn bt25_055_self_suspend_not_offered_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    assert_eq!(
+        offered_after_self_suspend(&["AVIAN"], |r| {
+            r.game.modifiers.add_player_modifier(
+                0,
+                PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+            );
+        }),
+        None,
+        "\"you can't play Digimon by effects\": nothing to offer"
+    );
+}
+
+/// "with [Bird] in any of its traits" is a substring match (DCGO
+/// BT25_055.cs:142 `ContainsTraits("Bird")`): a [Sky Bird] Digimon qualifies.
+#[test]
+fn bt25_055_self_suspend_pick_matches_bird_inside_a_longer_trait() {
+    let mut sky_bird = avian_target("SKY-BIRD");
+    sky_bird.traits = vec!["Sky Bird".to_string()];
+    let mut runner = base().add_card(sky_bird).hand(0, &["SKY-BIRD"]).start();
+    let deramon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.suspend(deramon);
+    assert!(runner.pending_selection().is_some(), "a [Sky Bird] Digimon is a candidate");
+    runner.accept_optional_trigger().ok();
+    runner.auto_resolve().expect("resolve the free play");
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "SKY-BIRD"),
+        "SKY-BIRD was played"
+    );
+}
+
+/// Playing nothing does not spend the [Once Per Turn]: DCGO `BT25_055.cs`
+/// `if (!Used) activateClass.RemoveUse()` (the pick selected no card), so a
+/// second self-suspend the same turn offers the free play again. Our YAML
+/// needs no `refund_opt` for this: the clause is `optional: true` and its
+/// first step is the optional pick, so the "you may" folds into that pick
+/// and PASS is the activation decline (no use spent). Regression guard.
+#[test]
+fn bt25_055_self_suspend_declined_pick_does_not_spend_once_per_turn() {
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::selection::SelectionKind;
+    let mut runner = base().hand(0, &["AVIAN"]).start();
+    let deramon = runner.place_on_field(0, CARD_ID, Some(0));
+
+    // First self-suspend: open the hand pick and select nothing.
+    runner.game.suspend(deramon);
+    assert!(runner.pending_selection().is_some(), "first suspend fires");
+    if runner.pending_kind() != Some(SelectionKind::Hand) {
+        runner.accept_optional_trigger().expect("accept the outer you-may");
+    }
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand), "the hand pick is open");
+    runner.execute_action(0, PASS).expect("select no card");
+    runner.auto_resolve().expect("settle");
+    assert_eq!(runner.hand_size(0), 1, "nothing played");
+
+    // Unsuspend and suspend again the same turn.
+    runner.game.players[0].battle_area[deramon.index as usize].is_suspended = false;
+    runner.game.suspend(deramon);
+    assert!(
+        runner.pending_selection().is_some(),
+        "the empty pick refunded the [Once Per Turn]: the second suspend offers the play again"
+    );
+    if runner.pending_kind() != Some(SelectionKind::Hand) {
+        runner.accept_optional_trigger().expect("accept the outer you-may");
+    }
+    runner.auto_resolve().expect("resolve the free play");
+    assert_eq!(runner.hand_size(0), 0, "AVIAN played on the second suspend");
+}
+
+/// Regression guard: an [Avian] Digi-Egg is never a "Digimon card with 4000
+/// DP or lower" play candidate (no DP, no play cost; CR 4.3 7-1-1).
+#[test]
+fn bt25_055_self_suspend_pick_excludes_avian_digi_egg() {
+    assert_eq!(
+        offered_after_self_suspend(&["AVIAN-EGG", "AVIAN"], |_| {}),
+        Some(vec!["AVIAN".to_string()])
     );
 }

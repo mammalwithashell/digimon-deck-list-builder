@@ -218,6 +218,8 @@ effects:
                     - any_of:
                         - name_contains: "Tai Kamiya"
                         - name_contains: "Kari Kamiya"
+                    # DCGO BT17_102.cs:163 / :275 `CanPlayAsNewPermanent`.
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 Tai/Kari Tamer free"
             - play_from_hand_free: { of: you, hand_index: tamer }
       - if:
@@ -257,6 +259,8 @@ effects:
                     - any_of:
                         - name_contains: "Tai Kamiya"
                         - name_contains: "Kari Kamiya"
+                    # DCGO BT17_102.cs:163 / :275 `CanPlayAsNewPermanent`.
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 Tai/Kari Tamer free"
             - play_from_hand_free: { of: you, hand_index: tamer }
       - if:

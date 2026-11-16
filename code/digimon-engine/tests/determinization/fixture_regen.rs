@@ -30,8 +30,9 @@ use digimon_engine::Game;
 /// Why the entries this run regenerates were regenerated. Name the engine change that made each
 /// regenerated entry stop replaying; refine the stamp per entry afterwards if they differ. History:
 /// 2026-11-11 the CR 11-1-2 / DUAL / play-gate fixes; 2026-11-12 this branch's DCGO-playback fixes
-/// (0de06211d, c6eda5678; per-entry reasons are in each regenerated `source`).
-const REGEN_NOTE: &str = "regenerated 2026-11-12 after the DCGO-playback prompt fixes 0de06211d / c6eda5678";
+/// (0de06211d, c6eda5678; per-entry reasons are in each regenerated `source`); 2026-11-15 the select_hand
+/// playability filters.
+const REGEN_NOTE: &str = "regenerated 2026-11-15 after the select_hand playability filters (EX12-066 and sibling hand picks now offer only cards the effect can actually play/use/digivolve)";
 
 const FIXTURE_DIR: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),

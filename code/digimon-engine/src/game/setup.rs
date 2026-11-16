@@ -279,6 +279,7 @@ impl Game {
             pending_interactive_digivolve_reduction: 0,
             pending_interactive_option_use_reduction: 0,
             interactive_option_use_reducer_prompted: false,
+            interactive_option_use_reducers_processed: Vec::new(),
             on_use_option_armed: None,
             option_body_pending: false,
             option_body_outer_deferred: 0,
@@ -491,6 +492,7 @@ impl Game {
         self.pending_interactive_digivolve_reduction = 0;
         self.pending_interactive_option_use_reduction = 0;
         self.interactive_option_use_reducer_prompted = false;
+        self.interactive_option_use_reducers_processed.clear();
         self.on_use_option_armed = None;
         self.option_body_pending = false;
         self.option_body_outer_deferred = 0;

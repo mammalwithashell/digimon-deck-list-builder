@@ -2,11 +2,11 @@
 //!
 //! # Card text
 //!
-//! AD1-019 has NO row in `data/cards.json` (incomplete ingest — the project
-//! plans mislabel it as an "empty/placeholder card"). It is in fact a real
-//! Tamer. Card details sourced per CLAUDE.md "Source priority" from the
-//! official cardlist (world.digimoncard.com AD-01) and the DCGO behavioral
-//! reference `DCGO/Assets/Scripts/CardEffect/AD1/Blue/AD1_019.cs`:
+//! Traits ADVENTURE/Hero (official bundle `data/card_bundles/AD1-019.md`;
+//! the `data/cards.json` row agrees). Card details sourced per CLAUDE.md
+//! "Source priority" from the official cardlist (world.digimoncard.com AD-01)
+//! and the DCGO behavioral reference
+//! `DCGO/Assets/Scripts/CardEffect/AD1/Blue/AD1_019.cs`:
 //!
 //!   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
 //!   [Your Turn] When any of your Digimon digivolve into an [ADVENTURE] trait
@@ -503,5 +503,142 @@ fn ad1_019_clause2_does_not_fire_for_non_adventure_digivolve() {
         runner.hand_size(0),
         hand_before,
         "hand net-unchanged (digivolve material -1, digivolve draw +1); clause 2 played nothing"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 5 — Clause 2 hand-pick legality: only cards that can be played AND
+//             paid for at the reduced cost
+//
+// DCGO AD1_019.cs:52-57 IsAdventureDigimon = `HasPlayCost &&
+// EqualsTraits("ADVENTURE") && CanPlayAsNewPermanent(cardSource, payCost:
+// true, activateClass, fixedCost: Math.Max(0, GetCostItself - reduction))`,
+// with `reduction = GetDifferenetColorCardCount(tamerCards) / 2` (:68-79): no
+// Digi-Egg (no play cost, CR 4.3 7-1-1 — Koromon ST20-01), no Option (it is
+// used, never played — Our Courage United ST20-14), a free battle-area slot,
+// no effect-play lock, and the reduced cost payable. CR 4.3 1-3-11-1: a card
+// can be declared for play only if it is able to be played, and not if its
+// cost can't be paid.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// AD1-019 + a Lv.3 base on P0's field, EVO + `hand` in hand, 10 memory.
+/// `prepare` runs before the digivolve. Digivolves EVO (an [ADVENTURE]
+/// Digimon) onto the base, accepts the optional trigger, and returns the
+/// non-PASS hand-pick candidates (sorted card ids; empty when no pick opens).
+fn adventure_offered(
+    hand: &[&str],
+    prepare: impl FnOnce(&mut DebugRunner),
+) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    let mut full_hand = vec!["EVO"];
+    full_hand.extend_from_slice(hand);
+    let mut runner = DebugRunner::builder()
+        .add_card(ad1_019_card_data())
+        .add_card(make_lv3_base("BASE", "Base"))
+        .add_card(make_lv4_adventure("EVO", "Adventure Evo"))
+        .add_card(make_adventure_hand_card("ADV-HAND", "Adventure Hand", 6))
+        .add_card(make_adventure_hand_card("ADV-21", "ADV-21", 21))
+        .add_card(make_adventure_hand_card("ADV-22", "ADV-22", 22))
+        .add_card(card_data_from_compiled("ST20-01"))
+        .add_card(card_data_from_compiled("ST20-14"))
+        .add_card(make_filler("FILLER-DECK"))
+        .deck(0, &["FILLER-DECK"; 5])
+        .deck(1, &["FILLER-DECK"; 5])
+        .hand(0, &full_hand)
+        .memory(10)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    prepare(&mut runner);
+    let evo_idx = runner.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "EVO")
+        .expect("EVO in P0 hand");
+    assert!(runner.game.digivolve_from_hand(
+        0,
+        evo_idx,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByDigivolve,
+    ));
+    runner.game.drain_effect_queue();
+    for _ in 0..4 {
+        let Some(view) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        if view.kind == SelectionKind::Hand {
+            let hand: Vec<String> = runner.game.players[0]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            let mut out: Vec<String> = view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&id| id != PASS)
+                .map(|id| hand[(id - PLAY_HAND_START) as usize].clone())
+                .collect();
+            out.sort();
+            return out;
+        }
+        runner
+            .accept_optional_trigger()
+            .expect("accept the optional [Your Turn] trigger");
+    }
+    panic!("the [ADVENTURE] hand pick never opened");
+}
+
+/// Koromon (ST20-01) is an [ADVENTURE] Digi-Egg with no play cost: not offered.
+#[test]
+fn ad1_019_clause2_hand_pick_excludes_adventure_digi_egg() {
+    assert_eq!(
+        adventure_offered(&["ST20-01", "ADV-HAND"], |_| {}),
+        vec!["ADV-HAND".to_string()]
+    );
+}
+
+/// Our Courage United (ST20-14) is an [ADVENTURE] Option: it is used, never
+/// played, so a "play" effect can't choose it.
+#[test]
+fn ad1_019_clause2_hand_pick_excludes_adventure_option() {
+    assert_eq!(
+        adventure_offered(&["ST20-14", "ADV-HAND"], |_| {}),
+        vec!["ADV-HAND".to_string()]
+    );
+}
+
+/// A full battle area: the [ADVENTURE] Digimon can't be placed.
+#[test]
+fn ad1_019_clause2_hand_pick_offers_nothing_when_battle_area_full() {
+    let offered = adventure_offered(&["ADV-HAND"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "no free slot → nothing can be chosen (got {offered:?})");
+}
+
+/// "You can't play Digimon by effects": nothing is offered.
+#[test]
+fn ad1_019_clause2_hand_pick_offers_nothing_under_digimon_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = adventure_offered(&["ADV-HAND"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "effect plays of Digimon are locked (got {offered:?})");
+}
+
+/// Affordability at the REDUCED cost: AD1-019 alone is 2 Tamer colours → -1.
+/// With 10 memory, ADV-21 costs 20 (memory ends at the opponent's 10, legal);
+/// ADV-22 costs 21 (one past the gauge) and can't be paid, so it isn't offered.
+#[test]
+fn ad1_019_clause2_hand_pick_offers_only_cards_payable_at_the_reduced_cost() {
+    assert_eq!(
+        adventure_offered(&["ADV-21", "ADV-22"], |_| {}),
+        vec!["ADV-21".to_string()]
     );
 }

@@ -283,3 +283,72 @@ fn bt22_025_branch1_filter_excludes_cost_5_and_non_blue() {
         "only UlforceVeedramon remains; no illegal Tamer was played"
     );
 }
+
+// ─── Branch 1 candidate legality ─────────────────────────────────────────────
+// DCGO BT22_025.cs:68-74 (and 211-217 for the second timing)
+// `CanSelectBlueTamer` = `IsExistOnHand && CanPlayAsNewPermanent(payCost:
+// false) && IsTamer && HasCardColor(Blue)`. DCGO omits the printed "play cost
+// 4 or lower" cap; the printed text governs what may be chosen, so the YAML
+// keeps `play_cost_lte: 4` and adds DCGO's playability check
+// (`can_play_from_effect_without_cost`; CR 4.3 1-3-11-1).
+
+/// The non-PASS hand-pick candidates after choosing branch 1 (empty when the
+/// pick does not install).
+fn branch1_offered(r: &mut DebugRunner, uv: digimon_engine::permanent::PermanentHandle) -> usize {
+    r.fire_on_play(0, uv.index as usize);
+    r.execute_branch(1).expect("pick branch 1");
+    r.pending_selection_view()
+        .map(|v| {
+            v.valid_action_ids
+                .iter()
+                .filter(|&&a| a != digimon_engine::action::space::PASS)
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+fn branch1_runner() -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT22-025 loads")
+        .add_card(blue_tamer("TAMER-4", 4))
+        .hand(0, &["TAMER-4"])
+        .memory(5)
+        .start();
+    let uv = r.place_on_field(0, CARD_ID, Some(0));
+    (r, uv)
+}
+
+/// Full battle area: the blue Tamer can't be played, so it is not offered.
+#[test]
+fn bt22_025_branch1_excludes_tamer_when_battle_area_full() {
+    let (mut r, uv) = branch1_runner();
+    r.game.rules.field_slots = 1;
+    assert_eq!(branch1_offered(&mut r, uv), 0);
+    let _ = r.auto_resolve();
+    assert_eq!(r.battle_area_size(0), 1);
+    assert!(r.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "TAMER-4"));
+}
+
+/// "Can't play Tamers by effects": the blue Tamer is not offered.
+#[test]
+fn bt22_025_branch1_excludes_tamer_under_tamer_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, uv) = branch1_runner();
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    assert_eq!(branch1_offered(&mut r, uv), 0);
+}
+
+/// Regression guard: with a free slot and no prohibition it is offered.
+#[test]
+fn bt22_025_branch1_offers_playable_blue_tamer() {
+    let (mut r, uv) = branch1_runner();
+    assert_eq!(branch1_offered(&mut r, uv), 1);
+}

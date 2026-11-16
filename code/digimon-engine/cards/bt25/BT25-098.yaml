@@ -67,6 +67,14 @@ effects:
   # extra machinery prompt); the printed body "・You may play 1 [Appmon] trait
   # card from your hand with the cost reduced by 3." carries its own "you may",
   # hence `optional: true` on the hand pick.
+  # Only cards the follow-up play can actually play are offered (DCGO
+  # BT25_098.cs:85-90 `HasPlayCost && EqualsTraits("Appmon") &&
+  # CanPlayAsNewPermanent(card, payCost: true, fixedCost: GetCostItself - 3)`):
+  # never a Digi-Egg (e.g. Swipemon BT21-005) or an Option (e.g. App Link
+  # BT21-097) — "play" needs a play cost, CR 4.3 7-1-1 — never a card under a
+  # play prohibition or with no free battle-area slot (BT25-098 is trashed as
+  # the <Delay> cost first, CR 4.3 16-17-1, so its own slot counts as free),
+  # and the reduced cost must be payable (CR 4.3 7-1-2-3). Audit 2026-11-13.
   - kind: delay
     trigger: delayed
     summary: "[Main]<Delay> Play 1 Appmon from hand with cost reduced by 3"
@@ -75,7 +83,11 @@ effects:
           of: you
           bind_as: play_pick
           optional: true
-          filter: { trait_has: Appmon }
+          filter:
+            all_of:
+              - trait_has: Appmon
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 3 }
           prompt: "You may play 1 [Appmon] trait card with the cost reduced by 3"
       - play_from_hand: { of: you, hand_index: play_pick, cost_delta: { reduce: 3 } }
   - scope: inherited

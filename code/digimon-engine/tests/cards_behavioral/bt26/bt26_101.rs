@@ -185,3 +185,109 @@ fn bt26_101_buff_is_continuous_over_later_ts_digimon() {
     assert!(!r.game.has_keyword(late, Keyword::Blocker));
     assert_eq!(r.effective_dp(late), Some(3000));
 }
+
+// ─── [Security] candidate filter: only cards the effect can actually play ───
+//
+// DCGO BT26_101.cs:169-171 — `CanPlayCondition` = `HasPlayCost &&
+// GetCostItself <= 4 && HasTSTraits && CardEffectCommons.CanPlayAsNewPermanent(
+// cardSource, payCost: false, activateClass)`, for the hand and the trash.
+// CR 4.3 1-3-11-1: a card can be declared for play only if it is able to be
+// played; 1-3-2: an impossible action is not carried out. So a [TS] card is
+// offered only with a free battle-area slot and no lock on playing its kind
+// by effects (and, for the trash copy, no "can't play cards from the trash").
+
+/// The union-pick candidates as sorted "Zone:card_id" strings (empty when no
+/// union pick is pending).
+fn union_offered(r: &DebugRunner) -> Vec<String> {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    use digimon_engine::selection::SelectionKind;
+    let Some(pending) = r.game.pending_selection.as_ref() else {
+        return Vec::new();
+    };
+    if !matches!(pending.kind, SelectionKind::UnionZone { .. }) {
+        return Vec::new();
+    }
+    let owner = pending
+        .card_choice
+        .as_ref()
+        .expect("union pick owns a card-choice page");
+    let mut out: Vec<String> = owner
+        .view(&r.game, pending.selecting_player)
+        .rows
+        .into_iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .map(|row| format!("{:?}:{}", row.zone.expect("zone"), row.card_id.unwrap_or_default()))
+        .collect();
+    out.sort();
+    out
+}
+
+fn add_player_lock(r: &mut DebugRunner, p: u8, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game
+        .modifiers
+        .add_player_modifier(p, PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, p));
+}
+
+/// Cross Arts on top of P0's security, a cost-3 [TS] Tamer in P0's hand, a
+/// cost-3 [TS] Digimon in P0's trash, and a P1 attacker on P1's turn.
+fn security_fixture() -> (DebugRunner, PermanentHandle) {
+    let mut r = setup();
+    let atk = r.place_on_field(1, "ATK", Some(0));
+    push_hand(&mut r, 0, "OTHER");
+    push_trash(&mut r, 0, "TS3");
+    let idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == CARD_ID)
+        .unwrap();
+    let next = r.game.next_card_index();
+    r.game.players[0]
+        .security
+        .push(digimon_engine::card_source::CardSource::new(idx, 0, next));
+    r.set_first_player(1);
+    (r, atk)
+}
+
+/// Regression guard: the [TS] Tamer in hand and the [TS] Digimon in trash
+/// are both offered.
+#[test]
+fn bt26_101_security_offers_ts_tamer_and_digimon() {
+    let (mut r, atk) = security_fixture();
+    r.attack_player(atk, 0, false);
+    assert_eq!(
+        union_offered(&r),
+        vec!["Hand:OTHER".to_string(), "Trash:TS3".to_string()]
+    );
+}
+
+/// No free battle-area slot: none offered.
+#[test]
+fn bt26_101_security_offers_nothing_when_battle_area_full() {
+    let (mut r, atk) = security_fixture();
+    r.place_on_field(0, "FILLER", Some(0));
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    r.attack_player(atk, 0, false);
+    let offered = union_offered(&r);
+    assert!(offered.is_empty(), "no free slot → nothing can be chosen (got {offered:?})");
+}
+
+/// "You can't play Tamers by effects": the [TS] Tamer is not offered.
+#[test]
+fn bt26_101_security_skips_tamer_under_tamer_effect_play_prohibition() {
+    let (mut r, atk) = security_fixture();
+    add_player_lock(&mut r, 0, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    r.attack_player(atk, 0, false);
+    assert_eq!(union_offered(&r), vec!["Trash:TS3".to_string()]);
+}
+
+/// "You can't play cards from the trash": the trash copy is dropped.
+#[test]
+fn bt26_101_security_skips_trash_card_under_cannot_play_from_trash() {
+    let (mut r, atk) = security_fixture();
+    add_player_lock(&mut r, 0, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    r.attack_player(atk, 0, false);
+    assert_eq!(union_offered(&r), vec!["Hand:OTHER".to_string()]);
+}

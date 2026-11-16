@@ -116,6 +116,8 @@ effects:
               - kind: digimon
               - trait_has: Hudie
               - play_cost_lte: 5
+              # DCGO BT23_037.cs:103 CanPlayAsNewPermanent(card, payCost: false).
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 play cost 5 or lower [Hudie] Digimon from your hand without paying the cost"
       - play_from_hand_free:
           of: you

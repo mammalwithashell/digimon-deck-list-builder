@@ -10894,17 +10894,13 @@
       "untested_constructs": []
     },
     "BT18-015": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
-      "untested_constructs": [
-        "verb:effect_initiated_dna_digivolve_trash_partner"
-      ]
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
     },
     "BT18-016": {
       "admissible": false,
@@ -11512,17 +11508,13 @@
       "untested_constructs": []
     },
     "BT18-073": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
-      "untested_constructs": [
-        "verb:effect_initiated_dna_digivolve_trash_partner"
-      ]
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
     },
     "BT18-074": {
       "admissible": false,
@@ -47118,20 +47110,20 @@
     }
   },
   "counts": {
-    "admissible": 1160,
+    "admissible": 1162,
     "diverged_no_quirk": 0,
     "failed_verdict": 17,
     "registered": 4483,
     "unregistered": 0,
     "untested_card": 7,
-    "untested_lowering": 3299
+    "untested_lowering": 3297
   },
-  "generated_at": "2026-11-15T15:22:07+00:00",
+  "generated_at": "2026-11-15T20:00:32+00:00",
   "sources": {
     "behavioral_test_modules_sha256": "09f73571ccc84272f5d08ba4b3c263dc7360b41f3cc2af0fd39a2aa27ded235a",
     "card_registry_sha256": "9a604ff3e4feb20a16ff8ce38febf866191d6d2b9697162e5b7e002332799599",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "6d8fd8e94e907ac62bb0d8cd3ef8a95c4e9fdff1a2fe7dfe21c4c5a168f4a2a3",
+    "lowering_coverage_sha256": "eb405b403841a5aeace95b8bfb295b7cff7de1becc7a7b423ed4d103dfd60ad7",
     "validated_cards_dsl_sha256": "15e0f52cdf22895bad6d0e382c8dc70f4d19ea45d229d1a5f0d783c1841cb083",
     "validated_cards_sha256": "64443d5a477f01781b8c8cce7defc79b47636d0da4c92ed20a977b61de46246a"
   },

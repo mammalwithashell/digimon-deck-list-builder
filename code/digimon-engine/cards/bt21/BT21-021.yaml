@@ -116,21 +116,32 @@ effects:
           of: you
           bind_as: play_pick
           optional: true
+          # Printed "1 card" -> Digimon or Tamer (DCGO BT21_021.cs:352-362
+          # `IsDigimon || IsTamer`). DCGO's pick has no playability / memory
+          # check; CR 4.3 1-3-11-1 + 1-3-2 forbid offering a card the play
+          # would refuse, so the play check and the reduced-cost
+          # affordability check are added.
           filter:
             all_of:
-              - kind: digimon
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
               - any_of:
                   - trait_has: "Xros Heart"
                   - trait_has: "Blue Flare"
                   - trait_has: Hero
-          prompt: "Play 1 [Xros Heart], [Blue Flare], or [Hero] Digimon from hand at cost -5?"
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 5 }
+          prompt: "Play 1 [Xros Heart], [Blue Flare], or [Hero] card from hand at cost -5?"
       - if:
           condition: { binding_exists: play_pick }
           then:
+            # `{reduce: 5}` = "play cost reduced by 5" (DCGO ChangeCostClass
+            # Cost -= 5). A bare `-5` is a FIXED cost (clamped to 0, free).
             - play_from_hand:
                 of: you
                 hand_index: play_pick
-                cost_delta: -5
+                cost_delta: { reduce: 5 }
             - delete_permanent: { target: source }
 
   # ─── Clause 2 — [On Deletion] optional hand-or-trash place under Tamer ───────

@@ -773,3 +773,233 @@ fn bt22_026_hand_main_jump_not_offered_without_nokia() {
         "MetalGarurumon must remain in hand — the jump was not offered"
     );
 }
+
+// ─── Section 5 — [Hand][Main] Nokia jump: who can be the [Gabumon] ────────────
+//
+// DCGO BT22_026.cs:43-48 (`CanUseCondition`) offers the [Hand][Main] only while
+// some Digimon passes `IsGabumon` (BT22_026.cs:55-60), the same condition the
+// pick uses:
+//   * `TopCard.EqualsCardName("Gabumon")` — the printed "1 of your [Gabumon]" is
+//     a bracketed name with no "in its name" (CR 4.3 2-3-1-2), so Gabumon
+//     (X Antibody) BT9-020 and Gabumon - Bond of Friendship BT6-030 do not count.
+//   * `card.CanPlayCardTargetFrame(frame, true, activateClass, fixedCost: 6,
+//     ignore: IgnoreRequirement.All)` — THIS card must be able to digivolve onto
+//     that Digimon for 6, requirements ignored (no `CannotDigivolve`, no
+//     "can't digivolve by effects").
+//   * Payment: an unpayable 6 is no target either (CR 4.3 1-3-11-1; 1-4-2-2).
+//     KNOWN DCGO DIVERGENCE (rules over DCGO): DCGO's `CanPlayCardTargetFrame`
+//     compares the cost to memory only for an EMPTY frame
+//     (CardSource.cs:1150-1162); onto a Digimon it calls only `CanEvolve`
+//     (CardSource.cs:1166, 1269-1290), which never looks at memory and is not
+//     given `fixedCost`, so DCGO would offer the jump with 6 unpayable.
+
+fn gabumon_named(id: &str, name: &str) -> CardData {
+    let mut card = make_test_card(id, name);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(3);
+    card.dp = Some(3000);
+    card
+}
+
+/// Nokia Shiramine + the given Digimon on player 0's field, BT22-026 in hand.
+fn jump_runner(digimon: &[CardData]) -> (DebugRunner, Vec<PermanentHandle>) {
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-026 YAML loads")
+        .add_card(make_nokia_tamer("MY-NOKIA"))
+        .add_card(make_filler_digimon("FILL"));
+    for c in digimon {
+        b = b.add_card(c.clone());
+    }
+    let mut runner = b
+        .hand(0, &["BT22-026"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL"])
+        .memory(5)
+        .start();
+    runner.place_on_field(0, "MY-NOKIA", Some(0));
+    let handles = digimon
+        .iter()
+        .map(|c| runner.place_on_field(0, &c.card_id, Some(0)))
+        .collect();
+    (runner, handles)
+}
+
+fn cannot_digivolve(runner: &mut DebugRunner, h: PermanentHandle) {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    runner
+        .game
+        .modifiers
+        .add(h, ModifierEntry::simple(ModifierType::CannotDigivolve, 0, Expiry::Permanent, 0));
+}
+
+fn effect_digivolve_lock(runner: &mut DebugRunner, player: u8) {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        player,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotDigivolveDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - player,
+        ),
+    );
+}
+
+fn top_id(runner: &DebugRunner, h: PermanentHandle) -> String {
+    runner.game.player(h.player).battle_area[h.index as usize]
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string()
+}
+
+/// Control: a Digimon named exactly [Gabumon] is a target, and the jump resolves.
+#[test]
+fn bt22_026_hand_main_jump_offered_for_a_digimon_named_gabumon() {
+    let (mut runner, hs) = jump_runner(&[gabumon_named("GABU", "Gabumon")]);
+    assert!(runner.game.activate_hand_main(0, 0), "a [Gabumon] is on the field");
+    let view = runner.pending_selection_view().expect("the Gabumon pick");
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("pick the Gabumon");
+    let _ = runner.auto_resolve();
+    assert_eq!(top_id(&runner, hs[0]), "BT22-026");
+}
+
+/// "1 of your [Gabumon]" is the card name (CR 4.3 2-3-1-2; DCGO
+/// `EqualsCardName("Gabumon")`, BT22_026.cs:58): with only Gabumon (X Antibody)
+/// and Gabumon - Bond of Friendship on the field the jump is not offered.
+#[test]
+fn bt22_026_hand_main_jump_not_offered_when_no_digimon_is_named_gabumon() {
+    let (mut runner, hs) = jump_runner(&[
+        gabumon_named("GABU-X", "Gabumon (X Antibody)"),
+        gabumon_named("GABU-BOND", "Gabumon - Bond of Friendship"),
+    ]);
+    assert!(
+        !runner.game.activate_hand_main(0, 0),
+        "no Digimon named [Gabumon]: the [Hand][Main] must not be offered"
+    );
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(top_id(&runner, hs[0]), "GABU-X");
+}
+
+/// A [Gabumon] that can't digivolve is no target (DCGO `CanPlayCardTargetFrame`,
+/// BT22_026.cs:59).
+#[test]
+fn bt22_026_hand_main_jump_not_offered_when_the_gabumon_cannot_digivolve() {
+    let (mut runner, hs) = jump_runner(&[gabumon_named("GABU", "Gabumon")]);
+    cannot_digivolve(&mut runner, hs[0]);
+    assert!(
+        !runner.game.activate_hand_main(0, 0),
+        "the only [Gabumon] can't digivolve: the [Hand][Main] must not be offered"
+    );
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(runner.hand_size(0), 1, "MetalGarurumon stays in hand");
+}
+
+/// Under "your Digimon can't digivolve by effects" no [Gabumon] is a target.
+#[test]
+fn bt22_026_hand_main_jump_not_offered_under_effect_digivolve_lock() {
+    let (mut runner, _hs) = jump_runner(&[gabumon_named("GABU", "Gabumon")]);
+    effect_digivolve_lock(&mut runner, 0);
+    assert!(
+        !runner.game.activate_hand_main(0, 0),
+        "a player who can't digivolve by effects: the [Hand][Main] must not be offered"
+    );
+    assert!(runner.game.pending_selection.is_none());
+}
+
+/// The fixed 6 must be payable: from memory -5 it would pass the opponent's 10
+/// (CR 4.3 1-4-2-2), so it can't be paid (1-3-11-1) and the [Hand][Main] is not
+/// offered. (DCGO would offer it — the payment divergence in the header above.)
+#[test]
+fn bt22_026_hand_main_jump_not_offered_when_the_6_cannot_be_paid() {
+    let (mut runner, hs) = jump_runner(&[gabumon_named("GABU", "Gabumon")]);
+    runner.game.set_memory(-5);
+    assert!(
+        !runner.game.activate_hand_main(0, 0),
+        "6 from memory -5 can't be paid: the [Hand][Main] must not be offered"
+    );
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(top_id(&runner, hs[0]), "GABU");
+    assert_eq!(runner.hand_size(0), 1, "MetalGarurumon stays in hand");
+}
+
+/// Boundary: from memory -4 the 6 reaches exactly -10, so it can be paid.
+#[test]
+fn bt22_026_hand_main_jump_offered_when_the_6_is_exactly_payable() {
+    let (mut runner, hs) = jump_runner(&[gabumon_named("GABU", "Gabumon")]);
+    runner.game.set_memory(-4);
+    assert!(runner.game.activate_hand_main(0, 0), "6 from -4 reaches -10: payable");
+    let view = runner.pending_selection_view().expect("the Gabumon pick");
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("pick the Gabumon");
+    let _ = runner.auto_resolve();
+    assert_eq!(top_id(&runner, hs[0]), "BT22-026");
+    // Memory ended on the opponent's side, so the turn passed: player 1 now
+    // sees +10, i.e. player 0 paid the 6 down to -10.
+    assert_eq!(runner.turn_player(), 1, "memory on the opponent's side ends the turn");
+    assert_eq!(runner.memory(), 10, "paid 6 from -4: the opponent sees 10");
+}
+
+/// The pick offers only the [Gabumon] MetalGarurumon can digivolve onto.
+#[test]
+fn bt22_026_hand_main_jump_pick_excludes_a_gabumon_that_cannot_digivolve() {
+    let (mut runner, hs) = jump_runner(&[
+        gabumon_named("GABU-LOCKED", "Gabumon"),
+        gabumon_named("GABU-FREE", "Gabumon"),
+    ]);
+    cannot_digivolve(&mut runner, hs[0]);
+    assert!(runner.game.activate_hand_main(0, 0), "GABU-FREE is a target");
+    let view = runner.pending_selection_view().expect("the Gabumon pick");
+    let offered: Vec<u16> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != digimon_engine::action::space::PASS)
+        .collect();
+    assert_eq!(offered.len(), 1, "only GABU-FREE is offered: {offered:?}");
+    runner
+        .execute_action(view.selecting_player, offered[0])
+        .expect("pick the offered Gabumon");
+    let _ = runner.auto_resolve();
+    assert_eq!(top_id(&runner, hs[1]), "BT22-026", "MetalGarurumon digivolved onto GABU-FREE");
+    assert_eq!(top_id(&runner, hs[0]), "GABU-LOCKED");
+}
+
+/// Branch 0 names cards: "1 of your [Agumon] may digivolve into [WarGreymon] in
+/// the hand" (CR 4.3 2-3-1-2; DCGO `EqualsCardName("Agumon")` /
+/// `EqualsCardName("WarGreymon")`, BT22_026.cs:159,164). Agumon (X Antibody)
+/// is no [Agumon] and WarGreymon (X Antibody) is no [WarGreymon].
+#[test]
+fn bt22_026_when_digivolving_branch_0_ignores_x_antibody_name_variants() {
+    let mut agu_x = make_agumon("AGU-X");
+    agu_x.card_name = "Agumon (X Antibody)".into();
+    let mut wg_x = make_wargreymon("WG-X");
+    wg_x.card_name = "WarGreymon (X Antibody)".into();
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT22-026 YAML loads")
+        .add_card(agu_x)
+        .add_card(wg_x)
+        .hand(0, &["WG-X"])
+        .memory(15)
+        .start();
+
+    let agu_handle = runner.place_on_field(0, "AGU-X", None);
+    let bt22 = place_bt22_on_field(&mut runner, 0);
+
+    trigger_when_digivolving(&mut runner, bt22);
+    runner.execute_branch(0).expect("pick Digivolve branch");
+    let _ = runner.auto_resolve();
+
+    assert_eq!(top_id(&runner, agu_handle), "AGU-X", "Agumon (X Antibody) is no [Agumon]");
+    assert!(
+        runner.game.players[0].hand.iter().any(|c| c.card_id(&runner.game.card_data) == "WG-X"),
+        "WarGreymon (X Antibody) stays in hand"
+    );
+}

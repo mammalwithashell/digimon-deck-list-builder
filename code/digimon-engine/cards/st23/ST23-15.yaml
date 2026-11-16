@@ -74,6 +74,12 @@ effects:
           zones: [hand, trash]
           bind_as: bb_pick
           optional: true
+          # DCGO ST23_15.cs:47-55 CanSelectPlayCondition adds HasPlayCost &&
+          # CanPlayAsNewPermanent(payCost: false): only a card that can
+          # actually be placed is offered: no effect-play lock and no trash-play
+          # lock for the trash copy (CR 4.3 1-3-11-1), and a free frame — the
+          # engine's rules.field_slots cap, mirroring DCGO's frame limit (CR 4.3
+          # 3-4-8-2 itself sets no battle-area limit).
           filter:
             all_of:
               - any_of:
@@ -81,6 +87,7 @@ effects:
                   - kind: tamer
               - trait_has: "BEATBREAK"
               - play_cost_lte: 4
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: bb_pick }
       # "Then, place this card in the battle area." — persistence handled by the
@@ -151,6 +158,7 @@ effects:
           zones: [hand, trash]
           bind_as: bb_pick_sec
           optional: true
+          # Same candidate filter as [Main] (DCGO ST23_15.cs:47-55).
           filter:
             all_of:
               - any_of:
@@ -158,6 +166,7 @@ effects:
                   - kind: tamer
               - trait_has: "BEATBREAK"
               - play_cost_lte: 4
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [BEATBREAK] cost 4 or less card from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: bb_pick_sec }
       # "Then, place this card in the battle area." - the [Main] being activated places it there too (DCGO

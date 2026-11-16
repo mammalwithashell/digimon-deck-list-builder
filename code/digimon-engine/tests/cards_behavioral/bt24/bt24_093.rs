@@ -716,3 +716,98 @@ fn bt24_093_compiled_card_has_exactly_main_and_security_clauses_pending_all_turn
          timing — worse than omitting it)"
     );
 }
+
+// candidate legality marker (select-hand audit batch 12)
+
+// ─── Section 6 — Security pick offers only playable cards ────────────────────
+//
+// DCGO BT24_093.cs:177-182 filters the hand AND trash candidates with
+// `(EqualsCardName("Aegiomon") || EqualsCardName("Elecmon")) &&
+// CanPlayAsNewPermanent(cardSource, false, activateClass)`, and
+// `HasMatchConditionOwnersHand` / `HasMatchConditionOwnersCardInTrash`
+// (186-187) decide whether a zone is offered at all. CR 4.3 1-3-11-1: a card
+// can be declared for play only if it can be played; CR 4.3 1-3-2: an
+// impossible play is not carried out, so offering it is a dead choice. Every
+// real [Aegiomon] / [Elecmon] is a Digimon, so the checks that matter are the
+// free slot, the effect-play prohibition and the trash-play lock.
+
+/// Player 0 (security holder) with `card_id` in its hand, under player 1's
+/// security attack. Returns the runner before the attack, plus the attacker.
+fn security_pick_runner() -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut runner = base()
+        .add_card(attacker_for_p1("ATTACKER"))
+        .security(0, &[CARD_ID])
+        .start();
+    let attacker = runner.place_on_field(1, "ATTACKER", Some(0));
+    (runner, attacker)
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs a free frame; the
+/// engine's play refuses with no slot): [Aegiomon] in hand is not offered and
+/// no pick installs.
+#[test]
+fn bt24_093_security_pick_not_offered_when_battle_area_full() {
+    let (mut runner, attacker) = security_pick_runner();
+    push_to_hand(&mut runner, 0, "AEGIOMON");
+    runner.place_on_field(0, "FILL", Some(0));
+    runner.game.rules.field_slots = 1;
+    let field_before = runner.battle_area_size(0);
+
+    runner.attack_player(attacker, 0, false);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no free battle-area slot: the [Aegiomon] can't be played, so nothing is offered"
+    );
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.battle_area_size(0), field_before);
+}
+
+/// "You can't play Digimon by effects" on the effect's controller: no pick.
+#[test]
+fn bt24_093_security_pick_not_offered_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, attacker) = security_pick_runner();
+    push_to_hand(&mut runner, 0, "ELECMON");
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+
+    runner.attack_player(attacker, 0, false);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "an effect-play prohibition makes the [Elecmon] unplayable, so nothing is offered"
+    );
+}
+
+/// "You can't play cards from the trash" (CannotPlayFromTrash, e.g. BT23-014):
+/// an [Elecmon] in the trash is not offered.
+#[test]
+fn bt24_093_security_pick_not_offered_from_trash_when_trash_play_is_locked() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, attacker) = security_pick_runner();
+    push_to_trash(&mut runner, 0, "ELECMON");
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+    );
+
+    runner.attack_player(attacker, 0, false);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "the trash [Elecmon] can't be played from the trash, so nothing is offered"
+    );
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "ELECMON"),
+        "Elecmon stays in the trash"
+    );
+}

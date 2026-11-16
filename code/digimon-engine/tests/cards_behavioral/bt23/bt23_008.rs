@@ -587,3 +587,136 @@ fn bt23_008_main_opt_then_plays_gabumon_from_hand() {
         "[Gabumon] played from hand"
     );
 }
+
+// ─── Hand-pick candidate legality (select-hand playability audit, 2026-11-13) ──
+// "you may play 1 [Gabumon] or [Nokia Shiramine] from your hand with the play
+// cost reduced by 2" offers only a card the play can actually perform. DCGO
+// BT23_008.cs:75-84 `CanSelectCardCondition` = `CanPlayAsNewPermanent(card, payCost: true,
+// …)` (empty battle-area frame, `CanEnterField` — no play prohibition — and
+// `Owner.MaxMemoryCost >= PayingCost`) and `IsDigimon && [Gabumon]` /
+// `IsTamer && [Nokia Shiramine]`. CR 4.3 1-3-2 (an impossible action is not
+// carried out) and 15-1-3 (a prohibition beats an enabling effect): a card that
+// can't be played is not a "play" choice. Memory: the play pays the REDUCED
+// cost, so affordability is priced at play cost - 2 (`affordable_with_cost:
+// {reduce: 2}`). DCGO prices the unreduced cost there (its `fixedCost` is only
+// applied at `PlayPermanentCards`), which is stricter than the card text; the
+// rules govern, so a card payable only after the reduction IS offered.
+
+fn hp_card(id: &str, name: &str, kind: digimon_engine::enums::CardKind, cost: u16) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = kind;
+    c.play_cost = cost;
+    if kind == digimon_engine::enums::CardKind::Tamer {
+        c.level = None;
+        c.dp = None;
+    }
+    c
+}
+
+fn hp_runner(hand: &[(&str, &str, digimon_engine::enums::CardKind, u16)], memory: i16) -> (DebugRunner, PermanentHandle) {
+    let mut b = DebugRunner::builder()
+        .dsl_card("BT23-008")
+        .expect("BT23-008 found in embedded DSL pack")
+        .add_card(digimon_engine::debug_runner::make_test_card_with_level("SRC-A", "Source A", 2))
+        .add_card(digimon_engine::debug_runner::make_test_card_with_level("SRC-B", "Source B", 3));
+    for (id, name, kind, cost) in hand {
+        b = b.add_card(hp_card(id, name, *kind, *cost));
+    }
+    let mut runner = b.memory(memory).start();
+    for (id, ..) in hand {
+        runner.add_to_hand(0, id);
+    }
+    let h = runner.place_stack(0, &["SRC-A", "SRC-B", "BT23-008"]);
+    (runner, h)
+}
+
+/// Fire the [Main], accept the activation, and return the hand-pick candidates'
+/// card ids (`None` when no hand pick installs).
+fn hp_offered(runner: &mut DebugRunner, h: PermanentHandle) -> Option<Vec<String>> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    tsc_fire_main(runner, h);
+    for _ in 0..4 {
+        let view = runner.pending_selection_view()?;
+        if view.kind == digimon_engine::selection::SelectionKind::Hand {
+            let hand: Vec<String> = runner.game.players[0]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            let mut ids: Vec<String> = view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&a| a != PASS)
+                .map(|a| hand[(a - PLAY_HAND_START) as usize].clone())
+                .collect();
+            ids.sort();
+            return Some(ids);
+        }
+        let a = view.valid_action_ids.iter().copied().find(|&a| a != PASS)?;
+        runner.execute_action(view.selecting_player, a).ok()?;
+    }
+    None
+}
+
+fn hp_player_lock(runner: &mut DebugRunner, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner
+        .game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1));
+}
+
+const HP_DIGI: digimon_engine::enums::CardKind = digimon_engine::enums::CardKind::Digimon;
+const HP_TAMER: digimon_engine::enums::CardKind = digimon_engine::enums::CardKind::Tamer;
+
+/// Regression guard: with nothing in the way both printed picks are offered.
+#[test]
+fn bt23_008_hand_pick_offers_gabumon_and_nokia_when_playable() {
+    let (mut runner, h) = hp_runner(&[("P-DIGI", "Gabumon", HP_DIGI, 3), ("P-NOKIA", "Nokia Shiramine", HP_TAMER, 2)], 10);
+    assert_eq!(hp_offered(&mut runner, h), Some(vec!["P-DIGI".to_string(), "P-NOKIA".to_string()]));
+}
+
+/// "You can't play Digimon by effects": the [Gabumon] is not offered, the Tamer is.
+#[test]
+fn bt23_008_hand_pick_excludes_digimon_when_effect_play_is_prohibited() {
+    let (mut runner, h) = hp_runner(&[("P-DIGI", "Gabumon", HP_DIGI, 3), ("P-NOKIA", "Nokia Shiramine", HP_TAMER, 2)], 10);
+    hp_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    assert_eq!(hp_offered(&mut runner, h), Some(vec!["P-NOKIA".to_string()]));
+}
+
+/// "You can't play Tamers by effects": [Nokia Shiramine] is not offered.
+#[test]
+fn bt23_008_hand_pick_excludes_tamer_when_tamer_effect_play_is_prohibited() {
+    let (mut runner, h) = hp_runner(&[("P-DIGI", "Gabumon", HP_DIGI, 3), ("P-NOKIA", "Nokia Shiramine", HP_TAMER, 2)], 10);
+    hp_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    assert_eq!(hp_offered(&mut runner, h), Some(vec!["P-DIGI".to_string()]));
+}
+
+/// A full battle area (DCGO needs an empty frame): nothing can be played, so no
+/// hand pick is offered.
+#[test]
+fn bt23_008_hand_pick_offers_nothing_when_battle_area_full() {
+    let (mut runner, h) = hp_runner(&[("P-DIGI", "Gabumon", HP_DIGI, 3), ("P-NOKIA", "Nokia Shiramine", HP_TAMER, 2)], 10);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    let offered = hp_offered(&mut runner, h).unwrap_or_default();
+    assert!(offered.is_empty(), "no playable candidate in a full battle area: {offered:?}");
+}
+
+/// Play cost 15 at memory 0: the reduced payment (13) would take memory to -13,
+/// past the -10 floor, so the card can't be played and is not offered.
+#[test]
+fn bt23_008_hand_pick_excludes_card_unaffordable_at_reduced_cost() {
+    let (mut runner, h) = hp_runner(&[("P-BIG", "Gabumon", HP_DIGI, 15), ("P-NOKIA", "Nokia Shiramine", HP_TAMER, 2)], 0);
+    assert_eq!(hp_offered(&mut runner, h), Some(vec!["P-NOKIA".to_string()]));
+}
+
+/// Play cost 15 at memory 3: the reduced payment (13) lands exactly on -10, so
+/// the card IS offered (the unreduced 15 would not be payable: this is where
+/// the rules, not DCGO's unreduced pricing, decide).
+#[test]
+fn bt23_008_hand_pick_offers_card_affordable_only_after_reduction() {
+    let (mut runner, h) = hp_runner(&[("P-BIG", "Gabumon", HP_DIGI, 15)], 3);
+    assert_eq!(hp_offered(&mut runner, h), Some(vec!["P-BIG".to_string()]));
+}

@@ -166,6 +166,23 @@ impl Game {
         self.play_from_trash_with_cost_suppress(player_id, trash_index, cost_delta, source, false)
     }
 
+    /// Whether `player_id`'s `CannotPlayFromTrash` lock covers playing a card
+    /// of `kind` from their trash. The lock's only producer is Gallantmon
+    /// (BT23-014), printed "their effects can't play Digimon or Tamers from
+    /// the trash"; DCGO installs a `CanNotPutFieldClass` gated on
+    /// `IsDigimon || IsTamer` (BT23_014.cs:46-49), so it covers Digimon,
+    /// Tamers and DUAL cards (a DUAL's card kinds include Digimon and are
+    /// fixed, so DCGO `IsDigimon` is always true for it: `CardKinds =>
+    /// _cEntity_Base.cardKind`, CardSource.cs:3606, `IsDigimon`,
+    /// CardSource.cs:3519) and never an Option USE (CR 4.3 9-1-1: using is
+    /// not playing, 7-1-1) nor a Digi-Egg.
+    pub(crate) fn trash_play_lock_applies(&self, player_id: PlayerId, kind: CardKind) -> bool {
+        matches!(kind, CardKind::Digimon | CardKind::Tamer | CardKind::Dual)
+            && self
+                .modifiers
+                .player_has(player_id, ModifierType::CannotPlayFromTrash)
+    }
+
     /// Why `player_id` can't play the card at `trash_index` of their trash
     /// right now, or `None` if nothing stops it before the cost is computed:
     /// the checks [`Self::play_from_trash_with_cost_suppress`] makes before
@@ -177,16 +194,13 @@ impl Game {
         trash_index: usize,
         source: PlaySource,
     ) -> Option<&'static str> {
-        if self
-            .modifiers
-            .player_has(player_id, ModifierType::CannotPlayFromTrash)
-        {
-            return Some("playing cards from the trash is prohibited");
-        }
         let player = self.player(player_id);
         let Some(card) = player.trash.get(trash_index) else {
             return Some("the card is no longer in the trash");
         };
+        if self.trash_play_lock_applies(player_id, card.card_kind(&self.card_data)) {
+            return Some("playing Digimon or Tamers from the trash is prohibited");
+        }
         if player.battle_area.len() >= self.rules.field_slots as usize {
             return Some("the battle area is full");
         }

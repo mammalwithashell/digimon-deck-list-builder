@@ -44,6 +44,12 @@ effects:
 
   - when: when_attacking
     once_per_turn: true
+    # Gate + candidates = DCGO EX13_019.cs:47-54 `IsTamer && HasText("Veedramon")
+    # && CanPlayAsNewPermanent(cardSource, payCost: true, activateClass,
+    # fixedCost: max(0, GetCostItself - 2))`: free slot, no "can't play Tamers
+    # by effects" lock, and the cost − 2 the play below charges payable.
+    # CR 4.3 1-3-11-1 / 7-1-2-3. Nothing legal → the effect doesn't activate
+    # and the [Once Per Turn] is not spent.
     condition:
       count_gte:
         filter:
@@ -51,6 +57,8 @@ effects:
           zone: [hand]
           kind: tamer
           in_text_contains: Veedramon
+          can_play_from_effect_without_cost: true
+          affordable_with_cost: { reduce: 2 }
         n: 1
     summary: "[When Attacking][OPT] You may play 1 [Veedramon]-text Tamer from hand with the cost reduced by 2"
     process:
@@ -62,6 +70,8 @@ effects:
             all_of:
               - kind: tamer
               - in_text_contains: Veedramon
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 2 }
           prompt: "You may play 1 Tamer card with [Veedramon] in its text from your hand with the cost reduced by 2"
       - play_from_hand:
           of: you

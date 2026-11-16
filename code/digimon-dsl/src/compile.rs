@@ -77,8 +77,12 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
     // maximums" can raise exactly those.
     crate::deletion_cap::mark_card(&mut card);
     // An effect digivolve's card selection offers only cards that can digivolve onto its target (DCGO
-    // `CanPlayCardTargetFrame`), unless the effect ignores the requirements.
-    crate::digivolve_candidates::mark_card(&mut card);
+    // `CanPlayCardTargetFrame`), unless the effect ignores the requirements. A candidate leaf the card authored
+    // that disagrees with the digivolve's waiver is an error.
+    let errors = crate::digivolve_candidates::mark_card(&mut card);
+    if !errors.is_empty() {
+        return Err(errors);
+    }
     Ok(card)
 }
 
@@ -587,6 +591,29 @@ fn compile_cost_delta(
     }
 }
 
+/// Shared lowering of `dna_hand_candidate` / `dna_trash_candidate` (same shape;
+/// the leaf name decides which zone the partner is read from).
+fn compile_dna_candidate(
+    spec: &crate::predicate::DnaHandCandidatePredicate,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> CompiledDnaHandCandidate {
+    CompiledDnaHandCandidate {
+        role: spec.role,
+        result: spec.result.clone(),
+        field: spec.field.clone(),
+        field_filter: spec.field_filter.as_ref().map(|filter| {
+            Box::new(compile_predicate(filter, &format!("{prefix}.field_filter"), card_id, errors))
+        }),
+        partner_filter: spec.partner_filter.as_ref().map(|filter| {
+            Box::new(compile_predicate(filter, &format!("{prefix}.partner_filter"), card_id, errors))
+        }),
+        cost: compile_cost_delta(&spec.cost, &format!("{prefix}.cost"), card_id, errors),
+        ignore_requirements: spec.ignore_requirements,
+    }
+}
+
 // ── Identity ────────────────────────────────────────────────────────
 
 fn compile_identity(id: &crate::identity::IdentitySpec) -> CompiledIdentity {
@@ -1030,35 +1057,44 @@ fn compile_predicate(
             )
         }),
         affordable_with_cost_reduce: p.affordable_with_cost_reduce,
+        affordable_with_cost: p.affordable_with_cost.as_ref().map(|cost| {
+            compile_cost_delta(cost, &format!("{prefix}.affordable_with_cost"), card_id, errors)
+        }),
         can_digivolve_from_source: p.can_digivolve_from_source,
         can_digivolve_onto: p.can_digivolve_onto.clone(),
         can_digivolve_onto_with_cost: p.can_digivolve_onto_with_cost.as_ref().map(|spec| {
+            if spec.ignore_level && spec.ignore_requirements {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.can_digivolve_onto_with_cost"),
+                    message: "`ignore_level` and `ignore_requirements` are exclusive: ignoring every \
+                              requirement already waives the level"
+                        .into(),
+                });
+            }
             CompiledDigivolveCostPredicate {
                 target: spec.target.clone(),
                 cost: compile_cost_delta(&spec.cost,
                     &format!("{prefix}.can_digivolve_onto_with_cost.cost"), card_id, errors),
-            }
-        }),
-        dna_hand_candidate: p.dna_hand_candidate.as_ref().map(|spec| {
-            CompiledDnaHandCandidate {
-                role: spec.role,
-                result: spec.result.clone(),
-                field: spec.field.clone(),
-                field_filter: spec.field_filter.as_ref().map(|filter| Box::new(compile_predicate(
-                    filter, &format!("{prefix}.dna_hand_candidate.field_filter"), card_id, errors,
-                ))),
-                partner_filter: spec.partner_filter.as_ref().map(|filter| Box::new(compile_predicate(
-                    filter, &format!("{prefix}.dna_hand_candidate.partner_filter"), card_id, errors,
-                ))),
-                cost: compile_cost_delta(&spec.cost,
-                    &format!("{prefix}.dna_hand_candidate.cost"), card_id, errors),
+                ignore_level: spec.ignore_level,
                 ignore_requirements: spec.ignore_requirements,
             }
+        }),
+        can_digivolve_onto_ignoring_level: p.can_digivolve_onto_ignoring_level.clone(),
+        dna_hand_candidate: p.dna_hand_candidate.as_ref().map(|spec| {
+            compile_dna_candidate(spec, &format!("{prefix}.dna_hand_candidate"), card_id, errors)
+        }),
+        dna_trash_candidate: p.dna_trash_candidate.as_ref().map(|spec| {
+            compile_dna_candidate(spec, &format!("{prefix}.dna_trash_candidate"), card_id, errors)
         }),
         dna_field_pair: p.dna_field_pair.as_ref().map(|spec| CompiledDnaFieldPair {
             role: spec.role,
             result: spec.result.clone(),
             first: spec.first.clone(),
+            second: spec.second.clone(),
+            cost: spec.cost.as_ref().map(|cost| {
+                compile_cost_delta(cost, &format!("{prefix}.dna_field_pair.cost"), card_id, errors)
+            }),
         }),
         can_play_from_effect_without_cost: p.can_play_from_effect_without_cost,
         can_play_or_use_from_effect: p.can_play_or_use_from_effect,
@@ -1117,6 +1153,28 @@ fn compile_predicate(
                         errors,
                     )
                 }),
+                ignore_level: hdc.ignore_level,
+            }
+        }),
+        this_card_can_digivolve_onto: p.this_card_can_digivolve_onto.as_ref().map(|spec| {
+            if spec.ignore_level && spec.ignore_requirements {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.this_card_can_digivolve_onto"),
+                    message: "`ignore_level` and `ignore_requirements` are exclusive: ignoring every \
+                              requirement already waives the level"
+                        .into(),
+                });
+            }
+            crate::compiled::CompiledThisCardDigivolve {
+                cost: compile_cost_delta(
+                    &spec.cost,
+                    &format!("{prefix}.this_card_can_digivolve_onto.cost"),
+                    card_id,
+                    errors,
+                ),
+                ignore_level: spec.ignore_level,
+                ignore_requirements: spec.ignore_requirements,
             }
         }),
         has_inherited: p.has_inherited.as_ref().map(|b| {
@@ -2500,6 +2558,7 @@ fn compile_declarative(
                 && !c.when_playing_this
                 && !c.when_digivolving_this
                 && c.when_any_ally_played.is_none()
+                && c.when_any_ally_used.is_none()
                 && c.when_any_ally_digivolves_into.is_none()
             {
                 errors.push(ValidationError {
@@ -2508,6 +2567,15 @@ fn compile_declarative(
                     message: "cost_reduction with only a `condition` reduces every card's cost; \
                               set `when_playing_this: true` for \"when this card would be played\", \
                               or scope it with `active_when` / a `when_any_*` trigger"
+                        .into(),
+                });
+            }
+            if c.when_any_ally_played.is_some() && c.when_any_ally_used.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: prefix.into(),
+                    message: "when_any_ally_played (a play) and when_any_ally_used (an Option use) \
+                              are mutually exclusive"
                         .into(),
                 });
             }
@@ -2537,6 +2605,14 @@ fn compile_declarative(
                     compile_predicate(
                         p,
                         &format!("{prefix}.when_any_ally_played"),
+                        card_id,
+                        errors,
+                    )
+                }),
+                when_any_ally_used: c.when_any_ally_used.as_ref().map(|p| {
+                    compile_predicate(
+                        p,
+                        &format!("{prefix}.when_any_ally_used"),
                         card_id,
                         errors,
                     )

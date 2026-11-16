@@ -179,3 +179,110 @@ fn bt26_073_on_deletion_may_decline() {
     assert!(field_ids(&r, 0).is_empty());
     assert_eq!(hand_ids(&r, 0), vec!["TS-T".to_string()]);
 }
+
+// ─── [On Deletion] candidate legality (G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE) ─────
+// DCGO BT26_073.cs:234-240 CanPlayCondition: `HasTSTraits && HasPlayCost &&
+// GetCostItself <= 5 && CanPlayAsNewPermanent(card, payCost:false,
+// activateClass)`, and CanActivateCondition (:247-252) needs one in hand or
+// trash. CR 4.3 1-3-2 (an impossible action is not carried out), 7-1-1 (playing
+// places a new card with a play cost), 4-6-2 (a DUAL is digivolved or used,
+// never played).
+
+/// Sorted card ids of the non-PASS candidates of the pending hand∪trash pick.
+fn offered(r: &DebugRunner) -> Vec<String> {
+    if r.game.pending_selection.is_none() {
+        return Vec::new();
+    }
+    let mut ids: Vec<String> = physical_menu::commits(&r.game)
+        .into_iter()
+        .filter_map(|row| row.card_id)
+        .collect();
+    ids.sort();
+    ids
+}
+
+fn add_player_lock(r: &mut DebugRunner, m: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(m, 0, Expiry::Permanent, None, 1));
+}
+
+fn delete_it(r: &mut DebugRunner, ae: digimon_engine::permanent::PermanentHandle) {
+    r.game.delete_permanents_batch(
+        vec![ae],
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+}
+
+/// "You can't play Digimon by effects": the [TS] Digimon is not offered, the
+/// [TS] Tamer still is.
+#[test]
+fn bt26_073_on_deletion_effect_play_prohibition_excludes_digimon() {
+    let mut r = setup();
+    push_hand(&mut r, 0, "TS-T");
+    push_trash(&mut r, 0, "TS5");
+    let ae = r.place_on_field(0, CARD_ID, Some(0));
+    add_player_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    delete_it(&mut r, ae);
+    assert_eq!(offered(&r), vec!["TS-T".to_string()]);
+}
+
+/// "You can't play cards from the trash" (BT23-014; the trash-origin play
+/// refuses): the trash card is not offered, the hand card still is.
+#[test]
+fn bt26_073_on_deletion_trash_play_lock_excludes_trash_cards() {
+    let mut r = setup();
+    push_hand(&mut r, 0, "TS-T");
+    push_trash(&mut r, 0, "TS5");
+    let ae = r.place_on_field(0, CARD_ID, Some(0));
+    add_player_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    delete_it(&mut r, ae);
+    assert_eq!(offered(&r), vec!["TS-T".to_string()]);
+}
+
+/// A full battle area after the deletion: nothing can be played, so nothing is
+/// offered and the cards stay where they are.
+#[test]
+fn bt26_073_on_deletion_full_battle_area_offers_nothing() {
+    let mut r = setup();
+    push_hand(&mut r, 0, "TS-T");
+    push_trash(&mut r, 0, "TS5");
+    let ae = r.place_on_field(0, CARD_ID, Some(0));
+    r.place_on_field(0, "FILLER", Some(0));
+    r.place_on_field(0, "FILLER", Some(0));
+    // After Aegiochusmon leaves, the two fillers fill a 2-slot battle area.
+    r.game.rules.field_slots = 2;
+    delete_it(&mut r, ae);
+    assert!(offered(&r).is_empty(), "offered {:?}", offered(&r));
+    let _ = r.auto_resolve();
+    assert_eq!(hand_ids(&r, 0), vec!["TS-T".to_string()]);
+    assert!(trash_ids(&r, 0).contains(&"TS5".to_string()));
+}
+
+/// Regression guard: a [TS] DUAL card (Jupitermon BT26-033, stored cost 2) has
+/// no play cost and can't be played (CR 4.3 7-1-1, 4-6-2), so it is never offered.
+#[test]
+fn bt26_073_on_deletion_dual_ts_card_not_offered() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT26-073")
+        .dsl_card("BT26-033")
+        .expect("BT26-033")
+        .add_card(filler("FILLER"))
+        .add_card(digimon("TS5", "Ts Five", CardColor::Red, 4, 5, &["TS"]))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(3)
+        .start();
+    r.set_first_player(0);
+    push_trash(&mut r, 0, "BT26-033");
+    push_trash(&mut r, 0, "TS5");
+    let ae = r.place_on_field(0, CARD_ID, Some(0));
+    delete_it(&mut r, ae);
+    assert_eq!(offered(&r), vec!["TS5".to_string()]);
+}
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

@@ -198,3 +198,47 @@ fn ex13_011_inherited_no_bonus_on_opponents_turn() {
     assert_eq!(r.turn_player(), 1);
     assert_eq!(r.effective_dp(h), Some(7000));
 }
+
+// ─── Candidate legality — only a [Mon] the free play can actually place ──────
+// DCGO EX13_011.cs:38-40 `IsPlayableMon = EqualsCardName("Mon") &&
+// CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)`, used both
+// as the activation gate (:42-44) and as the pick filter (:48). A [Mon] the
+// play would refuse is not a legal choice (CR 4.3 1-3-2: an impossible action
+// is not carried out), so it is not offered and nothing prompts.
+
+fn add_player_lock(r: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1));
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs a free frame): the
+/// [Mon] can't be placed, so it is not offered.
+#[test]
+fn ex13_011_mon_not_offered_when_battle_area_full() {
+    let mut r = start(&[CARD_ID, "MON"], 5);
+    let base = r.place_on_field(0, "RED-L3", Some(0));
+    r.game.rules.field_slots = 1;
+    digivolve_onto(&mut r, base);
+    assert!(r.pending_selection().is_none(), "no free slot: no [Mon] pick");
+    let _ = r.auto_resolve();
+    // (The digivolve also drew 1 card.)
+    assert!(hand_ids(&r, 0).contains(&"MON".to_string()), "[Mon] stays in hand");
+    assert!(!field_ids(&r, 0).contains(&"MON".to_string()));
+}
+
+/// "You can't play Tamers by effects": the [Mon] Tamer is not offered.
+#[test]
+fn ex13_011_mon_not_offered_under_tamer_effect_play_prohibition() {
+    let mut r = start(&[CARD_ID, "MON"], 5);
+    let base = r.place_on_field(0, "RED-L3", Some(0));
+    add_player_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    digivolve_onto(&mut r, base);
+    assert!(r.pending_selection().is_none(), "effect play of Tamers prohibited");
+    let _ = r.auto_resolve();
+    // (The digivolve also drew 1 card.)
+    assert!(hand_ids(&r, 0).contains(&"MON".to_string()), "[Mon] stays in hand");
+    assert!(!field_ids(&r, 0).contains(&"MON".to_string()));
+}

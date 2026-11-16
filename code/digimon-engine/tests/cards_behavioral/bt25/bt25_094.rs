@@ -384,3 +384,221 @@ fn bt25_094_security_effect_plays_level_four_red_or_blue_ts_from_hand_or_trash_f
         "level 5 TS is not eligible (level 4 or lower only)"
     );
 }
+
+// ─── Section 5 — Candidate legality (select-hand playability audit, 2026-11-13) ─
+//
+// DCGO BT25_094.cs: the [Main] pick offers `IsDigimon && red|blue && HasTSTraits &&
+// CanPlayAsNewPermanent(card, payCost: true, activateClass, fixedCost:
+// GetCostItself - 3)` (BT25_094.cs:107-113); the [Security] pick offers `IsDigimon &&
+// Level <= 4 && red|blue && HasTSTraits && CanPlayAsNewPermanent(card, payCost:
+// false, activateClass)` (BT25_094.cs:152-158). So a candidate must be playable: a play
+// cost (CR 4.3 7-1-1; a DUAL has none and is digivolved or used, never played,
+// CR 4.3 4-6-2 / 4-6-3), a free battle-area slot, no play prohibition, not in a
+// trash its owner can't play from; and for the [Main]'s cost-paying play,
+// affordable at the reduced cost (the memory may not pass the opponent's 10).
+// CR 4.3 1-3-2: an impossible play is not carried out, so offering it is a
+// dead choice.
+
+fn ts_costing(id: &str, color: CardColor, cost: u16) -> CardData {
+    let mut card = ts_digimon(id, color, 6);
+    card.play_cost = cost;
+    card
+}
+
+fn lock(runner: &mut DebugRunner, player: u8, modifier: digimon_engine::enums::ModifierType) {
+    runner.game.modifiers.add_player_modifier(
+        player,
+        digimon_engine::modifiers::PlayerModifierEntry::simple(
+            modifier,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            None,
+            player,
+        ),
+    );
+}
+
+/// This card at hand index 0 plus `hand`; two face-down security cards (no
+/// face-up security, so its colour requirement is ignored); memory 10.
+fn main_runner(hand: &[&str]) -> DebugRunner {
+    let mut all = vec![CARD_ID];
+    all.extend_from_slice(hand);
+    area_runner()
+        .dsl_card("BT26-033")
+        .expect("Jupitermon (BT26-033) YAML loads")
+        .add_card(filler("BOTTOM"))
+        .add_card(filler("TOP"))
+        .add_card(ts_digimon("RED-TS", CardColor::Red, 6))
+        .add_card(ts_costing("EDGE-TS", CardColor::Red, 20))
+        .add_card(ts_costing("PRICEY-TS", CardColor::Red, 21))
+        .add_card(attacker("OCCUPANT"))
+        .hand(0, &all)
+        .security(0, &["BOTTOM", "TOP"])
+        .memory(10)
+        .start()
+}
+
+/// Use this card from hand and return the sorted card ids its [Main] hand pick
+/// offers (empty when no hand pick installs).
+fn main_offered(runner: &mut DebugRunner) -> Vec<String> {
+    runner.game.enter_main_phase();
+    let _ = runner.game.play_option_from_hand(0, 0);
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| hand[(id - digimon_engine::action::space::PLAY_HAND_START) as usize].clone())
+        .collect();
+    offered.sort();
+    offered
+}
+
+fn in_hand(runner: &DebugRunner, player: u8, id: &str) -> bool {
+    runner.game.players[player as usize]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == id)
+}
+
+/// Regression guard: an affordable, playable red [TS] Digimon is offered.
+#[test]
+fn bt25_094_main_offers_a_playable_ts_digimon() {
+    let mut runner = main_runner(&["RED-TS"]);
+    assert_eq!(main_offered(&mut runner), vec!["RED-TS".to_string()]);
+}
+
+/// Jupitermon (BT26-033) is a yellow/red [TS] DUAL card: `kind: digimon` matches
+/// it in hand, but it can't be played (CR 4.3 4-6-2; DCGO `CanPlayAsNewPermanent`
+/// needs `!IsOption`), so it is not offered.
+#[test]
+fn bt25_094_main_does_not_offer_a_dual_card() {
+    let mut runner = main_runner(&["RED-TS", "BT26-033"]);
+    assert_eq!(
+        main_offered(&mut runner),
+        vec!["RED-TS".to_string()],
+        "Jupitermon (BT26-033) is never played"
+    );
+}
+
+/// Memory 10 - use cost 3 = 7. EDGE-TS (20, reduced to 17) pays down to the
+/// opponent's 10 and is offered; PRICEY-TS (21, reduced to 18) can't be paid.
+#[test]
+fn bt25_094_main_does_not_offer_a_card_it_cannot_afford_at_the_reduced_cost() {
+    let mut runner = main_runner(&["EDGE-TS", "PRICEY-TS"]);
+    assert_eq!(main_offered(&mut runner), vec!["EDGE-TS".to_string()]);
+}
+
+/// "You can't play Digimon by effects": nothing is offered and the Digimon
+/// stays in hand.
+#[test]
+fn bt25_094_main_offers_nothing_under_an_effect_play_prohibition() {
+    let mut runner = main_runner(&["RED-TS"]);
+    lock(&mut runner, 0, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    assert!(main_offered(&mut runner).is_empty());
+    let _ = runner.auto_resolve();
+    assert!(in_hand(&runner, 0, "RED-TS"));
+}
+
+/// No free battle-area slot: nothing is offered.
+#[test]
+fn bt25_094_main_offers_nothing_with_a_full_battle_area() {
+    let mut runner = main_runner(&["RED-TS"]);
+    runner.place_on_field(0, "OCCUPANT", Some(0));
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    assert!(main_offered(&mut runner).is_empty());
+}
+
+/// Player 1 holds a level-4 [TS] Digimon in hand (blue) and one in trash
+/// (red), with this card as its only security card; `prepare` runs before
+/// player 0 attacks.
+fn security_runner(prepare: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut runner = area_runner()
+        .add_card(ts_digimon("HAND-TS", CardColor::Blue, 4))
+        .add_card(ts_digimon("TRASH-TS", CardColor::Red, 4))
+        .add_card(attacker("ATTACKER"))
+        .add_card(filler("FILL"))
+        .hand(1, &["HAND-TS"])
+        .deck(1, &["TRASH-TS"])
+        .security(1, &[CARD_ID])
+        .memory(10)
+        .start();
+    let trash_card = runner.game.players[1].deck.pop().expect("trash seed");
+    runner.game.players[1].trash.push(trash_card);
+    prepare(&mut runner);
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    let _ = runner.attack_player(attacker, 1, false);
+    runner
+}
+
+/// The [Security] pick's legal (card id, zone) rows; empty when no physical
+/// card pick is installed.
+fn security_offered(runner: &DebugRunner) -> Vec<(String, &'static str)> {
+    if !runner
+        .game
+        .pending_selection
+        .as_ref()
+        .is_some_and(|p| p.card_choice.is_some())
+    {
+        return Vec::new();
+    }
+    let mut rows: Vec<(String, &'static str)> = physical_choice::commits(&runner.game)
+        .into_iter()
+        .map(|row| {
+            let zone = match row.zone {
+                Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand) => "hand",
+                Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash) => "trash",
+                _ => "other",
+            };
+            (row.card_id.unwrap_or_default(), zone)
+        })
+        .collect();
+    rows.sort();
+    rows
+}
+
+/// Regression guard: both the hand and the trash candidate are offered.
+#[test]
+fn bt25_094_security_offers_hand_and_trash_candidates() {
+    let runner = security_runner(|_| {});
+    assert_eq!(
+        security_offered(&runner),
+        vec![("HAND-TS".to_string(), "hand"), ("TRASH-TS".to_string(), "trash")]
+    );
+}
+
+/// "You can't play cards from the trash" (BT23-014's lock): the trash
+/// candidate is not offered, the hand candidate still is.
+#[test]
+fn bt25_094_security_trash_candidate_not_offered_when_trash_play_is_locked() {
+    let runner = security_runner(|r| {
+        lock(r, 1, digimon_engine::enums::ModifierType::CannotPlayFromTrash)
+    });
+    assert_eq!(security_offered(&runner), vec![("HAND-TS".to_string(), "hand")]);
+}
+
+/// "You can't play Digimon by effects": nothing is offered, nothing is played.
+#[test]
+fn bt25_094_security_offers_nothing_under_an_effect_play_prohibition() {
+    let mut runner = security_runner(|r| {
+        lock(r, 1, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect)
+    });
+    assert!(security_offered(&runner).is_empty());
+    let _ = runner.auto_resolve();
+    assert!(in_hand(&runner, 1, "HAND-TS"));
+    assert!(runner.game.players[1].battle_area.is_empty());
+}
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

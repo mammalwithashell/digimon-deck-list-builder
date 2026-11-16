@@ -883,3 +883,56 @@ fn bt9_041_your_turn_buff_zero_with_no_tamers() {
         "no Tamers in play → no DP buff"
     );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION — [When Digivolving] Tamer-play candidate filter
+//
+// DCGO BT9_041.cs:36-50 — `CanSelectCardCondition` = IsTamer AND (Yellow or
+// Red) AND `CardEffectCommons.CanPlayAsNewPermanent(cardSource, payCost: false,
+// activateClass)`. CR 4.3 1-3-11-1: a card can be declared for play only if it
+// is able to be played; 1-3-2: an impossible action is not carried out. A
+// yellow/red Tamer the effect cannot place (no free battle-area slot, "can't
+// play Tamers by effects") is therefore not offered.
+// ─────────────────────────────────────────────────────────────────────────────
+
+fn rizegreymon_with_yellow_tamer() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card("BT9-041")
+        .expect("BT9-041 in pack")
+        .add_card(make_tamer("TAMER-Y", "Yellow Tamer", CardColor::Yellow))
+        .hand(0, &["TAMER-Y"])
+        .memory(10)
+        .start()
+}
+
+/// "You can't play Tamers by effects": the yellow Tamer is not offered.
+#[test]
+fn bt9_041_when_digivolving_tamer_not_offered_under_tamer_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = rizegreymon_with_yellow_tamer();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 0),
+    );
+    fire_when_digivolving_bare(&mut runner);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "the lock leaves no playable Tamer → no prompt; got {:?}",
+        runner.game.pending_selection
+    );
+}
+
+/// RizeGreymon takes the only battle-area slot: the Tamer cannot be placed,
+/// so it is not offered.
+#[test]
+fn bt9_041_when_digivolving_tamer_not_offered_when_battle_area_full() {
+    let mut runner = rizegreymon_with_yellow_tamer();
+    runner.game.rules.field_slots = 1;
+    fire_when_digivolving_bare(&mut runner);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no free slot → no playable Tamer → no prompt; got {:?}",
+        runner.game.pending_selection
+    );
+}

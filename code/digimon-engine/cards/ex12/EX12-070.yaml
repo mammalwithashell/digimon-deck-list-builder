@@ -50,10 +50,14 @@ effects:
           of: you
           bind_as: sanmyojin
           optional: true
+          # DCGO EX12_070.cs:108-114: IsDigimon && HasPlayCost && [Sanmyojin]
+          # && CanPlayAsNewPermanent(payCost: false) -- a free frame and no
+          # play prohibition (CR 4.3 1-3-11-1); no pick when none qualifies.
           filter:
             all_of:
               - kind: digimon
               - trait_has: Sanmyojin
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Sanmyojin] Digimon from hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: sanmyojin }
 

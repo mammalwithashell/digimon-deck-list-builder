@@ -50,6 +50,17 @@ effects:
             all_of:
               - kind: digimon
               - trait_has: SW
+              # DCGO EX12_071.cs:112-125: only an [SW] Digimon some [Saneiketsu]
+              # hand card can digivolve onto (CanPlayCardTargetFrame, free), and
+              # no pick at all when none exists (:137). The hand pick below gets
+              # `can_digivolve_onto: sw_target` from the compile pass.
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_has: Saneiketsu
           prompt: "Choose 1 [SW] Digimon to digivolve"
       - select_hand:
           of: you

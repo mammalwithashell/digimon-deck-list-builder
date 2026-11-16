@@ -34,6 +34,11 @@ effects:
               - kind: digimon
               - level_eq: 3
               - trait_has: Puppet
+              # DCGO EX7_027.cs:42-48 CanPlayAsNewPermanent(payCost: false):
+              # only a card the free play accepts — never a DUAL such as
+              # Sistermon Blanc (Awakened) (EX13-065) (CR 4.3 4-6-2), a full
+              # area or an effect-play prohibition (CR 4.3 7-1-1, 1-3-2).
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 level 3 Puppet Digimon from hand"
       - play_from_hand_free: { of: you, hand_index: pick }
 

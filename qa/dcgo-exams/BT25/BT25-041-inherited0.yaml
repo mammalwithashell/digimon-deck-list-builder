@@ -123,11 +123,10 @@ steps:
     do: { attack: { attacker: field.1, target: security } }
     expect: { prompt: main_phase }
   # Kekkomon's (ST23-01) inherited [When Attacking] is now the only trigger:
-  # declined. (DCGO: OptionalSkill. Ours asks nothing: no [Glowing Dawn] card in
-  # hand can digivolve onto the attacker, so the effect-digivolve hand pick has
-  # no candidate and is not opened -- DCGO-only.)
+  # declined. DCGO asks its OptionalSkill and ours asks the same optional
+  # yes/no (ST23-01.yaml: `optional: true`, CR 4.3 15-7-5), so it is a shared row.
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   - actor: 0
     do: { select: { yes: true } }

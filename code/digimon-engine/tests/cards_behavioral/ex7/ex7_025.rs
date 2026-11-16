@@ -214,6 +214,82 @@ fn ex7_025_when_digivolving_blocked_with_two_or_more_tamers() {
     );
 }
 
+// ─── [When Digivolving] candidates: exactly [Arisa Kinosaki], playable ──────
+// DCGO EX7_025.cs:33-38 `IsArisaCardCondition` = IsTamer &&
+// EqualsCardName("Arisa Kinosaki") && `CanPlayAsNewPermanent(cardSource,
+// payCost: false, ...)`. "[Arisa Kinosaki]" names the card, not a substring
+// of it; a card the play would refuse is never offered (CR 4.3 7-1-1, 1-3-2).
+
+/// ShoeShoemon over a base with `hand` in hand; fire [When Digivolving] and
+/// return the hand ids the pick offers (empty when no pick installs).
+fn wd_offer(hand: &[&str], prep: impl FnOnce(&mut DebugRunner)) -> (DebugRunner, Vec<String>) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX7-025")
+        .expect("EX7-025 YAML loads")
+        .add_card(make_test_card("BASE", "Base"))
+        .add_card(make_tamer("ARISA", "Arisa Kinosaki"))
+        .add_card(make_tamer("ARISA-PLUS", "Arisa Kinosaki & Sistermon"))
+        .hand(0, hand)
+        .memory(10)
+        .start();
+    let shoe = runner.place_stack(0, &["BASE", "EX7-025"]);
+    prep(&mut runner);
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(shoe),
+    );
+    runner.game.drain_effect_queue();
+    let Some(view) = runner.pending_selection_view() else {
+        return (runner, Vec::new());
+    };
+    assert_eq!(view.kind, SelectionKind::Hand, "only the hand pick may prompt");
+    let ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let offered = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != digimon_engine::action::space::PASS)
+        .map(|a| ids[a as usize].clone())
+        .collect();
+    (runner, offered)
+}
+
+/// A card whose name merely contains "Arisa Kinosaki" is not [Arisa Kinosaki].
+#[test]
+fn ex7_025_wd_pick_offers_only_exact_arisa_kinosaki() {
+    let (_, offered) = wd_offer(&["ARISA-PLUS", "ARISA"], |_| {});
+    assert_eq!(offered, vec!["ARISA".to_string()]);
+}
+
+/// "You can't play Tamers by effects": no pick.
+#[test]
+fn ex7_025_wd_pick_offers_nothing_when_tamer_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (runner, offered) = wd_offer(&["ARISA"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+}
+
+/// A full battle area (no empty frame): no pick.
+#[test]
+fn ex7_025_wd_pick_offers_nothing_when_battle_area_full() {
+    let (runner, offered) = wd_offer(&["ARISA"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+}
+
 // ─── Inherited [Your Turn] opponent-security-DP aura — behavioral ───
 //
 // The aura rides under the attacker's stack and surfaces as a -3000 swing

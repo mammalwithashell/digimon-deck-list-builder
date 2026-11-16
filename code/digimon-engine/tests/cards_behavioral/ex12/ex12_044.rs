@@ -1,4 +1,5 @@
 use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_END, PLAY_HAND_START};
 use digimon_engine::enums::{CardColor, EffectTiming};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::replacement::ReplacementCause;
@@ -83,6 +84,89 @@ fn ex12_044_when_attacking_with_same_level_source_pair_digivolves_from_hand_cost
         1,
         "cost 3 should be reduced by 2"
     );
+}
+
+/// Walk the prompts (accepting each non-hand prompt with its first non-PASS
+/// action) to the [When Attacking] hand pick and return the card ids it
+/// offers. Empty when no hand pick installs.
+fn offered_hand_ids(runner: &mut DebugRunner, player: u8) -> Vec<String> {
+    for _ in 0..8 {
+        let Some(view) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        if view.kind == SelectionKind::Hand {
+            let hand: Vec<String> = runner.game.players[player as usize]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            let mut ids: Vec<String> = view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&a| a != PASS)
+                .map(|a| {
+                    let slot = if a < PLAY_HAND_END { a - PLAY_HAND_START } else { a - HAND_EFFECT_START };
+                    hand[slot as usize].clone()
+                })
+                .collect();
+            ids.sort();
+            return ids;
+        }
+        let Some(action) = view.valid_action_ids.iter().copied().find(|&a| a != PASS) else {
+            return Vec::new();
+        };
+        runner.execute_action(view.selecting_player, action).expect("advance prompt");
+    }
+    panic!("never reached the hand pick");
+}
+
+/// Angewomon (EX12-044) stacked on two Lv.4 sources (the 2+ same-level gate),
+/// `memory` memory, with `hand` in hand.
+fn angewomon_runner(extra: Vec<digimon_engine::card_data::CardData>, hand: &[&str], memory: i16) -> (DebugRunner, PermanentHandle) {
+    let mut builder = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-044 YAML loads")
+        .add_card(plain_digimon("SRC-L4A", CardColor::Yellow, 4, 4000))
+        .add_card(plain_digimon("SRC-L4B", CardColor::Green, 4, 4000));
+    for card in extra {
+        builder = builder.add_card(card);
+    }
+    let mut runner = builder.hand(0, hand).memory(memory).start();
+    let angewomon = runner.place_stack(0, &["SRC-L4A", "SRC-L4B", CARD_ID]);
+    (runner, angewomon)
+}
+
+// ── [When Attacking] hand-pick candidate legality ────────────────────────────
+// DCGO EX12_044.cs:188-195 runs `DigivolveIntoHandOrTrashCard(payCost: true,
+// reduceCostTuple: (2, null), isHand: true)`, whose `CanSelectCardCondition`
+// (CardEffectCommons.cs:858-881) offers only a Digimon that
+// `CanPlayCardTargetFrame(targetPermanent.PermanentFrame, PayCost: true, ...)`
+// onto THIS Digimon with the reduction applied: a real digivolve route AND a
+// payable cost. A card the digivolve would refuse is not a legal choice
+// (CR 4.3 1-3-2; 8-1-3-2 pays the digivolution cost, which must be payable).
+
+/// An [VB] Lv.6 whose only route costs 15 (13 after the -2) with 0 memory can't
+/// be paid (memory would fall below -10): not offered; the payable one is.
+#[test]
+fn ex12_044_when_attacking_hand_pick_excludes_unaffordable_digivolve() {
+    let cheap = with_evo_cost(vb_digimon("VB-LV6", CardColor::Yellow, 6, 11000), CardColor::Yellow, 5, 3);
+    let pricey = with_evo_cost(vb_digimon("VB-PRICEY", CardColor::Yellow, 6, 11000), CardColor::Yellow, 5, 15);
+    let (mut runner, angewomon) = angewomon_runner(vec![cheap, pricey], &["VB-LV6", "VB-PRICEY"], 0);
+    fire_when_attacking(&mut runner, angewomon);
+    assert_eq!(offered_hand_ids(&mut runner, 0), vec!["VB-LV6".to_string()]);
+}
+
+/// A [VB] Lv.6 with no digivolution route onto the Yellow Lv.5 Angewomon (its
+/// only circle is from Purple) is not offered. Regression guard: the compile
+/// pass adds the route check to requirement-honouring effect digivolves.
+#[test]
+fn ex12_044_when_attacking_hand_pick_excludes_card_with_no_route_onto_angewomon() {
+    let cheap = with_evo_cost(vb_digimon("VB-LV6", CardColor::Yellow, 6, 11000), CardColor::Yellow, 5, 3);
+    let no_route = with_evo_cost(vb_digimon("VB-PURPLE", CardColor::Purple, 6, 11000), CardColor::Purple, 5, 3);
+    let (mut runner, angewomon) = angewomon_runner(vec![cheap, no_route], &["VB-LV6", "VB-PURPLE"], 5);
+    fire_when_attacking(&mut runner, angewomon);
+    assert_eq!(offered_hand_ids(&mut runner, 0), vec!["VB-LV6".to_string()]);
 }
 
 #[test]

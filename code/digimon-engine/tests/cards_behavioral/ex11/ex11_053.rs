@@ -446,3 +446,64 @@ fn ex11_053_on_deletion_decline_leaves_board_unchanged() {
 
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_choice;
+
+// ─── Candidate legality (DCGO candidate filter) ──────────────────────────────
+// DCGO EX11_053.cs:173-177 `CanSelectCardCondition` = HasPlayCost &&
+// EqualsCardName("Omnimon (X Antibody)") && CanPlayAsNewPermanent(cardSource,
+// false, activateClass), used for both the hand pick (EX11_053.cs:234) and the
+// pick from under a [King Drasil_7D6] (EX11_053.cs:297). An Omnimon (X Antibody)
+// the effect could not then play is not offered; the pick is optional, so this
+// changes no outcome. The slot cap is the engine's `rules.field_slots`, not a CR
+// limit (CR 4.3 3-4-8-2).
+
+fn add_player_lock(runner: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Omekamon (EX11-053) with an Omnimon X in hand AND one under a fielded King
+/// Drasil_7D6; apply `setup` then delete Omekamon. Returns how many commit rows
+/// the [On Deletion] union pick offers (0 when no prompt installs).
+fn on_deletion_offer_count(setup: impl FnOnce(&mut DebugRunner)) -> usize {
+    let mut runner = deletion_runner();
+    inject_hand(&mut runner, "OMNI-X");
+    runner.place_stack(0, &["OMNI-X", "KING"]);
+    let omekamon = runner.place_on_field(0, "EX11-053", Some(0));
+    setup(&mut runner);
+    delete_omekamon(&mut runner, omekamon.index as usize);
+    if runner.game.pending_selection.is_none() {
+        return 0;
+    }
+    physical_choice::commits(&runner.game).len()
+}
+
+/// Regression guard: hand and source Omnimon X are both offered when playable.
+#[test]
+fn ex11_053_on_deletion_offers_hand_and_source_omnimon_when_playable() {
+    assert_eq!(on_deletion_offer_count(|_| {}), 2);
+}
+
+/// After Omekamon leaves, King Drasil fills a 1-slot battle area: neither
+/// Omnimon X can be played, so neither is offered.
+#[test]
+fn ex11_053_on_deletion_offers_nothing_when_battle_area_full() {
+    let offered = on_deletion_offer_count(|r| {
+        // King Drasil + Omekamon on the field; once Omekamon is deleted the
+        // single remaining permanent fills the area.
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8 - 1;
+    });
+    assert_eq!(offered, 0, "no Omnimon X is offered into a full battle area");
+}
+
+/// "You can't play Digimon by effects": no Omnimon X is offered.
+#[test]
+fn ex11_053_on_deletion_offers_nothing_when_effect_digimon_play_prohibited() {
+    let offered = on_deletion_offer_count(|r| {
+        add_player_lock(r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    });
+    assert_eq!(offered, 0, "a Digimon-play prohibition removes every candidate");
+}

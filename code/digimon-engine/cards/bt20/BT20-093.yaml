@@ -5,6 +5,22 @@ name: Unleash the Dragon Gene
 kind: option
 color: [red]
 cost: 2
+#
+# Pick legality (select-hand audit, 2026-11-13):
+# - [Main] DCGO BT20_093.cs:34-39 offers only a Digimon that
+#   `CanPlayAsNewPermanent` (play cost, free frame, no play lock; never a
+#   DUAL: it has no play cost, so it can't be played, CR 4.3 7-1-1; it is
+#   only digivolved or used, 4-6-2) = `can_play_from_effect_without_cost`. The play pays
+#   the cost reduced by 3 (:136-142 `payCost: true`); DCGO's pick does not
+#   check that this is payable, but CR 4.3 1-3-11-1 forbids declaring a play
+#   whose cost can't be paid, so `affordable_with_cost: {reduce: 3}` (the
+#   verb's own cost_delta) is added — stricter than DCGO, per the rules.
+# - Delay DNA: the replacement lowering's DelayFieldDna flow
+#   (lower_replacement.rs `delay_field_dna_pairs`) already offers only an
+#   [Examon] with a recipe-satisfying, payable field pair and only pair
+#   members that complete it (DCGO :184-189 `CanPlayJogress(true)`).
+# - [Security] DCGO :233-238 `CanPlayAsNewPermanent(payCost: false)` =
+#   `can_play_from_effect_without_cost` (zone-aware for the trash row).
 effects:
   - when: main_from_hand
     process:
@@ -18,6 +34,8 @@ effects:
               - any_of:
                   - in_text_contains: Dracomon
                   - in_text_contains: Examon
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: {reduce: 3}
           prompt: "Play 1 Dracomon/Examon-text Digimon with cost reduced by 3"
       - play_from_hand:
           of: you
@@ -65,7 +83,7 @@ effects:
           zones: [hand, trash]
           bind_as: played
           optional: true
-          filter: {kind: digimon, name_contains: Dracomon}
+          filter: {kind: digimon, name_contains: Dracomon, can_play_from_effect_without_cost: true}
           prompt: "Play 1 Dracomon-name Digimon from hand or trash without paying the cost"
       - play_union_bound_free: {binding: played}
       - place_self_as_delay_option: {}

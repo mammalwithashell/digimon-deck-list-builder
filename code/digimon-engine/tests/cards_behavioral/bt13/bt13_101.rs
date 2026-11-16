@@ -474,3 +474,80 @@ fn bt13_101_all_turns_does_not_trigger_when_tamer_is_already_suspended() {
         "cost failure must not grant the +1 memory"
     );
 }
+
+// ─── [On Play] hand-pick legality: only PawnChessmon Digimon that can be played.
+// DCGO BT13_101.cs:24-38 CanSelectCardCondition = `ContainsCardName("PawnChessmon")
+// && IsDigimon && CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)`
+// (an empty battle-area frame and no play prohibition). CR 4.3 1-3-2: an
+// impossible play is not carried out, so a card the play would refuse is not a
+// legal choice; CR 4.3 15-10-2-1: "1 card" chooses as many as possible, i.e. 0
+// when none can be played. Guards for the `can_play_from_effect_without_cost`
+// leaf (2026-11-13 select-hand audit).
+
+/// Non-PASS candidates of the pending selection (0 when none is pending).
+fn offered_count(runner: &DebugRunner) -> usize {
+    runner
+        .pending_selection_view()
+        .map(|view| {
+            view.valid_action_ids
+                .iter()
+                .filter(|&&id| id != digimon_engine::action::space::PASS)
+                .count()
+        })
+        .unwrap_or(0)
+}
+
+/// "You can't play Digimon by effects": the PawnChessmon is not offered and
+/// stays in hand.
+#[test]
+fn bt13_101_on_play_does_not_offer_pawnchessmon_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT13-101")
+        .expect("BT13-101 YAML loads")
+        .add_card(pawn_chessmon("PAWN-OK"))
+        .hand(0, &["BT13-101", "PAWN-OK"])
+        .memory(10)
+        .start();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+
+    runner.play(0, 0).expect("BT13-101 itself is a normal Tamer play");
+
+    assert_eq!(
+        offered_count(&runner),
+        0,
+        "a PawnChessmon that can't be played by an effect must not be offered"
+    );
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.battle_area_size(0), 1, "only BT13-101 is on the field");
+    assert_eq!(runner.hand_size(0), 1, "PawnChessmon stays in hand");
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs an empty frame): the
+/// PawnChessmon is not offered.
+#[test]
+fn bt13_101_on_play_does_not_offer_pawnchessmon_when_battle_area_full() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT13-101")
+        .expect("BT13-101 YAML loads")
+        .add_card(pawn_chessmon("PAWN-OK"))
+        .hand(0, &["BT13-101", "PAWN-OK"])
+        .memory(10)
+        .start();
+    // BT13-101 itself takes the only slot.
+    runner.game.rules.field_slots = 1;
+
+    runner.play(0, 0).expect("BT13-101 fills the last slot");
+
+    assert_eq!(
+        offered_count(&runner),
+        0,
+        "no free battle-area slot: the PawnChessmon must not be offered"
+    );
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "PawnChessmon stays in hand");
+}

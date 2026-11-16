@@ -320,3 +320,65 @@ fn bt24_024_real_attack_triggers_the_effect() {
     r.auto_resolve().ok();
     assert!(field_ids(&r, 0).contains(&"TS-TAMER-5".to_string()));
 }
+
+// ─── Candidates are Tamers the reduced-cost play will accept ─────────────────
+// DCGO BT24_024.cs:61-70 `CanPlayTamerCondition` = `IsTamer && HasTSTraits &&
+// CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)` (empty
+// frame, no "can't play" lock), and `CanActivateCondition` (:55-59) needs one
+// in hand. The play pays the reduced cost, and CR 4.3 1-3-11-1 forbids
+// declaring a play whose cost (or alternate cost) can't be paid (memory can't
+// pass 10 on the opponent's side, 1-4-2-2 / 4-2-2). DCGO's `payCost: false`
+// probe omits that check; the rules govern. YAML:
+// `can_play_from_effect_without_cost: true` + `affordable_with_cost: { reduce: 2 }`.
+
+#[test]
+fn bt24_024_not_offered_under_tamer_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, sub) = submarimon_on_field(&["TS-TAMER-5"], 5);
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    fire_when_attacking(&mut r, sub);
+    assert!(r.pending_selection().is_none(), "no playable [TS] Tamer -> no confirm");
+    assert_eq!(hand_ids(&r), vec!["TS-TAMER-5".to_string()]);
+}
+
+#[test]
+fn bt24_024_not_offered_when_battle_area_full() {
+    let (mut r, sub) = submarimon_on_field(&["TS-TAMER-5"], 5);
+    r.game.rules.field_slots = 1;
+    fire_when_attacking(&mut r, sub);
+    assert!(r.pending_selection().is_none(), "no free slot -> no confirm");
+    assert_eq!(hand_ids(&r), vec!["TS-TAMER-5".to_string()]);
+}
+
+/// Memory 8 on the opponent's side: the play cost 5 reduced by 2 (3) would pass
+/// 10 on their side, so the Tamer can't be played and is not offered.
+#[test]
+fn bt24_024_unaffordable_reduced_cost_tamer_not_offered() {
+    let (mut r, sub) = submarimon_on_field(&["TS-TAMER-5"], -8);
+    fire_when_attacking(&mut r, sub);
+    assert!(r.pending_selection().is_none(), "reduced cost 3 can't be paid -> no confirm");
+    assert_eq!(hand_ids(&r), vec!["TS-TAMER-5".to_string()]);
+}
+
+/// Regression guard: at 7 on the opponent's side the reduced cost of 3 is
+/// exactly payable (memory reaches 10 on their side), so the Tamer is offered.
+#[test]
+fn bt24_024_exactly_affordable_reduced_cost_tamer_is_offered() {
+    let (mut r, sub) = submarimon_on_field(&["TS-TAMER-5"], -7);
+    fire_when_attacking(&mut r, sub);
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Replacement), "'You may play' confirm");
+    r.accept_optional_trigger().unwrap();
+    let view = r.pending_selection_view().unwrap();
+    assert_eq!(view.valid_action_ids.len(), 1);
+    r.execute_action(0, view.valid_action_ids[0]).unwrap();
+    r.auto_resolve().ok();
+    assert_eq!(field_ids(&r, 0), vec![CARD_ID.to_string(), "TS-TAMER-5".to_string()]);
+    // `Game::memory` reads from the turn player's side; memory past 0 passes
+    // the turn, so read it from player 0's side.
+    let p0_memory = if r.game.turn_player() == 0 { r.game.memory } else { -r.game.memory };
+    assert_eq!(p0_memory, -10, "the reduced cost 3 was paid");
+}

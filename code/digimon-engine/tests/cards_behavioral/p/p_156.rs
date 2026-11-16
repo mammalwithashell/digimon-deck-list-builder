@@ -10,8 +10,9 @@
 //!
 //! Supported faithfully here:
 //! - Conditional Option color bypass via top-level `use_requirement`.
-//! - Main chosen-Tamer color binding with visible hand/trash choice and free
-//!   play of an eligible Digimon.
+//! - Main chosen-Tamer color binding with one optional pick over hand + trash
+//!   (no dead "From hand / From trash" choice) and free play of an eligible
+//!   Digimon.
 //! - Security optional Tamer free-play from hand (visible Play/Decline branch),
 //!   followed by the mandatory add-this-option-to-hand tail.
 //!
@@ -28,7 +29,7 @@ use std::path::Path;
 
 use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledTiming};
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
+use digimon_engine::action::space::PLAY_HAND_START;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use digimon_engine::effect_context::EffectReadContext;
@@ -256,17 +257,18 @@ fn p_156_main_chooses_tamer_then_filters_hand_or_trash_digimon_by_bound_tamer_co
         )
         .expect("choose the yellow Tamer");
 
-    runner.execute_branch(0).expect("choose hand branch");
-    let hand_choice = runner
-        .pending_selection_view()
-        .expect("hand Digimon selection");
     assert_eq!(
-        hand_choice.valid_action_ids,
-        vec![PLAY_HAND_START],
-        "only the yellow play-cost-3 Digimon should be selectable from hand"
+        offered(&runner),
+        vec![("YELLOW-HAND".to_string(), "hand")],
+        "only the yellow play-cost-3 Digimon should be selectable"
+    );
+    let pick = physical_choice::card_action(
+        &runner.game,
+        "YELLOW-HAND",
+        digimon_engine::owned_card_choice::CardChoiceZone::Hand,
     );
     runner
-        .execute_action(hand_choice.selecting_player, PLAY_HAND_START)
+        .execute_action(0, pick)
         .expect("play yellow hand Digimon");
     runner.auto_resolve().expect("finish P-156 Main");
 
@@ -357,14 +359,10 @@ fn p_156_main_can_choose_opponents_tamer() {
     runner
         .execute_action(tamer_choice.selecting_player, opp_tamer_id)
         .expect("choose opponent red Tamer");
-    runner.execute_branch(0).expect("choose hand branch");
 
-    let hand_choice = runner
-        .pending_selection_view()
-        .expect("hand Digimon selection");
     assert_eq!(
-        hand_choice.valid_action_ids,
-        vec![PLAY_HAND_START],
+        offered(&runner),
+        vec![("RED-HAND".to_string(), "hand")],
         "the selected opponent Tamer's color should filter hand Digimon"
     );
 }
@@ -414,18 +412,19 @@ fn p_156_main_trash_branch_uses_same_bound_tamer_color_and_cost_filter() {
             tamer_choice.valid_action_ids[0],
         )
         .expect("choose yellow Tamer");
-    runner.execute_branch(1).expect("choose trash branch");
 
-    let trash_choice = runner
-        .pending_selection_view()
-        .expect("trash Digimon selection");
     assert_eq!(
-        trash_choice.valid_action_ids,
-        vec![TRASH_EFFECT_START],
+        offered(&runner),
+        vec![("YELLOW-TRASH".to_string(), "trash")],
         "only the yellow play-cost-3 Digimon should be selectable from trash"
     );
+    let pick = physical_choice::card_action(
+        &runner.game,
+        "YELLOW-TRASH",
+        digimon_engine::owned_card_choice::CardChoiceZone::Trash,
+    );
     runner
-        .execute_action(trash_choice.selecting_player, TRASH_EFFECT_START)
+        .execute_action(0, pick)
         .expect("play yellow trash Digimon");
     runner.auto_resolve().expect("finish P-156 Main");
 
@@ -637,3 +636,271 @@ fn p_156_security_no_tamer_in_hand_skips_prompt_but_still_adds_this_option_to_ha
     );
     assert!(!zone_contains_card(&runner, 1, Zone::Trash, "P-156"));
 }
+
+// ─── Candidate legality ──────────────────────────────────────────────────────
+// [Main]: DCGO P_156.cs:58-75 `SelectDigimonCondition` = `IsDigimon &&
+// CanPlayAsNewPermanent(source, false, activateClass) && GetCostItself <= 3 &&
+// shares a colour with the chosen Tamer`, for both the hand pick
+// (P_156.cs:157-172) and the trash pick (P_156.cs:176-195, root Trash).
+// [Security]: P_156.cs:243-249 `HasTamer` = `CanPlayAsNewPermanent(source,
+// false, activateClass) && IsTamer`, which also gates the whole optional play
+// (P_156.cs:258 `HasMatchConditionOwnersHand(card, HasTamer)`).
+// `CanPlayAsNewPermanent` (GameContextDeterminarion.cs:419-432) needs an empty
+// battle-area frame and no play prohibition, and refuses a trash card while
+// the trash can't be played from. CR 4.3 1-3-11-1: a card can be declared for
+// play only if it can be played (7-1-1), so a card that can't be played is not
+// a legal "play" choice.
+
+fn add_player_modifier(runner: &mut DebugRunner, player: PlayerId, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        player,
+        PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+#[test]
+fn p_156_main_pick_excludes_digimon_under_effect_play_prohibition() {
+    let mut runner = main_after_tamer_choice(&["YELLOW-HAND"], &["YELLOW-TRASH"], |r| {
+        add_player_modifier(r, 0, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect)
+    });
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "\"can't play Digimon by effects\": no hand or trash Digimon may be offered"
+    );
+    runner.auto_resolve().expect("finish P-156 Main");
+    assert!(zone_contains_card(&runner, 0, Zone::Hand, "YELLOW-HAND"));
+    assert!(zone_contains_card(&runner, 0, Zone::Trash, "YELLOW-TRASH"));
+}
+
+#[test]
+fn p_156_main_pick_excludes_digimon_when_battle_area_full() {
+    let mut runner =
+        main_after_tamer_choice(&["YELLOW-HAND"], &["YELLOW-TRASH"], |r| r.game.rules.field_slots = 1);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "the Tamer fills the only slot: no hand or trash Digimon may be offered"
+    );
+    runner.auto_resolve().expect("finish P-156 Main");
+    assert!(zone_contains_card(&runner, 0, Zone::Hand, "YELLOW-HAND"));
+    assert!(zone_contains_card(&runner, 0, Zone::Trash, "YELLOW-TRASH"));
+}
+
+#[test]
+fn p_156_main_pick_excludes_trash_digimon_while_trash_play_is_locked() {
+    let runner = main_after_tamer_choice(&["YELLOW-HAND"], &["YELLOW-TRASH"], |r| {
+        add_player_modifier(r, 0, digimon_engine::enums::ModifierType::CannotPlayFromTrash)
+    });
+    assert_eq!(
+        offered(&runner),
+        vec![("YELLOW-HAND".to_string(), "hand")],
+        "\"can't play cards from the trash\": only the hand Digimon may be offered"
+    );
+}
+
+#[test]
+fn p_156_main_asks_nothing_when_only_trash_candidate_is_locked() {
+    let mut runner = main_after_tamer_choice(&[], &["YELLOW-TRASH"], |r| {
+        add_player_modifier(r, 0, digimon_engine::enums::ModifierType::CannotPlayFromTrash)
+    });
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "the only candidate is in a locked trash: no zone choice and no pick"
+    );
+    runner.auto_resolve().expect("finish P-156 Main");
+    assert!(zone_contains_card(&runner, 0, Zone::Trash, "YELLOW-TRASH"));
+}
+
+/// [Security] with a Tamer in hand that can't be played: no Play/Decline
+/// branch and no hand pick install; the add-this-card-to-hand tail still runs.
+fn security_with_unplayable_tamer(setup: impl FnOnce(&mut DebugRunner)) {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml())
+        .expect("P-156 YAML parses")
+        .add_card(digimon("ATTACKER", CardColor::Red, 3))
+        .add_card(digimon("DEF-DIGIMON", CardColor::Blue, 3))
+        .add_card(tamer("SEC-TAMER", CardColor::Blue))
+        .add_card(filler("FILL"))
+        .hand(1, &["SEC-TAMER"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .security(1, &["P-156"])
+        .memory(10)
+        .start();
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    setup(&mut runner);
+    let _ = runner.attack_player(attacker, 1, false);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "the Tamer can't be played, so neither the Play/Decline branch nor a Tamer pick installs"
+    );
+    runner.auto_resolve().expect("security clause resolves");
+    assert!(!battle_area_contains_card(&runner, 1, "SEC-TAMER"));
+    assert!(zone_contains_card(&runner, 1, Zone::Hand, "SEC-TAMER"));
+    assert!(
+        zone_contains_card(&runner, 1, Zone::Hand, "P-156"),
+        "the mandatory add-to-hand tail still runs"
+    );
+}
+
+#[test]
+fn p_156_security_does_not_offer_tamer_when_battle_area_full() {
+    security_with_unplayable_tamer(|r| {
+        r.place_on_field(1, "DEF-DIGIMON", Some(0));
+        r.game.rules.field_slots = 1;
+    });
+}
+
+#[test]
+fn p_156_security_does_not_offer_tamer_under_effect_play_prohibition() {
+    security_with_unplayable_tamer(|r| {
+        add_player_modifier(r, 1, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect)
+    });
+}
+
+// ─── [Main] zone choice ──────────────────────────────────────────────────────
+// Printed: "You may play 1 Digimon card ... from your hand or trash" — ONE card
+// chosen from the two zones together. DCGO P_156.cs:124-150 shows its "From
+// hand / From trash" prompt only when BOTH zones hold a `SelectDigimonCondition`
+// candidate; with one zone it fixes that zone (`SetBool(canSelectHand)`), and
+// with none it asks nothing. So a zone with no playable candidate must never be
+// offered. The engine asks one optional pick over hand ∪ trash (the
+// `select_union_zone` pattern of AvengeKidmon (P-170) / Dimetromon (P-189)).
+
+/// Committable rows of the pending physical card menu, as (card id, zone).
+fn offered(runner: &DebugRunner) -> Vec<(String, &'static str)> {
+    use digimon_engine::owned_card_choice::CardChoiceZone;
+    physical_choice::commits(&runner.game)
+        .into_iter()
+        .map(|row| {
+            let zone = match row.zone {
+                Some(CardChoiceZone::Hand) => "hand",
+                Some(CardChoiceZone::Trash) => "trash",
+                _ => "other",
+            };
+            (row.card_id.unwrap_or_default(), zone)
+        })
+        .collect()
+}
+
+/// Use P-156 with the yellow Tamer on the field, `hand` added to the hand and
+/// `trash` put in the trash, then choose that Tamer. `setup` runs before use.
+fn main_after_tamer_choice(
+    hand: &[&str],
+    trash: &[&str],
+    setup: impl FnOnce(&mut DebugRunner),
+) -> DebugRunner {
+    let mut hand_ids = vec!["P-156"];
+    hand_ids.extend_from_slice(hand);
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml())
+        .expect("P-156 YAML parses")
+        .add_card(tamer("YELLOW-TAMER", CardColor::Yellow))
+        .add_card(digimon("YELLOW-HAND", CardColor::Yellow, 3))
+        .add_card(digimon("YELLOW-TRASH", CardColor::Yellow, 3))
+        .add_card(digimon("RED-TRASH", CardColor::Red, 3))
+        .add_card(filler("FILL"))
+        .hand(0, &hand_ids)
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "YELLOW-TAMER", Some(0));
+    for id in trash {
+        runner.inject_trash(0, id);
+    }
+    setup(&mut runner);
+    runner.game.enter_main_phase();
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    let view = runner.pending_selection_view().expect("Tamer pick");
+    assert_eq!(view.valid_action_ids.len(), 1, "only the yellow Tamer is on the field");
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("choose the Tamer");
+    runner
+}
+
+#[test]
+fn p_156_main_offers_no_zone_choice_when_only_hand_has_a_candidate() {
+    let runner = main_after_tamer_choice(&["YELLOW-HAND"], &["RED-TRASH"], |_| {});
+    assert_ne!(
+        runner.pending_kind(),
+        Some(SelectionKind::EffectChoice),
+        "the trash holds no same-colour Digimon, so \"From trash\" is a dead option"
+    );
+    assert_eq!(offered(&runner), vec![("YELLOW-HAND".to_string(), "hand")]);
+}
+
+#[test]
+fn p_156_main_offers_no_zone_choice_when_only_trash_has_a_candidate() {
+    let runner = main_after_tamer_choice(&[], &["YELLOW-TRASH", "RED-TRASH"], |_| {});
+    assert_ne!(
+        runner.pending_kind(),
+        Some(SelectionKind::EffectChoice),
+        "the hand holds no candidate, so \"From hand\" is a dead option"
+    );
+    assert_eq!(offered(&runner), vec![("YELLOW-TRASH".to_string(), "trash")]);
+}
+
+#[test]
+fn p_156_main_asks_nothing_when_no_zone_has_a_candidate() {
+    let mut runner = main_after_tamer_choice(&[], &["RED-TRASH"], |_| {});
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no same-colour Digimon in hand or trash: no zone choice and no pick"
+    );
+    runner.auto_resolve().expect("finish P-156 Main");
+    assert!(zone_contains_card(&runner, 0, Zone::Trash, "RED-TRASH"));
+}
+
+#[test]
+fn p_156_main_offers_hand_and_trash_candidates_in_one_optional_pick() {
+    let mut runner = main_after_tamer_choice(&["YELLOW-HAND"], &["YELLOW-TRASH"], |_| {});
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::UnionZone {
+            zones: digimon_engine::selection::UnionZoneSet::HAND
+                | digimon_engine::selection::UnionZoneSet::TRASH
+        })
+    );
+    assert!(runner.pending_selection_view().unwrap().is_optional, "\"you may play\"");
+    let mut got = offered(&runner);
+    got.sort();
+    assert_eq!(
+        got,
+        vec![
+            ("YELLOW-HAND".to_string(), "hand"),
+            ("YELLOW-TRASH".to_string(), "trash"),
+        ]
+    );
+    let memory = runner.memory();
+    let pick = physical_choice::card_action(
+        &runner.game,
+        "YELLOW-TRASH",
+        digimon_engine::owned_card_choice::CardChoiceZone::Trash,
+    );
+    runner.execute_action(0, pick).expect("play the trash Digimon");
+    runner.auto_resolve().expect("finish P-156 Main");
+    assert!(battle_area_contains_card(&runner, 0, "YELLOW-TRASH"));
+    assert!(zone_contains_card(&runner, 0, Zone::Hand, "YELLOW-HAND"));
+    assert_eq!(runner.memory(), memory, "played without paying the cost");
+}
+
+#[test]
+fn p_156_main_pick_can_be_declined() {
+    let mut runner = main_after_tamer_choice(&["YELLOW-HAND"], &["YELLOW-TRASH"], |_| {});
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .expect("decline the optional play");
+    runner.auto_resolve().expect("finish P-156 Main");
+    assert!(zone_contains_card(&runner, 0, Zone::Hand, "YELLOW-HAND"));
+    assert!(zone_contains_card(&runner, 0, Zone::Trash, "YELLOW-TRASH"));
+    assert!(!battle_area_contains_card(&runner, 0, "YELLOW-HAND"));
+}
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

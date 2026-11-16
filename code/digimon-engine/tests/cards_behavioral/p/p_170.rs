@@ -391,6 +391,104 @@ fn p_170_on_deletion_no_eligible_card_no_prompt() {
     );
 }
 
+// ─── Section 3b — [On Deletion] candidate legality ───────────────────────────
+// DCGO P_170.cs:326-338 `CanSelectCardCondition` = `CanPlayAsNewPermanent(
+// cardSource, payCost: false, activateClass) && EqualsTraits("Three
+// Musketeers") && HasPlayCost && GetCostItself <= 12`, used by the hand pick
+// (P_170.cs:400-415), the trash pick (P_170.cs:428-439) and the activation gate
+// (P_170.cs:345-352 `CanActivateCondition`). `CanPlayAsNewPermanent`
+// (GameContextDeterminarion.cs:419-432) needs an empty battle-area frame, no
+// play prohibition, and refuses a trash card while the trash can't be played
+// from. `HasPlayCost` (CEntity_Base.cs:340) is false for a DUAL. CR 4.3
+// 1-3-11-1: a card can be declared for play only if it can be played, so one
+// that can't is not a legal "play" pick. 7-1-1 (playing needs a play cost) +
+// 4-6-1 / 4-6-2: BeelStarmon (BT25-085) prints "Play cost: D" — a DUAL has no
+// play cost; it is digivolved or used as an Option, never played.
+
+fn add_player_modifier(
+    runner: &mut DebugRunner,
+    player: PlayerId,
+    kind: digimon_engine::enums::ModifierType,
+) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        player,
+        PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+#[test]
+fn p_170_on_deletion_not_offered_under_effect_play_prohibition() {
+    let (mut runner, avenge) = deletion_runner(&["TM-COST12"], &["TM-COST5"]);
+    add_player_modifier(
+        &mut runner,
+        0,
+        digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect,
+    );
+    runner.game.delete_permanent_with_effects(avenge);
+    assert!(
+        runner.pending_selection().is_none(),
+        "\"can't play Digimon by effects\": no candidate can be played, so the \
+         optional effect is not offered"
+    );
+    assert_eq!(runner.battle_area_size(0), 0);
+}
+
+#[test]
+fn p_170_on_deletion_trash_card_not_offered_while_trash_play_is_locked() {
+    let (mut runner, avenge) = deletion_runner(&["TM-COST12"], &["TM-COST5"]);
+    add_player_modifier(
+        &mut runner,
+        0,
+        digimon_engine::enums::ModifierType::CannotPlayFromTrash,
+    );
+    runner.game.delete_permanent_with_effects(avenge);
+    runner.accept_optional_trigger().expect("accept");
+    let commits = physical_choice::commits(&runner.game);
+    let offered: Vec<_> = commits
+        .iter()
+        .map(|row| row.card_id.clone().unwrap_or_default())
+        .collect();
+    assert_eq!(
+        offered,
+        vec!["TM-COST12".to_string()],
+        "the trash TM-COST5 can't be played from the trash; only the hand card is offered"
+    );
+}
+
+#[test]
+fn p_170_on_deletion_trash_only_candidate_not_offered_while_trash_play_is_locked() {
+    let (mut runner, avenge) = deletion_runner(&[], &["TM-COST5"]);
+    add_player_modifier(
+        &mut runner,
+        0,
+        digimon_engine::enums::ModifierType::CannotPlayFromTrash,
+    );
+    runner.game.delete_permanent_with_effects(avenge);
+    assert!(
+        runner.pending_selection().is_none(),
+        "the only candidate is in a locked trash: the optional effect is not offered"
+    );
+}
+
+/// Regression guard: BeelStarmon (BT25-085) is a [Three Musketeers] DUAL — it
+/// has no play cost, so it is never a "play" candidate.
+#[test]
+fn p_170_on_deletion_does_not_offer_three_musketeers_dual() {
+    let mut runner = base()
+        .add_card(crate::dsl_card_data::card_data_from_compiled("BT25-085"))
+        .hand(0, &["BT25-085"])
+        .memory(3)
+        .start();
+    let avenge = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.delete_permanent_with_effects(avenge);
+    assert!(
+        runner.pending_selection().is_none(),
+        "a DUAL is used, never played: BeelStarmon (BT25-085) is not offered"
+    );
+}
+
 // ─── Section 4 — Option-trash timing vs the [On Deletion] it causes ──────────
 //
 // Exam P-170#effect#5 (qa/dcgo-exams/P/P-170-effect5.yaml): the OPPONENT's

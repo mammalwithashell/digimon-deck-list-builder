@@ -579,3 +579,192 @@ fn bt24_094_security_effect_may_be_declined() {
     );
     assert_eq!(runner.memory(), memory_before, "no memory spent on decline");
 }
+
+// candidate legality marker (select-hand audit batch 12)
+
+// ─── Section 6 — Picks offer only cards the play would accept ────────────────
+//
+// [Main] "you may play 1 green or yellow [TS] trait Digimon card from your hand
+// with the play cost reduced by 3": DCGO BT24_094.cs:114-120 filters the
+// SelectHandEffect with `IsDigimon && (Green || Yellow) && HasTSTraits &&
+// CanPlayAsNewPermanent(cardSource, true, activateClass, fixedCost:
+// GetCostItself - 3)` — a play-cost-paying play (affordability at the reduced
+// cost), a free frame and no prohibition. A DUAL card is never played (CR 4.3
+// 4-6-2: it is digivolved with its Digimon information or used with its Option
+// information; DCGO `CanPlayAsNewPermanent` needs `isPlayOption || !IsOption`),
+// so Ceresmon (BT26-032, yellow/green [TS] DUAL) is not a candidate. CR 4.3
+// 1-3-11-1: a card can be declared for play only if it can be played and its
+// cost paid.
+//
+// Inherited [Security] "play 1 level 4 or lower ... from your hand or trash
+// without paying the cost": DCGO BT24_094.cs:256-262 `IsDigimon && Level <= 4
+// && (Green || Yellow) && HasTSTraits && CanPlayAsNewPermanent(payCost:
+// false)`.
+
+fn ts_with_cost(id: &str, color: CardColor, level: u8, cost: u16) -> CardData {
+    let mut card = ts_digimon(id, color, level);
+    card.play_cost = cost;
+    card
+}
+
+/// Use the Option's [Main] from hand with `extra` (after the Option) in hand
+/// and return the card ids the "play with the cost reduced by 3" pick offers
+/// (empty when no hand pick installs).
+fn main_pick_offered(runner: &mut DebugRunner) -> Vec<String> {
+    runner.game.enter_main_phase();
+    let idx = runner.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == CARD_ID)
+        .expect("Throne Room in hand");
+    assert_ne!(
+        runner.game.play_option_from_hand(0, idx),
+        OptionPlayResult::Invalid,
+        "usable while no face-up security (colour ignored)"
+    );
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut out: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[(a - digimon_engine::action::space::PLAY_HAND_START) as usize].clone())
+        .collect();
+    out.sort();
+    out
+}
+
+fn main_runner(extra: &[&str]) -> DebugRunner {
+    let mut hand = vec![CARD_ID];
+    hand.extend_from_slice(extra);
+    throne_room_runner()
+        .dsl_card("BT26-032")
+        .expect("Ceresmon (BT26-032) YAML loads")
+        .add_card(filler("BOTTOM"))
+        .add_card(ts_digimon("GREEN-TS", CardColor::Green, 4))
+        .add_card(ts_with_cost("PRICEY-TS", CardColor::Yellow, 6, 21))
+        .hand(0, &hand)
+        .security(0, &["BOTTOM"])
+        .memory(10)
+        .start()
+}
+
+/// Ceresmon (BT26-032), a yellow/green [TS] DUAL, can't be played (CR 4.3
+/// 4-6-2): only the green [TS] Digimon is offered.
+#[test]
+fn bt24_094_main_pick_excludes_dual_card() {
+    let mut runner = main_runner(&["GREEN-TS", "BT26-032"]);
+    let offered = main_pick_offered(&mut runner);
+    assert_eq!(offered, vec!["GREEN-TS".to_string()], "the DUAL Ceresmon is not offered");
+}
+
+/// Memory 10, Option use cost 3 -> 7. A 21-cost [TS] Digimon reduced by 3
+/// costs 18 -> 7 - 18 = -11, past the opponent's 10: not payable, not offered
+/// (DCGO `CanPlayAsNewPermanent(payCost: true, fixedCost: cost - 3)`).
+#[test]
+fn bt24_094_main_pick_excludes_unaffordable_card() {
+    let mut runner = main_runner(&["GREEN-TS", "PRICEY-TS"]);
+    let offered = main_pick_offered(&mut runner);
+    assert_eq!(offered, vec!["GREEN-TS".to_string()], "the unpayable 21-cost card is not offered");
+}
+
+/// "You can't play Digimon by effects": no hand pick installs.
+#[test]
+fn bt24_094_main_pick_not_offered_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = main_runner(&["GREEN-TS"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = main_pick_offered(&mut runner);
+    assert!(offered.is_empty(), "nothing playable is offered: {offered:?}");
+}
+
+/// A full battle area: no hand pick installs.
+#[test]
+fn bt24_094_main_pick_not_offered_when_battle_area_full() {
+    let mut runner = main_runner(&["GREEN-TS"]);
+    runner.place_on_field(0, "BOTTOM", Some(0));
+    runner.game.rules.field_slots = 1;
+    let offered = main_pick_offered(&mut runner);
+    assert!(offered.is_empty(), "nothing playable is offered: {offered:?}");
+}
+
+/// Player 1 holds Throne Room in security with a level-4 green [TS] Digimon in
+/// hand; player 0 attacks it. Returns the runner just after the attack.
+fn security_runner(setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
+    let mut runner = throne_room_runner()
+        .add_card(ts_digimon("HAND-TS", CardColor::Green, 4))
+        .add_card(attacker("ATTACKER"))
+        .add_card(filler("FILL"))
+        .hand(1, &["HAND-TS"])
+        .security(1, &[CARD_ID])
+        .memory(10)
+        .start();
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    setup(&mut runner);
+    let _ = runner.attack_player(attacker, 1, false);
+    runner
+}
+
+/// A full battle area: the free security play has no candidate and asks nothing.
+#[test]
+fn bt24_094_security_pick_not_offered_when_battle_area_full() {
+    let runner = security_runner(|r| {
+        r.place_on_field(1, "FILL", Some(0));
+        r.game.rules.field_slots = 1;
+    });
+    assert!(
+        runner.pending_selection().is_none(),
+        "no free slot: the level-4 [TS] Digimon can't be played, so nothing is offered"
+    );
+}
+
+/// "You can't play Digimon by effects" on the security effect's controller.
+#[test]
+fn bt24_094_security_pick_not_offered_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let runner = security_runner(|r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 0),
+        );
+    });
+    assert!(
+        runner.pending_selection().is_none(),
+        "an effect-play prohibition: nothing is offered"
+    );
+}
+
+/// "You can't play cards from the trash": a trash candidate is not offered.
+#[test]
+fn bt24_094_security_pick_not_offered_from_trash_when_trash_play_is_locked() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let runner = security_runner(|r| {
+        // Move the hand candidate to the trash, then lock trash plays.
+        let card = r.game.players[1].hand.pop().expect("HAND-TS");
+        r.game.players[1].trash.push(card);
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 0),
+        );
+    });
+    assert!(
+        runner.pending_selection().is_none(),
+        "the trash candidate can't be played from the trash: nothing is offered"
+    );
+}

@@ -495,5 +495,285 @@ fn security_plays_name_only_from_both_zones_free_and_always_places_option() {
     }
 }
 
+// ─── Pick legality: only cards the follow-up play / DNA would accept ─────────
+// DCGO BT20_093.cs:34-39 [Main] `CanSelectCardCondition`: IsDigimon && text &&
+// CanPlayAsNewPermanent(payCost: false) — no free frame, a play lock, or a
+// DUAL (no play cost, so never played, CR 4.3 7-1-1; it is only digivolved
+// or used, 4-6-2; DCGO `CanPlayAsNewPermanent` needs
+// `!IsOption`) is not offered. The play then pays the cost reduced by 3
+// (:136-142 `payCost: true`); DCGO does not check that the reduced cost is
+// payable in the pick, but CR 4.3 1-3-11-1 forbids declaring a play whose
+// cost can't be paid, so the rules-tighter `affordable_with_cost` is used.
+// :233-238 [Security] the same CanPlayAsNewPermanent filter for the free
+// hand-or-trash play. :184-189 Delay DNA `CanPlayJogress(true)` (recipe +
+// payable printed cost).
+
+fn dual_card(id: &str, name: &str, text: &str) -> CardData {
+    use digimon_engine::card_data::{DualCardData, DualDigimonFace, DualOptionFace};
+    let mut c = make_test_card(id, name);
+    c.card_kind = CardKind::Dual;
+    c.effect_text = text.into();
+    c.colors = vec![CardColor::Red];
+    c.play_cost = 3;
+    c.dual = Some(DualCardData {
+        digimon: DualDigimonFace {
+            level: 4,
+            dp: 6000,
+            colors: vec![CardColor::Red],
+            traits: vec![],
+            evo_costs: vec![],
+            effect_text: text.into(),
+            inherited_text: String::new(),
+            keywords: vec![],
+        },
+        option: DualOptionFace {
+            use_cost: 3,
+            colors: vec![CardColor::Red],
+            effect_text: String::new(),
+            security_text: String::new(),
+            keywords: vec![],
+        },
+    });
+    c
+}
+
+fn pick_setup(security: bool, extras: Vec<CardData>, hand: &[&str]) -> DebugRunner {
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(
+            &std::fs::read_to_string(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/cards/bt20/BT20-093.yaml"
+            ))
+            .expect("production YAML"),
+        )
+        .unwrap();
+    for (id, name, text) in [
+        ("DRACO", "Dracomon X", ""),
+        ("TRASH", "Dracomon", ""),
+        ("ATTACKER", "Attacker", ""),
+        ("FILL", "Filler", ""),
+    ] {
+        let mut c = make_test_card(id, name);
+        c.effect_text = text.into();
+        c.card_kind = CardKind::Digimon;
+        c.colors = vec![CardColor::Red];
+        c.play_cost = 7;
+        c.dp = Some(10000);
+        b = b.add_card(c);
+    }
+    for c in extras {
+        b = b.add_card(c);
+    }
+    let owner = if security { 1 } else { 0 };
+    let mut full_hand: Vec<&str> = if security { vec![] } else { vec!["BT20-093"] };
+    full_hand.extend_from_slice(hand);
+    let mut r = b
+        .memory(10)
+        .hand(owner, &full_hand)
+        .security(1, if security { &["BT20-093"][..] } else { &[][..] })
+        .deck(owner, &["FILL", "FILL", "TRASH"])
+        .deck(1 - owner, &["FILL"; 5])
+        .start();
+    r.skip_mulligan();
+    let c = r.game.players[owner as usize].deck.pop().unwrap();
+    r.game.players[owner as usize].trash.push(c);
+    r
+}
+
+/// The non-PASS candidates of a plain hand pick, as card ids.
+fn hand_offered(game: &digimon_engine::game::Game, owner: usize) -> Vec<String> {
+    let s = game.pending_selection.as_ref().expect("hand pick");
+    let mut v: Vec<String> = s
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != digimon_engine::action::space::PASS)
+        .map(|a| {
+            game.players[owner].hand[(a - digimon_engine::action::space::PLAY_HAND_START) as usize]
+                .card_id(&game.card_data)
+                .to_string()
+        })
+        .collect();
+    v.sort();
+    v
+}
+
+/// The committable rows of a hand-or-trash union pick, as card ids.
+fn union_offered(game: &digimon_engine::game::Game, owner: u8) -> Vec<String> {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    let s = game.pending_selection.as_ref().expect("union pick");
+    let page = s.card_choice.as_ref().expect("physical union").view(game, owner);
+    let mut v: Vec<String> = page
+        .rows
+        .iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .filter_map(|row| row.card_id.clone())
+        .collect();
+    v.sort();
+    v
+}
+
+fn pricy_draco() -> CardData {
+    let mut c = make_test_card("PRICY", "Dracomon Pricy");
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![CardColor::Red];
+    c.play_cost = 30;
+    c.dp = Some(10000);
+    c
+}
+
+/// [Main] after using the Option (10 - 2 = 8 memory): PRICY's reduced cost
+/// 27 would take memory to -19, past the -10 floor, so it is not offered.
+#[test]
+fn main_pick_excludes_a_digimon_whose_reduced_cost_cannot_be_paid() {
+    let mut r = pick_setup(false, vec![pricy_draco()], &["DRACO", "PRICY"]);
+    // A red Digimon meets the red Option's colour requirement (CR 4.3 4-22).
+    r.place_on_field(0, "FILL", None);
+    r.game.play_option_from_hand(0, 0);
+    assert_eq!(hand_offered(&r.game, 0), vec!["DRACO".to_string()]);
+}
+
+/// [Main] a DUAL with [Dracomon] in its text is never played (CR 4.3 7-1-1:
+/// playing needs a play cost; 4-6-2: a DUAL is digivolved or used).
+#[test]
+fn main_pick_excludes_a_dual_card() {
+    let mut r = pick_setup(
+        false,
+        vec![dual_card("DUALD", "Dual Dracomon", "Dracomon")],
+        &["DRACO", "DUALD"],
+    );
+    r.place_on_field(0, "FILL", None);
+    r.game.play_option_from_hand(0, 0);
+    assert_eq!(hand_offered(&r.game, 0), vec!["DRACO".to_string()]);
+}
+
+/// [Main] a battle area at capacity has no frame for the play: no pick, the
+/// Digimon stays in hand.
+#[test]
+fn main_pick_offers_nothing_with_a_full_battle_area() {
+    let mut r = pick_setup(false, vec![], &["DRACO"]);
+    r.place_on_field(0, "FILL", None);
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    r.game.play_option_from_hand(0, 0);
+    assert!(
+        r.game
+            .pending_selection
+            .as_ref()
+            .is_none_or(|s| s.kind != digimon_engine::selection::SelectionKind::Hand),
+        "no hand pick with a full battle area"
+    );
+    assert!(r.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "DRACO"));
+}
+
+/// [Security] a DUAL named [Dracomon] in hand is not offered; the playable
+/// hand and trash Dracomon are.
+#[test]
+fn security_union_excludes_a_dual_card() {
+    let mut r = pick_setup(
+        true,
+        vec![dual_card("DUALD", "Dracomon Dual", "")],
+        &["DRACO", "DUALD"],
+    );
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    let _ = r.attack_player(attacker, 1, false);
+    assert_eq!(
+        union_offered(&r.game, 1),
+        vec!["DRACO".to_string(), "TRASH".to_string()]
+    );
+}
+
+/// [Security] P1's battle area at capacity: no Dracomon can be played, so no
+/// pick is offered.
+#[test]
+fn security_union_offers_nothing_with_a_full_battle_area() {
+    let mut r = pick_setup(true, vec![], &["DRACO"]);
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(1, "FILL", None);
+    r.game.rules.field_slots = 1;
+    let _ = r.attack_player(attacker, 1, false);
+    assert!(
+        r.game
+            .pending_selection
+            .as_ref()
+            .is_none_or(|s| s.card_choice.is_none()),
+        "no hand-or-trash pick with a full battle area"
+    );
+}
+
+/// Regression guard, Delay DNA: an [Examon] whose printed DNA cost can't be
+/// paid (10 - 21 = -11) is not offered beside a payable one.
+#[test]
+fn delay_field_dna_result_pick_excludes_unpayable_examon() {
+    let req = |color| DnaRequirement {
+        level: 6,
+        card_colors: vec![color],
+        name_contains: String::new(),
+        text_contains: String::new(),
+    };
+    let examon = |id: &str, cost: i16| {
+        let mut c = material(id, CardColor::Blue);
+        c.card_name = "Examon".into();
+        c.level = Some(7);
+        c.dna_costs = vec![DnaCost {
+            requirement1: req(CardColor::Blue),
+            requirement2: req(CardColor::Green),
+            memory_cost: cost,
+        }];
+        c
+    };
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(
+            &std::fs::read_to_string(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/cards/bt20/BT20-093.yaml"
+            ))
+            .expect("production YAML"),
+        )
+        .unwrap()
+        .add_card(examon("RESULT", 2))
+        .add_card(examon("PRICY", 21))
+        .add_card(material("BLUE", CardColor::Blue))
+        .add_card(material("GREEN", CardColor::Green))
+        .add_card(material("RED", CardColor::Red))
+        .add_card(material("FILL", CardColor::Red))
+        .memory(10)
+        .hand(0, &["PRICY", "RESULT"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    runner.game.turn_count = 3;
+    let option = runner.place_on_field(0, "BT20-093", None);
+    runner.game.players[0].battle_area[option.index as usize].option_state = OptionState::Delayed {
+        owner: 0,
+        placed_on_turn: 2,
+        trash_on_turn: 100,
+        trigger: DelayTrigger::EndOfYourNextTurn,
+    };
+    runner.place_on_field(0, "BLUE", None);
+    runner.place_on_field(0, "GREEN", None);
+    runner.place_on_field(0, "RED", None);
+    trigger(&mut runner, 3);
+    pick(&mut runner.game, None);
+    let labels: Vec<String> = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("result pick")
+        .effect_choices
+        .as_ref()
+        .expect("result pick labels")
+        .iter()
+        .map(|c| c.label.clone())
+        .collect();
+    assert_eq!(
+        labels.iter().filter(|l| l.as_str() == "Examon").count(),
+        1,
+        "only the payable Examon is offered: {labels:?}"
+    );
+}
+
 #[path = "../../support/owned_union_fixture.rs"]
 mod owned_union_fixture;

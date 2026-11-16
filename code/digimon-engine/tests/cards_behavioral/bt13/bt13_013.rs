@@ -275,3 +275,28 @@ fn bt13_013_captured_inherited_play_gains_memory_after_sistermon_leaves() {
     assert_eq!(r.memory(), 7, "both inherited OPT uses were consumed");
     assert!(r.pending_selection().is_none());
 }
+
+/// BaoHuckmon (BT13-013) digivolves "with the digivolution cost reduced by 2" (DCGO BT13_013.cs:59-65, `payCost:
+/// true`, `reduceCost: 2`), so SaviorHuckmon's printed 3 costs 1. A card whose cost can't be paid can't be digivolved
+/// (CR 4.3 1-3-11-1, 8-1-2-6; 4-2-2 / 1-4-2-2: the gauge stops at 10): from -10 nothing can be paid, so it is not
+/// offered; from -9 it is. The authored `can_digivolve_from_source` leaf checks the route only; the compile pass adds
+/// the payment check (G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT).
+#[test]
+fn bt13_013_offers_saviorhuckmon_only_when_the_reduced_cost_can_be_paid() {
+    let mut r = builder().hand(0, &["SISTER", "SAVIOR"]).start();
+    r.place_on_field(0, "BT13-013", None);
+    r.game.set_memory(-10);
+    r.play(0, 0).unwrap();
+    assert!(r.pending_selection().is_none(), "3-2=1 can't be paid from -10: nothing to choose");
+    assert_eq!(r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data), "BT13-013");
+
+    let mut r = builder().hand(0, &["SISTER", "SAVIOR"]).start();
+    r.place_on_field(0, "BT13-013", None);
+    r.game.set_memory(-9);
+    r.play(0, 0).unwrap();
+    let a = r.pending_selection().expect("3-2=1 is payable from -9").valid_action_ids[0];
+    r.execute_action(0, a).unwrap();
+    assert_eq!(r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data), "SAVIOR");
+    let mine = if r.game.turn_player() == 0 { r.memory() } else { -r.memory() };
+    assert_eq!(mine, -10);
+}

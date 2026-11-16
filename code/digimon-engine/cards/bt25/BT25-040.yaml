@@ -93,6 +93,10 @@ effects:
           of: you
           bind_as: pick
           optional: true
+          # Only a card the free play would accept (DCGO BT25_040.cs:48-55
+          # `HasPlayCost && … && CanPlayAsNewPermanent(cardSource, false, …)`):
+          # a play cost (CR 4.3 7-1-1), a free battle-area slot and no
+          # effect-play lock (CR 4.3 1-3-2).
           filter:
             all_of:
               - kind: digimon
@@ -100,6 +104,7 @@ effects:
               - any_of:
                   - trait_has: Angel
                   - trait_has: Iliad
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 Lv.4-or-lower [Angel] or [Iliad] card from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: pick }
 

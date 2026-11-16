@@ -918,3 +918,82 @@ fn find_deletion_observer(
         _ => None,
     })
 }
+
+// ============================================================================
+// Section 6 — Clause 2 candidate legality (DCGO candidate filter)
+// ============================================================================
+// DCGO EX11_055.cs:137-141 `CanSelectCardCondition` = (EqualsCardName("Gazimon")
+// || EqualsCardName("Gizamon")) && CanPlayAsNewPermanent(cardSource, false,
+// activateClass), and the hand pick opens only when such a card is in hand
+// (EX11_055.cs:148). A Gazimon the effect could not then play is not offered
+// (the pick is optional, so no outcome changes; the slot cap is the engine's
+// `rules.field_slots`, not a CR limit, CR 4.3 3-4-8-2); the suspend cost is still
+// paid (CR 4.3 15-7-5; DCGO taps first, EX11_055.cs:146).
+
+fn add_player_lock(runner: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Horaiji + a [Composite] Digimon on the field, Gazimon in hand; apply `setup`,
+/// delete the Composite, accept the suspend cost, and return the runner plus
+/// whether a Gazimon/Gizamon hand pick with a candidate is offered.
+fn gazimon_pick_offered(setup: impl FnOnce(&mut DebugRunner)) -> (DebugRunner, bool) {
+    let mut runner = horaiji_deletion_runner();
+    let _horaiji = runner.place_on_field(0, "EX11-055", Some(0));
+    let composite = runner.place_on_field(0, "COMPOSITE-SAC", Some(0));
+    setup(&mut runner);
+    runner
+        .game
+        .delete_permanent_with_cause(composite, ReplacementCause::OwnEffect);
+    let accept_view = runner
+        .pending_selection_view()
+        .expect("deletion must offer the suspend activation choice");
+    assert_eq!(accept_view.kind, SelectionKind::TriggerOrder);
+    runner
+        .execute_action(accept_view.selecting_player, accept_view.valid_action_ids[0])
+        .expect("accept the suspend cost");
+    let offered = runner.pending_selection_view().is_some_and(|v| {
+        v.kind == SelectionKind::Hand
+            && v
+                .valid_action_ids
+                .iter()
+                .any(|&a| a != digimon_engine::action::space::PASS)
+    });
+    (runner, offered)
+}
+
+fn horaiji_suspended(runner: &DebugRunner) -> bool {
+    runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|perm| perm.top_card().card_id(&runner.game.card_data) == "EX11-055")
+        .is_some_and(|perm| perm.is_suspended)
+}
+
+/// After the Composite is deleted, Horaiji alone fills a 1-slot battle area:
+/// Gazimon cannot be played, so it is not offered (the suspend is still paid).
+#[test]
+fn ex11_055_all_turns_gazimon_not_offered_when_battle_area_full() {
+    let (runner, offered) = gazimon_pick_offered(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8 - 1;
+    });
+    assert!(!offered, "no Gazimon is offered into a full battle area");
+    assert!(horaiji_suspended(&runner), "the suspend cost was paid");
+}
+
+/// "You can't play Digimon by effects": Gazimon is not offered.
+#[test]
+fn ex11_055_all_turns_gazimon_not_offered_when_effect_digimon_play_prohibited() {
+    let (runner, offered) = gazimon_pick_offered(|r| {
+        add_player_lock(r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    });
+    assert!(!offered, "a Digimon-play prohibition removes Gazimon from the candidates");
+    assert!(horaiji_suspended(&runner), "the suspend cost was paid");
+}

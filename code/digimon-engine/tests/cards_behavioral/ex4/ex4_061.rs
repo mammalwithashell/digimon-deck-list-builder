@@ -997,3 +997,342 @@ fn ex4_061_observer_no_panic_on_battle_area_fan_out() {
     // Drain any prompts that did install.
     drain_accepting_all(&mut runner);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 5 — Clause 2 candidates: exactly [Gabumon] / [Agumon], playable
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// DCGO EX4_061.cs:93-121 `CanSelectCardCondition` = IsDigimon &&
+// `CardEffectCommons.CanPlayAsNewPermanent(cardSource, payCost: false, ...)`
+// (:97) && (Greymon-named digivolver && `cardSource.CardNames.Contains("Gabumon")`
+// || Garurumon-named && `CardNames.Contains("Agumon")`). `CardNames` is the
+// card's name list, so the match is an exact card name: "[Gabumon]" is the card
+// named Gabumon, not every name containing it (Pagumon, SnowAgumon, Gabumon -
+// Bond of Friendship ...). A card the play would refuse is never offered
+// (CR 4.3 7-1-1, 1-3-2); from the trash, "you can't play cards from the trash"
+// refuses it too.
+
+/// Fire clause 2 for a lone digivolved Digimon named `digivolved_name`, choose
+/// the zone (`zone`: 0 hand, 1 trash), and return the card ids the hand/trash
+/// pick offers (empty when no pick installs).
+fn clause2_offer(
+    digivolved_name: &str,
+    hand: &[(&str, &str)],
+    trash: &[(&str, &str)],
+    zone: usize,
+    prep: impl FnOnce(&mut DebugRunner),
+) -> Vec<String> {
+    let mut runner = matttai_runner();
+    let mut digi = make_named_digimon("DIGI", digivolved_name, 4, 4000);
+    digi.play_cost = 0;
+    runner.game.card_data.push(digi);
+    for (id, name) in hand.iter().chain(trash.iter()) {
+        if !runner.game.card_data.iter().any(|c| c.card_id == *id) {
+            let mut c = make_named_digimon(id, name, 3, 3000);
+            c.play_cost = 3;
+            runner.game.card_data.push(c);
+        }
+    }
+    runner.place_on_field(0, "EX4-061", Some(0));
+    let digi_handle = runner.place_on_field(0, "DIGI", Some(0));
+    for (id, _) in hand {
+        push_to_hand(&mut runner, 0, id);
+    }
+    for (id, _) in trash {
+        push_to_trash(&mut runner, 0, id);
+    }
+    prep(&mut runner);
+    enqueue_digivolve_event_for(&mut runner, digi_handle);
+    for _ in 0..8 {
+        let Some(view) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        match view.kind {
+            SelectionKind::Hand => {
+                let ids: Vec<String> = runner.game.players[0]
+                    .hand
+                    .iter()
+                    .map(|c| c.card_id(&runner.game.card_data).to_string())
+                    .collect();
+                return view
+                    .valid_action_ids
+                    .iter()
+                    .copied()
+                    .filter(|&a| a != digimon_engine::action::space::PASS)
+                    .map(|a| ids[a as usize].clone())
+                    .collect();
+            }
+            SelectionKind::Trash => {
+                let ids: Vec<String> = runner.game.players[0]
+                    .trash
+                    .iter()
+                    .map(|c| c.card_id(&runner.game.card_data).to_string())
+                    .collect();
+                let start = digimon_engine::action::space::TRASH_EFFECT_START;
+                return view
+                    .valid_action_ids
+                    .iter()
+                    .copied()
+                    .filter(|&a| a != digimon_engine::action::space::PASS)
+                    .map(|a| ids[(if a >= start { a - start } else { a }) as usize].clone())
+                    .collect();
+            }
+            SelectionKind::EffectChoice => {
+                runner
+                    .execute_action(0, view.valid_action_ids[zone])
+                    .expect("choose the zone");
+            }
+            _ => {
+                let a = view
+                    .valid_action_ids
+                    .iter()
+                    .copied()
+                    .find(|&a| a != digimon_engine::action::space::PASS)
+                    .expect("an accept action");
+                runner.execute_action(0, a).expect("accept the activation");
+            }
+        }
+    }
+    panic!("prompts never drained");
+}
+
+/// Greymon digivolved: only the card named exactly Gabumon is offered.
+#[test]
+fn ex4_061_clause2_hand_pick_offers_only_exact_gabumon() {
+    let offered = clause2_offer(
+        "Greymon",
+        &[("GABU-BOF", "Gabumon - Bond of Friendship"), ("GABU", "Gabumon")],
+        &[],
+        0,
+        |_| {},
+    );
+    assert_eq!(offered, vec!["GABU".to_string()]);
+}
+
+/// Garurumon digivolved: Pagumon / SnowAgumon are not [Agumon].
+#[test]
+fn ex4_061_clause2_hand_pick_offers_only_exact_agumon() {
+    let offered = clause2_offer(
+        "Garurumon",
+        &[("PAGU", "Pagumon"), ("SNOWAGU", "SnowAgumon"), ("AGU", "Agumon")],
+        &[],
+        0,
+        |_| {},
+    );
+    assert_eq!(offered, vec!["AGU".to_string()]);
+}
+
+/// Same exact-name rule from the trash.
+#[test]
+fn ex4_061_clause2_trash_pick_offers_only_exact_agumon() {
+    let offered = clause2_offer(
+        "Garurumon",
+        &[],
+        &[("PAGU", "Pagumon"), ("SNOWAGU", "SnowAgumon"), ("AGU", "Agumon")],
+        1,
+        |_| {},
+    );
+    assert_eq!(offered, vec!["AGU".to_string()]);
+}
+
+/// "You can't play Digimon by effects": the hand pick offers nothing.
+#[test]
+fn ex4_061_clause2_hand_pick_offers_nothing_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = clause2_offer("Greymon", &[("GABU", "Gabumon")], &[], 0, |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+}
+
+/// A full battle area (no empty frame): the hand pick offers nothing.
+#[test]
+fn ex4_061_clause2_hand_pick_offers_nothing_when_battle_area_full() {
+    let offered = clause2_offer("Greymon", &[("GABU", "Gabumon")], &[], 0, |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+}
+
+/// "You can't play cards from the trash": the trash pick offers nothing.
+#[test]
+fn ex4_061_clause2_trash_pick_offers_nothing_when_trash_play_is_locked() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = clause2_offer("Greymon", &[], &[("GABU", "Gabumon")], 1, |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 8 — Clause 2 zone choice offers only a zone holding a candidate
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// DCGO EX4_061.cs:175-196: `canSelectHand` / `canSelectTrash` are computed with
+// the same `CanSelectCardCondition` as the pick. Both true → "From hand / From
+// trash" bool prompt; exactly one → `SetBool(canSelectHand)` (no prompt, that
+// zone); neither → nothing. A zone with no card the play would accept is not a
+// legal choice (CR 4.3 1-3-2). YAML: `select_effect_choice` `legal_when`.
+
+/// Fire clause 2 for a lone digivolved Digimon named `digivolved_name`, accept
+/// the activation, and record every prompt kind (with its action count) up to
+/// and including the first hand/trash pick. On a zone choice pick `zone`.
+fn clause2_trace(
+    digivolved_name: &str,
+    hand: &[(&str, &str)],
+    trash: &[(&str, &str)],
+    zone: usize,
+    prep: impl FnOnce(&mut DebugRunner),
+) -> Vec<(SelectionKind, usize)> {
+    let mut runner = matttai_runner();
+    let mut digi = make_named_digimon("DIGI", digivolved_name, 4, 4000);
+    digi.play_cost = 0;
+    runner.game.card_data.push(digi);
+    for (id, name) in hand.iter().chain(trash.iter()) {
+        if !runner.game.card_data.iter().any(|c| c.card_id == *id) {
+            let mut c = make_named_digimon(id, name, 3, 3000);
+            c.play_cost = 3;
+            runner.game.card_data.push(c);
+        }
+    }
+    runner.place_on_field(0, "EX4-061", Some(0));
+    let digi_handle = runner.place_on_field(0, "DIGI", Some(0));
+    for (id, _) in hand {
+        push_to_hand(&mut runner, 0, id);
+    }
+    for (id, _) in trash {
+        push_to_trash(&mut runner, 0, id);
+    }
+    prep(&mut runner);
+    enqueue_digivolve_event_for(&mut runner, digi_handle);
+    let mut trace = Vec::new();
+    for _ in 0..8 {
+        let Some(view) = runner.pending_selection_view() else {
+            return trace;
+        };
+        trace.push((view.kind, view.valid_action_ids.len()));
+        match view.kind {
+            SelectionKind::Hand | SelectionKind::Trash => return trace,
+            SelectionKind::EffectChoice => {
+                runner
+                    .execute_action(0, view.valid_action_ids[zone])
+                    .expect("choose the zone");
+            }
+            _ => {
+                let a = view
+                    .valid_action_ids
+                    .iter()
+                    .copied()
+                    .find(|&a| a != digimon_engine::action::space::PASS)
+                    .expect("an accept action");
+                runner.execute_action(0, a).expect("accept the activation");
+            }
+        }
+    }
+    panic!("prompts never drained");
+}
+
+fn saw(trace: &[(SelectionKind, usize)], kind: SelectionKind) -> bool {
+    trace.iter().any(|(k, _)| *k == kind)
+}
+
+/// Only the hand holds a [Gabumon] (the trash holds only non-candidates): no
+/// zone prompt; the hand pick installs directly.
+#[test]
+fn ex4_061_clause2_zone_choice_skipped_when_only_hand_has_candidate() {
+    let trace = clause2_trace(
+        "Greymon",
+        &[("GABU", "Gabumon")],
+        &[("SNOWAGU", "SnowAgumon"), ("AGU", "Agumon")],
+        0,
+        |_| {},
+    );
+    assert!(!saw(&trace, SelectionKind::EffectChoice), "{trace:?}");
+    assert!(saw(&trace, SelectionKind::Hand), "{trace:?}");
+}
+
+/// Only the trash holds a [Gabumon] (the hand holds an [Agumon], which a
+/// Greymon digivolve does not offer): no zone prompt; the trash pick installs.
+#[test]
+fn ex4_061_clause2_zone_choice_skipped_when_only_trash_has_candidate() {
+    let trace = clause2_trace(
+        "Greymon",
+        &[("AGU", "Agumon")],
+        &[("GABU", "Gabumon")],
+        0,
+        |_| {},
+    );
+    assert!(!saw(&trace, SelectionKind::EffectChoice), "{trace:?}");
+    assert!(saw(&trace, SelectionKind::Trash), "{trace:?}");
+}
+
+/// Both zones hold a candidate: the "From hand / From trash" prompt offers both.
+#[test]
+fn ex4_061_clause2_zone_choice_offered_when_both_zones_have_candidate() {
+    let trace = clause2_trace(
+        "Garurumon",
+        &[("AGU", "Agumon")],
+        &[("AGU", "Agumon")],
+        1,
+        |_| {},
+    );
+    let choice = trace
+        .iter()
+        .find(|(k, _)| *k == SelectionKind::EffectChoice)
+        .unwrap_or_else(|| panic!("zone prompt expected: {trace:?}"));
+    assert_eq!(choice.1, 2, "both zones offered: {trace:?}");
+    assert!(saw(&trace, SelectionKind::Trash), "{trace:?}");
+}
+
+/// Neither zone holds a playable candidate ("can't play Digimon by effects"):
+/// no zone prompt and no pick.
+#[test]
+fn ex4_061_clause2_no_zone_choice_when_no_zone_has_playable_candidate() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let trace = clause2_trace(
+        "Greymon",
+        &[("GABU", "Gabumon")],
+        &[("GABU", "Gabumon")],
+        0,
+        |r| {
+            r.game.modifiers.add_player_modifier(
+                0,
+                PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+            );
+        },
+    );
+    assert!(!saw(&trace, SelectionKind::EffectChoice), "{trace:?}");
+    assert!(!saw(&trace, SelectionKind::Hand), "{trace:?}");
+    assert!(!saw(&trace, SelectionKind::Trash), "{trace:?}");
+}
+
+/// "You can't play cards from the trash" removes only the trash zone: the hand
+/// pick installs without a zone prompt.
+#[test]
+fn ex4_061_clause2_trash_lock_leaves_only_hand_zone() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let trace = clause2_trace(
+        "Greymon",
+        &[("GABU", "Gabumon")],
+        &[("GABU", "Gabumon")],
+        0,
+        |r| {
+            r.game.modifiers.add_player_modifier(
+                0,
+                PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+            );
+        },
+    );
+    assert!(!saw(&trace, SelectionKind::EffectChoice), "{trace:?}");
+    assert!(saw(&trace, SelectionKind::Hand), "{trace:?}");
+}

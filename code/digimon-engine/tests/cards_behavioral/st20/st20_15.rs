@@ -695,3 +695,91 @@ fn _unused_silencer() {
     let _ = make_tamer("X", "X");
     let _ = make_lv3_digimon("Y", "Y");
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 4 — [Security] Tamer pick candidate legality (select-hand audit 2026-11-13)
+// ═══════════════════════════════════════════════════════════════════════════════
+// DCGO ST20_15.cs:93-97 offers `IsTamer && CanPlayAsNewPermanent(payCost:
+// false)`: a Tamer the effect can't play (play lock, no empty frame) is never a
+// candidate. CR 4.3 1-3-11-1: a card that can't be played can't be declared for
+// play. Regression guards for `can_play_from_effect_without_cost`.
+
+/// Player 1 holds ST20-15 as its only security card and `TAMER-HAND` in hand;
+/// `setup` runs before player 0's 9000-DP attacker checks it. Returns the
+/// runner and whether the Tamer is offered by the [Security] pick.
+fn security_tamer_offered(setup: impl FnOnce(&mut DebugRunner)) -> (DebugRunner, bool) {
+    use digimon_engine::action::space::{HAND_EFFECT_START, PLAY_HAND_START};
+    let mut atk = make_test_card("ATK", "Attacker");
+    atk.card_kind = CardKind::Digimon;
+    atk.level = Some(6);
+    atk.dp = Some(9000);
+    atk.play_cost = 8;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(atk)
+        .add_card(make_tamer("TAMER-HAND", "Hand Tamer"))
+        .add_card(filler("FILL"))
+        .hand(1, &["TAMER-HAND"])
+        .security(1, &[CARD_ID])
+        .deck(0, &["FILL"; 3])
+        .deck(1, &["FILL"; 3])
+        .memory(0)
+        .start();
+    let a = r.place_on_field(0, "ATK", Some(0));
+    setup(&mut r);
+    let _ = r.attack_player(a, 1, false);
+    let slot = r.game.players[1]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "TAMER-HAND")
+        .expect("Tamer still in hand") as u16;
+    let offered = r.pending_selection_view().is_some_and(|view| {
+        view.valid_action_ids.contains(&(PLAY_HAND_START + slot))
+            || view.valid_action_ids.contains(&(HAND_EFFECT_START + slot))
+    });
+    (r, offered)
+}
+
+fn tamer_on_field(r: &DebugRunner) -> bool {
+    r.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&r.game.card_data) == "TAMER-HAND")
+}
+
+/// Control: with a free slot and no lock the Tamer is offered.
+#[test]
+fn st20_15_security_offers_playable_tamer() {
+    let (_r, offered) = security_tamer_offered(|_| {});
+    assert!(offered, "the Tamer is a legal free-play candidate");
+}
+
+/// "You can't play Tamers by effects": the Tamer is not offered.
+#[test]
+fn st20_15_security_tamer_not_offered_when_effect_tamer_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut r, offered) = security_tamer_offered(|r| {
+        r.game.modifiers.add_player_modifier(
+            1,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 0),
+        );
+    });
+    assert!(!offered, "a Tamer the effect can't play is not offered");
+    let _ = r.auto_resolve();
+    assert!(!tamer_on_field(&r));
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs an empty frame): the
+/// Tamer is not offered.
+#[test]
+fn st20_15_security_tamer_not_offered_when_battle_area_full() {
+    let (mut r, offered) = security_tamer_offered(|r| {
+        r.place_on_field(1, "FILL", None);
+        r.game.rules.field_slots = r.game.players[1].battle_area.len() as u8;
+    });
+    assert!(!offered, "no free slot: the Tamer can't be played");
+    let _ = r.auto_resolve();
+    assert!(!tamer_on_field(&r));
+}

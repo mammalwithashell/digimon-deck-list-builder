@@ -84,34 +84,56 @@ effects:
   - when: end_of_your_turn
     optional: true
     summary: "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card with [Chaosmon] in its name in the hand. Then, the DNA digivolved Digimon may attack"
+    # DCGO BT20_036.cs:220-238 / :265-276 (fixed 2026-11-13, select-hand
+    # audit): the hand card is picked FIRST, and only a [Chaosmon] that THIS
+    # Digimon can DNA digivolve into (`CanPlayJogress(true)` +
+    # `CanJogressFromTargetPermanent(this)`: a printed DNA requirement this
+    # Digimon + some other Digimon of yours meet, at a payable cost) is
+    # offered; then the roots (this Digimon + a partner completing that
+    # recipe). "may DNA digivolve" with no "without paying the cost" pays the
+    # printed DNA cost (DCGO `payCost: true`; CR 4.3 1-3-11-1 — an unpayable
+    # card is never offered). The attack follows only a successful DNA
+    # (DCGO `successProcess: OnDNASuccess`).
     process:
-      - select_own_permanent:
-          bind_as: dna_partner
+      - select_hand:
+          of: you
+          bind_as: dna_result
           optional: true
           filter:
             all_of:
               - kind: digimon
-              - other: true
-          prompt: "Select your other DNA digivolution material"
-      - select_hand:
-          of: you
-          bind_as: dna_result
-          filter:
-            all_of:
-              - kind: digimon
               - name_contains: "Chaosmon"
+              - dna_field_pair: { role: result, first: source, cost: printed }
           prompt: "DNA digivolve into a Digimon card with [Chaosmon] in its name"
-      - effect_initiated_dna_digivolve:
-          target_a: source
-          target_b: dna_partner
-          from_hand: dna_result
-          cost: free
-      # After the merge, the BanchoLeomon card is a digivolution source of
-      # the merged permanent, so `source` resolves to the DNA-digivolved
-      # Digimon — the "may attack" rider's subject.
-      - may_attack_now:
-          attacker: source
-          windowed: true
+      - if:
+          condition: { binding_present: dna_result }
+          then:
+            - select_own_permanent:
+                bind_as: dna_partner
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - other: true
+                    - dna_field_pair: { role: second, result: dna_result, first: source, cost: printed }
+                prompt: "Select your other DNA digivolution material"
+            - if:
+                condition: { binding_present: dna_partner }
+                then:
+                  - effect_initiated_dna_digivolve:
+                      target_a: source
+                      target_b: dna_partner
+                      from_hand: dna_result
+                      cost: printed
+                  # After the merge, the BanchoLeomon card is a digivolution
+                  # source of the merged permanent, so `source` resolves to the
+                  # DNA-digivolved Digimon — the "may attack" rider's subject.
+                  - if:
+                      condition: { effect_digivolved_any_digimon: true }
+                      then:
+                        - may_attack_now:
+                            attacker: source
+                            windowed: true
 
   # ─── Inherited — [Opp Turn][OPT] attack redirect ───────────────────────────
   - scope: inherited

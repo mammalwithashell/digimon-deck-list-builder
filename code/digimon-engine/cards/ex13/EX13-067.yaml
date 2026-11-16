@@ -12,8 +12,20 @@
 #   Official Q&A: with two copies, once the first copy's [Your Turn] effect has
 #   resolved you no longer have 1 or fewer Digimon, so the second can't activate.
 #
-# DCGO: none — DCGO b9a0638cd ships no EX13_067.cs. Authored from the printed
-# text + Q&A with the established idioms:
+# DCGO: EX13_067.cs now exists (it was absent at b9a0638cd). Its candidate
+# filter, EX13_067.cs:96-100, is `EqualsCardName(name) &&
+# CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)` for both
+# the hand and the trash pick, skipped when neither zone has one (:102-108).
+# Every pick and the clause gate below carry the same check as
+# `can_play_from_effect_without_cost: true` (play cost, free slot, no
+# play-by-effect prohibition, no CannotPlayFromTrash for a trash copy): CR 4.3
+# 1-3-11-1 (a card that can't be played can't be declared) and 1-3-2 (the
+# impossible play isn't carried out, so offering it is a dead choice).
+# Known divergence NOT followed: DCGO reads "... and 1 [Agumon]" (:34, :76-84,
+# one pick per matching name) and gates activation only on the suspend cost
+# (:49-54); the official printed text says "or", so one card is played, and
+# the gate keeps "nothing playable → no suspend offer".
+# Authored from the printed text + Q&A with the established idioms:
 #   - [Your Turn] on_digivolve observer (BT24-082) gated on the digivolved
 #     permanent being yours, the own-Digimon count (<= 1), this Tamer being
 #     unsuspended (payable suspend cost), and the matching branch having a
@@ -63,6 +75,7 @@ effects:
                       of: you
                       zone: [hand, trash]
                       name_is: Gabumon
+                      can_play_from_effect_without_cost: true
                     n: 1
             - all_of:
                 - event_target_name_contains: Garurumon
@@ -71,6 +84,7 @@ effects:
                       of: you
                       zone: [hand, trash]
                       name_is: Agumon
+                      can_play_from_effect_without_cost: true
                     n: 1
     trigger_if:
       event_target_owner: you
@@ -88,6 +102,7 @@ effects:
                 zones: [hand, trash]
                 bind_as: partner
                 filter:
+                  can_play_from_effect_without_cost: true
                   any_of:
                     - name_is: Gabumon
                     - name_is: Agumon
@@ -100,14 +115,14 @@ effects:
                       of: you
                       zones: [hand, trash]
                       bind_as: partner
-                      filter: { name_is: Gabumon }
+                      filter: { name_is: Gabumon, can_play_from_effect_without_cost: true }
                       prompt: "Play 1 [Gabumon] from your hand or trash without paying the cost"
                 else:
                   - select_union_zone:
                       of: you
                       zones: [hand, trash]
                       bind_as: partner
-                      filter: { name_is: Agumon }
+                      filter: { name_is: Agumon, can_play_from_effect_without_cost: true }
                       prompt: "Play 1 [Agumon] from your hand or trash without paying the cost"
       - play_union_bound_free:
           binding: partner

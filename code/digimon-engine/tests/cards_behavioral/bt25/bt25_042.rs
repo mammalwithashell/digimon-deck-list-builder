@@ -323,3 +323,113 @@ fn bt25_042_security_removed_empty_hand_no_freeplay() {
         "no new permanent (nothing to free-play)"
     );
 }
+
+// ─── Section 4 — Security-removed free play: hand-pick legality ─────────────
+//
+// DCGO BT25_042.cs:133-137 `CanPlayCardCondition`: `HasLevel && Level <= 4 &&
+// (EqualsTraits("Angel") || HasIliadTraits) && CanPlayAsNewPermanent(cardSource,
+// false, activateClass)` — a free battle-area frame and no effect-play lock.
+// DCGO has no `HasPlayCost` here and `CanPlayAsNewPermanent` does not check it
+// (GameContextDeterminarion.cs:419-432, CardSource.cs:1122-1182), so DCGO would
+// offer a Lv.2 [Angel]/[Iliad] Digi-Egg (e.g. Bukamon BT24-002). The rules
+// don't allow that: CR 4.3 7-1-1 ("playing" places a new card with a play
+// cost) and 1-3-2 (an impossible play is not carried out) — the engine follows
+// the rules and never offers a Digi-Egg.
+
+fn iliad_egg(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::DigiEgg;
+    card.level = Some(2);
+    card.dp = None;
+    card.play_cost = 0;
+    card.traits = vec!["Iliad".to_string()];
+    card
+}
+
+/// Fire ClavisAngemon's [All Turns] security-removed clause and return the
+/// non-PASS hand-pick candidates' ids (empty when no pick installs). `setup`
+/// runs before the trigger fires.
+fn offered_on_security_removed(hand: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    let mut runner = base()
+        .add_card(iliad_egg("ILIAD-EGG"))
+        .hand(0, hand)
+        .security(0, &["SEC", "SEC"])
+        .start();
+    let clavis = runner.place_on_field(0, CARD_ID, Some(0));
+    setup(&mut runner);
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOwnSecurityRemoved,
+        TriggerSource::Permanent(clavis),
+    );
+    runner.game.drain_effect_queue();
+    for _ in 0..4 {
+        let Some(v) = runner.pending_selection_view() else {
+            return Vec::new();
+        };
+        if v.kind == SelectionKind::Hand {
+            let ids: Vec<String> = runner.game.players[0]
+                .hand
+                .iter()
+                .map(|c| c.card_id(&runner.game.card_data).to_string())
+                .collect();
+            return v
+                .valid_action_ids
+                .iter()
+                .copied()
+                .filter(|&id| id != PASS)
+                .map(|id| ids[(id - PLAY_HAND_START) as usize].clone())
+                .collect();
+        }
+        if v.kind != SelectionKind::EffectChoice && !runner.pending_is_optional() {
+            return Vec::new();
+        }
+        runner.accept_optional_trigger().expect("accept the optional clause");
+    }
+    Vec::new()
+}
+
+/// Regression guard: the Lv.4 [Angel] Digimon is offered, the Lv.6 non-match
+/// is not.
+#[test]
+fn bt25_042_hand_pick_offers_playable_angel() {
+    assert_eq!(
+        offered_on_security_removed(&["ANGEL", "BIG"], |_| {}),
+        vec!["ANGEL".to_string()]
+    );
+}
+
+/// A Lv.2 [Iliad] Digi-Egg has no play cost (CR 4.3 7-1-1): not offered, even
+/// though DCGO's filter would offer it.
+#[test]
+fn bt25_042_hand_pick_excludes_iliad_digi_egg() {
+    assert_eq!(
+        offered_on_security_removed(&["ILIAD-EGG", "ANGEL"], |_| {}),
+        vec!["ANGEL".to_string()]
+    );
+}
+
+/// A full battle area: the [Angel] Digimon can't be played, so it is not
+/// offered.
+#[test]
+fn bt25_042_hand_pick_excludes_angel_when_battle_area_full() {
+    let offered = offered_on_security_removed(&["ANGEL"], |r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "no free slot ⇒ nothing offered: {offered:?}");
+}
+
+/// "You can't play Digimon by effects": not offered.
+#[test]
+fn bt25_042_hand_pick_excludes_angel_under_digimon_effect_play_lock() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let offered = offered_on_security_removed(&["ANGEL"], |r| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    });
+    assert!(offered.is_empty(), "effect-play lock ⇒ nothing offered: {offered:?}");
+}

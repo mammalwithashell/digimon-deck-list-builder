@@ -221,6 +221,7 @@ fn collect_declarative_raw_rust_fns(
         CompiledDeclarativeClause::CostReduction {
             active_when,
             when_any_ally_played,
+            when_any_ally_used,
             condition,
             amount_fn,
             pay_cost,
@@ -228,6 +229,7 @@ fn collect_declarative_raw_rust_fns(
         } => {
             collect_optional_predicate_raw_rust_fns(active_when.as_ref(), names);
             collect_optional_predicate_raw_rust_fns(when_any_ally_played.as_ref(), names);
+            collect_optional_predicate_raw_rust_fns(when_any_ally_used.as_ref(), names);
             collect_optional_predicate_raw_rust_fns(condition.as_ref(), names);
             if let Some(formula) = amount_fn {
                 collect_formula_raw_rust_fns(formula, names);
@@ -726,6 +728,7 @@ mod tests {
                     when_playing_this: true,
                     when_digivolving_this: false,
                     when_any_ally_played: None,
+                    when_any_ally_used: None,
                     when_any_ally_digivolves_into: None,
                     condition: None,
                     optional: false,

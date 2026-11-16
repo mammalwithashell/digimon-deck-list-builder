@@ -17,10 +17,14 @@
 //! <Barrier>
 //! ```
 //! Official Q&A: "Yes, you can." (the optional processing condition may be
-//! paid even when no [Richard Sampson] can be played — rule 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]).
+//! paid even when no [Richard Sampson] can be played — CR 4.3 15-7-5).
 //!
 //! # DCGO C# reference
-//! None — DCGO has no `EX13_030.cs` at `b9a0638cd`. BT23-035 Dynasmon
+//! `DCGO/Assets/Scripts/CardEffect/EX13/Yellow/EX13_030.cs` — shared
+//! OP/WD/WA, optional, OPT, gated on >=1 security (:36-47); trash the top
+//! security card, then a hand/trash pick of a [Richard Sampson] that
+//! `CanPlayAsNewPermanent(card, false, activateClass)` (:54-58 / :66-98).
+//! BT23-035 Dynasmon
 //! (`optional` + `outer_prompt` security-trash cost) and BT25-096 /
 //! BT19-099 (`select_union_zone` hand-or-trash → `play_union_bound_free`) are
 //! the YAML idioms reused.
@@ -292,7 +296,7 @@ fn ex13_030_may_decline_the_play_after_paying() {
 
 #[test]
 fn ex13_030_can_pay_even_without_richard_available() {
-    // Official Q&A "Yes, you can." / rule 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md].
+    // Official Q&A "Yes, you can." / CR 4.3 15-7-5.
     let mut r = runner_with(&[CARD_ID]);
     let sec = r.security_count(0);
     play_and_accept(&mut r);
@@ -465,4 +469,69 @@ fn ex13_030_inherited_barrier_protects_the_carrier() {
     drain(&mut r);
     assert!(on_field(&r, 0, "CARRIER"), "carrier survives");
     assert_eq!(r.security_count(0), sec - 1);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 6 — candidate legality (select-hand playability audit, 2026-11-13)
+// ════════════════════════════════════════════════════════════════════════════
+// DCGO EX13_030.cs:54-58 offers only `EqualsCardName("Richard Sampson") &&
+// CardEffectCommons.CanPlayAsNewPermanent(cardSource, false, activateClass)`,
+// per root (hand / trash, :66-67). A Richard Sampson the play would refuse is
+// not a legal choice (CR 4.3 1-3-2: an impossible action is not carried out;
+// 7-1-1: playing places the card onto the field) — offering it would put a
+// dead pick in the action space. The security-trash cost stays payable
+// regardless (CR 4.3 15-7-5).
+
+/// Non-PASS choices at the pending prompt (0 when nothing is pending).
+fn offered_count(r: &DebugRunner) -> usize {
+    r.pending_selection_view()
+        .map(|v| v.valid_action_ids.iter().filter(|&&a| a != PASS).count())
+        .unwrap_or(0)
+}
+
+/// "You can't play Tamers by effects": Richard Sampson in hand is not offered;
+/// the security card is still trashed (CR 4.3 15-7-5) and Richard stays in hand.
+#[test]
+fn ex13_030_richard_not_offered_when_tamer_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = runner_with(&[CARD_ID, RICHARD]);
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let sec = r.security_count(0);
+    play_and_accept(&mut r);
+    assert_eq!(
+        offered_count(&r),
+        0,
+        "an unplayable Richard Sampson (EX13-071) is not offered: {:?}",
+        r.pending_selection_view()
+    );
+    drain(&mut r);
+    assert_eq!(r.security_count(0), sec - 1, "the cost is still paid");
+    assert!(!on_field(&r, 0, RICHARD));
+}
+
+/// "You can't play cards from the trash" (`CannotPlayFromTrash`): a Richard
+/// Sampson in the trash is not offered — the trash-origin play refuses it.
+#[test]
+fn ex13_030_richard_in_trash_not_offered_while_trash_play_is_locked() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = runner_with(&[CARD_ID]);
+    inject_trash(&mut r, RICHARD);
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+    );
+    play_and_accept(&mut r);
+    assert_eq!(
+        offered_count(&r),
+        0,
+        "the trash copy can't be played: {:?}",
+        r.pending_selection_view()
+    );
+    drain(&mut r);
+    assert!(!on_field(&r, 0, RICHARD));
 }

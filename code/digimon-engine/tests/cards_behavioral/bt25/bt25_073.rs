@@ -665,6 +665,174 @@ fn bt25_073_decline_hand_pick_after_paying_cost_still_trashes_link_card() {
     );
 }
 
+// ─── Section 6b — the hand pick offers only cards that can be played / used ──
+//
+// DCGO BT25_073.cs:131-138 `CanSelectCardCondition`: `EqualsTraits("TS") &&
+// GetCostItself <= 5 && ((IsOption && !CanNotPlayThisOption) || (HasPlayCost
+// && CanPlayAsNewPermanent(cardSource, false, activateClass)))`.
+// - CR 4.3 7-1-1: a Digi-Egg has no play cost (it is hatched, 4-18): never a
+//   "play" pick.
+// - Digimon / Tamer: an empty frame and no "can't play by effects" lock.
+// - Option (and a DUAL, used with its Option information, CR 4.3 4-6-2): no
+//   "can't use Option cards" lock, and its colour requirement met even though
+//   no cost is paid (CR 4.3 4-22-1..3; official rulings Q1500, Q2785;
+//   DCGO `CanNotPlayThisOption` includes `!MatchColorRequirement`).
+
+fn ts_egg(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::DigiEgg;
+    card.level = Some(2);
+    card.dp = None;
+    card.play_cost = 0;
+    card.traits = vec!["TS".to_string()];
+    card
+}
+
+fn ts_option_green(id: &str) -> CardData {
+    let mut card = ts_option(id, 3);
+    card.colors = vec![digimon_engine::enums::CardColor::Green];
+    card
+}
+
+/// Dragomon (BT25-073, black) is played next to HOST-A (red) carrying one link
+/// card; the link card is trashed; returns the hand-pick candidates' ids
+/// (empty when no pick opens). `setup` runs before Dragomon is played.
+fn offered_after_trashing_link(extra: &[&str], setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut r = base()
+        .dsl_card("BT26-033")
+        .expect("Jupitermon (BT26-033) compiles")
+        .dsl_card("BT26-056")
+        .expect("Cerberusmon: Werewolf Mode (BT26-056) compiles")
+        .add_card(ts_egg("TS-EGG"))
+        .add_card(ts_option_green("TS-OPT-GREEN"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    let host_a = r.place_on_field(0, "HOST-A", Some(0));
+    let _link_a1 = r.push_linked_owned(host_a, "LINK-A1", 0);
+    for id in extra {
+        let data_idx = r.game.card_data.iter().position(|c| c.card_id == *id).unwrap();
+        let next = r.game.next_card_index();
+        r.game.players[0].hand.push(CardSource::new(data_idx, 0, next));
+    }
+    advance_to_main(&mut r);
+    setup(&mut r);
+    r.play(0, 0).expect("Dragomon played");
+    r.game.resolve_selection(0, encode_attack(0, host_a.index as u16)).unwrap();
+    r.game.resolve_selection(0, HAND_EFFECT_START).unwrap();
+    let Some(p) = r.game.pending_selection.as_ref() else {
+        return Vec::new();
+    };
+    let hand: Vec<String> = r.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    let mut ids: Vec<String> = p
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[(a - PLAY_HAND_START) as usize].clone())
+        .collect();
+    ids.sort();
+    ids
+}
+
+#[test]
+fn bt25_073_hand_pick_excludes_ts_digi_egg() {
+    assert_eq!(
+        offered_after_trashing_link(&["TS-EGG", "TS-DIGI-5"], |_| {}),
+        vec!["TS-DIGI-5".to_string()],
+        "a [TS] Digi-Egg has no play cost: not offered"
+    );
+}
+
+#[test]
+fn bt25_073_hand_pick_excludes_option_whose_colour_requirement_is_unmet() {
+    assert_eq!(
+        offered_after_trashing_link(&["TS-OPT-GREEN", "TS-OPT-5"], |_| {}),
+        vec!["TS-OPT-5".to_string()],
+        "a green Option can't be used with only black (Dragomon) and red (HOST-A) on the field"
+    );
+}
+
+#[test]
+fn bt25_073_hand_pick_excludes_options_when_options_cannot_be_used() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let lock = |r: &mut DebugRunner| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+        );
+    };
+    assert_eq!(
+        offered_after_trashing_link(&["TS-OPT-5", "TS-DIGI-5"], lock),
+        vec!["TS-DIGI-5".to_string()]
+    );
+}
+
+#[test]
+fn bt25_073_hand_pick_excludes_digimon_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let lock = |r: &mut DebugRunner| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+        );
+    };
+    assert_eq!(
+        offered_after_trashing_link(&["TS-OPT-5", "TS-DIGI-5"], lock),
+        vec!["TS-OPT-5".to_string()]
+    );
+}
+
+#[test]
+fn bt25_073_hand_pick_excludes_digimon_when_battle_area_full() {
+    assert_eq!(
+        offered_after_trashing_link(&["TS-OPT-5", "TS-DIGI-5"], |r| {
+            // Dragomon takes the last free slot.
+            r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8 + 1;
+        }),
+        vec!["TS-OPT-5".to_string()],
+        "no empty frame for the Digimon; the Option is still usable"
+    );
+}
+
+/// DUAL cards are used with their Option information here (CR 4.3 4-6-2).
+/// Jupitermon (BT26-033, Option yellow/red, use cost 2 + 1 per own security
+/// card = 2 here) and Cerberusmon: Werewolf Mode (BT26-056, Option black, use
+/// cost 3) both carry `<Use Req. ([TS] trait)>`, met by Dragomon's [TS]
+/// (CR 4.3 16-42-3), so both are usable. Regression guard.
+#[test]
+fn bt25_073_hand_pick_offers_ts_duals_through_use_req() {
+    assert_eq!(
+        offered_after_trashing_link(&["BT26-033", "BT26-056"], |_| {}),
+        vec!["BT26-033".to_string(), "BT26-056".to_string()]
+    );
+}
+
+/// A DUAL is used, never played (CR 4.3 4-6-2; it prints "Can't play to the
+/// field"): under "you can't use Option cards" it is not offered at all.
+#[test]
+fn bt25_073_hand_pick_excludes_dual_when_options_cannot_be_used() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let lock = |r: &mut DebugRunner| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+        );
+    };
+    assert_eq!(
+        offered_after_trashing_link(&["BT26-056", "TS-DIGI-5"], lock),
+        vec!["TS-DIGI-5".to_string()]
+    );
+}
+
 // ─── Section 7 — Inherited leave-replacement ─────────────────────────────────
 
 // Per rule 15-3 ("Inherited effects (15-3): an effect gained from a

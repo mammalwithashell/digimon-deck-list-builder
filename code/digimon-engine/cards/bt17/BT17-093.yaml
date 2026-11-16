@@ -186,12 +186,16 @@ effects:
           of: you
           bind_as: tamer
           optional: true
+          # DCGO BT17_093.cs:84-95 HasProperTamer: IsTamer && name &&
+          # CanPlayAsNewPermanent(source, false) — only a Tamer the free play can
+          # place (free slot, no play prohibition; CR 4.3 1-3-2) is offered.
           filter:
             all_of:
               - kind: tamer
               - any_of:
                   - name_contains: "Tai Kamiya"
                   - name_contains: "Kari Kamiya"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 Tamer w/[Tai Kamiya] or [Kari Kamiya] in name (free)"
       - play_from_hand_free: { of: you, hand_index: tamer }
 

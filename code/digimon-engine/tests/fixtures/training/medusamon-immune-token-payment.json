@@ -266,17 +266,6 @@
       "winner_id": null
     },
     {
-      "action_id": 100,
-      "is_game_over": false,
-      "memory_after": 1,
-      "memory_before": 1,
-      "phase": "SelectTarget",
-      "player_id": 1,
-      "step": 26,
-      "turn": 4,
-      "winner_id": null
-    },
-    {
       "action_id": 30,
       "is_game_over": false,
       "memory_after": 2,
@@ -497,17 +486,6 @@
       "winner_id": null
     },
     {
-      "action_id": 100,
-      "is_game_over": false,
-      "memory_after": 3,
-      "memory_before": 3,
-      "phase": "SelectTarget",
-      "player_id": 1,
-      "step": 49,
-      "turn": 6,
-      "winner_id": null
-    },
-    {
       "action_id": 30,
       "is_game_over": false,
       "memory_after": 4,
@@ -585,6 +563,17 @@
       "winner_id": null
     },
     {
+      "action_id": 62,
+      "is_game_over": false,
+      "memory_after": 5,
+      "memory_before": 5,
+      "phase": "SelectTarget",
+      "player_id": 1,
+      "step": 58,
+      "turn": 6,
+      "winner_id": null
+    },
+    {
       "action_id": 144,
       "is_game_over": false,
       "memory_after": 5,
@@ -597,6 +586,17 @@
     },
     {
       "action_id": 102,
+      "is_game_over": false,
+      "memory_after": 5,
+      "memory_before": 5,
+      "phase": "SelectTarget",
+      "player_id": 1,
+      "step": 60,
+      "turn": 6,
+      "winner_id": null
+    },
+    {
+      "action_id": 62,
       "is_game_over": false,
       "memory_after": 5,
       "memory_before": 5,
@@ -653,10 +653,21 @@
     {
       "action_id": 0,
       "is_game_over": false,
-      "memory_after": 3,
+      "memory_after": 2,
       "memory_before": 2,
       "phase": "SelectHand",
       "player_id": 2,
+      "step": 65,
+      "turn": 6,
+      "winner_id": null
+    },
+    {
+      "action_id": 30,
+      "is_game_over": false,
+      "memory_after": 3,
+      "memory_before": 2,
+      "phase": "SelectEffectChoice",
+      "player_id": 1,
       "step": 65,
       "turn": 6,
       "winner_id": null

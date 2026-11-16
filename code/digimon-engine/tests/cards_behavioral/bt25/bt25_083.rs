@@ -558,6 +558,62 @@ fn bt25_083_wd_wa_trashes_option_source_then_offers_reduced_use() {
     );
 }
 
+/// Gallantmon (BT23-014)'s "their effects can't play Digimon or Tamers from
+/// the trash" (`CannotPlayFromTrash`) does not stop USING an Option from the
+/// trash: using is not playing (CR 4.3 7-1-1 vs 9-1-1), DCGO's lock is a
+/// `CanNotPutFieldClass` on `IsDigimon || IsTamer` (BT23_014.cs:46-49), and
+/// BT25-083's trash pick filters on `IsOption && !CanNotPlayThisOption`
+/// (BT25_083.cs:190-193), which never reads that lock. The reduced-cost use
+/// still happens: 6 printed - 3 = 3 memory paid.
+#[test]
+fn bt25_083_wd_wa_reduced_trash_option_use_ignores_digimon_tamer_trash_lock() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = base()
+        .add_card(make_option("STACK-OPT", 4, &[]))
+        .add_card(make_option("TM-OPT-TRASH", 6, &["Three Musketeers"]))
+        .memory(10)
+        .start();
+    runner.register_effect("TM-OPT-TRASH", Arc::new(OptionMainNoop));
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+    );
+
+    let ladydevimon = runner.place_on_field(0, CARD_ID, Some(0));
+    let host = runner.place_on_field(0, "LV4-PLAIN", Some(0));
+    runner.push_source(host, "STACK-OPT");
+    {
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TM-OPT-TRASH")
+            .unwrap();
+        let ci = runner.game.next_card_index();
+        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+    }
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
+    runner.game.drain_effect_queue();
+    resolve_trigger_order_if_present(&mut runner);
+    decline_clause1_union_pick_if_present(&mut runner);
+    runner.auto_resolve().expect("pay cost + use reduced Option");
+
+    assert_eq!(
+        runner.game.players[0].battle_area[host.index as usize].card_sources.len(),
+        1,
+        "the Option digivolution source was trashed as the cost"
+    );
+    assert_eq!(
+        runner.game.memory, 7,
+        "the trash Option was used under the Digimon/Tamer trash lock (paid 6 - 3 = 3)"
+    );
+}
+
 /// Drain a leading `TriggerOrder` selection (installed whenever 2+ clauses
 /// share the same firing timing), picking the first offered order.
 fn resolve_trigger_order_if_present(runner: &mut DebugRunner) {

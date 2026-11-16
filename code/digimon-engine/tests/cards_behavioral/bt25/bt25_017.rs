@@ -311,3 +311,89 @@ fn bt25_017_has_inherited_security_attack_plus_one() {
         "BT25-017 must grant inherited <Security A. +1> (SecurityAttackPlus)"
     );
 }
+
+// candidate legality marker (select-hand audit batch 12)
+
+// ─── Section 5 — [Your Turn] digivolve into [Apollomon]: candidate legality ──
+//
+// DCGO BT25_017.cs:150-153 `CanSelectCardCondition = EqualsCardName("Apollomon")`
+// passed to `CardEffectCommons.DigivolveIntoHandOrTrashCard(targetPermanent:
+// this, payCost: true, reduceCost: 2, isHand: true)` (BT25_017.cs:157-166),
+// which offers only `IsDigimon && cardCondition && !CanNotEvolve(target) &&
+// CanPlayCardTargetFrame(target frame, PayCost: true, ...)`
+// (CardEffectCommons.cs:859-881). "[Apollomon]" is a card name, matched
+// exactly (DCGO `EqualsCardName`), not "a card with Apollomon in its name".
+// CR 4.3 1-3-11-1: a card can be declared for digivolution only if it can be
+// digivolved and its cost paid.
+
+/// A Lv.6 whose name only contains "Apollomon".
+fn apollomon_variant(card_id: &str) -> CardData {
+    let mut card = apollomon(card_id);
+    card.card_name = "Apollomon Whispered".to_string();
+    card
+}
+
+fn blue_costly(card_id: &str) -> CardData {
+    let mut card = blue_lv4(card_id);
+    card.play_cost = 9;
+    card
+}
+
+/// Flaremon on the field, `evo_id` in hand, then play `blue_id` from `memory`.
+fn apollo_runner(evo_id: &str, blue_id: &str, memory: i16) -> (DebugRunner, PermanentHandle) {
+    let mut runner = base()
+        .add_card(apollomon_variant("APOLLO-VARIANT"))
+        .add_card(blue_costly("BLUE-9"))
+        .memory(memory)
+        .start();
+    runner.game.turn_count = 1;
+    let flaremon = place_flaremon(&mut runner);
+    push_to_hand(&mut runner, 0, evo_id);
+    let blue = push_to_hand(&mut runner, 0, blue_id);
+    runner.play(0, blue);
+    (runner, flaremon)
+}
+
+/// Positive (regression guard): the digivolve into [Apollomon] pays 4 - 2 = 2.
+#[test]
+fn bt25_017_your_turn_digivolves_into_apollomon_for_two_less() {
+    let (mut runner, flaremon) = apollo_runner("APOLLO", "BLUE-LV4", 10);
+    let memory_before = runner.memory();
+    assert!(runner.pending_selection().is_some(), "the optional digivolve is offered");
+    runner.auto_resolve().expect("take the digivolve");
+    assert_eq!(
+        runner.game.player(0).battle_area[flaremon.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "APOLLO"
+    );
+    assert_eq!(runner.memory(), memory_before - 2, "digivolution cost 4 reduced by 2");
+}
+
+/// A card whose name merely contains "Apollomon" is not [Apollomon].
+#[test]
+fn bt25_017_card_only_containing_apollomon_in_its_name_not_offered() {
+    let (runner, _) = apollo_runner("APOLLO-VARIANT", "BLUE-LV4", 10);
+    assert!(
+        runner.pending_selection().is_none(),
+        "\"Apollomon Whispered\" is not [Apollomon]: nothing is offered"
+    );
+}
+
+/// Memory 0, the blue Digimon costs 9 -> -9. Digivolving for 2 would reach -11:
+/// not payable, not offered.
+#[test]
+fn bt25_017_unaffordable_apollomon_not_offered() {
+    let (runner, flaremon) = apollo_runner("APOLLO", "BLUE-9", 0);
+    assert_eq!(runner.memory(), -9);
+    assert!(
+        runner.pending_selection().is_none(),
+        "the 2-cost digivolve can't be paid at -9: nothing is offered"
+    );
+    assert_eq!(
+        runner.game.player(0).battle_area[flaremon.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        CARD_ID
+    );
+}

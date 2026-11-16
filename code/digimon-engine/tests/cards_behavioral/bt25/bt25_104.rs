@@ -618,3 +618,166 @@ mod burst_digivolve {
         assert_two_tamers_choice(SPEC);
     }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 5 — Free Tamer pick legality (select-hand audit 2026-11-13)
+// ════════════════════════════════════════════════════════════════════════════
+//
+// DCGO BT25_104.cs:281-285 `CanSelectTamerCondition`: `IsTamer &&
+// CanPlayAsNewPermanent(card, payCost: false, activateClass)`; the inline
+// [WD][WA] clause runs the same Option [Main] (`ActivateMainOfOptionSide`,
+// BT25_104.cs:126). `CanPlayAsNewPermanent` (GameContextDeterminarion.cs:
+// 419-432) needs an empty battle-area frame and no play prohibition
+// (`CanEnterField`). A Tamer that can't be played stays in hand (CR 4.3
+// 7-1-2-3, 1-3-2), so it is not a choice. YAML: both Tamer picks add
+// `can_play_from_effect_without_cost: true`.
+
+/// The non-PASS hand candidates of the pending pick, as sorted card ids; empty
+/// when no hand pick is pending.
+fn offered_hand_ids(runner: &DebugRunner, p: u8) -> Vec<String> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    use digimon_engine::selection::SelectionKind;
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if !matches!(view.kind, SelectionKind::Hand) {
+        return Vec::new();
+    }
+    let hand = &runner.game.players[p as usize].hand;
+    let id_at = |i: usize| hand.get(i).map(|c| c.card_id(&runner.game.card_data).to_string());
+    let mut ids: Vec<String> = match view.card_choice {
+        Some(choice) => choice
+            .rows
+            .iter()
+            .filter(|row| {
+                matches!(row.operation, CardChoiceOperation::CommitCard)
+                    && matches!(row.zone, Some(CardChoiceZone::Hand))
+            })
+            .filter_map(|row| row.position.as_deref()?.parse::<usize>().ok())
+            .filter_map(id_at)
+            .collect(),
+        None => view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&a| a != PASS)
+            .filter_map(|a| a.checked_sub(PLAY_HAND_START))
+            .filter_map(|i| id_at(i as usize))
+            .collect(),
+    };
+    ids.sort();
+    ids
+}
+
+/// Answer the mandatory "-15000 DP" opponent pick (any non-hand prompt of
+/// player 0) with its first legal action, so the Tamer pick comes up next.
+fn answer_dp_pick(runner: &mut DebugRunner) {
+    use digimon_engine::selection::SelectionKind;
+    if let Some(view) = runner.pending_selection_view() {
+        if !matches!(view.kind, SelectionKind::Hand) {
+            let action = view.valid_action_ids[0];
+            runner
+                .execute_action(view.selecting_player, action)
+                .expect("answer the -15000 DP pick");
+        }
+    }
+}
+
+fn tamer_pick_runner(hand: &[&str]) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-104")
+        .expect("BT25-104 in pack")
+        .add_card(make_opp_digimon("OPP1"))
+        .add_card(make_tamer("TAMER1"))
+        .add_card(make_filler("FILL"))
+        .hand(0, hand)
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    runner
+}
+
+fn prohibit_tamer_effect_play(runner: &mut DebugRunner) {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Seat BT25-104 and an opponent Digimon, run `setup`, fire the inline
+/// [When Digivolving] clause, answer the DP pick, return the Tamer candidates.
+fn wd_tamer_offered(setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut runner = tamer_pick_runner(&["TAMER1"]);
+    let shine = runner.place_on_field(0, "BT25-104", Some(0));
+    runner.place_on_field(1, "OPP1", Some(0));
+    setup(&mut runner);
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(shine));
+    runner.game.drain_effect_queue();
+    answer_dp_pick(&mut runner);
+    offered_hand_ids(&runner, 0)
+}
+
+/// Use the Option face from hand (TAMER1 also in hand), run `setup` first,
+/// answer the DP pick, return the Tamer candidates.
+fn option_main_tamer_offered(setup: impl FnOnce(&mut DebugRunner)) -> Vec<String> {
+    let mut runner = tamer_pick_runner(&["BT25-104", "TAMER1"]);
+    runner.place_on_field(1, "OPP1", Some(0));
+    setup(&mut runner);
+    runner.game.activate_hand_main(0, 0);
+    runner.game.drain_effect_queue();
+    answer_dp_pick(&mut runner);
+    offered_hand_ids(&runner, 0)
+}
+
+/// Regression guard: with nothing in the way the Tamer is offered.
+#[test]
+fn bt25_104_wd_tamer_pick_offers_playable_tamer() {
+    assert_eq!(wd_tamer_offered(|_| {}), vec!["TAMER1".to_string()]);
+}
+
+/// "You can't play Tamers by effects": the Tamer is not offered.
+#[test]
+fn bt25_104_wd_tamer_pick_excludes_tamer_under_effect_play_prohibition() {
+    let offered = wd_tamer_offered(prohibit_tamer_effect_play);
+    assert!(offered.is_empty(), "{offered:?}");
+}
+
+/// A full battle area: the Tamer is not offered.
+#[test]
+fn bt25_104_wd_tamer_pick_excludes_tamer_when_battle_area_full() {
+    let offered = wd_tamer_offered(|r| {
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+}
+
+/// Regression guard: the Option-face [Main] offers the Tamer.
+#[test]
+fn bt25_104_option_main_tamer_pick_offers_playable_tamer() {
+    assert_eq!(option_main_tamer_offered(|_| {}), vec!["TAMER1".to_string()]);
+}
+
+/// The Option-face [Main] under "can't play Tamers by effects": not offered.
+#[test]
+fn bt25_104_option_main_tamer_pick_excludes_tamer_under_effect_play_prohibition() {
+    let offered = option_main_tamer_offered(prohibit_tamer_effect_play);
+    assert!(offered.is_empty(), "{offered:?}");
+}
+
+/// The Option-face [Main] with a full battle area: not offered.
+#[test]
+fn bt25_104_option_main_tamer_pick_excludes_tamer_when_battle_area_full() {
+    let offered = option_main_tamer_offered(|r| {
+        r.place_on_field(0, "FILL", None);
+        r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    });
+    assert!(offered.is_empty(), "{offered:?}");
+}

@@ -2177,6 +2177,20 @@ fn matching_hand_candidates(
     filter: &CompiledPredicate,
     limit: usize,
 ) -> Vec<CardHandle> {
+    matching_hand_candidates_with_bindings(ctx, player, filter, limit, None)
+}
+
+/// [`matching_hand_candidates`] with the replacement's bindings in scope, so
+/// a `choose.card_filter` can name `replacement_subject`
+/// (`can_digivolve_onto: replacement_subject`, BT17-097).
+/// G-DSL-CAN-DIGIVOLVE-ONTO-REPLACEMENT-SUBJECT.
+fn matching_hand_candidates_with_bindings(
+    ctx: &EffectContext<'_>,
+    player: PlayerId,
+    filter: &CompiledPredicate,
+    limit: usize,
+    bindings: Option<&Bindings>,
+) -> Vec<CardHandle> {
     let read_ctx = EffectReadContext::new(ctx.game, ctx.source_card, ctx.source_permanent, player);
     ctx.game
         .player(player)
@@ -2191,7 +2205,16 @@ fn matching_hand_candidates(
             if ctx.game.card_reserved_by_pending_digixros(card) {
                 return None;
             }
-            eval_predicate(filter, &read_ctx, PredicateSubject::Card(card)).then_some(card)
+            match bindings {
+                Some(bindings) => crate::dsl_cards::predicate::eval_predicate_with_bindings(
+                    filter,
+                    &read_ctx,
+                    PredicateSubject::Card(card),
+                    Some(bindings),
+                ),
+                None => eval_predicate(filter, &read_ctx, PredicateSubject::Card(card)),
+            }
+            .then_some(card)
         })
         .collect()
 }
@@ -2774,11 +2797,20 @@ fn install_delay_hand_digivolve_after_paid(
     else {
         return;
     };
-    let candidates = matching_hand_candidates(
+    // The choose filter sees the would-be-deleted Digimon as
+    // `replacement_subject`, as the generic replacement process does, so
+    // `can_digivolve_onto: replacement_subject` offers only the cards that can
+    // digivolve onto it (DCGO BT17_097.cs:137 / DigivolveIntoHandOrTrashCard).
+    let mut bindings = Bindings::new();
+    if let Some(handle) = subject.permanent() {
+        bindings.insert_permanent("replacement_subject", handle);
+    }
+    let candidates = matching_hand_candidates_with_bindings(
         ctx,
         continuation.player,
         &continuation.filter,
         HAND_MAIN_LIMIT,
+        Some(&bindings),
     );
     if candidates.is_empty() {
         return;

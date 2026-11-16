@@ -11,10 +11,16 @@
 #   [Knightmon] in their texts are played, <De-Digivolve 1> 1 of your
 #   opponent's Digimon.
 #
-# DCGO C# reference: none at b9a0638cd (no EX13_058.cs). Printed text governs.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_058.cs.
+# The hand pick (EX13_058.cs:32-35) offers `HasText("Knightmon") &&
+# GetCostItself <= 4 && CanPlayOrUse(card, activateClass)` (PlayEffects.cs:
+# 286-292: a usable Option -- colour requirement met, no use lock -- or a
+# Digimon/Tamer with a play cost that can be played into an empty frame), so
+# the filter carries `can_play_or_use_from_effect: true` (CR 4.3 1-3-2, 4-22,
+# 7-1-1; G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY).
 #
 # DSL: ST24-06 free play-or-use (`play_or_use_cost_lte: 4` +
-# `play_or_use_from_hand { cost_delta: free }`); EX13-062-style keyword auras
+# `can_play_or_use_from_effect` + `play_or_use_from_hand { cost_delta: free }`); EX13-062-style keyword auras
 # over own `[Knightmon]`-text Digimon gated `opponents_turn`; inherited
 # `on_ally_played` (`event_target_in_text_contains`) → De-Digivolve 1.
 
@@ -52,6 +58,7 @@ effects:
             all_of:
               - in_text_contains: Knightmon
               - play_or_use_cost_lte: 4
+              - can_play_or_use_from_effect: true
           prompt: "You may play or use 1 card with [Knightmon] in its text and a play or use cost of 4 or less without paying the cost"
       - if:
           condition: { binding_present: pick }

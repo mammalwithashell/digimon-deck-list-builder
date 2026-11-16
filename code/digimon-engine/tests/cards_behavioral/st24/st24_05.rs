@@ -253,3 +253,71 @@ fn st24_05_non_data_squad_tamer_not_playable() {
         "a non-[DATA SQUAD] Tamer is not playable by this effect"
     );
 }
+
+// ─── Section 3 — Hand-pick legality ──────────────────────────────────────────
+// DCGO ST24_05.cs:56-61 `HasTamerInHand`: `EqualsTraits("DATA SQUAD") &&
+// IsTamer && CanPlayAsNewPermanent(source, false, activateClass)`, and
+// `CanPlayAsNewPermanent` (GameContextDeterminarion.cs:419-432) needs an empty
+// battle-area frame the card can be played into. CR 4.3 1-3-2: a play that
+// can't happen is not carried out, so the Tamer is not a legal choice.
+
+/// A full battle area: the [DATA SQUAD] Tamer can't be played, so no pick.
+#[test]
+fn st24_05_no_pick_when_battle_area_full() {
+    let mut runner = base();
+    runner.set_first_player(0);
+    push_to_hand(&mut runner, 0, "DS-TAMER");
+    let geo = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    let hand_before = runner.hand_size(0);
+    runner.fire_on_play(0, geo.index as usize);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "a Tamer that can't be played is not offered; got {:?}",
+        runner.pending_selection_view().map(|v| v.prompt)
+    );
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), hand_before);
+}
+
+/// "You can't play Tamers by effects": the Tamer is not offered.
+#[test]
+fn st24_05_no_pick_when_effect_tamer_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = base();
+    runner.set_first_player(0);
+    push_to_hand(&mut runner, 0, "DS-TAMER");
+    let geo = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let hand_before = runner.hand_size(0);
+    runner.fire_on_play(0, geo.index as usize);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "a prohibited Tamer play is not offered; got {:?}",
+        runner.pending_selection_view().map(|v| v.prompt)
+    );
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), hand_before);
+}
+
+/// Regression guard: a Digimon-only play lock does not hide the Tamer.
+#[test]
+fn st24_05_digimon_play_lock_still_offers_tamer() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = base();
+    runner.set_first_player(0);
+    push_to_hand(&mut runner, 0, "DS-TAMER");
+    let geo = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    runner.fire_on_play(0, geo.index as usize);
+    let view = runner.pending_selection_view().expect("the Tamer is still offered");
+    assert_eq!(view.valid_action_ids.iter().filter(|&&id| id != digimon_engine::action::space::PASS).count(), 1);
+}

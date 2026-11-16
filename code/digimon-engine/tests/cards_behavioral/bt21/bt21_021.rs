@@ -953,3 +953,155 @@ fn bt21_021_alt_path_lv4_xros_heart_or_hero_cost3_present() {
         "must have a Digivolve alt-path with cost 3 (Lv.4 Xros Heart / Hero)"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 6 — [End of Attack] candidate legality + cost
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Printed: "play 1 CARD with the [Xros Heart], [Blue Flare] or [Hero] trait
+// from your hand with the play cost reduced by 5". DCGO BT21_021.cs:352-362
+// offers `IsDigimon || IsTamer` with one of the traits (so a Tamer is a legal
+// pick), registers a real "-5" `ChangeCostClass` (380-460) and plays with
+// `payCost: true` (478-484). DCGO's selection has no playability or memory
+// check, so it can offer a card the play then refuses (field full, play
+// prohibition, cost the owner can't pay). The rules forbid that choice: CR 4.3
+// 1-3-11-1 (a card can't be declared for play unless it can be played AND its
+// cost paid) and 1-3-2; so the filter adds the play check and the reduced-cost
+// affordability check.
+
+/// End of Attack with the given hand; returns (runner, non-PASS hand picks as
+/// card ids).
+fn end_of_attack_offered(
+    extra: Vec<digimon_engine::card_data::CardData>,
+    hand: &[&str],
+    memory: i16,
+) -> (DebugRunner, Vec<String>) {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT21-021 YAML parses");
+    for c in extra {
+        b = b.add_card(c);
+    }
+    let mut runner = b.memory(memory).start();
+    for h in hand {
+        push_to_hand(&mut runner, 0, h);
+    }
+    let omni_perm = runner.place_on_field(0, "BT21-021", Some(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfAttack,
+        TriggerSource::Permanent(omni_perm),
+    );
+    runner.game.drain_effect_queue();
+    let Some(view) = runner.pending_selection_view() else {
+        return (runner, Vec::new());
+    };
+    let ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS && id >= PLAY_HAND_START)
+        .map(|id| ids[(id - PLAY_HAND_START) as usize].clone())
+        .collect();
+    offered.sort();
+    (runner, offered)
+}
+
+fn xros_heart_tamer(id: &str) -> digimon_engine::card_data::CardData {
+    let mut t = make_tamer(id);
+    t.traits = vec!["Xros Heart".to_string()];
+    t
+}
+
+/// "Reduced by 5", not "costs 0": a cost-6 [Xros Heart] Digimon costs 1.
+#[test]
+fn bt21_021_end_of_attack_play_cost_is_reduced_by_five() {
+    let (mut runner, offered) =
+        end_of_attack_offered(vec![make_xros_heart_lv4("XH-HAND")], &["XH-HAND"], 5);
+    assert_eq!(offered, vec!["XH-HAND".to_string()]);
+    let action = digimon_engine::action::space::PLAY_HAND_START;
+    runner.execute_action(0, action).expect("pick XH-HAND");
+    runner.auto_resolve().expect("resolve play + self-delete");
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "XH-HAND"),
+        "XH-HAND is played"
+    );
+    assert_eq!(runner.memory(), 5 - 1, "play cost 6 reduced by 5 = 1 memory paid");
+}
+
+/// Printed "1 card with the ... trait": an [Xros Heart] Tamer is a legal pick
+/// (DCGO `IsDigimon || IsTamer`).
+#[test]
+fn bt21_021_end_of_attack_offers_xros_heart_tamer() {
+    let (_runner, offered) =
+        end_of_attack_offered(vec![xros_heart_tamer("XH-TAMER")], &["XH-TAMER"], 5);
+    assert_eq!(offered, vec!["XH-TAMER".to_string()]);
+}
+
+/// A card whose reduced cost can't be paid (20 - 5 = 15 from 0 memory goes past
+/// -10) is not offered; the payable one is.
+#[test]
+fn bt21_021_end_of_attack_excludes_unaffordable_card() {
+    let mut pricey = make_xros_heart_lv4("XH-PRICEY");
+    pricey.play_cost = 20;
+    let (_runner, offered) = end_of_attack_offered(
+        vec![pricey, make_xros_heart_lv4("XH-HAND")],
+        &["XH-PRICEY", "XH-HAND"],
+        0,
+    );
+    assert_eq!(offered, vec!["XH-HAND".to_string()]);
+}
+
+/// The reduction is priced: a cost-15 card (reduced to 10) IS payable from 0
+/// memory (0 - 10 = -10, the floor). Regression guard.
+#[test]
+fn bt21_021_end_of_attack_offers_card_payable_only_after_reduction() {
+    let mut edge = make_xros_heart_lv4("XH-EDGE");
+    edge.play_cost = 15;
+    let (_runner, offered) = end_of_attack_offered(vec![edge], &["XH-EDGE"], 0);
+    assert_eq!(offered, vec!["XH-EDGE".to_string()]);
+}
+
+/// "You can't play Digimon by effects": the [Xros Heart] Digimon is not offered,
+/// the [Xros Heart] Tamer still is.
+#[test]
+fn bt21_021_end_of_attack_excludes_digimon_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT21-021 YAML parses")
+        .add_card(make_xros_heart_lv4("XH-HAND"))
+        .add_card(xros_heart_tamer("XH-TAMER"))
+        .memory(5)
+        .start();
+    push_to_hand(&mut runner, 0, "XH-HAND");
+    push_to_hand(&mut runner, 0, "XH-TAMER");
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let omni_perm = runner.place_on_field(0, "BT21-021", Some(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfAttack,
+        TriggerSource::Permanent(omni_perm),
+    );
+    runner.game.drain_effect_queue();
+    let view = runner.pending_selection_view().expect("the Tamer is still offered");
+    let picks: Vec<u16> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS && id >= PLAY_HAND_START)
+        .collect();
+    assert_eq!(picks, vec![PLAY_HAND_START + 1], "only XH-TAMER (hand slot 1) is offered");
+}

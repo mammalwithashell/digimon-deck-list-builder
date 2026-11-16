@@ -998,6 +998,15 @@ pub struct Game {
     /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
     pub(crate) interactive_option_use_reducer_prompted: bool,
 
+    /// The interactive Option-use cost reducers already offered for the
+    /// in-flight Option use (accepted, paid or declined), so `play_option_core`
+    /// offers each one once and then the next (Armalizamon BT25-049 and Tomoro
+    /// Tenma BT25-090 both apply to one use, as in DCGO). Cleared with
+    /// `interactive_option_use_reducer_prompted` once the use is priced.
+    /// G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (review).
+    pub(crate) interactive_option_use_reducers_processed:
+        Vec<crate::game_actions::CostReductionKey>,
+
     /// Armed by `use_option_from` once an Option's use cost is paid; consumed
     /// by `fire_on_use_option_observers` AFTER the Option's own body has
     /// fully resolved. Lives on `Game` (not on `PendingOption`) because a body

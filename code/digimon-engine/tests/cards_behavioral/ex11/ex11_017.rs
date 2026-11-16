@@ -1412,3 +1412,147 @@ fn ex11_017_locked_digimon_cannot_declare_attack() {
         "the locked Digimon must remain unsuspended"
     );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY)
+//
+// DCGO EX11_017.cs:56-63 ValidCardToPlay has no playability check, so DCGO
+// offers a card the play then refuses. The rules forbid it: CR 4.3 1-3-2 (an
+// impossible action is not carried out), 7-1-1 (only a card with a play cost
+// is played), 4-6-2 (a DUAL is digivolved or used, never played). The pick
+// and the activation gate use `can_play_from_effect_without_cost`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A DUAL card whose Digimon information is a Lv.4 [Ice-Snow] Digimon.
+fn ice_snow_dual_lv4(id: &str) -> CardData {
+    use digimon_engine::card_data::{DualCardData, DualDigimonFace, DualOptionFace};
+    let mut c = make_test_card(id, "IceSnow DUAL");
+    c.card_kind = CardKind::Dual;
+    c.level = Some(4);
+    c.dp = Some(5000);
+    c.play_cost = 4;
+    c.colors = vec![CardColor::Blue];
+    c.traits = vec!["Ice-Snow".to_string()];
+    c.dual = Some(DualCardData {
+        digimon: DualDigimonFace {
+            level: 4,
+            dp: 5000,
+            colors: vec![CardColor::Blue],
+            traits: vec!["Ice-Snow".to_string()],
+            evo_costs: vec![],
+            effect_text: String::new(),
+            inherited_text: String::new(),
+            keywords: vec![],
+        },
+        option: DualOptionFace {
+            use_cost: 4,
+            colors: vec![CardColor::Blue],
+            effect_text: String::new(),
+            security_text: String::new(),
+            keywords: vec![],
+        },
+    });
+    c
+}
+
+/// Non-PASS hand candidates of the free-play pick, as card ids (empty when no
+/// hand pick installs).
+fn free_play_candidates(runner: &DebugRunner) -> Vec<String> {
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    view.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| hand[(id - digimon_engine::action::space::PLAY_HAND_START) as usize].clone())
+        .collect()
+}
+
+/// A Lv.4 [Ice-Snow] DUAL card is never played (CR 4.3 4-6-2), so it is not
+/// offered; the playable Lv.4 [Ice-Snow] Digimon still is.
+#[test]
+fn ex11_017_free_play_excludes_ice_snow_dual_card() {
+    let mut runner = base_builder()
+        .add_card(ice_snow_digimon("ICE-4", 4))
+        .add_card(ice_snow_dual_lv4("ICE-DUAL"))
+        .start();
+    runner.game.turn_count = 1;
+    let skadimon = runner.place_on_field(0, CARD_ID, Some(0));
+    put_in_hand(&mut runner, 0, "ICE-4");
+    put_in_hand(&mut runner, 0, "ICE-DUAL");
+
+    fire_on_play_for(&mut runner, skadimon);
+    assert_eq!(free_play_candidates(&runner), vec!["ICE-4".to_string()]);
+}
+
+/// A full battle area: neither [Suzune Kazuki] nor the Lv.4 [Ice-Snow] can be
+/// played, so nothing is offered and the [Once Per Turn] is not spent — once
+/// a slot frees up, [When Attacking] the same turn offers both.
+#[test]
+fn ex11_017_free_play_not_offered_when_battle_area_full_and_opt_kept() {
+    let mut runner = base_builder()
+        .add_card(suzune("SUZUNE"))
+        .add_card(ice_snow_digimon("ICE-4", 4))
+        .start();
+    runner.game.turn_count = 1;
+    let skadimon = runner.place_on_field(0, CARD_ID, Some(0));
+    put_in_hand(&mut runner, 0, "SUZUNE");
+    put_in_hand(&mut runner, 0, "ICE-4");
+    // Skadimon alone fills a 1-slot battle area.
+    runner.game.rules.field_slots = 1;
+
+    fire_on_play_for(&mut runner, skadimon);
+    assert!(
+        free_play_candidates(&runner).is_empty(),
+        "no playable candidate is offered in a full battle area"
+    );
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.battle_area_size(0), 1, "nothing was played");
+
+    runner.game.rules.field_slots = 4;
+    fire_when_attacking(&mut runner, skadimon);
+    let mut offered = free_play_candidates(&runner);
+    offered.sort();
+    assert_eq!(
+        offered,
+        vec!["ICE-4".to_string(), "SUZUNE".to_string()],
+        "the [Once Per Turn] was not spent while nothing could be played"
+    );
+}
+
+/// "You can't play Digimon by effects": the [Ice-Snow] Digimon is not offered,
+/// [Suzune Kazuki] (a Tamer) still is.
+#[test]
+fn ex11_017_free_play_excludes_digimon_under_effect_play_prohibition() {
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = base_builder()
+        .add_card(suzune("SUZUNE"))
+        .add_card(ice_snow_digimon("ICE-4", 4))
+        .start();
+    runner.game.turn_count = 1;
+    let skadimon = runner.place_on_field(0, CARD_ID, Some(0));
+    put_in_hand(&mut runner, 0, "SUZUNE");
+    put_in_hand(&mut runner, 0, "ICE-4");
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(
+            digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+
+    fire_on_play_for(&mut runner, skadimon);
+    assert_eq!(free_play_candidates(&runner), vec!["SUZUNE".to_string()]);
+}

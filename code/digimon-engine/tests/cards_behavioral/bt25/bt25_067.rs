@@ -309,3 +309,106 @@ fn bt25_067_inherited_aura_grants_1000_dp_on_opponents_turn() {
         "Sealsdramon inherited [All Turns] +1000 DP must ALSO contribute on the opponent's turn"
     );
 }
+
+// ─── Section 4 — the digivolve pick offers only cards the digivolve can take ─
+//
+// DCGO BT25_067.cs:67-76 `DigivolveIntoHandOrTrashCard(targetPermanent: this,
+// payCost: true, reduceCost 2, isHand: true)`; its candidate filter
+// (CardEffectCommons.cs:861-886) is `IsDigimon && cardCondition &&
+// !CanNotEvolve(target) && CanPlayCardTargetFrame(target frame, PayCost: true,
+// ...)` -- a printed digivolve route onto THIS Digimon AND the reduced cost
+// payable. CR 4.3 1-3-2: a digivolution whose cost can't be paid is not
+// carried out, so the card is not a choice.
+
+/// A [D-Brigade] Lv.5 whose only route onto a Lv.4 costs 20 (18 after the -2).
+fn dbrigade_lv5_expensive(card_id: &str) -> CardData {
+    let mut card = make_test_card_with_level(card_id, card_id, 5);
+    card.colors = vec![CardColor::Black];
+    card.dp = Some(7000);
+    card.traits = vec!["D-Brigade".to_string()];
+    card.play_cost = 9;
+    card.evo_costs = vec![EvoCost {
+        card_color: 5,
+        level: 4,
+        memory_cost: 20,
+    }];
+    card
+}
+
+/// A [D-Brigade] Lv.5 that digivolves only from a Lv.3: no route onto
+/// Sealsdramon (Lv.4).
+fn dbrigade_lv5_wrong_level(card_id: &str) -> CardData {
+    let mut card = dbrigade_lv5_expensive(card_id);
+    card.evo_costs = vec![EvoCost {
+        card_color: 5,
+        level: 3,
+        memory_cost: 2,
+    }];
+    card
+}
+
+/// Sealsdramon on the field, `hand` staged, then a [D-Brigade] Digimon is
+/// played (memory 10 -> 5). Returns the hand ids the digivolve pick offers,
+/// accepting an outer "may" prompt if one opens; `None` = no prompt at all.
+fn offered_after_dbrigade_play(hand: &[&str]) -> Option<Vec<String>> {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+    let mut runner = base()
+        .add_card(dbrigade_lv5_expensive("DB-EXPENSIVE"))
+        .add_card(dbrigade_lv5_wrong_level("DB-WRONG-LV"))
+        .start();
+    runner.game.turn_count = 1;
+    let _s = place_sealsdramon(&mut runner);
+    for id in hand {
+        push_to_hand(&mut runner, 0, id);
+    }
+    let played = push_to_hand(&mut runner, 0, "DB-LV4");
+    runner.play(0, played);
+    runner.pending_selection()?;
+    if runner.pending_kind() != Some(SelectionKind::Hand) {
+        runner.accept_optional_trigger().expect("accept the optional digivolve");
+    }
+    let Some(view) = runner.pending_selection_view() else {
+        return Some(Vec::new());
+    };
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut ids: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .filter_map(|a| hand_ids.get(a.checked_sub(PLAY_HAND_START)? as usize).cloned())
+        .collect();
+    ids.sort();
+    Some(ids)
+}
+
+#[test]
+fn bt25_067_digivolve_pick_excludes_unaffordable_dbrigade() {
+    assert_eq!(
+        offered_after_dbrigade_play(&["DB-EXPENSIVE", "DB-LV4"]),
+        Some(vec!["DB-LV4".to_string()]),
+        "18 memory (20 - 2) can't be paid from 5: DB-EXPENSIVE is not offered"
+    );
+}
+
+#[test]
+fn bt25_067_not_offered_with_only_an_unaffordable_target() {
+    assert_eq!(
+        offered_after_dbrigade_play(&["DB-EXPENSIVE"]),
+        None,
+        "no payable digivolve target: nothing to offer"
+    );
+}
+
+/// Regression guard: a [D-Brigade] card with no route onto Sealsdramon
+/// (Lv.3-only circle) is not offered (the compile pass's
+/// `can_digivolve_onto: source`).
+#[test]
+fn bt25_067_not_offered_with_only_a_routeless_target() {
+    assert_eq!(offered_after_dbrigade_play(&["DB-WRONG-LV"]), None);
+}

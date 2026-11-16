@@ -409,3 +409,114 @@ fn hand_contains(runner: &DebugRunner, card_id: &str) -> bool {
         .iter()
         .any(|card| card.card_id(&runner.game.card_data) == card_id)
 }
+
+// ─── The hand pick offers only cards the free play will accept ───────────────
+// Printed: "play 1 play cost 5 or lower [Iliad] trait card from your hand".
+// DCGO BT24_041.cs:63-69 `CanSelectCardCondition` = `HasPlayCost &&
+// GetCostItself <= 5 && EqualsTraits("Iliad") && CanPlayAsNewPermanent(cardSource,
+// false, activateClass)`. CR 4.3 7-1-1: a play places "a new card with a play
+// cost" (a Digi-Egg has none; an Option is used, not played), 4-6-2: a DUAL is
+// digivolved or used, never played, and 1-3-11-1: a card can't be declared for
+// a play it can't undergo. YAML: `can_play_from_effect_without_cost: true`.
+
+fn minervamon_pick_candidates(runner: &mut DebugRunner) -> Vec<String> {
+    let minervamon = runner.place_on_field(0, "BT24-041", Some(0));
+    runner.place_stack(1, &["OPP-BASE", "OPP-TOP"]);
+    fire_on_play(runner, minervamon);
+    let view = runner.pending_selection_view().expect("a selection installs");
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    view.valid_action_ids
+        .iter()
+        .filter(|&&a| a != PASS)
+        .map(|&a| {
+            runner.game.players[0].hand[(a - PLAY_HAND_START) as usize]
+                .card_id(&runner.game.card_data)
+                .to_string()
+        })
+        .collect()
+}
+
+fn iliad_egg() -> digimon_engine::CardData {
+    let mut card = make_test_egg("ILIAD-EGG", "Iliad Egg");
+    card.traits = vec!["Iliad".to_string()];
+    card
+}
+
+fn iliad_option() -> digimon_engine::CardData {
+    let mut card = make_test_card("ILIAD-OPTION", "Iliad Option");
+    card.card_kind = CardKind::Option;
+    card.colors = vec![CardColor::Yellow];
+    card.play_cost = 3;
+    card.level = None;
+    card.dp = None;
+    card.traits = vec!["Iliad".to_string()];
+    card
+}
+
+/// Bukamon (BT24-002)-style [Iliad] Digi-Egg: no play cost, never played.
+#[test]
+fn bt24_041_hand_pick_excludes_iliad_digi_egg() {
+    let mut runner = minervamon_runner()
+        .add_card(iliad_egg())
+        .hand(0, &["ILIAD-EGG", "ILIAD-CHEAP"])
+        .memory(20)
+        .start();
+    assert_eq!(minervamon_pick_candidates(&mut runner), vec!["ILIAD-CHEAP".to_string()]);
+}
+
+/// Abyss Sanctuary: Throne Room (BT24-090)-style [Iliad] Option: used, not played.
+#[test]
+fn bt24_041_hand_pick_excludes_iliad_option() {
+    let mut runner = minervamon_runner()
+        .add_card(iliad_option())
+        .hand(0, &["ILIAD-OPTION", "ILIAD-CHEAP"])
+        .memory(20)
+        .start();
+    assert_eq!(minervamon_pick_candidates(&mut runner), vec!["ILIAD-CHEAP".to_string()]);
+}
+
+/// Jupitermon (BT26-033) is an [Iliad] DUAL card: it can't be played (the 2026-11-11
+/// game audit saw Minervamon play it).
+#[test]
+fn bt24_041_hand_pick_excludes_iliad_dual_card() {
+    let mut runner = minervamon_runner()
+        .dsl_card("BT26-033")
+        .expect("BT26-033 Jupitermon (DUAL) YAML loads")
+        .hand(0, &["BT26-033", "ILIAD-CHEAP"])
+        .memory(20)
+        .start();
+    assert_eq!(minervamon_pick_candidates(&mut runner), vec!["ILIAD-CHEAP".to_string()]);
+}
+
+#[test]
+fn bt24_041_hand_pick_excludes_digimon_under_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = minervamon_runner()
+        .add_card(make_tamer("ILIAD-TAMER-5", &["Iliad"]))
+        .hand(0, &["ILIAD-CHEAP", "ILIAD-TAMER-5"])
+        .memory(20)
+        .start();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    assert_eq!(
+        minervamon_pick_candidates(&mut runner),
+        vec!["ILIAD-TAMER-5".to_string()],
+        "the Digimon is locked; the Tamer is still playable"
+    );
+}
+
+#[test]
+fn bt24_041_hand_pick_excludes_cards_when_battle_area_full() {
+    let mut runner = minervamon_runner()
+        .hand(0, &["ILIAD-CHEAP"])
+        .memory(20)
+        .start();
+    // Minervamon is the only permanent of player 0; a 1-slot battle area is full.
+    runner.game.rules.field_slots = 1;
+    assert!(minervamon_pick_candidates(&mut runner).is_empty());
+}

@@ -1132,3 +1132,174 @@ fn lm_032_security_adds_card_to_hand_and_plays_small_purple_digimon() {
         .to_string();
     assert_eq!(played_id, "LM032-SMALL-SEC");
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 5 — Candidate legality of the [Main] digivolve picks
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// DCGO LM_032.cs:38-43 offers a field Digimon only when some purple Digimon in
+// hand has a digivolution route onto it (`CanPlayCardTargetFrame(frame, false,
+// ...)`, route only, no payment), and `CardEffectCommons.DigivolveIntoHandOrTrashCard`
+// (CardEffectCommons.cs:859-885, called with `payCost: true, reduceCost: 3`)
+// offers only hand cards that `CanPlayCardTargetFrame(frame, PayCost: true, ...)`
+// with the reduction already installed, so a card whose reduced cost can't be
+// paid is never offered. CR 4.3 1-3-11-1: a card can't be declared for
+// digivolution if its cost can't be paid; 4-2-2 / 1-4-2-2: exactly the cost is
+// paid and the gauge can't pass 10; 8-1-2-6: such a digivolution doesn't happen.
+
+fn lm_032_cand_digimon(id: &str, color: CardColor, level: u8) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.colors = vec![color];
+    card.level = Some(level);
+    card.dp = Some(3000);
+    card.play_cost = 3;
+    card
+}
+
+/// A Lv.4 purple Digimon with one circle: purple Lv.3, cost `cost`.
+fn lm_032_cand_evo(id: &str, cost: u16) -> CardData {
+    let mut card = lm_032_cand_digimon(id, CardColor::Purple, 4);
+    card.evo_costs = vec![EvoCost {
+        card_color: CardColor::Purple as u8,
+        level: 3,
+        memory_cost: cost,
+    }];
+    card
+}
+
+/// Memory 3: the turn player can pay at most 13 (the gauge stops at 10 on the
+/// opponent's side). CHEAP costs 4 - 3 = 1; PRICEY costs 17 - 3 = 14, which
+/// can't be paid. Only CHEAP is offered, and picking it digivolves for 1.
+#[test]
+fn lm_032_main_hand_pick_excludes_card_whose_reduced_cost_cannot_be_paid() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-032 YAML parses")
+        .add_card(lm_032_cand_digimon("CAND-BASE", CardColor::Purple, 3))
+        .add_card(lm_032_cand_evo("CAND-CHEAP", 4))
+        .add_card(lm_032_cand_evo("CAND-PRICEY", 17))
+        .add_card(make_test_card("CAND-FILL", "CAND-FILL"))
+        .hand(0, &["LM-032", "CAND-PRICEY", "CAND-CHEAP"])
+        .deck(0, &["CAND-FILL"; 5])
+        .deck(1, &["CAND-FILL"; 5])
+        .memory(3)
+        .start();
+    let base = runner.place_on_field(0, "CAND-BASE", Some(0));
+
+    assert!(runner.game.activate_hand_main(0, 0));
+    let field = runner.pending_selection_view().expect("field pick");
+    assert_eq!(field.kind, SelectionKind::OwnField);
+    assert_eq!(field.valid_action_ids.len(), 1);
+    runner
+        .execute_action(0, field.valid_action_ids[0])
+        .expect("choose the base");
+
+    let hand = runner.pending_selection_view().expect("hand pick");
+    assert_eq!(hand.kind, SelectionKind::Hand);
+    assert_eq!(
+        hand.valid_action_ids.len(),
+        1,
+        "only the card whose reduced cost (1) can be paid is offered, not the cost-14 one"
+    );
+    runner
+        .execute_action(0, hand.valid_action_ids[0])
+        .expect("choose the affordable card");
+    runner.auto_resolve().expect("finish digivolve");
+    assert_eq!(
+        runner.game.player(0).battle_area[base.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "CAND-CHEAP"
+    );
+    assert_eq!(runner.memory(), 2, "evo cost 4 reduced by 3 pays 1");
+}
+
+/// A purple Lv.6 Digimon that no purple hand card can digivolve onto is not
+/// offered as the Digimon that digivolves; the Lv.3 with a route is.
+#[test]
+fn lm_032_main_field_pick_excludes_digimon_without_a_hand_route() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-032 YAML parses")
+        .add_card(lm_032_cand_digimon("CAND-BASE", CardColor::Purple, 3))
+        .add_card(lm_032_cand_digimon("CAND-LV6", CardColor::Purple, 6))
+        .add_card(lm_032_cand_evo("CAND-CHEAP", 4))
+        .add_card(make_test_card("CAND-FILL", "CAND-FILL"))
+        .hand(0, &["LM-032", "CAND-CHEAP"])
+        .deck(0, &["CAND-FILL"; 5])
+        .deck(1, &["CAND-FILL"; 5])
+        .memory(10)
+        .start();
+    let base = runner.place_on_field(0, "CAND-BASE", Some(0));
+    runner.place_on_field(0, "CAND-LV6", Some(0));
+
+    assert!(runner.game.activate_hand_main(0, 0));
+    let field = runner.pending_selection_view().expect("field pick");
+    assert_eq!(field.kind, SelectionKind::OwnField);
+    assert_eq!(
+        field.valid_action_ids.len(),
+        1,
+        "the Lv.6 with no hand route is not offered"
+    );
+    runner
+        .execute_action(0, field.valid_action_ids[0])
+        .expect("choose the base");
+    let hand = runner.pending_selection_view().expect("hand pick");
+    runner
+        .execute_action(0, hand.valid_action_ids[0])
+        .expect("choose the evo card");
+    runner.auto_resolve().expect("finish digivolve");
+    assert_eq!(
+        runner.game.player(0).battle_area[base.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "CAND-CHEAP"
+    );
+}
+
+/// Regression guard (DCGO parity): the field pick checks routes only, so a
+/// Digimon whose only route card can't be paid for is still offered (DCGO
+/// `CanPlayCardTargetFrame(frame, false, ...)`); the hand pick then has no
+/// candidate and nothing digivolves or is paid.
+#[test]
+fn lm_032_main_field_pick_is_route_only_and_unpayable_hand_offers_nothing() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-032 YAML parses")
+        .add_card(lm_032_cand_digimon("CAND-BASE", CardColor::Purple, 3))
+        .add_card(lm_032_cand_evo("CAND-PRICEY", 14))
+        .add_card(make_test_card("CAND-FILL", "CAND-FILL"))
+        .hand(0, &["LM-032", "CAND-PRICEY"])
+        .deck(0, &["CAND-FILL"; 5])
+        .deck(1, &["CAND-FILL"; 5])
+        .memory(0)
+        .start();
+    let base = runner.place_on_field(0, "CAND-BASE", Some(0));
+
+    assert!(runner.game.activate_hand_main(0, 0));
+    let field = runner.pending_selection_view().expect("field pick");
+    assert_eq!(field.kind, SelectionKind::OwnField);
+    assert_eq!(field.valid_action_ids.len(), 1);
+    runner
+        .execute_action(0, field.valid_action_ids[0])
+        .expect("choose the base");
+    assert_ne!(
+        runner.pending_kind(),
+        Some(SelectionKind::Hand),
+        "no hand card can be paid for, so no hand pick is asked"
+    );
+    runner.game.drain_effect_queue();
+    assert_eq!(
+        runner.game.player(0).battle_area[base.index as usize].card_sources.len(),
+        1
+    );
+    assert_eq!(runner.memory(), 0);
+    assert!(runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "CAND-PRICEY"));
+}

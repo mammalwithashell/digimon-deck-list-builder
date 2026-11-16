@@ -103,7 +103,31 @@ effects:
                 of: you
                 bind_as: gd_pick_sec
                 optional: true
-                filter: { trait_has: "Glowing Dawn" }
+                # Only a card the play / use can accept. DCGO
+                # BT25_041.cs:54-55,138-151 offers every [Glowing Dawn] card
+                # (`HasGlowingDawnTraits`) and lets PlayPermanentCards /
+                # PlayOptionCards refuse. CR 4.3 7-1-1 (a Digi-Egg such as
+                # Frimon BT25-003 has no play cost and is never "played"),
+                # 1-3-2 and 4-22 (an Option needs its colour requirement met,
+                # Q1500 / Q2785) make those picks impossible, so: no Digi-Egg,
+                # a Digimon needs a free slot and no play lock, an Option needs
+                # its colour requirement and no use lock.
+                # And its cost - 3 must be payable (CR 4.3 1-3-11-1), counting
+                # the "before paying" reducers the payment can take -- Kyo
+                # Sawashiro (BT25-088) -1 on a [Glowing Dawn] play, Armalizamon
+                # (BT25-049) -3 / Tomoro Tenma (BT25-090) -1 on a [Glowing
+                # Dawn] Option use (CR 4.3 1-3-11-3; DCGO's hidden availability
+                # ChangeCostClass, BT25_088.cs:246-275), which
+                # `affordable_with_cost` credits
+                # (G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT). Same filter as
+                # ST23-04 / ST23-08 (same text). DCGO would offer an unpayable
+                # card and refuse the play (CR 4.3 7-1-2-3); that dead choice
+                # is dropped.
+                filter:
+                  all_of:
+                    - trait_has: "Glowing Dawn"
+                    - can_play_or_use_from_effect: true
+                    - affordable_with_cost: { reduce: 3 }
                 prompt: "You may play or use 1 [Glowing Dawn] card from your hand with the cost reduced by 3"
             - play_or_use_from_hand:
                 of: you
@@ -120,7 +144,31 @@ effects:
                 of: you
                 bind_as: gd_pick_fd
                 optional: true
-                filter: { trait_has: "Glowing Dawn" }
+                # Only a card the play / use can accept. DCGO
+                # BT25_041.cs:54-55,138-151 offers every [Glowing Dawn] card
+                # (`HasGlowingDawnTraits`) and lets PlayPermanentCards /
+                # PlayOptionCards refuse. CR 4.3 7-1-1 (a Digi-Egg such as
+                # Frimon BT25-003 has no play cost and is never "played"),
+                # 1-3-2 and 4-22 (an Option needs its colour requirement met,
+                # Q1500 / Q2785) make those picks impossible, so: no Digi-Egg,
+                # a Digimon needs a free slot and no play lock, an Option needs
+                # its colour requirement and no use lock.
+                # And its cost - 3 must be payable (CR 4.3 1-3-11-1), counting
+                # the "before paying" reducers the payment can take -- Kyo
+                # Sawashiro (BT25-088) -1 on a [Glowing Dawn] play, Armalizamon
+                # (BT25-049) -3 / Tomoro Tenma (BT25-090) -1 on a [Glowing
+                # Dawn] Option use (CR 4.3 1-3-11-3; DCGO's hidden availability
+                # ChangeCostClass, BT25_088.cs:246-275), which
+                # `affordable_with_cost` credits
+                # (G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT). Same filter as
+                # ST23-04 / ST23-08 (same text). DCGO would offer an unpayable
+                # card and refuse the play (CR 4.3 7-1-2-3); that dead choice
+                # is dropped.
+                filter:
+                  all_of:
+                    - trait_has: "Glowing Dawn"
+                    - can_play_or_use_from_effect: true
+                    - affordable_with_cost: { reduce: 3 }
                 prompt: "You may play or use 1 [Glowing Dawn] card from your hand with the cost reduced by 3"
             - play_or_use_from_hand:
                 of: you

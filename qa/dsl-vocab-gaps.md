@@ -48,6 +48,561 @@ This does not change action IDs, observation tensors, or admission policy.
 
 # DSL Vocabulary Gaps Tracker
 
+## "Digivolve into THIS card" offered with no Digimon it can digivolve onto [G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO] — CLOSED 2026-11-14 (new leaf)
+
+- **What was wrong:** an effect that digivolves the effect's OWN card from the
+  hand or trash onto a chosen Digimon (`effect_initiated_digivolve { from_hand:
+  self | source: self }`) had no way to ask "can THIS card digivolve onto that
+  Digimon?". The compile pass (`digivolve_candidates.rs`) marks the CARD pick of
+  a digivolve, and here there is none (the card is fixed). So WarGreymon
+  (BT22-013) / MetalGarurumon (BT22-026) offered their `[Hand] [Main]` and the
+  [Agumon] / [Gabumon] pick even when that Digimon couldn't digivolve
+  (`CannotDigivolve`, "can't digivolve by effects") or the 6 couldn't be paid;
+  Ogremon (X Antibody) (P-250)'s {Trash} pick checked only the route (via a
+  `has_digivolve_candidate` over any P-250 in the trash), not the printed cost,
+  although its turn often ends with memory on the opponent's side; and
+  Sistermon Ciel (Awakened) (BT20-084) checked neither. DCGO gates the
+  activation AND the pick on `card.CanPlayCardTargetFrame(permanent.PermanentFrame,
+  payCost, activateClass, fixedCost, ignore)` (BT22_013.cs:50-68,
+  BT22_026.cs:43-60, P_250.cs:54-59, BT20_084.cs:76-118) — for a frame that
+  holds a Digimon, that is only the route + prohibition check
+  `CanEvolve`/`CanNotEvolve` (CardSource.cs:1166, 1269-1290). The payment half
+  comes from the rules, not DCGO: CR 4.3 1-3-11-1 / 1-4-2-2, a digivolve whose
+  cost can't be paid can't happen.
+- **KNOWN DCGO DIVERGENCE (rules over DCGO), payment half:** DCGO's
+  `CanPlayCardTargetFrame` refuses an unaffordable cost (`MaxMemoryCost <
+  cost`, CardSource.cs:1150-1162) only for an EMPTY frame; onto a Digimon it
+  never compares cost to memory, and `fixedCost` is not passed to `CanEvolve`.
+  So DCGO offers WarGreymon (BT22-013) / MetalGarurumon (BT22-026)'s [Hand]
+  [Main] with the 6 unpayable, and Ogremon (X Antibody) (P-250)'s {Trash} pick
+  for a [Demon] whose route cost can't be paid. We refuse both (the leaf's
+  payment probe), as EX12-074 already does. A DCGO exam of an unaffordable case
+  will read `diverged`; triage it `dcgo_quirk` citing this entry. Tests:
+  `bt22_013_hand_main_jump_not_offered_when_the_6_cannot_be_paid`,
+  `bt22_026_hand_main_jump_not_offered_when_the_6_cannot_be_paid` (+ the
+  `..._exactly_payable` boundaries at -4),
+  `p_250_trash_end_of_turn_offers_only_a_demon_whose_cost_can_be_paid`.
+- **Fix:** permanent-subject leaf `this_card_can_digivolve_onto: { cost,
+  ignore_level?, ignore_requirements? }` (`ThisCardDigivolvePredicate` /
+  `CompiledThisCardDigivolve`), evaluated by
+  `Game::can_effect_digivolve_from_source_with_cost_waiving` with
+  `rctx.source_card` as the card: the same probe as `can_digivolve_onto_with_cost`
+  (route set by the waiver, prohibitions for the target's controller, payment
+  at `cost`), the card fixed and the permanent free. Validated like the other
+  cost-aware leaves (forbidden inside `cost_reduction`; the two waivers are
+  exclusive). Authored on BT22-013 / BT22-026 (condition + pick, `{ cost: 6,
+  ignore_requirements: true }`), P-250 (`{ cost: printed }`, replacing the
+  any-copy `has_digivolve_candidate`) and BT20-084 (`{ cost: free }`).
+- **Fixed with it:** BT22-013 / BT22-026 / Lamiamon (BT24-016) matched
+  bracketed names with `name_contains`; "1 of your [Agumon]" is the card name
+  (CR 4.3 2-3-1-2; "in its name" is 2-3-1-3; DCGO `EqualsCardName`), so Agumon
+  (X Antibody), ToyAgumon, Gabumon - Bond of Friendship, WarGreymon (X Antibody)
+  ... no longer qualify (both [Hand] [Main] targets, both [When Digivolving]
+  branch 0 picks, Lamiamon's [Elizamon] / [Dimetromon]). BT20-084 ignored the
+  digivolution requirements its text keeps ("without paying the cost" only;
+  DCGO `IgnoreRequirement.None`, CardEffectCommons.cs:832, 842).
+- **Not gated, on purpose:** Rhihimon (BT18-081), BT22-036, Lamiamon (BT24-016)
+  and EX10-032 read "By placing ..., it digivolves into this card": the
+  placement is an optional processing condition that can be executed even when
+  the digivolve then can't be (CR 4.3 15-7-5), and DCGO's `CanUseCondition`
+  does not check the digivolve either (BT18_081.cs:69-75, BT22_036.cs:38-45,
+  BT24_016.cs:29-36, EX10_032.cs:28-35). That is also why the compile pass does
+  not add the leaf to every `from_hand: self` host pick.
+- **Tests:** `tests/dsl/constructs/this_card_can_digivolve_onto.rs`; per card
+  `bt22_013.rs`, `bt22_026.rs`, `bt24_016.rs`, `p_250.rs`, `bt20_084.rs`.
+- **Left open:**
+  - G-DSL-THIS-CARD-CAN-DIGIVOLVE-ONTO-WAIVER-CHECK: the compile pass does not
+    check that an authored `this_card_can_digivolve_onto` matches its
+    digivolve's cost and waiver (`can_digivolve_onto_with_cost` gets that
+    check). A mismatch is an authoring error the card tests catch today.
+  - G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-REQUIREMENTS: BT22-013 [When
+    Digivolving] branch 0 ("1 of your [Gabumon] may digivolve into
+    [MetalGarurumon] in the hand, ignoring digivolution requirements and without
+    paying the cost"). DCGO offers only a [Gabumon] some [MetalGarurumon] in
+    the hand can digivolve onto (BT22_013.cs:145-157; BT22-026's mirror branch
+    checks the name only, BT22_026.cs:156-160). `has_digivolve_candidate` has
+    no `ignore_requirements` flag (its route-only probe would wrongly demand a
+    printed route), so both host picks stay name-only: a locked [Gabumon] /
+    [Agumon], or one with no matching card in the hand, is still offered and
+    the digivolve then does nothing.
+- **BT17-097 (G-DSL-CAN-DIGIVOLVE-ONTO-REPLACEMENT-SUBJECT note, "the trigger
+  is still offered when no card qualifies"):** stale. The <Delay>
+  `active_when` carries `has_digivolve_candidate` (DCGO
+  `IsOwnerPermanentCondition`, BT17_097.cs:133-137) since 4e3fb6b89, pinned by
+  `bt17_097_delay_not_offered_when_no_imperialdramon_can_digivolve_onto_subject`
+  and `bt17_097_delay_not_offered_when_the_subject_cannot_digivolve`.
+
+## Paid effect-digivolve card picks checked only the route [G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT] — CLOSED 2026-11-14 (compile pass + leaf flag)
+
+- **What was wrong:** the card pick of a PAID `effect_initiated_digivolve`
+  ("may digivolve into [X] in the hand with the digivolution cost reduced by
+  N", "... for a digivolution cost of 3, ignoring digivolution requirements")
+  checked only the route (`can_digivolve_onto` / `can_digivolve_from_source`,
+  authored or added by the compile pass) or nothing at all (an
+  `ignore_requirements` step). A card whose cost can't be paid was offered and
+  the digivolve then did nothing: CR 4.3 1-3-11-1 (a card can't be declared if
+  its cost can't be paid), 8-1-2-6 (it goes back, memory doesn't move), 4-2-2 /
+  1-4-2-2 (the gauge stops at 10). Reachable when memory is low as the effect
+  resolves (an [On Play] / [Your Turn] trigger after a play cost took the gauge
+  to the opponent's side, an [Opponent's Turn] trigger, a cost increase).
+  57 picks in the pool: the audit's 40 (AD1-011, AD1-021, BT10-085, BT12-030,
+  BT18-065, BT20-012, BT23-076, BT25-092, BT26-035, BT26-038, BT26-091, BT9-109,
+  EX13-004, EX13-018, EX13-039, EX13-055, EX13-057, EX13-069, EX13-070, LM-027,
+  LM-028, LM-030, LM-055, LM-057..LM-062, P-166, P-244, BT13-013, BT20-023,
+  BT20-040, BT25-005, BT26-001, BT26-044, BT22-098, EX13-074, P-092) plus
+  BT11-105, BT16-040, BT24-009, BT24-013, BT24-021, BT24-026, BT24-042,
+  BT24-045, BT25-024, BT25-026, BT26-066 (x2), BT26-069, BT26-076, EX11-069,
+  EX12-032, EX3-008. Every one of them passes `payCost: true` in DCGO
+  (`DigivolveIntoHandOrTrashCard`, CardEffectCommons.cs:820-878), but
+  `CardSource.CanPlayCardTargetFrame` honours `PayCost` only for an EMPTY frame
+  (CardSource.cs:1150-1161), so DCGO itself checks only the route for a
+  digivolve onto a permanent; the rules manual governs.
+- **Fix:** the compile pass (`digimon-dsl/src/digivolve_candidates.rs`) gives
+  every paid digivolve's pick (cost not `free` / fixed `0`, target known at the
+  pick, outside a `cost_reduction` `pay_cost` body)
+  `can_digivolve_onto_with_cost { target, cost: <the step's cost> }` with the
+  step's waiver, unless it authored a cost leaf; an authored route-only leaf
+  stays in conjunction. New leaf flag `ignore_requirements: true`
+  (`DigivolveCostPredicate` / `CompiledDigivolveCostPredicate`; exclusive with
+  `ignore_level`) evaluated by
+  `Game::can_effect_digivolve_from_source_with_cost_waiving(..,
+  DigivolveRequirementWaiver::All)`, which now searches the single
+  requirement-free route the `ignore_requirements` commit uses. A
+  requirement-waiving leaf on a requirement-keeping pick is a compile error.
+  Free digivolves keep no payment check (P-092's inherited "without paying the
+  cost", P_092.cs:138-144 `payCost: false`). Tests:
+  `digimon-dsl/src/digivolve_candidates_payment_tests.rs` (the audit's 40 cards
+  at the step's exact cost, and pool-wide),
+  `tests/dsl/constructs/paid_digivolve_candidate_payment.rs` (each pool shape),
+  and per card: `p_092.rs`, `bt13_013.rs`, `ex13_074.rs`, `bt22_098.rs`.
+- **Review hardening (2026-11-14):** (1) the pass keys a digivolve's needs by
+  the card binding, so a binding feeding two digivolves with different targets,
+  costs or waivers (one pick would check the other's payment) is now a compile
+  error, as is a host binding feeding digivolves with different waivers;
+  identical needs still compile. (2) On a PAID `ignore_requirements` step
+  (EX13-074, P-092) any requirement-keeping leaf on the pick
+  (`can_digivolve_onto`, `can_digivolve_from_source`, `has_digivolve_candidate`,
+  a cost leaf without `ignore_requirements`) is a compile error; FREE ones stay
+  unchecked because `digivolve_without_cost` sugar (always `cost: free`,
+  BT17-097) compiles to `ignore_requirements` with a printed route leaf.
+  `can_digivolve_from_source` is now also checked against an `ignore_level`
+  step. (3) The pool sweep now fails on a spec that does not compile and on a
+  paid digivolve whose card is bound by no pick kind the pass marks. No card in
+  the pool hits (1) or (2). Tests: the two new cases in
+  `digivolve_candidates_payment_tests.rs`. Not changed: a cost leaf authored
+  only inside `any_of` / `not` gets the step's cost leaf conjoined; that is
+  rule-correct (the step always charges that cost, CR 4.3 1-3-11-1), and the
+  EX13-074 per-card test's -8 gauge is unreachable from a [Main] activation (it
+  pins the mechanism; the comment says so).
+
+## Host picks of a paid effect digivolve check only the route [G-DSL-PAID-DIGIVOLVE-HOST-PICK-ROUTE-ONLY] — OPEN 2026-11-14
+
+- **Gap:** a "1 of your Digimon may digivolve into a card in the hand" host
+  pick filtered by `has_digivolve_candidate { zone: [hand] }` without `cost`
+  (e.g. LM-027, LM-028, LM-030, LM-055, LM-057..LM-062, BT25-092, P-244) offers
+  a host whose only candidates can't be paid; after
+  G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT the card pick that follows is then empty, so
+  choosing that host is a dead choice (BT22-098's <Delay> host pick has no
+  candidate leaf at all). Same for activation gates that count route-only
+  candidates (`count_gte` with `can_digivolve_onto: source`, EX13-055 /
+  EX13-057): the effect can be offered with nothing payable.
+  DCGO's gates have the same shape (`CanPlayCardTargetFrame(..., false|true,
+  ...)` on an occupied frame never checks payment, CardSource.cs:1150-1161), so
+  this is a rules-faithfulness gap, not a DCGO divergence.
+- **Fix sketch:** let the compile pass give an authored `has_digivolve_candidate`
+  on the pick that binds a paid digivolve's target the step's `cost` (the leaf
+  already takes `cost`), and do the same for gate conditions whose candidate
+  leaf targets the digivolve's `source`. Needs per-card tests of the host pick.
+- **Why left open:** outside this lane (card picks only); the host leaf's
+  `cost` changes which hosts are offered for 10+ cards and needs its own audit.
+
+## Route-only candidate leaf that waives only the level [G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL-ROUTE-ONLY] — CLOSED 2026-11-14 (new vocabulary)
+
+- **What was wrong:** the compile pass (`digimon-dsl/src/digivolve_candidates.rs`)
+  gives an `effect_initiated_digivolve { ignore_level: true }` pick the
+  payment-checking `can_digivolve_onto_with_cost { ..., ignore_level: true }`.
+  Inside a `cost_reduction` clause's `pay_cost` body that leaf is forbidden
+  (its payment probe would evaluate the reducer being asked about), and no
+  route-only leaf could waive only the level (`can_digivolve_onto` honours
+  it), so such a pick got NO candidate leaf: every card was offered,
+  including ones the digivolve then refuses. No card has this shape today.
+- **Fix:** new card-subject leaf `can_digivolve_onto_ignoring_level: <target>`
+  (`PredicateSpec` / `CompiledPredicate`; same target names as
+  `can_digivolve_onto`, incl. `source` / `event_target`). The engine
+  evaluates it with `digivolve_routes_ignoring_level`, the route set the
+  `ignore_level` commit searches (DCGO `CanPlayCardTargetFrame(...,
+  IgnoreRequirement.Level)`, EX13_071.cs:357-361; ruling Q7449), with the
+  same prohibitions and no payment check. The pass emits it inside
+  `pay_cost`. Tests (`tests/dsl/constructs/ignore_level_digivolve_candidate.rs`):
+  `ignore_level_compile_pass_inside_pay_cost_emits_the_route_only_level_waiving_leaf`,
+  `can_digivolve_onto_ignoring_level_waives_the_level_and_checks_no_payment`.
+
+## `has_digivolve_candidate` that waives only the level [G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-LEVEL] — CLOSED 2026-11-14 (new vocabulary)
+
+- **What was wrong:** the host-pick leaf `has_digivolve_candidate` ("only
+  Digimon that have a legal result card are offered") had no level waiver,
+  so a "1 of your Digimon may digivolve into ... ignoring level" host pick
+  (the shape of BT12-089 and the other DCGO `IgnoreRequirement.Level` cards
+  BT6-087, BT6-088, BT7-110, BT13-098, BT24-025, none authored yet) would
+  have excluded every host whose only candidate needs the level waived.
+- **Fix:** `has_digivolve_candidate { ..., ignore_level: true }`
+  (`DigivolveCandidatePredicate` / `CompiledDigivolveCandidate`). Route-only
+  it uses `digivolve_routes_ignoring_level`; with `cost` it calls
+  `Game::can_effect_digivolve_from_source_with_cost_waiving(..,
+  DigivolveRequirementWaiver::Level)`. Tests:
+  `has_digivolve_candidate_ignore_level_waives_only_the_level`,
+  `has_digivolve_candidate_ignore_level_with_cost_checks_the_reduced_payment`.
+
+## "When you would USE an Option" cost reducers [G-DSL-COST-REDUCTION-WHEN-ANY-ALLY-USED] — CLOSED 2026-11-14 (new vocabulary)
+
+- **What was wrong:** a `cost_reduction` keyed on another card had one key,
+  `when_any_ally_played`, used both for "When one of your [X] cards would be
+  PLAYED" (Kyo Sawashiro BT25-088) and, with a `kind: option` predicate, for
+  "When you would USE a [Glowing Dawn] Option card" (Armalizamon BT25-049,
+  Tomoro Tenma BT25-090). The engine scanned every such reducer for both a
+  play and an Option-use cost, so Kyo's -1 reduced a [Glowing Dawn] Option
+  use: it was prompted on a Main-phase use, and `affordable_with_cost`
+  credited it on Murasamemon (ST23-04 / BT25-041), Monarchlizamon (ST23-08)
+  and Cougarmon (BT26-026), offering an Option only Kyo's -1 made payable and
+  charging 1 less. Using is not playing (CR 4.3 7-1-1 vs 9-1-1), and DCGO's
+  Kyo requires `cardSource.HasPlayCost` (BT25_088.cs:98-103), false for every
+  Option (`HasPlayCost => !cardKind.Contains(Option) && ..`,
+  CEntity_Base.cs:340); Armalizamon / Tomoro require `HasUseCost`
+  (BT25_049.cs:77-82, BT25_090.cs:103-108).
+- **Fix:** new `cost_reduction` key `when_any_ally_used` (an Option-use cost
+  only; mutually exclusive with `when_any_ally_played`, validated in
+  `compile.rs`); `when_any_ally_played` now answers a play cost only. Engine:
+  `Effect::reducer_cost_scope` (`ReducerCostScope::{Any, PlayOnly,
+  OptionUseOnly}`, set by the lowering) and
+  `Game::collect_before_pay_cost_reducers` skips a reducer whose scope
+  does not match the cost kind -- one choke point for the play chain, the
+  Option-use prompt, the synchronous scan and the affordability credit.
+  BT25-049 / BT25-090 migrated to `when_any_ally_used`.
+- **Tests:** `bt25_088_does_not_reduce_a_glowing_dawn_option_use`,
+  `st23_04_kyo_play_reducer_is_not_credited_on_an_option_use`,
+  `st23_04_kyo_play_reducer_is_not_offered_on_an_option_use`; structural
+  `bt25_049_cost_reduction_clause_present_with_pay_cost`,
+  `bt25_090_cost_reduction_clause_present_with_pay_cost` (now assert
+  `when_any_ally_used`).
+
+## Hand-or-trash zone choice offered with no candidate in the zone [G-DSL-ZONE-CHOICE-CANDIDATE-GATE] — CLOSED 2026-11-13 (no new vocabulary; both drivers fixed)
+
+- **Driver:** Future Potential! (P-156) [Main]. DCGO P_156.cs:126-150 offers
+  the "From hand / From trash" choice only when BOTH zones hold a candidate
+  (`SelectDigimonCondition`, which includes the chosen Tamer's colours), and
+  sets the zone automatically when only one does; with none it does nothing.
+- **Gap:** an always-offered `select_effect_choice ["From hand", "From
+  trash"]` makes a zone with no playable candidate a dead choice in the action
+  space (CR 4.3 1-3-11-1: a card can be declared for play only if it can be
+  played). Gating each label needs a `count_gte` whose filter reads a binding;
+  the vocabulary-free fix is one `select_union_zone { zones: [hand, trash] }`
+  pick (the BT25-083 / P-170 / P-189 idiom), which drops the zone choice.
+- **P-156: RESOLVED 2026-11-13** — the [Main] is now one optional
+  `select_union_zone` pick whose filter carries `color_matches_binding:
+  chosen_tamer` + `can_play_from_effect_without_cost`, then
+  `play_union_bound_free` (`p_156_main_offers_no_zone_choice_*`,
+  `p_156_main_asks_nothing_*`, `p_156_main_offers_hand_and_trash_candidates_in_one_optional_pick`
+  in `tests/cards_behavioral/p/p_156.rs`; a binding-reading filter inside a
+  union pick is now verified).
+- **Matt Ishida & Tai Kamiya (EX4-061): RESOLVED 2026-11-13** with existing
+  vocabulary. DCGO EX4_061.cs:175-196 asks "From hand / From trash" only when
+  both zones hold a `CanSelectCardCondition` card, else `SetBool(canSelectHand)`
+  (no prompt), and does nothing when neither does. The YAML's
+  `select_effect_choice` now carries a per-label `legal_when` (the
+  G-DSL-EFFECT-CHOICE-BRANCH-LEGALITY mechanism already used by EX10-069,
+  EX12-034, P-206): each label is a `count_gte` over that zone of the same
+  filter its pick uses (`name_is` [Gabumon] / [Agumon] keyed by
+  `event_target_name_contains` [Greymon] / [Garurumon], plus
+  `can_play_from_effect_without_cost`). Tests `ex4_061_clause2_zone_choice_*`,
+  `ex4_061_clause2_no_zone_choice_*`,
+  `ex4_061_clause2_trash_lock_leaves_only_hand_zone`. The gap's premise
+  ("gating each label needs a binding-reading filter") held for neither
+  driver: `legal_when` predicates can read the event target, and a union pick
+  covers the binding case.
+
+## `can_digivolve_onto` that waives only the level [G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL] — CLOSED 2026-11-14, added 2026-11-13
+
+- **CLOSED 2026-11-14.** `can_digivolve_onto_with_cost` gained
+  `ignore_level: bool` (`DigivolveCostPredicate` /
+  `CompiledDigivolveCostPredicate`). The engine leaf calls the new
+  `Game::can_effect_digivolve_from_source_with_cost_waiving(..,
+  DigivolveRequirementWaiver::Level)`, which searches the same routes the
+  `ignore_level` commit uses (`digivolve_routes_ignoring_level`) with the same
+  payment search and the same prohibitions. The compile pass
+  (`digivolve_candidates.rs`) now emits
+  `can_digivolve_onto_with_cost { target, cost: <the step's cost>, ignore_level: true }`
+  on the pick that binds an `effect_initiated_digivolve { ignore_level: true }`
+  card (not inside a `cost_reduction` `pay_cost` body, where the payment
+  probe is forbidden), and treats a leaf authored inside `all_of` as authored
+  (it used to add a route-only leaf on top, which would have re-imposed the
+  level). EX13-071 authors the leaf explicitly (`target: kudamon, cost:
+  { reduce: 1 }`). Tests: `ex13_071_kentaurosmon_pick_excludes_a_card_that_cannot_digivolve_ignoring_level`
+  (un-ignored), `ex13_071_kentaurosmon_pick_checks_payment_at_the_reduced_cost`,
+  and `tests/dsl/constructs/ignore_level_digivolve_candidate.rs`. No other
+  YAML card uses `ignore_level` on an effect digivolve (the other DCGO
+  `IgnoreRequirement.Level` cards — BT6-087, BT6-088, BT7-110, BT12-089,
+  BT13-098, BT24-025 — have no YAML spec yet; the pass covers them when they
+  are authored). Payment note: the leaf also checks the cost, at the effect's
+  reduced value (CR 4.3 1-3-11-1: a digivolve whose cost can't be paid can't
+  be declared). DCGO's filter does not: `CanPlayCardTargetFrame` checks
+  payment only for an empty frame (`DCGO/Assets/Scripts/Script/CardSource.cs:1150-1160`)
+  and for a digivolve onto a permanent runs only `CanEvolve` (routes +
+  prohibitions, `CardSource.cs:1269`). So with too little memory DCGO offers
+  a [Kentaurosmon] whose digivolve then cannot be paid, and ours does not
+  offer it. The rules manual governs; flag as a `dcgo_quirk` candidate if an
+  exam ever measures it.
+- **Review follow-up (2026-11-14).** (1) Inside a `cost_reduction`
+  `pay_cost` body the pass now emits the route-only
+  `can_digivolve_onto_ignoring_level` instead of nothing
+  (G-DSL-CAN-DIGIVOLVE-ONTO-IGNORE-LEVEL-ROUTE-ONLY). (2) A candidate leaf
+  the card authors is kept by the pass, so `mark_card` now returns a
+  compile error when it disagrees with the digivolve's waiver: a
+  level-honouring leaf on an `ignore_level` pick, a level-waiving leaf on a
+  normal pick, and the same two for a `has_digivolve_candidate` leaf on the
+  pick that binds the digivolve's target. No current card trips it. An
+  `ignore_requirements` step is deliberately not checked: the compiled flag
+  also comes from a replacement's `digivolve_without_cost` sugar, whose
+  printed text keeps the requirements and whose authored route leaf IS the
+  requirement check (BT17-097's [Imperialdramon] <Delay>; a first draft that
+  rejected it failed the pack build). (3) `has_digivolve_candidate` gained
+  `ignore_level` (G-DSL-HAS-DIGIVOLVE-CANDIDATE-IGNORE-LEVEL). Tests:
+  `ignore_level_pick_with_a_level_honouring_leaf_is_a_compile_error`,
+  `level_honouring_pick_with_a_level_waiving_leaf_is_a_compile_error`,
+  `ignore_requirements_pick_keeps_its_authored_route_leaf`,
+  `ignore_level_host_pick_with_a_level_honouring_candidate_leaf_is_a_compile_error`.
+  Still open, engine-side: Kokuwamon (BT8-059) "Players can't ignore
+  digivolution requirements" (G-ENGINE-CANNOT-IGNORE-DIGIVOLUTION-REQUIREMENTS).
+
+- **Driver:** Richard Sampson (EX13-071) [Main]: "it may digivolve into
+  [Kentaurosmon] in the hand or trash, ignoring level and with the cost
+  reduced by 1". DCGO EX13_071.cs:357-361 offers a [Kentaurosmon] only when
+  `CanPlayCardTargetFrame(selectedKudamon.PermanentFrame, true, ...,
+  IgnoreRequirement.Level)` holds (route onto THAT [Kudamon] with the level
+  waived; colour circle kept). Official ruling Q7449 (2026-09-18,
+  `data/card_qa.json`) is the direct authority: only a [Kentaurosmon] that
+  meets the digivolution requirements, with its Lv. as the sole exception,
+  may be chosen.
+- **Gap:** the compile pass `code/digimon-dsl/src/digivolve_candidates.rs`
+  skips `effect_initiated_digivolve { ignore_level: true }`, and neither
+  `can_digivolve_onto` (route-only, level honoured) nor
+  `can_digivolve_onto_with_cost` (`Game::can_effect_digivolve_from_source_with_cost`,
+  `waiver: DigivolveRequirementWaiver::None`) can waive the level gate. So the
+  pick offers a [Kentaurosmon] the commit refuses (CR 4.3 8-1-2-6; a dead
+  choice, 1-3-2), e.g. one whose only circle is a colour [Kudamon] lacks, or
+  any card while the [Kudamon] is under a digivolve lock.
+- **Proposed fix:** an `ignore_level: bool` on `DigivolveCostPredicate`
+  (`can_digivolve_onto_with_cost { target, cost, ignore_level: true }`)
+  probing `digivolve_routes_ignoring_level` with
+  `DigivolveRequirementWaiver::Level`, and the compile pass emitting it for
+  `ignore_level` digivolves. For EX13-071 the leaf must carry
+  `cost: { reduce: 1 }` so the probe applies both the level waiver and the
+  printed reduction (payment checked at the reduced cost, CR 4.3 1-3-11-1).
+- **Pinned by:** `ex13_071_kentaurosmon_pick_excludes_a_card_that_cannot_digivolve_ignoring_level`
+  (`code/digimon-engine/tests/cards_behavioral/ex13/ex13_071.rs`, `#[ignore]`
+  until the leaf lands; run with `--ignored`).
+
+## G-DSL-MOVE-SOURCES-COUNT-BINDING-SCOPE — CLOSED 2026-11-13 (validator)
+
+`move_matching_sources_under_tamer { bind_count_as: X }` binds the moved count
+at runtime, but the validator (`code/digimon-dsl/src/validator.rs`, step
+binding-scope walk) had no arm for the step, so it never declared `X`. A later
+`binding_value: X` inside a predicate (`affordable_with_cost: {reduce:
+{binding_value: moved_count}}`, BT21-092 Can't Turn My Back!) failed `dsl-lint`
+with "undeclared binding referenced before declaration" although the engine
+resolved it. Fix: the step's arm now declares `bind_count_as`. Driver:
+BT21-092 (`tests/cards_behavioral/bt21/bt21_092.rs`
+`bt21_092_main_affordability_counts_moved_cards`).
+
+## `affordable_with_cost` credits the reducers the payment takes [G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT] — CLOSED 2026-11-14 (engine leaf widened; no new vocabulary)
+
+- **Drivers:** Sirenmon (BT25-039) {Security} "play 1 [Ceresmon] ... with the
+  cost reduced by 7" dropped the real Ceresmon (BT25-059) at memory -6..-10
+  with 2+ suspended Digimon, although its own mandatory "When this card would
+  be played, if there are 2 or more suspended Digimon, reduce the cost by 5"
+  makes the play cost 0 (Q6306 "reduced by a total of 12") and the
+  `play_from_hand` verb charges 0. Murasamemon (BT25-041) carried no
+  affordability leaf at all because the leaf ignored the optional "by
+  trashing a face-down card, reduce the cost" reducers of Kyo Sawashiro
+  (BT25-088, -1 on a [Glowing Dawn] play), Armalizamon (BT25-049, -3) and
+  Tomoro Tenma (BT25-090, -1) on a [Glowing Dawn] Option use, while
+  Murasamemon (ST23-04), Monarchlizamon (ST23-08) and Cougarmon (BT26-026)
+  carried the leaf and so wrongly excluded a card those reducers make
+  payable.
+- **Rule:** CR 4.3 1-3-11-1..3 -- a card can be declared for play / use only
+  if its (alternate) cost can be paid, counting "when this card would be
+  played, reduce the cost" effects whose processing conditions are met
+  (1-3-11-2, whose own example is a Ceresmon-shaped card), optional ones
+  included, which the player must then perform as far as needed (1-3-11-3).
+  DCGO prices a play the same way: `CanPlayAsNewPermanent(.., payCost: true,
+  fixedCost)` -> `PayingCost(checkAvailability: true)`
+  (CardSource.cs:1150-1162, 668-686, 925-986) applies every static cost
+  change -- `MandatorySelfPlayCostReduction` (ChangePlayCost.cs:123-143) and
+  the hidden `isCheckAvailability: () => true` ChangeCostClass an optional
+  reducer keeps while its cost is payable (BT25_088.cs:246-275,
+  BT25_049.cs:226-255) -- and the reducer refuses its decline while it is
+  needed (`CanNoSelect`, BT25_088.cs:155-171, BT25_049.cs:135-150).
+- **Fix (engine; the leaf keeps its shape):**
+  `card_cost_affordable` (`code/digimon-engine/src/dsl_cards/predicate.rs`,
+  shared by `affordable_with_cost` and `affordable_with_cost_reduce`) now
+  subtracts `Game::declarable_cost_reduction`
+  (`code/digimon-engine/src/game_actions/cost.rs`): for a play, every reducer
+  `collect_before_pay_cost_reducers` returns (the card's own
+  `when_playing_this` one, field reducers, payable optional ones; not a
+  "set the cost to N" assignment); for an Option / DUAL use, the scan's
+  non-optional reducers plus every interactive pay-cost one (what
+  `play_option_core` applies; was "the first" until the review follow-up
+  below). Nothing is credited on a `free` delta or a
+  `fixed` Option use. Three verb fixes so the payment takes what the leaf
+  credits: (1) `play_option_core` judged an effect use's legal modes on the
+  UNREDUCED use cost, so a "use ... with the cost reduced by N" (or "without
+  paying the cost") of an Option whose printed cost alone was unpayable was
+  refused (`Game::option_legal_play_modes_for_policy`); (2) the interactive
+  Option-use reducer prompt ran only for a `Pay` use, never for a `Reduce`
+  one, so Armalizamon / Tomoro Tenma never reduced an effect use (DCGO
+  `PlayOptionCards(payCost: true)` runs them, ST23_04.cs:225-231); (3) CR
+  4.3 1-3-11-3: an optional reducer the declared play / use needs is offered
+  without a decline (`Game::play_cost_reducer_needed`,
+  `Game::option_use_reducer_needed`). Needed = unpayable with the reductions
+  already taken plus every other remaining reducer, so a reducer is forced
+  only when no other choice could pay (DCGO checks only the reductions
+  already registered).
+- **Cards:** BT25-039 KNOWN GAP comment closed; BT25-041 gains
+  `affordable_with_cost: { reduce: 3 }` on both branches (same filter as
+  ST23-04 / ST23-08; DCGO BT25_041.cs:138-151 would offer an unpayable card
+  and let the play fail, CR 4.3 7-1-2-3 -- a dead choice, dropped);
+  ST23-04 / ST23-08 / BT26-026 comments updated. BT26-026 deliberately
+  departs from DCGO: BT26_026.cs:56 reads `GetCostItself - 2`, which applies
+  no payment-time reduction (CardSource.cs:775), so DCGO drops an Option
+  payable only with Armalizamon's -3; CR 4.3 1-3-11-3 admits it.
+- **Tests:** `bt25_039_ceresmon_pick_credits_real_ceresmons_own_cost_reduction`
+  (un-ignored), `bt25_039_ceresmon_pick_excludes_real_ceresmon_with_one_suspended_digimon`;
+  `st23_04_hand_pick_credits_kyo_sawashiro_play_reducer`,
+  `st23_04_hand_pick_does_not_credit_kyo_without_a_face_down_card`,
+  `st23_04_kyo_credited_pick_plays_for_the_credited_cost`,
+  `st23_04_needed_kyo_reducer_cannot_be_declined`,
+  `st23_04_unneeded_kyo_reducer_stays_declinable`,
+  `st23_04_hand_pick_credits_armalizamon_option_reducer`,
+  `st23_04_armalizamon_credited_option_use_pays_the_credited_cost`,
+  `st23_04_option_payable_only_after_the_reduction_is_used`;
+  `st23_08_hand_pick_credits_kyo_sawashiro_play_reducer`;
+  `bt26_026_option_payable_only_after_the_reduction_is_used`,
+  `bt26_026_hand_pick_credits_armalizamon_option_reducer`;
+  `bt25_041_hand_pick_excludes_card_whose_reduced_cost_is_unpayable`,
+  `bt25_041_unpayable_card_is_not_offered_and_memory_does_not_move`
+  (were `..._offers_card_whose_reduced_cost_is_unpayable` /
+  `..._unpayable_pick_returns_card_...`).
+- **Left open (engine, `docs/RUST_ENGINE_GAPS.md`):**
+  G-ENGINE-MAIN-PHASE-DECLARATION-REDUCER-CREDIT (the main-phase mask credits
+  no "before paying" reducer), G-ENGINE-AFFORDABILITY-COST-ASSIGNMENT ("set
+  the cost to N" reducers are not credited by the leaf),
+  G-ENGINE-OPTION-USE-SYNC-OPTIONAL-REDUCER (a non-interactive optional
+  Option-use reducer is never applied by the use, so the leaf can't credit
+  it either), G-ENGINE-AFFORDABILITY-SHARED-REDUCER-RESOURCE (two reducers
+  paying from one face-down card are both credited),
+  G-ENGINE-AFFORDABILITY-VARIABLE-REDUCER-CREDIT (a payment-time variable
+  reducer is credited as 0).
+- **Review follow-up (2026-11-14), three defects fixed test-first:**
+  (1) Kyo Sawashiro (BT25-088)'s "would be played" reducer answered Option
+  uses -- see G-DSL-COST-REDUCTION-WHEN-ANY-ALLY-USED above. (2) Only the
+  FIRST interactive Option-use reducer in battle-area order was offered and
+  credited (`options.rs` `.find`, the leaf's `interactive_taken`), so with
+  Tomoro Tenma (BT25-090) before Armalizamon (BT25-049) the -3 was never
+  offered; DCGO applies each through its own [Once Per Turn] BeforePayCost
+  activation and availability class (BT25_049.cs:226-255), so -4 applies.
+  Now `play_option_core` offers every one in turn
+  (`Game::interactive_option_use_reducers_processed`, hashed only while
+  non-empty so existing digests are unchanged) and the leaf credits them all
+  (G-ENGINE-OPTION-USE-SINGLE-INTERACTIVE-REDUCER, closed). (3)
+  `play_cost_reducer_needed` / `option_use_reducer_needed` forced a reducer
+  (no decline) even when the play stays unpayable with it, so Kyo's
+  face-down card was spent on a play that then fails; CR 4.3 1-3-11-3
+  forces the processing only "as needed in order to pay the cost", so a
+  reducer is now forced only when it also makes the cost payable
+  (G-ENGINE-UNPAYABLE-PLAY-FORCES-REDUCER, closed; DCGO `CanNoSelect`,
+  BT25_088.cs:155-171, does force it -- CR outranks). Tests
+  `st23_04_two_option_use_reducers_are_both_credited_and_paid`,
+  `bt25_088_reducer_that_cannot_make_the_play_payable_stays_declinable`.
+
+## Effect-pick candidate legality, round 2 — added 2026-11-13 (select_hand / union playability audit)
+
+Follow-up to G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY below. The audit of
+`select_hand` / `select_union_zone` picks feeding a play, use or digivolve verb
+found four shapes existing leaves could not say. Principle: a pick offers only
+cards the follow-up verb would accept (CR 4.3 1-3-2: an impossible action is
+not carried out, so an unacceptable pick is a dead choice in the RL action
+space); DCGO filters the selection itself (e.g. ST24_06.cs:159-162,
+AD1_019.cs:56, BT26_090.cs:61, BT17_097.cs:137).
+
+1. **`affordable_with_cost: <CostDelta>` [G-DSL-AFFORDABLE-WITH-COST].** The
+   general form of `affordable_with_cost_reduce: N`: the card's owner can pay
+   the cost the verb charges, written with the verb's own `CostDelta`
+   (`{reduce: N}`, `{reduce: <formula>}` evaluated with the effect's
+   bindings, a fixed literal, `free`, `printed`). Base = play cost
+   (Digimon/Tamer) or effective use cost (Option, DUAL). Drivers: AD1-019,
+   BT21-092 (formula), BT26-090 (opponent memory), EX13-043 (4 + suspended).
+   Since 2026-11-14 the "before paying" reducers the payment would take
+   are credited (G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT, CLOSED). Engine fix in the same change: `affordable_with_cost_reduce`
+   priced a DUAL at its stored play cost instead of its use cost (CR 4.3
+   4-6-2; a DUAL is used, never played) — Ceresmon (BT26-032) / Jupitermon
+   (BT26-033) through the TS / Glowing Dawn pools. Shared helper
+   `card_cost_affordable` (`code/digimon-engine/src/dsl_cards/predicate.rs`).
+   Finding for card fixers: BT21-021 authors `cost_delta: -5`, which is a
+   FIXED cost (clamped to 0, i.e. free), not "reduced by 5"; it should be
+   `cost_delta: {reduce: 5}`.
+2. **Origin-zone-aware play leaves [G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE].** No new
+   key: `can_play_from_effect_without_cost` and `can_play_or_use_from_effect`
+   now fail for a Digimon / Tamer / DUAL in its owner's trash while that
+   player has `CannotPlayFromTrash` (BT23-014), the refusal
+   `Game::trash_play_refusal` makes. One filter serves both origins of ~50
+   hand+trash union picks (ST19-08, EX11-022, BT22-098, ...). Corrected
+   2026-11-14 (G-ENGINE-TRASH-LOCK-OPTION-OVERBLOCK, `docs/RUST_ENGINE_GAPS.md`):
+   the lock no longer refuses an Option USE from the trash (BT23-014 prints
+   "Digimon or Tamers"; CR 4.3 9-1-1), so `can_play_or_use_from_effect` reads
+   it only in its play arm. Open follow-up: G-ENGINE-TRASH-PLAY-LOCK-SCOPE.
+3. **DNA candidates.**
+   a. `dna_field_pair { role: result, first: <binding|source>, second:
+      <binding|source>, cost }` [G-DSL-DNA-FIELD-PAIR-FIXED-MATERIALS]: the
+      result must fit exactly the materials bound before it (BT20-036,
+      EX3-008 bind `source` + `dna_partner` first). `cost` (any stage,
+      optional, default `printed`) mirrors the consuming step, so a `cost:
+      free` DNA no longer requires the printed cost to be payable.
+   b. `dna_trash_candidate { role: result|field|partner, result, field,
+      field_filter, partner_filter, cost, ignore_requirements }`
+      [G-DSL-DNA-TRASH-PARTNER-CANDIDATE]: the field + TRASH sibling of
+      `dna_hand_candidate` for `effect_initiated_dna_digivolve_trash_partner`
+      (BT18-015, BT18-073). Mirrors the commit: no
+      `CannotDigivolveDigimonByEffect`, recipe (unless ignored), memory.
+      DCGO BT18_015.cs offers every [Millenniummon] (name + `jogressCondition`
+      only), so applying it narrows past DCGO; that is the no-dead-choice
+      principle, decide per card.
+4. **`can_digivolve_onto: replacement_subject`**
+   [G-DSL-CAN-DIGIVOLVE-ONTO-REPLACEMENT-SUBJECT]: the Delay hand-digivolve
+   replacement flow (`DelayHandDigivolveFlow`,
+   `code/digimon-engine/src/dsl_cards/lower_replacement.rs`) now evaluates
+   `choose.card_filter` with `replacement_subject` bound, as the generic
+   replacement process already did. Driver BT17-097 eff[1]. Caveats for the
+   fixer: the compiled replacement `digivolve_without_cost` sets
+   `ignore_requirements: true` (DCGO applies requirements,
+   `ignoreDigivolutionRequirementFixedCost: -1`), so the filter is the only
+   requirement check; the existing BT17-097 tests in
+   `tests/option_flow/replacement_integration.rs` use cards with empty
+   `evo_costs` and would need real requirements; and the trigger is still
+   offered when no card qualifies (DCGO's `CanUseCondition` refuses it).
+
+Already covered (no vocabulary): a digivolve pick whose target is `source`,
+`event_target` or bound by an earlier step gets `can_digivolve_onto: <target>`
+added at compile time (`code/digimon-dsl/src/digivolve_candidates.rs`) for
+every requirement-honouring `effect_initiated_digivolve`; author
+`can_digivolve_onto_with_cost` only when payment matters.
+
+Not fixed: `can_play_from_effect_without_cost` checks one free slot per
+candidate, not N slots for a multi-card simultaneous play (BT26-081,
+AD1-015, BT18-097). The 14-slot field is an engine limit, not a CR 4.3 rule.
+
+Mechanics tests: `code/digimon-engine/tests/dsl/constructs/`
+`affordable_with_cost.rs`, `play_candidate_origin_zone.rs`,
+`dna_candidate_fixed_pair_and_trash.rs`,
+`digivolve_onto_replacement_subject.rs`.
 ## Place a card list as TOP digivolution cards [G-DSL-PLACE-CARDS-AS-TOP-SOURCES] — added 2026-11-13 (EX12-018)
 
 Surfaced by the DCGO PvP replay of Virus Busters (raw-20261113T025510Z#g4).

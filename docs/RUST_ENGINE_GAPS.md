@@ -57,6 +57,149 @@ See `qa/archetype-qa/dsl/royal-knights-ex13-training-gate/` for exact-list scope
 
 # Rust Engine Gaps
 
+## G-ENGINE-CANNOT-IGNORE-DIGIVOLUTION-REQUIREMENTS — OPEN, added 2026-11-14
+
+- **What:** Kokuwamon (BT8-059) "[All Turns] Players can't ignore
+  digivolution requirements." (official Q&A: affects both players). The
+  engine has no such prohibition: neither the candidate leaves
+  (`can_digivolve_onto_with_cost { ignore_level }`,
+  `can_digivolve_onto_ignoring_level`, `has_digivolve_candidate
+  { ignore_level }`) nor the commit (`DigivolveRequirementWaiver::{Color,
+  Level, All}` in `game_actions/digivolve.rs`) checks one. BT8-059 has no
+  YAML spec (metadata JSON only), so nothing is wrong in play yet; once it
+  is authored, every ignore-requirements / ignore-colour / ignore-level
+  effect digivolve and its pick would wrongly go ahead while it is on the
+  field.
+- **DCGO:** `Player.CanIgnoreDigivolutionRequirement(targetPermanent,
+  cardSource)` (`DCGO/Assets/Scripts/Script/Player.cs:1426`) scans every
+  field permanent for an `ICannotIgnoreDigivolutionConditionEffect`;
+  `CardSource.EvoCosts` honours the `IgnoreRequirement.All` / `.Color` /
+  `.Level` waiver only when it returns true (`CardSource.cs:593-599`), and
+  `AddDigivolutionRequirement.cs:54-66` gates added requirements the same
+  way. So under Kokuwamon a waived digivolve falls back to the printed
+  requirements (it is not forbidden outright).
+- **Fix sketch:** a player modifier (e.g. `ModifierType::CannotIgnoreDigivolutionRequirements`,
+  checked for both players' fields) that degrades any non-`None`
+  `DigivolveRequirementWaiver` to `None` in the commit and in the three
+  candidate probes; DSL `aura` vocabulary to grant it from BT8-059.
+
+## G-ENGINE-AFFORDABILITY-SHARED-REDUCER-RESOURCE — OPEN, added 2026-11-14
+
+- **What:** `Game::declarable_cost_reduction` checks each optional reducer's
+  "by X" on its own (`collect_before_pay_cost_reducers` ->
+  `cost_reducer_condition_payable`). Two reducers that pay from one shared
+  resource are both credited although only one can be paid: Armalizamon
+  (BT25-049) -3 and Tomoro Tenma (BT25-090) -1 each trash "the bottom
+  face-down card under any of your Tamers", so with ONE such card left the
+  leaf credits -4 while the use can take only -3. `affordable_with_cost`
+  then offers an Option the use cannot pay; the use fails at `pay_memory`
+  (CR 4.3 1-3-11-1: it should not have been declarable). DCGO over-credits
+  the same way (each reducer's hidden availability ChangeCostClass checks
+  `TamerWithOneFaceDownSource` independently, BT25_049.cs:226-255).
+- **Fix sketch:** credit optional reducers through a joint payability check
+  (simulate the "by X" costs in sequence on a cloned `Game`, or count the
+  shared resource per pay-cost step kind).
+
+## G-ENGINE-AFFORDABILITY-VARIABLE-REDUCER-CREDIT — OPEN, added 2026-11-14
+
+- **What:** a reducer whose amount is only known at payment -- Akihiro
+  Kurata (BT13-103) "reduce the play cost by the play cost of the deleted
+  Digimon" (`delete_for_cost_reduction`, credited through
+  `pending_cost_reduction_amount_override`) -- lowers with a literal-0
+  amount, so `declarable_cost_reduction` credits 0 and
+  `play_cost_reducer_needed` never forces it. No `affordable_with_cost` card
+  can pick a [Belphemon] today, so nothing is dropped yet. Fix: credit the
+  largest amount the payment could choose (max play cost among the
+  deletable candidates).
+
+## G-ENGINE-OPTION-USE-SINGLE-INTERACTIVE-REDUCER — CLOSED 2026-11-14
+
+- **What was wrong:** `try_prompt_interactive_option_use_cost_reducer`
+  offered only the first interactive Option-use reducer in battle-area order
+  and `play_option_core` stopped after one, so Armalizamon (BT25-049) and
+  Tomoro Tenma (BT25-090) never both applied to one use (DCGO applies each,
+  BT25_049.cs:226-255). **Fix:** `Game::interactive_option_use_reducers_processed`;
+  each reducer is offered once, in turn. Test
+  `st23_04_two_option_use_reducers_are_both_credited_and_paid`. Part of
+  G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (`qa/dsl-vocab-gaps.md`).
+
+## G-ENGINE-UNPAYABLE-PLAY-FORCES-REDUCER — CLOSED 2026-11-14
+
+- **What was wrong:** `play_cost_reducer_needed` /
+  `option_use_reducer_needed` removed an optional reducer's decline whenever
+  the play / use was unpayable without it, even when it stayed unpayable
+  WITH it, so an effect play of an unpayable card made the player spend the
+  reducer's "by X" (Kyo Sawashiro BT25-088's face-down card) before the play
+  failed (CR 4.3 7-1-2-3). CR 4.3 1-3-11-3 forces only the processing
+  "needed in order to pay the cost". **Fix:** needed also requires the cost
+  to be payable with the reducer's own amount. DCGO's `CanNoSelect`
+  (BT25_088.cs:155-171) does force it; CR outranks. Test
+  `bt25_088_reducer_that_cannot_make_the_play_payable_stays_declinable`.
+
+## G-ENGINE-MAIN-PHASE-DECLARATION-REDUCER-CREDIT — OPEN, added 2026-11-14
+
+- **What:** the main-phase hand-play / Option-use mask (`code/digimon-engine/src/action/mask.rs`
+  hand loop; `Game::option_legal_play_modes` with `OptionCostPolicy::Pay`)
+  prices a declaration at its printed cost less `[Assembly]` / cast-time
+  assembly / cost assignments only. It credits no "before paying" reducer:
+  not the card's own mandatory one (Ceresmon BT25-059 "When this card would
+  be played, if there are 2 or more suspended Digimon, reduce the cost by
+  5") and not a payable optional one (Kyo Sawashiro BT25-088, Armalizamon
+  BT25-049, Tomoro Tenma BT25-090). CR 4.3 1-3-11-2's own example is exactly
+  this (a 12-cost card with "reduce the cost by 5" is declarable when 7 is
+  payable), and DCGO's main-phase availability uses
+  `PayingCost(checkAvailability: true)` with the hidden availability
+  ChangeCostClass (BT25_088.cs:246-275). So a card payable only with a
+  reducer is missing from the action space.
+- **Fix sketch:** subtract `Game::declarable_cost_reduction(player, card,
+  Play | OptionUse)` (added for G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT,
+  `game_actions/cost.rs`) in the mask's hand loop and in the `Pay` arm of
+  `Game::option_legal_play_modes_for_policy`; the play chain already forces
+  a needed optional reducer (CR 4.3 1-3-11-3, `play_cost_reducer_needed`).
+  Changes the mask, so tensor / replay goldens must be re-checked.
+- **Blocks training:** no flag set; it removes legal plays, it adds none.
+
+## G-ENGINE-AFFORDABILITY-COST-ASSIGNMENT — OPEN, added 2026-11-14
+
+- **What:** `Game::declarable_cost_reduction` skips a "set the play cost to
+  N" reducer (`Effect::cost_assignment`), so `affordable_with_cost` prices a
+  card the assignment would make payable at its reduced printed cost. The
+  play chain applies the assignment (`PlayCostAdjustments::assigned_base`),
+  so such a pick can be dropped although the play would succeed. How an
+  assignment composes with an effect's `CostDelta` (which base it replaces)
+  is not settled anywhere in the engine; settle that first, then credit it.
+
+## G-ENGINE-OPTION-USE-SYNC-OPTIONAL-REDUCER — OPEN, added 2026-11-14
+
+- **What:** `scan_before_pay_cost_reduction_with_target` skips an OPTIONAL
+  Option-use reducer that has no interactive pay cost ("[Skipped]
+  optional/paid BeforePayCost reducer ..."), and
+  `try_prompt_interactive_option_use_cost_reducer` offers only interactive
+  ones, so such a reducer is never offered on an Option use. The play path
+  offers it (`continue_play_from_hand_cost_reduction_chain`). No shipped
+  Option-use reducer has that shape today (BT25-049 / BT25-090 are
+  interactive); `declarable_cost_reduction` does not credit it, matching
+  the use. Fix: give the Option-use path the play chain's optional prompt.
+
+## G-ENGINE-EFFECT-OPTION-USE-PRICED-UNREDUCED — CLOSED 2026-11-14
+
+- **What was wrong:** `play_option_core` checked an effect-driven use's legal
+  modes (`option_legal_play_modes`) against the UNREDUCED use cost, so
+  "use ... with the cost reduced by N" / "without paying the cost" of an
+  Option whose printed use cost alone was unpayable returned `Invalid`
+  (ST23-04 / BT26-026 picks the leaf offered then fizzled). And the
+  interactive Option-use reducer (Armalizamon BT25-049, Tomoro Tenma
+  BT25-090) was prompted only for a `Pay` use, never for a `Reduce` one,
+  although DCGO's reduced use (`PlayOptionCards(payCost: true)`,
+  ST23_04.cs:225-231) runs it.
+- **Fix:** `Game::option_legal_play_modes_for_policy` (CR 4.3 1-3-11-1,
+  4-2-3-1: judged on the cost the use pays; `Pay` unchanged for the mask);
+  the interactive prompt runs for `Pay | Reduce`. Part of
+  G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (`qa/dsl-vocab-gaps.md`).
+  Tests `st23_04_option_payable_only_after_the_reduction_is_used`,
+  `st23_04_armalizamon_credited_option_use_pays_the_credited_cost`,
+  `bt26_026_option_payable_only_after_the_reduction_is_used`.
+
 ## Cross-source immunity-grant suppression [G-ENGINE-CROSS-SOURCE-IMMUNITY-GRANT-SUPPRESSION] — open outside the scoped pool
 
 The existing registry does not suppress `CannotBeAffected` entries themselves
@@ -2273,7 +2416,7 @@ Note: the Satellamon (BT21-074) protection bundle cites the *resolved* "Source-s
 return-immunity modifiers" entry â€” verify at implementation; likely no longer a gap.
 
 ### Option USE routed from non-hand origins (trash / hand-or-trash union / reveal pool / digivolution stack), free or with cost delta
-- **Status: ðŸŸ¢ ENGINE RESOLVED / DSL PARTIAL (2026-07-03).** `Game::use_option_from(player, OptionSource, CostDelta)`: `OptionSource` gains `Revealed(CardHandle)` + `Source{host,card}`; ALL origins route through `play_option_core` (correct [Main] resolution + disposal, `OnUseOption`, mode-select); memory actually paid for `Reduce(n)` (printed 5, reduce 3 â†’ 2 paid), stacking on field `BeforePayCost` reducers; `CannotPlayFromTrash` honored. EffectContext: `use_option_from_trash`/`use_option_from_revealed`/`use_option_from_source`. DSL verb `use_option_from_trash {of, filter, cost, optional}` shipped clone-safe (`UseOptionFromTrashStep` resume frame). **Residual DSL verbs RESOLVED 2026-07-03 (option-verbs reconciliation):** `use_option_from_revealed`/`use_option_from_sources`/`use_option_bound` all ship (cost? = free|printed|{reduce:N}); the `Source` origin resolves BOTH card_sources AND linked_cards. EX7-048 clause 1, BT25-085 use-facet, and BT21-062 union-use are all expressible. Tests: tests/dsl/option_source_use_cluster.rs (7). BT25-085 remains blocked ONLY on the trash-Option-as-COST facet (G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST, round 3). Tests: `option_lifecycle_cluster.rs` gap2_* (5/5).
+- **Status: ðŸŸ¢ ENGINE RESOLVED / DSL PARTIAL (2026-07-03).** `Game::use_option_from(player, OptionSource, CostDelta)`: `OptionSource` gains `Revealed(CardHandle)` + `Source{host,card}`; ALL origins route through `play_option_core` (correct [Main] resolution + disposal, `OnUseOption`, mode-select); memory actually paid for `Reduce(n)` (printed 5, reduce 3 â†’ 2 paid), stacking on field `BeforePayCost` reducers; ~~`CannotPlayFromTrash` honored~~ (reversed 2026-11-14: that lock is Digimon/Tamer-only and never refuses an Option use, see G-ENGINE-TRASH-LOCK-OPTION-OVERBLOCK). EffectContext: `use_option_from_trash`/`use_option_from_revealed`/`use_option_from_source`. DSL verb `use_option_from_trash {of, filter, cost, optional}` shipped clone-safe (`UseOptionFromTrashStep` resume frame). **Residual DSL verbs RESOLVED 2026-07-03 (option-verbs reconciliation):** `use_option_from_revealed`/`use_option_from_sources`/`use_option_bound` all ship (cost? = free|printed|{reduce:N}); the `Source` origin resolves BOTH card_sources AND linked_cards. EX7-048 clause 1, BT25-085 use-facet, and BT21-062 union-use are all expressible. Tests: tests/dsl/option_source_use_cluster.rs (7). BT25-085 remains blocked ONLY on the trash-Option-as-COST facet (G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST, round 3). Tests: `option_lifecycle_cluster.rs` gap2_* (5/5).
 - **Severity (was):** ðŸ”´ BLOCKING
 - **Discovered in:** Three Musketeers BeelStarmon (2026-07-02); Galacticmon (2026-07-02)
 - **Card(s):** BT25-083 LadyDevimon ("use 1 [Three Musketeers] trait Option card from your trash with the cost reduced by 3"), BT21-062 Galacticmon ("use 1 [Ragnarok Cannon] from your hand or trash without paying the cost"), EX7-048 Gundramon ("Reveal the top 6 cards... You may use 1 [Three Musketeers] trait Option card among them without paying the cost"), BT25-085 BeelStarmon ("use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost")
@@ -6947,6 +7090,19 @@ Not covered: the player-wide `CannotUseOptionCards` is the engine's only Option 
 
 Tests (red before the fix, green after): `tests/cards_behavioral/st24/st24_06.rs` `st24_06_hand_pick_excludes_option_whose_colour_requirement_is_unmet`, `st24_06_hand_pick_excludes_blue_option_without_a_blue_permanent`; `tests/dsl/constructs/play_or_use_candidate_legality.rs` `play_or_use_candidates_exclude_an_option_whose_colour_requirement_is_unmet`, `play_or_use_commit_refuses_an_off_colour_option`, `effect_driven_option_use_enforces_the_colour_requirement_for_every_cost_policy`, `use_option_from_hand_does_not_offer_an_off_colour_option`, `use_option_from_trash_does_not_offer_an_off_colour_option`. Regression guard (green before): `play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored`. Fixtures that relied on the bug (synthetic red Options with no matching permanent, none modelling a card whose text waives colour) were given a matching permanent or colour: `tests/dsl/option_effect_use.rs`, `option_lifecycle_cluster.rs` (4 tests), `option_source_use_cluster.rs` (5 tests), `constructs/play_or_use_candidate_legality.rs` (PU-OPTION now white), `tests/cards_behavioral/ex7/ex7_073.rs` (TM-OPT now purple; BeelStarmon (X Antibody) EX7-073's text does not waive colour and DCGO EX7_073.cs:62-70 filters on `!CanNotPlayThisOption`).
 
+## Trash play lock refused Option USE from the trash [G-ENGINE-TRASH-LOCK-OPTION-OVERBLOCK] - RESOLVED (2026-11-14)
+
+`ModifierType::CannotPlayFromTrash` has one producer, Gallantmon (BT23-014): "[On Play] [When Digivolving] Until your opponent's turn ends, their effects can't play Digimon or Tamers from the trash." (`data/card_bundles/BT23-014.md`). The engine applied it to every card kind: `Game::use_option_from` (trash origin) and `Game::play_option_from_trash` returned `Invalid`, and the `can_play_or_use_from_effect` / `can_play_from_effect_without_cost` predicate leaves (`trash_play_locked`) dropped a trash Option. So under the lock Galacticmon (BT21-062) could not use a trash [Ragnarok Cannon], LadyDevimon (BT25-083) offered its reduced trash Option use and then silently used nothing (a dead candidate: `install_use_option_from_trash` never read the lock, the commit did), and Knightmon-text EX13-064's hand-or-trash play-or-use pick dropped trash Options. The full set of cards that use an Option from the trash is BT21-062, BT25-083, BT26-070, BT26-074 and EX13-064 (BT26-070 / BT26-074 share BT25-083's `use_option_from_trash` path). Other `can_play_or_use_from_effect` picks were not affected because they never reach the trash: EX13-061 "from your hand or this Digimon's digivolution cards", EX13-072 and BT26-026 "from your hand".
+
+Evidence the lock is Digimon/Tamer only: the printed text; CR 4.3 7-1-1 ("playing a card" places a card with a play cost onto the field) vs 9-1-1 (using an Option activates its [Main]); DCGO BT23_014.cs:46-58 installs a `CanNotPutFieldClass` whose `CardCondition` is `IsExistInAnyTrash && (IsDigimon || IsTamer)`, consulted only by `CardSource.CanEnterField` (CardSource.cs:1214-1260), never by the Option-use gate `CanNotPlayThisOption` (CardSource.cs:184).
+
+Fix: new `Game::trash_play_lock_applies(player, kind)` (`game_actions/play.rs`): the lock covers Digimon, Tamer and DUAL (a DUAL's card kinds are fixed and include Digimon, so DCGO `IsDigimon` is always true for it: `CardKinds => _cEntity_Base.cardKind`, CardSource.cs:3606); never an Option use or a Digi-Egg. `trash_play_refusal` uses it; the Option-use paths (`use_option_from`, `play_option_from_trash`, `game_actions/options.rs`) no longer read the lock; `trash_play_locked` (`dsl_cards/predicate.rs`) takes the card kind and `can_play_or_use_from_effect` applies it only to its Digimon/Tamer play arm.
+
+Tests (red before, green after): `tests/cards_behavioral/bt21/bt21_062.rs` `bt21_062_trash_cannon_still_offered_under_bt23_014_digimon_tamer_trash_lock` (was `#[ignore]`), `bt21_062_trash_cannon_is_used_under_bt23_014_digimon_tamer_trash_lock` (use path: the [Main] resolves); `tests/cards_behavioral/ex13/ex13_064.rs` `ex13_064_wd_still_offers_a_trash_option_under_the_digimon_tamer_trash_lock` (was `#[ignore]`); `tests/cards_behavioral/bt25/bt25_083.rs` `bt25_083_wd_wa_reduced_trash_option_use_ignores_digimon_tamer_trash_lock`. Corrected (asserted the over-block): `tests/dsl/constructs/play_candidate_origin_zone.rs` `union_use_drops_the_trash_option_under_cannot_play_from_trash` -> `union_use_keeps_the_trash_option_under_cannot_play_from_trash`.
+
+## Trash play lock is keyed on the trash owner, not the effect's owner [G-ENGINE-TRASH-PLAY-LOCK-SCOPE] - OPEN (2026-11-14)
+
+DCGO BT23_014.cs:46-58 blocks a play when the card is in ANY trash (`IsExistInAnyTrash`) and the playing effect's source card belongs to the locked player (`CardEffectCondition: EffectSourceCard.Owner == card.Owner.Enemy`), matching the printed "their effects can't play ... from the trash". The engine's player-scoped `CannotPlayFromTrash` is read against the owner of the trash being played from (`trash_play_refusal(player_id, ..)`; `trash_play_locked`'s `CardSourceRef::Trash(owner, _)`). The two agree for "play from your own trash" effects (every current driver). They disagree for an effect that plays a Digimon/Tamer from the OTHER player's trash: the locked player's effect playing from Gallantmon's controller's trash is allowed (should be refused), and Gallantmon's controller's own effect playing from the locked player's trash is refused (should be allowed). Not fixed here: it needs the lock read against the effect controller (`effect_source_player`) at the trash-play sites, plus a cross-trash play driver to test it. Also unverified: whether any card plays a Digi-Egg from the trash (now outside the lock, per DCGO `IsDigimon`).
 ## DCGO replay cannot tell copies apart that no row names by card identity [G-DCGO-REPLAY-BOARD-CARD-INDEX] — RESOLVED for raw-20261113T025510Z#g6 (2026-11-14, round 7); open where the frame model is off
 
 Replay-harness gap (not an engine rule gap). The MelonLoader recordings name each battle-area permanent by card id only, in DCGO's frame order (`GetFieldPermanents()`, Player.cs:669-684; frames are allocated from on-screen layout, `CardSource.PreferredFrame`, CardSource.cs:2340-2370, and migrate at runtime), so a pick of one of several copies of a card cannot be read from its position (`ReplayDriver::duplicate_copy_target` stops rather than pair by position).

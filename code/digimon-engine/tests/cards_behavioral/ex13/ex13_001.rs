@@ -320,3 +320,116 @@ fn ex13_001_opponent_turn_red_tamer_does_not_trigger() {
     let _ = runner.auto_resolve();
     assert_eq!(top_card_id(&runner, 0, carrier.index as usize), "CARRIER");
 }
+
+// ─── Candidate legality: only cards the paid digivolve can complete ──────────
+//
+// DCGO `DigivolveIntoHandOrTrashCard(payCost: true, reduceCost: 2)`
+// (EX13_001.cs:55-64) offers a hand card when `!CanNotEvolve(target)` and
+// `CanPlayCardTargetFrame(target.PermanentFrame, PayCost: true, ...)`
+// (CardEffectCommons.cs:858-882). For the occupied carrier frame that is a
+// ROUTE-ONLY check: the `MaxMemoryCost < cost` refusal (CardSource.cs:1150-1162)
+// sits inside `if (PayCost && frame.GetFramePermanent() == null)`, i.e. only
+// for plays into an empty frame, and `CanEvolve` (CardSource.cs:1269-1290) /
+// `EvoCosts` never compare cost to memory. So DCGO offers a [Growlmon] card the
+// carrier has a route onto even when the player can't pay for it.
+//
+// We deliberately diverge (rules over DCGO): CR 4.3 1-3-11-1 forbids declaring
+// a digivolve whose cost can't be paid, and our effect digivolve refuses it
+// (`Game::can_effect_digivolve_from_source_with_cost`, game_actions/
+// digivolve.rs), so an unaffordable card is not offered (it would be an illegal
+// choice in the action space) and a hand holding only such cards opens no pick.
+// The no-route exclusion matches DCGO. A DCGO recording that offers or picks an
+// unaffordable card here is a known `dcgo_quirk`, not an engine bug.
+
+/// A red Lv.4 [Growlmon]-named Digimon digivolving from a red Lv.3 for `cost`.
+fn growl_costing(id: &str, cost: u8) -> CardData {
+    let mut c = digimon(id, "Growlmon", 4, 5);
+    c.evo_costs = vec![EvoCost {
+        card_color: 0,
+        level: 3,
+        memory_cost: cost.into(),
+    }];
+    c
+}
+
+/// A red Lv.6 [Growlmon]-named Digimon that needs a Lv.5: no route onto the Lv.3 carrier.
+fn growl_needing_lv5(id: &str) -> CardData {
+    let mut c = digimon(id, "WarGrowlmon", 6, 10);
+    c.evo_costs = vec![EvoCost {
+        card_color: 0,
+        level: 5,
+        memory_cost: 3,
+    }];
+    c
+}
+
+/// Memory 3, play the red Tamer (cost 2) → 1 memory, paying at most 11 (CR 4.3
+/// memory floor −10). Returns the runner with the hand pick (if any) pending.
+fn after_red_tamer(hand: &[&str]) -> DebugRunner {
+    let mut runner = builder()
+        .add_card(growl_costing("GROWL-13", 13))
+        .add_card(growl_costing("GROWL-14", 14))
+        .add_card(growl_needing_lv5("GROWL-LV6"))
+        .hand(0, hand)
+        .deck(0, &["FILL", "FILL"])
+        .memory(3)
+        .start();
+    runner.place_stack(0, &[CARD_ID, "CARRIER"]);
+    play_from_hand(&mut runner, "RED-TAMER");
+    runner
+}
+
+fn offered(runner: &DebugRunner) -> Vec<String> {
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut out: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .filter(|&&a| a != PASS)
+        .filter_map(|&a| {
+            [PLAY_HAND_START, HAND_EFFECT_START]
+                .iter()
+                .filter_map(|&s| a.checked_sub(s))
+                .find(|&i| (i as usize) < hand.len() && i < 30)
+        })
+        .map(|i| hand[i as usize].clone())
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// GROWL-13 costs 11 after the −2 (payable); GROWL-14 costs 12 (not).
+#[test]
+fn ex13_001_hand_pick_offers_only_growlmon_affordable_after_the_reduction() {
+    let runner = after_red_tamer(&["RED-TAMER", "GROWL-13", "GROWL-14"]);
+    assert_eq!(offered(&runner), vec!["GROWL-13".to_string()]);
+}
+
+/// Only an unaffordable [Growlmon] card in hand: no pick opens.
+#[test]
+fn ex13_001_no_pick_when_the_only_growlmon_is_unaffordable() {
+    let runner = after_red_tamer(&["RED-TAMER", "GROWL-14"]);
+    assert!(
+        offered(&runner).is_empty(),
+        "GROWL-14 can't be paid for: {:?}",
+        runner.pending_selection_view()
+    );
+}
+
+/// Regression guard: a [Growlmon] card with no route onto the Lv.3 carrier is
+/// not offered (the compile pass's `can_digivolve_onto: source`).
+#[test]
+fn ex13_001_hand_pick_excludes_growlmon_without_a_route_onto_the_carrier() {
+    let runner = after_red_tamer(&["RED-TAMER", "GROWL-LV6", "GROWL-13"]);
+    assert_eq!(offered(&runner), vec!["GROWL-13".to_string()]);
+}

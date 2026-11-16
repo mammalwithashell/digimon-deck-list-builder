@@ -310,3 +310,127 @@ fn ad1_002_eoa_od_trash_hybrid_draws_two() {
         "trashing should trigger Draw 2 (net hand +1)"
     );
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 4 — [EoA][OD] Tamer pick legality: only Tamers that can be played
+// ════════════════════════════════════════════════════════════════════════════
+//
+// DCGO AD1_002.cs:158-166 CanSelectPlayCondition = `IsTamer && (Red || Blue ||
+// Green) && HasInheritedEffect && CanPlayAsNewPermanent(cardSource, payCost:
+// false, activateClass)`, shared by the hand and the trash branch (:168-169).
+// A Tamer is offered only if the effect can place it: a free battle-area
+// slot, no "can't play Tamers by effects" lock, and — for the trash copy — no
+// "can't play cards from the trash" lock. CR 4.3 1-3-11-1: a card can be
+// declared for play only if it is able to be played; 1-3-2: an impossible
+// action is not carried out.
+
+/// A red Tamer with an inherited effect — the printed target.
+fn red_tamer_with_inherited(id: &str) -> CardData {
+    let mut card = tamer(id, id);
+    card.colors = vec![digimon_engine::enums::CardColor::Red];
+    card.play_cost = 2;
+    card.level = None;
+    card.dp = None;
+    card.inherited_text = "[Your Turn] This Digimon gets +1000 DP.".to_string();
+    card
+}
+
+/// Aldamon on P0's field, `RED-TAMER` in hand and trash (per flags).
+fn aldamon_with_tamers(in_hand: bool, in_trash: bool) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("AD1-002 YAML loads")
+        .add_card(red_tamer_with_inherited("RED-TAMER"))
+        .add_card(make_test_card("DECK-FILLER", "DeckFiller"))
+        .deck(0, &["DECK-FILLER"; 5])
+        .deck(1, &["DECK-FILLER"; 5])
+        .memory(10)
+        .start();
+    let aldamon = runner.place_on_field(0, CARD_ID, Some(0));
+    if in_hand {
+        runner.add_to_hand(0, "RED-TAMER");
+    }
+    if in_trash {
+        runner.inject_trash(0, "RED-TAMER");
+    }
+    (runner, aldamon)
+}
+
+/// Fire [On Deletion], skip the optional trash if it is offered, and return
+/// the union-pick candidates as sorted "zone:card_id" strings (empty when no
+/// union pick installs).
+fn tamer_union_offered(runner: &mut DebugRunner, aldamon: digimon_engine::permanent::PermanentHandle) -> Vec<String> {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnDeletion, TriggerSource::Permanent(aldamon));
+    runner.game.drain_effect_queue();
+    if runner.pending_kind() == Some(SelectionKind::Hand) {
+        runner.execute_action(0, PASS).expect("decline the optional trash");
+    }
+    let Some(pending) = runner.pending_selection() else {
+        return Vec::new();
+    };
+    if !matches!(pending.kind, SelectionKind::UnionZone { .. }) {
+        return Vec::new();
+    }
+    let owner = pending.card_choice.as_ref().expect("union pick owns a card-choice page");
+    let mut out: Vec<String> = owner
+        .view(&runner.game, pending.selecting_player)
+        .rows
+        .into_iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .map(|row| format!("{:?}:{}", row.zone.expect("zone"), row.card_id.unwrap_or_default()))
+        .collect();
+    out.sort();
+    out
+}
+
+fn add_player_lock(runner: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// Regression guard: hand and trash copies are both offered.
+#[test]
+fn ad1_002_eoa_od_offers_tamer_from_hand_and_trash() {
+    let (mut runner, aldamon) = aldamon_with_tamers(true, true);
+    assert_eq!(
+        tamer_union_offered(&mut runner, aldamon),
+        vec!["Hand:RED-TAMER".to_string(), "Trash:RED-TAMER".to_string()]
+    );
+}
+
+/// Aldamon fills the only slot: neither copy can be placed, none is offered.
+#[test]
+fn ad1_002_eoa_od_tamer_not_offered_when_battle_area_full() {
+    let (mut runner, aldamon) = aldamon_with_tamers(true, true);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    let offered = tamer_union_offered(&mut runner, aldamon);
+    assert!(offered.is_empty(), "no free slot → nothing can be chosen (got {offered:?})");
+}
+
+/// "You can't play Tamers by effects": neither copy is offered.
+#[test]
+fn ad1_002_eoa_od_tamer_not_offered_under_tamer_effect_play_prohibition() {
+    let (mut runner, aldamon) = aldamon_with_tamers(true, true);
+    add_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    let offered = tamer_union_offered(&mut runner, aldamon);
+    assert!(offered.is_empty(), "Tamer effect plays are locked (got {offered:?})");
+}
+
+/// "You can't play cards from the trash": the trash copy is dropped, the hand
+/// copy is still offered.
+#[test]
+fn ad1_002_eoa_od_trash_tamer_not_offered_under_cannot_play_from_trash() {
+    let (mut runner, aldamon) = aldamon_with_tamers(true, true);
+    add_player_lock(&mut runner, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    assert_eq!(
+        tamer_union_offered(&mut runner, aldamon),
+        vec!["Hand:RED-TAMER".to_string()]
+    );
+}

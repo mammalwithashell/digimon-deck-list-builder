@@ -37,11 +37,19 @@ effects:
             all_of:
               - kind: digimon
               - trait_has: Shambala
-              # DCGO's `DigivolveIntoHandOrTrashCard` (CardEffectCommons.cs) only
-              # offers hand cards that can ACTUALLY digivolve onto the attacker at
-              # the reduced cost (`CanPlayCardTargetFrame`) and opens no pick when
-              # there are none; the effect still triggers and is accepted (its
+              # DCGO's `DigivolveIntoHandOrTrashCard` (CardEffectCommons.cs) offers
+              # hand cards with a digivolution route onto the attacker
+              # (`CanPlayCardTargetFrame`) and opens no pick when there are none;
+              # the effect still triggers and is accepted (its
               # CanActivateCondition only needs a [Shambala] card in hand).
+              # KNOWN DCGO DIVERGENCE on affordability (rules over DCGO): for an
+              # occupied frame DCGO's check is route-only -- the
+              # `MaxMemoryCost < cost` refusal (CardSource.cs:1150-1162) runs
+              # only for an EMPTY frame, and `CanEvolve`/`EvoCosts`
+              # (CardSource.cs:1269-1290) never compare cost to memory -- so DCGO
+              # also offers unaffordable cards. We exclude them: CR 4.3 1-3-11-1,
+              # and our effect digivolve refuses them
+              # (Game::can_effect_digivolve_from_source_with_cost).
               - can_digivolve_onto_with_cost: { target: event_target, cost: { reduce: 1 } }
           prompt: "Digivolve the attacking [Shambala] Digimon into a [Shambala] Digimon in hand with the cost reduced by 1"
       - effect_initiated_digivolve:
@@ -68,6 +76,11 @@ effects:
                   - kind: digimon
                   - kind: tamer
               - trait_has: Shambala
+              # DCGO EX12_074.cs:88-92: CanPlayAsNewPermanent(payCost: true,
+              # fixedCost: cost - 3) -- free frame, no play prohibition, and the
+              # reduced cost payable (CR 4.3 1-3-11-1).
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 3 }
           prompt: "Play 1 [Shambala] card from your hand with the play cost reduced by 3"
       - play_from_hand:
           of: you
@@ -91,6 +104,9 @@ effects:
                   - kind: tamer
               - trait_has: Shambala
               - play_cost_lte: 5
+              # DCGO EX12_074.cs:129-135: HasPlayCost && CanPlayAsNewPermanent(
+              # payCost: false); no pick when neither zone has one (:139-142).
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 play cost 5 or lower [Shambala] card from your hand or trash without paying the cost"
       - play_union_bound_free:
           binding: shambala_free

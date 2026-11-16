@@ -53,6 +53,10 @@ effects:
                   kind: digimon
                   name_contains: Sistermon
                   name_not_shared_by_field_digimon: you
+                  # DCGO BT23_013.cs:116-117 gates the branch on IsValidSistermon,
+                  # which includes CanPlayAsNewPermanent (no DUAL, a free slot, no
+                  # prohibition, trash play not locked).
+                  can_play_from_effect_without_cost: true
                 n: 1
           prompt: "Choose what Jesmon plays"
       - if:
@@ -73,6 +77,9 @@ effects:
                     - kind: digimon
                     - name_contains: "Sistermon"
                     - name_not_shared_by_field_digimon: you
+                    # DCGO IsValidSistermon CanPlayAsNewPermanent: a DUAL (Sistermon
+                    # Blanc (Awakened) EX13-065) can't be played (CR 4.3 4-6-2).
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 Sistermon from hand or trash without paying the cost"
             - play_union_bound_free:
                 binding: sistermon_pick

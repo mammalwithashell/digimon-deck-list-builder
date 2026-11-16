@@ -244,16 +244,14 @@ impl Game {
         source: OptionSource,
         cost_delta: crate::enums::CostDelta,
     ) -> OptionPlayResult {
-        // Trash origins honor the `CannotPlayFromTrash` lock (parity with
-        // `play_option_from_trash`). Reveal / digivolution-source origins are
-        // not "from trash".
-        if matches!(source, OptionSource::Trash(_))
-            && self
-                .modifiers
-                .player_has(player_id, ModifierType::CannotPlayFromTrash)
-        {
-            return OptionPlayResult::Invalid;
-        }
+        // No `CannotPlayFromTrash` check, for ANY origin: that lock (only
+        // Gallantmon (BT23-014), "their effects can't play Digimon or Tamers
+        // from the trash") restricts PLAYING Digimon/Tamer cards (CR 4.3
+        // 7-1-1). Using an Option is not playing it (CR 4.3 9-1-1), and DCGO's
+        // lock is a `CanNotPutFieldClass` on `IsDigimon || IsTamer`
+        // (BT23_014.cs:46-49) read only by `CardSource.CanEnterField`, never by
+        // the Option-use gate `CanNotPlayThisOption` (CardSource.cs:184).
+        // See `Game::trash_play_lock_applies`.
         let policy = match cost_delta {
             crate::enums::CostDelta::Free => OptionCostPolicy::Free,
             crate::enums::CostDelta::Reduce(n) => OptionCostPolicy::Reduce(n),
@@ -268,22 +266,20 @@ impl Game {
         result
     }
 
-    /// Play an Option card from `player`'s trash (effect-driven).
+    /// Use an Option card from `player`'s trash (effect-driven), paying its
+    /// printed use cost.
     ///
     /// Same pipeline as `play_option_from_hand`, sourced from the trash zone.
-    /// No `PlaySource`-gated flood gates apply to Options in v1 (Phase 6
-    /// `CannotPlayDigimonByEffect` is Digimon-only).
+    /// No play flood gate applies: `CannotPlayDigimonByEffect` is
+    /// Digimon-only, and `CannotPlayFromTrash` (BT23-014, "can't play Digimon
+    /// or Tamers from the trash") does not restrict an Option USE (CR 4.3
+    /// 7-1-1 vs 9-1-1; see `use_option_from`). "Can't use Option cards" is
+    /// enforced inside `play_option_core`.
     pub fn play_option_from_trash(
         &mut self,
         player_id: PlayerId,
         trash_index: usize,
     ) -> OptionPlayResult {
-        if self
-            .modifiers
-            .player_has(player_id, ModifierType::CannotPlayFromTrash)
-        {
-            return OptionPlayResult::Invalid;
-        }
         self.play_option_core(
             player_id,
             OptionSource::Trash(trash_index),
@@ -506,7 +502,12 @@ impl Game {
                     let Some(card) = self.option_source_card(player_id, source) else {
                         return OptionPlayResult::Invalid;
                     };
-                    self.option_legal_play_modes(card, player_id, source)
+                    // Judged on the cost this use pays (CR 4.3 1-3-11-1,
+                    // 4-2-3-1), not the unreduced use cost: an effect use
+                    // "with the cost reduced by N" / "without paying the
+                    // cost" was refused whenever the printed use cost alone
+                    // was unpayable. G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT.
+                    self.option_legal_play_modes_for_policy(card, player_id, source, cost_policy)
                 };
                 match legal_modes.as_slice() {
                     [] => return OptionPlayResult::Invalid,
@@ -549,37 +550,57 @@ impl Game {
         // `pending_interactive_option_use_reduction` on resolution, and
         // re-enters `play_option_core` with the same `(source, mode,
         // cost_policy)`. The interactive reducer is irrelevant to a Link play
-        // (its use cost is the flat link cost) or a Free (effect-driven)
-        // play. The reducer's flood-gates / once-per-turn / activation count are
+        // (its use cost is the flat link cost), a Free (effect-driven) play or
+        // a Fixed one (exactly N, field reductions ignored). It DOES apply to
+        // an effect use "with the cost reduced by N" (`Reduce`): the flat N
+        // stacks on the field reductions below, and DCGO's reduced use
+        // (`PlayOptionCards(payCost: true)` after a -N ChangeCostClass,
+        // ST23_04.cs:225-231) still runs the BeforePayCost reducers, e.g.
+        // Armalizamon's (BT25_049.cs:123-224).
+        // G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT. The reducer's
+        // flood-gates / once-per-turn / activation count are
         // honored by the shared cost-reduction machinery. Runs only when there
         // is no pre-credited reduction pending (the re-entry sets it).
-        if cost_policy == OptionCostPolicy::Pay
+        //
+        // EVERY such reducer is offered in turn, each once: DCGO applies each
+        // [Once Per Turn] reducer through its own BeforePayCost activation
+        // (Armalizamon BT25_049.cs:123-224; Tomoro Tenma BT25-090 the same
+        // shape), so both apply to one use. `try_prompt_..` records each
+        // reducer it offers in `interactive_option_use_reducers_processed`, so
+        // the re-entry (after the accept/decline gate OR the parked Tamer pick
+        // resolves) offers the NEXT one and never re-offers a declined one (no
+        // infinite re-prompt on a 0-credit DECLINE). A mandatory reducer that
+        // resolves synchronously returns `false` having recorded itself: loop.
+        // G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (review);
+        // `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+        if matches!(cost_policy, OptionCostPolicy::Pay | OptionCostPolicy::Reduce(_))
             && !mode.is_link()
-            && !self.interactive_option_use_reducer_prompted
-            && self.try_prompt_interactive_option_use_cost_reducer(
-                player_id,
-                cost_target_ctx,
-                source,
-                mode,
-                cost_policy,
-            )
         {
-            // Mark the reducer as prompted so the re-entry (after the
-            // accept/decline gate OR the parked Tamer-pick resolves) does NOT
-            // re-offer it. A decline-surviving signal: unlike the old
-            // `pending_interactive_option_use_reduction == 0` guard, this clears
-            // the prompt on a 0-credit DECLINE too (no infinite re-prompt).
-            // `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
-            self.interactive_option_use_reducer_prompted = true;
-            return OptionPlayResult::Pending;
+            loop {
+                let offered = self.interactive_option_use_reducers_processed.len();
+                if self.try_prompt_interactive_option_use_cost_reducer(
+                    player_id,
+                    cost_target_ctx,
+                    source,
+                    mode,
+                    cost_policy,
+                ) {
+                    self.interactive_option_use_reducer_prompted = true;
+                    return OptionPlayResult::Pending;
+                }
+                if self.interactive_option_use_reducers_processed.len() == offered {
+                    break;
+                }
+            }
         }
         // Pre-resolved interactive Option-use reduction (set by the prompt's
         // parked pay_cost success continuation, 0 otherwise). Consumed here.
-        // Reset the prompted flag in lock-step so the NEXT independent Option
-        // play re-offers its reducer.
+        // Reset the prompted state in lock-step so the NEXT independent Option
+        // play re-offers its reducers.
         let interactive_reduction =
             std::mem::take(&mut self.pending_interactive_option_use_reduction);
         self.interactive_option_use_reducer_prompted = false;
+        self.interactive_option_use_reducers_processed.clear();
 
         let total_reduction = self.scan_before_pay_cost_reduction_with_target(
             player_id,
@@ -741,10 +762,12 @@ impl Game {
     /// offered; `false` when none qualifies (the synchronous scan then handles
     /// the rest as before).
     ///
-    /// Mirrors `try_prompt_interactive_digivolve_cost_reducer`. Only the FIRST
-    /// qualifying interactive reducer is handled per call (real cards —
-    /// BT25-049 / BT25-090 — print a single `[Once Per Turn]` reducer, and the
-    /// activation count dedups re-entry).
+    /// Mirrors `try_prompt_interactive_digivolve_cost_reducer`. Handles the
+    /// first qualifying interactive reducer NOT yet offered for this use
+    /// (`interactive_option_use_reducers_processed`) and records it there;
+    /// `play_option_core` calls again until none is left, so Armalizamon
+    /// (BT25-049) and Tomoro Tenma (BT25-090) both apply, in battle-area
+    /// order, as each of DCGO's reducers does.
     pub(super) fn try_prompt_interactive_option_use_cost_reducer(
         &mut self,
         player_id: PlayerId,
@@ -759,17 +782,26 @@ impl Game {
             &[],
             CostReductionKind::OptionUse,
         );
-        let Some(candidate) = candidates
-            .into_iter()
-            .find(|c| c.pay_cost_interactive && c.has_pay_cost)
-        else {
+        let Some(candidate) = candidates.into_iter().find(|c| {
+            c.pay_cost_interactive
+                && c.has_pay_cost
+                && !self.interactive_option_use_reducers_processed.contains(&c.key)
+        }) else {
             return false;
         };
 
         let key = candidate.key.clone();
         let source_kind = self.effect_source_kind_for_handle(key.source_card);
 
-        if candidate.optional {
+        // CR 4.3 1-3-11-3: an optional reducer the declared use needs (the
+        // use stays unpayable with every other reducer it applies, and is
+        // payable with this one) must be performed -- it takes the mandatory
+        // branch below, with no decline (DCGO `CanNoSelect`,
+        // BT25_049.cs:135-150, 178). G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT.
+        let needed = candidate.optional
+            && self.option_use_reducer_needed(player_id, cost_target, cost_policy, &key);
+        self.interactive_option_use_reducers_processed.push(key.clone());
+        if candidate.optional && !needed {
             // Optional reducer → accept/decline gate first.
             let accept_key = key.clone();
             let previous_phase = self.current_phase;

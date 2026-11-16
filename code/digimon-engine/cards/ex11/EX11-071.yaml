@@ -45,16 +45,28 @@ effects:
     summary: "[Main] By returning self to deck bottom, may play 1 cost-4+ Royal Knight/LIBERATOR from hand at cost -2"
     process:
       - activation_cost: { return_self_to_deck_bottom: true }
+      # Only a card the reduced-cost play can put on the field (DCGO
+      # EX11_071.cs:100-106 `CanPlayAsNewPermanent(payCost: true, fixedCost:
+      # cost - 2)`): never an Option (no play cost, CR 4.3 7-1-1 — e.g. Royal
+      # Knights of the Purge BT13-110), never under a play prohibition or with
+      # no free frame, never one whose reduced cost can't be paid (CR 4.3
+      # 1-3-11-1). The pick is optional: the card says "you may play" and
+      # DCGO lets the player decline it (EX11_071.cs:129 `canNoSelect: true`).
+      # A Tamer (e.g. a cost-4+ LIBERATOR Tamer) is a valid pick, so the
+      # prompt says "card".
       - select_hand:
           of: you
           bind_as: pick
+          optional: true
           filter:
             all_of:
               - play_cost_gte: 4
               - any_of:
                   - trait_has: "Royal Knight"
                   - trait_has: LIBERATOR
-          prompt: "Play 1 cost-4+ Royal Knight/LIBERATOR Digimon from hand at cost -2"
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 2 }
+          prompt: "You may play 1 cost-4+ Royal Knight/LIBERATOR card from hand at cost -2"
       - play_from_hand:
           of: you
           hand_index: pick

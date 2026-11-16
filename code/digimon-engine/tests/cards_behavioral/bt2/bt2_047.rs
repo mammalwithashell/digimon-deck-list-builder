@@ -322,3 +322,62 @@ fn bt2_047_inherited_entering_suspended_is_not_a_suspend_event() {
     assert!(find_on_field(&r, "G-LV3").is_some());
     assert_eq!(r.memory(), before, "no suspend event → no +1 memory");
 }
+
+// ─── SECTION 4 — the pick offers only Digimon the free play accepts ─────────
+//
+// DCGO BT2_047.cs:291-317 offers a level 3 green Digimon only when
+// `CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)`: a free
+// battle-area frame and no effect-play prohibition. A card the play would
+// refuse is a choice with no legal outcome (CR 4.3 1-3-2).
+
+/// The hand cards the pending `Hand` pick offers (PASS excluded).
+fn offered_hand_cards(r: &DebugRunner) -> Vec<String> {
+    let hand: Vec<String> = r.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    let Some(sel) = r.game.pending_selection.as_ref() else {
+        return Vec::new();
+    };
+    if sel.kind != digimon_engine::selection::SelectionKind::Hand {
+        return Vec::new();
+    }
+    sel.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[(a - PLAY_HAND_START) as usize].clone())
+        .collect()
+}
+
+/// "Can't play Digimon by effects": the level 3 green is not offered.
+#[test]
+fn bt2_047_inherited_excludes_level3_green_when_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = runner();
+    r.add_to_hand(0, "G-LV3");
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    attack_with_argomon_source(&mut r);
+    let offered = offered_hand_cards(&r);
+    assert!(offered.is_empty(), "no card offered: {offered:?}");
+    let _ = r.auto_resolve();
+    assert!(in_hand(&r, "G-LV3"));
+}
+
+/// A full battle area (the attacker fills the only frame): the level 3 green
+/// is not offered.
+#[test]
+fn bt2_047_inherited_excludes_level3_green_when_battle_area_full() {
+    let mut r = runner();
+    r.add_to_hand(0, "G-LV3");
+    let carrier = r.place_stack(0, &[CARD_ID, "G-LV4"]);
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    let _ = r.attack_player(carrier, 1, false);
+    let offered = offered_hand_cards(&r);
+    assert!(offered.is_empty(), "no card offered: {offered:?}");
+}

@@ -225,3 +225,143 @@ fn ex12_034_leave_free_play_of_a_digixros_card_pays_nothing() {
     // Sagomon's own effects may gain memory; the play itself must not charge.
     assert!(runner.memory() >= memory_before, "the free play paid no memory");
 }
+
+// --- Leave replacement: candidate legality (select-hand playability audit) ---
+// DCGO EX12_034.cs:146-152 `CanSelectCardCondition`: `HasLevel && Level <= 5
+// && EqualsTraits("SW") && CanPlayAsNewPermanent(cardSource, payCost: false,
+// activateClass)`, used both to decide which zones are offered
+// (EX12_034.cs:158-171) and for the pick itself (EX12_034.cs:186-194). A card
+// the free play would refuse (play prohibition, no free frame) is never
+// offered, and a zone holding only such cards is not offered either.
+
+fn ex12_034_dp_lock(runner: &mut DebugRunner, ceiling: i32) {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonWithDPAtMost,
+            ceiling,
+            Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+}
+
+fn ex12_034_hand_pick_ids(runner: &DebugRunner) -> Vec<String> {
+    use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START};
+    let view = runner.pending_selection_view().expect("hand pick pending");
+    assert_eq!(view.kind, digimon_engine::selection::SelectionKind::Hand);
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let mut offered: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| {
+            let slot = if id >= HAND_EFFECT_START { id - HAND_EFFECT_START } else { id - PLAY_HAND_START };
+            hand_ids[slot as usize].clone()
+        })
+        .collect();
+    offered.sort();
+    offered
+}
+
+/// "You can't play Digimon with 4000 DP or less": of two level 5 [SW] cards in
+/// hand only the 7000 DP one is offered.
+#[test]
+fn ex12_034_leave_hand_pick_excludes_card_under_play_prohibition() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-034 YAML loads")
+        .add_card(super::support::red_sw("SW-5", 5))
+        .add_card(super::support::digimon("SW-5-HIGH", CardColor::Red, 5, 4, 7000, &["SW"]))
+        .add_card(plain_digimon("VICTIM-A", CardColor::Red, 4, 4000))
+        .hand(0, &["SW-5", "SW-5-HIGH"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "VICTIM-A", Some(0));
+    ex12_034_dp_lock(&mut runner, 4000);
+
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    assert_eq!(choice_labels(&runner), vec!["Hand".to_string(), "Don't play".to_string()]);
+    runner.execute_branch(0).expect("choose Hand");
+    assert_eq!(ex12_034_hand_pick_ids(&runner), vec!["SW-5-HIGH".to_string()]);
+}
+
+/// A full battle area (the leaving Digimon still occupies its frame while this
+/// effect resolves): nothing can be played, so "Hand" isn't offered, only
+/// "Don't play" remains (auto-bound), and the [SW] card stays in hand.
+#[test]
+fn ex12_034_leave_offers_no_hand_zone_when_battle_area_full() {
+    let (mut runner, _) = leave_setup(&["SW-5"]);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    assert!(
+        !choice_labels(&runner).contains(&"Hand".to_string()),
+        "no playable hand card: {:?}",
+        choice_labels(&runner)
+    );
+    let _ = runner.auto_resolve();
+    assert!(super::support::hand_contains(&runner, 0, "SW-5"), "SW-5 stays in hand");
+}
+
+/// The digivolution-card zone uses the same filter: with a play prohibition
+/// covering Erlangmon's only level 5 [SW] source, "Sources" isn't offered.
+#[test]
+fn ex12_034_leave_offers_no_sources_zone_when_its_cards_cannot_be_played() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-034 YAML loads")
+        .add_card(super::support::red_sw("SW-5", 5))
+        .add_card(plain_digimon("VICTIM-A", CardColor::Red, 4, 4000))
+        .memory(10)
+        .start();
+    runner.place_stack(0, &["SW-5", CARD_ID]);
+    runner.place_on_field(0, "VICTIM-A", Some(0));
+    ex12_034_dp_lock(&mut runner, 4000);
+
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    assert!(
+        !choice_labels(&runner).contains(&"Sources".to_string()),
+        "no playable source: {:?}",
+        choice_labels(&runner)
+    );
+    let _ = runner.auto_resolve();
+    assert!(!field_contains(&runner, 0, "SW-5"), "SW-5 was not played");
+}
+
+/// Positive control for the test above: the same source with no play
+/// prohibition is playable, so "Sources" is offered and choosing it plays it.
+#[test]
+fn ex12_034_leave_offers_sources_zone_when_a_source_can_be_played() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-034 YAML loads")
+        .add_card(super::support::red_sw("SW-5", 5))
+        .add_card(plain_digimon("VICTIM-A", CardColor::Red, 4, 4000))
+        .memory(10)
+        .start();
+    runner.place_stack(0, &["SW-5", CARD_ID]);
+    runner.place_on_field(0, "VICTIM-A", Some(0));
+
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    assert_eq!(
+        choice_labels(&runner),
+        vec!["Sources".to_string(), "Don't play".to_string()]
+    );
+    runner.execute_branch(0).expect("choose Sources");
+    let _ = select_first_non_pass(&mut runner);
+    let _ = runner.auto_resolve();
+    assert!(field_contains(&runner, 0, "SW-5"), "SW-5 was played from the sources");
+}

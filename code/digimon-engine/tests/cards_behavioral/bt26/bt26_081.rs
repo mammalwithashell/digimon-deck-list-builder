@@ -215,3 +215,126 @@ fn bt26_081_alt_paths_and_assembly() {
         "{alt}"
     );
 }
+
+// ─── Budget-pick candidate legality (G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE) ───────
+// DCGO BT26_081.cs:57-61 CanSelectCardCondition: `EqualsTraits("Iliad") &&
+// HasPlayCost && GetCostItself <= totalCost && CanPlayAsNewPermanent(card,
+// false, activateClass)`. CR 4.3 1-3-2 (an impossible action is not carried
+// out), 7-1-1 (playing places a new card with a play cost), 4-6-2 (a DUAL is
+// digivolved or used, never played).
+
+fn add_player_lock(r: &mut DebugRunner, m: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(m, 0, Expiry::Permanent, None, 1));
+}
+
+fn valid(r: &DebugRunner) -> Vec<u16> {
+    r.pending_selection_view()
+        .map(|v| v.valid_action_ids)
+        .unwrap_or_default()
+}
+
+/// Finish the effect after an empty budget pick: decline the (optional) pick
+/// if it parked, then resolve the mandatory DP pick. The "Then" clause still
+/// applies when nothing was played (official ruling), so Mervamon alone
+/// ([Iliad]/[TS]) gives -4000 DP.
+fn assert_dp_step_still_runs(
+    r: &mut DebugRunner,
+    opp: digimon_engine::permanent::PermanentHandle,
+    before: i32,
+) {
+    if budget_remaining(r).is_some() {
+        r.execute_action(0, PASS).unwrap();
+    }
+    let v = r.pending_selection_view().expect("mandatory DP pick");
+    assert!(!v.is_optional);
+    drain_first(r);
+    let _ = r.auto_resolve();
+    assert_eq!(r.effective_dp(opp).unwrap(), before - 4000);
+}
+
+/// An [Iliad] DUAL card (Jupitermon BT26-033, stored cost 2) has no play cost
+/// and can't be played (CR 4.3 7-1-1, 4-6-2; DCGO HasPlayCost), so the budget pick
+/// does not offer it; the [Iliad] Digimon still is.
+#[test]
+fn bt26_081_dual_iliad_card_not_offered() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT26-081")
+        .dsl_card("BT26-033")
+        .expect("BT26-033")
+        .add_card(filler("FILLER"))
+        .add_card(digimon("IL3", "Iliad Three", CardColor::Yellow, 3, 3, &["Iliad"]))
+        .add_card(digimon("OPP", "Opp", CardColor::Red, 9, 9, &[]))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(3)
+        .start();
+    r.set_first_player(0);
+    r.game.players[0].hand.clear();
+    push_hand(&mut r, 0, "BT26-033");
+    push_hand(&mut r, 0, "IL3");
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    r.place_on_field(1, "OPP", Some(0));
+    fire(&mut r, EffectTiming::OnPlay, me);
+    assert_eq!(budget_remaining(&r), Some(8));
+    let v = valid(&r);
+    assert!(v.contains(&hand_action(&r, "IL3")));
+    assert!(
+        !v.contains(&hand_action(&r, "BT26-033")),
+        "the DUAL card can't be played (valid {v:?})"
+    );
+}
+
+/// "You can't play Digimon by effects": no [Iliad] Digimon is offered.
+#[test]
+fn bt26_081_effect_play_prohibition_offers_no_digimon() {
+    let mut r = setup();
+    push_hand(&mut r, 0, "IL3");
+    push_trash(&mut r, 0, "IL5");
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    let opp = r.place_on_field(1, "OPP", Some(0));
+    let before = r.effective_dp(opp).unwrap();
+    add_player_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect);
+    fire(&mut r, EffectTiming::OnPlay, me);
+    let v = valid(&r);
+    assert!(!v.contains(&hand_action(&r, "IL3")), "valid {v:?}");
+    assert!(!v.contains(&trash_action(&r, "IL5")), "valid {v:?}");
+    assert_dp_step_still_runs(&mut r, opp, before);
+}
+
+/// "You can't play cards from the trash" (BT23-014): the trash card is not
+/// offered, the hand card still is.
+#[test]
+fn bt26_081_trash_play_lock_excludes_trash_cards() {
+    let mut r = setup();
+    push_hand(&mut r, 0, "IL3");
+    push_trash(&mut r, 0, "IL5");
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    r.place_on_field(1, "OPP", Some(0));
+    add_player_lock(&mut r, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    fire(&mut r, EffectTiming::OnPlay, me);
+    let v = valid(&r);
+    assert!(v.contains(&hand_action(&r, "IL3")), "valid {v:?}");
+    assert!(!v.contains(&trash_action(&r, "IL5")), "valid {v:?}");
+}
+
+/// A full battle area: no [Iliad] card can be played, so none is offered.
+#[test]
+fn bt26_081_full_battle_area_offers_nothing() {
+    let mut r = setup();
+    push_hand(&mut r, 0, "IL3");
+    push_trash(&mut r, 0, "IL5");
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    let opp = r.place_on_field(1, "OPP", Some(0));
+    let before = r.effective_dp(opp).unwrap();
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    fire(&mut r, EffectTiming::OnPlay, me);
+    let v = valid(&r);
+    assert!(!v.contains(&hand_action(&r, "IL3")), "valid {v:?}");
+    assert!(!v.contains(&trash_action(&r, "IL5")), "valid {v:?}");
+    assert_dp_step_still_runs(&mut r, opp, before);
+}

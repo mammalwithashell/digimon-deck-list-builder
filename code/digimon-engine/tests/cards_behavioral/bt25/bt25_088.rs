@@ -408,3 +408,126 @@ fn bt25_088_no_reduction_when_no_face_down_stash() {
         "no stash → cost paid in full (3), no reduction credited"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 6 — the reducer answers plays only, and is forced only when it can
+// make the play payable (G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT review)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// A yellow [Glowing Dawn] Option of use cost 3 (no [Main] body).
+fn make_glowing_dawn_option(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Option;
+    c.colors = vec![CardColor::Yellow];
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c.traits = vec!["Glowing Dawn".to_string()];
+    c
+}
+
+/// "When any of your [Glowing Dawn] trait cards would be PLAYED": using an
+/// Option is not playing it (CR 4.3 7-1-1 vs 9-1-1), and DCGO gates the reducer
+/// on `cardSource.HasPlayCost` (BT25_088.cs:98-103), false for any Option
+/// (CEntity_Base.cs:340). A Main-phase use of a [Glowing Dawn] Option with Kyo
+/// and a face-down card on the field: no reducer prompt, full cost paid, the
+/// face-down card stays.
+#[test]
+fn bt25_088_does_not_reduce_a_glowing_dawn_option_use() {
+    let mut runner = DebugRunner::builder()
+        .add_card(kyo())
+        .add_card(make_glowing_dawn_option("GD-OPT"))
+        .add_card(make_filler("STASH"))
+        .hand(0, &["GD-OPT"])
+        .deck(0, &["STASH"; 5])
+        .deck(1, &["STASH"; 5])
+        .memory(5)
+        .start();
+    let kyo_perm = runner.place_stack(0, &["STASH", CARD_ID]);
+    runner.game.players[0].battle_area[kyo_perm.index as usize].card_sources[0].face_down = true;
+
+    let _ = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        runner.pending_selection().is_none(),
+        "Kyo's play reducer must not prompt on an Option use"
+    );
+    assert_eq!(runner.memory(), 2, "the Option's full cost 3 was paid (5 - 3)");
+    assert!(
+        runner.game.players[0].battle_area[kyo_perm.index as usize].card_sources[0].face_down,
+        "the face-down card under Kyo was not trashed"
+    );
+}
+
+/// An effect that plays a [Glowing Dawn] card from hand with no cost filter.
+const EFFECT_PLAYER: &str = r#"
+card: TEST-GD-EFFECT-PLAYER
+name: GD Effect Player
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] Play 1 [Glowing Dawn] card from your hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter: { trait_has: "Glowing Dawn" }
+          prompt: "Play 1 [Glowing Dawn] card from your hand"
+      - play_or_use_from_hand:
+          of: you
+          hand_index: pick
+"#;
+
+/// CR 4.3 1-3-11-3 forces an optional reducer's processing only "as needed in
+/// order to pay the cost" of a card that CAN be paid with it. A cost-20
+/// [Glowing Dawn] Digimon at memory 0 stays unpayable with Kyo's -1 (19), so
+/// Kyo's prompt keeps its decline: forcing it would trash the face-down card
+/// for a play that then fails (CR 4.3 7-1-2-3).
+#[test]
+fn bt25_088_reducer_that_cannot_make_the_play_payable_stays_declinable() {
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::{SelectionKind, TriggerSource};
+    let mut big = make_glowing_dawn_digimon("GD-20");
+    big.play_cost = 20;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(EFFECT_PLAYER)
+        .unwrap()
+        .add_card(kyo())
+        .add_card(big)
+        .add_card(make_filler("STASH"))
+        .hand(0, &["GD-20"])
+        .deck(0, &["STASH"; 5])
+        .deck(1, &["STASH"; 5])
+        .memory(0)
+        .start();
+    runner.set_first_player(0);
+    let kyo_perm = runner.place_stack(0, &["STASH", CARD_ID]);
+    runner.game.players[0].battle_area[kyo_perm.index as usize].card_sources[0].face_down = true;
+    let player = runner.place_on_field(0, "TEST-GD-EFFECT-PLAYER", Some(0));
+    runner.game.memory = 0;
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(player));
+    runner.game.drain_effect_queue();
+
+    let v = runner.pending_selection_view().expect("hand pick");
+    assert_eq!(v.kind, SelectionKind::Hand);
+    let pick = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .expect("GD-20 offered (the effect has no cost filter)");
+    runner.execute_action(0, pick).unwrap();
+    if let Some(v) = runner.pending_selection_view() {
+        assert!(
+            v.is_optional,
+            "a reducer that can't make the play payable must stay declinable: {} {:?}",
+            v.prompt,
+            v.valid_action_ids
+        );
+    }
+}

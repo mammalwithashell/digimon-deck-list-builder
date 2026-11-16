@@ -56,6 +56,8 @@ fn builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
         .add_card(option("CHRON-OPT", "Chronicle Option", CardColor::Black, 3, &["Chronicle"]))
         .add_card(option("PLAIN-OPT", "Plain Option", CardColor::Black, 3, &[]))
         .add_card(option("XAB-PROTO", "X Antibody Proto Form", CardColor::Black, 3, &[]))
+        .add_card(option("CHRON-OPT-RED", "Red Chronicle Option", CardColor::Red, 3, &["Chronicle"]))
+        .add_card(option("CHRON-OPT-BIG", "Big Chronicle Option", CardColor::Black, 13, &["Chronicle"]))
 }
 
 fn triggered(runner: &DebugRunner) -> Vec<CompiledTriggeredClause> {
@@ -314,4 +316,80 @@ fn ex13_072_security_plays_kota_without_paying_the_cost() {
         .find(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
         .map(|p| p.top_card().card_kind(&runner.game.card_data));
     assert_eq!(kota_kind, Some(CardKind::Tamer));
+}
+
+// ─── Candidate legality: only Options the effect can actually use ────────────
+// DCGO EX13_072.cs:98-105 `CanSelectOptionCondition` = `IsOption && (name
+// [X Antibody] || [Chronicle] trait) && !CanNotPlayThisOption && MaxMemoryCost
+// >= GetCostItself - 1`. `CanNotPlayThisOption` (CardSource.cs:184-246) is true
+// under a "can't use Options" lock or when the colour requirement is unmet
+// (CR 4.3 4-22-1..3; rulings Q1500 / Q2785: an effect that uses an Option does
+// not waive it). The memory term is CR 4.3 1-3-11-1 (can't declare a use whose
+// cost can't be paid; the gauge floor is 10 on the opponent's side, 1-4-2-2).
+
+/// A red [Chronicle] Option with only black cards in play can't be used: not
+/// offered. The black one still is.
+#[test]
+fn ex13_072_option_whose_colour_requirement_is_unmet_is_not_offered() {
+    let (mut runner, _kota, atk) = attack_setup("CHRON-ATK", &["CHRON-OPT-RED", "CHRON-OPT"], 5);
+    runner.attack_player(atk, 1, false);
+    accept(&mut runner);
+    assert!(hand_offered(&runner, 0, "CHRON-OPT"));
+    assert!(!hand_offered(&runner, 0, "CHRON-OPT-RED"), "no red card in play");
+}
+
+/// Only an unusable (colour-unmet) Option in hand: nothing to use, so the
+/// effect is not offered and Kota stays unsuspended.
+#[test]
+fn ex13_072_only_colour_unmet_option_does_not_offer_the_effect() {
+    let (mut runner, kota, atk) = attack_setup("CHRON-ATK", &["CHRON-OPT-RED"], 5);
+    runner.attack_player(atk, 1, false);
+    accept_everything(&mut runner);
+    assert!(!suspended(&runner, kota), "nothing usable → no suspend offer");
+    assert!(hand_ids(&runner, 0).contains(&"CHRON-OPT-RED".to_string()));
+}
+
+/// "You can't use Option cards": nothing usable, so no offer.
+#[test]
+fn ex13_072_option_use_lock_does_not_offer_the_effect() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let (mut runner, kota, atk) = attack_setup("CHRON-ATK", &["CHRON-OPT"], 5);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotUseOptionCards, 0, Expiry::Permanent, None, 1),
+    );
+    runner.attack_player(atk, 1, false);
+    accept_everything(&mut runner);
+    assert!(!suspended(&runner, kota), "nothing usable → no suspend offer");
+    assert!(hand_ids(&runner, 0).contains(&"CHRON-OPT".to_string()));
+}
+
+/// Answer every prompt with its first non-PASS action, so an offered Kota
+/// trigger would be ACCEPTED (and Kota suspended): the tests above then prove
+/// the trigger was never offered, not merely declined.
+fn accept_everything(runner: &mut DebugRunner) {
+    for _ in 0..64 {
+        let Some(view) = runner.pending_selection_view() else { return };
+        let a = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != digimon_engine::action::space::PASS)
+            .unwrap_or(digimon_engine::action::space::PASS);
+        runner.execute_action(view.selecting_player, a).expect("resolve");
+    }
+    panic!("accept_everything did not converge");
+}
+
+/// Memory 1: the cost-13 Option reduced to 12 would take the gauge to 11 on
+/// the opponent's side (beyond the 10 floor), so it can't be used and is not
+/// offered; the cost-3 one (2 after the reduction) is.
+#[test]
+fn ex13_072_unaffordable_option_is_not_offered() {
+    let (mut runner, _kota, atk) = attack_setup("CHRON-ATK", &["CHRON-OPT-BIG", "CHRON-OPT"], 1);
+    runner.attack_player(atk, 1, false);
+    accept(&mut runner);
+    assert!(hand_offered(&runner, 0, "CHRON-OPT"));
+    assert!(!hand_offered(&runner, 0, "CHRON-OPT-BIG"), "12 > 1 + 10");
 }

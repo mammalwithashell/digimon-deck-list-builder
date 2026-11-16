@@ -522,6 +522,12 @@ pub struct Effect {
     /// This exact physical hand card's own digivolution-cost reducer.
     /// Excluded from field scans and from play/use cost calculation.
     pub when_digivolving_this: bool,
+    /// Which cost a `BeforePayCost` reducer keyed on another card answers:
+    /// a play only ("would be played", DSL `when_any_ally_played`), an Option
+    /// use only ("would use", `when_any_ally_used`), or any (the default).
+    /// Enforced by `Game::collect_before_pay_cost_reducers`.
+    /// G-DSL-AFFORDABLE-WITH-COST-REDUCER-CREDIT (review).
+    pub reducer_cost_scope: ReducerCostScope,
 
     /// When `true`, a lone triggered firing of this OPTIONAL effect installs
     /// an explicit outer accept/decline `PendingSelection` before its body
@@ -1029,6 +1035,7 @@ impl EffectBuilder {
                 linked: false,
                 when_playing_this: false,
                 when_digivolving_this: false,
+                reducer_cost_scope: ReducerCostScope::Any,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
                 optional_activation_folded: false,
@@ -1821,4 +1828,23 @@ pub fn enumerate_refireable_effects(
             timing_key: timing_key.to_string(),
         })
         .collect()
+}
+
+/// The cost kind a `BeforePayCost` reducer keyed on another card's
+/// declaration answers. CR 4.3 7-1-1 (playing a card with a play cost) and
+/// 9-1-1 (using an Option) are different declarations: "When one of your [X]
+/// cards would be played" never reduces an Option use, and "When you would use
+/// an [X] Option" never reduces a play. DCGO keys the former on
+/// `cardSource.HasPlayCost` (Kyo Sawashiro BT25_088.cs:98-103), false for any
+/// Option (CEntity_Base.cs:340), and the latter on `HasUseCost`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ReducerCostScope {
+    /// No restriction (field reducers scoped by `active_when` / `condition`,
+    /// a card's own reducer, digivolve reducers).
+    #[default]
+    Any,
+    /// A play cost only.
+    PlayOnly,
+    /// An Option-use cost only.
+    OptionUseOnly,
 }

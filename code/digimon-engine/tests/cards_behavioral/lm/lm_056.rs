@@ -733,3 +733,147 @@ fn lm_056_declining_delay_leaves_option_in_battle_area() {
     );
     assert_eq!(runner.trash_size(0), 0, "declined LM-056 is not trashed");
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Candidate legality of the <Delay> digivolve picks
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// DCGO LM_056.cs:102-117 offers a field Digimon only when some purple or blue Digimon
+// in hand has a route onto it (`CanPlayCardTargetFrame(frame, false, ...)`, route
+// only), and `CardEffectCommons.DigivolveIntoHandOrTrashCard`
+// (CardEffectCommons.cs:859-885, `payCost: true, reduceCost: 2`) offers only hand
+// cards whose reduced cost can be paid. CR 4.3 1-3-11-1 / 4-2-2 / 1-4-2-2 /
+// 8-1-2-6.
+
+fn lm_056_seat_delay(runner: &mut DebugRunner) -> digimon_engine::permanent::PermanentHandle {
+    let delay_perm = runner.place_on_field(0, "LM-056", Some(0));
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[delay_perm.index as usize].option_state =
+        OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: DelayTrigger::MainPhaseActivated,
+            placed_on_turn,
+        };
+    delay_perm
+}
+
+fn lm_056_fire_delay(runner: &mut DebugRunner, delay_perm: digimon_engine::permanent::PermanentHandle) {
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(delay_perm));
+    runner.game.drain_effect_queue();
+}
+
+/// Memory 3: at most 13 can be paid (the gauge stops at 10 on the opponent's
+/// side). CHEAP costs 3 - 2 = 1; PRICEY costs 16 - 2 = 14, which can't be paid,
+/// so only CHEAP is offered.
+#[test]
+fn lm_056_delay_hand_pick_excludes_card_whose_reduced_cost_cannot_be_paid() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&lm_056_yaml())
+        .expect("LM-056 YAML parses")
+        .add_card(digimon("BASE", CardColor::Purple, 3))
+        .add_card(lv4_evo("CHEAP", CardColor::Purple, CardColor::Purple, 3))
+        .add_card(lv4_evo("PRICEY", CardColor::Blue, CardColor::Purple, 16))
+        .hand(0, &["PRICEY", "CHEAP"])
+        .memory(3)
+        .start();
+    let delay_perm = lm_056_seat_delay(&mut runner);
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    lm_056_fire_delay(&mut runner, delay_perm);
+
+    let field = runner.pending_selection_view().expect("field pick");
+    assert_eq!(field.kind, SelectionKind::OwnField);
+    runner
+        .execute_action(0, field.valid_action_ids[0])
+        .expect("choose the base");
+    let hand = runner.pending_selection_view().expect("hand pick");
+    assert_eq!(hand.kind, SelectionKind::Hand);
+    assert_eq!(
+        hand.valid_action_ids.len(),
+        1,
+        "only the card whose reduced cost (1) can be paid is offered, not the cost-14 one"
+    );
+    runner
+        .execute_action(0, hand.valid_action_ids[0])
+        .expect("choose the affordable card");
+    runner.game.drain_effect_queue();
+    // LM-0xx trashed itself as the <Delay> cost, so the base's slot shifted.
+    let _ = base;
+    let top = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| p.is_digimon(&runner.game.card_data))
+        .expect("the base Digimon is still in the battle area");
+    assert_eq!(top.top_card().card_id(&runner.game.card_data), "CHEAP");
+    assert_eq!(top.stack_size(), 2);
+    assert_eq!(runner.memory(), 2, "printed cost 3 reduced by 2 pays 1");
+}
+
+/// A Lv.6 Digimon that no purple or blue hand card can digivolve onto is not offered.
+#[test]
+fn lm_056_delay_field_pick_excludes_digimon_without_a_hand_route() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&lm_056_yaml())
+        .expect("LM-056 YAML parses")
+        .add_card(digimon("BASE", CardColor::Purple, 3))
+        .add_card(digimon("LV6", CardColor::Purple, 6))
+        .add_card(lv4_evo("CHEAP", CardColor::Purple, CardColor::Purple, 3))
+        .hand(0, &["CHEAP"])
+        .memory(5)
+        .start();
+    let delay_perm = lm_056_seat_delay(&mut runner);
+    runner.place_on_field(0, "BASE", Some(0));
+    runner.place_on_field(0, "LV6", Some(0));
+    lm_056_fire_delay(&mut runner, delay_perm);
+
+    let field = runner.pending_selection_view().expect("field pick");
+    assert_eq!(field.kind, SelectionKind::OwnField);
+    assert_eq!(
+        field.valid_action_ids.len(),
+        1,
+        "the Lv.6 with no hand route is not offered"
+    );
+}
+
+/// Regression guard (DCGO parity): the field pick checks routes only, so the
+/// base is offered even when its only route card can't be paid for; the hand
+/// pick then has no candidate and nothing digivolves.
+#[test]
+fn lm_056_delay_field_pick_is_route_only_and_unpayable_hand_offers_nothing() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&lm_056_yaml())
+        .expect("LM-056 YAML parses")
+        .add_card(digimon("BASE", CardColor::Purple, 3))
+        .add_card(lv4_evo("PRICEY", CardColor::Blue, CardColor::Purple, 13))
+        .hand(0, &["PRICEY"])
+        .memory(0)
+        .start();
+    let delay_perm = lm_056_seat_delay(&mut runner);
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    lm_056_fire_delay(&mut runner, delay_perm);
+
+    let field = runner.pending_selection_view().expect("field pick");
+    assert_eq!(field.kind, SelectionKind::OwnField);
+    assert_eq!(field.valid_action_ids.len(), 1);
+    runner
+        .execute_action(0, field.valid_action_ids[0])
+        .expect("choose the base");
+    assert_ne!(runner.pending_kind(), Some(SelectionKind::Hand));
+    runner.game.drain_effect_queue();
+    let _ = base;
+    let top = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| p.is_digimon(&runner.game.card_data))
+        .expect("the base Digimon is still in the battle area");
+    assert_eq!(top.stack_size(), 1, "nothing digivolved");
+    assert_eq!(runner.memory(), 0, "nothing was paid");
+}

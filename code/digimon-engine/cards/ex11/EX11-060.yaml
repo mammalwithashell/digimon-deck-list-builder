@@ -52,5 +52,18 @@ effects:
                           - kind: digimon
                           - level_lte: 4
                           - trait_has: Puppet
+                          # DCGO EX11_060.cs:50-56 has no playability check and
+                          # its IsDigimon is true for a DUAL (CardSource.cs:3519),
+                          # so it offers a [Puppet] DUAL (Sistermon Blanc/Noir
+                          # (Awakened) EX13-065/066) that PlayPermanentCards then
+                          # refuses. Under the rules a DUAL is digivolved or used
+                          # as an Option (CR 4.3 4-6-1, 4-6-2), is a Digimon only
+                          # once on the field (4-6-3), and its play cost reads
+                          # "Can't play to the field" (7-1-1); the play would not
+                          # be carried out (1-3-2). The pick is optional, so
+                          # dropping it changes no outcome. Also excludes a pick
+                          # with no free slot (engine rules.field_slots; DCGO
+                          # CanPlayAsNewPermanent) or under a play prohibition.
+                          - can_play_from_effect_without_cost: true
                       prompt: "Play 1 level 4 or lower Puppet Digimon from hand"
                   - play_from_hand_free: { of: you, hand_index: puppet }

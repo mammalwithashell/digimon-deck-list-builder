@@ -52,10 +52,22 @@ effects:
       - select_own_permanent:
           bind_as: target
           optional: true
+          # DCGO CanSelectPermanentCondition: a Digimon some purple/blue Digimon in
+          # hand has a route onto (CanPlayCardTargetFrame(frame, false, ...):
+          # route only, no payment).
           filter:
             all_of:
               - kind: digimon
               - zone: [battle_area]
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - any_of:
+                          - color_is: purple
+                          - color_is: blue
           prompt: "Choose 1 of your Digimon to digivolve"
       - select_hand:
           of: you
@@ -66,6 +78,10 @@ effects:
               - any_of:
                   - color_is: purple
                   - color_is: blue
+              # DCGO DigivolveIntoHandOrTrashCard (CardEffectCommons.cs:859-885,
+              # payCost: true, reduceCost: 2): route onto `target` AND the
+              # reduced cost can be paid (CR 4.3 1-3-11-1).
+              - can_digivolve_onto_with_cost: { target: target, cost: { reduce: 2 } }
           prompt: "Choose a blue or purple Digimon card in your hand to digivolve into"
       - effect_initiated_digivolve:
           target: target

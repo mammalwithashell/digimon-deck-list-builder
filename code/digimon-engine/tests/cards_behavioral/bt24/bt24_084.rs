@@ -846,10 +846,12 @@ fn bt24_084_digivolve_requirements_are_validated_not_ignored() {
         .execute_action(view.selecting_player, view.valid_action_ids[0])
         .expect("choose Aegiomon");
 
-    // The mismatched-evo_costs card is still offered by name filter (the
-    // hand-card `select_hand` filter only checks the name, per DCGO
-    // `CanSelectCardCondition`) but the subsequent `effect_initiated_digivolve`
-    // with `ignore_requirements: false` must reject the actual digivolve.
+    // The mismatched-evo_costs card is not offered: the compile pass adds
+    // `can_digivolve_onto: aegiomon` to the hand pick (DCGO
+    // `DigivolveIntoHandOrTrashCard` filters with `CanPlayCardTargetFrame`),
+    // so no hand pick is asked (see §4). If one were, the
+    // `effect_initiated_digivolve` with `ignore_requirements: false` would
+    // still reject the digivolve.
     if let Some(view) = runner.pending_selection_view() {
         if view.kind == SelectionKind::Hand {
             runner
@@ -1020,4 +1022,106 @@ fn bt24_084_security_effect_plays_self_free() {
         memory_before,
         "the security play must not charge its play cost"
     );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §4 — Clause 1 hand-pick candidate legality (regression guards)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// DCGO BT24_084.cs:75-78 `CanSelectCardCondition` = `ContainsCardName(
+// "Aegiochusmon")`, passed as `cardCondition` to
+// `CardEffectCommons.DigivolveIntoHandOrTrashCard` (BT24_084.cs:109-118), whose
+// own selection filter (CardEffectCommons.cs:859-882) adds `IsDigimon`,
+// `!CanNotEvolve(targetPermanent)` and `CanPlayCardTargetFrame(target frame,
+// payCost: false, ...)`. So only an [Aegiochusmon] card that can digivolve onto
+// the chosen [Aegiomon] is offered. The YAML gets this from the compile pass
+// `digimon-dsl/src/digivolve_candidates.rs`, which adds
+// `can_digivolve_onto: aegiomon` to the hand pick (target bound by the earlier
+// `select_own_permanent`); these tests pin that.
+
+/// The compiled hand pick carries `can_digivolve_onto: aegiomon`.
+#[test]
+fn bt24_084_hand_pick_filter_requires_digivolving_onto_the_chosen_aegiomon() {
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .memory(0)
+        .start();
+    let compiled = runner.compiled_card("BT24-084").expect("compiled");
+    let clause1 = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| t.when.contains(&CompiledTiming::OnOwnSecurityRemoved))
+        .expect("clause 1");
+    let hand_filter = clause1
+        .process
+        .iter()
+        .find_map(|step| match step {
+            CompiledStep::SelectHand { filter, .. } => Some(filter),
+            _ => None,
+        })
+        .expect("hand pick");
+    assert_eq!(hand_filter.can_digivolve_onto.as_deref(), Some("aegiomon"));
+}
+
+fn hand_pick_after_choosing_aegiomon(hand: &[&str]) -> (DebugRunner, Option<Vec<String>>) {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_aegiomon("AEGIOMON"))
+        .add_card(make_aegiochusmon_evo("EVO"))
+        .add_card(make_aegiochusmon_invalid_evo("BADEVO"))
+        .add_card(make_filler("FILL"))
+        .hand(0, hand)
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "BT24-084", Some(0));
+    runner.place_on_field(0, "AEGIOMON", Some(0));
+    fire_own_security_removed(&mut runner, 0);
+    accept_trigger_order_confirm(&mut runner);
+    let view = runner.pending_selection_view().expect("Aegiomon pick");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+    let pick = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .expect("Aegiomon offered");
+    runner.execute_action(view.selecting_player, pick).expect("choose Aegiomon");
+    let offered = runner.pending_selection_view().and_then(|view| {
+        (view.kind == SelectionKind::Hand).then(|| {
+            let hand = &runner.game.players[0].hand;
+            view.valid_action_ids
+                .iter()
+                .filter(|&&a| a != PASS)
+                .map(|&a| hand[a as usize].card_id(&runner.game.card_data).to_string())
+                .collect()
+        })
+    });
+    (runner, offered)
+}
+
+/// Of two [Aegiochusmon] cards, only the one with a route onto the Lv.4
+/// [Aegiomon] is offered.
+#[test]
+fn bt24_084_hand_pick_offers_only_aegiochusmon_that_can_digivolve() {
+    let (_, offered) = hand_pick_after_choosing_aegiomon(&["BADEVO", "EVO"]);
+    assert_eq!(offered, Some(vec!["EVO".to_string()]));
+}
+
+/// Only an [Aegiochusmon] with no route onto the [Aegiomon]: no hand pick is
+/// asked and the card stays in hand.
+#[test]
+fn bt24_084_hand_pick_not_asked_when_no_aegiochusmon_can_digivolve() {
+    let (mut runner, offered) = hand_pick_after_choosing_aegiomon(&["BADEVO"]);
+    assert_eq!(offered, None, "no legal digivolution card: no hand pick");
+    runner.auto_resolve().expect("settle");
+    assert!(hand_contains(&runner, 0, "BADEVO"));
 }

@@ -455,6 +455,15 @@ impl Game {
             "interactive_option_use_reducer_prompted",
             self.interactive_option_use_reducer_prompted,
         );
+        // Hashed only while an Option use is offering its reducers, so every
+        // digest recorded before the field existed is unchanged.
+        if !self.interactive_option_use_reducers_processed.is_empty() {
+            debug_field(
+                &mut h,
+                "interactive_option_use_reducers_processed",
+                &self.interactive_option_use_reducers_processed,
+            );
+        }
         debug_field(
             &mut h,
             "pending_cost_reduction_amount_override",

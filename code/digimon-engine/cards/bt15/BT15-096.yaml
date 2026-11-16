@@ -1,3 +1,36 @@
+# BT15-096 Supreme Connection! — Option, Black, Cost 3.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT15-096.md, the
+# card image and data/cards.json agree):
+#   [Main] Reveal the top 5 cards of your deck. Among them, add 1 card with the
+#   [Machine] or [Cyborg] trait to the hand and trash 1 such card. Return the
+#   rest to the top of the deck. Then, place this card in the battle area.
+#   [Main] <Delay> ・You may play 1 level 5 or higher Digimon card with the
+#   [Machine] or [Cyborg] trait from your hand with the play cost reduced by 3.
+#   [Security] Reveal the top 5 ... (same as the first [Main]) ... Then, place
+#   this card in the battle area.
+#
+# CORRECTION (2026-11-13 select-hand audit): the previous spec implemented a
+# text that is not printed: "reveal the top 3", Digimon-only buckets, a Delay
+# that first chose one of your Machine/Cyborg Digimon and capped the hand
+# card's play cost at that Digimon's play cost (mandatory pick), and a Security
+# that only placed the card. Rewritten to the printed text.
+#
+# DCGO BT15_096.cs:
+#   [Main] OptionSkill (:14-73) — SimplifiedRevealDeckTopCardsAndSelect(
+#     revealCount: 5), AddHand + Discard buckets over CanSelectCardCondition
+#     (:26-39) = CardTraits.Contains("Machine" | "Cyborg") — ANY card kind,
+#     remainder DeckTop, then PlaceDelayOptionCards.
+#   [Main] <Delay> OnDeclaration (:76-282) — deletes this card (the Delay
+#     cost), registers a -3 play-cost ChangeCostClass with isCheckAvailability
+#     false (so availability checks include it, CardSource.cs:780-850), then a
+#     SelectHandEffect (canNoSelect: true, :238-257) over CanSelectCardCondition
+#     (:88-112) = Level >= 5 && HasLevel && IsDigimon &&
+#     CanPlayAsNewPermanent(cardSource, payCost: true, activateClass) &&
+#     (Machine || Cyborg); then PlayPermanentCards(payCost: true).
+#     `payCost: true` refuses a card whose reduced cost exceeds MaxMemoryCost
+#     (CardSource.cs:1150-1160).
+#   [Security] SecuritySkill (:284-345) — the same reveal-5 + place.
 card: BT15-096
 name: "Supreme Connection!"
 kind: option
@@ -6,67 +39,59 @@ cost: 3
 
 effects:
   - when: main_from_hand
-    summary: "[Main] Reveal top 3; add and trash Machine/Cyborg Digimon; return rest top; place self as Delay"
+    summary: "[Main] Reveal top 5; add 1 and trash 1 [Machine]/[Cyborg] card; return rest to top; place self in battle area"
     process:
       - reveal_top_deck:
           of: you
-          count: 3
+          count: 5
           bind_as: revealed
       - select_reveal_buckets:
           from: revealed
           buckets:
             - bind_as: add_pick
               filter:
-                all_of:
-                  - kind: digimon
-                  - any_of:
-                      - trait_has: Machine
-                      - trait_has: Cyborg
+                any_of:
+                  - trait_has: Machine
+                  - trait_has: Cyborg
               min: 1
               max: 1
             - bind_as: trash_pick
               filter:
-                all_of:
-                  - kind: digimon
-                  - any_of:
-                      - trait_has: Machine
-                      - trait_has: Cyborg
+                any_of:
+                  - trait_has: Machine
+                  - trait_has: Cyborg
               min: 1
               max: 1
           no_duplicate_cards: true
-          prompt: "Add and trash Machine/Cyborg Digimon"
+          prompt: "Add 1 and trash 1 card with the [Machine] or [Cyborg] trait"
       - add_to_hand_from_reveal: { of: you, card: add_pick }
       - trash_from_reveal: { of: you, card: trash_pick }
       - place_remainder_on_deck: { of: you, position: top }
       - place_self_as_delay_option: {}
 
   - kind: delay
-    # TRIGGER CORRECTION (2026-08-24): was `end_of_your_next_turn`, which
-    # lowers to a turn-keyed AUTO-FIRE at the end of the controller's next
-    # turn. The printed timing is `[Main]`, and DCGO registers this clause at
-    # `EffectTiming.OnDeclaration` -- its [Main] activated-declaration timing --
-    # so it is a player-activated §16-16 Delay, not a schedule. `trigger: delayed`
-    # lowers to `DelayTrigger::MainPhaseActivated`, which surfaces a [Main]
-    # mask bit; NOT activating is the §16-16-2 decline, and the option stays on
-    # the field (§16-16-1: "while a card with this effect is in the battle area").
-    # The old wiring both fired it at the wrong time and gave the player no say.
+    # `trigger: delayed` lowers to DelayTrigger::MainPhaseActivated: the
+    # printed [Main] <Delay> is player-activated while the card is in the
+    # battle area (CR 4.3 16-17-1); activating it is the opt-in (16-17-2) and
+    # pays the Delay cost (trash this card) before the process runs.
     trigger: delayed
-    summary: "[Main]<Delay> Choose Machine/Cyborg Digimon; play Lv5+ Machine/Cyborg hand Digimon cost <= its play cost, cost -3"
+    summary: "[Main]<Delay> You may play 1 Lv5+ [Machine]/[Cyborg] Digimon from hand with play cost -3"
     process:
-      - select_own_permanent:
-          bind_as: source_digimon
-          optional: true
-          filter:
-            all_of:
-              - kind: digimon
-              - any_of:
-                  - trait_has: Machine
-                  - trait_has: Cyborg
-          prompt: "Choose 1 Machine/Cyborg Digimon"
+      # Candidate filter = DCGO CanSelectCardCondition (:88-112): level 5+
+      # Digimon with [Machine]/[Cyborg] that CanPlayAsNewPermanent(payCost:
+      # true) with the -3 in effect — a free slot and no play prohibition
+      # (`can_play_from_effect_without_cost`) and a payable reduced cost
+      # (`affordable_with_cost`, the same CostDelta as the play below).
+      # CR 4.3 1-3-2: a play that can't be carried out is not a legal pick.
+      # The printed text is "play" only, so NOT `can_play_or_use_from_effect`:
+      # `kind: digimon` also matches a DUAL card, which that predicate would
+      # pass on its Option-use branch, yet a DUAL is never played (CR 4.3
+      # 4-6-2, 7-1-1; DCGO `CanPlayAsNewPermanent` requires `isPlayOption ||
+      # !IsOption`). `can_play_from_effect_without_cost` rejects DUAL.
       - select_hand:
           of: you
           bind_as: play_pick
-          optional: false
+          optional: true
           filter:
             all_of:
               - kind: digimon
@@ -74,10 +99,9 @@ effects:
               - any_of:
                   - trait_has: Machine
                   - trait_has: Cyborg
-              - play_cost_lte:
-                  formula:
-                    binding_play_cost: source_digimon
-          prompt: "Play 1 Lv5+ Machine/Cyborg Digimon"
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 3 }
+          prompt: "You may play 1 level 5+ [Machine]/[Cyborg] Digimon with the play cost reduced by 3"
       - play_from_hand:
           of: you
           hand_index: play_pick
@@ -85,6 +109,32 @@ effects:
 
   - scope: inherited
     when: on_security
-    summary: "[Security] Place this card in the battle area"
+    summary: "[Security] Reveal top 5; add 1 and trash 1 [Machine]/[Cyborg] card; return rest to top; place self in battle area"
     process:
+      - reveal_top_deck:
+          of: you
+          count: 5
+          bind_as: revealed
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: add_pick
+              filter:
+                any_of:
+                  - trait_has: Machine
+                  - trait_has: Cyborg
+              min: 1
+              max: 1
+            - bind_as: trash_pick
+              filter:
+                any_of:
+                  - trait_has: Machine
+                  - trait_has: Cyborg
+              min: 1
+              max: 1
+          no_duplicate_cards: true
+          prompt: "Add 1 and trash 1 card with the [Machine] or [Cyborg] trait"
+      - add_to_hand_from_reveal: { of: you, card: add_pick }
+      - trash_from_reveal: { of: you, card: trash_pick }
+      - place_remainder_on_deck: { of: you, position: top }
       - place_self_as_delay_option: {}

@@ -299,5 +299,96 @@ fn ex13_013_engage_opens_an_end_of_turn_attack_window() {
     )));
 }
 
+// ─── Candidate legality — only Tamers the free play can actually place ───────
+// DCGO EX13_013.cs:125-129 `CanSelectCardCondition2 = IsTamer &&
+// HasText("Guilmon") && CanPlayAsNewPermanent(cardSource, false,
+// activateClass)`, used for the activation gate (:121-122), the hand/trash
+// zone choice (:134-135) and the pick (:161). A Tamer the play would refuse is
+// not a legal choice (CR 4.3 1-3-2), and a trash card can't be chosen while its
+// owner can't play cards from the trash (the play from the trash is refused).
+
+fn add_player_lock(r: &mut DebugRunner, modifier: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game
+        .modifiers
+        .add_player_modifier(0, PlayerModifierEntry::simple(modifier, 0, Expiry::Permanent, None, 1));
+}
+
+/// WarGrowlmon (EX13-013) on the field with GUIL-T2 in hand and GUIL-T in the
+/// trash; `setup` runs before the opponent's effect deletes it.
+fn on_deletion_with(setup: impl FnOnce(&mut DebugRunner, PermanentHandle)) -> DebugRunner {
+    let mut r = start(&["GUIL-T2"], 5);
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    r.game.players[0].trash.clear();
+    r.inject_trash(0, "GUIL-T");
+    setup(&mut r, me);
+    delete_by_opponent_effect(&mut r, me);
+    r
+}
+
+/// "zone:id" of every legal physical commit at the pending union pick.
+fn offered_union(r: &DebugRunner) -> Vec<String> {
+    use digimon_engine::owned_card_choice::CardChoiceZone;
+    let mut out: Vec<String> = physical_fixture::commits(&r.game)
+        .into_iter()
+        .map(|row| {
+            let zone = match row.zone {
+                Some(CardChoiceZone::Hand) => "hand",
+                Some(CardChoiceZone::Trash) => "trash",
+                _ => "other",
+            };
+            format!("{zone}:{}", row.card_id.unwrap_or_default())
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+/// Regression guard: with nothing in the way both copies are offered.
+#[test]
+fn ex13_013_on_deletion_offers_tamer_from_hand_and_trash() {
+    let r = on_deletion_with(|_, _| {});
+    assert_eq!(
+        offered_union(&r),
+        vec!["hand:GUIL-T2".to_string(), "trash:GUIL-T".to_string()]
+    );
+}
+
+#[test]
+fn ex13_013_on_deletion_no_tamer_offered_when_battle_area_full() {
+    let mut r = on_deletion_with(|r, _| {
+        r.place_on_field(0, "FILL", Some(0));
+        // After WarGrowlmon leaves, the one remaining Digimon fills the area.
+        r.game.rules.field_slots = 1;
+    });
+    assert!(r.pending_selection().is_none(), "no free slot: nothing to offer");
+    let _ = r.auto_resolve();
+    assert_eq!(hand_ids(&r, 0), vec!["GUIL-T2".to_string()]);
+    assert!(trash_ids(&r, 0).contains(&"GUIL-T".to_string()));
+}
+
+#[test]
+fn ex13_013_on_deletion_no_tamer_offered_under_tamer_effect_play_prohibition() {
+    let mut r = on_deletion_with(|r, _| {
+        add_player_lock(r, digimon_engine::enums::ModifierType::CannotPlayTamerByEffect);
+    });
+    assert!(r.pending_selection().is_none(), "effect play of Tamers prohibited");
+    let _ = r.auto_resolve();
+    assert_eq!(hand_ids(&r, 0), vec!["GUIL-T2".to_string()]);
+}
+
+#[test]
+fn ex13_013_on_deletion_trash_tamer_not_offered_when_trash_play_is_locked() {
+    let r = on_deletion_with(|r, _| {
+        add_player_lock(r, digimon_engine::enums::ModifierType::CannotPlayFromTrash);
+    });
+    assert_eq!(
+        offered_union(&r),
+        vec!["hand:GUIL-T2".to_string()],
+        "the trash copy can't be played from the trash"
+    );
+}
+
 #[path="../../support/owned_card_choice.rs"]
 mod physical_fixture;

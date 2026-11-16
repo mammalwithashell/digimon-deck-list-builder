@@ -50,8 +50,15 @@ effects:
           of: you
           bind_as: omekamon_pick
           optional: false
+          # DCGO BT20_091.cs:90-94 `IsOmekamon` = EqualsCardName("Omekamon")
+          # && CanPlayAsNewPermanent(payCost: false): only an Omekamon the free
+          # play would accept (free frame, no play lock, a play cost — CR 4.3
+          # 7-1-1) is offered; with none, the response is not offered
+          # (`CanActivateCondition`, :118-123). Fixed 2026-11-13.
           filter:
-            name_is: "Omekamon"
+            all_of:
+              - name_is: "Omekamon"
+              - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Omekamon] from hand"
       - play_from_hand_free:
           of: you

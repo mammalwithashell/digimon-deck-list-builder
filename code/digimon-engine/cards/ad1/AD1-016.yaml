@@ -126,10 +126,21 @@ effects:
           zones: [hand, trash]
           bind_as: marcus_pick
           optional: true
+          # Only a Marcus Damon the effect can actually place is offered (a
+          # free slot, no Tamer effect-play lock, no trash-play lock for the
+          # trash copy). DCGO is LOOSER here: AD1_016.cs:50 filters on
+          # `EqualsCardName("Marcus Damon")` alone and `PlayByEffect`
+          # (PlayEffects.cs:9-57) passes that condition through unchanged, so
+          # DCGO offers a Marcus Damon whose play then does nothing. We follow
+          # the rules: CR 4.3 1-3-11-1 (a card can be declared for play only if
+          # it is able to be played) and 1-3-2 (an impossible action is not
+          # carried out) — the check DCGO itself applies on sibling cards
+          # (AD1_002.cs:165 `CanPlayAsNewPermanent(payCost: false)`).
           filter:
             all_of:
               - kind: tamer
               - name_contains: "Marcus Damon"
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [Marcus Damon] from your hand or trash without paying the cost"
       # When the union pick is declined (PASS), `marcus_pick` is unbound and
       # `play_union_bound_free` is a silent no-op (per its missing-binding

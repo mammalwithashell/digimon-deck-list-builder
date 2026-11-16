@@ -11,7 +11,10 @@
 //! Inherited Effect: <Alliance>
 //!
 //! # DCGO C# reference
-//! None at b9a0638cd (no `EX13_042.cs`); printed text governs. The trait test
+//! `DCGO/Assets/Scripts/CardEffect/EX13/Green/EX13_042.cs` — pick filter
+//! :44-49 (`IsDigimon && HasPlayCost && GetCostItself <= 4 && HasBeastTraits
+//! && CanPlayAsNewPermanent`); :51-52 skips the effect when none qualifies.
+//! Printed text governs the trait wording. The trait test
 //! follows BT11-089's shipped reading (substring `trait_contains` over every
 //! trait, `[Sea Animal]` excluded — its Official Q&A: "Other than [Sea Animal],
 //! all traits with … are applicable regardless of other words").
@@ -164,4 +167,41 @@ fn ex13_042_once_per_turn_shared_between_timings() {
         }
     }
     assert!(hand_ids(&r, 0).contains(&"ANIMAL".to_string()));
+}
+
+// ─── Candidate legality (select-hand playability audit, 2026-11-13) ──────────
+// DCGO EX13_042.cs:44-49 offers only `IsDigimon && HasPlayCost &&
+// GetCostItself <= 4 && HasBeastTraits && CanPlayAsNewPermanent(cardSource,
+// false, activateClass)`; :51-52 skips the effect when none qualifies. A card
+// the free play would refuse is not a legal pick (CR 4.3 1-3-2; 7-1-1).
+
+/// "You can't play Digimon by effects": no hand pick is offered; the card
+/// stays in hand.
+#[test]
+fn ex13_042_nothing_offered_while_digimon_effect_play_is_prohibited() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = start(&[CARD_ID, "BEASTKIN"]);
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let base = r.place_on_field(0, "GREEN-L4", Some(0));
+    digivolve_onto(&mut r, base);
+    assert!(legal(&r).is_empty(), "BEASTKIN can't be played: {:?}", r.pending_selection_view());
+    let _ = r.auto_resolve();
+    assert!(hand_ids(&r, 0).contains(&"BEASTKIN".to_string()));
+}
+
+/// No free battle-area slot (DCGO `CanPlayAsNewPermanent`): no hand pick is
+/// offered.
+#[test]
+fn ex13_042_nothing_offered_when_the_battle_area_is_full() {
+    let mut r = start(&[CARD_ID, "BEASTKIN"]);
+    let base = r.place_on_field(0, "GREEN-L4", Some(0));
+    r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8;
+    digivolve_onto(&mut r, base);
+    assert!(legal(&r).is_empty(), "no slot for BEASTKIN: {:?}", r.pending_selection_view());
+    let _ = r.auto_resolve();
+    assert!(hand_ids(&r, 0).contains(&"BEASTKIN".to_string()));
 }

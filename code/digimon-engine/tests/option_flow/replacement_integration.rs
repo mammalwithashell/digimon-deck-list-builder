@@ -154,7 +154,8 @@ impl CardEffect for PromptThenAllowDelayCost {
 }
 
 /// Post-cost observer that rewrites hand contents after the Delay option is
-/// trashed. The Delay hand prompt must reflect this post-cost hand state.
+/// trashed. A trigger-type effect, so it waits until the <Delay>'s processing
+/// is done (CR 4.3 15-8-3-2) rather than changing the hand mid-pick.
 struct ReplaceHandAfterDeletion;
 impl CardEffect for ReplaceHandAfterDeletion {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
@@ -200,6 +201,21 @@ fn digimon_card(card_id: &str, color: CardColor) -> digimon_engine::CardData {
 fn trait_digimon_card(card_id: &str, name: &str, traits: &[&str]) -> digimon_engine::CardData {
     let mut cd = make_test_card(card_id, name);
     cd.traits = traits.iter().map(|s| s.to_string()).collect();
+    cd
+}
+
+/// An [Imperialdramon] hand card for BT17-097's <Delay>: Lv.4 with a red Lv.3
+/// digivolution requirement, so it can digivolve onto the red Lv.3
+/// FREE-TARGET (the <Delay> hand pick offers only such a card, DCGO
+/// BT17_097.cs:126-137).
+fn imperial_hand_card(card_id: &str, name: &str, traits: &[&str]) -> digimon_engine::CardData {
+    let mut cd = trait_digimon_card(card_id, name, traits);
+    cd.level = Some(4);
+    cd.evo_costs = vec![digimon_engine::card_data::EvoCost {
+        card_color: CardColor::Red as u8,
+        level: 3,
+        memory_cost: 3,
+    }];
     cd
 }
 
@@ -528,7 +544,7 @@ fn bt17_097_delay_prevents_deletion_and_digivolves_from_hand() {
         .dsl_card("BT17-097")
         .expect("BT17-097 fixture is available")
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
-        .add_card(trait_digimon_card(
+        .add_card(imperial_hand_card(
             "IMPERIAL-HAND",
             "Imperialdramon Hand",
             &["Imperialdramon"],
@@ -542,6 +558,10 @@ fn bt17_097_delay_prevents_deletion_and_digivolves_from_hand() {
 
     r.game
         .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    // CR 4.3 16-17-2: <Delay> is optional -- accept it before its cost is paid.
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the optional BT17-097 <Delay>");
 
     assert!(
         r.game.pending_selection.is_some(),
@@ -584,7 +604,7 @@ fn bt17_097_delay_before_subject_re_resolves_shifted_target() {
         .dsl_card("BT17-097")
         .expect("BT17-097 fixture is available")
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
-        .add_card(trait_digimon_card(
+        .add_card(imperial_hand_card(
             "IMPERIAL-HAND",
             "Imperialdramon Hand",
             &["Imperialdramon"],
@@ -598,6 +618,10 @@ fn bt17_097_delay_before_subject_re_resolves_shifted_target() {
 
     r.game
         .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    // CR 4.3 16-17-2: <Delay> is optional -- accept it before its cost is paid.
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the optional BT17-097 <Delay>");
     r.game
         .resolve_selection(0, HAND_EFFECT_START)
         .expect("select Imperialdramon-like hand target");
@@ -618,7 +642,7 @@ fn bt17_097_paid_delay_decline_commits_original_deletion() {
         .dsl_card("BT17-097")
         .expect("BT17-097 fixture is available")
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
-        .add_card(trait_digimon_card(
+        .add_card(imperial_hand_card(
             "IMPERIAL-HAND",
             "Imperialdramon Hand",
             &["Imperialdramon"],
@@ -632,6 +656,10 @@ fn bt17_097_paid_delay_decline_commits_original_deletion() {
 
     r.game
         .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    // CR 4.3 16-17-2: <Delay> is optional -- accept it before its cost is paid.
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the optional BT17-097 <Delay>");
 
     assert!(
         r.game.pending_selection.is_some(),
@@ -665,7 +693,7 @@ fn bt17_097_unpaid_delay_cost_does_not_prevent_original_deletion() {
         .dsl_card("BT17-097")
         .expect("BT17-097 fixture is available")
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
-        .add_card(trait_digimon_card(
+        .add_card(imperial_hand_card(
             "IMPERIAL-HAND",
             "Imperialdramon Hand",
             &["Imperialdramon"],
@@ -681,6 +709,10 @@ fn bt17_097_unpaid_delay_cost_does_not_prevent_original_deletion() {
 
     r.game
         .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    // CR 4.3 16-17-2: <Delay> is optional -- accept it before its cost is paid.
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the optional BT17-097 <Delay>");
 
     assert!(
         r.game.pending_selection.is_none(),
@@ -703,7 +735,7 @@ fn bt17_097_delay_waits_for_pending_cost_replacement_before_hand_choice() {
         .dsl_card("BT17-097")
         .expect("BT17-097 fixture is available")
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
-        .add_card(trait_digimon_card(
+        .add_card(imperial_hand_card(
             "IMPERIAL-HAND",
             "Imperialdramon Hand",
             &["Imperialdramon"],
@@ -719,6 +751,10 @@ fn bt17_097_delay_waits_for_pending_cost_replacement_before_hand_choice() {
 
     r.game
         .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    // CR 4.3 16-17-2: <Delay> is optional -- accept it before its cost is paid.
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the optional BT17-097 <Delay>");
 
     let pending = r
         .game
@@ -757,18 +793,28 @@ fn bt17_097_delay_waits_for_pending_cost_replacement_before_hand_choice() {
     assert!(trash_contains(&r, 0, "BT17-097"));
 }
 
+/// The <Delay> hand pick is built when it is made, after the Delay cost is
+/// paid; a trigger-type effect that the cost payment triggers (HAND-MUTATOR's
+/// "when a card is deleted, replace the hand") cannot activate during the
+/// <Delay>'s processing (CR 4.3 15-8-3-2), so it waits until the digivolve
+/// is done. Hence the offered card is the one in hand at pick time
+/// (IMPERIAL-OLD), and the hand is rewritten only afterward.
+///
+/// (Before BT17-097's <Delay> became optional, CR 4.3 16-17-2, the
+/// mandatory replacement path drained HAND-MUTATOR mid-processing and this
+/// test asserted the post-trigger hand; that drain violated 15-8-3-2.)
 #[test]
-fn bt17_097_delay_rebuilds_hand_candidates_after_cost_triggers() {
+fn bt17_097_delay_hand_pick_reads_hand_at_pick_time_and_cost_triggers_wait() {
     let mut r = DebugRunner::builder()
         .dsl_card("BT17-097")
         .expect("BT17-097 fixture is available")
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
-        .add_card(trait_digimon_card(
+        .add_card(imperial_hand_card(
             "IMPERIAL-OLD",
             "Imperialdramon Old",
             &["Imperialdramon"],
         ))
-        .add_card(trait_digimon_card(
+        .add_card(imperial_hand_card(
             "IMPERIAL-NEW",
             "Imperialdramon New",
             &["Imperialdramon"],
@@ -785,6 +831,10 @@ fn bt17_097_delay_rebuilds_hand_candidates_after_cost_triggers() {
 
     r.game
         .delete_permanent_with_cause(target, ReplacementCause::OpponentEffect);
+    // CR 4.3 16-17-2: <Delay> is optional -- accept it before its cost is paid.
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the optional BT17-097 <Delay>");
 
     let choices = r
         .game
@@ -792,28 +842,39 @@ fn bt17_097_delay_rebuilds_hand_candidates_after_cost_triggers() {
         .as_ref()
         .and_then(|selection| selection.effect_choices.as_ref())
         .expect("Delay hand choice is exposed");
+    let labels: Vec<String> = choices.iter().map(|c| c.label.clone()).collect();
     assert!(
-        choices
-            .iter()
-            .any(|choice| choice.label == "Imperialdramon New"),
-        "post-cost hand card is offered"
+        trash_contains(&r, 0, "BT17-097"),
+        "the hand pick is built after the Delay cost is paid"
     );
-    assert!(
-        !choices
-            .iter()
-            .any(|choice| choice.label == "Imperialdramon Old"),
-        "pre-cost stale hand card is not offered"
+    assert_eq!(
+        labels,
+        vec!["Imperialdramon Old".to_string()],
+        "the card in hand at pick time is offered; HAND-MUTATOR's trigger has not activated mid-processing (CR 4.3 15-8-3-2)"
     );
 
     r.game
         .resolve_selection(0, HAND_EFFECT_START)
-        .expect("select post-cost Imperialdramon-like hand target");
+        .expect("select the Imperialdramon hand card");
+    r.game.drain_effect_queue();
 
     let target = find_battle_permanent(&r, 0, "FREE-TARGET").expect("target still present");
     let target_stack = &r.game.player(0).battle_area[target.index as usize];
     assert_eq!(
         target_stack.top_card().card_id(&r.game.card_data),
-        "IMPERIAL-NEW",
-        "hand prompt resolved the post-cost candidate"
+        "IMPERIAL-OLD",
+        "the deletion was replaced by digivolving into the picked card"
+    );
+    let hand: Vec<String> = r
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        hand,
+        vec!["IMPERIAL-NEW".to_string()],
+        "HAND-MUTATOR's deletion trigger activated after the <Delay> finished"
     );
 }

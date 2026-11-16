@@ -189,3 +189,115 @@ fn bt25_013_inherited_plus_2000_on_your_turn_only() {
         "opponent's turn: [Your Turn] aura must not apply"
     );
 }
+
+// candidate legality marker (select-hand audit batch 12)
+
+// ─── Section 4 — [Your Turn] digivolve into [Flaremon]: candidate legality ────
+//
+// DCGO BT25_013.cs:153-156 `CanSelectCardCondition = EqualsCardName("Flaremon")`
+// passed to `CardEffectCommons.DigivolveIntoHandOrTrashCard(targetPermanent:
+// this, payCost: true, reduceCost: 1, isHand: true)` (BT25_013.cs:160-169),
+// which offers only `IsDigimon && cardCondition && !CanNotEvolve(target) &&
+// CanPlayCardTargetFrame(target frame, PayCost: true, ...)`
+// (CardEffectCommons.cs:859-881): requirements onto THIS Digimon and the
+// reduced cost payable. CR 4.3 1-3-11-1: a card can be declared for
+// digivolution only if it can be digivolved and its cost paid.
+
+/// A [Flaremon] that digivolves from a red Lv.4 for 3 (reduced to 2).
+fn flaremon(id: &str, from_level: u8) -> CardData {
+    let mut c = make_test_card(id, "Flaremon");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(5);
+    c.dp = Some(7000);
+    c.play_cost = 6;
+    c.colors = vec![CardColor::Red];
+    c.evo_costs = vec![EvoCost { card_color: 0, level: from_level, memory_cost: 3 }];
+    c
+}
+
+/// A blue Lv.4 Digimon whose play triggers the [Your Turn] clause.
+fn blue_digimon(id: &str, cost: u16) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = cost;
+    c.colors = vec![CardColor::Blue];
+    c
+}
+
+fn push_hand(runner: &mut DebugRunner, card_id: &str) -> usize {
+    let idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap();
+    let iid = runner.game.next_card_index();
+    runner.game.players[0].hand.push(CardSource::new(idx, 0, iid));
+    runner.game.players[0].hand.len() - 1
+}
+
+/// Firamon on the field, `flare_id` in hand; play the blue Digimon (play cost
+/// `blue_cost`) from `memory`. Returns the runner with the trigger resolved up
+/// to its first prompt, and Firamon's handle.
+fn digivolve_runner(flare_id: &str, memory: i16, blue_cost: u16) -> (DebugRunner, PermanentHandle) {
+    let mut runner = base()
+        .add_card(flaremon("FLAREMON", 4))
+        .add_card(flaremon("FLAREMON-LV3", 3))
+        .add_card(blue_digimon("BLUE", blue_cost))
+        .memory(memory)
+        .start();
+    runner.game.turn_count = 1;
+    let firamon = runner.place_on_field(0, CARD_ID, Some(0));
+    push_hand(&mut runner, flare_id);
+    let blue = push_hand(&mut runner, "BLUE");
+    runner.play(0, blue);
+    (runner, firamon)
+}
+
+/// Positive (regression guard): a blue Digimon played -> Firamon may digivolve
+/// into [Flaremon], paying 3 - 1 = 2.
+#[test]
+fn bt25_013_your_turn_digivolves_into_flaremon_for_one_less() {
+    let (mut runner, firamon) = digivolve_runner("FLAREMON", 10, 3);
+    let memory_before = runner.memory();
+    assert!(runner.pending_selection().is_some(), "the optional digivolve is offered");
+    runner.auto_resolve().expect("take the digivolve");
+    assert_eq!(
+        runner.game.player(0).battle_area[firamon.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "FLAREMON"
+    );
+    assert_eq!(runner.memory(), memory_before - 2, "digivolution cost 3 reduced by 1");
+}
+
+/// A [Flaremon] whose requirement (red Lv.3) Firamon (Lv.4) doesn't meet is
+/// not offered (DCGO `CanPlayCardTargetFrame`).
+#[test]
+fn bt25_013_flaremon_failing_requirements_not_offered() {
+    let (runner, _) = digivolve_runner("FLAREMON-LV3", 10, 3);
+    assert!(
+        runner.pending_selection().is_none(),
+        "no [Flaremon] can digivolve onto Firamon: nothing is offered"
+    );
+}
+
+/// Memory 0, the blue Digimon costs 9 -> -9. Digivolving for 2 would reach -11,
+/// past the opponent's 10: not payable, not offered.
+#[test]
+fn bt25_013_unaffordable_flaremon_not_offered() {
+    let (runner, firamon) = digivolve_runner("FLAREMON", 0, 9);
+    assert_eq!(runner.memory(), -9);
+    assert!(
+        runner.pending_selection().is_none(),
+        "the 2-cost digivolve can't be paid at -9: nothing is offered"
+    );
+    assert_eq!(
+        runner.game.player(0).battle_area[firamon.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        CARD_ID
+    );
+}

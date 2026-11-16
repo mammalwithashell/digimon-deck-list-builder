@@ -533,3 +533,140 @@ fn bt25_044_opposing_junomon_does_not_make_throne_room_free() {
     runner.auto_resolve().ok();
     assert_eq!(runner.memory(), before - 3, "Throne Room's use cost is 3");
 }
+
+// ─── Section 7 — [All Turns] pick offers only cards the play can take ───────
+//
+// DCGO BT25_044.cs:149-154 `CanSelectCardCondition`: `HasPlayCost &&
+// GetCostItself <= 8 && (Angel || Archangel || Iliad) &&
+// CanPlayAsNewPermanent(cardSource, false, activateClass, root)` -- used for
+// both the hand (:157) and the trash (:159) candidates AND for the
+// `CanActivateCondition` (:142-146), so without a playable candidate the
+// effect does not activate. CR 4.3 7-1-1: playing places "a new card with a
+// play cost" onto the field -- a Digi-Egg (hatched, CR 4.3 4-18) and an Option
+// (used, with a use cost) have none, so neither is a "play" candidate even
+// though the printed text says "card". CanPlayAsNewPermanent also needs an
+// empty frame and no play prohibition; from the trash it honours "can't play
+// from the trash" (CR 4.3 1-3-2: an impossible action is not carried out).
+
+/// An [Angel] Digi-Egg: no play cost, never played.
+fn angel_egg(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::DigiEgg;
+    card.level = Some(2);
+    card.dp = None;
+    card.play_cost = 0;
+    card.traits = vec!["Angel".to_string()];
+    card
+}
+
+fn pick_base() -> DebugRunnerBuilder {
+    base()
+        .from_dsl_yaml(TRASHER_YAML)
+        .expect("trasher YAML")
+        .dsl_card("BT24-090")
+        .expect("BT24-090 compiles")
+        .add_card(angel_egg("ANGEL-EGG"))
+        .security(0, &["PAD"; 4])
+        .memory(5)
+}
+
+/// Junomon on the field, `hand` (the trasher first) and `trash` staged, then
+/// the trasher is played so the own-security removal fires Junomon's [All
+/// Turns] clause. `setup` runs just before the trasher is played. Returns the
+/// card ids the union pick offers (`None` when no prompt opened).
+fn offered_after_security_loss(
+    hand: &[&str],
+    trash: &[&str],
+    setup: impl FnOnce(&mut DebugRunner),
+) -> Option<Vec<String>> {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    let mut runner = pick_base().hand(0, hand).start();
+    for id in trash {
+        runner.inject_trash(0, id);
+    }
+    let _j = runner.place_on_field(0, CARD_ID, Some(0));
+    setup(&mut runner);
+    runner.play(0, 0).expect("play the trasher");
+    assert_eq!(runner.security_count(0), 3, "the trasher removed a security card");
+    let view = runner.pending_selection_view()?;
+    let rows = view.card_choice.expect("union pick is an owned card choice").rows;
+    let mut ids: Vec<String> = rows
+        .into_iter()
+        .filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard))
+        .map(|row| row.card_id.expect("own hand/trash card identity visible"))
+        .collect();
+    ids.sort();
+    Some(ids)
+}
+
+#[test]
+fn bt25_044_all_turns_pick_excludes_angel_digi_egg() {
+    assert_eq!(
+        offered_after_security_loss(&["TEST-SEC-TRASHER", "ANGEL-EGG", "ANGEL-LOW"], &[], |_| {}),
+        Some(vec!["ANGEL-LOW".to_string()]),
+        "the [Angel] Digi-Egg has no play cost and is not offered"
+    );
+}
+
+#[test]
+fn bt25_044_all_turns_pick_excludes_iliad_option() {
+    assert_eq!(
+        offered_after_security_loss(&["TEST-SEC-TRASHER", "BT24-090", "ANGEL-LOW"], &["BT24-090"], |_| {}),
+        Some(vec!["ANGEL-LOW".to_string()]),
+        "Abyss Sanctuary: Throne Room (BT24-090) is an [Iliad] Option (use cost 3): it is used, never played"
+    );
+}
+
+#[test]
+fn bt25_044_all_turns_not_activated_with_only_unplayable_candidates() {
+    assert_eq!(
+        offered_after_security_loss(&["TEST-SEC-TRASHER", "ANGEL-EGG"], &["BT24-090"], |_| {}),
+        None,
+        "DCGO CanActivateCondition uses the same playability filter: no prompt"
+    );
+}
+
+#[test]
+fn bt25_044_all_turns_not_activated_when_battle_area_full() {
+    assert_eq!(
+        offered_after_security_loss(&["TEST-SEC-TRASHER", "ANGEL-LOW"], &["ANGEL-LOW"], |r| {
+            // The trasher takes the last free slot.
+            r.game.rules.field_slots = r.game.players[0].battle_area.len() as u8 + 1;
+        }),
+        None,
+        "no empty frame: nothing can be played, so the effect does not activate"
+    );
+}
+
+#[test]
+fn bt25_044_all_turns_not_activated_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    assert_eq!(
+        offered_after_security_loss(&["TEST-SEC-TRASHER", "ANGEL-LOW"], &["ANGEL-LOW"], |r| {
+            r.game.modifiers.add_player_modifier(
+                0,
+                PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+            );
+        }),
+        None,
+        "\"you can't play Digimon by effects\": no candidate"
+    );
+}
+
+#[test]
+fn bt25_044_all_turns_pick_drops_trash_copy_when_trash_play_is_locked() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let lock = |r: &mut DebugRunner| {
+        r.game.modifiers.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(ModifierType::CannotPlayFromTrash, 0, Expiry::Permanent, None, 1),
+        );
+    };
+    assert_eq!(
+        offered_after_security_loss(&["TEST-SEC-TRASHER"], &["ANGEL-LOW"], lock),
+        None,
+        "the only candidate sits in a trash its owner can't play from"
+    );
+}

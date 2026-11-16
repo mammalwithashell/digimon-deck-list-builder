@@ -1096,5 +1096,142 @@ fn p_189_progress_dormant_when_not_attacking() {
     );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 6 — [Security] candidate legality
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// "play 1 card with the [LIBERATOR] trait and a play cost of 4 or less from
+// your hand or trash": DCGO P_189.cs:39-44 `CanSelectCardCondition` =
+// `LIBERATOR && !IsDigiEgg && HasPlayCost && GetCostItself <= 4`, for the hand
+// pick (P_189.cs:90-105) and the trash pick (P_189.cs:113-131). `HasPlayCost`
+// (CEntity_Base.cs:340) is false for an Option and a DUAL. CR 4.3 7-1-1:
+// playing places "a new card with a play cost"; 2-6-1 / 2-7-1: an Option has a
+// use cost, not a play cost; 2-8-1 / 4-18: a Digi-Egg has none (it is hatched).
+//
+// DCGO's filter has NO `CanPlayAsNewPermanent` check (unlike P_151.cs /
+// P_170.cs / ST24_06.cs), so DCGO also offers a card that then can't be played
+// (full battle area, "can't play Digimon by effects", a locked trash) and
+// `PlayPermanentCards` silently plays nothing. CR 4.3 1-3-11-1: a card can be
+// declared for play only if it can be played, so that is not a legal "play"
+// choice and the engine follows the rules there (an exam divergence on such a
+// candidate is a `dcgo_quirk`).
+
+fn liberator_egg(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = None;
+    c.play_cost = 0;
+    c.traits = vec!["LIBERATOR".to_string()];
+    c
+}
+
+fn liberator_option(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Option;
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 2;
+    c.traits = vec!["LIBERATOR".to_string()];
+    c
+}
+
+fn liberator_tamer(id: &str) -> CardData {
+    let mut c = make_non_digimon_security_filler(id);
+    c.play_cost = 3;
+    c.traits = vec!["LIBERATOR".to_string()];
+    c
+}
+
+fn add_player_modifier(runner: &mut DebugRunner, player: u8, kind: digimon_engine::enums::ModifierType) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        player,
+        PlayerModifierEntry::simple(kind, 0, Expiry::Permanent, None, 1),
+    );
+}
+
+/// P-189 in P1's security; P0 attacks. Returns the union pick's committable
+/// card ids (sorted), or empty when no pick with candidates installs.
+fn security_offered(
+    hand: &[&str],
+    trash: &[&str],
+    setup: impl FnOnce(&mut DebugRunner),
+) -> Vec<String> {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(P189_YAML)
+        .expect("P-189 YAML parses")
+        .add_card(make_liberator_low_cost("LIB-OK"))
+        .add_card(make_liberator_low_cost("LIB-TRASH"))
+        .add_card(liberator_egg("LIB-EGG"))
+        .add_card(liberator_option("LIB-OPT"))
+        .add_card(liberator_tamer("LIB-TAMER"))
+        .add_card(make_test_card("DEF-DIGIMON", "Defender"))
+        .add_card(make_test_card("ATTACKER", "Attacker"))
+        .add_card(make_test_card("FILL", "Fill"))
+        .hand(1, hand)
+        .security(1, &["P-189"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    for id in trash {
+        push_into_trash(&mut runner, 1, id);
+    }
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    setup(&mut runner);
+    runner.attack_player(attacker, 1, false);
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if !matches!(view.kind, SelectionKind::UnionZone { .. }) {
+        return Vec::new();
+    }
+    let mut offered: Vec<String> = physical_choice::commits(&runner.game)
+        .into_iter()
+        .map(|row| row.card_id.unwrap_or_default())
+        .collect();
+    offered.sort();
+    offered
+}
+
+#[test]
+fn p_189_security_does_not_offer_liberator_option() {
+    let offered = security_offered(&["LIB-OK", "LIB-OPT"], &[], |_| {});
+    assert_eq!(offered, vec!["LIB-OK".to_string()]);
+}
+
+#[test]
+fn p_189_security_does_not_offer_liberator_digi_egg() {
+    let offered = security_offered(&["LIB-OK", "LIB-EGG"], &[], |_| {});
+    assert_eq!(offered, vec!["LIB-OK".to_string()]);
+}
+
+#[test]
+fn p_189_security_does_not_offer_digimon_under_effect_play_prohibition() {
+    let offered = security_offered(&["LIB-OK", "LIB-TAMER"], &[], |r| {
+        add_player_modifier(r, 1, digimon_engine::enums::ModifierType::CannotPlayDigimonByEffect)
+    });
+    assert_eq!(offered, vec!["LIB-TAMER".to_string()]);
+}
+
+#[test]
+fn p_189_security_does_not_offer_trash_card_while_trash_play_is_locked() {
+    let offered = security_offered(&["LIB-OK"], &["LIB-TRASH"], |r| {
+        add_player_modifier(r, 1, digimon_engine::enums::ModifierType::CannotPlayFromTrash)
+    });
+    assert_eq!(offered, vec!["LIB-OK".to_string()]);
+}
+
+#[test]
+fn p_189_security_offers_nothing_when_battle_area_full() {
+    let offered = security_offered(&["LIB-OK", "LIB-TAMER"], &["LIB-TRASH"], |r| {
+        r.place_on_field(1, "DEF-DIGIMON", Some(0));
+        r.game.rules.field_slots = 1;
+    });
+    assert!(offered.is_empty(), "nothing can be played: {offered:?}");
+}
+
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_choice;

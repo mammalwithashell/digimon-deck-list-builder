@@ -9,13 +9,17 @@
 #   trash without paying the cost.
 #   Inherited Effect: <Barrier>
 #   Official Q&A: "Yes, you can." (the optional processing condition can be
-#   paid even when no [Richard Sampson] is playable — rule 15-7-4).
+#   paid even when no [Richard Sampson] is playable — CR 4.3 15-7-5).
 #
-# DCGO: no EX13_030.cs at b9a0638cd.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Yellow/EX13_030.cs
+#   (shared OP/WD/WA, optional, OPT, gated on >=1 security at :36-47; trash
+#   the top security card, then a hand/trash pick of a [Richard Sampson] that
+#   `CanPlayAsNewPermanent(card, false, activateClass)`, :54-58 / :66-98).
 # - Cost clause: BT23-035 Dynasmon idiom — `optional` + `outer_prompt` (the
 #   body's first step is the bare cost, so the accept/decline confirm surfaces
-#   BEFORE any security card moves; 15-7-4). `security_count_gte: 1` gate: an
-#   unpayable processing condition can't be chosen (15-7-2).
+#   BEFORE any security card moves; CR 4.3 15-7-1 / 15-9-2-2).
+#   `security_count_gte: 1` gate: an unpayable processing condition can't be
+#   chosen (CR 4.3 15-7-4).
 # - "you may play 1 [Richard Sampson] from your hand or trash" — optional
 #   `select_union_zone` over hand+trash → `play_union_bound_free` (BT25-096 /
 #   BT19-099 idiom). Declining after paying is legal.
@@ -57,7 +61,15 @@ effects:
           zones: [hand, trash]
           bind_as: richard
           optional: true
-          filter: { name_is: "Richard Sampson" }
+          # Only a Richard Sampson (EX13-071) the free play can place: DCGO
+          # EX13_030.cs:54-58 `EqualsCardName && CanPlayAsNewPermanent` (free
+          # slot, no "can't play Tamers by effects", and for the trash copy no
+          # "can't play from the trash"). CR 4.3 1-3-2: an impossible play is
+          # not a legal choice. The security trash stays payable (15-7-5).
+          filter:
+            all_of:
+              - name_is: "Richard Sampson"
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [Richard Sampson] from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: richard }
 

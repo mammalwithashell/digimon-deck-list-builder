@@ -271,6 +271,7 @@ fn fixture_cost_reduction(amount: i32, condition: Option<CompiledPredicate>) -> 
                 when_playing_this: true,
                 when_digivolving_this: false,
                 when_any_ally_played: None,
+                when_any_ally_used: None,
                 when_any_ally_digivolves_into: None,
                 condition,
                 optional: false,

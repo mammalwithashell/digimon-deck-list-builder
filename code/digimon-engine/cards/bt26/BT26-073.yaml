@@ -174,6 +174,10 @@ effects:
                   - kind: digimon
                   - kind: tamer
               - play_cost_lte: 5
+              # DCGO BT26_073.cs:234-240 CanPlayAsNewPermanent: a free frame,
+              # no play prohibition, and (from the trash) no trash-play lock.
+              # Select-hand audit 2026-11-13.
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [TS] trait card with a play cost of 5 or less from your hand or trash without paying the cost"
       - play_union_bound_free:
           binding: ts_pick

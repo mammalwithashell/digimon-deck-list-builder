@@ -1,23 +1,29 @@
 //! EX11-020 Hanimon.
 //! Printed text covered here:
 //! - [On Deletion] If deleted other than in battle, you may play 1 [Shoemon]
-//!   trait from your hand without paying the cost.
+//!   from your hand without paying the cost.
+//!
+//! [Shoemon] is a card NAME (card image + official Bandai DB bundle
+//! data/card_bundles/EX11-020.md); cards.json's "[Shoemon] trait" is an API
+//! ingest error. DCGO EX11_020.cs:62-65 `EqualsCardName("Shoemon")`. Only a
+//! [Shoemon] this effect can actually play is offered (CR 4.3 1-3-2, 7-1-1;
+//! G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY).
 //! - Inherited: [Opponent's Turn] [Once Per Turn] when one of your opponent's
 //!   Digimon attacks, by deleting 1 of your other Digimon, end that attack.
 
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{PASS, PLAY_HAND_START};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::SelectionKind;
 
 #[test]
-fn ex11_020_on_deletion_may_play_shoemon_trait_from_hand_if_not_battle() {
+fn ex11_020_on_deletion_may_play_shoemon_from_hand_if_not_battle() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX11-020")
         .expect("EX11-020 YAML loads")
-        .add_card(make_shoemon_trait("SHOEMON-TRAIT", "Shoemon Friend"))
+        .add_card(make_shoemon("SHOEMON"))
         .add_card(make_test_card("NOT-SHOEMON", "Not Shoemon"))
-        .hand(0, &["SHOEMON-TRAIT", "NOT-SHOEMON"])
+        .hand(0, &["SHOEMON", "NOT-SHOEMON"])
         .memory(0)
         .start();
     let hanimon = runner.place_on_field(0, "EX11-020", Some(0));
@@ -32,24 +38,24 @@ fn ex11_020_on_deletion_may_play_shoemon_trait_from_hand_if_not_battle() {
     );
     let view = runner
         .pending_selection_view()
-        .expect("Shoemon-trait hand prompt");
+        .expect("[Shoemon] hand prompt");
     assert_eq!(view.kind, SelectionKind::Hand);
     assert_eq!(
         view.valid_action_ids.len(),
         1,
-        "only the Shoemon-trait card is eligible"
+        "only the [Shoemon]-named card is eligible"
     );
     runner
         .execute_action(0, view.valid_action_ids[0])
-        .expect("choose Shoemon-trait card");
+        .expect("choose [Shoemon]");
     runner.auto_resolve().expect("finish free play");
 
     assert!(
         runner.game.players[0]
             .battle_area
             .iter()
-            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "SHOEMON-TRAIT"),
-        "selected Shoemon-trait card enters the battle area"
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "SHOEMON"),
+        "selected [Shoemon] enters the battle area"
     );
     assert_eq!(runner.hand_size(0), 1, "non-Shoemon card remains in hand");
 }
@@ -59,8 +65,8 @@ fn ex11_020_on_deletion_can_decline_free_play() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX11-020")
         .expect("EX11-020 YAML loads")
-        .add_card(make_shoemon_trait("SHOEMON-TRAIT", "Shoemon Friend"))
-        .hand(0, &["SHOEMON-TRAIT"])
+        .add_card(make_shoemon("SHOEMON"))
+        .hand(0, &["SHOEMON"])
         .memory(0)
         .start();
     let hanimon = runner.place_on_field(0, "EX11-020", Some(0));
@@ -82,8 +88,8 @@ fn ex11_020_on_deletion_does_not_fire_when_deleted_in_battle() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX11-020")
         .expect("EX11-020 YAML loads")
-        .add_card(make_shoemon_trait("SHOEMON-TRAIT", "Shoemon Friend"))
-        .hand(0, &["SHOEMON-TRAIT"])
+        .add_card(make_shoemon("SHOEMON"))
+        .hand(0, &["SHOEMON"])
         .memory(0)
         .start();
     let hanimon = runner.place_on_field(0, "EX11-020", Some(0));
@@ -272,7 +278,7 @@ effects:
     condition:
       not:
         event_cause: battle_deletion
-    summary: "[On Deletion] If deleted other than in battle, you may play 1 [Shoemon] trait Digimon from hand free"
+    summary: "[On Deletion] If deleted other than in battle, you may play 1 [Shoemon] from hand free"
     process:
       - select_hand:
           of: you
@@ -280,9 +286,9 @@ effects:
           optional: true
           filter:
             all_of:
-              - kind: digimon
-              - trait_has: Shoemon
-          prompt: "Play 1 [Shoemon] trait Digimon from your hand without paying its cost"
+              - name_is: Shoemon
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 [Shoemon] from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: shoemon }
 "#;
 
@@ -291,9 +297,9 @@ fn deferred_barrier_decline_in_battle_does_not_fire_not_battle_on_deletion() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BARRIER_ON_DELETION_YAML)
         .expect("inline Barrier-OnDeletion YAML compiles")
-        .add_card(make_shoemon_trait("SHOEMON-TRAIT", "Shoemon Friend"))
+        .add_card(make_shoemon("SHOEMON"))
         .add_card(make_test_card("SEC", "Security Card"))
-        .hand(0, &["SHOEMON-TRAIT"])
+        .hand(0, &["SHOEMON"])
         // Barrier's gate requires the owner to hold at least one security card.
         .security(0, &["SEC"])
         .memory(0)
@@ -324,12 +330,122 @@ fn deferred_barrier_decline_in_battle_does_not_fire_not_battle_on_deletion() {
     assert_eq!(
         runner.hand_size(0),
         1,
-        "Shoemon-trait card stays in hand — the not-battle clause did not fire"
+        "[Shoemon] stays in hand — the not-battle clause did not fire"
     );
 }
 
-fn make_shoemon_trait(id: &str, name: &str) -> digimon_engine::card_data::CardData {
-    let mut card = make_test_card(id, name);
+/// A Digimon card named exactly [Shoemon] (no Shoemon trait).
+fn make_shoemon(id: &str) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, "Shoemon");
+    card.traits = vec!["Puppet".to_string()];
+    card
+}
+
+/// A Digimon with a [Shoemon] TRAIT but another name: not a [Shoemon] (the
+/// printed reference is a name, not a trait).
+fn make_shoemon_trait_only(id: &str) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, "Shoemon Friend");
     card.traits = vec!["Shoemon".to_string()];
     card
+}
+
+/// A Digimon named [Shoemon] that ALSO carries a [Shoemon] trait, so it passes
+/// both the printed name filter and the old (wrong) trait filter. The
+/// playability tests use it so they isolate the playability check: without
+/// that check this card would be offered under either filter.
+fn make_shoemon_named_and_traited(id: &str) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, "Shoemon");
+    card.traits = vec!["Puppet".to_string(), "Shoemon".to_string()];
+    card
+}
+
+// ─── Candidate legality (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY) ──────────────
+
+fn hand_candidates_after_effect_deletion(runner: &mut DebugRunner, full_after: bool) -> Vec<String> {
+    let hanimon = runner.place_on_field(0, "EX11-020", Some(0));
+    if full_after {
+        // Hanimon's own deletion frees its slot: size the area so that it is
+        // full once Hanimon has left.
+        runner.game.rules.field_slots = (runner.game.players[0].battle_area.len() - 1) as u8;
+    }
+    runner
+        .game
+        .delete_permanent_with_cause(hanimon, ReplacementCause::OpponentEffect);
+    let Some(view) = runner.pending_selection_view() else {
+        return Vec::new();
+    };
+    if view.kind != SelectionKind::Hand {
+        return Vec::new();
+    }
+    let hand: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    view.valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .map(|id| hand[(id - PLAY_HAND_START) as usize].clone())
+        .collect()
+}
+
+/// [Shoemon] is a NAME: a card named [Shoemon] is offered, a card that only
+/// carries a [Shoemon] trait is not (card image + official DB; DCGO
+/// EX11_020.cs:62-65 `EqualsCardName("Shoemon")`).
+#[test]
+fn ex11_020_shoemon_is_a_name_not_a_trait() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-020")
+        .expect("EX11-020 YAML loads")
+        .add_card(make_shoemon("SHOEMON"))
+        .add_card(make_shoemon_trait_only("SHOE-TRAIT"))
+        .hand(0, &["SHOEMON", "SHOE-TRAIT"])
+        .memory(0)
+        .start();
+    let offered = hand_candidates_after_effect_deletion(&mut runner, false);
+    assert_eq!(offered, vec!["SHOEMON".to_string()]);
+}
+
+/// "You can't play Digimon by effects": the [Shoemon] can't be played, so it
+/// is not offered (CR 4.3 1-3-2; DCGO offers it, then the play fails).
+#[test]
+fn ex11_020_shoemon_not_offered_under_effect_play_prohibition() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-020")
+        .expect("EX11-020 YAML loads")
+        .add_card(make_shoemon_named_and_traited("SHOEMON"))
+        .hand(0, &["SHOEMON"])
+        .memory(0)
+        .start();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotPlayDigimonByEffect, 0, Expiry::Permanent, None, 1),
+    );
+    let offered = hand_candidates_after_effect_deletion(&mut runner, false);
+    assert!(offered.is_empty(), "nothing playable is offered: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "[Shoemon] stays in hand");
+}
+
+/// A full battle area (DCGO `CanPlayAsNewPermanent` needs a free frame): the
+/// [Shoemon] is not offered. Hanimon's own deletion frees its slot, so the
+/// area is made full AFTER that slot is gone.
+#[test]
+fn ex11_020_shoemon_not_offered_when_battle_area_full() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-020")
+        .expect("EX11-020 YAML loads")
+        .add_card(make_shoemon_named_and_traited("SHOEMON"))
+        .add_card(make_test_card("OTHER", "Other Digimon"))
+        .hand(0, &["SHOEMON"])
+        .memory(0)
+        .start();
+    runner.place_on_field(0, "OTHER", Some(0));
+    let offered = hand_candidates_after_effect_deletion(&mut runner, true);
+    assert!(offered.is_empty(), "nothing playable is offered: {offered:?}");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.hand_size(0), 1, "[Shoemon] stays in hand");
 }

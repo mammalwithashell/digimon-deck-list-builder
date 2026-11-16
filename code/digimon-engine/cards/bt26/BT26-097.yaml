@@ -193,6 +193,10 @@ effects:
                   - kind: tamer
               - trait_has: TS
               - play_cost_lte: 5
+              # DCGO BT26_097.cs:296-298 `HasPlayCost && CanPlayAsNewPermanent`:
+              # a free frame and no play prohibition. Select-hand audit
+              # 2026-11-13.
+              - can_play_from_effect_without_cost: true
           prompt: "You may play 1 play cost 5 or lower [TS] trait card from your hand without paying the cost"
       # No-op when the pick is declined (PASS leaves `freebie` unbound).
       - play_union_bound_free: { binding: freebie }
