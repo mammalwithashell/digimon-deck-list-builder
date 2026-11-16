@@ -521,6 +521,14 @@ fn bt23_014_lock_refuses_a_locked_players_effect_playing_from_the_opponents_tras
         digimon_engine::selection::TriggerSource::Permanent(dragomon),
     );
     r.game.drain_effect_queue();
+    // The candidate leaf (`trash_play_locked`) must already drop the Lv4, so no
+    // pick is offered. Without this the refusal could come only from the later
+    // trash-play gate (`trash_play_refusal`) and a leaf still keyed on the trash
+    // owner would go unnoticed.
+    assert!(
+        r.pending_selection_view().is_none(),
+        "the locked player's Dragomon must not be offered the opponent's trash Lv4"
+    );
     let _ = r.auto_resolve();
 
     assert_eq!(
