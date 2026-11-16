@@ -195,6 +195,26 @@ class _Seat:
         rec(0, 0, [])
         return res
 
+    def frame_occupant(self, frame):
+        """The permanent at battle FrameID `frame` when EVERY hypothesis agrees on it: (listing position among the
+        battle frames, card id, DCGO CardIndex or None). None when the model is off, a hypothesis leaves the frame
+        empty, or two hypotheses disagree on the card or on how many battle permanents sit below it."""
+        if not self.alive or not self.hyps or not 0 <= frame < BREEDING_FRAME:
+            return None
+        seen = set()
+        for h in self.hyps:
+            at = next((x for x in h if x[0] == frame), None)
+            if at is None:
+                return None
+            seen.add((sum(1 for x in h if x[0] < frame), at[1], at[2]))
+        cards = {(pos, cid) for pos, cid, _ in seen}
+        if len(cards) != 1:
+            return None
+        (pos, cid), = cards
+        ks = {k for _, _, k in seen}
+        k = ks.pop() if len(ks) == 1 else None
+        return pos, cid, (k if isinstance(k, int) and not isinstance(k, bool) else None)
+
     def occupant(self, position, full):
         """DCGO's CardIndex of the permanent at listing `position`, when every hypothesis agrees; else None."""
         if not self.alive or not self.hyps:
@@ -240,8 +260,24 @@ def _played_index(r, seat, packet, card_id, pos):
 def pick_identities(rows, cards, you):
     """{raw row index: {(player, position): DCGO CardIndex}} for each SetTargetFrames board position whose card id
     occurs more than once on that seat's board and whose occupant the frame model names."""
+    return identities(rows, cards, you)[0]
+
+
+def burst_tamers(rows, cards, you):
+    """{raw row index of a Burst Digivolve play packet: (seat, position, card_id, card_index or None)}: the Tamer the
+    packet's BurstTamerFrameID names, where the frame model is certain of it. A remote seat's own pick of that Tamer
+    (SelectBurstDigivolutionEffect.SelectTamer, `isLocal: true`) ran on its own client and left no row, but the
+    packet carries the picked permanent's FrameID (TurnStateMachine.cs:3016-3030, `permanent.PermanentFrame.FrameID`),
+    and a FrameID names a permanent (module docstring). The Tamer is named only when every hypothesis puts the same
+    card id at that frame, the card is a Tamer, and the packet's own board (battle area, logged at queue time, before
+    the play resolves) is explained by the model."""
+    return identities(rows, cards, you)[1]
+
+
+def identities(rows, cards, you):
     seats = [_Seat(cards, s == you) for s in (0, 1)]
     found = {}
+    burst = {}
     for ridx, r in enumerate(rows):
         m = r.get("method")
         if m == "TurnStateMachine.QueueMainPhaseAction_Internal":
@@ -260,6 +296,15 @@ def pick_identities(rows, cards, you):
             for p in (0, 1):
                 if isinstance(boards[p], list):
                     seats[p].check(boards[p], full)
+            if m == "TurnStateMachine.QueueMainPhaseAction_Internal":
+                a = r.get("args") or []
+                if len(a) >= 3 and a[0] in (0, 1) and a[1] == 4 and isinstance(a[2], list):
+                    n_roots = _be32(a[2], 8)
+                    f = _be32(a[2], 12 + 4 * n_roots) if n_roots is not None and 0 <= n_roots < 64 else None
+                    if f is not None and f >= 0 and seats[a[0]].alive and isinstance(boards[a[0]], list):
+                        occ = seats[a[0]].frame_occupant(f)
+                        if occ is not None and seats[a[0]].kind(occ[1]) == "tamer":
+                            burst[ridx] = (a[0],) + occ
             if m == "SelectPermanentEffect.SetTargetFrames":
                 named = {}
                 for p in (0, 1):
@@ -287,4 +332,4 @@ def pick_identities(rows, cards, you):
                     seat.play(c, _played_index(r, s, packet, c, pos) if known else None,
                               tgt_id if pos == 0 else None, to_breeding, known)
                 seat.packet = None if known else seat.packet
-    return found
+    return found, burst

@@ -237,7 +237,9 @@ def convert(rows, cards, allow_truncated=False):
     dna_roots = {}  # card index -> (jogress root FrameIDs or None when unreadable, the packet's TargetFrameID)
     dna_picks = {}  # card index -> the material pick rows (in `out`) the local seat logged before its DNA packet
     # card index -> (BurstTamerFrameID, the Tamer pick row in `out` the local seat logged just before the packet, or
-    # None when no such row exists - a remote seat's pick ran on its own client only)
+    # None when no such row exists - a remote seat's pick ran on its own client only, the frame model's certain
+    # naming of that Tamer (frame_model.burst_tamers: seat, position, card id, card index) or None, the packet row's
+    # boards)
     burst_plays = {}
     # card index -> whether a play packet logged with NO payload bytes (an older recorder build) looks like a DNA
     dna_bytes_absent = {}
@@ -577,6 +579,7 @@ def convert(rows, cards, allow_truncated=False):
     # Which copy a board-position pick names, where the board holds several of that card (`frame_model`): DCGO's
     # frame placement followed from the logged plays and checked against every recorded board, or nothing.
     frame_names = frame_model.pick_identities(rows, cards, you)
+    burst_names = frame_model.burst_tamers(rows, cards, you)
     for ridx, r in enumerate(rows):
         tag_sources(ridx - 1)
         m, a = r["method"], r.get("args", [])
@@ -768,15 +771,36 @@ def convert(rows, cards, allow_truncated=False):
                         actor, card, roots, placed))
                 continue
             burst = burst_plays.pop(played_index, None) if played_index is not None else None
+            burst_named = None  # the frame model's naming of a REMOTE seat's Tamer, when there is no logged pick
             if burst is not None:
-                burst_frame, pick = burst
-                if pick is None or not any(pick is x for x in out) or digivolve_field is None:
+                burst_frame, burst_pick, burst_named, burst_boards = burst
+                if burst_pick is None and burst_named is not None and digivolve_field is not None:
+                    seat_, position, tamer_id, tamer_index = burst_named
+                    board = burst_boards[seat_] if isinstance(burst_boards, list) and len(burst_boards) == 2 else None
+                    if tamer_index is None:
+                        tamer_index = returned_tamer_index(rows, ridx, seat_, tamer_id)
+                        index_source = "hand_listing"  # derived from the owner's next hand listing
+                    else:
+                        index_source = "frame_model"
+                    ambiguous = isinstance(board, list) and board.count(tamer_id) >= 2
+                    if (seat_ != actor or not isinstance(board, list) or not 0 <= position < len(board)
+                            or board[position] != tamer_id or (ambiguous and tamer_index is None)):
+                        burst_named = None
+                    else:
+                        burst_named = (seat_, position, tamer_id, tamer_index, index_source, board)
+                else:
+                    burst_named = None
+                if (burst_pick is None and burst_named is None) or (
+                        burst_pick is not None and not any(burst_pick is x for x in out)) or digivolve_field is None:
                     truncated_at = truncated_at or (
                         "Burst Digivolve of %s (BurstTamerFrameID %d) at step %d: no pick of one of P%d's own Tamers "
                         "right before the play packet and after P%d's previous action names the returned Tamer (a "
-                        "remote seat's SelectBurstDigivolutionEffect pick is local to its own client), and a raw FrameID "
-                        "does not name an engine slot; the recorder would need to log the Tamer's compact battle-area "
-                        "index" % (card, burst_frame, step, actor, actor))
+                        "remote seat's SelectBurstDigivolutionEffect pick is local to its own client), and the frame "
+                        "model is not certain which permanent that FrameID names (it must see every one of the seat's "
+                        "permanents played and explain every recorded board, the frame must hold a Tamer, and one "
+                        "copy among several needs DCGO's CardIndex); the recorder would need to log the Tamer's "
+                        "compact battle-area index or its CardIndex (Core.cs: the play packet's `play` object)"
+                        % (card, burst_frame, step, actor, actor))
                     break
             if infer and not bot_bred:
                 breeding_for_bot(ridx, turn)
@@ -786,21 +810,40 @@ def convert(rows, cards, allow_truncated=False):
             else:
                 action_id = PLAY_HAND_START + slot
             action(actor, action_id, "Main", "main_phase", card_id=card, boards=r.get("boards"), card_index=played_index)
-            if burst is not None:
+            if burst is not None and burst_named is not None:
+                # A REMOTE seat's pick ran on its own client and left no row: write it from the frame model's certain
+                # naming of the packet's BurstTamerFrameID, right after the digivolve action (where the engine asks it).
+                seat_, position, tamer_id, tamer_index, index_source, board = burst_named
+                target = {"player": seat_, "frame": position}
+                if tamer_index is not None:
+                    target["card_index"] = tamer_index
+                    target["card_index_source"] = index_source
+                row = {"type": "selection", "step": step, "actor": actor, "prompt": "SelectPermanentEffect",
+                       "phase": "Main", "board_p0": burst_boards[0], "board_p1": burst_boards[1],
+                       "targets": [target], "mechanic": "burst", "synthesized": "burst_tamer_frame"}
+                out.append(row)
+                step += 1
+                inferred.append(
+                    "P%d Burst Digivolve of %s: its returned Tamer %s (battle position %d%s) was inferred from the play "
+                    "packet's BurstTamerFrameID %d by the frame model (the seat's own pick ran on its client only)" % (
+                        actor, card, tamer_id, position,
+                        ", CardIndex %d via %s" % (tamer_index, index_source) if tamer_index is not None else "",
+                        burst_frame))
+            elif burst is not None:
                 # ahead of the Tamer pick, which answers the engine's burst cost route; `mechanic` marks the pick as
                 # the burst's Tamer (the schema's alt-cost declaration field), never an effect's own pick
-                burst[1]["mechanic"] = "burst"
+                burst_pick["mechanic"] = "burst"
                 # The pick names the Tamer by board position only, and a board can hold several copies of it
                 # (raw-20261113T025510Z#g6: three ST24-13). The returned card's DCGO CardIndex, read from the owner's
                 # next hand listing, names the copy (`returned_tamer_index`); the replay resolves it by identity.
-                t = burst[1]["targets"][0]
-                board = burst[1].get("board_p%d" % actor) or []
+                t = burst_pick["targets"][0]
+                board = burst_pick.get("board_p%d" % actor) or []
                 if 0 <= t.get("frame", -1) < len(board):
                     k = returned_tamer_index(rows, ridx, actor, board[t["frame"]])
                     if k is not None:
                         t["card_index"] = k
                         t["card_index_source"] = "hand_listing"  # derived from the owner's next hand listing
-                at = next(i for i, x in enumerate(out) if x is burst[1])
+                at = next(i for i, x in enumerate(out) if x is burst_pick)
                 move_last_before(len(out) - 1 - at)
             continue
         if m == "TurnStateMachine.SetBreedingPhase":
@@ -878,7 +921,10 @@ def convert(rows, cards, allow_truncated=False):
                         board = last.get("board_p%d" % seat) or []
                         picked = board[tgt["frame"]] if 0 <= tgt.get("frame", -1) < len(board) else None
                         pick = last if picked is not None and is_tamer(cards, picked) else None
-                        burst_plays[ci] = (burst, pick)
+                        # a REMOTE seat's pick never ran on this client: the frame model may still name the permanent
+                        # its FrameID points at (certain or None, never a guess)
+                        named = None if roots_logged_here else burst_names.get(ridx)
+                        burst_plays[ci] = (burst, pick, named, r.get("boards"))
                 if a[1] == PLAY_PACKET_ID and not bytes_logged:
                     dna_bytes_absent[ci] = roots_logged_here and len(material_picks(seat, ridx)) == 2
                 elif a[1] != PLAY_PACKET_ID or not 0 <= n_roots < 0x80000000:
