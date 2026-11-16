@@ -26,6 +26,7 @@ sys.path.insert(0, str(REC))
 _spec = importlib.util.spec_from_file_location("dcgo_convert_raw_burst_remote_under_test", REC / "convert_raw.py")
 convert_raw = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(convert_raw)
+frame_model = convert_raw.frame_model  # the converter's own module object (patched through it below)
 
 YOU = 0
 REMOTE = 1
@@ -116,8 +117,38 @@ def _setup():
 BOARD = [HOST, TAMER, TAMER]  # frames 4, 10, 11
 
 
-def _halts(raw):
-    out, _ = convert_raw.convert(raw, cards=CARDS, allow_truncated=True)
+def _halts(raw, cards=None, model_names_nothing=True):
+    """The converter halts at the burst. By default the frame model itself names nothing too, so the halt is the model's
+    uncertainty and not some other guard (`model_names_nothing=False` for a halt that is the converter's own)."""
+    cards = CARDS if cards is None else cards
+    if model_names_nothing:
+        assert frame_model.burst_tamers(raw, cards, YOU) == {}, "the model named a Tamer: the halt is not its doing"
+    out, _ = convert_raw.convert(raw, cards=cards, allow_truncated=True)
+    assert not any(r.get("action_id") == DIGIVOLVE for r in _decisions(out)), "wrote the burst digivolve anyway"
+    assert "Burst" in (convert_raw.LAST_TRUNCATION or ""), convert_raw.LAST_TRUNCATION
+
+
+def _burst_packet_rows(raw):
+    rows = []
+    for i, r in enumerate(raw):
+        a = r.get("args") or []
+        if (r.get("method") == "TurnStateMachine.QueueMainPhaseAction_Internal" and len(a) >= 3
+                and a[1] == convert_raw.PLAY_PACKET_ID and isinstance(a[2], list)
+                and (frame_model._be32(a[2], 12) or -1) >= 0):
+            rows.append(i)
+    return rows
+
+
+def _halts_despite_naming(raw, naming):
+    """The model is made to NAME `naming` for every burst packet; the converter's own checks must still refuse."""
+    fake = {i: naming for i in _burst_packet_rows(raw)}
+    assert fake, "no burst packet in the raw rows"
+    real = frame_model.burst_tamers
+    frame_model.burst_tamers = lambda rows, cards, you: fake
+    try:
+        out, _ = convert_raw.convert(raw, cards=CARDS, allow_truncated=True)
+    finally:
+        frame_model.burst_tamers = real
     assert not any(r.get("action_id") == DIGIVOLVE for r in _decisions(out)), "wrote the burst digivolve anyway"
     assert "Burst" in (convert_raw.LAST_TRUNCATION or ""), convert_raw.LAST_TRUNCATION
 
@@ -169,7 +200,10 @@ def test_remote_burst_among_copies_with_no_card_index_halts():
         {"method": "PlayCardClass.PlayCard", "tp": REMOTE, "turn": 1, "cards": [TAMER], "pay_cost": False,
          "target": None, "hand": {"player": -1, "slot": -1}},
     ]
-    _halts(_raw_game(*setup, *_burst_digivolve(10, boards=_boards(BOARD))))
+    raw = _raw_game(*setup, *_burst_digivolve(10, boards=_boards(BOARD)))
+    # the model names the card and position (one frame, one card id) but not which copy: the converter's own check halts
+    assert [v[2:] for v in frame_model.burst_tamers(raw, CARDS, YOU).values()] == [(TAMER, None)]
+    _halts(raw, model_names_nothing=False)
 
 
 def test_remote_burst_of_a_lone_copy_needs_no_card_index():
@@ -209,3 +243,96 @@ def test_local_burst_still_uses_its_own_logged_pick():
     out, _ = convert_raw.convert(raw, cards=CARDS)
     picks = [r for r in out if r.get("prompt") == "SelectPermanentEffect"]
     assert len(picks) == 1 and not picks[0].get("synthesized") and picks[0]["mechanic"] == "burst"
+
+
+# --- the guarantees `burst_tamers` states, each one exercised -------------------------------------------------------
+
+
+def test_remote_burst_of_an_option_in_the_frame_is_not_a_tamer():
+    """`frame_model` groups Options with Tamers for FRAME PLACEMENT (both take the Tamer row); a burst returns a Tamer.
+    The local path accepts card_kind 1 only (`convert_raw.is_tamer`), and so must the remote naming: an Option sitting
+    on the battle area (a Delay Option) is never the burst Tamer."""
+    option_cards = {**CARDS, TAMER: {"card_kind": 2}}
+    raw = _raw_game(*_setup(), *_burst_digivolve(11, boards=_boards(BOARD)))
+    assert not convert_raw.is_tamer(option_cards, TAMER)
+    _halts(raw, cards=option_cards)
+
+
+def test_remote_burst_frame_the_hypotheses_disagree_on_halts():
+    """Two copies of the Tamer were played (frames 10, 11) and the packet's board holds ONE: the model cannot tell which
+    copy left, so frame 11 is empty under one hypothesis and a Tamer under the other. `burst_tamers` names a Tamer only
+    when EVERY hypothesis agrees: it must name nothing, and the converter halts instead of taking one hypothesis."""
+    one_left = [HOST, TAMER]
+    _halts(_raw_game(*_setup(), *_burst_digivolve(11, boards=_boards(one_left))))
+    _halts(_raw_game(*_setup(), *_burst_digivolve(10, boards=_boards(one_left))))
+
+
+def _seat_with(*hyps):
+    seat = frame_model._Seat(CARDS, False)
+    seat.hyps = {frozenset(h) for h in hyps}
+    return seat
+
+
+def test_frame_occupant_needs_every_hypothesis_to_agree():
+    a, b = (4, HOST, 21), (10, TAMER, 65)
+    # all agree: position (battle frames below it), card id, DCGO CardIndex
+    assert _seat_with([a, b], [a, b]).frame_occupant(10) == (1, TAMER, 65)
+    # one hypothesis leaves the frame empty
+    assert _seat_with([a, b], [a]).frame_occupant(10) is None
+    # a different card at the frame
+    assert _seat_with([a, b], [a, (10, FILLER, 66)]).frame_occupant(10) is None
+    # the same card at the frame but a different number of battle permanents below it
+    assert _seat_with([a, b], [b]).frame_occupant(10) is None
+    # the same card and position, different CardIndex: the card is named, the copy is not
+    assert _seat_with([a, b], [a, (10, TAMER, 66)]).frame_occupant(10) == (1, TAMER, None)
+
+
+def test_frame_occupant_is_none_for_a_dead_seat_and_the_breeding_frame():
+    seat = _seat_with([(4, HOST, 21)])
+    assert seat.frame_occupant(4) == (0, HOST, 21)
+    assert seat.frame_occupant(frame_model.BREEDING_FRAME) is None
+    assert seat.frame_occupant(-1) is None
+    seat.kill()
+    assert seat.frame_occupant(4) is None
+
+
+def test_remote_burst_on_a_board_the_model_cannot_explain_halts():
+    """A recorded board the model cannot explain turns it off for that seat: it names nothing afterwards."""
+    _halts(_raw_game(*_setup(), *_burst_digivolve(11, boards=_boards([HOST, FILLER, TAMER]))))
+
+
+# --- the converter's own checks on a naming, independent of the model that supplied it --------------------------------
+
+
+def test_converter_refuses_a_naming_whose_card_is_not_at_that_board_position():
+    raw = _raw_game(*_setup(), *_burst_digivolve(11, boards=_boards(BOARD)))
+    _halts_despite_naming(raw, (REMOTE, 0, TAMER, 65))  # position 0 of the packet's board is HOST
+
+
+def test_converter_refuses_a_naming_for_another_seat():
+    # both seats' boards hold the Tamer at position 2, so only the seat check can refuse the other seat's naming
+    raw = _raw_game(*_setup(), *_burst_digivolve(11, boards=[list(BOARD), list(BOARD)]))
+    _halts_despite_naming(raw, (YOU, 2, TAMER, 65))  # the packet is the remote seat's
+
+
+def test_converter_does_not_infer_a_local_seats_missing_pick():
+    """The local seat's pick runs on this client, so a missing pick row is not 'remote': nothing is synthesized from the
+    model, however sure it is."""
+    packet = {"method": "TurnStateMachine.QueueMainPhaseAction_Internal", "tp": YOU, "turn": 1,
+              "args": [YOU, convert_raw.PLAY_PACKET_ID,
+                       _be32(82) + _be32(4) + _be32(0) + _be32(11) + _be32(0)], "play": {"card_index": 82},
+              "boards": [[HOST, TAMER], []]}
+    resolve = {"method": "PlayCardClass.PlayCard", "tp": YOU, "turn": 1, "cards": [BURST], "pay_cost": True,
+               "hand": _hand(YOU, 0, [(BURST, 82)]), "target": "perm", "target_slot": 0,
+               "boards": [[HOST, TAMER], []]}
+    raw = [
+        _snapshot(),
+        {"method": "TurnStateMachine.SetRedraw", "args": [0, False]},
+        {"method": "TurnStateMachine.SetRedraw", "args": [1, False]},
+        {"method": "TurnStateMachine.SetBreedingPhase", "tp": YOU, "turn": 1, "args": [YOU, False]},
+        packet, resolve,
+        {"method": "TurnStateMachine.QueueMainPhaseAction_Internal", "tp": YOU, "turn": 1,
+         "args": [YOU, convert_raw.PASS_PACKET_ID, []]},
+        {"method": "TurnStateMachine.Surrender", "tp": REMOTE, "turn": 2, "args": [REMOTE]},
+    ]
+    _halts_despite_naming(raw, (YOU, 1, TAMER, 65))

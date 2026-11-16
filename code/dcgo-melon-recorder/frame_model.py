@@ -215,6 +215,13 @@ class _Seat:
         k = ks.pop() if len(ks) == 1 else None
         return pos, cid, (k if isinstance(k, int) and not isinstance(k, bool) else None)
 
+    def is_tamer(self, card_id):
+        """A Tamer proper (cards.json card_kind 1, the engine's CardKind::Tamer, as `convert_raw.is_tamer` reads it).
+        `kind()` groups Options with Tamers because both take the Tamer row for FRAME PLACEMENT; a burst returns a
+        Tamer, never an Option (a Delay Option on the battle area)."""
+        k = (self.cards.get(card_id) or {}).get("card_kind")
+        return k == 1 or "tamer" in str(k).lower()
+
     def occupant(self, position, full):
         """DCGO's CardIndex of the permanent at listing `position`, when every hypothesis agrees; else None."""
         if not self.alive or not self.hyps:
@@ -275,6 +282,7 @@ def burst_tamers(rows, cards, you):
 
 
 def identities(rows, cards, you):
+    """(`pick_identities`, `burst_tamers`) from one pass over the rows."""
     seats = [_Seat(cards, s == you) for s in (0, 1)]
     found = {}
     burst = {}
@@ -301,9 +309,10 @@ def identities(rows, cards, you):
                 if len(a) >= 3 and a[0] in (0, 1) and a[1] == 4 and isinstance(a[2], list):
                     n_roots = _be32(a[2], 8)
                     f = _be32(a[2], 12 + 4 * n_roots) if n_roots is not None and 0 <= n_roots < 64 else None
-                    if f is not None and f >= 0 and seats[a[0]].alive and isinstance(boards[a[0]], list):
+                    if f is not None and f >= 0 and isinstance(boards[a[0]], list):
+                        # frame_occupant is None for a seat the model has switched off
                         occ = seats[a[0]].frame_occupant(f)
-                        if occ is not None and seats[a[0]].kind(occ[1]) == "tamer":
+                        if occ is not None and seats[a[0]].is_tamer(occ[1]):
                             burst[ridx] = (a[0],) + occ
             if m == "SelectPermanentEffect.SetTargetFrames":
                 named = {}
