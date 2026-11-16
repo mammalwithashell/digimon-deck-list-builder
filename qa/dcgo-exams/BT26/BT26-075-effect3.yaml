@@ -95,10 +95,10 @@ steps:
   # Kekkomon first: its "by trashing ... may digivolve" -> declined.
   - actor: 0
     do: { select: { cards: [ST23-01] } }
-  # (DCGO asks its OptionalSkill; ours opens no prompt: no [Glowing Dawn] card
-  # in hand can digivolve onto the attacker, so the hand pick has no candidate.)
+  # (DCGO's OptionalSkill and our optional yes/no are the same decision:
+  # a shared row.)
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   # Liollmon's inherited "may add top security": our 2-way EffectChoice
   # (no decline form) answered by label sim-side; DCGO's Yes/No as a
