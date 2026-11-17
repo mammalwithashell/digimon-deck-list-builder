@@ -1499,6 +1499,7 @@ fn compile_predicate(
         is_event_host: p.is_event_host,
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
+        event_card_face_up_in_security: p.event_card_face_up_in_security,
         event_card_name_contains: p.event_card_name_contains.clone(),
         event_card_name_is: p.event_card_name_is.clone(),
         event_card_kind: p.event_card_kind.map(compile_card_kind),
@@ -3071,6 +3072,9 @@ fn compile_step(
             position: compile_stack_position(a.position),
         },
         S::AddTopSecurityToHand(a) => CompiledStep::AddTopSecurityToHand {
+            of: compile_player_ref(a.of),
+        },
+        S::AddTopFaceDownSecurityToHand(a) => CompiledStep::AddTopFaceDownSecurityToHand {
             of: compile_player_ref(a.of),
         },
         S::MayAddTopSecurityToHand(a) => CompiledStep::MayAddTopSecurityToHand {

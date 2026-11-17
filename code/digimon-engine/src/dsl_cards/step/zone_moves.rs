@@ -214,6 +214,29 @@ pub fn try_run(
             }
             true
         }
+        // EX11-025 FunBeemon "Add your top face-down security card to the hand":
+        // the first FACE-DOWN card from the top (the stack's last element) —
+        // face-up cards (CR 3-7-4 / 15-14-5) are skipped, never taken. DCGO
+        // walks `SecurityCards` and takes the first `IsFlipped` (face-down)
+        // card. No-op when the stack holds no face-down card.
+        CompiledStep::AddTopFaceDownSecurityToHand { of } => {
+            let p = resolve_player(ctx, *of);
+            let target = {
+                let player = ctx.game.player(p);
+                player
+                    .security
+                    .iter()
+                    .rev()
+                    .find(|c| !player.face_up_security.contains(&c.card_index))
+                    .map(|c| c.handle())
+            };
+            if let Some(card) = target {
+                if ctx.add_to_hand_from_security(p, card) {
+                    bindings.record_added_to_hand(card);
+                }
+            }
+            true
+        }
         CompiledStep::AddBottomSecurityToHand { of } => {
             let p = resolve_player(ctx, *of);
             ctx.add_bottom_security_to_hand(p);

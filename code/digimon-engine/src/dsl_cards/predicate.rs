@@ -2549,6 +2549,22 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = pred.event_card_face_up_in_security {
+        // EX11-003 Puroromon: the placed card's orientation in the security
+        // stack it entered (`affected_player` owns that stack; the face-up
+        // marker is set before the placement observers fire).
+        let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
+            return false;
+        };
+        let (Some(card), Some(owner)) = (trigger.event_card.read(), trigger.affected_player)
+        else {
+            return false;
+        };
+        let actual = rctx.game.player(owner).face_up_security.contains(&card.0);
+        if actual != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_card_kind {
         let Some(data) = rctx
             .event_card()

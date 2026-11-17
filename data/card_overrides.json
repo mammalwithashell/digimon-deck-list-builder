@@ -8004,11 +8004,6 @@
         "card_color": 2,
         "level": 2,
         "memory_cost": 1
-      },
-      {
-        "card_color": 3,
-        "level": 3,
-        "memory_cost": 1
       }
     ]
   },

@@ -1,0 +1,77 @@
+# BT22-004 Wanyamon — Digi-Egg, Lv.2, Green, Cost 0.
+# Traits: Lesser, CS. Form: In-Training.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT22-004.md;
+# DCGO BT22_004.cs cross-checked):
+#
+#   Inherited Effect [Your Turn] [Once Per Turn] When effects place [CS] trait
+#   Digimon cards in this Digimon's digivolution cards, it may digivolve into a
+#   [CS] trait Digimon card in the hand with the digivolution cost reduced by 1.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# `EffectTiming.OnAddDigivolutionCards` ActivateClass, inherited,
+# `SetUpActivateClass(..., 1 /* OPT */, TRUE /* optional yes/no */)`.
+#   CanUse  = IsExistOnBattleAreaDigimon && IsOwnerTurn &&
+#             CanTriggerOnAddDigivolutionCard(hashtable, IsThisPermanent,
+#               cardEffectCondition: null,           <- ANY effect
+#               CardCondition: IsDigimon && HasCSTraits)
+#   Active  = HasMatchConditionOwnersHand(CanSelectEvoCondition =
+#             IsCsDigimon && CanPlayCardTargetFrame(host frame, payCost: true))
+#   Body    = DigivolveIntoHandOrTrashCard(host, payCost: true,
+#             reduceCostTuple: (1, null), isHand: true).
+#
+# Same shape as BT25-005 Pagumon (see its header for the full rationale on the
+# per-host batch trigger, the outer yes/no, the count_gte no-legal-target guard
+# and the reduced-cost digivolve); only the gate (a [CS] trait Digimon card
+# placed) and the reduction (1) differ.
+
+card: BT22-004
+name: Wanyamon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Lesser, CS]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_add_digivolution_cards
+    optional: true
+    outer_prompt: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_host_permanent_is_source: true
+        - event_added_card_any:
+            all_of:
+              - kind: digimon
+              - trait_has: CS
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          kind: digimon
+          trait_has: CS
+          can_digivolve_from_source: true
+        n: 1
+    summary: "[Your Turn][Once Per Turn] When effects place [CS] trait Digimon cards in this Digimon's digivolution cards, it may digivolve into a [CS] trait Digimon card in the hand with the digivolution cost reduced by 1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: CS
+              - can_digivolve_from_source: true
+          prompt: "Digivolve this Digimon into a [CS] trait Digimon card from your hand, with the cost reduced by 1"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: { reduce: 1 }
+          ignore_requirements: false

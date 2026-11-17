@@ -50,7 +50,10 @@ use std::collections::BTreeSet;
 // and selected-permanent color count. Rebuild packs; bincode layouts differ.
 // 0.34.0 adds `ignore_requirements` to the compiled `has_digivolve_candidate`
 // leaf. Rebuild packs; bincode layouts differ.
-pub const PACK_FORMAT_VERSION: &str = "0.34.0";
+// 0.35.0 adds the `add_top_face_down_security_to_hand` compiled step and the
+// `event_card_face_up_in_security` compiled predicate leaf (EX11-025 / EX11-003).
+// Rebuild packs; bincode layouts differ.
+pub const PACK_FORMAT_VERSION: &str = "0.35.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

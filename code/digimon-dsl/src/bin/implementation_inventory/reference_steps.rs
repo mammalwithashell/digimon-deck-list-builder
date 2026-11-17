@@ -126,6 +126,15 @@ impl Walk for digimon_dsl::step::StepSpec {
                 );
                 f0.walk(c, &format!("{}@AddTopSecurityToHand.0", path), role);
             }
+            digimon_dsl::step::StepSpec::AddTopFaceDownSecurityToHand(f0) => {
+                c.node(
+                    path,
+                    "digimon_dsl::step::StepSpec",
+                    "VARIANT",
+                    serde_json::json!("AddTopFaceDownSecurityToHand"),
+                );
+                f0.walk(c, &format!("{}@AddTopFaceDownSecurityToHand.0", path), role);
+            }
             digimon_dsl::step::StepSpec::MayAddTopSecurityToHand(f0) => {
                 c.node(
                     path,
@@ -5563,6 +5572,7 @@ digimon_dsl::compiled::CompiledStep::TrashSelectedSecurity{of,card} => { c.node(
 digimon_dsl::compiled::CompiledStep::ReturnSelectedSecurityToDeck{of,card,position} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnSelectedSecurityToDeck"));of.walk(c, &format!("{}.of", &format!("{}@ReturnSelectedSecurityToDeck",path)), "UNCLASSIFIED_STRING");card.walk(c, &format!("{}.card", &format!("{}@ReturnSelectedSecurityToDeck",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@ReturnSelectedSecurityToDeck",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::ReturnTopSecurityToDeck{of,position} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnTopSecurityToDeck"));of.walk(c, &format!("{}.of", &format!("{}@ReturnTopSecurityToDeck",path)), "UNCLASSIFIED_STRING");position.walk(c, &format!("{}.position", &format!("{}@ReturnTopSecurityToDeck",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::AddTopSecurityToHand{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("AddTopSecurityToHand"));of.walk(c, &format!("{}.of", &format!("{}@AddTopSecurityToHand",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::AddTopFaceDownSecurityToHand{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("AddTopFaceDownSecurityToHand"));of.walk(c, &format!("{}.of", &format!("{}@AddTopFaceDownSecurityToHand",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::MayAddTopSecurityToHand{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("MayAddTopSecurityToHand"));of.walk(c, &format!("{}.of", &format!("{}@MayAddTopSecurityToHand",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::AddToHandFromReveal{of,card} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("AddToHandFromReveal"));of.walk(c, &format!("{}.of", &format!("{}@AddToHandFromReveal",path)), "UNCLASSIFIED_STRING");card.walk(c, &format!("{}.card", &format!("{}@AddToHandFromReveal",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::AddThisOptionToHand => c.node(path,"digimon_dsl::compiled::CompiledStep","ENUM_SCALAR",serde_json::json!("AddThisOptionToHand")),

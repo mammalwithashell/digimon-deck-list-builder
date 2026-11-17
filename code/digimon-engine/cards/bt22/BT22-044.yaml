@@ -1,0 +1,95 @@
+# BT22-044 Palmon — Digimon, Lv.3, Green/Red, DP 1000, Cost 3.
+# Traits: Vegetation, CS. Form: Rookie. Attribute: Data.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT22-044.md,
+# authoritative; DCGO BT22_044.cs cross-checked):
+#
+#   Evo box: Lv.2 Green / cost 1 OR Lv.2 Red / cost 1 (two circles).
+#   Evo box: "Digivolve Lv.2 w/[CS] trait: Cost 0".
+#
+#   [Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS]
+#   trait in this Digimon's digivolution cards, gain 1 memory.
+#
+#   Inherited Effect: [Main] [Once Per Turn] By placing this [CS] trait
+#   Digimon's top stacked card as its bottom digivolution card, <Draw 1>.
+#
+# Official Q&A: "Yes, it triggers." — the inherited [Main] places the top card
+# as a bottom digivolution card, which is an EFFECT placing a digivolution
+# card, so a [CS] Digimon card placed that way triggers the memory gain.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alt digivolution (EffectTiming.None): AddSelfDigivolutionRequirement
+#   StaticEffect(TopCard.IsLevel2 && HasCSTraits, digivolutionCost: 0).
+#   A Green/Red Lv.2 [CS] Digimon satisfies the circle (cost 1) AND the alt
+#   (cost 0): the engine's cost-choice prompt fires (DCGO CostList ->
+#   SelectCountEffect "Which digivolution cost do you pay?").
+#
+# [Your Turn][OPT] (EffectTiming.OnAddDigivolutionCards, not inherited):
+#   CanTriggerOnAddDigivolutionCard(hashtable, IsThisPermanent, null,
+#   IsCsDigimon = IsDigimon && HasCSTraits) — ANY effect (cardEffectCondition:
+#   null), batch gate on the added cards; CanActivate also requires
+#   IsOwnerTurn and CanAddMemory. Mandatory (isOptional: false).
+#   → `when: on_add_digivolution_cards`, `trigger_if: event_host_permanent_is_source
+#   + event_added_card_any { Digimon with CS }` (BT25-005 / BT7-056 idiom),
+#   `active_when: your_turn`, `once_per_turn`.
+#
+# Inherited [Main] (EffectTiming.OnDeclaration, inherited, OPT 1):
+#   CanUse = IsExistOnBattleAreaDigimon && DigivolutionCards.Count >= 1 &&
+#            PermanentOfThisCard().TopCard.HasCSTraits  (the permanent's TOP
+#            card carries [CS] — "this [CS] trait Digimon").
+#   Body   = AddDigivolutionCardsBottom([TopCard]) then Draw 1.
+#   → `scope: inherited, when: main_on_field, once_per_turn` + `condition:
+#   materials_count_gte 1 && source_permanent_trait_has CS`; the cost is the
+#   deterministic `place_top_source_as_bottom` (BT23-008 idiom — no fake
+#   choice), then `draw`.
+
+card: BT22-044
+name: Palmon
+kind: digimon
+level: 3
+color: [green, red]
+cost: 3
+dp: 1000
+traits: [Vegetation, CS]
+attribute: Data
+form: Rookie
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 1
+  # Printed alt evo box: "Digivolve Lv.2 w/[CS] trait: Cost 0".
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: CS }
+    cost: 0
+
+effects:
+  - when: on_add_digivolution_cards
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_host_permanent_is_source: true
+        - event_added_card_any:
+            all_of:
+              - kind: digimon
+              - trait_has: CS
+    summary: "[Your Turn][Once Per Turn] When effects place [CS] trait Digimon cards in this Digimon's digivolution cards, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - scope: inherited
+    when: main_on_field
+    once_per_turn: true
+    condition:
+      all_of:
+        - materials_count_gte: 1
+        - source_permanent_trait_has: CS
+    summary: "[Inherited][Main][Once Per Turn] By placing this [CS] trait Digimon's top stacked card as its bottom digivolution card, <Draw 1>"
+    process:
+      - place_top_source_as_bottom: { target: source }
+      - draw: { of: you, count: 1 }
