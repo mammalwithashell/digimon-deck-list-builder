@@ -53,12 +53,19 @@ effects:
   - scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
-    # The whole effect is one "may" (DCGO BT21_001.cs `isOptional: true`): a
-    # pass is not activating it, so the [Once Per Turn] is kept (official Q&A
-    # Q1818, CR 4.3 §15-14-1-4). `optional: true` + a tail gated on the pick
-    # lets the lowering refund the use on a pass
-    # (G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT).
+    # The whole effect is one "may" (DCGO BT21_001.cs:19 `isOptional: true`):
+    # DCGO ALWAYS shows its yes/no activation prompt once CanActivateCondition
+    # holds (:58-61, only `IsExistOnBattleAreaDigimon` -- it does NOT check for
+    # a digivolve candidate; the candidate check lives inside
+    # ActivateCoroutine's pick, :66-68 `maxCount = Min(1, count)`). So the gate
+    # is forced with `outer_prompt: true` (BT24-003 idiom) even when no Digimon
+    # has a legal digivolve: the folded optional pick below would vanish with no
+    # candidate and the prompt DCGO shows would not exist here. Declining the
+    # gate is not activating the effect, so the [Once Per Turn] is kept
+    # (official Q&A Q1818, CR 4.3 §15-14-1-4); accepting it uses the effect
+    # (§15-7-4 / §15-7-5), whether or not a digivolve then follows.
     optional: true
+    outer_prompt: true
     active_when: { your_turn: true }
     summary: "[Your Turn][OPT] When opponent's security removed, 1 of your Digimon may digivolve into Reptile/Dragonkin in hand, cost -1"
     # Candidate legality (select-hand audit, fixed 2026-11-13): DCGO

@@ -179,11 +179,14 @@ fn outer_prompt_non_optional_uncapped_or_self_refunding_clauses_are_not_rewritte
 /// process). A clause entering or leaving this list is a behaviour change and
 /// must be reviewed against Q1818 / Q1643.
 const REVIEWED: &[&str] = &[
+    // BT21-001#0 left this list: DCGO always shows its isOptional yes/no
+    // (CanActivateCondition has no candidate check), so the card authors
+    // `outer_prompt: true` instead of the folded refund.
     // Light Hybrid: both printed inherited clauses are whole-effect "you may"
     // with no independent Then tail (Q1818). Their card tests prove a decline
     // preserves OPT for a later attack, while successful use spends it.
     "BT17-020#1", "BT18-094#1",
-    "AD1-017#2", "BT13-008#1", "BT21-001#0", "BT13-012#1", "BT21-009#3", "BT21-042#0", "BT21-044#1",
+    "AD1-017#2", "BT13-008#1", "BT13-012#1", "BT21-009#3", "BT21-042#0", "BT21-044#1",
     "BT21-044#2", "BT21-082#2", "BT22-023#1", "BT24-001#0", "BT24-051#2", "BT24-067#3",
     "BT25-025#3", "BT25-039#3", "BT25-052#3", "BT25-053#3", "BT25-055#1", "BT25-055#2",
     "EX11-017#2", "EX12-045#1", "EX12-046#2",
