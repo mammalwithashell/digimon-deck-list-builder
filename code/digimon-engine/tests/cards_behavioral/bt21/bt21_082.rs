@@ -18,13 +18,13 @@
 #![allow(dead_code, unused_imports)]
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::action::space::{self, PASS};
+use digimon_engine::action::space::{self, PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::TriggerSource;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const CARD_ID: &str = "BT21-082";
 
@@ -101,6 +101,20 @@ fn fire(r: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
     r.game.drain_effect_queue();
 }
 
+/// DCGO ALWAYS shows the inherited clause's yes/no activation (BT21_082.cs:135
+/// `isOptional: true`; CanActivateCondition, :152, is only
+/// `IsExistOnBattleAreaDigimon`): assert it is parked, then accept it. The
+/// optional red-Tamer pick (:174 `canNoSelect: true`) follows.
+fn accept_activation_gate(r: &mut DebugRunner) {
+    let v = r
+        .pending_selection_view()
+        .expect("the optional 'use this effect?' prompt is parked");
+    assert_eq!(v.kind, SelectionKind::Replacement, "yes/no activation prompt");
+    assert!(v.is_optional, "the activation is the player's choice");
+    r.execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accepting the activation is legal");
+}
+
 fn top_id(r: &DebugRunner, h: PermanentHandle) -> String {
     r.game.players[h.player as usize].battle_area[h.index as usize]
         .top_card()
@@ -136,6 +150,10 @@ fn bt21_082_structure() {
         .when
         .contains(&CompiledTiming::OnOpponentSecurityRemoved));
     assert!(inh.optional, "'you may play'");
+    assert!(
+        inh.outer_prompt,
+        "DCGO always shows the yes/no activation, even with no red Tamer in hand"
+    );
     assert!(inh.once_per_turn, "[Once Per Turn]");
 }
 
@@ -284,7 +302,9 @@ fn bt21_082_inherited_plays_red_tamer_on_security_removal() {
     push_hand(&mut r, 0, "BLUE-T");
     let mem = r.memory();
     r.attack_player(c, 1, false);
-    // The optional red-Tamer hand pick IS the "you may" prompt.
+    // DCGO's yes/no activation comes first; the optional red-Tamer hand pick
+    // follows the accept.
+    accept_activation_gate(&mut r);
     let v = r.pending_selection_view().expect("red Tamer pick");
     assert!(v.is_optional);
     assert!(hand_pickable(&r, 0, "RED-T2"));
@@ -314,6 +334,7 @@ fn bt21_082_inherited_once_per_turn() {
     push_hand(&mut r, 0, "RED-T2");
     push_hand(&mut r, 0, "RED-T2");
     r.attack_player(c, 1, false);
+    accept_activation_gate(&mut r);
     pick_hand(&mut r, 0, "RED-T2");
     let _ = r.auto_resolve();
     // Ready the carrier and attack again the same turn.
@@ -587,6 +608,8 @@ fn bt21_082_somp_hero_payable_only_after_reduction_is_offered() {
 /// the inherited hand pick (false when no hand pick installs).
 fn inherited_red_tamer_offered(r: &mut DebugRunner, c: PermanentHandle) -> bool {
     r.attack_player(c, 1, false);
+    // DCGO's yes/no activation is shown regardless of what can be played.
+    accept_activation_gate(r);
     r.pending_selection_view().is_some() && hand_pickable(r, 0, "RED-T2")
 }
 
@@ -618,4 +641,43 @@ fn bt21_082_inherited_excludes_red_tamer_when_battle_area_full() {
     assert!(!inherited_red_tamer_offered(&mut r, c), "no free slot");
     let _ = r.auto_resolve();
     assert!(hand_ids(&r, 0).contains(&"RED-T2".to_string()));
+}
+
+// ─── DCGO's always-shown yes/no activation (isOptional) ─────────────────────
+
+/// With no red Tamer in hand DCGO still asks "use this effect?": declining
+/// keeps the [Once Per Turn] (Q1818, CR 4.3 15-14-1-4), accepting spends it.
+#[test]
+fn bt21_082_inherited_gate_offered_with_no_red_tamer_decline_keeps_the_use() {
+    let mut r = setup();
+    let c = carrier(&mut r);
+    r.attack_player(c, 1, false);
+    let v = r
+        .pending_selection_view()
+        .expect("the yes/no activation is parked even with nothing to play");
+    assert_eq!(v.kind, SelectionKind::Replacement);
+    r.decline_optional_trigger().expect("declining is legal");
+    let _ = r.auto_resolve();
+    r.game.players[0].battle_area[c.index as usize].is_suspended = false;
+    r.attack_player(c, 1, false);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "a declined activation keeps the [Once Per Turn]"
+    );
+}
+
+#[test]
+fn bt21_082_inherited_accepting_gate_with_no_red_tamer_spends_the_use() {
+    let mut r = setup();
+    let c = carrier(&mut r);
+    r.attack_player(c, 1, false);
+    accept_activation_gate(&mut r);
+    let _ = r.auto_resolve();
+    r.game.players[0].battle_area[c.index as usize].is_suspended = false;
+    r.attack_player(c, 1, false);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "an activated [Once Per Turn] effect is spent"
+    );
 }

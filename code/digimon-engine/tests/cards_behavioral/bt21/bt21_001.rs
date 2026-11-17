@@ -40,7 +40,7 @@ use digimon_engine::selection::SelectionKind;
 // ─── Helper builders ─────────────────────────────────────────────────────────
 
 /// The yes/no activation prompt DCGO always shows for this effect
-/// (`BT21_001.cs:19` `isOptional: true`): assert it is parked, then accept it.
+/// (`BT21_001.cs:21` `isOptional: true`): assert it is parked, then accept it.
 /// The effect is then in use (CR 4.3 15-7-4 / 15-7-5), whether or not a
 /// digivolve candidate exists.
 fn accept_activation_gate(runner: &mut DebugRunner) {
@@ -474,7 +474,7 @@ fn bt21_001_permanent_pick_excludes_a_digimon_without_a_legal_digivolve() {
 
 /// The only matching hand card can't be paid for even with the -1: no
 /// Digimon is offered, so no pick appears. DCGO still shows the yes/no
-/// activation prompt (its CanActivateCondition, BT21_001.cs:58-61, only needs
+/// activation prompt (its CanActivateCondition, BT21_001.cs:60-63, only needs
 /// a Digimon on the battle area); accepting it finds no candidate (:68
 /// `maxCount = Min(1, count)`) and the effect ends.
 #[test]
@@ -618,11 +618,11 @@ fn bt21_001_opt_resets_after_end_turn() {
 }
 
 // ─── Section 5b: DCGO's always-shown yes/no activation (isOptional) ─────────
-// BT21_001.cs:19 registers the effect with `isOptional: true`, and its
-// CanActivateCondition (:58-61) is only `IsExistOnBattleAreaDigimon(card)`:
+// BT21_001.cs:21 registers the effect with `isOptional: true`, and its
+// CanActivateCondition (:60-63) is only `IsExistOnBattleAreaDigimon(card)`:
 // the OptionalSkill "use this effect?" prompt appears whether or not any
 // Digimon can digivolve (the candidate check is inside ActivateCoroutine,
-// :66-68). A decline keeps the [Once Per Turn] use (Q1818, CR 4.3
+// :68). A decline keeps the [Once Per Turn] use (Q1818, CR 4.3
 // 15-14-1-4); an accepted activation spends it (15-7-4 / 15-7-5) even when it
 // then finds nothing to digivolve.
 

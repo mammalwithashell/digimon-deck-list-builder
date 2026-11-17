@@ -32,13 +32,18 @@ effects:
   - scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
+    # DCGO BT24_001.cs:21 `isOptional: true` and CanActivateCondition (:57-60)
+    # is only `IsExistOnBattleAreaDigimon`: the yes/no activation is ALWAYS
+    # shown, even with no deletable Digimon. Declining it keeps the OPT (Q1818,
+    # CR 4.3 15-14-1-4); accepting spends it (15-7-4 / 15-7-5). After the accept
+    # the pick is mandatory (:76 `canNoSelect: false`), so it is not optional.
     optional: true
+    outer_prompt: true
     active_when: { your_turn: true }
     summary: "[Your Turn] [OPT] When opp security removed, you may delete 1 opp Digimon with 3000 DP or less"
     process:
       - select_opponent_permanent:
           bind_as: tgt
-          optional: true
           filter:
             all_of:
               - kind: digimon

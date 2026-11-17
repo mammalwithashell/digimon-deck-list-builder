@@ -138,6 +138,11 @@ effects:
   - when: when_attacking
     once_per_turn: true
     optional: true
+    # DCGO P_207.cs: `isOptional: true`, CanActivateCondition is only
+    # `IsExistOnBattleAreaDigimon`, so the yes/no activation is shown even with
+    # no playable card in trash; the pick (`canNoSelect: true`) follows the
+    # accept. Declining keeps the OPT (Q1818, CR 4.3 15-14-1-4).
+    outer_prompt: true
     summary: "[WhenAttacking][OPT] May play 1 level<=4 Avian/Bird/Beast/Animal(not SeaAnimal)/Sovereign or TS Digimon from trash free"
     process:
       - select_trash:
