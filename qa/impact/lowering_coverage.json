@@ -8412,6 +8412,31 @@
    ],
    "untested_constructs": []
   },
+  "BT21-064": {
+   "behaviourally_covered": true,
+   "clause_count": 4,
+   "constructs": [
+    "verb:draw",
+    "verb:gain_memory",
+    "verb:if",
+    "verb:select_hand",
+    "verb:trash_from_hand_by_index",
+    "predicate:any_of",
+    "predicate:binding_present",
+    "predicate:level_eq",
+    "predicate:name_contains",
+    "predicate:name_is",
+    "predicate:trait_has",
+    "timing:on_deletion",
+    "timing:on_play"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "BT21-067": {
    "behaviourally_covered": true,
    "clause_count": 4,
@@ -9480,6 +9505,33 @@
     "timing:when_attacking"
    ],
    "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT22-034": {
+   "behaviourally_covered": true,
+   "clause_count": 4,
+   "constructs": [
+    "verb:add_dp_modifier",
+    "verb:if",
+    "verb:play_from_trash_free",
+    "verb:select_effect_choice",
+    "verb:select_opponent_permanent",
+    "verb:trash_top_security",
+    "predicate:equals",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:security_count_gte",
+    "predicate:trait_has",
+    "timing:on_discard_security",
+    "timing:on_play",
+    "timing:when_attacking",
+    "timing:when_digivolving"
+   ],
+   "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -11891,6 +11943,32 @@
    "constructs": [],
    "effect_clause_count": 0,
    "has_card_test": false,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT24-069": {
+   "behaviourally_covered": true,
+   "clause_count": 4,
+   "constructs": [
+    "verb:as_selecting_player",
+    "verb:if",
+    "verb:select_hand",
+    "verb:trash_from_hand_by_index",
+    "verb:trash_from_top",
+    "predicate:binding_present",
+    "predicate:count_gte",
+    "predicate:event_permanent_is_source",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:on_move",
+    "timing:when_attacking",
+    "timing:when_digivolving",
+    "keyword:Blocker"
+   ],
+   "effect_clause_count": 4,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20713,6 +20791,59 @@
     "timing:on_deletion",
     "timing:on_digivolution_card_trashed",
     "timing:on_play"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "EX10-046": {
+   "behaviourally_covered": true,
+   "clause_count": 2,
+   "constructs": [
+    "verb:add_to_hand_from_trash",
+    "verb:if",
+    "verb:select_trash",
+    "verb:trash_from_top",
+    "predicate:any_of",
+    "predicate:count_gte",
+    "predicate:count_lte",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:start_of_your_main_phase",
+    "timing:when_attacking",
+    "timing:when_digivolving"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "EX10-049": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:add_modifier",
+    "verb:delete_permanent",
+    "verb:if",
+    "verb:select_opponent_permanent",
+    "verb:trash_from_top",
+    "predicate:all_of",
+    "predicate:count_gte",
+    "predicate:count_lte",
+    "predicate:kind",
+    "predicate:level_lte",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:on_deletion",
+    "timing:when_attacking",
+    "timing:when_digivolving",
+    "keyword:Blocker"
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
@@ -82334,10 +82465,10 @@
  "summary": {
   "behavioural_tests": 2299,
   "cards": {
-   "behaviourally_covered": 1187,
-   "lowering_covered": 1204,
+   "behaviourally_covered": 1192,
+   "lowering_covered": 1209,
    "not_covered": 37,
-   "total": 1241
+   "total": 1246
   },
   "constructs": {
    "keyword": {
