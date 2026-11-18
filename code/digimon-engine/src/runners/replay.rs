@@ -2472,6 +2472,262 @@ fn branch_digest(game: &Game) -> u64 {
     h.finish()
 }
 
+/// The byte ranges of every card-identity number in the `Debug` text of a game,
+/// by namespace: `0` the card handle / `card_index` (`CardHandle(n)`,
+/// `card_index: n`), `1` the battle identity (any field `identity_references`
+/// reads, in the same shapes). Spans may not overlap and are returned in text
+/// order.
+fn identity_spans(text: &str) -> Vec<(usize, usize, u8)> {
+    fn digits_at(text: &str, from: usize) -> Option<(usize, usize)> {
+        let len = text[from..].chars().take_while(char::is_ascii_digit).count();
+        (len > 0).then_some((from, from + len))
+    }
+    let mut spans: Vec<(usize, usize, u8)> = Vec::new();
+    for prefix in ["CardHandle(", "card_index: "] {
+        let mut from = 0;
+        while let Some(found) = text[from..].find(prefix) {
+            let at = from + found + prefix.len();
+            from = at;
+            if let Some((s, e)) = digits_at(text, at) {
+                spans.push((s, e, 0));
+            }
+        }
+    }
+    fn is_name_char(c: char) -> bool {
+        c.is_ascii_lowercase() || c == '_'
+    }
+    for needle in ["identity", "immunity_excluded_source", "stable_subject"] {
+        let mut from = 0;
+        while let Some(found) = text[from..].find(needle) {
+            let at = from + found;
+            from = at + needle.len();
+            let start = text[..at]
+                .char_indices()
+                .rev()
+                .find(|(_, c)| !is_name_char(*c))
+                .map_or(0, |(i, c)| i + c.len_utf8());
+            let end = at + text[at..].find(|c: char| !is_name_char(c)).unwrap_or(text.len() - at);
+            let name = &text[start..end];
+            if name.starts_with("next_") || name == "treated_identity_orders" {
+                continue;
+            }
+            let Some(rest) = text[end..].strip_prefix(": ") else {
+                continue;
+            };
+            let mut value = end + 2;
+            let mut rest = rest;
+            while let Some(inner) = rest.strip_prefix("Some(") {
+                value += "Some(".len();
+                rest = inner;
+            }
+            if let Some(tuple) = rest.strip_prefix('(') {
+                // `(player, id)` / `(player, CardHandle(card), id)`: the last
+                // bare-number element is the identity.
+                let base = value + 1;
+                let (mut depth, mut elem_start) = (0i32, 0usize);
+                let mut elems: Vec<(usize, usize)> = Vec::new();
+                for (i, c) in tuple.char_indices() {
+                    match c {
+                        '(' | '[' | '{' => depth += 1,
+                        ')' | ']' | '}' => {
+                            if depth == 0 {
+                                elems.push((elem_start, i));
+                                break;
+                            }
+                            depth -= 1;
+                        }
+                        ',' if depth == 0 => {
+                            elems.push((elem_start, i));
+                            elem_start = i + 1;
+                        }
+                        _ => {}
+                    }
+                }
+                let number = elems.iter().rev().find_map(|(s, e)| {
+                    let raw = &tuple[*s..*e];
+                    let trimmed = raw.trim();
+                    (!trimmed.is_empty() && trimmed.chars().all(|c| c.is_ascii_digit()))
+                        .then(|| (base + s + (raw.len() - raw.trim_start().len()), base + s + (raw.len() - raw.trim_start().len()) + trimmed.len()))
+                });
+                if let Some((s, e)) = number {
+                    spans.push((s, e, 1));
+                }
+            } else if let Some((s, e)) = digits_at(text, value) {
+                spans.push((s, e, 1));
+            }
+        }
+    }
+    spans.sort_unstable();
+    spans.dedup();
+    spans
+}
+
+/// `text` with every card-identity number (`identity_spans`) renamed to its
+/// order of first appearance in its namespace: two texts are equal afterwards
+/// exactly when one maps onto the other by a consistent relabelling of cards
+/// and battle identities - the same game up to which physical copy is which.
+fn alpha_rename_identities(text: &str) -> String {
+    let spans = identity_spans(text);
+    let mut seen: [HashMap<&str, usize>; 2] = [HashMap::new(), HashMap::new()];
+    let mut out = String::with_capacity(text.len());
+    let mut at = 0;
+    for (s, e, ns) in spans {
+        if s < at {
+            continue;
+        }
+        out.push_str(&text[at..s]);
+        let map = &mut seen[ns as usize];
+        let next = map.len();
+        let label = *map.entry(&text[s..e]).or_insert(next);
+        out.push_str(&format!("#{ns}.{label}"));
+        at = e;
+    }
+    out.push_str(&text[at..]);
+    out
+}
+
+/// The fingerprint two branches are compared by when the order entries they
+/// came from are copies of ONE card (`branch_digest`'s state, with the physical
+/// identity of every card - and every battle identity - renamed away): two
+/// Tamers of one card id with the same state each queue the same trigger, the
+/// recording cannot say which copy DCGO activated, and the branches differ only
+/// in which physical copy went where (the verification digest hashes every
+/// card's `card_index`, `verification.rs` `write_card`). Positions stay: a
+/// slot, a zone order and a stack order are not renamed, so a choice that
+/// leaves the copies in different places still differs.
+///
+/// Built from the game's `Debug` text, like `interchangeable_copies` (the same
+/// limits: a reference the text does not show is not seen), plus the fields a
+/// hand-written `Debug` omits (`omitted_debug_fields`). The event log and the
+/// logger are history, not state, and are left out. The pinned
+/// `verification_digest` itself is never touched.
+fn identity_free_digest(game: &Game) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut g = game.clone();
+    g.events.clear();
+    g.logger = Box::new(crate::logger::SilentLogger);
+    // Static registries: shared by every branch (clones of one game) and by far
+    // the largest part of the text (the DSL alternate-path table alone is
+    // megabytes); nothing a choice between copies can change.
+    g.token_registry = Default::default();
+    g.card_id_index = Default::default();
+    #[cfg(feature = "dsl-yaml-loader")]
+    {
+        g.alt_path_registry = Default::default();
+    }
+    // A queued trigger's `trigger_context` keeps the slot its carrier had when
+    // it was queued; only `source_permanent` is rebased when an earlier slot
+    // empties (`shift_effect_queue_after_battle_area_remove`). Two branches
+    // that removed DIFFERENT copies of one card then hold the same survivor
+    // under different stale slots. Name the permanent by the card the context
+    // was taken with, as the carrier of that card now stands.
+    for queued in g.effect_queue.iter_mut() {
+        let Some(ctx) = queued.trigger_context.as_mut() else {
+            continue;
+        };
+        let card = if ctx.target_card.is_unavailable() { None } else { *ctx.target_card };
+        if let (Some(handle), Some(card)) = (ctx.target_permanent, card) {
+            let area = g.players.get(handle.player as usize).map(|p| &p.battle_area);
+            let holds = |slot: usize| area.and_then(|a| a.get(slot)).is_some_and(|p| p.card_sources.iter().any(|c| c.handle() == card));
+            if !holds(handle.index as usize) {
+                if let Some(now) = area.and_then(|a| a.iter().position(|p| p.card_sources.iter().any(|c| c.handle() == card))) {
+                    if let Some(target) = ctx.target_permanent.as_mut() {
+                        target.index = now as u8;
+                    }
+                }
+            }
+        }
+    }
+    // Per-card history the engine only reads for something else, which the
+    // two copies' pasts leave different (which copy was revealed from security
+    // last, when a card entered the trash or security stack, and the turn a
+    // Digimon or Tamer entered play - read only as "is it this turn",
+    // `perm.turn_played == turn_count`: the freshness test of the attack mask
+    // and of `combat/mod.rs`). Two Tamers played on different earlier turns are
+    // the same card in the same state. A Delay Option's `turn_played` is a
+    // different matter (`game_phases.rs` keys on it), so only Digimon and
+    // Tamers are normalised.
+    let turn = g.turn_count;
+    {
+        let data = &g.card_data;
+        for player in g.players.iter_mut() {
+            player.last_security_reveal = None;
+            player.trash_entry_generations.clear();
+            player.security_entry_generations.clear();
+            for perm in player.battle_area.iter_mut() {
+                let top = perm.top_card();
+                if (top.is_digimon(data) || top.is_tamer(data)) && perm.turn_played != turn {
+                    perm.turn_played = 0;
+                }
+            }
+        }
+    }
+    let mut text = blank_declarative_memo(&format!("{g:?}"));
+    text.push_str(&omitted_debug_fields(&g));
+    // The optional-activation mark, as `branch_digest` reads it: renamed with
+    // the rest, so the identity of the copy it names is not compared.
+    text.push_str(&format!("
+mark={:?}", game.pending_optional_activation_effect()));
+    let mut h = std::collections::hash_map::DefaultHasher::new();
+    alpha_rename_identities(&text).hash(&mut h);
+    h.finish()
+}
+
+/// `text` without the declarative-effect memo of the modifier registry
+/// (`decl_memo_valid`, `decl_last_fingerprint`): a cache of a hash over handles
+/// and play turns, not state.
+fn blank_declarative_memo(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while !rest.is_empty() {
+        let next = ["decl_last_fingerprint: ", "decl_memo_valid: "]
+            .iter()
+            .filter_map(|m| rest.find(m).map(|i| (i, m.len())))
+            .min();
+        let Some((i, len)) = next else {
+            out.push_str(rest);
+            break;
+        };
+        out.push_str(&rest[..i + len]);
+        rest = rest[i + len..].trim_start_matches(|c: char| c.is_ascii_alphanumeric());
+        out.push('_');
+    }
+    out
+}
+
+/// `branch_digest`, or - when `identity_free` - `identity_free_digest`: the
+/// comparison of branches that chose between copies of one card.
+fn order_branch_digest(game: &Game, identity_free: bool) -> u64 {
+    if identity_free {
+        identity_free_digest(game)
+    } else {
+        branch_digest(game)
+    }
+}
+
+/// Whether two or more entries of the parked order prompt are copies of ONE
+/// card: the same effect (same label) of two DIFFERENT physical cards of one
+/// card id. The branches they lead to are compared by `identity_free_digest`.
+/// Entries that share a source card (the inherited effects of one carrier's
+/// stack are all queued under its top card) are not copies of anything.
+fn entries_are_copies_of_one_card(game: &Game) -> bool {
+    let Some(entries) = game.pending_selection.as_ref().and_then(|p| p.effect_choices.as_ref().map(|e| (p, e))) else {
+        return false;
+    };
+    let (pending, entries) = entries;
+    let rows: Vec<(&str, crate::card_source::CardHandle, &str)> = entries
+        .iter()
+        .filter(|e| pending.valid_action_ids.contains(&e.action_id))
+        .filter_map(|e| {
+            let card = e.source_card?;
+            Some((e.label.as_str(), card, game.card_data_for_handle(card)?.card_id.as_str()))
+        })
+        .collect();
+    rows.iter().enumerate().any(|(i, (label, card, id))| {
+        rows[i + 1..].iter().any(|(l, c, other)| l == label && c != card && other == id)
+    })
+}
+
 /// Cards whose DCGO script picks the card FIRST and THEN asks a
 /// `SetBoolSelection` that names the branch the engine asks first, as
 /// `(card, engine label index of true, engine label index of false)`.
@@ -4024,11 +4280,15 @@ impl ReplayDriver {
                             (*id, g)
                         })
                         .collect();
-                    let first = branch_digest(&branches[0].1);
-                    let verdict = if branches.iter().all(|(_, g)| branch_digest(g) == first) {
+                    // Entries that are two copies of this card (not two effects of
+                    // one card): the branches are compared with the physical
+                    // identity of the copies renamed away.
+                    let identity_free = entries_are_copies_of_one_card(game);
+                    let first = order_branch_digest(&branches[0].1, identity_free);
+                    let verdict = if branches.iter().all(|(_, g)| order_branch_digest(g, identity_free) == first) {
                         LookaheadVerdict::Proved(branches[0].0)
                     } else {
-                        self.lookahead_trigger_order(branches, self.cursor + 1, &order_entry_sources(game))
+                        self.lookahead_trigger_order(branches, self.cursor + 1, &order_entry_sources(game), identity_free)
                     };
                     let LookaheadVerdict::Proved(entry) = verdict else {
                         let prompt = game.pending_selection.as_ref().map(|p| p.prompt.as_str()).unwrap_or_default();
@@ -5748,7 +6008,7 @@ impl ReplayDriver {
         }
         let slots: Vec<u16> = answered.iter().map(|(j, _, _)| *j).collect();
         let branches: Vec<(u16, Game)> = answered.iter().map(|(j, g, _)| (*j, g.clone())).collect();
-        let verdict = self.lookahead_trigger_order(branches, self.cursor + 1, &[]);
+        let verdict = self.lookahead_trigger_order(branches, self.cursor + 1, &[], false);
         if let LookaheadVerdict::Proved(j) = verdict {
             let (_, g, last) = answered.into_iter().find(|(k, _, _)| *k == j)?;
             return Some(Ok((g, last)));
@@ -6712,6 +6972,9 @@ impl ReplayDriver {
             return None;
         }
         let prompt_text = pending.prompt.clone();
+        // Entries that are copies of one card lead to branches that differ only
+        // in which physical copy is which: compared with that renamed away.
+        let identity_free = entries_are_copies_of_one_card(game);
 
         // The actor's unstamped "use this effect?" answers straight after the
         // index belong to the effect it chose; the row after them is the evidence.
@@ -6802,7 +7065,7 @@ impl ReplayDriver {
             }
             let branch_start = probe.clone();
             let Some(row) = evidence.as_ref() else {
-                qualifying.push((*id, label.clone(), branch_digest(&probe), branch_start));
+                qualifying.push((*id, label.clone(), order_branch_digest(&probe, identity_free), branch_start));
                 continue;
             };
             let row = remap_selection_targets(&probe, row).unwrap_or_else(|| row.clone());
@@ -6898,7 +7161,7 @@ impl ReplayDriver {
                 undetermined.push(format!("{label}: {reason}"));
                 continue;
             }
-            qualifying.push((*id, label.clone(), branch_digest(&probe), branch_start));
+            qualifying.push((*id, label.clone(), order_branch_digest(&probe, identity_free), branch_start));
         }
         let evidence_text = match evidence.as_ref() {
             Some(r) => format!(
@@ -6944,7 +7207,7 @@ impl ReplayDriver {
         // choice, and an entry the later rows refute is not DCGO's.
         let labels = qualifying.iter().map(|q| q.1.as_str()).collect::<Vec<_>>().join(" | ");
         let branches: Vec<(u16, Game)> = qualifying.into_iter().map(|(id, _, _, g)| (id, g)).collect();
-        match self.lookahead_trigger_order(branches, branch_cursor, &order_entry_sources(game)) {
+        match self.lookahead_trigger_order(branches, branch_cursor, &order_entry_sources(game), identity_free) {
             LookaheadVerdict::Proved(id) => return Some(Ok(id)),
             // Not an ambiguity: no entry leads to what DCGO recorded, so the
             // order (or the branch that led to it, inside a lookahead) is
@@ -6987,6 +7250,7 @@ impl ReplayDriver {
         branches: Vec<(u16, Game)>,
         from: u32,
         sources: &[(u16, crate::card_source::CardHandle)],
+        identity_free: bool,
     ) -> LookaheadVerdict {
         // Each branch chose its entry at the row under the cursor (`order_answer`).
         let order_row = self.cursor;
@@ -7033,7 +7297,7 @@ impl ReplayDriver {
                 if sub.paused || sub.cursor == before {
                     break;
                 }
-                seen.push((sub.cursor, branch_digest(&g)));
+                seen.push((sub.cursor, order_branch_digest(&g, identity_free)));
             }
             let nested = |d: &Divergence, marker: &str| {
                 matches!(&d.kind, DivergenceKind::SelectionResolution { reason } if reason.contains(marker))
@@ -9401,7 +9665,7 @@ mod tests {
         let game = build_empty_game(&filler_card_data()).expect("empty game");
         armed.store(true, std::sync::atomic::Ordering::SeqCst);
         let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            driver.lookahead_trigger_order(vec![(30, game.clone()), (31, game)], 0, &[])
+            driver.lookahead_trigger_order(vec![(30, game.clone()), (31, game)], 0, &[], false)
         }));
         assert!(outcome.is_err(), "the branch panicked");
         armed.store(false, std::sync::atomic::Ordering::SeqCst);
