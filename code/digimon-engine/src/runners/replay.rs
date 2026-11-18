@@ -7713,6 +7713,13 @@ impl ReplayDriver {
                 return;
             }
             game.decode_action(action, actor);
+            // Answering the pick can park the NEXT prompt DCGO skips - the one-card deck order that ends the same
+            // effect (EX13-026's "Return the rest to the bottom of the deck" with one card left; DCGO places a lone
+            // card without a prompt). `answer_dcgo_silent_prompts` ran the ordering fold BEFORE this pick, so
+            // without answering it here the action row would meet the effect controller's order prompt (an actor
+            // divergence when the row is the other seat's - raw-20261116T164448Z#g7 file step 45). Exactly what
+            // the MultipleSkills fold does after each answer.
+            self.answer_forced_single_ordering_prompt(game);
         }
     }
 
