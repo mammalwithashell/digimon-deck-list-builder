@@ -19,6 +19,10 @@
 #     BT19-089) + GainCanNotReturnToDeck + GainCanNotReturnToHand
 #     (UntilOpponentTurnEnd, cardEffectCondition null). The two return
 #     modifiers default to an opponent-effect cause filter.
+#   - DCGO passes an unscoped (null) condition for the DP modifier, but the
+#     printed text says "your OPPONENT'S effects", so all three modifiers here
+#     use `opponent_only: true` (the printed text governs over DCGO; own-side
+#     -DP / bounce / deck-return effects still apply).
 #   - Inherited OnDestroyedAnyone, OPT, optional: another own Digimon (not the
 #     carrier, TopCard.IsDigimon, [Unidentified] trait) is deleted -> play a
 #     [Diaboromon] Token. Tokens are Digimon, so a deleted Diaboromon Token
@@ -68,16 +72,19 @@ effects:
                 target: source
                 modifier: ImmuneFromDPMinus
                 value: 1
+                opponent_only: true
                 expiry: end_of_opponents_turn
             - add_modifier:
                 target: source
                 modifier: CannotBeReturnedToHand
                 value: 1
+                opponent_only: true
                 expiry: end_of_opponents_turn
             - add_modifier:
                 target: source
                 modifier: CannotBeReturnedToDeck
                 value: 1
+                opponent_only: true
                 expiry: end_of_opponents_turn
 
   - when: on_any_deletion

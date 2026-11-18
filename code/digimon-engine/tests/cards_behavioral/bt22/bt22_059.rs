@@ -65,6 +65,65 @@ fn bt22_059_protects_itself_only_while_arata_or_adam_is_in_play() {
     assert!(!r.modifiers().has(inf, ModifierType::CannotBeReturnedToHand));
 }
 
+/// Printed text: "your OPPONENT'S effects can't reduce this Digimon's DP or
+/// return it to hands or decks". The protection is scoped to the opponent's
+/// effects (CR 4.3 §10-1 effect-source scoping); the controller's own -DP /
+/// bounce / deck-return effects on this Digimon must still apply.
+fn protected_infermon() -> (DebugRunner, PermanentHandle) {
+    let mut r = full_runner();
+    let inf = r.place_on_field(0, "BT22-059", Some(0));
+    r.place_on_field(0, "ARATA", Some(0));
+    r.fire_on_play(0, inf.index as usize);
+    let _ = r.auto_resolve();
+    assert!(r.modifiers().has(inf, ModifierType::ImmuneFromDPMinus));
+    (r, inf)
+}
+
+#[test]
+fn bt22_059_dp_protection_blocks_opponent_dp_minus_but_not_own() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::EffectContext;
+    let (mut r, inf) = protected_infermon();
+    assert_eq!(r.effective_dp(inf), Some(7000));
+    let source = r.game.players[0].battle_area[inf.index as usize].top_card().handle();
+    {
+        let mut ctx = EffectContext::new(&mut r.game, source, None, 1);
+        ctx.add_dp_modifier(inf, -3000, Expiry::EndOfTurn);
+    }
+    assert_eq!(r.effective_dp(inf), Some(7000), "opponent -DP is blocked");
+    {
+        let mut ctx = EffectContext::new(&mut r.game, source, None, 0);
+        ctx.add_dp_modifier(inf, -2000, Expiry::EndOfTurn);
+    }
+    assert_eq!(r.effective_dp(inf), Some(5000), "own -DP still applies");
+}
+
+#[test]
+fn bt22_059_hand_protection_blocks_opponent_bounce_but_not_own() {
+    let (mut r, inf) = protected_infermon();
+    assert!(!r.game.return_to_hand_from_effect(inf, 1), "opponent bounce is blocked");
+    assert_eq!(field_top_ids(&r, 0).first().map(String::as_str), Some("BT22-059"));
+    let (mut r, inf) = protected_infermon();
+    assert!(r.game.return_to_hand_from_effect(inf, 0), "own bounce still applies");
+    assert!(!field_top_ids(&r, 0).iter().any(|id| id == "BT22-059"));
+}
+
+#[test]
+fn bt22_059_deck_protection_blocks_opponent_deck_return_but_not_own() {
+    let (mut r, inf) = protected_infermon();
+    assert!(
+        !r.game.return_to_deck_from_effect(inf, 1),
+        "opponent deck return is blocked"
+    );
+    assert_eq!(field_top_ids(&r, 0).first().map(String::as_str), Some("BT22-059"));
+    let (mut r, inf) = protected_infermon();
+    assert!(
+        r.game.return_to_deck_from_effect(inf, 0),
+        "own deck return still applies"
+    );
+    assert!(!field_top_ids(&r, 0).iter().any(|id| id == "BT22-059"));
+}
+
 #[test]
 fn bt22_059_protection_still_applies_when_the_delete_found_no_target() {
     // "Then, if you have [Arata Sanada] or [Eater Adam]" is independent of the delete.
