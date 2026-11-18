@@ -1,0 +1,135 @@
+# EX12-064 Megadramon — Digimon, Lv.5, Purple/Black, DP 7000, Cost 7.
+# Traits: Cyborg, ME. Attribute: Virus.
+# Digivolve: Purple Lv.4 / 4; Lv.4 w/[Machine]/[ME] trait / 3.
+# Assembly -2: 1 Lv.4 or lower [Machine]/[Cyborg]/[ME] trait card (from trash).
+#
+# Printed text (card face, data/cards.json, DCGO EX12_064.cs):
+#   [On Play] [When Digivolving] Delete 1 of your opponent's level 4 or lower
+#   Digimon. If this effect didn't delete, <De-Digivolve 1> 1 of your
+#   opponent's Digimon.
+#   [All Turns] [Once Per Turn] When any of your [Machine], [Cyborg] or [ME]
+#   trait Digimon are played, you may activate 1 of this Digimon's
+#   [When Digivolving] effects.
+#   Inherited: [End of Attack] [Once Per Turn] By unsuspending this Digimon,
+#   delete 1 of your Digimon with the lowest play cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX12/Purple/EX12_064.cs
+#   - OP/WD (optional:false): mandatory select of an opponent level <= 4
+#     Digimon (canNoSelect false) -> DeletePeremanentAndProcessAccordingToResult;
+#     if it deleted nothing (no target, or the delete was prevented), a
+#     mandatory <De-Digivolve 1> pick of any opponent Digimon.
+#     -> BT17-016's `effect_deleted_any_opponent_digimon: false` idiom.
+#   - All Turns OPT (optional, hash EX12_064_AT, OnEnterFieldAnyone, any own
+#     [Machine]/[Cyborg]/[ME] Digimon played): re-activates one of THIS
+#     Digimon's [When Digivolving] effects (only the OP/WD clause qualifies).
+#     -> `refire_effect { source: source, timing: when_digivolving }`.
+#   - Inherited End of Attack OPT (hash EX12_064_Inherited, optional): unsuspend
+#     this Digimon (cost, paid first), then a mandatory pick of an own Digimon
+#     with the lowest play cost (`IsMinCost`), deleted.
+
+card: EX12-064
+name: Megadramon
+kind: digimon
+level: 5
+color: [purple, black]
+cost: 7
+dp: 7000
+traits: [Cyborg, ME]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - trait_has: Machine
+            - trait_has: ME
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - level_lte: 4
+            - any_of:
+                - trait_has: Machine
+                - trait_has: Cyborg
+                - trait_has: ME
+        zones: [trash]
+        stack_under: true
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon. If this effect didn't delete, <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      # Top-level select+delete (BT17-016 / BT25-014 idiom): the result-log
+      # stays visible to the trailing `effect_deleted_*` check.
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Delete 1 of your opponent's level 4 or lower Digimon"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - select_opponent_permanent:
+                bind_as: dedigi
+                filter: { kind: digimon }
+                prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+            - de_digivolve:
+                target: dedigi
+                amount: 1
+                stop_at_level: 3
+
+  - when: on_ally_played
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_trait_has: Machine
+            - event_target_trait_has: Cyborg
+            - event_target_trait_has: ME
+    summary: "[All Turns][Once Per Turn] When any of your [Machine]/[Cyborg]/[ME] trait Digimon are played, you may activate 1 of this Digimon's [When Digivolving] effects"
+    process:
+      - refire_effect:
+          source: source
+          timing: when_digivolving
+          optional: true
+
+  # "By unsuspending this Digimon" is a cost (CR 4.3 1-3 / "By X, Y"): it can
+  # only be paid while this Digimon is suspended. The DSL has no
+  # `unsuspend_self` activation cost, so the gate is `source_is_unsuspended:
+  # false` and the unsuspend is the first step of the accepted effect; the
+  # delete follows only if the Digimon really is unsuspended afterwards (DCGO
+  # `if (!IsSuspended)`).
+  - scope: inherited
+    when: end_of_attack
+    once_per_turn: true
+    optional: true
+    condition: { source_is_unsuspended: false }
+    summary: "[Inherited][End of Attack][Once Per Turn] By unsuspending this Digimon, delete 1 of your Digimon with the lowest play cost"
+    process:
+      - unsuspend: { target: source }
+      - if:
+          condition: { source_is_unsuspended: true }
+          then:
+            - select_own_permanent:
+                bind_as: lowest
+                selector: lowest_play_cost
+                filter: { kind: digimon }
+                prompt: "Delete 1 of your Digimon with the lowest play cost"
+            - delete_permanent: { target: lowest }

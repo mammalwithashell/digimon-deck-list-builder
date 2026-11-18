@@ -1,0 +1,68 @@
+# EX12-003 Kapurimon — Digi-Egg, Lv.2, Black. Traits: Lesser, ME.
+#
+# Printed text (card face, DCGO EX12_003.cs):
+#   Inherited: [All Turns] When any of your [ME] trait Digimon would leave the
+#   battle area other than by your effects, 1 of them and any of your other
+#   Digimon may DNA digivolve into an [ME] trait Digimon card in the hand.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX12/Black/EX12_003.cs
+#   Inherited, WhenRemoveField, skippable, not optional: the leaving permanent
+#   must be one of your [ME] trait Digimon (top card) and the leave must not be
+#   by your own effect; the carrier must be an own Digimon on the battle area;
+#   usable only when an [ME] card in hand can DNA-digivolve from the leaving
+#   permanent (`CanJogressFromTargetPermanent`) and another own Digimon exists.
+#   `DNADigivolvePermanentsIntoHandOrTrashCard` then has the player pick the
+#   result card and the second material, one of the two being the leaving
+#   permanent. Digivolving the leaving permanent means it does not leave.
+#
+#   -> `kind: replacement` on `when_would_leave_battle_area` (the "would leave"
+#   window, scope inherited) whose body is `may_dna_digivolve_now` anchored on
+#   the leaving Digimon (`replacement_subject`), then `cancel_replacement` when
+#   the DNA digivolve happened (BT17-097's would-leave digivolve shape).
+
+card: EX12-003
+name: Kapurimon
+kind: digi_egg
+level: 2
+color: [black]
+traits: [Lesser, ME]
+
+effects:
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    # Not `optional`: DCGO EX12_003.cs `SetUpActivateClass(..., -1, false, ...)`
+    # + `SetIsSkippable(true)` — the effect has no yes/no gate; the DNA digivolve
+    # itself is the "may" (the hand pick below is declinable), so the owner's
+    # first decision is the result card pick, never an accept prompt.
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        # "any of your [ME] trait Digimon": an [ME] trait Option or Tamer that
+        # leaves the battle area (e.g. Giant Meat EX12-073 trashing itself for
+        # its Delay) is not a Digimon and does not open this window.
+        - kind: digimon
+        - trait_has: ME
+        - none_of:
+            - replacement_cause: own_effect
+    summary: "[Inherited][All Turns] When any of your [ME] trait Digimon would leave the battle area other than by your effects, 1 of them and any of your other Digimon may DNA digivolve into an [ME] trait Digimon card in the hand"
+    process:
+      - may_dna_digivolve_now:
+          anchor: replacement_subject
+          partner_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+          target_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+              - trait_has: ME
+          cost: 0
+          ignore_requirements: false
+          optional: true
+          prompt: "DNA digivolve the leaving [ME] Digimon and another of your Digimon into an [ME] trait Digimon card in your hand"
+      - if:
+          condition: { effect_digivolved_any_digimon: true }
+          then:
+            - cancel_replacement: {}

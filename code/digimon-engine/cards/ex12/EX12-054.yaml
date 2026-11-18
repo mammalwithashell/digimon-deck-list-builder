@@ -1,0 +1,77 @@
+# EX12-054 Guardromon — Digimon, Lv.4, Black, DP 5000, Cost 5.
+# Traits: Machine, ME. Attribute: Virus. Digivolve: Black Lv.3 / 2;
+# Lv.3 with an [ME] trait / 2.
+#
+# Printed text (data/cards.json, DCGO EX12_054.cs):
+#   <Blocker>
+#   [On Play] [When Digivolving] By trashing 1 card with the [Machine], [Cyborg]
+#   or [ME] trait from your hand, <Draw 2>.
+#   Inherited: <Blocker>
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX12/Black/EX12_054.cs
+#   Shared OP/WD (ActivateClassesForSharedEffects, optional:false,
+#   isSkippable:true): CanActivate needs a matching hand card; the hand pick is
+#   canNoSelect:true (Mode.Discard); Draw 2 only if a card was trashed.
+#   -> the BT26-087 / EX12-021 cost idiom: optional `select_hand` (cost: true)
+#   + trash + draw, gated by a matching hand card.
+
+card: EX12-054
+name: Guardromon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 5000
+traits: [Machine, ME]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: ME
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [on_play, when_digivolving]
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - trait_has: Machine
+            - trait_has: Cyborg
+            - trait_has: ME
+        n: 1
+    summary: "[On Play][When Digivolving] By trashing 1 [Machine]/[Cyborg]/[ME] trait card from your hand, <Draw 2>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - trait_has: Machine
+              - trait_has: Cyborg
+              - trait_has: ME
+          prompt: "Trash 1 [Machine]/[Cyborg]/[ME] trait card from your hand to <Draw 2>"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "Inherited <Blocker>"
