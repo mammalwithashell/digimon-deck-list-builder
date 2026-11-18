@@ -1110,6 +1110,15 @@ impl Game {
                 // Options may answer it (`only_player` below).
                 // G-ENGINE-EVENT-DELAY-ON-SECURITY-REMOVED.
                 | TriggerSource::SecurityRemoved { .. }
+                // BT23-099's `<Delay>` is keyed to `OnEvent(OnDigivolve)`
+                // ("When any of your Digimon digivolve into a Digimon with
+                // [Huckmon] or [Jesmon] in its name"). DCGO observes it on
+                // `OnEnterFieldAnyone` + `CanTriggerWhenPermanentDigivolving`.
+                // The just-digivolved permanent/card ride on the context as
+                // `event_permanent` / `event_card`, which the Delay's
+                // `active_when` (`event_target_*`, `event_card_name_*`) reads.
+                // G-ENGINE-EVENT-DELAY-ON-DIGIVOLVE.
+                | TriggerSource::Digivolved { .. }
         ) {
             let only_player = match source {
                 TriggerSource::SecurityRemoved { observer_player, .. } => Some(observer_player),

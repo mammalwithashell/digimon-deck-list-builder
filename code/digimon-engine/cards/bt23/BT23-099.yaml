@@ -1,0 +1,113 @@
+# BT23-099 The Sistermon Sisters Training Gym — Option, White, Cost 2, Traits: CS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT23-099.md):
+#   While you have a Digimon with [Huckmon] in its name on the field, you can
+#   ignore this card's color requirements.
+#   [Main] <Draw 1>. Then, place this card in the battle area.
+#   [Your Turn] When any of your Digimon digivolve into a Digimon with
+#   [Huckmon] or [Jesmon] in its name, <Delay>
+#   ・You may play 1 card with [Sistermon] in its name from your hand or trash
+#     without paying the cost.
+#   [Security] You may play 1 card with [Sistermon] in its name from your hand
+#   or trash without paying the cost. Then, place this card in the battle area.
+# Official Q&A: "on the field" = the battle area or the breeding area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT23/White/BT23_099.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 0 — `EffectTiming.None` IgnoreColorConditionClass; CanUseCondition =
+#   `HasMatchConditionPermanent(IsPermanentExistsOnField && IsDigimon &&
+#   TopCard.ContainsCardName("Huckmon"), true)`; CardCondition = this card only.
+#   -> card-level `use_requirement` (the mechanism the Option-use mask and
+#   decoder consult: `option_color_requirement_bypass`; a `flood_gate` clause on
+#   a card sitting in HAND never registers — see BT19-089's note). The
+#   existential is `any_field_permanent` (battle area + breeding area, per the
+#   official Q&A), of the controller, over a Digimon whose name contains
+#   [Huckmon].
+#
+# Clause 1 — `OptionSkill`: `Draw(1)` then `PlaceDelayOptionCards`.
+#
+# Clause 2 — `OnEnterFieldAnyone`, optional, [Your Turn]: own Digimon digivolves
+#   into a card whose TOP card name contains [Huckmon] or [Jesmon]
+#   (`CanTriggerWhenPermanentDigivolving`), `CanDeclareOptionDelayEffect`,
+#   `IsOwnerTurn`. Body: trash this card, then — if a hand/trash card with
+#   [Sistermon] in its name is playable — a hand/trash bool (when both zones
+#   have a candidate), the card pick (`canNoSelect: true`), then
+#   `PlayPermanentCards(payCost: false)`.
+#   -> `kind: delay, trigger: on_digivolve` (board-wide observer, same timing
+#   BT16-085 uses) + `select_union_zone [hand, trash]` (optional) +
+#   `play_union_bound_free`.
+#
+# Clause 3 — `SecuritySkill` (`SetIsSecurityEffect`): the same hand/trash play
+#   ("You may"), then `PlaceDelayOptionCards` unconditionally.
+
+card: BT23-099
+name: "The Sistermon Sisters Training Gym"
+kind: option
+color: [white]
+cost: 2
+traits: [CS]
+
+use_requirement:
+  any_field_permanent:
+    of: you
+    kind: digimon
+    name_contains: "Huckmon"
+
+effects:
+  # ─── Clause 1: [Main] <Draw 1>, then place this card ─────────────────────────
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] <Draw 1>. Then, place this card in the battle area"
+    process:
+      - draw: { of: you, count: 1 }
+      - place_self_as_delay_option: {}
+
+  # ─── Clause 2: [Your Turn] own Digimon digivolves into [Huckmon]/[Jesmon] ────
+  - kind: delay
+    trigger: on_digivolve
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_card_name_contains: "Huckmon"
+            - event_card_name_contains: "Jesmon"
+    summary: "[Your Turn] When any of your Digimon digivolve into a Digimon with [Huckmon] or [Jesmon] in its name, <Delay>: you may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - name_contains: "Sistermon"
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: pick }
+
+  # ─── Clause 3: [Security] may play a [Sistermon] card, then place this card ──
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost. Then, place this card in the battle area"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: sec_pick
+          optional: true
+          filter:
+            all_of:
+              - name_contains: "Sistermon"
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: sec_pick }
+      - place_self_as_delay_option: {}

@@ -1869,10 +1869,10 @@
     },
     "BT23-099": {
       "card_name": "The Sistermon Sisters Training Gym",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-jesmon-qa.md",
-      "status": "PASS",
-      "notes": "Delay trigger fires on any play not digivolve. Color req engine gap."
+      "validated_date": "2026-11-17",
+      "report": "hunt-delay-option-cards-authoring",
+      "status": "SUPERSEDED",
+      "notes": "Stale 2026-03-14 PASS (it recorded its own defects: Delay fired on any play, not on digivolve; colour requirement not ignored). The Python-era script is gone; the card is now the YAML spec cards/bt23/BT23-099.yaml (colour bypass via use_requirement, [Main] draw 1 + place, <Delay> on_digivolve into [Huckmon]/[Jesmon], [Security] play [Sistermon] + place). Verdict lives in validated_cards_dsl.json."
     },
     "BT23-100": {
       "verdict": "PASS",
