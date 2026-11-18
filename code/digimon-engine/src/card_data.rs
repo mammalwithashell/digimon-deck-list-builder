@@ -435,6 +435,19 @@ impl CardData {
 
         let mut cards = HashMap::with_capacity(raw.len());
         for (id, raw_card) in raw {
+            // Printed Lv.2 for hatchable In-Training Digi-Eggs: the API ingest
+            // omits the level on a few of them (EX13-001 and EX11-005 in the
+            // 2026-11 data), which left the breeding-area digivolve with no
+            // route (`collect_rules_digivolve_routes` needs a base level).
+            // Every other In-Training Digi-Egg prints and carries Lv.2. An egg
+            // counts as In-Training by its form, or -- because the ingest also
+            // drops the form of 182 eggs, EX11-005 among them -- by the [Lesser]
+            // type every In-Training egg carries. The four genuinely levelless
+            // special eggs (BT13-007, BT22-007, EX2-007, EX6-006) have neither
+            // and stay levelless (CR 4.3 2-9-2).
+            let is_in_training_egg = parse_card_kind(raw_card.card_kind) == CardKind::DigiEgg
+                && (raw_card.form_eng.iter().any(|f| f == "In-Training")
+                    || raw_card.type_eng.iter().any(|t| t == "Lesser"));
             // Combine type, form, attribute into traits
             let mut traits = Vec::new();
             traits.extend(raw_card.form_eng);
@@ -461,6 +474,7 @@ impl CardData {
                 card_kind: parse_card_kind(raw_card.card_kind),
                 level: match raw_card.level {
                     Some(l) if l >= 0 => Some(l as u8),
+                    _ if is_in_training_egg => Some(IN_TRAINING_EGG_LEVEL),
                     _ => None,
                 },
                 dp: match raw_card.dp {
@@ -505,6 +519,9 @@ impl CardData {
         Ok(cards)
     }
 }
+
+/// Level printed on every hatchable In-Training Digi-Egg ("Lv.2").
+const IN_TRAINING_EGG_LEVEL: u8 = 2;
 
 fn parse_digixros_aliases(effect_text: &str) -> Vec<String> {
     let marker = "also treated as ";
@@ -927,6 +944,89 @@ mod tests {
         assert_eq!(card.colors, vec![CardColor::Red]);
         assert!(card.traits.contains(&"In-Training".to_string()));
         assert!(card.traits.contains(&"Lesser".to_string()));
+    }
+
+    /// Build a one-card cards.json document for a Digi-Egg-kind row.
+    fn egg_row(id: &str, level: &str, form: &str, types: &str) -> String {
+        format!(
+            r#"{{
+            "{id}": {{
+                "index": 1, "norm_id": 0.00005, "card_id": "{id}", "card_index": 1,
+                "card_name_eng": "Egg", "card_name_jpn": "",
+                "card_effect_class_name": "X", "play_cost": 0, "dp": null,
+                "level": {level}, "card_kind": 3, "rarity": 1, "card_colors": [0],
+                "type_eng": [{types}], "form_eng": [{form}], "attribute_eng": [],
+                "effect_description_eng": "", "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "", "evo_costs": []
+            }}
+        }}"#
+        )
+    }
+
+    /// EX13-001 / EX11-005 reach us from the API ingest with `level: null`
+    /// although both print "Lv.2" (card faces checked 2026-11-17). An In-Training
+    /// Digi-Egg without a level had no breeding-area digivolve route at all, so a
+    /// recorded breeding digivolve was a mask miss. The loader must give every
+    /// In-Training Digi-Egg its printed Lv.2.
+    #[test]
+    fn in_training_digi_egg_with_null_level_loads_as_level_2() {
+        let cards =
+            CardData::load_from_str(&egg_row("EX13-001", "null", "\"In-Training\"", "\"Lesser\"")).unwrap();
+        assert_eq!(cards["EX13-001"].card_kind, CardKind::DigiEgg);
+        assert_eq!(cards["EX13-001"].level, Some(2));
+    }
+
+    /// EX11-005 reaches us with no form at all (the ingest drops it) but still
+    /// carries the [Lesser] type every In-Training egg has.
+    #[test]
+    fn form_less_lesser_digi_egg_with_null_level_loads_as_level_2() {
+        let cards = CardData::load_from_str(&egg_row("EX11-005", "null", "", "\"Lesser\"")).unwrap();
+        assert_eq!(cards["EX11-005"].level, Some(2));
+    }
+
+    /// The four genuinely levelless special Digi-Eggs (BT13-007 / BT22-007 /
+    /// EX2-007 / EX6-006) are not In-Training form: they print no level
+    /// (CR 4.3 2-9-2) and must stay levelless.
+    #[test]
+    fn special_levelless_digi_egg_stays_levelless() {
+        let cards = CardData::load_from_str(&egg_row("EX2-007", "null", "\"D-Reaper\"", "\"Ability Synthesis Agent\"")).unwrap();
+        assert_eq!(cards["EX2-007"].level, None);
+        let cards = CardData::load_from_str(&egg_row("BT13-007", "null", "", "")).unwrap();
+        assert_eq!(cards["BT13-007"].level, None);
+    }
+
+    /// Whole-pool guard against the committed data: after loading, the ONLY
+    /// levelless Digi-Eggs are the four special eggs that genuinely print no
+    /// level. A new null-level hatchable egg from a future ingest is caught here
+    /// (and restored to Lv.2 by the loader) instead of silently losing its
+    /// breeding-area digivolve routes.
+    #[test]
+    fn committed_cards_json_has_only_the_four_special_levelless_digi_eggs() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/cards.json");
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            return; // data/ not shipped alongside the crate (e.g. a packaged build)
+        };
+        let cards = CardData::load_from_str(&text).unwrap();
+        let mut levelless: Vec<&str> = cards
+            .values()
+            .filter(|c| c.card_kind == CardKind::DigiEgg && c.level.is_none())
+            .map(|c| c.card_id.as_str())
+            .collect();
+        levelless.sort_unstable();
+        assert_eq!(
+            levelless,
+            vec!["BT13-007", "BT22-007", "EX2-007", "EX6-006"],
+            "only the special Digi-Eggs that print no Lv. may be levelless"
+        );
+        assert_eq!(cards["EX13-001"].level, Some(2));
+        assert_eq!(cards["EX11-005"].level, Some(2));
+    }
+
+    /// A printed level always wins over the In-Training default.
+    #[test]
+    fn explicit_digi_egg_level_is_preserved() {
+        let cards = CardData::load_from_str(&egg_row("BT1-001", "2", "\"In-Training\"", "\"Lesser\"")).unwrap();
+        assert_eq!(cards["BT1-001"].level, Some(2));
     }
 
     /// Lock in Rust's int→enum color mapping to match Python's

@@ -31415,14 +31415,12 @@
       "untested_constructs": []
     },
     "EX11-005": {
-      "admissible": false,
+      "admissible": true,
       "dsl": false,
-      "has_card_test": false,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "EX11-006": {
@@ -31863,14 +31861,12 @@
       "untested_constructs": []
     },
     "EX11-047": {
-      "admissible": false,
+      "admissible": true,
       "dsl": false,
-      "has_card_test": false,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "EX11-048": {
@@ -38453,14 +38449,12 @@
       "untested_constructs": []
     },
     "EX8-009": {
-      "admissible": false,
+      "admissible": true,
       "dsl": false,
-      "has_card_test": false,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "EX8-010": {
@@ -47110,17 +47104,17 @@
     }
   },
   "counts": {
-    "admissible": 1162,
+    "admissible": 1165,
     "diverged_no_quirk": 0,
     "failed_verdict": 17,
     "registered": 4483,
     "unregistered": 0,
     "untested_card": 7,
-    "untested_lowering": 3297
+    "untested_lowering": 3294
   },
-  "generated_at": "2026-11-15T20:00:32+00:00",
+  "generated_at": "2026-11-18T03:12:12+00:00",
   "sources": {
-    "behavioral_test_modules_sha256": "09f73571ccc84272f5d08ba4b3c263dc7360b41f3cc2af0fd39a2aa27ded235a",
+    "behavioral_test_modules_sha256": "332f063f4a0ad30c4ec18bc614f61cb121d83535d892597f075aba60f909646e",
     "card_registry_sha256": "9a604ff3e4feb20a16ff8ce38febf866191d6d2b9697162e5b7e002332799599",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
     "lowering_coverage_sha256": "eb405b403841a5aeace95b8bfb295b7cff7de1becc7a7b423ed4d103dfd60ad7",

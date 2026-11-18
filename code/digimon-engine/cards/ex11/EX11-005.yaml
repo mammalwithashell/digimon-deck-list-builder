@@ -1,0 +1,82 @@
+# EX11-005 Yaamon — Digi-Egg, Lv.2, Purple. Traits: Lesser, LIBERATOR.
+# Form: In-Training. Rarity: C.
+#
+# Printed card text (card image EX11-005.webp — prints "Lv.2" although
+# data/cards.json carries `level: null`; official Bandai DB bundle
+# data/card_bundles/EX11-005.md, authoritative):
+#
+#   Inherited Effect: [Start of Your Main Phase] This Digimon may digivolve
+#   into a [Dark Dragon] or [Evil Dragon] trait Digimon card in the trash with
+#   the digivolution cost reduced by 1. If this effect digivolved, trash 2
+#   cards in your hand.
+#   Official Q&A: "You perform the digivolution bonus draw and then trash 2
+#   cards in your hand."
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX11/Purple/EX11_005.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# OnStartMainPhase, inherited, OPT = -1 (unlimited):
+#   CanUse: card on battle area && owner's turn.
+#   CanActivate: card on battle area && the owner's trash holds a Digimon card
+#   with EqualsTraits("Dark Dragon") || EqualsTraits("Evil Dragon") that can be
+#   played onto this permanent (CanPlayCardTargetFrame).
+#   Body: DigivolveIntoHandOrTrashCard(payCost: true, reduceCost 1, isHand:
+#   false) — a declinable "may". successProcess: discard min(2, hand size) —
+#   SelectHandEffect with canNoSelect false (mandatory) — runs only when the
+#   digivolve really happened.
+#
+# The trash-2 is gated on `effect_digivolved_any_digimon` (EX13-004 idiom).
+
+card: EX11-005
+name: Yaamon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Lesser, LIBERATOR]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: start_of_your_main_phase
+    active_when: { your_turn: true }
+    summary: "[Inherited][Start of Your Main Phase] This Digimon may digivolve into a [Dark Dragon]/[Evil Dragon] trait Digimon card in the trash with the cost reduced by 1; if it did, trash 2 cards in your hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Dark Dragon
+                  - trait_has: Evil Dragon
+              - can_digivolve_onto_with_cost:
+                  target: source
+                  cost: { reduce: 1 }
+          prompt: "This Digimon may digivolve into a [Dark Dragon] or [Evil Dragon] trait Digimon card in the trash with the digivolution cost reduced by 1"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: evo
+                cost: { reduce: 1 }
+                ignore_requirements: false
+            - if:
+                condition: { effect_digivolved_any_digimon: true }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: discard_a
+                      filter: {}
+                      prompt: "Trash 2 cards in your hand (1 of 2)"
+                  - trash_from_hand_by_index: { of: you, hand_index: discard_a }
+                  - select_hand:
+                      of: you
+                      bind_as: discard_b
+                      filter: {}
+                      prompt: "Trash 2 cards in your hand (2 of 2)"
+                  - trash_from_hand_by_index: { of: you, hand_index: discard_b }
