@@ -1701,6 +1701,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.can_play_or_use_from_effect.is_none()
         && pred.affordable_with_cost.is_none()
         && pred.can_play_to_breeding_from_hand.is_none()
+        && pred.can_play_to_breeding_from_trash.is_none()
         && pred.can_move_from_breeding_by_effect.is_none()
         && pred.can_digivolve_onto_with_cost.is_none()
         && pred.this_card_can_digivolve_onto.is_none()
@@ -3511,6 +3512,30 @@ fn eval_card_fields(
         (Some(d), false) => d.digimon.colors.as_slice(),
         (None, _) => data.colors.as_slice(),
     };
+    if let Some(want) = pred.can_play_to_breeding_from_trash {
+        let can = rctx
+            .game
+            .card_source_for_handle(card)
+            .is_some_and(|source| {
+                let owner = source.owner;
+                rctx.game
+                    .players
+                    .get(owner as usize)
+                    .and_then(|player| {
+                        player
+                            .trash
+                            .iter()
+                            .position(|candidate| candidate.handle() == card)
+                    })
+                    .is_some_and(|index| {
+                        rctx.game
+                            .can_play_to_breeding_from_trash(owner, index, rctx.player)
+                    })
+            });
+        if can != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.can_play_to_breeding_from_hand {
         let can = rctx
             .game

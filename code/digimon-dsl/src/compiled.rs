@@ -463,6 +463,8 @@ pub struct CompiledPredicate {
     pub can_play_or_use_from_effect: Option<bool>,
     #[serde(default)]
     pub can_play_to_breeding_from_hand: Option<bool>,
+    #[serde(default)]
+    pub can_play_to_breeding_from_trash: Option<bool>,
     /// Subject must be an existing breeding permanent. Compare its real move
     /// eligibility, including field capacity and CannotMove, to this value.
     #[serde(default)]
@@ -2180,6 +2182,10 @@ pub enum CompiledStep {
     PlayToBreedingFromHand {
         of: CompiledPlayerRef,
         hand_index: CompiledBindingRef,
+    },
+    PlayToBreedingFromTrash {
+        of: CompiledPlayerRef,
+        trash_index: CompiledBindingRef,
     },
     PlayFromHandFree {
         of: CompiledPlayerRef,

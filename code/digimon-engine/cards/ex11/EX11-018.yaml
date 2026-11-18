@@ -1,0 +1,144 @@
+# EX11-018 Ryugumon — Digimon Lv.6, Blue, DP 12000, Cost 11.
+# Traits: Mollusk, LIBERATOR, Aquatic ((Rule) Trait: Has [Aquatic] Type — in
+# data/card_overrides.json). Form: Mega. Attribute: Data.
+# Digivolve: Blue Lv.5 / Cost 3.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX11-018.md; DCGO
+# EX11_018.cs):
+#   <Evade> <Decode (Lv.5 or lower w/[Aqua]/[Sea Animal] in any trait)>
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] By placing 1
+#     Digimon card with [Aqua] or [Sea Animal] in any of its traits from your
+#     hand as this Digimon's bottom digivolution card, 1 of your Digimon
+#     unsuspends.
+#   [All Turns] [Once Per Turn] When effects add to this Digimon's digivolution
+#     cards, return 1 of your opponent's Digimon with as many or fewer
+#     digivolution cards as this Digimon to the bottom of the deck.
+#
+# DCGO crosscheck:
+#   * Shared OP/WD/WA (hash EX11_018_OP_WD_WA, maxCount 1 -> ONE shared OPT, so
+#     a single three-timing clause with `once_per_turn`): isOptional TRUE (the
+#     outer yes/no), CanActivate = a Digimon card with an Aqua/Sea Animal trait
+#     is in hand. Body: mandatory hand pick (canNoSelect false) -> AddDigivolution
+#     CardsBottom -> mandatory pick of ANY own Digimon (IsYourDigimonCondition,
+#     canNoSelect false) with Mode.UnTap (no suspended-only filter). The
+#     "By placing" is the activation condition (CR 4.3 15-7): the clause is
+#     `optional` + `outer_prompt` (AD1-007 / BT17-070 idiom) so declining the
+#     outer prompt keeps the OPT.
+#   * "[Aqua] or [Sea Animal] in any of its traits" = DCGO HasAquaTraits =
+#     ContainsTraits("Aqua") || "Sea Animal" || "SeaAnimal" (substring), i.e.
+#     `trait_contains` (so [Aquatic] / [Aqua Beast] qualify).
+#   * All Turns (OnAddDigivolutionCards, hash EX11_018_OnAddDigivolutionCards,
+#     maxCount 1, NOT optional): fires when `permanent == this` and the adding
+#     effect has a source card (the engine's `on_add_digivolution_cards` timing
+#     is effect-driven only, normal/DNA digivolution is not "effects add"); its
+#     own OP/WD/WA placement counts. Mandatory pick of an opponent Digimon with
+#     `permanent.DigivolutionCards.Count <= this.DigivolutionCards.Count`
+#     (`materials_count_lte` + `source_material_count`, BT16-027 idiom) ->
+#     bottom of the deck.
+#   * <Decode>: the printed keyword plays a matching card from THIS Digimon's
+#     digivolution cards when it would leave the battle area other than in
+#     battle (BT22-015 non-cancelling replacement idiom). Level 5 or lower and
+#     an Aqua/Sea Animal trait.
+
+card: EX11-018
+name: Ryugumon
+kind: digimon
+level: 6
+color: [blue]
+cost: 11
+dp: 12000
+form: Mega
+attribute: Data
+traits: [Mollusk, LIBERATOR, Aquatic]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Evade
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode (Lv.5 or lower w/[Aqua]/[Sea Animal] in any trait)> play a matching digivolution card when this Digimon would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - any_of:
+                  - trait_contains: Aqua
+                  - trait_contains: Sea Animal
+                  - trait_contains: SeaAnimal
+          prompt: "Choose a Lv.5 or lower [Aqua]/[Sea Animal] digivolution card to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - kind: digimon
+            - any_of:
+                - trait_contains: Aqua
+                - trait_contains: Sea Animal
+                - trait_contains: SeaAnimal
+        n: 1
+    summary: "[On Play][When Digivolving][When Attacking][OPT] By placing 1 [Aqua]/[Sea Animal] Digimon card from hand as this Digimon's bottom digivolution card, 1 of your Digimon unsuspends"
+    process:
+      - select_hand:
+          of: you
+          bind_as: placed
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_contains: Aqua
+                  - trait_contains: Sea Animal
+                  - trait_contains: SeaAnimal
+          prompt: "Place 1 Digimon card with [Aqua] or [Sea Animal] in any of its traits from your hand as this Digimon's bottom digivolution card"
+      - place_as_bottom_source:
+          source: placed
+          target: source
+      - select_own_permanent:
+          bind_as: to_unsuspend
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon unsuspends"
+      - unsuspend: { target: to_unsuspend }
+
+  - when: on_add_digivolution_cards
+    once_per_turn: true
+    trigger_if:
+      event_host_permanent_is_source: true
+    summary: "[All Turns][OPT] When effects add to this Digimon's digivolution cards, return 1 opponent Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte:
+                  formula:
+                    source_material_count: {}
+          prompt: "Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck"
+      - return_to_deck:
+          target: bounce_target
+          position: bottom
+          include_sources: false

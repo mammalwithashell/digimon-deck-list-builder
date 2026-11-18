@@ -196,6 +196,49 @@ impl Game {
         true
     }
 
+    /// Shared eligibility for effect play from the TRASH into the breeding
+    /// area (EX10-009 Creepymon's `[When Attacking]`; DCGO
+    /// `CanPlayAsNewPermanent(card, false, activateClass, isBreedingArea: true)`
+    /// over `Root.Trash`). The actual card must still be in its physical
+    /// owner's trash, the breeding area must be empty (battle-area capacity is
+    /// irrelevant), the controller must not be barred from playing Digimon by
+    /// effects, and the trash-play lock (`CannotPlayFromTrash`, BT23-014
+    /// Gallantmon) applies to a play from the trash whatever the destination.
+    pub fn can_play_to_breeding_from_trash(
+        &self,
+        player_id: PlayerId,
+        trash_index: usize,
+        effect_controller: PlayerId,
+    ) -> bool {
+        let Some(player) = self.players.get(player_id as usize) else { return false; };
+        let Some(card) = player.trash.get(trash_index) else { return false; };
+        if player.breeding_area.is_some() || card.owner != player_id || card.is_token {
+            return false;
+        }
+        let kind = self.card_data[card.data_index].card_kind;
+        matches!(kind, CardKind::Digimon | CardKind::Dual)
+            && !self.modifiers.player_has(effect_controller, ModifierType::CannotPlayDigimonByEffect)
+            && !self.trash_play_lock_applies(effect_controller, kind)
+            && !self.card_play_is_prohibited(effect_controller, card)
+    }
+
+    /// Play/place a Digimon from the trash into the real breeding area, free.
+    /// No On Play or battle-area entry event fires from this destination
+    /// (DCGO `activateETB: false`), exactly like
+    /// [`Self::play_to_breeding_from_hand`].
+    pub fn play_to_breeding_from_trash(&mut self, player_id: PlayerId, trash_index: usize) -> bool {
+        let controller = self.effect_source_player.unwrap_or(player_id);
+        if !self.can_play_to_breeding_from_trash(player_id, trash_index, controller) {
+            return false;
+        }
+        let card = self.player_mut(player_id).trash.remove(trash_index);
+        let mut permanent = crate::permanent::Permanent::new(card, self.turn_count);
+        // §17-1-3-2-3: placed in the breeding area by an effect.
+        permanent.placed_by_effect = true;
+        self.player_mut(player_id).breeding_area = Some(permanent);
+        true
+    }
+
     /// §17-1-3-2-3 / §17-1-3-2-4: is `player`'s breeding-area permanent a
     /// rule-check trash target? A face-down top card is (§17-1-3-2-4: the
     /// breeding area is part of the field, §3-4-6); so is a top card that is

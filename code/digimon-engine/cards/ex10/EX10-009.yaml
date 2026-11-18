@@ -1,0 +1,125 @@
+# EX10-009 Creepymon — Digimon, Lv.6, Red/Purple, DP 12000, Cost 12.
+# Traits: Demon Lord, Seven Great Demon Lords, Fallen Angel ((Rule) Trait: Has
+# [Fallen Angel] Type — data/card_overrides.json type_eng). Form: Mega.
+# Attribute: Virus. Digivolve: Red Lv.5 / Cost 4, Purple Lv.5 / Cost 4.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX10-009.md; DCGO
+# EX10_009.cs):
+#   [When Digivolving] [On Deletion] Delete all of your opponent's lowest DP
+#     Digimon. If this effect didn't delete, trash their deck's top 5 cards.
+#   [When Attacking] If your opponent has 10 or more cards in their trash, you
+#     may play 1 red or purple 5000 DP or lower Digimon card from your trash to
+#     your empty breeding area without paying the cost.
+#   [End of Your Turn] This Digimon may attack.
+#
+# DCGO crosscheck:
+#   * WD / OD shared body (not optional, no per-turn cap): every opponent Digimon
+#     with the lowest DP is deleted at once (`DeletePeremanentAndProcessAccording
+#     ToResult`); if there was no such Digimon, OR the deletion did not happen
+#     (e.g. prevented), the top 5 of the opponent's deck are trashed. =>
+#     `delete_all_permanents { selector: lowest_dp }` then `if
+#     effect_deleted_any_opponent_digimon: false` -> mill 5. ("didn't delete"
+#     covers both the empty board and a fully-prevented deletion.)
+#   * [When Attacking] (isOptional TRUE: the outer yes/no): CanActivate = opp
+#     trash >= 10 AND a candidate in the trash AND the breeding area empty.
+#     Candidate = Digimon, red or purple, printed DP <= 5000, and
+#     `CanPlayAsNewPermanent(card, false, activateClass, isBreedingArea: true)`.
+#     Body: SelectCardEffect (canNoSelect TRUE: the pick is declinable too) ->
+#     PlayPermanentCards(payCost false, activateETB false, isBreedingArea true).
+#     => outer prompt + optional `select_trash` + `play_to_breeding_from_trash`
+#     (no [On Play], no battle-area slot; the card sits in the breeding area).
+#   * [End of Your Turn] (isOptional TRUE: outer yes/no): CanActivate = on the
+#     battle area, owner's turn, `CanAttack(activateClass)`; the body then runs
+#     SelectAttackEffect (any player/Digimon target). => outer prompt gated on
+#     `can_attack` (DCGO parity; a no-op activation would have no outcome) +
+#     inline `may_attack_now` (the AD1-007 / EX9-013 [End of Your Turn] shape).
+
+card: EX10-009
+name: Creepymon
+kind: digimon
+level: 6
+color: [red, purple]
+cost: 12
+dp: 12000
+form: Mega
+attribute: Virus
+traits: [Demon Lord, Seven Great Demon Lords, Fallen Angel]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+
+effects:
+  - when: [when_digivolving, on_deletion]
+    optional: false
+    summary: "[When Digivolving][On Deletion] Delete all of your opponent's lowest DP Digimon. If this effect didn't delete, trash their deck's top 5 cards"
+    process:
+      - delete_all_permanents:
+          over:
+            all_of:
+              - of: opponent
+              - kind: digimon
+          selector: lowest_dp
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - trash_from_top: { of: opponent, count: 5 }
+
+  - when: when_attacking
+    optional: true
+    outer_prompt: true
+    summary: "[When Attacking] If opp has 10+ trash cards, you may play 1 red/purple 5000 DP or lower Digimon from your trash to your empty breeding area free"
+    condition:
+      all_of:
+        - count_gte:
+            filter: { of: opponent, zone: [trash] }
+            n: 10
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              all_of:
+                - kind: digimon
+                - any_of:
+                    - color_is: red
+                    - color_is: purple
+                - dp_lte: 5000
+                - can_play_to_breeding_from_trash: true
+            n: 1
+    process:
+      - select_trash:
+          of: you
+          bind_as: breeding_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - color_is: red
+                  - color_is: purple
+              - dp_lte: 5000
+              - can_play_to_breeding_from_trash: true
+          prompt: "You may play 1 red or purple 5000 DP or lower Digimon card from your trash to your empty breeding area without paying the cost"
+      - play_to_breeding_from_trash: { of: you, trash_index: breeding_pick }
+
+  - when: end_of_your_turn
+    optional: true
+    outer_prompt: true
+    summary: "[End of Your Turn] This Digimon may attack"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        is_source: true
+        can_attack: { targets: any }
+    process:
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true
+          prompt: "This Digimon may attack"

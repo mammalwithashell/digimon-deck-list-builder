@@ -305,6 +305,9 @@ pub enum StepSpec {
     // Play / digivolve
     PlayFromHand(PlayFromHandArgs),
     PlayToBreedingFromHand(PlayToBreedingFromHandArgs),
+    /// Play the selected TRASH Digimon into its owner's empty breeding area
+    /// (no cost, no `[On Play]`; EX10-009 Creepymon's `[When Attacking]`).
+    PlayToBreedingFromTrash(PlayToBreedingFromTrashArgs),
     PlayFromHandFree(PlayFromHandFreeArgs),
     UseOptionFromHand(UseOptionFromHandArgs),
     /// Effect-driven Option USE from the controller's trash with a cost delta
@@ -725,6 +728,7 @@ impl Serialize for StepSpec {
             // Play / digivolve
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
             StepSpec::PlayToBreedingFromHand(v) => kv!(s, "play_to_breeding_from_hand", v),
+            StepSpec::PlayToBreedingFromTrash(v) => kv!(s, "play_to_breeding_from_trash", v),
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::UseOptionFromHand(v) => kv!(s, "use_option_from_hand", v),
             StepSpec::UseOptionFromTrash(v) => kv!(s, "use_option_from_trash", v),
@@ -1035,6 +1039,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Play / digivolve
             "play_from_hand" => StepSpec::PlayFromHand(map.next_value()?),
             "play_to_breeding_from_hand" => StepSpec::PlayToBreedingFromHand(map.next_value()?),
+            "play_to_breeding_from_trash" => StepSpec::PlayToBreedingFromTrash(map.next_value()?),
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "use_option_from_hand" => StepSpec::UseOptionFromHand(map.next_value()?),
             "use_option_from_trash" => StepSpec::UseOptionFromTrash(map.next_value()?),
@@ -1272,6 +1277,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "hatch",
                         "play_from_hand",
                         "play_to_breeding_from_hand",
+                        "play_to_breeding_from_trash",
                         "play_from_hand_free",
                         "use_option_from_hand",
                         "use_option_from_trash",
@@ -2753,6 +2759,16 @@ pub struct PlayFromHandArgs {
 pub struct PlayToBreedingFromHandArgs {
     pub of: PlayerRef,
     pub hand_index: BindingRef,
+}
+
+/// Play the selected physical trash Digimon into its owner's empty breeding area.
+/// Like `play_to_breeding_from_hand` this pays no memory and activates no `[On Play]`;
+/// the binding comes from `select_trash` (EX10-009 Creepymon).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayToBreedingFromTrashArgs {
+    pub of: PlayerRef,
+    pub trash_index: BindingRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
