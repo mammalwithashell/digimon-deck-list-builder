@@ -1292,6 +1292,12 @@ impl Walk for digimon_dsl::clause::Timing {
                 "ENUM_SCALAR",
                 serde_json::json!("EndOfOpponentsTurn"),
             ),
+            digimon_dsl::clause::Timing::EndOfAllTurns => c.node(
+                path,
+                "digimon_dsl::clause::Timing",
+                "ENUM_SCALAR",
+                serde_json::json!("EndOfAllTurns"),
+            ),
             digimon_dsl::clause::Timing::EndOfYourNextTurn => c.node(
                 path,
                 "digimon_dsl::clause::Timing",
@@ -4930,6 +4936,12 @@ impl Walk for digimon_dsl::compiled::CompiledTiming {
                 "digimon_dsl::compiled::CompiledTiming",
                 "ENUM_SCALAR",
                 serde_json::json!("EndOfOpponentsTurn"),
+            ),
+            digimon_dsl::compiled::CompiledTiming::EndOfAllTurns => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledTiming",
+                "ENUM_SCALAR",
+                serde_json::json!("EndOfAllTurns"),
             ),
             digimon_dsl::compiled::CompiledTiming::EndOfYourNextTurn => c.node(
                 path,

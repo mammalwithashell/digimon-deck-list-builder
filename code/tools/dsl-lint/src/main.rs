@@ -228,6 +228,7 @@ fn is_observer_timing(t: digimon_engine::dsl::clause::Timing) -> bool {
             | T::StartOfOpponentsMainPhase
             | T::EndOfYourTurn
             | T::EndOfOpponentsTurn
+            | T::EndOfAllTurns
             | T::EndOfYourNextTurn
             | T::EndOfOpponentsNextTurn
             | T::UntilNextUnsuspend

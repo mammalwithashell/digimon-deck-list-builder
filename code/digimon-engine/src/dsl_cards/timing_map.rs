@@ -111,5 +111,10 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnLinkCardTrashed => EffectTiming::OnLinkedCardTrashed,
         // Phase 2a non-targets — skip emission.
         CompiledTiming::Delayed => return None,
+        // `[End of All Turns]` has no single engine timing: a `kind: delay`
+        // trigger lowers it to `DelayTrigger::EndOfAllTurns` (`lower_delay.rs`),
+        // and a triggered clause's `when:` expands it to the two end-of-turn
+        // timings before this map is consulted (`lower_triggered.rs`).
+        CompiledTiming::EndOfAllTurns => return None,
     })
 }

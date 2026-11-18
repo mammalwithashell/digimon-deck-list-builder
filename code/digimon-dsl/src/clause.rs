@@ -302,6 +302,11 @@ pub enum Timing {
     StartOfOpponentsMainPhase,
     EndOfYourTurn,
     EndOfOpponentsTurn,
+    /// Printed "[End of All Turns]" -- the end of EITHER player's turn. As a
+    /// `kind: delay` `trigger:` it is the optional every-turn-end `<Delay>` window
+    /// after the placing turn (P-193). As a triggered clause's `when:` it expands
+    /// to `end_of_your_turn` + `end_of_opponents_turn`.
+    EndOfAllTurns,
     EndOfYourNextTurn,
     EndOfOpponentsNextTurn,
     UntilNextUnsuspend,

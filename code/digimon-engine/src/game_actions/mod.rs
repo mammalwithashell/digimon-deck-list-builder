@@ -2312,6 +2312,11 @@ impl Game {
         use crate::enums::DelayTrigger;
         match trigger {
             DelayTrigger::EndOfThisTurn => self.turn_count,
+            // `[End of All Turns]`: the next turn end of ANY player. Both
+            // the first window (the turn after the placing turn) and the
+            // window after a decline are `turn_count + 1`, because the
+            // reschedule runs at the ending turn, before the counter advances.
+            DelayTrigger::EndOfAllTurns => self.turn_count + 1,
             DelayTrigger::EndOfYourNextTurn | DelayTrigger::StartOfYourNextTurn => {
                 self.next_owner_turn_count(owner)
             }

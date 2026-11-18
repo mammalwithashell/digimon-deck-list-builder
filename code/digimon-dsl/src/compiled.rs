@@ -1648,7 +1648,10 @@ pub enum CompiledTiming {
     OnLinkCardTrashed,
     /// This physical card was trashed from the deck by an effect.
     OnDiscardDeck,
-
+    /// `[End of All Turns]` (see `Timing::EndOfAllTurns`). Appended LAST so the
+    /// bincode discriminants of every earlier variant (and so the compiled pack
+    /// layout, `PACK_FORMAT_VERSION`) are unchanged.
+    EndOfAllTurns,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
