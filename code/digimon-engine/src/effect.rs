@@ -801,9 +801,11 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnBlock)
     }
 
-    /// Fires when an allied Digimon (same controller, excluding the attacker
-    /// itself) attacks. Observer timing — scans the attacker-controller's
-    /// battle area. Spec §7 / Phase 9 Task 8.
+    /// Fires when a Digimon of the observer's controller attacks -- the
+    /// attacker ITSELF included (DCGO's `OnAllyAttack` batch has no self
+    /// exclusion; "another Digimon" is `trigger_if: { event_target_is_source:
+    /// false }`). Observer timing — scans the attacker-controller's battle
+    /// area. Spec §7 / Phase 9 Task 8.
     pub fn on_ally_attack(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnAllyAttack)
     }

@@ -646,3 +646,58 @@ fn bt18_042_source_cost_payability_checks_controller_when_host_card_has_foreign_
         }
     }
 }
+
+/// Regression (DCGO PvP replay, `ally-attack-self-semantics`): the printed
+/// "[All Turns] When Digimon attack" is not "when ANOTHER Digimon attacks".
+/// DCGO stacks every `[All Turns]` observer in the attack's single
+/// `EffectTiming.OnAllyAttack` batch (`AttackProcess.cs`) with no
+/// attacker-self exclusion, and BT18_042.cs gates only on "the attacker is a
+/// Digimon on the battle area" (`CanTriggerOnPermanentAttack`). So when
+/// MagnaGarurumon (BT18-042) ITSELF attacks, its own unsuspend effect is
+/// offered. (CR 4.3 15-4-3-2: effects triggered by the same event pend
+/// together; the attack declaration triggers this effect for any attacker.)
+#[test]
+fn bt18_042_own_attack_offers_the_unsuspend_effect() {
+    for target_is_player in [true, false] {
+        let mut r = runner();
+        let host = r.place_stack(0, &["BT18-042"]);
+        let top = r.game.players[0].security.last().unwrap().handle();
+        if target_is_player {
+            r.attack_player(host, 1, false);
+        } else {
+            let def = r.place_stack(1, &["M-L3"]);
+            r.attack_digimon(host, def, false);
+        }
+        assert!(
+            r.pending_selection().is_some(),
+            "the attacker's own [All Turns] observer must be offered (target_is_player={target_is_player})"
+        );
+        accept(&mut r);
+        assert!(
+            r.game.players[0].hand.iter().any(|c| c.handle() == top),
+            "the top security card is added to the hand"
+        );
+        assert!(
+            !r.game.players[0].battle_area[host.index as usize].is_suspended,
+            "the declaration suspension is undone by the effect"
+        );
+    }
+}
+
+/// The attacker's own observer shares the trigger bundle with the other
+/// Digimon's `[All Turns]` observers: a second MagnaGarurumon (BT18-042) on
+/// the same side is offered too, so the player orders two entries rather than
+/// finding one missing (the replay's "chose BT18-042 names no entry").
+#[test]
+fn bt18_042_attacker_and_ally_copy_both_enter_the_trigger_bundle() {
+    let mut r = runner();
+    let host = r.place_stack(0, &["BT18-042"]);
+    let _ally = r.place_stack(0, &["BT18-042"]);
+    r.attack_player(host, 1, false);
+    let view = r.pending_selection().expect("trigger order prompt");
+    let entries = view
+        .effect_choices
+        .as_ref()
+        .map_or(0, |choices| choices.len());
+    assert_eq!(entries, 2, "both copies' unsuspend effects are pending");
+}

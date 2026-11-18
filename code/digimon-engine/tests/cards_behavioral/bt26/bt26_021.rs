@@ -140,6 +140,44 @@ fn bt26_021_main_needs_ts_tamer_in_trash() {
     assert!(field_ids(&r, 0).len() == 1);
 }
 
+/// The carrier's OWN attack as the attack declaration dispatches it: the
+/// printed "When a Digimon attacks" has no "another", so the carrier itself
+/// is an observer of the `OnAllyAttack` batch (DCGO `AttackProcess.cs` stacks
+/// one `EffectTiming.OnAllyAttack` batch with no attacker exclusion).
+fn carrier_attacks(r: &mut DebugRunner, carrier: digimon_engine::permanent::PermanentHandle) {
+    let card = r.game.players[0].battle_area[carrier.index as usize]
+        .top_card()
+        .handle();
+    r.game.enqueue_triggered(
+        EffectTiming::OnAllyAttack,
+        digimon_engine::selection::TriggerSource::PlayerBattleAreaAttack {
+            player: 0,
+            attacker: carrier,
+            card,
+        },
+    );
+    r.game.drain_effect_queue();
+}
+
+/// Through the REAL attack declaration the carrier's own attack offers the
+/// inherited effect exactly ONCE (the clause is not also enqueued through a
+/// carrier-scoped `OnAttack` entry, which would double the prompt).
+#[test]
+fn bt26_021_real_own_attack_offers_the_inherited_effect_once() {
+    let mut r = setup();
+    let carrier = r.place_stack(0, &[CARD_ID, "CARRIER"]);
+    let opp = opp_with_sources(&mut r);
+    push_hand(&mut r, 0, "FILLER");
+    push_hand(&mut r, 0, "FILLER");
+    r.attack_digimon(carrier, opp, false);
+    assert!(r.pending_is_optional(), "inherited trigger offered on own attack");
+    r.decline_optional_trigger().unwrap();
+    assert!(
+        r.pending_selection_view().is_none(),
+        "one entry only: declining leaves no second offer"
+    );
+}
+
 fn opp_with_sources(r: &mut DebugRunner) -> digimon_engine::permanent::PermanentHandle {
     r.place_stack(1, &["FILLER", "FILLER", "FILLER", "OPP"])
 }
@@ -178,12 +216,12 @@ fn bt26_021_inherited_once_per_turn_shared_across_attackers() {
     push_hand(&mut r, 0, "FILLER");
     push_hand(&mut r, 0, "FILLER");
     // The carrier itself attacks.
-    fire(&mut r, EffectTiming::OnAttack, carrier);
+    carrier_attacks(&mut r, carrier);
     r.accept_optional_trigger().unwrap();
     drain_first(&mut r);
     assert_eq!(sources(&r, opp), 1);
     // A second attack (by anything) the same turn: no trigger.
-    fire(&mut r, EffectTiming::OnAttack, carrier);
+    carrier_attacks(&mut r, carrier);
     assert!(r.pending_selection_view().is_none(), "once per turn");
     assert_eq!(r.hand_size(0), 1);
 }
@@ -194,11 +232,11 @@ fn bt26_021_inherited_decline_keeps_hand_and_use() {
     let carrier = r.place_stack(0, &[CARD_ID, "CARRIER"]);
     let opp = opp_with_sources(&mut r);
     push_hand(&mut r, 0, "FILLER");
-    fire(&mut r, EffectTiming::OnAttack, carrier);
+    carrier_attacks(&mut r, carrier);
     r.decline_optional_trigger().unwrap();
     assert_eq!(r.hand_size(0), 1);
     assert_eq!(sources(&r, opp), 3);
-    fire(&mut r, EffectTiming::OnAttack, carrier);
+    carrier_attacks(&mut r, carrier);
     assert!(
         r.pending_selection_view().is_some(),
         "not consumed by a decline"
@@ -210,7 +248,7 @@ fn bt26_021_inherited_needs_a_hand_card() {
     let mut r = setup();
     let carrier = r.place_stack(0, &[CARD_ID, "CARRIER"]);
     let _opp = opp_with_sources(&mut r);
-    fire(&mut r, EffectTiming::OnAttack, carrier);
+    carrier_attacks(&mut r, carrier);
     assert!(r.pending_selection_view().is_none());
 }
 

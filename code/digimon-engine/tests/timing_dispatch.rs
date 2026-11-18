@@ -2372,7 +2372,7 @@ fn on_ally_attack_observers_still_fire_after_attacker_left_during_on_attack() {
 }
 
 #[test]
-fn on_ally_attack_does_not_fire_on_the_attacker_itself() {
+fn on_ally_attack_fires_on_the_attacker_itself() {
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("ATTACKER-OBS", "Attacker Observer", 3))
         .memory(5)
@@ -2392,14 +2392,19 @@ fn on_ally_attack_does_not_fire_on_the_attacker_itself() {
     r.auto_resolve()
         .expect("attack prompts should auto-resolve");
 
+    // DCGO `AttackProcess.cs` stacks every observer in one
+    // `EffectTiming.OnAllyAttack` batch with no attacker exclusion, and
+    // "When a Digimon attacks" (BT18-042, BT25-016, BT26-021) includes the
+    // carrier itself. "Another Digimon" is a per-card predicate.
     assert_eq!(
         r.memory(),
-        before,
-        "OnAllyAttack observers exclude the attacking permanent itself; use OnAttack for self"
+        before + 1,
+        "the attacking permanent observes its own OnAllyAttack batch"
     );
-    assert!(
-        ally_seen.lock().unwrap().is_empty(),
-        "attacking permanent must not receive an OnAllyAttack payload"
+    assert_eq!(
+        ally_seen.lock().unwrap().len(),
+        1,
+        "the attacker receives exactly one OnAllyAttack payload"
     );
 }
 

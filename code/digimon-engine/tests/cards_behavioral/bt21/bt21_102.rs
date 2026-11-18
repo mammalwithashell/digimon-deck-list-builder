@@ -26,7 +26,7 @@
 //! | Clause | Gap | Status |
 //! |--------|-----|--------|
 //! | (a) [Start of Your Turn] memory floor 3 if memory <= 2 | none | PASS |
-//! | (b) [Your Turn] when ally Digimon attacks: suspend self -> draw 1 | DSL workaround: G-DSL-ON-ALLY-ATTACK-TIMING — `Timing` enum has no `when_attacking` variant; uses `when_attacking` instead, faithful for Tamer source (Tamer can never be the attacker). | PASS (with workaround) |
+//! | (b) [Your Turn] when ally Digimon attacks: suspend self -> draw 1 | none (`on_ally_attack`; driven by REAL attack declarations, not hand-enqueued triggers) | PASS |
 //! | (c) [Main][OPT] play 1 ADVENTURE/Hero, cap = 2 + distinct Tamer colors; return self to deck bottom | DSL-GAP: G-DSL-DISTINCT-TAMER-COLORS-FORMULA + G-PLAY-COST-LTE-FORMULA — `play_cost_lte` is `Option<i32>` literal only and there is no formula primitive that counts distinct colors of own Tamers. Implementing with a fixed `play_cost_lte: 2` would silently approximate (lose +1/color), violating no-approximations. Clause OMITTED. | BLOCKED – #[ignore] |
 //! | (d) [Security] play self free | none | PASS |
 
@@ -129,7 +129,7 @@ fn bt21_102_has_three_implementable_triggered_clauses() {
         .count();
     assert_eq!(
         triggered_count, 4,
-        "BT21-102 must have start_of_your_turn, when_attacking, main_on_field, and on_security clauses"
+        "BT21-102 must have start_of_your_turn, on_ally_attack, main_on_field, and on_security clauses"
     );
 }
 
@@ -163,10 +163,11 @@ fn bt21_102_clause_start_of_turn_is_mandatory_face_up() {
     );
 }
 
-/// Clause (b): when_attacking, FaceUp scope, optional (cost = "by suspending
-/// this Tamer"). Active only on your turn.
+/// Clause (b): on_ally_attack (NOT carrier-scoped `when_attacking`: Tai is a
+/// Tamer and never the attacker), FaceUp scope, optional (cost = "by
+/// suspending this Tamer"). Active only on your turn.
 #[test]
-fn bt21_102_clause_when_attacking_is_optional_with_suspend_cost() {
+fn bt21_102_clause_on_ally_attack_is_optional_with_suspend_cost() {
     let runner = tai_runner();
     let compiled = runner
         .compiled_card("BT21-102")
@@ -179,17 +180,21 @@ fn bt21_102_clause_when_attacking_is_optional_with_suspend_cost() {
             CompiledClause::Triggered(t) => Some(t),
             _ => None,
         })
-        .find(|t| t.when.contains(&CompiledTiming::WhenAttacking))
-        .expect("when_attacking clause must exist");
+        .find(|t| t.when.contains(&CompiledTiming::OnAllyAttack))
+        .expect("on_ally_attack clause must exist");
 
+    assert!(
+        !clause.when.contains(&CompiledTiming::WhenAttacking),
+        "[When Attacking] is carrier-scoped and can never fire for a Tamer"
+    );
     assert_eq!(
         clause.scope,
         CompiledScope::FaceUp,
-        "when_attacking must be FaceUp scope"
+        "on_ally_attack must be FaceUp scope"
     );
     assert!(
         clause.optional,
-        "when_attacking is optional ('by suspending this Tamer' is the cost)"
+        "on_ally_attack is optional (the suspension is the cost)"
     );
 }
 
@@ -265,173 +270,140 @@ fn bt21_102_start_of_turn_clause_uses_memory_lte_gate_and_set_memory_3() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 3 — Clause (b): [Your Turn] when_attacking: suspend self → draw 1
+// Section 3 — Clause (b): [Your Turn] when one of your Digimon attacks:
+//             suspend self -> draw 1
 // ═══════════════════════════════════════════════════════════════════════════════
+//
+// These drive REAL attack declarations (`attack_digimon`), so they exercise the
+// engine's actual trigger dispatch. (The earlier tests enqueued the timing by
+// hand against a clause authored as carrier-scoped `when_attacking`, which a
+// Tamer observer can never receive in a real game — the DCGO PvP replay caught
+// it: Tai (BT21-102) was never offered.)
 
-/// POSITIVE: When an ally Digimon attacks on Tai's controller's turn, the
-/// when_attacking clause is enqueued for Tai (the observer). Tai is not the
-/// attacker, so the engine does NOT filter Tai out of the OnAllyAttack fan-out
-/// (combat.rs line 2222-2231 only drops the attacker itself).
-///
-/// We assert the structural shape: clause fires on `EffectTiming::WhenAttacking`
-/// when the source_permanent is the Tamer.
-#[test]
-fn bt21_102_when_attacking_clause_fires_for_tamer_observer() {
-    let mut runner = tai_with_attacker_and_target();
-
-    // Find Tai's permanent handle.
-    let tai_perm = {
-        let player = &runner.game.players[0];
-        let mut handle = None;
-        for (i, p) in player.battle_area.iter().enumerate() {
-            if p.top_card().card_id(&runner.game.card_data) == "BT21-102" {
-                handle = Some(digimon_engine::permanent::PermanentHandle {
-                    player: 0,
-                    index: i as u8,
-                });
-                break;
-            }
-        }
-        handle.expect("Tai must be on field")
-    };
-
-    // Manually enqueue OnAllyAttack with Tai as the observer source. This
-    // mirrors what combat.rs does after a Digimon attacks (minus the
-    // attacker-self filter, which only drops the attacker, not other observers).
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(tai_perm),
-    );
-    runner.game.drain_effect_queue();
-
-    // The clause is optional ("by suspending this Tamer"), so the engine should
-    // park on a PASS-or-activate decision. The exact selection shape depends on
-    // the optional-clause runtime; we assert that a pending interaction exists
-    // (the player must be offered the choice to activate or decline).
-    //
-    // If the lowering for optional triggered clauses installs a yes/no prompt,
-    // pending_selection() will be Some. If the lowering enqueues the body
-    // directly with optional resolution at the first selection step, the suspend
-    // step itself (no selection) plus draw will execute. We accept either: the
-    // critical assertion is that the clause is dispatched without panicking.
-    //
-    // Stronger behavioral assertions live in the targeted tests below that
-    // exercise the activate path explicitly.
-    let _ = runner.pending_selection();
-}
-
-/// POSITIVE (behavioral): When the player ACTIVATES the when_attacking effect,
-/// Tai becomes suspended (cost) and the player draws 1 card from the deck.
-///
-/// We drive this via `auto_resolve()` which picks the first legal action at
-/// every prompt — including activating the optional clause when it's offered.
-#[test]
-fn bt21_102_when_attacking_activate_suspends_tai_and_draws_one() {
-    let mut runner = tai_with_attacker_and_target();
-
-    // Snapshot pre-state.
-    let tai_perm = {
-        let player = &runner.game.players[0];
-        let mut handle = None;
-        for (i, p) in player.battle_area.iter().enumerate() {
-            if p.top_card().card_id(&runner.game.card_data) == "BT21-102" {
-                handle = Some(digimon_engine::permanent::PermanentHandle {
-                    player: 0,
-                    index: i as u8,
-                });
-                break;
-            }
-        }
-        handle.expect("Tai must be on field")
-    };
-    let hand_before = runner.game.players[0].hand.len();
-    let deck_before = runner.game.players[0].deck.len();
-    assert!(
-        !runner.game.players[0].battle_area[tai_perm.index as usize].is_suspended,
-        "Tai must start unsuspended"
-    );
-
-    // Fire the OnAllyAttack observer for Tai.
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(tai_perm),
-    );
-    runner.game.drain_effect_queue();
-
-    // Auto-resolve any prompt — first legal action activates the optional clause.
-    let _ = runner.auto_resolve();
-
-    // After activation: Tai suspended, hand +1, deck -1.
-    let suspended_after = runner.game.players[0].battle_area[tai_perm.index as usize].is_suspended;
-    let hand_after = runner.game.players[0].hand.len();
-    let deck_after = runner.game.players[0].deck.len();
-
-    // We accept either of two faithful outcomes:
-    //   (i) the player activated → suspended + drew 1, OR
-    //   (ii) the player declined → no state change.
-    // The activate path is the one we want to prove executes correctly when chosen.
-    if suspended_after {
-        assert_eq!(
-            hand_after,
-            hand_before + 1,
-            "On activate: hand must grow by 1 (Draw 1)"
-        );
-        assert_eq!(
-            deck_after,
-            deck_before - 1,
-            "On activate: deck must shrink by 1 (Draw 1)"
-        );
-    } else {
-        // Decline path — confirm no draw and no suspend (clean PASS).
-        assert_eq!(hand_after, hand_before, "On decline: hand unchanged");
-        assert_eq!(deck_after, deck_before, "On decline: deck unchanged");
-    }
-}
-
-/// NEGATIVE: When Tai is already suspended, the when_attacking clause cannot
-/// pay its cost. The optional activation must NOT install a draw / re-suspend.
-///
-/// This guards against a bug where the suspend step would no-op on an
-/// already-suspended permanent yet the draw step would still run.
-#[test]
-fn bt21_102_when_attacking_no_draw_when_tai_already_suspended() {
-    let mut runner = tai_with_attacker_and_target();
-
-    let tai_perm = digimon_engine::permanent::PermanentHandle {
+fn tai_handle(runner: &DebugRunner) -> digimon_engine::permanent::PermanentHandle {
+    let idx = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "BT21-102")
+        .expect("Tai must be on field");
+    digimon_engine::permanent::PermanentHandle {
         player: 0,
-        index: 0,
-    };
-    // Pre-suspend Tai by direct mutation.
-    runner.game.players[0].battle_area[tai_perm.index as usize].is_suspended = true;
+        index: idx as u8,
+    }
+}
 
+fn atk_handle(runner: &DebugRunner) -> digimon_engine::permanent::PermanentHandle {
+    let idx = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "TEST-ATK")
+        .expect("attacker must be on field");
+    digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: idx as u8,
+    }
+}
+
+fn opp_handle() -> digimon_engine::permanent::PermanentHandle {
+    digimon_engine::permanent::PermanentHandle {
+        player: 1,
+        index: 0,
+    }
+}
+
+/// POSITIVE: when one of Tai's controller's Digimon attacks, Tai is offered
+/// the optional effect; accepting suspends Tai (cost) and draws exactly 1.
+#[test]
+fn bt21_102_real_attack_offers_tai_and_accept_suspends_and_draws() {
+    let mut runner = tai_with_attacker_and_target();
+    let tai = tai_handle(&runner);
+    let atk = atk_handle(&runner);
     let hand_before = runner.game.players[0].hand.len();
     let deck_before = runner.game.players[0].deck.len();
+    assert!(!runner.game.players[0].battle_area[tai.index as usize].is_suspended);
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(tai_perm),
-    );
-    runner.game.drain_effect_queue();
-    let _ = runner.auto_resolve();
-
-    // Hand and deck must be unchanged — Tai cannot pay the suspend cost, so
-    // even if the clause is offered, it cannot draw.
-    let hand_after = runner.game.players[0].hand.len();
-    let deck_after = runner.game.players[0].deck.len();
-
-    // Faithful outcome: no draw can happen. Accept hand/deck unchanged OR
-    // explicit decline path; what we forbid is hand+1 / deck-1 (= a draw fired
-    // without paying the cost).
+    runner.attack_digimon(atk, opp_handle(), false);
     assert!(
-        hand_after <= hand_before + 1 && deck_after >= deck_before - 1,
-        "Cost-failure must not produce more than 0 draws"
+        runner.pending_selection().is_some(),
+        "an ally Digimon's attack must offer Tai's optional draw"
     );
-    if hand_after == hand_before + 1 {
-        // If the lowering allowed a draw, Tai must have ended up suspended (paid
-        // the cost). Since Tai was already suspended, this is the failure mode
-        // we're guarding against.
-        panic!("Tai drew a card without paying the suspend cost (Tai was already suspended)");
+    runner.accept_optional_trigger().expect("accept Tai's effect");
+    runner.auto_resolve().expect("resolve the rest of the attack");
+
+    assert!(
+        runner.game.players[0].battle_area[tai.index as usize].is_suspended,
+        "the cost: Tai is suspended"
+    );
+    assert_eq!(runner.game.players[0].hand.len(), hand_before + 1);
+    assert_eq!(runner.game.players[0].deck.len(), deck_before - 1);
+}
+
+/// Declining is clean: no suspension, no draw.
+#[test]
+fn bt21_102_real_attack_decline_changes_nothing() {
+    let mut runner = tai_with_attacker_and_target();
+    let tai = tai_handle(&runner);
+    let atk = atk_handle(&runner);
+    let hand_before = runner.game.players[0].hand.len();
+
+    runner.attack_digimon(atk, opp_handle(), false);
+    assert!(runner.pending_selection().is_some());
+    runner.decline_optional_trigger().expect("decline");
+    runner.auto_resolve().expect("resolve the rest of the attack");
+
+    assert!(!runner.game.players[0].battle_area[tai.index as usize].is_suspended);
+    assert_eq!(runner.game.players[0].hand.len(), hand_before);
+}
+
+/// NEGATIVE: an already-suspended Tai cannot pay "by suspending this Tamer",
+/// so the effect is not offered at all (DCGO `CanActivateSuspendCostEffect`).
+#[test]
+fn bt21_102_real_attack_does_not_offer_when_tai_already_suspended() {
+    let mut runner = tai_with_attacker_and_target();
+    let tai = tai_handle(&runner);
+    let atk = atk_handle(&runner);
+    runner.game.players[0].battle_area[tai.index as usize].is_suspended = true;
+    let hand_before = runner.game.players[0].hand.len();
+
+    runner.attack_digimon(atk, opp_handle(), false);
+    assert!(
+        runner.pending_selection().is_none(),
+        "a suspended Tai must not be offered the effect"
+    );
+    assert_eq!(runner.game.players[0].hand.len(), hand_before);
+}
+
+/// Two Tais: both observe the same attack. The turn player orders the two
+/// entries (CR 4.3 15-4-3-5-1) and each Tai's optional effect is then
+/// accepted independently: two suspensions, two draws, and no third offer.
+#[test]
+fn bt21_102_two_tais_are_both_offered_for_one_attack() {
+    use digimon_engine::selection::SelectionKind;
+    let mut runner = tai_with_attacker_and_target();
+    runner.place_on_field(0, "BT21-102", None);
+    let atk = atk_handle(&runner);
+    let hand_before = runner.game.players[0].hand.len();
+
+    runner.attack_digimon(atk, opp_handle(), false);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::TriggerOrder),
+        "two same-controller observers pend together: the turn player orders them"
+    );
+    let mut prompts = 0;
+    while runner.pending_selection().is_some() {
+        prompts += 1;
+        assert!(prompts <= 6, "the two Tais must not be offered more than once each");
+        runner.accept_optional_trigger().expect("take the first legal action");
     }
+    assert_eq!(runner.game.players[0].hand.len(), hand_before + 2);
+    let suspended = runner.game.players[0]
+        .battle_area
+        .iter()
+        .filter(|p| p.top_card().card_id(&runner.game.card_data) == "BT21-102")
+        .filter(|p| p.is_suspended)
+        .count();
+    assert_eq!(suspended, 2, "each Tai paid its own suspension cost");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

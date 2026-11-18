@@ -7676,32 +7676,30 @@
       "predicates": [
         "all_of",
         "any_of",
-        "any_permanent",
         "can_play_from_effect_without_cost",
-        "card_number_is",
-        "is_unsuspended",
         "kind",
         "memory_lte",
         "owner",
         "play_cost_lte",
+        "source_is_unsuspended",
         "trait_has",
         "your_turn",
         "zone"
       ],
       "timings": [
         "main_on_field",
+        "on_ally_attack",
         "on_security",
-        "start_of_your_turn",
-        "when_attacking"
+        "start_of_your_turn"
       ],
       "verbs": [
+        "activation_cost",
         "draw",
         "play_from_hand_free",
         "play_from_security",
         "return_to_deck",
         "select_hand",
-        "set_memory",
-        "suspend"
+        "set_memory"
       ]
     },
     "BT22-002": {
@@ -11044,6 +11042,7 @@
       ],
       "timings": [
         "on_ally_attack",
+        "on_opponent_attack",
         "on_play",
         "when_digivolving"
       ],
@@ -13745,7 +13744,6 @@
       "timings": [
         "main_on_field",
         "on_ally_attack",
-        "on_attack",
         "on_opponent_attack",
         "on_play",
         "when_digivolving"
@@ -32324,7 +32322,6 @@
       "BT21-091",
       "BT21-092",
       "BT21-097",
-      "BT21-102",
       "BT22-009",
       "BT22-013",
       "BT22-019",
@@ -33237,7 +33234,6 @@
       "BT21-013",
       "BT21-081",
       "BT21-097",
-      "BT21-102",
       "BT22-089",
       "BT22-094",
       "BT22-099",
@@ -35747,7 +35743,6 @@
       "BT20-014",
       "BT20-091",
       "BT21-081",
-      "BT21-102",
       "BT23-058",
       "BT24-030",
       "BT24-102",
@@ -39737,6 +39732,7 @@
       "BT20-083",
       "BT21-084",
       "BT21-101",
+      "BT21-102",
       "BT22-019",
       "BT22-022",
       "BT23-072",
@@ -41914,6 +41910,7 @@
       "BT18-042",
       "BT18-092",
       "BT20-087",
+      "BT21-102",
       "BT22-085",
       "BT25-016",
       "BT26-021",
@@ -42046,8 +42043,7 @@
       "P-241"
     ],
     "on_attack": [
-      "BT25-065",
-      "BT26-021"
+      "BT25-065"
     ],
     "on_attack_target_change": [
       "BT21-025",
@@ -42361,6 +42357,7 @@
       "BT20-053",
       "BT21-060",
       "BT25-006",
+      "BT25-016",
       "BT25-039",
       "BT25-055",
       "BT26-021",
@@ -43554,7 +43551,6 @@
       "BT21-067",
       "BT21-074",
       "BT21-101",
-      "BT21-102",
       "BT22-013",
       "BT22-015",
       "BT22-025",
@@ -44318,6 +44314,7 @@
       "BT20-087",
       "BT21-084",
       "BT21-093",
+      "BT21-102",
       "BT22-088",
       "BT23-072",
       "BT23-079",
@@ -50082,7 +50079,6 @@
       "BT21-081",
       "BT21-083",
       "BT21-086",
-      "BT21-102",
       "BT23-039",
       "BT23-047",
       "BT23-058",

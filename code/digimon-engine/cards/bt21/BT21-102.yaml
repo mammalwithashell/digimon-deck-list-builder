@@ -26,47 +26,26 @@ traits: [ADVENTURE, Hero]
 #
 # ─── Clause (b): [Your Turn] when one of your Digimon attacks ────────────────
 #
-# "by suspending this Tamer" is the activation cost → optional: true.
-# active_when: { your_turn: true } scopes [Your Turn].
+# "by suspending this Tamer" is the activation cost -> optional: true with a
+# payability gate (`source_is_unsuspended`) and `activation_cost: {
+# suspend_self: true }` (BT18-092 / BT6-089 idiom; DCGO
+# `CanActivateSuspendCostEffect`). active_when: { your_turn: true } scopes
+# [Your Turn].
 #
-# G-DSL-ON-ALLY-ATTACK-TIMING [new — dsl]
-#   The DSL `Timing` enum (digimon-dsl/src/clause.rs lines 81-125) does NOT
-#   expose `on_ally_attack` (or `on_opponent_attack`). The engine has both
-#   `EffectTiming::OnAllyAttack` and a working dispatch in combat.rs §Phase 9
-#   Task 8, but lower_triggered.rs line 180's `OnAllyAttack` arm is unreachable
-#   from DSL because no `CompiledTiming::OnAllyAttack` exists.
-#
-#   Workaround used here: `when: when_attacking`. Both `when_attacking` and
-#   `on_ally_attack` are dispatched via `TriggerSource::PlayerBattleArea(attacker_player)`
-#   in combat.rs. The only behavioral difference is that OnAllyAttack also
-#   filters out the attacker itself, while WhenAttacking keeps it. Because Tai
-#   is a Tamer (Tamers never declare attacks), the source_permanent firing
-#   THIS clause can never coincide with the attacker — so the WhenAttacking
-#   path is faithful to "When one of your Digimon attacks" for a Tamer source.
-#
-#   When G-DSL-ON-ALLY-ATTACK-TIMING closes (add `OnAllyAttack` to
-#   `digimon_dsl::clause::Timing` and `compiled::CompiledTiming`, plus the
-#   timing_map.rs entry), swap `when: when_attacking` to `when: on_ally_attack`
-#   for clarity — but the runtime behavior is identical for this card.
-#
-# DCGO observer firing on EffectTiming.OnAllyAttack:
-#   CanUseCondition:
-#     - IsExistOnBattleArea(card)         → on_field gate
-#     - IsOwnerTurn(card)                 → active_when your_turn: true
-#     - CanActivateSuspendCostEffect(card) → Tai must be unsuspended (cost)
-#     - CanTriggerOnPermanentAttack(... PermanentCondition) where
-#       PermanentCondition = IsPermanentExistsOnOwnerBattleAreaDigimon(perm, card)
-#       → the attacker must be one of Tai's controller's permanents AND a Digimon.
-#
-# Note: combat.rs lines 2213-2231 dispatch OnAllyAttack across the
-# attacker-controller's PlayerBattleArea and explicitly drop only the
-# attacker's own slot from the queue. Tai (a separate permanent on the same
-# player's battle area) IS included as an observer — exactly the wiring we
-# want for "your Digimon attacks".
-#
-# Cost-failure semantics: if Tai is already suspended (`is_unsuspended: false`),
-# the `is_unsuspended: true` condition gate blocks activation entirely. This
-# matches DCGO's CanActivateSuspendCostEffect check.
+# Timing is `on_ally_attack`: Tai OBSERVES an attack by another permanent of
+# his controller (DCGO BT21_102.cs registers on `EffectTiming.OnAllyAttack`;
+# CanUseCondition = IsExistOnBattleArea(card) && IsOwnerTurn(card) &&
+# CanActivateSuspendCostEffect(card) && CanTriggerOnPermanentAttack(hashtable,
+# IsPermanentExistsOnOwnerBattleAreaDigimon)). `when_attacking` is NOT usable
+# here: it is carrier-scoped ("when THIS Digimon attacks" -- the engine
+# enqueues it only on the attacker's own stack), so on a Tamer it can never
+# fire. An earlier revision of this card used `when_attacking` on the claim
+# that the DSL had no `on_ally_attack`; it has (BT18-092, BT6-089, ...), and
+# the old unit test enqueued the timing by hand so it never exercised real
+# dispatch -- the DCGO PvP replay caught the Tamer never being offered.
+# The "of the same controller / is a Digimon" half of DCGO's attacker check
+# is implicit: `OnAllyAttack` fans out over the attacker's controller's
+# battle area, and only Digimon declare attacks.
 #
 # ─── Clause (c): [Main][OPT] play ADVENTURE/Hero ─────────────────────────────
 #
@@ -99,37 +78,16 @@ effects:
   # ─── Clause (b): [Your Turn] on_ally_attack — suspend self, draw 1 ───────────
   # optional: true — "by suspending this Tamer" is the activation cost.
   # active_when: { your_turn: true } — [Your Turn] scope.
-  # Condition: Tai must be on field AND unsuspended (so the suspend cost can
-  # be paid). DCGO additionally checks the attacker is a Digimon belonging to
-  # Tai's controller, but the engine's OnAllyAttack fan-out already restricts
-  # firing to the attacker-controller's PlayerBattleArea (combat.rs §Phase 9
-  # Task 8), so the controller half is implicit. The attacker-is-Digimon half
-  # is implicit in normal play — only Digimons declare attacks in this engine.
-  # Timing: we use `when_attacking` (not `on_ally_attack`) because the DSL
-  # `Timing` enum does NOT expose `OnAllyAttack` — see DSL gap notes below.
-  # `WhenAttacking` is dispatched via TriggerSource::PlayerBattleArea on the
-  # attacker's controller (combat.rs lines 2204-2207), so it ALSO fires for
-  # this Tamer as an observer when one of the controller's Digimons attacks.
-  # For a Tamer source this is a faithful equivalent of OnAllyAttack: a Tamer
-  # is never the attacker, so the "ally" semantic ("when one of YOUR DIGIMON
-  # attacks") is preserved — the source firing this clause is always Tai, and
-  # the attacker is always a separate Digimon on the same battle area.
-  #
-  # If we ever want to gate on "the attacker is a Digimon", note that only
-  # Digimons declare attacks in the action mask, so the gate is implicit.
-  - when: when_attacking
+  # `source_is_unsuspended` gates the OFFER on the cost being payable (DCGO
+  # `CanActivateSuspendCostEffect`); `activation_cost: { suspend_self: true }`
+  # pays it as the leading body step.
+  - when: on_ally_attack
     optional: true
     active_when: { your_turn: true }
-    summary: "[Your Turn] When ally Digimon attacks, suspend self -> draw 1"
-    condition:
-      any_permanent:
-        of: you
-        card_number_is: "BT21-102"
-        is_unsuspended: true
+    summary: "[Your Turn] When one of your Digimon attacks, by suspending this Tamer, draw 1"
+    condition: { source_is_unsuspended: true }
     process:
-      # Cost: suspend this tamer. `source` = ctx.source_permanent (the Tamer).
-      - suspend: { target: source }
-      # Effect: draw 1 card.
+      - activation_cost: { suspend_self: true }
       - draw: { of: you, count: 1 }
 
   # ─── Clause (c): [Main][OPT] play ADVENTURE/Hero free, dynamic cap ─────────

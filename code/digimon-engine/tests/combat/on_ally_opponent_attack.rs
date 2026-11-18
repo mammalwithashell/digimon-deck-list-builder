@@ -1,7 +1,10 @@
 //! Phase 9 Task 8 — OnAllyAttack + OnOpponentAttack dispatch.
 //!
 //! `OnAllyAttack` fires on every permanent in the attacker-controller's
-//! battle area EXCEPT the attacker itself; `OnOpponentAttack` fires on
+//! battle area INCLUDING the attacker itself (DCGO `AttackProcess.cs`
+//! stacks one `EffectTiming.OnAllyAttack` batch with no self exclusion;
+//! "another Digimon" is a per-card predicate, `event_target_is_source:
+//! false`); `OnOpponentAttack` fires on
 //! every permanent in the opposing controller's battle area. Both fan
 //! out after `OnAttack` + `WhenAttacking`. Spec §7.
 
@@ -64,9 +67,9 @@ impl CardEffect for RecordAllyAttackAttacker {
     }
 }
 
-/// Test 1 — OnAllyAttack fires on attacker-controller's OTHER Digimon only.
-/// The attacker itself does NOT fire its own OnAllyAttack; the opposing
-/// controller's Digimon do NOT fire it either.
+/// Test 1 — OnAllyAttack fires on every permanent of the attacker's
+/// controller, the attacker itself included ("When a Digimon attacks" has no
+/// "another"); the opposing controller's Digimon do NOT fire it.
 ///
 /// To keep the controller's trigger bundle to a single entry (avoiding the
 /// drainer's TriggerOrder prompt), only WIT1 carries the OnAllyAttack
@@ -75,7 +78,7 @@ impl CardEffect for RecordAllyAttackAttacker {
 /// WIT3 is on the opponent's side; it also carries an OnAllyAttack
 /// observer but MUST NOT fire because it's not an "ally" of the attacker.
 #[test]
-fn on_ally_attack_fires_on_same_controller_permanents_except_attacker() {
+fn on_ally_attack_fires_on_same_controller_permanents_including_attacker() {
     let ally_fires: Arc<Mutex<Vec<PermanentHandle>>> = Arc::new(Mutex::new(Vec::new()));
 
     let mut r = DebugRunner::builder()
@@ -97,6 +100,9 @@ fn on_ally_attack_fires_on_same_controller_permanents_except_attacker() {
     let def = r.place_on_field(1, "DEF", Some(0));
 
     r.attack_digimon(atk, def, false);
+    // Two same-controller observers (WIT1 and the attacker) now pend together,
+    // so the turn player orders them (CR 4.3 15-4-3-5-1).
+    r.auto_resolve().expect("order and resolve both observers");
 
     let entries = ally_fires.lock().unwrap().clone();
     // WIT1 must fire (same controller as attacker, not attacker).
@@ -105,10 +111,10 @@ fn on_ally_attack_fires_on_same_controller_permanents_except_attacker() {
         "WIT1 (P0 ally) should fire OnAllyAttack — got {:?}",
         entries
     );
-    // Attacker must NOT fire its own OnAllyAttack.
+    // The attacker observes its own attack too (no self exclusion).
     assert!(
-        !entries.contains(&atk),
-        "ATK (attacker) must NOT fire its own OnAllyAttack — got {:?}",
+        entries.contains(&atk),
+        "ATK (attacker) must fire its own OnAllyAttack — got {:?}",
         entries
     );
     // Opposing P1 digimon must NOT fire OnAllyAttack.
@@ -176,4 +182,59 @@ fn observers_see_attacker_via_ctx_helper() {
         "WIT observer should read attacker == ATK handle, got {:?}",
         entries[0]
     );
+}
+
+/// "When ANOTHER Digimon attacks" (BT23-069 Necromon, P-111 Knightmon) is a
+/// per-card predicate, not a property of the timing: `OnAllyAttack` includes
+/// the attacker, and `trigger_if: { event_target_is_source: false }` excludes
+/// it. The self-exclusion that used to be hard-wired into the dispatch made
+/// "When a Digimon attacks" cards (BT18-042) miss their own attack.
+const ANOTHER_ATTACKS_YAML: &str = r#"
+card: DSL-ANOTHER-OBSERVER
+name: Another Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 2000
+effects:
+  - when: on_ally_attack
+    trigger_if: { event_target_is_source: false }
+    process:
+      - gain_memory: 1
+"#;
+
+#[test]
+fn another_digimon_attacks_excludes_the_carrier_via_event_target_is_source() {
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(ANOTHER_ATTACKS_YAML)
+        .expect("register observer DSL")
+        .add_card(card("ALLY"))
+        .add_card(card("DEF"))
+        .memory(3)
+        .start();
+    let observer = r.place_on_field(0, "DSL-ANOTHER-OBSERVER", Some(0));
+    let ally = r.place_on_field(0, "ALLY", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+
+    // The ally attacks: the observer sees "another Digimon" attack.
+    let before = r.memory();
+    r.attack_digimon(ally, def, false);
+    r.auto_resolve().ok();
+    assert_eq!(r.memory(), before + 1, "another Digimon attacked");
+
+    // The observer attacks: it is not "another".
+    let mut r2 = DebugRunner::builder()
+        .from_dsl_yaml(ANOTHER_ATTACKS_YAML)
+        .expect("register observer DSL")
+        .add_card(card("DEF"))
+        .memory(3)
+        .start();
+    let observer2 = r2.place_on_field(0, "DSL-ANOTHER-OBSERVER", Some(0));
+    let def2 = r2.place_on_field(1, "DEF", Some(0));
+    let before2 = r2.memory();
+    r2.attack_digimon(observer2, def2, false);
+    r2.auto_resolve().ok();
+    assert_eq!(r2.memory(), before2, "its own attack is not 'another'");
+    let _ = observer;
 }
