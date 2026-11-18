@@ -34,6 +34,8 @@ ACTION_KEEP, ACTION_REDRAW, ACTION_PASS, ACTION_HATCH, ACTION_CONCEDE = 0, 1, 62
 ACTION_MOVE = 61  # MOVE_FROM_BREEDING
 ATTACK_START, TARGETS_PER_ATTACKER, SECURITY_TARGET = 100, 15, 14
 PLAY_PACKET_ID, ATTACK_PACKET_ID, ACTIVATE_PERMANENT_PACKET_ID = 4, 0, 2
+ACTIVATE_CARD_PACKET_ID = 1  # ActivateCardAction: a hand card's [Main]
+HAND_EFFECT_START, HAND_EFFECT_END = 30, 60  # engine action ids: HAND_EFFECT_START + hand slot
 FIELD_EFFECT_START, EFFECTS_PER_PERMANENT = 1000, 10
 PLAY_HAND_START, PLAY_HAND_END = 0, 30
 DIGIVOLVE_START, FIELDS_PER_HAND, BREEDING_TARGET = 400, 15, 14
@@ -45,6 +47,33 @@ SELECTION_PREFIXES = ("SelectCardEffect.", "UserSelectionManager.SetBoolForPlaye
 
 
 LAST_TRUNCATION = None
+
+
+def _s32(b, i):
+    """Big-endian signed 32-bit int at byte offset `i` of a packet payload."""
+    v = (b[i] << 24) | (b[i + 1] << 16) | (b[i + 2] << 8) | b[i + 3]
+    return v - (1 << 32) if v & 0x80000000 else v
+
+
+def hand_slot_of_card_index(rows, ridx, seat, card_index):
+    """(hand slot, card id) of the hand card with DCGO `card_index` for `seat`, read from the first PlayCard / ctor row
+    after rows[ridx] whose hand listing (`hand.cards`, each with its `card_index`) names it, or (None, None).
+
+    The scan stops at the seat's next queued main-phase packet (the next decision): a listing logged after it
+    describes a later hand."""
+    for later in rows[ridx + 1:]:
+        lm = later.get("method", "")
+        if lm == "TurnStateMachine.QueueMainPhaseAction_Internal":
+            break
+        if lm not in ("PlayCardClass.ctor", "PlayCardClass.PlayCard"):
+            continue
+        hand = later.get("hand") or {}
+        if hand.get("player") != seat:
+            continue
+        for slot, c in enumerate(hand.get("cards") or []):
+            if c.get("card_index") == card_index and c.get("card_id") is not None:
+                return slot, c["card_id"]
+    return None, None
 
 
 def deck_order(player):
@@ -959,6 +988,21 @@ def convert(rows, cards, allow_truncated=False):
                     skill = 3 if r["activate_link"] else 2
                 action(a[0], FIELD_EFFECT_START + perm * EFFECTS_PER_PERMANENT + skill, "Main", "main_phase",
                        boards=r.get("boards"))
+                continue
+            if a[1] == ACTIVATE_CARD_PACKET_ID and len(a) >= 3 and isinstance(a[2], list) and len(a[2]) >= 8:
+                # ActivateCardAction(card index, skill index): a HAND card's [Main] ("[Hand] [Main] ..."). The engine's
+                # action is HAND_EFFECT_START + the card's current hand slot (action/space.rs), not the deck-order card
+                # index the packet carries. The slot is read from the hand listing of the PlayCard row that follows
+                # (the listing names every hand card with its CardIndex); an activation whose card never plays has no
+                # such listing, so it truncates rather than guessing a slot.
+                ci, skill = _s32(a[2], 0), _s32(a[2], 4)
+                slot, listed = hand_slot_of_card_index(rows, ridx, a[0], ci)
+                if skill != 0 or slot is None or not (0 <= slot < HAND_EFFECT_END - HAND_EFFECT_START):
+                    truncated_at = truncated_at or (
+                        "activate packet for hand card index %d (skill %d) at step %d: its hand slot is not named by "
+                        "a following play listing" % (ci, skill, step))
+                    break
+                action(a[0], HAND_EFFECT_START + slot, "Main", "main_phase", card_id=listed, card_index=ci)
                 continue
             if a[1] in (PLAY_PACKET_ID, ATTACK_PACKET_ID):
                 continue  # attacks are decoded from SetAttackingPermaent (and plays without packet info from PlayCard rows)
