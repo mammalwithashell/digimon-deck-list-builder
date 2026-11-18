@@ -149,6 +149,11 @@ effects:
   - scope: inherited
     when: on_opponent_security_removed
     optional: true
+    # DCGO BT21_082.cs:135 `isOptional: true`; its CanActivateCondition (:152) is
+    # only `IsExistOnBattleAreaDigimon`, so the yes/no activation is shown even
+    # with no red Tamer to play (the pick, :174 `canNoSelect: true`, follows the
+    # accept). Declining keeps the OPT (Q1818, CR 4.3 15-14-1-4).
+    outer_prompt: true
     once_per_turn: true
     active_when: { your_turn: true }
     summary: "[Your Turn][Once Per Turn] When your opponent's security stack is removed from, you may play 1 red Tamer card from your hand without paying the cost"
