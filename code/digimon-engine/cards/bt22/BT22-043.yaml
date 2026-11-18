@@ -1,0 +1,97 @@
+# BT22-043 Terriermon — Digimon, Lv.3, Green/Yellow, DP 1000, Cost 3.
+# Traits: Beast, CS. Form: Rookie. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT22-043.md,
+# authoritative; DCGO BT22_043.cs cross-checked):
+#
+#   Evo box: Lv.2 Green / cost 1 OR Lv.2 Yellow / cost 1; "Digivolve Lv.2
+#   w/[CS] trait: Cost 0".
+#   [Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS]
+#   trait in this Digimon's digivolution cards, if you have 1 or fewer Tamers,
+#   you may play 1 Tamer card with the [CS] trait from your hand without paying
+#   the cost.
+#   Inherited Effect: [Main] [Once Per Turn] By placing this [CS] trait
+#   Digimon's top stacked card as its bottom digivolution card, <Draw 1>.
+#
+# Palmon (BT22-044) / Gargomon (BT22-046) siblings: alt route (TopCard.IsLevel2
+# && HasCSTraits, cost 0 — cost-choice prompt against the circles), the
+# OnAddDigivolutionCards trigger (DCGO: isOptional true, OPT 1, IsOwnerTurn,
+# hand has a legal CS Tamer, own Tamers <= 1, the pick canNoSelect: true), the
+# CS-top inherited [Main] rotate + Draw 1.
+
+card: BT22-043
+name: Terriermon
+kind: digimon
+level: 3
+color: [green, yellow]
+cost: 3
+dp: 1000
+traits: [Beast, CS]
+attribute: Vaccine
+form: Rookie
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: CS }
+    cost: 0
+
+effects:
+  - when: on_add_digivolution_cards
+    optional: true
+    outer_prompt: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_host_permanent_is_source: true
+        - event_added_card_any:
+            all_of:
+              - kind: digimon
+              - trait_has: CS
+    condition:
+      all_of:
+        - count_lte:
+            filter: { of: you, zone: [battle_area], kind: tamer }
+            n: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              kind: tamer
+              trait_has: CS
+              can_play_from_effect_without_cost: true
+            n: 1
+    summary: "[Your Turn][Once Per Turn] When effects place [CS] trait Digimon cards in this Digimon's digivolution cards, if you have 1 or fewer Tamers, you may play 1 [CS] trait Tamer card from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: CS
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 Tamer card with the [CS] trait from your hand without paying the cost"
+      - if:
+          condition: { binding_present: tamer }
+          then:
+            - play_from_hand_free: { of: you, hand_index: tamer }
+
+  - scope: inherited
+    when: main_on_field
+    once_per_turn: true
+    condition:
+      all_of:
+        - materials_count_gte: 1
+        - source_permanent_trait_has: CS
+    summary: "[Inherited][Main][Once Per Turn] By placing this [CS] trait Digimon's top stacked card as its bottom digivolution card, <Draw 1>"
+    process:
+      - place_top_source_as_bottom: { target: source }
+      - draw: { of: you, count: 1 }

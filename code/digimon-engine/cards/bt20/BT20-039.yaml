@@ -1,0 +1,57 @@
+# BT20-039 Diatrymon — Digimon, Lv.4, Green/Yellow, DP 5000, Cost 4.
+# Traits: Ancient Bird, ACCEL. Form: Champion. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT20-039.md,
+# authoritative; DCGO BT20_039.cs cross-checked):
+#
+#   Evo box: Lv.3 Green / cost 3 OR Lv.3 Yellow / cost 3 (two circles).
+#   Evo box: "Digivolve Lv.3 w/[ACCEL] trait: Cost 2".
+#
+#   [On Play] [When Digivolving] Suspend 1 of your opponent's Digimon.
+#
+#   Inherited Effect: <Piercing>
+#
+# DCGO: AddSelfDigivolutionRequirementStaticEffect(TopCard.HasLevel &&
+#   IsLevel3 && EqualsTraits("ACCEL"), digivolutionCost: 2) — any colour (the
+#   cost-choice prompt fires for a Green/Yellow Lv.3 [ACCEL] base, as for
+#   BT20-031 / BT20-038). [On Play] / [When Digivolving]: mandatory, the pick is
+#   mandatory (canNoSelect: false, Mode.Tap over any opposing Digimon).
+#   Inherited <Piercing>: PierceSelfEffect(isInheritedEffect: true).
+
+card: BT20-039
+name: Diatrymon
+kind: digimon
+level: 4
+color: [green, yellow]
+cost: 4
+dp: 5000
+traits: [Ancient Bird, ACCEL]
+attribute: Vaccine
+form: Champion
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  # Printed alt evo box: "Digivolve Lv.3 w/[ACCEL] trait: Cost 2".
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: ACCEL }
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Suspend 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: target }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "[Inherited] <Piercing>"

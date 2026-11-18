@@ -83,10 +83,11 @@ def test_yaml_cards_keep_their_printed_special_digivolution():
     assert not fixed, f"KNOWN_GAPS entries now fixed; remove them: {fixed}"
 
 
-def test_the_seven_hunt_cards_carry_their_special_route():
+def test_the_hunt_cards_carry_their_special_route():
     yamls = _yaml_index()
     for card_id in (
         "EX11-007", "BT20-038", "BT11-043", "EX11-025", "BT22-044", "BT22-046", "BT16-070",
+        "BT20-031", "BT20-039", "BT22-012", "BT22-043", "BT22-054",
     ):
         assert card_id in yamls, f"{card_id} must have a YAML spec"
         assert _has_alt_paths(yamls[card_id]), card_id

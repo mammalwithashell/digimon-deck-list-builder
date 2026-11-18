@@ -27,3 +27,6 @@ mod bt22_085;
 mod bt22_004;
 mod bt22_044;
 mod bt22_046;
+mod bt22_012;
+mod bt22_043;
+mod bt22_054;
