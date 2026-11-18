@@ -261,3 +261,42 @@ fn bt24_100_delay_activation_gains_two_memory_and_trashes_delay_option() {
         "BT24-100 is trashed as the Delay's cost once activated"
     );
 }
+
+/// Printed "While you have a [TS] trait Digimon or Tamer on the field" +
+/// official Q&A ("It refers to when you have the specified card in the battle
+/// area or breeding area") + DCGO (`HasMatchConditionPermanent(.., true)`,
+/// `isContainBreedingArea`): a [TS] Digimon that is ONLY in the breeding area
+/// unlocks the white Option even with no white source and an empty battle area.
+#[test]
+fn bt24_100_color_bypass_counts_a_ts_digimon_in_the_breeding_area() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT24-100")
+        .expect("BT24-100 YAML loads")
+        .add_card(ts_digimon("TS-EGG"))
+        .add_card(non_ts_digimon("PLAIN-EGG"))
+        .add_card(non_ts_digimon("FILL"))
+        .hand(0, &["BT24-100"])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .memory(10)
+        .start();
+
+    // Negative: a non-TS red Digimon in the breeding area does not unlock the
+    // white Option (the colour requirement is white, and no TS board exists).
+    runner.place_in_breeding(0, "PLAIN-EGG");
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        0.0,
+        "a non-[TS] breeding Digimon neither supplies white nor the TS bypass"
+    );
+
+    // Positive: swap in the [TS] Digimon (still breeding-only).
+    runner.game.players[0].breeding_area = None;
+    runner.place_in_breeding(0, "TS-EGG");
+    assert!(runner.game.player(0).battle_area.is_empty());
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0,
+        "a [TS] Digimon in the breeding area is on the field and unlocks the Option"
+    );
+}

@@ -5,9 +5,8 @@ color: [blue]
 cost: 5
 traits: [TS]
 use_requirement:
-  any_permanent:
+  any_field_permanent:
     of: you
-    zone: [battle_area]
     any_of:
       - all_of:
           - kind: digimon
@@ -19,9 +18,8 @@ use_requirement:
 effects:
   - kind: flood_gate
     active_when:
-      any_permanent:
+      any_field_permanent:
         of: you
-        zone: [battle_area]
         any_of:
           - all_of:
               - kind: digimon

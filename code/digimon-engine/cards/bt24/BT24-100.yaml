@@ -4,10 +4,15 @@ kind: option
 color: [white]
 cost: 3
 traits: [TS]
+# "While you have a [TS] trait Digimon or Tamer on the field": the field is the
+# battle area AND the breeding area (CR 4.3 3-4-6). DCGO's
+# IgnoreColorConditionClass scans `HasMatchConditionPermanent(.., true)`
+# (`isContainBreedingArea`) and the official Q&A says "It refers to when you have
+# the specified card in the battle area or breeding area", so a [TS] Digimon that
+# is only in the breeding area still unlocks the white Option.
 use_requirement:
-  any_permanent:
+  any_field_permanent:
     of: you
-    zone: [battle_area]
     any_of:
       - all_of:
           - kind: digimon
@@ -20,11 +25,11 @@ effects:
   - kind: flood_gate
     active_when:
       any_of:
-        - any_permanent:
+        - any_field_permanent:
             of: you
             kind: digimon
             trait_has: TS
-        - any_permanent:
+        - any_field_permanent:
             of: you
             kind: tamer
             trait_has: TS

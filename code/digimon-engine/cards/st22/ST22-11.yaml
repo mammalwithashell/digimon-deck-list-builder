@@ -54,6 +54,15 @@ color: [black]
 cost: 3
 traits: [Plug-In]
 
+# From-hand colour bypass. The `kind: flood_gate` clause below is a FIELD-scoped
+# declarative modifier and never applies to an Option still in the hand; the
+# card-level `use_requirement` is what the action mask / `play_option_from_hand`
+# consult (`option_use_requirement_or_color_available`). "While you have a Tamer"
+# (DCGO: HasMatchConditionOwnersPermanent(IsTamer), battle area; a Tamer is never
+# in the breeding area).
+use_requirement:
+  any_permanent: { of: you, zone: [battle_area], kind: tamer }
+
 effects:
   # ─── Clause 0: Color bypass ───────────────────────────────────────────────
   #

@@ -95,6 +95,18 @@ color: [yellow]
 cost: 3
 traits: [Device]
 
+# From-hand colour bypass. The `kind: flood_gate` clause below is a FIELD-scoped
+# declarative modifier and never applies to an Option still in the hand; the
+# card-level `use_requirement` is what the action mask / `play_option_from_hand`
+# consult (`option_use_requirement_or_color_available`). "While you don't have
+# [Queen Device] in the battle area" (DCGO: !HasMatchConditionOwnersPermanent(
+# EqualsCardName("Queen Device")), battle area only).
+use_requirement:
+  no_permanent:
+    of: you
+    zone: [battle_area]
+    name_is: "Queen Device"
+
 effects:
   # ─── Clause 0: Color bypass (negative-gate IgnoreColorRequirement) ─────────
   #
