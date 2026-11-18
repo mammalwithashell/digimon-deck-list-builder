@@ -1,0 +1,68 @@
+# EX12-008 ToyAgumon — Digimon, Lv.3, Red, DP 2000, Cost 3.
+# Traits: Puppet, ME. Attribute: Vaccine. Digivolve: Red Lv.2 / 0;
+# Lv.2 with an [ME] trait / 0.
+#
+# Printed text (data/cards.json, DCGO EX12_008.cs):
+#   [Start of Your Main Phase] By trashing 1 card with the [Puppet] or [ME]
+#   trait from your hand, <Draw 1> and gain 1 memory.
+#   Inherited: <Raid>
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX12/Red/EX12_008.cs
+#   OnStartMainPhase, isSkippable, hand pick canNoSelect:true (Mode.Discard);
+#   Draw 1 + AddMemory 1 only if a card was trashed. Sister of EX12-021.
+
+card: EX12-008
+name: ToyAgumon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Puppet, ME]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: ME
+    cost: 0
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - trait_has: Puppet
+            - trait_has: ME
+        n: 1
+    summary: "[Start of Your Main Phase] By trashing 1 [Puppet]/[ME] trait card from hand, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - trait_has: Puppet
+              - trait_has: ME
+          prompt: "Trash 1 [Puppet]/[ME] trait card from hand to <Draw 1> and gain 1 memory"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Raid
+    summary: "Inherited <Raid>"

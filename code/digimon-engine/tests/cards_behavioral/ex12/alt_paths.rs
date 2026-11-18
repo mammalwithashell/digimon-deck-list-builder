@@ -69,6 +69,30 @@ fn ex12_standard_dual_color_digivolve_paths_match_printed_circles() {
     );
 }
 
+/// EX12 [ME]/Machine dual-colour Digimon carry one printed circle per colour at
+/// the same level and cost. cards.json drops the second circle; DCGO's
+/// `card.CostList` still prices it (the owner's PvP recordings show the
+/// "Which digivolution cost do you pay?" prompt for a black base under a
+/// yellow/black Thundermon, and a black base under a purple/black Megadramon).
+#[test]
+fn ex12_me_machine_dual_colour_cards_have_both_printed_circles() {
+    for (card_id, level, first, second, cost) in [
+        ("EX12-041", 3, CompiledColor::Yellow, CompiledColor::Black, 3),
+        ("EX12-055", 4, CompiledColor::Black, CompiledColor::Yellow, 4),
+        ("EX12-058", 5, CompiledColor::Black, CompiledColor::Yellow, 3),
+        ("EX12-059", 5, CompiledColor::Black, CompiledColor::Purple, 4),
+        ("EX12-060", 6, CompiledColor::Black, CompiledColor::Purple, 5),
+        ("EX12-064", 4, CompiledColor::Purple, CompiledColor::Black, 4),
+    ] {
+        for color in [first, second] {
+            assert!(
+                has_standard_color_path(card_id, level, color, cost),
+                "{card_id} missing printed {color:?} Lv.{level} cost-{cost} digivolve circle"
+            );
+        }
+    }
+}
+
 #[test]
 fn ex12_special_digivolve_paths_match_printed_banners() {
     assert!(

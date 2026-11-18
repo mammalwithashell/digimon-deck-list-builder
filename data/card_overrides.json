@@ -18751,5 +18751,96 @@
   "EX12-069": {
     "inherited_effect_description_eng": "[Security] You may play 1 level 5 or lower [VB] trait Digimon card from your hand without paying the cost."
   },
-  "_note_EX12-069": "EX12-069 Virus Busters security box: the card image (DCGO_Application/Assets/Textures/Card/EX12-069.webp) and DCGO EX12_069.cs:113 print 'play 1 level 5 or lower [VB] trait Digimon card from your hand without paying the cost'. The digimoncard.io API serves 'play cost 5 or lower [VB] trait card from your hand or trash' (wrong gate, kind and zone). The card is absent from card_official.json, so the image is the authority."
+  "_note_EX12-069": "EX12-069 Virus Busters security box: the card image (DCGO_Application/Assets/Textures/Card/EX12-069.webp) and DCGO EX12_069.cs:113 print 'play 1 level 5 or lower [VB] trait Digimon card from your hand without paying the cost'. The digimoncard.io API serves 'play cost 5 or lower [VB] trait card from your hand or trash' (wrong gate, kind and zone). The card is absent from card_official.json, so the image is the authority.",
+  "EX12-041": {
+    "effect_description_eng": "[Main] [Once Per Turn] You may play or use 1 card with the [Mutant] or [ME] trait from your hand with the cost reduced by 2.\r\n(Rule) Name: Treated as including [Mamemon].",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "_note_EX12-041": "EX12-041 Thundermon rule box: the card face (DCGO_Application/Assets/Textures/Card/EX12-041.webp) and DCGO EX12_041.cs:188 (CardEffectFactory.NameTreatedAsIncluding(card, \"Mamemon\")) print '(Rule) Name: Treated as including [Mamemon].' - the digimoncard.io API drops the rule box (as it does for EX13-053). The card is absent from card_official.json, so the image is the authority. The engine side is the `also_treated_as` of code/digimon-engine/cards/ex12/EX12-041.yaml; the Kokuwamon (EX13-046) '[Mamemon] in its text' reveal reaches Thundermon through it.",
+  "EX12-072": {
+    "inherited_effect_description_eng": "[Security] You may play 1 level 5 or lower [ME] trait Digimon card from your hand without paying the cost."
+  },
+  "_note_EX12-072": "EX12-072 Metal Empire security box: the card image (DCGO_Application/Assets/Textures/Card/EX12-072.webp) and DCGO EX12_072.cs SecuritySkill (IsDigimon && Level <= 5 && ME, from the hand only, payCost false) print 'play 1 level 5 or lower [ME] trait Digimon card from your hand without paying the cost'. The digimoncard.io API serves 'play cost 5 or lower [ME] trait card from your hand or trash' (wrong gate, kind and zone). The card is absent from card_official.json, so the image is the authority.",
+  "EX12-055": {
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ]
+  },
+  "EX12-058": {
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "EX12-059": {
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ]
+  },
+  "EX12-060": {
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ]
+  },
+  "EX12-064": {
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ]
+  },
+  "_note_EX12_dual_colour_evo_costs": "Dual-colour digivolve circles (EX12-041/055/058/059/060/064): digimoncard.io drops the second colour's circle. The DCGO client (card.CostList -> 'Which digivolution cost do you pay?' SelectCountEffect rows in the owner's PvP recordings: Thundermon EX12-041 onto black Hagurumon {2,3}; Megadramon EX12-064 onto black Guardromon {3,4}) shows both circles exist at the same level and memory cost; the official DB bundles for these cards are absent, so the DCGO behaviour is the evidence (same shape as EX13-053 / EX12-061)."
 }
