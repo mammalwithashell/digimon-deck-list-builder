@@ -45,9 +45,12 @@
 #     player can decline to attack (DCGO canNoSelect:true on the attacker pick).
 #
 # Clause 2 ([All Turns] 13000+ DP attacker → free digivolve):
-#   - when: [on_ally_attack] with active_when all_turns so it fires on both
-#     players' turns (DCGO OnAllyAttack observer). The attacking permanent is
-#     the event_target; gate on event_target_dp_gte: 13000.
+#   - when: [on_ally_attack, on_opponent_attack] with active_when all_turns:
+#     "When a Digimon with 13000 DP or more attacks" is ANY Digimon on either
+#     side (DCGO BT25_016.cs gates only on IsPermanentExistsOnBattleArea &&
+#     DP >= 13000), this Digimon itself included (the OnAllyAttack batch has no
+#     attacker exclusion). The attacking permanent is the event_target; gate on
+#     event_target_dp_gte: 13000.
 #   - optional: true ("may digivolve").
 #   - select_hand filtered to name [Marsmon] OR [Callismon]; self
 #     effect_initiated_digivolve { target: source } cost 0 (without paying).
@@ -110,7 +113,7 @@ effects:
                 optional: true
 
   # ─── Clause 2 — [All Turns] 13000+ DP attacker → free digivolve ─────────────
-  - when: [on_ally_attack]
+  - when: [on_ally_attack, on_opponent_attack]
     optional: true
     active_when: { all_turns: true }
     summary: "[All Turns] When a 13000+ DP Digimon attacks, this Digimon may digivolve into [Marsmon]/[Callismon] in hand without paying the cost"

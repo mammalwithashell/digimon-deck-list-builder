@@ -35,9 +35,11 @@
 #   Body: hand pick canNoSelect: true (the "by trashing" cost — declining
 #   refunds the use); on success, mandatory pick of 1 opponent Digimon (if
 #   any) → TrashDigivolutionCardsFromTopOrBottom(2, bottom).
-#   → when: [on_attack, on_ally_attack, on_opponent_attack] (the carrier's
-#   own attack, an ally's attack, an opponent's attack) under one clause so
-#   the [Once Per Turn] is shared; optional (accept = pay the hand-trash cost);
+#   → when: [on_ally_attack, on_opponent_attack] (an attack by ANY Digimon of
+#   the carrier's controller -- the carrier itself included, because the
+#   `OnAllyAttack` batch has no attacker exclusion -- or an opponent's attack)
+#   under one clause so the [Once Per Turn] is shared; optional (accept = pay
+#   the hand-trash cost);
 #   trash_from_hand_by_index; select_opponent_permanent → trash_bottom_sources
 #   count 2.
 
@@ -114,7 +116,7 @@ effects:
   # ─── Inherited [All Turns][Once Per Turn] When a Digimon attacks, by trashing
   #     1 hand card, trash the bottom 2 sources of 1 opp Digimon ──────────────
   - scope: inherited
-    when: [on_attack, on_ally_attack, on_opponent_attack]
+    when: [on_ally_attack, on_opponent_attack]
     once_per_turn: true
     optional: true
     active_when: { all_turns: true }

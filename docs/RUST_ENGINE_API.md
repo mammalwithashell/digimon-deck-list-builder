@@ -3320,7 +3320,7 @@ retarget rider was deleted (2026-10-17, G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUS
 |--------|-------|-----------|
 | `OnAttackTargetChange` | Global observer | Fan-out via `TriggerSource::AttackTargetChanged` after a successful attack target rewrite; carries attacker, old target, new target, reason, and controller. |
 | `OnBlock` | Global observer | Fan-out via `TriggerSource::PlayerBattleArea` after block declaration; both players' battle areas scanned. Observers read the post-declare attack state (`effective_target` is the blocker). |
-| `OnAllyAttack` | Observer on attacker-controller's OTHER permanents | Fires on every same-controller permanent except the attacker itself. Attacker-filter is structural, not opt-in. |
+| `OnAllyAttack` | Observer on every permanent of the attacker's controller, the attacker itself INCLUDED | Fires on every same-controller permanent with no attacker exclusion (DCGO `AttackProcess.cs` stacks one `EffectTiming.OnAllyAttack` batch; `[When Attacking]` is that timing with a self filter, here the carrier-scoped `WhenAttacking`). "When a Digimon attacks" cards (BT18-042, BT25-016, BT26-021) therefore see their own attack; "when ANOTHER Digimon attacks" is a per-card predicate: `trigger_if: { event_target_is_source: false }`. A Tamer/Option observer of "when one of your Digimon attacks" must use `on_ally_attack`, never `when_attacking` (carrier-scoped, never reaches a Tamer). |
 | `OnOpponentAttack` | Observer on opposing-controller permanents | Fires on every permanent of the opposing controller. |
 
 All three fire after `OnAttack` + `WhenAttacking` resolve, via the standard `drain_effect_queue` path.
