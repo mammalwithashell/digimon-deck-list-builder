@@ -3341,6 +3341,14 @@ impl ReplayDriver {
             super::selection_resolve::resolve_next
         };
 
+        // An effect-initiated DNA digivolve: DCGO's hand row + two material
+        // root rows answer the engine's partner -> hand prompt pair.
+        if dcgo_folds {
+            if let Some(result) = self.fold_effect_dna_root_rows(game, payload, payload.actor) {
+                return result;
+            }
+        }
+
         // A recorder playback stamp is already an engine action. Only a
         // currently legal action of the recorded actor is trusted; stale stamps
         // still go through evidence-based DCGO ordering.
@@ -4860,6 +4868,209 @@ impl ReplayDriver {
             winner_id: game.winner,
             divergences: Vec::new(),
         }
+    }
+
+    /// An EFFECT-initiated DNA digivolve as DCGO records it, folded onto the
+    /// engine's partner -> hand prompt pair.
+    ///
+    /// DCGO's `DNADigivolvePermanentsIntoHandOrTrashCard`
+    /// (`CardEffectCommons/DNADigivolveEffects.cs:456-640`, used by every
+    /// `may_dna_digivolve_now` card: Nyaromon (EX12-001)'s inherited
+    /// [End of Your Turn], BT12-021, BT12-047, BT17-007, BT17-019, BT22-008,
+    /// BT22-017...) asks for the DNA card FIRST (`SelectHandEffect`), then for
+    /// the two material Digimon (`SelectJogressEffect.SelectDigivolutionRoots`,
+    /// recorded as TWO `SelectPermanentEffect` root rows, in the order they were
+    /// clicked), and only then moves on (the "may attack" follow-up is its own
+    /// `SelectAttackEffect` row). The engine asks the PARTNER first
+    /// (`MayDnaPartnerSelection`, an `OwnField` pick that excludes the anchor),
+    /// then the hand card (`MayDnaResultSelection`).
+    ///
+    /// Called when `payload` is such a hand row while the engine is parked on
+    /// that partner pick and the next two rows are own-side root rows. The
+    /// effect's carrier (`anchor`) is one of the two materials (CR 4.3 8-2: the
+    /// effect digivolves "this Digimon and another Digimon"), so the pair must
+    /// be exactly `{anchor, partner}`; the non-anchor root answers the partner
+    /// pick, the hand row answers the card pick, and all three rows are
+    /// consumed. A pair that does not contain the anchor is an honest
+    /// divergence (`Some` with a halted result), never a guess. `None` = this
+    /// is not that shape; the ordinary path runs.
+    fn fold_effect_dna_root_rows(
+        &mut self,
+        game: &mut Game,
+        payload: &crate::dcgo_recording::SelectionRow,
+        actor: PlayerId,
+    ) -> Option<ReplayStepResult> {
+        use crate::action::space::ATTACK_START;
+
+        if payload.prompt != "SelectHandEffect"
+            || payload.cancel == Some(true)
+            || payload.card_ids.as_ref().map_or(true, |c| c.len() != 1)
+        {
+            return None;
+        }
+        let pending = game.pending_selection.as_ref()?;
+        if pending.selecting_player != actor
+            || pending.kind != crate::selection::SelectionKind::OwnField
+        {
+            return None;
+        }
+        let (controller, anchor) = match game.pending_selection_resume.as_ref()?.frames.last()? {
+            crate::resume::ResumeFrame::MayDnaPartnerSelection(s) => (s.controller, s.anchor),
+            _ => return None,
+        };
+        if controller != actor {
+            return None;
+        }
+        let valid_partner_actions = pending.valid_action_ids.clone();
+
+        let cur = self.cursor as usize;
+        let root_rows: Vec<crate::dcgo_recording::SelectionRow> = (1..=2)
+            .map(|k| {
+                self.source
+                    .steps()
+                    .get(cur + k)
+                    .and_then(|s| s.selection.clone())
+                    .filter(|r| {
+                        r.actor == actor
+                            && r.prompt == "SelectPermanentEffect"
+                            && r.card_ids.is_none()
+                            && r.cancel != Some(true)
+                            && r.targets.as_ref().is_some_and(|t| {
+                                t.len() == 1 && t[0].player == controller && t[0].frame >= 0
+                            })
+                    })
+            })
+            .collect::<Option<Vec<_>>>()?;
+
+        let halt = |this: &mut Self, game: &Game, reason: String| {
+            this.divergences.push(Divergence {
+                step: this.cursor,
+                action_id: 0,
+                actor,
+                phase: payload.phase.clone(),
+                kind: DivergenceKind::SelectionResolution { reason },
+                board: describe_board(game),
+            });
+            this.paused = true;
+            this.no_progress_result(game)
+        };
+
+        // Engine slots of the two roots (DCGO frame order -> play order).
+        let slots: Vec<usize> = root_rows
+            .iter()
+            .map(|row| {
+                let mapped = remap_selection_targets(game, row);
+                let row = mapped.as_ref().unwrap_or(row);
+                row.targets.as_ref().map(|t| t[0].frame as usize).unwrap_or(usize::MAX)
+            })
+            .collect();
+        let ids = engine_board_ids(game, controller);
+        let anchor_slot = anchor.index as usize;
+        let anchor_id = ids.get(anchor_slot).cloned();
+        let describe = |slot: usize| -> String {
+            ids.get(slot).cloned().unwrap_or_else(|| format!("<no Digimon at slot {slot}>"))
+        };
+        if slots[0] == slots[1] {
+            return Some(halt(
+                self,
+                game,
+                format!(
+                    "DNA material roots name the same Digimon twice (slot {}): an effect-initiated DNA \
+                     digivolve needs the anchor (slot {anchor_slot}) and a distinct partner",
+                    slots[0]
+                ),
+            ));
+        }
+        // The root that is the anchor: its slot, else (DCGO's board is card ids,
+        // so a duplicate copy is indistinguishable) the only root showing the
+        // anchor's card id.
+        let anchor_root = if let Some(i) = slots.iter().position(|s| *s == anchor_slot) {
+            Some(i)
+        } else {
+            let same: Vec<usize> = (0..2)
+                .filter(|i| slots[*i] < ids.len() && Some(&ids[slots[*i]]) == anchor_id.as_ref())
+                .collect();
+            (same.len() == 1).then(|| same[0])
+        };
+        let Some(anchor_root) = anchor_root else {
+            return Some(halt(
+                self,
+                game,
+                format!(
+                    "DNA material roots {} (slot {}) and {} (slot {}) do not include the effect's anchor \
+                     {} (slot {anchor_slot}): an effect-initiated DNA digivolve is \"this Digimon and another \
+                     Digimon\" (CR 4.3 8-2), so the recorded pair is not the engine's {{anchor, partner}}",
+                    describe(slots[0]),
+                    slots[0],
+                    describe(slots[1]),
+                    slots[1],
+                    anchor_id.as_deref().unwrap_or("?"),
+                ),
+            ));
+        };
+        let partner_slot = slots[1 - anchor_root];
+        let partner_action = ATTACK_START + partner_slot as u16;
+        if !valid_partner_actions.contains(&partner_action) {
+            return Some(halt(
+                self,
+                game,
+                format!(
+                    "DNA material root {} (slot {partner_slot}) is not an offered partner for the anchor {} \
+                     (offered actions {valid_partner_actions:?})",
+                    describe(partner_slot),
+                    anchor_id.as_deref().unwrap_or("?"),
+                ),
+            ));
+        }
+
+        // DCGO's recorder read its memory gauge at the hand row, before the DNA.
+        let (phase_before, memory_before, memory_pair_before, turn_number) =
+            (game.current_phase.py_name().to_string(), game.memory, game.memory_pair, game.turn_count);
+        check_dcgo_memory(
+            &mut self.divergences,
+            self.cursor,
+            0,
+            actor,
+            &payload.phase,
+            self.source.steps()[cur].dcgo_memory,
+            self.source.my_player_id(),
+            memory_before,
+            memory_pair_before,
+            game,
+        );
+
+        game.decode_action(partner_action, actor);
+        let hand_action = match super::selection_resolve::resolve_next_dcgo(game, payload, 0) {
+            Ok(Some(a)) => a,
+            Ok(None) => {
+                return Some(halt(
+                    self,
+                    game,
+                    format!(
+                        "after the DNA partner {} (slot {partner_slot}) the engine offered no DNA card, but \
+                         DCGO's hand row picked {:?}",
+                        describe(partner_slot),
+                        payload.card_ids
+                    ),
+                ))
+            }
+            Err(reason) => return Some(halt(self, game, reason)),
+        };
+        game.decode_action(hand_action, actor);
+        self.cursor += 3;
+        Some(ReplayStepResult {
+            step_number: self.cursor,
+            player_id: actor,
+            action_id: hand_action,
+            phase_before,
+            phase_after: game.current_phase.py_name().to_string(),
+            memory_before,
+            memory_after: game.memory,
+            turn_number,
+            is_game_over: game.game_over,
+            winner_id: game.winner,
+            divergences: Vec::new(),
+        })
     }
 
     /// Answer the mandatory ONE-option prompts (and the actor's optional
