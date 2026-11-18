@@ -10285,3 +10285,8 @@ claimed. Exact cumulative verification and admission denominators are in
 
 - Effect text (BT13-092 Ravemon: Burst Mode): "[When Digivolving] Search your opponent's hand, and trash 1 card among it." (also BT14-075, EX6-059 when authored).
 - The DSL lowering is faithful (`select_hand { of: opponent }` without `as_selecting_player`: the controller picks among the opponent's hand, mandatory). But the observation tensor encodes only the observer's OWN hand (`write_own_hand`), and the legacy `SelectionKind::Hand` prompt exposes only hand indices, so an RL agent "searching" the opponent's hand chooses without seeing it. Needs an observation-layer reveal of the searched hand to the searching player for the duration of the prompt (not a DSL change). Not fixed here (tensor/action spec change, rule 1/4).
+
+
+## DCGO PvP replay hunt (2026-11-17)
+
+Lane-reported gap entries for the 19 hunt lanes are collected verbatim in `qa/qa-reports/dcgo-pvp-replay-hunt-2026-11-17.md` (resolved vs open per lane).

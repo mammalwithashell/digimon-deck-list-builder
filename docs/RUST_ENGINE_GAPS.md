@@ -7222,3 +7222,8 @@ Round 6 (2026-11-14) - the round-5 correctness + faithfulness review, finding by
 Corrections of statements this entry and its neighbours made: `CardController.cs:254-256` is only the `BurstTamer` frame lookup; the Tamer is bounced at `CardController.cs:942` (`BounceTamer`) - fixed in [G-DCGO-REPLAY-BOARD-CARD-INDEX] and the comments that cited it; raw-20261113T025510Z#g6 no longer stops at cursor 186 (213 steps, round 7).
 
 Corpus effect, round 6 (32 drive inputs, release build; the debug build gives the same): identical to the round-5 baseline in every one of the 32 (g3 x2, g4, g6, sim1b host/join, gd_dna, auto, mod_game3, pvp1_host PASS; the same stops elsewhere); the only difference is the stale-stamp note wording on sim1b host/join row 23. The nine raw games g11-g19 of raw-20261113T025510Z, which had no baseline, replay as g11/g12 PASS and g13-g19 stopping on their own causes (illegal_action, an unstamped optional effect the engine never offered, an actor mismatch) - judged from the stop messages, none at a row on a path this round changed (no baseline run exists for them, so this is a reading, not a diff).
+
+
+## DCGO PvP replay hunt (2026-11-17)
+
+Lane-reported gap entries for the 19 hunt lanes are collected verbatim in `qa/qa-reports/dcgo-pvp-replay-hunt-2026-11-17.md` (resolved vs open per lane).

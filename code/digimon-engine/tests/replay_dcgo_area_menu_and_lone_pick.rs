@@ -779,6 +779,8 @@ fn ex13_026_lone_tamer_pick_and_lone_order_are_both_answered_before_an_action_ro
         card_id: None,
         card_index: None,
         memory_before: None,
+        operand_card_index: None,
+        operand_card_index_source: None,
     });
     let mut s = session_over(game, vec![action]);
     replay_all(&mut s);
