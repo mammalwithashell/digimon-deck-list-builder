@@ -24,6 +24,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             color_matches_binding,
             color_matches_returned_card,
             name_matches_returned_card,
+            name_matches_source,
             color_matches_own_source_stack,
             trait_has,
             trait_contains,
@@ -290,6 +291,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         name_matches_returned_card.walk(
             c,
             &format!("{}.name_matches_returned_card", path),
+            "UNCLASSIFIED_STRING",
+        );
+        name_matches_source.walk(
+            c,
+            &format!("{}.name_matches_source", path),
             "UNCLASSIFIED_STRING",
         );
         color_matches_own_source_stack.walk(
@@ -1757,6 +1763,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             color_matches_binding,
             color_matches_returned_card,
             name_matches_returned_card,
+            name_matches_source,
             color_matches_own_source_stack,
             trait_has,
             trait_contains,
@@ -2011,6 +2018,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         name_matches_returned_card.walk(
             c,
             &format!("{}.name_matches_returned_card", path),
+            "UNCLASSIFIED_STRING",
+        );
+        name_matches_source.walk(
+            c,
+            &format!("{}.name_matches_source", path),
             "UNCLASSIFIED_STRING",
         );
         color_matches_own_source_stack.walk(

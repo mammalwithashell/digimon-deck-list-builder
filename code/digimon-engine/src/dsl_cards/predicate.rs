@@ -1719,6 +1719,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.color_matches_binding.is_none()
         && pred.color_matches_returned_card.is_none()
         && pred.name_matches_returned_card.is_none()
+        && pred.name_matches_source.is_none()
         && pred.color_matches_own_source_stack.is_none()
         && pred.trait_has.is_none()
         && pred.trait_contains.is_none()
@@ -3376,7 +3377,7 @@ printed_card_information_constraints!(
     kind, level_eq, level_eq_binding, level_lte_binding, level_gte_binding,
     level_lte, level_gte, level_matches_aggregate, color_is, color_only,
     color_matches_any_field_digimon, color_matches_binding, color_matches_returned_card,
-    name_matches_returned_card, color_matches_own_source_stack, trait_has, trait_contains, form_is, attribute_is,
+    name_matches_returned_card, name_matches_source, color_matches_own_source_stack, trait_has, trait_contains, form_is, attribute_is,
     name_is, name_contains, name_in, name_not_shared_by_field_digimon,
     name_not_shared_by_field_tamer, name_not_in_binding, card_number_is,
     effect_text_contains, in_text_contains, printed_keyword, has_keyword,
@@ -3664,6 +3665,18 @@ fn eval_card_fields(
             names.extend(source.also_treated_as.iter().cloned());
         }
         if card_shares_name_with_returned_card(rctx, bindings, &names) != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.name_matches_source {
+        // G-DSL-NAME-MATCHES-SOURCE -- printed name + static aliases + physical
+        // runtime aliases of the candidate card vs the source permanent's names.
+        let mut names = vec![data.card_name.clone()];
+        names.extend(data.also_treated_as.iter().cloned());
+        if let Some(source) = rctx.game.card_source_for_handle(card) {
+            names.extend(source.also_treated_as.iter().cloned());
+        }
+        if card_shares_name_with_source(rctx, &names) != want {
             return false;
         }
     }
@@ -4600,6 +4613,27 @@ fn card_shares_name_with_returned_card(
     })
 }
 
+/// G-DSL-NAME-MATCHES-SOURCE -- true when any of `candidate_names` equals a name
+/// of the effect source (carrier) permanent's synthesized top card (DCGO
+/// `TopCard.HasSameCardName(card.PermanentOfThisCard().TopCard)`; base-name
+/// overlays applied). False when there is no source permanent on the field.
+fn card_shares_name_with_source(
+    rctx: &EffectReadContext<'_>,
+    candidate_names: &[String],
+) -> bool {
+    let Some(source) = rctx.source_permanent else {
+        return false;
+    };
+    let Some(perm) = permanent_for_handle(rctx, source) else {
+        return false;
+    };
+    let synth = perm.synth_identity(rctx.card_data(), &rctx.game.modifiers, source);
+    synth
+        .card_names
+        .iter()
+        .any(|name| candidate_names.iter().any(|c| c == name))
+}
+
 fn eval_permanent_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
@@ -4764,6 +4798,14 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    // G-DSL-NAME-MATCHES-SOURCE -- compare the candidate permanent's
+    // synthesized names with the source permanent's.
+    let has_name_source_comparison = pred.name_matches_source.is_some();
+    if let Some(want) = pred.name_matches_source {
+        if card_shares_name_with_source(rctx, &synth_identity.card_names) != want {
+            return false;
+        }
+    }
     let has_dp_constraint = pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some();
     // `kind` for a field permanent is authoritatively checked below against
     // `synth_identity.kind` via `kind_matches_field` (which treats a battle-area
@@ -4790,6 +4832,7 @@ fn eval_permanent_fields(
     let delegated_pred_storage;
     let delegated_pred = if has_color_comparison
         || has_name_returned_comparison
+        || has_name_source_comparison
         || has_kind_constraint
         || level_eq_dna_match
         || trait_overlay_match
@@ -4810,6 +4853,7 @@ fn eval_permanent_fields(
         p.color_matches_binding = None;
         p.color_matches_returned_card = None;
         p.name_matches_returned_card = None;
+        p.name_matches_source = None;
         p.color_matches_own_source_stack = None;
         if has_kind_constraint {
             // Authoritative permanent-kind check is `kind_matches_field`

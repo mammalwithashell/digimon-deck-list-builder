@@ -1,0 +1,58 @@
+# BT5-067 Infermon — Digimon, Lv.5, Black, 6000 DP, play cost 7.
+# Traits: Unidentified. Ultimate / Unknown. Digivolve: Black Lv.4 / cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT5-067.md):
+#   Your [Keramon] can digivolve into this card in your hand for a memory
+#   cost of 4, ignoring this card's digivolution requirements.
+#   Inherited: [On Deletion] You may play 1 [Diaboromon] Token without paying
+#   the cost. (Digimon/Cost 14/Lv.6/White/Mega/Unknown/Unidentified/3000 DP)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT5/Black/BT5_067.cs
+#   - EffectTiming.None AddSelfDigivolutionRequirementStaticEffect:
+#     PermanentCondition = battle-area permanent whose TopCard.CardNames
+#     (a List<string> of base names) .Contains("Keramon") -- exact membership,
+#     so `name_is`, not a substring match; digivolutionCost 4; ignoreDigivolutionRequirement
+#     true; Condition = this card is in its owner's hand. -> alt_path
+#     `digivolve` from `name_is: Keramon`, cost 4, ignore_requirements.
+#     (The base Digimon only has to be named [Keramon]; its level / colour are
+#     not checked.) PermanentCondition also requires
+#     `IsPermanentExistsOnBattleArea`, and the official Q&A (Q1342) rules out a
+#     [Keramon] in the breeding area -> `in_breeding: false`.
+#     Q1344: an effect that digivolves one of your Digimon may use this route.
+#   - OnDestroyedAnyone, inherited, optional (SetUpActivateClass isOptional
+#     true): PlayDiaboromonToken. CanActivate needs a free battle-area frame.
+#     -> `scope: inherited`, `on_deletion`, `optional: true`, `play_token:
+#     diaboromon` (the token play no-ops without a free slot).
+
+card: BT5-067
+name: Infermon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 6000
+traits: [Unidentified]
+form: Ultimate
+attribute: Unknown
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+
+  # "Your [Keramon] can digivolve into this card in your hand for a memory cost
+  # of 4, ignoring this card's digivolution requirements."
+  - kind: digivolve
+    from: { name_is: "Keramon", in_breeding: false }
+    cost: 4
+    ignore_requirements: true
+
+effects:
+  - when: on_deletion
+    scope: inherited
+    optional: true
+    summary: "Inherited [On Deletion] You may play 1 [Diaboromon] Token without paying the cost"
+    process:
+      - play_token:
+          controller: you
+          token_name: diaboromon

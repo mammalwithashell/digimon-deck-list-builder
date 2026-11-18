@@ -177,13 +177,18 @@ pub(crate) fn field_value(
 }
 
 /// The permanent's top card has a printed play cost (not a Token, DUAL card
-/// or Option) — DCGO `CardSource.HasPlayCost` as used by `IsMaxCost`.
+/// or Option) — DCGO `CardSource.HasPlayCost` as used by `IsMaxCost`. A Token
+/// has none except the few that print one (Diaboromon 14, DCGO
+/// `DiaboromonToken.PlayCost`; `TokenDef::play_cost`): a costless token stores
+/// 0, a costed one its cost.
 pub(crate) fn top_card_has_play_cost(
     perm: &crate::permanent::Permanent,
     card_data: &[crate::card_data::CardData],
 ) -> bool {
     let top = perm.top_card();
-    top.has_play_cost(card_data) && top.card_kind(card_data) != crate::enums::CardKind::Token
+    top.has_play_cost(card_data)
+        && (top.card_kind(card_data) != crate::enums::CardKind::Token
+            || top.play_cost(card_data) > 0)
 }
 
 pub(crate) fn selected_field_extreme(

@@ -379,6 +379,8 @@ pub struct CompiledPredicate {
     /// G-DSL-NAME-MATCHES-RETURNED-CARD — true when the candidate shares a
     /// card name with a card this effect returned to deck (`returned_to_deck`).
     pub name_matches_returned_card: Option<bool>,
+    /// See `PredicateSpec::name_matches_source` (BT5-063).
+    pub name_matches_source: Option<bool>,
     /// G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK — true when the candidate shares a
     /// color with the effect carrier's NON-FLIPPED digivolution-source color set
     /// (DCGO `DigivolutionCards.Filter(!IsFlipped).SelectMany(CardColors)

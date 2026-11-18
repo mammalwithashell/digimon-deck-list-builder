@@ -34,6 +34,14 @@ pub struct TokenDef {
     pub dp: Option<i32>,
     pub level: Option<u8>,
     pub traits: Vec<String>,
+    /// Printed play cost, for the rare token that has one (DCGO
+    /// `CEntity_Base.PlayCost`: Diaboromon 14). `None` = no play cost -- the
+    /// stored `CardData::play_cost` is 0 and `top_card_has_play_cost` /
+    /// play-cost-budget picks treat the token as costless. A token is never
+    /// *paid* for (it is only ever put onto the field by an effect); the
+    /// value matters to play-cost filters ("play cost 8 or less") reading
+    /// the token on the field.
+    pub play_cost: Option<u16>,
     /// Static printed keywords (e.g. `<Reboot> <Blocker> <Decoy (Red/Black)>`).
     /// Mirrors `CardData::keywords`. Defaults to empty for tokens with no
     /// printed keywords.
@@ -51,7 +59,7 @@ impl TokenDef {
             card_kind: CardKind::Token,
             level: self.level,
             dp: self.dp,
-            play_cost: 0,
+            play_cost: self.play_cost.unwrap_or(0),
             colors: self.colors.clone(),
             traits: self.traits.clone(),
             evo_costs: Vec::new(),
@@ -126,6 +134,7 @@ pub fn build_registry() -> TokenRegistry {
         dp: Some(3000),
         level: None,
         traits: Vec::new(),
+        play_cost: None,
         keywords: Vec::new(),
     });
     r.insert(TokenDef {
@@ -136,6 +145,7 @@ pub fn build_registry() -> TokenRegistry {
         dp: Some(3000),
         level: None,
         traits: Vec::new(),
+        play_cost: None,
         keywords: Vec::new(),
     });
     // [Atho, René & Por] — printed stats and keywords from BT20-017 Jesmon:
@@ -149,6 +159,7 @@ pub fn build_registry() -> TokenRegistry {
         dp: Some(6000),
         level: None,
         traits: Vec::new(),
+        play_cost: None,
         keywords: vec![
             Keyword::Reboot,
             Keyword::Blocker,
@@ -165,6 +176,7 @@ pub fn build_registry() -> TokenRegistry {
         dp: Some(6000),
         level: None,
         traits: Vec::new(),
+        play_cost: None,
         keywords: vec![Keyword::Alliance, Keyword::Reboot, Keyword::Blocker],
     });
     // [Kotenken] — printed stats from EX12-034 Erlangmon:
@@ -177,6 +189,7 @@ pub fn build_registry() -> TokenRegistry {
         dp: Some(9000),
         level: None,
         traits: Vec::new(),
+        play_cost: None,
         keywords: vec![Keyword::Blocker],
     });
     // [Paishu] — printed stats from EX12-057 Takutoumon:
@@ -189,7 +202,31 @@ pub fn build_registry() -> TokenRegistry {
         dp: Some(6000),
         level: None,
         traits: Vec::new(),
+        play_cost: None,
         keywords: vec![Keyword::Blocker, Keyword::Guard],
+    });
+    // [Diaboromon] -- printed stats from BT5-067 Infermon / EX6-043 Diaboromon:
+    // "(Digimon/Cost 14/Lv.6/White/Mega/Unknown/Unidentified/3000 DP)". DCGO
+    // `ContinuousController.DiaboromonToken` (CardName "Diaboromon", PlayCost
+    // 14, Level 6, White, Mega / Unknown / Unidentified, DP 3000). Named plain
+    // "Diaboromon" (not "... Token") because the printed cards address it by
+    // that exact name ("1 of your other [Diaboromon]", `EqualsCardName`).
+    // Traits are the folded trait line (form + attribute + type, CR 4.3
+    // 2-3-2-1) like every production card.
+    r.insert(TokenDef {
+        name: "diaboromon".to_string(),
+        card_id: "TOKEN_DIABOROMON".to_string(),
+        card_name: "Diaboromon".to_string(),
+        colors: vec![CardColor::White],
+        dp: Some(3000),
+        level: Some(6),
+        traits: vec![
+            "Mega".to_string(),
+            "Unknown".to_string(),
+            "Unidentified".to_string(),
+        ],
+        play_cost: Some(14),
+        keywords: Vec::new(),
     });
     r
 }
@@ -223,11 +260,34 @@ mod tests {
             let token = registry.get(name).expect("registered token exists");
             let data = token.to_card_data();
             assert_eq!(data.card_kind, CardKind::Token, "{name}");
-            assert_eq!(data.play_cost, 0, "{name}");
+            // Only a token that prints a play cost (Diaboromon 14) stores one.
+            assert_eq!(
+                data.play_cost,
+                token.play_cost.unwrap_or(0),
+                "{name}"
+            );
             assert!(data.evo_costs.is_empty(), "{name}");
             assert!(data.dna_costs.is_empty(), "{name}");
             assert_eq!(data.effect_class_name, data.card_id, "{name}");
         }
+    }
+
+    #[test]
+    fn diaboromon_registered_with_printed_stats() {
+        let r = build_registry();
+        let def = r.get("diaboromon").expect("diaboromon missing");
+        assert_eq!(def.card_id, "TOKEN_DIABOROMON");
+        assert_eq!(def.card_name, "Diaboromon");
+        assert_eq!(def.colors, vec![CardColor::White]);
+        assert_eq!(def.dp, Some(3000));
+        assert_eq!(def.level, Some(6));
+        assert_eq!(def.play_cost, Some(14));
+        for t in ["Mega", "Unknown", "Unidentified"] {
+            assert!(def.traits.iter().any(|x| x == t), "{t}");
+        }
+        let cd = def.to_card_data();
+        assert_eq!(cd.card_kind, CardKind::Token);
+        assert_eq!(cd.play_cost, 14);
     }
 
     #[test]

@@ -1,0 +1,89 @@
+# BT22-053 Keramon — Digimon, Lv.3, Black, 1000 DP, play cost 3.
+# Traits: Unidentified, CS. Digivolve: Black Lv.2 / cost 0; Lv.2 w/[CS] trait / cost 0.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT22-053.md):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 [Arata Sanada] and 1
+#   card with the [Unidentified] or [CS] trait among them to the hand. Return
+#   the rest to the bottom of the deck.
+#   Inherited: [All Turns] [Once Per Turn] When this Digimon with [Diaboromon]
+#   in its text would leave the battle area, by deleting 1 of your other
+#   [Diaboromon], it doesn't leave.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT22/Black/BT22_053.cs
+#   - AddSelfDigivolutionRequirementStaticEffect: base TopCard level 2 with the
+#     [CS] trait, cost 0, requirements kept -> second alt_path.
+#   - OnEnterFieldAnyone [On Play]: SimplifiedRevealDeckTopCardsAndSelect(3,
+#     [CardNames contains "Arata Sanada" max 1, HasUnidentifiedTraits ||
+#     HasCSTraits max 1], remainder DeckBottom, canNoSelect false).
+#   - WhenRemoveField inherited, OPT, optional: carrier on the battle area, its
+#     TopCard.HasText("Diaboromon") (= `in_text_contains`, the name + traits +
+#     printed text scan), and another own Digimon named exactly [Diaboromon]
+#     (EqualsCardName); delete it (canNoSelect true) and the leave is cancelled
+#     only if the deletion succeeded. EX13-052 replacement idiom.
+
+card: BT22-053
+name: Keramon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Unidentified, CS]
+form: Rookie
+attribute: Unknown
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: CS }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Arata Sanada] and 1 [Unidentified]/[CS] card; rest to the bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: arata_pick
+              min: 1
+              max: 1
+              filter: { name_is: "Arata Sanada" }
+            - bind_as: trait_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - trait_has: Unidentified
+                  - trait_has: CS
+          prompt: "Add 1 [Arata Sanada] and 1 [Unidentified]/[CS] card"
+      - add_to_hand_from_reveal: { of: you, card: arata_pick }
+      - add_to_hand_from_reveal: { of: you, card: trait_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - in_text_contains: Diaboromon
+    summary: "Inherited [All Turns][OPT] When this Digimon with [Diaboromon] in its text would leave the battle area, by deleting 1 of your other [Diaboromon], it doesn't leave"
+    process:
+      - select_own_permanent:
+          bind_as: prevent_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+              - name_is: Diaboromon
+          prompt: "Delete 1 of your other [Diaboromon]"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}
+

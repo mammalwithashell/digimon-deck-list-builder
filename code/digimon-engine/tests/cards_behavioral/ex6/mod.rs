@@ -5,3 +5,5 @@ mod ex6_057;
 mod ex6_072;
 
 mod ex6_063;
+mod ex6_036;
+mod ex6_043;

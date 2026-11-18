@@ -74,6 +74,18 @@ pub struct PredicateSpec {
     /// G-DSL-NAME-MATCHES-RETURNED-CARD (driver BT13-092).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_matches_returned_card: Option<bool>,
+    /// True when the candidate shares >=1 card name with the effect SOURCE
+    /// (carrier) permanent's top card -- DCGO
+    /// `permanent.TopCard.HasSameCardName(card.PermanentOfThisCard().TopCard)`.
+    /// Models "[Your Turn] All of your other Digimon with the same name as this
+    /// Digimon gain <Rush>" (BT5-063 Kurisarimon) and its siblings (BT2-053 /
+    /// BT2-059 / EX1-044 / EX1-046 / EX1-051 / P-045). The carrier is whatever
+    /// Digimon currently holds the inherited effect, so the comparison is
+    /// against that permanent's own top card names (printed name + aliases),
+    /// never a literal. Authored as `name_matches_source: true`; pair with
+    /// `other: true` for "other Digimon".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_matches_source: Option<bool>,
     /// True when the candidate card shares â‰¥1 color with the effect CARRIER's
     /// NON-FLIPPED digivolution-source color set (the colors printed on the
     /// carrier's face-up digivolution cards, excluding the carrier's own top
