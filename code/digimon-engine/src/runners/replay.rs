@@ -3786,7 +3786,7 @@ impl ReplayDriver {
                 (matches!(&p.kind, crate::selection::SelectionKind::UnionZone { zones }
                     if zones.contains(crate::selection::UnionZoneSet::HAND)
                         && zones.contains(crate::selection::UnionZoneSet::TRASH))
-                    || super::selection_resolve::fresh_hand_and_trash_zone_card_pick(game))
+                    || super::selection_resolve::fresh_zone_card_pick_stands_for_zone_menu(game))
                     && p.effect_choices.is_none()
                     && p.selecting_player == actor
             })
