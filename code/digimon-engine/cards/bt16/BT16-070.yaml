@@ -1,0 +1,88 @@
+# BT16-070 Sethmon — Digimon, Lv.4, Purple/Red, DP 5000, Cost 5.
+# Traits: Dark Animal. Form: Armor Form. Attribute: Free.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT16-070.md,
+# authoritative; DCGO BT16_070.cs cross-checked):
+#
+#   Evo box: Lv.3 Purple / cost 3 (one circle).
+#   Evo box: "Digivolve [Veemon]: Cost 2".
+#
+#   <Armor Purge> (When this Digimon would be deleted, you may trash the top
+#   card of this Digimon to prevent that deletion.)
+#
+#   [When Digivolving] [When Attacking] You may choose 1 of your Digimon.
+#   Delete it and 1 of your opponent's Digimon with as much or less DP as it.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alt digivolution (EffectTiming.None): AddSelfDigivolutionRequirement
+#   StaticEffect(TopCard.CardNames.Contains("Veemon"), digivolutionCost: 2).
+#   Exact-name gate (the printed "[Veemon]" is a card name) → `name_is`, no
+#   level/colour restriction. A Purple Lv.3 [Veemon] satisfies the circle
+#   (cost 3) AND the alt (cost 2): the cost-choice prompt fires. A Lv.2 or
+#   non-purple [Veemon] reaches only the alt route.
+#
+# <Armor Purge>: ArmorPurgeEffect → `grant_keyword: ArmorPurge` (BT16-021 /
+#   BT16-033 idiom).
+#
+# [When Digivolving] / [When Attacking] (OnEnterFieldAnyone +
+#   CanTriggerWhenDigivolving / OnAllyAttack + CanTriggerOnAttack,
+#   isOptional: true): shared body —
+#   1. Pick 1 of YOUR Digimon (canNoSelect: true) — any own Digimon, this one
+#      included.
+#   2. Then, if an opponent Digimon with DP <= the picked Digimon's DP exists,
+#      pick 1 (canNoSelect: false → mandatory once candidates exist).
+#   3. ONE simultaneous DestroyPermanentsClass over [own pick, opponent pick];
+#      with no opponent candidate only the own pick is deleted.
+#   → `select_own_permanent` (optional; the inner PASS doubles as the decline
+#   of the "you may"), `select_opponent_permanent` filtered by `dp <= binding_dp`
+#   of the pick (ST22-08 / BT17-102 formula idiom), `delete_permanents`
+#   (BT24-075 batched-deletion idiom; an unset arm is ignored).
+
+card: BT16-070
+name: Sethmon
+kind: digimon
+level: 4
+color: [purple, red]
+cost: 5
+dp: 5000
+traits: [Dark Animal]
+attribute: Free
+form: Armor Form
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  # Printed alt evo box: "Digivolve [Veemon]: Cost 2".
+  - kind: digivolve
+    from: { name_is: "Veemon" }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    summary: "<Armor Purge>"
+
+  - when: [when_digivolving, when_attacking]
+    optional: true
+    summary: "[When Digivolving][When Attacking] You may choose 1 of your Digimon. Delete it and 1 of your opponent's Digimon with as much or less DP as it"
+    process:
+      - select_own_permanent:
+          bind_as: own_pick
+          optional: true
+          filter: { kind: digimon }
+          prompt: "You may choose 1 of your Digimon to delete along with 1 of your opponent's Digimon with as much or less DP"
+      - if:
+          condition: { binding_present: own_pick }
+          then:
+            - select_opponent_permanent:
+                bind_as: opp_pick
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte:
+                        formula:
+                          binding_dp: own_pick
+                prompt: "Delete 1 of your opponent's Digimon with as much or less DP as the chosen Digimon"
+            - delete_permanents: { targets: [own_pick, opp_pick] }

@@ -190,6 +190,7 @@
       "add_to_hand_from_reveal",
       "add_to_hand_from_security",
       "add_to_hand_from_trash",
+      "add_top_face_down_security_to_hand",
       "add_top_security_to_hand",
       "bounce_self",
       "flip_security_face_up",

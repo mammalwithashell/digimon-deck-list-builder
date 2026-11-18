@@ -76037,11 +76037,6 @@
         "card_color": 2,
         "level": 2,
         "memory_cost": 1
-      },
-      {
-        "card_color": 3,
-        "level": 3,
-        "memory_cost": 1
       }
     ],
     "xros_req": "[Digivolve] [Pinamon]/Lv.2 w/[ACCEL] trait: Cost 0"

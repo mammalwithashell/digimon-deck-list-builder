@@ -1,0 +1,55 @@
+# EX11-003 Puroromon — Digi-Egg, Lv.2, Green, Cost 0.
+# Traits: Larva, X Antibody, Royal Base, LIBERATOR. Form: In-Training.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX11-003.md;
+# DCGO EX11_003.cs cross-checked):
+#
+#   Inherited Effect [Your Turn] [Once Per Turn] When face-up [Royal Base]
+#   trait cards are placed in your security stack, <Draw 1>.
+#
+# Official Q&A Q5788: "Does this card's inherited effect trigger if my
+# face-down security card is flipped to face up and it's a [Royal Base] trait
+# card?" — "No, it doesn't trigger." (a placement event is required; flipping a
+# stack card face up is not a placement).
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# `EffectTiming.OnAddSecurity` ActivateClass, inherited, `SetUpActivateClass(
+# ..., 1 /* OPT */, false /* mandatory */)`.
+#   CanUse = IsExistOnBattleAreaDigimonTrigger && IsOwnerTurn &&
+#            CanTriggerWhenAddSecurity(hashtable, player == card.Owner)
+#   DCGO QUIRK (printed text governs): the body computes `securityCards =
+#   GetCardSourcesFromHashtable(hashtable).Filter(SecurityCondition)` with
+#   SecurityCondition = (!IsFlipped || IsDigiEgg) && EqualsTraits("Royal
+#   Base") — but never READS it, so DCGO draws on ANY card added to the owner's
+#   security stack. The printed text ("face-up [Royal Base] trait cards") and
+#   Q5788 require the filter; it is authored here (`event_card_face_up_in_
+#   security` + `event_card_trait_has`), faithful to the card, not to DCGO's
+#   unused-variable bug.
+#
+#   → `scope: inherited`, `when: on_added_to_security` (BT14-033 Patamon idiom:
+#     fires off the security owner's battle area, so it is "your" stack),
+#     `active_when: { your_turn: true }`, `once_per_turn: true`, mandatory.
+#   → Event gate: the placed card carries [Royal Base] and was placed face up.
+
+card: EX11-003
+name: Puroromon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Larva, X Antibody, Royal Base, LIBERATOR]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_added_to_security
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_card_trait_has: Royal Base
+        - event_card_face_up_in_security: true
+    summary: "[Your Turn][Once Per Turn] When face-up [Royal Base] trait cards are placed in your security stack, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

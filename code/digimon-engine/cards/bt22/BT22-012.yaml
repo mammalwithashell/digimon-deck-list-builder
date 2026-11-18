@@ -1,0 +1,94 @@
+# BT22-012 RizeGreymon — Digimon, Lv.5, Red/Black, DP 8000, Cost 8.
+# Traits: Cyborg, CS. Form: Ultimate. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT22-012.md,
+# authoritative; DCGO BT22_012.cs cross-checked):
+#
+#   Evo box: Lv.4 Red / cost 4 OR Lv.4 Black / cost 4 (two circles).
+#   Evo box: "Digivolve Lv.4 w/[Greymon] in name or w/[CS] trait: Cost 3".
+#
+#   <Raid>
+#   [When Digivolving] If you have 1 or fewer Tamers, from your hand and
+#   without paying the cost, you may play 1 red or black Tamer card with a play
+#   cost of 4 or less or 1 Tamer card with the [CS] trait.
+#
+#   Inherited Effect: <Security A. +1>
+#
+# DCGO: AddSelfDigivolutionRequirementStaticEffect(TopCard.IsLevel4 &&
+#   (ContainsCardName("Greymon") || HasCSTraits), digivolutionCost: 3) — any
+#   colour. A Red/Black Lv.4 [Greymon]/[CS] base satisfies the circle (cost 4)
+#   AND the alt (cost 3): the cost-choice prompt fires (family:
+#   alt-digivolve-xros-req-cards).
+#   [When Digivolving] (isOptional: true): CanActivate = IsOwnerTurn && hand
+#   has a legal Tamer && own Tamers <= 1; the pick is optional (canNoSelect:
+#   true); legal = Tamer && CanPlayAsNewPermanent(payCost: false) && ((printed
+#   play cost <= 4 && Red or Black) || HasCSTraits). BT22-046 / BT22-022 idiom.
+#   <Raid>: RaidSelfEffect (declarative keyword). Inherited <Security A. +1>:
+#   ChangeSelfSAttackStaticEffect(1, inherited).
+
+card: BT22-012
+name: RizeGreymon
+kind: digimon
+level: 5
+color: [red, black]
+cost: 8
+dp: 8000
+traits: [Cyborg, CS]
+attribute: Vaccine
+form: Ultimate
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  # Printed alt evo box: "Digivolve Lv.4 w/[Greymon] in name or w/[CS] trait: Cost 3".
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - name_contains: Greymon
+            - trait_has: CS
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - when: when_digivolving
+    summary: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 red/black Tamer with play cost <= 4 or 1 [CS] Tamer from your hand without paying the cost"
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: tamer }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - can_play_from_effect_without_cost: true
+              - any_of:
+                  - trait_has: CS
+                  - all_of:
+                      - play_cost_lte: 4
+                      - any_of:
+                          - color_is: red
+                          - color_is: black
+          prompt: "You may play 1 red or black Tamer card with a play cost of 4 or less or 1 [CS] trait Tamer card from your hand without paying the cost"
+      - if:
+          condition: { binding_present: tamer }
+          then:
+            - play_from_hand_free: { of: you, hand_index: tamer }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "[Inherited] <Security A. +1>"

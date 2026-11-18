@@ -706,6 +706,13 @@ pub struct CompiledPredicate {
     pub attack_target_change_reason: Option<String>,
     pub attacker_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
+    /// The captured event card is currently FACE UP in its security stack
+    /// (`true`) or face down (`false`) — the placement-event gate for "when
+    /// face-up [X] trait cards are placed in your security stack" (EX11-003
+    /// Puroromon). Reads the security owner's `face_up_security` set for the
+    /// event card; unsatisfied outside a security-placement trigger.
+    /// G-PRED-EVENT-CARD-FACE-UP-IN-SECURITY.
+    pub event_card_face_up_in_security: Option<bool>,
     pub event_card_name_contains: Option<String>,
     /// Exact printed/rule-granted name of the immutable event card identity.
     #[serde(default)]
@@ -1830,6 +1837,11 @@ pub enum CompiledStep {
         position: CompiledStackPosition,
     },
     AddTopSecurityToHand {
+        of: CompiledPlayerRef,
+    },
+    /// First face-down card from the top of `of`'s security stack to hand
+    /// (face-up cards skipped). G-DSL-ADD-TOP-FACE-DOWN-SECURITY-TO-HAND.
+    AddTopFaceDownSecurityToHand {
         of: CompiledPlayerRef,
     },
     MayAddTopSecurityToHand {

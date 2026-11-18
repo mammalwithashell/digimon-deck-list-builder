@@ -27,3 +27,6 @@ mod ex11_069;
 mod ex11_071;
 mod ex11_074;
 mod ex11_066;
+mod ex11_003;
+mod ex11_007;
+mod ex11_025;

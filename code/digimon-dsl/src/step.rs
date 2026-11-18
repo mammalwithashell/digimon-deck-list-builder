@@ -111,6 +111,14 @@ pub enum StepSpec {
     /// G-DSL-RETURN-TOP-SECURITY-TO-DECK.
     ReturnTopSecurityToDeck(ReturnTopSecurityToDeckArgs),
     AddTopSecurityToHand(PlayerArg),
+    /// "Add your top FACE-DOWN security card to the hand" (EX11-025 FunBeemon):
+    /// the first face-down card from the top of the stack — face-up cards
+    /// (CR 3-7-4, 15-14-5) are skipped, not taken. No-op when every security
+    /// card is face up or the stack is empty. Distinct from
+    /// `add_top_security_to_hand`, which takes the top card whatever its
+    /// orientation. YAML: `add_top_face_down_security_to_hand: { of: you }`.
+    /// G-DSL-ADD-TOP-FACE-DOWN-SECURITY-TO-HAND.
+    AddTopFaceDownSecurityToHand(PlayerArg),
     MayAddTopSecurityToHand(PlayerArg),
     AddToHandFromReveal(HandleMoveArgs),
     AddThisOptionToHand(EmptyArgs),
@@ -633,6 +641,9 @@ impl Serialize for StepSpec {
             }
             StepSpec::ReturnTopSecurityToDeck(v) => kv!(s, "return_top_security_to_deck", v),
             StepSpec::AddTopSecurityToHand(v) => kv!(s, "add_top_security_to_hand", v),
+            StepSpec::AddTopFaceDownSecurityToHand(v) => {
+                kv!(s, "add_top_face_down_security_to_hand", v)
+            }
             StepSpec::MayAddTopSecurityToHand(v) => kv!(s, "may_add_top_security_to_hand", v),
             StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
             StepSpec::AddThisOptionToHand(v) => kv!(s, "add_this_option_to_hand", v),
@@ -938,6 +949,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             }
             "return_top_security_to_deck" => StepSpec::ReturnTopSecurityToDeck(map.next_value()?),
             "add_top_security_to_hand" => StepSpec::AddTopSecurityToHand(map.next_value()?),
+            "add_top_face_down_security_to_hand" => {
+                StepSpec::AddTopFaceDownSecurityToHand(map.next_value()?)
+            }
             "may_add_top_security_to_hand" => StepSpec::MayAddTopSecurityToHand(map.next_value()?),
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
             "add_this_option_to_hand" => StepSpec::AddThisOptionToHand(map.next_value()?),
@@ -1210,6 +1224,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "return_selected_security_to_deck",
                         "return_top_security_to_deck",
                         "add_top_security_to_hand",
+                        "add_top_face_down_security_to_hand",
                         "may_add_top_security_to_hand",
                         "add_to_hand_from_reveal",
                         "add_this_option_to_hand",

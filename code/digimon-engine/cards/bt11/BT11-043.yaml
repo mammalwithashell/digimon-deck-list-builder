@@ -1,0 +1,162 @@
+# BT11-043 KingSukamon — Digimon, Lv.5, Yellow/Black, DP 6000, Cost 7.
+# Traits: Mutant. Form: Ultimate. Attribute: Virus.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT11-043.md,
+# authoritative; DCGO BT11_043.cs cross-checked):
+#
+#   Evo box: Lv.4 Yellow / cost 4 OR Lv.4 Black / cost 4 (two circles).
+#   Evo box: "Digivolve 3 from Lv.4 w/[Sukamon] in name".
+#
+#   [On Play] [When Digivolving] If your opponent has 16 or more cards in their
+#   trash, or you have 3 or more cards with [Sukamon] in their names in your
+#   trash, change 1 of your opponent's Digimon into a white Digimon with 3000 DP
+#   and an original name of [Sukamon] until the end of your opponent's turn.
+#
+#   [When Attacking] For each other Digimon with [Sukamon] in its name in play,
+#   this Digimon gains <Security Attack +1> for the turn.
+#
+#   Inherited Effect: [All Turns] When this Digimon would be deleted, by
+#   deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alt digivolution (EffectTiming.None): AddSelfDigivolutionRequirement
+#   StaticEffect(TopCard.ContainsCardName("Sukamon"), digivolutionCost: 3,
+#   level: 4) → `from: { level_eq: 4, name_contains: Sukamon }` cost 3, NO colour
+#   gate. A yellow/black Lv.4 [Sukamon]-name Digimon satisfies the circle
+#   (cost 4) AND the alt (cost 3): the cost-choice prompt fires.
+#
+# [On Play][When Digivolving] (ActivateClassesForSharedEffects, optional:
+#   false): the condition is a CanUse gate (opponent trash >= 16 OR own trash
+#   has >= 3 cards with [Sukamon] in the name). The pick (1 opponent Digimon)
+#   is mandatory (canNoSelect: false); the change is three effects until the
+#   end of the opponent's turn: base DP 3000 (ChangeBaseDigimonDP), original
+#   name [Sukamon] (ChangeBaseCardName), original colour white
+#   (ChangeBaseCardColor). EX13-031 idiom: three typed `add_modifier` steps
+#   (`ChangeOriginDP`, `ChangeBaseCardName`, `ChangeBaseCardColor`), each
+#   `end_of_opponents_turn` ("until the end of your opponent's turn": from your
+#   turn it lasts through their next turn).
+#
+# [When Attacking] (OnAllyAttack, mandatory; CanActivate requires count >= 1):
+#   count = battle-area Digimon (EITHER player's) that are not this permanent
+#   with [Sukamon] in the top card's name. → `SecurityAttackChange` with a
+#   formula value (`card_count_in_zone`, of: any, other Digimon with Sukamon)
+#   until end of turn, gated by the same count via `count_gte` condition.
+#
+# Inherited [All Turns] (WhenPermanentWouldBeDeleted, inherited, optional:
+#   false, skippable; `RemoveUse()` at the end → effectively unlimited — there
+#   is NO printed [Once Per Turn]): CanTriggerWhenRemoveField(this) &&
+#   exists a battle-area permanent (either owner) that is not this one with
+#   [Sukamon] in its name. The pick is optional (canNoSelect: true); the
+#   chosen Digimon is deleted and, if that deletion succeeded, this Digimon's
+#   deletion is cancelled. → `kind: replacement, trigger: when_would_be_deleted`,
+#   carrier only (`is_source: true`, EX5-015 idiom), `select_any_permanent` +
+#   `delete_permanent` + `cancel_replacement` (EX13-028 idiom).
+
+card: BT11-043
+name: KingSukamon
+kind: digimon
+level: 5
+color: [yellow, black]
+cost: 7
+dp: 6000
+traits: [Mutant]
+attribute: Virus
+form: Ultimate
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  # Printed alt evo box: "Digivolve 3 from Lv.4 w/[Sukamon] in name".
+  - kind: digivolve
+    from: { level_eq: 4, name_contains: Sukamon }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    condition:
+      any_of:
+        - count_gte:
+            filter: { of: opponent, zone: [trash] }
+            n: 16
+        - count_gte:
+            filter: { of: you, zone: [trash], name_contains: Sukamon }
+            n: 3
+    summary: "[On Play][When Digivolving] If opp has 16+ trash cards or you have 3+ [Sukamon]-name cards in trash, change 1 opp Digimon into a white 3000 DP [Sukamon] until the end of their turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Change 1 of your opponent's Digimon into a white Digimon with 3000 DP and an original name of [Sukamon] until the end of their turn"
+      - add_modifier:
+          target: victim
+          modifier: ChangeBaseCardName
+          value: 0
+          payload: { name: Sukamon }
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: victim
+          modifier: ChangeBaseCardColor
+          value: 0
+          payload: { colors: [white] }
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: victim
+          modifier: ChangeOriginDP
+          value: 0
+          payload: { dp: 3000 }
+          expiry: end_of_opponents_turn
+
+  - when: when_attacking
+    condition:
+      count_gte:
+        filter:
+          of: any
+          zone: [battle_area]
+          kind: digimon
+          name_contains: Sukamon
+          other: true
+        n: 1
+    summary: "[When Attacking] For each other Digimon with [Sukamon] in its name in play, this Digimon gains <Security Attack +1> for the turn"
+    process:
+      - add_modifier:
+          target: source
+          modifier: SecurityAttackChange
+          value:
+            base: 0
+            per:
+              card_count_in_zone:
+                of: any
+                zone: battle_area
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: Sukamon
+                    - not: { is_source: true }
+            delta: 1
+          expiry: end_of_turn
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_be_deleted
+    optional: true
+    active_when:
+      all_of:
+        - is_source: true
+        - all_turns: true
+    summary: "Inherited [All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion"
+    process:
+      - select_any_permanent:
+          bind_as: prevent_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+              - name_contains: Sukamon
+          prompt: "Delete 1 other Digimon with [Sukamon] in its name to prevent this Digimon's deletion"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}

@@ -1013,6 +1013,14 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    /// The captured event card is currently FACE UP in its security stack
+    /// (`true`) or face down (`false`) — the placement-event gate for "when
+    /// face-up [X] trait cards are placed in your security stack" (EX11-003
+    /// Puroromon). Reads the security owner's `face_up_security` set for the
+    /// event card; unsatisfied outside a security-placement trigger.
+    /// G-PRED-EVENT-CARD-FACE-UP-IN-SECURITY.
+    pub event_card_face_up_in_security: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,
     /// Exact printed name or rule-granted name of the captured event card.
     /// Independent of the current permanent slot/top; never a substring match.

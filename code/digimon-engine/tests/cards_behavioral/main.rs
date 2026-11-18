@@ -23,6 +23,7 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod app_fuse_primitive;
+mod alt_digivolve_support;
 mod assembly_material_predicates;
 mod burst_digivolve_common;
 mod printed_metadata_routes;

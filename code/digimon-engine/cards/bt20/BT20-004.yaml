@@ -1,0 +1,89 @@
+# BT20-004 Pinamon — Digi-Egg, Lv.2, Green, Cost 0.
+# Traits: Bird, ACCEL. Form: In-Training.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT20-004.md;
+# DCGO BT20_004.cs cross-checked):
+#
+#   Inherited Effect [Your Turn] [Once Per Turn] When any of your Digimon with
+#   the [ACCEL] trait are played, this Digimon may digivolve into a Digimon
+#   card with the [ACCEL] trait in the hand with the digivolution cost reduced
+#   by 2.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# `EffectTiming.OnEnterFieldAnyone` ActivateClass, `SetIsInheritedEffect(true)`,
+# `SetUpActivateClass(..., 1 /* OPT */, TRUE /* optional yes/no */)`.
+#   CanUse  = IsOwnerTurn && IsExistOnBattleAreaDigimon(card) &&
+#             CanTriggerOnPermanentPlay(hashtable, IsYourAccelDigimon)
+#             where IsYourAccelDigimon = IsPermanentExistsOnOwnerBattleAreaDigimon
+#             && TopCard.EqualsTraits("ACCEL")
+#   Active  = HasMatchConditionOwnersHand(IsYourAccelDigivolve) where
+#             IsYourAccelDigivolve = EqualsTraits("ACCEL") &&
+#             CanPlayCardTargetFrame(this permanent's frame, payCost: true)
+#   Body    = DigivolveIntoHandOrTrashCard(targetPermanent: this permanent,
+#             payCost: true, reduceCostTuple: (2, null), isHand: true).
+#
+#   → `scope: inherited`, `when: on_enter_field_anyone` (BT22-005 sibling idiom;
+#     fires for plays only, never for digivolutions), `active_when:
+#     { your_turn: true }`, `once_per_turn: true`.
+#   → Trigger gate: the entering permanent is an own Digimon whose top card has
+#     [ACCEL] (`event_target_owner: you` + `event_target_kind: digimon` +
+#     `event_target_trait_has: ACCEL`).
+#   → "may digivolve": `optional: true` + `outer_prompt: true` — DCGO's initial
+#     yes/no. Declining it drops the queued effect BEFORE its [Once Per Turn]
+#     use is recorded (rule 15-14-1-5; BT25-005 Pagumon idiom).
+#   → Body: `select_hand` (optional) over ACCEL Digimon cards that
+#     `can_digivolve_from_source`, then `effect_initiated_digivolve { target:
+#     source, from_hand, cost: { reduce: 2 }, ignore_requirements: false }`.
+#   → No-legal-target guard: DCGO's `HasMatchConditionOwnersHand` as a
+#     `count_gte` trigger condition over the same hand filter (BT25-005 idiom):
+#     with nothing legal in hand the effect does not trigger, so the yes/no is
+#     never shown and the [Once Per Turn] stays available.
+
+card: BT20-004
+name: Pinamon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Bird, ACCEL]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_enter_field_anyone
+    optional: true
+    outer_prompt: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_trait_has: ACCEL
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          kind: digimon
+          trait_has: ACCEL
+          can_digivolve_from_source: true
+        n: 1
+    summary: "[Your Turn][Once Per Turn] When any of your [ACCEL] trait Digimon are played, this Digimon may digivolve into an [ACCEL] trait Digimon card in the hand with the digivolution cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: ACCEL
+              - can_digivolve_from_source: true
+          prompt: "Digivolve this Digimon into a Digimon card with the [ACCEL] trait from your hand, with the cost reduced by 2"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false

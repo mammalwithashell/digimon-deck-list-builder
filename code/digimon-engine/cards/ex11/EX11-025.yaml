@@ -1,0 +1,118 @@
+# EX11-025 FunBeemon — Digimon, Lv.3, Green/Black, DP 1000, Cost 3.
+# Traits: Insectoid, X Antibody, Royal Base, LIBERATOR. Form: Rookie.
+# Attribute: Virus.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX11-025.md,
+# authoritative; DCGO EX11_025.cs cross-checked):
+#
+#   Evo box: Lv.2 Green / cost 1 OR Lv.2 Black / cost 1 (two circles).
+#   Evo box: "Digivolve Lv.2 w/[Royal Base] trait: Cost 0".
+#
+#   {Security} [Opponent's Turn] All of your [Royal Base] trait Digimon gain
+#   <Reboot>.
+#   [Start of Your Main Phase] Add your top face-down security card to the
+#   hand. Then, you may place 1 [Royal Base] trait Digimon card from your hand
+#   face up as the bottom security card.
+#
+#   Inherited Effect: [All Turns] This Digimon gets +1000 DP.
+#
+# Official Q&A Q5812-Q5815: cards placed face up by effects become face-up
+# security cards that remain revealed; a security check on one leaves it
+# revealed; its [Security] effect still triggers on a check; shuffling the stack
+# turns every face-up card face down first.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alt digivolution (EffectTiming.None): AddSelfDigivolutionRequirement
+#   StaticEffect(TopCard.IsLevel2 && HasRoyalBaseTraits, digivolutionCost: 0).
+#   A Green/Black Lv.2 [Royal Base] Digimon satisfies the circle (cost 1) AND
+#   the alt (cost 0): the cost-choice prompt fires.
+#
+# {Security} [Opponent's Turn] Reboot (EffectTiming.None, RebootStaticEffect):
+#   condition = IsExistInSecurity(card, false) [face UP, see the pink-icon
+#   rules of thumb in docs/RUST_DSL_AGENT_GUIDE.md §7] && IsOpponentTurn;
+#   permanents = own battle-area Digimon with EqualsTraits("Royal Base").
+#   → `kind: aura, scope: security` (BT24-094 idiom) with `grant_keyword:
+#   { keyword: Reboot }`, `active_when: { opponents_turn: true }`.
+#
+# [Start of Your Main Phase] (EffectTiming.OnStartMainPhase, mandatory, battle
+#   area): CanUse = IsExistOnBattleArea && IsOwnerTurn.
+#   1. Walk `Owner.SecurityCards` and add the first FACE-DOWN (IsFlipped) card
+#      to the hand (CR 3-7-4: face-up cards are skipped) → the new
+#      `add_top_face_down_security_to_hand` verb.
+#   2. If the hand holds a [Royal Base] Digimon and the owner CanAddSecurity:
+#      optional (canNoSelect: true) hand pick, placed FACE UP as the bottom
+#      security card (`SetIsFaceup`, Mode.PutSecurityBottom) →
+#      `select_hand` (optional) + `place_on_security { position: bottom,
+#      face_up: true }`.
+#
+# Inherited [All Turns] +1000 DP: ChangeSelfDPStaticEffect(1000, inherited) →
+#   `kind: aura, scope: inherited, target: {}`.
+
+card: EX11-025
+name: FunBeemon
+kind: digimon
+level: 3
+color: [green, black]
+cost: 3
+dp: 1000
+traits: [Insectoid, X Antibody, Royal Base, LIBERATOR]
+attribute: Virus
+form: Rookie
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 1
+  # Printed alt evo box: "Digivolve Lv.2 w/[Royal Base] trait: Cost 0".
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Royal Base }
+    cost: 0
+
+effects:
+  # {Security} [Opponent's Turn] Your [Royal Base] Digimon gain <Reboot>.
+  - kind: aura
+    scope: security
+    active_when: { opponents_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: Royal Base
+    grant_keyword: { keyword: Reboot }
+    summary: "{Security}[Opponent's Turn] All of your [Royal Base] trait Digimon gain <Reboot>"
+
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] Add your top face-down security card to the hand. Then, you may place 1 [Royal Base] trait Digimon card from your hand face up as the bottom security card"
+    process:
+      - add_top_face_down_security_to_hand: { of: you }
+      - if:
+          condition: { controller_can_add_security: true }
+          then:
+            - select_hand:
+                of: you
+                bind_as: royal_base_pick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: Royal Base
+                prompt: "You may place 1 [Royal Base] trait Digimon card from your hand face up as the bottom security card"
+            - if:
+                condition: { binding_present: royal_base_pick }
+                then:
+                  - place_on_security:
+                      of: you
+                      source: { card: { binding: royal_base_pick, zone: hand } }
+                      position: bottom
+                      face_up: true
+
+  - scope: inherited
+    kind: aura
+    active_when: { all_turns: true }
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"
