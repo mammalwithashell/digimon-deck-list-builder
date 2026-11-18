@@ -358,6 +358,9 @@ MelonLoader rows carry it wherever DCGO resolved a card, and
 | `selection` burst Tamer pick (`mechanic: "burst"`) | `targets[0].card_index` | the returned Tamer: the one card of the picked id that is new in its owner's next hand listing (same turn) and was last listed when it was played out of the hand; omitted unless exactly one card qualifies (`card_index_source: "hand_listing"`) |
 | `selection` burst Tamer pick of a REMOTE seat (`mechanic: "burst"`, `synthesized: "burst_tamer_frame"`) | `targets[0].frame` (+ `card_index`) | no pick row exists: the seat's `SelectBurstDigivolutionEffect.SelectTamer` ran on its own client. The converter writes the row right after the digivolve action from the play packet's `BurstTamerFrameID` (the picked permanent's `FrameID`, TurnStateMachine.cs:3016-3030), only when the frame model is certain (every frame hypothesis puts the same card at that frame, the card is a Tamer proper (card_kind 1, not an Option), and the packet's own board is explained). `card_index` comes from the model (`card_index_source: "frame_model"`) or, failing that, the owner's next hand listing (`"hand_listing"`); with copies of that Tamer on the board and no index the converter halts. A converter note records every such inference |
 | `selection` `SelectPermanentEffect` whose board holds several copies of the target's card | `targets[i].card_index` | a recorder 0.2.0 row's `board_indexes[player][frame]`; `card_index_source: "recorder"`; otherwise the frame model (`frame_model.py`), only when it is certain (`"frame_model"`) |
+| `action` (attack) whose board holds several copies of the attacker's card | `operand_card_index` | a recorder 0.2.0 `SetAttackingPermaent` row's `board_indexes[actor][attacker position]`; `operand_card_index_source: "recorder"` |
+| `action` (digivolve onto a battle-area permanent) whose board holds several copies of the target's card | `operand_card_index` | the resolve row's `target.card_index` (the target permanent's top card, `CardJson(target.TopCard)`), only when `boards[actor][target_slot]` names that card and `board_indexes` (when logged) agrees; `operand_card_index_source: "recorder"` |
+| `action` (activated permanent effect) whose board holds several copies of the host's card | `operand_card_index` | a recorder 0.2.0 activate-permanent packet row's `board_indexes[actor][field index]`; `operand_card_index_source: "recorder"` |
 
 **Provenance (`targets[i].card_index_source`).** A target's `card_index` is DCGO's own number only when the recorder
 logged it; the converter also derives some. Every target that carries a `card_index` therefore carries
@@ -375,6 +378,20 @@ and should say so where it reports the resolution. `dcgo-replay` does (`ReplayDr
 identified through such an index adds a replay note "copy identity inferred by frame model, not recorded" (or "by hand
 listing"); an index with no `card_index_source` (a recording predating the field) adds "provenance not recorded"; a
 `recorder` index stays silent. The notes never change whether the replay halts.
+
+**Own-board operands among copies (`operand_card_index`, `operand_card_index_source`).** An action's board operand is a
+position into the recorded board, which names permanents by card id only, and DCGO's frame order is not the engine's
+play order, so with two copies of one card the position cannot say which permanent it is
+(raw-20261115T153822Z#g10 raw seq 821: two ST24-05, DCGO's attacker was the newer copy holding BT26-036, and the
+occurrence-order pairing sent the older copy, so BT26-036's When Attacking effect never fired). The converter therefore
+writes the operand's own DCGO `CardIndex` on the action row, only when the board holds more than one copy of the
+operand's card, and only when the raw row grounds it (an older raw log without `board_indexes` omits it; there is no
+frame-model fallback for operands). The attack's TARGET on the opponent's board is not named: a duplicated defender
+still pairs by occurrence order. `operand_card_index_source` uses the same values as `targets[i].card_index_source`
+(always `recorder` today). The replay resolves the operand through its pairing of DCGO indexes with engine cards
+(`ReplayDriver::named_operand_action`); with no index (or one it never paired) it keeps the occurrence-order pairing and,
+when the engine holds copies that are not interchangeable and the same action is legal for more than one of them, adds a
+replay note naming the guess. It does not halt: a recording predating the field cannot do better.
 
 A played card's `card_index` (the `action` row) is taken from the resolve row's hand listing unless the listing NAMES a
 card at the played slot and that card is not the played card (`hand.cards[slot].card_id` present, `cards[0]` present and
