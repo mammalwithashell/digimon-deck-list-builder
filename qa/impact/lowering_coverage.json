@@ -20917,6 +20917,32 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "EX11-005": {
+   "behaviourally_covered": true,
+   "clause_count": 1,
+   "constructs": [
+    "verb:effect_initiated_digivolve",
+    "verb:if",
+    "verb:select_hand",
+    "verb:select_trash",
+    "verb:trash_from_hand_by_index",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:effect_digivolved_any_digimon",
+    "predicate:kind",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "timing:start_of_your_main_phase"
+   ],
+   "effect_clause_count": 1,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "EX11-008": {
    "behaviourally_covered": true,
    "clause_count": 3,
@@ -21467,6 +21493,26 @@
    "protection_constructs": [
     "verb:grant_effect_immunity"
    ],
+   "untested_constructs": []
+  },
+  "EX11-047": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "verb:gain_memory",
+    "verb:select_hand",
+    "verb:trash_from_hand_by_index",
+    "predicate:color_is",
+    "predicate:level_eq",
+    "predicate:name_is",
+    "predicate:your_turn",
+    "timing:start_of_your_main_phase"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
    "untested_constructs": []
   },
   "EX11-053": {
@@ -28139,6 +28185,35 @@
     "timing:on_digivolution_card_trashed"
    ],
    "effect_clause_count": 1,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "EX8-009": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "verb:add_to_hand_from_reveal",
+    "verb:gain_memory",
+    "verb:place_remainder_on_deck",
+    "verb:reveal_top_deck",
+    "verb:select_reveal_buckets",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:event_target_kind",
+    "predicate:event_target_owner",
+    "predicate:level_eq",
+    "predicate:name_contains",
+    "predicate:name_is",
+    "predicate:your_turn",
+    "timing:on_any_deletion",
+    "timing:on_play",
+    "timing:when_digivolving"
+   ],
+   "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -82334,10 +82409,10 @@
  "summary": {
   "behavioural_tests": 2299,
   "cards": {
-   "behaviourally_covered": 1187,
-   "lowering_covered": 1204,
+   "behaviourally_covered": 1190,
+   "lowering_covered": 1207,
    "not_covered": 37,
-   "total": 1241
+   "total": 1244
   },
   "constructs": {
    "keyword": {
