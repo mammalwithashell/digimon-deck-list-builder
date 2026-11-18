@@ -11,14 +11,10 @@
 //! reduced by 3. (DCGO EX9_067.cs, "Your Turn" region; CR 4.3 for the
 //! triggered-effect timing.) Covered by the `your_turn_*` tests below.
 
-use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
+use digimon_engine::action::space::{PASS, PLAY_HAND_START, SEL_REVEAL_START};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardKind, PlaySource};
-use digimon_engine::owned_card_choice::CardChoiceZone;
-
-#[path = "../../support/owned_card_choice.rs"]
-mod physical_menu;
 
 #[test]
 fn ex9_067_on_play_adds_one_puppet_or_liberator_and_bottoms_rest() {
@@ -128,7 +124,7 @@ fn zone_ids(
 
 // ─── [Your Turn] Puppet-digivolve observer ───────────────────────────────────
 
-fn digimon(id: &str, level: u8, cost: u8, traits: &[&str]) -> CardData {
+fn digimon(id: &str, level: u8, cost: u16, traits: &[&str]) -> CardData {
     let mut c = make_test_card(id, id);
     c.level = Some(level);
     c.play_cost = cost;
@@ -191,9 +187,33 @@ fn field_ids(r: &DebugRunner) -> Vec<String> {
         .collect()
 }
 
+fn hand_ids(r: &DebugRunner) -> Vec<String> {
+    zone_ids(&r.game.players[0].hand, &r.game.card_data)
+}
+
+/// Hand ids offered by the pending HAND pick (PASS excluded).
+fn offered_hand_ids(r: &DebugRunner) -> Vec<String> {
+    let view = r.pending_selection_view().expect("hand pick pending");
+    assert_eq!(view.kind, digimon_engine::selection::SelectionKind::Hand);
+    let hand = hand_ids(r);
+    let mut ids: Vec<String> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .map(|a| hand[(a - PLAY_HAND_START) as usize].clone())
+        .collect();
+    ids.sort();
+    ids
+}
+
 fn pick_from_hand(r: &mut DebugRunner, id: &str) {
-    let a = physical_menu::card_action(&r.game, id, CardChoiceZone::Hand);
-    r.execute_action(0, a).expect("pick hand card");
+    let idx = hand_ids(r)
+        .iter()
+        .position(|h| h == id)
+        .expect("card in hand");
+    r.execute_action(0, PLAY_HAND_START + idx as u16)
+        .expect("pick hand card");
 }
 
 #[test]
@@ -208,19 +228,16 @@ fn your_turn_digivolve_into_puppet_returns_tamer_and_plays_puppet_at_minus_3() {
         "the Tamer is returned to the deck as the cost"
     );
     assert_eq!(
-        r.game.players[0].deck.last().unwrap().card_id(&r.game.card_data),
+        r.game.players[0].deck.first().unwrap().card_id(&r.game.card_data),
         "EX9-067",
         "returned to the BOTTOM of the deck"
     );
     // Only the Puppet Digimon is a legal pick (not PLAIN-HAND).
     let view = r.pending_selection_view().expect("hand pick");
     assert!(view.is_optional, "DCGO canNoSelect: true");
-    let want = physical_menu::card_action(&r.game, "PUP-HAND", CardChoiceZone::Hand);
-    assert!(view.valid_action_ids.contains(&want));
-    assert!(
-        !physical_menu::commits(&r.game)
-            .iter()
-            .any(|row| row.card_id.as_deref() == Some("PLAIN-HAND")),
+    assert_eq!(
+        offered_hand_ids(&r),
+        vec!["PUP-HAND".to_string()],
         "a non-Puppet Digimon is not eligible"
     );
     let before = r.memory();

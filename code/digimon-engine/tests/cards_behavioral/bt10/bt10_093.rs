@@ -266,8 +266,8 @@ fn bt10_093_clause1_purple_placed_under_tamer_draws_and_gains_memory() {
         r.game.players[0].battle_area[yuu.index as usize]
             .card_sources
             .len(),
-        1,
-        "the purple card is now under Yuu Amano"
+        2,
+        "Yuu Amano itself + the purple card now under it"
     );
 }
 
@@ -306,7 +306,9 @@ fn bt10_093_clause1_fires_on_opponents_turn_and_for_opponent_effects() {
     let (mem, hand_len) = (r.memory(), r.game.players[0].hand.len());
     // The opponent's effect places a card from the OPPONENT's hand under Yuu.
     tuck(&mut r, 1, "OPP-PLACER", 1, yuu);
-    assert_eq!(r.memory(), mem + 1, "memory gained on the opponent's turn");
+    // The gauge is stored from the TURN player's perspective (here player 1),
+    // so player 0's +1 on the opponent's turn reads as -1.
+    assert_eq!(r.memory(), mem - 1, "player 0 gains 1 memory on the opponent's turn");
     assert_eq!(
         r.game.players[0].hand.len(),
         hand_len + 1,
