@@ -1434,6 +1434,43 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT11-043": {
+   "behaviourally_covered": true,
+   "clause_count": 6,
+   "constructs": [
+    "verb:add_modifier",
+    "verb:cancel_replacement",
+    "verb:delete_permanent",
+    "verb:select_any_permanent",
+    "verb:select_opponent_permanent",
+    "predicate:all_of",
+    "predicate:all_turns",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:count_gte",
+    "predicate:is_source",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:name_contains",
+    "predicate:not",
+    "predicate:other",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:on_play",
+    "timing:when_attacking",
+    "timing:when_digivolving"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "clause:replacement",
+    "trigger:when_would_be_deleted",
+    "verb:cancel_replacement"
+   ],
+   "untested_constructs": []
+  },
   "BT11-052": {
    "behaviourally_covered": true,
    "clause_count": 4,
@@ -3741,6 +3778,34 @@
    "untested_constructs": [
     "predicate:rules_text_contains"
    ]
+  },
+  "BT16-070": {
+   "behaviourally_covered": true,
+   "clause_count": 4,
+   "constructs": [
+    "verb:delete_permanents",
+    "verb:if",
+    "verb:select_opponent_permanent",
+    "verb:select_own_permanent",
+    "predicate:all_of",
+    "predicate:binding_present",
+    "predicate:color_is",
+    "predicate:dp_lte",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:name_is",
+    "timing:when_attacking",
+    "timing:when_digivolving",
+    "keyword:ArmorPurge"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "keyword:ArmorPurge"
+   ],
+   "untested_constructs": []
   },
   "BT16-077": {
    "behaviourally_covered": true,
@@ -6217,6 +6282,32 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT20-004": {
+   "behaviourally_covered": true,
+   "clause_count": 1,
+   "constructs": [
+    "verb:effect_initiated_digivolve",
+    "verb:select_hand",
+    "predicate:all_of",
+    "predicate:can_digivolve_from_source",
+    "predicate:count_gte",
+    "predicate:event_target_kind",
+    "predicate:event_target_owner",
+    "predicate:event_target_trait_has",
+    "predicate:kind",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "predicate:zone",
+    "timing:on_enter_field_anyone"
+   ],
+   "effect_clause_count": 1,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "BT20-007": {
    "behaviourally_covered": true,
    "clause_count": 4,
@@ -6672,6 +6763,29 @@
    ],
    "untested_constructs": []
   },
+  "BT20-031": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "verb:add_dp_modifier",
+    "verb:select_opponent_permanent",
+    "predicate:color_is",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:trait_has",
+    "timing:on_play",
+    "timing:when_digivolving",
+    "keyword:Barrier"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "keyword:Barrier"
+   ],
+   "untested_constructs": []
+  },
   "BT20-036": {
    "behaviourally_covered": true,
    "clause_count": 6,
@@ -6738,6 +6852,50 @@
    "protection_constructs": [
     "clause:partition"
    ],
+   "untested_constructs": []
+  },
+  "BT20-038": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:cost_target",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:name_is",
+    "predicate:source_is_cost_target_permanent",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "keyword:Piercing"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT20-039": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "verb:select_opponent_permanent",
+    "verb:suspend",
+    "predicate:color_is",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:trait_has",
+    "timing:on_play",
+    "timing:when_digivolving",
+    "keyword:Piercing"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
    "untested_constructs": []
   },
   "BT20-040": {
@@ -9098,6 +9256,31 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT22-004": {
+   "behaviourally_covered": true,
+   "clause_count": 1,
+   "constructs": [
+    "verb:effect_initiated_digivolve",
+    "verb:select_hand",
+    "predicate:all_of",
+    "predicate:can_digivolve_from_source",
+    "predicate:count_gte",
+    "predicate:event_added_card_any",
+    "predicate:event_host_permanent_is_source",
+    "predicate:kind",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "predicate:zone",
+    "timing:on_add_digivolution_cards"
+   ],
+   "effect_clause_count": 1,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "BT22-005": {
    "behaviourally_covered": true,
    "clause_count": 1,
@@ -9164,6 +9347,37 @@
     "timing:when_digivolving"
    ],
    "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT22-012": {
+   "behaviourally_covered": true,
+   "clause_count": 6,
+   "constructs": [
+    "verb:if",
+    "verb:play_from_hand_free",
+    "verb:select_hand",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
+    "predicate:color_is",
+    "predicate:count_lte",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:name_contains",
+    "predicate:owner",
+    "predicate:play_cost_lte",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:when_digivolving",
+    "keyword:Raid",
+    "keyword:SecurityAttackPlus"
+   ],
+   "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -9629,6 +9843,95 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT22-043": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "verb:draw",
+    "verb:if",
+    "verb:place_top_source_as_bottom",
+    "verb:play_from_hand_free",
+    "verb:select_hand",
+    "predicate:all_of",
+    "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
+    "predicate:color_is",
+    "predicate:count_gte",
+    "predicate:count_lte",
+    "predicate:event_added_card_any",
+    "predicate:event_host_permanent_is_source",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:materials_count_gte",
+    "predicate:owner",
+    "predicate:source_permanent_trait_has",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "predicate:zone",
+    "timing:main_on_field",
+    "timing:on_add_digivolution_cards"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT22-044": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "verb:draw",
+    "verb:gain_memory",
+    "verb:place_top_source_as_bottom",
+    "predicate:all_of",
+    "predicate:color_is",
+    "predicate:event_added_card_any",
+    "predicate:event_host_permanent_is_source",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:materials_count_gte",
+    "predicate:source_permanent_trait_has",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "timing:main_on_field",
+    "timing:on_add_digivolution_cards"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT22-046": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "verb:if",
+    "verb:play_from_hand_free",
+    "verb:select_hand",
+    "predicate:all_of",
+    "predicate:all_turns",
+    "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
+    "predicate:color_is",
+    "predicate:count_lte",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:when_digivolving"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "BT22-052": {
    "behaviourally_covered": true,
    "clause_count": 6,
@@ -9663,6 +9966,37 @@
     "clause:replacement",
     "predicate:replacement_subject_is_mine"
    ],
+   "untested_constructs": []
+  },
+  "BT22-054": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "verb:add_dp_modifier",
+    "verb:draw",
+    "verb:place_top_source_as_bottom",
+    "verb:select_opponent_permanent",
+    "predicate:all_of",
+    "predicate:any_permanent",
+    "predicate:color_is",
+    "predicate:event_added_card_any",
+    "predicate:event_host_permanent_is_source",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:materials_count_gte",
+    "predicate:owner",
+    "predicate:source_permanent_trait_has",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "predicate:zone",
+    "timing:main_on_field",
+    "timing:on_add_digivolution_cards"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
    "untested_constructs": []
   },
   "BT22-084": {
@@ -20917,6 +21251,54 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "EX11-003": {
+   "behaviourally_covered": false,
+   "clause_count": 1,
+   "constructs": [
+    "verb:draw",
+    "predicate:all_of",
+    "predicate:event_card_face_up_in_security",
+    "predicate:event_card_trait_has",
+    "predicate:your_turn",
+    "timing:on_added_to_security"
+   ],
+   "effect_clause_count": 1,
+   "has_card_test": true,
+   "lowering_covered": false,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": [
+    "predicate:event_card_face_up_in_security"
+   ]
+  },
+  "EX11-007": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "verb:grant_keyword",
+    "verb:select_own_permanent",
+    "predicate:all_of",
+    "predicate:all_turns",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:event_permanent_is_source",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:name_contains",
+    "predicate:name_is",
+    "predicate:trait_has",
+    "timing:on_move",
+    "timing:on_play",
+    "keyword:Piercing",
+    "keyword:Raid"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "EX11-008": {
    "behaviourally_covered": true,
    "clause_count": 3,
@@ -21338,6 +21720,37 @@
    "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
+  },
+  "EX11-025": {
+   "behaviourally_covered": false,
+   "clause_count": 6,
+   "constructs": [
+    "verb:add_top_face_down_security_to_hand",
+    "verb:if",
+    "verb:place_on_security",
+    "verb:select_hand",
+    "predicate:all_of",
+    "predicate:all_turns",
+    "predicate:binding_present",
+    "predicate:color_is",
+    "predicate:controller_can_add_security",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:opponents_turn",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:start_of_your_main_phase",
+    "keyword:Reboot"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": false,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": [
+    "verb:add_top_face_down_security_to_hand"
+   ]
   },
   "EX11-027": {
    "behaviourally_covered": true,
@@ -44221,6 +44634,18 @@
    "tested_behaviourally": false,
    "tests": []
   },
+  "predicate:event_card_face_up_in_security": {
+   "kind": "predicate",
+   "name": "event_card_face_up_in_security",
+   "near_miss_files": [
+    "src/dsl_cards/predicate.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
+  },
   "predicate:event_card_in_text_contains": {
    "kind": "predicate",
    "name": "event_card_in_text_contains",
@@ -65708,6 +66133,21 @@
     "rules_conformance::ch15_08_effect_categories.rs::inherited_on_deletion_is_pending_on_the_former_top_card"
    ]
   },
+  "verb:add_top_face_down_security_to_hand": {
+   "kind": "verb",
+   "lowering_files": [
+    "code/digimon-engine/src/dsl_cards/step/zone_moves.rs"
+   ],
+   "name": "add_top_face_down_security_to_hand",
+   "near_miss_files": [
+    "src/dsl_cards/step/zone_moves.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
+  },
   "verb:add_top_security_to_hand": {
    "kind": "verb",
    "lowering_files": [
@@ -82334,10 +82774,10 @@
  "summary": {
   "behavioural_tests": 2299,
   "cards": {
-   "behaviourally_covered": 1187,
-   "lowering_covered": 1204,
-   "not_covered": 37,
-   "total": 1241
+   "behaviourally_covered": 1200,
+   "lowering_covered": 1217,
+   "not_covered": 39,
+   "total": 1256
   },
   "constructs": {
    "keyword": {
@@ -82353,10 +82793,10 @@
     "parsed_only": 7,
     "tested": 207,
     "tested_behaviourally": 200,
-    "total": 230,
-    "untested": 23,
-    "used_by_cards": 203,
-    "used_untested": 15
+    "total": 231,
+    "untested": 24,
+    "used_by_cards": 204,
+    "used_untested": 16
    },
    "timing": {
     "parsed_only": 2,
@@ -82371,10 +82811,10 @@
     "parsed_only": 5,
     "tested": 184,
     "tested_behaviourally": 179,
-    "total": 187,
-    "untested": 3,
-    "used_by_cards": 175,
-    "used_untested": 3
+    "total": 188,
+    "untested": 4,
+    "used_by_cards": 176,
+    "used_untested": 4
    }
   },
   "ex13_lists": 1552,
@@ -82579,7 +83019,17 @@
    },
    {
     "cards_blocked": 1,
+    "construct": "predicate:event_card_face_up_in_security",
+    "ex13_lists_blocked": 1
+   },
+   {
+    "cards_blocked": 1,
     "construct": "timing:on_option_trashed",
+    "ex13_lists_blocked": 1
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "verb:add_top_face_down_security_to_hand",
     "ex13_lists_blocked": 1
    },
    {
