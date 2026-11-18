@@ -1934,6 +1934,7 @@ impl Walk for digimon_dsl::step::StructuredBindingRef {
             security_top,
             own_breeding,
             top_of,
+            played_carrier,
         } = self;
         binding.walk(c, &format!("{}.binding", path), "EXISTING_INSTANCE_BINDING");
         permanent.walk(
@@ -1956,6 +1957,11 @@ impl Walk for digimon_dsl::step::StructuredBindingRef {
         security_top.walk(c, &format!("{}.security_top", path), "UNCLASSIFIED_STRING");
         own_breeding.walk(c, &format!("{}.own_breeding", path), "UNCLASSIFIED_STRING");
             top_of.walk(c, &format!("{}.top_of", path), "EXISTING_INSTANCE_BINDING");
+        played_carrier.walk(
+            c,
+            &format!("{}.played_carrier", path),
+            "EXISTING_INSTANCE_BINDING",
+        );
 }
 }
 impl Walk for digimon_dsl::step::PlayerArg {

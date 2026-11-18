@@ -1,0 +1,54 @@
+# ST16-03 Gabumon (Lv.3, Purple, cost 3, 1000 DP). Traits: Reptile.
+#
+# Printed text (data/card_bundles/ST16-03.md, official Bandai DB):
+#   [Digivolve] [Tsunomon]: Cost 0
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   Inherited: [When Attacking][Once Per Turn] <Draw 1>. Then, trash 1 card in
+#   your hand.
+#   Official Q&A: Digimon in breeding areas aren't checked by the opening effect.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/ST16/Purple/ST16_03.cs
+#   - None timing: AddSelfDigivolutionRequirementStaticEffect(name Tsunomon,
+#     cost 0) -> alt_paths digivolve from [Tsunomon] (exact name, CR 4.3 2-3-1-2).
+#   - OnStartMainPhase: CanUse = on battle area + owner's turn; CanActivate =
+#     opponent has >= 1 BATTLE-AREA Digimon (breeding excluded, matches the Q&A)
+#     -> gain_memory 1; mandatory (no optional).
+#   - OnAllyAttack (inherited, maxCount 1): DrawClass 1, then if hand >= 1 a
+#     mandatory SelectHandEffect Discard (canNoSelect false).
+card: ST16-03
+name: Gabumon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 1000
+form: Rookie
+attribute: Data
+traits: [Reptile]
+alt_paths:
+  - kind: digivolve
+    from: { name_is: Tsunomon }
+    cost: 0
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] Draw 1, then trash 1 card in your hand (inherited)"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }

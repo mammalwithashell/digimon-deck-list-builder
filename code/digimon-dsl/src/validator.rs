@@ -3017,6 +3017,7 @@ fn validate_binding_ref(
         deck_top,
         security_top,
         own_breeding,
+        played_carrier,
         ..
     }) = binding_ref
     else {
@@ -3039,6 +3040,7 @@ fn validate_binding_ref(
         deck_top.is_some(),
         security_top.is_some(),
         matches!(own_breeding, Some(true)),
+        played_carrier.is_some(),
     ]
     .iter()
     .filter(|present| **present)

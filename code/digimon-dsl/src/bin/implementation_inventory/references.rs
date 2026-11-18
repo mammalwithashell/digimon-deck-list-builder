@@ -5582,6 +5582,19 @@ impl Walk for digimon_dsl::compiled::CompiledBindingRef {
                     "EXISTING_INSTANCE_BINDING",
                 );
             }
+            digimon_dsl::compiled::CompiledBindingRef::PlayedCarrier(f0) => {
+                c.node(
+                    path,
+                    "digimon_dsl::compiled::CompiledBindingRef",
+                    "VARIANT",
+                    serde_json::json!("PlayedCarrier"),
+                );
+                f0.walk(
+                    c,
+                    &format!("{}@PlayedCarrier.0", path),
+                    "EXISTING_INSTANCE_BINDING",
+                );
+            }
             digimon_dsl::compiled::CompiledBindingRef::DeckTop(f0) => {
                 c.node(
                     path,

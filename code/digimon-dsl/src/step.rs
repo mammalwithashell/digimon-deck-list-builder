@@ -1568,6 +1568,22 @@ pub struct StructuredBindingRef {
     /// G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub own_breeding: Option<bool>,
+    /// The permanent that CURRENTLY CARRIES the card a free-play verb
+    /// (`play_from_hand_free` / `play_union_bound_free` / `play_token`,
+    /// `bind_as: <name>`) played -- whether that card is still the top card
+    /// or has since been buried as a digivolution card by a later digivolve.
+    /// YAML: `{ played_carrier: played }`.
+    ///
+    /// This is the "return/delete THAT Digimon" reading of a delayed rider:
+    /// DCGO keeps the `Permanent` object across digivolution, so a delayed
+    /// "return it to the hand" still finds it after it digivolved (BT16-084:
+    /// official Q&A "Yes, it's returned. ... only the top card is returned to
+    /// the hand and all digivolution cards are trashed"). `{ permanent: <name> }`
+    /// is the STRICT sibling that fizzles once the played card is no longer a
+    /// battle-area top. Resolves to nothing once the played card left the
+    /// battle area entirely.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub played_carrier: Option<String>,
 }
 
 // ── Argument structs (one per verb family) ──────────────────────────

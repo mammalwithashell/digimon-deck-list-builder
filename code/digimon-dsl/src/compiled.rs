@@ -3468,6 +3468,12 @@ pub enum CompiledBindingRef {
     Permanent(String),
     Binding(String),
     OfPermanent(String),
+    /// The permanent that currently carries the card a free-play verb played
+    /// (`bind_as` of `play_from_hand_free` / `play_union_bound_free` /
+    /// `play_token`), whether that card is still the top or was since buried
+    /// as a digivolution card. The permissive sibling of `Permanent` for
+    /// "return/delete that Digimon" delayed riders (BT16-084).
+    PlayedCarrier(String),
     /// Resolve a named permanent's current top physical card.
     TopOf(String),
     /// Top card of a player's deck — resolves to `CardSourceRef::DeckTop`.
