@@ -4102,6 +4102,52 @@ impl Game {
         to_skip
     }
 
+    /// The queued effects of the parked `TriggerOrder`'s chooser and batch that
+    /// the prompt does NOT offer because the engine filters them as non-firing
+    /// right now, and that DCGO's `MultipleSkills` may nevertheless have listed:
+    /// `(source card id, why)` for each.
+    ///
+    /// Only two filters qualify, the ones where DCGO's own `CanActivate`
+    /// (MultipleSkills.cs:217-221) can hold while ours does not: the clause
+    /// `condition` fails (a cost preflight - EX9-032 Karakurumon's "By deleting
+    /// 1 of your Tokens or other [Puppet] Digimon", CR 4.3 15-7-4, whose DCGO
+    /// `CanActivateCondition` checks only that the card is on the field,
+    /// EX9_032.cs) and an optional processing condition that cannot be paid
+    /// (`queued_optional_condition_unpayable`). An exhausted once-per-turn count
+    /// and a left source are filtered by DCGO's `CanActivate` as well, so they
+    /// are not "extra" entries and are not counted. Empty unless a
+    /// `TriggerOrder` is parked. The condition check installs its trigger
+    /// context temporarily, so replay adapters call this on a clone.
+    pub(crate) fn parked_trigger_order_filtered_siblings(&mut self) -> Vec<(String, &'static str)> {
+        let Some(state) = self.pending_selection_resume.as_ref().and_then(|r| match r.frames.first() {
+            Some(crate::resume::ResumeFrame::TriggerOrderSelection(s)) => Some(s.clone()),
+            _ => None,
+        }) else {
+            return Vec::new();
+        };
+        let Some(batch) = state.bundle.first().and_then(|&i| self.effect_queue.get(i)).map(|qe| qe.trigger_batch)
+        else {
+            return Vec::new();
+        };
+        let mut found = Vec::new();
+        for i in 0..self.effect_queue.len() {
+            let Some(qe) = self.effect_queue.get(i) else { break };
+            if state.bundle.contains(&i) || qe.controller != state.chooser || qe.trigger_batch != batch {
+                continue;
+            }
+            let card_id = qe.card_id.clone();
+            if self.queued_effect_opt_exhausted(i) || !self.queued_effect_index_is_live(i) {
+                continue;
+            }
+            if !self.queued_effect_condition_passes(i) {
+                found.push((card_id, "its clause condition fails"));
+            } else if self.queued_optional_condition_unpayable(i) {
+                found.push((card_id, "its optional processing condition cannot be paid"));
+            }
+        }
+        found
+    }
+
     /// True when `effect_queue[i]` is an OPTIONAL effect whose optional
     /// processing condition can't be executed right now (§15-7-4, Ver. 4.3:
     /// it can't be chosen; owner ruling 2026-10-10 #6: not offered). Like the
