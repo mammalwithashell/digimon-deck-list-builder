@@ -2686,6 +2686,25 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = pred.event_target_digivolved_from_kind {
+        // G-DSL-EVENT-TARGET-DIGIVOLVED-FROM-KIND: same liveness guard as
+        // `event_target_same_level_as_previous` — a departed event permanent
+        // has no stack left to read.
+        if rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .is_some_and(|trigger| {
+                trigger.event_permanent_identity.is_some()
+                    && trigger.resolve_event_permanent(rctx.game).is_none()
+            })
+        {
+            return false;
+        }
+        if !event_target_digivolved_from_kind(rctx, want) {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_cause {
         let Some(actual) = rctx
             .game
@@ -3279,6 +3298,33 @@ fn event_target_dp(rctx: &EffectReadContext<'_>) -> Option<i32> {
         }
     }
     None
+}
+
+/// True when the card directly under the event permanent's new top card (the
+/// card it digivolved from) has category `want`. DCGO reads the same thing
+/// from the `evoRoots` of the enter-field hashtable.
+fn event_target_digivolved_from_kind(rctx: &EffectReadContext<'_>, want: CompiledCardKind) -> bool {
+    let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
+        return false;
+    };
+    let handle = if trigger.event_permanent_identity.is_some() {
+        trigger.resolve_event_permanent(rctx.game)
+    } else {
+        trigger.event_permanent.or(trigger.target_permanent)
+    };
+    let Some(handle) = handle else {
+        return false;
+    };
+    let Some(permanent) = permanent_for_handle(rctx, handle) else {
+        return false;
+    };
+    let Some(previous) = permanent.card_sources.iter().rev().nth(1) else {
+        return false;
+    };
+    let Some(data) = rctx.game.card_data.get(previous.data_index) else {
+        return false;
+    };
+    kind_matches_card_search(want, data)
 }
 
 fn event_target_same_level_as_previous(rctx: &EffectReadContext<'_>) -> Option<bool> {

@@ -18980,14 +18980,12 @@
       "untested_constructs": []
     },
     "BT24-068": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
-      "has_card_test": false,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT24-069": {
@@ -27020,14 +27018,12 @@
       "untested_constructs": []
     },
     "BT7-081": {
-      "admissible": false,
+      "admissible": true,
       "dsl": false,
-      "has_card_test": false,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT7-082": {
@@ -43311,14 +43307,12 @@
       "untested_constructs": []
     },
     "RB1-005": {
-      "admissible": false,
+      "admissible": true,
       "dsl": false,
-      "has_card_test": false,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "RB1-006": {
@@ -47110,21 +47104,21 @@
     }
   },
   "counts": {
-    "admissible": 1162,
+    "admissible": 1165,
     "diverged_no_quirk": 0,
-    "failed_verdict": 17,
+    "failed_verdict": 16,
     "registered": 4483,
     "unregistered": 0,
     "untested_card": 7,
-    "untested_lowering": 3297
+    "untested_lowering": 3295
   },
-  "generated_at": "2026-11-15T20:00:32+00:00",
+  "generated_at": "2026-11-18T00:24:41+00:00",
   "sources": {
-    "behavioral_test_modules_sha256": "09f73571ccc84272f5d08ba4b3c263dc7360b41f3cc2af0fd39a2aa27ded235a",
+    "behavioral_test_modules_sha256": "6a49d46b326bb3dc11eb63eab79261cf1a4d9c19f7f0d32da28fd0c52b85f731",
     "card_registry_sha256": "9a604ff3e4feb20a16ff8ce38febf866191d6d2b9697162e5b7e002332799599",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "eb405b403841a5aeace95b8bfb295b7cff7de1becc7a7b423ed4d103dfd60ad7",
-    "validated_cards_dsl_sha256": "15e0f52cdf22895bad6d0e382c8dc70f4d19ea45d229d1a5f0d783c1841cb083",
+    "lowering_coverage_sha256": "9327bb0693e444603e2247b3713de03675e592fbc279882de3af084ad115b7a2",
+    "validated_cards_dsl_sha256": "5b95fc56635a5deae924f4eed89b0e5b6ea97b7200686ad540dec473b96e1686",
     "validated_cards_sha256": "64443d5a477f01781b8c8cce7defc79b47636d0da4c92ed20a977b61de46246a"
   },
   "version": 2

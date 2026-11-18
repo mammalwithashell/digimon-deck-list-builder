@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-11-11",
+  "last_updated": "2026-11-17",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -8380,14 +8380,16 @@
     },
     "BT24-068": {
       "card_name": "DemiDevimon",
-      "validated_date": "2026-06-03",
-      "report": "rules-faq-faithfulness-suite (NV-1 vehicle)",
-      "status": "PARTIAL",
+      "validated_date": "2026-11-17",
+      "report": "dcgo-pvp-replay-hunt-reveal-two-bucket-onplay",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "rules-FAQ no-DP vehicle",
+      "archetype": "Evil / Seven Great Demon Lords (reveal-search)",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-068.yaml",
-      "test_path": null,
-      "audit_note": "2026-10-03: authored 2026-06-03 as a vanilla no-DP vehicle for FAQ NV-1 from a pre-release cards.json stub. The card prints 1000 DP (now in the YAML), [On Play] reveal 3 (add 1 [Evil]/[Fallen Angel] and 1 [Seven Great Demon Lords] trait card, rest to the bottom, then trash 1 card in hand) and an inherited [When Attacking] [Once Per Turn] trash of the top card of both players' decks; neither effect is implemented. NV-1 now uses a Digi-Egg as its vehicle."
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_068.rs",
+      "test_count": 11,
+      "tests_passing": 11,
+      "notes": "2026-11-17: promoted from PARTIAL (stats-only vanilla stub). [On Play] reveal 3, mandatory [Evil]/[Fallen Angel] and [Seven Great Demon Lords] picks (one card cannot fill both), remainder ordered to the deck bottom, then a mandatory hand trash; inherited [When Attacking][Once Per Turn] trashes the top card of both decks. Image + official bundle + DCGO BT24_068.cs. Simulator evidence only."
     },
     "EX3-014": {
       "card_name": "Dorbickmon",
@@ -16850,6 +16852,32 @@
       "tests_passing": 8,
       "tests_ignored": 0,
       "notes": "Official Q2315-Q2320 and pinned DCGO BT13_077: optional controller selection, player-directed mandatory attack if legal, source-kind immunity and expiry, Blocker, attack target ownership, both owners, cloned continuations and nested-attack rejection. Existing EX3-024 face/inherited immunity behavior preserved. Simulator qualification, not Oracle certification."
+    },
+    "RB1-005": {
+      "card_name": "Gammamon",
+      "validated_date": "2026-11-17",
+      "report": "dcgo-pvp-replay-hunt-reveal-two-bucket-onplay",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gammamon / Hiro Amanokawa (reveal-search)",
+      "yaml_path": "code/digimon-engine/cards/rb1/RB1-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/rb1/rb1_005.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "notes": "2026-11-17: authored from the card image, official bundle (incl. Q&A: only the top stacked card is read for [Gammamon] in its text) and DCGO RB1_005.cs. [On Play] reveal 3, [Gammamon]-in-text pick + [Hiro Amanokawa] pick (mandatory, no card fills both), remainder ordered to the bottom; inherited [Your Turn] +2000 DP while the carrier's top card has [Gammamon] in its text. Simulator evidence only."
+    },
+    "BT7-081": {
+      "card_name": "Bokomon",
+      "validated_date": "2026-11-17",
+      "report": "dcgo-pvp-replay-hunt-reveal-two-bucket-onplay",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Hybrid / Ten Warriors (reveal-search)",
+      "yaml_path": "code/digimon-engine/cards/bt7/BT7-081.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt7/bt7_081.rs",
+      "test_count": 13,
+      "tests_passing": 13,
+      "notes": "2026-11-17: authored from the card image, official bundle (Q&A: a lone matching card is still added) and DCGO BT7_081.cs. [On Play] reveal 5, [Hybrid]/[Ten Warriors] pick + Tamer pick (mandatory, no card fills both), remainder ordered to the bottom; [Your Turn][Once Per Turn] gain 2 memory when one of your Tamers digivolves via the new `event_target_digivolved_from_kind` predicate (the Tamer becomes a Digimon, so the resulting top card cannot be tested). Simulator evidence only."
     }
   }
 }

@@ -739,6 +739,7 @@ pub struct CompiledPredicate {
     pub is_event_host: Option<bool>,
     pub event_is_effect_initiated: Option<bool>,
     pub event_target_same_level_as_previous: Option<bool>,
+    pub event_target_digivolved_from_kind: Option<CompiledCardKind>,
     pub event_cause: Option<CompiledEventCause>,
     pub replacement_cause: Option<CompiledReplacementCause>,
     pub replacement_source_is_opponent: Option<bool>,

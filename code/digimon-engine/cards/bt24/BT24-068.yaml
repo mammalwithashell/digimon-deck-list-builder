@@ -1,3 +1,38 @@
+# BT24-068 DemiDevimon — Digimon, Lv.3, Purple, DP 1000, Cost 3.
+# Traits: Evil. Attribute: Virus. Form: Rookie.
+# Digivolve: Purple Lv.2 / cost 0 (single printed circle, carried by the card
+# data).
+#
+# Printed text (card image BT24-068.webp; official Bandai DB bundle
+# data/card_bundles/BT24-068.md; DCGO BT24_068.cs):
+#
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Evil]
+#   or [Fallen Angel] trait and 1 card with the [Seven Great Demon Lords] trait
+#   among them to the hand. Return the rest to the bottom of the deck. Then,
+#   trash 1 card in your hand.
+#
+#   Inherited: [When Attacking] [Once Per Turn] Trash the top card of both
+#   players' decks.
+#
+# DCGO crosscheck:
+#   - [On Play] (OnEnterFieldAnyone + CanTriggerOnPlay): `SimplifiedReveal-
+#     DeckTopCardsAndSelect(revealCount 3, [Evil | Fallen Angel] then [Seven
+#     Great Demon Lords], AddHand, maxCount 1 each, remaining -> DeckBottom)`
+#     then, when the hand is non-empty, a MANDATORY `SelectHandEffect` Discard
+#     (maxCount 1, canNoSelect false). Same reveal shape as BT20-048 (two
+#     mandatory buckets, a card taken by the first pick cannot fill the second,
+#     remainder ordered by the player - CR 4.3 3-1-3-4). The trash follows the
+#     adds, so a card just added is a legal discard.
+#   - Inherited (OnAllyAttack, SetIsInheritedEffect, maxCount 1 hash
+#     "BT24_068_TrashTopDeck"): trash the top card of the owner's deck, then of
+#     the opponent's. Mandatory, no choices.
+#
+# The Rule-granted [Fallen Angel] trait (e.g. BT24-073) is read from the card
+# data's trait line like any other trait.
+#
+# History: authored 2026-06-03 as a stats-only vanilla vehicle for FAQ NV-1
+# (NV-1 has since moved to a Digi-Egg); fully implemented 2026-11-17.
+
 card: BT24-068
 name: DemiDevimon
 kind: digimon
@@ -5,16 +40,45 @@ level: 3
 color: [purple]
 cost: 3
 dp: 1000
+form: Rookie
 traits: [Evil]
 attribute: Virus
-# PARTIAL: stats only. Authored 2026-06-03 as a vanilla, no-DP vehicle for FAQ
-# NV-1 from a pre-release cards.json stub (cost 0, no DP, no text). The card
-# prints 1000 DP and two effects, neither implemented yet:
-#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Evil] or
-#   [Fallen Angel] trait and 1 card with the [Seven Great Demon Lords] trait among
-#   them to the hand. Return the rest to the bottom of the deck. Then, trash 1
-#   card in your hand.
-#   Inherited: [When Attacking] [Once Per Turn] Trash the top card of both
-#   players' decks.
-# qa/qa-reports/validated_cards_dsl.json marks it PARTIAL so the training gate
-# leaves out decks that use it.
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Evil]/[Fallen Angel] card and 1 [Seven Great Demon Lords] card; bottom the rest; trash 1 from hand"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: evil_or_angel
+              filter:
+                any_of:
+                  - trait_has: Evil
+                  - trait_has: Fallen Angel
+              min: 1
+              max: 1
+            - bind_as: demon_lord
+              filter: { trait_has: Seven Great Demon Lords }
+              min: 1
+              max: 1
+          prompt: "Add 1 [Evil]/[Fallen Angel] card and 1 [Seven Great Demon Lords] card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: evil_or_angel }
+      - add_to_hand_from_reveal: { of: you, card: demon_lord }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] Trash the top card of both players' decks"
+    process:
+      - trash_from_top: { of: you, count: 1 }
+      - trash_from_top: { of: opponent, count: 1 }
