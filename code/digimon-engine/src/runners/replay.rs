@@ -4557,7 +4557,13 @@ impl ReplayDriver {
                 .steps()
                 .get(self.cursor as usize + 1)
                 .and_then(|s| s.selection.as_ref())
-                .is_some_and(|n| n.actor == actor);
+                // An UNSTAMPED `generic_bool` behind the yes is another optional
+                // effect's "use it?" answer (`classify_unstamped_answer` excludes
+                // it from "the actor's next selection" for the same reason), not a
+                // pick the yes opens: the yes IS the answer to this prompt (e.g.
+                // BT25-030's "add top security to hand?", whose added card then
+                // queues BT24-084's trigger that the unstamped bool answers).
+                .is_some_and(|n| n.actor == actor && !(n.unstamped && n.prompt == "generic_bool"));
         // DCGO picks a digivolution-source card in two steps: the Digimon that
         // holds it (`SelectPermanentEffect`, targets only), THEN the card
         // (`SelectCardEffect`, zone DigivolutionCards). Our engine parks ONE
