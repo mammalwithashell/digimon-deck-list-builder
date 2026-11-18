@@ -77,6 +77,11 @@ effects:
   - when: [when_digivolving, when_attacking]
     optional: true
     once_per_turn: true
+    # CR 4.3 15-7-4: "By trashing your top security card" is an optional
+    # processing condition; with 0 own security it cannot be executed, so the
+    # clause is not offered (DCGO P_187.cs CanActivateCondition requires
+    # SecurityCards.Count > 0 in both copies).
+    active_when: { security_count_gte: 1 }
     condition:
       count_gte:
         filter:

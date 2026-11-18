@@ -191,3 +191,61 @@ fn p_187_dna_digivolve_may_place_the_permanent_on_the_bottom() {
         "placed as the BOTTOM security card"
     );
 }
+
+/// CR 4.3 15-7-4: "By trashing your top security card" is an optional
+/// processing condition. With 0 own security it cannot be executed, so the
+/// player cannot choose to execute it: the clause is not offered and the
+/// Digimon is NOT played for free. (DCGO P_187.cs CanActivateCondition also
+/// requires own security > 0.)
+#[test]
+fn p_187_when_attacking_is_not_offered_with_no_own_security() {
+    let mut runner = base()
+        .hand(0, &["T-PY6000"])
+        .security(1, &["FILL", "FILL"])
+        .memory(5)
+        .start();
+    runner.inject_trash(0, "T-Y6000");
+    assert_eq!(runner.security_count(0), 0);
+    let host = runner.place_on_field(0, "P-187", Some(0));
+    runner.game.enter_main_phase();
+    let _ = runner.attack_player(host, 1, false);
+    runner.game.drain_effect_queue();
+
+    // The clause must not be offered at all: no optional confirm, no pick.
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "the [By trashing your top security card] clause must not be offered with 0 own security: {:?}",
+        runner.pending_selection_view().map(|v| v.kind)
+    );
+    assert!(!on_field(&runner, 0, "T-PY6000"), "nothing played free from hand");
+    assert!(!on_field(&runner, 0, "T-Y6000"), "nothing played free from trash");
+}
+
+/// 15-7-5 / DCGO: when the cost IS payable the security card is trashed first,
+/// even if the player then declines the play.
+#[test]
+fn p_187_security_is_trashed_as_cost_even_when_the_play_is_declined() {
+    let mut runner = base()
+        .hand(0, &["T-PY6000"])
+        .security(0, &["FILL", "FILL"])
+        .security(1, &["FILL", "FILL"])
+        .memory(5)
+        .start();
+    let host = runner.place_on_field(0, "P-187", Some(0));
+    runner.game.enter_main_phase();
+    let _ = runner.attack_player(host, 1, false);
+    let mut view = runner.pending_selection_view().expect("optional prompt parked");
+    if !matches!(view.kind, SelectionKind::UnionZone { .. }) {
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("accept the optional effect");
+        runner.game.drain_effect_queue();
+        view = runner.pending_selection_view().expect("union pick parked");
+    }
+    assert!(matches!(view.kind, SelectionKind::UnionZone { .. }));
+    assert_eq!(runner.security_count(0), 1, "cost paid before the pick");
+    runner.execute_action(view.selecting_player, PASS).expect("decline the play");
+    runner.game.drain_effect_queue();
+    assert_eq!(runner.security_count(0), 1, "security stays trashed");
+    assert!(!on_field(&runner, 0, "T-PY6000"), "declined: nothing played");
+}
