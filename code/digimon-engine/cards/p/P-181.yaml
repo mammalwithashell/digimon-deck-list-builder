@@ -1,0 +1,85 @@
+# P-181 Royal Base — Option, Green/Black, Cost 2. Trait: Royal Base.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/P-181.md,
+# authoritative; DCGO P_181.cs cross-checked):
+#
+#   {Security} [Your Turn] [Once Per Turn] When any of your Digimon would
+#   digivolve into a Digimon card with the [Royal Base] trait, reduce the
+#   digivolution cost by 1.
+#   [Main] Add your top security card to the hand. Then, place this card face
+#   up as your bottom security card.
+#   Security Effect [Security] You may play 1 level 5 or lower Digimon card with
+#   the [Royal Base] trait from your hand without paying the cost.
+#
+#   Official Q&A: if you have no security card, [Main] adds nothing and this
+#   card is still placed (it is then your only security card).
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# {Security} reducer (EffectTiming.BeforePayCost, isOptional: false,
+#   maxCountPerTurn 1): usable while this card is in the owner's security stack
+#   (face-up per CR 4.3 15-14-5-1), on the owner's turn, when any of the
+#   owner's Digimon would digivolve into a Digimon card with the [Royal Base]
+#   trait; the digivolution cost is reduced by 1. -> `kind: cost_reduction`,
+#   `scope: security`, `when_any_ally_digivolves_into` (BT5-092 / P-200 idiom),
+#   `once_per_turn`. The engine's before-pay-cost scan now also reads the
+#   acting player's face-up security cards (G-ENGINE-SECURITY-ZONE-COST-REDUCER).
+#
+# [Main] (OptionSkill, isOptional: false): `SecurityCards[0]` (the top card,
+#   face-up or face-down) is added to hand when any exists, then THIS card is
+#   placed face up as the bottom security card when the owner can add security.
+#   -> `add_top_security_to_hand` + `place_on_security { source: self_option,
+#   position: bottom, face_up: true }` (BT25-102 idiom). Not a Delay Option:
+#   it is never placed in the battle area.
+#
+# [Security] (SecuritySkill, SetIsSecurityEffect, isOptional: false): the pick
+#   of 1 level <= 5 [Royal Base] trait Digimon card in hand that
+#   `CanPlayAsNewPermanent(payCost: false)` is `canNoSelect: true`.
+
+card: P-181
+name: "Royal Base"
+kind: option
+color: [green, black]
+cost: 2
+traits: ["Royal Base"]
+
+effects:
+  - kind: cost_reduction
+    scope: security
+    reduction_timing: before_pay_cost
+    once_per_turn: true
+    active_when: { your_turn: true }
+    when_any_ally_digivolves_into:
+      all_of:
+        - kind: digimon
+        - trait_has: "Royal Base"
+    amount: 1
+    summary: "{Security}[Your Turn][Once Per Turn] When any of your Digimon would digivolve into a [Royal Base] trait Digimon card, reduce the digivolution cost by 1"
+
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Add your top security card to your hand. Then, place this card face up as your bottom security card"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - place_on_security:
+          source: self_option
+          position: bottom
+          face_up: true
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] You may play 1 level 5 or lower [Royal Base] trait Digimon card from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: royal_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - trait_has: "Royal Base"
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 level 5 or lower [Royal Base] trait Digimon card from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: royal_pick }

@@ -1,0 +1,71 @@
+# BT11-046 Agumon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+# Traits: Reptile. Form: Rookie. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT11-046.md,
+# authoritative; DCGO BT11_046.cs cross-checked):
+#
+#   Evo box: Green Lv.2 / cost 0.
+#   [On Play] Reveal the top 4 cards of your deck. Add 1 Tamer card among them
+#   to your hand. Place the rest at the bottom of your deck in any order.
+#   Inherited: [Your Turn] While you have a Tamer in play, this Digimon gets
+#   +2000 DP.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# [On Play] (EffectTiming.OnEnterFieldAnyone, isOptional: false):
+#   SimplifiedRevealDeckTopCardsAndSelect(revealCount: 4, ONE bucket
+#   `IsTamer`, mode AddHand, maxCount: 1, no canNoSelect, remainingCardsPlace
+#   DeckBottom). The add is therefore MANDATORY when a Tamer is revealed (no
+#   "may" in the printed text) and the rest is the player's ordered bottom
+#   placement (BT11-023 / BT12-021 idiom: `select_reveal_buckets` +
+#   `add_to_hand_from_reveal` + `place_remainder_on_deck: bottom`).
+#
+# Inherited [Your Turn] (EffectTiming.None, ChangeSelfDPStaticEffect +2000,
+#   isInheritedEffect: true, condition: on the battle area AND owner's turn AND
+#   the owner has a Tamer permanent) -> inherited aura gated on `your_turn` +
+#   an own Tamer in the battle area (BT11-052 idiom).
+
+card: BT11-046
+name: Agumon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Reptile]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 4; add 1 Tamer card to your hand; bottom the rest in any order"
+    process:
+      - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: tamer_pick
+              min: 1
+              max: 1
+              filter: { kind: tamer }
+          prompt: "Add 1 Tamer card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: tamer_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] While you have a Tamer in play, this Digimon gets +2000 DP"

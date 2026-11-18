@@ -1,0 +1,92 @@
+# BT11-040 Sukamon — Digimon, Lv.4, Yellow/Black, DP 1000, Cost 3.
+# Traits: Abnormal. Form: Champion. Attribute: Virus.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT11-040.md,
+# authoritative; DCGO BT11_040.cs cross-checked):
+#
+#   Evo box: Yellow Lv.3 / cost 2 OR Black Lv.3 / cost 2 (two circles).
+#   [On Deletion] Reveal the top 3 cards of your deck. Add 1 card with
+#   [Chuumon], [Sukamon], or [Etemon] in its name among them to your hand.
+#   Trash the rest.
+#   Inherited: [All Turns] When this Digimon would be deleted, by deleting 1
+#   other Digimon with [Sukamon] in its name, prevent that deletion.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# [On Deletion] (EffectTiming.OnDestroyedAnyone, isOptional: false, NOT
+#   inherited): SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, ONE
+#   bucket ContainsCardName Chuumon || Sukamon || Etemon, AddHand, maxCount 1,
+#   no canNoSelect, remainingCardsPlace Trash). The add is mandatory when a
+#   matching card is revealed; the rest is trashed (BT21-097 idiom:
+#   `per_selected` + `trash_from_reveal`). Post-trash firing (CLAUDE.md rule 25)
+#   is irrelevant: the effect reads only the owner's deck.
+#
+# Inherited [All Turns] (WhenPermanentWouldBeDeleted, isOptional: true,
+#   SetIsInheritedEffect): the pick of 1 OTHER battle-area permanent whose top
+#   card has [Sukamon] in its name is `canNoSelect: true`; the chosen Digimon
+#   is deleted and, if that deletion succeeded, this Digimon's deletion is
+#   cancelled. No once-per-turn cap (BT11-043 idiom: carrier-only
+#   `kind: replacement` + `select_any_permanent` + `delete_permanent` +
+#   `cancel_replacement`).
+
+card: BT11-040
+name: Sukamon
+kind: digimon
+level: 4
+color: [yellow, black]
+cost: 3
+dp: 1000
+traits: [Abnormal]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects:
+  - when: on_deletion
+    summary: "[On Deletion] Reveal 3; add 1 card with [Chuumon]/[Sukamon]/[Etemon] in its name to your hand; trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            any_of:
+              - name_contains: Chuumon
+              - name_contains: Sukamon
+              - name_contains: Etemon
+          prompt: "Add 1 card with [Chuumon], [Sukamon] or [Etemon] in its name to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_be_deleted
+    optional: true
+    active_when:
+      all_of:
+        - is_source: true
+        - all_turns: true
+    summary: "Inherited [All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion"
+    process:
+      - select_any_permanent:
+          bind_as: prevent_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+              - name_contains: Sukamon
+          prompt: "Delete 1 other Digimon with [Sukamon] in its name to prevent this Digimon's deletion"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}

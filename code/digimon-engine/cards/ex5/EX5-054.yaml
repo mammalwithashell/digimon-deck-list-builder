@@ -1,0 +1,143 @@
+# EX5-054 MetalEtemon — Digimon, Lv.6, Black/Yellow, DP 12000, Cost 12.
+# Traits: Cyborg. Form: Mega. Attribute: Virus.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX5-054.md,
+# authoritative; DCGO EX5_054.cs cross-checked):
+#
+#   Evo box: Black Lv.5 / cost 4 OR Yellow Lv.5 / cost 4 (two circles);
+#   "[Digivolve] Lv.5 w/[Etemon]/[Sukamon] in name: Cost 3".
+#   [On Play][When Digivolving] Delete 1 of your opponent's play cost 3 or
+#   lower Digimon or Tamers. For each card with [Etemon] or [Sukamon] in its
+#   name in your trash, add 1 to the maximum play cost this effect can choose.
+#   [Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by
+#   placing 1 card with [Etemon] or [Sukamon] in its name from your hand on top
+#   of your security stack, you may switch the target of attack to this Digimon
+#   or the player.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alt digivolve (EffectTiming.None, AddSelfDigivolutionRequirementStaticEffect):
+#   target top card has [Etemon] OR [Sukamon] in its name AND Level == 5 ->
+#   cost 3 (NO colour gate).
+#
+# [On Play] / [When Digivolving] (two OnEnterFieldAnyone ActivateClasses,
+#   isOptional: false): mandatory pick (`canNoSelect: false`) of 1 opponent
+#   Digimon OR Tamer whose top card HasPlayCost and GetCostItself <= 3 + the
+#   number of cards with [Etemon]/[Sukamon] in their name in the owner's trash
+#   (the cap is read when the pick opens, `maxCost()`); then Destroy. Tokens
+#   have no play cost (memory reference_tokens_have_no_play_cost) so the
+#   `play_cost_lte` leaf never matches them. -> `[on_play, when_digivolving]`
+#   + `select_opponent_permanent` with a formula `play_cost_lte`
+#   (BT23-057 idiom).
+#
+# [Opponent's Turn][OPT] (OnAllyAttack, isOptional: true, maxCountPerTurn 1):
+#   CanUse: this Digimon in the battle area, the opponent's turn, an
+#   opponent's permanent attacks. CanActivate: this Digimon in the battle
+#   area, owner's hand >= 1 card, owner `CanAddSecurity`. Activation: optional
+#   (`canNoSelect: true`) pick of 1 hand card with [Etemon]/[Sukamon] in its
+#   name, placed on TOP of security; ONLY if a card was placed does the
+#   3-way choice open: "This Digimon" / "You" (the player) / "Not switch".
+#   -> optional clause + `select_hand` (optional) + `place_on_security
+#   position: top` + `select_effect_choice` -> `redirect_attack_target`
+#   (`new_target: source` / `player: you`). The use is consumed on activation
+#   even when no card is placed (SetUpActivateClass maxCountPerTurn 1).
+
+card: EX5-054
+name: MetalEtemon
+kind: digimon
+level: 6
+color: [black, yellow]
+cost: 12
+dp: 12000
+traits: [Cyborg]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - name_contains: Etemon
+            - name_contains: Sukamon
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 opponent Digimon/Tamer with play cost <= 3 (+1 per [Etemon]/[Sukamon]-name card in your trash)"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - play_cost_lte:
+                  base: 3
+                  per:
+                    card_count_in_zone:
+                      of: you
+                      zone: trash
+                      filter:
+                        any_of:
+                          - name_contains: Etemon
+                          - name_contains: Sukamon
+                  delta: 1
+          prompt: "Delete 1 of your opponent's play cost 3 or lower Digimon or Tamers"
+      - delete_permanent: { target: victim }
+
+  - when: on_opponent_attack
+    optional: true
+    once_per_turn: true
+    active_when: { opponents_turn: true }
+    condition:
+      all_of:
+        - controller_can_add_security: true
+        - count_gte:
+            filter: { of: you, zone: [hand] }
+            n: 1
+    summary: "[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by placing 1 [Etemon]/[Sukamon]-name card from your hand on top of your security stack, you may switch the attack target to this Digimon or the player"
+    process:
+      # "by placing 1 card ... on top of your security stack" is an optional
+      # COST of an activated effect: declining it ends the clause but the
+      # [Once Per Turn] is spent (owner ruling #20, BT24-026 / P-250 idiom;
+      # DCGO SetUpActivateClass maxCountPerTurn 1 counts the activation, and a
+      # `canNoSelect` pass does not `RemoveUse`).
+      - select_hand:
+          of: you
+          bind_as: placed
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - name_contains: Etemon
+              - name_contains: Sukamon
+          prompt: "Place 1 card with [Etemon] or [Sukamon] in its name from your hand on top of your security stack"
+      - place_on_security:
+          of: you
+          source: { card: { binding: placed, zone: hand } }
+          position: top
+          face_up: false
+      - select_effect_choice:
+          bind_as: switch_to
+          labels:
+            - "Switch the target of attack to this Digimon"
+            - "Switch the target of attack to you (the player)"
+            - "Do not switch"
+          prompt: "Switch the target of attack to this Digimon or the player?"
+      - if:
+          condition: { equals: [switch_to, 0] }
+          then:
+            - redirect_attack_target: { new_target: source }
+      - if:
+          condition: { equals: [switch_to, 1] }
+          then:
+            - redirect_attack_target: { player: you }

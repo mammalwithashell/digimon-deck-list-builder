@@ -1012,6 +1012,16 @@ pub struct PredicateSpec {
     pub attacker_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_trait_has: Option<String>,
+    /// ANY card of the event's moved-card batch has this trait -- the batch
+    /// sibling of `event_card_trait_has` (which reads the single `event_card`,
+    /// set only for a one-card batch). A top-stack trash event carries every
+    /// card one <De-Digivolve> instance trashed at the same time (CR 4.3
+    /// 16-12-5), and DCGO's `CanTriggerWhenTopCardTrashed` fires when ANY of
+    /// them satisfies the card condition. BT21-094 ("When the top stacked card
+    /// of any of your [Armor Form] trait Digimon is trashed").
+    /// G-DSL-EVENT-BATCH-CARD-TRAIT-HAS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_batch_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// The captured event card is currently FACE UP in its security stack
     /// (`true`) or face down (`false`) — the placement-event gate for "when

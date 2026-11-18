@@ -1,0 +1,101 @@
+# EX5-045 Chuumon — Digimon, Lv.3, Black/Yellow, DP 1000, Cost 3.
+# Traits: Beast. Form: Rookie. Attribute: Virus.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX5-045.md,
+# authoritative; DCGO EX5_045.cs cross-checked):
+#
+#   Evo box: Black Lv.2 / cost 1 OR Yellow Lv.2 / cost 1 (two circles).
+#   [On Play] If it's your opponent's turn, reveal the top 3 cards of your
+#   deck. You may play 1 Digimon card with [Sukamon] in its name among them
+#   without paying the cost. Trash the rest.
+#   Inherited: [On Deletion] If this Digimon had [Sukamon] or [Etemon] in its
+#   name, you may play 1 [Chuumon] from your trash suspended without paying the
+#   cost.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# [On Play] (OnEnterFieldAnyone, isOptional: false): CanActivate requires the
+#   deck to be non-empty AND it to be the OPPONENT's turn (the printed "If it's
+#   your opponent's turn" is an activation gate, evaluated before the reveal).
+#   SimplifiedRevealDeckTopCardsAndSelect(3, ONE bucket: Digimon-name-contains
+#   Sukamon && CanPlayAsNewPermanent(payCost: false), Custom, maxCount 1,
+#   canNoSelect: true, remainingCardsPlace Trash) then PlayPermanentCards
+#   (payCost: false). -> reveal + optional bucket + `play_from_revealed_free` +
+#   trash the remainder (EX12-055 idiom).
+#
+# Inherited [On Deletion] (OnDestroyedAnyone, SetIsInheritedEffect,
+#   isOptional: true): gated on the DELETED Digimon having [Sukamon] or
+#   [Etemon] in its name (`CanActivateSelfOnDeletionWithContainingCardName`
+#   reads the pre-deletion snapshot, rule 25 -> `event_target_name_contains`)
+#   and on a [Chuumon] (CardNames.Contains) being in the owner's trash that can
+#   be played; the pick is `canNoSelect: true`; then PlayPermanentCards
+#   (payCost: false, isTapped: TRUE -> suspended). The printed "you may" is the
+#   outer accept/decline plus the declinable pick (BT17-053 idiom).
+
+card: EX5-045
+name: Chuumon
+kind: digimon
+level: 3
+color: [black, yellow]
+cost: 3
+dp: 1000
+traits: [Beast]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 1
+
+effects:
+  - when: on_play
+    condition: { opponents_turn: true }
+    summary: "[On Play] If it's your opponent's turn, reveal 3; you may play 1 Digimon card with [Sukamon] in its name among them free; trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - name_contains: Sukamon
+                  - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 Digimon card with [Sukamon] in its name without paying the cost"
+      - play_from_revealed_free: { of: you, card: play_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+
+  - when: on_deletion
+    scope: inherited
+    optional: true
+    trigger_if:
+      any_of:
+        - event_target_name_contains: Sukamon
+        - event_target_name_contains: Etemon
+    summary: "Inherited [On Deletion] If this Digimon had [Sukamon] or [Etemon] in its name, you may play 1 [Chuumon] from your trash suspended without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: chuumon_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Chuumon
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 [Chuumon] from your trash suspended without paying the cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: chuumon_pick
+          suspended: true

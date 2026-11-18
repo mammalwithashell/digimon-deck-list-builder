@@ -1,0 +1,138 @@
+# BT21-094 Armor Digivolution — Option, Blue, Cost 3.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT21-094.md,
+# authoritative; DCGO BT21_094.cs cross-checked):
+#
+#   [Main] Reveal the top 3 cards of your deck. Add 1 card with [Davis
+#   Motomiya] in its name and 1 card with the [Free] trait among them to the
+#   hand. Trash the rest. Then, place this card in the battle area.
+#   [All Turns] When the top stacked card of any your [Armor Form] trait Digimon
+#   is trashed, <Delay> (By trashing this card after the placing turn, activate
+#   the effect below.)
+#   ・1 of your Digimon may digivolve into a Digimon card with the [Armor Form]
+#     trait in the hand without paying the cost.
+#   Security Effect [Security] Activate this card's [Main] effects.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# [Main] (OptionSkill, isOptional: false): SimplifiedRevealDeckTopCardsAndSelect
+#   (3, bucket 1 `ContainsCardName("Davis Motomiya")`, bucket 2
+#   `EqualsTraits("Free")`, each AddHand maxCount 1, no canNoSelect, remainder
+#   Trash; `mutualConditions` defaulted false, so one card cannot fill both
+#   picks), then PlaceDelayOptionCards.
+#
+# <Delay> (WhenTopCardTrashed, isOptional: true): CanDeclareOptionDelayEffect
+#   && CanTriggerWhenTopCardTrashed(hashtable, card => card.Owner == owner &&
+#   card.EqualsTraits("Armor Form")) -- ANY card of the trashed batch matching
+#   (a <De-Digivolve 2> trashes two cards at the same time, CR 4.3 16-12-5).
+#   Body: trash this card first; on success, optional (`canNoSelect: true`) pick
+#   of an own Digimon that has a digivolve route to an [Armor Form] Digimon card
+#   in hand, then DigivolveIntoHandOrTrashCard(payCost: false).
+#   -> `kind: delay, trigger: on_top_card_trashed` gated on the batch predicate
+#   `event_batch_card_trait_has: Armor Form` + `event_target_owner: you`.
+
+card: BT21-094
+name: "Armor Digivolution"
+kind: option
+color: [blue]
+cost: 3
+
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 3; add 1 [Davis Motomiya]-name card and 1 [Free] trait card; trash the rest; pipeline then places self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: davis_pick
+              min: 1
+              max: 1
+              filter: { name_contains: "Davis Motomiya" }
+            - bind_as: free_pick
+              min: 1
+              max: 1
+              filter: { trait_has: Free }
+          prompt: "Select 1 card with [Davis Motomiya] in its name and 1 card with the [Free] trait"
+      - add_to_hand_from_reveal: { of: you, card: davis_pick }
+      - add_to_hand_from_reveal: { of: you, card: free_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Activate [Main] search effects, then place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: davis_pick
+              min: 1
+              max: 1
+              filter: { name_contains: "Davis Motomiya" }
+            - bind_as: free_pick
+              min: 1
+              max: 1
+              filter: { trait_has: Free }
+          prompt: "Select 1 card with [Davis Motomiya] in its name and 1 card with the [Free] trait"
+      - add_to_hand_from_reveal: { of: you, card: davis_pick }
+      - add_to_hand_from_reveal: { of: you, card: free_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: on_top_card_trashed
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_owner: you
+        - event_batch_card_trait_has: "Armor Form"
+    summary: "[All Turns] When the top stacked card of any of your [Armor Form] Digimon is trashed, Delay: 1 of your Digimon may digivolve into an [Armor Form] Digimon card in hand without paying the cost"
+    process:
+      - select_own_permanent:
+          bind_as: evo_base
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  cost: free
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_has: "Armor Form"
+          prompt: "Choose 1 of your Digimon to digivolve into an [Armor Form] Digimon card in your hand without paying the cost"
+      - if:
+          condition: { binding_present: evo_base }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo
+                optional: false
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Armor Form"
+                    - can_digivolve_onto_with_cost:
+                        target: evo_base
+                        cost: free
+                prompt: "Choose an [Armor Form] Digimon card in your hand to digivolve into without paying the cost"
+            - effect_initiated_digivolve:
+                target: evo_base
+                from_hand: evo
+                cost: free
+                ignore_requirements: false

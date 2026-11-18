@@ -97,6 +97,14 @@ pub fn lower_with_formula(
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
     }
+    // `{Security}` reducer (P-181 Royal Base): active only while its card is
+    // placed FACE UP in the owner's security stack (CR 4.3 15-14-5-1). The
+    // before-pay-cost scan reads the security stack for `security` effects and
+    // never reads a `security` effect from the battle area / hand.
+    // G-ENGINE-SECURITY-ZONE-COST-REDUCER.
+    if matches!(scope, CompiledScope::Security) {
+        builder = builder.security_zone();
+    }
     if once_per_turn {
         builder = builder.once_per_turn();
     }

@@ -1,0 +1,126 @@
+card: P-232
+name: "Unique Emblem: Melting Recital"
+kind: option
+color: [purple]
+cost: 2
+traits: [LIBERATOR]
+
+# Printed text (official Bandai DB bundle data/card_bundles/P-232.md):
+# [Main] Reveal the top 3 cards of your deck. Add 1 [Evil], [Dark Dragon] or
+# [Evil Dragon] trait Digimon card and 1 [LIBERATOR] trait card among them to
+# the hand. Return the rest to the bottom of the deck. Then, place this card in
+# the battle area.
+#
+# [Your Turn] When any of your [Yuuki]s are played, <Delay> (By trashing this
+# card after the placing turn, activate the effect below.)
+# ・1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait
+#   card in the hand OR TRASH with the digivolution cost reduced by 3.
+#
+# Security Effect [Security] Activate this card's [Main] effects.
+#
+# The "hand or trash" in the official text is NOT in the cards.json stub
+# (which says "in the hand"); the official Bandai DB wins for printed text and
+# DCGO P_232.cs agrees (it asks "From hand" / "From trash" when both zones hold
+# an eligible card and passes `isHand: fromHand`).
+#
+# DCGO P_232.cs: first bucket `EqualsTraits("Evil") || "Dark Dragon" ||
+# "Evil Dragon"` -- NO kind restriction in the C# predicate although the printed
+# text says "Digimon card" (printed text governs: `kind: digimon`); second bucket
+# `EqualsTraits("LIBERATOR")`; both AddHand maxCount 1, mandatory, remainder
+# DeckBottom (P-229 shape, `no_duplicate_cards`). <Delay> keyed to an own
+# [Yuuki] being played (`EqualsCardName("Yuuki")`).
+
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 3; add 1 Evil/Dark Dragon/Evil Dragon Digimon and 1 LIBERATOR; bottom the rest; pipeline then places self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: evil_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_has: Evil
+                      - trait_has: Dark Dragon
+                      - trait_has: Evil Dragon
+            - bind_as: liberator_pick
+              min: 1
+              max: 1
+              filter: { trait_has: LIBERATOR }
+          prompt: "Select 1 [Evil]/[Dark Dragon]/[Evil Dragon] Digimon and 1 [LIBERATOR] card"
+      - add_to_hand_from_reveal: { of: you, card: evil_pick }
+      - add_to_hand_from_reveal: { of: you, card: liberator_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Activate [Main] search effects, then place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: evil_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_has: Evil
+                      - trait_has: Dark Dragon
+                      - trait_has: Evil Dragon
+            - bind_as: liberator_pick
+              min: 1
+              max: 1
+              filter: { trait_has: LIBERATOR }
+          prompt: "Select 1 [Evil]/[Dark Dragon]/[Evil Dragon] Digimon and 1 [LIBERATOR] card"
+      - add_to_hand_from_reveal: { of: you, card: evil_pick }
+      - add_to_hand_from_reveal: { of: you, card: liberator_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: on_ally_played
+    active_when:
+      your_turn: true
+      event_target_owner: you
+      event_card_name_is: "Yuuki"
+    summary: "[Your Turn] When your Yuuki is played, Delay: 1 of your Digimon may digivolve into a level <=6 LIBERATOR card in hand or trash, cost -3"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: evo
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: LIBERATOR
+              - level_lte: 6
+              - can_digivolve_onto_with_cost:
+                  target: target
+                  cost: { reduce: 3 }
+          prompt: "Choose a level 6 or lower [LIBERATOR] card in your hand or trash to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          source: evo
+          cost: { reduce: 3 }
+          ignore_requirements: false

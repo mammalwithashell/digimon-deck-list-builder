@@ -2550,6 +2550,33 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(ref trait_name) = pred.event_batch_card_trait_has {
+        // G-DSL-EVENT-BATCH-CARD-TRAIT-HAS: ANY card of the event's moved-card
+        // batch has the trait. A top-stack trash event carries every card one
+        // <De-Digivolve> instance trashed at the same time (CR 4.3 16-12-5);
+        // DCGO `CanTriggerWhenTopCardTrashed` fires when `cards.Count(card =>
+        // cardCondition(card)) >= 1`. (`event_card_trait_has` only sees the
+        // one-card alias.)
+        let matched = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| {
+                trigger.moved_card_sets.iter().any(|set| {
+                    set.cards.iter().any(|card| {
+                        rctx.game.card_data_for_handle(*card).is_some_and(|data| {
+                            data.traits
+                                .iter()
+                                .any(|t| t.eq_ignore_ascii_case(trait_name))
+                        })
+                    })
+                })
+            })
+            .unwrap_or(false);
+        if !matched {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_card_face_up_in_security {
         // EX11-003 Puroromon: the placed card's orientation in the security
         // stack it entered (`affected_player` owns that stack; the face-up
