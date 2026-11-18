@@ -105,7 +105,7 @@ pub(super) fn dcgo_card_has_int_menu(card_id: &str) -> bool {
 /// (e.g. AD1-016's "Don't play" = 3, AD1_016.cs:80; ST24-13's "No" = 2,
 /// ST24_13.cs:57). A card whose menu text is built at run time (AD1-005,
 /// BT15-102, EX11-073) is left out.
-fn dcgo_int_menu_decline_value(card_id: &str) -> Option<i64> {
+pub(super) fn dcgo_int_menu_decline_value(card_id: &str) -> Option<i64> {
     DCGO_INT_MENU_DECLINE_VALUES.iter().find(|(c, _)| *c == card_id).map(|(_, v)| *v)
 }
 
