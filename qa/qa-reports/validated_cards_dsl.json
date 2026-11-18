@@ -2981,12 +2981,13 @@
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/ex10/EX10-034.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_034.rs",
-      "test_count": 14,
+      "test_count": 16,
       "patterns": [
         "KEYWORD",
-        "FRAGMENT"
+        "FRAGMENT",
+        "DIGIXROS"
       ],
-      "notes": "Keywords, [All Turns] source-trash SecA+1/+3000, and [OnPlay/WD] selected-opponent-Digimon forced StartOfYourMainPhase attack grant authored. Focused tests pass with no ignores."
+      "notes": "Keywords, [All Turns] source-trash SecA+1/+3000, and [OnPlay/WD] selected-opponent-Digimon forced StartOfYourMainPhase attack grant authored. The Special Play Condition (DigiXros -2: 3 Digimon w/ [Bagra Army], hand/battle area) was omitted until 2026-11 although the card was marked IMPLEMENTED (a real DCGO PvP replay played it with three hand materials); now authored as a digixros alt_path. Focused tests pass with no ignores."
     },
     "EX10-036": {
       "card_name": "Magneticdramon",

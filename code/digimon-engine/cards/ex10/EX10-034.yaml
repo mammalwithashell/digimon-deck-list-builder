@@ -14,6 +14,25 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: purple }
     cost: 5
+  # Special Play Condition: "DigiXros -2: 3 Digimon cards w/[Bagra Army] trait.
+  # When this would be played, you may place specified cards from your
+  # hand/battle area under it. Each one reduces the play cost." (CR 4.3 7-2.)
+  # DCGO EX10_034.cs `AddDigiXrosConditionClass`: three identical
+  # "Bagra Army trait" elements. Authored like EX10-056 (2x): one repeated
+  # slot, up to 3 materials from hand / battle area, -2 each. Previously
+  # omitted although the card was marked IMPLEMENTED; a real DCGO PvP replay
+  # played Blastmon with three hand materials, so the engine, offering
+  # no DigiXros, charged the full 13 and desynced.
+  - kind: digixros
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - trait_has: "Bagra Army"
+        repeat: { min: 3, max: 3 }
+        zones: [hand, battle_area]
+        cost_delta: -2
+    cost: 13
 
 # Authoritative card text (EX10-034.json / cards.json):
 #
