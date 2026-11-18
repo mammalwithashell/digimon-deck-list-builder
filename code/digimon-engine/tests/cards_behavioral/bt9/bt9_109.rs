@@ -413,6 +413,7 @@ fn main_can_choose_token_but_cannot_stack_card_with_it() {
         dp: Some(3000),
         level: None,
         traits: vec![],
+        play_cost: None,
         keywords: vec![],
     };
     let mut r = base().add_card(token.to_card_data()).hand(0, &[ID]).start();

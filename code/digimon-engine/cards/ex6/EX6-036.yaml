@@ -1,0 +1,76 @@
+# EX6-036 Keramon — Digimon, Lv.3, Black, 1000 DP, play cost 3.
+# Traits: Unidentified (Rookie / Unknown). Digivolve: Black Lv.2 / cost 0.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX6-036.md):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 Tamer card or Option
+#   card with [Diaboromon] in its text and 1 card with the [Unidentified]
+#   trait among them to the hand. Trash the rest.
+#   Inherited: [On Deletion] If this Digimon had the [Unidentified] trait, you
+#   may play 1 [Diaboromon] Token without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX6/Black/EX6_036.cs
+#   - SimplifiedRevealDeckTopCardsAndSelect(3, [Tamer/Option with
+#     HasText("Diaboromon") max 1, ContainsTraits("Unidentified") max 1],
+#     remainder Trash, canNoSelect false). Both picks are mandatory when a
+#     candidate exists and one card may not fill both slots
+#     (`no_duplicate_cards`, BT12-059 idiom). `in_text_contains` is the broad
+#     HasText scan (name + traits + printed text).
+#   - OnDestroyedAnyone inherited, optional, gated on the deleted Digimon having
+#     had the [Unidentified] trait (CardTraitsJustBeforeRemoveField).
+
+card: EX6-036
+name: Keramon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Unidentified]
+form: Rookie
+attribute: Unknown
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 Tamer/Option with [Diaboromon] in text and 1 [Unidentified] card; trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: diaboromon_support
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - any_of:
+                      - kind: tamer
+                      - kind: option
+                  - in_text_contains: Diaboromon
+            - bind_as: unidentified_pick
+              min: 1
+              max: 1
+              filter: { trait_has: Unidentified }
+          prompt: "Add 1 Tamer/Option with [Diaboromon] in its text and 1 [Unidentified] card"
+      - add_to_hand_from_reveal: { of: you, card: diaboromon_support }
+      - add_to_hand_from_reveal: { of: you, card: unidentified_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+
+  - when: on_deletion
+    scope: inherited
+    optional: true
+    trigger_if: { event_target_trait_has: Unidentified }
+    summary: "Inherited [On Deletion] If this Digimon had the [Unidentified] trait, you may play 1 [Diaboromon] Token without paying the cost"
+    process:
+      - play_token:
+          controller: you
+          token_name: diaboromon

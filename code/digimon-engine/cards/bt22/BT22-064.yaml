@@ -1,0 +1,82 @@
+# BT22-064 Diaboromon — Digimon, Lv.6, Black, 12000 DP, play cost 12.
+# Traits: Unidentified, CS. Digivolve: Black Lv.5 / cost 4; [Infermon] / Lv.5 w/[CS] trait / cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT22-064.md):
+#   <Alliance> (When this Digimon attacks, by suspending 1 of your other
+#   Digimon, add the suspended Digimon's DP to this Digimon and it gains
+#   <Security A. +1> for the attack.)
+#   [When Digivolving] [When Attacking] You may play 1 [Diaboromon] Token
+#   without paying the cost.
+#   [All Turns] [Once Per Turn] When any of your other Digimon with the
+#   [Unidentified] trait are played, delete 1 of your opponent's Digimon with
+#   the lowest play cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT22/Black/BT22_064.cs
+#   - Alt digivolve: base TopCard Lv.5 and ([CS] trait OR EqualsCardName
+#     "Infermon"), cost 3 (requirements kept) -> `any_of` on the base.
+#   - AllianceSelfEffect (not inherited) -> `grant_keyword: Alliance`.
+#   - [When Digivolving] / [When Attacking] (OnAllyAttack, CanTriggerOnAttack):
+#     optional PlayDiaboromonToken.
+#   - [All Turns] OPT OnEnterFieldAnyone: CanTriggerOnPermanentPlay of an own
+#     battle-area Digimon, [Unidentified] trait, not the carrier. Mandatory
+#     SelectPermanentEffect (Mode.Destroy) over opponent Digimon with
+#     HasPlayCost that IsMinCost among the opponent's permanents; only runs
+#     when such a Digimon exists.
+
+card: BT22-064
+name: Diaboromon
+kind: digimon
+level: 6
+color: [black]
+cost: 12
+dp: 12000
+traits: [Unidentified, CS]
+form: Mega
+attribute: Unknown
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: CS
+            - name_is: Infermon
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Alliance
+
+  - when: [when_digivolving, when_attacking]
+    optional: true
+    summary: "[When Digivolving][When Attacking] You may play 1 [Diaboromon] Token without paying the cost"
+    process:
+      - play_token:
+          controller: you
+          token_name: diaboromon
+
+  - when: on_ally_played
+    once_per_turn: true
+    active_when: { all_turns: true }
+    trigger_if:
+      all_of:
+        - event_target_kind: digimon
+        - event_target_trait_has: Unidentified
+        - event_permanent_is_source: false
+    summary: "[All Turns][OPT] When any of your other [Unidentified] Digimon are played, delete 1 of your opponent's Digimon with the lowest play cost"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte:
+                  aggregate:
+                    selector: lowest_play_cost
+                    scope: opponent
+          prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
+      - delete_permanent: { target: victim }

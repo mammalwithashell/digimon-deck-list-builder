@@ -44,6 +44,7 @@ mod scope_both_shared_opt_reducer;
 mod test_cards;
 mod tokens;
 mod trash_count_binding_primitive;
+mod keramon_line_support;
 
 // Sample template for forthcoming hand-written production card tests.
 // Currently ignored pending the engine gaps that BT17-015 depends on.

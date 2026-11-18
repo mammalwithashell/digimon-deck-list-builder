@@ -759,13 +759,17 @@ fn ex11_046_eot_ignores_non_galacticmon_hand_cards() {
 fn make_token(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = digimon_engine::enums::CardKind::Token;
-    c.play_cost = 20;
+    // A costless Token stores play_cost 0 (`TokenDef::play_cost == None`); only a
+    // token that prints a cost (Diaboromon 14) stores a positive one and counts
+    // as having a play cost.
+    c.play_cost = 0;
     c.level = None;
     c
 }
 
-/// A Token has no play cost, so it is never the "highest play cost" Digimon
-/// even if its data carries a number (DCGO IsMaxCost checks HasPlayCost).
+/// A costless Token has no play cost, so it is never the "highest play cost"
+/// Digimon (DCGO IsMaxCost checks HasPlayCost). A costed token such as the
+/// Diaboromon Token (play cost 14) is covered in `keramon_line_support`.
 #[test]
 fn ex11_046_token_is_not_a_highest_play_cost_candidate() {
     let mut runner = DebugRunner::builder()
@@ -794,6 +798,32 @@ fn ex11_046_token_is_not_a_highest_play_cost_candidate() {
         .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
         .collect();
     assert_eq!(left, vec!["EX11-046-CHEAP".to_string()], "the Token is deleted");
+}
+
+/// A Token that prints a play cost (Diaboromon Token, cost 14) has one: it is a
+/// legal "highest play cost" Digimon to keep (DCGO `HasPlayCost`).
+#[test]
+fn ex11_046_costed_token_is_a_highest_play_cost_candidate() {
+    let mut costed = make_token("EX11-046-COSTED");
+    costed.play_cost = 14;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-046")
+        .expect("EX11-046 parses")
+        .add_card(make_opp("EX11-046-CHEAP", 6))
+        .add_card(costed)
+        .memory(10)
+        .start();
+    let galacticmon = runner.place_on_field(0, "EX11-046", None);
+    runner.place_on_field(1, "EX11-046-CHEAP", None);
+    let token = runner.place_on_field(1, "EX11-046-COSTED", None);
+
+    fire_on_play(&mut runner, galacticmon);
+    let view = runner.pending_selection_view().expect("keep pick");
+    assert_eq!(
+        view.valid_action_ids,
+        vec![digimon_engine::action::space::encode_attack(0, token.index as u16)],
+        "the costed Token (14) is the highest play cost Digimon"
+    );
 }
 
 /// With only no-play-cost Digimon, none can be kept, so all are deleted.

@@ -1024,6 +1024,7 @@ fn compile_predicate(
         color_matches_binding: p.color_matches_binding.clone(),
         color_matches_returned_card: p.color_matches_returned_card,
         name_matches_returned_card: p.name_matches_returned_card,
+        name_matches_source: p.name_matches_source,
         color_matches_own_source_stack: p.color_matches_own_source_stack.map(|s| match s {
             crate::predicate::SourceStackScope::Scoped {
                 of: crate::predicate::SourceStackScopeOf::SelfCarrier,

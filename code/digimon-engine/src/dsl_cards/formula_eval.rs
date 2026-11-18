@@ -1701,6 +1701,17 @@ fn evaluate_aggregate_read(
     }
 }
 
+/// A Token permanent that prints a play cost (`TokenDef::play_cost`, e.g. the
+/// Diaboromon Token's 14; DCGO `HasPlayCost`). Costless tokens store 0 and are
+/// not play-cost candidates.
+fn is_costed_token(
+    perm: &crate::permanent::Permanent,
+    card_data: &[crate::card_data::CardData],
+) -> bool {
+    perm.top_card().card_kind(card_data) == crate::enums::CardKind::Token
+        && perm.top_card().play_cost(card_data) > 0
+}
+
 fn aggregate_value(
     sel: CompiledAggregateSelector,
     player: PlayerId,
@@ -1722,9 +1733,12 @@ fn aggregate_value(
             .level(&ctx.game.card_data)
             .map(i32::from),
         A::LowestPlayCost => {
-            // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`.
+            // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`. A Token
+            // counts only when it prints a play cost (Diaboromon 14).
             let perm = ctx.game.player(player).battle_area.get(index)?;
-            if !perm.is_digimon(&ctx.game.card_data) {
+            if !perm.is_digimon(&ctx.game.card_data)
+                && !is_costed_token(perm, &ctx.game.card_data)
+            {
                 return None;
             }
             Some(i32::from(perm.top_card().play_cost(&ctx.game.card_data)))
@@ -1758,8 +1772,9 @@ fn aggregate_value_read(
             perm.level(ctx.card_data()).map(i32::from)
         }
         CompiledAggregateSelector::LowestPlayCost => {
-            // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`.
-            if !perm.is_digimon(ctx.card_data()) {
+            // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`. A Token
+            // counts only when it prints a play cost (Diaboromon 14).
+            if !perm.is_digimon(ctx.card_data()) && !is_costed_token(perm, ctx.card_data()) {
                 return None;
             }
             Some(i32::from(perm.top_card().play_cost(ctx.card_data())))
