@@ -1,0 +1,153 @@
+# BT21-090 The Strongest of Brothers — Option, Red, Cost 3. No traits.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT21-090.md):
+#   While you have a Digimon or Tamer with [Gammamon] in its text on the field,
+#   you can ignore this card's color requirements.
+#   [Main] Reveal the top 3 cards of your deck. Add 1 card with [Gammamon] in
+#   its text among them to the hand. Return the rest to the bottom of the deck.
+#   Then, place this card in the battle area.
+#   [All Turns] When effects place digivolution cards under your Digimon,
+#   <Delay>
+#   ・1 of your Digimon may digivolve into a Digimon card with [Gammamon] in
+#     its text in the hand without paying the cost.
+#   [Security] You may play 1 card with [Gammamon] in its text and a play cost
+#   of 4 or less from your hand or trash without paying the cost. Then, place
+#   this card in the battle area.
+# Official Q&A: "[X] in its text" scans the card's name, traits, effects,
+# inherited effects, (Rule) text, digivolution requirements, etc.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Red/BT21_090.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 0 — `EffectTiming.None` IgnoreColorConditionClass; CanUseCondition =
+#   `HasMatchConditionPermanent(own && (IsTamer || IsDigimon) &&
+#   TopCard.HasText("Gammamon"), true)`; this card only.
+#   -> card-level `use_requirement` (the mechanism the Option-use mask and
+#   decoder consult; BT19-089 / BT21-091 precedent) over `any_field_permanent`
+#   (battle + breeding area) of the controller: Digimon or Tamer with
+#   `in_text_contains: Gammamon`.
+#
+# Clause 1 — `OptionSkill`: `SimplifiedRevealDeckTopCardsAndSelect(3, 1 card with
+#   HasText("Gammamon") -> AddHand, remaining -> DeckBottom)` then
+#   `PlaceDelayOptionCards` (unconditional).
+#   -> `reveal_top_deck` + `select_reveal_buckets` + `add_to_hand_from_reveal` +
+#   `place_remainder_on_deck` (EX12-007 [On Play] precedent) +
+#   `place_self_as_delay_option`.
+#
+# Clause 2 — `EffectTiming.OnAddDigivolutionCards`, optional: `CanTriggerOnAddDigivolutionCard(
+#   own Digimon, IsByEffect(any effect), cardCondition null) &&
+#   CanDeclareOptionDelayEffect`. NO turn gate ([All Turns]) and NO "your
+#   effects" gate — the printed text is "effects place digivolution cards under
+#   your Digimon", so an opponent's effect counts too. Body: trash this card
+#   (cost); then `SelectPermanentEffect` over own Digimon that have a
+#   [Gammamon]-text Digimon in hand they can digivolve into (`CanPlayCardTargetFrame(
+#   payCost: false)`, `canNoSelect: true`), then `DigivolveIntoHandOrTrashCard(
+#   payCost: false, isHand: true)`.
+#   -> `kind: delay, trigger: on_add_digivolution_cards` (P-244 / EX10-056
+#   family; the engine fires it once per host per placing-effect batch and only
+#   for effect-driven placement) + `has_digivolve_candidate` base gate +
+#   `select_hand` + `effect_initiated_digivolve { cost: free }`.
+#
+# Clause 3 — `SecuritySkill`: hand/trash bool + pick of a card with
+#   `HasPlayCost && BasePlayCostFromEntity <= 4 && HasText("Gammamon") &&
+#   !IsDigiEgg` (`canNoSelect: true`), `PlayPermanentCards(payCost: false)`, then
+#   `PlaceDelayOptionCards` unconditionally.
+
+card: BT21-090
+name: "The Strongest of Brothers"
+kind: option
+color: [red]
+cost: 3
+
+use_requirement:
+  any_field_permanent:
+    of: you
+    in_text_contains: "Gammamon"
+    any_of:
+      - kind: digimon
+      - kind: tamer
+
+effects:
+  # ─── Clause 1: [Main] reveal 3, add 1 [Gammamon]-text card, then place ───────
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal the top 3 cards of your deck. Add 1 card with [Gammamon] in its text among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: gammamon_pick
+              min: 1
+              max: 1
+              filter: { in_text_contains: Gammamon }
+          prompt: "Select 1 card with [Gammamon] in its text"
+      - add_to_hand_from_reveal: { of: you, card: gammamon_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  # ─── Clause 2: [All Turns] effects place digivolution cards under own Digimon
+  - kind: delay
+    trigger: on_add_digivolution_cards
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_owner: you
+        - event_target_kind: digimon
+    summary: "[All Turns] When effects place digivolution cards under your Digimon, <Delay>: 1 of your Digimon may digivolve into a Digimon card with [Gammamon] in its text in the hand without paying the cost"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - in_text_contains: Gammamon
+          prompt: "Choose 1 of your Digimon to digivolve into a Digimon card with [Gammamon] in its text"
+      - if:
+          condition: { binding_present: target }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo
+                optional: false
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - in_text_contains: Gammamon
+                    - can_digivolve_onto: target
+                prompt: "Digivolve into a Digimon card with [Gammamon] in its text in your hand without paying the cost"
+            - effect_initiated_digivolve:
+                target: target
+                from_hand: evo
+                cost: free
+                ignore_requirements: false
+
+  # ─── Clause 3: [Security] may play a cost<=4 [Gammamon]-text card, then place
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] You may play 1 card with [Gammamon] in its text and a play cost of 4 or less from your hand or trash without paying the cost. Then, place this card in the battle area"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: sec_pick
+          optional: true
+          filter:
+            all_of:
+              - in_text_contains: Gammamon
+              - play_cost_lte: 4
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "You may play 1 card with [Gammamon] in its text and a play cost of 4 or less from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: sec_pick }
+      - place_self_as_delay_option: {}

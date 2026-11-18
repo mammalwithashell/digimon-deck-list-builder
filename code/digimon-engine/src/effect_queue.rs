@@ -1102,6 +1102,15 @@ impl Game {
                 // any of your [Armor Form] trait Digimon is trashed".
                 // G-DSL-TOP-CARD-TRASHED-TIMING.
                 | TriggerSource::TopCardsTrashed { .. }
+                // BT23-099's `<Delay>` is keyed to `OnEvent(OnDigivolve)`
+                // ("When any of your Digimon digivolve into a Digimon with
+                // [Huckmon] or [Jesmon] in its name"). DCGO observes it on
+                // `OnEnterFieldAnyone` + `CanTriggerWhenPermanentDigivolving`.
+                // The just-digivolved permanent/card ride on the context as
+                // `event_permanent` / `event_card`, which the Delay's
+                // `active_when` (`event_target_*`, `event_card_name_*`) reads.
+                // G-ENGINE-EVENT-DELAY-ON-DIGIVOLVE.
+                | TriggerSource::Digivolved { .. }
         ) {
             let trigger_context = self.trigger_context_for_source(&source, None, timing);
             self.enqueue_event_gated_delayed_options(timing, trigger_context);

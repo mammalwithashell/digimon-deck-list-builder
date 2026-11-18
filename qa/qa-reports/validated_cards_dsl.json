@@ -16850,6 +16850,85 @@
       "tests_passing": 8,
       "tests_ignored": 0,
       "notes": "Official Q2315-Q2320 and pinned DCGO BT13_077: optional controller selection, player-directed mandatory attack if legal, source-kind immunity and expiry, Blocker, attack target ownership, both owners, cloned continuations and nested-attack rejection. Existing EX3-024 face/inherited immunity behavior preserved. Simulator qualification, not Oracle certification."
+    },
+    "BT22-096": {
+      "card_name": "Unique Emblem: Poseidia Lagoon",
+      "validated_date": "2026-11-17",
+      "report": "hunt-delay-option-cards-authoring",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LIBERATOR Emblems",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-096.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_096.rs",
+      "test_count": 13,
+      "patterns": [
+        "FREE-PLAY-FROM-HAND",
+        "SECURITY-ACTIVATE-MAIN",
+        "EVENT-GATED-DELAY",
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "DCGO-replay finding (real PvP game): no YAML, so the Option resolved effect-less (no free play, no Delay placement, memory driven negative). Now: [Main] hand-or-trash union pick of exactly [Sangomon]/[Yao Qinglan] + play free + place as Delay; [Your Turn] <Delay> on own [Yao Qinglan] (exact name) suspending -> Aqua/Sea Animal Digimon with a legal Aquatic+LIBERATOR hand card digivolves at cost -3; [Security] activates [Main].",
+      "tests_passing": 13,
+      "tests_ignored": 0
+    },
+    "BT23-099": {
+      "card_name": "The Sistermon Sisters Training Gym",
+      "validated_date": "2026-11-17",
+      "report": "hunt-delay-option-cards-authoring",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Sistermon",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-099.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_099.rs",
+      "test_count": 15,
+      "patterns": [
+        "OPTION-IGNORE-COLOR",
+        "PLACE-SELF-AS-DELAY",
+        "EVENT-GATED-DELAY",
+        "SECURITY-ACTIVATE-MAIN"
+      ],
+      "notes": "DCGO-replay finding (real PvP game): the white Option was a mask miss beside a [Huckmon] Digimon. Now: use_requirement over any_field_permanent (battle+breeding area, Digimon with [Huckmon] in its name) lifts the colour requirement; [Main] draw 1 + place; <Delay> keyed to on_digivolve (engine: Digivolved events now reach event-gated Delay Options, G-ENGINE-EVENT-DELAY-ON-DIGIVOLVE); [Security] may play [Sistermon] from hand/trash then place.",
+      "tests_passing": 15,
+      "tests_ignored": 0
+    },
+    "BT21-090": {
+      "card_name": "The Strongest of Brothers",
+      "validated_date": "2026-11-17",
+      "report": "hunt-delay-option-cards-authoring",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gammamon",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-090.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_090.rs",
+      "test_count": 18,
+      "patterns": [
+        "OPTION-IGNORE-COLOR",
+        "REVEAL-AND-ADD",
+        "PLACE-SELF-AS-DELAY",
+        "EVENT-GATED-DELAY",
+        "SECURITY-ACTIVATE-MAIN"
+      ],
+      "notes": "DCGO-replay finding (real PvP game): the [Main] reveal-3 pick never ran (no YAML). Now: colour bypass for a Digimon/Tamer with [Gammamon] in its text; [Main] reveal 3, add 1 [Gammamon]-text card, rest to deck bottom, place; <Delay> on_add_digivolution_cards (All Turns, any effect) -> a Digimon with a route digivolves into a [Gammamon]-text hand Digimon free; [Security] play a [Gammamon]-text card with play cost <= 4 from hand/trash then place.",
+      "tests_passing": 18,
+      "tests_ignored": 0
+    },
+    "BT19-017": {
+      "card_name": "Sangomon",
+      "validated_date": "2026-11-17",
+      "report": "hunt-delay-option-cards-authoring",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LIBERATOR",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_017.rs",
+      "test_count": 6,
+      "tests_passing": 6,
+      "tests_ignored": 0,
+      "patterns": [
+        "REVEAL-AND-ADD",
+        "INHERITED-END-OF-ATTACK"
+      ],
+      "notes": "DCGO-replay finding (real PvP game): Sangomon is the free-play target of BT22-096 and had no YAML, so its [On Play] reveal-3 never prompted. [On Play] two-bucket reveal ([Aqua]/[Sea Animal] in any trait, substring like DCGO HasAquaTraits, then [LIBERATOR]) with the no-duplicate rule from the official Q&A; (Rule) [Aquatic] trait; inherited [End of Attack][OPT] gain 1 memory."
     }
   }
 }
