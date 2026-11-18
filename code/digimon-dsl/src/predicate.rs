@@ -1052,6 +1052,18 @@ pub struct PredicateSpec {
     pub event_cause: Option<EventCauseSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_same_level_as_previous: Option<bool>,
+    /// Observer-side "digivolved FROM" kind gate for `on_digivolve` clauses:
+    /// true when the card the event-target permanent digivolved from (the
+    /// card directly under its new top card) has the given card category.
+    /// Needed because a Tamer that digivolves becomes a Digimon permanent, so
+    /// `event_target_kind` (the resulting top card) cannot say "one of your
+    /// Tamers digivolves". Mirrors DCGO's `evoRoots.Any(IsTamer)`
+    /// (`GetDigivolutionRootsFromEnterFieldHashtable`). Reads the live stack:
+    /// a DNA digivolution's roots below the merged material are not
+    /// distinguished. Driver: BT7-081 Bokomon.
+    /// G-DSL-EVENT-TARGET-DIGIVOLVED-FROM-KIND.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_digivolved_from_kind: Option<CardKind>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub host_permanent_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

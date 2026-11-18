@@ -181,6 +181,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             event_card_color_count,
             event_cause,
             event_target_same_level_as_previous,
+            event_target_digivolved_from_kind,
             host_permanent_trait_has,
             trashed_source_trait_has,
             trashed_source_card_id_is,
@@ -899,6 +900,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         event_target_same_level_as_previous.walk(
             c,
             &format!("{}.event_target_same_level_as_previous", path),
+            "UNCLASSIFIED_STRING",
+        );
+        event_target_digivolved_from_kind.walk(
+            c,
+            &format!("{}.event_target_digivolved_from_kind", path),
             "UNCLASSIFIED_STRING",
         );
         host_permanent_trait_has.walk(
@@ -1902,6 +1908,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             is_event_host,
             event_is_effect_initiated,
             event_target_same_level_as_previous,
+            event_target_digivolved_from_kind,
             event_cause,
             replacement_cause,
             replacement_source_is_opponent,
@@ -2575,6 +2582,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         event_target_same_level_as_previous.walk(
             c,
             &format!("{}.event_target_same_level_as_previous", path),
+            "UNCLASSIFIED_STRING",
+        );
+        event_target_digivolved_from_kind.walk(
+            c,
+            &format!("{}.event_target_digivolved_from_kind", path),
             "UNCLASSIFIED_STRING",
         );
         event_cause.walk(c, &format!("{}.event_cause", path), "UNCLASSIFIED_STRING");

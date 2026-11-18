@@ -1524,6 +1524,7 @@ fn compile_predicate(
             .map(|colors| colors.iter().copied().map(compile_color).collect()),
         event_card_color_count: p.event_card_color_count,
         event_target_same_level_as_previous: p.event_target_same_level_as_previous,
+        event_target_digivolved_from_kind: p.event_target_digivolved_from_kind.map(compile_card_kind),
         event_cause: p.event_cause.map(compile_event_cause),
         host_permanent_trait_has: p.host_permanent_trait_has.clone(),
         trashed_source_trait_has: p.trashed_source_trait_has.clone(),
