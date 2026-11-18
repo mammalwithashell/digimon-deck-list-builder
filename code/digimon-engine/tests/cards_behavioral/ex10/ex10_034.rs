@@ -20,6 +20,7 @@
 //! | Clause A [OP][WD] grant forced-attack to 1 opp Digimon | grant_triggered_effect target binding | PASS |
 //! | Clause B [All Turns][OPT] when_attacking + on_opponent_attack + all_turns | observer multi-timing | PASS |
 //! | Clause B once_per_turn + optional structural flags | compiled struct | PASS |
+//! | Special Play: DigiXros -2 (3 Bagra Army Digimon, hand/battle area) | digixros alt_path | PASS |
 //! | Clause B positive: SourceMulti(2,2) prompt with ≥2 own sources | select_own_sources from:source | PASS |
 //! | Clause B negative: no prompt when <2 own sources | select_own_sources silent-skip | PASS |
 //! | Clause B: SecurityAttackChange +1 granted after cost | add_modifier SecurityAttackChange | PASS |
@@ -32,7 +33,9 @@ use digimon_dsl::compiled::{
     CompiledTiming,
 };
 use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
+use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::owned_card_choice::CardChoiceZone;
 use digimon_engine::enums::{EffectTiming, Keyword, ModifierType};
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -737,4 +740,100 @@ fn ex10_034_clause_b_opt_blocks_second_when_attacking_same_turn() {
         runner.pending_selection().is_none(),
         "OPT must block Clause B from installing a second selection in the same turn"
     );
+}
+
+// ─── Special Play Condition: DigiXros -2 (3 Digimon w/ [Bagra Army]) ─────────
+// "When this would be played, you may place specified cards from your
+// hand/battle area under it. Each one reduces the play cost." CR 4.3 7-2.
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;
+
+fn bagra_digimon(id: &str) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, id);
+    c.traits = vec!["Bagra Army".to_string()];
+    c
+}
+
+fn xros_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card("EX10-034")
+        .expect("EX10-034 YAML parses and compiles")
+        .add_card(bagra_digimon("BAGRA-A"))
+        .add_card(bagra_digimon("BAGRA-B"))
+        .add_card(bagra_digimon("BAGRA-C"))
+        .add_card(make_test_card("OTHER", "Other"))
+        .hand(0, &["EX10-034", "BAGRA-A", "BAGRA-B", "BAGRA-C", "OTHER"])
+        .deck(0, &["OTHER"; 5])
+        .deck(1, &["OTHER"; 5])
+        .memory(10)
+        .start()
+}
+
+#[test]
+fn ex10_034_has_a_digixros_path_of_three_bagra_army_materials_minus_2_each() {
+    let r = DebugRunner::builder()
+        .dsl_card("EX10-034")
+        .expect("EX10-034 compiles")
+        .build();
+    let c = r.compiled_card("EX10-034").expect("compiled");
+    let xros = c
+        .alt_paths
+        .iter()
+        .find(|p| matches!(p.kind, digimon_dsl::compiled::CompiledAltPathKind::DigiXros))
+        .expect("DigiXros -2 special play condition");
+    assert_eq!(xros.materials.len(), 1);
+    let m = &xros.materials[0];
+    assert!(
+        m.filter
+            .all_of
+            .iter()
+            .any(|p| p.trait_has.as_deref() == Some("Bagra Army")),
+        "materials are [Bagra Army] trait Digimon"
+    );
+    assert_eq!(m.cost_delta, Some(-2));
+    assert!(matches!(
+        m.repeat,
+        Some(digimon_dsl::compiled::CompiledRepeat::Range { min: 3, max: 3 })
+    ));
+}
+
+#[test]
+fn ex10_034_digixros_three_hand_materials_reduce_cost_by_six_and_go_under() {
+    let mut r = xros_runner();
+    let before = r.memory();
+    let _ = r.play(0, 0);
+    // Only Bagra Army Digimon are legal materials (not OTHER).
+    for id in ["BAGRA-A", "BAGRA-B", "BAGRA-C"] {
+        let rows = physical_menu::commits(&r.game);
+        assert!(
+            !rows.iter().any(|row| row.card_id.as_deref() == Some("OTHER")),
+            "a non-Bagra Army card is not a legal DigiXros material"
+        );
+        let a = physical_menu::card_action(&r.game, id, CardChoiceZone::Hand);
+        r.execute_action(0, a).expect("select DigiXros material");
+    }
+    if r.pending_selection().is_some() {
+        r.execute_action(0, PASS).expect("stop selecting materials");
+    }
+    let _ = r.auto_resolve();
+    assert_eq!(
+        before - r.memory(),
+        7,
+        "play cost 13 reduced by three DigiXros -2 materials"
+    );
+    let blastmon = r.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&r.game.card_data) == "EX10-034")
+        .expect("Blastmon is played");
+    for id in ["BAGRA-A", "BAGRA-B", "BAGRA-C"] {
+        assert!(
+            blastmon
+                .card_sources
+                .iter()
+                .any(|c| c.card_id(&r.game.card_data) == id),
+            "{id} is placed under Blastmon"
+        );
+    }
 }

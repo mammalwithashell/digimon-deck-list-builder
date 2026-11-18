@@ -2981,12 +2981,13 @@
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/ex10/EX10-034.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_034.rs",
-      "test_count": 14,
+      "test_count": 16,
       "patterns": [
         "KEYWORD",
-        "FRAGMENT"
+        "FRAGMENT",
+        "DIGIXROS"
       ],
-      "notes": "Keywords, [All Turns] source-trash SecA+1/+3000, and [OnPlay/WD] selected-opponent-Digimon forced StartOfYourMainPhase attack grant authored. Focused tests pass with no ignores."
+      "notes": "Keywords, [All Turns] source-trash SecA+1/+3000, and [OnPlay/WD] selected-opponent-Digimon forced StartOfYourMainPhase attack grant authored. The Special Play Condition (DigiXros -2: 3 Digimon w/ [Bagra Army], hand/battle area) was omitted until 2026-11 although the card was marked IMPLEMENTED (a real DCGO PvP replay played it with three hand materials); now authored as a digixros alt_path. Focused tests pass with no ignores."
     },
     "EX10-036": {
       "card_name": "Magneticdramon",
@@ -3471,12 +3472,15 @@
       "archetype": "Puppets Batch 1",
       "yaml_path": "code/digimon-engine/cards/ex9/EX9-067.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_067.rs",
-      "test_count": 2,
+      "test_count": 9,
       "patterns": [
         "REVEAL-SEARCH",
-        "SECURITY-PLAY-SELF"
+        "SECURITY-PLAY-SELF",
+        "ON-DIGIVOLVE-OBSERVER",
+        "RETURN-SELF-COST",
+        "REDUCED-COST-PLAY-FROM-HAND"
       ],
-      "notes": "On Play mandatory reveal search and Security self-play shipped. The Your Turn digivolve observer/reduced-cost play rider remains omitted pending PUPPETS-G005 effect-initiated event-context/provenance coverage."
+      "notes": "On Play mandatory reveal search, Security self-play, and the [Your Turn] Puppet-digivolve clause (optional; by returning this Tamer to deck bottom, play Arisa Kinosaki / a Puppet Digimon from hand at -3) are all authored (on_digivolve + event_card_trait_has Puppet + activation_cost return_self_to_deck_bottom + play_from_hand cost_delta reduce 3). Previously the third clause was omitted yet the card was marked IMPLEMENTED; a real DCGO PvP replay diverged on it (2026-11 hunt)."
     },
     "ST19-03": {
       "card_name": "Shoemon",
@@ -8736,12 +8740,12 @@
       "card_name": "Yuu Amano",
       "validated_date": "2026-06-11",
       "report": "judge-quiz Q29",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Bagra Army",
       "yaml_path": "code/digimon-engine/cards/bt10/BT10-093.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt10/bt10_093.rs",
-      "notes": "Would-play preattach hook (-2/card, up to 3 purple from under Tamers) + [Security] free play IMPLEMENTED; clause 1 (purple card placed under -> Draw+memory) OMITTED on G-DSL-ON-CARD-PLACED-UNDER-TRIGGER. Q29 pin covers the DigiXros interaction."
+      "notes": "All three clauses authored: [All Turns][OPT] purple card placed under this Tamer -> Draw 1 + memory +1 (on_add_digivolution_cards + event_host_permanent_is_source + event_added_card_any color_is purple; added 2026-11 after a real DCGO PvP replay diverged on the omission), would-play preattach hook (-2/card, up to 3 purple from under Tamers), and [Security] free play. Q29 pin covers the DigiXros interaction."
     },
     "EX10-039": {
       "card_name": "ChuuChuumon",

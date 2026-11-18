@@ -93,11 +93,15 @@ fn ex10_044_on_play_places_bagra_card_under_tamer_then_draws_1() {
     r.execute_action(0, from_hand).expect("choose 'From hand'");
     r.auto_resolve().expect("card pick + Tamer pick resolve");
 
-    // Net hand change: −1 (placed) +1 (drawn) = 0.
+    // Net hand change: -1 (placed) +1 (EX10-044's own <Draw 1>) +1 (Yuu
+    // Amano's printed [All Turns][Once Per Turn] "When a purple card is placed
+    // under this Tamer, <Draw 1> and gain 1 memory": the placed ChuuChuumon
+    // (EX10-039) is purple) = +1. Before BT10-093's first clause was authored
+    // this read 0, because the Tamer's draw was silently omitted.
     assert_eq!(
         r.hand_size(0),
-        hand_before,
-        "place 1 from hand + Draw 1 must net to an unchanged hand size"
+        hand_before + 1,
+        "place 1 from hand + EX10-044's Draw 1 + Yuu Amano's Draw 1 (purple card placed under it)"
     );
     let yuu = r.game.players[0]
         .battle_area

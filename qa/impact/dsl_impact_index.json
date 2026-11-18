@@ -1037,16 +1037,22 @@
       "path": "bt10/BT10-093.yaml",
       "predicates": [
         "all_of",
+        "all_turns",
         "color_is",
+        "event_added_card_any",
+        "event_host_permanent_is_source",
         "kind",
         "level_gte",
         "trait_has",
         "your_turn"
       ],
       "timings": [
+        "on_add_digivolution_cards",
         "on_security"
       ],
       "verbs": [
+        "draw",
+        "gain_memory",
         "per_selected",
         "play_from_security",
         "preattach_digixros_material",
@@ -17415,10 +17421,12 @@
     "EX10-034": {
       "path": "ex10/EX10-034.yaml",
       "predicates": [
+        "all_of",
         "all_turns",
         "color_is",
         "kind",
-        "level_eq"
+        "level_eq",
+        "trait_has"
       ],
       "timings": [
         "on_opponent_attack",
@@ -24646,18 +24654,31 @@
     "EX9-067": {
       "path": "ex9/EX9-067.yaml",
       "predicates": [
+        "affordable_with_cost",
+        "all_of",
         "any_of",
-        "trait_has"
+        "can_play_from_effect_without_cost",
+        "event_card_kind",
+        "event_card_trait_has",
+        "event_target_owner",
+        "kind",
+        "name_is",
+        "trait_has",
+        "your_turn"
       ],
       "timings": [
+        "on_digivolve",
         "on_play",
         "on_security"
       ],
       "verbs": [
+        "activation_cost",
         "add_to_hand_from_reveal",
         "place_remainder_on_deck",
+        "play_from_hand",
         "play_from_security",
         "reveal_top_deck",
+        "select_hand",
         "select_reveal"
       ]
     },
@@ -30431,6 +30452,7 @@
       "EX13-019",
       "EX13-043",
       "EX13-072",
+      "EX9-067",
       "P-206",
       "ST23-04",
       "ST23-08"
@@ -30985,6 +31007,7 @@
       "EX10-028",
       "EX10-031",
       "EX10-032",
+      "EX10-034",
       "EX10-039",
       "EX10-044",
       "EX10-056",
@@ -31205,6 +31228,7 @@
       "EX9-033",
       "EX9-060",
       "EX9-066",
+      "EX9-067",
       "EX9-074",
       "LM-020",
       "LM-027",
@@ -31383,6 +31407,7 @@
       "AD1-017",
       "AD1-024",
       "AD1-025",
+      "BT10-093",
       "BT11-033",
       "BT12-031",
       "BT12-059",
@@ -33164,6 +33189,7 @@
       "EX8-028",
       "EX8-048",
       "EX8-050",
+      "EX9-067",
       "P-128",
       "P-136",
       "P-151",
@@ -34665,6 +34691,7 @@
       "BT25-087"
     ],
     "event_added_card_any": [
+      "BT10-093",
       "BT25-005",
       "EX7-005",
       "P-244"
@@ -34700,7 +34727,8 @@
       "BT23-006",
       "BT23-013",
       "EX3-065",
-      "EX6-063"
+      "EX6-063",
+      "EX9-067"
     ],
     "event_card_name_contains": [
       "AD1-001",
@@ -34741,6 +34769,7 @@
       "EX12-071",
       "EX3-065",
       "EX6-063",
+      "EX9-067",
       "P-217"
     ],
     "event_cause": [
@@ -34793,6 +34822,7 @@
       "ST24-11"
     ],
     "event_host_permanent_is_source": [
+      "BT10-093",
       "BT18-065",
       "BT21-058",
       "BT25-005",
@@ -35292,6 +35322,7 @@
       "EX9-012",
       "EX9-019",
       "EX9-066",
+      "EX9-067",
       "P-123",
       "P-130",
       "P-136",
@@ -36547,6 +36578,7 @@
       "EX9-058",
       "EX9-060",
       "EX9-066",
+      "EX9-067",
       "EX9-074",
       "LM-020",
       "LM-021",
@@ -38313,6 +38345,7 @@
       "EX8-009",
       "EX8-048",
       "EX8-073",
+      "EX9-067",
       "LM-055",
       "LM-057",
       "LM-058",
@@ -40347,6 +40380,7 @@
       "EX10-028",
       "EX10-032",
       "EX10-033",
+      "EX10-034",
       "EX10-036",
       "EX10-039",
       "EX10-041",
@@ -40925,6 +40959,7 @@
       "EX8-067",
       "EX9-012",
       "EX9-019",
+      "EX9-067",
       "P-092",
       "P-117",
       "P-123",
@@ -41884,6 +41919,7 @@
       "ST6-13"
     ],
     "on_add_digivolution_cards": [
+      "BT10-093",
       "BT25-005",
       "BT7-056",
       "EX7-005"
@@ -42228,6 +42264,7 @@
       "EX9-012",
       "EX9-019",
       "EX9-066",
+      "EX9-067",
       "P-136",
       "ST20-04",
       "ST20-06",
@@ -44358,6 +44395,7 @@
       "EX13-073",
       "EX6-063",
       "EX8-066",
+      "EX9-067",
       "P-136",
       "P-217",
       "P-241",
@@ -45320,6 +45358,7 @@
       "BT10-009",
       "BT10-029",
       "BT10-048",
+      "BT10-093",
       "BT11-022",
       "BT11-095",
       "BT12-002",
@@ -45753,6 +45792,7 @@
       "BT10-053",
       "BT10-057",
       "BT10-085",
+      "BT10-093",
       "BT11-018",
       "BT11-022",
       "BT11-023",
@@ -47188,6 +47228,7 @@
       "EX12-074",
       "EX13-019",
       "EX13-060",
+      "EX9-067",
       "P-206"
     ],
     "play_from_hand_free": [
@@ -48656,6 +48697,7 @@
       "EX9-027",
       "EX9-032",
       "EX9-060",
+      "EX9-067",
       "LM-027",
       "LM-028",
       "LM-029",
