@@ -1,0 +1,103 @@
+# EX10-049 SkullSatamon — Digimon, Lv.5, Purple, DP 8000, Cost 8.
+# Traits: Undead (+ Fallen Angel via the (Rule) box; data/card_overrides.json
+# type_eng). Form: Ultimate. Attribute: Virus.
+# Standard digivolve: Lv.4 Purple / Cost 3.
+#
+# Printed card text (data/card_bundles/EX10-049.md - verbatim):
+#   <Blocker>
+#   [When Digivolving] [On Deletion] If your opponent has 10 or fewer cards in
+#     their trash, trash the top 3 cards of both players' decks. Then, delete
+#     1 of your opponent's level 3 or lower Digimon. If your opponent has 10
+#     or more cards in their trash, add 2 to this effect's level maximum.
+#     (Rule) Trait: Has [Fallen Angel] Type.
+#   Inherited: [When Attacking] [Once Per Turn] This Digimon gains <Security
+#     A. +1> for the turn. If your opponent has 10 or fewer cards in their
+#     trash, instead trash the top 2 cards of both players' decks.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_049.cs
+#
+# Modeling notes:
+# - WD / OD shared body: the "<= 10" gate is read once for the mill; the level
+#   maximum ("10 or more -> 5, else 3") is a FRESH re-read AFTER the mill
+#   (DCGO `deleteLevel` is computed after the mill coroutines), so a mill that
+#   pushes the opponent from 9 to 12 cards raises the cap to 5. At exactly 10
+#   both conditions are true: mill AND level 5. The delete pick is mandatory
+#   (canNoSelect false) and runs even when the mill was skipped.
+# - Inherited [When Attacking][OPT] "instead" shape (official Q&A: the
+#   "instead" processing REPLACES the standard processing): opponent trash
+#   <= 10 -> ONLY the mill (no Security A. +1); otherwise only Security A. +1
+#   (DCGO: `hasSecAttack = trash >= 11`).
+
+card: EX10-049
+name: SkullSatamon
+kind: digimon
+level: 5
+color: [purple]
+cost: 8
+dp: 8000
+traits: [Undead, Fallen Angel]
+form: Ultimate
+attribute: Virus
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [when_digivolving, on_deletion]
+    optional: false
+    summary: "[When Digivolving][On Deletion] If opp trash <= 10, trash top 3 of both decks. Then delete 1 opposing level 3 or lower Digimon (level 5 or lower if opp trash >= 10)"
+    process:
+      - if:
+          condition:
+            count_lte:
+              filter: { of: opponent, zone: [trash] }
+              n: 10
+          then:
+            - trash_from_top: { of: you, count: 3 }
+            - trash_from_top: { of: opponent, count: 3 }
+      # Level maximum re-read AFTER the mill.
+      - if:
+          condition:
+            count_gte:
+              filter: { of: opponent, zone: [trash] }
+              n: 10
+          then:
+            - select_opponent_permanent:
+                bind_as: delete_target_5
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                prompt: "Delete 1 of your opponent's level 5 or lower Digimon"
+            - delete_permanent: { target: delete_target_5 }
+          else:
+            - select_opponent_permanent:
+                bind_as: delete_target_3
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 3
+                prompt: "Delete 1 of your opponent's level 3 or lower Digimon"
+            - delete_permanent: { target: delete_target_3 }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: false
+    summary: "[Inherited][When Attacking][OPT] This Digimon gains <Security A. +1> for the turn. If opp trash <= 10, instead trash the top 2 cards of both players' decks"
+    process:
+      - if:
+          condition:
+            count_lte:
+              filter: { of: opponent, zone: [trash] }
+              n: 10
+          then:
+            - trash_from_top: { of: you, count: 2 }
+            - trash_from_top: { of: opponent, count: 2 }
+          else:
+            - add_modifier:
+                target: source
+                modifier: SecurityAttackChange
+                value: 1
+                expiry: end_of_turn

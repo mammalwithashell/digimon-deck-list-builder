@@ -12,6 +12,8 @@ mod ex10_036;
 mod ex10_039;
 mod ex10_040;
 mod ex10_044;
+mod ex10_046;
+mod ex10_049;
 mod ex10_056;
 mod ex10_059;
 mod ex10_063;
