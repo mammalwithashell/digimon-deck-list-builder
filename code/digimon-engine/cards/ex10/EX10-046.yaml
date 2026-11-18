@@ -1,0 +1,72 @@
+# EX10-046 Devimon — Digimon, Lv.4, Purple, DP 5000, Cost 5.
+# Traits: Fallen Angel. Form: Champion. Attribute: Virus.
+# Standard digivolve: Lv.3 Purple / Cost 2.
+#
+# Printed card text (data/card_bundles/EX10-046.md - verbatim):
+#   [Start of Your Main Phase] [When Digivolving] If your opponent has 10 or
+#     fewer cards in their trash, trash the top 2 cards of both players'
+#     decks. Then, if they have 10 or more cards in their trash, you may
+#     return 1 card with the [Fallen Angel] or [Undead] trait from your trash
+#     to the hand.
+#   Inherited: [When Attacking] [Once Per Turn] Trash the top card of both
+#     players' decks.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_046.cs
+#
+# Modeling notes:
+# - Shared body for both timings: mill 2 of each deck when opp trash <= 10;
+#   THEN (fresh re-read after the mill) if opp trash >= 10 and the controller
+#   has a [Fallen Angel]/[Undead] card in trash, an OPTIONAL pick (DCGO
+#   `canNoSelect: () => true`) returns it to hand. Any card kind with the
+#   trait qualifies (DCGO filter is traits only).
+# - Inherited [When Attacking][OPT]: unconditional mandatory mill 1 of both.
+
+card: EX10-046
+name: Devimon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 5000
+traits: [Fallen Angel]
+form: Champion
+attribute: Virus
+
+effects:
+  - when: [start_of_your_main_phase, when_digivolving]
+    optional: false
+    summary: "[Start of Your Main Phase][When Digivolving] If opp trash <= 10, trash top 2 of both decks. Then, if opp trash >= 10, you may return 1 [Fallen Angel]/[Undead] card from trash to hand"
+    process:
+      - if:
+          condition:
+            count_lte:
+              filter: { of: opponent, zone: [trash] }
+              n: 10
+          then:
+            - trash_from_top: { of: you, count: 2 }
+            - trash_from_top: { of: opponent, count: 2 }
+      - if:
+          condition:
+            count_gte:
+              filter: { of: opponent, zone: [trash] }
+              n: 10
+          then:
+            - select_trash:
+                of: you
+                bind_as: recover
+                optional: true
+                filter:
+                  any_of:
+                    - trait_has: "Fallen Angel"
+                    - trait_has: Undead
+                prompt: "You may return 1 [Fallen Angel] or [Undead] card from your trash to your hand"
+            - add_to_hand_from_trash: { of: you, card: recover }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: false
+    summary: "[Inherited][When Attacking][OPT] Trash the top card of both players' decks"
+    process:
+      - trash_from_top: { of: you, count: 1 }
+      - trash_from_top: { of: opponent, count: 1 }

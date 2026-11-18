@@ -16882,6 +16882,105 @@
       "test_count": 13,
       "tests_passing": 13,
       "notes": "2026-11-17: authored from the card image, official bundle (Q&A: a lone matching card is still added) and DCGO BT7_081.cs. [On Play] reveal 5, [Hybrid]/[Ten Warriors] pick + Tamer pick (mandatory, no card fills both), remainder ordered to the bottom; [Your Turn][Once Per Turn] gain 2 memory when one of your Tamers digivolves via the new `event_target_digivolved_from_kind` predicate (the Tamer becomes a Digimon, so the resulting top card cannot be tested). Simulator evidence only."
+    },
+    "BT22-034": {
+      "card_name": "Reppamon",
+      "validated_date": "2026-11-17",
+      "report": "replay-hunt-misc-onplay-cards-unimpl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "PvP replay hunt (BT22-034 Reppamon)",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-034.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_034.rs",
+      "test_count": 11,
+      "tests_passing": 11,
+      "tests_ignored": 0,
+      "patterns": [
+        "optional-security-trash-instead",
+        "on-discard-security-play-self-from-trash",
+        "cs-alt-digivolve",
+        "inherited-when-attacking-dp"
+      ],
+      "notes": "TDD vs DCGO BT22_034.cs + official Q&A ('instead' replaces). OP/WD mandatory: Yes/No (select_effect_choice, decline second) only when the controller has security, asked BEFORE the target pick; yes -> trash_top_security with bind_count_as, -6000 only when the card was actually trashed, else -3000; target pick mandatory. on_discard_security (effect-caused only) optional play_from_trash_free self. Inherited WA OPT -2000 for the turn. Replay origin: recorded PvP game stopped on a generic_bool with no prompt."
+    },
+    "BT21-064": {
+      "card_name": "Guilmon",
+      "validated_date": "2026-11-17",
+      "report": "replay-hunt-misc-onplay-cards-unimpl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "PvP replay hunt (BT21-064 Guilmon)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-064.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_064.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "patterns": [
+        "optional-hand-trash-then-draw",
+        "name-contains-or-trait-filter",
+        "inherited-on-deletion-memory",
+        "alt-digivolve-name-or-trait"
+      ],
+      "notes": "TDD vs DCGO BT21_064.cs. OP: optional cost select_hand (Hero trait OR name contains Guilmon/Growlmon/Gallantmon/Megidramon; canNoSelect true) -> trash -> Draw 2 only when trashed. Inherited On Deletion +1 memory. Alt digivolve [Gigimon] / Lv.2 [Hero] cost 0."
+    },
+    "EX10-049": {
+      "card_name": "SkullSatamon",
+      "validated_date": "2026-11-17",
+      "report": "replay-hunt-misc-onplay-cards-unimpl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "PvP replay hunt (EX10-049 SkullSatamon)",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-049.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_049.rs",
+      "test_count": 11,
+      "tests_passing": 11,
+      "tests_ignored": 0,
+      "patterns": [
+        "conditional-mill-both-decks",
+        "level-maximum-re-read-after-mill",
+        "instead-replaces-branch",
+        "blocker"
+      ],
+      "notes": "TDD vs DCGO EX10_049.cs. WD/OD shared: opp trash <= 10 -> mill 3+3; THEN re-read opp trash >= 10 -> delete level <= 5 else <= 3 (mandatory pick). At exactly 10 both apply. Inherited WA OPT: opp trash <= 10 -> mill 2+2 INSTEAD of Security A. +1, else Security A. +1. Blocker."
+    },
+    "EX10-046": {
+      "card_name": "Devimon",
+      "validated_date": "2026-11-17",
+      "report": "replay-hunt-misc-onplay-cards-unimpl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "PvP replay hunt (EX10-046 Devimon)",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-046.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_046.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
+      "patterns": [
+        "conditional-mill-both-decks",
+        "condition-re-read-after-mill",
+        "optional-trash-to-hand-by-trait"
+      ],
+      "notes": "TDD vs DCGO EX10_046.cs. SoYMP/WD shared: opp trash <= 10 -> mill 2+2; then re-read opp trash >= 10 -> optional return of a [Fallen Angel]/[Undead] card (any kind) from trash to hand. Inherited WA OPT mill 1+1."
+    },
+    "BT24-069": {
+      "card_name": "Vilemon",
+      "validated_date": "2026-11-17",
+      "report": "replay-hunt-misc-onplay-cards-unimpl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "PvP replay hunt (BT24-069 Vilemon)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_069.rs",
+      "test_count": 8,
+      "tests_passing": 8,
+      "tests_ignored": 0,
+      "patterns": [
+        "opponent-optional-hand-trash",
+        "as-selecting-player-body",
+        "when-moving-timing-condition",
+        "conditional-static-blocker-dp"
+      ],
+      "notes": "TDD vs DCGO BT24_069.cs. WM (this Digimon only)/WD: controller trashes 1 hand card (mandatory); the OPPONENT (as_selecting_player) may trash 1 hand card, else the top 2 of their deck are trashed (also when their hand is empty). [All Turns] Blocker and +2000 DP while opp trash >= 10 (two self auras). Inherited WA OPT mill 1+1."
     }
   }
 }

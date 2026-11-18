@@ -9,6 +9,7 @@ mod bt22_025;
 mod bt22_026;
 mod bt22_029;
 mod bt22_032;
+mod bt22_034;
 mod bt22_036;
 mod bt22_040;
 mod bt22_041;
