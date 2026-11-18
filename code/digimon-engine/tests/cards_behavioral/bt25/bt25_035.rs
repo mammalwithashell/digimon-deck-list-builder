@@ -956,3 +956,42 @@ fn bt25_035_trash_1_from_each_of_two_st23_13s_triggers_each_once() {
     );
     assert_ne!(offered[0], offered[1], "each ST23-13 is offered once: {offered:?}");
 }
+
+/// REGRESSION (invariant_fuzz seed 20260708001, step 58): with ONE Tamer
+/// holding both face-down cards, the first Tamer pick of the "trash 2" cost
+/// re-parks the very same prompt (same kind, same valid ids). The pick is real
+/// progress (`remaining` 2 -> 1, the Tamer recorded in `picked`) but nothing has
+/// moved yet, so the verification digest must hash the multi-payment pick state
+/// or a legal action reads as a no-op (a replay/golden digest cannot tell the
+/// first prompt from the second, and the fuzz invariant "a legal action must
+/// change the digest" fails). CR 4.3 §15-5-2: the cards are trashed together,
+/// as one event, only after the last pick.
+#[test]
+fn bt25_035_first_of_two_tamer_picks_changes_the_verification_digest() {
+    let (mut runner, cougar, _tamers) = cougar_runner(&["GD5"], &[2]);
+    runner.fire_on_play(0, cougar.index as usize);
+    choose_pay(&mut runner, true);
+
+    let first = runner.pending_selection_view().expect("first Tamer pick parks");
+    assert_eq!(first.kind, SelectionKind::OwnField, "first Tamer pick: {first:?}");
+    let digest_first = runner.game.verification_digest();
+    let first_ids = first.valid_action_ids.clone();
+
+    runner.execute_action(0, first_ids[0]).expect("pick the only Tamer");
+    let second = runner.pending_selection_view().expect("second Tamer pick parks");
+    assert_eq!(second.kind, SelectionKind::OwnField, "second Tamer pick: {second:?}");
+    assert_eq!(
+        second.valid_action_ids, first_ids,
+        "the same lone Tamer is offered again (it still holds a second face-down card)"
+    );
+    assert_eq!(
+        face_down_source_count(&runner, 0),
+        2,
+        "nothing is trashed until the last pick (one source-trash event)"
+    );
+    assert_ne!(
+        runner.game.verification_digest(),
+        digest_first,
+        "the first pick (remaining 2 -> 1, Tamer recorded) must be visible in the verification digest"
+    );
+}
