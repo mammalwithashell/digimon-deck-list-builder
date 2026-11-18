@@ -194,3 +194,77 @@ def test_a_dna_packet_turns_the_model_off():
         _pick(0, [TAMER, OPTION, TAMER]),
     ), cards=CARDS)
     assert "card_index" not in _picks(out)[1]["targets"][0]
+
+
+# --- an Option that appears with no PlayCardClass row -------------------------------------------------------------
+# CardEffectCommons.PlaceDelayOptionCards (a [Security] / Delay Option placed by its own effect) builds a
+# PlayPermanentClass directly, so it takes PreferredFrame and the hybrid re-row like any play but the recorder's
+# PlayCardClass.PlayCard hook never sees it. The board listing is then the only witness.
+
+
+def _two_tamers(*tail):
+    """Tamer 65 takes frame 11, Tamer 89 frame 10 (11 is taken): board [T89, T65], both indexes known."""
+    return _raw_game(
+        *_main_play(TAMER, 65, 0, [(TAMER, 65), (TAMER, 89)]),
+        _effect_play(TAMER, (0, [(TAMER, 89)])),
+        *tail,
+    )
+
+
+def test_an_unlogged_option_appearance_keeps_the_model_alive():
+    """The Option shows up on the board with no play row: it took the next preferred frame (12, after both Tamers),
+    so the two Tamers' frames - and their indexes - are untouched."""
+    out, _ = convert_raw.convert(_two_tamers(
+        _pick(0, [TAMER, TAMER, OPTION]),
+        _pick(1, [TAMER, TAMER, OPTION]),
+    ), cards=CARDS)
+    first, second = _picks(out)
+    assert first["targets"] == [{"player": YOU, "frame": 0, "card_index": 89, "card_index_source": "frame_model"}]
+    assert second["targets"] == [{"player": YOU, "frame": 1, "card_index": 65, "card_index_source": "frame_model"}]
+
+
+def test_the_unlogged_option_itself_stays_positional():
+    """Nothing names the Option's DCGO card index, so a pick of it is written without one."""
+    out, _ = convert_raw.convert(_two_tamers(
+        _pick(2, [TAMER, TAMER, OPTION]),
+    ), cards=CARDS)
+    assert _picks(out)[0]["targets"] == [{"player": YOU, "frame": 2}]
+
+
+def test_a_later_play_skips_the_frame_the_unlogged_option_took():
+    """The unlogged Option occupies frame 12; the next logged Tamer takes the next preferred frame (9), listed first."""
+    out, _ = convert_raw.convert(_two_tamers(
+        _pick(0, [TAMER, TAMER, OPTION]),
+        *_main_play(TAMER, 77, 0, [(TAMER, 77)]),
+        _pick(0, [TAMER, TAMER, TAMER, OPTION]),
+        _pick(1, [TAMER, TAMER, TAMER, OPTION]),
+    ), cards=CARDS)
+    later = _picks(out)[1:]
+    assert later[0]["targets"] == [{"player": YOU, "frame": 0, "card_index": 77, "card_index_source": "frame_model"}]
+    assert later[1]["targets"] == [{"player": YOU, "frame": 1, "card_index": 89, "card_index_source": "frame_model"}]
+
+
+def test_an_appearance_with_a_simultaneous_departure_is_not_guessed():
+    """An Option appears while a Tamer has left: which Tamer left (and so the frames) is unknown, so the model does
+    not pretend: the pick stays positional."""
+    out, _ = convert_raw.convert(_two_tamers(
+        _pick(0, [TAMER, OPTION]),
+    ), cards=CARDS)
+    assert "card_index" not in _picks(out)[0]["targets"][0]
+
+
+def test_an_unlogged_tamer_appearance_is_not_modelled():
+    """Only a Delay Option has a direct, unlogged placement path: a Tamer appearing from nowhere is a model failure."""
+    out, _ = convert_raw.convert(_two_tamers(
+        _pick(0, [TAMER, TAMER, TAMER]),
+    ), cards=CARDS)
+    assert "card_index" not in _picks(out)[0]["targets"][0]
+
+
+def test_two_unlogged_options_in_one_step_are_both_placed():
+    """Two Options appear between two boards (preferred frames 12, then 9): still a pure appearance, the Tamers stay
+    named."""
+    out, _ = convert_raw.convert(_two_tamers(
+        _pick(2, [OPTION, TAMER, TAMER, OPTION]),
+    ), cards=CARDS)
+    assert _picks(out)[0]["targets"] == [{"player": YOU, "frame": 2, "card_index": 65, "card_index_source": "frame_model"}]
