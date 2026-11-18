@@ -15,14 +15,14 @@ effects:
   - when: end_of_your_turn
     optional: true
     summary: "[End of Your Turn] Suspend this Tamer to use 1 TS Option from hand under opponent-memory ceiling; then 1 TS Digimon may attack"
-    condition:
-      all_of:
-        - source_is_unsuspended: true
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            kind: digimon
-            trait_has: TS
+    # Printed (and DCGO `CanActivateCondition`): only the suspend cost has to be
+    # payable (this Tamer on the battle area and not suspended). No [TS] Digimon is
+    # required to START the effect -- the Option use is independent of the board,
+    # and the trailing "1 of your [TS] Digimon may attack" is its own optional,
+    # `can_attack`-filtered pick below. An unprinted "you have a [TS] Digimon in the
+    # battle area" gate here dropped the effect when the only [TS] Digimon was in the
+    # breeding area (replay cluster yaml-condition-stricter-dcgo).
+    condition: { source_is_unsuspended: true }
     process:
       - activation_cost: { suspend_self: true }
       - use_option_from_hand:

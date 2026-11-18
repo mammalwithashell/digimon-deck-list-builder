@@ -165,11 +165,11 @@ traits: [DM]
 # separate battle-area/face-up scope. Mirrors Clause 0's active_when exactly.
 use_requirement:
   any_of:
-    - any_permanent:
+    - any_field_permanent:
         of: you
         kind: digimon
         trait_has: DM
-    - any_permanent:
+    - any_field_permanent:
         of: you
         kind: tamer
         trait_has: DM
@@ -186,11 +186,11 @@ effects:
   - kind: flood_gate
     active_when:
       any_of:
-        - any_permanent:
+        - any_field_permanent:
             of: you
             kind: digimon
             trait_has: DM
-        - any_permanent:
+        - any_field_permanent:
             of: you
             kind: tamer
             trait_has: DM

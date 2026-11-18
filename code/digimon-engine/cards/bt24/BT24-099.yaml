@@ -42,9 +42,8 @@ cost: 3
 traits: [Appmon]
 
 use_requirement:
-  any_permanent:
+  any_field_permanent:
     of: you
-    zone: [battle_area]
     any_of:
       - all_of:
           - kind: digimon
@@ -57,9 +56,8 @@ effects:
   # Clause 1 — field-side color bypass (BT24-097 / BT21-097 idiom).
   - kind: flood_gate
     active_when:
-      any_permanent:
+      any_field_permanent:
         of: you
-        zone: [battle_area]
         any_of:
           - all_of:
               - kind: digimon

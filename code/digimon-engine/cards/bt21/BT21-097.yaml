@@ -55,8 +55,8 @@ effects:
   - kind: flood_gate
     active_when:
       any_of:
-        - any_permanent: { of: you, kind: digimon, trait_has: Appmon }
-        - any_permanent: { of: you, kind: tamer, trait_has: Appmon }
+        - any_field_permanent: { of: you, kind: digimon, trait_has: Appmon }
+        - any_field_permanent: { of: you, kind: tamer, trait_has: Appmon }
     modifier: IgnoreColorRequirement
     target: { card_number_is: "BT21-097" }
     summary: "While you have an Appmon Digimon or Tamer, ignore color requirements for this card"
