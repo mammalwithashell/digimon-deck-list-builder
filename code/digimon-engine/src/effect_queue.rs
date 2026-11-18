@@ -1102,9 +1102,21 @@ impl Game {
                 // any of your [Armor Form] trait Digimon is trashed".
                 // G-DSL-TOP-CARD-TRASHED-TIMING.
                 | TriggerSource::TopCardsTrashed { .. }
+                // BT24-093's `<Delay>` is keyed to
+                // `OnEvent(OnOwnSecurityRemoved)` ("[All Turns] When your
+                // security stack is removed from, <Delay>"), BT21-093's to
+                // `OnEvent(OnOpponentSecurityRemoved)`. The removal is observed
+                // by ONE player (`observer_player`), so only that player's
+                // Options may answer it (`only_player` below).
+                // G-ENGINE-EVENT-DELAY-ON-SECURITY-REMOVED.
+                | TriggerSource::SecurityRemoved { .. }
         ) {
+            let only_player = match source {
+                TriggerSource::SecurityRemoved { observer_player, .. } => Some(observer_player),
+                _ => None,
+            };
             let trigger_context = self.trigger_context_for_source(&source, None, timing);
-            self.enqueue_event_gated_delayed_options(timing, trigger_context);
+            self.enqueue_event_gated_delayed_options(timing, trigger_context, only_player);
         }
     }
 
@@ -2974,10 +2986,14 @@ impl Game {
         &mut self,
         timing: EffectTiming,
         trigger_context: TriggerContext,
+        only_player: Option<PlayerId>,
     ) {
         let mut candidates = Vec::new();
         for player in 0..self.players.len() {
             let player = player as PlayerId;
+            if only_player.is_some_and(|only| only != player) {
+                continue;
+            }
             for (index, perm) in self.player(player).battle_area.iter().enumerate() {
                 let OptionState::Delayed {
                     trigger: DelayTrigger::OnEvent(event_timing),
@@ -6352,6 +6368,7 @@ impl Game {
             perm.option_state,
             crate::permanent::OptionState::Delayed {
                 trigger: crate::enums::DelayTrigger::EndOfThisTurn
+                    | crate::enums::DelayTrigger::EndOfAllTurns
                     | crate::enums::DelayTrigger::EndOfYourNextTurn
                     | crate::enums::DelayTrigger::StartOfYourNextTurn,
                 ..

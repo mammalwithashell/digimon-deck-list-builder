@@ -360,6 +360,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::StartOfOpponentsMainPhase => CompiledTiming::StartOfOpponentsMainPhase,
         S::EndOfYourTurn => CompiledTiming::EndOfYourTurn,
         S::EndOfOpponentsTurn => CompiledTiming::EndOfOpponentsTurn,
+        S::EndOfAllTurns => CompiledTiming::EndOfAllTurns,
         S::EndOfYourNextTurn => CompiledTiming::EndOfYourNextTurn,
         S::EndOfOpponentsNextTurn => CompiledTiming::EndOfOpponentsNextTurn,
         S::UntilNextUnsuspend => CompiledTiming::UntilNextUnsuspend,
@@ -2051,10 +2052,24 @@ fn compile_triggered(
     errors: &mut Vec<ValidationError>,
 ) -> CompiledTriggeredClause {
     use crate::clause::TimingSet;
-    let when = match &t.when {
-        TimingSet::Single(x) => vec![compile_timing(*x)],
-        TimingSet::Multi(v) => v.iter().map(|x| compile_timing(*x)).collect(),
+    let raw_when: Vec<crate::clause::Timing> = match &t.when {
+        TimingSet::Single(x) => vec![*x],
+        TimingSet::Multi(v) => v.clone(),
     };
+    // "[End of All Turns]" on a triggered clause is the end of either
+    // player's turn: expand it to the two engine end-of-turn timings (the
+    // same shape BT20-084 spells out as `when: [end_of_your_turn,
+    // end_of_opponents_turn]`). A `kind: delay` clause keeps it whole
+    // (`CompiledTiming::EndOfAllTurns` -> `DelayTrigger::EndOfAllTurns`).
+    let when: Vec<CompiledTiming> = raw_when
+        .iter()
+        .flat_map(|x| match x {
+            crate::clause::Timing::EndOfAllTurns => {
+                vec![CompiledTiming::EndOfYourTurn, CompiledTiming::EndOfOpponentsTurn]
+            }
+            other => vec![compile_timing(*other)],
+        })
+        .collect();
     // Phase 2 Track B — `activation_cost:` is only valid as the FIRST
     // step of a triggered clause body. The lowering on the engine side
     // lifts it onto `EffectBuilder::activation_cost(...)`; mid-body uses

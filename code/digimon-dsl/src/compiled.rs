@@ -1606,6 +1606,8 @@ pub enum CompiledTiming {
     StartOfOpponentsMainPhase,
     EndOfYourTurn,
     EndOfOpponentsTurn,
+    /// `[End of All Turns]` (see `Timing::EndOfAllTurns`).
+    EndOfAllTurns,
     EndOfYourNextTurn,
     EndOfOpponentsNextTurn,
     UntilNextUnsuspend,

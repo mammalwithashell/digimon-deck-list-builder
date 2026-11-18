@@ -55,58 +55,24 @@
 #     cardSource)` called with the TOP card specifically, not a lower
 #     material) and (b) inserts it face-down at the TOP of the controller's
 #     security stack.
-#   → **BLOCKED, not authored.** No `kind: delay` clause is emitted for this
-#     text. Two independent, compounding engine/DSL gaps on the SAME clause:
-#
-#     Gap 1 (traced fresh for this card): `kind: delay`'s `trigger:` →
-#       `DelayTrigger` mapping in
-#       `code/digimon-engine/src/dsl_cards/lower_delay.rs::lower_with_raw`
-#       only routes `OnSuspend | OnUnsuspend | OnAllyPlayed | OnAttack |
-#       OnAllyAttack | OnOpponentAttack` to `DelayTrigger::OnEvent(..)`;
-#       `OnOwnSecurityRemoved` (this card's printed trigger — "when your
-#       security stack is removed from") falls through the `_ =>
-#       DelayTrigger::EndOfYourNextTurn` catch-all, silently mis-firing on a
-#       fixed schedule instead of the security-removal event. Confirmed by
-#       reading every existing `kind: delay` card in the shipping pool (37
-#       files): none uses `trigger: on_own_security_removed` /
-#       `on_lose_security` today. Even were the mapping fixed, `Game::
-#       enqueue_triggered`'s event-gated-Delay fan-out
-#       (`enqueue_event_gated_delayed_options`, effect_queue.rs ~line 620)
-#       only runs for `TriggerSource::{EventObserved, PlayerBattleAreaAttack,
-#       AttackTargetChanged, BlockDeclared, EnteredField}` — NOT
-#       `TriggerSource::SecurityRemoved` (what actually carries
-#       `OnOwnSecurityRemoved`, per `complete_effect_security_removed`
-#       ~line 3302). Two independent wiring gaps on the same path.
-#
-#     Gap 2 (PRE-EXISTING, already tracked — `docs/RUST_ENGINE_GAPS.md` §
-#       "Digivolution-stack source extraction (`pop_top_source` from named
-#       permanent)" names THIS card, BT24-093, verbatim as the open residual
-#       after the BT20-084 `security_place_top_stacked_card` destination
-#       shape closed; the doc's own "Workaround" field reads "None —
-#       BLOCKED"). Re-confirmed independently here: `security_place_
-#       (top_)stacked_card` extracts `card_sources[len-2]` (the MATERIAL just
-#       below the visible top, via `CardSourceRef::Material`) — the wrong
-#       card for this printed text, which (per DCGO) removes the permanent's
-#       actual visible TOP card (`card_sources[len-1]`) while leaving
-#       everything below it in place. `place_on_security` with
-#       `SecuritySource::Permanent{..}` removes the WHOLE permanent from the
-#       battle area and trashes every stacked card below the top — also
-#       wrong (this card must leave the chosen Digimon on the field,
-#       de-digivolved by one, not remove it entirely). `de_digivolve` pops
-#       the correct card (`card_sources.last()`) but hardcodes the
-#       destination to trash (`game_actions/helpers.rs::de_digivolve_core`)
-#       with no security-routing option. No existing verb composes "pop a
-#       named permanent's own top card, keep the rest of its stack on the
-#       field, route the popped card to security."
-#
-#     Per the no-approximations policy, substituting any of the above
-#     mismatched verbs, or a different `trigger:`, would silently implement
-#     DIFFERENT game behavior rather than the printed text — worse than
-#     omitting the clause. The clause is left unauthored (not stubbed) until
-#     both gaps close. Gap 2 is already tracked in `docs/RUST_ENGINE_GAPS.md`
-#     (names this card verbatim); Gap 1 (the `lower_delay.rs` trigger
-#     whitelist + `effect_queue.rs` TriggerSource whitelist) is newly traced
-#     here and should be routed to `qa/dsl-vocab-gaps.md` by the orchestrator.
+#   → `kind: delay` with `trigger: on_own_security_removed`
+#     (DelayTrigger::OnEvent(OnOwnSecurityRemoved)): parked until the controller's
+#     security stack is removed from after the placing turn, then an optional
+#     "use <Delay>?" prompt (CR 4.3 16-17-2); accepting trashes this Option as the
+#     cost (16-17-1) and runs the body. The body is a declinable
+#     `select_own_permanent` over the [Aegiochusmon]/[Jupitermon]-named Digimon
+#     that have at least one card under their top card (DCGO
+#     `DigivolutionCards.Count > 0`), then `security_place_top_stacked_card`
+#     (the Digimon's visible top card goes face-down on top of security; the rest
+#     of its stack stays — CR 4.3 4-7-1 "stacked cards" are the cards of a stack
+#     of 2 or more). Each separate security removal is its own event and its own
+#     prompt while the Option is still on the field (DCGO PvP replay 2026-11-14
+#     g2: two consecutive removals, two "use this optional effect?" answers).
+#     The two engine gaps an earlier draft recorded here are closed:
+#     `DelayTrigger::OnEvent` now fans out for `TriggerSource::SecurityRemoved`
+#     (observer-filtered; G-ENGINE-EVENT-DELAY-ON-SECURITY-REMOVED) and
+#     `security_place_top_stacked_card` places the visible top card
+#     (G-TOP-STACKED-CARD-TO-SECURITY, BT20-084 / BT20-055).
 #
 # Block 3 (EffectTiming.SecuritySkill, inherited [Security]):
 #   `activateClass.SetIsSecurityEffect(true)`. CanUseCondition:
@@ -143,7 +109,28 @@ effects:
       - recover: { of: you, count: 1 }
       - place_self_as_delay_option: {}
 
-  # ─── [All Turns] <Delay>: BLOCKED — see gap notes above. Not authored. ────
+  # ─── Clause 1: [All Turns] When your security stack is removed from, <Delay> ──
+  - kind: delay
+    trigger: on_own_security_removed
+    summary: "[All Turns] When your security stack is removed from, <Delay>: you may place the top stacked card of 1 of your [Aegiochusmon]/[Jupitermon] Digimon as the top security card"
+    process:
+      - select_own_permanent:
+          bind_as: stacked_host
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+              - any_of:
+                  - name_contains: "Aegiochusmon"
+                  - name_contains: "Jupitermon"
+              - materials_count_gte: 1
+          prompt: "You may place the top stacked card of 1 of your [Aegiochusmon]/[Jupitermon] Digimon as the top security card"
+      - security_place_top_stacked_card:
+          carrier: stacked_host
+          of: you
+          position: top
+          face: down
 
   # ─── Clause 1: Inherited [Security] ───────────────────────────────────────
   - scope: inherited

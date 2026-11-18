@@ -7,6 +7,8 @@
 //!   `[Main]`-phase activation action. The body never auto-fires; the
 //!   controller trashes the Option to activate it on a later main phase.
 //! - `CompiledTiming::EndOfYourTurn` → `DelayTrigger::EndOfThisTurn`.
+//! - `CompiledTiming::EndOfAllTurns` → `DelayTrigger::EndOfAllTurns` (every
+//!   turn end after the placing turn, optional; P-193).
 //! - `CompiledTiming::StartOfYourTurn` → `DelayTrigger::StartOfYourNextTurn`.
 //! - `CompiledTiming::EndOfYourNextTurn` → `DelayTrigger::EndOfYourNextTurn`
 //!   (engine-scheduled auto-fire; retained for cards not yet migrated to the
@@ -72,6 +74,9 @@ pub fn lower_with_raw(
         // activation action (PUPPETS-G009, RULES_CONTEXT 16-17).
         CompiledTiming::Delayed => DelayTrigger::MainPhaseActivated,
         CompiledTiming::EndOfYourTurn => DelayTrigger::EndOfThisTurn,
+        // Printed "[End of All Turns] <Delay>" (P-193): every turn's end after
+        // the placing turn, optional (16-17-2).
+        CompiledTiming::EndOfAllTurns => DelayTrigger::EndOfAllTurns,
         CompiledTiming::StartOfYourTurn => DelayTrigger::StartOfYourNextTurn,
         CompiledTiming::EndOfYourNextTurn => DelayTrigger::EndOfYourNextTurn,
         // EVERY other timing is an event-gated `<Delay>`: park indefinitely and
@@ -185,6 +190,7 @@ pub fn lower_with_raw(
             delay_trigger,
             DelayTrigger::OnEvent(_)
                 | DelayTrigger::EndOfThisTurn
+                | DelayTrigger::EndOfAllTurns
                 | DelayTrigger::EndOfYourNextTurn
                 | DelayTrigger::StartOfYourNextTurn
         )

@@ -23,9 +23,10 @@
 //! - Clause A (Main): `select_hand { cost: true }` trash-gated Draw 2, then
 //!   `place_self_as_delay_option`. The whole clause is skipped (no prompt)
 //!   when no [Composite]/[Wicked God] card is in hand (`condition: count_gte`).
-//! - Clause B (End of All Turns <Delay>): standard `trigger: delayed`
-//!   (`activate_delayed_option_main` performs the outer "trash this card"
-//!   activation cost automatically). The inner "By deleting 1 Millenniummon,
+//! - Clause B (End of All Turns <Delay>): `trigger: end_of_all_turns`
+//!   (`DelayTrigger::EndOfAllTurns`: the optional window opens at the end of every
+//!   turn after the placing turn; the lowered body pays the "trash this card"
+//!   activation cost on accept; see `p_193_delay_window.rs`). The inner "By deleting 1 Millenniummon,
 //!   you may play..." is modelled as `select_own_permanent { optional: true,
 //!   then: [...] }` — the DSL's default `continue_on_decline: false` means
 //!   declining (or a zero-Millenniummon no-op) drops the ENTIRE `then:` tail,
@@ -193,22 +194,23 @@ fn p193_main_clause_is_optional_face_up_and_gated_on_hand_fodder() {
 }
 
 #[test]
-fn p193_has_delay_clause_with_main_phase_trigger() {
+fn p193_has_delay_clause_with_end_of_all_turns_trigger() {
     let runner = p193_runner();
     let card = runner.compiled_card("P-193").expect("P-193 present");
     let has_delay = card.effects.iter().any(|c| {
         matches!(
             c,
             CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
-                trigger: CompiledTiming::Delayed,
+                trigger: CompiledTiming::EndOfAllTurns,
                 ..
             })
         )
     });
     assert!(
         has_delay,
-        "P-193 must have a `kind: delay` clause with `trigger: delayed` \
-         (standard printed <Delay>, matching DCGO's CanDeclareOptionDelayEffect gate)"
+        "P-193 must have a `kind: delay` clause with `trigger: end_of_all_turns` \
+         (printed [End of All Turns] <Delay>; DCGO registers it on OnEndTurn, optional, \
+         gated by CanDeclareOptionDelayEffect)"
     );
 }
 
@@ -461,14 +463,44 @@ fn p193_main_color_satisfied_self_qualifying_fodder_offers_activation() {
 /// clause) so Clause B tests can focus on the delay body alone.
 fn seat_p193_as_delay(runner: &mut DebugRunner, player: usize) -> usize {
     let handle = runner.place_on_field(player as u8, "P-193", Some(0));
+    let placed = runner.game.turn_count;
     let perm = &mut runner.game.players[player].battle_area[handle.index as usize];
     perm.option_state = OptionState::Delayed {
         owner: player as u8,
-        trash_on_turn: u16::MAX,
-        trigger: DelayTrigger::MainPhaseActivated,
-        placed_on_turn: 0,
+        trash_on_turn: placed + 1,
+        trigger: DelayTrigger::EndOfAllTurns,
+        placed_on_turn: placed,
     };
     handle.index as usize
+}
+
+/// End the placing turn: no <Delay> window may open yet (CR 4.3 16-17-3).
+fn advance_to_delay_window(runner: &mut DebugRunner) {
+    runner.end_turn();
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no [End of All Turns] <Delay> window at the end of the placing turn"
+    );
+}
+
+/// End the next turn (the opponent's): the optional [End of All Turns]
+/// <Delay> window opens for P-193's controller (DCGO `OnEndTurn`); accept it
+/// (trash this card as the cost, then the body runs).
+fn open_delay_window(runner: &mut DebugRunner) {
+    runner.end_turn();
+    let outer = runner
+        .pending_selection_view()
+        .expect("the optional <Delay> window opens at the end of the next turn");
+    let accept = outer
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != PASS)
+        .expect("accept branch");
+    runner
+        .game
+        .resolve_selection(outer.selecting_player, accept)
+        .expect("accept the <Delay>");
 }
 
 #[test]
@@ -492,16 +524,8 @@ fn p193_delay_deleting_millenniummon_offers_free_wicked_god_play_from_hand() {
 
     let delay_idx = seat_p193_as_delay(&mut runner, 0);
     runner.place_on_field(0, "P193-MILL", Some(0));
-    advance_past_placing_turn(&mut runner, 0, delay_idx);
-
-    let delay_handle = digimon_engine::permanent::PermanentHandle {
-        player: 0,
-        index: delay_idx as u8,
-    };
-    assert!(
-        runner.game.activate_delayed_option_main(delay_handle),
-        "the <Delay> must be activatable after the placing turn"
-    );
+    advance_to_delay_window(&mut runner);
+    open_delay_window(&mut runner);
 
     // The "trash this card" activation cost is paid FIRST (CR 4.3 16-17-1;
     // G-ENGINE-DELAY-BODY-BEFORE-TRASH, resolved 70694334d: the lowered
@@ -586,13 +610,8 @@ fn p193_delay_declining_deletion_skips_free_play() {
 
     let delay_idx = seat_p193_as_delay(&mut runner, 0);
     runner.place_on_field(0, "P193-MILL", Some(0));
-    advance_past_placing_turn(&mut runner, 0, delay_idx);
-
-    let delay_handle = digimon_engine::permanent::PermanentHandle {
-        player: 0,
-        index: delay_idx as u8,
-    };
-    assert!(runner.game.activate_delayed_option_main(delay_handle));
+    advance_to_delay_window(&mut runner);
+    open_delay_window(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -649,13 +668,8 @@ fn p193_delay_no_millenniummon_on_field_skips_delete_and_free_play() {
 
     let delay_idx = seat_p193_as_delay(&mut runner, 0);
     // No Millenniummon anywhere on the field.
-    advance_past_placing_turn(&mut runner, 0, delay_idx);
-
-    let delay_handle = digimon_engine::permanent::PermanentHandle {
-        player: 0,
-        index: delay_idx as u8,
-    };
-    assert!(runner.game.activate_delayed_option_main(delay_handle));
+    advance_to_delay_window(&mut runner);
+    open_delay_window(&mut runner);
 
     runner.game.drain_effect_queue();
 
@@ -696,13 +710,8 @@ fn p193_delay_deletion_succeeds_but_free_play_is_declinable() {
 
     let delay_idx = seat_p193_as_delay(&mut runner, 0);
     runner.place_on_field(0, "P193-MILL", Some(0));
-    advance_past_placing_turn(&mut runner, 0, delay_idx);
-
-    let delay_handle = digimon_engine::permanent::PermanentHandle {
-        player: 0,
-        index: delay_idx as u8,
-    };
-    assert!(runner.game.activate_delayed_option_main(delay_handle));
+    advance_to_delay_window(&mut runner);
+    open_delay_window(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -770,13 +779,8 @@ fn p193_delay_non_millenniummon_digimon_is_not_a_valid_delete_target() {
 
     let delay_idx = seat_p193_as_delay(&mut runner, 0);
     runner.place_on_field(0, "P193-OTHER", Some(0));
-    advance_past_placing_turn(&mut runner, 0, delay_idx);
-
-    let delay_handle = digimon_engine::permanent::PermanentHandle {
-        player: 0,
-        index: delay_idx as u8,
-    };
-    assert!(runner.game.activate_delayed_option_main(delay_handle));
+    advance_to_delay_window(&mut runner);
+    open_delay_window(&mut runner);
 
     runner.game.drain_effect_queue();
 
@@ -955,14 +959,9 @@ fn p193_delete_millenniummon_then(
 
     let delay_idx = seat_p193_as_delay(&mut runner, 0);
     runner.place_on_field(0, "P193-MILL", Some(0));
-    advance_past_placing_turn(&mut runner, 0, delay_idx);
+    advance_to_delay_window(&mut runner);
     setup(&mut runner);
-
-    let delay_handle = digimon_engine::permanent::PermanentHandle {
-        player: 0,
-        index: delay_idx as u8,
-    };
-    assert!(runner.game.activate_delayed_option_main(delay_handle));
+    open_delay_window(&mut runner);
     let view = runner
         .pending_selection_view()
         .expect("Millenniummon delete pick must install");

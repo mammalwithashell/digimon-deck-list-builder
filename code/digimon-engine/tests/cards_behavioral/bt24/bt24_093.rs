@@ -45,74 +45,13 @@
 //! - Group E2: inherited [Security] optional hand-OR-trash free play, filtered
 //!   by name (BT24-089 `select_union_zone` + `play_union_bound_free` idiom).
 //! - All-Turns event-gated `<Delay>` triggered by the controller's OWN
-//!   security stack being removed from — **BLOCKED**, see gap notes below.
-//!
-//! # Engine/DSL gaps (BOTH block the [All Turns] clause; Clauses 0 and the
-//! inherited Security effect are fully implemented and tested below)
-//!
-//! ## Gap 1 (NEW, this card) — `kind: delay` cannot event-gate on
-//! `OnOwnSecurityRemoved`
-//! `code/digimon-engine/src/dsl_cards/lower_delay.rs::lower_with_raw` maps
-//! `CompiledTiming` → `DelayTrigger` via an explicit whitelist for
-//! `DelayTrigger::OnEvent(..)`: `OnSuspend | OnUnsuspend | OnAllyPlayed |
-//! OnAttack | OnAllyAttack | OnOpponentAttack`. `CompiledTiming::
-//! OnOwnSecurityRemoved` (or `OnLoseSecurity`) is NOT in that list, so it
-//! silently falls through the `_ => DelayTrigger::EndOfYourNextTurn` catch-all
-//! — a wrong, unrelated auto-fire timing (traced by reading the full match
-//! arm; confirmed no card in the shipping pool uses `on_own_security_removed`
-//! / `on_lose_security` as a `kind: delay` `trigger:` today). Even if the
-//! trigger mapped correctly, `Game::enqueue_triggered`'s event-gated-Delay
-//! fan-out (`enqueue_event_gated_delayed_options`) is only invoked when the
-//! firing `TriggerSource` matches a `matches!` whitelist of `EventObserved |
-//! PlayerBattleAreaAttack | AttackTargetChanged | BlockDeclared |
-//! EnteredField` (see `effect_queue.rs` ~line 620) — `TriggerSource::
-//! SecurityRemoved` (what actually fires `OnOwnSecurityRemoved`, see
-//! `complete_effect_security_removal` ~line 3302) is NOT in that whitelist
-//! either. Two independent wiring gaps on the same trigger path.
-//! Workaround: none faithful — substituting a different `trigger:` (e.g.
-//! `end_of_your_next_turn`) would make the Delay auto-fire on a schedule
-//! instead of specifically when the controller's OWN security stack shrinks,
-//! which is observably different game behavior (no-approximations policy).
-//!
-//! ## Gap 2 (PRE-EXISTING, already tracked) — no primitive to pop a named
-//! permanent's TOP card to security while leaving the rest of its stack
-//! `docs/RUST_ENGINE_GAPS.md` § "Digivolution-stack source extraction
-//! (`pop_top_source` from named permanent)" already names THIS card
-//! (BT24-093) verbatim as the open residual after the BT20-084
-//! `security_place_top_stacked_card` shape closed. Traced independently here:
-//! - `security_place_(top_)stacked_card` extracts `card_sources[len-2]` (the
-//!   MATERIAL just below the visible top) via `CardSourceRef::Material`,
-//!   leaving the top card in place. DCGO's `AddSecurityCard(permanent.
-//!   TopCard)` extracts `card_sources[len-1]` (the actual top / "digivolve
-//!   root") instead — confirmed against `RemoveDigivolveRootEffect`'s name
-//!   and behavior and against `docs/digimon-rules/keyword-semantics.md`'s
-//!   `<Armor Purge>` row ("top card" = the permanent's visible top). Using
-//!   `security_place_top_stacked_card` here would silently move the WRONG
-//!   card.
-//! - `place_on_security` with `SecuritySource::Permanent{..}` (→
-//!   `CompiledStep::PlacePermanentOnSecurity` → `Game::
-//!   place_permanent_on_security`) removes the WHOLE permanent from the
-//!   battle area, sends only its top card to security, and TRASHES every
-//!   other stacked card underneath — also wrong: Temple of Beginnings must
-//!   leave the chosen Digimon on the field, de-digivolved by exactly one
-//!   card, not remove it entirely.
-//! - `ctx.de_digivolve` pops `card_sources.last()` correctly but hardcodes
-//!   the destination to `player.trash` (`game_actions/helpers.rs`
-//!   `de_digivolve_core`) with no way to redirect to security.
-//! No DSL verb / `EffectContext` method composes "pop a named permanent's own
-//! top card, keep the remaining stack on the battlefield, route the popped
-//! card to security" — exactly the missing `ctx.pop_top_digivolution_source`
-//! primitive the gap doc proposes. The doc's own text states: "Workaround:
-//! None — BLOCKED." Raw `battle_area[i].card_sources.pop()` from a test/card
-//! would skip curated-API bookkeeping (declarative re-tick, replacement
-//! windows, `OnDigivolutionCardTrashed`-vs-moved distinction) and is
-//! explicitly disallowed by the no-approximations / no-workarounds rules.
-//!
-//! Both gaps compound on the SAME clause (the `[All Turns] <Delay>` body), so
-//! that clause is authored as an explicit YAML comment (no `kind: delay`
-//! clause emitted) and its behavioral test is `#[ignore]`d citing both gaps.
-//! Clauses 0 (Main) and the inherited Security Effect have zero dependency on
-//! either gap and are fully implemented + tested below.
+//!   security stack being removed from (`kind: delay`, `trigger:
+//!   on_own_security_removed` -> `DelayTrigger::OnEvent(OnOwnSecurityRemoved)`),
+//!   optional outer prompt, trash-self cost, declinable host pick, then
+//!   `security_place_top_stacked_card` (hunt cluster `delay-trigger-substrate`;
+//!   the two gaps an earlier draft of this file recorded -- the event-delay
+//!   fan-out skipping `TriggerSource::SecurityRemoved`, and a "pop the top
+//!   stacked card to security" primitive -- are closed).
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -643,45 +582,223 @@ fn bt24_093_security_effect_picking_trash_plays_elecmon_free() {
 
 // ─── Section 5 — [All Turns] <Delay> event-gated on own-security-removed ─────
 //
-// BLOCKED — see the file-header gap notes (Gap 1: lower_delay.rs trigger
-// whitelist + effect_queue.rs TriggerSource whitelist; Gap 2: no primitive to
-// pop a named permanent's own top card to security while leaving the rest of
-// its stack on the field — docs/RUST_ENGINE_GAPS.md already names BT24-093
-// verbatim under "Digivolution-stack source extraction", Workaround: None).
-//
-// This test documents the intended faithful behavior and is `#[ignore]`d
-// until both gaps close. It is NOT a stub for a shipped clause: the YAML
-// deliberately does not emit a `kind: delay` clause for this text (see the
-// YAML's own comment block), so there is nothing today for this test to
-// drive — the assertion below is a placeholder proving the compiled card has
-// exactly the two clauses that ARE implemented (Main + inherited Security)
-// and none for the All-Turns Delay body, so a future close of both gaps must
-// add a THIRD clause and this test must be rewritten (not merely un-ignored).
+// DCGO `BT24_093.cs` Block 2 (`EffectTiming.OnLoseSecurity`):
+// `CanTriggerWhenLoseSecurity(player == card.Owner)` +
+// `CanDeclareOptionDelayEffect` (past the placing turn), optional
+// (`SetUpActivateClass(..., isOptional: true, ...)`). CR 4.3 16-17-1/-2/-3.
+
+const DELAY_HOST_TOP: &str = "AEGIOCHUSMON-TOP";
+const DELAY_HOST_BASE: &str = "AEGIOMON-BASE";
+
+fn aegiochusmon(id: &str, name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![CardColor::Yellow];
+    c.level = Some(5);
+    c.dp = Some(7000);
+    c.play_cost = 6;
+    c
+}
+
+/// Seat BT24-093 as a placed `<Delay>` Option that was placed on
+/// `placed_on_turn` (the printed "after the placing turn" gate compares it to
+/// the current turn).
+fn seat_delay(runner: &mut DebugRunner, player: PlayerId, placed_on_turn: u16) {
+    let handle = runner.place_on_field(player, CARD_ID, Some(0));
+    runner.game.players[player as usize].battle_area[handle.index as usize].option_state =
+        OptionState::Delayed {
+            owner: player,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::OnEvent(
+                EffectTiming::OnOwnSecurityRemoved,
+            ),
+            placed_on_turn,
+        };
+}
+
+fn delay_runner() -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut runner = base()
+        .add_card(attacker_for_p1("ATTACKER"))
+        .add_card(aegiochusmon(DELAY_HOST_TOP, "Aegiochusmon: Holy"))
+        .add_card(aegiochusmon(DELAY_HOST_BASE, "Aegiomon"))
+        .security(0, &["FILL", "FILL", "FILL"])
+        .security(1, &["FILL", "FILL", "FILL"])
+        .start();
+    seat_delay(&mut runner, 0, 0);
+    let attacker = runner.place_on_field(1, "ATTACKER", Some(0));
+    (runner, attacker)
+}
+
+fn option_on_field(runner: &DebugRunner, player: usize) -> bool {
+    runner.game.players[player].battle_area.iter().any(|p| {
+        p.top_card().card_id(&runner.game.card_data) == CARD_ID
+            && matches!(p.option_state, OptionState::Delayed { .. })
+    })
+}
+
+fn accept_branch(runner: &DebugRunner) -> u16 {
+    runner
+        .pending_selection_view()
+        .expect("a pending selection")
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|a| *a != digimon_engine::action::space::PASS)
+        .expect("a non-pass branch")
+}
+
+/// A security check on the Option's controller opens the optional `<Delay>`
+/// window; accepting trashes the Option, then the declinable pick moves the
+/// chosen Digimon's TOP card (not a lower material) face-down to the TOP of
+/// security and leaves the rest of that Digimon's stack in play.
 #[test]
-#[ignore = "pending: engine gap (lower_delay.rs OnEvent trigger whitelist missing OnOwnSecurityRemoved) + docs/RUST_ENGINE_GAPS.md 'Digivolution-stack source extraction (pop_top_source from named permanent)' (BT24-093 named verbatim, Workaround: None)"]
-fn bt24_093_all_turns_delay_places_chosen_permanents_top_stacked_card_as_security() {
-    // Intended faithful shape once both gaps close:
-    //  1. BT24-093 sits on the battle area as a Delay Option past its
-    //     placing turn.
-    //  2. The controller's security stack is removed from (e.g. a security
-    //     check trashes/adds-to-hand a card) — the Delay's event gate fires.
-    //  3. The controller may trash BT24-093 (the Delay's cost) to activate:
-    //     an optional select over own Aegiochusmon/Jupitermon-named
-    //     permanents with >=1 digivolution card; on pick, that permanent's
-    //     TOP card (not a lower material) is removed and placed as the new
-    //     top security card, face-down, while the rest of its stack stays on
-    //     the battlefield.
-    //  4. Declining at any point (no eligible permanent, or the player
-    //     passes) leaves the board untouched and BT24-093 stays trashed
-    //     (Delay's cost is paid regardless — DCGO trashes it before running
-    //     `SuccessProcess`).
-    unreachable!(
-        "intended-behavior placeholder only — do not implement via a workaround; see file header"
+fn bt24_093_delay_on_own_security_removed_places_top_stacked_card_as_top_security() {
+    let (mut runner, attacker) = delay_runner();
+    runner.place_stack(0, &[DELAY_HOST_BASE, DELAY_HOST_TOP]);
+    assert!(option_on_field(&runner, 0));
+
+    runner.attack_player(attacker, 0, false);
+
+    let outer = runner
+        .pending_selection_view()
+        .expect("the security removal opens the optional <Delay> window");
+    assert_eq!(outer.selecting_player, 0, "the Option's controller decides");
+    assert!(runner.pending_is_optional(), "16-17-2: <Delay> is optional");
+    let accept = accept_branch(&runner);
+    runner
+        .execute_action(outer.selecting_player, accept)
+        .expect("accept the <Delay>");
+    assert!(
+        !option_on_field(&runner, 0),
+        "accepting trashes the Option as the activation cost (16-17-1)"
+    );
+
+    let pick = runner
+        .pending_selection_view()
+        .expect("the declinable [Aegiochusmon]/[Jupitermon] pick");
+    assert!(runner.pending_is_optional(), "the placement is 'you may'");
+    let action = accept_branch(&runner);
+    runner
+        .execute_action(pick.selecting_player, action)
+        .expect("pick the host");
+    runner.auto_resolve().ok();
+
+    let perm = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| {
+            p.card_sources
+                .iter()
+                .any(|c| c.card_id(&runner.game.card_data) == DELAY_HOST_BASE)
+        })
+        .expect("the host stays in play");
+    assert_eq!(perm.card_sources.len(), 1, "only its top card left the stack");
+    assert_eq!(
+        perm.top_card().card_id(&runner.game.card_data),
+        DELAY_HOST_BASE,
+        "the card that was under the top is the new top"
+    );
+    let top_security = runner.game.players[0]
+        .security
+        .last()
+        .expect("security has cards")
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(
+        top_security, DELAY_HOST_TOP,
+        "the popped top card is the top security card"
+    );
+}
+
+/// Declining the outer window keeps the Option in play; it is offered again at
+/// the NEXT security removal.
+#[test]
+fn bt24_093_delay_decline_keeps_option_and_reoffers_on_next_removal() {
+    let (mut runner, attacker) = delay_runner();
+    runner.place_stack(0, &[DELAY_HOST_BASE, DELAY_HOST_TOP]);
+
+    runner.attack_player(attacker, 0, false);
+    let outer = runner.pending_selection_view().expect("first <Delay> window");
+    runner
+        .execute_action(outer.selecting_player, digimon_engine::action::space::PASS)
+        .expect("decline");
+    runner.auto_resolve().ok();
+    assert!(option_on_field(&runner, 0), "a declined <Delay> stays (16-17-1)");
+
+    // A second, separate removal opens a second window.
+    let attacker2 = runner.place_on_field(1, "ATTACKER", Some(0));
+    runner.attack_player(attacker2, 0, false);
+    assert!(
+        runner.pending_selection_view().is_some(),
+        "the next security removal re-offers the <Delay>"
+    );
+}
+
+/// 16-17-3: not on the placing turn.
+#[test]
+fn bt24_093_delay_not_offered_on_the_placing_turn() {
+    let mut runner = base()
+        .add_card(attacker_for_p1("ATTACKER"))
+        .security(0, &["FILL", "FILL"])
+        .start();
+    let turn = runner.game.turn_count;
+    seat_delay(&mut runner, 0, turn);
+    let attacker = runner.place_on_field(1, "ATTACKER", Some(0));
+
+    runner.attack_player(attacker, 0, false);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "the <Delay> can't be activated the turn its card was placed (16-17-3)"
+    );
+    assert!(option_on_field(&runner, 0));
+}
+
+/// "When YOUR security stack is removed from": the opponent's own removals do
+/// not open the Option's window.
+#[test]
+fn bt24_093_delay_ignores_the_opponents_security_removal() {
+    let (mut runner, _) = delay_runner();
+    // P0 attacks P1's security: that is P1's stack being removed from, not P0's.
+    let p0_attacker = runner.place_on_field(0, "YELLOW-BOARD", Some(0));
+    runner.attack_player(p0_attacker, 1, false);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "the opponent's security loss is not this Option's trigger"
+    );
+    assert!(option_on_field(&runner, 0));
+}
+
+/// Only [Aegiochusmon]/[Jupitermon]-named Digimon with a card under their top
+/// card are candidates: with none, the body finds nothing to pick and the
+/// Option is still spent (DCGO trashes the Option BEFORE `SuccessProcess`).
+#[test]
+fn bt24_093_delay_candidates_need_the_name_and_a_card_under_the_top() {
+    let (mut runner, attacker) = delay_runner();
+    // A lone [Aegiochusmon] (no cards under) and a stacked non-matching name.
+    runner.place_on_field(0, DELAY_HOST_TOP, Some(0));
+    runner.place_stack(0, &["FILL", "OTHER"]);
+
+    runner.attack_player(attacker, 0, false);
+    let outer = runner.pending_selection_view().expect("the <Delay> window");
+    let accept = accept_branch(&runner);
+    runner
+        .execute_action(outer.selecting_player, accept)
+        .expect("accept");
+    runner.auto_resolve().ok();
+    assert!(!option_on_field(&runner, 0), "the Option's cost was paid");
+    // No host qualified, so nothing was placed on security by the Delay.
+    assert!(
+        runner.game.players[0]
+            .security
+            .iter()
+            .all(|c| c.card_id(&runner.game.card_data) != DELAY_HOST_TOP),
+        "a lone [Aegiochusmon] with no card under it is not a candidate"
     );
 }
 
 #[test]
-fn bt24_093_compiled_card_has_exactly_main_and_security_clauses_pending_all_turns_gap() {
+fn bt24_093_compiled_card_has_main_security_and_the_all_turns_delay_clauses() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
 
@@ -690,30 +807,23 @@ fn bt24_093_compiled_card_has_exactly_main_and_security_clauses_pending_all_turn
         .iter()
         .filter(|c| matches!(c, CompiledClause::Triggered(_)))
         .count();
-    assert_eq!(
-        triggered_count, 2,
-        "only [Main] and inherited [Security] are implemented today; the \
-         [All Turns] <Delay> clause is BLOCKED (see file header) and must \
-         NOT be silently emitted as a mis-triggered clause"
-    );
+    assert_eq!(triggered_count, 2, "[Main] and inherited [Security]");
 
-    let declarative_delay_count = card
+    let delay_triggers: Vec<CompiledTiming> = card
         .effects
         .iter()
-        .filter(|c| {
-            matches!(
-                c,
-                CompiledClause::Declarative(
-                    digimon_dsl::compiled::CompiledDeclarativeClause::Delay { .. }
-                )
-            )
+        .filter_map(|c| match c {
+            CompiledClause::Declarative(
+                digimon_dsl::compiled::CompiledDeclarativeClause::Delay { trigger, .. },
+            ) => Some(*trigger),
+            _ => None,
         })
-        .count();
+        .collect();
     assert_eq!(
-        declarative_delay_count, 0,
-        "no `kind: delay` clause is authored until both blocking gaps close \
-         (a wrongly-triggered Delay would silently misfire on the wrong \
-         timing — worse than omitting it)"
+        delay_triggers,
+        vec![CompiledTiming::OnOwnSecurityRemoved],
+        "exactly one `kind: delay` clause, event-gated on the controller's own \
+         security stack being removed from"
     );
 }
 
