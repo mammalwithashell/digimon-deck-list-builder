@@ -879,6 +879,15 @@ pub trait RecordingSource: Send {
     fn dcgo_action_card_index(&self, _row: u32) -> Option<i32> {
         None
     }
+
+    /// DCGO's own identity of the permanent the ACTION step at `row` names as
+    /// its own-board operand (attacker, digivolve target, activated
+    /// permanent), with where the index came from
+    /// (`ActionRow::operand_card_index` / `operand_card_index_source`).
+    /// `None` for every source without it.
+    fn dcgo_action_operand_index(&self, _row: u32) -> Option<(i32, Option<crate::dcgo_recording::CardIndexSource>)> {
+        None
+    }
 }
 
 /// The single shared decision point for whether mulligan-phase actions
@@ -1132,6 +1141,9 @@ pub struct DcgoAdapter {
     /// selection step or an action without one). Read through
     /// `RecordingSource::dcgo_action_card_index`.
     action_card_indexes: Vec<Option<i32>>,
+    /// `ActionRow::operand_card_index` (+ source) of each step, parallel to
+    /// `steps`. Read through `RecordingSource::dcgo_action_operand_index`.
+    action_operand_indexes: Vec<Option<(i32, Option<crate::dcgo_recording::CardIndexSource>)>>,
 }
 
 impl DcgoAdapter {
@@ -1218,6 +1230,7 @@ impl DcgoAdapter {
 
         let mut steps = Vec::new();
         let mut action_card_indexes: Vec<Option<i32>> = Vec::new();
+        let mut action_operand_indexes: Vec<Option<(i32, Option<crate::dcgo_recording::CardIndexSource>)>> = Vec::new();
         let mut skipped_incomplete_plays: u32 = 0;
         for row in &recording.rows {
             match row {
@@ -1257,11 +1270,13 @@ impl DcgoAdapter {
                         inferred: a.inferred,
                     });
                     action_card_indexes.push(a.card_index);
+                    action_operand_indexes.push(a.operand_card_index.map(|k| (k, a.operand_card_index_source)));
                 }
                 // Semantic selection payload (task 3.5) — resolved against
                 // the live PendingSelection at step time.
                 Row::Selection(s) => {
                     action_card_indexes.push(None);
+                    action_operand_indexes.push(None);
                     steps.push(StepSpec {
                     actor: s.actor,
                     action_id: 0,
@@ -1310,6 +1325,7 @@ impl DcgoAdapter {
             card_data: card_data.clone(),
             skipped_incomplete_plays,
             action_card_indexes,
+            action_operand_indexes,
         })
     }
 }
@@ -1321,6 +1337,10 @@ impl RecordingSource for DcgoAdapter {
 
     fn dcgo_action_card_index(&self, row: u32) -> Option<i32> {
         self.action_card_indexes.get(row as usize).copied().flatten()
+    }
+
+    fn dcgo_action_operand_index(&self, row: u32) -> Option<(i32, Option<crate::dcgo_recording::CardIndexSource>)> {
+        self.action_operand_indexes.get(row as usize).copied().flatten()
     }
 
     fn omits_dcgo_silent_prompts(&self) -> bool {
@@ -5630,6 +5650,105 @@ impl ReplayDriver {
         })
     }
 
+    /// The own-board operand of the ACTION row at `cur` (the attacker, the
+    /// digivolve target, the host of an activated permanent effect) when the
+    /// recorded board holds several copies of its card: `remapped` (the action
+    /// after `remap_board_slots`' occurrence-order pairing) with that operand
+    /// replaced by the engine slot of the copy DCGO's own card identity names
+    /// (`ActionRow::operand_card_index`, paired with an engine card by the rows
+    /// that moved it, `record_dcgo_card_indexes`), and whether it was.
+    ///
+    /// raw-20261115T153822Z#g10 raw seq 821: two ST24-05, DCGO's attacker was
+    /// the newer copy (the one holding BT26-036), both copies could attack, and
+    /// the occurrence pairing sent the older copy.
+    ///
+    /// With no index, or one that names no engine card (or one that tops none
+    /// of the copies), the occurrence-order pairing stands and a note says it
+    /// was a guess when the engine's copies are not interchangeable and the same
+    /// action is legal for more than one of them. It never halts: a recording
+    /// predating the field cannot do better, and the engine's legality still
+    /// decides whether the paired copy's action is accepted.
+    fn named_operand_action(
+        &mut self,
+        game: &Game,
+        actor: PlayerId,
+        cur: u32,
+        raw_action_id: u16,
+        remapped: u16,
+    ) -> (u16, bool) {
+        let (Some(recorded_slot), Some(_)) = (own_board_operand(raw_action_id), own_board_operand(remapped)) else {
+            return (remapped, false);
+        };
+        let Some(step) = self.source.steps().get(cur as usize) else {
+            return (remapped, false);
+        };
+        let recorded = if actor == 0 { step.board_p0.clone() } else { step.board_p1.clone() };
+        let Some(recorded) = recorded else {
+            return (remapped, false);
+        };
+        let Some(want) = recorded.get(recorded_slot as usize).cloned() else {
+            return (remapped, false);
+        };
+        let recorded_copies = recorded.iter().filter(|id| **id == want).count();
+        if recorded_copies < 2 {
+            return (remapped, false);
+        }
+        let copies: Vec<usize> = engine_board_ids(game, actor)
+            .iter()
+            .enumerate()
+            .filter(|(_, id)| **id == want)
+            .map(|(j, _)| j)
+            .collect();
+        if copies.len() < 2 {
+            return (remapped, false);
+        }
+        if let Some((k, source)) = self.source.dcgo_action_operand_index(cur) {
+            match self.dcgo_identity_slot(game, actor, k, &copies) {
+                Some(Ok(j)) => {
+                    use crate::dcgo_recording::CardIndexSource;
+                    let provenance = match source {
+                        Some(CardIndexSource::Recorder) => None,
+                        Some(CardIndexSource::FrameModel) => Some("inferred by frame model, not recorded"),
+                        Some(CardIndexSource::HandListing) => Some("inferred by hand listing, not recorded"),
+                        None => Some("taken from a card index of unknown source (provenance not recorded)"),
+                    };
+                    if let Some(provenance) = provenance {
+                        self.notes.push(format!(
+                            "row {cur}: P{actor}'s action names {want} by DCGO card index {k}; copy identity \
+                             {provenance} (took slot {j})"
+                        ));
+                    }
+                    return (with_own_board_operand(remapped, j as u16), true);
+                }
+                Some(Err(why)) => self.notes.push(format!(
+                    "row {cur}: P{actor}'s action names {want} by DCGO card index {k}, but {why}; the \
+                     occurrence-order pairing stands"
+                )),
+                None => self.notes.push(format!(
+                    "row {cur}: P{actor}'s action names {want} by DCGO card index {k}, which no earlier row \
+                     paired with an engine card; the occurrence-order pairing stands"
+                )),
+            }
+        }
+        let mask = crate::action::build_action_mask(game, actor);
+        let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
+        let slots: Vec<u16> = copies
+            .iter()
+            .map(|j| *j as u16)
+            .filter(|j| legal(with_own_board_operand(remapped, *j)))
+            .collect();
+        if slots.len() >= 2 && !interchangeable_copies(game, actor, &slots) {
+            self.notes.push(format!(
+                "row {cur}: P{actor}'s action names one of {recorded_copies} copies of {want} by position only \
+                 (DCGO's frame order, not the engine's), and the engine's copies in slots {slots:?} differ and can \
+                 all take it: paired in occurrence order (slot {}), which is a guess - the recording names no card \
+                 index for the operand",
+                own_board_operand(remapped).unwrap_or(0)
+            ));
+        }
+        (remapped, false)
+    }
+
     /// A one-target pick row whose target is one of several copies of a card
     /// on the recorded board: which copy, decided by the rows that follow.
     /// `None` when the row is not that shape (the ordinary remap then runs).
@@ -7785,7 +7904,11 @@ impl ReplayDriver {
             )
         };
 
-        let action_id = resolve_duplicate_attacker(game, actor, action_id);
+        // An own-board operand among copies of one card: DCGO's own card
+        // identity (`operand_card_index`) names the permanent, else the
+        // occurrence-order pairing above stands (and says so when it is a guess).
+        let (action_id, operand_named) = self.named_operand_action(game, actor, cur as u32, raw_action_id, action_id);
+        let action_id = if operand_named { action_id } else { resolve_duplicate_attacker(game, actor, action_id) };
 
         // The frame-order remap trusts the row's board snapshot, which lists
         // permanents in DCGO's own order (Digimon before Tamers/Options) while a
@@ -7913,7 +8036,10 @@ impl ReplayDriver {
             }
         };
 
-        let action_id = if action_id != raw_action_id {
+        // A copy named by DCGO's own card identity is never swapped for the
+        // recorded position's other copy when the named one's action is illegal:
+        // that is a divergence to report, not a guess to make.
+        let action_id = if action_id != raw_action_id && !operand_named {
             let mask = crate::action::build_action_mask(game, actor);
             let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
             if !legal(action_id) && legal(raw_action_id) {
@@ -8657,6 +8783,37 @@ fn remap_board_slots(
     }
 
     action_id
+}
+
+/// The own-board slot an action addresses: the attacker of an attack, the
+/// battle-area target of a digivolve, the host of an activated permanent
+/// effect. `None` for any other action (and for the breeding-area digivolve).
+fn own_board_operand(action_id: u16) -> Option<u16> {
+    use crate::action::space::*;
+    if (ATTACK_START..ATTACK_END).contains(&action_id) {
+        Some(decode_attack(action_id).0)
+    } else if (DIGIVOLVE_START..DIGIVOLVE_END).contains(&action_id) {
+        Some(decode_digivolve(action_id).1).filter(|f| *f != BREEDING_TARGET)
+    } else if (FIELD_EFFECT_START..FIELD_EFFECT_END).contains(&action_id) {
+        Some(decode_field_effect(action_id).0)
+    } else {
+        None
+    }
+}
+
+/// `action_id` with its own-board operand (`own_board_operand`) replaced by
+/// `slot`; any other action is returned unchanged.
+fn with_own_board_operand(action_id: u16, slot: u16) -> u16 {
+    use crate::action::space::*;
+    if (ATTACK_START..ATTACK_END).contains(&action_id) {
+        encode_attack(slot, decode_attack(action_id).1)
+    } else if (DIGIVOLVE_START..DIGIVOLVE_END).contains(&action_id) {
+        encode_digivolve(decode_digivolve(action_id).0, slot)
+    } else if (FIELD_EFFECT_START..FIELD_EFFECT_END).contains(&action_id) {
+        FIELD_EFFECT_START + slot * EFFECTS_PER_PERMANENT + decode_field_effect(action_id).1
+    } else {
+        action_id
+    }
 }
 
 /// Resolve a recorded attack whose attacker is ambiguous between duplicate
@@ -9571,6 +9728,8 @@ mod tests {
             memory: None,
             card_id: None,
             card_index: None,
+            operand_card_index: None,
+            operand_card_index_source: None,
             memory_before: None,
         })
     }

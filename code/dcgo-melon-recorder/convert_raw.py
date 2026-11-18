@@ -247,7 +247,24 @@ def convert(rows, cards, allow_truncated=False):
     reason = ""
     inferred = []
 
-    def action(actor, action_id, phase, source, card_id=None, inferred_row=False, boards=None, card_index=None):
+    def board_operand_index(r, seat, position):
+        """DCGO's CardIndex of the permanent at `position` of `seat`'s recorded board, when it must be named: the
+        board holds another copy of that card (so the position alone cannot say which permanent it is) and the row
+        is a recorder 0.2.0 row whose `board_indexes` lines up with `boards` (Core.cs BoardsJson: the top card's
+        CardIndex per entry). None otherwise."""
+        boards, exact = r.get("boards"), r.get("board_indexes")
+        if not (isinstance(boards, list) and len(boards) == 2 and isinstance(exact, list) and len(exact) == 2
+                and seat in (0, 1) and isinstance(boards[seat], list) and isinstance(exact[seat], list)
+                and len(exact[seat]) == len(boards[seat]) and isinstance(position, int)
+                and 0 <= position < len(boards[seat])):
+            return None
+        k = exact[seat][position]
+        if isinstance(k, bool) or not isinstance(k, int) or boards[seat].count(boards[seat][position]) < 2:
+            return None
+        return k
+
+    def action(actor, action_id, phase, source, card_id=None, inferred_row=False, boards=None, card_index=None,
+               operand_card_index=None, operand_source="recorder"):
         nonlocal step
         row = {"type": "action", "step": step, "actor": actor, "action_id": action_id,
                "phase": phase, "source": source}
@@ -261,6 +278,12 @@ def convert(rows, cards, allow_truncated=False):
             # DCGO's CardIndex of the played card (its hand slot in the resolve row's hand listing): the replay pairs
             # it with the engine card this action moves (ReplayDriver::record_dcgo_card_indexes)
             row["card_index"] = card_index
+        if isinstance(operand_card_index, int) and not isinstance(operand_card_index, bool):
+            # DCGO's CardIndex of the action's own-board operand (the attacker, the digivolve target, the activated
+            # permanent) when the board holds several copies of that card: the replay resolves the permanent by
+            # identity (`ReplayDriver::named_operand_slot`) instead of pairing duplicates in occurrence order
+            row["operand_card_index"] = operand_card_index
+            row["operand_card_index_source"] = operand_source
         out.append(row)
         step += 1
 
@@ -809,7 +832,22 @@ def convert(rows, cards, allow_truncated=False):
                 action_id = DIGIVOLVE_START + slot * FIELDS_PER_HAND + digivolve_field
             else:
                 action_id = PLAY_HAND_START + slot
-            action(actor, action_id, "Main", "main_phase", card_id=card, boards=r.get("boards"), card_index=played_index)
+            operand_k = None
+            tgt = r.get("target")
+            if digivolve_field is not None and digivolve_field != BREEDING_TARGET and isinstance(tgt, dict):
+                # The digivolve target's own CardIndex (the permanent's top card, CardJson(target.TopCard)): only
+                # worth naming when the board holds more than one copy of it, and only when the row's board agrees
+                # that it is the card at the target slot
+                tk, board = tgt.get("card_index"), (r.get("boards") or [None, None])[actor] if r.get("boards") else None
+                exact = r.get("board_indexes")
+                if (isinstance(tk, int) and not isinstance(tk, bool) and isinstance(board, list)
+                        and 0 <= digivolve_field < len(board) and board[digivolve_field] == tgt.get("card_id")
+                        and board.count(tgt.get("card_id")) >= 2
+                        and not (isinstance(exact, list) and len(exact) == 2 and isinstance(exact[actor], list)
+                                 and len(exact[actor]) == len(board) and exact[actor][digivolve_field] != tk)):
+                    operand_k = tk
+            action(actor, action_id, "Main", "main_phase", card_id=card, boards=r.get("boards"), card_index=played_index,
+                   operand_card_index=operand_k)
             if burst is not None and burst_named is not None:
                 # A REMOTE seat's pick ran on its own client and left no row: write it from the frame model's certain
                 # naming of the packet's BurstTamerFrameID, right after the digivolve action (where the engine asks it).
@@ -958,7 +996,7 @@ def convert(rows, cards, allow_truncated=False):
                 if "activate_link" in r:
                     skill = 3 if r["activate_link"] else 2
                 action(a[0], FIELD_EFFECT_START + perm * EFFECTS_PER_PERMANENT + skill, "Main", "main_phase",
-                       boards=r.get("boards"))
+                       boards=r.get("boards"), operand_card_index=board_operand_index(r, a[0], perm))
                 continue
             if a[1] in (PLAY_PACKET_ID, ATTACK_PACKET_ID):
                 continue  # attacks are decoded from SetAttackingPermaent (and plays without packet info from PlayCard rows)
@@ -974,7 +1012,8 @@ def convert(rows, cards, allow_truncated=False):
                 truncated_at = truncated_at or ("attack without a turn player at step %d" % step)
                 break
             target = SECURITY_TARGET if a[1] < 0 else a[1]
-            action(actor, ATTACK_START + a[0] * TARGETS_PER_ATTACKER + target, "Main", "main_phase", boards=r.get("boards"))
+            action(actor, ATTACK_START + a[0] * TARGETS_PER_ATTACKER + target, "Main", "main_phase", boards=r.get("boards"),
+                   operand_card_index=board_operand_index(r, actor, a[0]))
             continue
         if m in ("TurnStateMachine.QueueMainPhaseAction", "TurnStateMachine.PassTurn"):
             continue  # the Internal row above already carries the decision
