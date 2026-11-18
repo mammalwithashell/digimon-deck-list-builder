@@ -1,0 +1,90 @@
+# BT17-094 Ancient Guardian Deity — Option, Red + Blue, cost 2. Trait: Ten Warriors.
+#
+# Printed text (data/card_bundles/BT17-094.md, official Bandai DB):
+#   While you have a Tamer or a Digimon with the [Hybrid] trait, you may ignore
+#   this card's color requirements.
+#   [Main] You may return 1 Digimon card with the [Hybrid] or [Ten Warriors]
+#     trait from your trash to the hand. Then, you may play 1 Digimon card with
+#     the [Ten Warriors] trait or 1 Tamer card with inherited effects from your
+#     hand with the play cost reduced by 4.
+#   [Security] You may play 1 Tamer card with inherited effects from your hand or
+#     trash without paying the cost. Then, add this card to the hand.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT17/Red/BT17_094.cs
+#   - None timing: IgnoreColorConditionClass gated on "owner has a Tamer or a
+#     Hybrid-trait Digimon" -> card-level `use_requirement` (the Option-use
+#     colour bypass; BT19-089 idiom).
+#   - OptionSkill: (1) SelectCardEffect Mode.AddHand over the trash, canNoSelect
+#     true, only Digimon with Hybrid/Ten Warriors; (2) a -4 ChangeCostClass is
+#     registered, then SelectHandEffect (canNoSelect true) over Ten Warriors
+#     Digimon / Tamers with inherited effects that CanPlayAsNewPermanent(payCost:
+#     true); PlayPermanentCards payCost=true. Both parts independent ("Then").
+#   - SecuritySkill: ActivateClass optional=false, hand/trash zone choice only
+#     when both hold an eligible Tamer, pick with canNoSelect true, play free,
+#     then ALWAYS AddThisCardToHand (even when nothing was played).
+card: BT17-094
+name: Ancient Guardian Deity
+kind: option
+color: [red, blue]
+cost: 2
+traits: [Ten Warriors]
+use_requirement:
+  any_permanent:
+    of: you
+    any_of:
+      - kind: tamer
+      - all_of:
+          - kind: digimon
+          - trait_has: Hybrid
+effects:
+  - when: main_from_hand
+    summary: "[Main] You may return 1 Hybrid/Ten Warriors Digimon card from trash to hand. Then, you may play 1 Ten Warriors Digimon or inherited-effect Tamer from hand with the play cost reduced by 4"
+    process:
+      - select_trash:
+          of: you
+          bind_as: recover
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Hybrid
+                  - trait_has: Ten Warriors
+          prompt: "You may return 1 Digimon card with the [Hybrid] or [Ten Warriors] trait from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: recover }
+      - select_hand:
+          of: you
+          bind_as: play_pick
+          optional: true
+          filter:
+            all_of:
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 4 }
+              - any_of:
+                  - all_of:
+                      - kind: digimon
+                      - trait_has: Ten Warriors
+                  - all_of:
+                      - kind: tamer
+                      - has_inherited: {}
+          prompt: "You may play 1 [Ten Warriors] Digimon or 1 Tamer with inherited effects with the play cost reduced by 4"
+      - play_from_hand: { of: you, hand_index: play_pick, cost_delta: { reduce: 4 } }
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] You may play 1 Tamer with inherited effects from hand or trash free. Then, add this card to the hand"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: picked
+          filter:
+            all_of:
+              - kind: tamer
+              - has_inherited: {}
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked
+      - add_this_option_to_hand: {}

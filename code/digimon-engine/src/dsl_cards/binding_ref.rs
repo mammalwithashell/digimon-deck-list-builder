@@ -54,6 +54,13 @@ pub fn resolve_binding_ref(
             permanent.card_sources.last().map(|card| ResolvedBinding::Card(card.handle()))
         }
         CompiledBindingRef::Carrier => ctx.source_permanent.map(ResolvedBinding::Permanent),
+        // The permissive sibling of `Permanent(name)`: the battle-area permanent
+        // that currently carries the played card, even after it was buried
+        // under a digivolve (BT16-084's delayed "return it to the hand").
+        CompiledBindingRef::PlayedCarrier(name) => {
+            resolve_played_permanent_permissive(name, ctx, bindings)
+                .map(ResolvedBinding::Permanent)
+        }
         CompiledBindingRef::Named(name)
         | CompiledBindingRef::Binding(name)
         | CompiledBindingRef::Permanent(name)

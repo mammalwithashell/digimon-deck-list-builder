@@ -1,0 +1,111 @@
+# P-187 Mastemon — Lv.6 Purple + Yellow, cost 13, 13000 DP. Traits: Angel. Mega / Vaccine.
+#
+# Printed text (data/card_bundles/P-187.md, official Bandai DB):
+#   Standard circles: purple Lv.5 / yellow Lv.5, cost 5.
+#   [DNA Digivolve] Purple Lv.5 + yellow Lv.5: Cost 0. Stack the 2 specified
+#     Digimon and digivolve unsuspended.
+#   [When Digivolving] <Recovery +1 (Deck)>. Then, if DNA digivolving, by placing
+#     1 other Digimon or Tamer as the top or bottom security card, trash your
+#     opponent's top security card.
+#   [When Digivolving][When Attacking][Once Per Turn] By trashing your top
+#     security card, you may play 1 purple or yellow Digimon card with 6000 DP or
+#     less from your hand or trash without paying the cost.
+#   Official Q&A: the placed card may go on the top or the bottom of security.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/P/Purple/P_187.cs
+#   - AddJogressCondition: purple Lv.5 + yellow Lv.5 Digimon, cost 0.
+#   - When Digivolving #1 (optional=false): IRecovery 1 when security can be
+#     added to; on a Jogress, a pick of 1 OTHER Digimon or Tamer ON THE BATTLE
+#     AREA (either side; canNoSelect true), a Top/Bottom bool, then
+#     PlacePermanentInSecurityAndProcessAccordingToResult whose success process
+#     trashes the OPPONENT's top security card (IDestroySecurity).
+#   - When Digivolving #2 / When Attacking (one shared OPT hash "PlayDigimon_P_187",
+#     optional=true): CanActivate = a purple/yellow Digimon <= 6000 DP in hand
+#     or trash AND own security >= 1. The security trash is the cost, paid FIRST
+#     (even when the player then declines the play), then a hand/trash zone
+#     choice only when both zones hold an eligible card, then a pick with
+#     canNoSelect true, play free.
+card: P-187
+name: Mastemon
+kind: digimon
+level: 6
+color: [purple, yellow]
+cost: 13
+dp: 13000
+form: Mega
+attribute: Vaccine
+traits: [Angel]
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 5, color_is: purple }
+      - { level_eq: 5, color_is: yellow }
+    cost: 0
+    stacks_unsuspended: true
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] <Recovery +1 (Deck)>. Then, if DNA digivolving, by placing 1 other Digimon or Tamer as the top or bottom security card, trash your opponent's top security card"
+    process:
+      - recover: { of: you, count: 1 }
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_any_permanent:
+                bind_as: placed
+                optional: true
+                filter:
+                  all_of:
+                    - other: true
+                    - any_of:
+                        - kind: digimon
+                        - kind: tamer
+                prompt: "Place 1 other Digimon or Tamer as the top or bottom security card"
+            - if:
+                condition: { binding_present: placed }
+                then:
+                  - place_on_security:
+                      source: { permanent: placed }
+                      to_owner: true
+                      position: choice
+                      face_up: false
+                      bind_placed_as: placed_card
+                  - if:
+                      condition: { binding_present: placed_card }
+                      then:
+                        - trash_top_security: { of: opponent }
+
+  - when: [when_digivolving, when_attacking]
+    optional: true
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          all_of:
+            - kind: digimon
+            - dp_lte: 6000
+            - any_of:
+                - color_is: purple
+                - color_is: yellow
+            - can_play_from_effect_without_cost: true
+        n: 1
+    summary: "[When Digivolving][When Attacking][Once Per Turn] By trashing your top security card, you may play 1 purple or yellow Digimon card with 6000 DP or less from your hand or trash without paying the cost"
+    process:
+      - trash_top_security: { of: you }
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: picked
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 6000
+              - any_of:
+                  - color_is: purple
+                  - color_is: yellow
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 purple or yellow Digimon card with 6000 DP or less from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked

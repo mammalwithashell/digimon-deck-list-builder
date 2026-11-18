@@ -1,0 +1,73 @@
+# BT16-031 Gatomon — Lv.4 Yellow + Purple, cost 4, 4000 DP. Traits: Holy Beast. Vaccine.
+#
+# Printed text (data/card_bundles/BT16-031.md, official Bandai DB):
+#   [Digivolve] [Salamon]: Cost 2   (plus the standard purple/red Lv.3: 3 circles)
+#   <Barrier>
+#   [On Play] [When Digivolving] By trashing 1 card in your hand, return 1 level
+#     6 or lower 2-color Digimon card that's red or purple from your trash to the
+#     hand.
+#   Inherited: [Your Turn] All of your opponent's Security Digimon get -3000 DP.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT16/Yellow/BT16_031.cs
+#   - None: AddSelfDigivolutionRequirementStaticEffect(name Salamon, cost 2).
+#   - WhenPermanentWouldBeDeleted: BarrierSelfEffect.
+#   - OnEnterFieldAnyone x2 (On Play / When Digivolving, the same body):
+#     optional=true; CanActivate = on battle area + hand >= 1; the cost is a
+#     SelectHandEffect Mode.Discard (canNoSelect true); on a discard, a
+#     mandatory (canNoSelect false) pick from the trash of a 2-color (exactly
+#     two), red-or-purple card with Level <= 6. The When Digivolving copy also
+#     checks IsDigimon; the On Play copy's `HasLevel` makes it equivalent (only
+#     Digimon carry a level), so both read "Digimon" as printed.
+#   - Inherited: ChangeSecurityDigimonCardDPStaticEffect -3000 on the
+#     opponent's security Digimon during the owner's turn (BT16-029 aura idiom).
+card: BT16-031
+name: Gatomon
+kind: digimon
+level: 4
+color: [yellow, purple]
+cost: 4
+dp: 4000
+attribute: Vaccine
+traits: [Holy Beast]
+alt_paths:
+  - kind: digivolve
+    from: { name_is: Salamon }
+    cost: 2
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier>"
+
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] By trashing 1 card in your hand, return 1 level 6 or lower 2-color red/purple Digimon card from your trash to your hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "You may trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - select_trash:
+          of: you
+          bind_as: recover
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 6
+              - self_color_count_gte: 2
+              - self_color_count_lte: 2
+              - any_of:
+                  - color_is: red
+                  - color_is: purple
+          prompt: "Return 1 level 6 or lower 2-color red or purple Digimon card from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: recover }
+
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    dp_modifier: -3000
+    applies_to_opponent_security_dp: true
+    summary: "[Inherited][Your Turn] All of your opponent's Security Digimon get -3000 DP"

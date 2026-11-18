@@ -2856,9 +2856,12 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
             deck_top,
             security_top,
             own_breeding,
+            played_carrier,
             ..
         }) => {
-            if let Some(p) = permanent {
+            if let Some(p) = played_carrier {
+                CompiledBindingRef::PlayedCarrier(p.clone())
+            } else if let Some(p) = permanent {
                 CompiledBindingRef::Permanent(p.clone())
             } else if let Some(b) = binding {
                 CompiledBindingRef::Binding(b.clone())
