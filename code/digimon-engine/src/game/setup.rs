@@ -247,6 +247,7 @@ impl Game {
             replacement_depth: 0,
             replacement_pending_outcome: None,
             last_play_order_choice: None,
+            last_collapsed_refire: None,
             source_play_receipts: Vec::new(),
             prepared_source_plays: Vec::new(),
             next_source_play_receipt: 0,
@@ -461,6 +462,7 @@ impl Game {
         self.replacement_depth = 0;
         self.replacement_pending_outcome = None;
         self.last_play_order_choice = None;
+        self.last_collapsed_refire = None;
         self.prepared_source_plays.clear();
         self.source_play_receipts.clear();
         self.next_source_play_receipt = 0;

@@ -1046,27 +1046,7 @@ impl<'a> EffectContext<'a> {
     }
 
     fn refire_effect_slot_available(&self, effect: &ReFireableEffect) -> bool {
-        let Some(effects) = self
-            .game
-            .effects_for_card(&effect.card_id, effect.source_card)
-        else {
-            return false;
-        };
-        let Some(effect_body) = effects.get(effect.effect_id as usize) else {
-            return false;
-        };
-        if effect_body.max_per_turn == 0 {
-            return true;
-        }
-        let Some(perm) = self
-            .game
-            .players
-            .get(effect.source.player as usize)
-            .and_then(|p| p.battle_area.get(effect.source.index as usize))
-        else {
-            return false;
-        };
-        perm.activation_count(effect.source_card, effect.effect_id) < effect_body.max_per_turn
+        self.game.refire_effect_slot_available(effect)
     }
 
     pub fn new_with_cost_target(

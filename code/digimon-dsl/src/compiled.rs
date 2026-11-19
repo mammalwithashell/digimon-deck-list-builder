@@ -527,6 +527,9 @@ pub struct CompiledPredicate {
     /// See `PredicateSpec::can_attack` (G-DSL-CAN-ATTACK-PREDICATE).
     #[serde(default)]
     pub can_attack: Option<CompiledCanAttack>,
+    /// See `PredicateSpec::has_refireable_effect` (G-DSL-HAS-REFIREABLE-EFFECT).
+    #[serde(default)]
+    pub has_refireable_effect: Option<String>,
     pub has_keyword: Option<String>,
     /// Permanent-subject leaf for printed/granted/temporary Security A.
     /// deltas. Used by Venusmon-style text that cares about "with

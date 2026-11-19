@@ -1208,6 +1208,24 @@ fn compile_predicate(
             without_suspending: c.without_suspending,
             ignore_summoning_sickness: c.ignore_summoning_sickness,
         }),
+        has_refireable_effect: p.has_refireable_effect.as_ref().and_then(|timing| {
+            if matches!(
+                timing.as_str(),
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+            ) {
+                Some(timing.clone())
+            } else {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.has_refireable_effect"),
+                    message: format!(
+                        "unknown refire timing `{timing}`: expected `on_play`, `when_digivolving` or \
+                         `on_play_or_when_digivolving`"
+                    ),
+                });
+                None
+            }
+        }),
         has_keyword: p.has_keyword.clone(),
         has_security_attack_change: p.has_security_attack_change,
         has_on_deletion_effect: p.has_on_deletion_effect,
