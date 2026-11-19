@@ -2363,10 +2363,21 @@ pub struct DeDigivolveArgs {
     /// non-optional) when 2 or more cards are trashable. A formula is printed
     /// "`<De-Digivolve 1>` for each …" and runs as that many SEPARATE
     /// `<De-Digivolve 1>` instances (§16-12-7 / §16-12-8), with no declaration.
+    ///
+    /// `declared: true` selects the other reading of a formula amount: ONE
+    /// `<De-Digivolve N>` where N is the formula's value at resolution, whose
+    /// count the controller declares (1..=min(N, trashable), §16-12-1) exactly
+    /// like a literal `amount: N`. Used where DCGO resolves the printed "for
+    /// each" as a single De-Digivolve N (EX13-066 Option: `EX13_066.cs`
+    /// `SetDegenerationCount(Owner.GetBattleAreaDigimons().Count)`), as
+    /// opposed to the per-instance loop (BT19-073, BT21-060, BT24-041,
+    /// BT25-075). Meaningful only with a formula `amount`.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "amount_fn")]
     pub amount: Option<FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stop_at_level: Option<u8>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub declared: bool,
 }
 
 /// Phase 2 Track F (G-DSL-GAIN-MEMORY-FN): args for formula-valued

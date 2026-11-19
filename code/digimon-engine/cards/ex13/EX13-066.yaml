@@ -42,6 +42,8 @@
 # Option [Main]: optional hand-or-trash union pick → free play; then a
 #   mandatory <De-Digivolve N> on 1 opp Digimon, N = your Digimon count read
 #   at resolution (after the optional play). De-Digivolve stops at level 3.
+#   `declared: true` = DCGO's single declared <De-Digivolve N> (EX13_066.cs),
+#   not N separate <De-Digivolve 1> instances.
 
 card: EX13-066
 name: "Sistermon Noir (Awakened)"
@@ -151,3 +153,9 @@ dual:
                     filter: { kind: digimon }
                 delta: 1
               stop_at_level: 3
+              # ONE <De-Digivolve N>, N = your Digimon count: DCGO EX13_066.cs
+              # resolves a single De-Digivolve via SetDegenerationCount, so the
+              # controller declares 1..min(N, trashable) (CR 4.3 16-12-1,
+              # 4-27-2), unlike the per-instance loops of BT19-073 / BT21-060 /
+              # BT24-041 / BT25-075.
+              declared: true

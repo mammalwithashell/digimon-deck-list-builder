@@ -410,6 +410,7 @@ impl Game {
             }
         };
         let target = effective_target;
+        self.de_digivolve_instances = self.de_digivolve_instances.wrapping_add(1);
         let cause =
             crate::trigger_context::EventCause::from(self.infer_effect_cause(target.player));
 

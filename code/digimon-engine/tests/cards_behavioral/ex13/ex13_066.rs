@@ -297,10 +297,71 @@ fn ex13_066_option_plays_then_de_digivolves_per_ally() {
     let view = r.pending_selection_view().expect("De-Digivolve target");
     assert_eq!(view.kind, SelectionKind::OppField);
     r.execute_action(0, encode_attack(0, opp.index as u16)).unwrap();
-    // 2 own Digimon → De-Digivolve 2: L5 and L4 trashed, L3 remains.
+    // 2 own Digimon → ONE <De-Digivolve 2> (DCGO EX13_066.cs resolves a single
+    // De-Digivolve N via SetDegenerationCount), so the controller declares 1..2
+    // (CR 4.3 16-12-1). Declaring the maximum trashes L5 and L4; L3 remains.
+    declare_de_digivolve(&mut r, opp, 2);
     let perm = &r.game.player(1).battle_area[opp.index as usize];
     assert_eq!(perm.stack_size(), 1);
     assert_eq!(perm.top_card().card_id(&r.game.card_data), "OPP-L3");
+}
+
+/// Answer the parked `<De-Digivolve>` count declaration: pick the declared
+/// number `n` (the action whose resolution leaves the target with the stack
+/// size a declaration of `n` implies). Asserts the prompt cannot be declined
+/// (CR 4.3 16-12-1, 16-12-3). Returns the offered action ids.
+fn declare_de_digivolve(r: &mut DebugRunner, opp: PermanentHandle, n: usize) -> Vec<u16> {
+    let view = r
+        .pending_selection_view()
+        .expect("the <De-Digivolve> count declaration is parked");
+    assert!(!view.is_optional, "0 cannot be declared: {view:?}");
+    let stack_before = r.game.player(1).battle_area[opp.index as usize].stack_size();
+    let mut chosen = None;
+    let mut sizes = Vec::new();
+    for &a in &view.valid_action_ids {
+        let mut g = r.game.clone();
+        g.resolve_selection(0, a).expect("declaration is legal");
+        let left = g.player(1).battle_area[opp.index as usize].stack_size();
+        sizes.push(stack_before - left);
+        if stack_before - left == n {
+            chosen = Some(a);
+        }
+    }
+    sizes.sort();
+    let action = chosen.unwrap_or_else(|| panic!("no declaration of {n}: trashed counts {sizes:?}"));
+    r.execute_action(0, action).unwrap();
+    view.valid_action_ids
+}
+
+/// EX13-066 Option: `<De-Digivolve 1> for each of your Digimon` is ONE
+/// `<De-Digivolve N>` whose N = your Digimon count (DCGO EX13_066.cs:192-211
+/// `SetDegenerationCount(Owner.GetBattleAreaDigimons().Count)`; the engine
+/// used to expand it into N instances so the count prompt DCGO opens was
+/// never parked, G-DEDIGIVOLVE-NO-DECLARATION). With 3 own Digimon and a
+/// 5-card stack the controller declares 1..3 and the declared number is what
+/// is trashed.
+#[test]
+fn ex13_066_option_declares_the_de_digivolve_count() {
+    let mut r = option_runner(&[CARD_ID, "SIS-CIEL"], &[]);
+    r.place_on_field(0, "WHITE-ALLY", Some(1));
+    let opp = r.place_stack(1, &["OPP-L3", "OPP-L4", "OPP-L5", "SIS-BIG", "OPP-C5"]);
+    let idx = hand_pos(&r, 0, CARD_ID);
+    assert_eq!(r.game.play_option_from_hand(0, idx), OptionPlayResult::Pending);
+    let ciel = physical_menu::zone_action(&r.game,0,hand_pos(&r,0,"SIS-CIEL"),digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+    r.execute_action(0, ciel).unwrap();
+    // The free play made it 3 own Digimon.
+    assert_eq!(field_ids(&r, 0).len(), 3);
+    r.execute_action(0, encode_attack(0, opp.index as u16)).unwrap();
+    let offered = declare_de_digivolve(&mut r, opp, 2);
+    assert_eq!(offered.len(), 3, "the numbers 1..=3 are offered: {offered:?}");
+    let perm = &r.game.player(1).battle_area[opp.index as usize];
+    assert_eq!(perm.stack_size(), 3, "declared 2 of a possible 3: 5 - 2 cards remain");
+    assert_eq!(perm.top_card().card_id(&r.game.card_data), "OPP-L5");
+    // Only the Option's own <Arts Digivolve> offer is left (declined here).
+    let view = r.pending_selection_view().expect("the <Arts Digivolve> offer");
+    assert!(view.is_optional && view.prompt.contains("Arts Digivolve"), "{view:?}");
+    r.execute_action(0, PASS).unwrap();
+    assert!(r.pending_selection_view().is_none(), "nothing else parked");
 }
 
 #[test]

@@ -3307,6 +3307,7 @@ fn compile_step(
                 amount: amount_lit.map(|n| n.max(0) as u8),
                 amount_fn,
                 stop_at_level: a.stop_at_level.or(Some(3)),
+                declared: a.declared,
             }
         }
         S::PlaceOnSecurity(a) => {

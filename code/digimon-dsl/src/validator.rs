@@ -1290,6 +1290,18 @@ fn validate_step(
             if let Some(formula) = &args.amount {
                 validate_formula(formula, &format!("{prefix}.amount"), card_id, ctx, errors);
             }
+            if args.declared
+                && !args
+                    .amount
+                    .as_ref()
+                    .is_some_and(|f| !matches!(f, crate::formula::FormulaSpec::Literal(_)))
+            {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.declared"),
+                    message: "de_digivolve `declared: true` needs a formula `amount` (a literal amount is already declared)".to_string(),
+                });
+            }
         }
         StepSpec::SearchOwnSecurityStack(args) => {
             validate_predicate(

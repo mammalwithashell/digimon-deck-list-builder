@@ -1916,6 +1916,22 @@ pub(crate) struct ReplayDriver {
     /// when the engine resolved its effect since then
     /// (`forced_count_evidence`).
     count_evidence: Option<CountEvidenceBase>,
+    /// The run of candidate-less unit counts (`is_unit_count_row`) the replay is
+    /// consuming against ONE target's `<De-Digivolve>` instances
+    /// (`unit_count_evidence`).
+    count_run: Option<CountRun>,
+}
+
+/// A run of consecutive candidate-less `SelectCountEffect 1` rows of one actor,
+/// each judged against the SAME engine window (`unit_count_evidence`): the
+/// window the first row was judged by, how many rows of the run are consumed
+/// and the last of them.
+#[derive(Clone)]
+struct CountRun {
+    actor: PlayerId,
+    last_row: u32,
+    consumed: usize,
+    base: CountEvidenceBase,
 }
 
 /// See `ReplayDriver::count_evidence`.
@@ -1928,6 +1944,20 @@ struct CountEvidenceBase {
     /// bottom up, and its top card's id. Read by `forced_count_evidence` to tell
     /// a permanent that lost its top cards from one that left the field.
     stacks: Vec<BaseStack>,
+    /// `Game::de_digivolve_instances` as the row began: the instances the
+    /// engine ran since are what a run of unit counts is budgeted against.
+    de_instances: u32,
+}
+
+/// What `top_cards_trashed` found: the permanent's owner, how many top cards
+/// went to the trash, their names, the actor's targets and the cards still
+/// under them (bottom up).
+struct TopTrashFacts {
+    owner: PlayerId,
+    trashed: usize,
+    names: String,
+    targets: String,
+    remaining: Vec<crate::card_source::CardHandle>,
 }
 
 /// One battle-area permanent as a decision began (`CountEvidenceBase`).
@@ -1951,7 +1981,7 @@ impl CountEvidenceBase {
                 })
             })
             .collect();
-        Self { row, events: game.events.len(), zones: card_zones(game), stacks }
+        Self { row, events: game.events.len(), zones: card_zones(game), stacks, de_instances: game.de_digivolve_instances }
     }
 }
 
@@ -1966,6 +1996,19 @@ fn is_forced_count_row(row: &crate::dcgo_recording::SelectionRow) -> bool {
             .candidates
             .as_deref()
             .is_some_and(|c| c.len() == 1 && row.count.is_some_and(|n| i64::from(n) == c[0]))
+}
+
+/// Whether `row` is a DCGO `SelectCountEffect 1` whose candidate set is absent
+/// (what recorder 0.2.0 writes for every count: it never emits `candidates`
+/// for `SetCount`) or exactly `[1]`. With the set unknown the row cannot be
+/// read as a forced count by itself (`is_forced_count_row`); either way it is
+/// consumed only against engine evidence that it was a `<De-Digivolve>`
+/// instance whose count the engine did not ask (`unit_count_evidence`).
+fn is_unit_count_row(row: &crate::dcgo_recording::SelectionRow) -> bool {
+    row.prompt == "SelectCountEffect"
+        && row.cancel != Some(true)
+        && row.count == Some(1)
+        && row.candidates.as_deref().map_or(true, |c| c == [1])
 }
 
 /// `(entry action, source card)` of every entry of the parked order prompt
@@ -3445,7 +3488,7 @@ impl ReplayDriver {
                 unstamped_window_start: 0,
                 order_answer: None,
                 dcgo_cards: HashMap::new(),
-                count_evidence: None,
+                count_evidence: None, count_run: None,
             },
         ))
     }
@@ -5014,7 +5057,37 @@ impl ReplayDriver {
                 self.paused = true;
                 return self.no_progress_result(game);
             }
-            match resolve_next(game, payload, picks_done) {
+            let resolved = resolve_next(game, payload, picks_done);
+            // A `SelectCountEffect 1` (candidate set absent or `[1]`) the
+            // engine has no count prompt for: consumed only when the engine's
+            // own window proves it was a `<De-Digivolve>` instance's count
+            // (`unit_count_evidence`). When it cannot prove it, the row keeps
+            // the behaviour it had before this fold.
+            if picks_done == 0 && is_unit_count_row(payload) && !matches!(resolved, Ok(Some(_))) {
+                match self.unit_count_evidence(game, payload) {
+                    Ok(evidence) => {
+                        let set = if payload.candidates.is_some() {
+                            "its candidate set is that one value, so DCGO's count was forced"
+                        } else {
+                            "it carries no candidate set (recorder 0.2.0), so it is read as DCGO's forced count"
+                        };
+                        self.notes.push(format!(
+                            "row {}: SelectCountEffect 1 of P{actor} consumed with no effect: {set}, and the \
+                             engine asked no count - a <De-Digivolve> instance (DCGO opens the count even for one \
+                             trashable card, CardController.cs:5281-5297; CR 4.3 16-12-1): {evidence}",
+                            self.cursor
+                        ));
+                        break;
+                    }
+                    Err(why) => {
+                        self.notes.push(format!(
+                            "row {}: the count of 1 is not a proven <De-Digivolve> instance count: {why}",
+                            self.cursor
+                        ));
+                    }
+                }
+            }
+            match resolved {
                 // Nothing parked and nothing applied: the engine never asked this
                 // row's question. A row that carries a decision is drift the
                 // replay cannot see past (an effect the engine did not run, or
@@ -5839,12 +5912,135 @@ impl ReplayDriver {
         game: &Game,
         payload: &crate::dcgo_recording::SelectionRow,
     ) -> Result<String, String> {
-        use crate::events::GameEvent;
-        let actor = payload.actor;
         let n = payload.count.unwrap_or_default().max(0) as usize;
         let Some(base) = self.count_evidence.as_ref().filter(|b| b.row + 1 == self.cursor) else {
             return Err("no recorded decision in front of it shows the engine resolving anything".into());
         };
+        let facts = Self::top_cards_trashed(game, base, payload.actor, Some(n))?;
+        Ok(format!(
+            "since row {}: {}; {n} card(s) went from that Digimon to the trash [{}] and it stayed on the field",
+            base.row, facts.targets, facts.names
+        ))
+    }
+
+    /// What a `SelectCountEffect 1` with no candidate set (or exactly `[1]`,
+    /// `is_unit_count_row`) proves about the engine, or why it proves nothing.
+    /// DCGO's `IDegeneration` opens its count whenever the target holds a
+    /// digivolution card (`MaxCount = min(digivolution cards, N)`,
+    /// CardController.cs:5281-5297), so a `<De-Digivolve 1>` instance asks `{1}`
+    /// and then stops at once on a level-3 top card (:5311-5322); recorder
+    /// 0.2.0 never writes the set. A formula "for each" the engine expands into
+    /// N instances (`expand_de_digivolve_instances`) therefore shows as a RUN of
+    /// these rows. The row at position `i` of the run (0-based) is consumed
+    /// when, in the window since the decision before the run (the target pick):
+    /// * an effect of the row's actor chose a target and `T >= 1` cards, the
+    ///   TOP `T` of ONE permanent, went to the trash while it stayed on the
+    ///   field and was topped by that target (`top_cards_trashed`) - the engine
+    ///   ran the instances (`Game::de_digivolve_instances`, `I >= T` of them);
+    ///   and
+    /// * `i` is below the number of counts DCGO opens for them: `T` when every
+    ///   instance trashed a card (`I == T`) or the target is left with no
+    ///   digivolution card (the later instances open nothing), and `I` when it
+    ///   still holds one under a level 3 top, where each remaining instance
+    ///   opens `{1}` and trashes nothing (CR 4.3 16-12-4). Any other state
+    ///   means DCGO's further instance would have trashed a card the engine did
+    ///   not.
+    /// A bigger count, a row past that budget, or any other card movement
+    /// leaves the row unmatched: the replay halts rather than guess.
+    fn unit_count_evidence(
+        &mut self,
+        game: &Game,
+        payload: &crate::dcgo_recording::SelectionRow,
+    ) -> Result<String, String> {
+        let actor = payload.actor;
+        let (base, position) = match self.count_run.as_ref() {
+            Some(run) if run.actor == actor && run.last_row + 1 == self.cursor => {
+                (run.base.clone(), run.consumed)
+            }
+            _ => match self.count_evidence.as_ref().filter(|b| b.row + 1 == self.cursor) {
+                Some(b) => (b.clone(), 0),
+                None => {
+                    return Err("no recorded decision in front of it shows the engine resolving anything".into())
+                }
+            },
+        };
+        let facts = Self::top_cards_trashed(game, &base, actor, None)?;
+        let total = facts.trashed;
+        let instances = game.de_digivolve_instances.wrapping_sub(base.de_instances) as usize;
+        if instances < total {
+            return Err(format!(
+                "the engine started {instances} <De-Digivolve> instance(s) in that window but trashed {total} \
+                 card(s): the cards did not come from separate <De-Digivolve 1> instances"
+            ));
+        }
+        // DCGO opens one count per instance while the target holds a
+        // digivolution card (CardController.cs:5281-5297). After the engine's
+        // `total` trashes the target either has none left (the instances past
+        // them open nothing) or still holds some under a level 3 top (each
+        // remaining instance opens {1} and trashes nothing, CR 4.3 16-12-4);
+        // any other state means DCGO's further instance would have trashed.
+        let remaining_len = facts.remaining.len();
+        let at_floor = || {
+            game.player(facts.owner).battle_area.iter().enumerate().any(|(index, perm)| {
+                perm.card_sources.iter().map(|c| c.handle()).eq(facts.remaining.iter().copied())
+                    && perm
+                        .level_for_rules(
+                            &game.card_data,
+                            &game.modifiers,
+                            crate::permanent::PermanentHandle { player: facts.owner, index: index as u8 },
+                        )
+                        .is_some_and(|l| l <= 3)
+            })
+        };
+        let (budget, why) = if instances == total {
+            (total, format!("{instances} instance(s), each trashing one card"))
+        } else if remaining_len <= 1 {
+            (
+                total,
+                format!(
+                    "{instances} instance(s), {total} trashing a card; the Digimon then held no digivolution card, \
+                     so the rest opened no count"
+                ),
+            )
+        } else if at_floor() {
+            (
+                instances,
+                format!(
+                    "{instances} instance(s), {total} trashing a card; the Digimon then stood on a level 3 top \
+                     with a digivolution card left, where each remaining instance opens {{1}} and trashes nothing"
+                ),
+            )
+        } else {
+            return Err(format!(
+                "the engine ran {instances} instance(s) but trashed {total}, and the Digimon is neither out of \
+                 digivolution cards nor on a level 3 (or lower) top: DCGO's further instance would have trashed \
+                 a card the engine did not"
+            ));
+        };
+        if position >= budget {
+            return Err(format!(
+                "this is count {} of a run, but the engine's {instances} instance(s) open only {budget} count(s)",
+                position + 1
+            ));
+        }
+        let detail = format!("count {} of {budget}: {why}", position + 1);
+        self.count_run = Some(CountRun { actor, last_row: self.cursor, consumed: position + 1, base: base.clone() });
+        Ok(format!("since row {}: {}; {detail}", base.row, facts.targets))
+    }
+
+    /// The engine moved the TOP `expect` cards (any number >= 1 when `None`) of
+    /// ONE permanent of one player from the battle area to the trash since
+    /// `base`, the permanent stayed on the field holding the cards below them,
+    /// and an effect of `actor` named its top card as a target
+    /// (`GameEvent::EffectTarget`; DCGO's count belongs to `EffectSourceCard.
+    /// Owner`, CardController.cs:5287). `Err` (why not) otherwise.
+    fn top_cards_trashed(
+        game: &Game,
+        base: &CountEvidenceBase,
+        actor: PlayerId,
+        expect: Option<usize>,
+    ) -> Result<TopTrashFacts, String> {
+        use crate::events::GameEvent;
         let window = Self::unstamped_window(&game.events, base.events)?;
         let mut chosen: Vec<String> = Vec::new();
         let mut targets: Vec<String> = Vec::new();
@@ -5874,12 +6070,17 @@ impl ReplayDriver {
         let owners: HashSet<PlayerId> = trashed.iter().map(|(p, _)| *p).collect();
         let name = |h: &crate::card_source::CardHandle| game.card_data_for_handle(*h).map(|d| d.card_id.clone()).unwrap_or_default();
         let names = trashed.iter().map(|(p, h)| format!("P{p}'s {}", name(h))).collect::<Vec<_>>().join(", ");
-        if trashed.len() != n || owners.len() > 1 {
+        let n = expect.unwrap_or(trashed.len());
+        if trashed.is_empty() || trashed.len() != n || owners.len() > 1 {
             return Err(format!(
                 "since row {} began the engine moved {} card(s) from the battle area to the trash ([{names}]), not \
-                 the {n} of one Digimon the count names",
+                 the {} of one Digimon the count names",
                 base.row,
-                trashed.len()
+                trashed.len(),
+                match expect {
+                    Some(n) => n.to_string(),
+                    None => "1 or more".to_string(),
+                }
             ));
         }
         let owner = trashed[0].0;
@@ -5914,11 +6115,13 @@ impl ReplayDriver {
                 targets.join("; ")
             ));
         }
-        Ok(format!(
-            "since row {}: {}; {n} card(s) went from that Digimon to the trash [{names}] and it stayed on the field",
-            base.row,
-            targets.join("; ")
-        ))
+        Ok(TopTrashFacts {
+            owner,
+            trashed: n,
+            names,
+            targets: targets.join("; "),
+            remaining: stack.cards[..keep].to_vec(),
+        })
     }
 
     /// AMATERASUMON (EX12-047)'s "return 2 cards from your opponent's trash to
@@ -7620,6 +7823,7 @@ impl ReplayDriver {
                     order_answer: sources.iter().find(|(e, _)| *e == id).map(|(_, src)| (order_row, *src)),
                     dcgo_cards: self.dcgo_cards.clone(),
                     count_evidence: self.count_evidence.clone(),
+                    count_run: self.count_run.clone(),
                 },
             );
             let sub = &mut lent.sub;
@@ -8289,7 +8493,16 @@ impl ReplayDriver {
             .steps()
             .get(self.cursor as usize + 1)
             .and_then(|s| s.selection.as_ref())
-            .is_some_and(is_forced_count_row)
+            .is_some_and(|r| is_forced_count_row(r) || is_unit_count_row(r))
+            // A unit count that itself follows a unit count is judged against
+            // the run's own window (`CountRun`): re-capturing here would
+            // replace the base the row in front of it is read against.
+            && !self
+                .source
+                .steps()
+                .get(self.cursor as usize)
+                .and_then(|s| s.selection.as_ref())
+                .is_some_and(is_unit_count_row)
         {
             self.count_evidence = Some(CountEvidenceBase::capture(self.cursor, game));
         }
@@ -8798,6 +9011,7 @@ impl ReplayDriver {
             self.unstamped_window_start = 0;
             self.dcgo_cards.clear();
             self.count_evidence = None;
+            self.count_run = None;
         }
         while self.cursor < target && !game.game_over && !self.paused {
             self.step(game);
@@ -10041,7 +10255,7 @@ mod tests {
             unstamped_window_start: 0,
             order_answer: None,
             dcgo_cards: HashMap::new(),
-            count_evidence: None,
+            count_evidence: None, count_run: None,
         };
         let game = build_empty_game(&filler_card_data()).expect("empty game");
         armed.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -10100,7 +10314,7 @@ mod tests {
             unstamped_window_start: 0,
             order_answer: None,
             dcgo_cards: HashMap::new(),
-            count_evidence: None,
+            count_evidence: None, count_run: None,
         };
         let (game, [a, b, c]) = hand_pair_game();
         let before: HashMap<CardHandle, (PlayerId, CardZone)> =
@@ -10289,7 +10503,7 @@ mod tests {
             digivolve_operand_fallbacks: Vec::new(), inferred_skipped: Vec::new(),
             notes: Vec::new(), raid_retarget: None, paused: false, lookahead_depth: 0,
             pick_zone_hint: None, zone_menu_row: None, unstamped_window_start: 0,
-            order_answer: None, dcgo_cards: HashMap::new(), count_evidence: None,
+            order_answer: None, dcgo_cards: HashMap::new(), count_evidence: None, count_run: None,
         };
         let result = driver.apply_selection_step(&mut runner.game, &order);
         assert_eq!(result.step_number, 0);
@@ -10368,7 +10582,7 @@ mod tests {
                 inferred_skipped: Vec::new(), notes: Vec::new(),
                 raid_retarget: None, paused: false, lookahead_depth: 0,
                 pick_zone_hint: None, zone_menu_row: None, unstamped_window_start: 0,
-                order_answer: None, dcgo_cards: HashMap::new(), count_evidence: None,
+                order_answer: None, dcgo_cards: HashMap::new(), count_evidence: None, count_run: None,
             };
             let step = driver.apply_selection_step(&mut runner.game, &payload);
             if actor == 0 {
@@ -10636,7 +10850,7 @@ mod tests {
             unstamped_window_start: 0,
             order_answer: None,
             dcgo_cards: HashMap::new(),
-            count_evidence: None,
+            count_evidence: None, count_run: None,
         }
     }
 

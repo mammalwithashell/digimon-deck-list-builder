@@ -24,8 +24,9 @@
 //! - vanilla ST1 Digimon (Dracomon L3/3, Birdramon L4/4, Greymon L4/5,
 //!   Garudamon L5/6, Biyomon filler) = opponents / deck filler.
 //!
-//! No DCGO C# exists for EX13-035/065/066 (base submodule `b9a0638cd`);
-//! official Bandai DB bundles (`data/card_bundles/<ID>.md`) + `general_rule.pdf`
+//! No DCGO C# exists for EX13-035/065 (base submodule `b9a0638cd`); EX13-066's
+//! Option follows `EX13_066.cs` (ONE declared `<De-Digivolve N>`, N = your
+//! Digimon); official Bandai DB bundles (`data/card_bundles/<ID>.md`) + `general_rule.pdf`
 //! (`<Decode>`, `<De-Digivolve>`, `<Arts Digivolve>`, `<Security A.>`) govern.
 
 #![allow(dead_code)]
@@ -178,6 +179,22 @@ fn accept_rest(r: &mut DebugRunner) {
     panic!("selection loop did not terminate");
 }
 
+/// The action declaring the LARGEST number of a parked count declaration
+/// (`<De-Digivolve N>`), when one is parked.
+fn declared_max(r: &DebugRunner) -> Option<u16> {
+    use digimon_engine::count_choice::CountChoiceOperation;
+    r.pending_selection()?
+        .effect_choices
+        .as_ref()?
+        .iter()
+        .filter_map(|e| match e.count_choice?.operation {
+            CountChoiceOperation::Commit(v) => Some((v.declared, e.action_id)),
+            _ => None,
+        })
+        .max()
+        .map(|(_, a)| a)
+}
+
 /// Use Noir's Option face from hand and drive it to the end:
 /// - the union free-play pick takes `free_play` from the trash (or PASSes),
 /// - the De-Digivolve target is `opp`,
@@ -212,6 +229,9 @@ fn use_noir_option(
             SelectionKind::OppField if v.valid_action_ids.contains(&encode_attack(0, opp.index as u16)) => {
                 encode_attack(0, opp.index as u16)
             }
+            // The Option's `<De-Digivolve N>` is ONE declared N (DCGO
+            // EX13_066.cs, CR 4.3 16-12-1): declare the maximum.
+            _ if declared_max(r).is_some() => declared_max(r).unwrap(),
             _ => v
                 .valid_action_ids
                 .iter()
