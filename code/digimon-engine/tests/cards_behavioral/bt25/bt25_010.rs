@@ -92,6 +92,12 @@ fn base() -> DebugRunnerBuilder {
         .add_card(lv4_target("SOVEREIGN-LV4", &["Sovereign"]))
         .add_card(lv4_target("SEA-ANIMAL-LV4", &["Sea Animal"]))
         .add_card(lv4_target("PLAIN-LV4", &["Plain"]))
+        // Compound traits that CONTAIN a listed word (DCGO `ContainsTraits`):
+        .add_card(lv4_target("HOLY-BEAST-LV4", &["Holy Beast"]))
+        .add_card(lv4_target("GIANT-BIRD-LV4", &["Giant Bird"]))
+        .add_card(lv4_target("FOUR-SOV-LV4", &["Four Sovereigns"]))
+        .add_card(lv4_target("DARK-ANIMAL-LV4", &["Dark Animal"]))
+        .add_card(lv4_target("SEA-BEAST-LV4", &["Sea Beast"]))
         // A Bird Digimon that ALSO carries [Sea Animal] — the exclusion must
         // win: even though Bird matches, "other than [Sea Animal]" blocks it.
         .add_card(lv4_target("BIRD-SEA-LV4", &["Bird", "Sea Animal"]))
@@ -205,6 +211,41 @@ fn bt25_010_reduces_cost_for_matching_trait_targets() {
         "BEAST-LV4",
         "ANIMAL-LV4",
         "SOVEREIGN-LV4",
+    ] {
+        let mut runner = base().start();
+        runner.game.turn_count = 1;
+        let hawkmon = place_hawkmon(&mut runner);
+        let hand_index = push_to_hand(&mut runner, 0, target_id);
+
+        let memory_before = runner.game.memory;
+        let digivolved = runner.game.digivolve_from_hand(
+            0,
+            hand_index,
+            hawkmon.index as usize,
+            PlaySource::ByHand,
+        );
+
+        assert!(digivolved, "Hawkmon should digivolve into {target_id}");
+        assert_eq!(
+            runner.game.memory, memory_before,
+            "base cost 1 must be reduced to 0 when digivolving into {target_id}"
+        );
+    }
+}
+
+/// "[Avian], [Bird], [Beast], [Animal] or [Sovereign] ... in any of its traits"
+/// is a SUBSTRING reading (DCGO `CardSource.HasBirdTraits` / `HasBeastTraits`
+/// -> `ContainsTraits`; official Q&A "regardless of other words or
+/// pluralizations"). A single-trait [Holy Beast] Digimon (Gatomon BT16-031)
+/// therefore gets the reduction; an exact `trait_has: Beast` paid full cost.
+#[test]
+fn bt25_010_reduces_cost_for_compound_traits_containing_a_listed_word() {
+    for target_id in [
+        "HOLY-BEAST-LV4",
+        "GIANT-BIRD-LV4",
+        "FOUR-SOV-LV4",
+        "DARK-ANIMAL-LV4",
+        "SEA-BEAST-LV4",
     ] {
         let mut runner = base().start();
         runner.game.turn_count = 1;

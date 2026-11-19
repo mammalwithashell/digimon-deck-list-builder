@@ -69,11 +69,11 @@ effects:
         any_of:
           - all_of:
               - any_of:
-                  - trait_has: Beast
-                  - trait_has: Animal
-                  - trait_has: Sovereign
+                  - trait_contains: Beast
+                  - trait_contains: Animal
+                  - trait_contains: Sovereign
               - none_of:
-                  - trait_has: Sea Animal
+                  - trait_contains: Sea Animal
           - trait_has: Shaman
           - trait_has: TS
     process:
@@ -85,11 +85,11 @@ effects:
               - any_of:
                   - all_of:
                       - any_of:
-                          - trait_has: Beast
-                          - trait_has: Animal
-                          - trait_has: Sovereign
+                          - trait_contains: Beast
+                          - trait_contains: Animal
+                          - trait_contains: Sovereign
                       - none_of:
-                          - trait_has: Sea Animal
+                          - trait_contains: Sea Animal
                   - trait_has: Shaman
                   - trait_has: TS
           prompt: "Select 1 of your Digimon to gain Raid and +3000 DP for the turn"

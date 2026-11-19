@@ -267,6 +267,53 @@ fn bt24_030_protects_matching_digimon_from_opponent_effects_by_suspending() {
     );
 }
 
+/// Printed text (data/card_bundles/BT24-030.md): "any of your Digimon with the
+/// [TS] trait or [Aqua] or [Sea Animal] in any of their traits would leave...".
+/// "[Aqua] ... in any of their traits" is a SUBSTRING reading (DCGO
+/// `CardSource.HasAquaTraits` -> `ContainsTraits`), so a Digimon whose only
+/// trait is [Aquatic] / [Aquabeast] is protected. An exact `trait_has: Aqua`
+/// matched no real card.
+#[test]
+fn bt24_030_protects_digimon_with_aqua_substring_in_any_trait() {
+    for traits in [&["Aquatic"][..], &["Aquabeast"][..], &["Sea Animal"][..]] {
+        let mut runner = neptunemon_runner()
+            .add_card(make_digimon("AQUA-TARGET", traits))
+            .start();
+        runner.place_on_field(0, "BT24-030", Some(0));
+        let target = runner.place_on_field(0, "AQUA-TARGET", Some(0));
+
+        runner.game.return_to_hand_from_effect(target, 1);
+
+        assert!(
+            runner.pending_is_optional(),
+            "{traits:?}: Neptunemon's protection must be offered for an [Aqua]/[Sea Animal] substring trait"
+        );
+    }
+}
+
+/// Negative twin: a Digimon with no [TS] trait and no [Aqua]/[Sea Animal]
+/// substring in its traits is not protected.
+#[test]
+fn bt24_030_does_not_protect_digimon_without_matching_trait() {
+    let mut runner = neptunemon_runner().start();
+    runner.place_on_field(0, "BT24-030", Some(0));
+    let target = runner.place_on_field(0, "OPP-A", Some(0));
+
+    runner.game.return_to_hand_from_effect(target, 1);
+
+    assert!(
+        !runner.pending_is_optional(),
+        "a [Plain] Digimon must not be offered Neptunemon's protection"
+    );
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "OPP-A"),
+        "the unprotected Digimon returns to hand"
+    );
+}
+
 fn neptunemon_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
     DebugRunner::builder()
         .from_dsl_yaml(YAML)

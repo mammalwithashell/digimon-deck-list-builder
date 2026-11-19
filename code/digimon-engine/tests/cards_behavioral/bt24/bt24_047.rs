@@ -302,3 +302,48 @@ fn bt24_047_standard_alt_path_accepts_right_color_base() {
         "a green level-3 base digivolves into BT24-047 via the Green Lv.3 alt path"
     );
 }
+
+/// "[Avian] or [Bird] in any of its traits" is a substring reading (DCGO
+/// `HasBirdTraits` -> `ContainsTraits`): a [Giant Bird] / [Holy Bird] Digimon
+/// is a legal unsuspend target, a [Plain] one is not.
+#[test]
+fn bt24_047_unsuspend_matches_bird_as_substring_of_any_trait() {
+    for (traits, eligible) in [
+        (&["Giant Bird"][..], true),
+        (&["Holy Bird"][..], true),
+        (&["Avian"][..], true),
+        (&["Plain"][..], false),
+    ] {
+        let mut ally = bird_card("SUBSTR-ALLY");
+        ally.traits = traits.iter().map(|t| t.to_string()).collect();
+        let mut runner = DebugRunner::builder()
+            .from_dsl_yaml(YAML)
+            .expect("BT24-047 YAML loads")
+            .add_card(ally)
+            .add_card(plain_card("OPP"))
+            .memory(10)
+            .start();
+        let source = runner.place_on_field(0, "BT24-047", Some(0));
+        let ally = runner.place_on_field(0, "SUBSTR-ALLY", Some(0));
+        runner.game.turn_count = 1;
+
+        fire_on_play(&mut runner, source);
+        let suspend_prompt = runner
+            .pending_selection_view()
+            .expect("Kokatorimon should offer a Digimon to suspend");
+        let ally_action = encode_attack(ally.player as u16, ally.index as u16);
+        assert!(suspend_prompt.valid_action_ids.contains(&ally_action));
+        runner
+            .game
+            .resolve_selection(suspend_prompt.selecting_player, ally_action)
+            .expect("suspend the ally");
+        // The suspended ally is offered to the unsuspend step iff one of its
+        // traits CONTAINS Avian / Bird.
+        let offered = runner.pending_selection_view().is_some_and(|v| {
+            v.kind == SelectionKind::OwnField
+                && v.valid_action_ids
+                    .contains(&encode_attack(0, ally.index as u16))
+        });
+        assert_eq!(offered, eligible, "{traits:?}: unsuspend eligibility");
+    }
+}

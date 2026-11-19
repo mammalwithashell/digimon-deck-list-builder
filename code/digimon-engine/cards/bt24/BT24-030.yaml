@@ -16,8 +16,8 @@ alt_paths:
       all_of:
         - level_eq: 5
         - any_of:
-            - trait_has: Aqua
-            - trait_has: Sea Animal
+            - trait_contains: Aqua
+            - trait_contains: Sea Animal
             - trait_has: TS
     cost: 3
 
@@ -70,8 +70,8 @@ effects:
         - kind: digimon
         - any_of:
             - trait_has: TS
-            - trait_has: Aqua
-            - trait_has: Sea Animal
+            - trait_contains: Aqua
+            - trait_contains: Sea Animal
         - any_permanent:
             of: you
             zone: [battle_area]

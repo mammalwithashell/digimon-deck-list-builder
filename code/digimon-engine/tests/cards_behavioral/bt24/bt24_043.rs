@@ -265,6 +265,42 @@ fn bt24_043_on_play_excludes_sea_animal_from_beast_animal_sovereign_bucket() {
     );
 }
 
+/// "[Beast], [Animal] or [Sovereign] in any of its traits" is a substring
+/// reading (DCGO `HasBeastTraits` -> `ContainsTraits`; official Q&A "regardless
+/// of other words or pluralizations"): [Holy Beast], [Beastkin], [Four
+/// Sovereigns] and [Dark Animal] all qualify, [Sea Animal] alone does not.
+#[test]
+fn bt24_043_on_play_matches_beast_animal_sovereign_as_substring_of_any_trait() {
+    for group in [
+        ["HOLY-BEAST", "BEASTKIN", "SEA-ONLY"],
+        ["FOUR-SOV", "DARK-ANIMAL", "SEA-ONLY"],
+    ] {
+        let mut runner = builder_with_tapirmon()
+            .add_card(trait_digimon("HOLY-BEAST", &["Holy Beast"]))
+            .add_card(trait_digimon("BEASTKIN", &["Beastkin"]))
+            .add_card(trait_digimon("FOUR-SOV", &["Four Sovereigns"]))
+            .add_card(trait_digimon("DARK-ANIMAL", &["Dark Animal"]))
+            .add_card(trait_digimon("SEA-ONLY", &["Sea Animal"]))
+            .deck(0, &group)
+            .hand(0, &[CARD_ID])
+            .memory(10)
+            .start();
+
+        runner.play(0, 0).expect("play Tapirmon");
+        let first = runner
+            .pending_selection_view()
+            .expect("trait bucket must be offered");
+        for id in group {
+            let action = revealed_action_for_id(&runner, id).expect("revealed");
+            assert_eq!(
+                first.valid_action_ids.contains(&action),
+                id != "SEA-ONLY",
+                "{id}: substring match on Beast/Animal/Sovereign, [Sea Animal] excluded"
+            );
+        }
+    }
+}
+
 #[test]
 fn bt24_043_on_play_with_no_matching_search_targets_adds_nothing_and_bottoms_reveal() {
     let mut runner = builder_with_tapirmon()

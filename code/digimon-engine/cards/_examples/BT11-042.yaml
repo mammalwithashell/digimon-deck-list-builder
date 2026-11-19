@@ -50,9 +50,9 @@ effects:
           prompt: "You may reveal 1 [Angel]/[Archangel]/[Fallen Angel] card from your security and add it to your hand"
           filter:
             any_of:
-              - trait_has: Angel
-              - trait_has: Archangel
-              - trait_has: "Fallen Angel"
+              - trait_contains: Angel
+              - trait_contains: Archangel
+              - trait_contains: "Fallen Angel"
           on_select:
             - add_to_hand_from_security: { of: you, card: chosen }
             - recover: { of: you, count: 1 }
@@ -104,7 +104,7 @@ effects:
       zone: [battle_area]
       kind: digimon
       any_of:
-        - trait_has: Angel
-        - trait_has: Archangel
-        - trait_has: "Fallen Angel"
+        - trait_contains: Angel
+        - trait_contains: Archangel
+        - trait_contains: "Fallen Angel"
     grant_keyword: { keyword: Blocker }
