@@ -10,3 +10,5 @@ mod bt9_109;
 mod bt9_104;
 
 mod bt9_084;
+
+mod bt9_006;

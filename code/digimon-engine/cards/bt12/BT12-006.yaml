@@ -1,0 +1,44 @@
+# BT12-006 Monimon — Digi-Egg, Lv.2, Purple, cost 0. Traits: CRT. Form: In-Training.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT12-006.md):
+#   Inherited Effect
+#   [On Deletion] If this Digimon has <Save> in its text, <Draw 1>.
+#   (Draw 1 card from your deck.)
+#
+# DCGO: CardEffect/BT12/Purple/BT12_006.cs. OnDestroyedAnyone inherited effect,
+#   isOptional FALSE (mandatory draw):
+#   CanUseCondition  = CanTriggerOnDeletion(hashtable, card, activateClass)
+#   CanActivate      = CanActivateOnDeletion AND library has >= 1 card AND
+#                      CanActivateSelefOnDeletionWithSaveText = the DELETED
+#                      carrier's TopCard.HasSaveText, recorded in the deletion
+#                      event hashtable at deletion time (HashtableSetting.cs).
+#   Coroutine        = DrawClass(owner, 1).Draw()
+#
+# The carrier is already in the trash when this fires (engine rule 25; CR 4.3
+# 15-8-3-9-4: a processing condition that refers to something that has since
+# left the field reads its last-known information), so the <Save> gate reads the carrier's
+# top card from the deleted-object snapshot, never from a live field slot:
+# `rules_text_contains` resolves to the snapshot when the effect's source card
+# was part of the deleted permanent.
+
+card: BT12-006
+name: Monimon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [CRT]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_deletion
+    condition:
+      all_of:
+        - rules_text_contains: "＜Save＞"
+        - count_gte:
+            filter: { of: you, zone: [deck] }
+            n: 1
+    summary: "[On Deletion] If this Digimon has <Save> in its text, <Draw 1>."
+    process:
+      - draw: { of: you, count: 1 }
