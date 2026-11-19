@@ -5,6 +5,7 @@ mod me_machine_puppet;
 mod me_machine_puppet_big;
 mod ex12_001;
 mod ex12_002;
+mod ex12_003;
 mod ex12_004;
 mod ex12_005;
 mod ex12_006;

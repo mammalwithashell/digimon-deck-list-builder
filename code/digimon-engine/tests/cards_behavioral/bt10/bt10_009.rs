@@ -102,9 +102,9 @@ fn bt10_009_digixros_two_field_materials_reduce_cost_and_attach_sources() {
     runner
         .execute_action(0, ballistamon_action)
         .expect("select Ballistamon as second DigiXros material");
-    runner
-        .execute_action(0, PASS)
-        .expect("stop selecting DigiXros materials");
+    // The recipe is full (no eligible material left): DCGO's
+    // `SelectDigiXrosClass.Select` ends by itself (a one-"End"-only element is
+    // skipped without a prompt), so the play commits with no trailing stop prompt.
 
     assert_eq!(
         memory_before - runner.memory(),

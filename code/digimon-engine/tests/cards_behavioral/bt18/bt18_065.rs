@@ -257,9 +257,9 @@ fn bt18_065_digixros_completes_with_4_vemmon_from_hand() {
             .execute_action(0, action)
             .expect("select a Vemmon material");
     }
-    runner
-        .execute_action(0, PASS)
-        .expect("finish DigiXros material selection");
+    // The recipe is full (no eligible material left): DCGO's
+    // `SelectDigiXrosClass.Select` ends by itself (a one-"End"-only element is
+    // skipped without a prompt), so the play commits with no trailing stop prompt.
 
     assert!(
         runner.pending_selection().is_none(),
@@ -296,7 +296,7 @@ fn bt18_065_digixros_reduces_cost_by_1_per_material() {
         let action = runner.pending_selection().unwrap().valid_action_ids[0];
         runner.execute_action(0, action).unwrap();
     }
-    runner.execute_action(0, PASS).unwrap();
+    // Recipe full after the fourth material: the play commits by itself.
 
     assert_eq!(
         runner.memory(),

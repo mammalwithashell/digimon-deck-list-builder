@@ -161,11 +161,45 @@ fn activate_deletion_candidate(game:&mut crate::game::Game,mut window:Replacemen
     let paid=paid_self_prevention_candidate(game,&chosen.candidate)
         || paid_prevention_properties(game,&chosen.candidate).is_some_and(|(_,all)|all);
     if matches.len()>1 && !paid {
+        // A DNA-digivolve replacement (Kapurimon EX12-003: "1 of them and any of
+        // your other Digimon may DNA digivolve") applies to the leaving SET, and
+        // DCGO asks no "which one anchors it" question: it asks the hand card,
+        // then the pair (`DNADigivolvePermanentsIntoHandOrTrashCard`, one root
+        // must be a leaving member; an unambiguous pair is taken silently). So
+        // when every matching member reaches the same DNA pairs, which member is
+        // the subject changes nothing and no subject prompt is installed. When
+        // they reach different pairs the choice is real and stays a prompt.
+        if let Some(i)=dna_equivalent_subject(game,&window,&chosen.candidate,&matches){
+            select_deletion_member(game,&mut window,matches[i].0);
+            let candidate=matches[i].1.clone();
+            run_deletion_candidate_body(game,window,candidate,Vec::new(),retain_summary);
+            return;
+        }
         install_deletion_subject_choice(game,window,chosen,&matches);return;
     }
     select_deletion_member(game,&mut window,matches[0].0);
     let candidate=matches[0].1.clone();
     run_deletion_candidate_body(game,window,candidate,if paid{matches.iter().map(|(i,_)|*i).collect()}else{Vec::new()},retain_summary);
+}
+/// For a DNA-digivolve replacement (`Effect::dna_subject_probe`) matching several
+/// members of one deletion event: the index (into `matches`) of a member whose
+/// reachable DNA pairs cover every other member's, or `None` when the members
+/// reach different pairs (a real subject choice) or the effect is not a DNA one.
+/// Pairs are unordered `{subject, partner}` battle-area slots: CR 4.3 8-2 treats
+/// the two materials symmetrically, and the hand card offered depends only on
+/// the pair.
+fn dna_equivalent_subject(game:&crate::game::Game,window:&ReplacementWindow,c:&Candidate,matches:&[(usize,Candidate)])->Option<usize> {
+    let CandidateKind::EffectClosure{card_id,effect_slot}=&c.kind else{return None;};
+    let probe=game.effects_for_card(card_id,c.source_card)?.get(*effect_slot as usize)?.dna_subject_probe.clone()?;
+    let batch=window.deletion_batch.as_ref()?;
+    let handles:Vec<PermanentHandle>=matches.iter()
+        .map(|(i,_)|deletion_member_handle(game,&batch.members[*i]))
+        .collect::<Option<Vec<_>>>()?;
+    let pairs:Vec<std::collections::BTreeSet<(u8,u8)>>=handles.iter().map(|h|
+        probe.partners_of(game,c.source_card,c.source_permanent,crate::enums::EffectSourceKind::Digimon,c.source_controller,*h)
+            .into_iter().map(|p|(h.index.min(p.index),h.index.max(p.index))).collect()).collect();
+    let union:std::collections::BTreeSet<(u8,u8)>=pairs.iter().flatten().copied().collect();
+    pairs.iter().position(|set|*set==union)
 }
 fn run_deletion_candidate_body(game:&mut crate::game::Game,mut window:ReplacementWindow,candidate:Candidate,paid_members:Vec<usize>,retain_summary:bool){
     let base=game.parked_replacement.len();

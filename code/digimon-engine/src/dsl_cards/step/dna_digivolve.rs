@@ -48,50 +48,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             let source_kind = ctx.source_kind;
             let player = ctx.player;
             let bindings_snapshot = bindings.clone();
-
-            let partner_pred: CompiledPredicate = partner_filter.clone();
-            let target_pred: CompiledPredicate = target_filter.clone();
-            let bindings_for_partner = bindings_snapshot.clone();
-            let bindings_for_target = bindings_snapshot;
-
-            let partner_closure: Arc<
-                dyn Fn(&crate::game::Game, crate::permanent::PermanentHandle) -> bool + Send + Sync,
-            > = Arc::new(move |game, h| {
-                let read_ctx = EffectReadContext::new_with_source_kind(
-                    game,
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    player,
-                );
-                eval_predicate_with_bindings(
-                    &partner_pred,
-                    &read_ctx,
-                    PredicateSubject::Permanent(h),
-                    Some(&bindings_for_partner),
-                )
-            });
-
-            let target_closure: Arc<dyn Fn(&crate::game::Game, usize) -> bool + Send + Sync> =
-                Arc::new(move |game, hand_idx| {
-                    let card = match game.player(player).hand.get(hand_idx).map(|c| c.handle()) {
-                        Some(c) => c,
-                        None => return false,
-                    };
-                    let read_ctx = EffectReadContext::new_with_source_kind(
-                        game,
-                        source_card,
-                        source_permanent,
-                        source_kind,
-                        player,
-                    );
-                    eval_predicate_with_bindings(
-                        &target_pred,
-                        &read_ctx,
-                        PredicateSubject::Card(card),
-                        Some(&bindings_for_target),
-                    )
-                });
+            let (partner_closure, target_closure) = dna_filter_closures(
+                partner_filter,
+                target_filter,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+                &bindings_snapshot,
+            );
 
             ctx.may_dna_digivolve_now(
                 anchor_handle,
@@ -106,5 +71,159 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             true
         }
         _ => false,
+    }
+}
+
+type PartnerClosure =
+    Arc<dyn Fn(&crate::game::Game, crate::permanent::PermanentHandle) -> bool + Send + Sync>;
+type TargetClosure = Arc<dyn Fn(&crate::game::Game, usize) -> bool + Send + Sync>;
+
+/// Runtime closures for a `may_dna_digivolve_now` step's partner / hand-target
+/// predicates. Shared by the step itself and by [`DnaSubjectProbe`], so the
+/// probe asks exactly the question the step will ask.
+fn dna_filter_closures(
+    partner_filter: &CompiledPredicate,
+    target_filter: &CompiledPredicate,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<crate::permanent::PermanentHandle>,
+    source_kind: crate::enums::EffectSourceKind,
+    player: crate::enums::PlayerId,
+    bindings: &Bindings,
+) -> (PartnerClosure, TargetClosure) {
+    let partner_pred = partner_filter.clone();
+    let target_pred = target_filter.clone();
+    let bindings_for_partner = bindings.clone();
+    let bindings_for_target = bindings.clone();
+
+    let partner_closure: PartnerClosure = Arc::new(move |game, h| {
+        let read_ctx = EffectReadContext::new_with_source_kind(
+            game,
+            source_card,
+            source_permanent,
+            source_kind,
+            player,
+        );
+        eval_predicate_with_bindings(
+            &partner_pred,
+            &read_ctx,
+            PredicateSubject::Permanent(h),
+            Some(&bindings_for_partner),
+        )
+    });
+
+    let target_closure: TargetClosure = Arc::new(move |game, hand_idx| {
+        let card = match game.player(player).hand.get(hand_idx).map(|c| c.handle()) {
+            Some(c) => c,
+            None => return false,
+        };
+        let read_ctx = EffectReadContext::new_with_source_kind(
+            game,
+            source_card,
+            source_permanent,
+            source_kind,
+            player,
+        );
+        eval_predicate_with_bindings(
+            &target_pred,
+            &read_ctx,
+            PredicateSubject::Card(card),
+            Some(&bindings_for_target),
+        )
+    });
+    (partner_closure, target_closure)
+}
+
+/// What a replacement-window DNA digivolve (`may_dna_digivolve_now` anchored on
+/// the leaving subject, e.g. Kapurimon EX12-003) can reach from a given subject.
+/// The deletion batch uses it to decide whether the choice of WHICH leaving
+/// Digimon anchors the digivolve is a real choice (see
+/// [`DnaSubjectProbe::partners_of`]).
+#[derive(Clone, Debug)]
+pub struct DnaSubjectProbe {
+    pub partner_filter: CompiledPredicate,
+    pub target_filter: CompiledPredicate,
+    pub ignore_requirements: bool,
+}
+
+impl DnaSubjectProbe {
+    /// The finder used at lowering time: the first `MayDnaDigivolveNow` step
+    /// anchored on `replacement_subject` in a replacement's process (top level
+    /// or inside an `if`).
+    pub fn from_process(process: &[CompiledStep]) -> Option<Self> {
+        for step in process {
+            match step {
+                CompiledStep::MayDnaDigivolveNow {
+                    anchor,
+                    partner_filter,
+                    target_filter,
+                    ignore_requirements,
+                    ..
+                } if matches!(
+                    anchor,
+                    digimon_dsl::compiled::CompiledBindingRef::Named(n)
+                        | digimon_dsl::compiled::CompiledBindingRef::Binding(n)
+                        if n == "replacement_subject"
+                ) =>
+                {
+                    return Some(Self {
+                        partner_filter: partner_filter.clone(),
+                        target_filter: target_filter.clone(),
+                        ignore_requirements: *ignore_requirements,
+                    });
+                }
+                CompiledStep::If {
+                    then, else_branch, ..
+                } => {
+                    if let Some(p) =
+                        Self::from_process(then).or_else(|| Self::from_process(else_branch))
+                    {
+                        return Some(p);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    /// Every own battle-area permanent `partner` such that `{subject, partner}`
+    /// is a legal DNA pair for at least one filtered hand card — the partner
+    /// pick the step would offer with `subject` as the anchor.
+    #[allow(clippy::too_many_arguments)]
+    pub fn partners_of(
+        &self,
+        game: &crate::game::Game,
+        source_card: crate::card_source::CardHandle,
+        source_permanent: Option<crate::permanent::PermanentHandle>,
+        source_kind: crate::enums::EffectSourceKind,
+        controller: crate::enums::PlayerId,
+        subject: crate::permanent::PermanentHandle,
+    ) -> Vec<crate::permanent::PermanentHandle> {
+        let (partner, target) = dna_filter_closures(
+            &self.partner_filter,
+            &self.target_filter,
+            source_card,
+            source_permanent,
+            source_kind,
+            controller,
+            &Bindings::new(),
+        );
+        (0..game.player(controller).battle_area.len())
+            .map(|i| crate::permanent::PermanentHandle {
+                player: controller,
+                index: i as u8,
+            })
+            .filter(|&p| {
+                crate::effect_context::dna_partner_has_target(
+                    game,
+                    controller,
+                    subject,
+                    p,
+                    self.ignore_requirements,
+                    partner.as_ref(),
+                    target.as_ref(),
+                )
+            })
+            .collect()
     }
 }

@@ -152,11 +152,13 @@ fn assignment_survives_digixros_material_selection_and_stop_clones() {
     assert_eq!(played_sources(&r), 1);
     r.game = saved;
     let part_a = digixros_part_a(&r);
-    choose(&mut r, part_a);
-    let selected = r.game.clone();
+    // One-element recipe: picking its material fills it, so the play commits by
+    // itself (DCGO asks no trailing "End" prompt once no candidate remains).
+    // Both cloned branches of the parked material prompt must commit alike.
+    let parked = r.game.clone();
     for _ in 0..2 {
-        r.game = selected.clone();
-        choose(&mut r, PASS);
+        r.game = parked.clone();
+        choose(&mut r, part_a);
         assert_eq!(r.memory(), 97, "Set5 minus selected DigiXros2");
         assert_eq!(played_sources(&r), 2);
     }
@@ -167,7 +169,6 @@ fn assignment_survives_late_digixros_leave_window_accept_and_decline() {
     start(&mut r);
     let part_a = digixros_part_a(&r);
     choose(&mut r, part_a);
-    choose(&mut r, PASS);
     assert!(
         r.game.pending_selection.is_some(),
         "actual late material leave window parks"
@@ -202,7 +203,6 @@ fn own_once_per_turn_leave_effect_survives_digixros_limbo_in_both_cloned_branche
     start(&mut r);
     let part_a = digixros_part_a(&r);
     choose(&mut r, part_a);
-    choose(&mut r, PASS);
     let parked = r.game.clone();
     assert!(parked.pending_selection.is_some());
     for accept in [false, true] {

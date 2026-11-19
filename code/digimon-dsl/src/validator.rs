@@ -1784,7 +1784,7 @@ fn validate_post_payment_plural_filter(
                         | "trashed_hand_card_matching" | "effect_deleted_opponent_digimon_dp_gte" => true,
                         // These two per-selectors read the same lost result log.
                         "per" => matches!(value.as_str(),
-                            Some("returned_card_color_count" | "effect_suspended_count")),
+                            Some("returned_card_color_count" | "returned_card_count" | "effect_suspended_count")),
                         // Formula targets may explicitly name the carrier or
                         // current subject; other target names require bindings.
                         "source_stack_count" | "source_stack_dp_sum" => {

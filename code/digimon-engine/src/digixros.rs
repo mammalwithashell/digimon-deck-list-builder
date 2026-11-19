@@ -2123,13 +2123,28 @@ alt_paths:
     #[cfg(feature = "dsl-yaml-loader")]
     fn wildcard_material_is_prompted_once_and_masked_after_selection() {
         let king = test_card("BT10-111", "Shoutmon (King Version)", &["Xros Heart"]);
+        // TWO Ballistamon requirements, so a follow-up prompt (with the real
+        // Ballistamon still a candidate) exists after the wildcard is used: a
+        // one-element recipe ends the moment its single material is picked
+        // (DCGO `SelectDigiXrosClass.Select` asks no trailing prompt).
+        let two_element_yaml = ballistamon_target_yaml().replace(
+            "        cost_delta: -2
+    cost: 5",
+            "        cost_delta: -2
+      - filter: { name_is: Ballistamon }
+        zones: [battle_area]
+        cost_delta: -2
+    cost: 5",
+        );
         let mut runner = crate::debug_runner::DebugRunner::builder()
-            .from_dsl_yaml(ballistamon_target_yaml())
+            .from_dsl_yaml(&two_element_yaml)
             .expect("compile inline DigiXros DSL")
             .add_card(king)
+            .add_card(test_card("DX-REAL-BALLI", "Ballistamon", &["Xros Heart"]))
             .hand(0, &["DX-BALLISTAMON"])
             .memory(10)
             .start();
+        runner.place_on_field(0, "DX-REAL-BALLI", Some(0));
         let permanent = runner.place_on_field(0, "BT10-111", Some(0));
         let material_card = runner.game.player(0).battle_area[permanent.index as usize]
             .top_card()
@@ -2141,9 +2156,12 @@ alt_paths:
         );
 
         assert_eq!(runner.play(0, 0), None);
-        let action_id = crate::card_choice_page::CARD_CHOICE_START;
-        let row = runner.pending_selection().unwrap().card_choice.as_ref().unwrap().view(&runner.game, 0).rows.remove(0);
-        assert_eq!(row.card_id.as_deref(), Some("BT10-111"));
+        let rows = runner.pending_selection().unwrap().card_choice.as_ref().unwrap().view(&runner.game, 0).rows;
+        let row = rows
+            .iter()
+            .find(|row| row.card_id.as_deref() == Some("BT10-111"))
+            .expect("the wildcard material is a row of the prompt");
+        let action_id = row.action_id;
         assert!(matches!(row.zone, Some(crate::owned_card_choice::CardChoiceZone::BattleTop)));
         assert!(
             runner
@@ -2157,13 +2175,21 @@ alt_paths:
         runner
             .execute_action(0, action_id)
             .expect("select wildcard material");
+        let follow_up = runner
+            .pending_selection()
+            .expect("follow-up DigiXros material prompt (second requirement, real Ballistamon left)");
+        let follow_up_rows = follow_up.card_choice.as_ref().unwrap().view(&runner.game, 0).rows;
         assert!(
-            !runner
-                .pending_selection()
-                .expect("follow-up DigiXros material prompt")
-                .valid_action_ids
-                .contains(&action_id),
+            !follow_up_rows
+                .iter()
+                .any(|row| row.card_id.as_deref() == Some("BT10-111")),
             "selected wildcard material must be masked after its substitution is consumed"
+        );
+        assert!(
+            follow_up_rows
+                .iter()
+                .any(|row| row.card_id.as_deref() == Some("DX-REAL-BALLI")),
+            "the real Ballistamon is still a legal second material"
         );
         assert_eq!(runner.game.pending_digixros_transaction.as_ref().unwrap()
             .wildcard_substitutions[0].remaining_uses, 0, "the transaction consumes its one wildcard use");

@@ -58,3 +58,42 @@ fn ex12_056_on_play_de_digivolves_then_grants_alliance_and_attack_prompt() {
         "the selected other [SW] Digimon gains Alliance"
     );
 }
+
+/// DCGO `SelectDigiXrosClass.Select` walks the recipe's elements and asks only for
+/// an element that has candidates; after the last element it just ends. A
+/// one-element recipe (this card: ONE [SW]/[Gokuumon] material) must therefore
+/// commit the play right after its single material. The engine used to park a
+/// second, EMPTY "Select DigiXros material" stop prompt that swallowed the next
+/// recorded DCGO row (raw-20261113T025510Z#g8, Hakubamon EX12-043 -> EX12-056).
+#[test]
+fn ex12_056_single_element_digixros_commits_right_after_its_material() {
+    use digimon_engine::selection::SelectionKind;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-056 YAML loads")
+        .add_card(black_sw("SW-MAT", 4))
+        .add_card(black_sw("SW-MAT-2", 4))
+        .hand(0, &[CARD_ID, "SW-MAT", "SW-MAT-2"])
+        .memory(10)
+        .start();
+    let slot = hand_index(&runner, 0, CARD_ID);
+    assert!(runner.play(0, slot).is_none(), "the optional material prompt parks first");
+    let view = runner.pending_selection_view().expect("material prompt");
+    assert_eq!(view.kind, SelectionKind::Material);
+    assert!(view.is_optional, "DigiXros is declinable");
+    select_first_non_pass(&mut runner);
+
+    assert!(
+        runner.pending_selection_view().map_or(true, |v| v.kind != SelectionKind::Material),
+        "the one-element recipe is full: no second (empty) material prompt: {:?}",
+        runner.pending_selection_view()
+    );
+    assert_eq!(runner.battle_area_size(0), 1, "the play committed");
+    assert_eq!(top_card_id(&runner, 0, 0), CARD_ID);
+    assert_eq!(
+        runner.game.players[0].battle_area[0].card_sources.len(),
+        2,
+        "top card + the one DigiXros material"
+    );
+}

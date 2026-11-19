@@ -449,6 +449,7 @@ fn compile_per_selector(
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
         S::SourceColorCount => CompiledPerSelector::SourceColorCount,
         S::ReturnedCardColorCount => CompiledPerSelector::ReturnedCardColorCount,
+        S::ReturnedCardCount => CompiledPerSelector::ReturnedCardCount,
         S::EffectSuspendedCount => CompiledPerSelector::EffectSuspendedCount,
         S::SameLevelPairsInSources => CompiledPerSelector::SameLevelPairsInSources,
         S::SharedTrashCount { bucket } => CompiledPerSelector::SharedTrashCount { bucket: *bucket },
