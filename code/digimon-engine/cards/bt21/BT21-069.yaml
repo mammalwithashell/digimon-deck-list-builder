@@ -1,0 +1,94 @@
+# BT21-069 GulusGammamon — Digimon, Lv.4, Purple+Red, DP 6000, Cost 6.
+# Traits: [Dragonkin]. Virus. Form: Champion.
+#
+# Printed (official Bandai DB bundle data/card_bundles/BT21-069.md):
+#   Digivolve: Purple Lv.3 / cost 3, Red Lv.3 / cost 3.
+#   "[Digivolve] [Gammamon]: Cost 2" (alt route, any level).
+#   [Security] At the end of the battle, play this card without paying the cost.
+#   [On Play] [When Digivolving] By placing 1 Digimon card with [Gammamon] in its
+#     name from your hand or trash as this Digimon's bottom digivolution card,
+#     delete 1 of your opponent's level 4 or lower Digimon.
+#   Inherited: <Retaliation>.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT21/Purple/BT21_069.cs
+#   - Alt route: `AddSelfDigivolutionRequirementStaticEffect(TopCard.
+#     EqualsCardName("Gammamon"), cost 2, ignoreDigivolutionRequirement:
+#     false)` -> exact `name_is` gate on the host's top card.
+#   - [Security]: `PlaySelfDigimonAfterBattleSecurityEffect` (same shape as
+#     BT21-067 Garurumon: `on_security` + `play_from_security`).
+#   - OP / WD: two ActivateClasses with identical bodies, `isOptional: true`.
+#     Pick the origin (hand / trash) when both hold a [Gammamon]-name Digimon,
+#     then `SelectHandEffect` / `SelectCardEffect` with `canNoSelect: true`;
+#     once a card is placed (`AddDigivolutionCardsBottom`) the delete is a
+#     MANDATORY pick (`canNoSelect: false`) among the opponent's Digimon whose
+#     top card has a level <= 4. Placing is the cost: no placement, no delete.
+#   - Inherited Retaliation.
+#
+# Regression (hunt2 cluster alt-digivolve-cost-cards): shipped only as a .json
+# stub, so the cost-2 [Gammamon] route did not exist and DCGO's WD effect had
+# nothing to resolve against.
+
+card: BT21-069
+name: GulusGammamon
+kind: digimon
+level: 4
+color: [purple, red]
+cost: 6
+dp: 6000
+traits: [Dragonkin]
+attribute: Virus
+
+alt_paths:
+  # Printed circles: Purple Lv.3 / cost 3 and Red Lv.3 / cost 3.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  # "[Digivolve] [Gammamon]: Cost 2".
+  - kind: digivolve
+    from: { name_is: "Gammamon" }
+    cost: 2
+
+effects:
+  - when: on_security
+    summary: "[Security] At the end of the battle, play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] By placing 1 Digimon card with [Gammamon] in its name from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's level 4 or lower Digimon"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: tuck
+          optional: true
+          cost: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Gammamon"
+          prompt: "You may place 1 Digimon card with [Gammamon] in its name from your hand or trash as this Digimon's bottom digivolution card"
+      - place_as_bottom_source:
+          source: tuck
+          target: source
+          bind_placed_as: tucked
+      - if:
+          condition: { binding_present: tucked }
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 4
+                prompt: "Delete 1 of your opponent's level 4 or lower Digimon"
+            - delete_permanent: { target: victim }
+
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Retaliation
+    summary: "<Retaliation>"

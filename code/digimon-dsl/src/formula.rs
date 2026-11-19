@@ -410,4 +410,10 @@ pub enum AggregateSelector {
     /// aggregates are already Digimon-only since Tamers lack DP/level.
     /// G-PLAY-COST-AGGREGATE.
     LowestPlayCost,
+    /// Highest printed play cost among the scope's **Digimon** (Tamers are
+    /// excluded — DCGO `IsMaxCost(.., IsDigimonOnly: true)`). Mirror of
+    /// `lowest_play_cost`. Drives BT24-065 Diaboromon (X Antibody)'s "delete all
+    /// of your opponent's Digimon with the highest play cost".
+    /// G-DSL-HIGHEST-PLAY-COST-AGGREGATE.
+    HighestPlayCost,
 }

@@ -1242,6 +1242,9 @@ pub enum CompiledAggregateSelector {
     /// Lowest printed play cost among the candidate set.
     /// G-PLAY-COST-AGGREGATE.
     LowestPlayCost,
+    /// Highest printed play cost among the candidate set (mirror of
+    /// `LowestPlayCost`). G-DSL-HIGHEST-PLAY-COST-AGGREGATE.
+    HighestPlayCost,
 }
 
 /// Value carried by `add_dp_modifier` / `add_modifier` steps. Phase 2f2 Task 1

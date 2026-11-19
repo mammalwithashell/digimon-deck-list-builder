@@ -1,0 +1,117 @@
+# EX5-018 Garurumon (X Antibody) — Digimon, Lv.4, Blue+Purple, DP 6000, Cost 6.
+# Traits: [Beast, X Antibody]. Vaccine.
+#
+# Printed (official Bandai DB bundle data/card_bundles/EX5-018.md):
+#   Digivolve: Blue Lv.3 / cost 3, Purple Lv.3 / cost 3.
+#   "[Digivolve] [Garurumon]: Cost 0" (alt route, any level).
+#   [When Digivolving] <Draw 2> (Draw 2 cards from your deck.) Then, trash 2
+#     cards in your hand. If [Garurumon] or [X Antibody] is in this Digimon's
+#     digivolution cards, gain 1 memory.
+#   Inherited: [All Turns] [Once Per Turn] When this Digimon with [Garurumon]
+#     or [Omnimon] in its name would be deleted in battle, by returning 2
+#     non-Digi-Egg cards from your trash to the bottom of the deck, prevent
+#     that deletion.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX5/Blue/EX5_018.cs
+#   - Alt route: `AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#     TopCard.CardNames.Contains("Garurumon"), digivolutionCost: 0,
+#     ignoreDigivolutionRequirement: false)` -> a `name_is` gate on the host's
+#     top card (exact name, so [Garurumon (X Antibody)] does NOT qualify).
+#   - [When Digivolving]: mandatory trigger (`isOptional: false`). Draw 2, then
+#     `SelectHandEffect(maxCount: min(2, hand), canNoSelect: false, Discard)`,
+#     then +1 memory iff the digivolution cards (sources only, never the top
+#     card) hold a card whose name list contains exactly "Garurumon", "X
+#     Antibody" or "XAntibody" -> `self_source_count` with `name_is`.
+#   - Inherited substitute: identical shape to EX5-015 Gabumon (X Antibody)
+#     (clause C there); `CanTriggerWhenRemoveField` = carrier only, by battle.
+#
+# Regression (hunt2 cluster alt-digivolve-cost-cards): the card shipped only as
+# a .json stub, so the engine saw just the printed circles and a Lv.4
+# [Garurumon] base could not be digivolved onto for 0 (illegal_action).
+
+card: EX5-018
+name: Garurumon (X Antibody)
+kind: digimon
+level: 4
+color: [blue, purple]
+cost: 6
+dp: 6000
+traits: [Beast, X Antibody]
+attribute: Vaccine
+
+alt_paths:
+  # Printed circles: Blue Lv.3 / cost 3 and Purple Lv.3 / cost 3.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  # "[Digivolve] [Garurumon]: Cost 0".
+  - kind: digivolve
+    from: { name_is: "Garurumon" }
+    cost: 0
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] <Draw 2>. Then, trash 2 cards in your hand. If [Garurumon] or [X Antibody] is in this Digimon's digivolution cards, gain 1 memory"
+    process:
+      - draw: { of: you, count: 2 }
+      # "trash 2 cards in your hand" is a mandatory pick of min(2, hand size)
+      # (DCGO canNoSelect: false). A pick with an empty hand is a no-op.
+      - select_hand:
+          of: you
+          bind_as: discard_a
+          filter: {}
+          prompt: "Trash 2 cards in your hand (1 of 2)"
+      - trash_from_hand_by_index: { of: you, hand_index: discard_a }
+      - select_hand:
+          of: you
+          bind_as: discard_b
+          filter: {}
+          prompt: "Trash 2 cards in your hand (2 of 2)"
+      - trash_from_hand_by_index: { of: you, hand_index: discard_b }
+      - if:
+          condition:
+            self_source_count:
+              filter:
+                any_of:
+                  - name_is: "Garurumon"
+                  - name_is: "X Antibody"
+              op: gte
+              value: 1
+          then:
+            - gain_memory: 1
+
+  # Inherited [All Turns][Once Per Turn] substitute — see EX5-015 clause C for
+  # the full derivation of this shape.
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_be_deleted
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - is_source: true
+        - all_turns: true
+        - any_of:
+            - source_name_contains: "Garurumon"
+            - source_name_contains: "Omnimon"
+        - replacement_cause: battle
+    summary: "[All Turns][OPT] Substitute on battle deletion — return 2 non-Digi-Egg trash cards to deck bottom"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          min: 2
+          max: 2
+          bind_as: returned
+          filter:
+            none_of:
+              - kind: digi_egg
+          prompt: "Return 2 non-Digi-Egg cards from your trash to the bottom of the deck"
+          optional_zero: false
+      - return_trash_list_to_deck_bottom:
+          of: you
+          cards: returned
+      - cancel_replacement: {}

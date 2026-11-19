@@ -1676,7 +1676,7 @@ fn evaluate_aggregate(
         A::LowestDp | A::LowestLevel | A::LowestPlayCost | A::FewestMaterials => {
             values.min().unwrap_or(0)
         }
-        A::HighestDp | A::HighestLevel => values.max().unwrap_or(0),
+        A::HighestDp | A::HighestLevel | A::HighestPlayCost => values.max().unwrap_or(0),
     }
 }
 
@@ -1697,7 +1697,7 @@ fn evaluate_aggregate_read(
         A::LowestDp | A::LowestLevel | A::LowestPlayCost | A::FewestMaterials => {
             values.min().unwrap_or(0)
         }
-        A::HighestDp | A::HighestLevel => values.max().unwrap_or(0),
+        A::HighestDp | A::HighestLevel | A::HighestPlayCost => values.max().unwrap_or(0),
     }
 }
 
@@ -1732,7 +1732,7 @@ fn aggregate_value(
             .get(index)?
             .level(&ctx.game.card_data)
             .map(i32::from),
-        A::LowestPlayCost => {
+        A::LowestPlayCost | A::HighestPlayCost => {
             // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`. A Token
             // counts only when it prints a play cost (Diaboromon 14).
             let perm = ctx.game.player(player).battle_area.get(index)?;
@@ -1771,7 +1771,7 @@ fn aggregate_value_read(
         CompiledAggregateSelector::LowestLevel | CompiledAggregateSelector::HighestLevel => {
             perm.level(ctx.card_data()).map(i32::from)
         }
-        CompiledAggregateSelector::LowestPlayCost => {
+        CompiledAggregateSelector::LowestPlayCost | CompiledAggregateSelector::HighestPlayCost => {
             // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`. A Token
             // counts only when it prints a play cost (Diaboromon 14).
             if !perm.is_digimon(ctx.card_data()) && !is_costed_token(perm, ctx.card_data()) {
