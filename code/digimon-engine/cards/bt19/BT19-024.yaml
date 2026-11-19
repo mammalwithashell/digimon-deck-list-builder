@@ -1,0 +1,153 @@
+# BT19-024 MarineBullmon — Digimon, Lv.5, Blue, DP 7000, Cost 7.
+# Traits: Mollusk, LIBERATOR, Aquatic ((Rule) Trait: Has [Aquatic] Type —
+# data/card_overrides.json type_eng). Form: Ultimate. Attribute: Data.
+# Digivolve: Blue Lv.4 / Cost 3.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT19-024.md; DCGO
+# BT19_024.cs):
+#   <Decode (Blue Lv.4)> (When this Digimon would leave the battle area other
+#     than in battle, you may play 1 level 4 blue Digimon card from its
+#     digivolution cards without paying the cost.)
+#   [On Play] [When Digivolving] You may place 1 Digimon card with [Aqua] or
+#     [Sea Animal] in any of its traits from your hand as 1 of your Digimon's
+#     bottom digivolution card.
+#   Inherited: [End of Attack] [Once Per Turn] You may play 1 level 4 or lower
+#     Digimon card with [Aqua] or [Sea Animal] in any of its traits from this
+#     Digimon's digivolution cards without paying the cost.
+#
+# DCGO crosscheck:
+#   * Decode: DecodeSelfEffect, sourceCondition = blue AND level 4 (BT22-015
+#     non-cancelling replacement idiom; the source must be a Digimon card).
+#   * OP / WD (two ActivateClass, same body, isOptional TRUE, no cap):
+#     CanActivate = on the battle area AND an [Aqua]/[Sea Animal] Digimon card
+#     in hand (HasAquaTraits = `ContainsTraits` substring on "Aqua" / "Sea
+#     Animal" / "SeaAnimal" -> `trait_contains`). Body: hand pick (canNoSelect
+#     TRUE), THEN a mandatory pick of ANY own Digimon (canNoSelect false), then
+#     AddDigivolutionCardsBottom. => outer prompt + optional hand pick +
+#     mandatory own-Digimon pick + `place_as_bottom_source`.
+#   * Inherited End of Attack (OnEndAttack, maxCount 1, isOptional TRUE):
+#     CanActivate = a source card that is a Digimon of level <= 4 with an Aqua /
+#     Sea Animal trait that `CanPlayAsNewPermanent`; body = a declinable pick
+#     (canNoSelect true) then PlayPermanentCards(payCost false, activateETB
+#     true) from the digivolution cards.
+
+card: BT19-024
+name: MarineBullmon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Data
+traits: [Mollusk, LIBERATOR, Aquatic]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode (Blue Lv.4)> play a blue Lv.4 digivolution card when this Digimon would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 4
+              - color_is: blue
+          prompt: "Choose a blue level 4 digivolution card to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  - when: [on_play, when_digivolving]
+    optional: true
+    outer_prompt: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - kind: digimon
+            - any_of:
+                - trait_contains: Aqua
+                - trait_contains: Sea Animal
+                - trait_contains: SeaAnimal
+        n: 1
+    summary: "[On Play][When Digivolving] You may place 1 [Aqua]/[Sea Animal] Digimon card from hand as 1 of your Digimon's bottom digivolution card"
+    process:
+      - select_hand:
+          of: you
+          bind_as: placed
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_contains: Aqua
+                  - trait_contains: Sea Animal
+                  - trait_contains: SeaAnimal
+          prompt: "Place 1 Digimon card with [Aqua] or [Sea Animal] in any of its traits from your hand as 1 of your Digimon's bottom digivolution card"
+      - if:
+          condition: { binding_present: placed }
+          then:
+            - select_own_permanent:
+                bind_as: host
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to place the card under as its bottom digivolution card"
+            - place_as_bottom_source:
+                source: placed
+                target: host
+
+  - scope: inherited
+    when: end_of_attack
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    condition:
+      self_source_count:
+        filter:
+          all_of:
+            - kind: digimon
+            - level_lte: 4
+            - any_of:
+                - trait_contains: Aqua
+                - trait_contains: Sea Animal
+                - trait_contains: SeaAnimal
+            - can_play_from_effect_without_cost: true
+        op: gte
+        value: 1
+    summary: "[Inherited][End of Attack][Once Per Turn] You may play 1 level 4 or lower [Aqua]/[Sea Animal] Digimon card from this Digimon's digivolution cards without paying the cost"
+    process:
+      - select_material:
+          of_permanent: source
+          bind_as: played_source
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_contains: Aqua
+                  - trait_contains: Sea Animal
+                  - trait_contains: SeaAnimal
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 level 4 or lower [Aqua]/[Sea Animal] Digimon card from this Digimon's digivolution cards without paying the cost"
+      - if:
+          condition: { binding_present: played_source }
+          then:
+            - play_from_materials:
+                target: source
+                source_index: played_source
+                cost_delta: free

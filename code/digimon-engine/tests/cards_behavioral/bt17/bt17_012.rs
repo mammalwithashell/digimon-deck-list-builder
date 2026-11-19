@@ -177,6 +177,13 @@ fn bt17_012_has_raid_face_up() {
 
 // ─── [When Attacking] ────────────────────────────────────────────────────────
 
+fn accept_outer(r: &mut DebugRunner) {
+    let p = r.pending_selection_view().expect("the [When Attacking] outer prompt");
+    assert!(p.is_optional, "'may digivolve': the outer prompt is declinable");
+    let a = *p.valid_action_ids.iter().find(|a| **a != PASS).expect("an accept action");
+    choose(r, a);
+}
+
 #[test]
 fn bt17_012_attack_evolution_masks_filters_and_pays_reduced_cost() {
     let mut r = builder()
@@ -184,9 +191,10 @@ fn bt17_012_attack_evolution_masks_filters_and_pays_reduced_cost() {
         .start();
     r.place_on_field(0, CARD_ID, Some(0));
     attack(&mut r);
+    accept_outer(&mut r);
     let p = r.pending_selection_view().expect("the [When Attacking] hand pick");
     assert_eq!(p.kind, SelectionKind::Hand);
-    assert!(p.is_optional, "'may digivolve'");
+    assert!(p.is_optional, "the pick is declinable too (DCGO canNoSelect)");
     assert!(build_action_mask(&r.game, 0)[PASS as usize] > 0.5);
     assert!(p.valid_action_ids.contains(&0));
     for invalid in [1, 2, 3] {
@@ -205,31 +213,54 @@ fn bt17_012_attack_evolution_masks_filters_and_pays_reduced_cost() {
 }
 
 #[test]
-fn bt17_012_attack_evolution_can_be_declined() {
-    let mut r = builder().hand(0, &["TEST-HYBRID"]).start();
-    r.place_on_field(0, CARD_ID, Some(0));
-    attack(&mut r);
-    let p = r.pending_selection_view().expect("the [When Attacking] hand pick");
-    assert!(p.is_optional);
-    choose(&mut r, PASS);
-    r.auto_resolve().unwrap();
-    assert_eq!(r.memory(), 10);
-    assert_eq!(
-        r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data),
-        CARD_ID
-    );
-    assert_eq!(r.hand_size(0), 1);
+fn bt17_012_declining_the_outer_prompt_or_the_pick_keeps_the_card_unevolved() {
+    for decline_outer in [true, false] {
+        let mut r = builder().hand(0, &["TEST-HYBRID"]).start();
+        r.place_on_field(0, CARD_ID, Some(0));
+        attack(&mut r);
+        if decline_outer {
+            let p = r.pending_selection_view().expect("outer prompt");
+            assert!(p.is_optional);
+            choose(&mut r, PASS);
+        } else {
+            accept_outer(&mut r);
+            let p = r.pending_selection_view().expect("hand pick");
+            assert!(p.is_optional);
+            choose(&mut r, PASS);
+        }
+        r.auto_resolve().unwrap();
+        assert_eq!(r.memory(), 10);
+        assert_eq!(
+            r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data),
+            CARD_ID
+        );
+        assert_eq!(r.hand_size(0), 1);
+    }
 }
 
 #[test]
-fn bt17_012_without_a_hybrid_in_hand_nothing_is_offered() {
+fn bt17_012_outer_prompt_is_offered_for_any_hybrid_digimon_in_hand_even_if_none_can_digivolve() {
+    // DCGO's CanActivate only counts Hybrid Digimon cards in hand; the legality
+    // filter belongs to the inner pick. A Hybrid whose route doesn't fit and one
+    // the reduced cost can't pay are both "in hand", so the yes/no is shown.
+    let mut r = builder().hand(0, &["TEST-WRONG-ROUTE", "TEST-EXPENSIVE"]).start();
+    r.place_on_field(0, CARD_ID, Some(0));
+    attack(&mut r);
+    accept_outer(&mut r);
+    assert!(
+        r.pending_selection_view().map_or(true, |p| p.kind != SelectionKind::Hand),
+        "no card can digivolve, so no hand pick is offered"
+    );
+    r.auto_resolve().unwrap();
+    assert_eq!(r.memory(), 10);
+}
+
+#[test]
+fn bt17_012_without_a_hybrid_digimon_in_hand_nothing_is_offered() {
     let mut r = builder().hand(0, &["TEST-NON-HYBRID"]).start();
     r.place_on_field(0, CARD_ID, Some(0));
     attack(&mut r);
-    assert!(
-        r.pending_selection_view().map_or(true, |p| p.kind != SelectionKind::Hand),
-        "no Hybrid card can be picked"
-    );
+    assert!(r.pending_selection_view().is_none(), "no Hybrid Digimon card in hand: not activatable");
 }
 
 // ─── Inherited [Your Turn] +2000 DP ──────────────────────────────────────────

@@ -1,6 +1,7 @@
 mod bt19_006;
 mod bt19_008;
 mod bt19_012;
+mod bt19_024;
 mod bt19_017;
 mod bt19_014;
 mod bt19_026;

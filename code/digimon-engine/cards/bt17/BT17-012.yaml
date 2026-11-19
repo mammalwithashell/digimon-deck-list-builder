@@ -78,8 +78,26 @@ effects:
   - kind: grant_keyword
     keyword: Raid
 
+  # DCGO (`BT17_012.cs` [When Attacking], isOptional TRUE): the always-shown outer
+  # yes/no is offered whenever a Hybrid Digimon card is in hand (CanActivate =
+  # `HandCards.Count(IsDigimon && ContainsTraits("Hybrid")) >= 1`), WITHOUT
+  # checking that one of them can actually digivolve; the inner pick
+  # (`DigivolveIntoHandOrTrashCard`, canNoSelect) then lists only the cards that
+  # can. Rules-compatible: a player may choose to activate an effect whose
+  # processing then can't be executed (CR 4.3 15-14-1-4 counts such a use), so
+  # the outer confirm is the player's own decision and an accepted pick with no
+  # legal card simply ends.
   - when: when_attacking
     optional: true
+    outer_prompt: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          kind: digimon
+          trait_has: Hybrid
+        n: 1
     summary: "[When Attacking] This Digimon may digivolve into a Hybrid card in hand with the digivolution cost reduced by 1"
     process:
       - select_hand:
