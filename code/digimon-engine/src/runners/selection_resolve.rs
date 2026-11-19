@@ -144,12 +144,22 @@ pub(super) fn is_top_bottom_choice(pending: &crate::selection::PendingSelection)
 /// card's own. Omnimon (EX12-037): "DP - 13K" = true, "Trash security" = false
 /// (EX12_037.cs:157-170, then the -13000 pick :172-199 or the security trash
 /// and <Recovery +1> :201-213); EX12-037.yaml `repeat_effect_choice` labels.
-/// Add a card only after reading its C# and YAML.
+/// Jesmon (BT23-013): "Play [Atho, Rene & Por] Token" = true, "Player [Sistermon]
+/// in name digimon from hand or trash" = false (BT23_013.cs:121-141; the
+/// from-hand / from-trash bool that follows a false is the zone menu); its
+/// YAML `select_effect_choice` labels. Add a card only after reading its C#
+/// and YAML.
+const DCGO_MODE_BOOLS: &[(&str, &str, &str)] = &[
+    (
+        "EX12-037",
+        "1 opponent Digimon gets -13000 DP",
+        "Trash opponent top security, then Recovery +1",
+    ),
+    ("BT23-013", "Play Atho, Rene & Por Token", "Play Sistermon from hand or trash"),
+];
+
 fn dcgo_mode_bool(card_id: &str) -> Option<(&'static str, &'static str)> {
-    match card_id {
-        "EX12-037" => Some(("1 opponent Digimon gets -13000 DP", "Trash opponent top security, then Recovery +1")),
-        _ => None,
-    }
+    DCGO_MODE_BOOLS.iter().find(|(c, _, _)| *c == card_id).map(|(_, y, n)| (*y, *n))
 }
 
 /// The `(true, false)` action ids of `pending` when it is the two-mode body
@@ -168,6 +178,37 @@ pub(super) fn mode_bool_branches(game: &Game, pending: &crate::selection::Pendin
     }
     let find = |label: &str| entries.iter().find(|e| e.label == label).map(|e| e.action_id);
     Some((find(yes_label)?, find(no_label)?))
+}
+
+/// The `(Yes, No)` action ids of `pending` when it is a keyword <Ascension>'s
+/// "place this card as the top security card?" choice of its own owner.
+/// DCGO asks it from the shared keyword helper as a `SetBoolSelection` (Yes =
+/// true, No = false; `CardEffectCommons/KeyWordEffects/Ascension.cs:30-39`), so
+/// no card's own script lists it and [`dcgo_card_asks_yes_no_bool`] never
+/// knows it; the engine's `KeywordAscensionChoice` frame (CR 4.3 16-1, the
+/// keyword's own "you may") identifies the question instead of any card id.
+/// `None` for any other prompt, including a card-authored "Yes" / "No"
+/// choice outside that frame.
+pub(super) fn ascension_choice_branches(
+    game: &Game,
+    pending: &crate::selection::PendingSelection,
+) -> Option<(u16, u16)> {
+    if !matches!(pending.kind, crate::selection::SelectionKind::EffectChoice) {
+        return None;
+    }
+    let frames = &game.pending_selection_resume.as_ref()?.frames;
+    let [crate::resume::ResumeFrame::KeywordAscensionChoice(state)] = frames.as_slice() else {
+        return None;
+    };
+    if state.owner != pending.selecting_player {
+        return None;
+    }
+    let entries = pending.effect_choices.as_ref()?;
+    if entries.len() != 2 || !entries.iter().all(|e| pending.valid_action_ids.contains(&e.action_id)) {
+        return None;
+    }
+    let find = |label: &str| entries.iter().find(|e| e.label == label).map(|e| e.action_id);
+    Some((find("Yes")?, find("No")?))
 }
 
 /// Cards whose DCGO "To which area will you place a card?" int menu is
@@ -1969,8 +2010,13 @@ fn resolve_next_with_provenance(
         if let Some((top, bottom)) = top_bottom_branches(pending) {
             return Ok(Some(if b { top } else { bottom }));
         }
+        // A keyword <Ascension>'s Yes / No (Yes = true, `Ascension.cs:30-39`).
+        if let Some((yes, no)) = ascension_choice_branches(game, pending) {
+            return Ok(Some(if b { yes } else { no }));
+        }
         // A card's two-mode body choice that DCGO asks as a bool, by the
-        // card's own button meanings (`dcgo_mode_bool`, Omnimon (EX12-037)).
+        // card's own button meanings (`dcgo_mode_bool`, Omnimon (EX12-037),
+        // Jesmon (BT23-013)).
         if let Some((yes, no)) = mode_bool_branches(game, pending) {
             return Ok(Some(if b { yes } else { no }));
         }

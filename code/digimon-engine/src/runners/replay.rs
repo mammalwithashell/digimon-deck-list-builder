@@ -4583,7 +4583,14 @@ impl ReplayDriver {
                 // pick the yes opens: the yes IS the answer to this prompt (e.g.
                 // BT25-030's "add top security to hand?", whose added card then
                 // queues BT24-084's trigger that the unstamped bool answers).
-                .is_some_and(|n| n.actor == actor && !(n.unstamped && n.prompt == "generic_bool"));
+                .is_some_and(|n| {
+                    n.actor == actor
+                        && !(n.unstamped && n.prompt == "generic_bool")
+                        // The simultaneous-effects menu is the ORDER of triggers the
+                        // yes itself queued (e.g. an added security card's
+                        // `<Security>`-removed triggers), never a pick the yes opens.
+                        && n.prompt != "MultipleSkills"
+                });
         // DCGO picks a digivolution-source card in two steps: the Digimon that
         // holds it (`SelectPermanentEffect`, targets only), THEN the card
         // (`SelectCardEffect`, zone DigivolutionCards). Our engine parks ONE
@@ -5610,6 +5617,18 @@ impl ReplayDriver {
         }
     }
 
+    /// Is the parked prompt the one-entry accept/decline gate of a single
+    /// optional `BeforePayCost` cost reducer (`PlayFromHandCostReductionPrompt`
+    /// with no order menu), whose only accept id is the entry's?
+    fn is_lone_cost_reduction_gate(game: &Game, p: &crate::selection::PendingSelection) -> bool {
+        let entry_ids: Vec<u16> = p.effect_choices.iter().flatten().map(|e| e.action_id).collect();
+        matches!(
+            game.pending_selection_resume.as_ref().map(|r| r.frames.as_slice()),
+            Some([crate::resume::ResumeFrame::PlayFromHandCostReductionPrompt(s)]) if s.order.is_none()
+        ) && entry_ids.len() == 1
+            && p.valid_action_ids == entry_ids
+    }
+
     /// Is the parked prompt a clause-level "you may" accept/decline gate
     /// (`ResumeFrame::OuterOptionalTrigger`, single accept id)?
     fn is_outer_optional_gate(game: &Game) -> bool {
@@ -5659,6 +5678,16 @@ impl ReplayDriver {
         let yes = match p.kind {
             SelectionKind::Replacement if p.valid_action_ids == [REPLACEMENT_ACCEPT] => Some(REPLACEMENT_ACCEPT),
             SelectionKind::TriggerOrder if p.valid_action_ids.len() == 1 => Some(p.valid_action_ids[0]),
+            // A `BeforePayCost` optional cost reduction ("by X, reduce the play
+            // cost"; BT22-094): DCGO asks the activation as an `OptionalSkill`
+            // Yes/No before the cost is paid; the engine parks the lone reducer
+            // as a one-entry accept/decline `EffectChoice`
+            // (`PlayFromHandCostReductionPrompt`, `order: None`). yes = that
+            // entry, no = PASS. A several-reducer ORDER menu (`order: Some`) is
+            // not a yes/no and is left unmatched.
+            SelectionKind::EffectChoice if Self::is_lone_cost_reduction_gate(game, p) => {
+                p.valid_action_ids.first().copied()
+            }
             _ if game.pending_is_optional_activation() => None,
             _ => return None,
         };
@@ -7059,6 +7088,12 @@ impl ReplayDriver {
         // card's own button meanings (Omnimon (EX12-037)'s "DP - 13K" = true /
         // "Trash security" = false, EX12_037.cs:157-170).
         if super::selection_resolve::mode_bool_branches(game, p).is_some() {
+            return None;
+        }
+        // A keyword <Ascension>'s Yes / No: asked by the shared keyword helper
+        // (`Ascension.cs:30-39`), so no card's script lists it; the engine's
+        // own `KeywordAscensionChoice` frame names it.
+        if super::selection_resolve::ascension_choice_branches(game, p).is_some() {
             return None;
         }
         let card = game.card_data_for_handle(p.source_card).map(|d| d.card_id.clone()).unwrap_or_default();
