@@ -4300,27 +4300,30 @@ impl ReplayDriver {
                     })
                     .unwrap_or_default();
                 if matching.len() >= 2 && super::selection_resolve::resolve_next(game, payload, 0).is_err() {
-                    // DCGO's chosen effect runs its OWN prompts next; a pick row right
-                    // after the index is that effect's pick, not a later order pick.
-                    let matching = self.order_entries_answering_next_pick(game, actor, &matching);
-                    let branches: Vec<(u16, Game)> = matching
-                        .iter()
-                        .map(|id| {
-                            let mut g = game.clone();
-                            g.decode_action(*id, actor);
-                            (*id, g)
-                        })
-                        .collect();
                     // Entries that are two copies of this card (not two effects of
                     // one card): the branches are compared with the physical
                     // identity of the copies renamed away.
                     let identity_free = entries_are_copies_of_one_card(game);
-                    let first = order_branch_digest(&branches[0].1, identity_free);
-                    let verdict = if branches.iter().all(|(_, g)| order_branch_digest(g, identity_free) == first) {
-                        LookaheadVerdict::Proved(branches[0].0)
-                    } else {
-                        self.lookahead_trigger_order(branches, self.cursor + 1, &order_entry_sources(game), identity_free)
-                    };
+                    let sources = order_entry_sources(game);
+                    let mut verdict = self.same_card_order_verdict(game, actor, &matching, &sources, identity_free);
+                    // The rows after the index did not single an entry out. DCGO's
+                    // chosen effect runs its OWN prompts next, so a pick row right
+                    // after the index may be that effect's pick: only then are the
+                    // entries narrowed to the ones whose own prompt takes it. Never
+                    // BEFORE the rows have been tried: DCGO can ask prompts the
+                    // engine's entry has no analogue of (EX12-035's "which
+                    // Digimon" pick ahead of its source pick, raw-20261113T025510Z#g4),
+                    // and an entry whose prompt cannot take such a row is not refuted.
+                    if !matches!(verdict, LookaheadVerdict::Proved(_)) {
+                        let narrowed = self.order_entries_answering_next_pick(game, actor, &matching);
+                        if narrowed.len() < matching.len() {
+                            let narrowed_verdict =
+                                self.same_card_order_verdict(game, actor, &narrowed, &sources, identity_free);
+                            if matches!(narrowed_verdict, LookaheadVerdict::Proved(_)) {
+                                verdict = narrowed_verdict;
+                            }
+                        }
+                    }
                     let LookaheadVerdict::Proved(entry) = verdict else {
                         let prompt = game.pending_selection.as_ref().map(|p| p.prompt.as_str()).unwrap_or_default();
                         let index = payload.int_value.unwrap_or_default();
@@ -7552,6 +7555,33 @@ impl ReplayDriver {
              games and are not told apart by the next {LOOKAHEAD_ROWS} rows; the recording does not say which effect \
              DCGO activated"
         )))
+    }
+
+    /// The verdict over the order entries `entries` (all of one card): the one
+    /// every branch agrees on when they all lead to the same game, else what the
+    /// actor's following rows prove (`lookahead_trigger_order`).
+    fn same_card_order_verdict(
+        &mut self,
+        game: &Game,
+        actor: PlayerId,
+        entries: &[u16],
+        sources: &[(u16, crate::card_source::CardHandle)],
+        identity_free: bool,
+    ) -> LookaheadVerdict {
+        let branches: Vec<(u16, Game)> = entries
+            .iter()
+            .map(|id| {
+                let mut g = game.clone();
+                g.decode_action(*id, actor);
+                (*id, g)
+            })
+            .collect();
+        let first = order_branch_digest(&branches[0].1, identity_free);
+        if branches.iter().all(|(_, g)| order_branch_digest(g, identity_free) == first) {
+            LookaheadVerdict::Proved(branches[0].0)
+        } else {
+            self.lookahead_trigger_order(branches, self.cursor + 1, sources, identity_free)
+        }
     }
 
     /// Meet the pick `row` (the actor's next recorded row, naming cards or

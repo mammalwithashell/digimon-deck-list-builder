@@ -349,3 +349,90 @@ fn a_card_named_index_over_same_card_entries_is_the_one_whose_own_prompt_takes_t
     );
     assert_eq!(dp_of_opponent(&s.game), before_dp, "the -4000 effects did not run first");
 }
+
+
+// ── Same-card entries: the rows decide before the next pick narrows ─────────
+//
+// MetalGarurumon (EX12-035) digivolved into queues its [When Digivolving]
+// "trash 4 sources, then bottom-deck" (slot A) and its [All Turns][OPT] "can't
+// suspend" (slot B): two entries of ONE card. DCGO runs A first and asks the
+// Digimon to trash from (`SelectTrashDigivolutionCards` asks for the carrier,
+// TrashDigivolutionCards.cs) BEFORE the source pick - a prompt the engine's
+// flat source multi-pick has no analogue of, which the replay absorbs. The
+// pick row right after the index (the carrier) is therefore NOT a pick of A's
+// own first prompt, and B's opponent-Digimon prompt takes it positionally: an
+// entry narrowing that ran before the rows were tried chose B and stranded the
+// last row (raw-20261113T025510Z#g4). The rows that follow prove A.
+
+fn metal_garurumon_digivolves() -> DebugRunner {
+    let src = |id: &str| {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(3);
+        c.dp = Some(3000);
+        c
+    };
+    let mut base = digimon("GARU-BASE", 5, 4, &["ME"]);
+    base.colors = vec![CardColor::Red];
+    base.dp = Some(7000);
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX12-035")
+        .expect("EX12-035 YAML loads")
+        .add_card(base)
+        .add_card(digimon("OPP-A", 4, 4, &[]))
+        .add_card(digimon("OPP-B", 4, 4, &[]))
+        .add_card(src("SRC-1"))
+        .add_card(src("SRC-2"))
+        .add_card(src("SRC-3"))
+        .add_card(src("SRC-4"))
+        .add_card(make_test_card("FILL", "Filler"))
+        .hand(0, &["EX12-035"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+    r.game.turn_count = 1;
+    r.place_stack(1, &["SRC-1", "SRC-2", "SRC-3", "SRC-4", "OPP-A"]);
+    r.place_stack(1, &["OPP-B"]);
+    r.place_on_field(0, "GARU-BASE", Some(0));
+    assert!(r.game.digivolve_from_hand(0, 0, 0, PlaySource::ByEffect));
+    r
+}
+
+fn opp_pick(frame: i64) -> StepSpec {
+    row(serde_json::json!({"step":1,"actor":0,"prompt":"SelectPermanentEffect","targets":[{"player":1,"frame":frame}]}))
+}
+
+#[test]
+fn same_card_entries_are_told_apart_by_the_rows_before_the_next_pick_narrows_them() {
+    let r = metal_garurumon_digivolves();
+    let p = r.game.pending_selection.as_ref().expect("a trigger order is parked");
+    assert!(matches!(p.kind, SelectionKind::TriggerOrder), "{:?}", p.kind);
+    let offered = p
+        .effect_choices
+        .as_ref()
+        .expect("entries")
+        .iter()
+        .filter(|e| p.valid_action_ids.contains(&e.action_id))
+        .count();
+    assert_eq!(offered, 2, "both EX12-035 effects are offered");
+    let index = row(serde_json::json!({"step":0,"actor":0,"prompt":"MultipleSkills","int_value":0,"chosen_effect_card":"EX12-035"}));
+    let sources = row(serde_json::json!({
+        "step":2,"actor":0,"prompt":"SelectCardEffect","card_ids":["SRC-1","SRC-2","SRC-3"]
+    }));
+    let mut s = session(
+        r,
+        vec![
+            index,
+            opp_pick(0), // the carrier DCGO asks first (absorbed)
+            sources,
+            opp_pick(1), // the bottom-deck target
+            opp_pick(0), // [All Turns] "can't suspend"
+        ],
+    );
+    for _ in 0..5 {
+        s.step();
+    }
+    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
+    assert_eq!(s.current_step(), 5, "every row was consumed");
+}
