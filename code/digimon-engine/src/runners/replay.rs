@@ -4453,24 +4453,30 @@ impl ReplayDriver {
                     })
                     .unwrap_or_default();
                 if matching.len() >= 2 && super::selection_resolve::resolve_next(game, payload, 0).is_err() {
-                    let branches: Vec<(u16, Game)> = matching
-                        .iter()
-                        .map(|id| {
-                            let mut g = game.clone();
-                            g.decode_action(*id, actor);
-                            (*id, g)
-                        })
-                        .collect();
                     // Entries that are two copies of this card (not two effects of
                     // one card): the branches are compared with the physical
                     // identity of the copies renamed away.
                     let identity_free = entries_are_copies_of_one_card(game);
-                    let first = order_branch_digest(&branches[0].1, identity_free);
-                    let verdict = if branches.iter().all(|(_, g)| order_branch_digest(g, identity_free) == first) {
-                        LookaheadVerdict::Proved(branches[0].0)
-                    } else {
-                        self.lookahead_trigger_order(branches, self.cursor + 1, &order_entry_sources(game), identity_free)
-                    };
+                    let sources = order_entry_sources(game);
+                    let mut verdict = self.same_card_order_verdict(game, actor, &matching, &sources, identity_free);
+                    // The rows after the index did not single an entry out. DCGO's
+                    // chosen effect runs its OWN prompts next, so a pick row right
+                    // after the index may be that effect's pick: only then are the
+                    // entries narrowed to the ones whose own prompt takes it. Never
+                    // BEFORE the rows have been tried: DCGO can ask prompts the
+                    // engine's entry has no analogue of (EX12-035's "which
+                    // Digimon" pick ahead of its source pick, raw-20261113T025510Z#g4),
+                    // and an entry whose prompt cannot take such a row is not refuted.
+                    if !matches!(verdict, LookaheadVerdict::Proved(_)) {
+                        let narrowed = self.order_entries_answering_next_pick(game, actor, &matching);
+                        if narrowed.len() < matching.len() {
+                            let narrowed_verdict =
+                                self.same_card_order_verdict(game, actor, &narrowed, &sources, identity_free);
+                            if matches!(narrowed_verdict, LookaheadVerdict::Proved(_)) {
+                                verdict = narrowed_verdict;
+                            }
+                        }
+                    }
                     let LookaheadVerdict::Proved(entry) = verdict else {
                         let prompt = game.pending_selection.as_ref().map(|p| p.prompt.as_str()).unwrap_or_default();
                         let index = payload.int_value.unwrap_or_default();
@@ -7808,7 +7814,29 @@ impl ReplayDriver {
             .filter(|e| e.source_card.is_some() && pending.valid_action_ids.contains(&e.action_id))
             .map(|e| (e.action_id, e.label.clone()))
             .collect();
-        if entries.len() < 2 {
+        // ONE entry offered: DCGO's `MultipleSkills` row proves it listed 2+ effects
+        // (a lone activatable effect is activated without asking,
+        // MultipleSkills.cs:273-278), so the engine filtered at least one that DCGO
+        // kept. The filtered ones are the ones DCGO's `CanActivate` does not weigh
+        // (`parked_trigger_order_filtered_siblings`: a cost preflight, CR 4.3
+        // 15-7-4); without one the row keeps its ordinary path.
+        let mut lone_filtered: Option<Vec<(String, &'static str)>> = None;
+        if entries.len() == 1 && is_order_prompt(pending) && matches!(pending.kind, SelectionKind::TriggerOrder) {
+            let siblings = game.clone().parked_trigger_order_filtered_siblings();
+            if !siblings.is_empty() {
+                let listed = siblings.len() as i64 + 1;
+                if dcgo_index >= listed {
+                    return Some(Err(format!(
+                        "card-less MultipleSkills index {dcgo_index} (DCGO's own ordering, no chosen_effect_card): the                          engine offers ONE trigger ({}) and filters {} more ([{}]), so DCGO's list holds at most                          {listed} effects and cannot have an index {dcgo_index}",
+                        entries[0].1,
+                        siblings.len(),
+                        siblings.iter().map(|(c, why)| format!("{c}: {why}")).collect::<Vec<_>>().join("; ")
+                    )));
+                }
+                lone_filtered = Some(siblings);
+            }
+        }
+        if entries.len() < 2 && lone_filtered.is_none() {
             return None;
         }
         let prompt_text = pending.prompt.clone();
@@ -7845,6 +7873,20 @@ impl ReplayDriver {
                 .cloned();
             (gate_answers, evidence, at as u32)
         };
+        // A cancel row does not discriminate here: both the offered trigger's optional
+        // pick and a filtered sibling's cost pick can be cancelled, so only a row that
+        // names cards or targets can prove which effect DCGO chose.
+        let names_something = |n: &&crate::dcgo_recording::SelectionRow| {
+            n.card_ids.as_ref().is_some_and(|c| !c.is_empty()) || n.targets.as_ref().is_some_and(|t| !t.is_empty())
+        };
+        if let (Some(siblings), None) = (lone_filtered.as_ref(), evidence.as_ref().filter(names_something)) {
+            return Some(Err(format!(
+                "card-less MultipleSkills index {dcgo_index} (DCGO's own ordering, no chosen_effect_card) {AMBIGUOUS_ORDER}:                  the engine offers ONE trigger ({}) and filters {} more ([{}]) that DCGO's list kept, and the actor's                  next row names no card or target (or cancels), so nothing proves DCGO chose the offered trigger and                  not a filtered one",
+                entries[0].1,
+                siblings.len(),
+                siblings.iter().map(|(c, why)| format!("{c}: {why}")).collect::<Vec<_>>().join("; ")
+            )));
+        }
 
         // (entry, label, digest once the evidence row is applied under it, the
         // game the entry leads to before that row)
@@ -7933,57 +7975,7 @@ impl ReplayDriver {
                     probe.decode_action(PASS, actor);
                 }
             } else {
-                // The entry's effect leads with a branch `EffectChoice` that DCGO
-                // folds into the pick itself (BT20-087's "which area?" ahead of
-                // its field pick: DCGO asks one `SelectPermanentEffect` over both
-                // areas, BT20_087.cs:114-127). `step()` meets the row through
-                // `probe_branch_for_row` (the branch whose follow-up accepts the
-                // row, only when exactly one does); the evidence is met the same
-                // way, by the same function.
-                if !self.source.answers_engine_only_prompts()
-                    && probe
-                        .pending_selection
-                        .as_ref()
-                        .is_some_and(|p| {
-                            matches!(p.kind, SelectionKind::EffectChoice)
-                                && !is_order_prompt(p)
-                                && p.selecting_player == actor
-                        })
-                {
-                    if let Some((branch, _)) = self.probe_branch_for_row(&probe, &row, actor, branch_cursor as usize) {
-                        probe.decode_action(branch, actor);
-                    }
-                }
-                // A one-option prompt DCGO resolves without a row stands in
-                // front of the evidence (Owen Dreadnought (EX11-054)'s lone
-                // <Progress> pick, EX11_054.cs:66-69): `step()` answers it
-                // before the row, and so does the probe.
-                self.answer_lone_prompts_before_row(&mut probe, &row, actor, branch_cursor as usize);
-                // A chosen "you may" effect parks its own accept; a pick row is
-                // the acceptance AND the pick (the replay's implied-accept fold).
-                let accept_first = probe.pending_selection.as_ref().is_some_and(|p| {
-                    p.is_optional && p.selecting_player == actor && p.valid_action_ids == [REPLACEMENT_ACCEPT]
-                }) && resolve_next(&probe, &row, 0).is_err();
-                if accept_first {
-                    let mut accepted = probe.clone();
-                    accepted.decode_action(REPLACEMENT_ACCEPT, actor);
-                    if matches!(resolve_next(&accepted, &row, 0), Ok(Some(_))) {
-                        probe = accepted;
-                    }
-                }
-                // A pick row is answered by a PICK prompt of the actor: an order
-                // prompt accepts a card id positionally, which proves nothing.
-                let answers = probe.pending_selection.as_ref().is_some_and(|p| {
-                    p.selecting_player == actor
-                        && !is_order_prompt(p)
-                        && !matches!(p.kind, SelectionKind::OrderedPermutation { .. })
-                }) && matches!(resolve_next(&probe, &row, 0), Ok(Some(a)) if a != PASS);
-                if !answers {
-                    let showing = probe
-                        .pending_selection
-                        .as_ref()
-                        .map(|p| format!("{:?} P{} '{}'", p.kind, p.selecting_player, p.prompt))
-                        .unwrap_or_else(|| "no prompt".into());
+                if let Err(showing) = self.entry_prompt_answers_pick_row(&mut probe, &row, actor, branch_cursor as usize) {
                     rejected.push(format!("{label}: leads to {showing}"));
                     continue;
                 }
@@ -8067,6 +8059,170 @@ impl ReplayDriver {
              games and are not told apart by the next {LOOKAHEAD_ROWS} rows; the recording does not say which effect \
              DCGO activated"
         )))
+    }
+
+    /// The verdict over the order entries `entries` (all of one card): the one
+    /// every branch agrees on when they all lead to the same game, else what the
+    /// actor's following rows prove (`lookahead_trigger_order`).
+    fn same_card_order_verdict(
+        &mut self,
+        game: &Game,
+        actor: PlayerId,
+        entries: &[u16],
+        sources: &[(u16, crate::card_source::CardHandle)],
+        identity_free: bool,
+    ) -> LookaheadVerdict {
+        let branches: Vec<(u16, Game)> = entries
+            .iter()
+            .map(|id| {
+                let mut g = game.clone();
+                g.decode_action(*id, actor);
+                (*id, g)
+            })
+            .collect();
+        let first = order_branch_digest(&branches[0].1, identity_free);
+        if branches.iter().all(|(_, g)| order_branch_digest(g, identity_free) == first) {
+            LookaheadVerdict::Proved(branches[0].0)
+        } else {
+            self.lookahead_trigger_order(branches, self.cursor + 1, sources, identity_free)
+        }
+    }
+
+    /// Meet the pick `row` (the actor's next recorded row, naming cards or
+    /// targets) the way `step()` meets it from the prompt a chosen order entry
+    /// parked: the entry's branch `EffectChoice` folded into the pick, the
+    /// one-option prompts DCGO resolves without a row, and the "you may"
+    /// accept that a pick row implies. `Ok` when the entry's OWN prompt
+    /// (a pick prompt of the actor, never another order prompt) accepts the
+    /// row, leaving `probe` at that prompt; otherwise `Err(what is parked)`.
+    ///
+    /// An order prompt accepts a card id positionally, which proves nothing:
+    /// an entry that only leads back to the order (the other entries still
+    /// waiting) did not consume the row itself.
+    fn entry_prompt_answers_pick_row(
+        &self,
+        probe: &mut Game,
+        row: &crate::dcgo_recording::SelectionRow,
+        actor: PlayerId,
+        branch_cursor: usize,
+    ) -> Result<(), String> {
+        use super::selection_resolve::resolve_next;
+        use crate::action::space::{PASS, REPLACEMENT_ACCEPT};
+        use crate::selection::SelectionKind;
+        let is_order_prompt = |p: &crate::selection::PendingSelection| {
+            matches!(p.kind, SelectionKind::TriggerOrder)
+                || (matches!(p.kind, SelectionKind::EffectChoice) && p.prompt == REPLACEMENT_ORDER_PROMPT)
+        };
+        // The entry's effect leads with a branch `EffectChoice` that DCGO
+        // folds into the pick itself (BT20-087's "which area?" ahead of
+        // its field pick: DCGO asks one `SelectPermanentEffect` over both
+        // areas, BT20_087.cs:114-127). `step()` meets the row through
+        // `probe_branch_for_row` (the branch whose follow-up accepts the
+        // row, only when exactly one does); the evidence is met the same
+        // way, by the same function.
+        if !self.source.answers_engine_only_prompts()
+            && probe
+                .pending_selection
+                .as_ref()
+                .is_some_and(|p| {
+                    matches!(p.kind, SelectionKind::EffectChoice)
+                        && !is_order_prompt(p)
+                        && p.selecting_player == actor
+                })
+        {
+            if let Some((branch, _)) = self.probe_branch_for_row(&*probe, &row, actor, branch_cursor as usize) {
+                probe.decode_action(branch, actor);
+            }
+        }
+        // A one-option prompt DCGO resolves without a row stands in
+        // front of the evidence (Owen Dreadnought (EX11-054)'s lone
+        // <Progress> pick, EX11_054.cs:66-69): `step()` answers it
+        // before the row, and so does the probe.
+        self.answer_lone_prompts_before_row(probe, &row, actor, branch_cursor as usize);
+        // A chosen "you may" effect parks its own accept; a pick row is
+        // the acceptance AND the pick (the replay's implied-accept fold).
+        let accept_first = probe.pending_selection.as_ref().is_some_and(|p| {
+            p.is_optional && p.selecting_player == actor && p.valid_action_ids == [REPLACEMENT_ACCEPT]
+        }) && resolve_next(&*probe, &row, 0).is_err();
+        if accept_first {
+            let mut accepted = probe.clone();
+            accepted.decode_action(REPLACEMENT_ACCEPT, actor);
+            if matches!(resolve_next(&accepted, &row, 0), Ok(Some(_))) {
+                *probe = accepted;
+            }
+        }
+        // A pick row is answered by a PICK prompt of the actor: an order
+        // prompt accepts a card id positionally, which proves nothing.
+        let answers = probe.pending_selection.as_ref().is_some_and(|p| {
+            p.selecting_player == actor
+                && !is_order_prompt(p)
+                && !matches!(p.kind, SelectionKind::OrderedPermutation { .. })
+        }) && matches!(resolve_next(&*probe, &row, 0), Ok(Some(a)) if a != PASS);
+        if answers {
+            Ok(())
+        } else {
+            Err(probe
+                .pending_selection
+                .as_ref()
+                .map(|p| format!("{:?} P{} '{}'", p.kind, p.selecting_player, p.prompt))
+                .unwrap_or_else(|| "no prompt".into()))
+        }
+    }
+
+    /// Of the order entries `entries` (all of one card) that a card-named
+    /// `MultipleSkills` row may have chosen, those whose OWN prompt answers the
+    /// actor's next pick row.
+    ///
+    /// DCGO activates the effect the index chose and asks that effect's
+    /// questions next; when 2+ activatable effects remain afterwards it asks
+    /// `MultipleSkills` AGAIN (MultipleSkills.cs:273-278 activates only a lone
+    /// effect silently), so a pick row straight after the index belongs to the
+    /// chosen effect. An entry that instead leads back to the order prompt (a
+    /// mandatory effect that ran silently on a lone target, its siblings still
+    /// waiting) consumed no row: reading the pick as an implied order pick
+    /// there makes every such entry look as consistent as the one that really
+    /// asked it (Angewomon (EX12-044)'s -4000 effect and its optional hand
+    /// digivolve under one index, raw-20261116T164448Z#g2). The unstamped
+    /// "use it?" yes answers between the index and the pick are skipped
+    /// (a decline, a non-pick next row, or no entry answering leaves
+    /// `entries` unchanged: nothing is proved).
+    fn order_entries_answering_next_pick(&self, game: &Game, actor: PlayerId, entries: &[u16]) -> Vec<u16> {
+        let steps = self.source.steps();
+        let mut at = self.cursor as usize + 1;
+        while let Some(sel) = steps.get(at).and_then(|s| s.selection.as_ref()) {
+            if sel.actor == actor && sel.unstamped && sel.prompt == "generic_bool" {
+                if sel.bool_value != Some(true) {
+                    return entries.to_vec();
+                }
+                at += 1;
+            } else {
+                break;
+            }
+        }
+        let Some(row) = steps.get(at).and_then(|s| s.selection.as_ref()).filter(|n| {
+            n.actor == actor
+                && n.int_value.is_none()
+                && n.bool_value.is_none()
+                && n.count.is_none()
+                && (n.card_ids.as_ref().is_some_and(|c| !c.is_empty())
+                    || n.targets.as_ref().is_some_and(|t| !t.is_empty()))
+        }) else {
+            return entries.to_vec();
+        };
+        let mut keep = Vec::new();
+        for &id in entries {
+            let mut probe = game.clone();
+            probe.decode_action(id, actor);
+            let row = remap_selection_targets(&probe, row).unwrap_or_else(|| row.clone());
+            if self.entry_prompt_answers_pick_row(&mut probe, &row, actor, at).is_ok() {
+                keep.push(id);
+            }
+        }
+        if keep.is_empty() {
+            entries.to_vec()
+        } else {
+            keep
+        }
     }
 
     /// Replay up to [`LOOKAHEAD_ROWS`] recorded rows from `from` under each
