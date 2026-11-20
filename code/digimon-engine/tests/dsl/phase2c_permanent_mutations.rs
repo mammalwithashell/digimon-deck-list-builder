@@ -215,6 +215,7 @@ fn de_digivolve_amount_one_pops_one_source() {
         amount: Some(1),
         amount_fn: None,
         stop_at_level: None,
+        declared: false,
     };
     let mut bindings = Bindings::new();
     bindings.insert_permanent("tgt", handle);
@@ -337,6 +338,7 @@ fn de_digivolve_amount_fn_uses_own_digimon_count_and_caps_to_sources() {
             delta: 1,
         }),
         stop_at_level: None,
+        declared: false,
     };
     let mut bindings = Bindings::new();
     bindings.insert_permanent("target", target);
