@@ -3163,14 +3163,12 @@
       "untested_constructs": []
     },
     "BT11-042": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
-      "has_card_test": false,
+      "has_card_test": true,
       "needs_card_test": true,
-      "reason": "untested_card",
-      "reasons": [
-        "untested_card"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT11-043": {
@@ -47033,17 +47031,17 @@
     }
   },
   "counts": {
-    "admissible": 1205,
+    "admissible": 1206,
     "diverged_no_quirk": 0,
     "failed_verdict": 16,
     "registered": 4483,
     "unregistered": 0,
-    "untested_card": 19,
+    "untested_card": 18,
     "untested_lowering": 3243
   },
-  "generated_at": "2026-11-18T15:24:40+00:00",
+  "generated_at": "2026-11-20T04:32:43+00:00",
   "sources": {
-    "behavioral_test_modules_sha256": "8d1b186e2d5fb96faf4799138d468b2cc9db4f5803ce9978cc35e2bbff9c17f9",
+    "behavioral_test_modules_sha256": "89944607eb49d3ab1b28d382ac2bf898ddbc4639c8fcf8660781d0deff304c77",
     "card_registry_sha256": "9a604ff3e4feb20a16ff8ce38febf866191d6d2b9697162e5b7e002332799599",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
     "lowering_coverage_sha256": "0101a3575f7beb4e73267eea748024cf12d0fa150a7e7ccd6ab49e67d43087a9",
