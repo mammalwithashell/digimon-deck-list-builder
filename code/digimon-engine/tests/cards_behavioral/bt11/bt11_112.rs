@@ -166,3 +166,36 @@ fn bt11_112_security_free_play_and_no_on_play_target() {
         ID
     );
 }
+/// A refired effect keeps the source Digimon's identity: "this Digimon" in
+/// BT12-029's [When Digivolving] is the Digimon Rina's effect borrowed it from,
+/// so it must be offered next to the blue Tamers (CR 4.3 §15-15-7).
+#[test]
+fn bt11_112_refired_wd_keeps_this_digimon_identity() {
+    let mut r = base()
+        .dsl_card("BT12-029")
+        .expect("BT12-029 loads")
+        .start();
+    let rina = r.place_on_field(0, ID, Some(0));
+    let ulforce = r.place_on_field(0, "BT12-029", Some(0));
+    r.game.suspend(ulforce);
+    assert!(r.pending_is_optional());
+    pick(&mut r, 0);
+    assert!(r.game.players[0].battle_area[rina.index as usize].is_suspended);
+    let v = r.pending_selection_view().expect("unsuspend choice");
+    assert_eq!(
+        v.valid_action_ids.len(),
+        2,
+        "the Digimon itself and the suspended blue Tamer are both offered"
+    );
+    // Pick the Digimon itself (the permanent at its own board index).
+    let mut found = false;
+    for id in v.valid_action_ids.clone() {
+        let mut c = DebugRunner::wrap(r.game.clone());
+        c.execute_action(0, id).unwrap();
+        if !c.game.players[0].battle_area[ulforce.index as usize].is_suspended {
+            assert!(c.game.players[0].battle_area[rina.index as usize].is_suspended);
+            found = true;
+        }
+    }
+    assert!(found, "choosing the Digimon unsuspends it");
+}
