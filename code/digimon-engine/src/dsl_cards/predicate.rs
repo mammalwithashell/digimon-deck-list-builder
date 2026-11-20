@@ -1696,6 +1696,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.source_count.is_none()
         && pred.link_card_count.is_none()
         && pred.can_attack.is_none()
+        && pred.has_refireable_effect.is_none()
         && pred.can_change_orientation.is_none()
         && pred.can_play_from_effect_without_cost.is_none()
         && pred.can_play_or_use_from_effect.is_none()
@@ -3464,6 +3465,7 @@ fn eval_card_fields(
         && (pred.source_count.is_some()
             || pred.link_card_count.is_some()
             || pred.can_attack.is_some()
+            || pred.has_refireable_effect.is_some()
             || pred.can_change_orientation.is_some())
     {
         return false;
@@ -5087,6 +5089,16 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    if let Some(timing) = &pred.has_refireable_effect {
+        // G-DSL-HAS-REFIREABLE-EFFECT: DCGO BT24_102.cs:93-98 offers only the
+        // Digimon whose effect list holds a refire candidate.
+        let Some(filter) = crate::effect::TimingFilter::from_refire_timing(timing) else {
+            return false;
+        };
+        if !rctx.game.has_refireable_effect(handle, filter) {
+            return false;
+        }
+    }
     if let Some(want) = pred.has_on_deletion_effect {
         let observed = permanent_has_on_deletion_effect(perm, rctx);
         if observed != want {
@@ -5610,6 +5622,7 @@ fn eval_breeding_permanent_fields(
         && pred.can_unsuspend.is_none()
         && pred.owner_can_add_security.is_none()
         && pred.can_attack.is_none()
+        && pred.has_refireable_effect.is_none()
 }
 
 fn kind_matches(want: CompiledCardKind, got: CardKind) -> bool {

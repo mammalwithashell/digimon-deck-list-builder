@@ -1641,6 +1641,7 @@ fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
         || pred.can_unsuspend.is_some()
         || pred.owner_can_add_security.is_some()
         || pred.can_attack.is_some()
+        || pred.has_refireable_effect.is_some()
         || pred.has_face_down_source.is_some()
         || pred.owner.is_some()
         || pred.other.is_some()

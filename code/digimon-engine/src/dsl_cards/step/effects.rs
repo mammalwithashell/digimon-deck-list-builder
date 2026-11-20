@@ -47,11 +47,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             target_attribution,
         } => {
             if let Some(source) = resolve_permanent_ref(source, ctx, bindings) {
-                let filter = if timing == "on_play_or_when_digivolving" {
-                    Some(TimingFilter::Either)
-                } else {
-                    TimingFilter::from_timing_key(timing)
-                };
+                let filter = TimingFilter::from_refire_timing(timing);
                 if let Some(filter) = filter {
                     let _ = ctx.refire_target_effect_inner(
                         source,

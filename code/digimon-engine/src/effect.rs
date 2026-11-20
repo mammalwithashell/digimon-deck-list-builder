@@ -187,6 +187,16 @@ pub enum TimingFilter {
 }
 
 impl TimingFilter {
+    /// The timing a `refire_effect` step / `has_refireable_effect` predicate
+    /// names: a single timing key or the either-of pair.
+    pub fn from_refire_timing(timing: &str) -> Option<Self> {
+        if timing == "on_play_or_when_digivolving" {
+            Some(Self::Either)
+        } else {
+            Self::from_timing_key(timing)
+        }
+    }
+
     pub fn from_timing_key(key: &str) -> Option<Self> {
         match key {
             "on_play" => Some(Self::OnPlay),

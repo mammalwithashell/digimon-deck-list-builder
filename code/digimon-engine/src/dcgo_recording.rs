@@ -329,7 +329,12 @@ pub struct SelectionRow {
     /// without it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card_indexes: Option<Vec<i32>>,
-    /// Zone positions picked, when DCGO knows them (hand indexes etc.).
+    /// Zone positions picked, when DCGO knows them (hand indexes etc.). For a
+    /// `SelectCardEffect` the converter writes DCGO's position of each pick in the
+    /// candidate list the prompt showed (`SetTargetCardAndIndicies`' third
+    /// argument); the replay reads it only to check a refire's duplicate effect
+    /// pick against the number of entries DCGO lists (`ReplayDriver::
+    /// refire_duplicate_effect_pick_fold`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub indexes: Option<Vec<i32>>,
     /// SelectCountEffect payload: the VALUE chosen (a digivolution cost, a

@@ -458,6 +458,21 @@ pub struct PredicateSpec {
     /// shows no prompt. G-DSL-CAN-ATTACK-PREDICATE.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_attack: Option<CanAttackPredicate>,
+    /// Permanent-subject leaf: the Digimon's top card carries at least one
+    /// effect a refire could activate right now (`refire_effect`, "activate 1
+    /// [On Play] or [When Digivolving] effect of 1 of your [X] Digimon"), and
+    /// that effect still has a use left this turn. The value is the refire's
+    /// timing: `on_play`, `when_digivolving` or `on_play_or_when_digivolving`.
+    /// Mirrors DCGO BT24_102.cs:93-98, where the Digimon pick's
+    /// `canTargetCondition` requires `permanent.EffectList(OnEnterFieldAnyone)
+    /// .Any(CanBeEffectCandidate)`, so a Digimon with nothing to activate is
+    /// never offered and an all-ineligible board opens no prompt. It checks the
+    /// refire's own candidates only (timing + `can_be_refired` + the
+    /// once-per-turn slot); a card-specific activation condition (DCGO
+    /// `CanActivateCondition`) is evaluated when the effect runs.
+    /// G-DSL-HAS-REFIREABLE-EFFECT.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_refireable_effect: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_keyword: Option<String>,
     /// Permanent-subject predicate. True when the candidate currently has

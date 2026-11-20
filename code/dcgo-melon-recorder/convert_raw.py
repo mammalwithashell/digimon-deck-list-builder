@@ -151,6 +151,18 @@ def pick_card_indexes(args, card_ids):
     return list(args[1])
 
 
+def pick_list_positions(args, card_ids):
+    """The position of each pick in the candidate list DCGO showed, parallel to `card_ids`, or None.
+
+    SelectCardEffect.SetTargetCardAndIndicies(playerID, int[] cardIndexes, int[] positions): `positions` is
+    the third argument, one non-negative int per picked card."""
+    if len(args) < 3 or not isinstance(args[2], list) or len(args[2]) != len(card_ids):
+        return None
+    if not all(isinstance(k, int) and not isinstance(k, bool) and k >= 0 for k in args[2]):
+        return None
+    return list(args[2])
+
+
 def _hand_listing(row, seat):
     """The (card_id, card_index) list of `seat`'s hand that a PlayCardClass.PlayCard row logged (Core.cs OwnerHandJson:
     the owner's HandCards in hand order, each with its CardIndex, taken BEFORE the played card leaves), or None."""
@@ -1064,29 +1076,19 @@ def convert(rows, cards, allow_truncated=False):
         if m == "SelectCardEffect.SetTargetCardAndIndicies" and r.get("stray"):
             continue  # a pick DCGO asked among identical candidates and the engine did not (the mod marks it)
         if m == "SelectCardEffect.SetTargetCardAndIndicies" and "card_ids" in r:
-            # Homeros refires BT24-101's sole shared On Play/When
-            # Digivolving effect. DCGO asks for the card after the target;
-            # the engine has already resolved that unique effect from the
-            # chosen Digimon, so the card row adds no further choice.
-            if (r["card_ids"] == ["BT24-101"] and len(out) >= 3
-                    and out[-1].get("prompt") == "SelectPermanentEffect"
-                    and out[-1].get("actor") == a[0]
-                    and out[-2].get("prompt") == "OptionalSkill"
-                    and out[-2].get("bool_value") is True
-                    and out[-3].get("chosen_effect_card") == "BT24-102"):
-                targets = out[-1].get("targets") or []
-                if len(targets) == 1:
-                    target = targets[0]
-                    board = out[-1].get("board_p%s" % target["player"]) or []
-                    if 0 <= target["frame"] < len(board) and board[target["frame"]] == "BT24-101":
-                        inferred.append("unique BT24-101 refired effect after Homeros target (raw seq %s)" % r.get("seq"))
-                        continue
             row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectCardEffect", "phase": "Main"}
             if r["card_ids"] and None not in r["card_ids"]:
                 row["card_ids"] = r["card_ids"]
                 indexes = pick_card_indexes(a, r["card_ids"])
                 if indexes is not None:
                     row["card_indexes"] = indexes
+                # SetTargetCardAndIndicies(playerID, int[] cardIndexes, int[] positions): the third list is the
+                # position of each pick in the candidate list DCGO showed. The replay checks it against the
+                # number of entries DCGO builds for a refired effect (ReplayDriver::
+                # refire_duplicate_effect_pick_fold); no other reader uses it.
+                positions = pick_list_positions(a, r["card_ids"])
+                if positions is not None:
+                    row["indexes"] = positions
             elif not r["card_ids"]:
                 row["cancel"] = True
             else:

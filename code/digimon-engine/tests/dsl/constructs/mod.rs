@@ -53,3 +53,4 @@ mod ignore_level_digivolve_candidate;
 mod paid_digivolve_candidate_payment;
 mod paid_digivolve_host_pick;
 mod this_card_can_digivolve_onto;
+mod refire_target_eligibility;

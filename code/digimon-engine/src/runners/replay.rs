@@ -3656,6 +3656,47 @@ impl ReplayDriver {
             super::selection_resolve::resolve_next
         };
 
+        // DCGO's duplicate-candidate effect pick after a refire ("Select 1
+        // effect to activate." over several effect objects that are ONE effect
+        // in the engine). See `refire_duplicate_effect_pick_fold`.
+        if dcgo_folds && payload.prompt == "SelectCardEffect" && payload.engine_action.is_none() {
+            if let Some(outcome) = self.refire_duplicate_effect_pick_fold(game, payload) {
+                let (phase_before, memory_before) = (game.current_phase.py_name().to_string(), game.memory);
+                match outcome {
+                    Ok(note) => {
+                        self.notes.push(note);
+                        game.last_collapsed_refire = None;
+                        self.cursor += 1;
+                        return ReplayStepResult {
+                            step_number: self.cursor,
+                            player_id: payload.actor,
+                            action_id: 0,
+                            phase_before,
+                            phase_after: game.current_phase.py_name().to_string(),
+                            memory_before,
+                            memory_after: game.memory,
+                            turn_number: game.turn_count,
+                            is_game_over: game.game_over,
+                            winner_id: game.winner,
+                            divergences: Vec::new(),
+                        };
+                    }
+                    Err(reason) => {
+                        self.divergences.push(Divergence {
+                            step: self.cursor,
+                            action_id: 0,
+                            actor: payload.actor,
+                            phase: payload.phase.clone(),
+                            kind: DivergenceKind::SelectionResolution { reason },
+                            board: describe_board(game),
+                        });
+                        self.paused = true;
+                        return self.no_progress_result(game);
+                    }
+                }
+            }
+        }
+
         // An effect-initiated DNA digivolve: DCGO's hand row + two material
         // root rows answer the engine's partner -> hand prompt pair.
         if dcgo_folds {
@@ -6070,6 +6111,128 @@ impl ReplayDriver {
                 events.len()
             )
         })
+    }
+
+    /// DCGO's extra "Select 1 effect to activate." row after a REFIRE
+    /// (BT24-102 Homeros, "activate 1 [On Play] or [When Digivolving] effect of
+    /// 1 of your [Olympos XII] trait Digimon"), consumed ONLY when the engine's
+    /// own state proves it is DCGO's duplicate-candidate prompt.
+    ///
+    /// DCGO (BT24_102.cs:173-215) lists the chosen Digimon's candidate effects
+    /// (`EffectList(OnEnterFieldAnyone).Filter(CanBeEffectCandidate)`) and, from
+    /// two candidates up, opens a mandatory `SelectCardEffect` over their source
+    /// cards. A printed `[On Play] [When Digivolving] X` effect is built as one
+    /// effect object per timing tag (`ActivateClassesForSharedEffects`,
+    /// CardEffectFactory.cs:812-880; BT24_041.cs:142-166), so a Digimon with that
+    /// single effect already makes two candidates, both naming the same card, and
+    /// every choice runs the same shared coroutine. The engine has ONE clause for
+    /// it (CR 4.3 15-15-7-2: one printed effect, no choice between its timings;
+    /// `collapse_combined_timing_clauses`) and parks nothing. The recorder
+    /// logs only the picked card (plus its position in DCGO's list), so the row
+    /// then meets whatever prompt the refired effect parks (BT24-041: "play 1 cost
+    /// 5 or lower Iliad card") and shifts every later row.
+    ///
+    /// `None` when the row is not a candidate for this fold at all (no collapsed
+    /// refire on record, or a different card named): the normal resolver reads it.
+    /// Otherwise `Ok(note)` when ALL of these hold, `Err(why)` when any fails:
+    /// * the engine recorded a refire (`Game::last_collapsed_refire`) that ran
+    ///   ONE collapsed combined-timing clause standing for `dcgo_entries >= 2`
+    ///   DCGO entries, and that refire happened while the row BEFORE this one
+    ///   was applied (`first_seen_row`),
+    /// * the row's actor controls that refire and the row names the carrier's
+    ///   own card (the engine's candidate), not another card,
+    /// * the carrier is still on the field and the row's DCGO CardIndex, when
+    ///   the replay knows it, is the carrier's own card (not another copy),
+    /// * the row's position in DCGO's list, when the converter recorded it
+    ///   (`indexes`), is one of the `dcgo_entries` entries, and
+    /// * the engine has no effect-pick prompt of its own over that card parked
+    ///   (a real two-effect choice is answered by `resolve_next`, never here).
+    ///
+    /// The choice cannot change the game: every entry is the same effect.
+    fn refire_duplicate_effect_pick_fold(
+        &self,
+        game: &Game,
+        payload: &crate::dcgo_recording::SelectionRow,
+    ) -> Option<Result<String, String>> {
+        let rec = game.last_collapsed_refire.as_ref()?;
+        let [card] = payload.card_ids.as_deref()? else {
+            return None;
+        };
+        if *card != rec.carrier_card_id || payload.cancel == Some(true) {
+            return None;
+        }
+        let row = self.cursor;
+        let grantor = game
+            .card_data_for_handle(rec.grantor)
+            .map(|d| d.card_id.clone())
+            .unwrap_or_else(|| "?".to_string());
+        let refuse = |why: String| -> Option<Result<String, String>> {
+            Some(Err(format!(
+                "row {row}: P{}'s SelectCardEffect {card:?} looks like DCGO's \"Select 1 effect to activate.\" after \
+                 {grantor}'s refire of {} (the engine ran one effect for it), but {why}",
+                payload.actor, rec.carrier_card_id
+            )))
+        };
+        if rec.first_seen_row != Some(row) {
+            return refuse(format!(
+                "that refire did not happen while row {} was applied (first seen at row {:?}): the row cannot be \
+                 the prompt that followed it",
+                row.wrapping_sub(1),
+                rec.first_seen_row
+            ));
+        }
+        if payload.actor != rec.controller {
+            return refuse(format!("the refire belongs to P{}", rec.controller));
+        }
+        let carrier_top = game
+            .players
+            .get(rec.carrier.player as usize)
+            .and_then(|p| p.battle_area.get(rec.carrier.index as usize))
+            .map(|perm| perm.top_card().handle());
+        if carrier_top != Some(rec.carrier_card) {
+            return refuse("the refired Digimon is no longer on the field".into());
+        }
+        if let Some(sel) = game.pending_selection.as_ref() {
+            let own_choice = matches!(sel.kind, crate::selection::SelectionKind::EffectChoice)
+                && sel.effect_choices.iter().flatten().any(|e| e.source_card == Some(rec.carrier_card));
+            if own_choice {
+                return refuse(format!(
+                    "the engine has its own effect choice '{}' parked for that card",
+                    sel.prompt
+                ));
+            }
+        }
+        if let Some([k]) = payload.card_indexes.as_deref() {
+            if let Some(h) = self.dcgo_cards.get(k) {
+                if *h != rec.carrier_card {
+                    return refuse(format!(
+                        "DCGO card {k} is another copy of {card} than the one that was refired"
+                    ));
+                }
+            }
+        }
+        let position = match payload.indexes.as_deref() {
+            None => None,
+            Some([p]) if *p >= 0 && (*p as usize) < rec.dcgo_entries => Some(*p),
+            Some(other) => {
+                return refuse(format!(
+                    "its position in DCGO's candidate list {other:?} is not one of the {} entries DCGO builds for \
+                     that one effect",
+                    rec.dcgo_entries
+                ));
+            }
+        };
+        Some(Ok(format!(
+            "row {row}: SelectCardEffect {card:?} of P{} consumed with no effect: it is DCGO's \"Select 1 effect to \
+             activate.\" over the {} effect objects DCGO builds for {}'s ONE printed [On Play]/[When Digivolving] \
+             effect (one per timing tag, CardEffectFactory.ActivateClassesForSharedEffects), refired by {grantor}; \
+             the engine ran that one effect and asks nothing, and every entry runs the same coroutine, so the \
+             choice{} cannot change the game",
+            payload.actor,
+            rec.dcgo_entries,
+            rec.carrier_card_id,
+            position.map(|p| format!(" (position {p})")).unwrap_or_default()
+        )))
     }
 
     /// Whether the engine resolved the effect a forced DCGO count
@@ -8934,6 +9097,11 @@ impl ReplayDriver {
     fn step_row(&mut self, game: &mut Game) -> ReplayStepResult {
         if self.is_complete() || self.paused {
             return self.no_progress_result(game);
+        }
+        // A refire record the engine left for the previous row is stamped with
+        // THIS row (`refire_duplicate_effect_pick_fold` reads the stamp).
+        if let Some(rec) = game.last_collapsed_refire.as_mut() {
+            rec.first_seen_row.get_or_insert(self.cursor);
         }
         if !self.source.steps()[self.cursor as usize]
             .selection

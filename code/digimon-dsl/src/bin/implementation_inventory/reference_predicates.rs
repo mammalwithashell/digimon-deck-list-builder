@@ -70,6 +70,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             can_change_orientation,
             controller_can_add_security,
             can_attack,
+            has_refireable_effect,
             has_keyword,
             has_security_attack_change,
             has_on_deletion_effect,
@@ -428,6 +429,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             "UNCLASSIFIED_STRING",
         );
         can_attack.walk(c, &format!("{}.can_attack", path), "UNCLASSIFIED_STRING");
+        has_refireable_effect.walk(c, &format!("{}.has_refireable_effect", path), "UNCLASSIFIED_STRING");
         controller_can_add_security.walk(c, &format!("{}.controller_can_add_security", path), "UNCLASSIFIED_STRING");
         has_keyword.walk(c, &format!("{}.has_keyword", path), "UNCLASSIFIED_STRING");
         has_security_attack_change.walk(
@@ -1824,6 +1826,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             is_unsuspended,
             can_change_orientation,
             can_attack,
+            has_refireable_effect,
             has_keyword,
             has_security_attack_change,
             has_on_deletion_effect,
@@ -2179,6 +2182,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             "UNCLASSIFIED_STRING",
         );
         can_attack.walk(c, &format!("{}.can_attack", path), "UNCLASSIFIED_STRING");
+        has_refireable_effect.walk(c, &format!("{}.has_refireable_effect", path), "UNCLASSIFIED_STRING");
         has_keyword.walk(c, &format!("{}.has_keyword", path), "UNCLASSIFIED_STRING");
         has_security_attack_change.walk(
             c,
