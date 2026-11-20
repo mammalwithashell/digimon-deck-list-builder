@@ -388,9 +388,28 @@ No blocking residual for this cluster. Not run: cargo test --lib, dsl suite, and
 
 ## Census after round 2
 
-<!-- PLACEHOLDER: the verify phase fills this section (replay census over the recorded games on this branch; do not paste deck or hand contents). -->
+Census run with the release `dcgo-replay` built from this branch (539fa1687, before the repair commit) over the recorder folder. The folder now holds 85 games: the 65 from round 1 plus 20 recorded on 2026-11-19. Counts and card IDs only; no deck or hand contents.
 
-_Not yet filled._
+**Replay-clean games.** On the 65 shared games the clean count went 18 to 20 (the round-1 report's "6 of 65" counted only a narrower set; the triage JSON shows 18 raw passes, 10 of them real games of 4+ turns). Real-game passes went 10 to 12. 0 regressions: every round-1 pass still passes. Newly clean: `20261115T153822Z#g7` and `20261116T045756Z#g6`. Across all 85 games: 20 pass plus 4 prefix-clean truncated recordings. None of the 20 new games replays clean.
+
+**Movement among the 39 shared games that fail in both rounds:** 35 first divergences moved later in the game, 4 are unchanged, 0 moved earlier; 37 changed defect kind. So the round-2 fixes did advance most games, but the next defect in line stopped them before the end.
+
+**EX13 pool seat** (a seat deck with at least 80% of its cards in the 264-card training-pool core): 72 of 85 games have one. Of the 56 shared pool-seat games, 18 replay clean (16 in round 1), 12 of them real games. 0 of the 16 new pool-seat games are clean.
+
+**Training gate.** All 21 distinct EX13 training lists are fully admissible in `data/card_admissibility.json` on this branch and on the round-1 branch, with 0 blocking cards in either. No pool card's admissibility entry changed. Round 2 modified the pool cards BT24-030, BT24-102 and EX12-021 and newly authored none. Replay failures do not gate training; they are faithfulness findings.
+
+### Round-3 list (62 failing games with a first divergence; 3 more are not games)
+
+36 fall in known residual families, 20 are new defects, 6 are on the recording or converter side.
+
+1. Duplicate-copy / same-card MultipleSkills identity, 15 games (EX13-053, BT24-034, BT24-031, ST24-14, ST24-13, BT25-051, AD1-021, BT16-084, BT17-023, EX13-023, BT24-084 with BT25-030). The raw logs do carry `board_indexes`/`card_index` keys, so the converted rows may be losing the copy identity. Investigate the converter first.
+2. EX12-069 activation-condition prompt: the engine offers it, DCGO skips it. Needs a `level_eq_event_target` predicate.
+3. BT24-041 play mask ignores the `before_pay_cost` reduction. The illegal-digivolve/play shape recurs in two further games.
+4. Deck-order prompt shape: the engine parks "Place remaining cards on deck in any order" where DCGO records a 2-card SelectCardEffect row (BT13-007, EX10-046). New, and cheap to fix in one place.
+5. BT25-092 zone-menu bool fold.
+6. Digivolution cost-route ambiguity and alt-cost (AD1-022, plus two more games).
+7. Count-as-optional-gate rows (SelectCountEffect) against an engine parked prompt, including BT24-034 where the recorder does not log candidates.
+8. New engine-offers-extra or misses-effect findings: the declare-a-blocker prompt, BT21-069 hand pick, Kurisarimon play optional effect never offered, EX5-054 name filter missing BT14-097, P-249 trigger not queued, the Cerberusmon: Werewolf Mode trigger order, RevealBucket two-bucket order (BT24-068, EX10-049), and the TriggerOrder seat/extra prompt.
 
 ## Integration build status
 
