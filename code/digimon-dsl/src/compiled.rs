@@ -2387,6 +2387,9 @@ pub enum CompiledStep {
         from_hand: CompiledBindingRef,
         cost: CompiledCostDelta,
         ignore_requirements: bool,
+        /// Name the merged (DNA-digivolved) permanent is bound under after a
+        /// successful merge. G-DSL-DNA-RESULT-BINDING.
+        bind_as: Option<String>,
     },
     /// DNA digivolve where `target` is a battle-area permanent and
     /// `hand_partner` is the second DNA material drawn from hand; the merged

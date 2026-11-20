@@ -3152,6 +3152,12 @@ pub struct EffectDnaDigivolveArgs {
     pub cost: CostDelta,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,
+    /// Bind the MERGED permanent (the DNA-digivolved Digimon) after a
+    /// successful digivolve, so later steps can address "that DNA digivolved
+    /// Digimon" (e.g. `may_attack_now: { attacker: <name> }`, EX8-060
+    /// Myotismon). Unset on a rejected/failed merge. G-DSL-DNA-RESULT-BINDING.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 /// `effect_initiated_dna_digivolve_hand_partner:` — DNA digivolve where one

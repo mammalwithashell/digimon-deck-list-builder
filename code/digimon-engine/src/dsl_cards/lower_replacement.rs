@@ -1596,6 +1596,7 @@ impl DelayFieldDnaDigivolveFlow {
             from_hand,
             cost,
             ignore_requirements,
+            ..
         }] = process
         else {
             return None;

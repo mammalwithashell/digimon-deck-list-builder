@@ -18836,5 +18836,11 @@
       }
     ]
   },
-  "_note_EX12_dual_colour_evo_costs": "Dual-colour digivolve circles (EX12-041/055/058/059/060/064): digimoncard.io drops the second colour's circle. The DCGO client (card.CostList -> 'Which digivolution cost do you pay?' SelectCountEffect rows in the owner's PvP recordings: Thundermon EX12-041 onto black Hagurumon {2,3}; Megadramon EX12-064 onto black Guardromon {3,4}) shows both circles exist at the same level and memory cost; the official DB bundles for these cards are absent, so the DCGO behaviour is the evidence (same shape as EX13-053 / EX12-061)."
+  "_note_EX12_dual_colour_evo_costs": "Dual-colour digivolve circles (EX12-041/055/058/059/060/064): digimoncard.io drops the second colour's circle. The DCGO client (card.CostList -> 'Which digivolution cost do you pay?' SelectCountEffect rows in the owner's PvP recordings: Thundermon EX12-041 onto black Hagurumon {2,3}; Megadramon EX12-064 onto black Guardromon {3,4}) shows both circles exist at the same level and memory cost; the official DB bundles for these cards are absent, so the DCGO behaviour is the evidence (same shape as EX13-053 / EX12-061).",
+  "EX11-059": {
+    "type_eng": [
+      "LIBERATOR",
+      "NSo"
+    ]
+  }
 }

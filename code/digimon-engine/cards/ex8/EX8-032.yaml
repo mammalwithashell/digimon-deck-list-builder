@@ -1,0 +1,53 @@
+# EX8-032 Apemon — Digimon, Yellow, Lv.4, cost 3, 4000 DP. Traits: Beastkin, NSo.
+# Attribute: Vaccine (form Champion).
+#
+# Printed text (official Bandai DB, data/card_bundles/EX8-032.md):
+#   [Digivolve] Yellow Lv.3 / cost 2
+#   [Digivolve] Lv.3 w/[NSo] trait: Cost 2
+#   Inherited Effect
+#   [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP
+#   for the turn.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX8/Yellow/EX8_032.cs
+#   - AddSelfDigivolutionRequirementStaticEffect: top card level 3 AND
+#     EqualsTraits("NSo"), cost 2.
+#   - OnAllyAttack, inherited, OPT (hash "ChangeDP_EX8_032"), NOT optional
+#     (isOptional: false); CanActivate = the carrier is on the battle area.
+#     Body: a MANDATORY pick (canNoSelect: false) of 1 opponent Digimon that
+#     gets -2000 DP until the end of the turn (UntilEachTurnEnd).
+
+card: EX8-032
+name: Apemon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 3
+dp: 4000
+traits: [Beastkin, NSo]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: NSo
+    cost: 2
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: shrunk
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -2000 DP for the turn"
+      - add_dp_modifier:
+          target: shrunk
+          value: -2000
+          expiry: end_of_turn

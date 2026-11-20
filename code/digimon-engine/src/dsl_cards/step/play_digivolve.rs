@@ -1260,6 +1260,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             from_hand,
             cost,
             ignore_requirements,
+            bind_as,
         } => {
             let a = match resolve_binding_ref(target_a, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
@@ -1292,6 +1293,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if let Some(played) = success {
                 bindings.record_digivolved(played);
                 super::pin_evolved_source_carrier(ctx.game, ctx.source_card, played, bindings);
+                if let Some(name) = bind_as {
+                    bindings.insert_permanent(name, played);
+                }
             }
             true
         }

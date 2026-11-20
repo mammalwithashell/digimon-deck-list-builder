@@ -1,0 +1,167 @@
+# EX8-060 Myotismon — Digimon, Purple, Lv.5, cost 7, 7000 DP. Traits: Undead,
+# NSo. Attribute: Virus (form Ultimate).
+#
+# Printed text (official Bandai DB, data/card_bundles/EX8-060.md):
+#   [Digivolve] Purple Lv.4 / cost 3
+#   [Digivolve] Lv.4 w/[NSo] trait: Cost 3
+#   [When Attacking] You may play 1 [NSo] trait Digimon card with a play cost of
+#     3 or less from your trash without paying the cost.
+#   [Your Turn] [Once Per Turn] When your Digimon are played or digivolve, if
+#     any of them have the [NSo] trait, 2 of your Digimon may DNA digivolve into
+#     a Digimon card with the [NSo] trait in the hand. Then, that DNA digivolved
+#     Digimon may attack.
+#   Inherited Effect
+#   [When Attacking] [Once Per Turn] By deleting 1 of your other Digimon, this
+#     Digimon unsuspends.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX8/Purple/EX8_060.cs
+#   - Alt digivolve: top card EqualsTraits("NSo") at level 4, cost 3.
+#   - [When Attacking] (isOptional false, skippable): a `canNoSelect: true`
+#     trash pick (Digimon, HasPlayCost, play cost <= 3, EqualsTraits("NSo"),
+#     CanPlayAsNewPermanent(payCost: false)) -> play free.
+#   - [Your Turn] OPT (hash "DNADigivolve_EX8_060"), isOptional TRUE: triggers
+#     on OnEnterFieldAnyone for an own Digimon played/digivolved whose top card
+#     has the NSo trait (IsPermanentExistsOnOwnerBattleAreaDigimon + CardTraits
+#     contains "NSo"); CanActivate = an NSo Digimon in hand that
+#     `CanPlayJogress(true)`. Body: DNADigivolvePermanentsIntoHandOrTrashCard
+#     (payCost: true) -> successProcess: if the merged permanent can attack, a
+#     SelectAttackEffect for IT (the DNA digivolved Digimon).
+#   - Inherited [When Attacking] OPT (hash "Unsuspend_EX8_060"), skippable: a
+#     `canNoSelect: true` pick of another own Digimon; the pick is deleted and,
+#     if the deletion succeeded and this permanent still has a top card, it is
+#     unsuspended. Declining refunds the use (RemoveUse when nothing was used).
+
+card: EX8-060
+name: Myotismon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 7000
+traits: [Undead, NSo]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: NSo
+    cost: 3
+
+effects:
+  # ─── [When Attacking] may play 1 [NSo] play cost <= 3 from trash free ───────
+  - when: when_attacking
+    summary: "[When Attacking] You may play 1 [NSo] trait Digimon card with a play cost of 3 or less from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: nso_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: NSo
+              - play_cost_lte: 3
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 [NSo] trait Digimon card with a play cost of 3 or less from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: nso_pick }
+
+  # ─── [Your Turn][OPT] NSo Digimon played/digivolved -> 2 Digimon may DNA ────
+  #     digivolve into an [NSo] Digimon in hand; then it may attack ────────────
+  #
+  # Trigger = DCGO OnEnterFieldAnyone gated on an OWN Digimon being played
+  # (CanTriggerOnPermanentPlay) or digivolving (CanTriggerWhenPermanentDigivolving)
+  # whose top card has the [NSo] trait, on the owner's turn. `on_ally_played`
+  # only scans the playing player's observer zones; `event_target_owner: you`
+  # carries the own-Digimon gate for the digivolve half (EX8-066 idiom).
+  #
+  # Body = DNADigivolvePermanentsIntoHandOrTrashCard: hand pick of the result
+  # (canNoSelect true), then the 2-permanent pick, then PlayCard with payCost.
+  # `dna_field_pair` admits only results/pairs that can DNA right now at their
+  # printed cost (CanPlayJogress(true)). successProcess: the MERGED permanent
+  # may attack when it CanAttack -> `bind_as` names the merged Digimon and
+  # `may_attack_now` runs for IT ("that DNA digivolved Digimon").
+  - when: [on_ally_played, on_digivolve]
+    once_per_turn: true
+    optional: true
+    active_when: { your_turn: true }
+    condition: { event_target_trait_has: NSo }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    summary: "[Your Turn][Once Per Turn] When your Digimon are played or digivolve, if any of them have the [NSo] trait, 2 of your Digimon may DNA digivolve into a Digimon card with the [NSo] trait in the hand. Then, that DNA digivolved Digimon may attack"
+    process:
+      - select_hand:
+          of: you
+          bind_as: dna_card
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: NSo
+              - dna_field_pair: { role: result }
+          prompt: "2 of your Digimon may DNA digivolve into a Digimon card with the [NSo] trait in the hand"
+      - if:
+          condition: { binding_present: dna_card }
+          then:
+            - select_dna_pair:
+                left_filter:
+                  all_of:
+                    - kind: digimon
+                    - of: you
+                    - dna_field_pair: { role: first, result: dna_card }
+                right_filter:
+                  all_of:
+                    - kind: digimon
+                    - of: you
+                    - dna_field_pair: { role: second, result: dna_card, first: dna_a }
+                bind_left_as: dna_a
+                bind_right_as: dna_b
+                prompt: "Select 2 of your Digimon to DNA digivolve"
+                optional: true
+            - if:
+                condition: { binding_present: dna_a }
+                then:
+                  - effect_initiated_dna_digivolve:
+                      target_a: dna_a
+                      target_b: dna_b
+                      from_hand: dna_card
+                      cost: printed
+                      bind_as: dna_result
+                  - if:
+                      condition: { binding_present: dna_result }
+                      then:
+                        - may_attack_now:
+                            attacker: dna_result
+                            targets: any
+                            optional: true
+                            prompt: "That DNA digivolved Digimon may attack"
+
+  # ─── Inherited [When Attacking][OPT] by deleting another Digimon, unsuspend ──
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] By deleting 1 of your other Digimon, this Digimon unsuspends"
+    process:
+      - select_own_permanent:
+          bind_as: sacrifice
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+          prompt: "You may delete 1 of your other Digimon to unsuspend this Digimon"
+      - delete_permanent: { target: sacrifice }
+      - if:
+          condition: { effect_deleted_any_own_digimon: true }
+          then:
+            - unsuspend: { target: source }
+      - if:
+          condition: { binding_absent: sacrifice }
+          then:
+            - refund_opt: {}
