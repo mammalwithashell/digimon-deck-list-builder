@@ -23009,7 +23009,7 @@
     "predicate:trait_has"
    ],
    "effect_clause_count": 1,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
@@ -26790,12 +26790,10 @@
    "constructs": [
     "verb:de_digivolve",
     "verb:delete_permanent",
-    "verb:if",
-    "verb:return_union_bound_to_deck",
+    "verb:return_trash_list_to_deck_bottom",
+    "verb:select_count_capped_multi",
     "verb:select_opponent_permanent",
-    "verb:select_union_zone",
     "predicate:all_of",
-    "predicate:binding_present",
     "predicate:color_is",
     "predicate:in_text_contains",
     "predicate:kind",
@@ -59331,6 +59329,9 @@
     "dsl::group7_formula_batch.rs::returned_card_color_count_formula_compiles_from_yaml_per_selector": [
      "yaml_key"
     ],
+    "dsl::group7_formula_batch.rs::returned_card_count_formula_compiles_from_yaml_per_selector": [
+     "yaml_key"
+    ],
     "dsl::group7_formula_batch.rs::shared_trash_count_formula_compiles": [
      "yaml_key"
     ],
@@ -59919,6 +59920,7 @@
     "dsl::group7_formula_batch.rs::binding_dp_formula_compiles",
     "dsl::group7_formula_batch.rs::de_digivolve_amount_compiles_from_own_link_card_count_formula",
     "dsl::group7_formula_batch.rs::returned_card_color_count_formula_compiles_from_yaml_per_selector",
+    "dsl::group7_formula_batch.rs::returned_card_count_formula_compiles_from_yaml_per_selector",
     "dsl::group7_formula_batch.rs::shared_trash_count_formula_compiles",
     "dsl::group7_formula_batch.rs::suspended_count_formula_compiles_from_yaml_per_selector",
     "dsl::group7_predicate_batch.rs::color_matches_any_field_digimon_compiles",
@@ -66890,6 +66892,10 @@
      "variant",
      "yaml_key"
     ],
+    "dsl::group7_formula_batch.rs::returned_card_count_formula_compiles_from_yaml_per_selector": [
+     "variant",
+     "yaml_key"
+    ],
     "dsl::phase2c_end_to_end.rs::select_then_if_opponents_turn_buffs_opponent_permanent": [
      "variant"
     ],
@@ -67095,6 +67101,7 @@
     "dsl::constructs/protection.rs::stack_source_return_expiry_and_own_deck",
     "dsl::group7_formula_batch.rs::modifier_formula_binding_dp_uses_current_step_bindings",
     "dsl::group7_formula_batch.rs::returned_card_color_count_formula_compiles_from_yaml_per_selector",
+    "dsl::group7_formula_batch.rs::returned_card_count_formula_compiles_from_yaml_per_selector",
     "dsl::phase2c_end_to_end.rs::select_then_if_opponents_turn_buffs_opponent_permanent",
     "dsl::phase2c_end_to_end.rs::select_then_if_your_turn_deletes_opponent_permanent",
     "dsl::phase2c_modifiers.rs::add_dp_modifier_end_of_turn_raises_effective_dp",
@@ -77587,6 +77594,9 @@
     "dsl::group7_formula_batch.rs::returned_card_color_count_formula_reads_returned_to_deck_result_log": [
      "variant"
     ],
+    "dsl::group7_formula_batch.rs::returned_card_count_formula_counts_only_cards_this_effect_returned": [
+     "variant"
+    ],
     "rules_conformance::ch15_04_effect_states.rs::effect_battle_triggers_wait_for_the_effect_and_pool_with_it": [
      "fixture"
     ],
@@ -77606,6 +77616,7 @@
     "dsl::constructs/zone_moves.rs::exact_count_forbids_partial_payment_and_preserves_pick_order",
     "dsl::constructs/zone_moves.rs::mandatory_one_candidate_still_requires_a_choice",
     "dsl::group7_formula_batch.rs::returned_card_color_count_formula_reads_returned_to_deck_result_log",
+    "dsl::group7_formula_batch.rs::returned_card_count_formula_counts_only_cards_this_effect_returned",
     "rules_conformance::ch15_04_effect_states.rs::effect_battle_triggers_wait_for_the_effect_and_pool_with_it",
     "rules_conformance::ch15_04_effect_states.rs::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes",
     "rules_conformance::ch15_07_optional_conditions.rs::partial_payment_of_compound_condition_is_impossible"
@@ -84141,7 +84152,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2299,
+  "behavioural_tests": 2300,
   "cards": {
    "behaviourally_covered": 1241,
    "lowering_covered": 1258,
@@ -84304,7 +84315,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 421,
-  "scanned_tests": 2720,
+  "scanned_tests": 2722,
   "top_untested": [
    {
     "cards_blocked": 3,

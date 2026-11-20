@@ -333,6 +333,12 @@ pub struct Effect {
     pub paid_prevention_all: bool,
     /// Post-payment subject qualification, separate from source activation/liveness.
     pub paid_prevention_filter: Option<CompiledPredicate>,
+    /// A replacement whose body is a DNA digivolve anchored on the leaving
+    /// subject (`may_dna_digivolve_now { anchor: replacement_subject }`,
+    /// Kapurimon EX12-003). When one deletion event has several members this
+    /// effect applies to, the batch asks WHICH member anchors it only if the
+    /// members reach different DNA pairs (see `DnaSubjectProbe`).
+    pub dna_subject_probe: Option<std::sync::Arc<crate::dsl_cards::step::dna_digivolve::DnaSubjectProbe>>,
     /// Heuristic metadata for policies: this effect produces or preserves
     /// hand/resource flow, such as drawing, searching/add-to-hand, filtering
     /// hand, or Save-like deletion value. This is deliberately advisory; it
@@ -1018,6 +1024,7 @@ impl EffectBuilder {
                 paid_self_prevention: false,
                 paid_prevention_all: false,
                 paid_prevention_filter: None,
+                dna_subject_probe: None,
                 resource_flow: false,
                 development_hand: Default::default(),
                 blast_digivolve: false,
@@ -1560,6 +1567,12 @@ impl EffectBuilder {
     /// Dispatch through `Game::try_replace` lands in Task 2.
     pub fn paid_prevention_filter(mut self, filter: CompiledPredicate) -> Self {
         self.inner.paid_prevention_filter = Some(filter); self
+    }
+    pub fn dna_subject_probe(
+        mut self,
+        probe: crate::dsl_cards::step::dna_digivolve::DnaSubjectProbe,
+    ) -> Self {
+        self.inner.dna_subject_probe = Some(std::sync::Arc::new(probe)); self
     }
     pub fn prevention_all_matching(mut self) -> Self {
         self.inner.paid_prevention_all = true; self

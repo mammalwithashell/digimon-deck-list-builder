@@ -81,9 +81,9 @@ fn bt10_111_on_play_wildcard_can_replace_one_missing_digixros_requirement_this_t
     runner
         .execute_action(0, king_action)
         .expect("select BT10-111 as wildcard DigiXros material");
-    runner
-        .execute_action(0, PASS)
-        .expect("finish DigiXros material selection");
+    // The recipe is full (no eligible material left): DCGO's
+    // `SelectDigiXrosClass.Select` ends by itself (a one-"End"-only element is
+    // skipped without a prompt), so the play commits with no trailing stop prompt.
 
     assert_eq!(
         memory_before - runner.memory(),

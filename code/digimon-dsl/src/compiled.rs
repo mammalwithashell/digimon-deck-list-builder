@@ -1173,6 +1173,8 @@ pub enum CompiledPerSelector {
     DigivolutionColorCount,
     SourceColorCount,
     ReturnedCardColorCount,
+    /// See `PerSelector::ReturnedCardCount`.
+    ReturnedCardCount,
     /// See `PerSelector::EffectSuspendedCount`.
     EffectSuspendedCount,
     SameLevelPairsInSources,

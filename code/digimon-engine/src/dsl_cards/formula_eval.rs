@@ -476,6 +476,9 @@ fn evaluate_per(
                 distinct_colors_in_returned_cards(ctx.game, &bindings.result_log().returned_to_deck)
             })
             .unwrap_or(0),
+        CompiledPerSelector::ReturnedCardCount => bindings
+            .map(|bindings| bindings.result_log().returned_to_deck.len() as i32)
+            .unwrap_or(0),
         CompiledPerSelector::EffectSuspendedCount => bindings
             .map(|bindings| bindings.result_log().suspended.len() as i32)
             .unwrap_or(0),
@@ -614,6 +617,9 @@ fn evaluate_per_read(
             .map(|bindings| {
                 distinct_colors_in_returned_cards(ctx.game, &bindings.result_log().returned_to_deck)
             })
+            .unwrap_or(0),
+        CompiledPerSelector::ReturnedCardCount => bindings
+            .map(|bindings| bindings.result_log().returned_to_deck.len() as i32)
             .unwrap_or(0),
         CompiledPerSelector::EffectSuspendedCount => bindings
             .map(|bindings| bindings.result_log().suspended.len() as i32)

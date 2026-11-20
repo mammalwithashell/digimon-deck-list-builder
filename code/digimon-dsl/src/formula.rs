@@ -221,6 +221,13 @@ pub enum PerSelector {
     /// return-to-deck step in the same process. YAML form:
     /// `per: returned_card_color_count`.
     ReturnedCardColorCount,
+    /// Number of cards THIS effect has returned to the deck so far (reads the
+    /// effect result log, like `returned_card_color_count`; a card counts only
+    /// when it actually moved). YAML form: `per: returned_card_count`. Drives
+    /// EX13-053 Thundermon's "for each one this effect returned, add 1 to this
+    /// effect's play cost maximum" (DCGO `returnedCount` = the cards that
+    /// ended up in the library). G-DSL-FORMULA-RETURNED-CARD-COUNT.
+    ReturnedCardCount,
     /// Number of permanents THIS effect has suspended so far (reads the
     /// effect result log, like `returned_card_color_count`). YAML form:
     /// `per: effect_suspended_count`. Drives BT2-041 ShineGreymon's "Suspend
@@ -335,6 +342,7 @@ impl Serialize for PerSelector {
             Self::DigivolutionColorCount => serializer.serialize_str("digivolution_color_count"),
             Self::SourceColorCount => serializer.serialize_str("source_color_count"),
             Self::ReturnedCardColorCount => serializer.serialize_str("returned_card_color_count"),
+            Self::ReturnedCardCount => serializer.serialize_str("returned_card_count"),
             Self::EffectSuspendedCount => serializer.serialize_str("effect_suspended_count"),
             Self::SameLevelPairsInSources => {
                 serializer.serialize_str("same_level_pairs_in_sources")

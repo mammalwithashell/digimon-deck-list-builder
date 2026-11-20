@@ -22666,7 +22666,6 @@
       "path": "ex13/EX13-053.yaml",
       "predicates": [
         "all_of",
-        "binding_present",
         "color_is",
         "in_text_contains",
         "kind",
@@ -22680,10 +22679,9 @@
       "verbs": [
         "de_digivolve",
         "delete_permanent",
-        "if",
-        "return_union_bound_to_deck",
-        "select_opponent_permanent",
-        "select_union_zone"
+        "return_trash_list_to_deck_bottom",
+        "select_count_capped_multi",
+        "select_opponent_permanent"
       ]
     },
     "EX13-054": {
@@ -34333,7 +34331,6 @@
       "EX13-042",
       "EX13-043",
       "EX13-044",
-      "EX13-053",
       "EX13-056",
       "EX13-058",
       "EX13-060",
@@ -48618,7 +48615,6 @@
       "EX13-043",
       "EX13-044",
       "EX13-045",
-      "EX13-053",
       "EX13-056",
       "EX13-057",
       "EX13-058",
@@ -50194,6 +50190,7 @@
       "EX11-012",
       "EX12-047",
       "EX13-035",
+      "EX13-053",
       "EX13-077",
       "EX5-015",
       "LM-027",
@@ -50202,7 +50199,6 @@
     ],
     "return_union_bound_to_deck": [
       "BT26-009",
-      "EX13-053",
       "EX7-043"
     ],
     "reveal_search": [
@@ -50484,6 +50480,7 @@
       "EX13-016",
       "EX13-035",
       "EX13-044",
+      "EX13-053",
       "EX13-077",
       "EX4-051",
       "EX5-015",
@@ -52281,7 +52278,6 @@
       "EX13-031",
       "EX13-035",
       "EX13-045",
-      "EX13-053",
       "EX13-055",
       "EX13-057",
       "EX13-061",

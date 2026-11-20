@@ -397,6 +397,12 @@ impl Walk for digimon_dsl::formula::PerSelector {
                 "ENUM_SCALAR",
                 serde_json::json!("ReturnedCardColorCount"),
             ),
+            digimon_dsl::formula::PerSelector::ReturnedCardCount => c.node(
+                path,
+                "digimon_dsl::formula::PerSelector",
+                "ENUM_SCALAR",
+                serde_json::json!("ReturnedCardCount"),
+            ),
             digimon_dsl::formula::PerSelector::EffectSuspendedCount => c.node(
                 path,
                 "digimon_dsl::formula::PerSelector",
@@ -845,6 +851,12 @@ impl Walk for digimon_dsl::compiled::CompiledPerSelector {
                 "digimon_dsl::compiled::CompiledPerSelector",
                 "ENUM_SCALAR",
                 serde_json::json!("ReturnedCardColorCount"),
+            ),
+            digimon_dsl::compiled::CompiledPerSelector::ReturnedCardCount => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledPerSelector",
+                "ENUM_SCALAR",
+                serde_json::json!("ReturnedCardCount"),
             ),
             digimon_dsl::compiled::CompiledPerSelector::EffectSuspendedCount => c.node(
                 path,
