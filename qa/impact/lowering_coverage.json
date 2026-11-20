@@ -1434,7 +1434,7 @@
     "keyword:Blocker"
    ],
    "effect_clause_count": 3,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],

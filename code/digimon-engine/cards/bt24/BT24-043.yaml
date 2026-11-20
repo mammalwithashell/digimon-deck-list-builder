@@ -35,11 +35,12 @@ effects:
                       - trait_has: Shaman
                       - all_of:
                           - any_of:
-                              - trait_has: Beast
-                              - trait_has: Animal
-                              - trait_has: Sovereign
-                          - none_of:
-                              - trait_has: Sea Animal
+                              - trait_contains: Beast
+                              - trait_contains: Sovereign
+                              - all_of:
+                                  - trait_contains: Animal
+                                  - none_of:
+                                      - trait_contains: Sea Animal
             - bind_as: ts_pick
               min: 1
               max: 1

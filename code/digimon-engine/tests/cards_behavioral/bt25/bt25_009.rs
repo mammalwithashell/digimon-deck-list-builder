@@ -75,6 +75,9 @@ fn bearmon_base() -> DebugRunnerBuilder {
         .add_card(make_evo_target("SOVEREIGN-LV4", &["Sovereign"]))
         .add_card(make_evo_target("TS-LV4", &["TS"]))
         .add_card(make_evo_target("SEAANIMAL-LV4", &["Sea Animal"]))
+        .add_card(make_evo_target("HOLYBEAST-LV4", &["Holy Beast"]))
+        .add_card(make_evo_target("FOURSOV-LV4", &["Four Sovereigns"]))
+        .add_card(make_evo_target("DARKANIMAL-LV4", &["Dark Animal"]))
         .add_card(make_evo_target("INSECT-LV4", &["Insectoid"]))
         .deck(0, &["DECK-PAD"; 6])
         .deck(1, &["DECK-PAD"; 6])
@@ -289,6 +292,23 @@ fn bt25_009_somp_accepts_sovereign_trait_hand_card() {
         runner.pending_selection().is_some(),
         "a [Sovereign] Digimon must be an eligible evolution target"
     );
+}
+
+/// "[Beast], [Animal] or [Sovereign] ... in any of its traits" is a substring
+/// reading (DCGO `ContainsTraits`): compound traits such as [Holy Beast],
+/// [Four Sovereigns] and [Dark Animal] qualify; only the exact [TS] clause is a
+/// whole-trait match.
+#[test]
+fn bt25_009_somp_matches_compound_traits_by_substring() {
+    for target in ["HOLYBEAST-LV4", "FOURSOV-LV4", "DARKANIMAL-LV4"] {
+        let mut runner = bearmon_base().hand(0, &[target]).memory(3).start();
+        let _bear = place_bearmon(&mut runner);
+        runner.game.enter_main_phase();
+        assert!(
+            runner.pending_selection().is_some(),
+            "{target}: a compound trait containing Beast/Animal/Sovereign must be an eligible target"
+        );
+    }
 }
 
 #[test]

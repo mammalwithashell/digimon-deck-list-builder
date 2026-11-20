@@ -38,8 +38,8 @@ effects:
                     - kind: digimon
                     - is_suspended: true
                     - any_of:
-                        - trait_has: Avian
-                        - trait_has: Bird
+                        - trait_contains: Avian
+                        - trait_contains: Bird
                         - trait_has: Vortex Warriors
                 prompt: "Unsuspend 1 Avian, Bird or Vortex Warriors Digimon"
             - unsuspend: { target: unsuspended }

@@ -133,10 +133,13 @@ effects:
             - event_target_trait_contains: Avian
             - event_target_trait_contains: Bird
             - event_target_trait_contains: Beast
-            - event_target_trait_contains: Animal
             - event_target_trait_contains: Sovereign
-        - not:
-            event_target_trait_has: Sea Animal
+            # DCGO HasAvianBeastAnimalTraits: "Animal" counts only when no
+            # trait is [Sea Animal]; the other four are unconditional.
+            - all_of:
+                - event_target_trait_contains: Animal
+                - not:
+                    event_target_trait_contains: Sea Animal
     summary: "[Your Turn] When an effect plays your red Digimon with [Avian]/[Bird]/[Beast]/[Animal]/[Sovereign] (other than [Sea Animal]) in any of its traits, by suspending this Tamer, it gains <Rush> for the turn"
     process:
       - activation_cost: { suspend_self: true }

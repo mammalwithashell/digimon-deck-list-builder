@@ -135,6 +135,39 @@ fn bt25_012_on_play_grants_raid_and_3000_dp() {
     }
 }
 
+/// "[Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its
+/// traits" is a substring reading (DCGO `ContainsTraits`): an ally whose trait
+/// is [Holy Beast] / [Four Sovereigns] / [Dark Animal] is an eligible target
+/// alongside the Grizzlymon itself; a [Sea Animal] or [Machine] ally is not.
+#[test]
+fn bt25_012_targets_compound_beast_animal_sovereign_traits() {
+    for (traits, eligible) in [
+        (&["Holy Beast"][..], true),
+        (&["Four Sovereigns"][..], true),
+        (&["Dark Animal"][..], true),
+        (&["Sea Animal"][..], false),
+        (&["Machine"][..], false),
+    ] {
+        let mut ally = make_test_card("COMPOUND-ALLY", "Compound Ally");
+        ally.card_kind = CardKind::Digimon;
+        ally.level = Some(4);
+        ally.dp = Some(4000);
+        ally.traits = traits.iter().map(|t| t.to_string()).collect();
+        let mut runner = base().add_card(ally).hand(0, &[CARD_ID]).memory(10).start();
+        runner.place_on_field(0, "COMPOUND-ALLY", Some(0));
+        runner.play(0, 0);
+        let view = runner
+            .pending_selection_view()
+            .expect("Grizzlymon itself is always an eligible target");
+        let expected = if eligible { 2 } else { 1 };
+        assert_eq!(
+            view.valid_action_ids.len(),
+            expected,
+            "{traits:?}: eligible targets (self + ally when it qualifies)"
+        );
+    }
+}
+
 #[test]
 fn bt25_012_grizzlymon_self_is_an_eligible_target() {
     // With no other ally, Grizzlymon (a [Beast] Digimon) is itself eligible.

@@ -101,6 +101,43 @@ fn battle_area_contains(runner: &DebugRunner, player: usize, card_id: &str) -> b
         .any(|perm| perm.top_card().card_id(&runner.game.card_data) == card_id)
 }
 
+/// Printed digivolve condition (data/card_bundles/BT24-059.md): "Lv.4 w/[Aqua]
+/// or [Sea Animal] in any trait or w/[TS] trait: Cost 3". "in any trait" is a
+/// substring reading (DCGO `HasAquaTraits` -> `ContainsTraits`), so a Lv.4 with
+/// the [Aquatic] type satisfies it; a [Plain] Lv.4 of an off colour does not.
+#[test]
+fn bt24_059_alt_digivolve_accepts_aqua_substring_base_for_cost_3() {
+    for (traits, expect_ok) in [
+        (&["Aquatic"][..], true),
+        (&["Aquabeast"][..], true),
+        (&["Sea Animal"][..], true),
+        (&["Plain"][..], false),
+    ] {
+        let mut base = make_digimon("ALT-BASE", traits);
+        base.colors = vec![CardColor::Red]; // standard Blue/Black circles unavailable
+        let mut runner = sharkmon_runner()
+            .add_card(base)
+            .add_card(make_filler("FILL"))
+            .hand(0, &[CARD_ID])
+            .deck(0, &["FILL"; 5])
+            .deck(1, &["FILL"; 5])
+            .memory(10)
+            .start();
+        let base_handle = runner.place_on_field(0, "ALT-BASE", Some(0));
+        let before = runner.game.memory;
+        let ok = runner.game.digivolve_from_hand(
+            0,
+            0,
+            base_handle.index as usize,
+            digimon_engine::enums::PlaySource::ByHand,
+        );
+        assert_eq!(ok, expect_ok, "{traits:?}: alt-path digivolve legality");
+        if expect_ok {
+            assert_eq!(runner.game.memory, before - 3, "{traits:?}: cost 3 paid");
+        }
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 1 — Structural assertions
 // ═══════════════════════════════════════════════════════════════════════════════

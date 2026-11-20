@@ -594,6 +594,32 @@ fn bt11_089_pluralized_trait_token_still_matches_substring() {
     );
 }
 
+/// "other than [Sea Animal]" removes that TRAIT, not the whole card (official
+/// Q&A; DCGO `HasAvianBeastAnimalTraits` keeps Avian/Bird/Beast/Sovereign
+/// unconditional): a red [Beast] + [Sea Animal] Digimon still triggers.
+#[test]
+fn bt11_089_beast_trait_still_qualifies_when_card_also_has_sea_animal() {
+    let mut both = red_trait_digimon("RED-BEAST-SEA", 3, "Beast");
+    both.traits = vec!["Beast".to_string(), "Sea Animal".to_string()];
+    let mut runner = akiho_runner().add_card(both).memory(10).start();
+    let akiho = runner.place_on_field(0, CARD_ID, Some(0));
+    stage_hand_card(&mut runner, "RED-BEAST-SEA");
+
+    let source_card = runner.top_card(akiho);
+    let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(akiho), 0);
+    let played = ctx
+        .play_from_hand_free(0, 0)
+        .expect("effect plays RED-BEAST-SEA from hand");
+    runner
+        .auto_resolve()
+        .expect("resolve suspend-cost + Rush grant");
+
+    assert!(
+        runner.game.has_keyword(played, Keyword::Rush),
+        "[Beast] qualifies independently of the [Sea Animal] trait"
+    );
+}
+
 #[test]
 fn bt11_089_compound_trait_sea_beast_matches_beast_substring() {
     // "Sea Beast" contains the substring "Beast" and is NOT the excluded
