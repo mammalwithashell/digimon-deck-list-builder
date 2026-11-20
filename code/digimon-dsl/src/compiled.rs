@@ -578,6 +578,10 @@ pub struct CompiledPredicate {
     /// (driver EX12-032).
     #[serde(default)]
     pub self_same_level_source_pairs_gte: Option<u8>,
+    /// See `PredicateSpec::self_stack_same_level_count_gte`. `serde(default)`
+    /// keeps older serialized packs deserializable.
+    #[serde(default)]
+    pub self_stack_same_level_count_gte: Option<u8>,
     /// True when the effect CARRIER's NON-FLIPPED digivolution-source color
     /// set (the shared `non_flipped_source_colors` extraction — top card
     /// excluded, face-down sources excluded) has at least N distinct colors.
@@ -594,6 +598,12 @@ pub struct CompiledPredicate {
     /// Mirror of `other` — subject must BE the source permanent. G-OPT-REFUND-ON-DECLINE.
     #[serde(default)]
     pub is_source: Option<bool>,
+    /// See `PredicateSpec::is_source_card` / `card_in_zone`. `serde(default)`
+    /// keeps older serialized packs deserializable.
+    #[serde(default)]
+    pub is_source_card: Option<bool>,
+    #[serde(default)]
+    pub card_in_zone: Vec<CompiledZone>,
     pub of_permanent: Option<String>,
     pub not_in_binding: Option<String>,
     /// See `PredicateSpec::name_not_in_binding` (BT26-086).
@@ -753,6 +763,10 @@ pub struct CompiledPredicate {
     pub is_event_host: Option<bool>,
     pub event_is_effect_initiated: Option<bool>,
     pub event_target_same_level_as_previous: Option<bool>,
+    /// See `PredicateSpec::event_target_has_same_level_source`. `serde(default)`
+    /// keeps older serialized packs deserializable.
+    #[serde(default)]
+    pub event_target_has_same_level_source: Option<bool>,
     pub event_target_digivolved_from_kind: Option<CompiledCardKind>,
     pub event_cause: Option<CompiledEventCause>,
     pub replacement_cause: Option<CompiledReplacementCause>,

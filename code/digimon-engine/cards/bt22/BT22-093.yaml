@@ -1,0 +1,97 @@
+# BT22-093 Ami Aiba -- Tamer, White, Cost 4.
+# Traits: CS.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT22-093.md; image
+# BT22-093.webp):
+#
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [Your Turn] When any of your Digimon digivolve into a Digimon with the [CS]
+#   trait, if it has a digivolution card with the same level as the digivolved
+#   Digimon, by suspending this Tamer, that Digimon may digivolve into a Digimon
+#   card with the [CS] trait in the hand without paying the cost.
+#   Security Effect: [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT22/<COLOR>/BT22_093.cs
+#
+# Clause 1 -- `EffectTiming.OnStartMainPhase`, `isOptional: false`. CanUse =
+#   on the battle area on its owner's turn; CanActivate = on the battle area,
+#   the opponent has >= 1 battle-area Digimon, and the owner can add memory.
+#   Body: `AddMemory(1)`. Mandatory, so no `optional:`; the opponent-has-a-
+#   Digimon gate is the clause `condition`.
+#
+# Clause 2 -- `EffectTiming.OnEnterFieldAnyone`, `isOptional: true`.
+#   DigivolvingCondition(permanent) = an own battle-area Digimon whose TOP card
+#   has the [CS] trait AND whose digivolution cards include a card with
+#   `HasLevel && Level == permanent.Level` (the digivolved Digimon's CURRENT
+#   level; the official Q&A reads the same way). CanActivate additionally needs
+#   this Tamer unsuspended (`CanActivateSuspendCostEffect`) on its owner's turn.
+#   Body: suspend this Tamer (the "by suspending" cost), then -- if the hand
+#   holds a [CS] Digimon that can digivolve onto the Digimon --
+#   `DigivolveIntoHandOrTrashCard(payCost: false,
+#   ignoreDigivolutionRequirementFixedCost: -1)`: the digivolution requirements
+#   are NOT ignored, only the cost is waived.
+#   -> `on_digivolve` + `optional: true` + `source_is_unsuspended`,
+#      `activation_cost: { suspend_self: true }`, then an OPTIONAL hand pick
+#      ("may digivolve") filtered by `can_digivolve_onto_with_cost { cost: free }`
+#      onto the event Digimon, then `effect_initiated_digivolve { cost: free }`.
+#   The same-level gate is `event_target_has_same_level_source` (new leaf,
+#   G-DSL-EVENT-TARGET-HAS-SAME-LEVEL-SOURCE; face-down digivolution cards have
+#   no characteristics, CR 4.3 4-7-9, so they never count).
+#   DCGO activates (and pays the suspension) even with no eligible hand card;
+#   we do the same -- the cost is real, the digivolve is empty.
+#
+# Clause 3 -- `EffectTiming.SecuritySkill` -> `PlaySelfTamerSecurityEffect`.
+
+card: BT22-093
+name: Ami Aiba
+kind: tamer
+color: [white]
+cost: 4
+traits: [CS]
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - when: on_digivolve
+    optional: true
+    active_when: { your_turn: true }
+    condition: { source_is_unsuspended: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_trait_has: CS
+        - event_target_has_same_level_source: true
+    summary: "[Your Turn] When your Digimon digivolves into a [CS] Digimon that has a same-level digivolution card, by suspending this Tamer, it may digivolve into a [CS] Digimon in hand without paying the cost"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_hand:
+          of: you
+          bind_as: cs_evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: CS
+              - can_digivolve_onto_with_cost: { target: event_target, cost: free }
+          prompt: "That Digimon may digivolve into a [CS] trait Digimon card in your hand without paying the cost"
+      - if:
+          condition: { binding_present: cs_evo }
+          then:
+            - effect_initiated_digivolve:
+                target: event_target
+                from_hand: cs_evo
+                cost: free
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
