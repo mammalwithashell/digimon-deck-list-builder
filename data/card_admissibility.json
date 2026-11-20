@@ -10487,14 +10487,17 @@
     },
     "BT17-080": {
       "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
       "reason": "untested_lowering",
       "reasons": [
         "untested_lowering"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:card_in_zone",
+        "predicate:is_source_card"
+      ]
     },
     "BT17-081": {
       "admissible": true,
@@ -16696,14 +16699,16 @@
     },
     "BT22-056": {
       "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
-      "needs_card_test": false,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
       "reason": "untested_lowering",
       "reasons": [
         "untested_lowering"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:self_stack_same_level_count_gte"
+      ]
     },
     "BT22-057": {
       "admissible": true,
@@ -17089,14 +17094,16 @@
     },
     "BT22-093": {
       "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
       "reason": "untested_lowering",
       "reasons": [
         "untested_lowering"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:event_target_has_same_level_source"
+      ]
     },
     "BT22-094": {
       "admissible": true,
@@ -47041,12 +47048,12 @@
     "untested_card": 19,
     "untested_lowering": 3243
   },
-  "generated_at": "2026-11-18T15:24:40+00:00",
+  "generated_at": "2026-11-20T06:48:38+00:00",
   "sources": {
-    "behavioral_test_modules_sha256": "8d1b186e2d5fb96faf4799138d468b2cc9db4f5803ce9978cc35e2bbff9c17f9",
+    "behavioral_test_modules_sha256": "df073a73a02897a9f5f5b08f61169f5831af00c0192222abae31ceaedb8f57af",
     "card_registry_sha256": "9a604ff3e4feb20a16ff8ce38febf866191d6d2b9697162e5b7e002332799599",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "0101a3575f7beb4e73267eea748024cf12d0fa150a7e7ccd6ab49e67d43087a9",
+    "lowering_coverage_sha256": "6934e8fe5997683d53b8bde372e20bb676ed50071826ac92612a6680c0699338",
     "validated_cards_dsl_sha256": "370b9d890b82b83c3ecf2d4b3760ca544609412491dd1481b4d3d0bda42e1a34",
     "validated_cards_sha256": "c1ca1b49d7c58d7ab9e1ab29ca05b5f06e075e19acdde6aca4494da54d318a05"
   },

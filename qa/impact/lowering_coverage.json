@@ -4474,6 +4474,46 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT17-080": {
+   "behaviourally_covered": false,
+   "clause_count": 3,
+   "constructs": [
+    "verb:effect_initiated_digivolve",
+    "verb:gain_memory",
+    "verb:if",
+    "verb:place_cards_as_bottom_sources",
+    "verb:play_from_security",
+    "verb:select_hand",
+    "verb:select_own_permanent",
+    "verb:select_zone_cards",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:any_permanent",
+    "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:card_in_zone",
+    "predicate:count_gte",
+    "predicate:is_source_card",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:name_contains",
+    "predicate:name_is",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:end_of_your_turn",
+    "timing:on_security",
+    "timing:start_of_your_main_phase"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": false,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": [
+    "predicate:card_in_zone",
+    "predicate:is_source_card"
+   ]
+  },
   "BT17-081": {
    "behaviourally_covered": true,
    "clause_count": 3,
@@ -10325,6 +10365,36 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT22-056": {
+   "behaviourally_covered": false,
+   "clause_count": 5,
+   "constructs": [
+    "verb:add_dp_modifier",
+    "verb:de_digivolve",
+    "verb:if",
+    "verb:select_opponent_permanent",
+    "predicate:all_of",
+    "predicate:any_permanent",
+    "predicate:color_is",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:opponents_turn",
+    "predicate:owner",
+    "predicate:self_stack_same_level_count_gte",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:on_play",
+    "timing:when_digivolving"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": false,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": [
+    "predicate:self_stack_same_level_count_gte"
+   ]
+  },
   "BT22-057": {
    "behaviourally_covered": true,
    "clause_count": 4,
@@ -10565,6 +10635,43 @@
    "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
+  },
+  "BT22-093": {
+   "behaviourally_covered": false,
+   "clause_count": 3,
+   "constructs": [
+    "verb:activation_cost",
+    "verb:effect_initiated_digivolve",
+    "verb:gain_memory",
+    "verb:if",
+    "verb:play_from_security",
+    "verb:select_hand",
+    "predicate:all_of",
+    "predicate:any_permanent",
+    "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:event_target_has_same_level_source",
+    "predicate:event_target_kind",
+    "predicate:event_target_owner",
+    "predicate:event_target_trait_has",
+    "predicate:kind",
+    "predicate:owner",
+    "predicate:source_is_unsuspended",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "predicate:zone",
+    "timing:on_digivolve",
+    "timing:on_security",
+    "timing:start_of_your_main_phase"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": false,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": [
+    "predicate:event_target_has_same_level_source"
+   ]
   },
   "BT22-094": {
    "behaviourally_covered": true,
@@ -43436,6 +43543,18 @@
     "dsl::can_unsuspend.rs::can_unsuspend_matches_permanent_and_player_locks_for_both_polarities"
    ]
   },
+  "predicate:card_in_zone": {
+   "kind": "predicate",
+   "name": "card_in_zone",
+   "near_miss_files": [
+    "src/dsl_cards/predicate.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
+  },
   "predicate:card_number_is": {
    "kind": "predicate",
    "name": "card_number_is",
@@ -46669,6 +46788,18 @@
    "tested_behaviourally": false,
    "tests": []
   },
+  "predicate:event_target_has_same_level_source": {
+   "kind": "predicate",
+   "name": "event_target_has_same_level_source",
+   "near_miss_files": [
+    "src/dsl_cards/predicate.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
+  },
   "predicate:event_target_in_text_contains": {
    "kind": "predicate",
    "name": "event_target_in_text_contains",
@@ -48271,6 +48402,18 @@
     "dsl::predicate_leaves_ii.rs::distinct_named_count_gte_compiles_from_yaml",
     "rules_conformance::ch18_pending_overwrite.rs::dp_progress_chain_is_not_an_infinite_loop"
    ]
+  },
+  "predicate:is_source_card": {
+   "kind": "predicate",
+   "name": "is_source_card",
+   "near_miss_files": [
+    "src/dsl_cards/predicate.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
   },
   "predicate:is_source_permanent": {
    "kind": "predicate",
@@ -56260,6 +56403,18 @@
     "dsl::self_source_count_threshold.rs::self_source_count_leaf_evaluates_directly",
     "rules_conformance::ch16_new_keywords.rs::dual_digivolution_card_counts_through_the_referenced_information"
    ]
+  },
+  "predicate:self_stack_same_level_count_gte": {
+   "kind": "predicate",
+   "name": "self_stack_same_level_count_gte",
+   "near_miss_files": [
+    "src/dsl_cards/predicate.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
   },
   "predicate:source_count": {
    "kind": "predicate",
@@ -84144,8 +84299,8 @@
   "cards": {
    "behaviourally_covered": 1241,
    "lowering_covered": 1258,
-   "not_covered": 42,
-   "total": 1300
+   "not_covered": 45,
+   "total": 1303
   },
   "constructs": {
    "keyword": {
@@ -84161,10 +84316,10 @@
     "parsed_only": 7,
     "tested": 207,
     "tested_behaviourally": 200,
-    "total": 233,
-    "untested": 26,
-    "used_by_cards": 206,
-    "used_untested": 18
+    "total": 237,
+    "untested": 30,
+    "used_by_cards": 210,
+    "used_untested": 22
    },
    "timing": {
     "parsed_only": 2,
@@ -84326,6 +84481,16 @@
     "ex13_lists_blocked": 29
    },
    {
+    "cards_blocked": 1,
+    "construct": "predicate:card_in_zone",
+    "ex13_lists_blocked": 26
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "predicate:is_source_card",
+    "ex13_lists_blocked": 26
+   },
+   {
     "cards_blocked": 3,
     "construct": "predicate:rules_text_contains",
     "ex13_lists_blocked": 20
@@ -84428,6 +84593,16 @@
    {
     "cards_blocked": 1,
     "construct": "predicate:event_target_digivolved_from_kind",
+    "ex13_lists_blocked": 0
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "predicate:event_target_has_same_level_source",
+    "ex13_lists_blocked": 0
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "predicate:self_stack_same_level_count_gte",
     "ex13_lists_blocked": 0
    },
    {
