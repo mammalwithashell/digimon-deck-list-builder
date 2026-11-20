@@ -10290,3 +10290,78 @@ claimed. Exact cumulative verification and admission denominators are in
 ## DCGO PvP replay hunt (2026-11-17)
 
 Lane-reported gap entries for the 19 hunt lanes are collected verbatim in `qa/qa-reports/dcgo-pvp-replay-hunt-2026-11-17.md` (resolved vs open per lane).
+
+
+## DCGO PvP replay hunt, round 2 (2026-11-19)
+
+Lane-reported DSL-vocabulary entries from the 17 round-2 lanes, as the lanes wrote them. Round-1 entries above are
+unchanged. Integration report: `qa/qa-reports/dcgo-pvp-replay-hunt-2026-11-19-round2.md`.
+
+#### Lane `homeros-effect-pick`
+
+**RESOLVED G-DSL-HAS-REFIREABLE-EFFECT**: new permanent-filter leaf `has_refireable_effect: on_play | when_digivolving | on_play_or_when_digivolving` (Game::has_refireable_effect). Homeros BT24-102 uses it (DCGO BT24_102.cs:93-98 CanSelectPermanentCondition). Tests: tests/dsl/constructs/refire_target_eligibility.rs.
+
+#### Lane `engine-prompt-shape-parity`
+
+### G-DSL-FORMULA-RETURNED-CARD-COUNT (qa/dsl-vocab-gaps.md) - DONE
+New formula selector `per: returned_card_count`: the number of cards THIS effect returned to the deck, counted only when the card actually moved. It reads the effect result log, like `returned_card_color_count`. Used by EX13-053 Thundermon (delete cap = 3 + returned). Lowered in digimon-dsl formula.rs / compile.rs / compiled.rs and evaluated in dsl_cards/formula_eval.rs. Test: tests/dsl/group7_formula_batch.rs.
+
+### OPEN - chained-optional-pick ladders (qa/dsl-vocab-gaps.md follow-up)
+EX10-036, EX11-044, EX7-043 and BT7-107 still model 'choose up to N' as chained optional prompts (1/3, 2/3, ...). Verify against DCGO and convert to select_count_capped_multi where DCGO asks one multi-select.
+
+#### Lane `trigger-order-bundle`
+
+- `requires_target_to_activate` (clause flag, ADDED): declares that a mandatory clause is not activatable while its first pick has no candidate (DCGO CanActivateCondition -> HasMatchConditionPermanent). Lowered in lower_triggered.rs to Effect::activation_guard via first_step_candidate_guard. The compiled field must stay plain `#[serde(default)]` (the embedded bincode pack breaks on skip_serializing_if).
+- `level_eq_event_target` predicate (OPEN, EX12-069): a card level equal to the live trigger event target's level, usable in a clause `condition`; needed so EX12-069's hand-match activation condition can leave the body.
+- Replay-layer mapping (OPEN, g16): BT23-013 Jesmon DCGO SetBoolSelection (true = token, false = hand/trash Sistermon) to our EffectChoice 'Choose what Jesmon plays'.
+
+#### Lane `dedigivolve-count`
+
+- (lane h2-dedigivolve-count) New DSL vocabulary: `de_digivolve: { amount: <formula>, declared: true }` keeps the formula as one declared De-Digivolve N. The validator rejects `declared: true` with a literal amount, which is already declared. Use `declared: true` only where DCGO sets a single degeneration count. Keep the default per-instance expansion where DCGO loops.
+
+#### Lane `replay-multipleskills-index`
+
+### G-DSL-EX12-069-OPTIONAL-OFFERED-WITHOUT-CANDIDATE (open; DSL vocab gap; EX13 pool core card)
+EX12-069 [Security][Your Turn] "When your level 4 or higher [VB] Digimon attacks, you may play 1 [VB] Digimon of the same level from your hand with the cost reduced by 3". DCGO (EX12_069.cs:44-47) puts HasMatchConditionOwnersHand in CanActivateCondition, so with no playable same-level [VB] in hand the effect is not offered. Ours offers an optional Replacement prompt and then no-ops through an `if: count_gte`. The first-step candidate guards (`first_step_candidate_guard`, `CostGuard`) cannot see through the `bind_permanent_property: attacker_level` step. Needed: a DSL predicate for "level equal to the event target's level" (e.g. `level_eq_event_target`) so the leading select_hand carries the filter. Seen in the 20261116T164448Z-g2 replay at step 46 (actor_mismatch P1 vs P0 in Breeding).
+
+#### Lane `unimpl-digimon-misc`
+
+- ADDED (lane h2-unimpl-digimon-misc): step `play_to_breeding_from_trash` (plays a card from the trash into the breeding area; engine primitive `Game::play_to_breeding_from_trash` / `can_play_to_breeding_from_trash` in `game_actions/breeding.rs`, `EffectContext` wrappers in `effect_context/action/play.rs`) and predicate `can_play_to_breeding_from_trash`. Users: EX10-009 Creepymon [When Attacking] (play red/purple <=5000 DP from trash to breeding if opponent trash >= 10).
+- OPEN: timing `on_opponent_deck_trashed` ("when your opponent's deck is trashed from") for EX10-005 Pagumon inherited [Your Turn][OPT] <Draw 1>; also timing for "when this card is trashed from your deck" (EX2-071 Death Slinger, gain 1 memory). Without them the replay of 20261113T025510Z#g10 drifts P0's library by one card at the next reveal (BT24-068 DemiDevimon [On Play]).
+- NOTE: `outer_prompt: true` + `condition: count_gte hand Hybrid` models DCGO's always-shown optional yes/no that does not check the inner pick's legality (BT17-012, BT19-024); re-use for similar `CanActivate`-only gates.
+
+#### Lane `ex8-nso-opponent`
+
+- G-DSL-DNA-RESULT-BINDING (RESOLVED, branch claude/h2-ex8-nso-opponent): `effect_initiated_dna_digivolve` had no way to name the merged permanent, so "Then, that DNA digivolved Digimon may attack" (EX8-060 Myotismon [Your Turn][Once Per Turn]) could not target the result. Added `bind_as: <name>` on EffectDnaDigivolveArgs. It is set only after a successful merge and left unset on a rejected one. Tests: tests/dsl/phase2f1_digivolve_steps.rs (bind_as_names_the_merged_permanent, bind_as_is_unset_when_the_merge_is_rejected); card use: cards/ex8/EX8-060.yaml. effect_initiated_dna_digivolve_hand_partner and _trash_partner still lack the same binding, so add it when a card needs it.
+
+#### Lane `reveal-bucket-cards`
+
+- **predicate `event_batch_card_trait_has` - ADDED.** `{event_batch_card_trait_has: <trait>}` is true when any card in the triggering event's moved-card batch has the trait. It lowers in `code/digimon-dsl/src/predicate.rs`, `compile.rs`, `compiled.rs` and `src/dsl_cards/predicate.rs`, with a reference_predicates doc entry. First user: BT21-094.
+- **cost reducer `scope: security` - ADDED.** A [Security] cost reducer is read from face-up security cards (CR 4.3 15-14-5-1), with its [Once Per Turn] count kept on the player. First user: P-181.
+- Cards authored with the existing reveal-bucket / delay-option vocabulary (`select_reveal_buckets`, `RevealBucketStep`, delay placement): BT11-046, BT11-040, BT13-065, BT14-034, EX5-054, EX5-045, P-230, P-232, P-227, BT21-094, BT8-110.
+
+#### Lane `alt-digivolve-cost-cards`
+
+- **G-DSL-HIGHEST-PLAY-COST-AGGREGATE (CLOSED, hunt2 alt-digivolve-cost-cards):** `aggregate: { selector: highest_play_cost, scope: ... }` added as the mirror of `lowest_play_cost` (Digimon-only, tokens count only when they print a play cost). Used by BT24-065 Diaboromon (X Antibody) 'delete all of your opponent's Digimon with the highest play cost', evaluated after the de-digivolves. Files: `digimon-dsl` `formula.rs`/`compiled.rs`/`compile.rs`, engine `dsl_cards/formula_eval.rs`/`predicate.rs`, and the implementation-inventory reference walkers.
+
+#### Lane `memory-tamer-start-main`
+
+Entries for qa/dsl-vocab-gaps.md (all CLOSED by this lane, driver cards in brackets):
+- G-DSL-EVENT-TARGET-HAS-SAME-LEVEL-SOURCE: observer-side leaf `event_target_has_same_level_source`: the digivolved Digimon has a face-up digivolution card whose level equals its current level (face-down never counts, CR 4.3 4-7-9). [BT22-093]
+- G-DSL-SELF-STACK-SAME-LEVEL-COUNT: `self_stack_same_level_count_gte: N`: the carrier's whole stack, top card included, holds N face-up cards of one level (differs from self_same_level_source_pairs_gte, which excludes the top). [BT22-056]
+- G-DSL-IS-SOURCE-CARD: `is_source_card: true`: the card subject IS the effect's own source card (card-subject mirror of is_source), so a select_zone_cards pick can range over 'this Tamer' plus other zones. [BT17-080]
+- G-DSL-CARD-IN-ZONE: `card_in_zone: [zones]`: card-subject location gate (a battle-area stack's top card is battle_area, cards under it are material), so one multi-zone select can say '[Growlmon] from your trash' without matching a field Growlmon. [BT17-080]
+Known residual in BT17-080: DCGO also refuses a TOKEN Tamer or TOKEN Guilmon; the DSL has no token leaf and no such token exists in the pool, so that gate is not expressed.
+
+#### Lane `trait-substring-audit`
+
+### trait-substring-audit (h2)
+- Family: printed "[X], [Y] ... in any of its traits" must lower to `trait_contains` (CR 4.3 2-3-2-4), never exact `trait_has`. "the [X] trait" stays exact.
+- "other than [Sea Animal]" in the Avian/Bird/Beast/Animal/Sovereign family removes the Sea Animal TRAIT, not the card. Lower it as any_of[Avian, Bird, Beast, Sovereign, all_of[trait_contains Animal, none_of[trait_contains "Sea Animal"]]] (DCGO HasBeastTraits / HasAvianBeastAnimalTraits; official Q&A). Do not wrap the whole any_of in a none_of Sea Animal. Fixed in BT25-010, BT25-009, BT25-012, BT25-051, BT24-043, EX13-042, BT11-089 (P-207 and EX13-038 already had the correct shape).
+- Possible DSL-vocab follow-up: a lowering lint or macro for the Avian/Bird/Beast/Animal/Sovereign-other-than-Sea-Animal filter, since 8+ cards hand-copy it.
+- DCGO quirk (do not copy): BT11_042.cs tests Angel / Fallen Angel with exact CardTraits.Contains, while printed text and CR 2-3-2-4 are substring. We follow the rules.
+- Open: g14 step 41, a DCGO P0 MultipleSkills(-1) row between the security take and P1's LM-059 "Add 1 yellow or red card" prompt. Unclassified (replay-layer or engine trigger at the security check).
+
+#### Lane `digitama-inherited-effects`
+
+- `rules_text_contains` evaluated for an inherited [On Deletion] clause (BT12-006 Monimon: "If this Digimon has <Save> in its text"): the carrier is already in the trash (rule 25) and its battle-area slot may be empty or reoccupied. Fixed in `code/digimon-engine/src/dsl_cards/predicate.rs` (`carrier_top_card`): the predicate reads the top card from the trigger context's `deleted_object` snapshot when the effect's source card is the snapshot's top card or one of its recorded digivolution cards, and reads the live permanent otherwise. Tests: `tests/cards_behavioral/bt12/bt12_006.rs`.
