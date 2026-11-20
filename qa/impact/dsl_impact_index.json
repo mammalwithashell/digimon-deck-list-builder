@@ -19953,6 +19953,7 @@
         "draw",
         "gain_memory",
         "if",
+        "refund_opt",
         "select_hand",
         "trash_from_hand_by_index"
       ]
@@ -50028,6 +50029,7 @@
       "BT26-074",
       "BT26-086",
       "EX12-017",
+      "EX12-021",
       "EX12-034",
       "EX12-041",
       "EX13-004",
