@@ -23528,6 +23528,7 @@
     "verb:draw",
     "verb:gain_memory",
     "verb:if",
+    "verb:refund_opt",
     "verb:select_hand",
     "verb:trash_from_hand_by_index",
     "predicate:all_of",

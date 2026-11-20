@@ -349,6 +349,7 @@ fn event_card_liveness_proof_rejects_context_reads_and_unaudited_shapes() {
         timing_conditions: vec![],
         optional: true,
         outer_prompt: false,
+        requires_target_to_activate: false,
         opt_group: None,
         once_per_turn: false,
         as_option_effect: false,

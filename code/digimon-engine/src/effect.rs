@@ -559,6 +559,18 @@ pub struct Effect {
     /// pre-evaluated). `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub outer_optional_guard: Option<ConditionFn>,
 
+    /// Activatability guard of a MANDATORY triggered clause whose whole body
+    /// is one required target pick plus single-target actions on that pick
+    /// ("delete 1 of your opponent's Digimon with 5000 DP or less"): `false`
+    /// when the pick has no candidate. DCGO gates such an effect's
+    /// `CanActivateCondition` on `HasMatchConditionPermanent`, so a no-target
+    /// trigger never enters the `MultipleSkills` order list. The queue
+    /// excludes the entry from the `TriggerOrder` bundle while this is
+    /// `false` (transient, like the condition filter: a sibling that creates
+    /// a target makes it fireable again). `None` means "always activatable".
+    /// `G-ENGINE-TRIGGER-ORDER-NO-TARGET-ENTRY`.
+    pub activation_guard: Option<ConditionFn>,
+
     /// This effect's FIRST decision is its "you may" activation decision
     /// even though the effect itself is not `optional`: a keyword body that
     /// DCGO activates as an `IsOptional` `ActivateClass` (an `OptionalSkill`
@@ -1050,6 +1062,7 @@ impl EffectBuilder {
                 reducer_cost_scope: ReducerCostScope::Any,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
+                activation_guard: None,
                 optional_activation_folded: false,
                 optional_condition_guard: None,
                 pay_cost_self_gated: false,
@@ -1233,6 +1246,16 @@ impl EffectBuilder {
         F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     {
         self.inner.outer_optional_guard = Some(Arc::new(f));
+        self
+    }
+
+    /// Attach the activatability guard of a mandatory single-pick clause
+    /// (see `Effect::activation_guard`).
+    pub fn activation_guard<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
+    {
+        self.inner.activation_guard = Some(Arc::new(f));
         self
     }
 

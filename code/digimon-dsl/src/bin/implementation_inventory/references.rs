@@ -916,6 +916,7 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
             timing_conditions,
             optional,
             outer_prompt,
+            requires_target_to_activate,
             once_per_turn,
             max_per_turn,
             as_option_effect,
@@ -944,6 +945,11 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
         );
         optional.walk(c, &format!("{}.optional", path), "UNCLASSIFIED_STRING");
         outer_prompt.walk(c, &format!("{}.outer_prompt", path), "UNCLASSIFIED_STRING");
+        requires_target_to_activate.walk(
+            c,
+            &format!("{}.requires_target_to_activate", path),
+            "UNCLASSIFIED_STRING",
+        );
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         max_per_turn.walk(c, &format!("{}.max_per_turn", path), "UNCLASSIFIED_STRING");
         as_option_effect.walk(c, &format!("{}.as_option_effect", path), "UNCLASSIFIED_STRING");
@@ -3739,6 +3745,7 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
             timing_conditions,
             optional,
             outer_prompt,
+            requires_target_to_activate,
             once_per_turn,
             max_per_turn,
             as_option_effect,
@@ -3759,6 +3766,11 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
         );
         optional.walk(c, &format!("{}.optional", path), "UNCLASSIFIED_STRING");
         outer_prompt.walk(c, &format!("{}.outer_prompt", path), "UNCLASSIFIED_STRING");
+        requires_target_to_activate.walk(
+            c,
+            &format!("{}.requires_target_to_activate", path),
+            "UNCLASSIFIED_STRING",
+        );
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         max_per_turn.walk(c, &format!("{}.max_per_turn", path), "UNCLASSIFIED_STRING");
         as_option_effect.walk(c, &format!("{}.as_option_effect", path), "UNCLASSIFIED_STRING");

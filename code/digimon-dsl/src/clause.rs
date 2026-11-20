@@ -105,6 +105,18 @@ pub struct TriggeredClause {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub outer_prompt: bool,
 
+    /// A MANDATORY clause that is one required target pick plus actions on
+    /// that pick is NOT activatable while the pick has no candidate: DCGO
+    /// gates the effect's `CanActivateCondition` on
+    /// `HasMatchConditionPermanent`, so with no legal target it never enters
+    /// the trigger-order list (no `TriggerOrder` entry, no once-per-turn use).
+    /// Whether DCGO gates this way is a per-card fact (BT25-059 Ceresmon's
+    /// mandatory pick does NOT gate and still spends its OPT), so it is
+    /// declared per clause, not derived from the body shape.
+    /// BT20-014 SaviorHuckmon. G-ENGINE-TRIGGER-ORDER-NO-TARGET-ENTRY.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub requires_target_to_activate: bool,
+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub once_per_turn: bool,
 

@@ -174,6 +174,15 @@ pub fn lower_for_kind_with_clause_index(
         // for optional clauses and for [Main] field abilities even when the
         // clause isn't "optional" (activating IS the player's opt-in).
         let cost_guard = leading_cost_guard(&body_steps);
+        // `requires_target_to_activate: true` (a per-card DCGO fact, see the
+        // clause field): the clause is not activatable while its first
+        // required pick has no candidate, so it never enters the trigger-order
+        // list. `G-ENGINE-TRIGGER-ORDER-NO-TARGET-ENTRY`.
+        let mandatory_pick_guard = if clause.requires_target_to_activate {
+            Some(requires_target_guard(clause, &body_steps))
+        } else {
+            None
+        };
         let process_steps = Arc::new(body_steps);
         let active_when = clause.active_when.clone().map(Arc::new);
         let condition = clause.condition.clone().map(Arc::new);
@@ -275,6 +284,9 @@ pub fn lower_for_kind_with_clause_index(
             if let Some(guard) = cost_guard {
                 builder = builder.optional_condition_guard(guard);
             }
+        }
+        if let Some(guard) = mandatory_pick_guard {
+            builder = builder.activation_guard(guard);
         }
         if steps_provide_resource_flow(&process) {
             builder = builder.resource_flow();
@@ -1022,6 +1034,26 @@ pub(crate) fn first_step_candidate_guard(
         // for them.
         _ => None,
     }
+}
+
+/// Candidate guard for a clause declared `requires_target_to_activate`: the
+/// first body step must be a battle-area pick whose candidate set the engine
+/// can read, and the clause must be mandatory (an optional clause is gated by
+/// its own optional-activation path). A clause that declares the flag but
+/// cannot be guarded is an authoring error, so it fails card loading loudly
+/// instead of silently staying always-activatable.
+/// `G-ENGINE-TRIGGER-ORDER-NO-TARGET-ENTRY`.
+fn requires_target_guard(
+    clause: &CompiledTriggeredClause,
+    body: &[CompiledStep],
+) -> Box<dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync> {
+    assert!(
+        !clause.optional,
+        "requires_target_to_activate is only meaningful on a mandatory clause"
+    );
+    body.first()
+        .and_then(first_step_candidate_guard)
+        .expect("requires_target_to_activate needs a first step that is a single battle-area pick")
 }
 
 // ─── Optional processing condition payability (§15-7-4, §15-8-4-4-1) ──────
