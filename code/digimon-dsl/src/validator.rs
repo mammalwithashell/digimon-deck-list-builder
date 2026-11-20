@@ -2343,6 +2343,12 @@ fn validate_step_binding_scope(
         StepSpec::MoveFromBreeding(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
+        // The merged (DNA-digivolved) permanent's `bind_as` is visible to later
+        // steps in the same body (EX8-060 `may_attack_now: { attacker: .. }`).
+        // G-DSL-DNA-RESULT-BINDING.
+        StepSpec::EffectInitiatedDnaDigivolve(args) => {
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::PlayFromHand(args) => {
             // Cost-paying sibling of PlayFromHandFree: `bind_as` (honored only
             // on play_from_hand — the trash variants sharing these args reject
@@ -3711,6 +3717,58 @@ effects:
         assert!(errs
             .iter()
             .any(|e| e.path.contains("level_matches_aggregate.selector")));
+    }
+
+    #[test]
+    fn dna_digivolve_result_bind_as_is_declared_for_later_steps() {
+        // EX8-060 shape: `effect_initiated_dna_digivolve.bind_as` names the
+        // merged permanent, so later steps (a `binding_present` condition and
+        // `may_attack_now.attacker`) may read it (G-DSL-DNA-RESULT-BINDING).
+        let yaml = r#"
+card: X-1
+name: Test
+kind: option
+color: [black]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - select_own_permanent:
+          bind_as: dna_a
+          prompt: A
+          filter: { kind: digimon }
+      - select_own_permanent:
+          bind_as: dna_b
+          prompt: B
+          filter: { kind: digimon }
+      - select_hand:
+          of: you
+          bind_as: dna_card
+          prompt: Result
+          filter: { kind: digimon }
+      - effect_initiated_dna_digivolve:
+          target_a: dna_a
+          target_b: dna_b
+          from_hand: dna_card
+          cost: printed
+          bind_as: dna_result
+      - if:
+          condition: { binding_present: dna_result }
+          then:
+            - may_attack_now:
+                attacker: dna_result
+                targets: any
+                optional: true
+                prompt: "That DNA digivolved Digimon may attack"
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        if let Err(errs) = validate(&spec, &ValidationContext { raw_rust: &reg }) {
+            assert!(
+                !errs.iter().any(|e| e.message.contains("undeclared binding")),
+                "dna_result must be declared by the digivolve step: {errs:?}"
+            );
+        }
     }
 
     #[test]

@@ -99,7 +99,12 @@ def build_world(tmp_path: Path, *, partial: bool = True, dcgo: bool = True,
     overrides.write_text("{}", encoding="utf-8")
     official = tmp_path / "official.json"
     official.write_text(json.dumps({"cards": {
-        c: {"text_sections": [{"label": "Effect", "text": t}] if t else []} for c, t in TEXT.items()
+        # `colors` marks a populated catalog entry: an entry with neither colours
+        # nor any section text is an empty scrape record, not evidence of a
+        # blank printed card (card_sources.extract), and would re-open the
+        # security slot of every vanilla card here.
+        c: {"colors": "Red", "text_sections": [{"label": "Effect", "text": t}] if t else []}
+        for c, t in TEXT.items()
     }}), encoding="utf-8")
 
     yaml_dir = tmp_path / "cards"

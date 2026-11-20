@@ -160,3 +160,35 @@ def test_live_engine_callback_only_sites_do_not_exceed_baseline():
 
     assert violations == []
     assert summarize(findings)[CALLBACK_ONLY] > 0
+
+
+_PARKED_FIXTURE = """
+fn fixture(game: &mut Game) {
+    game.pending_selection = Some(PendingSelection {
+        callback: Box::new(|_, _| panic!("fixture must not resolve")),
+    });
+}
+"""
+
+
+def test_out_of_line_cfg_test_modules_are_not_live_sites(tmp_path):
+    parent = tmp_path / "parent.rs"
+    parent.write_text(
+        '#[cfg(test)]\nmod fixture_tests;\n'
+        '#[cfg(test)]\n#[path = "elsewhere/moved_tests.rs"]\nmod moved_tests;\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "parent").mkdir()
+    (tmp_path / "parent" / "fixture_tests.rs").write_text(
+        _PARKED_FIXTURE, encoding="utf-8"
+    )
+    (tmp_path / "elsewhere").mkdir()
+    (tmp_path / "elsewhere" / "moved_tests.rs").write_text(
+        _PARKED_FIXTURE, encoding="utf-8"
+    )
+    live = tmp_path / "live.rs"
+    live.write_text(_PARKED_FIXTURE, encoding="utf-8")
+
+    findings = audit_paths(tmp_path.rglob("*.rs"), root=tmp_path)
+
+    assert [finding.relpath for finding in findings] == ["live.rs"]

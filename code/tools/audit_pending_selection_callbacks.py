@@ -81,12 +81,55 @@ class BaselineViolation:
         )
 
 
+CFG_TEST_MOD_DECL_RE = re.compile(
+    r"#\[cfg\(test\)\]\s*"
+    r'(?:#\[path\s*=\s*"([^"]+)"\]\s*)?'
+    r"(?:pub(?:\([^)]*\))?\s+)?mod\s+([A-Za-z0-9_]+)\s*;"
+)
+LINE_COMMENT_RE = re.compile(r"//[^\n]*")
+
+
+def _cfg_test_module_files(paths: Sequence[Path]) -> set[Path]:
+    """Files that are out-of-line `#[cfg(test)] mod name;` test modules.
+
+    `_blank_cfg_test_modules` only blanks inline `#[cfg(test)] mod x { .. }`
+    bodies. A test module moved to its own file (`foo_tests.rs`, optionally
+    via `#[path = "..."]`) is equally test-only code, and its parked-selection
+    fixtures (a panicking callback standing in for a parked choice) are not
+    live engine sites, so they must not count against the live baseline.
+    """
+    test_files: set[Path] = set()
+    for decl in paths:
+        if decl.suffix != ".rs" or not decl.exists():
+            continue
+        text = LINE_COMMENT_RE.sub("", decl.read_text(encoding="utf-8"))
+        for match in CFG_TEST_MOD_DECL_RE.finditer(text):
+            explicit, name = match.group(1), match.group(2)
+            if explicit:
+                candidates = [decl.parent / explicit]
+            else:
+                base = (
+                    decl.parent
+                    if decl.name in ("mod.rs", "lib.rs", "main.rs")
+                    else decl.parent / decl.stem
+                )
+                candidates = [base / f"{name}.rs", base / name / "mod.rs"]
+            for candidate in candidates:
+                if candidate.exists():
+                    test_files.add(candidate.resolve())
+    return test_files
+
+
 def audit_paths(paths: Iterable[Path], *, root: Path) -> list[Finding]:
     """Classify PendingSelection callback installs in Rust source files."""
     root = root.resolve()
     findings: list[Finding] = []
-    for path in sorted(Path(p) for p in paths):
+    ordered = sorted(Path(p) for p in paths)
+    test_only = _cfg_test_module_files(ordered)
+    for path in ordered:
         if path.suffix != ".rs" or not path.exists():
+            continue
+        if path.resolve() in test_only:
             continue
         source = path.read_text(encoding="utf-8")
         source = _blank_cfg_test_modules(source)
