@@ -17,7 +17,9 @@ and a permanent keeps its frame while it stays on the field:
 The model follows each seat's frames from the plays the raw logged (each permanent tagged with DCGO's CardIndex when a
 row names it: the play packet, a 0.2.0 `card_indexes`, or the played hand slot) and checks EVERY recorded board of
 that seat against it, keeping each hypothesis a board allows (which copy left, whether the breeding area moved, a
-Digimon's top card changed in place). A pick's position is named only when every hypothesis puts the same tagged
+Digimon's top card changed in place). An Option that shows up with no play row (a Delay Option placed by its own
+effect, CardEffectCommons.PlaceDelayOptionCards, which never reaches the recorder's PlayCardClass hook) is explained
+only when nothing else does and nothing else left: it takes PreferredFrame like any play, its CardIndex unknown. A pick's position is named only when every hypothesis puts the same tagged
 permanent there. When a board matches no hypothesis, the hypotheses outgrow a bound, a card's kind is unknown, or a
 DNA / App Fusion packet places a permanent by TargetFrameID (DNADigivolveEffects.cs:33, not modelled), the model is
 off for that seat for the rest of the game: it never guesses.
@@ -144,13 +146,29 @@ class _Seat:
         self.hyps = hyps
 
     def check(self, listing, full):
-        """Keep the hypotheses that explain `listing` (battle area, plus the breeding area when `full`)."""
+        """Keep the hypotheses that explain `listing` (battle area, plus the breeding area when `full`).
+
+        When none does, one more explanation is tried: an Option the recorder never saw played (see
+        `_with_unlogged_options`). It is a last resort and a pure appearance - nothing else may leave in the same
+        step - so it never turns an inconsistent model into a consistent one by also guessing a departure."""
         if not self.alive:
             return
         if any(not isinstance(c, str) or not c for c in listing):
             return self.kill()
+        out = self._explain(self.hyps, listing, full)
+        if out is None:
+            return self.kill()
+        if not out:
+            out = self._explain_unlogged_options(listing, full)
+            if out is None:
+                return self.kill()
+        self._set(out)
+
+    def _explain(self, hyps, listing, full, min_kept=None):
+        """The hypotheses `hyps` yield for `listing`, or None past MAX_HYPOTHESES. `min_kept`: {hypothesis: how many
+        permanents it must still hold} - an explanation that lets any of them go is dropped."""
         out = set()
-        for h in self.hyps:
+        for h in hyps:
             bases = [h]
             breed = next((x for x in h if x[0] == BREEDING_FRAME), None)
             if breed is not None:
@@ -169,10 +187,54 @@ class _Seat:
                     seq = [x for x in seq if x[0] != BREEDING_FRAME]
                 for keep in self._align(seq, listing):
                     g = frozenset(keep) | ({kept_breed} if kept_breed else set())
+                    if min_kept is not None and len(g) < min_kept[h]:
+                        continue
                     out.add(g)
                     if len(out) > MAX_HYPOTHESES:
-                        return self.kill()
-        self._set(out)
+                        return None
+        return out
+
+    def _explain_unlogged_options(self, listing, full):
+        """`listing` as every hypothesis grown by Options nobody logged playing, nothing else changed.
+
+        CardEffectCommons.PlaceDelayOptionCards (a Delay Option placed by its own effect, e.g. a [Security] [Main]
+        placement) builds a PlayPermanentClass directly: the Option takes PreferredFrame and the hybrid re-row like
+        any play (CardController.cs:1811-1856), but PlayCardClass.PlayCard - the recorder's only play hook - never
+        runs, so no row names it and its DCGO CardIndex is unknown. It is the only direct PlayPermanentClass path
+        besides a DigiEgg's hatch (HatchDigiEggClass, handled by `_explain`), so only an Option is admitted. Every
+        Option id on the listing is tried as the newcomer, up to two of them (a placement can place several)."""
+        options = sorted({c for c in listing if self.is_option(c)})
+        if not options:
+            return set()
+        grown = set()
+        for h in self.hyps:
+            frontier = [h]
+            for _ in range(2):
+                nxt = []
+                for g in frontier:
+                    for c in options:
+                        f = self.preferred(g, c)
+                        if f is None:
+                            continue
+                        g2 = self._rerow(g | {(f, c, None)}, f)
+                        grown.add(g2)
+                        nxt.append(g2)
+                frontier = nxt
+        out = set()
+        for g in grown:
+            # the grown hypothesis must be kept whole, not whittled down by a departure
+            res = self._explain({g}, listing, full, {g: len(g)})
+            if res is None:
+                return None
+            out |= res
+            if len(out) > MAX_HYPOTHESES:
+                return None
+        return out
+
+    def is_option(self, card_id):
+        """An Option proper (cards.json card_kind 2): the card kind a Delay Option placement puts on the field."""
+        k = (self.cards.get(card_id) or {}).get("card_kind")
+        return k == 2 or "option" in str(k).lower()
 
     def _align(self, seq, listing):
         """Every way `seq` (frame order) yields `listing`: an entry stays (same id, or a Digimon whose top changed in
