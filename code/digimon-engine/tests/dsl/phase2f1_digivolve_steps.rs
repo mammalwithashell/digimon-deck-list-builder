@@ -179,6 +179,7 @@ fn effect_initiated_dna_digivolve_step_merges_two_perms_with_card_handle_top() {
         from_hand: CompiledBindingRef::Named("from".into()),
         cost: CompiledCostDelta::Literal(0),
         ignore_requirements: true,
+        bind_as: None,
     };
 
     {
@@ -225,4 +226,81 @@ fn effect_initiated_dna_digivolve_step_merges_two_perms_with_card_handle_top() {
         handles.contains(&hand_card_handle),
         "merged stack contains the result card"
     );
+}
+
+/// G-DSL-DNA-RESULT-BINDING: `bind_as` names the MERGED permanent after a
+/// successful effect-initiated DNA digivolve so a later step can address "that
+/// DNA digivolved Digimon" (EX8-060 Myotismon's follow-up attack). The binding
+/// names the surviving permanent (its top card is the result card), not either
+/// consumed material slot; a rejected merge binds nothing.
+#[test]
+fn effect_initiated_dna_digivolve_bind_as_names_the_merged_permanent() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TST-A", "DnaSourceA"))
+        .add_card(make_test_card("TST-B", "DnaSourceB"))
+        .add_card(make_test_card("TST-DNA-RESULT", "DnaResult"))
+        .hand(0, &["TST-DNA-RESULT"])
+        .memory(5)
+        .start();
+    // The partner sits at the LOWER slot, so the merged permanent shifts down.
+    let handle_b = runner.place_on_field(0, "TST-B", None);
+    let handle_a = runner.place_on_field(0, "TST-A", None);
+    let hand_card_handle = runner.game.players[0].hand[0].handle();
+
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("a", handle_a);
+    bindings.insert_permanent("b", handle_b);
+    bindings.insert_card("from", hand_card_handle);
+    let step = CompiledStep::EffectInitiatedDnaDigivolve {
+        target_a: CompiledBindingRef::Named("a".into()),
+        target_b: CompiledBindingRef::Named("b".into()),
+        from_hand: CompiledBindingRef::Named("from".into()),
+        cost: CompiledCostDelta::Literal(0),
+        ignore_requirements: true,
+        bind_as: Some("merged".to_string()),
+    };
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card_handle, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+    let merged = bindings.get_permanent("merged").expect("the merged permanent is bound");
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+    assert_eq!(
+        runner.game.players[0].battle_area[merged.index as usize]
+            .top_card()
+            .handle(),
+        hand_card_handle,
+        "the binding resolves to the permanent topped by the result card"
+    );
+}
+
+/// A merge the engine rejects (here: the same Digimon named twice) binds nothing.
+#[test]
+fn effect_initiated_dna_digivolve_bind_as_is_unset_when_the_merge_is_rejected() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TST-A", "DnaSourceA"))
+        .add_card(make_test_card("TST-DNA-RESULT", "DnaResult"))
+        .hand(0, &["TST-DNA-RESULT"])
+        .memory(5)
+        .start();
+    let handle_a = runner.place_on_field(0, "TST-A", None);
+    let hand_card_handle = runner.game.players[0].hand[0].handle();
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("a", handle_a);
+    bindings.insert_permanent("b", handle_a);
+    bindings.insert_card("from", hand_card_handle);
+    let step = CompiledStep::EffectInitiatedDnaDigivolve {
+        target_a: CompiledBindingRef::Named("a".into()),
+        target_b: CompiledBindingRef::Named("b".into()),
+        from_hand: CompiledBindingRef::Named("from".into()),
+        cost: CompiledCostDelta::Literal(0),
+        ignore_requirements: true,
+        bind_as: Some("merged".to_string()),
+    };
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card_handle, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+    assert!(bindings.get_permanent("merged").is_none(), "no merge, no binding");
+    assert_eq!(runner.game.players[0].hand.len(), 1, "the result card stays in hand");
 }

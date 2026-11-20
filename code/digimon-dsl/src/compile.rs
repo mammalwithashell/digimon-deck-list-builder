@@ -3764,6 +3764,7 @@ fn compile_step(
             from_hand: compile_binding_ref(&a.from_hand),
             cost: compile_cost_delta(&a.cost, prefix, card_id, errors),
             ignore_requirements: a.ignore_requirements,
+            bind_as: a.bind_as.clone(),
         },
         S::EffectInitiatedDnaDigivolveHandPartner(a) => {
             CompiledStep::EffectInitiatedDnaDigivolveHandPartner {

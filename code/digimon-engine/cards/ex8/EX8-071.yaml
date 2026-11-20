@@ -1,0 +1,91 @@
+# EX8-071 Nightmare Soldiers — Option, Purple, use cost 2. Traits: NSo.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX8-071.md):
+#   While you have no face-up security cards, you may ignore this card's color
+#     requirements.
+#   {Security} [All Turns] All of your level 4 or higher Digimon with the [NSo]
+#     trait gain <Scapegoat>.
+#   [Main] Add your bottom security card to the hand. Then, place this card face
+#     up as the bottom security card.
+#   Security Effect:
+#   [Security] You may play 1 level 5 or lower Digimon card with the [NSo] trait
+#     from your hand without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX8/Purple/EX8_071.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Colour (EffectTiming.None, IgnoreColorConditionClass): active while the owner
+#   has 0 face-up (non-flipped) security cards; applies to this card only.
+#   → `use_requirement: face_up_security_count_lte: 0` — the engine's Option
+#   colour check treats a true use requirement as satisfying the colour
+#   requirement (action/mask.rs `option_use_requirement_or_color_available`).
+#   Same idiom as BT25-097 Guardian Palace / ST21-15.
+# Scapegoat (AddSkillClass over the owner's battle-area Digimon whose TOP card
+#   is level >= 4 AND EqualsTraits("NSo"), gated on this card face-up in
+#   security `IsExistInSecurity(card, false)`): grants
+#   ScapegoatSelfEffect on WhenPermanentWouldBeDeleted. No [Once Per Turn]; the
+#   printed "[All Turns]" means both turns. → `kind: aura, scope: security`
+#   with `grant_keyword: Scapegoat` (BT25-097's second aura is the sister idiom;
+#   the WhenWouldBeDeleted scan synthesizes the Scapegoat replacement body on
+#   the recipient).
+# [Main] (OptionSkill): CardEffectFactory.ReplaceBottomSecurityWithFaceUpOptionMainEffect
+#   — bottom security card → hand (if any), then this card → face-up bottom
+#   security. Mandatory. → `add_bottom_security_to_hand` + `place_on_security`
+#   (ST21-15 / BT25-097 idiom).
+# [Security] (SecuritySkill): `canNoSelect: true` hand pick over Digimon with
+#   level <= 5, EqualsTraits("NSo"), CanPlayAsNewPermanent(payCost: false) →
+#   PlayPermanentCards free. → optional `select_hand` + `play_from_hand_free`.
+
+card: EX8-071
+name: Nightmare Soldiers
+kind: option
+color: [purple]
+cost: 2
+traits: [NSo]
+
+use_requirement:
+  face_up_security_count_lte: 0
+
+effects:
+  # ─── {Security} [All Turns] level 4+ [NSo] Digimon gain <Scapegoat> ─────────
+  - kind: aura
+    scope: security
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      level_gte: 4
+      trait_has: NSo
+    grant_keyword: { keyword: Scapegoat }
+    summary: "{Security} [All Turns] All of your level 4 or higher [NSo] trait Digimon gain <Scapegoat>"
+
+  # ─── [Main] replace the bottom security card with this card, face up ────────
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Add your bottom security card to the hand. Then, place this card face up as the bottom security card"
+    process:
+      - add_bottom_security_to_hand: { of: you }
+      - place_on_security:
+          source: self_option
+          position: bottom
+          face_up: true
+
+  # ─── [Security] may play 1 level <= 5 [NSo] Digimon from hand free ──────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] You may play 1 level 5 or lower Digimon card with the [NSo] trait from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: nso_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - trait_has: NSo
+              # DCGO `CanPlayAsNewPermanent(card, payCost: false, ...)`.
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 level 5 or lower Digimon card with the [NSo] trait from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: nso_pick }

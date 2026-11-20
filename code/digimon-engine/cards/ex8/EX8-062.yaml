@@ -1,0 +1,106 @@
+# EX8-062 Piedmon — Digimon, Purple/Yellow, Lv.6, cost 7, 12000 DP. Traits:
+# Wizard, NSo. Attribute: Virus (form Mega). ACE.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX8-062.md):
+#   [Digivolve] Purple Lv.5 / cost 4;  Yellow Lv.5 / cost 4
+#   [Digivolve] Lv.5 w/[NSo] trait: Cost 3
+#   {Hand} [Counter] <Blast Digivolve>
+#   [On Play] [When Digivolving] Activate the effect below 4 times:
+#     - 1 of your opponent's Digimon gets -2000 DP for the turn.
+#   [All Turns] [Once Per Turn] When other Digimon are deleted, you may play 1
+#     level 4 or lower [NSo] trait Digimon card from your trash without paying
+#     the cost.
+#   Special rule: <Overflow (-4)> (ACE)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX8/Purple/EX8_062.cs
+#   - Alt digivolve: top card level 5 AND EqualsTraits("NSo"), cost 3.
+#   - OnCounterTiming: BlastDigivolveEffect.
+#   - [On Play] / [When Digivolving]: `for (i < 4)` { if an opponent Digimon
+#     exists: MANDATORY pick of 1 (canNoSelect: false), -2000 DP until the end of
+#     the turn }. The same Digimon may be picked more than once; the loop skips
+#     an iteration only when the opponent has no Digimon left.
+#   - [All Turns] OPT (hash "PlayDigimon_EX8_062"): CanTriggerOnPermanentDeleted
+#     over a battle-area Digimon that is not this permanent; body = a
+#     `canNoSelect: true` trash pick (NSo, Digimon, level <= 4,
+#     CanPlayAsNewPermanent(payCost: false)) -> play free.
+#
+# DSL: the "4 times" loop is unrolled into 4 identical pick+modifier pairs (the
+# DSL has no repeat-N step; an empty candidate set silently skips a pick).
+
+card: EX8-062
+name: Piedmon
+kind: digimon
+level: 6
+color: [purple, yellow]
+cost: 7
+dp: 12000
+traits: [Wizard, NSo]
+attribute: Virus
+ace_overflow: -4
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: NSo
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+    summary: "{Hand} [Counter] <Blast Digivolve>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Activate the effect below 4 times: 1 of your opponent's Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: shrunk_1
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -2000 DP for the turn (1 of 4)"
+      - add_dp_modifier: { target: shrunk_1, value: -2000, expiry: end_of_turn }
+      - select_opponent_permanent:
+          bind_as: shrunk_2
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -2000 DP for the turn (2 of 4)"
+      - add_dp_modifier: { target: shrunk_2, value: -2000, expiry: end_of_turn }
+      - select_opponent_permanent:
+          bind_as: shrunk_3
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -2000 DP for the turn (3 of 4)"
+      - add_dp_modifier: { target: shrunk_3, value: -2000, expiry: end_of_turn }
+      - select_opponent_permanent:
+          bind_as: shrunk_4
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -2000 DP for the turn (4 of 4)"
+      - add_dp_modifier: { target: shrunk_4, value: -2000, expiry: end_of_turn }
+
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][Once Per Turn] When other Digimon are deleted, you may play 1 level 4 or lower [NSo] trait Digimon card from your trash without paying the cost"
+    trigger_if:
+      all_of:
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: token
+        - event_permanent_is_source: false
+    process:
+      - select_trash:
+          of: you
+          bind_as: nso_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - trait_has: NSo
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 level 4 or lower [NSo] trait Digimon card from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: nso_pick }

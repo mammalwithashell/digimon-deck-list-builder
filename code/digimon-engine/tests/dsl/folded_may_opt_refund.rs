@@ -199,6 +199,12 @@ const REVIEWED: &[&str] = &[
     // card from your trash": whole-effect may, no Then tail (Q1818).
     // st21_11.rs tests decline preserving OPT and use spending it.
     "ST21-11#1",
+    // EX8-060 [Your Turn][Once Per Turn] "2 of your Digimon may DNA digivolve into a
+    // Digimon card with the [NSo] trait in the hand. Then, that DNA digivolved
+    // Digimon may attack": a whole-effect may, and the attack tail depends on the
+    // DNA binding. ex8_060.rs tests that declining keeps the use for a second
+    // trigger the same turn.
+    "EX8-060#1",
 ];
 
 #[test]
