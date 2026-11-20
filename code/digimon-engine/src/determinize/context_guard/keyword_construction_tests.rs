@@ -35,8 +35,8 @@ fn expected_count(keyword: Keyword) -> usize {
         Keyword::Blocker | Keyword::SecurityAttackPlus(_) | Keyword::SecurityAttackMinus(_) | Keyword::Rush | Keyword::Jamming | Keyword::Reboot | Keyword::DeDigivolve(_) | Keyword::DrawX(_) | Keyword::DigiBurst(_) | Keyword::Digisorption(_) | Keyword::Collision | Keyword::Decode | Keyword::Progress | Keyword::Iceclad | Keyword::ArtsDigivolve => 0,
     }
 }
-fn callback_shape(e: &Effect) -> [bool; 16] {
-    [e.condition.is_some(),e.trigger_qualifier.is_some(),e.outer_optional_guard.is_some(),
+fn callback_shape(e: &Effect) -> [bool; 17] {
+    [e.condition.is_some(),e.trigger_qualifier.is_some(),e.outer_optional_guard.is_some(),e.activation_guard.is_some(),
      e.option_color_requirement_bypass.is_some(),e.cost_reduction_fn.is_some(),
      e.use_cost_increase_fn.is_some(),e.replacement_condition.is_some(),
      e.dp_modifier_fn.is_some(),e.security_attack_fn.is_some(),e.link_filter.is_some(),
@@ -110,7 +110,7 @@ fn every_emitted_keyword_callback_rejects_world_direct_and_nested_contexts() {
                 macro_rules! two {($field:ident,$arg:expr) => {
                     if let Some(f)=&e.$field {reject(||f(&read,$arg));invocations+=1;}
                 };}
-                one!(condition,trigger_qualifier,outer_optional_guard,
+                one!(condition,trigger_qualifier,outer_optional_guard,activation_guard,
                     option_color_requirement_bypass,cost_reduction_fn,use_cost_increase_fn);
                 two!(replacement_condition,&ReplacementSubject::Player(seat));
                 two!(dp_modifier_fn,permanent);two!(security_attack_fn,permanent);

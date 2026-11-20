@@ -2122,6 +2122,7 @@ fn compile_triggered(
             .collect(),
         optional: t.optional,
         outer_prompt: t.outer_prompt,
+        requires_target_to_activate: t.requires_target_to_activate,
         once_per_turn: t.once_per_turn,
         max_per_turn: t.max_per_turn,
         as_option_effect: t.as_option_effect,

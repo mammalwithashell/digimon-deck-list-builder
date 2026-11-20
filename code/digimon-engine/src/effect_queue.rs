@@ -4095,11 +4095,67 @@ impl Game {
                 || !self.queued_effect_condition_passes(i)
                 || !self.queued_effect_index_is_live(i)
                 || self.queued_optional_condition_unpayable(i)
+                || self.queued_effect_activation_guard_fails(i)
             {
                 to_skip.push(i);
             }
         }
         to_skip
+    }
+
+    /// True when `effect_queue[i]` is a mandatory single-pick effect
+    /// (`Effect::activation_guard`) whose pick has no candidate right now:
+    /// DCGO gates such an effect's `CanActivateCondition` on
+    /// `HasMatchConditionPermanent`, so it is never an entry of the
+    /// `MultipleSkills` order list. Transient like the other `non_firing`
+    /// exclusions -- the entry stays queued and is re-evaluated after a
+    /// sibling resolves (which may create a target).
+    /// G-ENGINE-TRIGGER-ORDER-NO-TARGET-ENTRY.
+    fn queued_effect_activation_guard_fails(&mut self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i).cloned() else {
+            return false;
+        };
+        if qe.granted_effect_id.is_some()
+            || qe.keyword_effect.is_some()
+            || qe.pending_processing.is_some()
+            || qe
+                .trigger_context
+                .as_ref()
+                .is_some_and(|c| !c.simultaneous_play_members.is_empty())
+        {
+            return false;
+        }
+        let Some(effects) = self.effects_for_queued(&qe) else {
+            return false;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return false;
+        };
+        let Some(guard) = effect.activation_guard.clone() else {
+            return false;
+        };
+        let source_kind = self.queued_effect_activation_kind(&qe);
+        let prev_dna_origin = self.current_dna_origin;
+        if qe.dna_origin_context.is_some() {
+            self.current_dna_origin = qe.dna_origin_context;
+        }
+        let gate = qe
+            .trigger_context
+            .as_ref()
+            .and_then(|context| self.gate_trigger_context(context));
+        let trigger_guard =
+            TriggerContextGuard::install(self, gate.or_else(|| qe.trigger_context.clone()));
+        let rctx = EffectReadContext::new_with_source_kind(
+            &*trigger_guard.game,
+            qe.source_card,
+            qe.source_permanent,
+            source_kind,
+            qe.controller,
+        );
+        let holds = guard(&rctx);
+        drop(trigger_guard);
+        self.current_dna_origin = prev_dna_origin;
+        !holds
     }
 
     /// True when `effect_queue[i]` is an OPTIONAL effect whose optional

@@ -1310,6 +1310,9 @@ pub struct CompiledTriggeredClause {
     /// `RemoveUse` semantics. G-OPT-REFUND-ON-DECLINE.
     #[serde(default)]
     pub outer_prompt: bool,
+    /// See `clause::TriggeredClause::requires_target_to_activate`.
+    #[serde(default)]
+    pub requires_target_to_activate: bool,
     pub once_per_turn: bool,
     pub max_per_turn: Option<u8>,
     /// Queue this clause's effects as Option effects. See
@@ -3583,6 +3586,7 @@ mod tests {
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
+                requires_target_to_activate: false,
                 opt_group: None,
                 once_per_turn: false,
                 as_option_effect: false,
@@ -3647,6 +3651,7 @@ mod tests {
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
+                requires_target_to_activate: false,
                 opt_group: None,
                 once_per_turn: false,
                 as_option_effect: false,
