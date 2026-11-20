@@ -60,6 +60,17 @@ effects:
 "#).unwrap();
     let card = digimon_dsl::compile::compile(&spec).unwrap();
     let pack = CardPack::new("royal-knights", vec![card]);
-    assert_eq!(pack.manifest.pack_version, "0.35.0");
+    assert_eq!(pack.manifest.pack_version, "0.36.0");
     assert_eq!(CardPack::from_bytes(&pack.to_bytes().unwrap()).unwrap(), pack);
+}
+
+#[test]
+fn pre_event_batch_trait_leaf_layout_is_rejected() {
+    // 0.35.0 packs predate the mid-struct `event_batch_card_trait_has`
+    // CompiledPredicate field; bincode is positional, so they must be refused
+    // cleanly rather than decoded misaligned.
+    let mut pack = CardPack::new("legacy-0.35", vec![]);
+    pack.manifest.pack_version = "0.35.0".into();
+    let err = CardPack::from_bytes(&pack.to_bytes().unwrap()).unwrap_err();
+    assert!(err.contains("unsupported pack format") && err.contains("0.35.0"), "{err}");
 }
