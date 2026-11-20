@@ -294,10 +294,12 @@ fn bt25_010_does_not_reduce_for_sea_animal_target() {
     );
 }
 
-/// Negative: the exclusion wins even when another matching trait is present —
-/// a Bird + Sea Animal Digimon must NOT get the reduction.
+/// "other than [Sea Animal]" removes that TRAIT, not the whole card (official
+/// Q&A: "Other than [Sea Animal], all traits with [Avian], [Bird], [Beast],
+/// [Animal] or [Sovereign] are applicable"; DCGO `HasBirdTraits` is
+/// unconditional). A Bird + Sea Animal Digimon keeps the reduction via [Bird].
 #[test]
-fn bt25_010_sea_animal_exclusion_overrides_other_matching_trait() {
+fn bt25_010_bird_trait_still_qualifies_when_card_also_has_sea_animal() {
     let mut runner = base().start();
     runner.game.turn_count = 1;
     let hawkmon = place_hawkmon(&mut runner);
@@ -312,8 +314,8 @@ fn bt25_010_sea_animal_exclusion_overrides_other_matching_trait() {
     assert!(digivolved, "Bird+Sea Animal target is a legal digivolution");
     assert_eq!(
         runner.game.memory,
-        memory_before - 1,
-        "'other than [Sea Animal]' must veto the reduction even with a Bird trait present"
+        memory_before,
+        "[Bird] qualifies independently of the [Sea Animal] trait: cost 1 reduced to 0"
     );
 }
 

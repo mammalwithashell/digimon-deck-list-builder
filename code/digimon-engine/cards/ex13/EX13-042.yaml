@@ -54,10 +54,13 @@ effects:
               - play_cost_lte: 4
               - any_of:
                   - trait_contains: Beast
-                  - trait_contains: Animal
                   - trait_contains: Sovereign
-              - not:
-                  trait_has: "Sea Animal"
+                  # DCGO HasBeastTraits: "Animal" counts only when no trait
+                  # is [Sea Animal]; Beast/Sovereign are unconditional.
+                  - all_of:
+                      - trait_contains: Animal
+                      - none_of:
+                          - trait_contains: "Sea Animal"
           prompt: "You may play 1 play cost 4 or lower Digimon card with [Beast], [Animal] or [Sovereign] (other than [Sea Animal]) in its traits without paying the cost"
       - if:
           condition: { binding_present: pick }

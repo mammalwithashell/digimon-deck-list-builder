@@ -36,10 +36,11 @@ effects:
                       - all_of:
                           - any_of:
                               - trait_contains: Beast
-                              - trait_contains: Animal
                               - trait_contains: Sovereign
-                          - none_of:
-                              - trait_contains: Sea Animal
+                              - all_of:
+                                  - trait_contains: Animal
+                                  - none_of:
+                                      - trait_contains: Sea Animal
             - bind_as: ts_pick
               min: 1
               max: 1
