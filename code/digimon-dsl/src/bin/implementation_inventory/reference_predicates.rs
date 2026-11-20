@@ -83,11 +83,14 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             battle_opponent_no_sources,
             self_source_count,
             self_same_level_source_pairs_gte,
+            self_stack_same_level_count_gte,
             own_source_stack_color_count_gte,
             zone,
             owner,
             other,
             is_source,
+            is_source_card,
+            card_in_zone,
             of_permanent,
             not_in_binding,
             name_not_in_binding,
@@ -183,6 +186,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             event_card_color_count,
             event_cause,
             event_target_same_level_as_previous,
+            event_target_has_same_level_source,
             event_target_digivolved_from_kind,
             host_permanent_trait_has,
             trashed_source_trait_has,
@@ -490,6 +494,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             &format!("{}.self_same_level_source_pairs_gte", path),
             "UNCLASSIFIED_STRING",
         );
+        self_stack_same_level_count_gte.walk(
+            c,
+            &format!("{}.self_stack_same_level_count_gte", path),
+            "UNCLASSIFIED_STRING",
+        );
         own_source_stack_color_count_gte.walk(
             c,
             &format!("{}.own_source_stack_color_count_gte", path),
@@ -499,6 +508,8 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         owner.walk(c, &format!("{}.owner", path), "UNCLASSIFIED_STRING");
         other.walk(c, &format!("{}.other", path), "UNCLASSIFIED_STRING");
         is_source.walk(c, &format!("{}.is_source", path), "UNCLASSIFIED_STRING");
+        is_source_card.walk(c, &format!("{}.is_source_card", path), "UNCLASSIFIED_STRING");
+        card_in_zone.walk(c, &format!("{}.card_in_zone", path), "UNCLASSIFIED_STRING");
         of_permanent.walk(
             c,
             &format!("{}.of_permanent", path),
@@ -912,6 +923,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         event_target_same_level_as_previous.walk(
             c,
             &format!("{}.event_target_same_level_as_previous", path),
+            "UNCLASSIFIED_STRING",
+        );
+        event_target_has_same_level_source.walk(
+            c,
+            &format!("{}.event_target_has_same_level_source", path),
             "UNCLASSIFIED_STRING",
         );
         event_target_digivolved_from_kind.walk(
@@ -1837,11 +1853,14 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             battle_opponent_no_sources,
             self_source_count,
             self_same_level_source_pairs_gte,
+            self_stack_same_level_count_gte,
             own_source_stack_color_count_gte,
             zone,
             owner,
             other,
             is_source,
+            is_source_card,
+            card_in_zone,
             of_permanent,
             not_in_binding,
             name_not_in_binding,
@@ -1922,6 +1941,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             is_event_host,
             event_is_effect_initiated,
             event_target_same_level_as_previous,
+            event_target_has_same_level_source,
             event_target_digivolved_from_kind,
             event_cause,
             replacement_cause,
@@ -2240,6 +2260,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             &format!("{}.self_same_level_source_pairs_gte", path),
             "UNCLASSIFIED_STRING",
         );
+        self_stack_same_level_count_gte.walk(
+            c,
+            &format!("{}.self_stack_same_level_count_gte", path),
+            "UNCLASSIFIED_STRING",
+        );
         own_source_stack_color_count_gte.walk(
             c,
             &format!("{}.own_source_stack_color_count_gte", path),
@@ -2249,6 +2274,8 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         owner.walk(c, &format!("{}.owner", path), "UNCLASSIFIED_STRING");
         other.walk(c, &format!("{}.other", path), "UNCLASSIFIED_STRING");
         is_source.walk(c, &format!("{}.is_source", path), "UNCLASSIFIED_STRING");
+        is_source_card.walk(c, &format!("{}.is_source_card", path), "UNCLASSIFIED_STRING");
+        card_in_zone.walk(c, &format!("{}.card_in_zone", path), "UNCLASSIFIED_STRING");
         of_permanent.walk(
             c,
             &format!("{}.of_permanent", path),
@@ -2606,6 +2633,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         event_target_same_level_as_previous.walk(
             c,
             &format!("{}.event_target_same_level_as_previous", path),
+            "UNCLASSIFIED_STRING",
+        );
+        event_target_has_same_level_source.walk(
+            c,
+            &format!("{}.event_target_has_same_level_source", path),
             "UNCLASSIFIED_STRING",
         );
         event_target_digivolved_from_kind.walk(

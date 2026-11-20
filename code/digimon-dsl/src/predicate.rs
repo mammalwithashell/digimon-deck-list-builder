@@ -549,6 +549,18 @@ pub struct PredicateSpec {
     /// or more same-level cards...".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_same_level_source_pairs_gte: Option<u8>,
+    /// True when the effect carrier's WHOLE stack -- its top card AND its
+    /// face-up digivolution cards -- holds at least N cards of one level
+    /// ("if this Digimon's stack has 2 or more same-level cards"). Unlike
+    /// `self_same_level_source_pairs_gte` (source cards only, top card
+    /// excluded) the top card counts: official Q&A on BT22-056 -- "a level 5
+    /// Digimon has a level 5 digivolution card". DCGO
+    /// `PermanentOfThisCard().StackCards.Filter(!IsFlipped).GroupBy(Level)
+    /// .Any(g => g.Count() >= N)`. Face-down cards have no characteristics
+    /// (CR 4.3 4-7-9) and cards without a level never form a group.
+    /// G-DSL-SELF-STACK-SAME-LEVEL-COUNT (driver BT22-056).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_stack_same_level_count_gte: Option<u8>,
     /// True when the effect CARRIER's NON-FLIPPED digivolution-source color
     /// set has at least N distinct colors. A no-subject, carrier-scoped
     /// global predicate â€” it does NOT inspect the candidate, it reads
@@ -579,6 +591,25 @@ pub struct PredicateSpec {
     /// `is_source: true`, exposing the Yes/No to the RL action space.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_source: Option<bool>,
+    /// `is_source_card: true` -- the subject CARD must BE the effect's own
+    /// source card (the card-subject mirror of `is_source`, which only reads
+    /// permanent subjects). A battle-area stack is addressed by its top card,
+    /// so a Tamer's own card is `is_source_card` while another copy of the same
+    /// Tamer in play or in the trash is not. Lets a `select_zone_cards` pick
+    /// range over "this Tamer" together with other zones' cards (BT17-080
+    /// Takato Matsuki: "by placing this Tamer and 1 [Growlmon] and 1
+    /// [WarGrowlmon] from your trash as ... digivolution cards").
+    /// G-DSL-IS-SOURCE-CARD.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_source_card: Option<bool>,
+    /// Card-subject location gate: the subject CARD currently lies in one of
+    /// these zones. `zone` is only enforced on permanent subjects (and the
+    /// reveal overlay), so a multi-zone `select_zone_cards` could not say
+    /// "[Growlmon] from your trash" without also matching a [Growlmon] on the
+    /// field. A battle-area stack's TOP card is `battle_area`; the cards under
+    /// it are `material`. Empty = no constraint. G-DSL-CARD-IN-ZONE.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub card_in_zone: Vec<Zone>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub of_permanent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1072,6 +1103,17 @@ pub struct PredicateSpec {
     pub event_cause: Option<EventCauseSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_same_level_as_previous: Option<bool>,
+    /// Observer-side gate for `on_digivolve` clauses: true when the event
+    /// Digimon (the permanent that just digivolved) has a FACE-UP digivolution
+    /// card whose level equals the event Digimon's own current level (its new
+    /// top card's level). Face-down digivolution cards are never counted -- a
+    /// face-down card under another card has no characteristics (CR 4.3
+    /// 4-7-9). Mirrors DCGO `permanent.DigivolutionCards.Filter(x => x.HasLevel
+    /// && x.Level == permanent.Level).Count >= 1`. Driver: BT22-093 Ami Aiba
+    /// ("if it has a digivolution card with the same level as the digivolved
+    /// Digimon"). G-DSL-EVENT-TARGET-HAS-SAME-LEVEL-SOURCE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_has_same_level_source: Option<bool>,
     /// Observer-side "digivolved FROM" kind gate for `on_digivolve` clauses:
     /// true when the card the event-target permanent digivolved from (the
     /// card directly under its new top card) has the given card category.

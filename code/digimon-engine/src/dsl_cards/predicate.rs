@@ -177,6 +177,57 @@ fn eval_predicate_ref_known(
     bindings: Option<&Bindings>,
     inherited_ref: DualRef,
 ) -> bool {
+    if let Some(want) = pred.is_source_card {
+        // G-DSL-IS-SOURCE-CARD: the subject CARD is the effect's own source
+        // card. A permanent subject is addressed by its top card.
+        let is_src = match subject {
+            PredicateSubject::Card(card) | PredicateSubject::RevealedCard(card) => {
+                card == rctx.source_card
+            }
+            PredicateSubject::Source(source) => source.card == rctx.source_card,
+            PredicateSubject::Permanent(handle) => permanent_for_handle(rctx, handle)
+                .is_some_and(|perm| perm.top_card().handle() == rctx.source_card),
+            _ => false,
+        };
+        if is_src != want {
+            return false;
+        }
+    }
+    if !pred.card_in_zone.is_empty() {
+        // G-DSL-CARD-IN-ZONE: where the subject CARD currently lies. A
+        // battle-area stack's top card is `battle_area`; the cards under it
+        // are `material`.
+        let card = match subject {
+            PredicateSubject::Card(card) | PredicateSubject::RevealedCard(card) => Some(card),
+            PredicateSubject::Source(source) => Some(source.card),
+            _ => None,
+        };
+        let zone = card.and_then(|card| {
+            use crate::enums::CardSourceRef;
+            Some(match rctx.game.locate_card_source_ref(card)? {
+                CardSourceRef::Hand(..) => CompiledZone::Hand,
+                CardSourceRef::Trash(..) => CompiledZone::Trash,
+                CardSourceRef::Security(..) | CardSourceRef::PendingSecurity => {
+                    CompiledZone::Security
+                }
+                CardSourceRef::Reveal(_) => CompiledZone::Reveal,
+                CardSourceRef::DeckTop(_) => CompiledZone::Deck,
+                CardSourceRef::Material(host, _) => {
+                    if permanent_for_handle(rctx, host)
+                        .is_some_and(|perm| perm.top_card().handle() == card)
+                    {
+                        CompiledZone::BattleArea
+                    } else {
+                        CompiledZone::Material
+                    }
+                }
+                CardSourceRef::Link(..) => CompiledZone::Material,
+            })
+        });
+        if !zone.is_some_and(|zone| pred.card_in_zone.contains(&zone)) {
+            return false;
+        }
+    }
     if let Some(want) = pred.can_digivolve_into_source_card {
         let possible = match subject {
             PredicateSubject::Permanent(handle) => can_card_digivolve_onto(rctx, rctx.source_card, handle),
@@ -703,6 +754,25 @@ fn eval_predicate_ref_known(
             .map(|perm| same_level_pairs_in_sources(perm, rctx.card_data()))
             .unwrap_or(0);
         if count < i32::from(floor) {
+            return false;
+        }
+    }
+    if let Some(floor) = pred.self_stack_same_level_count_gte {
+        // G-DSL-SELF-STACK-SAME-LEVEL-COUNT: the carrier's whole stack (top
+        // card included) holds >= `floor` face-up cards of a single level.
+        let satisfied = rctx
+            .source_permanent
+            .and_then(|handle| permanent_for_handle(rctx, handle))
+            .is_some_and(|perm| {
+                let mut counts = std::collections::BTreeMap::<u8, u8>::new();
+                for card in perm.card_sources.iter().filter(|card| !card.face_down) {
+                    if let Some(level) = card.level(rctx.card_data()) {
+                        *counts.entry(level).or_default() += 1;
+                    }
+                }
+                counts.values().any(|count| *count >= floor)
+            });
+        if !satisfied {
             return false;
         }
     }
@@ -2703,6 +2773,26 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = pred.event_target_has_same_level_source {
+        // G-DSL-EVENT-TARGET-HAS-SAME-LEVEL-SOURCE: same liveness guard as
+        // `event_target_same_level_as_previous` -- a departed event permanent
+        // has no stack left to read.
+        if rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .is_some_and(|trigger| {
+                trigger.event_permanent_identity.is_some()
+                    && trigger.resolve_event_permanent(rctx.game).is_none()
+            })
+        {
+            return false;
+        }
+        let actual = event_target_has_same_level_source(rctx).unwrap_or(false);
+        if actual != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_target_digivolved_from_kind {
         // G-DSL-EVENT-TARGET-DIGIVOLVED-FROM-KIND: same liveness guard as
         // `event_target_same_level_as_previous` — a departed event permanent
@@ -3342,6 +3432,28 @@ fn event_target_digivolved_from_kind(rctx: &EffectReadContext<'_>, want: Compile
         return false;
     };
     kind_matches_card_search(want, data)
+}
+
+/// True when the event permanent has a FACE-UP digivolution card whose level
+/// equals the permanent's own current level (its top card's level). Face-down
+/// digivolution cards have no characteristics (CR 4.3 4-7-9), so they never
+/// count. DCGO `permanent.DigivolutionCards.Filter(x => x.HasLevel && x.Level
+/// == permanent.Level).Count >= 1` (BT22_093.cs). `None` when the event
+/// permanent or its top card's level cannot be read.
+fn event_target_has_same_level_source(rctx: &EffectReadContext<'_>) -> Option<bool> {
+    let trigger = rctx.game.current_trigger_context.as_ref()?;
+    let handle = if trigger.event_permanent_identity.is_some() {
+        trigger.resolve_event_permanent(rctx.game)?
+    } else {
+        trigger.event_permanent.or(trigger.target_permanent)?
+    };
+    let permanent = permanent_for_handle(rctx, handle)?;
+    let top = permanent.card_sources.last()?;
+    let top_level = rctx.game.card_data[top.data_index].level?;
+    let under = permanent.card_sources.len() - 1;
+    Some(permanent.card_sources[..under].iter().any(|source| {
+        !source.face_down && rctx.game.card_data[source.data_index].level == Some(top_level)
+    }))
 }
 
 fn event_target_same_level_as_previous(rctx: &EffectReadContext<'_>) -> Option<bool> {
