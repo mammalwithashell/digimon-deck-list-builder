@@ -606,6 +606,12 @@ pub struct Game {
     /// Per-game memo for `effects_for_card` (see `EffectsCache`). Not part of
     /// the observable game state — pure derived data, never snapshotted.
     pub(crate) effects_cache: EffectsCache,
+    /// How many `<De-Digivolve>` instances have started on a target
+    /// (`de_digivolve_core`), including one that trashed nothing at the level
+    /// floor. Replay evidence only (the DCGO count rows a `<De-Digivolve 1>`
+    /// instance opens, `runners::replay::unit_count_evidence`); never read by
+    /// rules, the tensor or digests.
+    pub(crate) de_digivolve_instances: u32,
     pub players: Vec<Player>,
     pub turn_count: u16,
     /// Cumulative regular-digivolve count per player. Incremented on every

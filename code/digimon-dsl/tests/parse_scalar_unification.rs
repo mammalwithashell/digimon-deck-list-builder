@@ -370,3 +370,46 @@ fn canonical_level_eq_rejects_formula() {
         "a formula-valued level eq must be rejected"
     );
 }
+
+// ── de_digivolve `declared`: one declared <De-Digivolve N> vs N instances ──
+
+const DEDIGI_HEADER: &str = r#"
+card: X-1
+name: Test
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - select_opponent_permanent: { bind_as: t, filter: { kind: digimon }, prompt: "pick" }
+"#;
+
+const DEDIGI_FORMULA: &str = r#"      - de_digivolve:
+          target: t
+          amount: { base: 0, per: { card_count_in_zone: { of: you, zone: battle_area, filter: { kind: digimon } } }, delta: 1 }
+"#;
+
+fn de_digivolve_step(tail: &str) -> CompiledStep {
+    let yaml = format!("{DEDIGI_HEADER}{DEDIGI_FORMULA}{tail}");
+    let compiled = compile(&parse(&yaml)).expect("compile");
+    match &compiled.effects[0] {
+        CompiledClause::Triggered(t) => t.process[1].clone(),
+        other => panic!("expected triggered clause, got {other:?}"),
+    }
+}
+
+/// A formula amount is N separate `<De-Digivolve 1>` instances unless the card
+/// says `declared: true` (EX13-066: ONE declared `<De-Digivolve N>`).
+#[test]
+fn de_digivolve_formula_is_per_instance_unless_declared() {
+    assert!(matches!(
+        de_digivolve_step(""),
+        CompiledStep::DeDigivolve { declared: false, amount_fn: Some(_), .. }
+    ));
+    assert!(matches!(
+        de_digivolve_step("          declared: true
+"),
+        CompiledStep::DeDigivolve { declared: true, amount_fn: Some(_), .. }
+    ));
+}

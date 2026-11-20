@@ -30,6 +30,7 @@ pub fn expand_de_digivolve_instances(
         target,
         amount_fn: Some(formula),
         stop_at_level,
+        declared: false,
         ..
     } = step
     else {
@@ -52,6 +53,7 @@ pub fn expand_de_digivolve_instances(
                 amount: Some(1),
                 amount_fn: None,
                 stop_at_level: *stop_at_level,
+                declared: false,
             })
             .collect(),
     )
@@ -282,6 +284,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             amount,
             amount_fn,
             stop_at_level,
+            ..
         } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {

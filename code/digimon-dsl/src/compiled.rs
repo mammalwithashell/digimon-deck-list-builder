@@ -1991,6 +1991,11 @@ pub enum CompiledStep {
         amount: Option<u8>,
         amount_fn: Option<CompiledFormula>,
         stop_at_level: Option<u8>,
+        /// A formula amount resolved as ONE declared `<De-Digivolve N>`
+        /// instead of N separate `<De-Digivolve 1>` instances (see
+        /// `DeDigivolveArgs::declared`).
+        #[serde(default)]
+        declared: bool,
     },
     PlaceOnSecurity {
         of: CompiledPlayerRef,
