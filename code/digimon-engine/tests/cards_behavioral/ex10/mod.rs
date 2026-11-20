@@ -23,3 +23,5 @@ mod ex10_069;
 mod ex10_070;
 
 mod ex10_041;
+
+mod ex10_042;

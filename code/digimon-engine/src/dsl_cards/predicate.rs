@@ -5495,7 +5495,8 @@ fn aggregate_level(
         CompiledAggregateSelector::LowestDp
         | CompiledAggregateSelector::HighestDp
         | CompiledAggregateSelector::FewestMaterials
-        | CompiledAggregateSelector::LowestPlayCost => None,
+        | CompiledAggregateSelector::LowestPlayCost
+        | CompiledAggregateSelector::HighestPlayCost => None,
     }
 }
 
@@ -5538,7 +5539,8 @@ fn aggregate_material_count(
         | CompiledAggregateSelector::HighestDp
         | CompiledAggregateSelector::LowestLevel
         | CompiledAggregateSelector::HighestLevel
-        | CompiledAggregateSelector::LowestPlayCost => None,
+        | CompiledAggregateSelector::LowestPlayCost
+        | CompiledAggregateSelector::HighestPlayCost => None,
     }
 }
 

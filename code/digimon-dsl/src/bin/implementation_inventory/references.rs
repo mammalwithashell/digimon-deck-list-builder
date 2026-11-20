@@ -3587,6 +3587,12 @@ impl Walk for digimon_dsl::compiled::CompiledAggregateSelector {
                 "ENUM_SCALAR",
                 serde_json::json!("LowestPlayCost"),
             ),
+            digimon_dsl::compiled::CompiledAggregateSelector::HighestPlayCost => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledAggregateSelector",
+                "ENUM_SCALAR",
+                serde_json::json!("HighestPlayCost"),
+            ),
         }
     }
 }

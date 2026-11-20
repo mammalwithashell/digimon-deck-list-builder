@@ -526,6 +526,7 @@ fn compile_aggregate_selector(a: crate::formula::AggregateSelector) -> CompiledA
         S::HighestLevel => CompiledAggregateSelector::HighestLevel,
         S::FewestMaterials => CompiledAggregateSelector::FewestMaterials,
         S::LowestPlayCost => CompiledAggregateSelector::LowestPlayCost,
+        S::HighestPlayCost => CompiledAggregateSelector::HighestPlayCost,
     }
 }
 
