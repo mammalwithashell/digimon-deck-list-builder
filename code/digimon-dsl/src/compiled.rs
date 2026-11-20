@@ -721,6 +721,10 @@ pub struct CompiledPredicate {
     pub attack_target_change_reason: Option<String>,
     pub attacker_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
+    /// ANY card of the event's moved-card batch has this trait (see the DSL
+    /// `event_batch_card_trait_has`). G-DSL-EVENT-BATCH-CARD-TRAIT-HAS.
+    #[serde(default)]
+    pub event_batch_card_trait_has: Option<String>,
     /// The captured event card is currently FACE UP in its security stack
     /// (`true`) or face down (`false`) — the placement-event gate for "when
     /// face-up [X] trait cards are placed in your security stack" (EX11-003

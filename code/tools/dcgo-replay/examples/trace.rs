@@ -9,6 +9,10 @@ use dcgo_replay::{load_card_data, parse_jsonl};
 use digimon_engine::live_game::LiveGame;
 
 fn main() {
+    std::thread::Builder::new().stack_size(512<<20).spawn(real_main).unwrap().join().unwrap();
+}
+
+fn real_main() {
     let args: Vec<String> = std::env::args().collect();
     let path = args.get(1).expect("usage: trace <recording.jsonl> [from] [to]");
     let from: u32 = args.get(2).and_then(|s| s.parse().ok()).unwrap_or(0);

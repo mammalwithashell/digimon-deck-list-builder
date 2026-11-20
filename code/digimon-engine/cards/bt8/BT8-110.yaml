@@ -1,0 +1,127 @@
+# BT8-110 Armor Texture! — Option, White, Cost 0.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT8-110.md,
+# authoritative; DCGO BT8_110.cs cross-checked):
+#
+#   While you have an [Armor Form] trait Digimon, you can ignore this card's
+#   color requirements.
+#   [Main] Trash the top card of 1 of your Digimon with the [Armor Form] trait.
+#   Then, you may digivolve 1 of your Digimon into a Digimon card in your hand
+#   with the [Armor Form] trait for its digivolution cost. If you do, unsuspend
+#   that Digimon.
+#   Security Effect [Security] You may play 1 level 3 Digimon card with the
+#   [Free] trait from your hand or trash without paying its memory cost.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 0 (EffectTiming.None, IgnoreColorConditionClass): usable while the
+#   owner has a battle-area Digimon whose top card has the [Armor Form] trait
+#   -> card-level `use_requirement` (BT21-091 idiom: "can satisfy colour
+#   requirements"; it never gates the use itself).
+#
+# Clause 1 (OptionSkill, isOptional: false):
+#   (a) mandatory pick (`canNoSelect: false`) of 1 own Digimon with an
+#       [Armor Form] top card AND >= 1 digivolution card (the last card cannot
+#       be trashed); the TOP card is removed (`RemoveFromAllArea` + trash) and
+#       `WhenTopCardTrashed` is stacked -> `trash_top_stacked_sources` with
+#       `include_top_card: true` (BT21-030 idiom) which fires `on_top_card_trashed`
+#       observers (BT21-094).
+#   (b) then an optional (`canNoSelect: true`) pick of 1 own Digimon that has a
+#       digivolve route to an [Armor Form] Digimon card in hand, payable at the
+#       PRINTED digivolution cost (`payCost: true`, no reduction), and if the
+#       digivolve happened, unsuspend that Digimon (`effect_digivolved_any_digimon`,
+#       BT9-098 idiom). The Option is NOT placed in the battle area.
+#
+# Clause 2 (SecuritySkill): play 1 level 3 [Free]-trait Digimon from hand OR
+#   trash, no memory cost; the hand/trash choice is a single masked union pick
+#   (BT24-089 idiom). The pick is `canNoSelect: true`.
+
+card: BT8-110
+name: "Armor Texture!"
+kind: option
+color: [white]
+cost: 0
+
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+    trait_has: "Armor Form"
+
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Trash the top card of 1 of your [Armor Form] Digimon. Then, you may digivolve 1 of your Digimon into an [Armor Form] Digimon card in your hand for its digivolution cost; if you do, unsuspend that Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: trash_host
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Armor Form"
+              - stack_size_gte: 2
+          prompt: "Choose 1 of your [Armor Form] Digimon to trash its top card"
+      - trash_top_stacked_sources:
+          target: trash_host
+          count: 1
+          include_top_card: true
+      - select_own_permanent:
+          bind_as: evo_base
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  cost: printed
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_has: "Armor Form"
+          prompt: "You may choose 1 of your Digimon to digivolve into an [Armor Form] Digimon card in your hand"
+      - if:
+          condition: { binding_present: evo_base }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo
+                optional: false
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Armor Form"
+                    - can_digivolve_onto_with_cost:
+                        target: evo_base
+                        cost: printed
+                prompt: "Choose an [Armor Form] Digimon card in your hand to digivolve into"
+            - effect_initiated_digivolve:
+                target: evo_base
+                from_hand: evo
+                cost: printed
+                ignore_requirements: false
+            - if:
+                condition: { effect_digivolved_any_digimon: true }
+                then:
+                  - unsuspend: { target: evo_base }
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] You may play 1 level 3 [Free] trait Digimon card from your hand or trash without paying its memory cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: free_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - trait_has: Free
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 level 3 [Free] trait Digimon card from your hand or trash without paying its memory cost"
+      - play_union_bound_free:
+          binding: free_pick

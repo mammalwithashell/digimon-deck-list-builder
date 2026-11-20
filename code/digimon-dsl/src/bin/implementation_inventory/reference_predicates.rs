@@ -176,6 +176,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             attack_target_change_reason,
             attacker_trait_has,
             event_card_trait_has,
+            event_batch_card_trait_has,
             event_card_face_up_in_security,
             event_card_name_contains,
             event_card_text_contains,
@@ -875,6 +876,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         event_card_trait_has.walk(
             c,
             &format!("{}.event_card_trait_has", path),
+            "MATCH_OR_DEFINE_TRAIT",
+        );
+        event_batch_card_trait_has.walk(
+            c,
+            &format!("{}.event_batch_card_trait_has", path),
             "MATCH_OR_DEFINE_TRAIT",
         );
         event_card_face_up_in_security.walk(
@@ -1929,6 +1935,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             attack_target_change_reason,
             attacker_trait_has,
             event_card_trait_has,
+            event_batch_card_trait_has,
             event_card_face_up_in_security,
             event_card_name_contains,
             event_card_text_contains,
@@ -2559,6 +2566,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         event_card_trait_has.walk(
             c,
             &format!("{}.event_card_trait_has", path),
+            "MATCH_OR_DEFINE_TRAIT",
+        );
+        event_batch_card_trait_has.walk(
+            c,
+            &format!("{}.event_batch_card_trait_has", path),
             "MATCH_OR_DEFINE_TRAIT",
         );
         event_card_face_up_in_security.walk(

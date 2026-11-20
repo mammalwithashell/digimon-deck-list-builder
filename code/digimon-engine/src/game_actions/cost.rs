@@ -1719,6 +1719,11 @@ impl Game {
 
     pub(crate) fn record_cost_reducer_activation(&mut self, key: &CostReductionKey) {
         let Some(source) = key.source_permanent else {
+            if self.cost_reducer_is_security_zone(key) {
+                let opt_slot = self.cost_reducer_opt_slot(key);
+                self.player_mut(key.controller)
+                    .record_security_activation(key.source_card, opt_slot);
+            }
             return;
         };
         // Route through the shared OPT slot so the two `scope: both` copies

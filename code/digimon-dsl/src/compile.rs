@@ -1525,6 +1525,7 @@ fn compile_predicate(
         is_event_host: p.is_event_host,
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
+        event_batch_card_trait_has: p.event_batch_card_trait_has.clone(),
         event_card_face_up_in_security: p.event_card_face_up_in_security,
         event_card_name_contains: p.event_card_name_contains.clone(),
         event_card_name_is: p.event_card_name_is.clone(),

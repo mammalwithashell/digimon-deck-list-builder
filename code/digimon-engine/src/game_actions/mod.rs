@@ -3209,6 +3209,14 @@ impl Game {
 
     fn cost_reducer_activation_count(&self, key: &CostReductionKey) -> u8 {
         let Some(source) = key.source_permanent else {
+            // A `{Security}` reducer lives on a card in the security stack,
+            // not on a permanent: its [X Per Turn] count is on the player.
+            if self.cost_reducer_is_security_zone(key) {
+                let opt_slot = self.cost_reducer_opt_slot(key);
+                return self
+                    .player(key.controller)
+                    .security_activation_count(key.source_card, opt_slot);
+            }
             return 0;
         };
         let opt_slot = self.cost_reducer_opt_slot(key);
@@ -3225,6 +3233,15 @@ impl Game {
             .get(source.index as usize)
             .map(|perm| perm.activation_count(key.source_card, opt_slot))
             .unwrap_or(0)
+    }
+
+    /// Whether this cost reducer is a `{Security}` (security-stack) effect.
+    pub(crate) fn cost_reducer_is_security_zone(&self, key: &CostReductionKey) -> bool {
+        key.source_permanent.is_none()
+            && self
+                .effects_for_card(&key.card_id, key.source_card)
+                .and_then(|effects| effects.get(key.effect_slot as usize).map(|e| e.security))
+                .unwrap_or(false)
     }
 
     fn before_pay_cost_source_infos(
@@ -3273,6 +3290,36 @@ impl Game {
             }
             if player_id != acting_player {
                 self.push_breeding_cost_sources(player_id, &mut infos);
+            }
+        }
+        // `{Security}` reducers (P-181 Royal Base, CR 4.3 15-14-5-1): a
+        // FACE-UP card in the ACTING player's security stack reduces that
+        // player's own costs. Only `security`-flagged effects are read from
+        // the stack (the card's other effects are inactive there).
+        // G-ENGINE-SECURITY-ZONE-COST-REDUCER.
+        {
+            let player = self.player(acting_player);
+            for source in player.security.iter() {
+                if !player.face_up_security.contains(&source.card_index) {
+                    continue;
+                }
+                let card_id = source.card_id(&self.card_data).to_string();
+                let source_card = source.handle();
+                let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                    continue;
+                };
+                for (slot, effect) in effects.iter().enumerate() {
+                    if effect.timing == EffectTiming::BeforePayCost && effect.security {
+                        infos.push(BeforePayCostSourceInfo {
+                            source_permanent: None,
+                            source_card,
+                            card_id: card_id.clone(),
+                            is_under: false,
+                            controller: acting_player,
+                            effect_slot: slot as u8,
+                        });
+                    }
+                }
             }
         }
         if let Some(target) = cost_target_card {
@@ -3353,6 +3400,10 @@ impl Game {
         };
         for (slot, effect) in effects.iter().enumerate() {
             if effect.timing != EffectTiming::BeforePayCost {
+                continue;
+            }
+            // A `{Security}` reducer is read from the security stack only.
+            if effect.security {
                 continue;
             }
             if (effect.when_playing_this || effect.when_digivolving_this) && !allow_when_playing_this {
