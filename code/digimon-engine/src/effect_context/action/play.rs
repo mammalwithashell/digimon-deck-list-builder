@@ -1214,6 +1214,17 @@ impl<'a> EffectContext<'a> {
         self.with_play_controller(|game| game.play_to_breeding_from_hand(player, hand_index))
     }
 
+    /// Read-only eligibility of `player`'s trash card for an effect play into
+    /// the breeding area, using this effect's controller.
+    pub fn can_play_to_breeding_from_trash(&self, player: PlayerId, trash_index: usize) -> bool {
+        self.game.can_play_to_breeding_from_trash(player, trash_index, self.player)
+    }
+
+    /// Play/place `player`'s trash card into their real breeding area by effect.
+    pub fn play_to_breeding_from_trash(&mut self, player: PlayerId, trash_index: usize) -> bool {
+        self.with_play_controller(|game| game.play_to_breeding_from_trash(player, trash_index))
+    }
+
     pub fn play_selected_sources_without_cost(
         &mut self,
         selected: Vec<SourceSelectionRef>,

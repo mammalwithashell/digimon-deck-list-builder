@@ -205,6 +205,7 @@
       "place_self_under_permanent",
       "play_selected_sources_free",
       "play_to_breeding_from_hand",
+      "play_to_breeding_from_trash",
       "recover",
       "return_all_sources_to_deck",
       "return_all_trash_to_deck_bottom",

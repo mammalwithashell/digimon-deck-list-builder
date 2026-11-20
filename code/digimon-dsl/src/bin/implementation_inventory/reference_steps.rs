@@ -1712,6 +1712,10 @@ impl Walk for digimon_dsl::step::StepSpec {
                 c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("PlayToBreedingFromHand"));
                 value.walk(c, &format!("{}@PlayToBreedingFromHand.0", path), role);
             }
+            digimon_dsl::step::StepSpec::PlayToBreedingFromTrash(value) => {
+                c.node(path, "digimon_dsl::step::StepSpec", "VARIANT", serde_json::json!("PlayToBreedingFromTrash"));
+                value.walk(c, &format!("{}@PlayToBreedingFromTrash.0", path), role);
+            }
 }
     }
 }
@@ -5798,6 +5802,11 @@ digimon_dsl::compiled::CompiledStep::MayDnaDigivolveNow{anchor,partner_filter,ta
                 of.walk(c, &format!("{}@PlayToBreedingFromHand.of", path), "UNCLASSIFIED_STRING");
                 hand_index.walk(c, &format!("{}@PlayToBreedingFromHand.hand_index", path), "EXISTING_INSTANCE_BINDING");
             }
+            digimon_dsl::compiled::CompiledStep::PlayToBreedingFromTrash { of, trash_index } => {
+                c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("PlayToBreedingFromTrash"));
+                of.walk(c, &format!("{}@PlayToBreedingFromTrash.of", path), "UNCLASSIFIED_STRING");
+                trash_index.walk(c, &format!("{}@PlayToBreedingFromTrash.trash_index", path), "EXISTING_INSTANCE_BINDING");
+            }
             digimon_dsl::compiled::CompiledStep::TrashSelectedSourcesAsCost { source_refs, min_count } => {
                 c.node(path, "digimon_dsl::compiled::CompiledStep", "VARIANT", serde_json::json!("TrashSelectedSourcesAsCost"));
                 source_refs.walk(c, &format!("{}@TrashSelectedSourcesAsCost.source_refs", path), "EXISTING_INSTANCE_BINDING");
@@ -5977,5 +5986,14 @@ impl Walk for digimon_dsl::step::PlayToBreedingFromHandArgs {
         let digimon_dsl::step::PlayToBreedingFromHandArgs { of, hand_index } = self;
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
         hand_index.walk(c, &format!("{}.hand_index", path), "EXISTING_INSTANCE_BINDING");
+    }
+}
+
+impl Walk for digimon_dsl::step::PlayToBreedingFromTrashArgs {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::step::PlayToBreedingFromTrashArgs", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::step::PlayToBreedingFromTrashArgs { of, trash_index } = self;
+        of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
+        trash_index.walk(c, &format!("{}.trash_index", path), "EXISTING_INSTANCE_BINDING");
     }
 }

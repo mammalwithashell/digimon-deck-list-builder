@@ -334,6 +334,11 @@ pub struct PredicateSpec {
     /// checks the effect controller's play prohibition, not battle-area capacity.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_play_to_breeding_from_hand: Option<bool>,
+    /// Candidate is a physical trash Digimon/Dual whose owner's breeding is empty;
+    /// checks the effect controller's play prohibitions (incl. the trash-play
+    /// lock), not battle-area capacity. EX10-009 Creepymon.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_play_to_breeding_from_trash: Option<bool>,
     /// Existing breeding-permanent subject only. True if its owner can move
     /// it to battle by effect; false if that existing permanent cannot move.
     /// Non-breeding subjects and an empty breeding slot match neither value.

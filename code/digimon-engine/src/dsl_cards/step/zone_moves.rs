@@ -152,6 +152,24 @@ pub fn try_run(
             }
             true
         }
+        CompiledStep::PlayToBreedingFromTrash { of, trash_index } => {
+            let player = resolve_player(ctx, *of);
+            // The binding addresses the card by trash index, or by card handle
+            // (`select_trash` binds a TrashIndex; re-resolve after any prompt).
+            let located = match resolve_binding_ref(trash_index, ctx, bindings) {
+                Some(ResolvedBinding::TrashIndex(owner, i)) => Some((owner, i as usize)),
+                Some(ResolvedBinding::Card(h)) => {
+                    ctx.game.player(player).trash.iter().position(|c| c.handle() == h).map(|i| (player, i))
+                }
+                _ => None,
+            };
+            if let Some((owner, index)) = located {
+                if owner == player {
+                    let _ = ctx.play_to_breeding_from_trash(player, index);
+                }
+            }
+            true
+        }
         CompiledStep::BounceSelf => {
             let _ = ctx.bounce_self();
             true

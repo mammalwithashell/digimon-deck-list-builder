@@ -1102,6 +1102,7 @@ fn compile_predicate(
         can_play_from_effect_without_cost: p.can_play_from_effect_without_cost,
         can_play_or_use_from_effect: p.can_play_or_use_from_effect,
         can_play_to_breeding_from_hand: p.can_play_to_breeding_from_hand,
+        can_play_to_breeding_from_trash: p.can_play_to_breeding_from_trash,
         can_move_from_breeding_by_effect: p.can_move_from_breeding_by_effect,
         dp_eq,
         dp_lte,
@@ -3578,6 +3579,10 @@ fn compile_step(
         S::PlayToBreedingFromHand(a) => CompiledStep::PlayToBreedingFromHand {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
+        },
+        S::PlayToBreedingFromTrash(a) => CompiledStep::PlayToBreedingFromTrash {
+            of: compile_player_ref(a.of),
+            trash_index: compile_binding_ref(&a.trash_index),
         },
         S::PlayFromHandFree(a) => CompiledStep::PlayFromHandFree {
             of: compile_player_ref(a.of),

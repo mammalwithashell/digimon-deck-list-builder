@@ -1,0 +1,114 @@
+# BT24-073 SkullSatamon — Digimon, Lv.5, Purple, DP 8000, Cost 8.
+# Traits: Undead (+ Fallen Angel via the (Rule) box; data/card_overrides.json
+# type_eng). Form: Ultimate. Attribute: Virus.
+# Standard digivolve: Lv.4 Purple / Cost 3.
+#
+# Printed card text (data/card_bundles/BT24-073.md, official Bandai DB; DCGO
+# BT24_073.cs):
+#   <Blocker>
+#   [When Digivolving] [On Deletion] If your opponent has 10 or fewer cards in
+#     their trash, trash the top 3 cards of both players' decks. Then, if your
+#     opponent has 10 or more cards in their trash, you may play 1 level 4 or
+#     lower [Evil] or [Fallen Angel] trait Digimon card from your trash without
+#     paying the cost. (Rule) Trait: Has [Fallen Angel] Type.
+#   Inherited: [When Attacking] [Once Per Turn] This Digimon gains <Security
+#     A. +1> for the turn. If your opponent has 10 or fewer cards in their
+#     trash, instead trash the top 2 cards of both players' decks.
+#
+# Sibling of EX10-049 SkullSatamon (same name, different text); the mill gate,
+# the post-mill re-read and the inherited "instead" shape are the same.
+#
+# Modeling notes:
+# - WD / OD shared body (DCGO SharedActivateCoroutine, not optional at the
+#   clause level, no per-turn cap): the "<= 10" gate is read once for the mill
+#   (yours first, then the opponent's), then the ">= 10" gate is a FRESH read
+#   AFTER the mill, so a mill that pushes the opponent from 9 to 12 enables the
+#   play; at exactly 10 both gates are true. The play is the printed "you may"
+#   (DCGO canNoSelect: true): an optional trash pick (the single decline
+#   surface), then `play_from_trash_free` (DCGO PlayPermanentCards, payCost
+#   false, activateETB true, so the played Digimon's [On Play] fires).
+# - "[Evil] or [Fallen Angel] trait" = exact trait match (DCGO EqualsTraits);
+#   `trait_has` is the exact-match leaf. Level 4 or lower = `level_lte: 4`
+#   (DCGO HasLevel && Level <= 4).
+# - Rule 25: [On Deletion] runs after the carrier reached the trash, so its own
+#   stack (a Lv.4 [Evil] digivolution card under it) is a legal pick, as in DCGO
+#   (OnDestroyed also resolves after the move; BT24-072 note).
+# - Inherited [When Attacking][OPT] "instead" shape (official Q&A: "instead"
+#   REPLACES the standard processing): opponent trash <= 10 -> ONLY the mill;
+#   otherwise only Security A. +1 (DCGO: `hasSecAttack = trash >= 11`).
+
+card: BT24-073
+name: SkullSatamon
+kind: digimon
+level: 5
+color: [purple]
+cost: 8
+dp: 8000
+traits: [Undead, Fallen Angel]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [when_digivolving, on_deletion]
+    optional: false
+    summary: "[When Digivolving][On Deletion] If opp trash <= 10, trash the top 3 of both decks. Then, if opp trash >= 10, you may play 1 Lv.4 or lower [Evil]/[Fallen Angel] Digimon from your trash free"
+    process:
+      - if:
+          condition:
+            count_lte:
+              filter: { of: opponent, zone: [trash] }
+              n: 10
+          then:
+            - trash_from_top: { of: you, count: 3 }
+            - trash_from_top: { of: opponent, count: 3 }
+      # The second gate is a FRESH read after the mill.
+      - if:
+          condition:
+            count_gte:
+              filter: { of: opponent, zone: [trash] }
+              n: 10
+          then:
+            - select_trash:
+                of: you
+                bind_as: revive_pick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 4
+                    - any_of:
+                        - trait_has: Evil
+                        - trait_has: Fallen Angel
+                    - can_play_from_effect_without_cost: true
+                prompt: "You may play 1 level 4 or lower [Evil] or [Fallen Angel] trait Digimon card from your trash without paying the cost"
+            - play_from_trash_free: { of: you, hand_index: revive_pick }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: false
+    summary: "[Inherited][When Attacking][OPT] This Digimon gains <Security A. +1> for the turn. If opp trash <= 10, instead trash the top 2 cards of both players' decks"
+    process:
+      - if:
+          condition:
+            count_lte:
+              filter: { of: opponent, zone: [trash] }
+              n: 10
+          then:
+            - trash_from_top: { of: you, count: 2 }
+            - trash_from_top: { of: opponent, count: 2 }
+          else:
+            - add_modifier:
+                target: source
+                modifier: SecurityAttackChange
+                value: 1
+                expiry: end_of_turn

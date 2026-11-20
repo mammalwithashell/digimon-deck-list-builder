@@ -1067,6 +1067,14 @@ fn validate_step(
                 errors,
             );
         }
+        StepSpec::PlayToBreedingFromTrash(args) => {
+            validate_binding_ref(
+                &args.trash_index,
+                &format!("{prefix}.trash_index"),
+                card_id,
+                errors,
+            );
+        }
         StepSpec::Battle(args) => {
             validate_binding_ref(
                 &args.attacker,

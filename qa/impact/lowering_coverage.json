@@ -4118,6 +4118,33 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT17-012": {
+   "behaviourally_covered": true,
+   "clause_count": 9,
+   "constructs": [
+    "verb:effect_initiated_digivolve",
+    "verb:select_hand",
+    "predicate:all_of",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:color_is",
+    "predicate:count_gte",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:name_is",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "predicate:zone",
+    "timing:when_attacking",
+    "keyword:Raid"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "BT17-015": {
    "behaviourally_covered": true,
    "clause_count": 4,
@@ -5672,6 +5699,46 @@
    "parsed_only_constructs": [],
    "protection_constructs": [
     "modifier:CannotBeDestroyedByBattle"
+   ],
+   "untested_constructs": []
+  },
+  "BT19-024": {
+   "behaviourally_covered": true,
+   "clause_count": 4,
+   "constructs": [
+    "verb:if",
+    "verb:place_as_bottom_source",
+    "verb:play_from_materials",
+    "verb:select_hand",
+    "verb:select_material",
+    "verb:select_own_permanent",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:binding_present",
+    "predicate:can_play_from_effect_without_cost",
+    "predicate:color_is",
+    "predicate:count_gte",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:level_lte",
+    "predicate:none_of",
+    "predicate:owner",
+    "predicate:replacement_cause",
+    "predicate:self_source_count",
+    "predicate:trait_contains",
+    "predicate:zone",
+    "timing:end_of_attack",
+    "timing:on_play",
+    "timing:when_digivolving"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "clause:replacement",
+    "predicate:replacement_cause",
+    "trigger:when_would_leave_battle_area"
    ],
    "untested_constructs": []
   },
@@ -12797,6 +12864,39 @@
     "keyword:Blocker",
     "keyword:Retaliation",
     "keyword:SecurityAttackPlus"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT24-073": {
+   "behaviourally_covered": true,
+   "clause_count": 4,
+   "constructs": [
+    "verb:add_modifier",
+    "verb:if",
+    "verb:play_from_trash_free",
+    "verb:select_trash",
+    "verb:trash_from_top",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
+    "predicate:color_is",
+    "predicate:count_gte",
+    "predicate:count_lte",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:level_lte",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:on_deletion",
+    "timing:when_attacking",
+    "timing:when_digivolving",
+    "keyword:Blocker"
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
@@ -21256,6 +21356,45 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "EX10-009": {
+   "behaviourally_covered": false,
+   "clause_count": 5,
+   "constructs": [
+    "verb:delete_all_permanents",
+    "verb:if",
+    "verb:may_attack_now",
+    "verb:play_to_breeding_from_trash",
+    "verb:select_trash",
+    "verb:trash_from_top",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:any_permanent",
+    "predicate:can_attack",
+    "predicate:can_play_to_breeding_from_trash",
+    "predicate:color_is",
+    "predicate:count_gte",
+    "predicate:dp_lte",
+    "predicate:effect_deleted_any_opponent_digimon",
+    "predicate:is_source",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:end_of_your_turn",
+    "timing:on_deletion",
+    "timing:when_attacking",
+    "timing:when_digivolving"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": false,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": [
+    "verb:play_to_breeding_from_trash",
+    "predicate:can_play_to_breeding_from_trash"
+   ]
+  },
   "EX10-010": {
    "behaviourally_covered": true,
    "clause_count": 8,
@@ -22059,6 +22198,31 @@
    ],
    "untested_constructs": []
   },
+  "EX11-013": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:draw",
+    "verb:gain_memory",
+    "verb:if",
+    "predicate:color_is",
+    "predicate:count_gte",
+    "predicate:event_permanent_is_source",
+    "predicate:level_eq",
+    "predicate:not",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:end_of_attack",
+    "timing:on_move",
+    "timing:on_play"
+   ],
+   "effect_clause_count": 2,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "EX11-014": {
    "behaviourally_covered": true,
    "clause_count": 5,
@@ -22198,6 +22362,50 @@
    ],
    "protection_constructs": [
     "keyword:Barrier"
+   ],
+   "untested_constructs": []
+  },
+  "EX11-018": {
+   "behaviourally_covered": true,
+   "clause_count": 5,
+   "constructs": [
+    "verb:place_as_bottom_source",
+    "verb:play_from_materials",
+    "verb:return_to_deck",
+    "verb:select_hand",
+    "verb:select_material",
+    "verb:select_opponent_permanent",
+    "verb:select_own_permanent",
+    "verb:unsuspend",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:color_is",
+    "predicate:count_gte",
+    "predicate:event_host_permanent_is_source",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:level_lte",
+    "predicate:materials_count_lte",
+    "predicate:none_of",
+    "predicate:owner",
+    "predicate:replacement_cause",
+    "predicate:trait_contains",
+    "predicate:zone",
+    "timing:on_add_digivolution_cards",
+    "timing:on_play",
+    "timing:when_attacking",
+    "timing:when_digivolving",
+    "keyword:Evade"
+   ],
+   "effect_clause_count": 4,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "clause:replacement",
+    "keyword:Evade",
+    "predicate:replacement_cause",
+    "trigger:when_would_leave_battle_area"
    ],
    "untested_constructs": []
   },
@@ -43419,6 +43627,18 @@
     "dsl::constructs/breeding_play.rs::breeding_dsl_removed_choice_never_substitutes_an_identical_copy",
     "dsl::constructs/breeding_play.rs::breeding_dsl_resolution_rechecks_new_occupation_and_new_prohibition"
    ]
+  },
+  "predicate:can_play_to_breeding_from_trash": {
+   "kind": "predicate",
+   "name": "can_play_to_breeding_from_trash",
+   "near_miss_files": [
+    "src/dsl_cards/predicate.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
   },
   "predicate:can_unsuspend": {
    "kind": "predicate",
@@ -76465,6 +76685,21 @@
     "dsl::constructs/breeding_play.rs::breeding_dsl_resolution_rechecks_new_occupation_and_new_prohibition"
    ]
   },
+  "verb:play_to_breeding_from_trash": {
+   "kind": "verb",
+   "lowering_files": [
+    "code/digimon-engine/src/dsl_cards/step/zone_moves.rs"
+   ],
+   "name": "play_to_breeding_from_trash",
+   "near_miss_files": [
+    "src/dsl_cards/step/zone_moves.rs"
+   ],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
+  },
   "verb:play_token": {
    "kind": "verb",
    "lowering_files": [
@@ -84154,10 +84389,10 @@
  "summary": {
   "behavioural_tests": 2300,
   "cards": {
-   "behaviourally_covered": 1241,
-   "lowering_covered": 1258,
-   "not_covered": 42,
-   "total": 1300
+   "behaviourally_covered": 1246,
+   "lowering_covered": 1263,
+   "not_covered": 43,
+   "total": 1306
   },
   "constructs": {
    "keyword": {
@@ -84173,10 +84408,10 @@
     "parsed_only": 7,
     "tested": 207,
     "tested_behaviourally": 200,
-    "total": 233,
-    "untested": 26,
-    "used_by_cards": 206,
-    "used_untested": 18
+    "total": 234,
+    "untested": 27,
+    "used_by_cards": 207,
+    "used_untested": 19
    },
    "timing": {
     "parsed_only": 2,
@@ -84191,10 +84426,10 @@
     "parsed_only": 5,
     "tested": 184,
     "tested_behaviourally": 179,
-    "total": 188,
-    "untested": 4,
-    "used_by_cards": 176,
-    "used_untested": 4
+    "total": 189,
+    "untested": 5,
+    "used_by_cards": 177,
+    "used_untested": 5
    }
   },
   "ex13_lists": 1552,
@@ -84384,7 +84619,17 @@
    },
    {
     "cards_blocked": 1,
+    "construct": "predicate:can_play_to_breeding_from_trash",
+    "ex13_lists_blocked": 3
+   },
+   {
+    "cards_blocked": 1,
     "construct": "predicate:effect_trashed_any_hand_card",
+    "ex13_lists_blocked": 3
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "verb:play_to_breeding_from_trash",
     "ex13_lists_blocked": 3
    },
    {

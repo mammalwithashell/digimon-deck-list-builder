@@ -238,6 +238,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             can_play_from_effect_without_cost,
             can_play_or_use_from_effect,
             can_play_to_breeding_from_hand,
+            can_play_to_breeding_from_trash,
             can_unsuspend,
             owner_can_add_security,
             source_name_is,
@@ -1098,6 +1099,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             can_play_from_effect_without_cost.walk(c, &format!("{}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
         can_play_or_use_from_effect.walk(c, &format!("{}.can_play_or_use_from_effect", path), "UNCLASSIFIED_STRING");
         can_play_to_breeding_from_hand.walk(c, &format!("{}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
+        can_play_to_breeding_from_trash.walk(c, &format!("{}.can_play_to_breeding_from_trash", path), "UNCLASSIFIED_STRING");
         can_unsuspend.walk(c, &format!("{}.can_unsuspend", path), "UNCLASSIFIED_STRING");
         owner_can_add_security.walk(c, &format!("{}.owner_can_add_security", path), "UNCLASSIFIED_STRING");
         source_name_is.walk(c, &format!("{}.source_name_is", path), "MATCH_NAME_EXACT");
@@ -1988,6 +1990,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             can_play_from_effect_without_cost,
             can_play_or_use_from_effect,
             can_play_to_breeding_from_hand,
+            can_play_to_breeding_from_trash,
             can_unsuspend,
             owner_can_add_security,
             controller_can_add_security,
@@ -2855,6 +2858,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             can_play_from_effect_without_cost.walk(c, &format!("{}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
         can_play_or_use_from_effect.walk(c, &format!("{}.can_play_or_use_from_effect", path), "UNCLASSIFIED_STRING");
         can_play_to_breeding_from_hand.walk(c, &format!("{}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
+        can_play_to_breeding_from_trash.walk(c, &format!("{}.can_play_to_breeding_from_trash", path), "UNCLASSIFIED_STRING");
         can_unsuspend.walk(c, &format!("{}.can_unsuspend", path), "UNCLASSIFIED_STRING");
         owner_can_add_security.walk(c, &format!("{}.owner_can_add_security", path), "UNCLASSIFIED_STRING");
         controller_can_add_security.walk(c, &format!("{}.controller_can_add_security", path), "UNCLASSIFIED_STRING");
