@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-11-17",
+  "last_updated": "2026-11-18",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -17060,6 +17060,81 @@
         "INHERITED-END-OF-ATTACK"
       ],
       "notes": "DCGO-replay finding (real PvP game): Sangomon is the free-play target of BT22-096 and had no YAML, so its [On Play] reveal-3 never prompted. [On Play] two-bucket reveal ([Aqua]/[Sea Animal] in any trait, substring like DCGO HasAquaTraits, then [LIBERATOR]) with the no-duplicate rule from the official Q&A; (Rule) [Aquatic] trait; inherited [End of Attack][OPT] gain 1 memory."
+    },
+    "BT9-006": {
+      "card_name": "Pagumon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-18",
+      "archetype": "Digi-Egg inherited effects",
+      "report": "dcgo-pvp-replay-hunt-2026-11-round-2",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_006.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "notes": "inherited [When Attacking] optional trash-for-+1000 DP; outer confirm + declinable hand pick (DCGO isOptional + canNoSelect); empty hand offers nothing. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
+      "integration_verification": "limited"
+    },
+    "BT12-006": {
+      "card_name": "Monimon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-18",
+      "archetype": "Digi-Egg inherited effects",
+      "report": "dcgo-pvp-replay-hunt-2026-11-round-2",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_006.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
+      "notes": "inherited [On Deletion] <Draw 1> gated on the deleted carrier's <Save> text read from the deletion snapshot (CR 4.3 15-8-3-9-4); orders against the carrier's own <Save>; deck-empty gate; shifted-slot regression. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
+      "integration_verification": "limited"
+    },
+    "P-247": {
+      "card_name": "Nyaromon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-18",
+      "archetype": "Digi-Egg inherited effects",
+      "report": "dcgo-pvp-replay-hunt-2026-11-round-2",
+      "yaml_path": "code/digimon-engine/cards/p/P-247.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_247.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
+      "notes": "inherited [When Attacking][OPT] trash a [Dark Animal]/[Shaman]/[Undead]/[TS] card to delete an unsuspended level 4 or lower Digimon; declining the hand pick refunds the OPT (DCGO RemoveUse). Synthetic-board behavioural tests; printed-clause oracle exam not run.",
+      "integration_verification": "limited"
+    },
+    "EX8-006": {
+      "card_name": "DemiMeramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-18",
+      "archetype": "Digi-Egg inherited effects",
+      "report": "dcgo-pvp-replay-hunt-2026-11-round-2",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_006.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "notes": "inherited [When Attacking][OPT] [NSo] carrier trashes 1 card to delete a level 3 Digimon; outer confirm + declinable pick. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
+      "integration_verification": "limited"
+    },
+    "EX11-001": {
+      "card_name": "Koromon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-18",
+      "archetype": "Digi-Egg inherited effects",
+      "report": "dcgo-pvp-replay-hunt-2026-11-round-2",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-001.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_001.rs",
+      "test_count": 5,
+      "tests_passing": 5,
+      "tests_ignored": 0,
+      "notes": "inherited [When Attacking][OPT] may digivolve into a [Dinosaur]/[Tyrannomon]-named hand card with the printed cost; outer confirm + declinable pick. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
+      "integration_verification": "limited"
     }
   }
 }

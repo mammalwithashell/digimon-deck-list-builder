@@ -1,0 +1,76 @@
+# P-247 Nyaromon — Digi-Egg, Lv.2, Purple, cost 0. Traits: Lesser, Titan, TS. Form: In-Training.
+#
+# Printed text (cards.json / DCGO P_247.cs description):
+#   Inherited Effect
+#   [When Attacking] [Once Per Turn] By trashing 1 [Dark Animal], [Shaman],
+#   [Undead] or [TS] trait card from your hand, delete 1 of your opponent's
+#   unsuspended level 4 or lower Digimon.
+#
+# DCGO CardEffect/P/Purple/P_247.cs: OnAllyAttack inherited, maxCount 1 (OPT),
+#   isOptional FALSE, SetIsSkippable(true), hash "P_247_Inherited".
+#   CanActivate = carrier on the battle area AND the hand holds a card whose
+#                 traits EQUAL Dark Animal / Shaman / Undead / TS.
+#   Coroutine   = SelectHandEffect(canNoSelect: TRUE, 1, Discard); declining
+#                 (`cardSources.Count != 1`) calls activateClass.RemoveUse(), i.e.
+#                 the once-per-turn use is refunded (G-OPT-REFUND-ON-DECLINE); then,
+#                 if discarded and an opponent Digimon with a level, level <= 4 and
+#                 NOT suspended exists, a MANDATORY SelectPermanentEffect (Destroy).
+# There is no outer yes/no (isOptional false): the declinable hand pick is the
+# "by trashing" optional processing condition, so `outer_prompt` is not set.
+
+card: P-247
+name: Nyaromon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Lesser, Titan, TS]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - { trait_has: "Dark Animal" }
+            - { trait_has: "Shaman" }
+            - { trait_has: "Undead" }
+            - { trait_has: "TS" }
+        n: 1
+    summary: "[When Attacking] [Once Per Turn] By trashing 1 [Dark Animal], [Shaman], [Undead] or [TS] trait card from your hand, delete 1 of your opponent's unsuspended level 4 or lower Digimon."
+    process:
+      - select_hand:
+          of: you
+          bind_as: trashed
+          optional: true
+          filter:
+            any_of:
+              - { trait_has: "Dark Animal" }
+              - { trait_has: "Shaman" }
+              - { trait_has: "Undead" }
+              - { trait_has: "TS" }
+          prompt: "By trashing 1 [Dark Animal], [Shaman], [Undead] or [TS] trait card from your hand, delete 1 of your opponent's unsuspended level 4 or lower Digimon"
+      - if:
+          condition: { binding_present: trashed }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: trashed }
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 4
+                    - is_unsuspended: true
+                prompt: "Delete 1 of your opponent's unsuspended level 4 or lower Digimon"
+            - delete_permanent: { target: victim }
+      # DCGO: declining the hand pick (`cardSources.Count != 1`) calls
+      # activateClass.RemoveUse() -> the once-per-turn use is refunded.
+      - if:
+          condition: { binding_absent: trashed }
+          then:
+            - refund_opt: {}

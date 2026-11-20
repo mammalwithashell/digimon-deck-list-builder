@@ -1,0 +1,55 @@
+# BT9-006 Pagumon — Digi-Egg, Lv.2, Purple, cost 0. Traits: Lesser. Form: In-Training.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT9-006.md):
+#   Inherited Effect
+#   [When Attacking] You may trash 1 card in your hand to have this Digimon get
+#   +1000 DP for the turn.
+# No on-field effect, no security effect.
+#
+# DCGO: CardEffect/BT9/Purple/BT9_006.cs. OnAllyAttack inherited effect,
+#   `SetUpActivateClass(..., maxCount -1, isOptional: TRUE, ...)`:
+#   CanUseCondition  = CanTriggerOnAttack(card)
+#   CanActivate      = the card is on the battle area AND the owner's hand has >= 1 card
+#   Coroutine        = SelectHandEffect(canNoSelect: TRUE, maxCount 1, Mode.Discard)
+#                      -> if a card was discarded: +1000 DP, UntilEachTurnEnd.
+# The effect is optional at the activation level (DCGO's always-shown Yes/No,
+# `outer_prompt: true`) AND the hand pick itself may select nothing
+# (canNoSelect:true), so both prompts are modelled. An empty hand never offers
+# the effect (`CanActivate` requires a card in hand), hence the `condition`.
+# The +1000 DP is applied only to the carrier (`target: source`), and only when
+# a card was actually trashed ("to have" is a cost-like condition).
+
+card: BT9-006
+name: Pagumon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    optional: true
+    outer_prompt: true
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    summary: "[When Attacking] You may trash 1 card in your hand to have this Digimon get +1000 DP for the turn."
+    process:
+      - select_hand:
+          of: you
+          bind_as: trashed
+          optional: true
+          filter: {}
+          prompt: "You may trash 1 card in your hand to have this Digimon get +1000 DP for the turn"
+      - if:
+          condition: { binding_present: trashed }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: trashed }
+            - add_dp_modifier:
+                target: source
+                value: 1000
+                expiry: end_of_turn

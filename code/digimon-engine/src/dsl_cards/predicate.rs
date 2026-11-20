@@ -892,10 +892,17 @@ fn eval_predicate_ref_known(
     // its text." In an inherited while_condition context the subject is
     // the carrier permanent.
     if let Some(ref needle) = pred.rules_text_contains {
-        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+        // BT12-006 Monimon: an inherited [On Deletion] "If this Digimon has
+        // <Save> in its text" gates on the carrier that was JUST deleted. By
+        // the time the effect resolves the carrier is already in the trash
+        // (rule 25) and its battle-area slot may be empty or reoccupied by a
+        // different Digimon, so the carrier's top card is read from the
+        // deletion's last-known-information snapshot (DCGO captures
+        // `permanent.TopCard.HasSaveText` in the deletion hashtable).
+        let Some(top_card) = carrier_top_card(subject, rctx) else {
             return false;
         };
-        let Some(data) = rctx.game.card_data_for_handle(perm.top_card().handle()) else {
+        let Some(data) = rctx.game.card_data_for_handle(top_card) else {
             return false;
         };
         let needle_lc = needle.to_lowercase();
@@ -3028,6 +3035,45 @@ fn subject_or_source_permanent<'a>(
         | PredicateSubject::Source(_)
         | PredicateSubject::None => rctx.source_permanent(),
     }
+}
+
+/// Top card of the permanent carrying the effect being evaluated. While the
+/// carrier is on the field this is its live top card. When the effect fires
+/// from the carrier's own deletion, the carrier has left the field, so the
+/// trigger's `deleted_object` snapshot (captured before removal) names the top
+/// card instead -- the source card is then either that top card or one of the
+/// digivolution cards the snapshot recorded beneath it. A different Digimon's
+/// deletion (an observer clause) never matches the snapshot, so the live
+/// carrier is read as before.
+fn carrier_top_card(
+    subject: PredicateSubject,
+    rctx: &EffectReadContext<'_>,
+) -> Option<CardHandle> {
+    // The subject names this effect's own carrier: a card / source subject, or
+    // (an inherited clause's gate) the carrier permanent by its handle.
+    let carrier_subject = match subject {
+        PredicateSubject::Permanent(handle) => rctx.source_permanent == Some(handle),
+        PredicateSubject::BreedingPermanent(_) => false,
+        PredicateSubject::Card(_)
+        | PredicateSubject::RevealedCard(_)
+        | PredicateSubject::Source(_)
+        | PredicateSubject::None => true,
+    };
+    if carrier_subject {
+        if let Some(snapshot) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+        {
+            if snapshot.top_card == rctx.source_card
+                || snapshot.digisources_just_before.contains(&rctx.source_card)
+            {
+                return Some(snapshot.top_card);
+            }
+        }
+    }
+    subject_or_source_permanent(subject, rctx).map(|perm| perm.top_card().handle())
 }
 
 fn permanent_for_handle<'a>(
