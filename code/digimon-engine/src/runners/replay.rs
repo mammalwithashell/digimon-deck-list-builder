@@ -7366,7 +7366,13 @@ impl ReplayDriver {
                 .cloned();
             (gate_answers, evidence, at as u32)
         };
-        if let (Some(siblings), None) = (lone_filtered.as_ref(), evidence.as_ref()) {
+        // A cancel row does not discriminate here: both the offered trigger's optional
+        // pick and a filtered sibling's cost pick can be cancelled, so only a row that
+        // names cards or targets can prove which effect DCGO chose.
+        let names_something = |n: &&crate::dcgo_recording::SelectionRow| {
+            n.card_ids.as_ref().is_some_and(|c| !c.is_empty()) || n.targets.as_ref().is_some_and(|t| !t.is_empty())
+        };
+        if let (Some(siblings), None) = (lone_filtered.as_ref(), evidence.as_ref().filter(names_something)) {
             return Some(Err(format!(
                 "card-less MultipleSkills index {dcgo_index} (DCGO's own ordering, no chosen_effect_card) {AMBIGUOUS_ORDER}:                  the engine offers ONE trigger ({}) and filters {} more ([{}]) that DCGO's list kept, and the actor's                  next row names no card or target (or cancels), so nothing proves DCGO chose the offered trigger and                  not a filtered one",
                 entries[0].1,

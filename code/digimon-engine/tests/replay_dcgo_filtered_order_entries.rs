@@ -218,6 +218,23 @@ fn an_index_with_no_pick_to_prove_it_stops() {
     assert_eq!(s.game.verification_digest(), before, "nothing was applied");
 }
 
+/// A cancel after the "use it?" yes does not discriminate: Mirai's optional hand
+/// pick and the filtered Karakurumon's cost pick can both be cancelled, so it is
+/// no proof DCGO chose the offered trigger. The replay stops with nothing applied
+/// (paying Mirai's cost would be a guess).
+#[test]
+fn an_index_followed_by_a_cancel_stops() {
+    let r = digivolved_into_karakurumon(false);
+    let before = r.game.verification_digest();
+    let cancel = row(serde_json::json!({"step":2,"actor":0,"prompt":"SelectHandEffect","zone":"Hand","cancel":true}));
+    let mut s = session(r, vec![index(1), use_it(true), cancel]);
+    s.step();
+    let reason = stop_reason(&s);
+    assert!(reason.contains("nothing proves DCGO chose the offered trigger"), "{reason}");
+    assert_eq!(s.game.verification_digest(), before, "nothing was applied");
+    assert!(on_field(&s.game, "EX9-067"), "Mirai was not returned to the deck");
+}
+
 /// A pick the offered trigger cannot answer (PLAIN-HAND is no [Puppet]; only a
 /// Puppet is a legal pick) is not evidence for it.
 #[test]
