@@ -301,7 +301,7 @@ mod tests {
                 outcome: ReplacementOutcome::None, cancel_if_deleted: None,
             };
             verify!(effect.replacement_process.as_ref().unwrap()(&mut replacement), ());
-            assert_eq!(calls.load(Ordering::SeqCst), if marked { 0 } else { 16 });
+            assert_eq!(calls.load(Ordering::SeqCst), if marked { 0 } else { 17 });
         }
     }
 

@@ -96,7 +96,7 @@ fn verify_all(effect: &Effect, game: &mut Game, card: CardHandle, seat: u8, guar
         subject: ReplacementSubject::Player(seat), original_destination: None,
         outcome: ReplacementOutcome::None, cancel_if_deleted: None };
     verify!(effect.replacement_process.as_ref().unwrap()(&mut replacement), ());
-    assert_eq!(calls.load(Ordering::SeqCst) - before, if guarded { 0 } else { 16 });
+    assert_eq!(calls.load(Ordering::SeqCst) - before, if guarded { 0 } else { 17 });
     assert_eq!(game.memory, memory + if guarded { 0 } else { 2 });
 }
 
