@@ -296,21 +296,14 @@ fn full_assembly_pays_reduced_cost_places_sources_and_trashes_material_stack() {
         .execute_action(0, pick)
         .expect("pick MetalSeadramon from trash");
 
-    // Slot cap (3) reached — the finishing prompt has no candidates left and
-    // must therefore be declinable regardless of payability.
-    let sel = runner.pending_selection().expect("finishing prompt");
+    // Slot cap (3) reached: DCGO BT15_102.cs runs the placement loop only
+    // `while (placed < 3 && valid candidates != 0)`, so it ends by itself and
+    // asks no trailing "finish" prompt; the play commits right after the third
+    // pick.
     assert!(
-        material_rows(&runner.game).is_empty(),
-        "no candidates past the cap"
+        runner.pending_selection().is_none(),
+        "no empty finishing prompt past the cap"
     );
-    assert!(sel.valid_action_ids.is_empty(), "no candidate ids past the cap");
-    assert!(sel.is_optional);
-    assert_eq!(
-        build_action_mask(&runner.game, 0)[PASS as usize],
-        1.0,
-        "finishing (PASS) is mask-legal at the cap"
-    );
-    runner.execute_action(0, PASS).expect("finish placing");
 
     assert_eq!(runner.memory(), 7, "cost 15 - 3×4 = 3 paid from memory 10");
     assert_eq!(
@@ -489,7 +482,9 @@ fn assembly_play_is_not_marked_digixros_and_on_play_drains_after_placement() {
     runner.execute_action(0, first).expect("pick");
     let next = material_action(&runner.game, "DM-METAL", CardChoiceZone::Trash);
     runner.execute_action(0, next).expect("pick");
-    runner.execute_action(0, PASS).expect("finish");
+    // No Dark Masters candidate is left, so the assembly loop ends by itself
+    // (DCGO BT15_102.cs `while (... && valid candidates != 0)`).
+    assert!(runner.pending_selection().is_none(), "no empty finishing prompt");
 
     assert_eq!(
         *seen.lock().unwrap(),
