@@ -755,6 +755,24 @@ fn write_resume_stack(
             if let crate::resume::ResumeSelectKind::CountChoice(page) = select_kind {
                 debug_field(hasher, "resume.count_choice", page);
             }
+            // Multi-card "trash N bottom face-down cards from under your Tamers"
+            // payment (CR 4.3 15-5-2): nothing leaves the board until the last
+            // Tamer pick, so the picks made so far live ONLY here. Without them
+            // a lone Tamer holding two face-down cards re-parks a byte-identical
+            // prompt after its first pick and the step reads as a no-op.
+            if version != crate::recorder::VerificationDigestVersion::LegacyV2 {
+                if let crate::resume::ResumeSelectKind::FieldPermanent {
+                    post:
+                        Some(crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSourcesPick {
+                            remaining,
+                            picked,
+                        }),
+                    ..
+                } = select_kind
+                {
+                    debug_field(hasher, "resume.face_down_payment", &(remaining, picked));
+                }
+            }
             debug_field(hasher, "resume.bind_as", bind_as);
             let length=if version==crate::recorder::VerificationDigestVersion::V4 {inner_tail.len()}
                 else {inner_tail.iter().filter(|step|!security_play_hash::is_runtime_step(step)).count()};
