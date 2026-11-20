@@ -317,7 +317,7 @@ impl Game {
         }
     }
 
-    fn queued_refired_effect(&self, effect: ReFireableEffect) -> QueuedEffect {
+    fn queued_refired_effect(&mut self, effect: ReFireableEffect) -> QueuedEffect {
         let is_turn_player = effect.controller == self.turn_player();
         // §15-15-7-4 (Ver. 4.3): the refired effect keeps its own optional
         // processing condition even when the effect activating it is
@@ -332,9 +332,15 @@ impl Game {
                     .map(|effect| effect.optional)
             })
             .unwrap_or(false);
+        // The refired effect is run directly (not through
+        // `push_effect_with_identity`), so capture the borrowed-from
+        // permanent's identity here: "this Digimon" in the refired body
+        // (`is_source`, source-carrier rebinding) must still resolve to the
+        // Digimon the effect was borrowed from, not to nothing.
+        let source_identity = Some(self.source_move_anchor(effect.source));
         QueuedEffect {
-                source_identity: None,
-                source_card: effect.source_card,
+            source_identity,
+            source_card: effect.source_card,
             source_permanent: Some(effect.source),
             source_kind: effect.source_kind,
             attribution_source_card: effect.attribution_source_card,
