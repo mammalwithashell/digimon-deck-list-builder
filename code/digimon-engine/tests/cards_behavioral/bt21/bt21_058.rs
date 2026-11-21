@@ -257,9 +257,20 @@ fn bt21_058_clause1_fires_on_both_play_and_digivolve() {
             _ => None,
         })
         .expect("must have a Triggered clause containing OnPlay");
+    // Printed "[On Play] [When Digivolving]" are both SELF timings. The
+    // board-wide observer `on_digivolve` (EffectTiming::OnDigivolve, enqueued
+    // from every permanent on both battle areas) is the wrong timing: DCGO
+    // BT21_058.cs gates the shared effect on `CanTriggerOnPlay(hashtable,
+    // card)` / `CanTriggerWhenDigivolving(hashtable, card)`, i.e. only the
+    // permanent that CONTAINS this card. This assertion used to pin the
+    // observer timing; corrected against the card and DCGO.
     assert!(
-        clause1.when.contains(&CompiledTiming::OnDigivolve),
-        "[On Play][When Digivolving] clause must ALSO carry OnDigivolve timing"
+        clause1.when.contains(&CompiledTiming::WhenDigivolving),
+        "[On Play][When Digivolving] clause must carry the SELF timing WhenDigivolving"
+    );
+    assert!(
+        !clause1.when.contains(&CompiledTiming::OnDigivolve),
+        "the board-wide OnDigivolve observer must not be on the [When Digivolving] clause"
     );
     assert_eq!(
         clause1.scope,
@@ -1209,5 +1220,161 @@ fn bt21_058_inherited_observer_delete_emits_event() {
         "a Trash event must fire for the inherited observer's deletion (deleted \
          permanents route through trash_permanent_stack's emission helper); \
          events: {events:?}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Section 4 -- [When Digivolving] is a SELF timing, not a board-wide observer
+// ---------------------------------------------------------------------------
+//
+// Bug scan (31+ logged games): authored `when: [on_play, on_digivolve]`, a
+// Snatchmon (BT21-058) sitting in play re-ran its whole effect (reveal 3, add
+// 1, trash the rest) every time ANY other Digimon digivolved, on either side.
+
+fn bt21_058_observer_fixture() -> DebugRunner {
+    let mut lv3 = make_digimon("F058-LV3", 3, 3000, 3);
+    lv3.colors = vec![digimon_engine::enums::CardColor::Red];
+    let mut lv4 = make_digimon("F058-LV4", 4, 5000, 5);
+    lv4.colors = vec![digimon_engine::enums::CardColor::Red];
+    lv4.evo_costs = vec![digimon_engine::card_data::EvoCost {
+        card_color: digimon_engine::enums::CardColor::Red as u8,
+        level: 3,
+        memory_cost: 2,
+    }];
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("parses")
+        .add_card(lv3)
+        .add_card(lv4)
+        .add_card(make_filler("F058-PAD"))
+        .hand(0, &["F058-LV4"])
+        .hand(1, &["F058-LV4"])
+        .deck(0, &["F058-PAD"; 10])
+        .deck(1, &["F058-PAD"; 10])
+        .memory(10)
+        .start();
+    r.game.turn_count = 1;
+    r.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    r
+}
+
+/// Another of the OWNER's Digimon digivolves: Snatchmon (BT21-058) in play
+/// must not reveal anything.
+#[test]
+fn bt21_058_does_not_fire_when_another_own_digimon_digivolves() {
+    let mut r = bt21_058_observer_fixture();
+    r.place_on_field(0, CARD_ID, Some(0));
+    let base = r.place_on_field(0, "F058-LV3", Some(0));
+    let deck_before = r.deck_size(0);
+    let trash_before = r.trash_size(0);
+
+    assert!(r.game.digivolve_from_hand(
+        0,
+        0,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByHand
+    ));
+    let _ = r.auto_resolve();
+
+    assert!(
+        r.pending_selection().is_none(),
+        "no Snatchmon prompt may open for another Digimon's digivolution"
+    );
+    // At most the digivolution's own draw leaves the deck -- no reveal-3.
+    assert!(
+        deck_before - r.deck_size(0) <= 1,
+        "only the digivolve draw may leave the deck; {} cards left it",
+        deck_before - r.deck_size(0)
+    );
+    assert_eq!(r.trash_size(0), trash_before, "nothing is trashed");
+}
+
+/// An OPPONENT's Digimon digivolves: Snatchmon (BT21-058) in play must not
+/// reveal anything either.
+#[test]
+fn bt21_058_does_not_fire_when_an_opponent_digimon_digivolves() {
+    let mut r = bt21_058_observer_fixture();
+    r.place_on_field(0, CARD_ID, Some(0));
+    let opp_base = r.place_on_field(1, "F058-LV3", Some(0));
+    // A real turn change: the opponent starts their turn with 3 memory, enough
+    // for the cost-2 digivolution.
+    r.pass_turn();
+    let _ = r.auto_resolve();
+    assert_eq!(r.turn_player(), 1, "it is the opponent's turn");
+    assert_eq!(
+        r.current_phase(),
+        digimon_engine::enums::GamePhase::Main,
+        "the opponent is in their Main phase"
+    );
+    let deck_before = r.deck_size(0);
+    let trash_before = r.trash_size(0);
+    let hand_before = r.hand_size(0);
+
+    assert!(r.game.digivolve_from_hand(
+        1,
+        0,
+        opp_base.index as usize,
+        digimon_engine::enums::PlaySource::ByHand
+    ));
+    let _ = r.auto_resolve();
+
+    assert!(r.pending_selection().is_none());
+    assert_eq!(r.deck_size(0), deck_before, "Snatchmon's owner reveals nothing");
+    assert_eq!(r.trash_size(0), trash_before);
+    assert_eq!(r.hand_size(0), hand_before);
+}
+
+/// Positive control: digivolving INTO Snatchmon (BT21-058) still fires the
+/// printed [When Digivolving] (reveal 3: 1 to hand or all trashed).
+#[test]
+fn bt21_058_fires_when_this_card_digivolves() {
+    let mut lv3 = make_digimon("F058-B3", 3, 3000, 3);
+    lv3.colors = vec![digimon_engine::enums::CardColor::Black];
+    // Production effects + the printed digivolve circle (Black Lv.3 / cost 3;
+    // DebugRunner card data carries no evo_costs for a DSL card, so the circle
+    // is supplied as an alt_path for this fixture only).
+    let yaml = format!(
+        "{}
+alt_paths:
+  - kind: digivolve
+    from: {{ level_eq: 3, color_is: black }}
+    cost: 3
+",
+        include_str!("../../../cards/bt21/BT21-058.yaml")
+    );
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("parses")
+        .add_card(lv3)
+        .add_card(make_filler("F058-PAD"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["F058-PAD"; 10])
+        .memory(10)
+        .start();
+    r.game.turn_count = 1;
+    r.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    let base = r.place_on_field(0, "F058-B3", Some(0));
+    let deck_before = r.deck_size(0);
+    let trash_before = r.trash_size(0);
+
+    assert!(
+        r.game.digivolve_from_hand(
+            0,
+            0,
+            base.index as usize,
+            digimon_engine::enums::PlaySource::ByHand
+        ),
+        "Snatchmon (BT21-058) digivolves onto a black Lv.3"
+    );
+    drive_first_choice_n_times(&mut r, 20);
+    let _ = r.auto_resolve();
+
+    // Reveal 3 with no [Vemmon]-text card among them: all 3 are trashed
+    // (plus, at most, the digivolution's own draw leaving the deck).
+    assert_eq!(r.trash_size(0), trash_before + 3, "the 3 revealed cards are trashed");
+    assert!(
+        (3..=4).contains(&(deck_before - r.deck_size(0))),
+        "reveal 3 (+ the digivolve draw) left the deck; got {}",
+        deck_before - r.deck_size(0)
     );
 }

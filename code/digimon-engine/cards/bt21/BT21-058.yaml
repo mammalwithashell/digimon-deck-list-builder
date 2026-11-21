@@ -79,11 +79,15 @@
 # EX10-025 Sunarizamon idiom: pick target once, then 2 independent optional
 # trash picks each immediately placed via `place_as_bottom_source`).
 #
-# [When Digivolving] scope: DCGO/DSL convention for a clause printed with
-# both [On Play] and [When Digivolving] qualifiers is `when: [on_play,
-# on_digivolve]` sharing one clause body (TimingSet accepts multiple
-# timings); this card has ONLY that shared body (no per-timing condition
-# split needed — the process is identical from either timing).
+# [When Digivolving] scope: a clause printed with both [On Play] and [When
+# Digivolving] is `when: [on_play, when_digivolving]` -- the two SELF timings --
+# sharing one clause body. `on_digivolve` is NOT [When Digivolving]: it is the
+# board-wide observer timing (it fires from every permanent whenever ANY
+# Digimon on either side digivolves). DCGO BT21_058.cs gates the shared effect
+# on `CanTriggerOnPlay(hashtable, card)` / `CanTriggerWhenDigivolving(hashtable,
+# card)`, i.e. only the permanent that contains this card. (This spec used to
+# say `[on_play, on_digivolve]` and re-ran the whole effect on every
+# digivolution in the game.)
 #
 # ─── Clause 2 — Inherited [All Turns][Once Per Turn] delete on Vemmon
 #      returned to deck bottom from THIS Digimon's digivolution cards ─────
@@ -125,7 +129,7 @@ attribute: Unknown
 effects:
   # ─── Clause 1: [On Play][When Digivolving] reveal-3 hand-1 trash-rest,
   #      then optionally place up to 2 trash Vemmon as 1 Digimon's source ──
-  - when: [on_play, on_digivolve]
+  - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Reveal top 3; add 1 [Vemmon]-in-text card to hand; trash the rest. Then you may place up to 2 [Vemmon] from trash as 1 Digimon's bottom digivolution cards"
     process:
       - reveal_search:
