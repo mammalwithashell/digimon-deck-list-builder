@@ -112,10 +112,11 @@ effects:
   #   - DP debuff: `select_opponent_permanent { kind: digimon }` (mandatory —
   #     installs only when an opponent Digimon exists, matching DCGO's
   #     GetBattleAreaDigimons().Any() gate), then `add_dp_modifier` with value
-  #     formula `-3000 × card_count_in_zone(you, battle_area)`. Unfiltered
-  #     battle-area count = "your Digimon and Tamers" because only Digimon and
-  #     Tamers occupy battle-area slots (BT23-014 / BT9-112 idiom — documented
-  #     faithful). Expiry end_of_opponents_turn = "until their turn ends".
+  #     formula `-3000 × card_count_in_zone(you, battle_area, filter: Digimon
+  #     or Tamer)`. The filter is required: an Option card placed in the battle
+  #     area (Digital Accident Tactics Squad (P-235), DNA Charge (ST24-15); CR
+  #     4.3 4-28-1) also occupies a battle-area slot and is not counted.
+  #     Expiry end_of_opponents_turn = "until their turn ends".
   - when: [when_digivolving, when_attacking]
     once_per_turn: true
     summary: "[WD][WA][OPT] May free-play a Marcus Damon (hand/trash); then -3000×(own Digimon+Tamers) to 1 opp Digimon"
@@ -159,9 +160,17 @@ effects:
             formula:
               base: 0
               per:
+                # "for each of your Digimon and Tamers" -- an Option card
+                # placed in the battle area (CR 4.3 4-28-1) is neither, so the
+                # count is filtered. DCGO AD1_016.cs: `-3000 *
+                # GetBattleAreaPermanents().Count(IsDigimon || IsTamer)`.
                 card_count_in_zone:
                   of: you
                   zone: battle_area
+                  filter:
+                    any_of:
+                      - kind: digimon
+                      - kind: tamer
               delta: -3000
           expiry: end_of_opponents_turn
 

@@ -18,12 +18,10 @@ effects:
   # DCGO: ChangeCostClass with CardSourceCondition (cardSource == card) and
   # count() = 2 * GetBattleAreaPermanents().Count(permanent => permanent.IsDigimon).
   #
-  # NOTE: card_count_in_zone counts ALL battle_area permanents (Digimon + Tamers).
-  # The DSL formula has no `kind: digimon` filter for the per-selector, so Tamers
-  # on the opponent's side are also counted. This matches the approximation used in
-  # BT24-017 (same formula pattern). In practice this is rarely significant since
-  # opponents rarely run Tamers in the late game. A future G-FORMULA-KIND-FILTER gap
-  # can address this if needed.
+  # "for each of your opponent's Digimon": the count carries `filter: { kind:
+  # digimon }` -- an unfiltered battle-area count would also count Tamers and
+  # Option cards placed in the battle area (CR 4.3 4-4-1, 4-28-1). DCGO
+  # BT21_026.cs: `2 * Enemy.GetBattleAreaPermanents().Count(p => p.IsDigimon)`.
   - kind: cost_reduction
     reduction_timing: before_pay_cost
     when_playing_this: true
@@ -33,8 +31,9 @@ effects:
         card_count_in_zone:
           of: opponent
           zone: battle_area
+          filter: { kind: digimon }
       delta: 2
-    summary: "-2 per opp battle area permanent when played"
+    summary: "-2 per opponent Digimon when played"
 
   # ─── Clause 2: <Rush>
   # DCGO: RushSelfStaticEffect(isInheritedEffect: false, card: card, condition: null)
