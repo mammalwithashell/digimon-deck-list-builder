@@ -5370,6 +5370,18 @@ pub fn try_install(
             }
             let mut success_tail = then.clone();
             success_tail.extend_from_slice(tail);
+            // A "by trashing 1 ..." cost pick: flagged `cost: true`, or a
+            // mandatory pick whose card the very next step trashes (the same
+            // shape `lower_triggered::leading_cost_guard` reads as
+            // `CostGuard::UnionZoneTrash` when it leads the clause).
+            let pays_cost = *cost
+                || (!*optional
+                    && bind_as.as_ref().is_some_and(|bound| {
+                        matches!(
+                            then.first().or_else(|| tail.first()),
+                            Some(CompiledStep::TrashUnionBound { binding }) if binding == bound
+                        )
+                    }));
             install_select_union_zone(
                 ctx,
                 *of,
@@ -5387,6 +5399,19 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
+            if pays_cost && ctx.game.pending_selection.is_none() {
+                // No candidate: the cost was not carried out, so nothing
+                // after "by ..." may run. CR 4.3 15-7-2: "If the content of
+                // the optional processing conditions isn't executed, the
+                // processing after the conditions can't be executed." The
+                // install parks whenever at least one candidate exists (even
+                // a single one is a real pick), so no pending selection here
+                // means none did. Same unpayable-abort contract as the
+                // face-down / link-card / stack-Option trash costs above:
+                // stop the dispatcher, do NOT run the tail.
+                ctx.cost_unpayable = true;
+                return InstallResult::TailAlreadyRan;
+            }
             selection_result(ctx)
         }
         CompiledStep::SelectOrderedPermutation {
