@@ -19,7 +19,7 @@
 #![allow(dead_code)]
 
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::{encode_digivolve, PASS};
+use digimon_engine::action::space::{encode_digivolve, BREEDING_TARGET, PASS};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, CostDelta, PlaySource};
@@ -333,4 +333,66 @@ pub fn assert_two_tamers_choice(spec: BurstSpec) {
         1
     );
     assert!(hand_ids(&r).iter().any(|id| id == TAMER));
+}
+
+fn breeding_stack_ids(r: &DebugRunner) -> Vec<String> {
+    r.game.players[0]
+        .breeding_area
+        .as_ref()
+        .map(|perm| {
+            perm.card_sources
+                .iter()
+                .map(|c| r.game.card_data[c.data_index].card_id.clone())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The burst base is "one of your cards on the field" (CR 4.3 6-5-1-2-3,
+/// 8-3-3-1), which includes the breeding area (3-4-6); DCGO
+/// `CardSource.CanPlayBurst` scans `GetFieldPermanents()`. The requirement is
+/// printed on the HAND card, so 3-4-7-4 does not switch it off. 8-3-2-1's
+/// turn-end trash is pending processing of the burst RULE (18-1-1), not an
+/// effect, so 3-4-7-3 does not shield the breeding-area stack from it: the top
+/// card is trashed at the end of the burst turn there too (DCGO
+/// `SelectBurstDigivolutionEffect.AddTrashTopCardAtTurnEnd` targets the
+/// permanent wherever it is).
+pub fn assert_breeding_burst_turn_end_trash(spec: BurstSpec) {
+    let (mut r, host_h, hand_index) = setup(spec, Host::BurstOnly, true);
+    let host = r.game.players[0].battle_area.remove(host_h.index as usize);
+    r.game.players[0].breeding_area = Some(host);
+    let action = encode_digivolve(hand_index as u16, BREEDING_TARGET);
+    assert_eq!(
+        build_action_mask(&r.game, 0)[action as usize],
+        1.0,
+        "{}: burst digivolve onto the breeding-area card is offered",
+        spec.card
+    );
+    let memory = r.game.memory;
+    r.game.decode_action(action, 0);
+    assert!(route_choices(&r).is_none(), "{}: burst is the only route", spec.card);
+    assert_eq!(r.game.memory, memory, "{}: burst cost 0 is paid", spec.card);
+    assert!(hand_ids(&r).iter().any(|id| id == TAMER), "{}: Tamer returned", spec.card);
+    assert_eq!(
+        breeding_stack_ids(&r),
+        vec![HOST.to_string(), spec.card.to_string()],
+        "{}: Burst Mode on top of the breeding-area host",
+        spec.card
+    );
+    settle(&mut r);
+    assert_eq!(breeding_stack_ids(&r).len(), 2, "{}: still there before turn end", spec.card);
+
+    let turn = r.game.turn_count;
+    r.end_turn();
+    settle(&mut r);
+    assert!(r.game.turn_count > turn, "{}: the turn ended", spec.card);
+    assert_eq!(
+        breeding_stack_ids(&r),
+        vec![HOST.to_string()],
+        "{}: 8-3-2-1 trashes the top card of the breeding-area stack",
+        spec.card
+    );
+    assert!(trash_ids(&r).iter().any(|id| id == spec.card), "{}: in trash", spec.card);
+    let other = slot_of(&r, STACK_TOP).expect("other stack");
+    assert_eq!(r.game.players[0].battle_area[other].card_sources.len(), 2);
 }
