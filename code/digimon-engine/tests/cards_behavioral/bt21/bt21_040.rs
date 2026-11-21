@@ -825,3 +825,41 @@ fn bt21_040_inherited_dp_inactive_on_opponents_turn() {
         contribution
     );
 }
+
+/// The warp is Agumon (BT21-040)'s own [Your Turn] effect, so it is off while
+/// the card sits in the breeding area.
+///
+/// CR 4.3 3-4-7-4: "Effects on cards in breeding areas can't trigger or
+/// activate, except for effects that explicitly specify or reference breeding
+/// areas." Official Q&A Q6388 (BlackGatomon (BT25-082), the same clause
+/// shape): "No, you can't. The effect doesn't activate in the breeding area."
+/// DCGO BT21_040.cs gates the clause on `IsExistOnBattleAreaDigimon(card)`.
+#[test]
+fn bt21_040_warp_is_not_available_in_the_breeding_area() {
+    use digimon_engine::action::build_action_mask;
+    use digimon_engine::action::space::{encode_digivolve, BREEDING_TARGET};
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-040")
+        .expect("BT21-040 in pack")
+        .add_card(make_shinegreymon("SHINEGREY"))
+        .add_card(make_opp_digimon("BIG-LVL", 6))
+        .hand(0, &["SHINEGREY"])
+        .memory(20)
+        .start();
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner.place_in_breeding(0, "BT21-040");
+    runner.place_on_field(1, "BIG-LVL", Some(0));
+    let memory_before = runner.game.memory;
+
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[encode_digivolve(0, BREEDING_TARGET) as usize],
+        0.0,
+        "the warp must not be offered for a breeding-area Agumon (BT21-040)"
+    );
+    assert!(!runner
+        .game
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand));
+    let breeding = runner.game.players[0].breeding_area.as_ref().expect("still in breeding");
+    assert_eq!(breeding.top_card().card_id(&runner.game.card_data), "BT21-040");
+    assert_eq!(runner.game.memory, memory_before, "nothing was paid");
+}
