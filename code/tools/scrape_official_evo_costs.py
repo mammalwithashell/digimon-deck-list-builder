@@ -57,6 +57,24 @@ def fetch(card_id: str, retries: int = 3) -> str:
     raise last
 
 
+def _circle_colors(seg: str):
+    """Colour codes of one digivolve-cost row, in printed order.
+
+    ``<span class='cardColor_all'>Multicolor</span>`` is the rainbow circle: ANY
+    colour (JP DB 「全」 = all; DCGO has one EvoCosts row per colour), so it expands
+    to all seven. It used to be dropped, which made a rainbow-circle card look as if
+    it printed no circle. Same rule as `build_card_bundles._circle_colors`.
+    """
+    colors = []
+    for name in _COLOR_SPAN.findall(seg):
+        name = name.lower()
+        codes = sorted(COLOR_CODE.values()) if name == "all" else [COLOR_CODE[name]] if name in COLOR_CODE else []
+        for code in codes:
+            if code not in colors:
+                colors.append(code)
+    return colors
+
+
 def parse_evo_costs(html: str):
     """Distinct (card_color, level, memory_cost) tuples from the official page.
 
@@ -67,7 +85,7 @@ def parse_evo_costs(html: str):
     seen = []
     for m in _BLOCK.finditer(html):
         seg = m.group(1)
-        colors = [COLOR_CODE[c.lower()] for c in _COLOR_SPAN.findall(seg) if c.lower() in COLOR_CODE]
+        colors = _circle_colors(seg)
         text = re.sub(r"<[^>]+>", " ", seg)
         cm = _COST_LV.search(text)
         if not cm:

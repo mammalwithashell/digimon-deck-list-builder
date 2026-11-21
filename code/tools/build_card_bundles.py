@@ -42,6 +42,7 @@ BASE = "https://world.digimoncard.com/cardlist/?search=true&card_no="
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
 COLOR_CODE = {"red": 0, "blue": 1, "yellow": 2, "green": 3, "white": 4, "black": 5, "purple": 6}
 COLOR_NAME = {v: k.capitalize() for k, v in COLOR_CODE.items()}
+ALL_COLOR_CODES = sorted(COLOR_CODE.values())
 
 _PAIR = re.compile(r'cardInfoTit[^>]*>(.*?)</dt>\s*<dd[^>]*>(.*?)</dd>', re.S)
 _DIGI_BLOCK = re.compile(r"Digivolve Cost \d+</dt>\s*<dd[^>]*>(.*?)</dd>", re.S)
@@ -65,12 +66,37 @@ def fetch(card_id: str, retries: int = 3) -> str:
     raise last
 
 
+def _circle_colors(seg: str):
+    """Colour codes of one digivolve-cost row, in printed order.
+
+    The rainbow circle is ``<span class='cardColor_all'>Multicolor</span>``: ANY
+    colour (the Japanese DB writes it 「全」 = all; DCGO lists one EvoCosts row per
+    colour), not "a base with 2+ colours". It expands to all seven colours, as
+    `tools.card_data.sources.official._colors` does. Dropping it (the old
+    behaviour: only single-colour class names were kept) made the mirror say a
+    rainbow-circle card prints no circle at all.
+    """
+    colors = []
+    for name in _COLOR_SPAN.findall(seg):
+        name = name.lower()
+        codes = ALL_COLOR_CODES if name == "all" else [COLOR_CODE[name]] if name in COLOR_CODE else []
+        for code in codes:
+            if code not in colors:
+                colors.append(code)
+    return colors
+
+
 def parse_evo_costs(html: str):
-    """Authoritative standard digivolve-cost circles: distinct (color,level,cost)."""
+    """Authoritative standard digivolve-cost circles: distinct (color,level,cost).
+
+    Only "<n> from Lv.<x>" rows are level circles. An Appmon grade circle
+    ("Multicolor 4 from Stnd." / "from 神") is a trait gate this table cannot
+    express and is skipped here.
+    """
     seen = []
     for m in _DIGI_BLOCK.finditer(html):
         seg = m.group(1)
-        colors = [COLOR_CODE[c.lower()] for c in _COLOR_SPAN.findall(seg) if c.lower() in COLOR_CODE]
+        colors = _circle_colors(seg)
         cm = _COST_LV.search(re.sub(r"<[^>]+>", " ", seg))
         if not cm:
             continue
@@ -140,14 +166,38 @@ def parse_official(card_id: str, html: str) -> dict:
     return out
 
 
+def evo_circle_lines(evo):
+    """Bundle lines for the standard circles, one per printed circle colour.
+
+    A level/cost pair carried by all seven colours is ONE printed rainbow circle;
+    it is written as a single any-colour line so nobody reads seven circles, or
+    "Multicolor" as "2+ colour base" (the Susanoomon (EX12-076) misreading).
+    """
+    lines = []
+    rainbow = set()
+    for e in evo:
+        key = (e["level"], e["memory_cost"])
+        if key in rainbow:
+            continue
+        same = {x["card_color"] for x in evo if (x["level"], x["memory_cost"]) == key}
+        if same >= set(ALL_COLOR_CODES):
+            rainbow.add(key)
+            lines.append(
+                f'  - Any colour (rainbow circle; official DB "Multicolor") '
+                f"Lv.{e['level']} / cost {e['memory_cost']}"
+            )
+            continue
+        lines.append(
+            f"  - {COLOR_NAME.get(e['card_color'], e['card_color'])} Lv.{e['level']} / cost {e['memory_cost']}"
+        )
+    return lines
+
+
 def write_bundle(card_id: str, official: dict, meta: dict, outdir: str):
     """Write a per-card markdown bundle merging official + cards.json + image."""
     img = os.path.join(IMG_DIR, card_id + ".webp")
     evo = official.get("digivolve_costs") or []
-    evo_lines = [
-        f"  - {COLOR_NAME.get(e['card_color'], e['card_color'])} Lv.{e['level']} / cost {e['memory_cost']}"
-        for e in evo
-    ] or ["  - (none — DigiEgg / Lv.2 base, or DNA/special only)"]
+    evo_lines = evo_circle_lines(evo) or ["  - (none — DigiEgg / Lv.2 base, or DNA/special only)"]
     lines = [
         f"# {meta.get('card_name_eng', card_id)}  ({card_id})",
         "",

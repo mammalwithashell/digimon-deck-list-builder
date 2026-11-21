@@ -106,6 +106,15 @@ python code/tools/scrape_official_evo_costs.py --ids BT13-020 EX1-014
   official entries are simply wrong. When the mirror and `cards.json` disagree, check
   the card image. `PRINTED_OVER_MIRROR` in `code/tests/test_cards_json_integrity.py`
   lists the known cases.
+- **Rainbow circles are any colour**: the official page writes a rainbow digivolve
+  circle as `Multicolor N from Lv.X` (`<span class='cardColor_all'>`; the Japanese
+  DB writes 「全」, "all"). Both tools expand it to seven rows, one per colour, and
+  the bundle prints it as a single "Any colour" line. It does not mean "a base with
+  two or more colours". The closed list of these cards is `RAINBOW_CIRCLES` in
+  `code/digimon-engine/tests/support/printed_circles.rs`;
+  `tests/data_official_parity.rs` keeps the mirror, `cards.json` and
+  `card_overrides.json` in step with it. An Appmon grade circle
+  (`Multicolor N from Stnd.`) is a trait gate and is not a level row.
 - `code/tools/audit_digivolve/reconcile_traits.py` folds official traits the API
   drops, including `(Rule) Trait` grants, into `card_overrides.json`.
 

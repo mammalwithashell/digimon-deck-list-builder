@@ -22301,7 +22301,43 @@
     },
     "BT16-082": {
       "card_id": "BT16-082",
-      "digivolve_costs": [],
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 2,
+          "memory_cost": 1
+        },
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 1
+        },
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 1
+        },
+        {
+          "card_color": 3,
+          "level": 2,
+          "memory_cost": 1
+        },
+        {
+          "card_color": 4,
+          "level": 2,
+          "memory_cost": 1
+        },
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 1
+        },
+        {
+          "card_color": 6,
+          "level": 2,
+          "memory_cost": 1
+        }
+      ],
       "colors": "White",
       "play_cost": "3",
       "dp": "2000",
@@ -22320,7 +22356,43 @@
     },
     "BT16-083": {
       "card_id": "BT16-083",
-      "digivolve_costs": [],
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 3,
+          "level": 5,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 4,
+          "level": 5,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 6,
+          "level": 5,
+          "memory_cost": 5
+        }
+      ],
       "colors": "White",
       "play_cost": "12",
       "dp": "13000",
@@ -28566,7 +28638,43 @@
     },
     "BT18-102": {
       "card_id": "BT18-102",
-      "digivolve_costs": [],
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 1,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 2,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 3,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 4,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 5,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 6,
+          "level": 6,
+          "memory_cost": 6
+        }
+      ],
       "colors": "White",
       "play_cost": "9",
       "dp": "16000",
@@ -31387,7 +31495,43 @@
     },
     "BT19-102": {
       "card_id": "BT19-102",
-      "digivolve_costs": [],
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 1,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 3,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 4,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
       "colors": "White",
       "play_cost": "6",
       "dp": "6000",
@@ -64669,7 +64813,43 @@
     },
     "BT7-112": {
       "card_id": "BT7-112",
-      "digivolve_costs": [],
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 6,
+          "memory_cost": 7
+        },
+        {
+          "card_color": 1,
+          "level": 6,
+          "memory_cost": 7
+        },
+        {
+          "card_color": 2,
+          "level": 6,
+          "memory_cost": 7
+        },
+        {
+          "card_color": 3,
+          "level": 6,
+          "memory_cost": 7
+        },
+        {
+          "card_color": 4,
+          "level": 6,
+          "memory_cost": 7
+        },
+        {
+          "card_color": 5,
+          "level": 6,
+          "memory_cost": 7
+        },
+        {
+          "card_color": 6,
+          "level": 6,
+          "memory_cost": 7
+        }
+      ],
       "colors": "White",
       "play_cost": "15",
       "dp": "15000",
@@ -66834,7 +67014,43 @@
     },
     "BT8-084": {
       "card_id": "BT8-084",
-      "digivolve_costs": [],
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 1,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 3,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 4,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
       "colors": "White",
       "play_cost": "8",
       "dp": "8000",
@@ -93088,7 +93304,43 @@
     },
     "EX9-074": {
       "card_id": "EX9-074",
-      "digivolve_costs": [],
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 1,
+          "level": 4,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 3,
+          "level": 4,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 4,
+          "level": 4,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 5
+        }
+      ],
       "colors": "White",
       "play_cost": "10",
       "dp": "10000",
@@ -97561,7 +97813,43 @@
     },
     "P-123": {
       "card_id": "P-123",
-      "digivolve_costs": [],
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 2,
+          "memory_cost": 0
+        },
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        },
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 0
+        },
+        {
+          "card_color": 3,
+          "level": 2,
+          "memory_cost": 0
+        },
+        {
+          "card_color": 4,
+          "level": 2,
+          "memory_cost": 0
+        },
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        },
+        {
+          "card_color": 6,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
       "colors": "White",
       "play_cost": "3",
       "dp": "2000",
@@ -115836,7 +116124,43 @@
     },
     "EX13-077": {
       "card_id": "EX13-077",
-      "digivolve_costs": [],
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 1,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 2,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 3,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 4,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 5,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 6,
+          "level": 6,
+          "memory_cost": 6
+        }
+      ],
       "colors": "White",
       "play_cost": "16",
       "dp": "16000",
@@ -115958,7 +116282,43 @@
     },
     "EX12-076": {
       "card_id": "EX12-076",
-      "digivolve_costs": [],
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 1,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 2,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 3,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 4,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 5,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 6,
+          "level": 6,
+          "memory_cost": 6
+        }
+      ],
       "colors": "Yellow White Red",
       "play_cost": "16",
       "dp": "16000",

@@ -27792,6 +27792,36 @@
         "card_color": 0,
         "level": 6,
         "memory_cost": 7
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 7
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 7
+      },
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 7
+      },
+      {
+        "card_color": 4,
+        "level": 6,
+        "memory_cost": 7
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 7
+      },
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 7
       }
     ],
     "xros_req": ""
@@ -30970,6 +31000,36 @@
     "evo_costs": [
       {
         "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 4,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
         "level": 4,
         "memory_cost": 4
       }
@@ -62295,6 +62355,36 @@
         "card_color": 0,
         "level": 2,
         "memory_cost": 1
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 4,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
       }
     ],
     "xros_req": ""
@@ -62328,6 +62418,36 @@
     "evo_costs": [
       {
         "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 4,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
         "level": 5,
         "memory_cost": 5
       }
@@ -70593,6 +70713,36 @@
         "card_color": 0,
         "level": 6,
         "memory_cost": 6
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 4,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 6
       }
     ],
     "xros_req": "[Digivolve] [Takuya Kanbara] or [Koji Minamoto] w/10 [Hybrid] trait cards under: Cost 6"
@@ -74495,6 +74645,36 @@
     "evo_costs": [
       {
         "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 4,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
         "level": 4,
         "memory_cost": 4
       }
@@ -121883,6 +122063,36 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 4,
+        "level": 4,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 5
       }
     ],
     "xros_req": "Assembly Requirements [Assembly -7] 7 level 4 [DM] trait Digimon cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
@@ -134096,6 +134306,36 @@
     "evo_costs": [
       {
         "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 4,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 6,
         "level": 2,
         "memory_cost": 0
       }
@@ -153359,6 +153599,11 @@
         "card_color": 2,
         "level": 3,
         "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] Lv.3 w/[ME] trait: Cost 2"
@@ -153923,6 +154168,11 @@
         "card_color": 5,
         "level": 4,
         "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.4 w/[Machine]/[ME] trait: Cost 3 \r\n[DNA Digivolve] Black/Purple Lv.4 + Red/Yellow Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
@@ -154070,6 +154320,11 @@
         "card_color": 5,
         "level": 5,
         "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] Lv.5 w/[ME] trait: Cost 3 \r\n[DNA Digivolve] Black/Purple Lv.5 + Red/Yellow Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
@@ -154130,6 +154385,11 @@
         "card_color": 5,
         "level": 5,
         "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.5 w/[Cyborg]/[ME] trait: Cost 3"
@@ -154165,6 +154425,11 @@
     "evo_costs": [
       {
         "card_color": 5,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
         "level": 6,
         "memory_cost": 5
       }
@@ -154347,6 +154612,11 @@
     "evo_costs": [
       {
         "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
         "level": 4,
         "memory_cost": 4
       }
@@ -154671,6 +154941,36 @@
     "evo_costs": [
       {
         "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 4,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 6,
         "level": 6,
         "memory_cost": 6
       }
@@ -162612,7 +162912,43 @@
     "effect_description_eng": "[On Play] [When Digivolving] 1 of your Digimon may attack without suspending. Then, for every 2 of your Digimon and Tamers' colors, activate 1 effect below:\r\n・This Digimon may battle 1 of your opponent's Digimon.\r\n・By returning 5 cards from your opponent's trash to the bottom of the deck, ＜Recovery +1＞ (Place the top card of your deck as your top security card.)\r\n[All Turns] This Digimon gains all colors in its digivolution cards, and +1000 DP for each of your Digimon and Tamers' colors.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
-    "evo_costs": [],
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 4,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
     "xros_req": "[Digivolve] [Omnimon]: Cost 2 \r\nAssembly Requirements [Assembly -8] 6 [ADVENTURE] trait Digimon cards w/different colors\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
     "digixros_costs": [
       {
