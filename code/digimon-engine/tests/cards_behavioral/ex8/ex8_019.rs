@@ -228,11 +228,11 @@ fn ex8_019_compiles_with_printed_stats_and_digivolve_paths() {
             path.kind == CompiledAltPathKind::Digivolve
                 && path.cost == Some(CompiledCost::Literal(0))
                 && path.from.as_ref().is_some_and(|from| {
-                    from.name_contains.as_deref() == Some("Hiyarimon")
+                    from.name_is.as_deref() == Some("Hiyarimon")
                         || from
                             .all_of
                             .iter()
-                            .any(|pred| pred.name_contains.as_deref() == Some("Hiyarimon"))
+                            .any(|pred| pred.name_is.as_deref() == Some("Hiyarimon"))
                 })
         }),
         "Penguinmon must digivolve from [Hiyarimon] for cost 0"
@@ -811,37 +811,36 @@ fn ex8_019_breeding_hiyarimon_offers_cost_0_alt_route() {
     );
 }
 
-/// Name-substring fidelity: DCGO gates EX8-019's alt path with
-/// ContainsCardName("Hiyarimon"), so a breeding base named "Hiyarimon X"
-/// ALSO qualifies for the cost-0 route (unlike EX11-014's exact-name gate).
+/// Exact-name fidelity. Printed "[Digivolve] [Hiyarimon]: Cost 0" is a
+/// brackets-only gate: it references only a card NAMED [Hiyarimon] (CR 4.3
+/// 2-3-1-2, 2-3-5-3; the substring match is only for "with [XX] in its name",
+/// 2-3-1-3), as the official Bandai DB prints it. A breeding base named
+/// "Hiyarimon X" therefore gets ONLY the standard cost-1 circle.
+///
+/// This test used to pin the opposite ("ALSO qualifies") because DCGO
+/// EX8_019.cs gates the route with the substring `ContainsCardName("Hiyarimon")`
+/// (CardSource.cs `cardName.Contains(name)`). The printed card and the rules
+/// outrank DCGO for what a card prints (CLAUDE.md source priority), and the
+/// sibling EX11-014 uses the exact-name gate; the route is `name_is`.
 #[test]
-fn ex8_019_breeding_name_containing_hiyarimon_also_gets_cost_0() {
+fn ex8_019_breeding_name_containing_hiyarimon_does_not_get_cost_0() {
     let mut hiya_x = hiyarimon_egg("HIYA-X");
     hiya_x.card_name = "Hiyarimon X".to_string();
     let mut runner = breeding_runner(hiya_x);
 
+    let mem_before = runner.game.memory;
     let proceeded = runner
         .game
         .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand);
     assert!(
-        !proceeded,
-        "ContainsCardName(\"Hiyarimon\") matches \"Hiyarimon X\" — both routes \
-         apply, so the cost choice must surface"
+        proceeded,
+        "[Hiyarimon] is an exact-name gate: only the standard circle applies to \"Hiyarimon X\""
     );
-    let view = runner
-        .pending_selection_view()
-        .expect("a cost-choice selection must be pending");
-    let labels: Vec<String> = view
-        .effect_choices
-        .as_ref()
-        .expect("effect_choices")
-        .iter()
-        .map(|c| c.label.to_lowercase())
-        .collect();
     assert!(
-        labels.iter().any(|l| l.contains("cost 0")),
-        "the substring-matched cost-0 route must be offered (labels {labels:?})"
+        runner.pending_selection().is_none(),
+        "no cost choice for a single applicable route"
     );
+    assert_eq!(mem_before - runner.game.memory, 1, "standard cost 1, not the cost-0 route");
 }
 
 /// Negative: a breeding base NOT named Hiyarimon gets only the standard

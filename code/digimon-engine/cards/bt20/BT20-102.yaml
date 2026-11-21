@@ -17,7 +17,7 @@ traits: [Holy Warrior, X Antibody, Royal Knight, LIBERATOR]
 # you may digivolve into BT20-102 for a cost of 2 (normal requirements still apply).
 alt_paths:
   - kind: digivolve
-    from: { name_contains: "Omnimon" }
+    from: { name_is: "Omnimon" }
     cost: 2
 
 effects:

@@ -88,7 +88,7 @@ fn bt21_037_has_veemon_cost_2_alt_path() {
             && path
                 .from
                 .as_ref()
-                .is_some_and(|from| from.name_contains.as_deref() == Some("Veemon"))
+                .is_some_and(|from| from.name_is.as_deref() == Some("Veemon"))
     });
 
     assert!(

@@ -57,7 +57,7 @@ alt_paths:
         - in_text_contains: "Chronomon"
     cost: 5
   - kind: digivolve
-    from: { name_contains: "Giant Slayer" }
+    from: { name_is: "Giant Slayer" }
     cost: 5
 
 effects:

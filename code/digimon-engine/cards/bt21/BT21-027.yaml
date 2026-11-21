@@ -13,7 +13,7 @@ digixros_aliases: [Shoutmon, ZeigGreymon]
 alt_paths:
   - kind: digivolve
     from:
-      name_contains: ZeigGreymon
+      name_is: ZeigGreymon
     cost: 2
   - kind: digivolve
     from:

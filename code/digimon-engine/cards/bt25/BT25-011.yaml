@@ -45,7 +45,7 @@ alt_paths:
     from: { level_eq: 3, color_is: red }
     cost: 3
   - kind: digivolve
-    from: { name_contains: "Hawkmon" }
+    from: { name_is: "Hawkmon" }
     cost: 2
     ignore_requirements: true
   - kind: digivolve

@@ -197,7 +197,7 @@ fn ad1_001_alt_digivolve_path_omnimon_or_adventure_cost_2() {
         "alt-digivolve `from:` must require level_eq: 3 somewhere in the predicate"
     );
 
-    let omnimon = pred_any(from, |p| p.name_contains.as_deref() == Some("Omnimon"));
+    let omnimon = pred_any(from, |p| p.in_text_contains.as_deref() == Some("Omnimon"));
     let adventure = pred_any(from, |p| {
         p.trait_has
             .as_deref()
@@ -206,7 +206,7 @@ fn ad1_001_alt_digivolve_path_omnimon_or_adventure_cost_2() {
     });
     assert!(
         omnimon,
-        "alt-digivolve `from:` must allow name_contains: Omnimon"
+        "alt-digivolve `from:` must allow in_text_contains: Omnimon (printed w/[Omnimon] in text)"
     );
     assert!(
         adventure,

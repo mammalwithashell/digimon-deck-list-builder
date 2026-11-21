@@ -34,14 +34,14 @@ fn ex12_021_has_tsunomon_or_vb_egg_digivolve_path() {
             path.kind == CompiledAltPathKind::Digivolve
                 && path.cost == Some(CompiledCost::Literal(0))
                 && path.from.as_ref().is_some_and(|from| {
-                    pred_any(from, |p| p.name_contains.as_deref() == Some("Tsunomon"))
+                    pred_any(from, |p| p.name_is.as_deref() == Some("Tsunomon"))
                         && pred_any(from, |p| p.trait_has.as_deref() == Some("VB"))
                 })
         })
         .expect("Lv.2 Tsunomon/VB digivolve path");
     let from = special.from.as_ref().expect("special path has from filter");
     assert!(pred_any(from, |p| p.level_eq == Some(2)));
-    assert!(pred_any(from, |p| p.name_contains.as_deref() == Some("Tsunomon")));
+    assert!(pred_any(from, |p| p.name_is.as_deref() == Some("Tsunomon")));
     assert!(pred_any(from, |p| p.trait_has.as_deref() == Some("VB")));
 }
 

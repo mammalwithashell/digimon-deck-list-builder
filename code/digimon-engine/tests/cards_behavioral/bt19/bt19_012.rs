@@ -86,7 +86,7 @@ fn bt19_012_declares_shoutmon_digixros_alias_and_alt_paths() {
                 && path
                     .from
                     .as_ref()
-                    .is_some_and(|filter| filter.name_contains.as_deref() == Some("Shoutmon"))
+                    .is_some_and(|filter| filter.name_is.as_deref() == Some("Shoutmon"))
         }),
         "OmniShoutmon should digivolve from Shoutmon for 4"
     );

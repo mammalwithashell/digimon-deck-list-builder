@@ -17,7 +17,7 @@ alt_paths:
       all_of:
         - level_eq: 3
         - any_of:
-            - name_contains: Salamon
+            - name_is: Salamon
             - trait_has: NSp
             - trait_has: VB
     cost: 2

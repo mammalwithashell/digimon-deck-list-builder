@@ -47,7 +47,7 @@ alt_paths:
     cost: 4
   # [Digivolve] While you have 4 or more [Hudie] trait Tamers, [Erika Mishima]: Cost 3
   - kind: digivolve
-    from: { name_contains: "Erika Mishima" }
+    from: { name_is: "Erika Mishima" }
     cost: 3
     condition:
       count_gte:

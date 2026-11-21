@@ -20,7 +20,7 @@ alt_paths:
       all_of:
         - level_eq: 3
         - any_of:
-            - name_contains: "Omnimon"
+            - in_text_contains: "Omnimon"
             - trait_has: "ADVENTURE"
     cost: 2
 

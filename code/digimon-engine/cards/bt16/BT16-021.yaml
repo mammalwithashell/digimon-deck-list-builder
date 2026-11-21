@@ -54,7 +54,7 @@ alt_paths:
     from: { level_eq: 3, color_is: green }
     cost: 3
   - kind: digivolve
-    from: { name_contains: "Wormmon" }
+    from: { name_is: "Wormmon" }
     cost: 2
 
 effects:

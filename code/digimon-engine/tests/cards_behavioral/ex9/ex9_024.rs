@@ -158,7 +158,7 @@ fn ex9_024_has_kyaromon_cost_zero_alt_digivolve() {
         .iter()
         .find(|p| {
             p.kind == CompiledAltPathKind::Digivolve
-                && p.from.as_ref().and_then(|f| f.name_contains.as_deref()) == Some("Kyaromon")
+                && p.from.as_ref().and_then(|f| f.name_is.as_deref()) == Some("Kyaromon")
         })
         .expect("a [Kyaromon] alt-digivolve path exists");
 

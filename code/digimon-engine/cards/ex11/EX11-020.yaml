@@ -11,7 +11,7 @@ alt_paths:
     from: { level_eq: 2, color_is: yellow }
     cost: 1
   - kind: digivolve
-    from: { name_contains: "Kyaromon" }
+    from: { name_is: "Kyaromon" }
     cost: 0
 
 effects:

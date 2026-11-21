@@ -11,7 +11,7 @@ alt_paths:
     from: { level_eq: 3 }
     cost: 3
   - kind: digivolve
-    from: { name_contains: "Veemon" }
+    from: { name_is: "Veemon" }
     cost: 2
     ignore_requirements: true
 

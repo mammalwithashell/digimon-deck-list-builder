@@ -134,7 +134,7 @@ alt_paths:
     cost: 3
 
   - kind: digivolve
-    from: { name_contains: "Rapidmon" }
+    from: { name_is: "Rapidmon" }
     cost: 4
     ignore_requirements: true
 
