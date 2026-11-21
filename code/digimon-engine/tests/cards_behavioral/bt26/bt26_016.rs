@@ -246,3 +246,75 @@ fn bt26_016_replacement_only_protects_itself() {
     assert!(r.game.pending_selection.is_none(), "only 'this Digimon'");
     assert!(!on_field(&r, "MINE"));
 }
+
+/// [Once Per Turn] must stay spent after a completed return, whichever way
+/// the three cards were split between the two trashes. CR 4.3 15-14-1-1: "each
+/// activation counts toward 1 use"; 15-14-1-2: once used, "it won't trigger
+/// again during that turn". DCGO BT26_016.cs shares one `BT26_016_OPT` hash
+/// (maxCountPerTurn 1) across On Play / When Digivolving / When Attacking and
+/// calls `RemoveUse()` only when nothing was deleted AND nothing was returned.
+///
+/// Bug-scan repro (2026-11): one Chronomon: Holy Mode (BT26-016) resolved the
+/// whole effect at On Play and again at When Attacking in the same turn
+/// whenever the return went through the opponent-trash prompt. The return was
+/// recorded in the nested prompt's bindings and never reached the parked
+/// outer tail, so the trailing "nothing deleted and nothing returned" guard
+/// read a stale log and refunded the use.
+fn split_return_then_second_trigger(own: usize, opp: usize) {
+    let mut r = setup();
+    for _ in 0..own {
+        push_trash(&mut r, 0, "TR");
+    }
+    for _ in 0..opp {
+        push_trash(&mut r, 1, "TR");
+    }
+    let h = chrono(&mut r);
+    fire(&mut r, EffectTiming::OnPlay, h);
+    // No opposing Digimon: the first prompt is the own-trash share.
+    pick_n_then_finish(&mut r, own);
+    if opp > 0 {
+        assert!(
+            r.pending_selection_view().is_some(),
+            "opponent-trash share prompt ({own} own + {opp} opponent)"
+        );
+        pick_n_then_finish(&mut r, opp);
+    }
+    assert!(r.game.pending_selection.is_none());
+    assert!(trash_ids(&r, 0).is_empty() && trash_ids(&r, 1).is_empty());
+    assert_eq!(r.security_count(0), 4, "<Recovery +1> ({own} own + {opp} opponent)");
+
+    // Same turn, fresh material for a second return: the effect must not
+    // trigger again.
+    for _ in 0..3 {
+        push_trash(&mut r, 0, "TR");
+        push_trash(&mut r, 1, "TR");
+    }
+    fire(&mut r, EffectTiming::WhenAttacking, h);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "[Once Per Turn] is spent after a {own} own + {opp} opponent return"
+    );
+    assert_eq!(r.security_count(0), 4, "no second <Recovery +1>");
+    assert_eq!(trash_ids(&r, 0).len(), 3);
+    assert_eq!(trash_ids(&r, 1).len(), 3);
+}
+
+#[test]
+fn bt26_016_once_per_turn_holds_after_three_own_return() {
+    split_return_then_second_trigger(3, 0);
+}
+
+#[test]
+fn bt26_016_once_per_turn_holds_after_two_own_one_opponent_return() {
+    split_return_then_second_trigger(2, 1);
+}
+
+#[test]
+fn bt26_016_once_per_turn_holds_after_one_own_two_opponent_return() {
+    split_return_then_second_trigger(1, 2);
+}
+
+#[test]
+fn bt26_016_once_per_turn_holds_after_three_opponent_return() {
+    split_return_then_second_trigger(0, 3);
+}

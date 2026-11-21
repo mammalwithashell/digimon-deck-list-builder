@@ -234,7 +234,19 @@ impl Bindings {
     /// picks made since, and the outer tail must see those picks — a sibling
     /// `binding_exists` / `binding_absent` after a nested select would
     /// otherwise read a stale absence (G-OPT-REFUND-ON-DECLINE fallout).
+    ///
+    /// The per-effect result log travels with the slots. `other` is this
+    /// snapshot's own lineage (the bindings the parked selection carried,
+    /// plus whatever its inner tail did), so its log is this log with newer
+    /// entries appended; those entries are adopted. Without that, a trailing
+    /// result predicate of the outer tail (`effect_returned_any_card`,
+    /// `effect_deleted_any_*`, ...) read the park-time log: Chronomon: Holy
+    /// Mode (BT26-016) returned 3 cards through its nested opponent-trash
+    /// prompt, the outer "nothing deleted and nothing returned" guard still
+    /// saw an empty log, and `refund_opt` handed the [Once Per Turn] back
+    /// (bug scan 2026-11; CR 4.3 15-14-1-1 / 15-14-1-2).
     pub fn merge_slots_from(&mut self, other: &Bindings) {
+        self.adopt_result_log_from(other);
         for name in &other.cleared_slots {
             self.clear_for_merge(name);
         }
@@ -323,6 +335,38 @@ impl Bindings {
     /// predicates. G-DSL-EFFECT-TRASHED-HAND-CARD.
     pub fn record_trashed_from_hand(&mut self, card: CardHandle) {
         self.result_log.trashed_from_hand.push(card);
+    }
+
+    /// Append the entries `other`'s result log has beyond this one, for each
+    /// list where this log is a prefix of `other`'s (the lineage case, see
+    /// `merge_slots_from`). A list that is not a prefix belongs to an
+    /// unrelated history and is left alone.
+    fn adopt_result_log_from(&mut self, other: &Bindings) {
+        fn adopt<T: Clone + PartialEq>(mine: &mut Vec<T>, theirs: &[T]) -> bool {
+            let extends = theirs.len() > mine.len() && theirs[..mine.len()] == mine[..];
+            if extends {
+                let start = mine.len();
+                mine.extend_from_slice(&theirs[start..]);
+            }
+            extends
+        }
+        let (mine, theirs) = (&mut self.result_log, &other.result_log);
+        adopt(&mut mine.suspended, &theirs.suspended);
+        adopt(&mut mine.returned_cards, &theirs.returned_cards);
+        adopt(&mut mine.returned_to_deck, &theirs.returned_to_deck);
+        // `deleted_is_digimon` is parallel to `deleted`: adopt them together.
+        let deleted_before = mine.deleted.len();
+        if adopt(&mut mine.deleted, &theirs.deleted)
+            && mine.deleted_is_digimon.len() == deleted_before
+            && theirs.deleted_is_digimon.len() == theirs.deleted.len()
+        {
+            mine.deleted_is_digimon
+                .extend_from_slice(&theirs.deleted_is_digimon[deleted_before..]);
+        }
+        adopt(&mut mine.played, &theirs.played);
+        adopt(&mut mine.digivolved, &theirs.digivolved);
+        adopt(&mut mine.added_to_hand, &theirs.added_to_hand);
+        adopt(&mut mine.trashed_from_hand, &theirs.trashed_from_hand);
     }
 
     pub fn merge_result_log_from_since(&mut self, other: &Bindings, cursor: EffectResultLogCursor) {
