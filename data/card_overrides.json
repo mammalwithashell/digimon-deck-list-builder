@@ -18789,7 +18789,19 @@
   },
   "_note_EX12-032": "Printed card image and DCGO EX12_032.cs require Blue/Yellow Lv.4 + Purple/Red Lv.4, cost 0. The ingested DNA line incorrectly said Lv.5 on both sides. Override the source text so parsed dna_costs are regenerated consistently.",
   "EX12-032": {
-    "xros_req": "[Digivolve] Lv.4 w/[Garurumon] in name or w/[NSo]/[VB] trait: Cost 3 \r\n[DNA Digivolve] Blue/Yellow Lv.4 + Purple/Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
+    "xros_req": "[Digivolve] Lv.4 w/[Garurumon] in name or w/[NSo]/[VB] trait: Cost 3 \r\n[DNA Digivolve] Blue/Yellow Lv.4 + Purple/Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ]
   },
   "P-249": {
     "attribute_eng": [
@@ -18927,6 +18939,11 @@
       },
       {
         "card_color": 6,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
         "level": 6,
         "memory_cost": 5
       }
@@ -19226,5 +19243,187 @@
       }
     ]
   },
-  "_note_rainbow_circles": "Rainbow (ANY-colour) digivolve circles, one evo_costs row per colour (Red=0 .. Purple=6): BT7-112, BT8-084, BT16-082, BT16-083, BT18-102, BT19-102, EX9-074, EX12-076, EX13-077, P-123. The card face prints a rainbow-filled circle; the official EN DB lists it as 'Multicolor N from Lv.X' (span class cardColor_all), the JP DB as '全 Lv.XからN' (全 = all), and DCGO's card asset has one EvoCosts row per colour. It is NOT 'a base with 2+ colours'. digimoncard.io serves the circle as a single red row, and the official-mirror builder used to drop it, so a reconcile against the mirror wrote evo_costs [] for EX13-077 (it could then only be played or digivolved from [Omnimon]). All ten were checked against the card image, the live official EN and JP pages and the DCGO asset on 2026-11-21. Guard: RAINBOW_CIRCLES in code/digimon-engine/tests/data_official_parity.rs."
+  "_note_rainbow_circles": "Rainbow (ANY-colour) digivolve circles, one evo_costs row per colour (Red=0 .. Purple=6): BT7-112, BT8-084, BT16-082, BT16-083, BT18-102, BT19-102, EX9-074, EX12-076, EX13-077, P-123. The card face prints a rainbow-filled circle; the official EN DB lists it as 'Multicolor N from Lv.X' (span class cardColor_all), the JP DB as '全 Lv.XからN' (全 = all), and DCGO's card asset has one EvoCosts row per colour. It is NOT 'a base with 2+ colours'. digimoncard.io serves the circle as a single red row, and the official-mirror builder used to drop it, so a reconcile against the mirror wrote evo_costs [] for EX13-077 (it could then only be played or digivolved from [Omnimon]). All ten were checked against the card image, the live official EN and JP pages and the DCGO asset on 2026-11-21. Guard: RAINBOW_CIRCLES in code/digimon-engine/tests/data_official_parity.rs.",
+  "EX12-023": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ]
+  },
+  "EX12-024": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "EX12-027": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "EX12-028": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ]
+  },
+  "EX12-030": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ]
+  },
+  "EX12-035": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ]
+  },
+  "EX12-038": {
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ]
+  },
+  "EX12-042": {
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "EX12-049": {
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ]
+  },
+  "EX12-050": {
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "EX12-051": {
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ]
+  },
+  "EX12-077": {
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ]
+  },
+  "P-248": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ]
+  }
 }

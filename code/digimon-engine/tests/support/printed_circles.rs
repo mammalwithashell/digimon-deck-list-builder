@@ -113,3 +113,37 @@ pub const COLOURED_CIRCLES: &[(&str, u8, i16, &[CardColor])] = &[
     ("ST1-10", 5, 2, &[Red]),            // Phoenixmon
     ("ST1-11", 5, 4, &[Red]),            // WarGreymon
 ];
+
+/// Multi-colour (split) standard circles of cards that the official mirror does
+/// not carry (all of EX12 plus two promos), so `cards.json` came from the
+/// digimoncard.io API alone — which keeps one colour of a split circle:
+/// `(card_id, level digivolved from, printed cost, printed circle colours)`.
+///
+/// Each row was read off the card face (circle crop) on 2026-11-21 and agrees
+/// with the DCGO card asset's `EvoCosts` (one row per colour). The API had
+/// dropped the second (and for Chaosdramon (EX12-060) the third) colour, so a
+/// base of that colour could not be digivolved onto in production.
+/// `tests/data_official_parity.rs` pins `cards.json`, `card_overrides.json`
+/// and the per-card JSON against this table.
+pub const SPLIT_CIRCLES_OUTSIDE_THE_MIRROR: &[(&str, u8, i16, &[CardColor])] = &[
+    ("EX12-023", 2, 1, &[Blue, Yellow]),         // Jellymon
+    ("EX12-024", 3, 3, &[Blue, Purple]),         // Garurumon
+    ("EX12-027", 3, 3, &[Blue, Yellow]),         // TeslaJellymon
+    ("EX12-028", 4, 4, &[Blue, Black]),          // Gusokumon
+    ("EX12-030", 4, 4, &[Blue, Yellow]),         // Thetismon
+    ("EX12-032", 4, 4, &[Blue, Purple]),         // WereGarurumon
+    ("EX12-035", 5, 4, &[Blue, Purple]),         // MetalGarurumon
+    ("EX12-038", 2, 0, &[Yellow, Black]),        // Kokuwamon
+    ("EX12-041", 3, 3, &[Yellow, Black]),        // Thundermon
+    ("EX12-042", 3, 3, &[Yellow, Green]),        // Gatomon
+    ("EX12-049", 2, 1, &[Green, Black]),         // Angoramon
+    ("EX12-050", 3, 3, &[Green, Black]),         // SymbareAngoramon
+    ("EX12-051", 4, 4, &[Green, Black]),         // Lamortmon
+    ("EX12-055", 4, 4, &[Black, Yellow]),        // Andromon
+    ("EX12-058", 5, 3, &[Black, Yellow]),        // HiAndromon
+    ("EX12-059", 5, 4, &[Black, Purple]),        // Machinedramon
+    ("EX12-060", 6, 5, &[Black, Purple, Red]),   // Chaosdramon (a three-colour circle)
+    ("EX12-064", 4, 4, &[Purple, Black]),        // Megadramon
+    ("EX12-077", 6, 5, &[Red, Purple]),          // Proximamon
+    ("P-248", 2, 1, &[Blue, Red]),               // Veemon
+];

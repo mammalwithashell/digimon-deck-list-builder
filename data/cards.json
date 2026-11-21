@@ -152751,6 +152751,11 @@
         "card_color": 1,
         "level": 2,
         "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
       }
     ],
     "xros_req": "[Digivolve] [Puyoyomon]/Lv.2 w/[DS] trait: Cost 0"
@@ -152787,6 +152792,11 @@
     "evo_costs": [
       {
         "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
         "level": 3,
         "memory_cost": 3
       }
@@ -152901,6 +152911,11 @@
         "card_color": 1,
         "level": 3,
         "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] [Jellymon]/Lv.3 w/[DS] trait: Cost 2"
@@ -152936,6 +152951,11 @@
     "evo_costs": [
       {
         "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
         "level": 4,
         "memory_cost": 4
       }
@@ -153041,6 +153061,11 @@
         "card_color": 1,
         "level": 4,
         "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.4 w/[Jellymon] in text or w/[DS] trait: Cost 3"
@@ -153121,6 +153146,11 @@
     "evo_costs": [
       {
         "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
         "level": 4,
         "memory_cost": 4
       }
@@ -153312,6 +153342,11 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.5 w/[Garurumon] in name or w/[ME]/[VB] trait: Cost 3 \r\n[DNA Digivolve] Blue/Black Lv.5 + Purple/Yellow Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
@@ -153489,6 +153524,11 @@
         "card_color": 2,
         "level": 2,
         "memory_cost": 0
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
       }
     ],
     "xros_req": "[Digivolve] Lv.2 w/[ME] trait: Cost 0"
@@ -153640,6 +153680,11 @@
     "evo_costs": [
       {
         "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
         "level": 3,
         "memory_cost": 3
       }
@@ -153901,6 +153946,11 @@
         "card_color": 3,
         "level": 2,
         "memory_cost": 1
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
       }
     ],
     "xros_req": "[Digivolve] [Bosamon]/Lv.2 w/[NSp] trait: Cost 0"
@@ -153938,6 +153988,11 @@
         "card_color": 3,
         "level": 3,
         "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] [Angoramon]/Lv.3 w/[NSp] trait: Cost 2"
@@ -153973,6 +154028,11 @@
     "evo_costs": [
       {
         "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
         "level": 4,
         "memory_cost": 4
       }
@@ -154430,6 +154490,11 @@
       },
       {
         "card_color": 6,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
         "level": 6,
         "memory_cost": 5
       }
@@ -155008,6 +155073,11 @@
     "evo_costs": [
       {
         "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
         "level": 6,
         "memory_cost": 5
       }
@@ -163185,6 +163255,11 @@
     "evo_costs": [
       {
         "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 0,
         "level": 2,
         "memory_cost": 1
       }

@@ -26,7 +26,7 @@ use std::path::PathBuf;
 
 #[path = "support/printed_circles.rs"]
 mod printed_circles;
-use printed_circles::RAINBOW_CIRCLES;
+use printed_circles::{RAINBOW_CIRCLES, SPLIT_CIRCLES_OUTSIDE_THE_MIRROR};
 
 /// Official-mirror circles the card face does NOT print (the mirror keeps
 /// every printing's rows / has DB errors; CLAUDE.md "Printed card data").
@@ -376,5 +376,70 @@ fn rainbow_circles_are_one_row_per_colour_in_every_data_file() {
          evo-cost rows (see RAINBOW_CIRCLES):\n{}",
         failures.len(),
         failures.join("\n")
+    );
+}
+
+/// Split circles of cards the official mirror does not carry (EX12 and two
+/// promos): the API-only `cards.json` had kept one colour of each, so a base of
+/// the other printed colour could not be digivolved onto. Every data file the
+/// engine or the next ingest reads must carry exactly the printed colours
+/// (`SPLIT_CIRCLES_OUTSIDE_THE_MIRROR`, read off the card faces).
+#[test]
+fn split_circles_outside_the_mirror_carry_every_printed_colour() {
+    let cards_path = repo_data("cards.json");
+    let overrides_path = repo_data("card_overrides.json");
+    if !cards_path.exists() || !overrides_path.exists() {
+        eprintln!("Skipping: data/*.json missing — full repo checkout required");
+        return;
+    }
+    let cards = read_json(&cards_path);
+    let overrides = read_json(&overrides_path);
+    let mut failures: Vec<String> = Vec::new();
+    for (id, level, cost, colours) in SPLIT_CIRCLES_OUTSIDE_THE_MIRROR {
+        let (level, cost) = (i64::from(*level), i64::from(*cost));
+        let want: HashSet<(i64, i64, i64)> =
+            colours.iter().map(|c| (*c as i64, level, cost)).collect();
+        let per_card_json = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("cards")
+            .join(id.split('-').next().unwrap().to_lowercase())
+            .join(format!("{id}.json"));
+        let per_card = per_card_json.exists().then(|| read_json(&per_card_json));
+        let mut sources: Vec<(&str, Option<HashSet<(i64, i64, i64)>>)> = vec![
+            ("data/cards.json", circle_rows(cards[*id].get("evo_costs"))),
+            (
+                "data/card_overrides.json (re-applied by every ingest)",
+                circle_rows(overrides[*id].get("evo_costs")),
+            ),
+        ];
+        if let Some(doc) = &per_card {
+            sources.push((
+                "the per-card JSON under code/digimon-engine/cards/",
+                circle_rows(doc.get("evo_costs")),
+            ));
+        }
+        for (source, got) in sources {
+            // Only this circle's (level, cost) is compared: a card may print
+            // other circles too.
+            let got: Option<HashSet<(i64, i64, i64)>> = got.map(|rows| {
+                rows.into_iter()
+                    .filter(|(_, l, c)| *l == level && *c == cost)
+                    .collect()
+            });
+            if got.as_ref() != Some(&want) {
+                let mut found: Vec<_> = got.unwrap_or_default().into_iter().collect();
+                found.sort_unstable();
+                failures.push(format!(
+                    "{id}: the printed Lv.{level} / cost {cost} circle has colours {colours:?}                      but {source} carries {found:?}"
+                ));
+            }
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "{} split-circle data fault(s):
+{}",
+        failures.len(),
+        failures.join("
+")
     );
 }

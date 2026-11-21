@@ -32,6 +32,11 @@
       "card_color": 1,
       "level": 4,
       "memory_cost": 4
+    },
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
     }
   ],
   "xros_req": "[Digivolve] Lv.4 w/[Garurumon] in name or w/[NSo]/[VB] trait: Cost 3 \r\n[DNA Digivolve] Blue/Yellow Lv.4 + Purple/Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",

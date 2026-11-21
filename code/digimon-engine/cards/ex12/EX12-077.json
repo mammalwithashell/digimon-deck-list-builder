@@ -31,6 +31,11 @@
       "card_color": 0,
       "level": 6,
       "memory_cost": 5
+    },
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 5
     }
   ],
   "xros_req": "[Digivolve] Lv.6 w/[Gammamon] in text or w/[VB] trait: Cost 5 \r\n[DNA Digivolve] Red/Blue Lv.6 + Black/Purple Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
