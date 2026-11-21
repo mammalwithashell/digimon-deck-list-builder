@@ -23,6 +23,7 @@ impl CardEffect for Probe {
         one!(condition, Arc, true);
         one!(trigger_qualifier, Arc, true);
         one!(outer_optional_guard, Arc, true);
+        one!(activation_guard, Arc, true);
         one!(option_color_requirement_bypass, Arc, true);
         one!(cost_reduction_fn, Box, 7);
         one!(pay_cost_fn, Box, true);
@@ -77,6 +78,7 @@ fn verify_all(effect: &Effect, game: &mut Game, card: CardHandle, seat: u8, guar
     verify!(effect.condition.as_ref().unwrap()(&read), true);
     verify!(effect.trigger_qualifier.as_ref().unwrap()(&read), true);
     verify!(effect.outer_optional_guard.as_ref().unwrap()(&read), true);
+    verify!(effect.activation_guard.as_ref().unwrap()(&read), true);
     verify!(effect.option_color_requirement_bypass.as_ref().unwrap()(&read), true);
     verify!(effect.cost_reduction_fn.as_ref().unwrap()(&read), 7);
     verify!(effect.use_cost_increase_fn.as_ref().unwrap()(&read), 11);
@@ -94,7 +96,7 @@ fn verify_all(effect: &Effect, game: &mut Game, card: CardHandle, seat: u8, guar
         subject: ReplacementSubject::Player(seat), original_destination: None,
         outcome: ReplacementOutcome::None, cancel_if_deleted: None };
     verify!(effect.replacement_process.as_ref().unwrap()(&mut replacement), ());
-    assert_eq!(calls.load(Ordering::SeqCst) - before, if guarded { 0 } else { 16 });
+    assert_eq!(calls.load(Ordering::SeqCst) - before, if guarded { 0 } else { 17 });
     assert_eq!(game.memory, memory + if guarded { 0 } else { 2 });
 }
 

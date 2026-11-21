@@ -1,0 +1,84 @@
+# BT20-038 Falcomon — Digimon, Lv.3, Green/Yellow, DP 1000, Cost 3.
+# Traits: Avian, ACCEL. Form: Rookie. Attribute: Vaccine.
+#
+# Printed text (card image BT20-038.webp + official Bandai DB bundle
+# data/card_bundles/BT20-038.md, authoritative; DCGO BT20_038.cs cross-checked):
+#
+#   Evo box: Lv.2 Green/Yellow split circle / cost 1 (ONE split-colour circle:
+#   the official DB lists "Green Lv.2 / cost 1" AND "Yellow Lv.2 / cost 1";
+#   the card image shows a single Lv.2 circle — there is NO Lv.3 circle. The
+#   old cards.json / card_overrides.json `{green, Lv.3, cost 1}` evo entry was
+#   a bad scrape and is removed).
+#   Evo box: "Digivolve [Pinamon] or Lv.2 w/[ACCEL] trait: Cost 0".
+#
+#   [Your Turn] When this Digimon would digivolve into a Digimon card with the
+#   [ACCEL] trait, reduce the digivolution cost by 1.
+#
+#   Inherited Effect: <Piercing>
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alt digivolution (EffectTiming.None): AddSelfDigivolutionRequirement
+#   StaticEffect(permanentCondition: TopCard.ContainsCardName("Pinamon") ||
+#   (HasLevel && IsLevel2 && EqualsTraits("ACCEL")), digivolutionCost: 0).
+#   The printed "[Pinamon]" is a card name; DCGO uses ContainsCardName (no
+#   other card has "Pinamon" in its name), authored as `name_is`.
+#   A Lv.2 [ACCEL] Green/Yellow Digimon satisfies both the circle (cost 1)
+#   and the alt (cost 0): the cost-choice prompt fires then.
+#
+# [Your Turn] cost reduction (EffectTiming.BeforePayCost, optional: false):
+#   CanTriggerWhenPermanentWouldDigivolve(PermanentCondition: this permanent,
+#   HasProperTrait: IsDigimon && EqualsTraits("ACCEL")) + IsOwnerTurn.
+#   ChangeCost -1 on the digivolution being paid → `kind: cost_reduction,
+#   reduction_timing: before_pay_cost` with the BT20-010 / BT22-019 idiom
+#   (`source_is_cost_target_permanent` + `cost_target` + `your_turn`).
+#
+# Inherited <Piercing>: PierceSelfEffect(isInheritedEffect: true) →
+#   `scope: inherited, kind: grant_keyword`.
+
+card: BT20-038
+name: Falcomon
+kind: digimon
+level: 3
+color: [green, yellow]
+cost: 3
+dp: 1000
+traits: [Avian, ACCEL]
+attribute: Vaccine
+form: Rookie
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 1
+  # Printed alt evo box: "Digivolve [Pinamon] or Lv.2 w/[ACCEL] trait: Cost 0".
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: "Pinamon"
+        - all_of:
+            - level_eq: 2
+            - trait_has: ACCEL
+    cost: 0
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - trait_has: ACCEL
+    amount: 1
+    summary: "[Your Turn] When this Digimon would digivolve into a Digimon card with the [ACCEL] trait, reduce the digivolution cost by 1"
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "[Inherited] <Piercing>"

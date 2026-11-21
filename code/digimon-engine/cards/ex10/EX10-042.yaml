@@ -1,0 +1,125 @@
+# EX10-042 GulusGammamon — Digimon, Lv.4, Purple+Red, DP 5000, Cost 5.
+# Traits: [Dragonkin]. Virus. Form: Champion.
+#
+# Printed (official Bandai DB bundle data/card_bundles/EX10-042.md):
+#   Digivolve: Purple Lv.3 / cost 3, Red Lv.3 / cost 3.
+#   "[Digivolve] [Gammamon]: Cost 2" (alt route, any level).
+#   [On Play] [When Digivolving] Trash the top 2 cards of your deck. Then, you
+#     may place 1 Digimon card with [Gammamon] in its name from your trash as
+#     this Digimon's bottom digivolution card.
+#   [Your Turn] [Once Per Turn] When effects add to this Digimon's digivolution
+#     cards, this Digimon may digivolve into [Regulusmon] in the hand or trash
+#     with the digivolution cost reduced by 1.
+#   Inherited: <Raid>.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_042.cs
+#   - Alt route: `AddSelfDigivolutionRequirementStaticEffect(TopCard.
+#     EqualsCardName("Gammamon"), cost 2, ignoreDigivolutionRequirement:
+#     false)` -> `name_is` (exact name) gate on the host's top card.
+#   - OP / WD: two separate mandatory ActivateClasses with identical bodies.
+#     Trash 2 (when the deck is non-empty), then `SelectCardEffect(canNoSelect:
+#     true, Root.Trash)` over Digimon cards whose name contains "Gammamon",
+#     then `AddDigivolutionCardsBottom`.
+#   - [Your Turn] OPT: `OnAddDigivolutionCards` with `permanent == this`,
+#     `cardEffect.EffectSourceCard != null` (an EFFECT placed the cards, which
+#     includes this card's own OP/WD placement), `isOptional: true`. Body: pick
+#     hand/trash origin when both hold a legal [Regulusmon] (exact name), then
+#     `DigivolveIntoHandOrTrashCard(payCost: true, reduceCost 1)`.
+#   - Inherited Raid.
+#
+# Regression (hunt2 cluster alt-digivolve-cost-cards): shipped only as a .json
+# stub, so the engine offered the 3-cost circle but never the cost-2
+# [Gammamon] route, and a base satisfying both (a Purple/Red Lv.3 named
+# [Gammamon]) never reached DCGO's "which cost?" prompt.
+
+card: EX10-042
+name: GulusGammamon
+kind: digimon
+level: 4
+color: [purple, red]
+cost: 5
+dp: 5000
+traits: [Dragonkin]
+attribute: Virus
+
+alt_paths:
+  # Printed circles: Purple Lv.3 / cost 3 and Red Lv.3 / cost 3.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  # "[Digivolve] [Gammamon]: Cost 2".
+  - kind: digivolve
+    from: { name_is: "Gammamon" }
+    cost: 2
+
+effects:
+  # ─── [On Play] [When Digivolving] mill 2, then may tuck a [Gammamon]-name Digimon from trash ───
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash the top 2 cards of your deck. Then, you may place 1 Digimon card with [Gammamon] in its name from your trash as this Digimon's bottom digivolution card"
+    process:
+      - trash_from_top: { of: you, count: 2 }
+      - select_trash:
+          of: you
+          bind_as: tuck
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Gammamon"
+          prompt: "You may place 1 Digimon card with [Gammamon] in its name from your trash as this Digimon's bottom digivolution card"
+      - if:
+          condition: { binding_present: tuck }
+          then:
+            - place_as_bottom_source:
+                source: tuck
+                target: source
+
+  # ─── [Your Turn][OPT] when effects add to this Digimon's digivolution cards: digivolve into [Regulusmon] ───
+  - when: on_add_digivolution_cards
+    optional: true
+    outer_prompt: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      event_host_permanent_is_source: true
+    # DCGO CanActivateCondition: a [Regulusmon] in the hand or trash that this
+    # Digimon can digivolve into (route only; the payment is checked at the pick).
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          kind: digimon
+          name_is: "Regulusmon"
+          can_digivolve_from_source: true
+        n: 1
+    summary: "[Your Turn][Once Per Turn] When effects add to this Digimon's digivolution cards, this Digimon may digivolve into [Regulusmon] in the hand or trash with the digivolution cost reduced by 1"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: evolution
+          optional: true
+          cost: false
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Regulusmon"
+              - can_digivolve_onto_with_cost:
+                  target: source
+                  cost: { reduce: 1 }
+          prompt: "Choose a [Regulusmon] in your hand or trash to digivolve into with the cost reduced by 1"
+      - effect_initiated_digivolve:
+          target: source
+          source: evolution
+          cost: { reduce: 1 }
+          ignore_requirements: false
+
+  # ─── Inherited <Raid> ───
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Raid
+    summary: "<Raid>"

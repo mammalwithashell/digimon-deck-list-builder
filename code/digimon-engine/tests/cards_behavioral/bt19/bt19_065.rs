@@ -726,9 +726,9 @@ fn bt19_065_digixros_five_field_materials_reduce_cost_and_attach_sources() {
             .execute_action(0, action)
             .unwrap_or_else(|_| panic!("select DigiXros material slot {slot}"));
     }
-    runner
-        .execute_action(0, PASS)
-        .expect("stop selecting DigiXros materials");
+    // The recipe is full (no eligible material left): DCGO's
+    // `SelectDigiXrosClass.Select` ends by itself (a one-"End"-only element is
+    // skipped without a prompt), so the play commits with no trailing stop prompt.
 
     // Play cost 11 reduced by 5 * -1 = -5 -> effective cost 6.
     assert_eq!(
@@ -778,18 +778,27 @@ fn bt19_065_digixros_rejects_duplicate_card_number() {
     let first_action = physical_menu::battle_top_action(&runner.game, first);
     runner.execute_action(0, first_action).expect("select the first XR-DUP copy");
 
-    // Materials remain physically unpaid until the transaction commits, but the
-    // second copy must already be masked by the selected printed card number.
-    let after_first = runner
-        .pending_selection()
-        .expect("material prompt continues after first pick");
-    let mask = digimon_engine::action::build_action_mask(&runner.game, after_first.selecting_player);
-    let rows = after_first.card_choice.as_ref().map(|owner| owner.view(&runner.game, after_first.selecting_player).rows).unwrap_or_default();
-    assert!(!rows.iter().any(|row| row.card_id.as_deref() == Some("XR-DUP")
-        && matches!(row.operation, digimon_engine::owned_card_choice::CardChoiceOperation::CommitCard)
-        && mask[row.action_id as usize] > 0.5),
-        "a second card sharing the SAME card number must be excluded (different card numbers rule)");
-    assert_eq!(mask[PASS as usize], 1.0, "the optional transaction can still finish with its one legal selected copy");
+    // The second copy shares the SELECTED printed card number, so it is no
+    // longer an eligible material (different card numbers rule). No candidate is
+    // left, and DCGO's `SelectDigiXrosClass.Select` asks nothing when only "End"
+    // remains, so the transaction commits with its one legal selected copy
+    // instead of parking an empty stop prompt.
+    assert!(
+        runner.pending_selection().map_or(true, |p| p.kind != SelectionKind::Material),
+        "no material prompt remains once the only other copy is excluded"
+    );
+    let on_field_dups = runner.game.players[0]
+        .battle_area
+        .iter()
+        .filter(|p| p.top_card().card_id(&runner.game.card_data) == "XR-DUP")
+        .count();
+    assert_eq!(on_field_dups, 1, "the second copy was not consumed as a material");
+    let machine = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .expect("Machinedramon was played with the one selected material");
+    assert_eq!(machine.card_sources.len(), 2, "top card + the one selected XR-DUP");
 }
 
 // ─── Section 6 — Inherited redirect: condition gating + behavior ────────────

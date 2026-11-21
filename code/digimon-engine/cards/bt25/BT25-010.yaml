@@ -73,13 +73,16 @@ effects:
             all_of:
               - kind: digimon
               - any_of:
-                  - trait_has: Avian
-                  - trait_has: Bird
-                  - trait_has: Beast
-                  - trait_has: Animal
-                  - trait_has: Sovereign
-              - none_of:
-                  - trait_has: "Sea Animal"
+                  - trait_contains: Avian
+                  - trait_contains: Bird
+                  - trait_contains: Beast
+                  - trait_contains: Sovereign
+                  # DCGO HasBeastTraits: "Animal" counts only when no trait
+                  # is [Sea Animal]; Avian/Bird/Beast/Sovereign are unconditional.
+                  - all_of:
+                      - trait_contains: Animal
+                      - none_of:
+                          - trait_contains: "Sea Animal"
     amount: 1
     summary: "[Your Turn] When this digivolves into Avian/Bird/Beast/Animal/Sovereign (not Sea Animal), reduce cost by 1"
 

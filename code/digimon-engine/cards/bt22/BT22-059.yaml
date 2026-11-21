@@ -1,0 +1,107 @@
+# BT22-059 Infermon — Digimon, Lv.5, Black, 7000 DP, play cost 7.
+# Traits: Unidentified, CS. Digivolve: Black Lv.4 / cost 3; Lv.4 w/[CS] trait / cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT22-059.md):
+#   [On Play] [When Digivolving] Delete 1 of your opponent's Digimon with a play
+#   cost of 5 or less. Then, if you have [Arata Sanada] or [Eater Adam], your
+#   opponent's effects can't reduce this Digimon's DP or return it to hands or
+#   decks until their turn ends.
+#   Inherited: [All Turns] [Once Per Turn] When any of your Digimon with the
+#   [Unidentified] trait are deleted, you may play 1 [Diaboromon] Token without
+#   paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT22/Black/BT22_059.cs
+#   - Alt digivolve: base Lv.4 with [CS], cost 3 (requirements kept).
+#   - [On Play] / [When Digivolving] (two identical bodies): mandatory delete of
+#     1 opponent Digimon with HasPlayCost && play cost <= 5; then, if the owner
+#     has a battle-area permanent EqualsCardName "Arata Sanada" / "Eater Adam"
+#     (any permanent kind), GainImmuneFromDPMinus (unscoped, exactly like
+#     BT19-089) + GainCanNotReturnToDeck + GainCanNotReturnToHand
+#     (UntilOpponentTurnEnd, cardEffectCondition null). The two return
+#     modifiers default to an opponent-effect cause filter.
+#   - DCGO passes an unscoped (null) condition for the DP modifier, but the
+#     printed text says "your OPPONENT'S effects", so all three modifiers here
+#     use `opponent_only: true` (the printed text governs over DCGO; own-side
+#     -DP / bounce / deck-return effects still apply).
+#   - Inherited OnDestroyedAnyone, OPT, optional: another own Digimon (not the
+#     carrier, TopCard.IsDigimon, [Unidentified] trait) is deleted -> play a
+#     [Diaboromon] Token. Tokens are Digimon, so a deleted Diaboromon Token
+#     (Unidentified) counts.
+
+card: BT22-059
+name: Infermon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Unidentified, CS]
+form: Ultimate
+attribute: Unknown
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: CS }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 opponent Digimon with play cost <= 5; then with [Arata Sanada]/[Eater Adam] this Digimon is protected until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte: 5
+          prompt: "Delete 1 of your opponent's Digimon with a play cost of 5 or less"
+      - delete_permanent: { target: victim }
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              any_of:
+                - name_is: "Arata Sanada"
+                - name_is: "Eater Adam"
+          then:
+            - add_modifier:
+                target: source
+                modifier: ImmuneFromDPMinus
+                value: 1
+                opponent_only: true
+                expiry: end_of_opponents_turn
+            - add_modifier:
+                target: source
+                modifier: CannotBeReturnedToHand
+                value: 1
+                opponent_only: true
+                expiry: end_of_opponents_turn
+            - add_modifier:
+                target: source
+                modifier: CannotBeReturnedToDeck
+                value: 1
+                opponent_only: true
+                expiry: end_of_opponents_turn
+
+  - when: on_any_deletion
+    scope: inherited
+    optional: true
+    once_per_turn: true
+    active_when: { all_turns: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: token
+        - event_target_trait_has: Unidentified
+        - event_permanent_is_source: false
+    summary: "Inherited [All Turns][OPT] When any of your [Unidentified] Digimon are deleted, you may play 1 [Diaboromon] Token without paying the cost"
+    process:
+      - play_token:
+          controller: you
+          token_name: diaboromon

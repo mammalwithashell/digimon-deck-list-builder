@@ -181,9 +181,9 @@ fn bt11_095_suspends_to_allow_under_tamer_cards_as_digixros_materials_for_one_pl
         .expect("select under-Tamer Shoutmon as DigiXros material");
     let ballistamon_action = physical_menu::battle_top_action(&runner.game, ballistamon);
     runner.execute_action(0, ballistamon_action).expect("select the remaining battle-area Ballistamon material");
-    runner
-        .execute_action(0, PASS)
-        .expect("stop selecting DigiXros materials");
+    // The recipe is full (no eligible material left): DCGO's
+    // `SelectDigiXrosClass.Select` ends by itself (a one-"End"-only element is
+    // skipped without a prompt), so the play commits with no trailing stop prompt.
 
     let x4 = runner.game.players[0]
         .battle_area

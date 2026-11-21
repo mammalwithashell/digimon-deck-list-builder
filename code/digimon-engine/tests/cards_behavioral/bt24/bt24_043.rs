@@ -241,10 +241,11 @@ fn bt24_043_on_play_adds_trait_bucket_and_ts_without_duplicate_selection() {
 #[test]
 fn bt24_043_on_play_excludes_sea_animal_from_beast_animal_sovereign_bucket() {
     let mut runner = builder_with_tapirmon()
-        .add_card(trait_digimon("SEA-BEAST", &["Beast", "Sea Animal"]))
+        .add_card(trait_digimon("SEA-ONLY", &["Sea Animal"]))
+        .add_card(trait_digimon("BEAST-SEA", &["Beast", "Sea Animal"]))
         .add_card(trait_digimon("BEAST-OK", &["Beast"]))
         .add_card(trait_tamer("TS-ONLY", &["TS"]))
-        .deck(0, &["TS-ONLY", "BEAST-OK", "SEA-BEAST"])
+        .deck(0, &["TS-ONLY", "BEAST-OK", "SEA-ONLY", "BEAST-SEA"])
         .hand(0, &[CARD_ID])
         .memory(10)
         .start();
@@ -253,11 +254,19 @@ fn bt24_043_on_play_excludes_sea_animal_from_beast_animal_sovereign_bucket() {
     let first = runner
         .pending_selection_view()
         .expect("trait bucket must be offered");
-    let sea_action = revealed_action_for_id(&runner, "SEA-BEAST").expect("SEA-BEAST revealed");
+    let sea_action = revealed_action_for_id(&runner, "SEA-ONLY").expect("SEA-ONLY revealed");
+    let both_action = revealed_action_for_id(&runner, "BEAST-SEA").expect("BEAST-SEA revealed");
     let beast_action = revealed_action_for_id(&runner, "BEAST-OK").expect("BEAST-OK revealed");
     assert!(
         !first.valid_action_ids.contains(&sea_action),
-        "Sea Animal must be excluded even when it has Beast"
+        "a card whose only matching trait is [Sea Animal] is excluded"
+    );
+    // "other than [Sea Animal]" removes that TRAIT (official Q&A: "Other than
+    // [Sea Animal], all traits with [Beast] ... are applicable"; DCGO
+    // HasBeastTraits keeps Beast unconditional), so [Beast]+[Sea Animal] stays.
+    assert!(
+        first.valid_action_ids.contains(&both_action),
+        "[Beast, Sea Animal] still has a qualifying [Beast] trait"
     );
     assert!(
         first.valid_action_ids.contains(&beast_action),
@@ -265,13 +274,49 @@ fn bt24_043_on_play_excludes_sea_animal_from_beast_animal_sovereign_bucket() {
     );
 }
 
+/// "[Beast], [Animal] or [Sovereign] in any of its traits" is a substring
+/// reading (DCGO `HasBeastTraits` -> `ContainsTraits`; official Q&A "regardless
+/// of other words or pluralizations"): [Holy Beast], [Beastkin], [Four
+/// Sovereigns] and [Dark Animal] all qualify, [Sea Animal] alone does not.
+#[test]
+fn bt24_043_on_play_matches_beast_animal_sovereign_as_substring_of_any_trait() {
+    for group in [
+        ["HOLY-BEAST", "BEASTKIN", "SEA-ONLY"],
+        ["FOUR-SOV", "DARK-ANIMAL", "SEA-ONLY"],
+    ] {
+        let mut runner = builder_with_tapirmon()
+            .add_card(trait_digimon("HOLY-BEAST", &["Holy Beast"]))
+            .add_card(trait_digimon("BEASTKIN", &["Beastkin"]))
+            .add_card(trait_digimon("FOUR-SOV", &["Four Sovereigns"]))
+            .add_card(trait_digimon("DARK-ANIMAL", &["Dark Animal"]))
+            .add_card(trait_digimon("SEA-ONLY", &["Sea Animal"]))
+            .deck(0, &group)
+            .hand(0, &[CARD_ID])
+            .memory(10)
+            .start();
+
+        runner.play(0, 0).expect("play Tapirmon");
+        let first = runner
+            .pending_selection_view()
+            .expect("trait bucket must be offered");
+        for id in group {
+            let action = revealed_action_for_id(&runner, id).expect("revealed");
+            assert_eq!(
+                first.valid_action_ids.contains(&action),
+                id != "SEA-ONLY",
+                "{id}: substring match on Beast/Animal/Sovereign, [Sea Animal] excluded"
+            );
+        }
+    }
+}
+
 #[test]
 fn bt24_043_on_play_with_no_matching_search_targets_adds_nothing_and_bottoms_reveal() {
     let mut runner = builder_with_tapirmon()
-        .add_card(trait_digimon("SEA-BEAST", &["Beast", "Sea Animal"]))
+        .add_card(trait_digimon("SEA-ONLY", &["Sea Animal"]))
         .add_card(trait_digimon("NO-TRAIT", &["Machine"]))
         .add_card(trait_tamer("TAMER-NO-TS", &["Iliad"]))
-        .deck(0, &["TAMER-NO-TS", "NO-TRAIT", "SEA-BEAST"])
+        .deck(0, &["TAMER-NO-TS", "NO-TRAIT", "SEA-ONLY"])
         .hand(0, &[CARD_ID])
         .memory(10)
         .start();

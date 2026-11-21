@@ -34,6 +34,8 @@ ACTION_KEEP, ACTION_REDRAW, ACTION_PASS, ACTION_HATCH, ACTION_CONCEDE = 0, 1, 62
 ACTION_MOVE = 61  # MOVE_FROM_BREEDING
 ATTACK_START, TARGETS_PER_ATTACKER, SECURITY_TARGET = 100, 15, 14
 PLAY_PACKET_ID, ATTACK_PACKET_ID, ACTIVATE_PERMANENT_PACKET_ID = 4, 0, 2
+ACTIVATE_CARD_PACKET_ID = 1  # ActivateCardAction: a hand card's [Main]
+HAND_EFFECT_START, HAND_EFFECT_END = 30, 60  # engine action ids: HAND_EFFECT_START + hand slot
 FIELD_EFFECT_START, EFFECTS_PER_PERMANENT = 1000, 10
 PLAY_HAND_START, PLAY_HAND_END = 0, 30
 DIGIVOLVE_START, FIELDS_PER_HAND, BREEDING_TARGET = 400, 15, 14
@@ -45,6 +47,33 @@ SELECTION_PREFIXES = ("SelectCardEffect.", "UserSelectionManager.SetBoolForPlaye
 
 
 LAST_TRUNCATION = None
+
+
+def _s32(b, i):
+    """Big-endian signed 32-bit int at byte offset `i` of a packet payload."""
+    v = (b[i] << 24) | (b[i + 1] << 16) | (b[i + 2] << 8) | b[i + 3]
+    return v - (1 << 32) if v & 0x80000000 else v
+
+
+def hand_slot_of_card_index(rows, ridx, seat, card_index):
+    """(hand slot, card id) of the hand card with DCGO `card_index` for `seat`, read from the first PlayCard / ctor row
+    after rows[ridx] whose hand listing (`hand.cards`, each with its `card_index`) names it, or (None, None).
+
+    The scan stops at the seat's next queued main-phase packet (the next decision): a listing logged after it
+    describes a later hand."""
+    for later in rows[ridx + 1:]:
+        lm = later.get("method", "")
+        if lm == "TurnStateMachine.QueueMainPhaseAction_Internal":
+            break
+        if lm not in ("PlayCardClass.ctor", "PlayCardClass.PlayCard"):
+            continue
+        hand = later.get("hand") or {}
+        if hand.get("player") != seat:
+            continue
+        for slot, c in enumerate(hand.get("cards") or []):
+            if c.get("card_index") == card_index and c.get("card_id") is not None:
+                return slot, c["card_id"]
+    return None, None
 
 
 def deck_order(player):
@@ -120,6 +149,18 @@ def pick_card_indexes(args, card_ids):
     if not all(isinstance(k, int) and not isinstance(k, bool) for k in args[1]):
         return None
     return list(args[1])
+
+
+def pick_list_positions(args, card_ids):
+    """The position of each pick in the candidate list DCGO showed, parallel to `card_ids`, or None.
+
+    SelectCardEffect.SetTargetCardAndIndicies(playerID, int[] cardIndexes, int[] positions): `positions` is
+    the third argument, one non-negative int per picked card."""
+    if len(args) < 3 or not isinstance(args[2], list) or len(args[2]) != len(card_ids):
+        return None
+    if not all(isinstance(k, int) and not isinstance(k, bool) and k >= 0 for k in args[2]):
+        return None
+    return list(args[2])
 
 
 def _hand_listing(row, seat):
@@ -247,7 +288,24 @@ def convert(rows, cards, allow_truncated=False):
     reason = ""
     inferred = []
 
-    def action(actor, action_id, phase, source, card_id=None, inferred_row=False, boards=None, card_index=None):
+    def board_operand_index(r, seat, position):
+        """DCGO's CardIndex of the permanent at `position` of `seat`'s recorded board, when it must be named: the
+        board holds another copy of that card (so the position alone cannot say which permanent it is) and the row
+        is a recorder 0.2.0 row whose `board_indexes` lines up with `boards` (Core.cs BoardsJson: the top card's
+        CardIndex per entry). None otherwise."""
+        boards, exact = r.get("boards"), r.get("board_indexes")
+        if not (isinstance(boards, list) and len(boards) == 2 and isinstance(exact, list) and len(exact) == 2
+                and seat in (0, 1) and isinstance(boards[seat], list) and isinstance(exact[seat], list)
+                and len(exact[seat]) == len(boards[seat]) and isinstance(position, int)
+                and 0 <= position < len(boards[seat])):
+            return None
+        k = exact[seat][position]
+        if isinstance(k, bool) or not isinstance(k, int) or boards[seat].count(boards[seat][position]) < 2:
+            return None
+        return k
+
+    def action(actor, action_id, phase, source, card_id=None, inferred_row=False, boards=None, card_index=None,
+               operand_card_index=None, operand_source="recorder"):
         nonlocal step
         row = {"type": "action", "step": step, "actor": actor, "action_id": action_id,
                "phase": phase, "source": source}
@@ -261,6 +319,12 @@ def convert(rows, cards, allow_truncated=False):
             # DCGO's CardIndex of the played card (its hand slot in the resolve row's hand listing): the replay pairs
             # it with the engine card this action moves (ReplayDriver::record_dcgo_card_indexes)
             row["card_index"] = card_index
+        if isinstance(operand_card_index, int) and not isinstance(operand_card_index, bool):
+            # DCGO's CardIndex of the action's own-board operand (the attacker, the digivolve target, the activated
+            # permanent) when the board holds several copies of that card: the replay resolves the permanent by
+            # identity (`ReplayDriver::named_operand_slot`) instead of pairing duplicates in occurrence order
+            row["operand_card_index"] = operand_card_index
+            row["operand_card_index_source"] = operand_source
         out.append(row)
         step += 1
 
@@ -809,7 +873,22 @@ def convert(rows, cards, allow_truncated=False):
                 action_id = DIGIVOLVE_START + slot * FIELDS_PER_HAND + digivolve_field
             else:
                 action_id = PLAY_HAND_START + slot
-            action(actor, action_id, "Main", "main_phase", card_id=card, boards=r.get("boards"), card_index=played_index)
+            operand_k = None
+            tgt = r.get("target")
+            if digivolve_field is not None and digivolve_field != BREEDING_TARGET and isinstance(tgt, dict):
+                # The digivolve target's own CardIndex (the permanent's top card, CardJson(target.TopCard)): only
+                # worth naming when the board holds more than one copy of it, and only when the row's board agrees
+                # that it is the card at the target slot
+                tk, board = tgt.get("card_index"), (r.get("boards") or [None, None])[actor] if r.get("boards") else None
+                exact = r.get("board_indexes")
+                if (isinstance(tk, int) and not isinstance(tk, bool) and isinstance(board, list)
+                        and 0 <= digivolve_field < len(board) and board[digivolve_field] == tgt.get("card_id")
+                        and board.count(tgt.get("card_id")) >= 2
+                        and not (isinstance(exact, list) and len(exact) == 2 and isinstance(exact[actor], list)
+                                 and len(exact[actor]) == len(board) and exact[actor][digivolve_field] != tk)):
+                    operand_k = tk
+            action(actor, action_id, "Main", "main_phase", card_id=card, boards=r.get("boards"), card_index=played_index,
+                   operand_card_index=operand_k)
             if burst is not None and burst_named is not None:
                 # A REMOTE seat's pick ran on its own client and left no row: write it from the frame model's certain
                 # naming of the packet's BurstTamerFrameID, right after the digivolve action (where the engine asks it).
@@ -958,7 +1037,22 @@ def convert(rows, cards, allow_truncated=False):
                 if "activate_link" in r:
                     skill = 3 if r["activate_link"] else 2
                 action(a[0], FIELD_EFFECT_START + perm * EFFECTS_PER_PERMANENT + skill, "Main", "main_phase",
-                       boards=r.get("boards"))
+                       boards=r.get("boards"), operand_card_index=board_operand_index(r, a[0], perm))
+                continue
+            if a[1] == ACTIVATE_CARD_PACKET_ID and len(a) >= 3 and isinstance(a[2], list) and len(a[2]) >= 8:
+                # ActivateCardAction(card index, skill index): a HAND card's [Main] ("[Hand] [Main] ..."). The engine's
+                # action is HAND_EFFECT_START + the card's current hand slot (action/space.rs), not the deck-order card
+                # index the packet carries. The slot is read from the hand listing of the PlayCard row that follows
+                # (the listing names every hand card with its CardIndex); an activation whose card never plays has no
+                # such listing, so it truncates rather than guessing a slot.
+                ci, skill = _s32(a[2], 0), _s32(a[2], 4)
+                slot, listed = hand_slot_of_card_index(rows, ridx, a[0], ci)
+                if skill != 0 or slot is None or not (0 <= slot < HAND_EFFECT_END - HAND_EFFECT_START):
+                    truncated_at = truncated_at or (
+                        "activate packet for hand card index %d (skill %d) at step %d: its hand slot is not named by "
+                        "a following play listing" % (ci, skill, step))
+                    break
+                action(a[0], HAND_EFFECT_START + slot, "Main", "main_phase", card_id=listed, card_index=ci)
                 continue
             if a[1] in (PLAY_PACKET_ID, ATTACK_PACKET_ID):
                 continue  # attacks are decoded from SetAttackingPermaent (and plays without packet info from PlayCard rows)
@@ -974,36 +1068,27 @@ def convert(rows, cards, allow_truncated=False):
                 truncated_at = truncated_at or ("attack without a turn player at step %d" % step)
                 break
             target = SECURITY_TARGET if a[1] < 0 else a[1]
-            action(actor, ATTACK_START + a[0] * TARGETS_PER_ATTACKER + target, "Main", "main_phase", boards=r.get("boards"))
+            action(actor, ATTACK_START + a[0] * TARGETS_PER_ATTACKER + target, "Main", "main_phase", boards=r.get("boards"),
+                   operand_card_index=board_operand_index(r, actor, a[0]))
             continue
         if m in ("TurnStateMachine.QueueMainPhaseAction", "TurnStateMachine.PassTurn"):
             continue  # the Internal row above already carries the decision
         if m == "SelectCardEffect.SetTargetCardAndIndicies" and r.get("stray"):
             continue  # a pick DCGO asked among identical candidates and the engine did not (the mod marks it)
         if m == "SelectCardEffect.SetTargetCardAndIndicies" and "card_ids" in r:
-            # Homeros refires BT24-101's sole shared On Play/When
-            # Digivolving effect. DCGO asks for the card after the target;
-            # the engine has already resolved that unique effect from the
-            # chosen Digimon, so the card row adds no further choice.
-            if (r["card_ids"] == ["BT24-101"] and len(out) >= 3
-                    and out[-1].get("prompt") == "SelectPermanentEffect"
-                    and out[-1].get("actor") == a[0]
-                    and out[-2].get("prompt") == "OptionalSkill"
-                    and out[-2].get("bool_value") is True
-                    and out[-3].get("chosen_effect_card") == "BT24-102"):
-                targets = out[-1].get("targets") or []
-                if len(targets) == 1:
-                    target = targets[0]
-                    board = out[-1].get("board_p%s" % target["player"]) or []
-                    if 0 <= target["frame"] < len(board) and board[target["frame"]] == "BT24-101":
-                        inferred.append("unique BT24-101 refired effect after Homeros target (raw seq %s)" % r.get("seq"))
-                        continue
             row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectCardEffect", "phase": "Main"}
             if r["card_ids"] and None not in r["card_ids"]:
                 row["card_ids"] = r["card_ids"]
                 indexes = pick_card_indexes(a, r["card_ids"])
                 if indexes is not None:
                     row["card_indexes"] = indexes
+                # SetTargetCardAndIndicies(playerID, int[] cardIndexes, int[] positions): the third list is the
+                # position of each pick in the candidate list DCGO showed. The replay checks it against the
+                # number of entries DCGO builds for a refired effect (ReplayDriver::
+                # refire_duplicate_effect_pick_fold); no other reader uses it.
+                positions = pick_list_positions(a, r["card_ids"])
+                if positions is not None:
+                    row["indexes"] = positions
             elif not r["card_ids"]:
                 row["cancel"] = True
             else:

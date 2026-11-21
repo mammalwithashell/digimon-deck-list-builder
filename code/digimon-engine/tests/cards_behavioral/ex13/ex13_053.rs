@@ -16,13 +16,17 @@
 //! effects, (Rule), digivolve requirements, ... (a broad text scan).
 //!
 //! # DCGO C# reference
-//! None at the submodule (no EX13_053.cs). The (Rule) name follows DCGO's
-//! EX12_041 "Also treated as including [Mamemon]" (`cardNames[i] =
-//! "Mamemon " + name`): an alias that CONTAINS [Mamemon] without making the
-//! card a [Mamemon] by exact name.
+//! `DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_053.cs`: ONE
+//! `SelectCardEffect` (`maxCount = min(3, matches)`, `canNoSelect`,
+//! `canEndNotMax`), picked list reversed then `AddLibraryTopCards` (each
+//! `Insert(0)`) so the FIRST pick ends on top; delete cap = 3 + the cards that
+//! actually returned. The (Rule) name follows DCGO's EX12_041 "Also treated as
+//! including [Mamemon]" (`cardNames[i] = "Mamemon " + name`): an alias that
+//! CONTAINS [Mamemon] without making the card a [Mamemon] by exact name.
 //!
 //! # Pattern rows
-//! - A4-variant trash → deck top, up to 3, each pick a separate ordered choice
+//! - ONE multi-select (not a chained 1/3, 2/3, 3/3 ladder): trash → deck top,
+//!   up to 3, first pick on top
 //! - dynamic play-cost cap (3 + returned count) delete
 //! - inherited [On Deletion] De-Digivolve 1
 //! - identity alias (Rule name)
@@ -145,11 +149,11 @@ fn offered_trash_ids(runner: &DebugRunner) -> Vec<String> {
 fn assert_return_prompt(runner: &DebugRunner) {
     let view = runner.pending_selection_view().expect("return prompt");
     assert!(
-        matches!(view.kind, SelectionKind::UnionZone { .. } | SelectionKind::Trash),
+        matches!(view.kind, SelectionKind::CountCappedMultiSelect { max: 3, .. }),
         "trash pick expected, got {:?}",
         view.kind
     );
-    assert!(runner.pending_is_optional(), "\"up to 3\" — every pick is declinable");
+    assert!(runner.pending_is_optional(), "\"up to 3\" — the multi-select may end with any count");
 }
 
 fn opp_offered(runner: &DebugRunner) -> Vec<String> {
@@ -306,7 +310,7 @@ fn ex13_053_returning_one_raises_the_cap_to_4() {
 }
 
 #[test]
-fn ex13_053_returning_three_raises_the_cap_to_6_and_stacks_in_pick_order() {
+fn ex13_053_returning_three_raises_the_cap_to_6_and_first_pick_goes_on_top() {
     let mut runner = play_with_trash(&["MAME-1", "MAME-2", "MAME-3", "MAME-4"]);
     let deck0 = runner.deck_size(0);
     runner.execute_action(0, trash_pick(&runner, "MAME-2")).unwrap();
@@ -329,8 +333,52 @@ fn ex13_053_returning_three_raises_the_cap_to_6_and_stacks_in_pick_order() {
     assert_eq!(runner.deck_size(0), deck0 + 3);
     let deck = ids(&runner.game.players[0].deck, &runner);
     let n = deck.len();
-    assert_eq!(&deck[n - 3..], &["MAME-2", "MAME-4", "MAME-1"], "last pick is the new top");
+    // DCGO reverses the picked list and inserts each at library index 0, so the
+    // FIRST card picked ends on top (the deck's last element is its top).
+    assert_eq!(&deck[n - 3..], &["MAME-1", "MAME-4", "MAME-2"], "first pick is the new top");
     assert_eq!(ids(&runner.game.players[0].trash, &runner), vec!["MAME-3".to_string()]);
+}
+
+/// DCGO asks ONE multi-select (`canEndNotMax`): ending it after k < max picks
+/// moves on to the delete. The engine used to chain optional picks and park a
+/// "(k+1/3)" prompt there — the next recorded DCGO row (the delete target)
+/// then met a return prompt (raw-20261113T011922Z#g1).
+#[test]
+fn ex13_053_one_multi_select_not_a_chained_ladder() {
+    let mut runner = play_with_trash(&["MAME-1", "MAME-2", "MAME-3"]);
+    let view = runner.pending_selection_view().expect("return prompt");
+    assert!(
+        view.prompt.to_lowercase().contains("up to 3"),
+        "one prompt that states the whole \"up to 3\": {}",
+        view.prompt
+    );
+    assert!(!view.prompt.contains("/3)"), "no (1/3) ladder: {}", view.prompt);
+    runner.execute_action(0, trash_pick(&runner, "MAME-2")).unwrap();
+    // Still the same multi-select: the other two are still offered.
+    assert_eq!(
+        offered_trash_ids(&runner),
+        vec!["MAME-1".to_string(), "MAME-3".to_string()]
+    );
+    // Ending it early (PASS) goes straight to the delete — cap 3 + 1 = 4.
+    runner.execute_action(0, PASS).expect("end after one");
+    assert_eq!(opp_offered(&runner), vec!["OPP-C3".to_string(), "OPP-C4".to_string()]);
+    assert_eq!(runner.trash_size(0), 2, "only the one picked card left the trash");
+    let deck = ids(&runner.game.players[0].deck, &runner);
+    assert_eq!(deck.last().map(String::as_str), Some("MAME-2"));
+}
+
+#[test]
+fn ex13_053_picking_every_available_card_ends_the_selection_without_a_pass() {
+    // Two eligible cards (< 3): taking both fills the multi-select (DCGO
+    // `maxCount = min(3, matches)`), so it ends by itself — cap 3 + 2 = 5.
+    let mut runner = play_with_trash(&["MAME-1", "MAME-2"]);
+    runner.execute_action(0, trash_pick(&runner, "MAME-1")).unwrap();
+    runner.execute_action(0, trash_pick(&runner, "MAME-2")).unwrap();
+    assert_eq!(
+        opp_offered(&runner),
+        vec!["OPP-C3".to_string(), "OPP-C4".to_string(), "OPP-C5".to_string()]
+    );
+    assert_eq!(runner.trash_size(0), 0);
 }
 
 #[test]
@@ -371,6 +419,8 @@ fn ex13_053_on_deletion_runs_the_same_body() {
     runner.game.drain_effect_queue();
     assert_return_prompt(&runner);
     runner.execute_action(0, trash_pick(&runner, "MAME-1")).unwrap();
+    // The deleted Thundermon is itself a [Mamemon]-text Digimon card in the trash
+    // (OnDeletion fires post-trash), so it is still offered: end the selection.
     runner.execute_action(0, PASS).unwrap();
     assert_eq!(opp_offered(&runner), vec!["OPP-C4".to_string()]);
 }

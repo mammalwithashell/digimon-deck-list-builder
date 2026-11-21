@@ -268,6 +268,54 @@ fn bt25_016_free_digivolve_when_13k_attacker_attacks() {
     );
 }
 
+/// "[All Turns] When a Digimon with 13000 DP or more attacks" has no
+/// "another": DCGO BT25_016.cs gates only on the attacking permanent's DP
+/// (`CanTriggerOnPermanentAttack` over the OnAllyAttack batch, no self
+/// exclusion), so GrapLeomon offers its own digivolve when IT is the 13000+
+/// attacker.
+#[test]
+fn bt25_016_offers_digivolve_when_it_is_itself_the_13k_attacker() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    let mut runner = base().start();
+    runner.game.turn_count = 1;
+    runner.game_mut().players[1].security.clear();
+
+    let grap = place_grapleomon(&mut runner);
+    runner.game.modifiers.add(
+        grap,
+        ModifierEntry::simple(ModifierType::ChangeDp, 6000, Expiry::Permanent, 1),
+    );
+    assert!(runner.effective_dp(grap).unwrap() >= 13000);
+    let _mars = push_to_hand(&mut runner, 0, "MARS");
+
+    runner.attack_player(grap, 1, false);
+    assert!(
+        runner.pending_selection().is_some(),
+        "the 13000+ DP attacker is GrapLeomon itself; its own observer must be offered"
+    );
+}
+
+/// The printed "a Digimon" covers the OPPONENT's attackers on their turn too
+/// (`active_when: all_turns`): GrapLeomon (owner = player 1) reacts to the
+/// turn player's 13000+ DP attacker.
+#[test]
+fn bt25_016_offers_digivolve_when_the_opponents_13k_digimon_attacks() {
+    let mut runner = base().start();
+    runner.game.turn_count = 1;
+    runner.game_mut().players[1].security.clear();
+
+    let big = runner.place_on_field(0, "BIG-13K", Some(0));
+    let _grap = runner.place_on_field(1, CARD_ID, Some(0));
+    let _mars = push_to_hand(&mut runner, 1, "MARS");
+
+    runner.attack_player(big, 1, false);
+    assert!(
+        runner.pending_selection().is_some(),
+        "an opponent's 13000+ DP attacker must offer GrapLeomon's free digivolve"
+    );
+}
+
 #[test]
 fn bt25_016_no_digivolve_when_attacker_below_13k() {
     let mut runner = base().start();

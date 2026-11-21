@@ -23,6 +23,44 @@ use crate::selection::*;
 use crate::token_registry::*;
 use crate::trigger_context::*;
 
+impl Game {
+    /// Whether a once-per-turn effect still has a use left for a refire of
+    /// `effect` (unlimited effects always do).
+    pub(crate) fn refire_effect_slot_available(&self, effect: &ReFireableEffect) -> bool {
+        let Some(effects) = self.effects_for_card(&effect.card_id, effect.source_card) else {
+            return false;
+        };
+        let Some(effect_body) = effects.get(effect.effect_id as usize) else {
+            return false;
+        };
+        if effect_body.max_per_turn == 0 {
+            return true;
+        }
+        let Some(perm) = self
+            .players
+            .get(effect.source.player as usize)
+            .and_then(|p| p.battle_area.get(effect.source.index as usize))
+        else {
+            return false;
+        };
+        perm.activation_count(effect.source_card, effect.effect_id) < effect_body.max_per_turn
+    }
+
+    /// Whether `target`'s top card holds at least one effect a refire with
+    /// `filter` could activate right now: a refireable effect of one of the
+    /// filter's timings whose once-per-turn slot is still open. This is the
+    /// engine's reading of DCGO's `EffectList(OnEnterFieldAnyone).Any(
+    /// CanBeEffectCandidate)` (BT24_102.cs:93-98) — the refire's own candidate
+    /// set, before the effect's activation condition runs.
+    pub fn has_refireable_effect(&self, target: PermanentHandle, filter: TimingFilter) -> bool {
+        filter.timing_keys().iter().any(|key| {
+            enumerate_refireable_effects(self, target, key)
+                .iter()
+                .any(|effect| self.refire_effect_slot_available(effect))
+        })
+    }
+}
+
 impl<'a> EffectContext<'a> {
     pub fn refire_effect_from_permanent(
         &mut self,
@@ -85,13 +123,18 @@ impl<'a> EffectContext<'a> {
             .iter()
             .flat_map(|timing_key| enumerate_refireable_effects(self.game, target, timing_key))
             .collect();
+        let enumerated = effects.len();
         let effects = self.collapse_combined_timing_clauses(effects);
+        // DCGO lists one effect object per timing tag of a printed combined
+        // effect, so a collapsed clause stands for `enumerated` DCGO entries.
+        let dcgo_entries = (effects.len() == 1 && enumerated > 1).then_some(enumerated);
         self.dispatch_refireable_effects(
             effects,
             selecting_player,
             bypass_once_per_turn,
             optional,
             target_attribution,
+            dcgo_entries,
         )
     }
 
@@ -164,7 +207,7 @@ impl<'a> EffectContext<'a> {
         // turn, so its effects have no prior activations to gate on (DCGO
         // enumerates a fresh effect instance for the placed card and only
         // checks `CanUse`).
-        self.dispatch_refireable_effects(effects, selecting_player, true, false, false)
+        self.dispatch_refireable_effects(effects, selecting_player, true, false, false, None)
     }
 
     /// Shared dispatch tail for both refire variants: OPT-slot filtering,
@@ -177,6 +220,7 @@ impl<'a> EffectContext<'a> {
         bypass_once_per_turn: bool,
         optional: bool,
         target_attribution: bool,
+        dcgo_entries: Option<usize>,
     ) -> bool {
         let mut effects: Vec<ReFireableEffect> = effects
             .into_iter()
@@ -193,6 +237,19 @@ impl<'a> EffectContext<'a> {
         match effects.as_slice() {
             [] => false,
             [effect] if !optional => {
+                if let Some(dcgo_entries) = dcgo_entries {
+                    let carrier_card_id = effect.card_id.clone();
+                    self.game.last_collapsed_refire = Some(crate::game::CollapsedRefire {
+                        grantor: self.source_card,
+                        carrier: effect.source,
+                        carrier_card: effect.source_card,
+                        carrier_card_id,
+                        controller: self.player,
+                        dcgo_entries,
+                        events_len: self.game.events.len(),
+                        first_seen_row: None,
+                    });
+                }
                 self.game.run_refired_effect(effect.clone());
                 true
             }

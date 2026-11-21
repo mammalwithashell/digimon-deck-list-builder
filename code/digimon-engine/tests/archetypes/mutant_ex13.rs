@@ -188,7 +188,11 @@ fn pick_trash(runner: &mut DebugRunner, id: &str) {
 fn is_trash_prompt(runner: &DebugRunner) -> bool {
     matches!(
         view_kind(runner),
-        Some(SelectionKind::UnionZone { .. } | SelectionKind::Trash)
+        Some(
+            SelectionKind::UnionZone { .. }
+                | SelectionKind::Trash
+                | SelectionKind::CountCappedMultiSelect { .. }
+        )
     )
 }
 
@@ -339,8 +343,10 @@ fn c2_thundermon_stacks_the_top_and_bigmamemon_reveal_replays_it() {
 
     let slot = hand_index(&runner, 0, THUNDERMON);
     runner.play(0, slot).expect("Thundermon plays");
-    pick_trash(&mut runner, THUNDERMON);
+    // DCGO EX13_053.cs: the FIRST card picked ends on top of the deck, so pick
+    // BigMamemon first to keep it above Thundermon#2.
     pick_trash(&mut runner, BIGMAMEMON);
+    pick_trash(&mut runner, THUNDERMON);
     while is_trash_prompt(&runner) {
         runner.execute_action(0, PASS).expect("stop returning");
     }

@@ -40,8 +40,9 @@ fn digixros_under_tamer_reaches_deep_physical_sources_and_clones_prefix() {
         for game in [&mut r.game,&mut clone] {
             assert_eq!(game.player(player).battle_area[host.index as usize].card_sources.len(), depth + 3,
                 "selected prefix stays physically unpaid until transaction commit");
+            // The recipe is full after the second piece: the play commits by itself
+            // (DCGO asks no trailing "End" prompt when no candidate remains).
             game.resolve_selection(player,CARD_CHOICE_START).unwrap();
-            game.resolve_selection(player,PASS).unwrap();
             let played=game.player(player).battle_area.iter().find(|p|p.top_card().card_id(&game.card_data)=="DX-OWNED").expect("paid DigiXros plays target");
             assert_eq!(played.card_sources.len(),3);
             assert!(played.card_sources.iter().any(|c|c.handle()==expected));
@@ -65,8 +66,8 @@ fn digixros_source_prefix_follows_carrier_and_source_compaction_until_payment() 
     r.game.resolve_selection(0,CARD_CHOICE_START+11).unwrap();
     r.game.players[0].battle_area.remove(0);
     r.game.players[0].battle_area[0].card_sources.remove(0);
+    // Recipe full after the second piece: the play commits by itself.
     r.game.resolve_selection(0,CARD_CHOICE_START+1).unwrap();
-    r.game.resolve_selection(0,PASS).unwrap();
     let played=r.game.player(0).battle_area.iter().find(|p|p.top_card().card_id(&r.game.card_data)=="DX-OWNED").unwrap();
     assert_eq!(played.card_sources.len(),3,"both physical materials must be paid after compaction");
     assert!(played.card_sources.iter().any(|c|c.handle()==expected));
@@ -104,8 +105,8 @@ fn digixros_complete_menu_preserves_deep_hand_trash_and_battle_top_payment() {
     r.game.resolve_selection(0,CARD_CHOICE_START+1).unwrap();
     let mut clone=r.game.clone();
     for game in [&mut r.game,&mut clone] {
+        // Recipe full after the second piece: the play commits by itself.
         game.resolve_selection(0,CARD_CHOICE_START+1).unwrap();
-        game.resolve_selection(0,PASS).unwrap();
         let played=game.player(0).battle_area.iter().find(|p|p.top_card().card_id(&game.card_data)=="DX-OWNED").unwrap();
         assert_eq!(played.card_sources.len(),3);
         assert!(played.card_sources.iter().any(|c|c.handle()==field_card));

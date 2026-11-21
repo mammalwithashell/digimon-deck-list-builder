@@ -224,7 +224,14 @@ fn bt15_102_play_with_three_dark_masters_pays_three_and_stacks_them_under() {
     runner
         .execute_action(0, material_action(&runner, "DM-METAL"))
         .expect("place MetalSeadramon from trash");
-    runner.execute_action(0, PASS).expect("finish at the cap");
+    // At the cap of 3 the placement loop ends by itself (DCGO BT15_102.cs:
+    // `while (placed < 3 && valid candidates != 0)`): no trailing stop prompt.
+    assert!(
+        runner
+            .pending_selection()
+            .map_or(true, |s| s.kind != digimon_engine::selection::SelectionKind::Material),
+        "no DigiXros material prompt after the cap"
+    );
 
     assert_eq!(runner.memory(), 7, "cost 15 - 3×4 = 3 paid from memory 10");
     assert_eq!(play_cost_paid(&runner), vec![3]);
@@ -292,13 +299,15 @@ fn bt15_102_same_named_dark_masters_cannot_both_be_placed() {
     runner
         .execute_action(0, material_action(&runner, "DM-PUPPET"))
         .expect("place the first Puppetmon");
-    let sel = runner.pending_selection().expect("selection re-installs");
+    // The second same-named Puppetmon is not a legal material (distinct names,
+    // DCGO BT15_102.cs:70/108 `GetUniqueNameCardCount`), so no candidate is
+    // left and the placement loop ends without a stop prompt.
     assert!(
-        sel.valid_action_ids.is_empty(),
-        "the second same-named Puppetmon must be masked out (different names): {:?}",
-        sel.valid_action_ids
+        runner
+            .pending_selection()
+            .map_or(true, |s| s.kind != digimon_engine::selection::SelectionKind::Material),
+        "the second same-named Puppetmon cannot be placed and no empty prompt remains"
     );
-    runner.execute_action(0, PASS).expect("finish");
     assert_eq!(play_cost_paid(&runner), vec![11], "only one -4 applied");
 }
 

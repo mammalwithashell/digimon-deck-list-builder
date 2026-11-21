@@ -937,7 +937,17 @@ impl Game {
         }
 
         let candidates = self.pending_digixros_material_candidates(player_id);
-        if candidates.is_empty() && transaction.material_count() == 0 {
+        // No eligible material left: there is nothing to choose, so no prompt.
+        // DCGO's `SelectDigiXrosClass.Select` walks the recipe's elements and
+        // asks only for an element that has at least one candidate
+        // (`canSelectActions.Count == 1` — only "End" — is `continue`/`break`
+        // with no prompt, `SelectDigiXrosClass.cs:460-471`). After the last
+        // element's material is picked it simply ends, so a one-element recipe
+        // (Cho-Hakkaimon EX12-056) must commit the play right after its single
+        // material instead of parking an empty "Select DigiXros material"
+        // stop prompt that swallows the next recorded row. The stop stays
+        // legal for the prompts that DO have candidates (`can_stop` below).
+        if candidates.is_empty() {
             return false;
         }
 
@@ -948,15 +958,13 @@ impl Game {
         // adding materials only lowers it, so `can_stop` stays true there —
         // this only bites cast-time-assembly plays whose printed cost
         // exceeds the payable range (BT15-102's 15). With no candidates left
-        // the stop must stay legal regardless (the selection would otherwise
-        // have no legal action); an unpayable commit then routes through the
-        // declare-then-pay return-to-hand flow.
+        // no prompt is installed at all (above); an unpayable commit then
+        // routes through the declare-then-pay return-to-hand flow.
         let stop_cost = total_reduction.final_cost(
             transaction.final_cost() as i32,
             transaction.selected_cost_delta() as i32,
         ) as i32;
-        let can_stop = candidates.is_empty()
-            || (self.memory as i32 - stop_cost) >= self.rules.memory_range.0 as i32;
+        let can_stop = (self.memory as i32 - stop_cost) >= self.rules.memory_range.0 as i32;
 
         let selected_origins: Vec<_> = transaction
             .selected_materials

@@ -105,7 +105,7 @@ pub(super) fn dcgo_card_has_int_menu(card_id: &str) -> bool {
 /// (e.g. AD1-016's "Don't play" = 3, AD1_016.cs:80; ST24-13's "No" = 2,
 /// ST24_13.cs:57). A card whose menu text is built at run time (AD1-005,
 /// BT15-102, EX11-073) is left out.
-fn dcgo_int_menu_decline_value(card_id: &str) -> Option<i64> {
+pub(super) fn dcgo_int_menu_decline_value(card_id: &str) -> Option<i64> {
     DCGO_INT_MENU_DECLINE_VALUES.iter().find(|(c, _)| *c == card_id).map(|(_, v)| *v)
 }
 
@@ -144,12 +144,22 @@ pub(super) fn is_top_bottom_choice(pending: &crate::selection::PendingSelection)
 /// card's own. Omnimon (EX12-037): "DP - 13K" = true, "Trash security" = false
 /// (EX12_037.cs:157-170, then the -13000 pick :172-199 or the security trash
 /// and <Recovery +1> :201-213); EX12-037.yaml `repeat_effect_choice` labels.
-/// Add a card only after reading its C# and YAML.
+/// Jesmon (BT23-013): "Play [Atho, Rene & Por] Token" = true, "Player [Sistermon]
+/// in name digimon from hand or trash" = false (BT23_013.cs:121-141; the
+/// from-hand / from-trash bool that follows a false is the zone menu); its
+/// YAML `select_effect_choice` labels. Add a card only after reading its C#
+/// and YAML.
+const DCGO_MODE_BOOLS: &[(&str, &str, &str)] = &[
+    (
+        "EX12-037",
+        "1 opponent Digimon gets -13000 DP",
+        "Trash opponent top security, then Recovery +1",
+    ),
+    ("BT23-013", "Play Atho, Rene & Por Token", "Play Sistermon from hand or trash"),
+];
+
 fn dcgo_mode_bool(card_id: &str) -> Option<(&'static str, &'static str)> {
-    match card_id {
-        "EX12-037" => Some(("1 opponent Digimon gets -13000 DP", "Trash opponent top security, then Recovery +1")),
-        _ => None,
-    }
+    DCGO_MODE_BOOLS.iter().find(|(c, _, _)| *c == card_id).map(|(_, y, n)| (*y, *n))
 }
 
 /// The `(true, false)` action ids of `pending` when it is the two-mode body
@@ -170,6 +180,37 @@ pub(super) fn mode_bool_branches(game: &Game, pending: &crate::selection::Pendin
     Some((find(yes_label)?, find(no_label)?))
 }
 
+/// The `(Yes, No)` action ids of `pending` when it is a keyword <Ascension>'s
+/// "place this card as the top security card?" choice of its own owner.
+/// DCGO asks it from the shared keyword helper as a `SetBoolSelection` (Yes =
+/// true, No = false; `CardEffectCommons/KeyWordEffects/Ascension.cs:30-39`), so
+/// no card's own script lists it and [`dcgo_card_asks_yes_no_bool`] never
+/// knows it; the engine's `KeywordAscensionChoice` frame (CR 4.3 16-1, the
+/// keyword's own "you may") identifies the question instead of any card id.
+/// `None` for any other prompt, including a card-authored "Yes" / "No"
+/// choice outside that frame.
+pub(super) fn ascension_choice_branches(
+    game: &Game,
+    pending: &crate::selection::PendingSelection,
+) -> Option<(u16, u16)> {
+    if !matches!(pending.kind, crate::selection::SelectionKind::EffectChoice) {
+        return None;
+    }
+    let frames = &game.pending_selection_resume.as_ref()?.frames;
+    let [crate::resume::ResumeFrame::KeywordAscensionChoice(state)] = frames.as_slice() else {
+        return None;
+    };
+    if state.owner != pending.selecting_player {
+        return None;
+    }
+    let entries = pending.effect_choices.as_ref()?;
+    if entries.len() != 2 || !entries.iter().all(|e| pending.valid_action_ids.contains(&e.action_id)) {
+        return None;
+    }
+    let find = |label: &str| entries.iter().find(|e| e.label == label).map(|e| e.action_id);
+    Some((find("Yes")?, find("No")?))
+}
+
 /// Cards whose DCGO "To which area will you place a card?" int menu is
 /// verified (by reading the DCGO C#) to be exactly P-249's: "Under this
 /// Digimon" = 1, "Under Tamer with inherited effects" = 2 (then a `canNoSelect`
@@ -178,12 +219,31 @@ pub(super) fn mode_bool_branches(game: &Game, pending: &crate::selection::Pendin
 /// the menu value maps onto that pick only for these cards. Other one-based
 /// menus number different options (BT15-102's "from Battle Area" = 1, BT26-102's
 /// "Battle area" = 1 / "Play from hand" = 2, EX13-013's "Play from hand" = 1)
-/// and must not borrow this meaning. As of 2026-11-13 P-249 is the only DCGO
-/// card with this menu (no other script offers "Under this Digimon" / "Under
-/// Tamer ..." as `SelectionElement<int>` messages); add a card here only after
-/// reading its C#.
+/// and must not borrow this meaning. Verified against the C#: P-249 and
+/// Beowolfmon (AD1-015) (`AD1_015.cs:191-250`: "Place under this Digimon" = 1 /
+/// "Place under a Tamer" = 2, offered only with a Tamer on the field / "Don't
+/// place" = 3, then a `canNoSelect` Tamer `SelectPermanentEffect`). As of
+/// 2026-11-17 no other script offers "Under this Digimon" / "Under Tamer ..." /
+/// "Place under ..." as `SelectionElement<int>` messages; add a card here only
+/// after reading its C#.
 pub(super) fn dcgo_placement_area_menu(card_id: &str) -> bool {
-    matches!(card_id, "P-249")
+    matches!(card_id, "P-249" | "AD1-015")
+}
+
+/// Cards whose DCGO hand/trash int menu ([`dcgo_int_zone_menu`]) is asked
+/// whenever EITHER zone holds a candidate, listing only the zones that do.
+/// Beowolfmon (AD1-015)'s "Play Tamer from hand" = 1 / "from trash" = 2 /
+/// "Don't play" = 3 is built from `validHandCard` / `validTrashCard` and shown
+/// when `validHandCard || validTrashCard` (`AD1_015.cs:150-171`), so a
+/// hand-only board still records `generic_int 1` before its hand pick.
+///
+/// A card NOT listed here asks its menu only when BOTH zones hold a candidate
+/// and sets the zone itself otherwise, recording no row (Strabimon (P-249):
+/// `SetInt(canSelectHand ? 1 : 2)`, `P_249.cs:49-71`). For those an int meeting
+/// a one-zone pick is not the zone menu, and the replay does not read it as
+/// one. Add a card only after reading its C#.
+pub(super) fn dcgo_zone_menu_asked_for_either_zone(card_id: &str) -> bool {
+    matches!(card_id, "AD1-015")
 }
 
 /// The zone a recorded DCGO pick row drew its cards from, when the row says:
@@ -299,9 +359,9 @@ pub(super) fn dcgo_bool_gate_before_zone_menu(card_id: &str) -> Option<bool> {
 #[rustfmt::skip]
 const DCGO_INT_MENU_DECLINE_VALUES: &[(&str, i64)] = &[
     ("AD1-002", 3), ("AD1-015", 3), ("AD1-016", 3), ("AD1-017", 3), ("AD1-020", 3), ("AD1-023", 3),
-    ("BT17-097", 3), ("BT24-090", 3), ("BT24-094", 3), ("BT24-098", 3), ("BT25-038", 3), ("BT25-043", 3),
+    ("BT17-097", 3), ("BT24-090", 3), ("BT24-094", 3), ("BT24-098", 3), ("BT25-038", 3), ("BT25-040", 3), ("BT25-042", 3), ("BT25-043", 3),
     ("BT25-044", 3), ("BT25-052", 3), ("BT25-056", 3), ("BT25-060", 3), ("BT25-070", 3), ("BT25-072", 3),
-    ("BT25-075", 3), ("BT25-085", 3), ("BT25-087", 3), ("BT25-088", 3), ("BT25-089", 3), ("BT25-090", 3),
+    ("BT25-075", 3), ("BT25-083", 3), ("BT25-085", 3), ("BT25-087", 3), ("BT25-088", 3), ("BT25-089", 3), ("BT25-090", 3),
     ("BT25-094", 3), ("BT25-095", 3), ("BT25-096", 3), ("BT25-097", 3), ("BT25-099", 3), ("BT25-102", 3),
     ("BT26-007", 3), ("BT26-016", 3), ("BT26-026", 3), ("BT26-030", 3), ("BT26-031", 3), ("BT26-043", 2),
     ("BT26-072", 3), ("BT26-073", 3), ("BT26-081", 3), ("BT26-082", 3), ("BT26-085", 3), ("BT26-096", 3),
@@ -333,7 +393,8 @@ const DCGO_INT_ZONE_MENUS: &[(&str, Option<i64>, Option<i64>, Option<i64>)] = &[
     ("BT24-094", Some(1), Some(2), Some(3)), ("BT24-098", Some(1), Some(2), Some(3)), ("BT25-038", Some(1), None, Some(3)),
     ("BT25-044", Some(1), Some(2), Some(3)), ("BT25-052", Some(1), None, Some(3)), ("BT25-056", Some(1), None, Some(3)),
     ("BT25-060", Some(1), None, Some(3)), ("BT25-070", None, Some(1), Some(3)), ("BT25-072", None, Some(1), Some(3)),
-    ("BT25-075", Some(1), Some(2), Some(3)), ("BT25-085", Some(1), Some(2), Some(3)), ("BT25-089", Some(1), None, Some(3)),
+    ("BT25-075", Some(1), Some(2), Some(3)), ("BT25-083", Some(1), Some(2), Some(3)),
+    ("BT25-085", Some(1), Some(2), Some(3)), ("BT25-089", Some(1), None, Some(3)),
     ("BT25-094", Some(1), Some(2), Some(3)), ("BT25-095", Some(1), Some(2), Some(3)), ("BT25-096", Some(1), Some(2), Some(3)),
     ("BT25-097", Some(1), Some(2), Some(3)), ("BT25-099", Some(1), Some(2), Some(3)), ("BT25-102", Some(1), Some(2), Some(3)),
     ("BT26-007", Some(1), None, Some(3)), ("BT26-030", Some(1), Some(2), Some(3)), ("BT26-073", Some(1), Some(2), Some(3)),
@@ -889,22 +950,43 @@ fn pending_zone_card_pick(game:&Game)->Option<&crate::dsl_cards::step::zone_card
     active_zone_card_pick(game.pending_selection_resume.as_ref()?)
 }
 
-/// Is the parked prompt a FRESH DSL zone-card pick (`select_zone_cards`, no
-/// card taken yet) whose candidates lie in BOTH the hand and the trash? DCGO
-/// asks that question as a "From which area?" int menu followed by a pick
-/// inside the chosen zone (P-249: `P_249.cs:53-123`, From hand = 1 / From trash
-/// = 2 / Don't select = 3, then `SelectHandEffect` or `SelectCardEffect`).
-pub(super) fn fresh_hand_and_trash_zone_card_pick(game: &Game) -> bool {
+/// `(a hand card, a trash card)` is offered by a FRESH DSL zone-card pick
+/// (`select_zone_cards`, no card taken yet), or `None` when the parked prompt
+/// is not one. DCGO asks a pick over the hand AND the trash as a "From which
+/// area?" int menu followed by a pick inside the chosen zone (P-249:
+/// `P_249.cs:53-123`, From hand = 1 / From trash = 2 / Don't select = 3, then
+/// `SelectHandEffect` or `SelectCardEffect`).
+fn fresh_zone_card_pick_offers(game: &Game) -> Option<(bool, bool)> {
     use crate::action::space::{PLAY_HAND_END, PLAY_HAND_START, TRASH_EFFECT_END, TRASH_EFFECT_START};
-    let Some(state) = pending_zone_card_pick(game) else {
+    let state = pending_zone_card_pick(game)?;
+    let p = game.pending_selection.as_ref()?;
+    state.picked.is_empty().then(|| {
+        (
+            p.valid_action_ids.iter().any(|id| (PLAY_HAND_START..PLAY_HAND_END).contains(id)),
+            p.valid_action_ids.iter().any(|id| (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(id)),
+        )
+    })
+}
+
+/// Does the parked prompt stand for a DCGO "From which area?" int menu: a
+/// fresh DSL zone-card pick that offers the hand AND the trash (DCGO asks the
+/// menu only when both zones hold a candidate, unless the card says otherwise),
+/// or one that offers just one of
+/// them for a card whose DCGO script asks that menu with either zone valid
+/// ([`dcgo_zone_menu_asked_for_either_zone`]; Beowolfmon (AD1-015))?
+pub(super) fn fresh_zone_card_pick_stands_for_zone_menu(game: &Game) -> bool {
+    let Some((hand, trash)) = fresh_zone_card_pick_offers(game) else {
         return false;
     };
-    let Some(p) = game.pending_selection.as_ref() else {
-        return false;
-    };
-    state.picked.is_empty()
-        && p.valid_action_ids.iter().any(|id| (PLAY_HAND_START..PLAY_HAND_END).contains(id))
-        && p.valid_action_ids.iter().any(|id| (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(id))
+    if hand && trash {
+        return true;
+    }
+    (hand || trash)
+        && game
+            .pending_selection
+            .as_ref()
+            .and_then(|p| game.card_data_for_handle(p.source_card))
+            .is_some_and(|d| dcgo_zone_menu_asked_for_either_zone(&d.card_id))
 }
 
 fn zone_card_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, String)>> {
@@ -1928,8 +2010,13 @@ fn resolve_next_with_provenance(
         if let Some((top, bottom)) = top_bottom_branches(pending) {
             return Ok(Some(if b { top } else { bottom }));
         }
+        // A keyword <Ascension>'s Yes / No (Yes = true, `Ascension.cs:30-39`).
+        if let Some((yes, no)) = ascension_choice_branches(game, pending) {
+            return Ok(Some(if b { yes } else { no }));
+        }
         // A card's two-mode body choice that DCGO asks as a bool, by the
-        // card's own button meanings (`dcgo_mode_bool`, Omnimon (EX12-037)).
+        // card's own button meanings (`dcgo_mode_bool`, Omnimon (EX12-037),
+        // Jesmon (BT23-013)).
         if let Some((yes, no)) = mode_bool_branches(game, pending) {
             return Ok(Some(if b { yes } else { no }));
         }

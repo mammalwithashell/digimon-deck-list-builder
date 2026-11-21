@@ -144,6 +144,7 @@ fn repeated_formula_and_alternate_path_predicates_keep_occurrence_paths() {
         }],
         optional: false,
         outer_prompt: false,
+        requires_target_to_activate: false,
         opt_group: None,
         once_per_turn: false,
         as_option_effect: false,

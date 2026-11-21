@@ -916,6 +916,7 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
             timing_conditions,
             optional,
             outer_prompt,
+            requires_target_to_activate,
             once_per_turn,
             max_per_turn,
             as_option_effect,
@@ -944,6 +945,11 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
         );
         optional.walk(c, &format!("{}.optional", path), "UNCLASSIFIED_STRING");
         outer_prompt.walk(c, &format!("{}.outer_prompt", path), "UNCLASSIFIED_STRING");
+        requires_target_to_activate.walk(
+            c,
+            &format!("{}.requires_target_to_activate", path),
+            "UNCLASSIFIED_STRING",
+        );
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         max_per_turn.walk(c, &format!("{}.max_per_turn", path), "UNCLASSIFIED_STRING");
         as_option_effect.walk(c, &format!("{}.as_option_effect", path), "UNCLASSIFIED_STRING");
@@ -1291,6 +1297,12 @@ impl Walk for digimon_dsl::clause::Timing {
                 "digimon_dsl::clause::Timing",
                 "ENUM_SCALAR",
                 serde_json::json!("EndOfOpponentsTurn"),
+            ),
+            digimon_dsl::clause::Timing::EndOfAllTurns => c.node(
+                path,
+                "digimon_dsl::clause::Timing",
+                "ENUM_SCALAR",
+                serde_json::json!("EndOfAllTurns"),
             ),
             digimon_dsl::clause::Timing::EndOfYourNextTurn => c.node(
                 path,
@@ -3575,6 +3587,12 @@ impl Walk for digimon_dsl::compiled::CompiledAggregateSelector {
                 "ENUM_SCALAR",
                 serde_json::json!("LowestPlayCost"),
             ),
+            digimon_dsl::compiled::CompiledAggregateSelector::HighestPlayCost => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledAggregateSelector",
+                "ENUM_SCALAR",
+                serde_json::json!("HighestPlayCost"),
+            ),
         }
     }
 }
@@ -3733,6 +3751,7 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
             timing_conditions,
             optional,
             outer_prompt,
+            requires_target_to_activate,
             once_per_turn,
             max_per_turn,
             as_option_effect,
@@ -3753,6 +3772,11 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
         );
         optional.walk(c, &format!("{}.optional", path), "UNCLASSIFIED_STRING");
         outer_prompt.walk(c, &format!("{}.outer_prompt", path), "UNCLASSIFIED_STRING");
+        requires_target_to_activate.walk(
+            c,
+            &format!("{}.requires_target_to_activate", path),
+            "UNCLASSIFIED_STRING",
+        );
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         max_per_turn.walk(c, &format!("{}.max_per_turn", path), "UNCLASSIFIED_STRING");
         as_option_effect.walk(c, &format!("{}.as_option_effect", path), "UNCLASSIFIED_STRING");
@@ -4931,6 +4955,12 @@ impl Walk for digimon_dsl::compiled::CompiledTiming {
                 "ENUM_SCALAR",
                 serde_json::json!("EndOfOpponentsTurn"),
             ),
+            digimon_dsl::compiled::CompiledTiming::EndOfAllTurns => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledTiming",
+                "ENUM_SCALAR",
+                serde_json::json!("EndOfAllTurns"),
+            ),
             digimon_dsl::compiled::CompiledTiming::EndOfYourNextTurn => c.node(
                 path,
                 "digimon_dsl::compiled::CompiledTiming",
@@ -5567,6 +5597,19 @@ impl Walk for digimon_dsl::compiled::CompiledBindingRef {
                 f0.walk(
                     c,
                     &format!("{}@OfPermanent.0", path),
+                    "EXISTING_INSTANCE_BINDING",
+                );
+            }
+            digimon_dsl::compiled::CompiledBindingRef::PlayedCarrier(f0) => {
+                c.node(
+                    path,
+                    "digimon_dsl::compiled::CompiledBindingRef",
+                    "VARIANT",
+                    serde_json::json!("PlayedCarrier"),
+                );
+                f0.walk(
+                    c,
+                    &format!("{}@PlayedCarrier.0", path),
                     "EXISTING_INSTANCE_BINDING",
                 );
             }

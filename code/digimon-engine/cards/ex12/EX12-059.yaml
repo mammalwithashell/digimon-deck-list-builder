@@ -1,0 +1,140 @@
+# EX12-059 Machinedramon ACE — Digimon, Lv.6, Black/Purple, DP 12000, Cost 7.
+# Traits: Machine, ME. Attribute: Virus.
+# Digivolve: Black Lv.5 / 4; Lv.5 w/[Cyborg]/[ME] trait / 3.
+# ACE: Overflow <-4>.
+#
+# Printed text (card face, data/cards.json, DCGO EX12_059.cs):
+#   [Hand] [Counter] <Blast Digivolve>
+#   <Reboot>
+#   <Fragment <2>>
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn]
+#   <De-Digivolve 3> 1 of your opponent's Digimon. Then, by placing 2 level 5 or
+#   lower [Machine], [Cyborg] or [ME] trait cards from your hand or trash as
+#   this Digimon's bottom digivolution cards, your opponent's effects can't
+#   trash any of your Digimon's stacked cards until their turn ends.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX12/Black/EX12_059.cs
+#   - Shared OP/WD/WA (optional:false, maxCountPerTurn 1): a mandatory
+#     De-Digivolve 3 pick when an opponent Digimon exists; then, only when the
+#     hand+trash hold >= 2 qualifying cards, up to two picks (each from the
+#     hand or the trash, or "Do not place"); only when exactly 2 were picked
+#     are they placed under this Digimon (bottom) and the ImmuneStackTrashing
+#     (opponent effects, every own Digimon) + detail text installed until the
+#     opponent's turn ends.
+#
+# KNOWN LIMIT: the stack-trash immunity is granted to the own Digimon on the
+# battle area when the effect resolves (`for_each`); a Digimon that enters
+# later this turn cycle is not covered (DCGO installs a player-level permanent
+# condition). Logged as a DSL gap in the lane report.
+
+card: EX12-059
+name: Machinedramon
+kind: digimon
+level: 6
+color: [black, purple]
+cost: 7
+dp: 12000
+traits: [Machine, ME]
+attribute: Virus
+ace_overflow: -4
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: Cyborg
+            - trait_has: ME
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+    summary: "[Hand][Counter] <Blast Digivolve>"
+
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - kind: grant_keyword
+    keyword: Fragment
+    value: 2
+    summary: "<Fragment <2>>"
+
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][When Attacking][Once Per Turn] <De-Digivolve 3> 1 of your opponent's Digimon. Then, by placing 2 level 5 or lower [Machine]/[Cyborg]/[ME] cards from your hand or trash as bottom digivolution cards, your opponent's effects can't trash any of your Digimon's stacked cards until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigi
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 3> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dedigi
+          amount: 3
+          stop_at_level: 3
+      - if:
+          condition:
+            count_gte:
+              filter:
+                of: you
+                zone: [hand, trash]
+                level_lte: 5
+                any_of:
+                  - trait_has: Machine
+                  - trait_has: Cyborg
+                  - trait_has: ME
+              n: 2
+          then:
+            - select_union_zone:
+                of: you
+                zones: [hand, trash]
+                optional: true
+                bind_as: placed_1
+                filter:
+                  all_of:
+                    - level_lte: 5
+                    - any_of:
+                        - trait_has: Machine
+                        - trait_has: Cyborg
+                        - trait_has: ME
+                prompt: "Place 1 (of 2) level 5 or lower [Machine]/[Cyborg]/[ME] trait cards from your hand or trash as this Digimon's bottom digivolution card"
+            - if:
+                condition: { binding_present: placed_1 }
+                then:
+                  - select_union_zone:
+                      of: you
+                      zones: [hand, trash]
+                      optional: true
+                      bind_as: placed_2
+                      filter:
+                        all_of:
+                          - level_lte: 5
+                          - not_in_binding: placed_1
+                          - any_of:
+                              - trait_has: Machine
+                              - trait_has: Cyborg
+                              - trait_has: ME
+                      prompt: "Place the 2nd level 5 or lower [Machine]/[Cyborg]/[ME] trait card from your hand or trash as this Digimon's bottom digivolution card"
+                  - if:
+                      condition: { binding_present: placed_2 }
+                      then:
+                        - place_as_bottom_source: { source: placed_1, target: source }
+                        - place_as_bottom_source: { source: placed_2, target: source }
+                        - for_each:
+                            over:
+                              of: you
+                              zone: [battle_area]
+                              kind: digimon
+                            bind_as: mine
+                            body:
+                              - grant_stack_trash_immunity_from_opponent_effects:
+                                  target: mine
+                                  expiry: end_of_opponents_turn

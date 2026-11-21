@@ -1,0 +1,145 @@
+# BT17-080 Takato Matsuki -- Tamer, Red, Cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT17-080.md):
+#
+#   [Start of Your Main Phase] If you have a Digimon with [Guilmon], [Growlmon]
+#   or [Gallantmon] in its name, gain 1 memory.
+#   [End of Your Turn] By placing this Tamer and 1 [Growlmon] and 1
+#   [WarGrowlmon] from your trash as 1 of your [Guilmon]'s bottom digivolution
+#   cards, that Digimon may digivolve into [Gallantmon] in the hand, ignoring
+#   its digivolution requirements and without paying the cost.
+#   Security Effect: [Security] Play this card without paying the cost.
+#   Official Q&A: the digivolve is a "may" -- you can choose not to digivolve
+#   (after the cards have been placed).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT17/<COLOR>/BT17_080.cs
+#
+# Clause 1 -- `OnStartMainPhase`, mandatory. CanActivate = on the battle area,
+#   the owner can add memory, and the owner has a Digimon PERMANENT whose top
+#   card `ContainsCardName` Guilmon / Growlmon / Gallantmon (substring on the
+#   name). -> `any_permanent` + `name_contains`.
+#
+# Clause 2 -- `OnEndTurn`, `isOptional: true`, own turn.
+#   CanActivate = this Tamer is not a token AND the owner has a non-token
+#   Digimon named exactly [Guilmon] AND the trash holds a [Growlmon] and a
+#   [WarGrowlmon] (exact names) AND the hand holds a level 6 Digimon named
+#   exactly [Gallantmon]. Body (all picks mandatory once the effect is
+#   accepted): pick the Growlmon, the WarGrowlmon, the Guilmon, then specify the
+#   ORDER the three cards (this Tamer + the two trash cards) are placed as the
+#   Guilmon's bottom digivolution cards ("cards with lower numbers on top"),
+#   `AddDigivolutionCardsBottom`, then `DigivolveIntoHandOrTrashCard(payCost:
+#   false, IgnoreRequirement.All)` onto the Guilmon.
+#   -> `select_own_permanent` (the Guilmon), one `select_zone_cards` over this
+#      Tamer's own card (`is_source_card`, G-DSL-IS-SOURCE-CARD) and the trash
+#      ([Growlmon]/[WarGrowlmon], `card_in_zone: [trash]`, G-DSL-CARD-IN-ZONE)
+#      with `min = max = 3` and `distinct_by: name`, so the player picks exactly
+#      one of each IN THE ORDER they want them stacked (first pick = topmost of
+#      the three, CR 4.3 3-1-3-3), `place_cards_as_bottom_sources`, an OPTIONAL
+#      hand pick (the "may digivolve"), and `effect_initiated_digivolve
+#      { cost: free, ignore_requirements: true }`.
+#   Known residual: DCGO also refuses a TOKEN Tamer / TOKEN Guilmon. The DSL has
+#   no token leaf and no [Guilmon]/[Takato Matsuki] token exists in the card
+#   pool, so the gate is not expressed.
+#
+# Clause 3 -- `SecuritySkill` -> `PlaySelfTamerSecurityEffect`.
+
+card: BT17-080
+name: Takato Matsuki
+kind: tamer
+color: [red]
+cost: 3
+traits: []
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        all_of:
+          - kind: digimon
+          - any_of:
+              - name_contains: Guilmon
+              - name_contains: Growlmon
+              - name_contains: Gallantmon
+    summary: "[Start of Your Main Phase] If you have a Digimon with [Guilmon], [Growlmon] or [Gallantmon] in its name, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - when: end_of_your_turn
+    optional: true
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            name_is: Guilmon
+        - count_gte:
+            filter: { of: you, zone: [trash], name_is: Growlmon }
+            n: 1
+        - count_gte:
+            filter: { of: you, zone: [trash], name_is: WarGrowlmon }
+            n: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              all_of:
+                - kind: digimon
+                - name_is: Gallantmon
+                - level_eq: 6
+            n: 1
+    summary: "[End of Your Turn] By placing this Tamer and 1 [Growlmon] and 1 [WarGrowlmon] from your trash as a [Guilmon]'s bottom digivolution cards, it may digivolve into [Gallantmon] in hand, ignoring requirements, without paying the cost"
+    process:
+      - select_own_permanent:
+          bind_as: guilmon
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Guilmon
+          prompt: "Select 1 of your [Guilmon] to place this Tamer, a [Growlmon] and a [WarGrowlmon] under"
+      - select_zone_cards:
+          zones: [battle_area, trash]
+          filter:
+            any_of:
+              - { is_source_card: true, card_in_zone: [battle_area] }
+              - { name_is: Growlmon, card_in_zone: [trash] }
+              - { name_is: WarGrowlmon, card_in_zone: [trash] }
+          min: 3
+          max: 3
+          distinct_by: name
+          exclude: guilmon
+          bind_as: materials
+          prompt: "Place this Tamer, 1 [Growlmon] and 1 [WarGrowlmon] from your trash as bottom digivolution cards, in the order you pick them (first pick on top)"
+      - if:
+          condition: { binding_present: materials }
+          then:
+            - place_cards_as_bottom_sources: { cards: materials, target: guilmon }
+            - select_hand:
+                of: you
+                bind_as: gallantmon
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_is: Gallantmon
+                    - level_eq: 6
+                    - can_digivolve_onto_with_cost:
+                        target: guilmon
+                        cost: free
+                        ignore_requirements: true
+                prompt: "That [Guilmon] may digivolve into [Gallantmon] in your hand, ignoring its digivolution requirements and without paying the cost"
+            - if:
+                condition: { binding_present: gallantmon }
+                then:
+                  - effect_initiated_digivolve:
+                      target: guilmon
+                      from_hand: gallantmon
+                      cost: free
+                      ignore_requirements: true
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

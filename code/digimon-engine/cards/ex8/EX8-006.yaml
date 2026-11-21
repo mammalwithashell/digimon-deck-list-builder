@@ -1,0 +1,55 @@
+# EX8-006 DemiMeramon — Digi-Egg, Lv.2, Purple, cost 0. Traits: Lesser. Form: In-Training.
+#
+# Printed text (cards.json; DCGO CardEffect/EX8/Purple/EX8_006.cs):
+#   Inherited Effect
+#   [When Attacking] [Once Per Turn] If this Digimon has the [NSo] trait, by
+#   trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon.
+#
+# DCGO: OnAllyAttack inherited, maxCount 1 (OPT), isOptional TRUE (the always-
+#   shown Yes/No -> `outer_prompt: true`). CanActivate = carrier on the battle
+#   area AND the carrier's TopCard ContainsTraits("NSo") AND hand >= 1.
+#   Coroutine: SelectHandEffect(canNoSelect: true, Discard); if a card was
+#   discarded, a MANDATORY SelectPermanentEffect over opponent Digimon with
+#   Level == 3 (Destroy). Nothing runs when no card was discarded.
+
+card: EX8-006
+name: DemiMeramon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Flame, NSo]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    condition:
+      all_of:
+        - source_permanent_trait_has: "NSo"
+        - count_gte:
+            filter: { of: you, zone: [hand] }
+            n: 1
+    summary: "[When Attacking] [Once Per Turn] If this Digimon has the [NSo] trait, by trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon."
+    process:
+      - select_hand:
+          of: you
+          bind_as: trashed
+          optional: true
+          filter: {}
+          prompt: "By trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon"
+      - if:
+          condition: { binding_present: trashed }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: trashed }
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_eq: 3
+                prompt: "Delete 1 of your opponent's level 3 Digimon"
+            - delete_permanent: { target: victim }

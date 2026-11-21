@@ -1,0 +1,123 @@
+# EX8-064 Boltboutamon — Digimon, Purple/Black/Yellow, Lv.7, cost 15, 15000 DP.
+# Traits: Wizard, NSo. Attribute: Virus (form Mega).
+#
+# Printed text (official Bandai DB, data/card_bundles/EX8-064.md):
+#   [Digivolve] Purple Lv.6 / cost 5;  Black Lv.6 / cost 5;  Yellow Lv.6 / cost 5
+#   [DNA Digivolve] Purple/Black Lv.6 + Yellow/Green Lv.6: Cost 0
+#   [DNA Digivolve] [Piedmon] + [Myotismon]: Cost 0
+#     (stack the 2 specified Digimon and digivolve unsuspended)
+#   [When Digivolving] <De-Digivolve 3> 1 of your opponent's Digimon and, for the
+#     turn, all of their Digimon get -6000 DP. Then, if DNA digivolving, you may
+#     play up to 10 play cost's total worth of [NSo] trait Digimon cards from
+#     your trash without paying the cost.
+#   [All Turns] [Once Per Turn] When other Digimon are deleted, trash your
+#     opponent's top security card.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX8/Purple/EX8_064.cs
+#   - Two jogress recipes: (a) own Digimon named "Piedmon" + own Digimon named
+#     "Myotismon"; (b) own Digimon with a Purple or Black top card at level 6 +
+#     own Digimon with a Yellow or Green top card at level 6; cost 0.
+#   - [When Digivolving]: a MANDATORY pick of 1 opponent Digimon for
+#     IDegeneration 3 (when one exists); then ChangeDigimonDPPlayerEffect -6000
+#     on ALL opponent Digimon for the turn; then, `IsJogress`, a play of up to 10
+#     total PLAY COST of NSo Digimon from trash (CanPlayAsNewPermanent
+#     payCost:false), `canNoSelect: true`, `canEndNotMax: true`.
+#   - [All Turns] OPT (hash "TrashSecurity_EX8_064"): CanTriggerOnPermanentDeleted
+#     over a battle-area Digimon that is not this permanent; body = trash the
+#     opponent's TOP security card (IDestroySecurity fromTop: true).
+#
+# Official Q&A (data/card_bundles/EX8-064.md): the -6000 DP can bring an
+# opponent's Digimon to 0 DP, but it is not deleted until the whole effect has
+# resolved (the rule-check deletion happens after the [NSo] plays), and
+# Piedmon played from the trash by this effect can then trigger its own
+# [All Turns] when those 0-DP Digimon are deleted.
+
+card: EX8-064
+name: Boltboutamon
+kind: digimon
+level: 7
+color: [purple, black, yellow]
+cost: 15
+dp: 15000
+traits: [Wizard, NSo]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: purple }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: yellow }
+    cost: 5
+  - kind: dna_digivolve
+    # `color_only` is the OR-set the DNA requirement bridge understands
+    # (`dsl_bridge::compiled_dna_requirement` drops `any_of` silently).
+    materials:
+      - { level_eq: 6, color_only: [purple, black] }
+      - { level_eq: 6, color_only: [yellow, green] }
+    cost: 0
+    stacks_unsuspended: true
+  - kind: dna_digivolve
+    materials:
+      - { name_is: "Piedmon" }
+      - { name_is: "Myotismon" }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] <De-Digivolve 3> 1 of your opponent's Digimon and, for the turn, all of their Digimon get -6000 DP. Then, if DNA digivolving, you may play up to 10 play cost's total worth of [NSo] trait Digimon cards from your trash without paying the cost"
+    process:
+      # DCGO guards ONLY the pick on an opponent Digimon existing; the -6000 and
+      # the DNA play that follow run regardless (a mandatory `select_*` with no
+      # candidate would abort the whole clause).
+      - if:
+          condition:
+            any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+          then:
+            - select_opponent_permanent:
+                bind_as: dedigi
+                filter: { kind: digimon }
+                prompt: "<De-Digivolve 3> 1 of your opponent's Digimon"
+            - de_digivolve:
+                target: dedigi
+                amount: 3
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+          bind_as: each_opp
+          body:
+            - add_dp_modifier: { target: each_opp, value: -6000, expiry: end_of_turn }
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_zone_cards:
+                zones: [trash]
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: NSo
+                    - can_play_from_effect_without_cost: true
+                play_cost_budget: 10
+                bind_as: nso_plays
+                prompt: "You may play up to 10 play cost's total worth of [NSo] trait Digimon cards from your trash without paying the cost"
+            - play_cards_free: { cards: nso_plays }
+
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][Once Per Turn] When other Digimon are deleted, trash your opponent's top security card"
+    trigger_if:
+      all_of:
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: token
+        - event_permanent_is_source: false
+    process:
+      - trash_top_security: { of: opponent }

@@ -23,12 +23,14 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod app_fuse_primitive;
+mod alt_digivolve_support;
 mod assembly_material_predicates;
 mod burst_digivolve_common;
 mod printed_metadata_routes;
 mod printed_attribute_filters;
 mod printed_form_filters;
 mod native_four_field_consumers;
+mod option_color_bypass_breeding;
 mod gazimon_repeated_triggers;
 mod gazimon_optional_scope;
 mod gazimon_alt_paths;
@@ -43,6 +45,8 @@ mod scope_both_shared_opt_reducer;
 mod test_cards;
 mod tokens;
 mod trash_count_binding_primitive;
+mod keramon_line_support;
+mod reveal_bucket_support;
 
 // Sample template for forthcoming hand-written production card tests.
 // Currently ignored pending the engine gaps that BT17-015 depends on.

@@ -1067,6 +1067,14 @@ fn validate_step(
                 errors,
             );
         }
+        StepSpec::PlayToBreedingFromTrash(args) => {
+            validate_binding_ref(
+                &args.trash_index,
+                &format!("{prefix}.trash_index"),
+                card_id,
+                errors,
+            );
+        }
         StepSpec::Battle(args) => {
             validate_binding_ref(
                 &args.attacker,
@@ -1289,6 +1297,18 @@ fn validate_step(
             // not both" mutual-exclusion check no longer applies.
             if let Some(formula) = &args.amount {
                 validate_formula(formula, &format!("{prefix}.amount"), card_id, ctx, errors);
+            }
+            if args.declared
+                && !args
+                    .amount
+                    .as_ref()
+                    .is_some_and(|f| !matches!(f, crate::formula::FormulaSpec::Literal(_)))
+            {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.declared"),
+                    message: "de_digivolve `declared: true` needs a formula `amount` (a literal amount is already declared)".to_string(),
+                });
             }
         }
         StepSpec::SearchOwnSecurityStack(args) => {
@@ -1784,7 +1804,7 @@ fn validate_post_payment_plural_filter(
                         | "trashed_hand_card_matching" | "effect_deleted_opponent_digimon_dp_gte" => true,
                         // These two per-selectors read the same lost result log.
                         "per" => matches!(value.as_str(),
-                            Some("returned_card_color_count" | "effect_suspended_count")),
+                            Some("returned_card_color_count" | "returned_card_count" | "effect_suspended_count")),
                         // Formula targets may explicitly name the carrier or
                         // current subject; other target names require bindings.
                         "source_stack_count" | "source_stack_dp_sum" => {
@@ -2321,6 +2341,12 @@ fn validate_step_binding_scope(
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::MoveFromBreeding(args) => {
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        // The merged (DNA-digivolved) permanent's `bind_as` is visible to later
+        // steps in the same body (EX8-060 `may_attack_now: { attacker: .. }`).
+        // G-DSL-DNA-RESULT-BINDING.
+        StepSpec::EffectInitiatedDnaDigivolve(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::PlayFromHand(args) => {
@@ -3017,6 +3043,7 @@ fn validate_binding_ref(
         deck_top,
         security_top,
         own_breeding,
+        played_carrier,
         ..
     }) = binding_ref
     else {
@@ -3039,6 +3066,7 @@ fn validate_binding_ref(
         deck_top.is_some(),
         security_top.is_some(),
         matches!(own_breeding, Some(true)),
+        played_carrier.is_some(),
     ]
     .iter()
     .filter(|present| **present)
@@ -3689,6 +3717,58 @@ effects:
         assert!(errs
             .iter()
             .any(|e| e.path.contains("level_matches_aggregate.selector")));
+    }
+
+    #[test]
+    fn dna_digivolve_result_bind_as_is_declared_for_later_steps() {
+        // EX8-060 shape: `effect_initiated_dna_digivolve.bind_as` names the
+        // merged permanent, so later steps (a `binding_present` condition and
+        // `may_attack_now.attacker`) may read it (G-DSL-DNA-RESULT-BINDING).
+        let yaml = r#"
+card: X-1
+name: Test
+kind: option
+color: [black]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - select_own_permanent:
+          bind_as: dna_a
+          prompt: A
+          filter: { kind: digimon }
+      - select_own_permanent:
+          bind_as: dna_b
+          prompt: B
+          filter: { kind: digimon }
+      - select_hand:
+          of: you
+          bind_as: dna_card
+          prompt: Result
+          filter: { kind: digimon }
+      - effect_initiated_dna_digivolve:
+          target_a: dna_a
+          target_b: dna_b
+          from_hand: dna_card
+          cost: printed
+          bind_as: dna_result
+      - if:
+          condition: { binding_present: dna_result }
+          then:
+            - may_attack_now:
+                attacker: dna_result
+                targets: any
+                optional: true
+                prompt: "That DNA digivolved Digimon may attack"
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        if let Err(errs) = validate(&spec, &ValidationContext { raw_rust: &reg }) {
+            assert!(
+                !errs.iter().any(|e| e.message.contains("undeclared binding")),
+                "dna_result must be declared by the digivolve step: {errs:?}"
+            );
+        }
     }
 
     #[test]

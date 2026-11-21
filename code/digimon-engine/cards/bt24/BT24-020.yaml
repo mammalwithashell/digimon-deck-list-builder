@@ -37,8 +37,8 @@ effects:
                   - any_of:
                       - trait_has: Sea Beast
                       - trait_has: Shaman
-                      - trait_has: Aqua
-                      - trait_has: Sea Animal
+                      - trait_contains: Aqua
+                      - trait_contains: Sea Animal
             - bind_as: ts_pick
               min: 1
               max: 1

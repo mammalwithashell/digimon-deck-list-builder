@@ -552,6 +552,43 @@ impl EffectsCache {
     }
 }
 
+/// One refire (CR 4.3 15-15-7: "activate 1 [On Play] or [When Digivolving]
+/// effect of ...", BT24-102 Homeros) that ran a SINGLE effect which the
+/// engine models as one clause carrying several of the refire's timings
+/// (`Effect::clause_group`, `collapse_combined_timing_clauses`), where DCGO
+/// models the same printed effect as one `ActivateClass` per timing tag
+/// (`CardEffectFactory.ActivateClassesForSharedEffects`; BT24_041.cs:142-166).
+///
+/// DCGO then builds its candidate list from those objects, finds
+/// `dcgo_entries >= 2` of them and opens a mandatory "Select 1 effect to
+/// activate." prompt over them (BT24_102.cs:173-215); the engine has ONE
+/// candidate and asks nothing (a printed multi-timing effect is ONE effect, so
+/// CR 4.3 15-15-7-2 has no choice between its timings). The record lets the DCGO replay prove that a
+/// recorded effect-pick row is exactly that extra prompt. It is evidence for
+/// the replay layer only: no rule reads it and no digest includes it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CollapsedRefire {
+    /// The card whose effect activated the refire (Homeros).
+    pub grantor: CardHandle,
+    /// The Digimon whose effect was activated.
+    pub carrier: PermanentHandle,
+    /// The carrier's top card (the effect's source card).
+    pub carrier_card: CardHandle,
+    pub carrier_card_id: String,
+    /// The player who controls the refired effect.
+    pub controller: PlayerId,
+    /// How many effect entries DCGO's candidate list holds for it (the number
+    /// of the refire's timings the clause carries; always >= 2 here).
+    pub dcgo_entries: usize,
+    /// `Game::events.len()` when the refire dispatched.
+    pub events_len: usize,
+    /// Replay bookkeeping: the replay row at whose start the replay first saw
+    /// this record. A record created while row `r` was applied is stamped
+    /// `r + 1`, so a row can tell "the refire happened during the row before
+    /// me" from a stale record. The engine never sets or reads it.
+    pub first_seen_row: Option<u32>,
+}
+
 #[derive(Debug, Clone)]
 pub struct Game {
     /// Inactive world-level obligation. Independent of replaceable trigger contexts.
@@ -569,6 +606,12 @@ pub struct Game {
     /// Per-game memo for `effects_for_card` (see `EffectsCache`). Not part of
     /// the observable game state — pure derived data, never snapshotted.
     pub(crate) effects_cache: EffectsCache,
+    /// How many `<De-Digivolve>` instances have started on a target
+    /// (`de_digivolve_core`), including one that trashed nothing at the level
+    /// floor. Replay evidence only (the DCGO count rows a `<De-Digivolve 1>`
+    /// instance opens, `runners::replay::unit_count_evidence`); never read by
+    /// rules, the tensor or digests.
+    pub(crate) de_digivolve_instances: u32,
     pub players: Vec<Player>,
     pub turn_count: u16,
     /// Cumulative regular-digivolve count per player. Incremented on every
@@ -870,6 +913,12 @@ pub struct Game {
     /// selection has been resolved; the wrapper takes the value and resets
     /// the slot. The engine itself is BO3-agnostic.
     pub last_play_order_choice: Option<crate::selection::PlayOrder>,
+    /// Replay evidence, never read by gameplay: the latest `[On Play]` /
+    /// `[When Digivolving]` refire that resolved ONE collapsed combined-timing
+    /// clause which DCGO lists as several separate effect objects (one per
+    /// timing tag). See [`CollapsedRefire`].
+    #[doc(hidden)]
+    pub last_collapsed_refire: Option<CollapsedRefire>,
     /// Private cloneable receipts, filled at commit before entry observers.
     pub(crate) source_play_receipts: Vec<(
         u64,

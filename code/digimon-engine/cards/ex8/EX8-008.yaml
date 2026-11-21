@@ -1,0 +1,49 @@
+# EX8-008 Candlemon — Digimon, Red, Lv.3, cost 3, 2000 DP. Traits: Flame, NSo.
+# Attribute: Data (form Rookie).
+#
+# Printed text (official Bandai DB, data/card_bundles/EX8-008.md):
+#   [Digivolve] Red Lv.2: Cost 0
+#   [Digivolve] Lv.2 w/[NSo] trait: Cost 0
+#   [On Deletion] Gain 1 memory.
+#   Inherited Effect
+#   [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX8/Red/EX8_008.cs
+#   - Alt digivolve: top card level 2 AND EqualsTraits("NSo"), cost 0.
+#   - [On Deletion]: CanTriggerOnDeletion; CanActivate also requires
+#     `Owner.CanAddMemory`; body = AddMemory(1). Mandatory.
+#   - Inherited ChangeSelfDPStaticEffect +2000 while it is the owner's turn.
+
+card: EX8-008
+name: Candlemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Flame, NSo]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: NSo
+    cost: 0
+
+effects:
+  - when: on_deletion
+    summary: "[On Deletion] Gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

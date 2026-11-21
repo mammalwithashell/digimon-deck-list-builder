@@ -179,15 +179,19 @@ fn outer_prompt_non_optional_uncapped_or_self_refunding_clauses_are_not_rewritte
 /// process). A clause entering or leaving this list is a behaviour change and
 /// must be reviewed against Q1818 / Q1643.
 const REVIEWED: &[&str] = &[
+    // BT21-001#0, BT21-082#2, BT24-001#0, EX9-033#3 and P-207#2 left this list:
+    // DCGO always shows their isOptional yes/no (CanActivateCondition has no
+    // candidate check), so each card authors `outer_prompt: true` instead of the
+    // folded refund (a declined gate keeps the OPT; an accepted one spends it).
     // Light Hybrid: both printed inherited clauses are whole-effect "you may"
     // with no independent Then tail (Q1818). Their card tests prove a decline
     // preserves OPT for a later attack, while successful use spends it.
     "BT17-020#1", "BT18-094#1",
-    "AD1-017#2", "BT13-008#1", "BT21-001#0", "BT13-012#1", "BT21-009#3", "BT21-042#0", "BT21-044#1",
-    "BT21-044#2", "BT21-082#2", "BT22-023#1", "BT24-001#0", "BT24-051#2", "BT24-067#3",
+    "AD1-017#2", "BT13-008#1", "BT13-012#1", "BT21-009#3", "BT21-042#0", "BT21-044#1",
+    "BT21-044#2", "BT22-023#1", "BT24-051#2", "BT24-067#3",
     "BT25-025#3", "BT25-039#3", "BT25-052#3", "BT25-053#3", "BT25-055#1", "BT25-055#2",
     "EX11-017#2", "EX12-045#1", "EX12-046#2",
-    "EX12-065#1", "EX12-074#0", "EX9-033#3", "P-207#2",
+    "EX12-065#1", "EX12-074#0",
     // P-176's whole-effect may: p_176.rs tests decline preserving OPT and
     // successful activation spending it until the next turn.
     "P-176#0",
@@ -195,6 +199,12 @@ const REVIEWED: &[&str] = &[
     // card from your trash": whole-effect may, no Then tail (Q1818).
     // st21_11.rs tests decline preserving OPT and use spending it.
     "ST21-11#1",
+    // EX8-060 [Your Turn][Once Per Turn] "2 of your Digimon may DNA digivolve into a
+    // Digimon card with the [NSo] trait in the hand. Then, that DNA digivolved
+    // Digimon may attack": a whole-effect may, and the attack tail depends on the
+    // DNA binding. ex8_060.rs tests that declining keeps the use for a second
+    // trigger the same turn.
+    "EX8-060#1",
 ];
 
 #[test]

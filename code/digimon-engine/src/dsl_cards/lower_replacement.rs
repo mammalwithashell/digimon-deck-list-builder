@@ -108,6 +108,10 @@ pub fn lower_with_raw_and_slot(
         builder = builder.paid_prevention_filter(active_when.cloned().unwrap_or_default());
     }
 
+    if let Some(probe) = crate::dsl_cards::step::dna_digivolve::DnaSubjectProbe::from_process(&process) {
+        builder = builder.dna_subject_probe(probe);
+    }
+
     let mut plural_probe = PaidPreventionProbe::default();
     serde::Serialize::serialize(process.as_ref(), &mut plural_probe).expect("typed prevention probe");
     if let Some(filter) = plural_probe.plural_filter {
@@ -478,6 +482,7 @@ fn predicate_reads_replacement_subject(pred: &CompiledPredicate) -> bool {
         || pred.can_unsuspend.is_some()
         || pred.owner_can_add_security.is_some()
         || pred.can_attack.is_some()
+        || pred.has_refireable_effect.is_some()
         || pred.has_keyword.is_some()
         || !pred.zone.is_empty()
         || pred.owner.is_some()
@@ -1591,6 +1596,7 @@ impl DelayFieldDnaDigivolveFlow {
             from_hand,
             cost,
             ignore_requirements,
+            ..
         }] = process
         else {
             return None;

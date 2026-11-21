@@ -1,0 +1,144 @@
+# EX11-059 Reina Oumi — Tamer, Yellow/Purple, cost 4. Traits: NSo, LIBERATOR.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX11-059.md):
+#   [Start of Your Main Phase] [On Play] By trashing 1 [NSo] trait card from
+#     your hand, <Draw 1> and gain 1 memory.
+#   [All Turns] When any of your [NSo] trait Digimon are deleted, by suspending
+#     this Tamer, 1 of your [NSo] trait Digimon and 1 [NSo] trait Digimon card
+#     in the trash may DNA digivolve into a Digimon card with the [NSo] trait in
+#     the hand.
+#   Security Effect
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX11/Yellow/EX11_059.cs
+#   - [SoMP]/[On Play] (ActivateClassesForSharedEffects, optional: false,
+#     skippable): activates only when the owner's hand holds an [NSo] card; body
+#     = `canNoSelect: true` discard pick of an [NSo] card, and ONLY if one was
+#     trashed: Draw 1 then AddMemory(1).
+#   - [All Turns] (OnDestroyedAnyone, isOptional TRUE): triggers when an own
+#     battle-area Digimon whose top card has [NSo] is deleted
+#     (CanTriggerOnPermanentDeleted); CanActivate = this Tamer on the battle
+#     area and able to suspend. Body: suspend this Tamer (cost), THEN
+#     DNADigivolveWithHandOrTrashCardIntoHandOrTrash: a `canNoSelect` pick of an
+#     [NSo] Digimon in HAND that has a legal pair, the field [NSo] Digimon, and
+#     the trash [NSo] Digimon card, then PlayCard(payCost: true) as a jogress.
+#     The suspend is paid even when no DNA digivolve can follow (DCGO does not
+#     guard the cost on a feasible DNA).
+#   - [Security]: PlaySelfTamerSecurityEffect.
+#
+# DSL: BT18-015's `dna_trash_candidate` + `effect_initiated_dna_digivolve_trash_partner`
+# shape (one field Digimon + one trash Digimon card into a hand card), behind an
+# `activation_cost: suspend_self` (EX8-066 idiom). Each pick is declinable (DCGO
+# `isOptional: true`). Known divergence: when both a field Digimon and a trash
+# card could be the FIRST material DCGO first asks a "From Battle Area / From
+# Trash" question (UserSelectionManager bool) that only orders the two
+# materials; both materials are still chosen, and the two [NSo] conditions are
+# identical so the order cannot change the result.
+
+card: EX11-059
+name: Reina Oumi
+kind: tamer
+color: [yellow, purple]
+cost: 4
+traits: [NSo, LIBERATOR]
+
+effects:
+  # ─── [Start of Your Main Phase][On Play] by trashing 1 [NSo] card: draw + mem ─
+  - when: [start_of_your_main_phase, on_play]
+    summary: "[Start of Your Main Phase][On Play] By trashing 1 [NSo] trait card from your hand, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: { trait_has: NSo }
+          prompt: "You may trash 1 [NSo] trait card from your hand to <Draw 1> and gain 1 memory"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
+
+  # ─── [All Turns] own [NSo] Digimon deleted -> suspend -> DNA (field + trash) ──
+  - when: on_any_deletion
+    optional: true
+    active_when: { all_turns: true }
+    condition: { source_is_unsuspended: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_trait_has: NSo
+    summary: "[All Turns] When any of your [NSo] trait Digimon are deleted, by suspending this Tamer, 1 of your [NSo] trait Digimon and 1 [NSo] trait Digimon card in the trash may DNA digivolve into a Digimon card with the [NSo] trait in the hand"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_hand:
+          of: you
+          bind_as: dna_result
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: NSo
+              - dna_trash_candidate:
+                  role: result
+                  cost: printed
+                  field_filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_has: NSo
+                  partner_filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_has: NSo
+          prompt: "Select 1 [NSo] trait Digimon card in your hand to DNA digivolve into"
+      - if:
+          condition: { binding_present: dna_result }
+          then:
+            - select_own_permanent:
+                bind_as: field_partner
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: NSo
+                    - dna_trash_candidate:
+                        role: field
+                        result: dna_result
+                        cost: printed
+                        partner_filter:
+                          all_of:
+                            - kind: digimon
+                            - trait_has: NSo
+                prompt: "Select 1 of your [NSo] trait Digimon as the DNA material"
+            - if:
+                condition: { binding_present: field_partner }
+                then:
+                  - select_trash:
+                      of: you
+                      bind_as: trash_partner
+                      optional: true
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - trait_has: NSo
+                          - dna_trash_candidate:
+                              role: partner
+                              result: dna_result
+                              field: field_partner
+                              cost: printed
+                      prompt: "Select 1 [NSo] trait Digimon card in your trash as the DNA material"
+                  - if:
+                      condition: { binding_present: trash_partner }
+                      then:
+                        - effect_initiated_dna_digivolve_trash_partner:
+                            target: field_partner
+                            trash_partner: trash_partner
+                            from_hand: dna_result
+                            cost: printed
+                            ignore_requirements: false
+
+  # ─── [Security] play this card without paying the cost ─────────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

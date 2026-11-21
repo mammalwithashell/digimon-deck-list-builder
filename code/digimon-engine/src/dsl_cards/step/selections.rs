@@ -177,13 +177,18 @@ pub(crate) fn field_value(
 }
 
 /// The permanent's top card has a printed play cost (not a Token, DUAL card
-/// or Option) — DCGO `CardSource.HasPlayCost` as used by `IsMaxCost`.
+/// or Option) — DCGO `CardSource.HasPlayCost` as used by `IsMaxCost`. A Token
+/// has none except the few that print one (Diaboromon 14, DCGO
+/// `DiaboromonToken.PlayCost`; `TokenDef::play_cost`): a costless token stores
+/// 0, a costed one its cost.
 pub(crate) fn top_card_has_play_cost(
     perm: &crate::permanent::Permanent,
     card_data: &[crate::card_data::CardData],
 ) -> bool {
     let top = perm.top_card();
-    top.has_play_cost(card_data) && top.card_kind(card_data) != crate::enums::CardKind::Token
+    top.has_play_cost(card_data)
+        && (top.card_kind(card_data) != crate::enums::CardKind::Token
+            || top.play_cost(card_data) > 0)
 }
 
 pub(crate) fn selected_field_extreme(
@@ -4108,6 +4113,77 @@ fn compose_then_tail(then: &[CompiledStep], tail: &[CompiledStep]) -> Vec<Compil
     inner
 }
 
+/// collapse §3.1/§3.2 — the binary top/bottom pick shared by every
+/// place-on-security verb carrying `position: choice`. Install a top/bottom
+/// EffectChoice, then re-run `make_step(<concrete end>)` followed by `tail`
+/// through `run_steps`, so a tail that parks (and the resume frame that carries
+/// it) is captured correctly. Closure-free data (`ResumeFrame::RunTail`), so
+/// `Game: Clone` stays faithful.
+fn install_security_position_choice(
+    ctx: &mut EffectContext<'_>,
+    tail: &[CompiledStep],
+    bindings: Bindings,
+    runtime: &StepRuntime,
+    make_step: impl Fn(CompiledStackPosition) -> CompiledStep,
+) -> InstallResult {
+    let branch = |pos: CompiledStackPosition| {
+        let mut t = vec![make_step(pos)];
+        t.extend_from_slice(tail);
+        Arc::new(t)
+    };
+    let tail_top = branch(CompiledStackPosition::Top);
+    let tail_bottom = branch(CompiledStackPosition::Bottom);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let runtime = runtime.clone();
+    let branches_for_resume = vec![Arc::clone(&tail_top), Arc::clone(&tail_bottom)];
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let override_pin = ctx.override_selecting_player();
+    ctx.select_effect_choice(
+        "Place as the top or bottom security card",
+        vec![
+            "Top of security".to_string(),
+            "Bottom of security".to_string(),
+        ],
+        move |cb_ctx, idx| {
+            let branch = if idx == 0 { &tail_top } else { &tail_bottom };
+            let mut b = bindings.clone();
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, branch, &mut b, &runtime);
+        },
+    );
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::EffectChoice {
+                    post: Some(crate::resume::EffectChoicePostAction::RunTailBranch {
+                        branches: branches_for_resume,
+                    }),
+                },
+                bind_as: None,
+                inner_tail: Arc::new(Vec::new()),
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
+    selection_result(ctx)
+}
+
 /// Installs a selection step or reports how the dispatcher should advance.
 ///
 /// Most selection steps park by installing the remainder as their callback.
@@ -4774,75 +4850,40 @@ pub fn try_install(
             source,
             position: CompiledStackPosition::Choice,
             face_up,
-        } => {
-            let branch = |pos: CompiledStackPosition| {
-                let mut t = vec![CompiledStep::PlaceOnSecurity {
-                    of: *of,
-                    source: source.clone(),
-                    position: pos,
-                    face_up: *face_up,
-                }];
-                t.extend_from_slice(tail);
-                Arc::new(t)
-            };
-            let tail_top = branch(CompiledStackPosition::Top);
-            let tail_bottom = branch(CompiledStackPosition::Bottom);
-            let trigger_context = ctx.game.current_trigger_context.clone();
-            let runtime = runtime.clone();
-            let branches_for_resume = vec![Arc::clone(&tail_top), Arc::clone(&tail_bottom)];
-            let bindings_for_resume = bindings.clone();
-            let runtime_for_resume = runtime.clone();
-            let trigger_for_resume = trigger_context.clone();
-            let source_card = ctx.source_card;
-            let source_permanent = ctx.source_permanent;
-            let source_kind = ctx.source_kind;
-            let player = ctx.player;
-            let override_pin = ctx.override_selecting_player();
-            ctx.select_effect_choice(
-                "Place as the top or bottom security card",
-                vec![
-                    "Top of security".to_string(),
-                    "Bottom of security".to_string(),
-                ],
-                move |cb_ctx, idx| {
-                    let branch = if idx == 0 { &tail_top } else { &tail_bottom };
-                    let mut b = bindings.clone();
-                    run_tail_preserving_trigger_context(
-                        cb_ctx,
-                        trigger_context,
-                        branch,
-                        &mut b,
-                        &runtime,
-                    );
-                },
-            );
-            if ctx.game.pending_selection.is_some() {
-                ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
-                    frames: vec![crate::resume::ResumeFrame::RunTail {
-                        prov: crate::resume::ResumeProvenance {
-                            source_card,
-                            source_permanent,
-                            source_kind,
-                            controller: player,
-                            override_pin,
-                        },
-                        select_kind: crate::resume::ResumeSelectKind::EffectChoice {
-                            post: Some(crate::resume::EffectChoicePostAction::RunTailBranch {
-                                branches: branches_for_resume,
-                            }),
-                        },
-                        bind_as: None,
-                        inner_tail: Arc::new(Vec::new()),
-                        outer_conts: Vec::new(),
-                        bindings: bindings_for_resume,
-                        runtime: runtime_for_resume,
-                        trigger_context: trigger_for_resume,
-                        decline: crate::resume::ResumeDecline::None,
-                    }],
-                });
+        } => install_security_position_choice(ctx, tail, bindings, runtime, |pos| {
+            CompiledStep::PlaceOnSecurity {
+                of: *of,
+                source: source.clone(),
+                position: pos,
+                face_up: *face_up,
             }
-            selection_result(ctx)
-        }
+        }),
+        // The permanent-source sibling (BT25-044 / P-187 "by placing 1 other
+        // Digimon or Tamer as the top or bottom security card"): the same
+        // binary pick, then the placement re-runs at the concrete end. When the
+        // clause binds `bind_placed_as`, the receipt expansion
+        // (`security_placement_results::expand`) has already rewritten this into
+        // `[operation, finalize]`, so the finalizer rides in `tail` and runs
+        // after whichever end was picked.
+        CompiledStep::PlacePermanentOnSecurity {
+            of,
+            target,
+            position: CompiledStackPosition::Choice,
+            face_up,
+            to_owner,
+            bind_placed_as,
+            result_receipt,
+        } => install_security_position_choice(ctx, tail, bindings, runtime, |pos| {
+            CompiledStep::PlacePermanentOnSecurity {
+                of: *of,
+                target: target.clone(),
+                position: pos,
+                face_up: *face_up,
+                to_owner: *to_owner,
+                bind_placed_as: bind_placed_as.clone(),
+                result_receipt: *result_receipt,
+            }
+        }),
         CompiledStep::SelectRevealBuckets {
             from,
             buckets,

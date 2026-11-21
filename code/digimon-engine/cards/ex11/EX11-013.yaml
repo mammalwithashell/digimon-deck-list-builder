@@ -1,0 +1,58 @@
+# EX11-013 Sangomon — Digimon, Lv.3, Blue, DP 1000, Cost 3.
+# Traits: Mollusk, LIBERATOR, Aquatic ((Rule) Trait: Has [Aquatic] Type —
+# data/card_overrides.json type_eng). Form: Rookie. Attribute: Data.
+# Digivolve: Blue Lv.2 / Cost 0.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX11-013.md; DCGO
+# EX11_013.cs):
+#   [When Moving] [On Play] If you have 7 or fewer cards in your hand, <Draw 1>.
+#   Inherited: [End of Attack] [Once Per Turn] Gain 1 memory.
+#
+# DCGO crosscheck:
+#   * Shared WM / OP (two ActivateClass, same body, not optional, no per-turn
+#     cap): CanActivate = on the battle area; body = `if hand <= 7 { draw 1 }`
+#     (the hand size is read when the effect resolves).
+#   * [When Moving] is SELF-scoped (`CanTriggerOnMove(permanent == this)`): the
+#     engine's on_move dispatch is a board-wide observer scan, so the timing is
+#     gated with `event_permanent_is_source` (P-215 / EX11-038 idiom).
+#   * Inherited [End of Attack] (OnEndAttack, maxCount 1, mandatory): +1 memory.
+
+card: EX11-013
+name: Sangomon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Mollusk, LIBERATOR, Aquatic]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  - when: [on_move, on_play]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][On Play] If you have 7 or fewer cards in your hand, <Draw 1>"
+    process:
+      # Read when the effect resolves (DCGO checks inside the coroutine).
+      - if:
+          condition:
+            not:
+              count_gte:
+                filter: { of: you, zone: [hand] }
+                n: 8
+          then:
+            - draw: { of: you, count: 1 }
+
+  - scope: inherited
+    when: end_of_attack
+    once_per_turn: true
+    summary: "[Inherited][End of Attack][Once Per Turn] Gain 1 memory"
+    process:
+      - gain_memory: 1

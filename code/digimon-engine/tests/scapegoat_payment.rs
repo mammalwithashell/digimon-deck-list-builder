@@ -65,7 +65,7 @@ fn token_disappearance_is_successful_deletion_payment_in_clones() {
     use digimon_engine::effect_context::EffectContext;
     use digimon_engine::enums::CardColor;
     use digimon_engine::token_registry::TokenDef;
-    let token = TokenDef { name: "payer-token".into(), card_id: "TOKEN_PAYER".into(), card_name: "Payer Token".into(), colors: vec![CardColor::Blue], dp: Some(3000), level: None, traits: vec![], keywords: vec![] };
+    let token = TokenDef { name: "payer-token".into(), card_id: "TOKEN_PAYER".into(), card_name: "Payer Token".into(), colors: vec![CardColor::Blue], dp: Some(3000), level: None, traits: vec![], play_cost: None, keywords: vec![] };
     let mut scap = make_test_card("SCAP", "SCAP");
     scap.keywords = vec![Keyword::Scapegoat];
     let mut r = DebugRunner::builder().add_card(scap).add_card(token.to_card_data()).start();

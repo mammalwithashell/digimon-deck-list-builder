@@ -358,6 +358,7 @@ fn blue_digimon_token_play_triggers_homer_but_cannot_gain_sources() {
         dp: Some(3000),
         level: None,
         traits: vec![],
+        play_cost: None,
         keywords: vec![],
     };
     let mut r = base().add_card(token.to_card_data()).start();

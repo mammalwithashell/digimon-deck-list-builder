@@ -1,0 +1,80 @@
+# BT5-063 Kurisarimon — Digimon, Lv.4, Black, 4000 DP, play cost 5.
+# Traits: Unidentified. Champion / Unknown. Digivolve: Black Lv.3 / cost 2.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT5-063.md):
+#   [When Digivolving] If you don't have an [Arata Sanada] card in play, you may
+#   play one from your hand without paying its memory cost.
+#   Inherited: [Your Turn] All of your other Digimon with the same name as this
+#   Digimon gain <Rush>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT5/Black/BT5_063.cs
+#   - [When Digivolving], optional: CanActivate = on the battle area, hand >= 1
+#     and NO battle-area permanent of the owner (any kind) whose TopCard names
+#     contain "Arata Sanada" / "ArataSanada" (CardNames.Contains: exact name
+#     membership -> `name_is`). Then a SelectHandEffect
+#     (canNoSelect true) over hand cards named [Arata Sanada] that
+#     CanPlayAsNewPermanent(payCost false), played free (PlayPermanentCards).
+#     The hand card need not be a Tamer: any card named [Arata Sanada].
+#   - Inherited RushStaticEffect (EffectTiming.None): condition = on the battle
+#     area on the owner's turn; PermanentCondition = an owner's Digimon that is
+#     not this permanent and `TopCard.HasSameCardName(this permanent's TopCard)`.
+#     The comparison is against the carrier's CURRENT top card, so it is
+#     authored with the dynamic `name_matches_source` leaf, not a literal name
+#     (G-DSL-NAME-MATCHES-SOURCE; BT2-053 / BT2-059 / EX1-051 / P-045 siblings).
+
+card: BT5-063
+name: Kurisarimon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 4000
+traits: [Unidentified]
+form: Champion
+attribute: Unknown
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects:
+  - when: when_digivolving
+    optional: true
+    condition:
+      all_of:
+        - no_permanent:
+            of: you
+            zone: [battle_area]
+            name_is: "Arata Sanada"
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              all_of:
+                - name_is: "Arata Sanada"
+                - can_play_from_effect_without_cost: true
+            n: 1
+    summary: "[When Digivolving] If you don't have an [Arata Sanada] card in play, you may play one from your hand without paying its memory cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: arata
+          filter:
+            all_of:
+              - name_is: "Arata Sanada"
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 [Arata Sanada] from your hand without paying its memory cost"
+      - play_from_hand_free: { of: you, hand_index: arata }
+
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      other: true
+      name_matches_source: true
+    grant_keyword: { keyword: Rush }
+    summary: "Inherited [Your Turn] All of your other Digimon with the same name as this Digimon gain <Rush>"

@@ -598,6 +598,14 @@ fn another_one_based_menu_card_does_not_borrow_p_249_area_meaning() {
 /// game parked at the mandatory "which [DATA SQUAD] Tamer" pick. Returns the
 /// game and the Tamer slots.
 fn kudamon_parked_at_tamer_pick(tamers: usize) -> (Game, Vec<PermanentHandle>) {
+    kudamon_parked_at_tamer_pick_with(tamers, false)
+}
+
+/// `kudamon_parked_at_tamer_pick`, optionally with the effect's controller one
+/// memory point past the boundary (the turn passes as soon as the effect
+/// finishes) and a Lv.4 Digimon in P1's breeding area (a P1 breeding-phase
+/// MOVE is then a legal first action of P1's turn).
+fn kudamon_parked_at_tamer_pick_with(tamers: usize, turn_passes_after: bool) -> (Game, Vec<PermanentHandle>) {
     let digimon = |id: &str, traits: &[&str]| {
         let mut c = make_test_card(id, id);
         c.card_kind = CardKind::Digimon;
@@ -631,6 +639,9 @@ fn kudamon_parked_at_tamer_pick(tamers: usize) -> (Game, Vec<PermanentHandle>) {
         .memory(5)
         .start();
     let handles: Vec<_> = (0..tamers).map(|_| r.place_stack(0, &["DS-TAMER"])).collect();
+    if turn_passes_after {
+        r.place_in_breeding(1, "FILL");
+    }
     r.play(0, 0).expect("Kudamon played");
     // Answer the reveal picks (add 1 / place 1) until the Tamer pick parks.
     for _ in 0..8 {
@@ -648,6 +659,9 @@ fn kudamon_parked_at_tamer_pick(tamers: usize) -> (Game, Vec<PermanentHandle>) {
     assert!(matches!(p.kind, SelectionKind::OwnField), "{:?}", p.kind);
     assert!(!p.is_optional, "the placement is mandatory");
     assert_eq!(p.valid_action_ids.len(), tamers, "{:?}", p.valid_action_ids);
+    if turn_passes_after {
+        r.game.memory = -1;
+    }
     (r.game, handles)
 }
 
@@ -736,4 +750,45 @@ fn ex13_026_lone_tamer_pick_is_not_answered_for_another_seats_multiple_skills_ro
     assert_eq!(s.current_step(), 0, "P1's row is not consumed");
     let p = s.game.pending_selection.as_ref().expect("P0's Tamer pick is still parked");
     assert!(matches!(p.kind, SelectionKind::OwnField) && p.selecting_player == 0);
+}
+
+/// An ACTION row (not a selection row) of the other seat follows the effect.
+/// Kudamon's lone [DATA SQUAD] Tamer pick is skipped by DCGO (a single
+/// candidate), and so is the one-card deck-bottom order that ends the same
+/// effect (DCGO places a lone card without a prompt) - the recording has no row
+/// for either. Answering the pick parks the order, which must be answered
+/// before the action row too: the effect then finishes, the memory (past the
+/// boundary) passes the turn, and P1's first row of its turn replays clean
+/// instead of meeting P0's still-parked ordering prompt (an actor divergence).
+/// raw-20261116T164448Z#g7 file step 45 (DNA Charge ST24-15 played Kudamon).
+#[test]
+fn ex13_026_lone_tamer_pick_and_lone_order_are_both_answered_before_an_action_row() {
+    use digimon_engine::action::space::MOVE_FROM_BREEDING;
+    use digimon_engine::dcgo_recording::ActionRow;
+    let (game, tamers) = kudamon_parked_at_tamer_pick_with(1, true);
+    let action = Row::Action(ActionRow {
+        inferred: false,
+        step: 0,
+        actor: 1,
+        action_id: MOVE_FROM_BREEDING,
+        phase: "Breeding".into(),
+        source: "breeding_action".into(),
+        board_p0: None,
+        board_p1: None,
+        memory: None,
+        card_id: None,
+        card_index: None,
+        memory_before: None,
+        operand_card_index: None,
+        operand_card_index_source: None,
+    });
+    let mut s = session_over(game, vec![action]);
+    replay_all(&mut s);
+    let placed = face_down_sources(&s.game, tamers[0]);
+    assert_eq!(placed.len(), 1, "the lone [DATA SQUAD] Tamer received the card");
+    assert_eq!(s.game.players[0].deck[0].card_id(&s.game.card_data), "PLAIN", "remainder to the deck bottom");
+    assert!(
+        s.game.players[1].breeding_area.is_none(),
+        "P1's breeding Digimon moved: the row applied to P1's own turn"
+    );
 }

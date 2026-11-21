@@ -1,6 +1,7 @@
 mod bt17_007;
 mod bt17_009;
 mod bt17_015;
+mod bt17_012;
 mod bt17_016;
 mod bt17_018;
 mod bt17_019;
@@ -8,6 +9,7 @@ mod bt17_027;
 mod bt17_070;
 mod bt17_077;
 mod bt17_078;
+mod bt17_080;
 mod bt17_081;
 mod bt17_093;
 mod bt17_095;
@@ -17,3 +19,6 @@ mod bt17_102;
 mod bt17_020;
 
 mod bt17_023;
+mod bt17_094;
+mod bt17_053;
+mod bt17_055;

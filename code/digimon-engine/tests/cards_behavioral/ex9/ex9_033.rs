@@ -27,13 +27,28 @@ use digimon_dsl::compiled::{
     CompiledPredicate, CompiledTiming,
 };
 use digimon_engine::action::space::encode_attack;
-use digimon_engine::action::space::{PASS, TRASH_EFFECT_START};
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT, TRASH_EFFECT_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
+
+/// DCGO ALWAYS shows the end-of-turn effect's yes/no activation (EX9_033.cs
+/// `isOptional: true`; CanActivateCondition is only `IsExistOnBattleAreaDigimon
+/// && IsOwnerTurn`): assert it is parked, then accept it. The optional trash
+/// pick (`canNoSelect: () => true`) follows.
+fn accept_activation_gate(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional 'use this effect?' prompt is parked");
+    assert_eq!(view.kind, SelectionKind::Replacement, "yes/no activation prompt");
+    assert!(view.is_optional, "the activation is the player's choice");
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accepting the activation is legal");
+}
 
 fn runner_with_kaguyamon() -> DebugRunner {
     DebugRunner::builder()
@@ -120,6 +135,10 @@ fn ex9_033_has_two_keyword_auras_and_eot_trash_play_clause() {
     });
     let eot = eot.expect("End of Your Turn trash-play clause exists");
     assert!(eot.optional, "printed 'You may play' must be optional");
+    assert!(
+        eot.outer_prompt,
+        "DCGO always shows the yes/no activation, even with no Puppet in trash"
+    );
     assert!(
         eot.once_per_turn,
         "printed [Once Per Turn] must be retained"
@@ -215,6 +234,7 @@ fn ex9_033_eot_may_play_level_4_or_lower_puppet_from_trash() {
     );
     runner.game.drain_effect_queue();
 
+    accept_activation_gate(&mut runner);
     let view = runner
         .pending_selection_view()
         .expect("EOT trash-play prompt should install");
@@ -261,7 +281,8 @@ fn ex9_033_eot_trash_play_can_be_declined() {
     );
     runner.game.drain_effect_queue();
 
-    assert_eq!(runner.pending_kind(), Some(SelectionKind::Trash));
+    // Declining the yes/no activation is not activating the effect.
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
     assert!(runner.pending_is_optional(), "trash play is optional");
     runner
         .execute_action(0, PASS)
@@ -444,4 +465,55 @@ fn predicate_has_event_permanent_is_source(predicate: &CompiledPredicate, expect
             .any_of
             .iter()
             .any(|child| predicate_has_event_permanent_is_source(child, expected))
+}
+
+// -- DCGO's always-shown yes/no activation (isOptional) ----------------------
+
+fn fire_end_of_turn(runner: &mut DebugRunner, kaguyamon: PermanentHandle) {
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::Permanent(kaguyamon),
+    );
+    runner.game.drain_effect_queue();
+}
+
+/// With no Puppet in trash DCGO still asks "use this effect?": declining keeps
+/// the [Once Per Turn] (Q1818, CR 4.3 15-14-1-4), accepting spends it
+/// (15-7-4 / 15-7-5) with nothing played.
+#[test]
+fn ex9_033_eot_gate_offered_with_no_puppet_in_trash_decline_keeps_the_use() {
+    let mut runner = runner_with_kaguyamon();
+    let kaguyamon = runner.place_on_field(0, "EX9-033", None);
+    fire_end_of_turn(&mut runner, kaguyamon);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "the yes/no activation is parked even with nothing to play"
+    );
+    runner.execute_action(0, PASS).expect("declining is legal");
+    assert!(runner.pending_selection().is_none());
+
+    push_to_trash(&mut runner, 0, "TRASH-PUPPET-L4");
+    fire_end_of_turn(&mut runner, kaguyamon);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "a declined activation keeps the [Once Per Turn]"
+    );
+}
+
+#[test]
+fn ex9_033_eot_accepting_gate_with_no_puppet_spends_the_use() {
+    let mut runner = runner_with_kaguyamon();
+    let kaguyamon = runner.place_on_field(0, "EX9-033", None);
+    fire_end_of_turn(&mut runner, kaguyamon);
+    accept_activation_gate(&mut runner);
+    assert!(runner.pending_selection().is_none(), "nothing to play: no pick");
+
+    push_to_trash(&mut runner, 0, "TRASH-PUPPET-L4");
+    fire_end_of_turn(&mut runner, kaguyamon);
+    assert!(
+        runner.pending_selection().is_none(),
+        "an activated [Once Per Turn] effect is spent"
+    );
 }

@@ -4702,19 +4702,19 @@ impl Game {
             })
         };
 
-        // OnAllyAttack: every permanent of the attacker's controller EXCEPT
-        // the attacker itself — drop the attacker's own entries from this
-        // fan-out only (its own OnAttack / [When Attacking] above stay).
-        let ally_fanout_start = self.effect_queue.len();
+        // OnAllyAttack: every permanent of the attacker's controller, the
+        // attacker ITSELF included. DCGO `AttackProcess.cs` stacks one
+        // `EffectTiming.OnAllyAttack` batch with no attacker exclusion
+        // (`[When Attacking]` is that same timing with a self filter, which is
+        // the carrier-scoped `WhenAttacking` above), and a printed "When a
+        // Digimon attacks" ([All Turns] BT18-042, BT25-016, BT26-021) has no
+        // "another" -- so a Digimon observes its own attack. "When ANOTHER
+        // Digimon attacks" is a per-card predicate (`trigger_if:
+        // { event_target_is_source: false }`), not a property of the timing.
+        // The self-exclusion this used to hard-wire dropped the attacker's own
+        // entry from the trigger bundle, so the owner's recorded pick named an
+        // entry the engine never offered (DCGO PvP replay, BT18-042).
         self.enqueue_triggered(EffectTiming::OnAllyAttack, attack_source(handle.player));
-        let mut i = ally_fanout_start;
-        while i < self.effect_queue.len() {
-            if self.effect_queue[i].source_permanent == Some(handle) {
-                self.effect_queue.remove(i);
-            } else {
-                i += 1;
-            }
-        }
 
         let opp = 1 - handle.player;
         if (opp as usize) < self.players.len() {

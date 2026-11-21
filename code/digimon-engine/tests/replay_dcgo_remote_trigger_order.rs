@@ -605,3 +605,178 @@ fn order_probe_answers_silent_prompts_before_each_unstamped_answer() {
     }
     assert!(in_hand(&s.game, 0, "TB-LOW"));
 }
+
+// ---------------------------------------------------------------------------
+// Copies of one card: the order cannot name WHICH copy DCGO activated.
+// ---------------------------------------------------------------------------
+
+const HIROKO: &str = "BT24-083";
+
+/// P0 holds two Hiroko Sagisaka (BT24-083) Tamers - the same card, one
+/// [Start of Your Turn] trigger each - and a TS Digimon in hand for either
+/// trigger to play. `second_suspended` makes the second copy differ.
+///
+/// Field witness: the Three Musketeers PvP games of 2026-11-15/16. DCGO's
+/// `MultipleSkills` row names the card (or, for the remote seat, nothing), never
+/// which of two byte-identical Tamers; each trigger returns ITS Tamer to the
+/// deck bottom, so the two branches differ only in which physical copy went to
+/// the bottom, which `verification_digest` hashes (`write_card`'s `card_index`).
+fn two_hirokos(second_suspended: bool) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(HIROKO)
+        .expect("BT24-083 YAML loads")
+        .add_card(digimon("TS-LOW", 3, 4000, &["TS"]))
+        .add_card(digimon("FILLER", 3, 4000, &[]))
+        .hand(0, &["TS-LOW"])
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(3)
+        .start();
+    runner.game.turn_count = 1;
+    let first = runner.place_stack(0, &[HIROKO]);
+    let second = runner.place_stack(0, &[HIROKO]);
+    if second_suspended {
+        runner.game.players[0].battle_area[second.index as usize].is_suspended = true;
+    }
+    for tamer in [first, second] {
+        runner.game.enqueue_triggered(EffectTiming::StartOfYourTurn, TriggerSource::Permanent(tamer));
+    }
+    runner.game.drain_effect_queue();
+    runner
+}
+
+fn tamers_on_field(game: &Game, player: usize) -> usize {
+    game.players[player].battle_area.iter().filter(|p| p.top_card().card_id(&game.card_data) == HIROKO).count()
+}
+
+fn hiroko_rows(chosen_card: bool) -> Vec<StepSpec> {
+    let mut order = serde_json::json!({"step":0,"actor":0,"prompt":"MultipleSkills","int_value":1});
+    if chosen_card {
+        order["chosen_effect_card"] = serde_json::json!(HIROKO);
+    }
+    vec![
+        row(order),
+        row(serde_json::json!({"step":1,"actor":0,"prompt":"generic_bool","bool_value":true,"unstamped":true})),
+        row(serde_json::json!({"step":2,"actor":0,"prompt":"SelectHandEffect","zone":"Hand","card_ids":["TS-LOW"]})),
+    ]
+}
+
+/// A card-less index over two identical Tamers: whichever DCGO activated, the
+/// game after the hand pick is the same up to which physical copy went to the
+/// deck bottom, so the order is not an ambiguity.
+#[test]
+fn cardless_order_over_identical_copies_is_not_an_ambiguity() {
+    let runner = two_hirokos(false);
+    assert_eq!(order_labels(&runner.game).0.matches(HIROKO).count(), 2, "two copies are offered");
+    let mut s = session(runner, hiroko_rows(false));
+    for _ in 0..3 {
+        s.step();
+    }
+    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
+    assert_eq!(s.current_step(), 3);
+    assert!(on_field(&s.game, 0, "TS-LOW"), "the Tamer's play ran and played TS-LOW");
+    assert_eq!(tamers_on_field(&s.game, 0), 1, "one copy returned to the deck bottom");
+}
+
+/// The same, when the row names the card: both entries belong to it.
+#[test]
+fn card_named_order_over_identical_copies_is_not_an_ambiguity() {
+    let runner = two_hirokos(false);
+    let mut s = session(runner, hiroko_rows(true));
+    for _ in 0..3 {
+        s.step();
+    }
+    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
+    assert_eq!(s.current_step(), 3);
+    assert!(on_field(&s.game, 0, "TS-LOW"));
+    assert_eq!(tamers_on_field(&s.game, 0), 1);
+}
+
+/// Copies that DIFFER (the second is suspended) are not interchangeable: which
+/// one returns to the deck bottom changes the game (the survivor is suspended
+/// or not), the rows after do not tell, and the replay must still stop.
+#[test]
+fn cardless_order_over_copies_in_different_states_stays_ambiguous() {
+    let runner = two_hirokos(true);
+    let before = runner.game.verification_digest();
+    let mut s = session(runner, hiroko_rows(false));
+    s.step();
+    assert!(s.is_paused());
+    assert_eq!(s.current_step(), 0);
+    assert_eq!(s.game.verification_digest(), before, "nothing was applied");
+    assert!(
+        matches!(&s.divergences()[..], [d] if matches!(&d.kind, DivergenceKind::SelectionResolution { reason } if reason.contains("ambiguous"))),
+        "{:?}",
+        s.divergences()
+    );
+}
+
+const ASUNA: &str = "BT24-088";
+
+/// Two Asuna Shiroki (BT24-088) Tamers - played on different turns - whose
+/// [Start of Your Turn] plays a level 4 or lower TS Digimon FROM THE TRASH. The remote seat's recording of
+/// the Three Musketeers game of 2026-11-16 names no copy (its row carries no
+/// card at all) and the pick that follows names the Digimon in the trash.
+fn two_asunas() -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(ASUNA)
+        .expect("BT24-088 YAML loads")
+        .add_card(digimon("TS-LOW", 3, 4000, &["TS"]))
+        .add_card(digimon("FILLER", 3, 4000, &[]))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(3)
+        .start();
+    runner.game.turn_count = 1;
+    // Played on different earlier turns, as in the recording: `turn_played` is
+    // read only as "is it this turn", so the copies are still the same card in
+    // the same state.
+    runner.game.turn_count = 5;
+    let first = runner.place_field_stack(0, &[ASUNA], false, 2);
+    let second = runner.place_field_stack(0, &[ASUNA], false, 3);
+    runner.inject_trash(0, "TS-LOW");
+    for tamer in [first, second] {
+        runner.game.enqueue_triggered(EffectTiming::StartOfYourTurn, TriggerSource::Permanent(tamer));
+    }
+    runner.game.drain_effect_queue();
+    runner
+}
+
+fn asuna_rows() -> Vec<StepSpec> {
+    vec![
+        row(serde_json::json!({"step":0,"actor":0,"prompt":"MultipleSkills","int_value":1})),
+        row(serde_json::json!({"step":1,"actor":0,"prompt":"generic_bool","bool_value":true,"unstamped":true})),
+        row(serde_json::json!({"step":2,"actor":0,"prompt":"SelectCardEffect","card_ids":["TS-LOW"]})),
+    ]
+}
+
+#[test]
+fn cardless_order_over_copies_played_on_different_turns_is_not_an_ambiguity() {
+    let runner = two_asunas();
+    assert!(matches!(runner.game.pending_selection.as_ref().map(|p| &p.kind), Some(SelectionKind::TriggerOrder)));
+    let mut s = session(runner, asuna_rows());
+    for _ in 0..3 {
+        s.step();
+    }
+    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
+    assert_eq!(s.current_step(), 3);
+    assert!(on_field(&s.game, 0, "TS-LOW"), "the Tamer's play ran and played TS-LOW from the trash");
+}
+
+/// A copy played THIS turn is not the same card in the same state (it is
+/// summoning-sick as a Digimon): the order stays an ambiguity.
+#[test]
+fn cardless_order_over_a_copy_played_this_turn_stays_ambiguous() {
+    let mut runner = two_asunas();
+    runner.game.players[0].battle_area[1].turn_played = runner.game.turn_count;
+    let before = runner.game.verification_digest();
+    let mut s = session(runner, asuna_rows());
+    s.step();
+    assert!(s.is_paused());
+    assert_eq!(s.game.verification_digest(), before, "nothing was applied");
+    assert!(
+        matches!(&s.divergences()[..], [d] if matches!(&d.kind, DivergenceKind::SelectionResolution { reason } if reason.contains("ambiguous"))),
+        "{:?}",
+        s.divergences()
+    );
+}

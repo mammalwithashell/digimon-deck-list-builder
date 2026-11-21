@@ -24,6 +24,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             color_matches_binding,
             color_matches_returned_card,
             name_matches_returned_card,
+            name_matches_source,
             color_matches_own_source_stack,
             trait_has,
             trait_contains,
@@ -69,6 +70,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             can_change_orientation,
             controller_can_add_security,
             can_attack,
+            has_refireable_effect,
             has_keyword,
             has_security_attack_change,
             has_on_deletion_effect,
@@ -82,11 +84,14 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             battle_opponent_no_sources,
             self_source_count,
             self_same_level_source_pairs_gte,
+            self_stack_same_level_count_gte,
             own_source_stack_color_count_gte,
             zone,
             owner,
             other,
             is_source,
+            is_source_card,
+            card_in_zone,
             of_permanent,
             not_in_binding,
             name_not_in_binding,
@@ -171,6 +176,8 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             attack_target_change_reason,
             attacker_trait_has,
             event_card_trait_has,
+            event_batch_card_trait_has,
+            event_card_face_up_in_security,
             event_card_name_contains,
             event_card_text_contains,
             event_card_in_text_contains,
@@ -181,6 +188,8 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             event_card_color_count,
             event_cause,
             event_target_same_level_as_previous,
+            event_target_has_same_level_source,
+            event_target_digivolved_from_kind,
             host_permanent_trait_has,
             trashed_source_trait_has,
             trashed_source_card_id_is,
@@ -234,6 +243,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             can_play_from_effect_without_cost,
             can_play_or_use_from_effect,
             can_play_to_breeding_from_hand,
+            can_play_to_breeding_from_trash,
             can_unsuspend,
             owner_can_add_security,
             source_name_is,
@@ -290,6 +300,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         name_matches_returned_card.walk(
             c,
             &format!("{}.name_matches_returned_card", path),
+            "UNCLASSIFIED_STRING",
+        );
+        name_matches_source.walk(
+            c,
+            &format!("{}.name_matches_source", path),
             "UNCLASSIFIED_STRING",
         );
         color_matches_own_source_stack.walk(
@@ -420,6 +435,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             "UNCLASSIFIED_STRING",
         );
         can_attack.walk(c, &format!("{}.can_attack", path), "UNCLASSIFIED_STRING");
+        has_refireable_effect.walk(c, &format!("{}.has_refireable_effect", path), "UNCLASSIFIED_STRING");
         controller_can_add_security.walk(c, &format!("{}.controller_can_add_security", path), "UNCLASSIFIED_STRING");
         has_keyword.walk(c, &format!("{}.has_keyword", path), "UNCLASSIFIED_STRING");
         has_security_attack_change.walk(
@@ -482,6 +498,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             &format!("{}.self_same_level_source_pairs_gte", path),
             "UNCLASSIFIED_STRING",
         );
+        self_stack_same_level_count_gte.walk(
+            c,
+            &format!("{}.self_stack_same_level_count_gte", path),
+            "UNCLASSIFIED_STRING",
+        );
         own_source_stack_color_count_gte.walk(
             c,
             &format!("{}.own_source_stack_color_count_gte", path),
@@ -491,6 +512,8 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         owner.walk(c, &format!("{}.owner", path), "UNCLASSIFIED_STRING");
         other.walk(c, &format!("{}.other", path), "UNCLASSIFIED_STRING");
         is_source.walk(c, &format!("{}.is_source", path), "UNCLASSIFIED_STRING");
+        is_source_card.walk(c, &format!("{}.is_source_card", path), "UNCLASSIFIED_STRING");
+        card_in_zone.walk(c, &format!("{}.card_in_zone", path), "UNCLASSIFIED_STRING");
         of_permanent.walk(
             c,
             &format!("{}.of_permanent", path),
@@ -855,6 +878,16 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             &format!("{}.event_card_trait_has", path),
             "MATCH_OR_DEFINE_TRAIT",
         );
+        event_batch_card_trait_has.walk(
+            c,
+            &format!("{}.event_batch_card_trait_has", path),
+            "MATCH_OR_DEFINE_TRAIT",
+        );
+        event_card_face_up_in_security.walk(
+            c,
+            &format!("{}.event_card_face_up_in_security", path),
+            "UNCLASSIFIED_STRING",
+        );
         event_card_name_contains.walk(
             c,
             &format!("{}.event_card_name_contains", path),
@@ -899,6 +932,16 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         event_target_same_level_as_previous.walk(
             c,
             &format!("{}.event_target_same_level_as_previous", path),
+            "UNCLASSIFIED_STRING",
+        );
+        event_target_has_same_level_source.walk(
+            c,
+            &format!("{}.event_target_has_same_level_source", path),
+            "UNCLASSIFIED_STRING",
+        );
+        event_target_digivolved_from_kind.walk(
+            c,
+            &format!("{}.event_target_digivolved_from_kind", path),
             "UNCLASSIFIED_STRING",
         );
         host_permanent_trait_has.walk(
@@ -1078,6 +1121,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             can_play_from_effect_without_cost.walk(c, &format!("{}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
         can_play_or_use_from_effect.walk(c, &format!("{}.can_play_or_use_from_effect", path), "UNCLASSIFIED_STRING");
         can_play_to_breeding_from_hand.walk(c, &format!("{}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
+        can_play_to_breeding_from_trash.walk(c, &format!("{}.can_play_to_breeding_from_trash", path), "UNCLASSIFIED_STRING");
         can_unsuspend.walk(c, &format!("{}.can_unsuspend", path), "UNCLASSIFIED_STRING");
         owner_can_add_security.walk(c, &format!("{}.owner_can_add_security", path), "UNCLASSIFIED_STRING");
         source_name_is.walk(c, &format!("{}.source_name_is", path), "MATCH_NAME_EXACT");
@@ -1757,6 +1801,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             color_matches_binding,
             color_matches_returned_card,
             name_matches_returned_card,
+            name_matches_source,
             color_matches_own_source_stack,
             trait_has,
             trait_contains,
@@ -1805,6 +1850,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             is_unsuspended,
             can_change_orientation,
             can_attack,
+            has_refireable_effect,
             has_keyword,
             has_security_attack_change,
             has_on_deletion_effect,
@@ -1818,11 +1864,14 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             battle_opponent_no_sources,
             self_source_count,
             self_same_level_source_pairs_gte,
+            self_stack_same_level_count_gte,
             own_source_stack_color_count_gte,
             zone,
             owner,
             other,
             is_source,
+            is_source_card,
+            card_in_zone,
             of_permanent,
             not_in_binding,
             name_not_in_binding,
@@ -1886,6 +1935,8 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             attack_target_change_reason,
             attacker_trait_has,
             event_card_trait_has,
+            event_batch_card_trait_has,
+            event_card_face_up_in_security,
             event_card_name_contains,
             event_card_text_contains,
             event_card_in_text_contains,
@@ -1902,6 +1953,8 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             is_event_host,
             event_is_effect_initiated,
             event_target_same_level_as_previous,
+            event_target_has_same_level_source,
+            event_target_digivolved_from_kind,
             event_cause,
             replacement_cause,
             replacement_source_is_opponent,
@@ -1964,6 +2017,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             can_play_from_effect_without_cost,
             can_play_or_use_from_effect,
             can_play_to_breeding_from_hand,
+            can_play_to_breeding_from_trash,
             can_unsuspend,
             owner_can_add_security,
             controller_can_add_security,
@@ -2011,6 +2065,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         name_matches_returned_card.walk(
             c,
             &format!("{}.name_matches_returned_card", path),
+            "UNCLASSIFIED_STRING",
+        );
+        name_matches_source.walk(
+            c,
+            &format!("{}.name_matches_source", path),
             "UNCLASSIFIED_STRING",
         );
         color_matches_own_source_stack.walk(
@@ -2153,6 +2212,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             "UNCLASSIFIED_STRING",
         );
         can_attack.walk(c, &format!("{}.can_attack", path), "UNCLASSIFIED_STRING");
+        has_refireable_effect.walk(c, &format!("{}.has_refireable_effect", path), "UNCLASSIFIED_STRING");
         has_keyword.walk(c, &format!("{}.has_keyword", path), "UNCLASSIFIED_STRING");
         has_security_attack_change.walk(
             c,
@@ -2214,6 +2274,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             &format!("{}.self_same_level_source_pairs_gte", path),
             "UNCLASSIFIED_STRING",
         );
+        self_stack_same_level_count_gte.walk(
+            c,
+            &format!("{}.self_stack_same_level_count_gte", path),
+            "UNCLASSIFIED_STRING",
+        );
         own_source_stack_color_count_gte.walk(
             c,
             &format!("{}.own_source_stack_color_count_gte", path),
@@ -2223,6 +2288,8 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         owner.walk(c, &format!("{}.owner", path), "UNCLASSIFIED_STRING");
         other.walk(c, &format!("{}.other", path), "UNCLASSIFIED_STRING");
         is_source.walk(c, &format!("{}.is_source", path), "UNCLASSIFIED_STRING");
+        is_source_card.walk(c, &format!("{}.is_source_card", path), "UNCLASSIFIED_STRING");
+        card_in_zone.walk(c, &format!("{}.card_in_zone", path), "UNCLASSIFIED_STRING");
         of_permanent.walk(
             c,
             &format!("{}.of_permanent", path),
@@ -2501,6 +2568,16 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             &format!("{}.event_card_trait_has", path),
             "MATCH_OR_DEFINE_TRAIT",
         );
+        event_batch_card_trait_has.walk(
+            c,
+            &format!("{}.event_batch_card_trait_has", path),
+            "MATCH_OR_DEFINE_TRAIT",
+        );
+        event_card_face_up_in_security.walk(
+            c,
+            &format!("{}.event_card_face_up_in_security", path),
+            "UNCLASSIFIED_STRING",
+        );
         event_card_name_contains.walk(
             c,
             &format!("{}.event_card_name_contains", path),
@@ -2575,6 +2652,16 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         event_target_same_level_as_previous.walk(
             c,
             &format!("{}.event_target_same_level_as_previous", path),
+            "UNCLASSIFIED_STRING",
+        );
+        event_target_has_same_level_source.walk(
+            c,
+            &format!("{}.event_target_has_same_level_source", path),
+            "UNCLASSIFIED_STRING",
+        );
+        event_target_digivolved_from_kind.walk(
+            c,
+            &format!("{}.event_target_digivolved_from_kind", path),
             "UNCLASSIFIED_STRING",
         );
         event_cause.walk(c, &format!("{}.event_cause", path), "UNCLASSIFIED_STRING");
@@ -2815,6 +2902,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             can_play_from_effect_without_cost.walk(c, &format!("{}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
         can_play_or_use_from_effect.walk(c, &format!("{}.can_play_or_use_from_effect", path), "UNCLASSIFIED_STRING");
         can_play_to_breeding_from_hand.walk(c, &format!("{}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
+        can_play_to_breeding_from_trash.walk(c, &format!("{}.can_play_to_breeding_from_trash", path), "UNCLASSIFIED_STRING");
         can_unsuspend.walk(c, &format!("{}.can_unsuspend", path), "UNCLASSIFIED_STRING");
         owner_can_add_security.walk(c, &format!("{}.owner_can_add_security", path), "UNCLASSIFIED_STRING");
         controller_can_add_security.walk(c, &format!("{}.controller_can_add_security", path), "UNCLASSIFIED_STRING");

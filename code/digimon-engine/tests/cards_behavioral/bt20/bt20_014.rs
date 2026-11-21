@@ -217,3 +217,45 @@ fn bt20_014_failed_payment_after_selection_cannot_evolve() {
         "BT20-014"
     );
 }
+
+/// DCGO `BT20_014.cs` gates the [On Play]/[When Digivolving] delete's
+/// `CanActivateCondition` on `HasMatchConditionPermanent`, so with no
+/// opponent Digimon of 5000 DP or less it is not an entry of the
+/// `MultipleSkills` order list: a sibling trigger (Sistermon Ciel BT10-085's
+/// "digivolves into a Huckmon" memory gain) resolves alone, no `TriggerOrder`.
+/// With a legal target both are listed. G-ENGINE-TRIGGER-ORDER-NO-TARGET-ENTRY.
+#[test]
+fn bt20_014_no_target_delete_is_not_a_trigger_order_entry() {
+    use digimon_engine::selection::SelectionKind;
+    for has_target in [false, true] {
+        let mut r = builder()
+            .dsl_card("BT10-085")
+            .expect("BT10-085 production YAML")
+            .hand(0, &["BT20-014"])
+            .start();
+        r.place_on_field(0, "BT10-085", None);
+        r.place_on_field(0, "BASE", None);
+        r.place_on_field(1, "BIG", None);
+        if has_target {
+            r.place_on_field(1, "SMALL", None);
+        }
+        let a = encode_digivolve(0, 1);
+        assert_eq!(build_action_mask(&r.game, 0)[a as usize], 1.0);
+        r.game.decode_action(a, 0);
+        if has_target {
+            assert_eq!(
+                r.pending_kind(),
+                Some(SelectionKind::TriggerOrder),
+                "delete (a target exists) and the Sistermon memory gain are both listed"
+            );
+        } else {
+            assert_ne!(
+                r.pending_kind(),
+                Some(SelectionKind::TriggerOrder),
+                "no legal delete target: the delete is not an orderable entry"
+            );
+            assert!(r.pending_selection().is_none(), "the memory gain resolves alone");
+            assert_eq!(r.memory(), 8, "10 - 3 digivolve cost + 1 from BT10-085");
+        }
+    }
+}

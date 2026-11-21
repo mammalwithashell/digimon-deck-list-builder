@@ -529,6 +529,17 @@ pub enum DelayTrigger {
     EndOfYourNextTurn,
     EndOfThisTurn,
     StartOfYourNextTurn,
+    /// Printed `[End of All Turns] <Delay>` (P-193): the window opens at the
+    /// end of EVERY turn after the placing turn -- the controller's and the
+    /// opponent's alike (CR 4.3 15-16-12-3 "[End of All Turns]"; DCGO
+    /// `EffectTiming.OnEndTurn`, whose `StackSkillInfos(null, OnEndTurn)`
+    /// collects every battle-area permanent whichever player's turn ends, gated
+    /// by `CanDeclareOptionDelayEffect` = the enter-field turn is not the
+    /// current turn). Activation is optional (16-17-2): a decline leaves the
+    /// Option in the battle area and its window moves to the next turn end
+    /// (`compute_delay_trash_turn` yields `turn_count + 1`, which is also the
+    /// first window after the placing turn).
+    EndOfAllTurns,
     OnEvent(EffectTiming),
     /// The `<Delay>`'s activation window is NOT owned by the delay machinery.
     ///
@@ -546,16 +557,10 @@ pub enum DelayTrigger {
     ///     BT20-100 The Last Guardian, ST20-14. The replacement registry sees
     ///     the window, prompts, and pays the trash-self cost itself
     ///     (`delete_permanent: { target: source }`).
-    ///   * NO owner clause at all: BT24-093, whose `<Delay>` is deliberately
-    ///     unauthored (`BT24-093.yaml:146`, "BLOCKED -- see gap notes above")
-    ///     while its `place_self_as_delay_option` step is live. So the name of
-    ///     this variant OVERSTATES that card: nothing gates it, and it now
-    ///     parks inert for the rest of the game instead of being auto-trashed.
-    ///     That is still the better of the two wrongs -- 16-17-1 says the card
-    ///     stays in the battle area, and the missing activation is the
-    ///     pre-existing BLOCKED gap, not something introduced here -- but it is
-    ///     untested behaviour on a card this change never opened. Do not read
-    ///     the variant name as a promise that a gate exists.
+    ///   * (BT24-093 used to be listed here as a card with NO owner clause; its
+    ///     `<Delay>` is now authored as `trigger: on_own_security_removed`, i.e.
+    ///     `OnEvent(OnOwnSecurityRemoved)`. A card whose `<Delay>` clause is ever
+    ///     missing again parks inert -- the variant name promises no gate.)
     ///
     /// This variant means: **park the carrier and do nothing else.** The delay
     /// machinery must not schedule an auto-trash

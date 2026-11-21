@@ -42,7 +42,7 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
     CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, Keyword, PlaySource};
@@ -258,6 +258,10 @@ fn p_207_when_attacking_clause_is_optional_and_once_per_turn() {
         "DCGO maxUsableCount: 1 — the When Attacking clause IS once per turn"
     );
     assert_eq!(clause.scope, CompiledScope::FaceUp);
+    assert!(
+        clause.outer_prompt,
+        "DCGO always shows the yes/no activation, even with nothing to play"
+    );
 }
 
 #[test]
@@ -691,7 +695,23 @@ fn p_207_on_play_via_hand_play_offers_free_play_prompt() {
 // SECTION 7 — When Attacking [OPT]: filter positive/negative + behavior
 // ─────────────────────────────────────────────────────────────────────────────
 
-fn attack_and_get_trash_prompt(traits: &[&str], level: u8) -> DebugRunner {
+/// DCGO ALWAYS shows the [When Attacking] effect's yes/no activation (P_207.cs
+/// `isOptional: true`; CanActivateCondition is only
+/// `IsExistOnBattleAreaDigimon`): assert it is parked, then accept it. The
+/// optional trash pick (`canNoSelect: true`) follows.
+fn accept_activation_gate(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional 'use this effect?' prompt is parked");
+    assert_eq!(view.kind, SelectionKind::Replacement, "yes/no activation prompt");
+    assert!(view.is_optional, "the activation is the player's choice");
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accepting the activation is legal");
+}
+
+/// Attack with a trash candidate; the yes/no activation is left PENDING.
+fn attack_and_get_gate(traits: &[&str], level: u8) -> DebugRunner {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("parses")
@@ -719,6 +739,14 @@ fn attack_and_get_trash_prompt(traits: &[&str], level: u8) -> DebugRunner {
 
     let mine = runner.place_on_field(0, CARD_ID, Some(0));
     runner.attack_player(mine, 1, false);
+    runner
+}
+
+/// As `attack_and_get_gate`, then accept the yes/no activation: what is pending
+/// afterwards is the optional trash pick (or nothing when no card qualifies).
+fn attack_and_get_trash_prompt(traits: &[&str], level: u8) -> DebugRunner {
+    let mut runner = attack_and_get_gate(traits, level);
+    accept_activation_gate(&mut runner);
     runner
 }
 
@@ -810,9 +838,9 @@ fn p_207_when_attacking_declining_leaves_candidate_in_trash() {
 /// again (G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT).
 #[test]
 fn p_207_declined_when_attacking_is_offered_again_same_turn_q1818() {
-    let mut runner = attack_and_get_trash_prompt(&["Beast"], 4);
-    // Decline the first offer: the whole effect is a "may" (DCGO P_207.cs
-    // `isOptional: true`), so declining it does not use the [Once Per Turn].
+    let mut runner = attack_and_get_gate(&["Beast"], 4);
+    // Decline the yes/no activation (DCGO P_207.cs `isOptional: true`): not
+    // activating the effect does not use the [Once Per Turn].
     runner
         .execute_action(0, PASS)
         .expect("decline the first free play");
@@ -841,6 +869,41 @@ fn p_207_declined_when_attacking_is_offered_again_same_turn_q1818() {
         runner.pending_selection().is_some(),
         "Q1818: the declined When Attacking effect is offered again on the second attack"
     );
+}
+
+/// The inverse: accepting the activation and then passing the optional trash
+/// pick has used the effect, so the second attack the same turn offers nothing.
+#[test]
+fn p_207_accepted_when_attacking_then_passed_pick_spends_the_use() {
+    let mut runner = attack_and_get_trash_prompt(&["Beast"], 4);
+    runner.execute_action(0, PASS).expect("pass the trash pick");
+    let _ = runner.auto_resolve();
+    let mine = runner.perm_handle(0, 0);
+    runner.game.players[0].battle_area[mine.index as usize].is_suspended = false;
+    let fill_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "FILL")
+        .unwrap();
+    let next = runner.game.next_card_index();
+    runner.game.players[1]
+        .security
+        .push(digimon_engine::card_source::CardSource::new(fill_idx, 1, next));
+    runner.attack_player(mine, 1, false);
+    assert!(
+        runner.pending_selection().is_none(),
+        "an activated [Once Per Turn] effect is spent"
+    );
+}
+
+/// With nothing in the trash DCGO still shows the yes/no activation.
+#[test]
+fn p_207_when_attacking_gate_is_offered_with_no_trash_candidate() {
+    let mut runner = attack_and_get_gate(&["Sea Animal"], 4);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
+    accept_activation_gate(&mut runner);
+    assert!(runner.pending_selection().is_none(), "no candidate: no pick");
 }
 
 #[test]
@@ -1155,6 +1218,8 @@ fn p207_attack_with(setup: impl FnOnce(&mut DebugRunner)) -> DebugRunner {
     let mine = runner.place_on_field(0, CARD_ID, Some(0));
     setup(&mut runner);
     runner.attack_player(mine, 1, false);
+    // DCGO's yes/no activation is shown regardless of what can be played.
+    accept_activation_gate(&mut runner);
     runner
 }
 

@@ -126,6 +126,20 @@ color: [black]
 cost: 5
 traits: [CS]
 
+# From-hand colour bypass. The `kind: flood_gate` clause below is a FIELD-scoped
+# declarative modifier and never applies to an Option still in the hand; a
+# card-level `use_requirement` is what the action mask / `play_option_from_hand`
+# consult (`option_use_requirement_or_color_available`). It mirrors the gate:
+# a [CS] Digimon or Tamer on the field -- battle AND breeding area (CR 4.3 3-4-6;
+# DCGO IgnoreColorConditionClass scans `HasMatchConditionPermanent(.., true)`).
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: CS
+    any_of:
+      - kind: digimon
+      - kind: tamer
+
 effects:
   # ─── Clause 0: Color bypass (conditional IgnoreColorRequirement) ──────────
   #
@@ -142,11 +156,11 @@ effects:
   - kind: flood_gate
     active_when:
       any_of:
-        - any_permanent:
+        - any_field_permanent:
             of: you
             kind: digimon
             trait_has: CS
-        - any_permanent:
+        - any_field_permanent:
             of: you
             kind: tamer
             trait_has: CS

@@ -177,6 +177,57 @@ fn eval_predicate_ref_known(
     bindings: Option<&Bindings>,
     inherited_ref: DualRef,
 ) -> bool {
+    if let Some(want) = pred.is_source_card {
+        // G-DSL-IS-SOURCE-CARD: the subject CARD is the effect's own source
+        // card. A permanent subject is addressed by its top card.
+        let is_src = match subject {
+            PredicateSubject::Card(card) | PredicateSubject::RevealedCard(card) => {
+                card == rctx.source_card
+            }
+            PredicateSubject::Source(source) => source.card == rctx.source_card,
+            PredicateSubject::Permanent(handle) => permanent_for_handle(rctx, handle)
+                .is_some_and(|perm| perm.top_card().handle() == rctx.source_card),
+            _ => false,
+        };
+        if is_src != want {
+            return false;
+        }
+    }
+    if !pred.card_in_zone.is_empty() {
+        // G-DSL-CARD-IN-ZONE: where the subject CARD currently lies. A
+        // battle-area stack's top card is `battle_area`; the cards under it
+        // are `material`.
+        let card = match subject {
+            PredicateSubject::Card(card) | PredicateSubject::RevealedCard(card) => Some(card),
+            PredicateSubject::Source(source) => Some(source.card),
+            _ => None,
+        };
+        let zone = card.and_then(|card| {
+            use crate::enums::CardSourceRef;
+            Some(match rctx.game.locate_card_source_ref(card)? {
+                CardSourceRef::Hand(..) => CompiledZone::Hand,
+                CardSourceRef::Trash(..) => CompiledZone::Trash,
+                CardSourceRef::Security(..) | CardSourceRef::PendingSecurity => {
+                    CompiledZone::Security
+                }
+                CardSourceRef::Reveal(_) => CompiledZone::Reveal,
+                CardSourceRef::DeckTop(_) => CompiledZone::Deck,
+                CardSourceRef::Material(host, _) => {
+                    if permanent_for_handle(rctx, host)
+                        .is_some_and(|perm| perm.top_card().handle() == card)
+                    {
+                        CompiledZone::BattleArea
+                    } else {
+                        CompiledZone::Material
+                    }
+                }
+                CardSourceRef::Link(..) => CompiledZone::Material,
+            })
+        });
+        if !zone.is_some_and(|zone| pred.card_in_zone.contains(&zone)) {
+            return false;
+        }
+    }
     if let Some(want) = pred.can_digivolve_into_source_card {
         let possible = match subject {
             PredicateSubject::Permanent(handle) => can_card_digivolve_onto(rctx, rctx.source_card, handle),
@@ -706,6 +757,25 @@ fn eval_predicate_ref_known(
             return false;
         }
     }
+    if let Some(floor) = pred.self_stack_same_level_count_gte {
+        // G-DSL-SELF-STACK-SAME-LEVEL-COUNT: the carrier's whole stack (top
+        // card included) holds >= `floor` face-up cards of a single level.
+        let satisfied = rctx
+            .source_permanent
+            .and_then(|handle| permanent_for_handle(rctx, handle))
+            .is_some_and(|perm| {
+                let mut counts = std::collections::BTreeMap::<u8, u8>::new();
+                for card in perm.card_sources.iter().filter(|card| !card.face_down) {
+                    if let Some(level) = card.level(rctx.card_data()) {
+                        *counts.entry(level).or_default() += 1;
+                    }
+                }
+                counts.values().any(|count| *count >= floor)
+            });
+        if !satisfied {
+            return false;
+        }
+    }
     if let Some(floor) = pred.own_source_stack_color_count_gte {
         // G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD: distinct colors among
         // the effect CARRIER's NON-FLIPPED digivolution sources (top card
@@ -892,10 +962,17 @@ fn eval_predicate_ref_known(
     // its text." In an inherited while_condition context the subject is
     // the carrier permanent.
     if let Some(ref needle) = pred.rules_text_contains {
-        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+        // BT12-006 Monimon: an inherited [On Deletion] "If this Digimon has
+        // <Save> in its text" gates on the carrier that was JUST deleted. By
+        // the time the effect resolves the carrier is already in the trash
+        // (rule 25) and its battle-area slot may be empty or reoccupied by a
+        // different Digimon, so the carrier's top card is read from the
+        // deletion's last-known-information snapshot (DCGO captures
+        // `permanent.TopCard.HasSaveText` in the deletion hashtable).
+        let Some(top_card) = carrier_top_card(subject, rctx) else {
             return false;
         };
-        let Some(data) = rctx.game.card_data_for_handle(perm.top_card().handle()) else {
+        let Some(data) = rctx.game.card_data_for_handle(top_card) else {
             return false;
         };
         let needle_lc = needle.to_lowercase();
@@ -1696,11 +1773,13 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.source_count.is_none()
         && pred.link_card_count.is_none()
         && pred.can_attack.is_none()
+        && pred.has_refireable_effect.is_none()
         && pred.can_change_orientation.is_none()
         && pred.can_play_from_effect_without_cost.is_none()
         && pred.can_play_or_use_from_effect.is_none()
         && pred.affordable_with_cost.is_none()
         && pred.can_play_to_breeding_from_hand.is_none()
+        && pred.can_play_to_breeding_from_trash.is_none()
         && pred.can_move_from_breeding_by_effect.is_none()
         && pred.can_digivolve_onto_with_cost.is_none()
         && pred.this_card_can_digivolve_onto.is_none()
@@ -1719,6 +1798,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.color_matches_binding.is_none()
         && pred.color_matches_returned_card.is_none()
         && pred.name_matches_returned_card.is_none()
+        && pred.name_matches_source.is_none()
         && pred.color_matches_own_source_stack.is_none()
         && pred.trait_has.is_none()
         && pred.trait_contains.is_none()
@@ -2549,6 +2629,49 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(ref trait_name) = pred.event_batch_card_trait_has {
+        // G-DSL-EVENT-BATCH-CARD-TRAIT-HAS: ANY card of the event's moved-card
+        // batch has the trait. A top-stack trash event carries every card one
+        // <De-Digivolve> instance trashed at the same time (CR 4.3 16-12-5);
+        // DCGO `CanTriggerWhenTopCardTrashed` fires when `cards.Count(card =>
+        // cardCondition(card)) >= 1`. (`event_card_trait_has` only sees the
+        // one-card alias.)
+        let matched = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| {
+                trigger.moved_card_sets.iter().any(|set| {
+                    set.cards.iter().any(|card| {
+                        rctx.game.card_data_for_handle(*card).is_some_and(|data| {
+                            data.traits
+                                .iter()
+                                .any(|t| t.eq_ignore_ascii_case(trait_name))
+                        })
+                    })
+                })
+            })
+            .unwrap_or(false);
+        if !matched {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_card_face_up_in_security {
+        // EX11-003 Puroromon: the placed card's orientation in the security
+        // stack it entered (`affected_player` owns that stack; the face-up
+        // marker is set before the placement observers fire).
+        let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
+            return false;
+        };
+        let (Some(card), Some(owner)) = (trigger.event_card.read(), trigger.affected_player)
+        else {
+            return false;
+        };
+        let actual = rctx.game.player(owner).face_up_security.contains(&card.0);
+        if actual != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_card_kind {
         let Some(data) = rctx
             .event_card()
@@ -2683,6 +2806,45 @@ fn eval_event_fields(
         }
         let actual = event_target_same_level_as_previous(rctx).unwrap_or(false);
         if actual != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_target_has_same_level_source {
+        // G-DSL-EVENT-TARGET-HAS-SAME-LEVEL-SOURCE: same liveness guard as
+        // `event_target_same_level_as_previous` -- a departed event permanent
+        // has no stack left to read.
+        if rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .is_some_and(|trigger| {
+                trigger.event_permanent_identity.is_some()
+                    && trigger.resolve_event_permanent(rctx.game).is_none()
+            })
+        {
+            return false;
+        }
+        let actual = event_target_has_same_level_source(rctx).unwrap_or(false);
+        if actual != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_target_digivolved_from_kind {
+        // G-DSL-EVENT-TARGET-DIGIVOLVED-FROM-KIND: same liveness guard as
+        // `event_target_same_level_as_previous` — a departed event permanent
+        // has no stack left to read.
+        if rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .is_some_and(|trigger| {
+                trigger.event_permanent_identity.is_some()
+                    && trigger.resolve_event_permanent(rctx.game).is_none()
+            })
+        {
+            return false;
+        }
+        if !event_target_digivolved_from_kind(rctx, want) {
             return false;
         }
     }
@@ -2993,6 +3155,45 @@ fn subject_or_source_permanent<'a>(
     }
 }
 
+/// Top card of the permanent carrying the effect being evaluated. While the
+/// carrier is on the field this is its live top card. When the effect fires
+/// from the carrier's own deletion, the carrier has left the field, so the
+/// trigger's `deleted_object` snapshot (captured before removal) names the top
+/// card instead -- the source card is then either that top card or one of the
+/// digivolution cards the snapshot recorded beneath it. A different Digimon's
+/// deletion (an observer clause) never matches the snapshot, so the live
+/// carrier is read as before.
+fn carrier_top_card(
+    subject: PredicateSubject,
+    rctx: &EffectReadContext<'_>,
+) -> Option<CardHandle> {
+    // The subject names this effect's own carrier: a card / source subject, or
+    // (an inherited clause's gate) the carrier permanent by its handle.
+    let carrier_subject = match subject {
+        PredicateSubject::Permanent(handle) => rctx.source_permanent == Some(handle),
+        PredicateSubject::BreedingPermanent(_) => false,
+        PredicateSubject::Card(_)
+        | PredicateSubject::RevealedCard(_)
+        | PredicateSubject::Source(_)
+        | PredicateSubject::None => true,
+    };
+    if carrier_subject {
+        if let Some(snapshot) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+        {
+            if snapshot.top_card == rctx.source_card
+                || snapshot.digisources_just_before.contains(&rctx.source_card)
+            {
+                return Some(snapshot.top_card);
+            }
+        }
+    }
+    subject_or_source_permanent(subject, rctx).map(|perm| perm.top_card().handle())
+}
+
 fn permanent_for_handle<'a>(
     rctx: &'a EffectReadContext<'_>,
     handle: PermanentHandle,
@@ -3281,6 +3482,55 @@ fn event_target_dp(rctx: &EffectReadContext<'_>) -> Option<i32> {
     None
 }
 
+/// True when the card directly under the event permanent's new top card (the
+/// card it digivolved from) has category `want`. DCGO reads the same thing
+/// from the `evoRoots` of the enter-field hashtable.
+fn event_target_digivolved_from_kind(rctx: &EffectReadContext<'_>, want: CompiledCardKind) -> bool {
+    let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
+        return false;
+    };
+    let handle = if trigger.event_permanent_identity.is_some() {
+        trigger.resolve_event_permanent(rctx.game)
+    } else {
+        trigger.event_permanent.or(trigger.target_permanent)
+    };
+    let Some(handle) = handle else {
+        return false;
+    };
+    let Some(permanent) = permanent_for_handle(rctx, handle) else {
+        return false;
+    };
+    let Some(previous) = permanent.card_sources.iter().rev().nth(1) else {
+        return false;
+    };
+    let Some(data) = rctx.game.card_data.get(previous.data_index) else {
+        return false;
+    };
+    kind_matches_card_search(want, data)
+}
+
+/// True when the event permanent has a FACE-UP digivolution card whose level
+/// equals the permanent's own current level (its top card's level). Face-down
+/// digivolution cards have no characteristics (CR 4.3 4-7-9), so they never
+/// count. DCGO `permanent.DigivolutionCards.Filter(x => x.HasLevel && x.Level
+/// == permanent.Level).Count >= 1` (BT22_093.cs). `None` when the event
+/// permanent or its top card's level cannot be read.
+fn event_target_has_same_level_source(rctx: &EffectReadContext<'_>) -> Option<bool> {
+    let trigger = rctx.game.current_trigger_context.as_ref()?;
+    let handle = if trigger.event_permanent_identity.is_some() {
+        trigger.resolve_event_permanent(rctx.game)?
+    } else {
+        trigger.event_permanent.or(trigger.target_permanent)?
+    };
+    let permanent = permanent_for_handle(rctx, handle)?;
+    let top = permanent.card_sources.last()?;
+    let top_level = rctx.game.card_data[top.data_index].level?;
+    let under = permanent.card_sources.len() - 1;
+    Some(permanent.card_sources[..under].iter().any(|source| {
+        !source.face_down && rctx.game.card_data[source.data_index].level == Some(top_level)
+    }))
+}
+
 fn event_target_same_level_as_previous(rctx: &EffectReadContext<'_>) -> Option<bool> {
     let trigger = rctx.game.current_trigger_context.as_ref()?;
     // Last-known information (a deletion snapshot, or a clause gate's view of
@@ -3376,7 +3626,7 @@ printed_card_information_constraints!(
     kind, level_eq, level_eq_binding, level_lte_binding, level_gte_binding,
     level_lte, level_gte, level_matches_aggregate, color_is, color_only,
     color_matches_any_field_digimon, color_matches_binding, color_matches_returned_card,
-    name_matches_returned_card, color_matches_own_source_stack, trait_has, trait_contains, form_is, attribute_is,
+    name_matches_returned_card, name_matches_source, color_matches_own_source_stack, trait_has, trait_contains, form_is, attribute_is,
     name_is, name_contains, name_in, name_not_shared_by_field_digimon,
     name_not_shared_by_field_tamer, name_not_in_binding, card_number_is,
     effect_text_contains, in_text_contains, printed_keyword, has_keyword,
@@ -3401,6 +3651,7 @@ fn eval_card_fields(
         && (pred.source_count.is_some()
             || pred.link_card_count.is_some()
             || pred.can_attack.is_some()
+            || pred.has_refireable_effect.is_some()
             || pred.can_change_orientation.is_some())
     {
         return false;
@@ -3448,6 +3699,30 @@ fn eval_card_fields(
         (Some(d), false) => d.digimon.colors.as_slice(),
         (None, _) => data.colors.as_slice(),
     };
+    if let Some(want) = pred.can_play_to_breeding_from_trash {
+        let can = rctx
+            .game
+            .card_source_for_handle(card)
+            .is_some_and(|source| {
+                let owner = source.owner;
+                rctx.game
+                    .players
+                    .get(owner as usize)
+                    .and_then(|player| {
+                        player
+                            .trash
+                            .iter()
+                            .position(|candidate| candidate.handle() == card)
+                    })
+                    .is_some_and(|index| {
+                        rctx.game
+                            .can_play_to_breeding_from_trash(owner, index, rctx.player)
+                    })
+            });
+        if can != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.can_play_to_breeding_from_hand {
         let can = rctx
             .game
@@ -3664,6 +3939,18 @@ fn eval_card_fields(
             names.extend(source.also_treated_as.iter().cloned());
         }
         if card_shares_name_with_returned_card(rctx, bindings, &names) != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.name_matches_source {
+        // G-DSL-NAME-MATCHES-SOURCE -- printed name + static aliases + physical
+        // runtime aliases of the candidate card vs the source permanent's names.
+        let mut names = vec![data.card_name.clone()];
+        names.extend(data.also_treated_as.iter().cloned());
+        if let Some(source) = rctx.game.card_source_for_handle(card) {
+            names.extend(source.also_treated_as.iter().cloned());
+        }
+        if card_shares_name_with_source(rctx, &names) != want {
             return false;
         }
     }
@@ -4600,6 +4887,27 @@ fn card_shares_name_with_returned_card(
     })
 }
 
+/// G-DSL-NAME-MATCHES-SOURCE -- true when any of `candidate_names` equals a name
+/// of the effect source (carrier) permanent's synthesized top card (DCGO
+/// `TopCard.HasSameCardName(card.PermanentOfThisCard().TopCard)`; base-name
+/// overlays applied). False when there is no source permanent on the field.
+fn card_shares_name_with_source(
+    rctx: &EffectReadContext<'_>,
+    candidate_names: &[String],
+) -> bool {
+    let Some(source) = rctx.source_permanent else {
+        return false;
+    };
+    let Some(perm) = permanent_for_handle(rctx, source) else {
+        return false;
+    };
+    let synth = perm.synth_identity(rctx.card_data(), &rctx.game.modifiers, source);
+    synth
+        .card_names
+        .iter()
+        .any(|name| candidate_names.iter().any(|c| c == name))
+}
+
 fn eval_permanent_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
@@ -4764,6 +5072,14 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    // G-DSL-NAME-MATCHES-SOURCE -- compare the candidate permanent's
+    // synthesized names with the source permanent's.
+    let has_name_source_comparison = pred.name_matches_source.is_some();
+    if let Some(want) = pred.name_matches_source {
+        if card_shares_name_with_source(rctx, &synth_identity.card_names) != want {
+            return false;
+        }
+    }
     let has_dp_constraint = pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some();
     // `kind` for a field permanent is authoritatively checked below against
     // `synth_identity.kind` via `kind_matches_field` (which treats a battle-area
@@ -4790,6 +5106,7 @@ fn eval_permanent_fields(
     let delegated_pred_storage;
     let delegated_pred = if has_color_comparison
         || has_name_returned_comparison
+        || has_name_source_comparison
         || has_kind_constraint
         || level_eq_dna_match
         || trait_overlay_match
@@ -4810,6 +5127,7 @@ fn eval_permanent_fields(
         p.color_matches_binding = None;
         p.color_matches_returned_card = None;
         p.name_matches_returned_card = None;
+        p.name_matches_source = None;
         p.color_matches_own_source_stack = None;
         if has_kind_constraint {
             // Authoritative permanent-kind check is `kind_matches_field`
@@ -4978,6 +5296,16 @@ fn eval_permanent_fields(
     }
     if let Some(want) = pred.has_security_attack_change {
         if rctx.game.has_security_attack_change(handle) != want {
+            return false;
+        }
+    }
+    if let Some(timing) = &pred.has_refireable_effect {
+        // G-DSL-HAS-REFIREABLE-EFFECT: DCGO BT24_102.cs:93-98 offers only the
+        // Digimon whose effect list holds a refire candidate.
+        let Some(filter) = crate::effect::TimingFilter::from_refire_timing(timing) else {
+            return false;
+        };
+        if !rctx.game.has_refireable_effect(handle, filter) {
             return false;
         }
     }
@@ -5194,7 +5522,8 @@ fn aggregate_level(
         CompiledAggregateSelector::LowestDp
         | CompiledAggregateSelector::HighestDp
         | CompiledAggregateSelector::FewestMaterials
-        | CompiledAggregateSelector::LowestPlayCost => None,
+        | CompiledAggregateSelector::LowestPlayCost
+        | CompiledAggregateSelector::HighestPlayCost => None,
     }
 }
 
@@ -5237,7 +5566,8 @@ fn aggregate_material_count(
         | CompiledAggregateSelector::HighestDp
         | CompiledAggregateSelector::LowestLevel
         | CompiledAggregateSelector::HighestLevel
-        | CompiledAggregateSelector::LowestPlayCost => None,
+        | CompiledAggregateSelector::LowestPlayCost
+        | CompiledAggregateSelector::HighestPlayCost => None,
     }
 }
 
@@ -5504,6 +5834,7 @@ fn eval_breeding_permanent_fields(
         && pred.can_unsuspend.is_none()
         && pred.owner_can_add_security.is_none()
         && pred.can_attack.is_none()
+        && pred.has_refireable_effect.is_none()
 }
 
 fn kind_matches(want: CompiledCardKind, got: CardKind) -> bool {

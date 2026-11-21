@@ -34,9 +34,25 @@ use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::selection::SelectionKind;
 
 // ─── Helper builders ─────────────────────────────────────────────────────────
+
+/// The yes/no activation prompt DCGO always shows for this effect
+/// (`BT21_001.cs:21` `isOptional: true`): assert it is parked, then accept it.
+/// The effect is then in use (CR 4.3 15-7-4 / 15-7-5), whether or not a
+/// digivolve candidate exists.
+fn accept_activation_gate(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional 'use this effect?' prompt is parked");
+    assert_eq!(view.kind, SelectionKind::Replacement, "yes/no activation prompt");
+    assert!(view.is_optional, "the activation is the player's choice");
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accepting the activation is legal");
+}
 
 /// A Lv.4 [Reptile] Digimon that digivolves from a red Lv.3 for `cost`.
 fn make_reptile_costing(id: &str, cost: u16) -> CardData {
@@ -187,10 +203,14 @@ fn bt21_001_inherited_clause_scope_timing_opt_flags() {
         "BT21-001's inherited clause must be once_per_turn (OPT)"
     );
     // The whole effect is one "may": DCGO BT21_001.cs `SetUpActivateClass(..,
-    // 1, true, ..)` (`isOptional`). The clause is `optional: true` with the
-    // "may" folded into the permanent pick, so passing it keeps the
-    // [Once Per Turn] (Q1818; G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT).
+    // 1, true, ..)` (`isOptional`). The clause is `optional: true` with a
+    // forced `outer_prompt`, so declining the yes/no keeps the [Once Per Turn]
+    // (Q1818).
     assert!(clause.optional, "\"may digivolve\" covers the whole effect");
+    assert!(
+        clause.outer_prompt,
+        "DCGO always shows the yes/no activation, even with no digivolve candidate"
+    );
 }
 
 // ─── Section 2: Condition gating ────────────────────────────────────────────
@@ -258,12 +278,15 @@ fn bt21_001_inherited_fires_on_your_turn_and_installs_selection() {
     // P0 attacks P1's security → removes a security card.
     runner.attack_player(carrier, 1, false);
 
-    // After the security removal the inherited clause should install a
-    // pending_selection (optional own-field digimon pick).
+    // After the security removal the inherited clause parks DCGO's yes/no
+    // activation prompt; accepting it then surfaces the optional own-field
+    // Digimon pick.
     assert!(
         runner.pending_selection().is_some(),
         "BT21-001's inherited clause should install a selection on P0's turn after security removal"
     );
+    accept_activation_gate(&mut runner);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
 }
 
 // ─── Section 3: Behavioral per-branch (selection path) ──────────────────────
@@ -288,6 +311,7 @@ fn bt21_001_declining_permanent_selection_no_digivolve() {
     let field_before = runner.battle_area_size(0);
 
     runner.attack_player(carrier, 1, false);
+    accept_activation_gate(&mut runner);
 
     // Selection must be optional (DCGO canNoSelect = true).
     assert!(
@@ -337,6 +361,7 @@ fn bt21_001_selecting_permanent_then_hand_card_triggers_digivolve_cost_minus_1()
     let carrier = place_gigimon_as_source(&mut runner, "CARRIER");
 
     runner.attack_player(carrier, 1, false);
+    accept_activation_gate(&mut runner);
 
     // Step 1: select a Digimon on P0's field (should be OwnField selection).
     {
@@ -438,7 +463,8 @@ fn offered_ids(runner: &DebugRunner) -> Vec<u16> {
 /// Lv.5) is not offered; the red Lv.3 carrier is.
 #[test]
 fn bt21_001_permanent_pick_excludes_a_digimon_without_a_legal_digivolve() {
-    let (runner, carrier, _extra) = security_removed_runner(&["LV5-BASE"], &["REPTILE-HAND"]);
+    let (mut runner, carrier, _extra) = security_removed_runner(&["LV5-BASE"], &["REPTILE-HAND"]);
+    accept_activation_gate(&mut runner);
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
     assert_eq!(
         offered_ids(&runner),
@@ -447,10 +473,14 @@ fn bt21_001_permanent_pick_excludes_a_digimon_without_a_legal_digivolve() {
 }
 
 /// The only matching hand card can't be paid for even with the -1: no
-/// Digimon is offered, so no pick appears.
+/// Digimon is offered, so no pick appears. DCGO still shows the yes/no
+/// activation prompt (its CanActivateCondition, BT21_001.cs:60-63, only needs
+/// a Digimon on the battle area); accepting it finds no candidate (:68
+/// `maxCount = Min(1, count)`) and the effect ends.
 #[test]
 fn bt21_001_unpayable_digivolve_offers_no_pick() {
-    let (runner, _carrier, _extra) = security_removed_runner(&[], &["REPTILE-PRICY"]);
+    let (mut runner, _carrier, _extra) = security_removed_runner(&[], &["REPTILE-PRICY"]);
+    accept_activation_gate(&mut runner);
     assert!(
         runner.pending_selection().is_none(),
         "no payable digivolve: {:?}",
@@ -467,6 +497,7 @@ fn bt21_001_hand_pick_offers_only_payable_routes_onto_the_chosen_digimon() {
         &[],
         &["REPTILE-PRICY", "REPTILE-LV6", "REPTILE-HAND"],
     );
+    accept_activation_gate(&mut runner);
     runner
         .execute_action(0, digimon_engine::action::space::encode_attack(0, carrier.index as u16))
         .unwrap();
@@ -556,11 +587,11 @@ fn bt21_001_opt_resets_after_end_turn() {
 
     let carrier = place_gigimon_as_source(&mut runner, "CARRIER");
 
-    // Turn 1: fire OPT and decline.
+    // Turn 1: activate (accept the yes/no prompt) and pass the digivolve pick:
+    // the activated use is spent whether or not a digivolve followed.
     runner.attack_player(carrier, 1, false);
-    runner
-        .execute_action(0, digimon_engine::action::space::PASS)
-        .unwrap();
+    accept_activation_gate(&mut runner);
+    runner.execute_action(0, PASS).unwrap();
     let _ = runner.auto_resolve();
 
     if runner.game_over() {
@@ -579,10 +610,100 @@ fn bt21_001_opt_resets_after_end_turn() {
     let carrier3 = runner.perm_handle(0, 0);
     runner.attack_player(carrier3, 1, false);
 
-    // After the security removal, selection should install (OPT reset).
+    // After the security removal, the activation prompt installs (OPT reset).
     assert!(
         runner.pending_selection().is_some(),
         "OPT must reset after end_turn; inherited should fire again on P0's next turn"
+    );
+}
+
+// ─── Section 5b: DCGO's always-shown yes/no activation (isOptional) ─────────
+// BT21_001.cs:21 registers the effect with `isOptional: true`, and its
+// CanActivateCondition (:60-63) is only `IsExistOnBattleAreaDigimon(card)`:
+// the OptionalSkill "use this effect?" prompt appears whether or not any
+// Digimon can digivolve (the candidate check is inside ActivateCoroutine,
+// :68). A decline keeps the [Once Per Turn] use (Q1818, CR 4.3
+// 15-14-1-4); an accepted activation spends it (15-7-4 / 15-7-5) even when it
+// then finds nothing to digivolve.
+
+/// Fire the removal with no hand card any Digimon can digivolve into, then
+/// attack a second time in the same turn. Returns the runner and the carrier.
+fn no_candidate_runner() -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let (runner, carrier, _extra) = security_removed_runner(&[], &[]);
+    (runner, carrier)
+}
+
+fn second_removal_same_turn(
+    runner: &mut DebugRunner,
+    carrier: digimon_engine::permanent::PermanentHandle,
+) {
+    let _ = runner.auto_resolve();
+    assert!(!runner.game_over(), "fixture: the game continues");
+    runner.game.players[0].battle_area[carrier.index as usize].is_suspended = false;
+    let sec_before = runner.security_count(1);
+    runner.attack_player(carrier, 1, false);
+    assert_eq!(runner.security_count(1), sec_before - 1, "the second attack removed security");
+}
+
+/// With no digivolve candidate DCGO still asks "use this effect?": the folded
+/// optional pick alone would vanish and leave DCGO's prompt unmodelled.
+#[test]
+fn bt21_001_yes_no_gate_is_offered_with_no_digivolve_candidate() {
+    let (runner, _carrier) = no_candidate_runner();
+    let view = runner
+        .pending_selection_view()
+        .expect("DCGO's yes/no activation prompt is parked even with nothing to digivolve");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert!(view.is_optional);
+}
+
+/// Declining the gate (no candidate) is not activating: the use is kept, so the
+/// next removal the same turn offers the prompt again.
+#[test]
+fn bt21_001_declined_gate_without_candidate_keeps_the_use() {
+    let (mut runner, carrier) = no_candidate_runner();
+    runner.execute_action(0, PASS).expect("declining is legal");
+    second_removal_same_turn(&mut runner, carrier);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "a declined activation does not spend the [Once Per Turn]"
+    );
+}
+
+/// Accepting the gate with nothing to digivolve still activates the effect
+/// (15-7-5): nothing happens, the use is spent, and the next removal the same
+/// turn offers nothing.
+#[test]
+fn bt21_001_accepted_gate_without_candidate_spends_the_use() {
+    let (mut runner, carrier) = no_candidate_runner();
+    accept_activation_gate(&mut runner);
+    assert!(
+        runner.pending_selection().is_none(),
+        "no candidate: no pick follows the accepted activation, got {:?}",
+        runner.pending_selection_view().map(|v| (v.kind, v.prompt))
+    );
+    second_removal_same_turn(&mut runner, carrier);
+    assert!(
+        runner.pending_selection().is_none(),
+        "an activated [Once Per Turn] effect is spent: {:?}",
+        runner.pending_selection_view().map(|v| (v.kind, v.prompt))
+    );
+}
+
+/// Accepting the gate and then passing the digivolve pick has used the effect:
+/// only the pre-activation decline keeps the [Once Per Turn].
+#[test]
+fn bt21_001_accepted_gate_then_passed_pick_spends_the_use() {
+    let (mut runner, carrier, _extra) = security_removed_runner(&[], &["REPTILE-HAND"]);
+    accept_activation_gate(&mut runner);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
+    runner.execute_action(0, PASS).expect("passing the pick is legal");
+    second_removal_same_turn(&mut runner, carrier);
+    assert!(
+        runner.pending_selection().is_none(),
+        "the activated effect spent the use: {:?}",
+        runner.pending_selection_view().map(|v| (v.kind, v.prompt))
     );
 }
 

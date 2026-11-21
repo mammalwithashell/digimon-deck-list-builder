@@ -1,0 +1,169 @@
+# EX12-060 Chaosdramon — Digimon, Lv.7, Black/Purple, DP 15000, Cost 15.
+# Traits: Machine, ME. Attribute: Virus.
+# Digivolve: Black Lv.6 / 5.
+# DNA digivolve: Red/Black Lv.6 + Purple/Yellow Lv.6 / 0 (stack the 2 specified
+# Digimon and digivolve unsuspended).
+# Assembly -8: 6 Lv.6 or lower [Machine]/[Cyborg]/[ME] trait cards w/different
+# names (printed on the card face; data/cards.json drops this line).
+#
+# Printed text (card face, data/cards.json, DCGO EX12_060.cs):
+#   <Piercing> <Security A. +1> <Fragment <2>> <Engage>
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn]
+#   <De-Digivolve 2> all of your opponent's Digimon. Then, by placing 2 level 5
+#   or lower [Machine], [Cyborg] or [ME] trait cards from your hand or trash as
+#   this Digimon's bottom digivolution cards, delete 2 of your opponent's
+#   Digimon with as high or lower a play cost as the number of this Digimon's
+#   digivolution cards.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX12/Black/EX12_060.cs
+#   Shared OP/WD/WA (maxCountPerTurn 1): De-Digivolve 2 on every opponent
+#   Digimon; then the Machinedramon (EX12-059) two-card placement; when both
+#   were placed, delete 2 opponent Digimon whose play cost is <= the number of
+#   this Digimon's digivolution cards.
+
+card: EX12-060
+name: Chaosdramon
+kind: digimon
+level: 7
+color: [black, purple]
+cost: 15
+dp: 15000
+traits: [Machine, ME]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: purple }
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - level_eq: 6
+        any_of:
+          - color_is: red
+          - color_is: black
+      - level_eq: 6
+        any_of:
+          - color_is: purple
+          - color_is: yellow
+    cost: 0
+    stacks_unsuspended: true
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - level_lte: 6
+            - any_of:
+                - trait_has: Machine
+                - trait_has: Cyborg
+                - trait_has: ME
+        repeat: { min: 6, max: 6 }
+        distinct_by: name
+        zones: [trash]
+        stack_under: true
+    cost: 8
+
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - kind: grant_keyword
+    keyword: Fragment
+    value: 2
+    summary: "<Fragment <2>>"
+
+  - kind: grant_keyword
+    keyword: Engage
+    summary: "<Engage>"
+
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][When Attacking][Once Per Turn] <De-Digivolve 2> all of your opponent's Digimon. Then, by placing 2 level 5 or lower [Machine]/[Cyborg]/[ME] cards from your hand or trash as bottom digivolution cards, delete 2 of your opponent's Digimon with as high or lower a play cost as the number of this Digimon's digivolution cards"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          bind_as: dedigi
+          body:
+            - de_digivolve:
+                target: dedigi
+                amount: 2
+                stop_at_level: 3
+      - if:
+          condition:
+            count_gte:
+              filter:
+                of: you
+                zone: [hand, trash]
+                level_lte: 5
+                any_of:
+                  - trait_has: Machine
+                  - trait_has: Cyborg
+                  - trait_has: ME
+              n: 2
+          then:
+            - select_union_zone:
+                of: you
+                zones: [hand, trash]
+                optional: true
+                bind_as: placed_1
+                filter:
+                  all_of:
+                    - level_lte: 5
+                    - any_of:
+                        - trait_has: Machine
+                        - trait_has: Cyborg
+                        - trait_has: ME
+                prompt: "Place 1 (of 2) level 5 or lower [Machine]/[Cyborg]/[ME] trait cards from your hand or trash as this Digimon's bottom digivolution card"
+            - if:
+                condition: { binding_present: placed_1 }
+                then:
+                  - select_union_zone:
+                      of: you
+                      zones: [hand, trash]
+                      optional: true
+                      bind_as: placed_2
+                      filter:
+                        all_of:
+                          - level_lte: 5
+                          - not_in_binding: placed_1
+                          - any_of:
+                              - trait_has: Machine
+                              - trait_has: Cyborg
+                              - trait_has: ME
+                      prompt: "Place the 2nd level 5 or lower [Machine]/[Cyborg]/[ME] trait card from your hand or trash as this Digimon's bottom digivolution card"
+                  - if:
+                      condition: { binding_present: placed_2 }
+                      then:
+                        - place_as_bottom_source: { source: placed_1, target: source }
+                        - place_as_bottom_source: { source: placed_2, target: source }
+                        - select_opponent_permanent:
+                            bind_as: victim_1
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - play_cost_lte:
+                                    formula:
+                                      source_material_count: {}
+                            prompt: "Delete 1 (of 2) of your opponent's Digimon with as high or lower a play cost as the number of this Digimon's digivolution cards"
+                        - delete_permanent: { target: victim_1 }
+                        - select_opponent_permanent:
+                            bind_as: victim_2
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - play_cost_lte:
+                                    formula:
+                                      source_material_count: {}
+                            prompt: "Delete the 2nd of your opponent's Digimon with as high or lower a play cost as the number of this Digimon's digivolution cards"
+                        - delete_permanent: { target: victim_2 }

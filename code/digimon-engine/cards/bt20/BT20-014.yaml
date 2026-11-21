@@ -17,6 +17,10 @@ alt_paths:
     cost: 3
 effects:
   - when: [on_play, when_digivolving]
+    # DCGO BT20_014.cs gates both CanActivateCondition()s on
+    # HasMatchConditionPermanent: with no legal target the delete is not
+    # activatable, so it is not a trigger-order entry.
+    requires_target_to_activate: true
     summary: "Delete 1 opponent Digimon with 5000 DP or less"
     process:
       - select_opponent_permanent:

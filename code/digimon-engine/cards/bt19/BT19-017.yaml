@@ -1,0 +1,83 @@
+# BT19-017 Sangomon — Digimon, Lv.3, Blue, DP 1000, Cost 3.
+# Traits: Mollusk, LIBERATOR, Aquatic (Rule-granted). Form: Rookie. Attribute: Data.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT19-017.md):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Aqua] or
+#   [Sea Animal] in any of its traits and 1 card with the [LIBERATOR] trait
+#   among them to the hand. Return the rest to the bottom of the deck.
+#   (Rule) Trait: Has [Aquatic] Type.
+#   Inherited: [End of Attack] [Once Per Turn] Gain 1 memory.
+# Digivolution: Blue Lv.2, cost 0.
+# Official Q&A: "Yes, you must add as many cards to your hand as possible."
+#   (so a card that matches both conditions fills only ONE slot — two distinct
+#   cards are added whenever two exist; same ruling shape as EX12-007).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT19/Blue/BT19_017.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `OnEnterFieldAnyone` (own play), `CanActivateCondition` =
+#   `IsExistOnBattleAreaDigimon && deck >= 1`. `SimplifiedRevealDeckTopCardsAndSelect(
+#   revealCount 3, [HasAquaTraits -> AddHand max 1, ContainsTraits("LIBERATOR") ->
+#   AddHand max 1], remaining -> DeckBottom)`. `HasAquaTraits` = any trait
+#   containing "Aqua" or "Sea Animal" (substring, "in any of its traits").
+#   -> `reveal_top_deck` + `select_reveal_buckets { no_duplicate_cards }` with
+#   the two buckets in DCGO's order (Aqua / Sea Animal first, then LIBERATOR) +
+#   `add_to_hand_from_reveal` x2 + `place_remainder_on_deck { bottom }`
+#   (EX12-007 / BT22-094 precedent).
+#
+# Clause 2 — inherited `OnEndAttack`, `SetMaxCountPerTurn 1`, hash
+#   "Memory+1_BT19_017": `card.Owner.AddMemory(1)`. -> `scope: inherited`,
+#   `when: end_of_attack`, `once_per_turn: true`, `gain_memory: 1` (BT12-016
+#   inherited end-of-attack precedent).
+#
+# (Rule) Trait: Has [Aquatic] Type — carried in `traits` (the official DB's
+# Rule-granted trait, dropped by the lossy API ingest; BT19-065 precedent).
+
+card: BT19-017
+name: Sangomon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Mollusk, LIBERATOR, Aquatic]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Aqua]/[Sea Animal] card and 1 [LIBERATOR] card; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: aqua_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - trait_contains: Aqua
+                  - trait_contains: Sea Animal
+            - bind_as: liberator_pick
+              min: 1
+              max: 1
+              filter: { trait_has: LIBERATOR }
+          prompt: "Select 1 card with [Aqua] or [Sea Animal] in any of its traits and 1 card with the [LIBERATOR] trait"
+      - add_to_hand_from_reveal: { of: you, card: aqua_pick }
+      - add_to_hand_from_reveal: { of: you, card: liberator_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: end_of_attack
+    once_per_turn: true
+    summary: "[Inherited][End of Attack][Once Per Turn] Gain 1 memory"
+    process:
+      - gain_memory: 1

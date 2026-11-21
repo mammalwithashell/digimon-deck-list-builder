@@ -7222,3 +7222,173 @@ Round 6 (2026-11-14) - the round-5 correctness + faithfulness review, finding by
 Corrections of statements this entry and its neighbours made: `CardController.cs:254-256` is only the `BurstTamer` frame lookup; the Tamer is bounced at `CardController.cs:942` (`BounceTamer`) - fixed in [G-DCGO-REPLAY-BOARD-CARD-INDEX] and the comments that cited it; raw-20261113T025510Z#g6 no longer stops at cursor 186 (213 steps, round 7).
 
 Corpus effect, round 6 (32 drive inputs, release build; the debug build gives the same): identical to the round-5 baseline in every one of the 32 (g3 x2, g4, g6, sim1b host/join, gd_dna, auto, mod_game3, pvp1_host PASS; the same stops elsewhere); the only difference is the stale-stamp note wording on sim1b host/join row 23. The nine raw games g11-g19 of raw-20261113T025510Z, which had no baseline, replay as g11/g12 PASS and g13-g19 stopping on their own causes (illegal_action, an unstamped optional effect the engine never offered, an actor mismatch) - judged from the stop messages, none at a row on a path this round changed (no baseline run exists for them, so this is a reading, not a diff).
+
+
+## DCGO PvP replay hunt (2026-11-17)
+
+Lane-reported gap entries for the 19 hunt lanes are collected verbatim in `qa/qa-reports/dcgo-pvp-replay-hunt-2026-11-17.md` (resolved vs open per lane).
+
+
+## DCGO PvP replay hunt, round 2 (2026-11-19)
+
+Lane-reported engine and replay-layer gap entries from the 17 round-2 lanes, as the lanes wrote them
+(statuses are the lane's own at the time it reported; the integration report is
+`qa/qa-reports/dcgo-pvp-replay-hunt-2026-11-19-round2.md`). Round-1 entries above are unchanged.
+
+#### Lane `homeros-effect-pick`
+
+### Round-2 homeros-effect-pick (Homeros BT24-102 x [Olympos XII] Digimon)
+
+**RESOLVED G-REPLAY-HOMEROS-DUPLICATE-EFFECT-PICK**: DCGO opens "Select 1 effect to activate." (BT24_102.cs:173-215) over one effect object per timing tag of a printed [On Play] [When Digivolving] effect (CardEffectFactory.ActivateClassesForSharedEffects:812-880); the engine runs one collapsed clause (CR 4.3 15-15-7-2, Effect::clause_group) and parks nothing. Fixed in the replay layer: `Game::last_collapsed_refire` (CollapsedRefire, replay evidence only) + `ReplayDriver::refire_duplicate_effect_pick_fold`; converter emits SelectCardEffect `indexes`. Tests: tests/replay_dcgo_refire_duplicate_pick.rs, bt24_102.rs, test_dcgo_convert_raw_effect_pick_position.py.
+
+
+**DATA FIX**: BT24-081 had a wrong [Olympos XII] trait (printed Shaman/Titan/TS); removed from cards.json, card_overrides.json and BT24-081.json.
+
+**OPEN G-REPLAY-HOMEROS-OWNCHOICE-INDEX-MAP**: BT24-051 Merukimon under Homeros: DCGO has 3 candidates ([OP], [WD] of the shared effect, [WD] of the separate [WD][WA]); the engine has a 2-way EffectChoice, so the card pick is ambiguous and the replay stops honestly. Map via `indexes` once a recording exists to verify DCGO's list order.
+
+**OPEN G-ENGINE-REFIRE-CANDIDATE-ACTIVATION-GATE**: has_refireable_effect ignores the clause activation condition; DCGO CanBeEffectCandidate uses CanUse = CanTrigger and CanActivate. No pool card found where it differs (read DCGO C# for BT10-042, BT24-030/040/041/101, P-207 and the ActivateClassesForSharedEffects cards).
+
+**Card-by-card table** (DCGO shape: S = exactly one [OP]/[WD] object; C2 = one printed [OP][WD] effect split into 2 objects (engine: one clause, records dcgo_entries 2, no prompt); 2 = real choice; N = not offered). All YAML-backed rows are covered by test bt24_102_refire_matches_dcgo_candidate_shape_for_every_olympos_xii_digimon:
+- BT10-042 Venusmon: S ([WD] only)
+- BT24-030 Neptunemon: C2
+- BT24-040 Venusmon: C2
+- BT24-041 Minervamon: C2 ([On Deletion] N)
+- BT24-051 Merukimon: 2 (DCGO 3 entries, engine 2; see OPEN above)
+- BT24-101 Jupitermon: C2
+- BT25-018 Apollomon: C2
+- BT25-020 Marsmon: C2 ([WA] N)
+- BT25-028 Dianamon: C2 ([All Turns] N)
+- BT25-044 Junomon: C2
+- BT25-059 Ceresmon: C2
+- BT25-075 Vulcanusmon: C2
+- BT25-077 Bacchusmon: C2
+- BT25-103 GraceNovamon: S ([WD][WA]; only [WD] qualifies)
+- BT26-032 Ceresmon (DUAL): S
+- BT26-033 Jupitermon (DUAL): S
+- BT26-080 Bacchusmon (DUAL): S
+- BT26-081 Mervamon: C2
+- BT26-083 Junomon: Hysteric Mode: C2 ([On Deletion] N)
+- BT26-103 Jupitermon: Wrath Mode: S ([WD][Counter])
+- P-207 Minervamon: C2
+- No YAML (engine cannot offer; none in EX13 pool): BT11-017 Marsmon S; BT22-077 Dianamon S; EX5-014 Apollomon S; EX5-025 Dianamon S; EX5-042 Merukimon C2; P-191 Apollomon C2; P-208 Merukimon S; ST10-13 Junomon S; BT10-083, BT3-056, BT5-030, BT8-018: N (no [OP]/[WD] effect).
+DCGO activation detail confirmed in BT24_102.cs: the chosen effect runs via Activate_Optional_Effect_Execute trying the WhenDigivolving hashtable first, then OnPlay; engine behaviour matches (refire runs the clause once, carrier = the Digimon, source = Homeros, optionality kept).
+
+#### Lane `ci-invariant-fuzz`
+
+### G-ENGINE-DIGEST-FACE-DOWN-PAYMENT-PICK-STATE (fixed in claude/h2-ci-invariant-fuzz)
+The multi-card "trash N bottom face-down cards from under your Tamers" payment keeps its picks in a TrashBottomFaceDownSourcesPick { remaining, picked } resume frame. The verification digest hashed only the frame variant, so a lone Tamer holding two face-down cards re-parked a byte-identical prompt after the first pick and the step read as a no-op to the invariant_fuzz digest-progress check (seed 20260708001, step 58). The digest now hashes (remaining, picked) as resume.face_down_payment (skipped for LegacyV2). Pre-existing on main since 983817ea5; round 1 only shifted deck selection. Residual risk: other resume frames whose in-flight state lives only in a post-action payload may be unhashed in the same way; audit write_resume_stack for any FieldPermanentPostAction (and similar) variant carrying state that is not also visible on the board.
+
+#### Lane `replay-int-and-order-folds`
+
+- **G-MASK-PLAY-COST-REDUCTION (open, pool: TS Jupitermon)**: `action/mask.rs` hand-play affordability uses the printed play cost (`available_play_assignment_base`) and ignores a card's own static `before_pay_cost` play-cost reduction. Minervamon (BT24-041), cost 12 reduced by 5 with an Iliad Digimon/Tamer, is hidden at memory 0 (0 - 12 < -10) although its real cost 7 is affordable (-7 >= -10). It is offered at memory 3 and above, so tests at memory 20 do not catch it. DCGO recording `20261114T142653Z-g3` stops here (MaskMiss, recorded play_hand_5). Fix: the mask must use the same effective cost the play path pays, then add a memory-0 case to `tests/cards_behavioral/bt24/bt24_041.rs`. Blocks training: no (the play is rejected only in a narrow low-memory window), but it makes the agent unable to play a pool card in that window.
+
+- **G-REPLAY-SOYMP-UNRECORDED-ORDER (resolved by this lane)**: `ReplayDriver::zone_loop_trigger_entry` now chooses the zone-loop entry when a zone-menu int meets the start-of-main TriggerOrder and DCGO had one activatable effect (no MultipleSkills row). Requires exactly one qualifying entry; refuses when the other entries offer a real decision.
+
+- **G-REPLAY-OUTER-GATE-INT-MENU (resolved by this lane)**: a bare `generic_int` row against `ResumeFrame::OuterOptionalTrigger` is read for cards in `dcgo_int_menu_opens_the_effect` (EX13-032): the card's decline value declines, 1/2 accept (then answer the cost choice or are the forced cost). To extend, add a card only after reading its DCGO script for `optional: false` plus an opening `SetIntSelection`. Siblings EX13-030/031/035/036 were not added; they have not been checked.
+
+- **G-REPLAY-PLACEMENT-ORDER-ROW (resolved by this lane)**: `ReplayDriver::placement_order_fold` folds DCGO's membership rows plus a separate `Root.Custom` SelectCardEffect order row onto the engine's one ordered multi-select for the cards in `DCGO_PLACEMENT_ORDER_ROW_CARDS` (BT18-097). Refused unless the order row is a permutation of exactly the chosen cards. Other cards that ask a separate order row need an entry in that list after reading their DCGO script.
+
+#### Lane `engine-prompt-shape-parity`
+
+### Engine gap - DigiXros / cast-time assembly: no empty trailing material prompt (docs/RUST_ENGINE_GAPS.md) - DONE
+`Game::install_pending_digixros_material_selection_or_finish` (game_actions/misc.rs) now commits the play when no eligible material remains, instead of parking an empty 'Select DigiXros material' stop prompt. This matches DCGO SelectDigiXrosClass.Select (only 'End' left means no prompt) and the BT15_102.cs `while (placed < 3 && valid != 0)` loop. The stop stays legal while candidates exist. Tests: ex12_056, bt12_112, bt15_102, cast_time_assembly, digixros_transaction_steps.
+
+### Engine gap - Deletion batch: DNA-digivolve replacement subject prompt (docs/RUST_ENGINE_GAPS.md) - DONE
+replacement_deletion_batch.rs no longer asks a non-DCGO 'Choose the impending deletion' prompt for a DNA-digivolve replacement (Kapurimon EX12-003) when every matching leaving member reaches the same DNA pairs (`dna_equivalent_subject`, `Effect::dna_subject_probe`, `DnaSubjectProbe`). Real ambiguity still parks a pending_selection. Test: cards_behavioral/ex12/ex12_003.rs.
+
+### OPEN - effect-initiated attack vs queued triggers (docs/RUST_ENGINE_GAPS.md)
+Evidence: raw-20261113T025510Z#g8 step 59. EX12-056 'Alliance and attack' starts an effect-initiated attack. DCGO runs the entire attack (SelectAttackEffect, blocks, damage) inside the effect coroutine before the remaining queued triggers (EX12-071 delay, EX12-002) resolve. The engine resolves the queued triggers before the attack. Also, EX12-071's delay should ask its optional 'Select 1 Digimon that will digivolve' SelectPermanentEffect (canNoSelect) even with a single candidate. Cards: EX12-056, EX12-071, EX12-002. Blocks the g8 replay. Pool decks affected: SW / Virus Busters.
+
+#### Lane `replay-bool-answer-maps`
+
+- replay-bool-answer-maps (fixed 2026-11-19): four generic_bool answers now map onto engine prompts: optional_yes_gate no longer folds a stamped yes into a decline when a MultipleSkills row follows; selection_resolve::ascension_choice_branches maps the shared-helper Ascension Yes/No by its KeywordAscensionChoice frame; dcgo_use_optional_answer maps the unstamped yes/no of a lone BeforePayCost cost-reduction gate (BT22-094); DCGO_MODE_BOOLS lists BT23-013 (true = token, false = Sistermon). OPEN: BT25-078 Gazimon asks its Add to hand / Place on digivolution cards bool AFTER the card pick, the engine asks the mode FIRST; needs an order fold or engine prompt-shape parity. Unaudited two-mode bool cards: BT13-112, BT17-102, BT19-090, BT24-058, P-167, EX3-008, P-128, ST18-14. Pre-existing red on the integrated branch: replay_dcgo_review_r4::unfollowable_order_branch_does_not_cut_the_other_branches_short and replay_dcgo_review_r4b::cardless_index_is_not_consumed_by_a_prompt_its_next_row_does_not_answer (closure-callback clone panic in selection.rs:360).
+
+#### Lane `trigger-order-bundle`
+
+- G-ENGINE-TRIGGER-ORDER-NO-TARGET-ENTRY (FIXED on claude/h2-trigger-order-bundle): a mandatory trigger whose DCGO CanActivateCondition requires a target (HasMatchConditionPermanent) was queued into the TriggerOrder bundle with zero candidates. New `Effect::activation_guard`, evaluated by `non_firing_queued_effect_indices_for`, fed by the clause flag `requires_target_to_activate` (set per card because DCGO does not gate uniformly: BT25-059 and BT26-103 mandatory picks still activate and spend the OPT). Applied to BT20-014 only so far.
+- G-ENGINE-TRIGGER-ORDER-PROCESSING-CONDITION-ENTRY (PARTIAL): DCGO processing conditions (tested inside ActivateCoroutine, then RemoveUse) must keep the entry orderable. Fixed for EX12-021 by authoring the hand test as if/else + `refund_opt` in the body. The generic engine behaviour, where a failing clause `condition` drops the entry, is unchanged; other cards whose DCGO test sits in ActivateCoroutine are unaudited.
+- G-ENGINE-TRIGGER-ENTRY-LIVE-EVENT-LEVEL (OPEN): EX12-069's activation condition needs a hand-card level compared with the live event target's level at activation (it changes mid-batch when a sibling digivolves the attacker); the DSL can only express it inside the body via `level_eq_binding`.
+
+#### Lane `dedigivolve-count`
+
+### G-DEDIGIVOLVE-NO-DECLARATION - RESOLVED for single declared De-Digivolve N (2026-11-19, lane h2-dedigivolve-count, branch claude/h2-dedigivolve-count)
+
+A formula `de_digivolve.amount` ("<De-Digivolve 1> for each ...") expands into N separate <De-Digivolve 1> instances with no count declaration (`expand_de_digivolve_instances`, `dsl_cards/step/permanent_mutations.rs`). DCGO does that for BT19-073, BT21-060, BT24-041 and BT25-075 (an `IDegeneration(permanent, 1)` loop). EX13-066 Sistermon Noir (Awakened) is the one verified exception: its Option resolves ONE `SetDegenerationCount(Owner.GetBattleAreaDigimons().Count)` (EX13_066.cs:192-211), so the controller declares 1..min(N, trashable cards) (CR 4.3 16-12-1; 4-27-2).
+
+New DSL vocabulary: `de_digivolve: { amount: <formula>, declared: true }` keeps the formula as one declared De-Digivolve N. The validator rejects `declared: true` with a literal amount, which is already declared. Use `declared: true` only where DCGO sets a single degeneration count. Keep the default per-instance expansion where DCGO loops.
+
+Replay evidence (not rules state): `Game::de_digivolve_instances` counts De-Digivolve instances started on a target. `runners/replay.rs` uses it to consume the run of candidate-less `SelectCountEffect 1` rows that DCGO opens for each per-instance De-Digivolve (recorder 0.2.0 writes no `candidates` for SetCount). A run is consumed only when the actor's effect chose the target, the top cards of one permanent went to the trash, and the run fits the counts DCGO opens for the engine's instances (a Lv3 floor still opens {1} per remaining instance, CR 4.3 16-12-4); anything else halts.
+
+Open follow-ups:
+- Emit `candidates` in Core.cs CountPostfix so recordings carry the count set.
+- BT24-102 (Tamer) effect-choice: a recorded `SelectCardEffect` naming the chosen Digimon sits between the Digimon pick and the hand pick, and the engine has no matching prompt (game 20261114T142653Z-g1, step 43).
+- EX13-071 Richard Sampson: On Play memory gain versus DCGO's turn pass (game 20261113T025510Z-g19, step 57).
+- Two replay tests fail on an older integrate build too, so they are pre-existing and need their own triage: replay_dcgo_review_r4 `unfollowable_order_branch_does_not_cut_the_other_branches_short`, and replay_dcgo_review_r4b `cardless_index_is_not_consumed_by_a_prompt_its_next_row_does_not_answer` (selection.rs:360 clone panic).
+
+#### Lane `replay-multipleskills-index`
+
+### G-REPLAY-TRIGGERORDER-FILTERED-ENTRY-INDEX (replay layer) - resolved on claude/h2-replay-multipleskills-index (bc42f904e)
+A card-less DCGO MultipleSkills index (e.g. 1) against an engine TriggerOrder that offers ONE entry because the engine filtered the other as unchoosable (EX9-032 Karakurumon's optional "By deleting 1 of your Tokens or other [Puppet] Digimon" when there is nothing to delete, CR 4.3 15-7-4). The index is now proved by the actor's following rows (the "use it?" yes plus a pick only the offered entry asks for) via `Game::parked_trigger_order_filtered_siblings`. With nothing proving it, or an index beyond the effects DCGO could have listed, the replay stops honestly. Regression: tests/replay_dcgo_filtered_order_entries.rs.
+
+DCGO quirk (dcgo_quirk, rule cited): DCGO's MultipleSkills (MultipleSkills.cs:217-221) lists effects by CanActivate. EX9_032.cs's CanActivateCondition only checks that the card is on the field, so DCGO lists the unpayable optional-cost effect. CR 4.3 15-7-4 makes it unchoosable. The engine follows the rules.
+
+### G-REPLAY-SAME-CARD-ORDER-ENTRIES (replay layer) - resolved on claude/h2-replay-multipleskills-index
+A card-named MultipleSkills index over several entries of ONE card (EX12-044 Angewomon x3) no longer treats an implied order pick as the remaining entry. `order_entries_answering_next_pick` keeps only the entries whose own prompt takes the next pick row, since DCGO re-asks MultipleSkills while 2+ activatable effects remain (MultipleSkills.cs:273-278). Regression: a_card_named_index_over_same_card_entries_is_the_one_whose_own_prompt_takes_the_pick.
+
+### G-REPLAY-DUPLICATE-COPY-STALE-RECORDING (open; stale-recording artefact)
+20261114T142653Z-g4 step 58: a board-position pick of BT24-031 with two engine copies that lead to different games, and recorded boards that name cards by id only. Re-recording with recorder 0.2.0 (board card_index) makes it exact.
+
+### Stale-on-base replay tests (open)
+tests/replay_dcgo_review_r4.rs::unfollowable_order_branch_does_not_cut_the_other_branches_short (no divergence where it expects the "ambiguous ... bottommost" halt) and tests/replay_dcgo_review_r4b.rs::cardless_index_is_not_consumed_by_a_prompt_its_next_row_does_not_answer (selection.rs:360 clone-of-closure panic in probe_branch_for_row) fail on the integrated base as well as in sibling lanes (inferred, not proven by a base rebuild). Fix them in their own commit.
+
+#### Lane `unimpl-digimon-misc`
+
+- Replay layer (not simulator): `ReplayDriver::remote_trigger_order_choice` / `accept_outer_gate_for_pick` mis-handle a card-less MultipleSkills index whose entries are [optional outer-gated effect, mandatory effect] when DCGO's next rows are (mandatory effect's pick, then an unstamped bool false declining the optional one). Symptom: actor_mismatch at the declining row (20261114T012101Z#g3 step 22, BT17-012 + EX12-061 both [When Attacking]). Blocks: pool-seat game with core cards EX12-061 / EX11-012.
+- Unimplemented Digimon blocking pool-seat replays: EX10-005 Pagumon, EX2-071 Death Slinger, BT24-078 Creepymon (X Antibody), BT24-096 Seventh Graviton, P-219 Flame Inferno, BT16-071 (blocking recording 20261113T025510Z#g10).
+
+#### Lane `frame-model-unlogged`
+
+### Converter frame_model: Option appearance with no play row (fixed, lane frame-model-unlogged)
+- Symptom: a [Security]/Delay Option placed by its own effect (CardEffectCommons.PlaceDelayOptionCards builds PlayPermanentClass directly) never reaches the recorder's PlayCardClass.PlayCard hook, so frame_model had no play row to explain it. The seat was killed for the rest of the game and later picks among copies lost card_index.
+- Fix: frame_model._Seat._explain_unlogged_options explains it as up to 2 Options added at PreferredFrame (CardIndex unknown), only when nothing else leaves in the same step. Test: code/tests/tools/test_dcgo_frame_model.py.
+- Open: other unlogged direct PlayPermanentClass paths, if any appear, would need the same treatment. Only Options are admitted today, and a DigiEgg hatch is handled separately.
+- Recorder note (optional, Core.cs): hooking PlayPermanentClass itself instead of PlayCardClass.PlayCard would log these placements and make the converter heuristic unnecessary for new recordings.
+
+#### Lane `ex8-nso-opponent`
+
+- G-REPLAY-REMOTE-DNA-ROOT-ROWS (OPEN, replay layer or recorder, found on 20261116T164448Z-g10 step 36): for a REMOTE human seat's effect-initiated DNA digivolve (DNADigivolvePermanentsIntoHandOrTrashCard) DCGO records the hand pick and the PlayCard of the result but NOT the two SelectDigivolutionRoots rows. Only the local or AI path hooks them. runners/replay.rs fold_effect_dna_root_rows therefore finds no root rows, and the may-attack SelectAttackEffect row is mis-paired with the engine's AnyField pair prompt (engine_error "frame target (player 1, slot 14) matches none of [100, 101]"). Candidate fixes: (a) a replay adapter that fires only when exactly one legal pair exists and a following PlayCard row proves the digivolve (verify-or-refuse), or (b) record the remote branch in Core.cs. Blocks this game's opponent seat past step 36.
+
+- NOTE (not a bug): <De-Digivolve N> stops at a level 3 top card (CR 4.3 16-12-4). Synthetic tests that stack level-3 cards over a bottom card and expect N trashes will lose the whole stack to the later -DP deletion (17-1-3-1). Give removable stack cards level 4 or higher.
+
+#### Lane `reveal-bucket-cards`
+
+- **{Security}-scoped cost reducers (CR 4.3 15-14-5-1) - CLOSED by reveal-bucket-cards (round 2).** P-181 Royal Base: while face-up in security it reduces digivolution cost by 1 once per turn. The before-pay-cost scan (`game_actions/mod.rs`, `cost.rs`) now reads the acting player's face-up security cards for `scope: security` reducers, and keeps their [Once Per Turn] counter on the player. Test: `tests/cards_behavioral/p/p_181.rs`.
+- **Multi-card <De-Digivolve> trashing a batch containing a trait card triggers 'top card trashed' delays - CLOSED.** BT21-094's Delay needs 'any trashed card has the Armor-form trait' (DCGO CanTriggerWhenTopCardTrashed). Added predicate leaf `event_batch_card_trait_has`. Test: `tests/cards_behavioral/bt21/bt21_094.rs`.
+- **OPEN (replay layer):** the recorder's SelectCountEffect 0/1 and unstamped generic_bool 'use this optional effect?' gate has no engine-side prompt when the engine parks the selection directly (g6 EX12-039/056 [SW] Alliance prompt; g18 <Barrier> Replacement with no `candidates`). It needs a state-verified adapter or recorder candidates.
+- **OPEN (replay layer):** 'recorded printed digivolution cost N matches 2 legal routes' (g7 hand-digivolve with the cost reduced by 2). Disambiguation is needed when two legal routes share the reduced cost.
+- **OPEN (cards, stub-only):** EX11-056 (memory-3 start-of-turn Tamer, Tyrannomon/Dinosaur digivolve hatch) and EX7-055 Punkmon (Lv.3 w/[Evil] cost-2 alt digivolve, Yuuki play).
+
+#### Lane `alt-digivolve-cost-cards`
+
+- **G-REPLAY-MULTI-INSTANCE-DEDIGIVOLVE-COUNT (OPEN, replay layer, recording 20261113T025510Z-g13):** DCGO `IDegeneration` asks a forced SelectCountEffect per <De-Digivolve 1> instance. BT24-065's N-instance de-digivolve followed by a delete of that permanent, while another seat's trigger (EX1-066) is parked, is refused by the single-instance `forced_count_evidence`, so the replay stops with `actor_mismatch`. Needs a verified multi-instance rule.
+- **G-CARD-BT21-077-UNIMPLEMENTED (OPEN):** Regulusmon BT21-077 is still a .json stub. Its alt route '[Digivolve] Lv.4 w/[Gammamon] in text: Cost 3' produces DCGO's cost-choice prompt. Blocks g7 (20261113T025510Z-g7) after EX10-042.
+- **G-DCGO-REFIRE-EFFECT-CHOICE-BT24-102 (OPEN, pool-core):** BT24-101's separate On Play and When Digivolving ActivateClasses make DCGO ask 'Select 1 effect to activate' during BT24-102's refire. The engine's combined clause asks nothing. Blocks g1 (20261116T164448Z-g1).
+- **G-EX12-069-TRIGGER-DIVERGENCE (OPEN, pool-core):** The engine parks P0's optional EX12-069 triggered effect where DCGO does not (g5, 20261113T025510Z-g5, step 30).
+- **G-AD1-023-REPLACEMENT-ORDER (OPEN, pool-core):** AD1-023's inherited would-leave replacement is parked before DCGO's remaining P1 attack-trigger rows (g2, 20261113T011922Z-g2, step 48).
+
+#### Lane `memory-tamer-start-main`
+
+Entries for docs/RUST_ENGINE_GAPS.md / replay tracker:
+- REPLAY-COUNT-NO-CANDIDATES (recorder 0.2.0 never writes `candidates` for SelectCountEffect, so a forced De-Digivolve count of 1 is a candidate-less row): covered by lane h2-dedigivolve-count (unit_count_evidence); this lane's equivalent fold was removed to avoid a replay.rs conflict. Blocks DCGO recording 20261115T153822Z-g7 at step 44 until merged.
+- REPLAY-DUPLICATE-COPY-TRIGGER-ORDER (20261115T153822Z-g8 step 26): two copies of one card (AD1-021) each queue an End-of-Turn trigger, DCGO's MultipleSkills row names the card only, and the two entries lead to different games, so the replay halts honestly. Needs per-board-entry card_index or a verified symmetry proof.
+- Observed, unconfirmed on a pristine base: replay_dcgo_review_r4::unfollowable_order_branch_does_not_cut_the_other_branches_short fails (trigger-order lookahead, EX12-046 fixture).
+
+#### Lane `digitama-inherited-effects`
+
+- Digi-Egg inherited effects with no YAML: 182 Digi-Egg cards that carry only an inherited effect (kind 3 in cards.json) are still JSON-only stubs, so the effect never fires under a Digimon. Authored in this lane: BT9-006, BT12-006, P-247, EX8-006, EX11-001. None of the 15 Digi-Eggs in the 21-deck pool core set is affected. Remaining ones are opponent-side (BT1-001 to BT26-006, EX2 to EX11, ST7 to ST24, P-148, P-149, P-157, P-177, P-188, P-245, P-246, RB1-001 to RB1-003). Re-run `PYTHONUTF8=1 python` over data/cards.json with kind==3 and no YAML to regenerate the list. Priority: the ones that appear in recorded opponent egg decks.
+- Opponent cards with no YAML blocking the two cluster games: BT19-068 Shademon, BT19-087 Nene Amano (g5); 11 further JSON-only cards on the opponent seat of g1 (list withheld: it is recording-derived deck content; re-derive it with the no-YAML audit).
+
+#### Lane `refire-source-identity`
+
+### G-ENGINE-REFIRE-LOSES-SOURCE-IDENTITY (fixed, branch claude/h2-refire-source-identity, commit bddb66706)
+`queued_refired_effect` (src/effect_queue.rs) returned a QueuedEffect with `source_identity: None` and `run_refired_effect` runs it directly, bypassing `push_effect_with_identity` / `capture_queued_effect_identities`. As a result `run_queued_effect_inner` set `ctx.source_identity` to None and `rebind_activation_carrier` cleared `ctx.source_permanent`, so the `is_source: true` branch of the borrowed effect's filter rejected the source slot. Seen with BT11-112 Rina Shinomiya's on_suspend refire of BT12-029 UlforceVeedramon (X Antibody) [When Digivolving] "Unsuspend this Digimon or 1 of your blue Tamers": only the Tamers were offered, while DCGO also offers the Digimon (DCGO PvP replay 20261116T045756Z-g6). Fix: capture `Some(self.source_move_anchor(effect.source))` when the refire is queued. Audit result: every other `source_identity: None` QueuedEffect literal is pushed via `push_effect_with_identity`, so none were exposed. Rule: any QueuedEffect that is run directly rather than pushed must capture its identity at construction.

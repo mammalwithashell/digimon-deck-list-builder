@@ -1,0 +1,134 @@
+# BT22-034 Reppamon — Digimon, Lv.4, Yellow, DP 5000, Cost 5.
+# Traits: Holy Beast / CS. Attribute: Vaccine.
+# Standard digivolve (cards.json evo_costs / official DB): Lv.3 Yellow / Cost 2.
+# Printed special digivolution box: [Digivolve] Lv.3 w/[CS] trait: Cost 2.
+#
+# Printed card text (data/card_bundles/BT22-034.md — verbatim):
+#   When effects trash this card from the security stack, you may play this
+#     card without paying the cost.
+#   [On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP
+#     until their turn ends. By trashing your top security card, instead 1 of
+#     your opponent's Digimon gets -6000 DP until their turn ends.
+#   Inherited: [When Attacking] [Once Per Turn] 1 of your opponent's Digimon
+#     gets -2000 DP for the turn.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT22/Yellow/BT22_034.cs
+#
+# Modeling notes:
+# - OP / WD (`SharedActivateCoroutine`): the clause is MANDATORY (isOptional
+#   false). When the controller has at least one security card DCGO asks a
+#   Yes/No bool ("Trash top security to -6K DP instead of 3K?") BEFORE the
+#   target pick; with no security the bool is skipped (nothing to pay). On
+#   "yes" it trashes the top security (`IDestroySecurity`, fromTop) and the
+#   penalty becomes -6000 ONLY if that security card actually reached the
+#   trash (`IsExistOnTrash`) — the "instead" (official Q&A: the processing
+#   after "instead" replaces the standard processing) is conditional on the
+#   cost having been paid. The target pick is mandatory (canNoSelect false);
+#   the modifier lasts `UntilOpponentTurnEnd`.
+#   Authored: the Yes/No is a `select_effect_choice` (affirmative first,
+#   decline second) inside an `if security_count_gte 1`; the cost is
+#   `trash_top_security` with `bind_count_as`, and the -6000 / -3000 branch
+#   reads the bound count (0 when the trash was replaced).
+# - OnDiscardSecurity: "When EFFECTS trash this card from the security stack,
+#   you may play this card without paying the cost" -> `on_discard_security`
+#   (fires only for effect-caused trash, not battle/attack security checks),
+#   optional, `play_from_trash_free` of the carrier itself. DCGO also plays it
+#   with `activateETB: true` (its [On Play] fires).
+# - Inherited [When Attacking][OPT]: mandatory pick of 1 opposing Digimon,
+#   -2000 DP for the turn (`UntilEachTurnEnd`).
+
+card: BT22-034
+name: Reppamon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+traits: [Holy Beast, CS]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: CS }
+    cost: 2
+
+effects:
+  # ─── [On Play] / [When Digivolving]: -3000 DP, or -6000 by trashing top security
+  - when: [on_play, when_digivolving]
+    optional: false
+    summary: "[On Play][When Digivolving] 1 opposing Digimon gets -3000 DP until their turn ends. By trashing your top security card, instead -6000 DP"
+    process:
+      - if:
+          condition: { security_count_gte: 1 }
+          then:
+            - select_effect_choice:
+                bind_as: pay_choice
+                labels: ["Trash top security: -6000 DP instead", "Don't trash security (-3000 DP)"]
+                prompt: "Trash your top security card to give -6000 DP instead of -3000 DP?"
+            - if:
+                condition: { equals: [pay_choice, 0] }
+                then:
+                  - trash_top_security: { of: you, bind_count_as: paid_security }
+                  - if:
+                      condition: { equals: [paid_security, 1] }
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: dp_target_6k
+                            filter: { kind: digimon }
+                            prompt: "1 of your opponent's Digimon gets -6000 DP until their turn ends"
+                        - add_dp_modifier:
+                            target: dp_target_6k
+                            value: -6000
+                            expiry: end_of_opponents_turn
+                      else:
+                        - select_opponent_permanent:
+                            bind_as: dp_target_3k_a
+                            filter: { kind: digimon }
+                            prompt: "1 of your opponent's Digimon gets -3000 DP until their turn ends"
+                        - add_dp_modifier:
+                            target: dp_target_3k_a
+                            value: -3000
+                            expiry: end_of_opponents_turn
+                else:
+                  - select_opponent_permanent:
+                      bind_as: dp_target_3k_b
+                      filter: { kind: digimon }
+                      prompt: "1 of your opponent's Digimon gets -3000 DP until their turn ends"
+                  - add_dp_modifier:
+                      target: dp_target_3k_b
+                      value: -3000
+                      expiry: end_of_opponents_turn
+          else:
+            - select_opponent_permanent:
+                bind_as: dp_target_3k_c
+                filter: { kind: digimon }
+                prompt: "1 of your opponent's Digimon gets -3000 DP until their turn ends"
+            - add_dp_modifier:
+                target: dp_target_3k_c
+                value: -3000
+                expiry: end_of_opponents_turn
+
+  # ─── When effects trash this card from security: may play it free ───────────
+  - when: on_discard_security
+    scope: security
+    optional: true
+    summary: "When effects trash this card from the security stack, you may play this card without paying the cost"
+    process:
+      - play_from_trash_free: { of: you, hand_index: self }
+
+  # ─── Inherited [When Attacking][Once Per Turn]: -2000 DP for the turn ──────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: false
+    summary: "[Inherited][When Attacking][OPT] 1 of your opponent's Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target_2k
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -2000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target_2k
+          value: -2000
+          expiry: end_of_turn

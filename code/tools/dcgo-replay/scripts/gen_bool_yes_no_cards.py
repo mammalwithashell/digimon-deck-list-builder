@@ -16,6 +16,14 @@ whose `false` button is a decline ("No", "Not ...", "Do not ...", "Don't ...",
 "no, decline". Bool menus asked by shared helpers (RevealLibrary.cs:270-282
 "Will you select cards?", Guard.cs:89-98, Ascension.cs:30-39) are not attributed
 to the calling card; the replay stops honestly on them until a fold maps them.
+<Ascension>'s Yes / No is mapped by the engine's own frame, not by a card id
+(`selection_resolve::ascension_choice_branches`: the `KeywordAscensionChoice`
+frame, Yes = true). A card whose bool menu is a two-MODE body choice (neither
+button a decline) is left out here and listed in `selection_resolve::dcgo_mode_bool`
+instead: Omnimon (EX12-037), Jesmon (BT23-013, the Token = true / a [Sistermon] =
+false, BT23_013.cs:121-141). A `BeforePayCost` optional cost reduction (Yuugo
+Kamishiro (BT22-094)) asks an `OptionalSkill` Yes/No, which is an UNSTAMPED
+`generic_bool`, never this list's stamped one.
 
 Usage (from the base repo, where DCGO is checked out):
     python code/tools/dcgo-replay/scripts/gen_bool_yes_no_cards.py

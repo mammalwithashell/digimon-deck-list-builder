@@ -187,6 +187,16 @@ pub enum TimingFilter {
 }
 
 impl TimingFilter {
+    /// The timing a `refire_effect` step / `has_refireable_effect` predicate
+    /// names: a single timing key or the either-of pair.
+    pub fn from_refire_timing(timing: &str) -> Option<Self> {
+        if timing == "on_play_or_when_digivolving" {
+            Some(Self::Either)
+        } else {
+            Self::from_timing_key(timing)
+        }
+    }
+
     pub fn from_timing_key(key: &str) -> Option<Self> {
         match key {
             "on_play" => Some(Self::OnPlay),
@@ -323,6 +333,12 @@ pub struct Effect {
     pub paid_prevention_all: bool,
     /// Post-payment subject qualification, separate from source activation/liveness.
     pub paid_prevention_filter: Option<CompiledPredicate>,
+    /// A replacement whose body is a DNA digivolve anchored on the leaving
+    /// subject (`may_dna_digivolve_now { anchor: replacement_subject }`,
+    /// Kapurimon EX12-003). When one deletion event has several members this
+    /// effect applies to, the batch asks WHICH member anchors it only if the
+    /// members reach different DNA pairs (see `DnaSubjectProbe`).
+    pub dna_subject_probe: Option<std::sync::Arc<crate::dsl_cards::step::dna_digivolve::DnaSubjectProbe>>,
     /// Heuristic metadata for policies: this effect produces or preserves
     /// hand/resource flow, such as drawing, searching/add-to-hand, filtering
     /// hand, or Save-like deletion value. This is deliberately advisory; it
@@ -548,6 +564,18 @@ pub struct Effect {
     /// prompt" (used when the first step's actionability cannot be
     /// pre-evaluated). `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub outer_optional_guard: Option<ConditionFn>,
+
+    /// Activatability guard of a MANDATORY triggered clause whose whole body
+    /// is one required target pick plus single-target actions on that pick
+    /// ("delete 1 of your opponent's Digimon with 5000 DP or less"): `false`
+    /// when the pick has no candidate. DCGO gates such an effect's
+    /// `CanActivateCondition` on `HasMatchConditionPermanent`, so a no-target
+    /// trigger never enters the `MultipleSkills` order list. The queue
+    /// excludes the entry from the `TriggerOrder` bundle while this is
+    /// `false` (transient, like the condition filter: a sibling that creates
+    /// a target makes it fireable again). `None` means "always activatable".
+    /// `G-ENGINE-TRIGGER-ORDER-NO-TARGET-ENTRY`.
+    pub activation_guard: Option<ConditionFn>,
 
     /// This effect's FIRST decision is its "you may" activation decision
     /// even though the effect itself is not `optional`: a keyword body that
@@ -801,9 +829,11 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnBlock)
     }
 
-    /// Fires when an allied Digimon (same controller, excluding the attacker
-    /// itself) attacks. Observer timing — scans the attacker-controller's
-    /// battle area. Spec §7 / Phase 9 Task 8.
+    /// Fires when a Digimon of the observer's controller attacks -- the
+    /// attacker ITSELF included (DCGO's `OnAllyAttack` batch has no self
+    /// exclusion; "another Digimon" is `trigger_if: { event_target_is_source:
+    /// false }`). Observer timing — scans the attacker-controller's battle
+    /// area. Spec §7 / Phase 9 Task 8.
     pub fn on_ally_attack(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnAllyAttack)
     }
@@ -994,6 +1024,7 @@ impl EffectBuilder {
                 paid_self_prevention: false,
                 paid_prevention_all: false,
                 paid_prevention_filter: None,
+                dna_subject_probe: None,
                 resource_flow: false,
                 development_hand: Default::default(),
                 blast_digivolve: false,
@@ -1038,6 +1069,7 @@ impl EffectBuilder {
                 reducer_cost_scope: ReducerCostScope::Any,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
+                activation_guard: None,
                 optional_activation_folded: false,
                 optional_condition_guard: None,
                 pay_cost_self_gated: false,
@@ -1221,6 +1253,16 @@ impl EffectBuilder {
         F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     {
         self.inner.outer_optional_guard = Some(Arc::new(f));
+        self
+    }
+
+    /// Attach the activatability guard of a mandatory single-pick clause
+    /// (see `Effect::activation_guard`).
+    pub fn activation_guard<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
+    {
+        self.inner.activation_guard = Some(Arc::new(f));
         self
     }
 
@@ -1525,6 +1567,12 @@ impl EffectBuilder {
     /// Dispatch through `Game::try_replace` lands in Task 2.
     pub fn paid_prevention_filter(mut self, filter: CompiledPredicate) -> Self {
         self.inner.paid_prevention_filter = Some(filter); self
+    }
+    pub fn dna_subject_probe(
+        mut self,
+        probe: crate::dsl_cards::step::dna_digivolve::DnaSubjectProbe,
+    ) -> Self {
+        self.inner.dna_subject_probe = Some(std::sync::Arc::new(probe)); self
     }
     pub fn prevention_all_matching(mut self) -> Self {
         self.inner.paid_prevention_all = true; self

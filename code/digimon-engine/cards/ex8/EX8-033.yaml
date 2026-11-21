@@ -1,0 +1,86 @@
+# EX8-033 Pumpkinmon — Digimon, Yellow/Purple, Lv.5, cost 6, 6000 DP. Traits:
+# Puppet, NSo. Attribute: Data (form Ultimate).
+#
+# Printed text (official Bandai DB, data/card_bundles/EX8-033.md):
+#   [Digivolve] Yellow Lv.4 / cost 4;  Purple Lv.4 / cost 4
+#   [Digivolve] Lv.4 w/[NSo] trait: Cost 3
+#   [DNA Digivolve] Yellow Lv.4 + Purple/Red Lv.4: Cost 0
+#     (stack the 2 specified Digimon and digivolve unsuspended)
+#   [On Play] [When Digivolving] Return 1 card with the [NSo] trait from your
+#     trash to the hand.
+#   [On Deletion] 1 of your opponent's Digimon gets -4000 DP for the turn.
+#   Inherited Effect
+#   [On Deletion] <Recovery +1 (Deck)> (Place the top card of your deck on top
+#     of your security stack.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX8/Yellow/EX8_033.cs
+#   - Alt digivolve: top card level 4 AND EqualsTraits("NSo"), cost 3.
+#   - DNA: element 1 = own battle-area Digimon whose top card is Yellow with
+#     level 4 (Levels_ForJogress), element 2 = Purple OR Red with level 4; cost 0.
+#   - [On Play] / [When Digivolving] (two ActivateClasses sharing one body):
+#     CanActivate = a card with the [NSo] trait in the owner's trash; body =
+#     MANDATORY pick of 1 such card (canNoSelect: false) -> add to hand.
+#   - [On Deletion]: CanTriggerOnDeletion; body = a MANDATORY pick of 1 opponent
+#     Digimon (canNoSelect: false) that gets -4000 DP until end of turn.
+#   - Inherited [On Deletion]: Recovery +1.
+
+card: EX8-033
+name: Pumpkinmon
+kind: digimon
+level: 5
+color: [yellow, purple]
+cost: 6
+dp: 6000
+traits: [Puppet, NSo]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: NSo
+    cost: 3
+  - kind: dna_digivolve
+    # `color_only` is the OR-set the DNA requirement bridge understands
+    # (`dsl_bridge::compiled_dna_requirement` drops `any_of` silently).
+    materials:
+      - { level_eq: 4, color_only: [yellow] }
+      - { level_eq: 4, color_only: [purple, red] }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Return 1 card with the [NSo] trait from your trash to the hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: recovered
+          filter: { trait_has: NSo }
+          prompt: "Return 1 card with the [NSo] trait from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: recovered }
+
+  - when: on_deletion
+    summary: "[On Deletion] 1 of your opponent's Digimon gets -4000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: shrunk
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -4000 DP for the turn"
+      - add_dp_modifier:
+          target: shrunk
+          value: -4000
+          expiry: end_of_turn
+
+  - scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] <Recovery +1 (Deck)>"
+    process:
+      - recover: { of: you, count: 1 }

@@ -317,7 +317,7 @@ impl Game {
         }
     }
 
-    fn queued_refired_effect(&self, effect: ReFireableEffect) -> QueuedEffect {
+    fn queued_refired_effect(&mut self, effect: ReFireableEffect) -> QueuedEffect {
         let is_turn_player = effect.controller == self.turn_player();
         // §15-15-7-4 (Ver. 4.3): the refired effect keeps its own optional
         // processing condition even when the effect activating it is
@@ -332,9 +332,15 @@ impl Game {
                     .map(|effect| effect.optional)
             })
             .unwrap_or(false);
+        // The refired effect is run directly (not through
+        // `push_effect_with_identity`), so capture the borrowed-from
+        // permanent's identity here: "this Digimon" in the refired body
+        // (`is_source`, source-carrier rebinding) must still resolve to the
+        // Digimon the effect was borrowed from, not to nothing.
+        let source_identity = Some(self.source_move_anchor(effect.source));
         QueuedEffect {
-                source_identity: None,
-                source_card: effect.source_card,
+            source_identity,
+            source_card: effect.source_card,
             source_permanent: Some(effect.source),
             source_kind: effect.source_kind,
             attribution_source_card: effect.attribution_source_card,
@@ -1102,9 +1108,30 @@ impl Game {
                 // any of your [Armor Form] trait Digimon is trashed".
                 // G-DSL-TOP-CARD-TRASHED-TIMING.
                 | TriggerSource::TopCardsTrashed { .. }
+                // BT24-093's `<Delay>` is keyed to
+                // `OnEvent(OnOwnSecurityRemoved)` ("[All Turns] When your
+                // security stack is removed from, <Delay>"), BT21-093's to
+                // `OnEvent(OnOpponentSecurityRemoved)`. The removal is observed
+                // by ONE player (`observer_player`), so only that player's
+                // Options may answer it (`only_player` below).
+                // G-ENGINE-EVENT-DELAY-ON-SECURITY-REMOVED.
+                | TriggerSource::SecurityRemoved { .. }
+                // BT23-099's `<Delay>` is keyed to `OnEvent(OnDigivolve)`
+                // ("When any of your Digimon digivolve into a Digimon with
+                // [Huckmon] or [Jesmon] in its name"). DCGO observes it on
+                // `OnEnterFieldAnyone` + `CanTriggerWhenPermanentDigivolving`.
+                // The just-digivolved permanent/card ride on the context as
+                // `event_permanent` / `event_card`, which the Delay's
+                // `active_when` (`event_target_*`, `event_card_name_*`) reads.
+                // G-ENGINE-EVENT-DELAY-ON-DIGIVOLVE.
+                | TriggerSource::Digivolved { .. }
         ) {
+            let only_player = match source {
+                TriggerSource::SecurityRemoved { observer_player, .. } => Some(observer_player),
+                _ => None,
+            };
             let trigger_context = self.trigger_context_for_source(&source, None, timing);
-            self.enqueue_event_gated_delayed_options(timing, trigger_context);
+            self.enqueue_event_gated_delayed_options(timing, trigger_context, only_player);
         }
     }
 
@@ -2974,10 +3001,14 @@ impl Game {
         &mut self,
         timing: EffectTiming,
         trigger_context: TriggerContext,
+        only_player: Option<PlayerId>,
     ) {
         let mut candidates = Vec::new();
         for player in 0..self.players.len() {
             let player = player as PlayerId;
+            if only_player.is_some_and(|only| only != player) {
+                continue;
+            }
             for (index, perm) in self.player(player).battle_area.iter().enumerate() {
                 let OptionState::Delayed {
                     trigger: DelayTrigger::OnEvent(event_timing),
@@ -4070,11 +4101,113 @@ impl Game {
                 || !self.queued_effect_condition_passes(i)
                 || !self.queued_effect_index_is_live(i)
                 || self.queued_optional_condition_unpayable(i)
+                || self.queued_effect_activation_guard_fails(i)
             {
                 to_skip.push(i);
             }
         }
         to_skip
+    }
+
+    /// The queued effects of the parked `TriggerOrder`'s chooser and batch that
+    /// the prompt does NOT offer because the engine filters them as non-firing
+    /// right now, and that DCGO's `MultipleSkills` may nevertheless have listed:
+    /// `(source card id, why)` for each.
+    ///
+    /// Only two filters qualify, the ones where DCGO's own `CanActivate`
+    /// (MultipleSkills.cs:217-221) can hold while ours does not: the clause
+    /// `condition` fails (a cost preflight - EX9-032 Karakurumon's "By deleting
+    /// 1 of your Tokens or other [Puppet] Digimon", CR 4.3 15-7-4, whose DCGO
+    /// `CanActivateCondition` checks only that the card is on the field,
+    /// EX9_032.cs) and an optional processing condition that cannot be paid
+    /// (`queued_optional_condition_unpayable`). An exhausted once-per-turn count
+    /// and a left source are filtered by DCGO's `CanActivate` as well, so they
+    /// are not "extra" entries and are not counted. Empty unless a
+    /// `TriggerOrder` is parked. The condition check installs its trigger
+    /// context temporarily, so replay adapters call this on a clone.
+    pub(crate) fn parked_trigger_order_filtered_siblings(&mut self) -> Vec<(String, &'static str)> {
+        let Some(state) = self.pending_selection_resume.as_ref().and_then(|r| match r.frames.first() {
+            Some(crate::resume::ResumeFrame::TriggerOrderSelection(s)) => Some(s.clone()),
+            _ => None,
+        }) else {
+            return Vec::new();
+        };
+        let Some(batch) = state.bundle.first().and_then(|&i| self.effect_queue.get(i)).map(|qe| qe.trigger_batch)
+        else {
+            return Vec::new();
+        };
+        let mut found = Vec::new();
+        for i in 0..self.effect_queue.len() {
+            let Some(qe) = self.effect_queue.get(i) else { break };
+            if state.bundle.contains(&i) || qe.controller != state.chooser || qe.trigger_batch != batch {
+                continue;
+            }
+            let card_id = qe.card_id.clone();
+            if self.queued_effect_opt_exhausted(i) || !self.queued_effect_index_is_live(i) {
+                continue;
+            }
+            if !self.queued_effect_condition_passes(i) {
+                found.push((card_id, "its clause condition fails"));
+            } else if self.queued_optional_condition_unpayable(i) {
+                found.push((card_id, "its optional processing condition cannot be paid"));
+            }
+        }
+        found
+    }
+
+    /// True when `effect_queue[i]` is a mandatory single-pick effect
+    /// (`Effect::activation_guard`) whose pick has no candidate right now:
+    /// DCGO gates such an effect's `CanActivateCondition` on
+    /// `HasMatchConditionPermanent`, so it is never an entry of the
+    /// `MultipleSkills` order list. Transient like the other `non_firing`
+    /// exclusions -- the entry stays queued and is re-evaluated after a
+    /// sibling resolves (which may create a target).
+    /// G-ENGINE-TRIGGER-ORDER-NO-TARGET-ENTRY.
+    fn queued_effect_activation_guard_fails(&mut self, i: usize) -> bool {
+        let Some(qe) = self.effect_queue.get(i).cloned() else {
+            return false;
+        };
+        if qe.granted_effect_id.is_some()
+            || qe.keyword_effect.is_some()
+            || qe.pending_processing.is_some()
+            || qe
+                .trigger_context
+                .as_ref()
+                .is_some_and(|c| !c.simultaneous_play_members.is_empty())
+        {
+            return false;
+        }
+        let Some(effects) = self.effects_for_queued(&qe) else {
+            return false;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return false;
+        };
+        let Some(guard) = effect.activation_guard.clone() else {
+            return false;
+        };
+        let source_kind = self.queued_effect_activation_kind(&qe);
+        let prev_dna_origin = self.current_dna_origin;
+        if qe.dna_origin_context.is_some() {
+            self.current_dna_origin = qe.dna_origin_context;
+        }
+        let gate = qe
+            .trigger_context
+            .as_ref()
+            .and_then(|context| self.gate_trigger_context(context));
+        let trigger_guard =
+            TriggerContextGuard::install(self, gate.or_else(|| qe.trigger_context.clone()));
+        let rctx = EffectReadContext::new_with_source_kind(
+            &*trigger_guard.game,
+            qe.source_card,
+            qe.source_permanent,
+            source_kind,
+            qe.controller,
+        );
+        let holds = guard(&rctx);
+        drop(trigger_guard);
+        self.current_dna_origin = prev_dna_origin;
+        !holds
     }
 
     /// True when `effect_queue[i]` is an OPTIONAL effect whose optional
@@ -6352,6 +6485,7 @@ impl Game {
             perm.option_state,
             crate::permanent::OptionState::Delayed {
                 trigger: crate::enums::DelayTrigger::EndOfThisTurn
+                    | crate::enums::DelayTrigger::EndOfAllTurns
                     | crate::enums::DelayTrigger::EndOfYourNextTurn
                     | crate::enums::DelayTrigger::StartOfYourNextTurn,
                 ..

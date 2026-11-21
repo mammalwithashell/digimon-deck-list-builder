@@ -1,0 +1,100 @@
+# EX11-007 Agumon — Digimon, Lv.3, Red/Green, DP 1000, Cost 3.
+# Traits: Reptile, LIBERATOR. Form: Rookie. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/EX11-007.md,
+# authoritative; DCGO EX11_007.cs cross-checked):
+#
+#   Evo box: Lv.2 Red / cost 1 OR Lv.2 Green / cost 1 (two circles).
+#   Evo box: "Digivolve [Koromon]: Cost 0".
+#
+#   [When Moving] [On Play] 1 of your Digimon with [Tyrannomon] in its name or
+#   the [Reptile] or [Dinosaur] trait gains <Raid> and <Piercing> for the turn.
+#
+#   Inherited Effect: [All Turns] This Digimon gets +1000 DP.
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alt digivolution (EffectTiming.None): AddSelfDigivolutionRequirement
+#   StaticEffect(permanentCondition: TopCard.EqualsCardName("Koromon"),
+#   digivolutionCost: 0, ignoreDigivolutionRequirement: false) — exact-name
+#   gate, no level/colour restriction → `from: { name_is: "Koromon" }`.
+#   Standard Red/Green Lv.2 circles are listed explicitly (EX11-014 idiom) so a
+#   DSL-only load carries the full printed cost table.
+#   A Red or Green Lv.2 [Koromon] satisfies BOTH the circle (cost 1) and the
+#   alt (cost 0): the engine's digivolve cost-choice prompt fires then (DCGO
+#   `CostList` -> SelectCountEffect "Which digivolution cost do you pay?").
+#
+# [When Moving] / [On Play] share one body (SharedActivateCoroutine):
+#   - PermanentDigimonCondition = own battle-area Digimon whose TOP CARD
+#     ContainsCardName("Tyrannomon") OR EqualsTraits("Reptile") OR
+#     EqualsTraits("Dinosaur"). The card itself (Reptile) can be picked.
+#   - The pick is mandatory (canNoSelect: false); the effect is mandatory
+#     (isOptional: false); it no-ops when no Digimon matches.
+#   - GainRaid + GainPierce with EffectDuration.UntilEachTurnEnd ("for the
+#     turn") → `grant_keyword { expiry: end_of_turn }` for both keywords.
+#   - [When Moving] is self-scoped ("when THIS Digimon moves from the breeding
+#     area", DCGO PermanentCondition = permanent == card.PermanentOfThisCard()):
+#     the engine's on_move dispatch is a board-wide observer scan, so the
+#     on_move timing is gated on the moved permanent being this Digimon
+#     (BT25-008 / EX11-008 idiom).
+#
+# Inherited [All Turns] +1000 DP: ChangeSelfDPStaticEffect(1000,
+#   isInheritedEffect: true, condition: always true) → `kind: aura, scope:
+#   inherited, target: {}, active_when: all_turns`.
+
+card: EX11-007
+name: Agumon
+kind: digimon
+level: 3
+color: [red, green]
+cost: 3
+dp: 1000
+traits: [Reptile, LIBERATOR]
+attribute: Vaccine
+form: Rookie
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  # Printed alt evo box: "Digivolve [Koromon]: Cost 0".
+  - kind: digivolve
+    from: { name_is: "Koromon" }
+    cost: 0
+
+effects:
+  - when: [on_move, on_play]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][On Play] 1 of your [Tyrannomon]-name / [Reptile] / [Dinosaur] Digimon gains <Raid> and <Piercing> for the turn"
+    process:
+      - select_own_permanent:
+          bind_as: raider
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Tyrannomon
+                  - trait_has: Reptile
+                  - trait_has: Dinosaur
+          prompt: "Select 1 of your Digimon with [Tyrannomon] in its name or the [Reptile] or [Dinosaur] trait to gain <Raid> and <Piercing> for the turn"
+      - grant_keyword:
+          target: raider
+          keyword: Raid
+          expiry: end_of_turn
+      - grant_keyword:
+          target: raider
+          keyword: Piercing
+          expiry: end_of_turn
+
+  # Inherited [All Turns] +1000 DP.
+  - scope: inherited
+    kind: aura
+    active_when: { all_turns: true }
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

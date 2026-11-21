@@ -152,6 +152,24 @@ pub fn try_run(
             }
             true
         }
+        CompiledStep::PlayToBreedingFromTrash { of, trash_index } => {
+            let player = resolve_player(ctx, *of);
+            // The binding addresses the card by trash index, or by card handle
+            // (`select_trash` binds a TrashIndex; re-resolve after any prompt).
+            let located = match resolve_binding_ref(trash_index, ctx, bindings) {
+                Some(ResolvedBinding::TrashIndex(owner, i)) => Some((owner, i as usize)),
+                Some(ResolvedBinding::Card(h)) => {
+                    ctx.game.player(player).trash.iter().position(|c| c.handle() == h).map(|i| (player, i))
+                }
+                _ => None,
+            };
+            if let Some((owner, index)) = located {
+                if owner == player {
+                    let _ = ctx.play_to_breeding_from_trash(player, index);
+                }
+            }
+            true
+        }
         CompiledStep::BounceSelf => {
             let _ = ctx.bounce_self();
             true
@@ -209,6 +227,29 @@ pub fn try_run(
             let p = resolve_player(ctx, *of);
             if let Some(card) = ctx.game.player(p).security.last().map(|c| c.handle()) {
                 if ctx.add_top_security_to_hand(p) {
+                    bindings.record_added_to_hand(card);
+                }
+            }
+            true
+        }
+        // EX11-025 FunBeemon "Add your top face-down security card to the hand":
+        // the first FACE-DOWN card from the top (the stack's last element) —
+        // face-up cards (CR 3-7-4 / 15-14-5) are skipped, never taken. DCGO
+        // walks `SecurityCards` and takes the first `IsFlipped` (face-down)
+        // card. No-op when the stack holds no face-down card.
+        CompiledStep::AddTopFaceDownSecurityToHand { of } => {
+            let p = resolve_player(ctx, *of);
+            let target = {
+                let player = ctx.game.player(p);
+                player
+                    .security
+                    .iter()
+                    .rev()
+                    .find(|c| !player.face_up_security.contains(&c.card_index))
+                    .map(|c| c.handle())
+            };
+            if let Some(card) = target {
+                if ctx.add_to_hand_from_security(p, card) {
                     bindings.record_added_to_hand(card);
                 }
             }

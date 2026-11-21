@@ -1,0 +1,145 @@
+# BT25-074 Tankdramon — Digimon, Lv.5, Black+Purple, DP 7000, Cost 7.
+# Traits: [Machine, D-Brigade, ACCEL]. Virus. Form: Ultimate.
+#
+# Printed (official Bandai DB bundle data/card_bundles/BT25-074.md):
+#   Digivolve: Black Lv.4 / cost 4, Purple Lv.4 / cost 4.
+#   "[Digivolve] Lv.4 w/[D-Brigade]/[ACCEL] trait: Cost 3".
+#   [When Digivolving] [When Attacking] [Once Per Turn] Reveal the top 3 cards of
+#     your deck. You may play 1 play cost 12 or lower [D-Brigade] or [ACCEL]
+#     trait Digimon card among them with the cost reduced by 5. Trash the rest.
+#   [All Turns] [Once Per Turn] When any of your [D-Brigade] or [ACCEL] trait
+#     Digimon are played, 1 of your opponent's Digimon can't digivolve until
+#     their turn ends.
+#   Inherited: [Opponent's Turn] This Digimon with [Chaosmon] in its name or the
+#     [D-Brigade] or [ACCEL] trait gains <Reboot> and <Blocker>.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_074.cs
+#   - Alt route: `AddSelfDigivolutionRequirementStaticEffect(host.TopCard has the
+#     exact trait D-Brigade OR ACCEL, cost 3, level: 4)`.
+#   - WD / WA share ONE once-per-turn counter (`ActivateClassesForSharedEffects`,
+#     `optional: false`, maxCountPerTurn 1): reveal 3, optional pick of a Digimon
+#     with a printed play cost <= 12 and the D-Brigade/ACCEL trait that
+#     `CanPlayAsNewPermanent(payCost: true, fixedCost: max(0, cost - 5))`, play
+#     it paying the REDUCED cost from the reveal, trash the rest.
+#   - [All Turns] OPT: `OnEnterFieldAnyone` + `CanTriggerOnPermanentPlay`
+#     (a PLAY, not a digivolve) of an own D-Brigade/ACCEL Digimon (this card
+#     included); mandatory pick of 1 opponent Digimon, `CanNotDigivolveClass`
+#     until THAT Digimon's owner's turn ends.
+#   - Inherited: `[Opponent's Turn]` and the host's top card names/traits.
+#
+# Regression (hunt2 cluster alt-digivolve-cost-cards): the card had no YAML
+# (BLOCKED on `play_from_revealed_free` cost_delta in qa/dsl-vocab-gaps.md until
+# G-DSL-PLAY-FROM-REVEALED-COST-REDUCED closed, but never authored afterwards),
+# so DCGO's cost-choice prompt (cost 3 vs 4 for a Black/Purple Lv.4 [D-Brigade])
+# met nothing in the engine.
+
+card: BT25-074
+name: Tankdramon
+kind: digimon
+level: 5
+color: [black, purple]
+cost: 7
+dp: 7000
+traits: [Machine, D-Brigade, ACCEL]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  # Printed circles: Black Lv.4 / cost 4 and Purple Lv.4 / cost 4.
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  # "[Digivolve] Lv.4 w/[D-Brigade]/[ACCEL] trait: Cost 3".
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - trait_has: D-Brigade
+            - trait_has: ACCEL
+    cost: 3
+
+effects:
+  # ─── [When Digivolving] [When Attacking] [Once Per Turn] (one shared counter) ───
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[When Digivolving][When Attacking][Once Per Turn] Reveal the top 3 cards of your deck. You may play 1 play cost 12 or lower [D-Brigade] or [ACCEL] trait Digimon card among them with the cost reduced by 5. Trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - play_cost_lte: 12
+                  - any_of:
+                      - trait_has: D-Brigade
+                      - trait_has: ACCEL
+                  - can_play_from_effect_without_cost: true
+                  - affordable_with_cost: { reduce: 5 }
+          prompt: "You may play 1 play cost 12 or lower [D-Brigade] or [ACCEL] trait Digimon card among them with the cost reduced by 5"
+      - play_from_revealed_free: { of: you, card: play_pick, cost_delta: { reduce: 5 } }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  # ─── [All Turns] [Once Per Turn] a [D-Brigade]/[ACCEL] Digimon is played -> deny digivolution ───
+  - when: on_ally_played
+    once_per_turn: true
+    active_when: { all_turns: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_trait_has: D-Brigade
+            - event_target_trait_has: ACCEL
+    summary: "[All Turns][Once Per Turn] When any of your [D-Brigade] or [ACCEL] trait Digimon are played, 1 of your opponent's Digimon can't digivolve until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: deny_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon can't digivolve until their turn ends"
+      - add_modifier:
+          target: deny_target
+          modifier: CannotDigivolve
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── Inherited [Opponent's Turn]: Chaosmon-name / D-Brigade / ACCEL host gains Reboot + Blocker ───
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - any_of:
+            - source_name_contains: "Chaosmon"
+            - source_permanent_trait_has: D-Brigade
+            - source_permanent_trait_has: ACCEL
+    grant_keyword: { keyword: Reboot }
+    summary: "[Inherited][Opponent's Turn] This Digimon with [Chaosmon] in its name or the [D-Brigade]/[ACCEL] trait gains <Reboot>"
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - any_of:
+            - source_name_contains: "Chaosmon"
+            - source_permanent_trait_has: D-Brigade
+            - source_permanent_trait_has: ACCEL
+    grant_keyword: { keyword: Blocker }
+    summary: "[Inherited][Opponent's Turn] This Digimon with [Chaosmon] in its name or the [D-Brigade]/[ACCEL] trait gains <Blocker>"

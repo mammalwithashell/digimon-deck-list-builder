@@ -1,0 +1,138 @@
+# BT22-096 Unique Emblem: Poseidia Lagoon — Option, Blue, Cost 3, Traits: LIBERATOR.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT22-096.md):
+#   [Main] You may play 1 [Sangomon] or [Yao Qinglan] from your hand or trash
+#   without paying the cost. Then, place this card in the battle area.
+#   [Your Turn] When any of your [Yao Qinglan] suspend, <Delay>
+#   ・1 of your Digimon with [Aqua] or [Sea Animal] in any of its traits may
+#     digivolve into an [Aquatic] and [LIBERATOR] trait Digimon card in the
+#     hand with the digivolution cost reduced by 3.
+#   [Security] Activate this card's [Main] effects.
+# Official Q&A: the digivolve target must carry BOTH [Aquatic] and [LIBERATOR].
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT22/Blue/BT22_096.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OptionSkill` ([Main]). `canSelectHand` /
+#   `canSelectTrash` over `EqualsCardName("Sangomon") || EqualsCardName("Yao
+#   Qinglan")` (EXACT names). Both zones populated -> a hand/trash bool prompt,
+#   then the card pick (`canNoSelect: true`); only one populated -> the bool is
+#   skipped. `PlayPermanentCards(payCost: false)`. `PlaceDelayOptionCards` runs
+#   UNCONDITIONALLY afterwards (outside the `canSelectHand || canSelectTrash`
+#   guard) — so the Option is placed even with nothing to play.
+#   -> `select_union_zone [hand, trash]` (one pick spanning both zones, the
+#   origin-preserving equivalent of DCGO's zone-then-card two-step; BT24-089 /
+#   BT22-098 precedent) + `play_union_bound_free` + `place_self_as_delay_option`.
+#
+# Clause 2 — `EffectTiming.OnTappedAnyone`, optional. CanUseCondition:
+#   `CanDeclareOptionDelayEffect && IsOwnerTurn &&
+#   CanTriggerWhenPermanentSuspends(IsYaoQinglan)` where IsYaoQinglan = own
+#   permanent whose TOP card `EqualsCardName("Yao Qinglan")`. Body: trash this
+#   card (cost), then select 1 own permanent with `HasAquaTraits` (any trait
+#   containing "Aqua" or "Sea Animal"), then
+#   `DigivolveIntoHandOrTrashCard(payCost: true, reduceCost 3, isHand: true)`
+#   over `HasAquaticTraits && HasLiberatorTraits` hand cards.
+#   -> `kind: delay, trigger: on_suspend` gated on `event_card_name_is`
+#   ("Yao Qinglan", exact — NOT `_contains`, which would also match
+#   [Yao Qinglan X] variants) with `your_turn` + `event_target_owner: you`;
+#   body = `select_own_permanent` (only Digimon that actually have a legal
+#   Aquatic+LIBERATOR hand card at -3, the printed "may digivolve") then
+#   `select_hand` + `effect_initiated_digivolve { cost: { reduce: 3 } }`.
+#
+# Clause 3 — `AddActivateMainOptionSecurityEffect`: the [Main] body run as the
+#   security effect, including the trailing placement.
+
+card: BT22-096
+name: "Unique Emblem: Poseidia Lagoon"
+kind: option
+color: [blue]
+cost: 3
+traits: [LIBERATOR]
+
+effects:
+  # ─── Clause 1: [Main] free play of [Sangomon] / [Yao Qinglan], then place ────
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] You may play 1 [Sangomon] or [Yao Qinglan] from your hand or trash without paying the cost. Then, place this card in the battle area"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - name_is: Sangomon
+              - name_is: Yao Qinglan
+          prompt: "You may play 1 [Sangomon] or [Yao Qinglan] from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: pick }
+      - place_self_as_delay_option: {}
+
+  # ─── Clause 2: [Your Turn] [Yao Qinglan] suspends -> <Delay> digivolve -3 ────
+  - kind: delay
+    trigger: on_suspend
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+        - event_card_name_is: "Yao Qinglan"
+    summary: "[Your Turn] When any of your [Yao Qinglan] suspend, <Delay>: 1 of your [Aqua]/[Sea Animal] Digimon may digivolve into an [Aquatic] [LIBERATOR] Digimon in hand, cost reduced by 3"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_contains: Aqua
+                  - trait_contains: Sea Animal
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  cost: { reduce: 3 }
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_has: Aquatic
+                      - trait_has: LIBERATOR
+          prompt: "Choose 1 of your [Aqua] or [Sea Animal] Digimon to digivolve"
+      - if:
+          condition: { binding_present: target }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo
+                optional: false
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: Aquatic
+                    - trait_has: LIBERATOR
+                    - can_digivolve_onto: target
+                prompt: "Choose an [Aquatic] and [LIBERATOR] Digimon card in your hand to digivolve into (cost reduced by 3)"
+            - effect_initiated_digivolve:
+                target: target
+                from_hand: evo
+                cost: { reduce: 3 }
+                ignore_requirements: false
+
+  # ─── Clause 3: [Security] activate this card's [Main] effects ────────────────
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Activate this card's [Main] effects: may play 1 [Sangomon]/[Yao Qinglan] from hand or trash free; place this card in the battle area"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: sec_pick
+          optional: true
+          filter:
+            any_of:
+              - name_is: Sangomon
+              - name_is: Yao Qinglan
+          prompt: "You may play 1 [Sangomon] or [Yao Qinglan] from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: sec_pick }
+      - place_self_as_delay_option: {}

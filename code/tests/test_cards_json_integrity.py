@@ -331,3 +331,35 @@ def test_printed_values_stand_in_for_a_wrong_mirror():
     cards, official = _synthetic({"dp": None, "card_kind": 3, "play_cost": 0}, {"play_cost": None, "dp": "1000"})
     assert stats_violations(cards, official, ["X-1"]) == ["X-1: dp None != official '1000'"]
     assert stats_violations(cards, official, ["X-1"], printed={"X-1": {"dp": None}}) == []
+
+
+# Digi-Egg cards (card_kind 3) that genuinely print no level: the engine leaves them levelless.
+SPECIAL_LEVELLESS_EGGS = ("BT13-007", "BT22-007", "EX2-007", "EX6-006")
+# Hatchable In-Training eggs whose card face prints "Lv.2" but whose cards.json row has
+# `level: null` (the digimoncard.io ingest dropped it; official DB mirror carries no level
+# field either). `CardData::load_from_str` restores Lv.2 for them (Rust test
+# committed_cards_json_has_only_the_four_special_levelless_digi_eggs), which is what lets a
+# recorded breeding-area digivolve over them resolve. Retire an id here once cards.json is
+# corrected through the card-data pipeline.
+KNOWN_NULL_LEVEL_IN_TRAINING_EGGS = ("EX11-005", "EX13-001")
+
+
+def level_violations(cards):
+    out = []
+    for cid, card in sorted(cards.items()):
+        if card.get("card_kind") != 3 or cid in SPECIAL_LEVELLESS_EGGS:
+            continue
+        if card.get("level") == 2:
+            if cid in KNOWN_NULL_LEVEL_IN_TRAINING_EGGS:
+                out.append(f"{cid}: now Lv.2 in cards.json; drop it from KNOWN_NULL_LEVEL_IN_TRAINING_EGGS")
+        elif cid not in KNOWN_NULL_LEVEL_IN_TRAINING_EGGS:
+            out.append(f"{cid}: Digi-Egg level {card.get('level')!r}, expected 2 (a hatchable egg prints Lv.2)")
+    return out
+
+
+def test_every_digi_egg_is_level_2_except_the_special_levelless_ones():
+    cards, _ = _repo_inputs()
+    violations = level_violations(cards)
+    assert not violations, "Digi-Egg level problems: " + "; ".join(violations)
+    for cid in SPECIAL_LEVELLESS_EGGS:
+        assert cards[cid]["card_kind"] == 3 and cards[cid].get("level") is None, cid

@@ -1,0 +1,89 @@
+# P-174 Boltmon — Digimon, Black/Purple, Lv.6, cost 11, 11000 DP. Traits: Cyborg,
+# NSo. Attribute: Data (form Mega). (Promo card.)
+#
+# Printed text (official Bandai DB, data/card_bundles/P-174.md):
+#   [Digivolve] Black Lv.5 / cost 3;  Purple Lv.5 / cost 3
+#   [Digivolve] Lv.5 w/[NSo] trait: Cost 3
+#   [DNA Digivolve] Black/Yellow Lv.5 + Purple/Red Lv.5: Cost 0
+#   When this card would be played, if [Nightmare Soldiers] is in your face-up
+#     security cards, reduce the play cost by 4.
+#   <Blocker>
+#   [When Digivolving] [On Deletion] <De-Digivolve 1> 1 of your opponent's
+#     Digimon. Then, delete 1 of their level 4 or lower Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Black/P_174.cs
+#   - Alt digivolve: top card EqualsTraits("NSo") AND level 5, cost 3.
+#   - Jogress: own Black OR Yellow level-5 Digimon + own Purple OR Red level-5
+#     Digimon, cost 0.
+#   - BeforePayCost: while the owner has a FACE-UP security card named
+#     "Nightmare Soldiers" the play cost is reduced by 4 (shown + hidden form).
+#   - <Blocker> (not inherited).
+#   - [When Digivolving] / [On Deletion] (two ActivateClasses, one body):
+#     CanActivate = an opponent Digimon exists; MANDATORY pick of 1 opponent
+#     Digimon -> IDegeneration 1; then a MANDATORY pick of 1 opponent Digimon
+#     with level <= 4 -> delete (evaluated AFTER the de-digivolve).
+
+card: P-174
+name: Boltmon
+kind: digimon
+level: 6
+color: [black, purple]
+cost: 11
+dp: 11000
+traits: [Cyborg, NSo]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: NSo
+    cost: 3
+  - kind: dna_digivolve
+    # `color_only` is the OR-set the DNA requirement bridge understands
+    # (`dsl_bridge::compiled_dna_requirement` drops `any_of` silently).
+    materials:
+      - { level_eq: 5, color_only: [black, yellow] }
+      - { level_eq: 5, color_only: [purple, red] }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount: 4
+    condition:
+      not:
+        no_face_up_security_named: { of: you, name_is: "Nightmare Soldiers" }
+    summary: "When this card would be played, if [Nightmare Soldiers] is in your face-up security cards, reduce the play cost by 4"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [when_digivolving, on_deletion]
+    summary: "[When Digivolving][On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of their level 4 or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigi
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dedigi
+          amount: 1
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Delete 1 of your opponent's level 4 or lower Digimon"
+      - delete_permanent: { target: victim }

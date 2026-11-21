@@ -360,6 +360,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::StartOfOpponentsMainPhase => CompiledTiming::StartOfOpponentsMainPhase,
         S::EndOfYourTurn => CompiledTiming::EndOfYourTurn,
         S::EndOfOpponentsTurn => CompiledTiming::EndOfOpponentsTurn,
+        S::EndOfAllTurns => CompiledTiming::EndOfAllTurns,
         S::EndOfYourNextTurn => CompiledTiming::EndOfYourNextTurn,
         S::EndOfOpponentsNextTurn => CompiledTiming::EndOfOpponentsNextTurn,
         S::UntilNextUnsuspend => CompiledTiming::UntilNextUnsuspend,
@@ -448,6 +449,7 @@ fn compile_per_selector(
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
         S::SourceColorCount => CompiledPerSelector::SourceColorCount,
         S::ReturnedCardColorCount => CompiledPerSelector::ReturnedCardColorCount,
+        S::ReturnedCardCount => CompiledPerSelector::ReturnedCardCount,
         S::EffectSuspendedCount => CompiledPerSelector::EffectSuspendedCount,
         S::SameLevelPairsInSources => CompiledPerSelector::SameLevelPairsInSources,
         S::SharedTrashCount { bucket } => CompiledPerSelector::SharedTrashCount { bucket: *bucket },
@@ -524,6 +526,7 @@ fn compile_aggregate_selector(a: crate::formula::AggregateSelector) -> CompiledA
         S::HighestLevel => CompiledAggregateSelector::HighestLevel,
         S::FewestMaterials => CompiledAggregateSelector::FewestMaterials,
         S::LowestPlayCost => CompiledAggregateSelector::LowestPlayCost,
+        S::HighestPlayCost => CompiledAggregateSelector::HighestPlayCost,
     }
 }
 
@@ -1023,6 +1026,7 @@ fn compile_predicate(
         color_matches_binding: p.color_matches_binding.clone(),
         color_matches_returned_card: p.color_matches_returned_card,
         name_matches_returned_card: p.name_matches_returned_card,
+        name_matches_source: p.name_matches_source,
         color_matches_own_source_stack: p.color_matches_own_source_stack.map(|s| match s {
             crate::predicate::SourceStackScope::Scoped {
                 of: crate::predicate::SourceStackScopeOf::SelfCarrier,
@@ -1099,6 +1103,7 @@ fn compile_predicate(
         can_play_from_effect_without_cost: p.can_play_from_effect_without_cost,
         can_play_or_use_from_effect: p.can_play_or_use_from_effect,
         can_play_to_breeding_from_hand: p.can_play_to_breeding_from_hand,
+        can_play_to_breeding_from_trash: p.can_play_to_breeding_from_trash,
         can_move_from_breeding_by_effect: p.can_move_from_breeding_by_effect,
         dp_eq,
         dp_lte,
@@ -1206,6 +1211,24 @@ fn compile_predicate(
             without_suspending: c.without_suspending,
             ignore_summoning_sickness: c.ignore_summoning_sickness,
         }),
+        has_refireable_effect: p.has_refireable_effect.as_ref().and_then(|timing| {
+            if matches!(
+                timing.as_str(),
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+            ) {
+                Some(timing.clone())
+            } else {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.has_refireable_effect"),
+                    message: format!(
+                        "unknown refire timing `{timing}`: expected `on_play`, `when_digivolving` or \
+                         `on_play_or_when_digivolving`"
+                    ),
+                });
+                None
+            }
+        }),
         has_keyword: p.has_keyword.clone(),
         has_security_attack_change: p.has_security_attack_change,
         has_on_deletion_effect: p.has_on_deletion_effect,
@@ -1265,11 +1288,14 @@ fn compile_predicate(
             }
         }),
         self_same_level_source_pairs_gte: p.self_same_level_source_pairs_gte,
+        self_stack_same_level_count_gte: p.self_stack_same_level_count_gte,
         own_source_stack_color_count_gte: p.own_source_stack_color_count_gte,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
         other: p.other,
         is_source: p.is_source,
+        is_source_card: p.is_source_card,
+        card_in_zone: p.card_in_zone.iter().map(|z| compile_zone(*z)).collect(),
         of_permanent: p.of_permanent.clone(),
         not_in_binding: p.not_in_binding.clone(),
         name_not_in_binding: p.name_not_in_binding.clone(),
@@ -1499,6 +1525,8 @@ fn compile_predicate(
         is_event_host: p.is_event_host,
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
+        event_batch_card_trait_has: p.event_batch_card_trait_has.clone(),
+        event_card_face_up_in_security: p.event_card_face_up_in_security,
         event_card_name_contains: p.event_card_name_contains.clone(),
         event_card_name_is: p.event_card_name_is.clone(),
         event_card_kind: p.event_card_kind.map(compile_card_kind),
@@ -1523,6 +1551,8 @@ fn compile_predicate(
             .map(|colors| colors.iter().copied().map(compile_color).collect()),
         event_card_color_count: p.event_card_color_count,
         event_target_same_level_as_previous: p.event_target_same_level_as_previous,
+        event_target_has_same_level_source: p.event_target_has_same_level_source,
+        event_target_digivolved_from_kind: p.event_target_digivolved_from_kind.map(compile_card_kind),
         event_cause: p.event_cause.map(compile_event_cause),
         host_permanent_trait_has: p.host_permanent_trait_has.clone(),
         trashed_source_trait_has: p.trashed_source_trait_has.clone(),
@@ -2051,10 +2081,24 @@ fn compile_triggered(
     errors: &mut Vec<ValidationError>,
 ) -> CompiledTriggeredClause {
     use crate::clause::TimingSet;
-    let when = match &t.when {
-        TimingSet::Single(x) => vec![compile_timing(*x)],
-        TimingSet::Multi(v) => v.iter().map(|x| compile_timing(*x)).collect(),
+    let raw_when: Vec<crate::clause::Timing> = match &t.when {
+        TimingSet::Single(x) => vec![*x],
+        TimingSet::Multi(v) => v.clone(),
     };
+    // "[End of All Turns]" on a triggered clause is the end of either
+    // player's turn: expand it to the two engine end-of-turn timings (the
+    // same shape BT20-084 spells out as `when: [end_of_your_turn,
+    // end_of_opponents_turn]`). A `kind: delay` clause keeps it whole
+    // (`CompiledTiming::EndOfAllTurns` -> `DelayTrigger::EndOfAllTurns`).
+    let when: Vec<CompiledTiming> = raw_when
+        .iter()
+        .flat_map(|x| match x {
+            crate::clause::Timing::EndOfAllTurns => {
+                vec![CompiledTiming::EndOfYourTurn, CompiledTiming::EndOfOpponentsTurn]
+            }
+            other => vec![compile_timing(*other)],
+        })
+        .collect();
     // Phase 2 Track B — `activation_cost:` is only valid as the FIRST
     // step of a triggered clause body. The lowering on the engine side
     // lifts it onto `EffectBuilder::activation_cost(...)`; mid-body uses
@@ -2104,6 +2148,7 @@ fn compile_triggered(
             .collect(),
         optional: t.optional,
         outer_prompt: t.outer_prompt,
+        requires_target_to_activate: t.requires_target_to_activate,
         once_per_turn: t.once_per_turn,
         max_per_turn: t.max_per_turn,
         as_option_effect: t.as_option_effect,
@@ -2856,9 +2901,12 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
             deck_top,
             security_top,
             own_breeding,
+            played_carrier,
             ..
         }) => {
-            if let Some(p) = permanent {
+            if let Some(p) = played_carrier {
+                CompiledBindingRef::PlayedCarrier(p.clone())
+            } else if let Some(p) = permanent {
                 CompiledBindingRef::Permanent(p.clone())
             } else if let Some(b) = binding {
                 CompiledBindingRef::Binding(b.clone())
@@ -3073,6 +3121,9 @@ fn compile_step(
         S::AddTopSecurityToHand(a) => CompiledStep::AddTopSecurityToHand {
             of: compile_player_ref(a.of),
         },
+        S::AddTopFaceDownSecurityToHand(a) => CompiledStep::AddTopFaceDownSecurityToHand {
+            of: compile_player_ref(a.of),
+        },
         S::MayAddTopSecurityToHand(a) => CompiledStep::MayAddTopSecurityToHand {
             of: compile_player_ref(a.of),
         },
@@ -3283,6 +3334,7 @@ fn compile_step(
                 amount: amount_lit.map(|n| n.max(0) as u8),
                 amount_fn,
                 stop_at_level: a.stop_at_level.or(Some(3)),
+                declared: a.declared,
             }
         }
         S::PlaceOnSecurity(a) => {
@@ -3534,6 +3586,10 @@ fn compile_step(
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
         },
+        S::PlayToBreedingFromTrash(a) => CompiledStep::PlayToBreedingFromTrash {
+            of: compile_player_ref(a.of),
+            trash_index: compile_binding_ref(&a.trash_index),
+        },
         S::PlayFromHandFree(a) => CompiledStep::PlayFromHandFree {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
@@ -3740,6 +3796,7 @@ fn compile_step(
             from_hand: compile_binding_ref(&a.from_hand),
             cost: compile_cost_delta(&a.cost, prefix, card_id, errors),
             ignore_requirements: a.ignore_requirements,
+            bind_as: a.bind_as.clone(),
         },
         S::EffectInitiatedDnaDigivolveHandPartner(a) => {
             CompiledStep::EffectInitiatedDnaDigivolveHandPartner {

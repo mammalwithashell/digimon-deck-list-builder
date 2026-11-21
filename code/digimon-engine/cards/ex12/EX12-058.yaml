@@ -1,0 +1,106 @@
+# EX12-058 HiAndromon — Digimon, Lv.6, Black/Yellow, DP 11000, Cost 11.
+# Traits: Cyborg, ME. Attribute: Vaccine.
+# Digivolve: Black Lv.5 / 3; Lv.5 w/[ME] trait / 3;
+# DNA digivolve: Black/Purple Lv.5 + Red/Yellow Lv.5 / 0 (stack the 2 specified
+# Digimon and digivolve unsuspended).
+#
+# Printed text (data/cards.json xros_req + effect text, DCGO EX12_058.cs):
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] Reveal the top
+#   3 cards of your deck. You may play 1 play cost 7 or lower [Machine],
+#   [Cyborg] or [ME] trait card among them without paying the cost. Trash the
+#   rest.
+#   [All Turns] All of your [ME] trait Digimon gain <Alliance> and <Reboot>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX12/Black/EX12_058.cs
+#   - Shared OP/WD/WA (optional:false, maxCountPerTurn 1, one hash): the
+#     EX12-055 reveal shape with cost <= 7 (HasPlayCost, so Digimon/Tamers).
+#   - All Turns: RebootStaticEffect + AllianceStaticEffect on every own Digimon
+#     whose top card has [ME], while this Digimon is on the battle area.
+#     -> one `kind: aura` per keyword (EX13-063 idiom).
+
+card: EX12-058
+name: HiAndromon
+kind: digimon
+level: 6
+color: [black, yellow]
+cost: 11
+dp: 11000
+traits: [Cyborg, ME]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: ME
+    cost: 3
+  - kind: dna_digivolve
+    materials:
+      - level_eq: 5
+        any_of:
+          - color_is: black
+          - color_is: purple
+      - level_eq: 5
+        any_of:
+          - color_is: red
+          - color_is: yellow
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][When Attacking][Once Per Turn] Reveal 3; you may play 1 play cost 7 or lower [Machine]/[Cyborg]/[ME] card among them free; trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - any_of:
+                      - kind: digimon
+                      - kind: tamer
+                  - can_play_from_effect_without_cost: true
+                  - play_cost_lte: 7
+                  - any_of:
+                      - trait_has: Machine
+                      - trait_has: Cyborg
+                      - trait_has: ME
+          prompt: "You may play 1 play cost 7 or lower [Machine]/[Cyborg]/[ME] trait card without paying the cost"
+      - play_from_revealed_free: { of: you, card: play_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      kind: digimon
+      trait_has: ME
+    grant_keyword: { keyword: Alliance }
+    summary: "[All Turns] All of your [ME] trait Digimon gain <Alliance>"
+
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      kind: digimon
+      trait_has: ME
+    grant_keyword: { keyword: Reboot }
+    summary: "[All Turns] All of your [ME] trait Digimon gain <Reboot>"

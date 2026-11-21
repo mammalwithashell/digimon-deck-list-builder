@@ -1,0 +1,87 @@
+# BT16-084 Yolei Inoue & Kari Kamiya — Tamer, Red + Yellow, cost 4.
+#
+# Printed text (data/card_bundles/BT16-084.md, official Bandai DB):
+#   [Start of Your Main Phase] You may play 1 [Hawkmon] or [Salamon] from your
+#     hand without paying the cost. At the next end of your opponent's turn,
+#     return it to the hand.
+#   [Your Turn] When one of your Digimon digivolves into a red or yellow
+#     Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving, 1 of
+#     your opponent's Digimon gets -3000 DP for the turn.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A (return rider): "Yes, it's returned. In such cases, only the
+#   top card is returned to the hand and all digivolution cards are trashed."
+#   -> the played Digimon is returned even after it digivolved, so the rider
+#   follows the carrying permanent (`played_carrier`), not the strict
+#   top-card `permanent` binding (which fizzles once the played card is buried).
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT16/Red/BT16_084.cs
+#   - OnStartMainPhase: ActivateClass optional=true, CanUse = owner's turn,
+#     CanActivate = on battle area + hand >= 1. The pick is SelectHandEffect
+#     (canNoSelect: true) over cards whose CardNames contains "Salamon" or
+#     "Hawkmon" (exact names) that CanPlayAsNewPermanent(payCost: false);
+#     PlayPermanentCards payCost=false. The return is an ActivateClass pinned to
+#     the played `Permanent` object via UntilOpponentTurnEndEffects (DCGO keeps
+#     the Permanent across digivolution) -> BouncePeremanent.
+#   - OnEnterFieldAnyone: [Your Turn] a red/yellow top card of one of OUR
+#     Digimon digivolved; optional=true; suspend this Tamer (cost), +1 memory;
+#     when the digivolve was a Jogress (DNA), a mandatory pick of 1 opponent
+#     Digimon for -3000 DP until turn end.
+#   - SecuritySkill: PlaySelfTamerSecurityEffect.
+card: BT16-084
+name: Yolei Inoue & Kari Kamiya
+kind: tamer
+color: [red, yellow]
+cost: 4
+effects:
+  - when: start_of_your_main_phase
+    optional: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          name_in: ["Hawkmon", "Salamon"]
+        n: 1
+    summary: "[Start of Your Main Phase] You may play 1 [Hawkmon] or [Salamon] from hand free; return it to hand at the next end of the opponent's turn"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - name_in: ["Hawkmon", "Salamon"]
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 [Hawkmon] or [Salamon] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick, bind_as: played }
+      - schedule_delayed:
+          when: end_of_opponents_turn
+          body:
+            - return_to_hand: { target: { played_carrier: played } }
+
+  - when: on_digivolve
+    optional: true
+    active_when: { your_turn: true }
+    condition: { source_is_unsuspended: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_card_color_has: [red, yellow]
+    summary: "[Your Turn] When your Digimon digivolves into a red/yellow Digimon, by suspending this Tamer, gain 1 memory; if DNA digivolving, 1 opponent Digimon gets -3000 DP for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                filter: { kind: digimon }
+                prompt: "Select 1 of your opponent's Digimon to get -3000 DP for the turn"
+            - add_dp_modifier: { target: victim, value: -3000, expiry: end_of_turn }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

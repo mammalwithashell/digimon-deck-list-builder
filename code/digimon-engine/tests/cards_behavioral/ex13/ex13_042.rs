@@ -45,6 +45,7 @@ fn builder() -> DebugRunnerBuilder {
         .add_card(d("ANIMAL", 3, &["Animal"]))
         .add_card(d("SOV", 4, &["Sovereign"]))
         .add_card(d("SEA", 3, &["Sea Animal"]))
+        .add_card(d("BEAST-SEA", 3, &["Beast", "Sea Animal"]))
         .add_card(d("BEAST-5", 5, &["Beast"]))
         .add_card(d("PLAIN", 3, &["Dragon"]))
         .add_card({
@@ -113,6 +114,23 @@ fn ex13_042_offers_only_cost_4_or_lower_beast_animal_sovereign_digimon() {
         offered_hand_ids(&r),
         vec!["ANIMAL".to_string(), "BEASTKIN".to_string(), "SOV".to_string()],
         "Beastkin/Animal/Sovereign ≤4; not Sea Animal, cost 5, other traits, or non-Digimon"
+    );
+}
+
+/// "[Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its
+/// traits": the carve-out removes the [Sea Animal] TRAIT, not the whole card.
+/// Official Q&A: "Other than [Sea Animal], all traits with [Beast] ... are
+/// applicable." A Digimon with [Beast] AND [Sea Animal] still has a qualifying
+/// [Beast] trait (DCGO `HasBeastTraits`: Beast/Sovereign unconditional).
+#[test]
+fn ex13_042_beast_trait_still_qualifies_when_card_also_has_sea_animal() {
+    let mut r = start(&[CARD_ID, "BEAST-SEA", "SEA"]);
+    let base = r.place_on_field(0, "GREEN-L4", Some(0));
+    digivolve_onto(&mut r, base);
+    assert_eq!(
+        offered_hand_ids(&r),
+        vec!["BEAST-SEA".to_string()],
+        "[Beast, Sea Animal] qualifies via [Beast]; a lone [Sea Animal] does not"
     );
 }
 

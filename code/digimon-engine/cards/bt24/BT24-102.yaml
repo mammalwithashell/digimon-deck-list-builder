@@ -60,10 +60,15 @@ effects:
       - select_own_permanent:
           bind_as: refire_target
           optional: true
+          # DCGO BT24_102.cs:93-98 `CanSelectPermanentCondition`: an
+          # [Olympos XII] Digimon whose effect list holds an [On Play] /
+          # [When Digivolving] candidate. One with nothing to activate is
+          # never offered, and with none eligible the pick opens nothing.
           filter:
             all_of:
               - kind: digimon
               - trait_has: "Olympos XII"
+              - has_refireable_effect: on_play_or_when_digivolving
           prompt: "Choose 1 of your Olympos XII Digimon"
       - refire_effect:
           source: refire_target

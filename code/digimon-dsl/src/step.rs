@@ -111,6 +111,14 @@ pub enum StepSpec {
     /// G-DSL-RETURN-TOP-SECURITY-TO-DECK.
     ReturnTopSecurityToDeck(ReturnTopSecurityToDeckArgs),
     AddTopSecurityToHand(PlayerArg),
+    /// "Add your top FACE-DOWN security card to the hand" (EX11-025 FunBeemon):
+    /// the first face-down card from the top of the stack — face-up cards
+    /// (CR 3-7-4, 15-14-5) are skipped, not taken. No-op when every security
+    /// card is face up or the stack is empty. Distinct from
+    /// `add_top_security_to_hand`, which takes the top card whatever its
+    /// orientation. YAML: `add_top_face_down_security_to_hand: { of: you }`.
+    /// G-DSL-ADD-TOP-FACE-DOWN-SECURITY-TO-HAND.
+    AddTopFaceDownSecurityToHand(PlayerArg),
     MayAddTopSecurityToHand(PlayerArg),
     AddToHandFromReveal(HandleMoveArgs),
     AddThisOptionToHand(EmptyArgs),
@@ -297,6 +305,9 @@ pub enum StepSpec {
     // Play / digivolve
     PlayFromHand(PlayFromHandArgs),
     PlayToBreedingFromHand(PlayToBreedingFromHandArgs),
+    /// Play the selected TRASH Digimon into its owner's empty breeding area
+    /// (no cost, no `[On Play]`; EX10-009 Creepymon's `[When Attacking]`).
+    PlayToBreedingFromTrash(PlayToBreedingFromTrashArgs),
     PlayFromHandFree(PlayFromHandFreeArgs),
     UseOptionFromHand(UseOptionFromHandArgs),
     /// Effect-driven Option USE from the controller's trash with a cost delta
@@ -633,6 +644,9 @@ impl Serialize for StepSpec {
             }
             StepSpec::ReturnTopSecurityToDeck(v) => kv!(s, "return_top_security_to_deck", v),
             StepSpec::AddTopSecurityToHand(v) => kv!(s, "add_top_security_to_hand", v),
+            StepSpec::AddTopFaceDownSecurityToHand(v) => {
+                kv!(s, "add_top_face_down_security_to_hand", v)
+            }
             StepSpec::MayAddTopSecurityToHand(v) => kv!(s, "may_add_top_security_to_hand", v),
             StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
             StepSpec::AddThisOptionToHand(v) => kv!(s, "add_this_option_to_hand", v),
@@ -714,6 +728,7 @@ impl Serialize for StepSpec {
             // Play / digivolve
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
             StepSpec::PlayToBreedingFromHand(v) => kv!(s, "play_to_breeding_from_hand", v),
+            StepSpec::PlayToBreedingFromTrash(v) => kv!(s, "play_to_breeding_from_trash", v),
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::UseOptionFromHand(v) => kv!(s, "use_option_from_hand", v),
             StepSpec::UseOptionFromTrash(v) => kv!(s, "use_option_from_trash", v),
@@ -938,6 +953,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             }
             "return_top_security_to_deck" => StepSpec::ReturnTopSecurityToDeck(map.next_value()?),
             "add_top_security_to_hand" => StepSpec::AddTopSecurityToHand(map.next_value()?),
+            "add_top_face_down_security_to_hand" => {
+                StepSpec::AddTopFaceDownSecurityToHand(map.next_value()?)
+            }
             "may_add_top_security_to_hand" => StepSpec::MayAddTopSecurityToHand(map.next_value()?),
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
             "add_this_option_to_hand" => StepSpec::AddThisOptionToHand(map.next_value()?),
@@ -1021,6 +1039,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Play / digivolve
             "play_from_hand" => StepSpec::PlayFromHand(map.next_value()?),
             "play_to_breeding_from_hand" => StepSpec::PlayToBreedingFromHand(map.next_value()?),
+            "play_to_breeding_from_trash" => StepSpec::PlayToBreedingFromTrash(map.next_value()?),
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "use_option_from_hand" => StepSpec::UseOptionFromHand(map.next_value()?),
             "use_option_from_trash" => StepSpec::UseOptionFromTrash(map.next_value()?),
@@ -1210,6 +1229,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "return_selected_security_to_deck",
                         "return_top_security_to_deck",
                         "add_top_security_to_hand",
+                        "add_top_face_down_security_to_hand",
                         "may_add_top_security_to_hand",
                         "add_to_hand_from_reveal",
                         "add_this_option_to_hand",
@@ -1257,6 +1277,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "hatch",
                         "play_from_hand",
                         "play_to_breeding_from_hand",
+                        "play_to_breeding_from_trash",
                         "play_from_hand_free",
                         "use_option_from_hand",
                         "use_option_from_trash",
@@ -1568,6 +1589,22 @@ pub struct StructuredBindingRef {
     /// G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub own_breeding: Option<bool>,
+    /// The permanent that CURRENTLY CARRIES the card a free-play verb
+    /// (`play_from_hand_free` / `play_union_bound_free` / `play_token`,
+    /// `bind_as: <name>`) played -- whether that card is still the top card
+    /// or has since been buried as a digivolution card by a later digivolve.
+    /// YAML: `{ played_carrier: played }`.
+    ///
+    /// This is the "return/delete THAT Digimon" reading of a delayed rider:
+    /// DCGO keeps the `Permanent` object across digivolution, so a delayed
+    /// "return it to the hand" still finds it after it digivolved (BT16-084:
+    /// official Q&A "Yes, it's returned. ... only the top card is returned to
+    /// the hand and all digivolution cards are trashed"). `{ permanent: <name> }`
+    /// is the STRICT sibling that fizzles once the played card is no longer a
+    /// battle-area top. Resolves to nothing once the played card left the
+    /// battle area entirely.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub played_carrier: Option<String>,
 }
 
 // ── Argument structs (one per verb family) ──────────────────────────
@@ -2332,10 +2369,21 @@ pub struct DeDigivolveArgs {
     /// non-optional) when 2 or more cards are trashable. A formula is printed
     /// "`<De-Digivolve 1>` for each …" and runs as that many SEPARATE
     /// `<De-Digivolve 1>` instances (§16-12-7 / §16-12-8), with no declaration.
+    ///
+    /// `declared: true` selects the other reading of a formula amount: ONE
+    /// `<De-Digivolve N>` where N is the formula's value at resolution, whose
+    /// count the controller declares (1..=min(N, trashable), §16-12-1) exactly
+    /// like a literal `amount: N`. Used where DCGO resolves the printed "for
+    /// each" as a single De-Digivolve N (EX13-066 Option: `EX13_066.cs`
+    /// `SetDegenerationCount(Owner.GetBattleAreaDigimons().Count)`), as
+    /// opposed to the per-instance loop (BT19-073, BT21-060, BT24-041,
+    /// BT25-075). Meaningful only with a formula `amount`.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "amount_fn")]
     pub amount: Option<FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stop_at_level: Option<u8>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub declared: bool,
 }
 
 /// Phase 2 Track F (G-DSL-GAIN-MEMORY-FN): args for formula-valued
@@ -2724,6 +2772,16 @@ pub struct PlayToBreedingFromHandArgs {
     pub hand_index: BindingRef,
 }
 
+/// Play the selected physical trash Digimon into its owner's empty breeding area.
+/// Like `play_to_breeding_from_hand` this pays no memory and activates no `[On Play]`;
+/// the binding comes from `select_trash` (EX10-009 Creepymon).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayToBreedingFromTrashArgs {
+    pub of: PlayerRef,
+    pub trash_index: BindingRef,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayFromHandFreeArgs {
@@ -3094,6 +3152,12 @@ pub struct EffectDnaDigivolveArgs {
     pub cost: CostDelta,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,
+    /// Bind the MERGED permanent (the DNA-digivolved Digimon) after a
+    /// successful digivolve, so later steps can address "that DNA digivolved
+    /// Digimon" (e.g. `may_attack_now: { attacker: <name> }`, EX8-060
+    /// Myotismon). Unset on a rejected/failed merge. G-DSL-DNA-RESULT-BINDING.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 /// `effect_initiated_dna_digivolve_hand_partner:` — DNA digivolve where one

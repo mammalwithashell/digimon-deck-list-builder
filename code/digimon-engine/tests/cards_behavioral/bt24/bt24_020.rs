@@ -226,6 +226,41 @@ fn bt24_020_on_play_first_bucket_accepts_aqua_trait() {
     assert!(hand_ids.contains(&"TS-TAMER".to_string()));
 }
 
+/// "[Aqua] or [Sea Animal] in any of its traits" is a substring reading (DCGO
+/// `CardSource.HasAquaTraits` -> `ContainsTraits`): the common [Aquatic] type
+/// and [Aquabeast] contain "Aqua". An exact `trait_has: Aqua` matched no real
+/// card. A [Sea Beast]-only Digimon is accepted through the separate exact
+/// [Sea Beast] trait clause, and a [Plain] one is not offered.
+#[test]
+fn bt24_020_on_play_first_bucket_matches_aqua_as_substring_of_aquatic() {
+    for (traits, eligible) in [
+        (&["Aquatic"][..], true),
+        (&["Aquabeast"][..], true),
+        (&["Sea Animal"][..], true),
+        (&["Plain"][..], false),
+    ] {
+        let mut runner = gomamon_runner()
+            .add_card(make_trait_digimon("SUBSTR", traits))
+            .add_card(make_trait_tamer("TS-TAMER", &["TS"]))
+            .add_card(make_trait_digimon("FILLER", &[]))
+            .hand(0, &[CARD_ID])
+            .deck(0, &["FILLER", "TS-TAMER", "SUBSTR"])
+            .memory(10)
+            .start();
+
+        runner.play(0, 0).expect("play BT24-020");
+        let view = runner
+            .pending_selection_view()
+            .unwrap_or_else(|| panic!("{traits:?}: the TS bucket is always offered"));
+        let action = revealed_action_for_id(&runner, "SUBSTR").expect("revealed");
+        assert_eq!(
+            view.valid_action_ids.contains(&action),
+            eligible,
+            "{traits:?}: first-bucket eligibility of the substring trait"
+        );
+    }
+}
+
 #[test]
 fn bt24_020_inherited_on_unsuspend_draws_when_hand_count_is_seven_or_less() {
     let mut runner = gomamon_runner()

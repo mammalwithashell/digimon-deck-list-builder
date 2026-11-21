@@ -188,6 +188,19 @@ pub struct ActionRow {
     /// `None` in recordings without it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card_index: Option<i32>,
+    /// DCGO's own identity (`CardSource.CardIndex` of the TOP card) of the permanent this action's own-board
+    /// operand names - the attacker of an attack, the digivolve target, the host of an activated permanent
+    /// effect - written only when the recorded board holds more than one copy of that card, so the position
+    /// alone cannot say which permanent it is (`board_p0` / `board_p1` name permanents by card id only, in
+    /// DCGO's frame order, and two copies are otherwise paired in occurrence order). The MelonLoader converter
+    /// takes it from a recorder 0.2.0 row's `board_indexes` (or a digivolve's logged target card). The replay
+    /// resolves it through the pairing of DCGO indexes with engine cards
+    /// (`ReplayDriver::named_operand_action`). `None` in recordings without it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operand_card_index: Option<i32>,
+    /// Where `operand_card_index` came from; see [`CardIndexSource`] and docs/DCGO_RECORDING_SCHEMA.md.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub operand_card_index_source: Option<CardIndexSource>,
     /// [Diagnostic, added post-v1] Identical read to `memory`, under its
     /// own key — see `memory`'s doc for the perspective convention. Exists
     /// so a reader never has to know that, specifically for an `action`
@@ -316,7 +329,12 @@ pub struct SelectionRow {
     /// without it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub card_indexes: Option<Vec<i32>>,
-    /// Zone positions picked, when DCGO knows them (hand indexes etc.).
+    /// Zone positions picked, when DCGO knows them (hand indexes etc.). For a
+    /// `SelectCardEffect` the converter writes DCGO's position of each pick in the
+    /// candidate list the prompt showed (`SetTargetCardAndIndicies`' third
+    /// argument); the replay reads it only to check a refire's duplicate effect
+    /// pick against the number of entries DCGO lists (`ReplayDriver::
+    /// refire_duplicate_effect_pick_fold`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub indexes: Option<Vec<i32>>,
     /// SelectCountEffect payload: the VALUE chosen (a digivolution cost, a

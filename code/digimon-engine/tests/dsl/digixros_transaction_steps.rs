@@ -182,9 +182,7 @@ fn turn_scoped_wildcard_step_makes_source_legal_for_later_digixros() {
     runner
         .execute_action(0, wildcard_action)
         .expect("select wildcard material");
-    runner
-        .execute_action(0, PASS)
-        .expect("finish DigiXros material selection");
+    // One-element recipe: the play commits by itself once its material is picked.
 
     let target = runner.game.players[0]
         .battle_area
@@ -197,14 +195,39 @@ fn turn_scoped_wildcard_step_makes_source_legal_for_later_digixros() {
         .any(|card| card.card_id(&runner.game.card_data) == "DX-WILDCARD"));
 }
 
+/// Two material elements, so a follow-up prompt (with a candidate left) follows
+/// the first pick: the shape whose clone-safety this test pins.
+fn digixros_two_element_yaml() -> &'static str {
+    r#"
+card: DX-TARGET
+name: DigiXros Target
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 4000
+traits: [Xros Heart]
+alt_paths:
+  - kind: digixros
+    materials:
+      - filter: { trait_has: Xros Heart }
+        zones: [hand, battle_area]
+        cost_delta: -1
+      - filter: { trait_has: Xros Heart }
+        zones: [hand, battle_area]
+        cost_delta: -1
+    cost: 5
+"#
+}
+
 #[test]
 fn digixros_material_prompt_clones_faithfully() {
     let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(digixros_yaml())
+        .from_dsl_yaml(digixros_two_element_yaml())
         .expect("compile DigiXros target")
         .from_dsl_yaml(wildcard_yaml())
         .expect("compile material body")
-        .hand(0, &["DX-TARGET", "DX-WILDCARD"])
+        .hand(0, &["DX-TARGET", "DX-WILDCARD", "DX-WILDCARD"])
         .memory(10)
         .start();
 
@@ -233,7 +256,7 @@ fn digixros_material_prompt_clones_faithfully() {
         .expect("clone commits DigiXros materials");
     assert!(clone.pending_selection.is_none());
     assert_eq!(clone.memory, 6, "one -1 material reduces cost 5 to 4");
-    assert_eq!(clone.players[0].hand.len(), 0);
+    assert_eq!(clone.players[0].hand.len(), 1, "the second wildcard stays in hand (stopped after one material)");
     assert_eq!(clone.players[0].battle_area.len(), 1);
     assert!(clone.players[0].battle_area[0]
         .card_sources

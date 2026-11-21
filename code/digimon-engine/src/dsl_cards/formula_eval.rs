@@ -476,6 +476,9 @@ fn evaluate_per(
                 distinct_colors_in_returned_cards(ctx.game, &bindings.result_log().returned_to_deck)
             })
             .unwrap_or(0),
+        CompiledPerSelector::ReturnedCardCount => bindings
+            .map(|bindings| bindings.result_log().returned_to_deck.len() as i32)
+            .unwrap_or(0),
         CompiledPerSelector::EffectSuspendedCount => bindings
             .map(|bindings| bindings.result_log().suspended.len() as i32)
             .unwrap_or(0),
@@ -614,6 +617,9 @@ fn evaluate_per_read(
             .map(|bindings| {
                 distinct_colors_in_returned_cards(ctx.game, &bindings.result_log().returned_to_deck)
             })
+            .unwrap_or(0),
+        CompiledPerSelector::ReturnedCardCount => bindings
+            .map(|bindings| bindings.result_log().returned_to_deck.len() as i32)
             .unwrap_or(0),
         CompiledPerSelector::EffectSuspendedCount => bindings
             .map(|bindings| bindings.result_log().suspended.len() as i32)
@@ -1641,6 +1647,7 @@ fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
         || pred.can_unsuspend.is_some()
         || pred.owner_can_add_security.is_some()
         || pred.can_attack.is_some()
+        || pred.has_refireable_effect.is_some()
         || pred.has_face_down_source.is_some()
         || pred.owner.is_some()
         || pred.other.is_some()
@@ -1676,7 +1683,7 @@ fn evaluate_aggregate(
         A::LowestDp | A::LowestLevel | A::LowestPlayCost | A::FewestMaterials => {
             values.min().unwrap_or(0)
         }
-        A::HighestDp | A::HighestLevel => values.max().unwrap_or(0),
+        A::HighestDp | A::HighestLevel | A::HighestPlayCost => values.max().unwrap_or(0),
     }
 }
 
@@ -1697,8 +1704,19 @@ fn evaluate_aggregate_read(
         A::LowestDp | A::LowestLevel | A::LowestPlayCost | A::FewestMaterials => {
             values.min().unwrap_or(0)
         }
-        A::HighestDp | A::HighestLevel => values.max().unwrap_or(0),
+        A::HighestDp | A::HighestLevel | A::HighestPlayCost => values.max().unwrap_or(0),
     }
+}
+
+/// A Token permanent that prints a play cost (`TokenDef::play_cost`, e.g. the
+/// Diaboromon Token's 14; DCGO `HasPlayCost`). Costless tokens store 0 and are
+/// not play-cost candidates.
+fn is_costed_token(
+    perm: &crate::permanent::Permanent,
+    card_data: &[crate::card_data::CardData],
+) -> bool {
+    perm.top_card().card_kind(card_data) == crate::enums::CardKind::Token
+        && perm.top_card().play_cost(card_data) > 0
 }
 
 fn aggregate_value(
@@ -1721,10 +1739,13 @@ fn aggregate_value(
             .get(index)?
             .level(&ctx.game.card_data)
             .map(i32::from),
-        A::LowestPlayCost => {
-            // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`.
+        A::LowestPlayCost | A::HighestPlayCost => {
+            // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`. A Token
+            // counts only when it prints a play cost (Diaboromon 14).
             let perm = ctx.game.player(player).battle_area.get(index)?;
-            if !perm.is_digimon(&ctx.game.card_data) {
+            if !perm.is_digimon(&ctx.game.card_data)
+                && !is_costed_token(perm, &ctx.game.card_data)
+            {
                 return None;
             }
             Some(i32::from(perm.top_card().play_cost(&ctx.game.card_data)))
@@ -1757,9 +1778,10 @@ fn aggregate_value_read(
         CompiledAggregateSelector::LowestLevel | CompiledAggregateSelector::HighestLevel => {
             perm.level(ctx.card_data()).map(i32::from)
         }
-        CompiledAggregateSelector::LowestPlayCost => {
-            // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`.
-            if !perm.is_digimon(ctx.card_data()) {
+        CompiledAggregateSelector::LowestPlayCost | CompiledAggregateSelector::HighestPlayCost => {
+            // Digimon-only — DCGO `IsMinCost(.., IsDigimonOnly: true)`. A Token
+            // counts only when it prints a play cost (Diaboromon 14).
+            if !perm.is_digimon(ctx.card_data()) && !is_costed_token(perm, ctx.card_data()) {
                 return None;
             }
             Some(i32::from(perm.top_card().play_cost(ctx.card_data())))

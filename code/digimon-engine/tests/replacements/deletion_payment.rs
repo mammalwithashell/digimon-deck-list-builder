@@ -338,6 +338,15 @@ fn recorded_medusamon_immune_token_payment_does_not_loop() {
     // to that row (2 -> 3). An inserted row repeats the step number of the
     // row before it, so no recorded step is renumbered; the game's outcome
     // is unchanged.
+    // 2026-11-17: BT21-001 now always asks its yes/no activation (DCGO
+    // `isOptional: true`; CanActivateCondition has no candidate check), also
+    // when no Digimon can digivolve. Two more declines (action 62) were
+    // inserted before the rows at steps 28 and 51, where it was previously
+    // skipped silently, and a third after the step-65 trigger-order row (the
+    // order row now only parks BT21-001's yes/no, so EX11-008's +1 memory
+    // moved to the decline: 2 -> 3). The two existing declines (steps 58 and
+    // 60) now answer that yes/no prompt (phase SelectEffectChoice). Declining
+    // keeps the [Once Per Turn] (Q1818), so the game's outcome is unchanged.
     let recording: serde_json::Value = serde_json::from_str(include_str!(
         "../fixtures/training/medusamon-immune-token-payment.json"
     ))

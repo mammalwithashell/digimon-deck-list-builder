@@ -344,3 +344,106 @@ fn bt24_085_turn_does_not_pass_mid_effect_after_used_option() {
         "once the effect has fully resolved, the End phase hands the turn to P1"
     );
 }
+
+/// Printed [End of Your Turn]: "By suspending this Tamer, you may use 1 [TS]
+/// trait Option card ... Then, 1 of your Digimon with the [TS] trait may
+/// attack." Nothing in the printed text (or DCGO's `CanActivateCondition`,
+/// which only needs the Tamer on the battle area, the suspend cost payable and
+/// memory <= 0) requires a [TS] Digimon in the BATTLE AREA to start the effect.
+/// The YAML used to gate the whole clause on one, so a [TS] Digimon that was
+/// only in the breeding area (or no [TS] Digimon at all) silently dropped the
+/// optional Option use. The attack is a separate optional follow-up whose
+/// attacker pick is already `can_attack`-filtered.
+#[test]
+fn bt24_085_end_of_turn_offered_with_ts_digimon_only_in_breeding_area() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-085 YAML parses")
+        .add_card(ts_digimon("TS-EGG"))
+        .add_card(ts_option("TS-LOW", 2))
+        .hand(0, &["TS-LOW"])
+        .memory(-2)
+        .start();
+    runner.register_effect("TS-LOW", Arc::new(OptionMainNoop));
+
+    runner.game.turn_count = 1;
+    let tamer = runner.place_on_field(0, "BT24-085", Some(0));
+    runner.place_in_breeding(0, "TS-EGG");
+    assert!(
+        runner.game.players[0].battle_area.iter().all(|p| p.top_card().card_id(&runner.game.card_data) == "BT24-085"),
+        "precondition: the only battle-area permanent is the Tamer"
+    );
+
+    enqueue_dan_kanan_eot(&mut runner, tamer);
+
+    assert!(
+        runner.pending_is_optional(),
+        "the optional [End of Your Turn] use must be offered although the \
+         [TS] Digimon is in the breeding area, not the battle area"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept BT24-085 end-of-turn effect");
+    let option_prompt = runner
+        .pending_selection_view()
+        .expect("TS Option hand-use prompt");
+    assert_eq!(option_prompt.kind, SelectionKind::Hand);
+    runner
+        .execute_action(0, PLAY_HAND_START)
+        .expect("use the TS Option");
+
+    assert!(runner.game.players[0].battle_area[tamer.index as usize].is_suspended);
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "TS-LOW"),
+        "the TS Option was used from hand"
+    );
+    // The breeding-area Digimon cannot attack, so the may-attack follow-up has
+    // no candidate and the effect simply ends.
+    let _ = runner.auto_resolve();
+    assert!(runner.game.pending_selection.is_none());
+}
+
+#[test]
+fn bt24_085_end_of_turn_offered_with_no_ts_digimon_anywhere() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-085 YAML parses")
+        .add_card(ts_option("TS-LOW", 2))
+        .hand(0, &["TS-LOW"])
+        .memory(-2)
+        .start();
+    runner.register_effect("TS-LOW", Arc::new(OptionMainNoop));
+
+    runner.game.turn_count = 1;
+    let tamer = runner.place_on_field(0, "BT24-085", Some(0));
+    enqueue_dan_kanan_eot(&mut runner, tamer);
+
+    assert!(
+        runner.pending_is_optional(),
+        "using a [TS] Option does not depend on owning a [TS] Digimon"
+    );
+}
+
+/// The suspend cost is still a real gate: a Tamer that is already suspended
+/// cannot pay "By suspending this Tamer".
+#[test]
+fn bt24_085_end_of_turn_not_offered_when_tamer_already_suspended() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-085 YAML parses")
+        .add_card(ts_option("TS-LOW", 2))
+        .hand(0, &["TS-LOW"])
+        .memory(-2)
+        .start();
+    runner.register_effect("TS-LOW", Arc::new(OptionMainNoop));
+
+    runner.game.turn_count = 1;
+    let tamer = runner.place_on_field(0, "BT24-085", Some(0));
+    runner.game.players[0].battle_area[tamer.index as usize].is_suspended = true;
+    enqueue_dan_kanan_eot(&mut runner, tamer);
+
+    assert!(runner.game.pending_selection.is_none());
+}

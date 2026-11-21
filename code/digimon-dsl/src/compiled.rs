@@ -379,6 +379,8 @@ pub struct CompiledPredicate {
     /// G-DSL-NAME-MATCHES-RETURNED-CARD — true when the candidate shares a
     /// card name with a card this effect returned to deck (`returned_to_deck`).
     pub name_matches_returned_card: Option<bool>,
+    /// See `PredicateSpec::name_matches_source` (BT5-063).
+    pub name_matches_source: Option<bool>,
     /// G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK — true when the candidate shares a
     /// color with the effect carrier's NON-FLIPPED digivolution-source color set
     /// (DCGO `DigivolutionCards.Filter(!IsFlipped).SelectMany(CardColors)
@@ -461,6 +463,8 @@ pub struct CompiledPredicate {
     pub can_play_or_use_from_effect: Option<bool>,
     #[serde(default)]
     pub can_play_to_breeding_from_hand: Option<bool>,
+    #[serde(default)]
+    pub can_play_to_breeding_from_trash: Option<bool>,
     /// Subject must be an existing breeding permanent. Compare its real move
     /// eligibility, including field capacity and CannotMove, to this value.
     #[serde(default)]
@@ -525,6 +529,9 @@ pub struct CompiledPredicate {
     /// See `PredicateSpec::can_attack` (G-DSL-CAN-ATTACK-PREDICATE).
     #[serde(default)]
     pub can_attack: Option<CompiledCanAttack>,
+    /// See `PredicateSpec::has_refireable_effect` (G-DSL-HAS-REFIREABLE-EFFECT).
+    #[serde(default)]
+    pub has_refireable_effect: Option<String>,
     pub has_keyword: Option<String>,
     /// Permanent-subject leaf for printed/granted/temporary Security A.
     /// deltas. Used by Venusmon-style text that cares about "with
@@ -571,6 +578,10 @@ pub struct CompiledPredicate {
     /// (driver EX12-032).
     #[serde(default)]
     pub self_same_level_source_pairs_gte: Option<u8>,
+    /// See `PredicateSpec::self_stack_same_level_count_gte`. `serde(default)`
+    /// keeps older serialized packs deserializable.
+    #[serde(default)]
+    pub self_stack_same_level_count_gte: Option<u8>,
     /// True when the effect CARRIER's NON-FLIPPED digivolution-source color
     /// set (the shared `non_flipped_source_colors` extraction — top card
     /// excluded, face-down sources excluded) has at least N distinct colors.
@@ -587,6 +598,12 @@ pub struct CompiledPredicate {
     /// Mirror of `other` — subject must BE the source permanent. G-OPT-REFUND-ON-DECLINE.
     #[serde(default)]
     pub is_source: Option<bool>,
+    /// See `PredicateSpec::is_source_card` / `card_in_zone`. `serde(default)`
+    /// keeps older serialized packs deserializable.
+    #[serde(default)]
+    pub is_source_card: Option<bool>,
+    #[serde(default)]
+    pub card_in_zone: Vec<CompiledZone>,
     pub of_permanent: Option<String>,
     pub not_in_binding: Option<String>,
     /// See `PredicateSpec::name_not_in_binding` (BT26-086).
@@ -704,6 +721,17 @@ pub struct CompiledPredicate {
     pub attack_target_change_reason: Option<String>,
     pub attacker_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
+    /// ANY card of the event's moved-card batch has this trait (see the DSL
+    /// `event_batch_card_trait_has`). G-DSL-EVENT-BATCH-CARD-TRAIT-HAS.
+    #[serde(default)]
+    pub event_batch_card_trait_has: Option<String>,
+    /// The captured event card is currently FACE UP in its security stack
+    /// (`true`) or face down (`false`) — the placement-event gate for "when
+    /// face-up [X] trait cards are placed in your security stack" (EX11-003
+    /// Puroromon). Reads the security owner's `face_up_security` set for the
+    /// event card; unsatisfied outside a security-placement trigger.
+    /// G-PRED-EVENT-CARD-FACE-UP-IN-SECURITY.
+    pub event_card_face_up_in_security: Option<bool>,
     pub event_card_name_contains: Option<String>,
     /// Exact printed/rule-granted name of the immutable event card identity.
     #[serde(default)]
@@ -739,6 +767,11 @@ pub struct CompiledPredicate {
     pub is_event_host: Option<bool>,
     pub event_is_effect_initiated: Option<bool>,
     pub event_target_same_level_as_previous: Option<bool>,
+    /// See `PredicateSpec::event_target_has_same_level_source`. `serde(default)`
+    /// keeps older serialized packs deserializable.
+    #[serde(default)]
+    pub event_target_has_same_level_source: Option<bool>,
+    pub event_target_digivolved_from_kind: Option<CompiledCardKind>,
     pub event_cause: Option<CompiledEventCause>,
     pub replacement_cause: Option<CompiledReplacementCause>,
     pub replacement_source_is_opponent: Option<bool>,
@@ -1160,6 +1193,8 @@ pub enum CompiledPerSelector {
     DigivolutionColorCount,
     SourceColorCount,
     ReturnedCardColorCount,
+    /// See `PerSelector::ReturnedCardCount`.
+    ReturnedCardCount,
     /// See `PerSelector::EffectSuspendedCount`.
     EffectSuspendedCount,
     SameLevelPairsInSources,
@@ -1232,6 +1267,9 @@ pub enum CompiledAggregateSelector {
     /// Lowest printed play cost among the candidate set.
     /// G-PLAY-COST-AGGREGATE.
     LowestPlayCost,
+    /// Highest printed play cost among the candidate set (mirror of
+    /// `LowestPlayCost`). G-DSL-HIGHEST-PLAY-COST-AGGREGATE.
+    HighestPlayCost,
 }
 
 /// Value carried by `add_dp_modifier` / `add_modifier` steps. Phase 2f2 Task 1
@@ -1300,6 +1338,9 @@ pub struct CompiledTriggeredClause {
     /// `RemoveUse` semantics. G-OPT-REFUND-ON-DECLINE.
     #[serde(default)]
     pub outer_prompt: bool,
+    /// See `clause::TriggeredClause::requires_target_to_activate`.
+    #[serde(default)]
+    pub requires_target_to_activate: bool,
     pub once_per_turn: bool,
     pub max_per_turn: Option<u8>,
     /// Queue this clause's effects as Option effects. See
@@ -1648,7 +1689,10 @@ pub enum CompiledTiming {
     OnLinkCardTrashed,
     /// This physical card was trashed from the deck by an effect.
     OnDiscardDeck,
-
+    /// `[End of All Turns]` (see `Timing::EndOfAllTurns`). Appended LAST so the
+    /// bincode discriminants of every earlier variant (and so the compiled pack
+    /// layout, `PACK_FORMAT_VERSION`) are unchanged.
+    EndOfAllTurns,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1826,6 +1870,11 @@ pub enum CompiledStep {
     AddTopSecurityToHand {
         of: CompiledPlayerRef,
     },
+    /// First face-down card from the top of `of`'s security stack to hand
+    /// (face-up cards skipped). G-DSL-ADD-TOP-FACE-DOWN-SECURITY-TO-HAND.
+    AddTopFaceDownSecurityToHand {
+        of: CompiledPlayerRef,
+    },
     MayAddTopSecurityToHand {
         of: CompiledPlayerRef,
     },
@@ -1970,6 +2019,11 @@ pub enum CompiledStep {
         amount: Option<u8>,
         amount_fn: Option<CompiledFormula>,
         stop_at_level: Option<u8>,
+        /// A formula amount resolved as ONE declared `<De-Digivolve N>`
+        /// instead of N separate `<De-Digivolve 1>` instances (see
+        /// `DeDigivolveArgs::declared`).
+        #[serde(default)]
+        declared: bool,
     },
     PlaceOnSecurity {
         of: CompiledPlayerRef,
@@ -2163,6 +2217,10 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         hand_index: CompiledBindingRef,
     },
+    PlayToBreedingFromTrash {
+        of: CompiledPlayerRef,
+        trash_index: CompiledBindingRef,
+    },
     PlayFromHandFree {
         of: CompiledPlayerRef,
         hand_index: CompiledBindingRef,
@@ -2329,6 +2387,9 @@ pub enum CompiledStep {
         from_hand: CompiledBindingRef,
         cost: CompiledCostDelta,
         ignore_requirements: bool,
+        /// Name the merged (DNA-digivolved) permanent is bound under after a
+        /// successful merge. G-DSL-DNA-RESULT-BINDING.
+        bind_as: Option<String>,
     },
     /// DNA digivolve where `target` is a battle-area permanent and
     /// `hand_partner` is the second DNA material drawn from hand; the merged
@@ -3465,6 +3526,12 @@ pub enum CompiledBindingRef {
     Permanent(String),
     Binding(String),
     OfPermanent(String),
+    /// The permanent that currently carries the card a free-play verb played
+    /// (`bind_as` of `play_from_hand_free` / `play_union_bound_free` /
+    /// `play_token`), whether that card is still the top or was since buried
+    /// as a digivolution card. The permissive sibling of `Permanent` for
+    /// "return/delete that Digimon" delayed riders (BT16-084).
+    PlayedCarrier(String),
     /// Resolve a named permanent's current top physical card.
     TopOf(String),
     /// Top card of a player's deck — resolves to `CardSourceRef::DeckTop`.
@@ -3559,6 +3626,7 @@ mod tests {
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
+                requires_target_to_activate: false,
                 opt_group: None,
                 once_per_turn: false,
                 as_option_effect: false,
@@ -3623,6 +3691,7 @@ mod tests {
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
+                requires_target_to_activate: false,
                 opt_group: None,
                 once_per_turn: false,
                 as_option_effect: false,

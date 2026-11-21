@@ -1,0 +1,73 @@
+# BT5-107 Revive From the Darkness! — Option, Purple, cost 4.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT5-107.md):
+#   [Main] Delete 1 of your purple Digimon. Then, you may play 1 level 5 or
+#     lower purple Digimon card from your trash without paying the cost. [On
+#     Play] effects on Digimon this effect played don't activate.
+#   Security Effect
+#   [Security] Add this card to the hand.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT5/Purple/BT5_107.cs
+#   - [Main] (OptionSkill): when an own battle-area Digimon whose top card is
+#     purple exists, a MANDATORY pick of one (canNoSelect: false) is deleted; then
+#     (independently of the delete) a `canNoSelect: true` trash pick of a Digimon
+#     with HasCardColor(Purple), HasLevel, level <= 5 and
+#     CanPlayAsNewPermanent(payCost: false) -> PlayPermanentCards(activateETB:
+#     false), i.e. the played Digimon's [On Play] effects do NOT activate.
+#   - [Security]: AddThisCardToHand.
+# Official Q&A: the deleted purple Digimon is already gone when the replacement
+# enters play, so e.g. an [On Play] that keys on it does not see it.
+#
+# DSL: BT5-106's `play_from_trash_free ... suppress_on_play: true` idiom.
+
+card: BT5-107
+name: "Revive From the Darkness!"
+kind: option
+color: [purple]
+cost: 4
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Delete 1 of your purple Digimon. Then, you may play 1 level 5 or lower purple Digimon card from your trash without paying the cost; its [On Play] effects don't activate"
+    process:
+      # DCGO runs the delete only when an own purple Digimon exists, and the
+      # trash play afterwards regardless (a mandatory `select_*` with no
+      # candidate would abort the whole clause).
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              color_is: purple
+          then:
+            - select_own_permanent:
+                bind_as: sacrifice
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - color_is: purple
+                prompt: "Delete 1 of your purple Digimon"
+            - delete_permanent: { target: sacrifice }
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+              - level_lte: 5
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 level 5 or lower purple Digimon card from your trash without paying the cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: revived
+          suppress_on_play: true
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Add this card to the hand"
+    process:
+      - add_this_option_to_hand: {}

@@ -50,7 +50,12 @@ use std::collections::BTreeSet;
 // and selected-permanent color count. Rebuild packs; bincode layouts differ.
 // 0.34.0 adds `ignore_requirements` to the compiled `has_digivolve_candidate`
 // leaf. Rebuild packs; bincode layouts differ.
-pub const PACK_FORMAT_VERSION: &str = "0.34.0";
+// 0.35.0 adds the `add_top_face_down_security_to_hand` compiled step and the
+// `event_card_face_up_in_security` compiled predicate leaf (EX11-025 / EX11-003).
+// Rebuild packs; bincode layouts differ.
+// 0.36.0 adds the `event_batch_card_trait_has` compiled predicate leaf (any card of
+// the event's moved-card batch has the trait). Rebuild packs; bincode layouts differ.
+pub const PACK_FORMAT_VERSION: &str = "0.36.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {
@@ -710,6 +715,7 @@ mod tests {
                     timing_conditions: Vec::new(),
                     optional: false,
                     outer_prompt: false,
+                    requires_target_to_activate: false,
                     opt_group: None,
                     once_per_turn: false,
                     as_option_effect: false,

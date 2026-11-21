@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-11-11",
+  "last_updated": "2026-11-18",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -2981,12 +2981,13 @@
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/ex10/EX10-034.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_034.rs",
-      "test_count": 14,
+      "test_count": 16,
       "patterns": [
         "KEYWORD",
-        "FRAGMENT"
+        "FRAGMENT",
+        "DIGIXROS"
       ],
-      "notes": "Keywords, [All Turns] source-trash SecA+1/+3000, and [OnPlay/WD] selected-opponent-Digimon forced StartOfYourMainPhase attack grant authored. Focused tests pass with no ignores."
+      "notes": "Keywords, [All Turns] source-trash SecA+1/+3000, and [OnPlay/WD] selected-opponent-Digimon forced StartOfYourMainPhase attack grant authored. The Special Play Condition (DigiXros -2: 3 Digimon w/ [Bagra Army], hand/battle area) was omitted until 2026-11 although the card was marked IMPLEMENTED (a real DCGO PvP replay played it with three hand materials); now authored as a digixros alt_path. Focused tests pass with no ignores."
     },
     "EX10-036": {
       "card_name": "Magneticdramon",
@@ -3471,12 +3472,15 @@
       "archetype": "Puppets Batch 1",
       "yaml_path": "code/digimon-engine/cards/ex9/EX9-067.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_067.rs",
-      "test_count": 2,
+      "test_count": 9,
       "patterns": [
         "REVEAL-SEARCH",
-        "SECURITY-PLAY-SELF"
+        "SECURITY-PLAY-SELF",
+        "ON-DIGIVOLVE-OBSERVER",
+        "RETURN-SELF-COST",
+        "REDUCED-COST-PLAY-FROM-HAND"
       ],
-      "notes": "On Play mandatory reveal search and Security self-play shipped. The Your Turn digivolve observer/reduced-cost play rider remains omitted pending PUPPETS-G005 effect-initiated event-context/provenance coverage."
+      "notes": "On Play mandatory reveal search, Security self-play, and the [Your Turn] Puppet-digivolve clause (optional; by returning this Tamer to deck bottom, play Arisa Kinosaki / a Puppet Digimon from hand at -3) are all authored (on_digivolve + event_card_trait_has Puppet + activation_cost return_self_to_deck_bottom + play_from_hand cost_delta reduce 3). Previously the third clause was omitted yet the card was marked IMPLEMENTED; a real DCGO PvP replay diverged on it (2026-11 hunt)."
     },
     "ST19-03": {
       "card_name": "Shoemon",
@@ -8380,14 +8384,16 @@
     },
     "BT24-068": {
       "card_name": "DemiDevimon",
-      "validated_date": "2026-06-03",
-      "report": "rules-faq-faithfulness-suite (NV-1 vehicle)",
-      "status": "PARTIAL",
+      "validated_date": "2026-11-17",
+      "report": "dcgo-pvp-replay-hunt-reveal-two-bucket-onplay",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "rules-FAQ no-DP vehicle",
+      "archetype": "Evil / Seven Great Demon Lords (reveal-search)",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-068.yaml",
-      "test_path": null,
-      "audit_note": "2026-10-03: authored 2026-06-03 as a vanilla no-DP vehicle for FAQ NV-1 from a pre-release cards.json stub. The card prints 1000 DP (now in the YAML), [On Play] reveal 3 (add 1 [Evil]/[Fallen Angel] and 1 [Seven Great Demon Lords] trait card, rest to the bottom, then trash 1 card in hand) and an inherited [When Attacking] [Once Per Turn] trash of the top card of both players' decks; neither effect is implemented. NV-1 now uses a Digi-Egg as its vehicle."
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_068.rs",
+      "test_count": 11,
+      "tests_passing": 11,
+      "notes": "2026-11-17: promoted from PARTIAL (stats-only vanilla stub). [On Play] reveal 3, mandatory [Evil]/[Fallen Angel] and [Seven Great Demon Lords] picks (one card cannot fill both), remainder ordered to the deck bottom, then a mandatory hand trash; inherited [When Attacking][Once Per Turn] trashes the top card of both decks. Image + official bundle + DCGO BT24_068.cs. Simulator evidence only."
     },
     "EX3-014": {
       "card_name": "Dorbickmon",
@@ -8736,12 +8742,12 @@
       "card_name": "Yuu Amano",
       "validated_date": "2026-06-11",
       "report": "judge-quiz Q29",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Bagra Army",
       "yaml_path": "code/digimon-engine/cards/bt10/BT10-093.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt10/bt10_093.rs",
-      "notes": "Would-play preattach hook (-2/card, up to 3 purple from under Tamers) + [Security] free play IMPLEMENTED; clause 1 (purple card placed under -> Draw+memory) OMITTED on G-DSL-ON-CARD-PLACED-UNDER-TRIGGER. Q29 pin covers the DigiXros interaction."
+      "notes": "All three clauses authored: [All Turns][OPT] purple card placed under this Tamer -> Draw 1 + memory +1 (on_add_digivolution_cards + event_host_permanent_is_source + event_added_card_any color_is purple; added 2026-11 after a real DCGO PvP replay diverged on the omission), would-play preattach hook (-2/card, up to 3 purple from under Tamers), and [Security] free play. Q29 pin covers the DigiXros interaction."
     },
     "EX10-039": {
       "card_name": "ChuuChuumon",
@@ -16850,6 +16856,285 @@
       "tests_passing": 8,
       "tests_ignored": 0,
       "notes": "Official Q2315-Q2320 and pinned DCGO BT13_077: optional controller selection, player-directed mandatory attack if legal, source-kind immunity and expiry, Blocker, attack target ownership, both owners, cloned continuations and nested-attack rejection. Existing EX3-024 face/inherited immunity behavior preserved. Simulator qualification, not Oracle certification."
+    },
+    "RB1-005": {
+      "card_name": "Gammamon",
+      "validated_date": "2026-11-17",
+      "report": "dcgo-pvp-replay-hunt-reveal-two-bucket-onplay",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gammamon / Hiro Amanokawa (reveal-search)",
+      "yaml_path": "code/digimon-engine/cards/rb1/RB1-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/rb1/rb1_005.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "notes": "2026-11-17: authored from the card image, official bundle (incl. Q&A: only the top stacked card is read for [Gammamon] in its text) and DCGO RB1_005.cs. [On Play] reveal 3, [Gammamon]-in-text pick + [Hiro Amanokawa] pick (mandatory, no card fills both), remainder ordered to the bottom; inherited [Your Turn] +2000 DP while the carrier's top card has [Gammamon] in its text. Simulator evidence only."
+    },
+    "BT7-081": {
+      "card_name": "Bokomon",
+      "validated_date": "2026-11-17",
+      "report": "dcgo-pvp-replay-hunt-reveal-two-bucket-onplay",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Hybrid / Ten Warriors (reveal-search)",
+      "yaml_path": "code/digimon-engine/cards/bt7/BT7-081.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt7/bt7_081.rs",
+      "test_count": 13,
+      "tests_passing": 13,
+      "notes": "2026-11-17: authored from the card image, official bundle (Q&A: a lone matching card is still added) and DCGO BT7_081.cs. [On Play] reveal 5, [Hybrid]/[Ten Warriors] pick + Tamer pick (mandatory, no card fills both), remainder ordered to the bottom; [Your Turn][Once Per Turn] gain 2 memory when one of your Tamers digivolves via the new `event_target_digivolved_from_kind` predicate (the Tamer becomes a Digimon, so the resulting top card cannot be tested). Simulator evidence only."
+    },
+    "BT22-034": {
+      "card_name": "Reppamon",
+      "validated_date": "2026-11-17",
+      "report": "replay-hunt-misc-onplay-cards-unimpl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "PvP replay hunt (BT22-034 Reppamon)",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-034.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_034.rs",
+      "test_count": 11,
+      "tests_passing": 11,
+      "tests_ignored": 0,
+      "patterns": [
+        "optional-security-trash-instead",
+        "on-discard-security-play-self-from-trash",
+        "cs-alt-digivolve",
+        "inherited-when-attacking-dp"
+      ],
+      "notes": "TDD vs DCGO BT22_034.cs + official Q&A ('instead' replaces). OP/WD mandatory: Yes/No (select_effect_choice, decline second) only when the controller has security, asked BEFORE the target pick; yes -> trash_top_security with bind_count_as, -6000 only when the card was actually trashed, else -3000; target pick mandatory. on_discard_security (effect-caused only) optional play_from_trash_free self. Inherited WA OPT -2000 for the turn. Replay origin: recorded PvP game stopped on a generic_bool with no prompt."
+    },
+    "BT21-064": {
+      "card_name": "Guilmon",
+      "validated_date": "2026-11-17",
+      "report": "replay-hunt-misc-onplay-cards-unimpl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "PvP replay hunt (BT21-064 Guilmon)",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-064.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_064.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "patterns": [
+        "optional-hand-trash-then-draw",
+        "name-contains-or-trait-filter",
+        "inherited-on-deletion-memory",
+        "alt-digivolve-name-or-trait"
+      ],
+      "notes": "TDD vs DCGO BT21_064.cs. OP: optional cost select_hand (Hero trait OR name contains Guilmon/Growlmon/Gallantmon/Megidramon; canNoSelect true) -> trash -> Draw 2 only when trashed. Inherited On Deletion +1 memory. Alt digivolve [Gigimon] / Lv.2 [Hero] cost 0."
+    },
+    "EX10-049": {
+      "card_name": "SkullSatamon",
+      "validated_date": "2026-11-17",
+      "report": "replay-hunt-misc-onplay-cards-unimpl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "PvP replay hunt (EX10-049 SkullSatamon)",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-049.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_049.rs",
+      "test_count": 11,
+      "tests_passing": 11,
+      "tests_ignored": 0,
+      "patterns": [
+        "conditional-mill-both-decks",
+        "level-maximum-re-read-after-mill",
+        "instead-replaces-branch",
+        "blocker"
+      ],
+      "notes": "TDD vs DCGO EX10_049.cs. WD/OD shared: opp trash <= 10 -> mill 3+3; THEN re-read opp trash >= 10 -> delete level <= 5 else <= 3 (mandatory pick). At exactly 10 both apply. Inherited WA OPT: opp trash <= 10 -> mill 2+2 INSTEAD of Security A. +1, else Security A. +1. Blocker."
+    },
+    "EX10-046": {
+      "card_name": "Devimon",
+      "validated_date": "2026-11-17",
+      "report": "replay-hunt-misc-onplay-cards-unimpl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "PvP replay hunt (EX10-046 Devimon)",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-046.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_046.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
+      "patterns": [
+        "conditional-mill-both-decks",
+        "condition-re-read-after-mill",
+        "optional-trash-to-hand-by-trait"
+      ],
+      "notes": "TDD vs DCGO EX10_046.cs. SoYMP/WD shared: opp trash <= 10 -> mill 2+2; then re-read opp trash >= 10 -> optional return of a [Fallen Angel]/[Undead] card (any kind) from trash to hand. Inherited WA OPT mill 1+1."
+    },
+    "BT24-069": {
+      "card_name": "Vilemon",
+      "validated_date": "2026-11-17",
+      "report": "replay-hunt-misc-onplay-cards-unimpl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "PvP replay hunt (BT24-069 Vilemon)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_069.rs",
+      "test_count": 8,
+      "tests_passing": 8,
+      "tests_ignored": 0,
+      "patterns": [
+        "opponent-optional-hand-trash",
+        "as-selecting-player-body",
+        "when-moving-timing-condition",
+        "conditional-static-blocker-dp"
+      ],
+      "notes": "TDD vs DCGO BT24_069.cs. WM (this Digimon only)/WD: controller trashes 1 hand card (mandatory); the OPPONENT (as_selecting_player) may trash 1 hand card, else the top 2 of their deck are trashed (also when their hand is empty). [All Turns] Blocker and +2000 DP while opp trash >= 10 (two self auras). Inherited WA OPT mill 1+1."
+    },
+    "BT22-096": {
+      "card_name": "Unique Emblem: Poseidia Lagoon",
+      "validated_date": "2026-11-17",
+      "report": "hunt-delay-option-cards-authoring",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LIBERATOR Emblems",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-096.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_096.rs",
+      "test_count": 13,
+      "patterns": [
+        "FREE-PLAY-FROM-HAND",
+        "SECURITY-ACTIVATE-MAIN",
+        "EVENT-GATED-DELAY",
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "DCGO-replay finding (real PvP game): no YAML, so the Option resolved effect-less (no free play, no Delay placement, memory driven negative). Now: [Main] hand-or-trash union pick of exactly [Sangomon]/[Yao Qinglan] + play free + place as Delay; [Your Turn] <Delay> on own [Yao Qinglan] (exact name) suspending -> Aqua/Sea Animal Digimon with a legal Aquatic+LIBERATOR hand card digivolves at cost -3; [Security] activates [Main].",
+      "tests_passing": 13,
+      "tests_ignored": 0
+    },
+    "BT23-099": {
+      "card_name": "The Sistermon Sisters Training Gym",
+      "validated_date": "2026-11-17",
+      "report": "hunt-delay-option-cards-authoring",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Sistermon",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-099.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_099.rs",
+      "test_count": 15,
+      "patterns": [
+        "OPTION-IGNORE-COLOR",
+        "PLACE-SELF-AS-DELAY",
+        "EVENT-GATED-DELAY",
+        "SECURITY-ACTIVATE-MAIN"
+      ],
+      "notes": "DCGO-replay finding (real PvP game): the white Option was a mask miss beside a [Huckmon] Digimon. Now: use_requirement over any_field_permanent (battle+breeding area, Digimon with [Huckmon] in its name) lifts the colour requirement; [Main] draw 1 + place; <Delay> keyed to on_digivolve (engine: Digivolved events now reach event-gated Delay Options, G-ENGINE-EVENT-DELAY-ON-DIGIVOLVE); [Security] may play [Sistermon] from hand/trash then place.",
+      "tests_passing": 15,
+      "tests_ignored": 0
+    },
+    "BT21-090": {
+      "card_name": "The Strongest of Brothers",
+      "validated_date": "2026-11-17",
+      "report": "hunt-delay-option-cards-authoring",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Gammamon",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-090.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_090.rs",
+      "test_count": 18,
+      "patterns": [
+        "OPTION-IGNORE-COLOR",
+        "REVEAL-AND-ADD",
+        "PLACE-SELF-AS-DELAY",
+        "EVENT-GATED-DELAY",
+        "SECURITY-ACTIVATE-MAIN"
+      ],
+      "notes": "DCGO-replay finding (real PvP game): the [Main] reveal-3 pick never ran (no YAML). Now: colour bypass for a Digimon/Tamer with [Gammamon] in its text; [Main] reveal 3, add 1 [Gammamon]-text card, rest to deck bottom, place; <Delay> on_add_digivolution_cards (All Turns, any effect) -> a Digimon with a route digivolves into a [Gammamon]-text hand Digimon free; [Security] play a [Gammamon]-text card with play cost <= 4 from hand/trash then place.",
+      "tests_passing": 18,
+      "tests_ignored": 0
+    },
+    "BT19-017": {
+      "card_name": "Sangomon",
+      "validated_date": "2026-11-17",
+      "report": "hunt-delay-option-cards-authoring",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LIBERATOR",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_017.rs",
+      "test_count": 6,
+      "tests_passing": 6,
+      "tests_ignored": 0,
+      "patterns": [
+        "REVEAL-AND-ADD",
+        "INHERITED-END-OF-ATTACK"
+      ],
+      "notes": "DCGO-replay finding (real PvP game): Sangomon is the free-play target of BT22-096 and had no YAML, so its [On Play] reveal-3 never prompted. [On Play] two-bucket reveal ([Aqua]/[Sea Animal] in any trait, substring like DCGO HasAquaTraits, then [LIBERATOR]) with the no-duplicate rule from the official Q&A; (Rule) [Aquatic] trait; inherited [End of Attack][OPT] gain 1 memory."
+    },
+    "BT9-006": {
+      "card_name": "Pagumon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-18",
+      "archetype": "Digi-Egg inherited effects",
+      "report": "dcgo-pvp-replay-hunt-2026-11-round-2",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_006.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "notes": "inherited [When Attacking] optional trash-for-+1000 DP; outer confirm + declinable hand pick (DCGO isOptional + canNoSelect); empty hand offers nothing. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
+      "integration_verification": "limited"
+    },
+    "BT12-006": {
+      "card_name": "Monimon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-18",
+      "archetype": "Digi-Egg inherited effects",
+      "report": "dcgo-pvp-replay-hunt-2026-11-round-2",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_006.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
+      "notes": "inherited [On Deletion] <Draw 1> gated on the deleted carrier's <Save> text read from the deletion snapshot (CR 4.3 15-8-3-9-4); orders against the carrier's own <Save>; deck-empty gate; shifted-slot regression. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
+      "integration_verification": "limited"
+    },
+    "P-247": {
+      "card_name": "Nyaromon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-18",
+      "archetype": "Digi-Egg inherited effects",
+      "report": "dcgo-pvp-replay-hunt-2026-11-round-2",
+      "yaml_path": "code/digimon-engine/cards/p/P-247.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_247.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
+      "notes": "inherited [When Attacking][OPT] trash a [Dark Animal]/[Shaman]/[Undead]/[TS] card to delete an unsuspended level 4 or lower Digimon; declining the hand pick refunds the OPT (DCGO RemoveUse). Synthetic-board behavioural tests; printed-clause oracle exam not run.",
+      "integration_verification": "limited"
+    },
+    "EX8-006": {
+      "card_name": "DemiMeramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-18",
+      "archetype": "Digi-Egg inherited effects",
+      "report": "dcgo-pvp-replay-hunt-2026-11-round-2",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_006.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "notes": "inherited [When Attacking][OPT] [NSo] carrier trashes 1 card to delete a level 3 Digimon; outer confirm + declinable pick. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
+      "integration_verification": "limited"
+    },
+    "EX11-001": {
+      "card_name": "Koromon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-18",
+      "archetype": "Digi-Egg inherited effects",
+      "report": "dcgo-pvp-replay-hunt-2026-11-round-2",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-001.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_001.rs",
+      "test_count": 5,
+      "tests_passing": 5,
+      "tests_ignored": 0,
+      "notes": "inherited [When Attacking][OPT] may digivolve into a [Dinosaur]/[Tyrannomon]-named hand card with the printed cost; outer confirm + declinable pick. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
+      "integration_verification": "limited"
     }
   }
 }

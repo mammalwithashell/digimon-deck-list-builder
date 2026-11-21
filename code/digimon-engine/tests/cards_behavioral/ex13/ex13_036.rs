@@ -379,3 +379,97 @@ fn ex13_036_assembly_yellow_holy_beast_line_for_7() {
     assert_eq!(runner.game.players[0].battle_area[0].card_sources.len(), 4);
     assert_eq!(mem0 - runner.game.memory, 7);
 }
+
+// ─── Section 6 — one-sided placement ("do as much as possible") ──────────────
+//
+// DCGO registers the [When Digivolving]/[End of Attack]/[Counter] placement with
+// an `AdditionalActivateCondition` that is an OR
+// (`HasMatchConditionPermanent(own Digimon) || HasMatchConditionPermanent(opp
+// Digimon)`), and its coroutine selects the owner's Digimon and the opponent's
+// Digimon independently, each only when that side has one, then places whichever
+// were chosen. CR 4.3 1-3-2 ("do as much as possible"): "You may place 1 of each
+// player's Digimon" is still performed for the side that has a Digimon. The YAML
+// used to AND the two sides, so with no opposing Digimon the optional prompt was
+// never parked and the recorded DCGO use (own Digimon placed alone) could not be
+// replayed.
+
+#[test]
+fn ex13_036_counter_with_no_opposing_digimon_still_places_own_digimon() {
+    let mut runner = builder()
+        .security(0, &["PAD"; 2])
+        .security(1, &["PAD"; 2])
+        .start();
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    assert_eq!(runner.battle_area_size(1), 0, "precondition: no opposing Digimon");
+    fire(&mut runner, EffectTiming::CounterEffect, me);
+    assert!(
+        runner.pending_is_optional(),
+        "'you may place' must still be offered when only the owner has a Digimon"
+    );
+    runner.accept_optional_trigger().expect("accept");
+    pick_field(&mut runner, ally);
+    let _ = runner.auto_resolve();
+    assert!(
+        runner.pending_selection().is_none(),
+        "no opposing Digimon: no second pick is parked"
+    );
+    assert_eq!(field_ids(&runner, 0), vec![CARD_ID.to_string()]);
+    assert_eq!(runner.security_count(0), 3, "own Digimon placed on top of security");
+    assert_eq!(runner.security_count(1), 2, "opponent security unchanged");
+}
+
+#[test]
+fn ex13_036_counter_with_only_the_carrier_and_no_opponent_places_the_carrier() {
+    let mut runner = builder()
+        .security(0, &["PAD"; 2])
+        .security(1, &["PAD"; 2])
+        .start();
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    fire(&mut runner, EffectTiming::CounterEffect, me);
+    assert!(runner.pending_is_optional());
+    runner.accept_optional_trigger().expect("accept");
+    pick_field(&mut runner, me);
+    let _ = runner.auto_resolve();
+    assert!(field_ids(&runner, 0).is_empty(), "Kentaurosmon itself is 'your Digimon'");
+    assert_eq!(runner.security_count(0), 3);
+    assert_eq!(runner.security_count(1), 2);
+}
+
+/// The [When Digivolving] timing queues this clause alongside the trash-cost
+/// clause; with no opposing Digimon the placement must still be reachable.
+#[test]
+fn ex13_036_when_digivolving_places_own_digimon_when_opponent_has_none() {
+    let mut runner = builder()
+        .security(0, &["PAD"; 3])
+        .security(1, &["PAD"; 3])
+        .start();
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    fire(&mut runner, EffectTiming::WhenDigivolving, me);
+    let mut placed = false;
+    for _ in 0..12 {
+        match runner.pending_kind() {
+            None => break,
+            Some(SelectionKind::EffectChoice) => {
+                runner.execute_branch(2).expect("don't trash a security card");
+            }
+            Some(SelectionKind::OwnField) => {
+                pick_field(&mut runner, ally);
+                placed = true;
+            }
+            Some(_) => {
+                if runner.pending_is_optional() {
+                    runner.accept_optional_trigger().expect("accept optional");
+                } else {
+                    let v = runner.pending_selection_view().unwrap();
+                    let first = v.valid_action_ids[0];
+                    runner.execute_action(v.selecting_player, first).unwrap();
+                }
+            }
+        }
+    }
+    assert!(placed, "the own-Digimon pick was parked although the opponent has no Digimon");
+    assert_eq!(runner.security_count(0), 4);
+    assert_eq!(runner.security_count(1), 3);
+}

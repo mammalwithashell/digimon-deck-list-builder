@@ -74,6 +74,18 @@ pub struct PredicateSpec {
     /// G-DSL-NAME-MATCHES-RETURNED-CARD (driver BT13-092).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_matches_returned_card: Option<bool>,
+    /// True when the candidate shares >=1 card name with the effect SOURCE
+    /// (carrier) permanent's top card -- DCGO
+    /// `permanent.TopCard.HasSameCardName(card.PermanentOfThisCard().TopCard)`.
+    /// Models "[Your Turn] All of your other Digimon with the same name as this
+    /// Digimon gain <Rush>" (BT5-063 Kurisarimon) and its siblings (BT2-053 /
+    /// BT2-059 / EX1-044 / EX1-046 / EX1-051 / P-045). The carrier is whatever
+    /// Digimon currently holds the inherited effect, so the comparison is
+    /// against that permanent's own top card names (printed name + aliases),
+    /// never a literal. Authored as `name_matches_source: true`; pair with
+    /// `other: true` for "other Digimon".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_matches_source: Option<bool>,
     /// True when the candidate card shares â‰¥1 color with the effect CARRIER's
     /// NON-FLIPPED digivolution-source color set (the colors printed on the
     /// carrier's face-up digivolution cards, excluding the carrier's own top
@@ -322,6 +334,11 @@ pub struct PredicateSpec {
     /// checks the effect controller's play prohibition, not battle-area capacity.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_play_to_breeding_from_hand: Option<bool>,
+    /// Candidate is a physical trash Digimon/Dual whose owner's breeding is empty;
+    /// checks the effect controller's play prohibitions (incl. the trash-play
+    /// lock), not battle-area capacity. EX10-009 Creepymon.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_play_to_breeding_from_trash: Option<bool>,
     /// Existing breeding-permanent subject only. True if its owner can move
     /// it to battle by effect; false if that existing permanent cannot move.
     /// Non-breeding subjects and an empty breeding slot match neither value.
@@ -446,6 +463,21 @@ pub struct PredicateSpec {
     /// shows no prompt. G-DSL-CAN-ATTACK-PREDICATE.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_attack: Option<CanAttackPredicate>,
+    /// Permanent-subject leaf: the Digimon's top card carries at least one
+    /// effect a refire could activate right now (`refire_effect`, "activate 1
+    /// [On Play] or [When Digivolving] effect of 1 of your [X] Digimon"), and
+    /// that effect still has a use left this turn. The value is the refire's
+    /// timing: `on_play`, `when_digivolving` or `on_play_or_when_digivolving`.
+    /// Mirrors DCGO BT24_102.cs:93-98, where the Digimon pick's
+    /// `canTargetCondition` requires `permanent.EffectList(OnEnterFieldAnyone)
+    /// .Any(CanBeEffectCandidate)`, so a Digimon with nothing to activate is
+    /// never offered and an all-ineligible board opens no prompt. It checks the
+    /// refire's own candidates only (timing + `can_be_refired` + the
+    /// once-per-turn slot); a card-specific activation condition (DCGO
+    /// `CanActivateCondition`) is evaluated when the effect runs.
+    /// G-DSL-HAS-REFIREABLE-EFFECT.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_refireable_effect: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_keyword: Option<String>,
     /// Permanent-subject predicate. True when the candidate currently has
@@ -537,6 +569,18 @@ pub struct PredicateSpec {
     /// or more same-level cards...".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_same_level_source_pairs_gte: Option<u8>,
+    /// True when the effect carrier's WHOLE stack -- its top card AND its
+    /// face-up digivolution cards -- holds at least N cards of one level
+    /// ("if this Digimon's stack has 2 or more same-level cards"). Unlike
+    /// `self_same_level_source_pairs_gte` (source cards only, top card
+    /// excluded) the top card counts: official Q&A on BT22-056 -- "a level 5
+    /// Digimon has a level 5 digivolution card". DCGO
+    /// `PermanentOfThisCard().StackCards.Filter(!IsFlipped).GroupBy(Level)
+    /// .Any(g => g.Count() >= N)`. Face-down cards have no characteristics
+    /// (CR 4.3 4-7-9) and cards without a level never form a group.
+    /// G-DSL-SELF-STACK-SAME-LEVEL-COUNT (driver BT22-056).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_stack_same_level_count_gte: Option<u8>,
     /// True when the effect CARRIER's NON-FLIPPED digivolution-source color
     /// set has at least N distinct colors. A no-subject, carrier-scoped
     /// global predicate â€” it does NOT inspect the candidate, it reads
@@ -567,6 +611,25 @@ pub struct PredicateSpec {
     /// `is_source: true`, exposing the Yes/No to the RL action space.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_source: Option<bool>,
+    /// `is_source_card: true` -- the subject CARD must BE the effect's own
+    /// source card (the card-subject mirror of `is_source`, which only reads
+    /// permanent subjects). A battle-area stack is addressed by its top card,
+    /// so a Tamer's own card is `is_source_card` while another copy of the same
+    /// Tamer in play or in the trash is not. Lets a `select_zone_cards` pick
+    /// range over "this Tamer" together with other zones' cards (BT17-080
+    /// Takato Matsuki: "by placing this Tamer and 1 [Growlmon] and 1
+    /// [WarGrowlmon] from your trash as ... digivolution cards").
+    /// G-DSL-IS-SOURCE-CARD.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_source_card: Option<bool>,
+    /// Card-subject location gate: the subject CARD currently lies in one of
+    /// these zones. `zone` is only enforced on permanent subjects (and the
+    /// reveal overlay), so a multi-zone `select_zone_cards` could not say
+    /// "[Growlmon] from your trash" without also matching a [Growlmon] on the
+    /// field. A battle-area stack's TOP card is `battle_area`; the cards under
+    /// it are `material`. Empty = no constraint. G-DSL-CARD-IN-ZONE.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub card_in_zone: Vec<Zone>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub of_permanent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1000,6 +1063,24 @@ pub struct PredicateSpec {
     pub attacker_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_trait_has: Option<String>,
+    /// ANY card of the event's moved-card batch has this trait -- the batch
+    /// sibling of `event_card_trait_has` (which reads the single `event_card`,
+    /// set only for a one-card batch). A top-stack trash event carries every
+    /// card one <De-Digivolve> instance trashed at the same time (CR 4.3
+    /// 16-12-5), and DCGO's `CanTriggerWhenTopCardTrashed` fires when ANY of
+    /// them satisfies the card condition. BT21-094 ("When the top stacked card
+    /// of any of your [Armor Form] trait Digimon is trashed").
+    /// G-DSL-EVENT-BATCH-CARD-TRAIT-HAS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_batch_card_trait_has: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// The captured event card is currently FACE UP in its security stack
+    /// (`true`) or face down (`false`) — the placement-event gate for "when
+    /// face-up [X] trait cards are placed in your security stack" (EX11-003
+    /// Puroromon). Reads the security owner's `face_up_security` set for the
+    /// event card; unsatisfied outside a security-placement trigger.
+    /// G-PRED-EVENT-CARD-FACE-UP-IN-SECURITY.
+    pub event_card_face_up_in_security: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,
     /// Exact printed name or rule-granted name of the captured event card.
@@ -1052,6 +1133,29 @@ pub struct PredicateSpec {
     pub event_cause: Option<EventCauseSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_same_level_as_previous: Option<bool>,
+    /// Observer-side gate for `on_digivolve` clauses: true when the event
+    /// Digimon (the permanent that just digivolved) has a FACE-UP digivolution
+    /// card whose level equals the event Digimon's own current level (its new
+    /// top card's level). Face-down digivolution cards are never counted -- a
+    /// face-down card under another card has no characteristics (CR 4.3
+    /// 4-7-9). Mirrors DCGO `permanent.DigivolutionCards.Filter(x => x.HasLevel
+    /// && x.Level == permanent.Level).Count >= 1`. Driver: BT22-093 Ami Aiba
+    /// ("if it has a digivolution card with the same level as the digivolved
+    /// Digimon"). G-DSL-EVENT-TARGET-HAS-SAME-LEVEL-SOURCE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_has_same_level_source: Option<bool>,
+    /// Observer-side "digivolved FROM" kind gate for `on_digivolve` clauses:
+    /// true when the card the event-target permanent digivolved from (the
+    /// card directly under its new top card) has the given card category.
+    /// Needed because a Tamer that digivolves becomes a Digimon permanent, so
+    /// `event_target_kind` (the resulting top card) cannot say "one of your
+    /// Tamers digivolves". Mirrors DCGO's `evoRoots.Any(IsTamer)`
+    /// (`GetDigivolutionRootsFromEnterFieldHashtable`). Reads the live stack:
+    /// a DNA digivolution's roots below the merged material are not
+    /// distinguished. Driver: BT7-081 Bokomon.
+    /// G-DSL-EVENT-TARGET-DIGIVOLVED-FROM-KIND.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_digivolved_from_kind: Option<CardKind>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub host_permanent_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

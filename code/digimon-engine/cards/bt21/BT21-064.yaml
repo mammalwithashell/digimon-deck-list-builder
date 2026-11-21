@@ -1,0 +1,74 @@
+# BT21-064 Guilmon — Digimon, Lv.3, Purple/Red, DP 1000, Cost 3.
+# Traits: Reptile / Hero. Form: Rookie. Attribute: Virus.
+# Standard digivolve (data/card_overrides.json evo_costs; official DB):
+#   Lv.2 Purple / Cost 1 and Lv.2 Red / Cost 1.
+# Printed special digivolution box: [Digivolve] [Gigimon]/Lv.2 w/[Hero]
+#   trait: Cost 0.
+#
+# Printed card text (data/card_bundles/BT21-064.md - verbatim):
+#   [On Play] By trashing 1 card with [Guilmon], [Growlmon], [Gallantmon] or
+#     [Megidramon] in its name or the [Hero] trait from your hand, <Draw 2>.
+#   Inherited: [On Deletion] Gain 1 memory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Purple/BT21_064.cs
+#
+# Modeling notes:
+# - [On Play]: DCGO's activation requires a matching card in hand, then
+#   `SelectHandEffect` (Mode.Discard, canNoSelect TRUE, maxCount 1); the draw
+#   runs only if a card was actually trashed. Authored as an optional
+#   cost-select_hand (decline = nothing happens) -> trash by index -> draw 2.
+#   Name match is "in its name" (`name_contains`), plus the [Hero] trait.
+# - Inherited [On Deletion]: mandatory +1 memory (DCGO `CanActivateOnDeletion`
+#   + `AddMemory(1)`).
+# - Alt digivolve: [Gigimon] by name, or any Lv.2 [Hero] trait Digimon,
+#   cost 0 (DCGO `AddSelfDigivolutionRequirementStaticEffect`).
+
+card: BT21-064
+name: Guilmon
+kind: digimon
+level: 3
+color: [purple, red]
+cost: 3
+dp: 1000
+traits: [Reptile, Hero]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Gigimon" }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Hero }
+    cost: 0
+
+effects:
+  - when: on_play
+    optional: true
+    summary: "[On Play] By trashing 1 [Guilmon]/[Growlmon]/[Gallantmon]/[Megidramon]-name or [Hero] card from your hand, Draw 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: trash_pick
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - trait_has: Hero
+              - name_contains: "Guilmon"
+              - name_contains: "Growlmon"
+              - name_contains: "Gallantmon"
+              - name_contains: "Megidramon"
+          prompt: "Trash 1 card with [Guilmon], [Growlmon], [Gallantmon] or [Megidramon] in its name or the [Hero] trait to Draw 2"
+      - if:
+          condition: { binding_present: trash_pick }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: trash_pick }
+            - draw: { of: you, count: 2 }
+
+  - scope: inherited
+    when: on_deletion
+    optional: false
+    summary: "[Inherited][On Deletion] Gain 1 memory"
+    process:
+      - gain_memory: 1

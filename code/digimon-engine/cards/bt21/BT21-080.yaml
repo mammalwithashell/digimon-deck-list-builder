@@ -1,0 +1,65 @@
+# BT21-080 Hiro Amanokawa — Tamer, Red+Purple, Cost 4. Traits: [Hero].
+#
+# Printed (official Bandai DB bundle data/card_bundles/BT21-080.md):
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [Your Turn] When effects place digivolution cards under any of your
+#     Digimon with [Gammamon] in their texts or the [Hero] trait, by suspending
+#     this Tamer, <Draw 1> and gain 1 memory.
+#   Security: [Security] Play this card without paying the cost.
+#
+# Official Q&A (bundle): "[X] in its text" refers to a card that contains the
+# text in its name, traits, effects, inherited effects, (Rule), digivolution
+# requirements, ... -> the broad `event_target_in_text_contains` scan
+# (DCGO `TopCard.HasText`). [Hero] is the exact trait (`EqualsTraits`).
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT21/Red/BT21_080.cs
+#   - Start of Main Phase: mandatory; `OwnerTurn`, opponent has >= 1 Digimon and
+#     the owner can gain memory.
+#   - Your Turn: `OnAddDigivolutionCards`, `isOptional: true`, no once-per-turn;
+#     the host permanent must be one of the owner's Digimon whose top card has
+#     [Gammamon] in its text or the [Hero] trait; any effect with a source card
+#     placed the cards (the opponent's effects count). Cost: suspend this Tamer
+#     (`CanActivateSuspendCostEffect`), then Draw 1, then +1 memory.
+#
+# Regression (hunt2 cluster alt-digivolve-cost-cards): shipped only as a .json
+# stub, so the Tamer's three clauses never fired in a game it was in play.
+
+card: BT21-080
+name: Hiro Amanokawa
+kind: tamer
+color: [red, purple]
+cost: 4
+traits: [Hero]
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - gain_memory: 1
+
+  - when: on_add_digivolution_cards
+    optional: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_in_text_contains: "Gammamon"
+            - event_target_trait_has: "Hero"
+    condition: { source_is_unsuspended: true }
+    summary: "[Your Turn] When effects place digivolution cards under any of your Digimon with [Gammamon] in their texts or the [Hero] trait, by suspending this Tamer, <Draw 1> and gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -32,8 +32,9 @@ traits: [Lesser, LIBERATOR]
 #   - when: on_opponent_security_removed
 #   - active_when: { your_turn: true }
 #   - once_per_turn: true      [Once Per Turn]
-#   - optional: false at clause level — clause fires automatically; optionality is
-#     inside the process via select_own_permanent with optional: true.
+#   - optional: true + outer_prompt: true at clause level — DCGO's always-shown
+#     isOptional yes/no (BT21_001.cs:21); the inner select_own_permanent keeps
+#     optional: true (DCGO canNoSelect: true, :77).
 #   - process:
 #     1. select_own_permanent (optional: true, filter: digimon)
 #        → DCGO's SelectPermanentEffect with canNoSelect: true.
@@ -53,12 +54,19 @@ effects:
   - scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
-    # The whole effect is one "may" (DCGO BT21_001.cs `isOptional: true`): a
-    # pass is not activating it, so the [Once Per Turn] is kept (official Q&A
-    # Q1818, CR 4.3 §15-14-1-4). `optional: true` + a tail gated on the pick
-    # lets the lowering refund the use on a pass
-    # (G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT).
+    # The whole effect is one "may" (DCGO BT21_001.cs:21 `isOptional: true`):
+    # DCGO ALWAYS shows its yes/no activation prompt once CanActivateCondition
+    # holds (:60-63, only `IsExistOnBattleAreaDigimon` -- it does NOT check for
+    # a digivolve candidate; the candidate check lives inside
+    # ActivateCoroutine's pick, :68 `maxCount = Min(1, count)`). So the gate
+    # is forced with `outer_prompt: true` (BT24-003 idiom) even when no Digimon
+    # has a legal digivolve: the folded optional pick below would vanish with no
+    # candidate and the prompt DCGO shows would not exist here. Declining the
+    # gate is not activating the effect, so the [Once Per Turn] is kept
+    # (official Q&A Q1818, CR 4.3 §15-14-1-4); accepting it uses the effect
+    # (§15-7-4 / §15-7-5), whether or not a digivolve then follows.
     optional: true
+    outer_prompt: true
     active_when: { your_turn: true }
     summary: "[Your Turn][OPT] When opponent's security removed, 1 of your Digimon may digivolve into Reptile/Dragonkin in hand, cost -1"
     # Candidate legality (select-hand audit, fixed 2026-11-13): DCGO

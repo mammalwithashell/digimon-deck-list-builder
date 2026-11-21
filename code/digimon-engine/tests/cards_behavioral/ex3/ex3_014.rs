@@ -469,9 +469,9 @@ fn ex3_014_digixros_five_field_materials_reduce_cost_and_attach_sources() {
             .execute_action(0, action)
             .unwrap_or_else(|_| panic!("select DigiXros material slot {slot}"));
     }
-    runner
-        .execute_action(0, PASS)
-        .expect("stop selecting DigiXros materials");
+    // The recipe is full (no eligible material left): DCGO's
+    // `SelectDigiXrosClass.Select` ends by itself (a one-"End"-only element is
+    // skipped without a prompt), so the play commits with no trailing stop prompt.
 
     // Play cost 13 reduced by 5 * -2 = -10 → effective cost 3.
     assert_eq!(

@@ -6,7 +6,7 @@ use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::token_registry::TokenDef;
 
 fn board(token:bool)->(DebugRunner,PermanentHandle,PermanentHandle){
-    let def=TokenDef{name:"blue-test".into(),card_id:"TOKEN_BLUE_TEST".into(),card_name:"Blue Token".into(),colors:vec![CardColor::Blue],dp:Some(3000),level:None,traits:vec![],keywords:vec![]};
+    let def=TokenDef{name:"blue-test".into(),card_id:"TOKEN_BLUE_TEST".into(),card_name:"Blue Token".into(),colors:vec![CardColor::Blue],dp:Some(3000),level:None,traits:vec![],play_cost:None,keywords:vec![]};
     let observer="card: WATCH\nname: Watch\nkind: tamer\ncolor: [blue]\ncost: 0\neffects:\n  - when: on_add_digivolution_cards\n    process:\n      - gain_memory: 1\n";
     let mut r=DebugRunner::builder().from_dsl_yaml(observer).unwrap()
         .add_card(make_test_card("BODY","Body")).add_card(make_test_card("MAT","Material"))

@@ -5,7 +5,6 @@
 //! - That hook applies a one-shot -1 cost modifier.
 //! - The same transaction can then use trash cards as DigiXros materials.
 
-use digimon_engine::action::space::{PASS};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card_with_level, DebugRunner};
@@ -81,9 +80,12 @@ fn bt12_112_preattaches_shoutmon_reduces_cost_and_unlocks_trash_materials() {
     runner
         .execute_action(0, trash_action)
         .expect("select Ballistamon from trash as a DigiXros material");
-    runner
-        .execute_action(0, PASS)
-        .expect("stop selecting DigiXros materials");
+    // No further eligible material remains, so DCGO's `SelectDigiXrosClass`
+    // asks nothing more and the play commits with no trailing stop prompt.
+    assert!(
+        runner.pending_selection().is_none(),
+        "no empty DigiXros stop prompt once no candidate remains"
+    );
 
     assert_eq!(
         memory_before, 10,

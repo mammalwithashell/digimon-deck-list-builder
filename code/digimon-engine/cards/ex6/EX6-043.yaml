@@ -1,0 +1,84 @@
+# EX6-043 Diaboromon — Digimon, Lv.6, Black, 11000 DP, play cost 11.
+# Traits: Unidentified. Attribute: Unknown. Digivolve: Black Lv.5 / cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX6-043.md):
+#   [Start of Your Main Phase] [When Digivolving] You may play 1 [Diaboromon]
+#   Token without paying the cost.
+#   [All Turns] [Once Per Turn] When an opponent's Digimon is played, you may
+#   activate 1 of this Digimon's [When Digivolving] effects.
+#   [All Turns] All of your other Digimon with [Diaboromon] in their names gain
+#   <Jamming> and <Blocker>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX6/Black/EX6_043.cs
+#   - OnStartMainPhase (own turn) and OnEnterFieldAnyone [When Digivolving]:
+#     optional PlayDiaboromonToken (needs a free frame).
+#   - OnEnterFieldAnyone OPT, optional: CanTriggerOnPermanentPlay of an
+#     opponent's Digimon; activates one of the permanent's own [When
+#     Digivolving] effects (a picker when several). `refire_effect` with
+#     `timing: when_digivolving` is the BT22-042 idiom for exactly this.
+#   - EffectTiming.None: BlockerStaticEffect + JammingStaticEffect for the
+#     owner's other Digimon whose top card ContainsCardName "Diaboromon".
+
+card: EX6-043
+name: Diaboromon
+kind: digimon
+level: 6
+color: [black]
+cost: 11
+dp: 11000
+traits: [Unidentified]
+form: Mega
+attribute: Unknown
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+
+effects:
+  - when: [start_of_your_main_phase, when_digivolving]
+    optional: true
+    summary: "[Start of Your Main Phase][When Digivolving] You may play 1 [Diaboromon] Token without paying the cost"
+    process:
+      - play_token:
+          controller: you
+          token_name: diaboromon
+
+  - when: on_enter_field_anyone
+    optional: true
+    once_per_turn: true
+    active_when: { all_turns: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: token
+    summary: "[All Turns][OPT] When an opponent's Digimon is played, you may activate 1 of this Digimon's [When Digivolving] effects"
+    process:
+      - refire_effect:
+          source: source
+          timing: when_digivolving
+          optional: true
+
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      name_contains: "Diaboromon"
+      other: true
+    grant_keyword: { keyword: Blocker }
+    summary: "[All Turns] Your other [Diaboromon]-name Digimon gain <Blocker>"
+
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      name_contains: "Diaboromon"
+      other: true
+    grant_keyword: { keyword: Jamming }
+    summary: "[All Turns] Your other [Diaboromon]-name Digimon gain <Jamming>"

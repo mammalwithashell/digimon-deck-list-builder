@@ -433,3 +433,80 @@ fn ex13_001_hand_pick_excludes_growlmon_without_a_route_onto_the_carrier() {
     let runner = after_red_tamer(&["RED-TAMER", "GROWL-LV6", "GROWL-13"]);
     assert_eq!(offered(&runner), vec!["GROWL-13".to_string()]);
 }
+
+// ── Breeding-area digivolve over a null-level egg row (2026-11 DCGO replay) ──
+//
+// data/cards.json ships EX13-001 with `level: null` (the API ingest drops it;
+// the card face prints Lv.2). A real PvP game hatched this Gigimon and then
+// digivolved a Lv.3 over it from the breeding area; the engine offered no such
+// action (mask miss) because `collect_rules_digivolve_routes` needs a base
+// level. The loader now restores the printed Lv.2 for In-Training Digi-Eggs.
+
+/// The egg exactly as cards.json carries it: Digi-Egg kind, `level: null`.
+fn null_level_egg_from_cards_json(id: &str) -> CardData {
+    let json = format!(
+        r#"{{ "{id}": {{
+            "index": 1, "norm_id": 0.00005, "card_id": "{id}", "card_index": 1,
+            "card_name_eng": "Gigimon", "card_name_jpn": "",
+            "card_effect_class_name": "X", "play_cost": 0, "dp": null,
+            "level": null, "card_kind": 3, "rarity": 1, "card_colors": [0],
+            "type_eng": ["Lesser"], "form_eng": ["In-Training"], "attribute_eng": [],
+            "effect_description_eng": "", "inherited_effect_description_eng": "",
+            "security_effect_description_eng": "", "evo_costs": []
+        }} }}"#
+    );
+    CardData::load_from_str(&json)
+        .expect("egg row parses")
+        .remove(id)
+        .expect("egg row present")
+}
+
+/// A red Lv.3 whose printed circle is "Lv.2 from red: cost 0" (Guilmon EX13-007).
+fn guilmon_like(id: &str) -> CardData {
+    let mut c = digimon(id, "Guilmon", 3, 3);
+    c.evo_costs = vec![EvoCost {
+        card_color: 0,
+        level: 2,
+        memory_cost: 0,
+    }];
+    c
+}
+
+#[test]
+fn ex13_001_breeding_digivolve_is_offered_over_a_null_level_egg_row() {
+    use digimon_engine::action::mask::build_action_mask;
+    use digimon_engine::action::space::{encode_digivolve, BREEDING_TARGET};
+    use digimon_engine::enums::{GamePhase, PlaySource};
+
+    let mut runner = DebugRunner::builder()
+        .add_card(null_level_egg_from_cards_json("EGG-NULL"))
+        .add_card(guilmon_like("GUILMON"))
+        .add_card(digimon("FILL", "Fill", 3, 3))
+        .hand(0, &["GUILMON"])
+        .deck(0, &["FILL", "FILL"])
+        .memory(3)
+        .start();
+    runner.game.turn_count = 1;
+    runner.game.current_phase = GamePhase::Main;
+    runner.place_in_breeding(0, "EGG-NULL");
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(
+        mask[encode_digivolve(0, BREEDING_TARGET) as usize] > 0.0,
+        "a Lv.2 In-Training egg in the breeding area must accept a Lv.2-from-red digivolve"
+    );
+    assert!(
+        runner
+            .game
+            .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand),
+        "cost-0 printed circle resolves without a prompt"
+    );
+    let top = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .expect("breeding permanent remains")
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(top, "GUILMON");
+}

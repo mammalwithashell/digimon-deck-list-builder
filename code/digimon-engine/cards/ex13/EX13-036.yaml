@@ -184,8 +184,13 @@ effects:
   - when: [when_digivolving, end_of_attack, counter]
     once_per_turn: true
     optional: true
+    # Either side having a Digimon is enough (DCGO's AdditionalActivateCondition is
+    # `HasMatchConditionPermanent(own Digimon) || HasMatchConditionPermanent(opp
+    # Digimon)`; CR 4.3 1-3-2 "do as much as possible"): each pick below
+    # auto-skips an empty side and `place_on_security` of an unbound permanent is a
+    # no-op, so whichever side has a Digimon is placed.
     condition:
-      all_of:
+      any_of:
         - any_permanent: { of: you, zone: [battle_area], kind: digimon }
         - any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
     summary: "[When Digivolving][End of Attack][Counter][OPT] You may place 1 of each player's Digimon as the top security cards"

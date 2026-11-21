@@ -1,0 +1,110 @@
+# EX12-041 Thundermon — Digimon, Lv.4, Yellow/Black, DP 6000, Cost 5.
+# Traits: Mutant, ME. Attribute: Data. Digivolve: Yellow Lv.3 / 3;
+# Lv.3 with an [ME] trait / 2.
+#
+# Printed text (data/cards.json, DCGO EX12_041.cs):
+#   [Main] [Once Per Turn] You may play or use 1 card with the [Mutant] or [ME]
+#   trait from your hand with the cost reduced by 2.
+#   (Rule) Name: Treated as including [Mamemon].   <- dropped by every data
+#   layer (cards.json / overrides / official mirror have no EX12-041 rule box);
+#   DCGO EX12_041.cs:188 CardEffectFactory.NameTreatedAsIncluding(card,
+#   "Mamemon"), which rewrites the name to "Mamemon Thundermon" (an alias that
+#   CONTAINS [Mamemon], mirrored on EX13-053 Thundermon). Cards that look for
+#   "[Mamemon] in its text" (Kokuwamon EX13-046) reach this card through it.
+#   Inherited: [When Attacking] [Once Per Turn] 1 of your opponent's Digimon
+#   gets -2000 DP for the turn.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX12/Yellow/EX12_041.cs
+#   - Alt digivolve: AddSelfDigivolutionRequirementStaticEffect(top card ME,
+#     cost 2, level 3) -> alt_paths entry.
+#   - Main (OnDeclaration, OPT, hash EX12_041_Main): hand pick canNoSelect:true
+#     of a [Mutant]/[ME] card that is an Option (not CanNotPlayThisOption) or a
+#     Digimon/Tamer with a play cost that can be played for cost-2; the chosen
+#     card is then played/used paying the reduced cost. Nothing picked ->
+#     RemoveUse() (the once-per-turn is not consumed) -> `refund_opt`.
+#     Mirrors EX12-013 (BetelGammamon).
+#   - Inherited: OnAllyAttack, OPT (hash EX12_041_Inherited), mandatory target.
+
+card: EX12-041
+name: Thundermon
+kind: digimon
+level: 4
+color: [yellow, black]
+cost: 5
+dp: 6000
+traits: [Mutant, ME]
+attribute: Data
+also_treated_as: ["Mamemon Thundermon"]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  # Dual-colour card: DCGO prompts "Which digivolution cost do you pay?" for a
+  # black Lv.3 [ME] base (costs {2, 3}), i.e. it carries a black circle too
+  # (cards.json drops the second circle; see data/card_overrides.json).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: ME
+    cost: 2
+
+effects:
+  - when: main_on_field
+    once_per_turn: true
+    optional: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - any_of:
+                - trait_has: Mutant
+                - trait_has: ME
+            - can_play_or_use_from_effect: true
+            - affordable_with_cost: { reduce: 2 }
+        n: 1
+    summary: "[Main][OPT] You may play or use 1 [Mutant]/[ME] trait card from your hand with the cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - trait_has: Mutant
+                  - trait_has: ME
+              - can_play_or_use_from_effect: true
+              - affordable_with_cost: { reduce: 2 }
+          prompt: "Play or use 1 card with the [Mutant] or [ME] trait from your hand with the cost reduced by 2"
+      - if:
+          condition: { binding_present: pick }
+          then:
+            - play_or_use_from_hand:
+                of: you
+                hand_index: pick
+                cost_delta: { reduce: 2 }
+          else:
+            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
+            - refund_opt: {}
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Inherited][When Attacking][OPT] 1 of your opponent's Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -2000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -2000
+          expiry: end_of_turn

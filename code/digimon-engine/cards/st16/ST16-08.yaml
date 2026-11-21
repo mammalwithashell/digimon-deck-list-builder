@@ -1,0 +1,83 @@
+# ST16-08 Garurumon (Lv.4, Purple, cost 6, 5000 DP). Traits: Beast.
+#
+# Printed text (data/card_bundles/ST16-08.md, official Bandai DB):
+#   [Digivolve] Lv.3 w/[Gabumon] in name: Cost 2   (plus the standard purple Lv.3: 2)
+#   [Security] You may play 1 [Gabumon] or 1 Tamer card with [Matt Ishida] in its
+#     name from your hand or trash without paying the cost.
+#   [When Digivolving] <Draw 1>. Then, trash 1 card in your hand.
+#   Inherited: [When Attacking][Once Per Turn] <Draw 1>. Then, trash 1 card in
+#     your hand.
+#   Official Q&A: "[Gabumon]" is the exact name, so e.g. a Digimon that merely
+#   has Gabumon in its name cannot be played by the [Security] effect.
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/ST16/Purple/ST16_08.cs
+#   - None timing: AddSelfDigivolutionRequirementStaticEffect(top card name
+#     contains "Gabumon" and level 3, cost 2) -> alt_paths.
+#   - SecuritySkill: ActivateClass optional=true (the unstamped optional yes/no
+#     in a recording), then a hand/trash zone choice only when BOTH zones hold an
+#     eligible card, then a per-zone pick with canNoSelect=true; PlayPermanentCards
+#     payCost=false. Eligibility = CanPlayAsNewPermanent(payCost: false) AND
+#     (CardNames contains "Gabumon" (exact) OR Tamer with "Matt Ishida" in name)
+#     -> select_union_zone + play_union_bound_free (BT17-095 / AD1-003 idiom).
+#   - OnEnterFieldAnyone (When Digivolving): draw 1, then a mandatory 1-card
+#     discard when the hand is non-empty (canNoSelect false).
+#   - OnAllyAttack (inherited, maxCount 1): same draw/discard.
+card: ST16-08
+name: Garurumon
+kind: digimon
+level: 4
+color: [purple]
+cost: 6
+dp: 5000
+form: Champion
+attribute: Vaccine
+traits: [Beast]
+alt_paths:
+  - kind: digivolve
+    from: { kind: digimon, level_eq: 3, name_contains: Gabumon }
+    cost: 2
+effects:
+  - when: on_security
+    optional: true
+    summary: "[Security] You may play 1 [Gabumon] or 1 [Matt Ishida] Tamer from hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: picked
+          filter:
+            all_of:
+              - can_play_from_effect_without_cost: true
+              - any_of:
+                  - name_is: Gabumon
+                  - all_of:
+                      - kind: tamer
+                      - name_contains: Matt Ishida
+          prompt: "You may play 1 [Gabumon] or 1 Tamer with [Matt Ishida] in its name from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked
+
+  - when: when_digivolving
+    summary: "[When Digivolving] Draw 1, then trash 1 card in your hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] Draw 1, then trash 1 card in your hand (inherited)"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }

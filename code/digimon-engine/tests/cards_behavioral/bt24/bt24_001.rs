@@ -20,6 +20,7 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::CardKind;
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::selection::SelectionKind;
 
 const GIGIMON_YAML: &str = include_str!("../../../cards/bt24/BT24-001.yaml");
@@ -112,6 +113,21 @@ fn place_gigimon_as_source(runner: &mut DebugRunner) -> digimon_engine::permanen
     handle
 }
 
+/// DCGO ALWAYS shows this effect's yes/no activation (BT24_001.cs:21
+/// `isOptional: true`; CanActivateCondition, :57-60, is only
+/// `IsExistOnBattleAreaDigimon`): assert it is parked and accept it. The delete
+/// pick that follows is mandatory (:76 `canNoSelect: false`).
+fn accept_activation_gate(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional 'use this effect?' prompt is parked");
+    assert_eq!(view.kind, SelectionKind::Replacement, "yes/no activation prompt");
+    assert!(view.is_optional, "the activation is the player's choice");
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accepting the activation is legal");
+}
+
 // ── Section 1: Structural assertions ────────────────────────────────────────
 
 #[test]
@@ -192,6 +208,10 @@ fn bt24_001_inherited_clause_is_opt_and_optional() {
         clause.optional,
         "BT24-001 clause must be optional (\"you may\")"
     );
+    assert!(
+        clause.outer_prompt,
+        "DCGO always shows the yes/no activation, even with no deletable Digimon"
+    );
 }
 
 // ── Section 2: Condition gating ─────────────────────────────────────────────
@@ -209,8 +229,9 @@ fn bt24_001_condition_positive_fires_on_your_turn_when_opp_security_removed() {
 
     // P0 attacks P1's security → security removed → inherited clause fires.
     runner.attack_player(carrier, 1, false);
-    // Expected: selection prompt installs asking to delete opp Digimon.
-    // Drive the selection.
+    // Expected: the yes/no activation, then a prompt asking to delete an opp
+    // Digimon. Drive both.
+    accept_activation_gate(&mut runner);
     let _ = runner.auto_resolve();
 
     // LOW-DP-1 should be deleted.
@@ -282,16 +303,16 @@ fn bt24_001_declining_does_not_delete_digimon() {
 
     runner.attack_player(carrier, 1, false);
 
-    // Expect: optional selection is installed (PASS is valid).
+    // Expect: the optional yes/no activation is parked (PASS declines it).
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
     assert!(
         runner.pending_is_optional(),
-        "delete selection must be optional (\"you may\")"
+        "the activation must be optional (\"you may\")"
     );
 
     // Decline.
-    use digimon_engine::action::space as action;
     runner
-        .execute_action(0, action::PASS)
+        .execute_action(0, PASS)
         .expect("decline must be valid");
     let _ = runner.auto_resolve();
 
@@ -326,15 +347,17 @@ fn bt24_001_accepting_deletes_low_dp_digimon() {
 
     runner.attack_player(carrier, 1, false);
 
-    // The inherited effect is optional, so its delete selection admits PASS.
+    // The inherited effect is optional: DCGO's yes/no first, then (once it is
+    // accepted) a MANDATORY delete pick (BT24_001.cs:76 `canNoSelect: false`).
+    accept_activation_gate(&mut runner);
     assert_eq!(
         runner.pending_kind(),
         Some(SelectionKind::OppField),
         "should prompt OppField selection for delete target"
     );
     assert!(
-        runner.pending_is_optional(),
-        "delete target selection should be optional (\"you may\")"
+        !runner.pending_is_optional(),
+        "after the accept the delete pick is mandatory (DCGO canNoSelect: false)"
     );
 
     // Accept: pick the first (only) eligible target.
@@ -379,17 +402,16 @@ fn bt24_001_high_dp_digimon_not_eligible_for_delete() {
 
     runner.attack_player(carrier, 1, false);
 
-    // When the clause fires, the high-DP Digimon must not be eligible.
-    // Either: no selection is presented (no eligible targets), or
-    // if a selection IS presented, HIGH-DP-1 is not in valid_action_ids.
-    if let Some(view) = runner.pending_selection_view() {
-        assert_eq!(
-            view.valid_action_ids.len(),
-            0,
-            "HIGH-DP-1 must not appear as a valid delete target (dp_lte: 3000 filter)"
-        );
-    }
-    // If no selection (clause opted out due to no eligible targets) — also correct.
+    // DCGO still shows the yes/no activation (its CanActivateCondition has no
+    // target check). Accepting it finds no eligible target, so the delete pick
+    // never installs and the effect ends: HIGH-DP-1 is never a valid target.
+    accept_activation_gate(&mut runner);
+    assert!(
+        runner.pending_selection().is_none(),
+        "HIGH-DP-1 must not appear as a delete target (dp_lte: 3000 filter): {:?}",
+        runner.pending_selection_view().map(|v| (v.kind, v.prompt))
+    );
+    assert_eq!(runner.battle_area_size(1), 1, "HIGH-DP-1 is not deleted");
 }
 
 // ── Section 4: Event log (cost firing) ──────────────────────────────────────
@@ -426,14 +448,11 @@ fn bt24_001_opt_blocks_second_trigger_same_turn() {
 
     // First attack: OPT fires, should get optional delete selection.
     runner.attack_player(carrier, 1, false);
+    accept_activation_gate(&mut runner);
     assert_eq!(
         runner.pending_kind(),
         Some(SelectionKind::OppField),
         "first trigger must produce delete selection"
-    );
-    assert!(
-        runner.pending_is_optional(),
-        "first delete selection must admit decline"
     );
     {
         let view = runner.pending_selection_view().unwrap();
@@ -484,5 +503,69 @@ fn bt24_001_opt_resets_after_end_turn_structural() {
     assert!(
         triggered[0].once_per_turn,
         "DSL clause must encode once_per_turn: true; runtime same-turn lockout is covered above"
+    );
+}
+
+// ── Section 6: DCGO's always-shown yes/no activation ────────────────────────
+
+/// With no Digimon of 3000 DP or less, DCGO still asks "use this effect?":
+/// declining keeps the [Once Per Turn] (Q1818, CR 4.3 15-14-1-4), accepting
+/// spends it (15-7-4 / 15-7-5) with nothing deleted.
+#[test]
+fn bt24_001_gate_is_offered_without_a_deletable_digimon_and_decline_keeps_the_use() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(GIGIMON_YAML)
+        .expect("BT24-001 YAML must parse")
+        .add_card(make_filler("CARRIER"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-2"))
+        .add_card(make_filler("FILLER-DECK"))
+        .security(1, &["SEC-1", "SEC-2"])
+        .deck(0, &["FILLER-DECK"])
+        .deck(1, &["FILLER-DECK"])
+        .memory(10)
+        .start();
+    let carrier = place_gigimon_as_source(&mut runner);
+    runner.attack_player(carrier, 1, false);
+    let view = runner
+        .pending_selection_view()
+        .expect("DCGO's yes/no activation is parked even with no target");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner.execute_action(0, PASS).expect("declining is legal");
+    let _ = runner.auto_resolve();
+
+    // A declined activation did not spend the use: the next removal the same
+    // turn offers the prompt again.
+    runner.game.players[0].battle_area[carrier.index as usize].is_suspended = false;
+    runner.attack_player(carrier, 1, false);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
+}
+
+#[test]
+fn bt24_001_accepting_the_gate_with_no_target_spends_the_use() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(GIGIMON_YAML)
+        .expect("BT24-001 YAML must parse")
+        .add_card(make_filler("CARRIER"))
+        .add_card(make_non_digimon_security_filler("SEC-1"))
+        .add_card(make_non_digimon_security_filler("SEC-2"))
+        .add_card(make_filler("FILLER-DECK"))
+        .security(1, &["SEC-1", "SEC-2"])
+        .deck(0, &["FILLER-DECK"])
+        .deck(1, &["FILLER-DECK"])
+        .memory(10)
+        .start();
+    let carrier = place_gigimon_as_source(&mut runner);
+    runner.attack_player(carrier, 1, false);
+    accept_activation_gate(&mut runner);
+    assert!(runner.pending_selection().is_none(), "nothing to delete: no pick");
+    let _ = runner.auto_resolve();
+
+    runner.game.players[0].battle_area[carrier.index as usize].is_suspended = false;
+    runner.attack_player(carrier, 1, false);
+    assert!(
+        runner.pending_selection().is_none(),
+        "an activated [Once Per Turn] effect is spent: {:?}",
+        runner.pending_selection_view().map(|v| (v.kind, v.prompt))
     );
 }

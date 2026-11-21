@@ -1,0 +1,66 @@
+# EX12-053 Hagurumon — Digimon, Lv.3, Black, DP 2000, Cost 3.
+# Traits: Machine, ME. Attribute: Virus. Digivolve: Black Lv.2 / 0;
+# Lv.2 with an [ME] trait / 0.
+#
+# Printed text (data/cards.json, DCGO EX12_053.cs):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with the
+#   [Machine], [Cyborg] or [Mutant] trait and 1 card with the [ME] trait among
+#   them to the hand. Return the rest to the bottom of the deck.
+#   Inherited: <Blocker>
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX12/Black/EX12_053.cs
+#   - AddSelfDigivolutionRequirementStaticEffect(top card has trait ME, cost 0,
+#     level 2) -> alt_paths entry below.
+#   - On Play = SimplifiedRevealDeckTopCardsAndSelect(revealCount 3, two
+#     conditions, mutualConditions: true, remainder DeckBottom): one card can
+#     never fill both slots -> `reveal_search` buckets are cross-bucket
+#     de-duplicated, so a [Machine]+[ME] card fills exactly one slot.
+#   - Inherited BlockerSelfStaticEffect -> grant_keyword Blocker, scope inherited.
+
+card: EX12-053
+name: Hagurumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 2000
+traits: [Machine, ME]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: ME
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Machine]/[Cyborg]/[Mutant] card and 1 [ME] card to hand; rest to deck bottom"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - filter:
+                any_of:
+                  - trait_has: Machine
+                  - trait_has: Cyborg
+                  - trait_has: Mutant
+              to: hand
+              max: 1
+              prompt: "Add 1 card with the [Machine], [Cyborg] or [Mutant] trait to the hand"
+            - filter: { trait_has: ME }
+              to: hand
+              max: 1
+              prompt: "Add 1 card with the [ME] trait to the hand"
+          remainder: bottom
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "Inherited <Blocker>"

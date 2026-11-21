@@ -1,0 +1,82 @@
+# BT17-053 Keramon — Digimon, Lv.3, Black, 1000 DP, play cost 3.
+# Traits: Unidentified. Rookie / Unknown. Digivolve: Black Lv.2 / cost 0.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT17-053.md):
+#   [Opponent's Turn] When an opponent's Digimon is played or digivolves, if
+#   that Digimon is level 5 or higher, you may digivolve this Digimon into a
+#   [Infermon] from your hand without paying the cost, ignoring digivolution
+#   requirements.
+#   Inherited: [On Deletion] If this Digimon had [Unidentified] trait, you may
+#   play 1 [Diaboromon] Token without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT17/Black/BT17_053.cs
+#   - OnEnterFieldAnyone, optional: CanUseCondition = opponent's turn AND
+#     (CanTriggerOnPermanentPlay OR CanTriggerWhenPermanentDigivolving) of an
+#     opponent Digimon with a level >= 5; CanActivate = this Digimon on the
+#     battle area and an [Infermon] (EqualsCardName) in hand;
+#     DigivolveIntoHandOrTrashCard(payCost false, ignoreDigivolutionRequirement
+#     FixedCost 0, isHand true).
+#     -> `[on_enter_field_anyone, on_digivolve]` + `event_target_level_gte: 5`
+#     (BT26-079 / BT16-028 idiom), `optional: true`, `select_hand` of [Infermon]
+#     and `effect_initiated_digivolve { cost: 0, ignore_requirements: true }`.
+#   - OnDestroyedAnyone, inherited, optional: CanActivateOnDeletion AND the
+#     deleted Digimon had the [Unidentified] trait (CardTraitsJustBeforeRemoveField)
+#     AND a free frame; PlayDiaboromonToken.
+#     -> inherited `on_deletion`, `optional: true`, `trigger_if: event_target_trait_has` (reads the
+#     pre-deletion snapshot in the trigger context, rule 25 -- not the live
+#     permanent, which is already in the trash).
+
+card: BT17-053
+name: Keramon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Unidentified]
+form: Rookie
+attribute: Unknown
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when: { opponents_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - event_target_level_gte: 5
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          name_is: Infermon
+        n: 1
+    summary: "[Opponent's Turn] When an opponent's level 5+ Digimon is played or digivolves, may digivolve into an [Infermon] from hand for free, ignoring requirements"
+    process:
+      - select_hand:
+          of: you
+          bind_as: infermon
+          filter: { name_is: Infermon }
+          prompt: "Digivolve this Digimon into [Infermon]"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: infermon
+          cost: 0
+          ignore_requirements: true
+
+  - when: on_deletion
+    scope: inherited
+    optional: true
+    trigger_if: { event_target_trait_has: Unidentified }
+    summary: "Inherited [On Deletion] If this Digimon had [Unidentified] trait, you may play 1 [Diaboromon] Token without paying the cost"
+    process:
+      - play_token:
+          controller: you
+          token_name: diaboromon

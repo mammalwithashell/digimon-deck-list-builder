@@ -35,32 +35,33 @@
 #     the trash succeeding — matching the Q&A above.
 #
 # Clause B — EffectTiming.OnEndTurn (the printed "[End of All Turns] <Delay>"):
-#   CanUseCondition: CanDeclareOptionDelayEffect(card) — standard printed
-#     <Delay> declare-gate (RULES 16-16): the Option is on the field as a
-#     Delay permanent, not the turn it was placed. Despite the "OnEndTurn"
-#     C# timing label, DCGO's own doc-string for this clause (line 91) reads
-#     "[End of All Turns] <Delay> (After this card is placed, by trashing it
-#     the next turn or later, activate the effect below)" — this IS the
-#     standard player-declared <Delay> Main-phase activation (glossary.pdf /
-#     keyword-semantics.md: "<Delay> — Option in battle area; trash this card
-#     to activate the linked effect; not the turn it entered the battle
-#     area"), not an engine-automatic end-of-turn trigger. Modelled as the
-#     standard `trigger: delayed` (→ DelayTrigger::MainPhaseActivated), the
-#     same idiom BT13-110 / BT21-097 use for their "[End of Your/All Turns]
-#     <Delay>" clauses.
-#   CanActivateCondition: IsExistOnField(card) — automatically true whenever
-#     `activate_delayed_option_main` is legal (the standard engine Delay gate
-#     already requires the Option be seated on the field as
-#     OptionState::Delayed with trigger MainPhaseActivated and
-#     turn_count > placed_on_turn — no extra `active_when` needed).
+#   SetUpActivateClass(..., isOptional: true, ...) — the controller is asked
+#     "use this optional effect?" at a turn end, and may decline (CR 4.3
+#     16-17-2: the processing from <Delay> is optional).
+#   CanUseCondition: CanDeclareOptionDelayEffect(card) — the Option is on the
+#     battle area and its enter-field turn is NOT the current turn (the printed
+#     "after the placing turn", CR 4.3 16-17-1).
+#   Timing: `StackSkillInfos(null, EffectTiming.OnEndTurn)` (AutoProcessing.cs)
+#     collects every battle-area permanent regardless of whose turn is ending,
+#     so the window opens at the end of EVERY turn after the placing turn, the
+#     controller's and the opponent's alike (CR 4.3 15-16-12-3 "[End of All
+#     Turns]"). A decline leaves the Option in play; it is offered again at the
+#     next turn end. This is NOT the player-initiated [Main] <Delay> (that is
+#     `CardEffectFactory.Gain2MemoryOptionDelayEffect`'s `[Main] <Delay>`
+#     shape); an earlier draft modelled it as `trigger: delayed`
+#     (DelayTrigger::MainPhaseActivated), so the engine never parked the
+#     optional end-of-turn prompt that DCGO's recorded decline answers
+#     (DCGO PvP replay 2026-11-14 g1). Modelled as `trigger: end_of_all_turns`
+#     (DelayTrigger::EndOfAllTurns).
+#   CanActivateCondition: IsExistOnField(card) — the carrier is still in the
+#     battle area when the window resolves (the engine's Delay machinery
+#     re-checks it; no extra `active_when` needed).
 #   ActivateCoroutine:
 #     1. DeletePermanentAndProcessAccordingToResult(card.PermanentOfThisCard())
 #        — this is the OUTER standard <Delay> activation cost: "by trashing
-#        this card" (the engine's `activate_delayed_option_main` already
-#        performs this trash unconditionally as the Delay body's activation
-#        cost — see option_lifecycle.rs; no explicit
-#        `activation_cost: { trash_self: true }` step is authored here,
-#        matching the BT13-110/BT21-097 idiom for `trigger: delayed`).
+#        this card" (the lowered `kind: delay` body pays it first, CR 4.3
+#        16-17-1 / 15-7; no explicit `activation_cost: { trash_self: true }`
+#        step is authored here, matching the other scheduled-Delay cards).
 #     2. SuccessProcess (self-trash succeeded — always true once this body
 #        runs): if HasMatchConditionOwnersPermanent(own battle-area Digimon
 #        named "Millenniummon"): SelectPermanentEffect (maxCount 1,
@@ -141,12 +142,12 @@ effects:
   # ─── Clause B — [End of All Turns] <Delay> — By deleting 1 [Millenniummon],
   #     you may play 1 [Wicked God] trait Digimon card from hand/trash free ──
   #
-  # Standard printed <Delay> (trigger: delayed → DelayTrigger::MainPhaseActivated).
-  # The engine's `activate_delayed_option_main` performs the outer "by
-  # trashing this card" activation cost automatically; no explicit
-  # `activation_cost: { trash_self: true }` step is needed (matches
-  # BT13-110 / BT21-097's `trigger: delayed` idiom for "[End of Your/All
-  # Turns] <Delay>").
+  # `trigger: end_of_all_turns` → DelayTrigger::EndOfAllTurns: at the end of
+  # every turn after the placing turn the controller is offered the optional
+  # <Delay> (accept = trash this card as the activation cost, then run the
+  # body; decline = the Option stays). The lowered body pays the outer "by
+  # trashing this card" cost itself (lower_delay.rs `delay_cost_in_body`), so
+  # no explicit `activation_cost: { trash_self: true }` step is needed.
   #
   # Inner cost-gate: the Millenniummon delete pick is the printed "By
   # deleting 1 of your [Millenniummon]" COST that gates the "you may play"
@@ -156,7 +157,7 @@ effects:
   # never installed unless a Millenniummon is actually deleted, matching
   # DCGO's DeleteSuccessProcess gating.
   - kind: delay
-    trigger: delayed
+    trigger: end_of_all_turns
     summary: "[End of All Turns]<Delay> By deleting 1 [Millenniummon], you may play 1 [Wicked God] Digimon from hand/trash free"
     process:
       - select_own_permanent:

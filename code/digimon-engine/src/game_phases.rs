@@ -1467,7 +1467,11 @@ impl Game {
     pub(crate) fn resolve_delayed_options(&mut self, ending_turn: u16, ending_player: PlayerId) {
         self.resolve_delayed_options_matching(
             ending_turn,
-            &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn],
+            &[
+                DelayTrigger::EndOfThisTurn,
+                DelayTrigger::EndOfYourNextTurn,
+                DelayTrigger::EndOfAllTurns,
+            ],
             DelayedOptionLifecycleResumeKind::EndTurn { ending_player },
             None,
         );
@@ -1893,7 +1897,11 @@ impl Game {
                 DelayedOptionLifecycleResumeKind::EndTurn { ending_player } => {
                     self.resolve_delayed_options_matching(
                         resume.turn,
-                        &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn],
+                        &[
+                            DelayTrigger::EndOfThisTurn,
+                            DelayTrigger::EndOfYourNextTurn,
+                            DelayTrigger::EndOfAllTurns,
+                        ],
                         resume.kind,
                         resume.skip_key,
                     );
@@ -1925,7 +1933,11 @@ impl Game {
                 &[DelayTrigger::StartOfYourNextTurn]
             }
             DelayedOptionLifecycleResumeKind::EndTurn { .. } => {
-                &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn]
+                &[
+                    DelayTrigger::EndOfThisTurn,
+                    DelayTrigger::EndOfYourNextTurn,
+                    DelayTrigger::EndOfAllTurns,
+                ]
             }
             DelayedOptionLifecycleResumeKind::Event { .. }
             | DelayedOptionLifecycleResumeKind::UnsuspendPhase => &[],

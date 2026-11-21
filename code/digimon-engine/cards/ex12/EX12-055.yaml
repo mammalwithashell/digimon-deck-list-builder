@@ -1,0 +1,146 @@
+# EX12-055 Andromon — Digimon, Lv.5, Black/Yellow, DP 7000, Cost 7.
+# Traits: Cyborg, ME. Attribute: Vaccine.
+# Digivolve: Black Lv.4 / 4; Lv.4 w/[Machine]/[ME] trait / 3;
+# DNA digivolve: Black/Purple Lv.4 + Red/Yellow Lv.4 / 0 (stack the 2 specified
+# Digimon and digivolve unsuspended).
+#
+# Printed text (data/cards.json xros_req + effect text, DCGO EX12_055.cs):
+#   [On Play] [When Digivolving] Reveal the top 3 cards of your deck. You may
+#   play 1 play cost 5 or lower [Machine], [Cyborg] or [ME] trait card among
+#   them without paying the cost. Trash the rest.
+#   [Counter] [Once Per Turn] 1 of your other Digimon may digivolve into a
+#   level 6 or lower [ME] trait Digimon card in the hand without paying the cost.
+#   Inherited: [Opponent's Turn] [Once Per Turn] When one of your opponent's
+#   Digimon attacks, you may change the attack target to this Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX12/Black/EX12_055.cs
+#   - OP/WD (ActivateClassesForSharedEffects, optional:false, no OPT): reveal 3,
+#     one optional pick of a HasPlayCost, cost <= 5 [Machine]/[Cyborg]/[ME]
+#     card; picked card plays free when CanPlayAsNewPermanent, else it is
+#     trashed with the rest. -> EX13-028 idiom (`select_reveal_buckets` +
+#     `play_from_revealed_free` + trash the rest); only Digimon/Tamers have a
+#     play cost, and `can_play_from_effect_without_cost` is the DCGO gate.
+#   - Counter (OnCounterTiming, OPT hash EX12_055_Counter, skippable): pick of
+#     another own Digimon (canNoSelect: true) -> DigivolveIntoHandOrTrashCard
+#     (payCost: false, isHand: true) of a level <= 6 [ME] Digimon card.
+#     -> BT25-092 / BT26-034 idiom (`select_own_permanent` +
+#     `select_hand` + `effect_initiated_digivolve { cost: free }`).
+#   - Inherited: OnAllyAttack, opponent's turn, optional, OPT -> EX12-056's
+#     `on_opponent_attack` + `redirect_attack_target { new_target: source }`.
+
+card: EX12-055
+name: Andromon
+kind: digimon
+level: 5
+color: [black, yellow]
+cost: 7
+dp: 7000
+traits: [Cyborg, ME]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - trait_has: Machine
+            - trait_has: ME
+    cost: 3
+  - kind: dna_digivolve
+    materials:
+      - level_eq: 4
+        any_of:
+          - color_is: black
+          - color_is: purple
+      - level_eq: 4
+        any_of:
+          - color_is: red
+          - color_is: yellow
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Reveal 3; you may play 1 play cost 5 or lower [Machine]/[Cyborg]/[ME] card among them free; trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - any_of:
+                      - kind: digimon
+                      - kind: tamer
+                  - can_play_from_effect_without_cost: true
+                  - play_cost_lte: 5
+                  - any_of:
+                      - trait_has: Machine
+                      - trait_has: Cyborg
+                      - trait_has: ME
+          prompt: "You may play 1 play cost 5 or lower [Machine]/[Cyborg]/[ME] trait card without paying the cost"
+      - play_from_revealed_free: { of: you, card: play_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  - when: counter
+    once_per_turn: true
+    summary: "[Counter][Once Per Turn] 1 of your other Digimon may digivolve into a level 6 or lower [ME] trait Digimon card in the hand without paying the cost"
+    process:
+      - select_own_permanent:
+          bind_as: evo_base
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  cost: free
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - level_lte: 6
+                      - trait_has: ME
+          prompt: "Choose 1 of your other Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 6
+              - trait_has: ME
+              - can_digivolve_onto_with_cost: { target: evo_base, cost: free }
+          prompt: "Digivolve into a level 6 or lower [ME] trait Digimon card in your hand without paying the cost"
+      - effect_initiated_digivolve:
+          target: evo_base
+          from_hand: evo
+          cost: free
+          ignore_requirements: false
+
+  - scope: inherited
+    when: on_opponent_attack
+    once_per_turn: true
+    optional: true
+    active_when: { opponents_turn: true }
+    summary: "[Inherited][Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, you may change the attack target to this Digimon"
+    process:
+      - redirect_attack_target: { new_target: source }
