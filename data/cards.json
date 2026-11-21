@@ -153435,7 +153435,8 @@
     "rarity": 0,
     "card_colors": [
       1,
-      2
+      2,
+      0
     ],
     "type_eng": [
       "Holy Warrior",
@@ -154469,7 +154470,8 @@
     "rarity": 0,
     "card_colors": [
       5,
-      6
+      6,
+      0
     ],
     "type_eng": [
       "Machine",
@@ -154811,7 +154813,8 @@
     "rarity": 0,
     "card_colors": [
       2,
-      3
+      3,
+      1
     ],
     "type_eng": [
       "Shambala",
@@ -154840,7 +154843,8 @@
     "rarity": 0,
     "card_colors": [
       5,
-      1
+      1,
+      0
     ],
     "type_eng": [
       "Shambala",
@@ -154986,7 +154990,8 @@
     "rarity": 4,
     "card_colors": [
       2,
-      4
+      4,
+      0
     ],
     "type_eng": [
       "Shaman",
@@ -155057,7 +155062,8 @@
     "rarity": 4,
     "card_colors": [
       4,
-      0
+      0,
+      6
     ],
     "type_eng": [
       "Unique",

@@ -443,3 +443,110 @@ fn split_circles_outside_the_mirror_carry_every_printed_colour() {
 ")
     );
 }
+
+/// The six three-colour EX12 cards. The API truncated each to two colours, so
+/// production saw `card_colors` with one colour missing: a Digimon that counts
+/// as fewer colours (Omnimon: Merciful Mode (EX13-077) adds DP per colour among
+/// your Digimon and Tamers) and two Options that can be played without their
+/// third colour (CR 4.3 §4-22-3). The card face shows three colour bars and
+/// DCGO's `cardColors` lists three (read 2026-11-21).
+const THREE_COLOUR_CARDS: &[(&str, [i64; 3])] = &[
+    ("EX12-037", [1, 2, 0]), // Omnimon: Blue / Yellow / Red
+    ("EX12-060", [5, 6, 0]), // Chaosdramon: Black / Purple / Red
+    ("EX12-070", [2, 3, 1]), // Sanmyojin Arrival (Option): Yellow / Green / Blue
+    ("EX12-071", [5, 1, 0]), // Saneiketsu Invitation (Option): Black / Blue / Red
+    ("EX12-076", [2, 4, 0]), // Susanoomon: Yellow / White / Red
+    ("EX12-077", [4, 0, 6]), // Proximamon: White / Red / Purple
+];
+
+#[test]
+fn three_colour_ex12_cards_keep_all_three_colours() {
+    let cards_path = repo_data("cards.json");
+    let overrides_path = repo_data("card_overrides.json");
+    if !cards_path.exists() || !overrides_path.exists() {
+        eprintln!("Skipping: data/*.json missing — full repo checkout required");
+        return;
+    }
+    let cards = read_json(&cards_path);
+    let overrides = read_json(&overrides_path);
+    let sorted = |v: Option<&serde_json::Value>| -> Option<Vec<i64>> {
+        let mut colours: Vec<i64> = v?.as_array()?.iter().filter_map(|c| c.as_i64()).collect();
+        colours.sort_unstable();
+        Some(colours)
+    };
+    let mut failures: Vec<String> = Vec::new();
+    for (id, colours) in THREE_COLOUR_CARDS {
+        let mut want = colours.to_vec();
+        want.sort_unstable();
+        let per_card_json = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("cards")
+            .join("ex12")
+            .join(format!("{id}.json"));
+        let per_card = read_json(&per_card_json);
+        for (source, got) in [
+            ("data/cards.json", sorted(cards[*id].get("card_colors"))),
+            (
+                "data/card_overrides.json (re-applied by every ingest)",
+                sorted(overrides[*id].get("card_colors")),
+            ),
+            (
+                "the per-card JSON under code/digimon-engine/cards/",
+                sorted(per_card.get("card_colors")),
+            ),
+        ] {
+            if got.as_ref() != Some(&want) {
+                failures.push(format!(
+                    "{id}: card colour codes must be {want:?} (three-colour card) in {source};                      found {got:?}"
+                ));
+            }
+        }
+    }
+    // The YAML specs feed DebugRunner fixtures, which never read cards.json.
+    let spec_failures = std::thread::Builder::new()
+        .stack_size(256 * 1024 * 1024)
+        .spawn(|| {
+            use digimon_dsl::compiled::CompiledColor;
+            let registry = digimon_engine::dsl_registry::from_embedded_cached()
+                .expect("embedded cards.pack loads");
+            let mut out: Vec<String> = Vec::new();
+            for (id, colours) in THREE_COLOUR_CARDS {
+                let spec = registry
+                    .lookup(id)
+                    .unwrap_or_else(|| panic!("{id} in the embedded DSL pack"));
+                let mut got: Vec<i64> = spec
+                    .color
+                    .iter()
+                    .map(|c| match c {
+                        CompiledColor::Red => 0,
+                        CompiledColor::Blue => 1,
+                        CompiledColor::Yellow => 2,
+                        CompiledColor::Green => 3,
+                        CompiledColor::White => 4,
+                        CompiledColor::Black => 5,
+                        CompiledColor::Purple => 6,
+                    })
+                    .collect();
+                got.sort_unstable();
+                let mut want = colours.to_vec();
+                want.sort_unstable();
+                if got != want {
+                    out.push(format!(
+                        "{id}: the YAML spec's `color:` has codes {got:?}, the card prints {want:?}"
+                    ));
+                }
+            }
+            out
+        })
+        .expect("spawn large-stack thread")
+        .join()
+        .expect("spec colour check panicked");
+    failures.extend(spec_failures);
+    assert!(
+        failures.is_empty(),
+        "{} three-colour card data fault(s):
+{}",
+        failures.len(),
+        failures.join("
+")
+    );
+}
