@@ -8,7 +8,7 @@
 //! cost 12 or lower [Chronomon] text or [Titan] trait card from your trash
 //! without paying the cost.
 //!
-//! DCGO: BT26/Purple/BT26_078.cs.
+//! DCGO: BT26/Green/BT26_078.cs.
 
 use super::support::*;
 use digimon_engine::debug_runner::DebugRunner;
@@ -201,4 +201,123 @@ fn resolve_until_end_of_turn_keyword_decision(r: &mut DebugRunner) {
         r.execute_action(player, action).unwrap();
     }
     panic!("no end-of-turn keyword decision after 16 prompts");
+}
+
+fn move_cherubimon_from_trash_to_deck_bottom(r: &mut DebugRunner) {
+    let at = r.game.players[0]
+        .trash
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == CARD_ID)
+        .expect("a Cherubimon (BT26-078) in the trash");
+    let card = r.game.players[0].trash.remove(at);
+    r.game.players[0].deck.insert(0, card);
+}
+
+fn cherubimon_in_trash(r: &DebugRunner) -> usize {
+    trash_ids(r, 0).iter().filter(|id| *id == CARD_ID).count()
+}
+
+/// CR 4.3 15-4-4-3: "When a card with an effect that's pending activation
+/// becomes a new card before the effect activates, the effect can no longer
+/// be activated." 15-14-3-1: a {Trash} effect can trigger and activate "while
+/// the card with the effect is in your trash". DCGO BT26_078.cs
+/// `CanActivateCondition` requires `IsExistOnTrashActivate(card, ...)`.
+///
+/// Bug-scan repro (2026-11): two Cherubimon (BT26-078) triggered on a
+/// Chronomon: Holy Mode (BT26-016) play; Chronomon's own cost returned one of
+/// them to the deck, and that copy's pending trigger was still offered and
+/// granted <Rush> and <Execute> with nothing returned.
+#[test]
+fn bt26_078_pending_trash_trigger_is_lost_when_the_card_leaves_the_trash() {
+    let mut r = setup(-5);
+    push_trash(&mut r, 0, CARD_ID);
+    push_trash(&mut r, 0, CARD_ID);
+    let t = r.place_on_field(0, "TITAN", None);
+    r.fire_play_event_triggers(0, t.index as usize, false, false);
+    assert!(
+        r.pending_selection().is_some(),
+        "both Cherubimon triggers are pending"
+    );
+    // Another effect returns BOTH copies to the deck before either activates.
+    move_cherubimon_from_trash_to_deck_bottom(&mut r);
+    move_cherubimon_from_trash_to_deck_bottom(&mut r);
+    let deck_before = deck_ids(&r, 0);
+
+    // Answer the prompt that was already on screen (order pick or the first
+    // copy's "you may"), accepting.
+    let sel = r.pending_selection().unwrap();
+    let (player, action) = (
+        sel.selecting_player,
+        sel.valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != digimon_engine::action::space::PASS)
+            .expect("an accepting action"),
+    );
+    r.execute_action(player, action).unwrap();
+
+    assert!(
+        !r.pending_is_end_of_turn_keyword_decision(),
+        "no <Execute> was granted: neither card was in the trash to be returned"
+    );
+    assert!(
+        !r.pending_is_optional(),
+        "the second copy's trigger can no longer activate either"
+    );
+    assert_eq!(deck_ids(&r, 0), deck_before, "nothing was returned");
+    assert!(!has_kw(&r, t, Keyword::Rush));
+    assert!(!has_kw(&r, t, Keyword::Execute));
+}
+
+/// Same rule, one copy surviving: the copy still in the trash pays and
+/// grants; the copy that left does not get a second, free activation.
+#[test]
+fn bt26_078_only_the_copy_still_in_the_trash_activates() {
+    let mut r = setup(-5);
+    push_trash(&mut r, 0, CARD_ID);
+    push_trash(&mut r, 0, CARD_ID);
+    let t = r.place_on_field(0, "TITAN", None);
+    r.fire_play_event_triggers(0, t.index as usize, false, false);
+    // Whatever is on screen now (the order pick, or one copy's "you may") was
+    // offered while both copies were in the trash. Another effect then returns
+    // the copy that is NOT being asked about to the deck.
+    let on_screen = r.pending_selection().expect("triggers pending").source_card;
+    let at = r.game.players[0]
+        .trash
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == CARD_ID && c.handle() != on_screen)
+        .expect("a second Cherubimon (BT26-078) in the trash");
+    let moved = r.game.players[0].trash.remove(at);
+    let moved_handle = moved.handle();
+    r.game.players[0].deck.insert(0, moved);
+    assert_eq!(cherubimon_in_trash(&r), 1);
+
+    let mut offers_for_the_moved_copy = 0;
+    for _ in 0..8 {
+        if r.pending_is_end_of_turn_keyword_decision() {
+            break;
+        }
+        let Some(sel) = r.pending_selection() else {
+            break;
+        };
+        if sel.is_optional && sel.source_card == moved_handle {
+            offers_for_the_moved_copy += 1;
+        }
+        let (player, action) = (
+            sel.selecting_player,
+            sel.valid_action_ids
+                .iter()
+                .copied()
+                .find(|&a| a != digimon_engine::action::space::PASS)
+                .expect("an accepting action"),
+        );
+        r.execute_action(player, action).unwrap();
+    }
+    assert_eq!(
+        offers_for_the_moved_copy, 0,
+        "the copy that left the trash is never offered"
+    );
+    assert_eq!(cherubimon_in_trash(&r), 0, "the surviving copy paid its cost");
+    assert!(has_kw(&r, t, Keyword::Rush));
+    assert!(has_kw(&r, t, Keyword::Execute));
 }

@@ -359,6 +359,7 @@ impl Game {
             keyword_effect: None,
             trigger_batch: 0,
             pending_processing: None,
+            trash_zone_generation: None,
         }
     }
 
@@ -1184,6 +1185,7 @@ impl Game {
                 keyword_effect: None,
                 trigger_batch: 0,
                 pending_processing: None,
+                trash_zone_generation: None,
             });
         }
     }
@@ -1237,6 +1239,11 @@ impl Game {
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
+                // CR 4.3 15-4-4-3: pin the trigger to THIS stay in the trash.
+                let trash_generation = self.players[controller as usize]
+                    .trash_entry_generations
+                    .get(&source_card)
+                    .copied();
                 self.push_effect_with_identity(QueuedEffect {
                 source_identity: None,
                     source_card,
@@ -1258,6 +1265,7 @@ impl Game {
                     keyword_effect: None,
                     trigger_batch: 0,
                     pending_processing: None,
+                    trash_zone_generation: Some(trash_generation),
                 });
             }
         }
@@ -1311,6 +1319,11 @@ impl Game {
             if !timing_flag_matches(effect, timing) {
                 continue;
             }
+            // CR 4.3 15-4-4-3: pin the trigger to THIS stay in the trash.
+            let trash_generation = self.players[owner as usize]
+                .trash_entry_generations
+                .get(&card)
+                .copied();
             self.push_effect_with_identity(QueuedEffect {
                 source_identity: None,
                 source_card: card,
@@ -1332,6 +1345,7 @@ impl Game {
                 keyword_effect: None,
                 trigger_batch: 0,
                 pending_processing: None,
+                trash_zone_generation: Some(trash_generation),
             });
         }
     }
@@ -1381,7 +1395,7 @@ impl Game {
                     effect_slot: slot as u8, is_optional: effect.optional,
                     is_turn_player: owner == self.turn_player(), card_id: card_id.clone(),
                     allow_below_top_liveness: false, dna_origin_context: self.current_dna_origin,
-                    granted_effect_id: None, keyword_effect: None, trigger_batch: 0, pending_processing: None,
+                    granted_effect_id: None, keyword_effect: None, trigger_batch: 0, pending_processing: None, trash_zone_generation: None,
                 });
             }
         }
@@ -3105,6 +3119,7 @@ impl Game {
                 keyword_effect: None,
                 trigger_batch: 0,
                 pending_processing: None,
+                trash_zone_generation: None,
             });
         }
     }
@@ -3277,6 +3292,7 @@ impl Game {
                 keyword_effect: None,
                 trigger_batch: 0,
                 pending_processing: None,
+                trash_zone_generation: None,
             });
         }
     }
@@ -3351,6 +3367,7 @@ impl Game {
                 keyword_effect: None,
                 trigger_batch: 0,
                 pending_processing: None,
+                trash_zone_generation: None,
             });
         }
     }
@@ -3459,6 +3476,7 @@ impl Game {
                 keyword_effect: None,
                 trigger_batch: 0,
                 pending_processing: None,
+                trash_zone_generation: None,
             });
         }
 
@@ -3516,6 +3534,7 @@ impl Game {
                     keyword_effect: None,
                     trigger_batch: 0,
                     pending_processing: None,
+                    trash_zone_generation: None,
                 });
             }
         }
@@ -3614,6 +3633,7 @@ impl Game {
                     keyword_effect: Some(keyword),
                     trigger_batch: 0,
                     pending_processing: None,
+                    trash_zone_generation: None,
                 });
             }
         }
@@ -3682,6 +3702,7 @@ impl Game {
                     keyword_effect: None,
                     trigger_batch: 0,
                     pending_processing: None,
+                    trash_zone_generation: None,
                 });
             }
         }
@@ -3776,6 +3797,7 @@ impl Game {
                         keyword_effect: None,
                         trigger_batch: 0,
                         pending_processing: None,
+                        trash_zone_generation: None,
                     });
                 }
             }
@@ -3855,6 +3877,7 @@ impl Game {
                     keyword_effect: None,
                     trigger_batch: 0,
                     pending_processing: None,
+                    trash_zone_generation: None,
                 });
             }
         }
@@ -3924,6 +3947,7 @@ impl Game {
                 keyword_effect: None,
                 trigger_batch: 0,
                 pending_processing: None,
+                trash_zone_generation: None,
             });
         }
 
@@ -3964,6 +3988,7 @@ impl Game {
                     keyword_effect: None,
                     trigger_batch: 0,
                     pending_processing: None,
+                    trash_zone_generation: None,
                 });
             }
         }
@@ -4016,6 +4041,7 @@ impl Game {
                     keyword_effect: None,
                     trigger_batch: 0,
                     pending_processing: None,
+                    trash_zone_generation: None,
                 });
             }
         }
@@ -5564,6 +5590,23 @@ impl Game {
                 .players
                 .iter()
                 .any(|p| p.trash.iter().any(|c| c.handle() == qe.source_card));
+        }
+        // A {Trash}-zone trigger (`scope: trash`) pends on the card in the
+        // trash, with no field carrier. CR 4.3 15-14-3-1: it can trigger and
+        // activate "while the card with the effect is in your trash". Once the
+        // card has left the trash it is a new card (3-1-3-1) and the pending
+        // effect can no longer be activated (15-4-4-3) -- also when the card
+        // has come back since: its entry generation no longer matches the one
+        // recorded when it triggered. DCGO `IsExistOnTrashActivate`. Before
+        // 2026-11 these entries fell through the "no source permanent => live"
+        // default below, so Cherubimon (BT26-078) still granted <Rush> and
+        // <Execute> after Chronomon: Holy Mode (BT26-016) had returned it to
+        // the deck. This gate serves staging (`queued_effect_index_is_live`,
+        // so a dead entry is not offered) and activation alike.
+        if let Some(generation) = qe.trash_zone_generation {
+            let player = &self.players[qe.controller as usize];
+            return player.trash.iter().any(|c| c.handle() == qe.source_card)
+                && player.trash_entry_generations.get(&qe.source_card).copied() == generation;
         }
         // Source permanent may have been deleted by a prior effect in this
         // batch or by a parked pay-cost selection callback. Skip silently —

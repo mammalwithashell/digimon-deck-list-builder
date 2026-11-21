@@ -93,6 +93,7 @@ mod queue_handle_rekey_tests {
                         keyword_effect: None,
                         trigger_batch: 0,
                         pending_processing: None,
+                        trash_zone_generation: None,
                     };
                     game.push_effect_with_identity(queued.clone());
                     // A surviving carrier still observes the captured handle

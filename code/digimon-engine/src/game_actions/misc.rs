@@ -1558,6 +1558,7 @@ impl Game {
                 keyword_effect: None,
                 trigger_batch: 0,
                 pending_processing: None,
+                trash_zone_generation: None,
             });
         }
     }
@@ -1606,6 +1607,7 @@ impl Game {
                 keyword_effect: None,
                 trigger_batch: 0,
                 pending_processing: None,
+                trash_zone_generation: None,
             });
         }
     }
