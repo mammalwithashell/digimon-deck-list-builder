@@ -1451,28 +1451,42 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         let Some(from) = ap.from.as_ref() else {
             continue;
         };
-        let (Some(level), Some(color)) = (from.level_eq, from.color_is) else {
+        let Some(level) = from.level_eq else {
             continue;
+        };
+        let memory_cost = match &ap.cost {
+            Some(CompiledCost::Literal(n)) => (*n).max(0) as u16,
+            _ => continue,
+        };
+        // A colour-free `{ level_eq: N }` gate is the RAINBOW (any-colour)
+        // circle -- the only printed circle that carries no colour (official
+        // EN DB "Multicolor N from Lv.X", DCGO one `EvoCosts` row per colour;
+        // `tests/alt_path_printed_cost_guard.rs` rejects a colour-free gate on
+        // any card whose circle is colour-specific). Production holds it as
+        // one row per colour, so the fixture does too; without that the
+        // fixture's `evo_costs` was empty and `Game::can_digivolve` (Blast
+        // Digivolve) refused every base.
+        let colours: Vec<u8> = match from.color_is {
+            Some(color) => vec![compiled_color_to_evo_code(color)],
+            None => (0u8..7).collect(),
         };
         let printed_requirement = CompiledPredicate {
             level_eq: Some(level),
-            color_is: Some(color),
+            color_is: from.color_is,
             ..CompiledPredicate::default()
         };
         if from.as_ref() != &printed_requirement {
             continue;
         }
-        let memory_cost = match &ap.cost {
-            Some(CompiledCost::Literal(n)) => (*n).max(0) as u16,
-            _ => continue,
-        };
-        let entry = EvoCost {
-            card_color: compiled_color_to_evo_code(color),
-            level,
-            memory_cost,
-        };
-        if !evo_costs.contains(&entry) {
-            evo_costs.push(entry);
+        for card_color in colours {
+            let entry = EvoCost {
+                card_color,
+                level,
+                memory_cost,
+            };
+            if !evo_costs.contains(&entry) {
+                evo_costs.push(entry);
+            }
         }
     }
 

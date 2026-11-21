@@ -251,3 +251,56 @@ fn dimetromon_p_189_spec_rejects_the_white_ukkomon() {
         "a red Lv.3 circle does not accept a white Lv.3"
     );
 }
+
+/// The `evo_costs` table DebugRunner builds from a spec's `alt_paths` (it never
+/// reads `cards.json`) holds each printed circle exactly as production does: one
+/// row per printed colour, seven for a rainbow circle. `Game::can_digivolve`
+/// (Blast Digivolve) and the borrowed-circle routes read this table, so a
+/// rainbow fixture with an empty table refused every base.
+#[test]
+fn fixture_evo_costs_hold_every_printed_circle_colour() {
+    let mut failures: Vec<String> = Vec::new();
+    let mut check = |id: &str, level: u8, cost: i16, want: Vec<CardColor>| {
+        let r = DebugRunner::builder()
+            .dsl_card(id)
+            .unwrap_or_else(|e| panic!("{id} in the embedded DSL pack: {e}"))
+            .build();
+        let data = r
+            .game
+            .card_data
+            .iter()
+            .find(|c| c.card_id == id)
+            .unwrap_or_else(|| panic!("{id} staged in the fixture"));
+        let mut got: Vec<u8> = data
+            .digivolution_costs()
+            .iter()
+            .filter(|e| e.level == level && i16::try_from(e.memory_cost) == Ok(cost))
+            .map(|e| e.card_color)
+            .collect();
+        got.sort_unstable();
+        got.dedup();
+        let mut want: Vec<u8> = want.iter().map(|c| *c as u8).collect();
+        want.sort_unstable();
+        if got != want {
+            failures.push(format!(
+                "{id}: the fixture's Lv.{level} / cost {cost} circle has colour codes {got:?},                  the printed circle has {want:?}"
+            ));
+        }
+    };
+    for (id, level, cost) in RAINBOW_CIRCLES {
+        if RAINBOW_CIRCLE_SPECS.contains(id) {
+            check(id, *level, *cost, ALL_COLOURS.to_vec());
+        }
+    }
+    for (id, level, cost, printed) in COLOURED_CIRCLES {
+        check(id, *level, *cost, printed.to_vec());
+    }
+    assert!(
+        failures.is_empty(),
+        "{} fixture evo-cost fault(s):
+{}",
+        failures.len(),
+        failures.join("
+")
+    );
+}
