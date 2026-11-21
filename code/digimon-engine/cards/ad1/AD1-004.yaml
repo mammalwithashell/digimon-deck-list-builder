@@ -116,33 +116,41 @@ effects:
 
   # ─── Inherited: [When Attacking][OPT] name-gated delete (Greymon/Omnimon) ────
   #
-  # "[When Attacking] [Once Per Turn] If this Digimon has [Greymon] or [Omnimon]
-  # in its name, delete 1 of your opponent's Digimon with as much or less DP as
-  # this Digimon." `source_name_contains` (AD1-014 inherited idiom) reads the
-  # carrier permanent's TOP-card name; the delete reuses dp_lte source_dp
-  # (reads the carrier's effective DP). DCGO AD1_004.cs ESS clause gates on the
-  # carrier name + a matching opponent Digimon, optional "you may delete".
+  # Printed (card image + official Bandai DB):
+  #   "[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with
+  #    as much or less DP as this Digimon with [Greymon] or [Omnimon] in its name."
+  #
+  # MANDATORY -- the text has no "may" (CR 4.3 15-1-5, 15-9-1-2). Official Q&A
+  # Q6055: "You must activate this card's inherited effect and use up its [Once
+  # Per Turn], even if the attacking Digimon doesn't have [Greymon] or [Omnimon]
+  # in its name. However, ... you can't reference DP or delete a Digimon."
+  # DCGO AD1_004.cs ("When Attacking - ESS"): SetUpActivateClass(...,
+  # maxCountPerTurn 1, isOptional FALSE, ...); CanActivateCondition is only
+  # IsExistOnBattleAreaDigimon(card); the name gate and the target-exists check
+  # are INSIDE ActivateCoroutine, and the pick is canNoSelect: false.
+  #
+  # So: no `optional`, and no activation `condition` -- the effect always
+  # activates (spending the [Once Per Turn]); the name gate is an `if` in the
+  # body. `source_name_contains` reads the carrier permanent's TOP-card name;
+  # the delete filter reuses dp_lte source_dp (the carrier's effective DP). With
+  # no eligible opponent Digimon the mandatory pick has no candidates and the
+  # body does nothing.
   - scope: inherited
     when: when_attacking
     once_per_turn: true
-    optional: true
-    summary: "[Inherited][When Attacking][OPT] If carrier name has Greymon/Omnimon, delete 1 opp Digimon with DP <= this Digimon"
-    condition:
-      all_of:
-        - any_of:
-            - source_name_contains: "Greymon"
-            - source_name_contains: "Omnimon"
-        - any_permanent:
-            of: opponent
-            zone: [battle_area]
-            kind: digimon
-            dp_lte: { formula: { source_dp: {} } }
+    summary: "[Inherited][When Attacking][OPT] (mandatory) If this Digimon has Greymon/Omnimon in its name, delete 1 opp Digimon with DP <= this Digimon"
     process:
-      - select_opponent_permanent:
-          bind_as: inh_del
-          filter:
-            all_of:
-              - kind: digimon
-              - dp_lte: { formula: { source_dp: {} } }
-          prompt: "Delete 1 opponent Digimon with DP equal to or less than this Digimon's DP"
-      - delete_permanent: { target: inh_del }
+      - if:
+          condition:
+            any_of:
+              - source_name_contains: "Greymon"
+              - source_name_contains: "Omnimon"
+          then:
+            - select_opponent_permanent:
+                bind_as: inh_del
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: { formula: { source_dp: {} } }
+                prompt: "Delete 1 opponent Digimon with DP equal to or less than this Digimon's DP"
+            - delete_permanent: { target: inh_del }
