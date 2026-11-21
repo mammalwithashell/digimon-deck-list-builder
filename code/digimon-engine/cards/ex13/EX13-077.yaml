@@ -12,6 +12,8 @@
 #   +1000 DP for each of your Digimon and Tamers' colors.
 #   Assembly -8: 6 [ADVENTURE] trait Digimon cards w/different colors
 #   Digivolve: [Omnimon]: Cost 2.
+#   Digivolve circle: rainbow (any colour) Lv.6 / cost 6. The bundle listed no
+#   circle until 2026-11-21 because the mirror builder dropped "Multicolor".
 #   Official Q&A: the battle starts immediately and follows the standard
 #   battle rules.
 #
@@ -60,6 +62,14 @@ traits: ["Holy Warrior", ADVENTURE]
 attribute: Vaccine
 
 alt_paths:
+  # Printed RAINBOW circle: any-colour Lv.6 / cost 6 (card image; official EN DB
+  # "Multicolor 6 from Lv.6", JP 「全 Lv.6から6」 = all colours; DCGO asset: one
+  # EvoCosts row per colour). A rainbow circle is ANY colour, so the gate carries
+  # no `color_is` — the Ukkomon (BT16-082) idiom. cards.json holds it as seven rows.
+  - kind: digivolve
+    from: { level_eq: 6 }
+    cost: 6
+  # Printed black text: "[Digivolve] [Omnimon]: Cost 2".
   - kind: digivolve
     from: { name_is: Omnimon }
     cost: 2

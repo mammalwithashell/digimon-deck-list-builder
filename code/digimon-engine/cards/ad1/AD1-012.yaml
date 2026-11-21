@@ -47,8 +47,13 @@ traits: ["Beast Knight", ADVENTURE]
 # Standard Lv.5 Blue / Cost 4 digivolve (printed default).
 # Alt-digivolve (xros_req): Lv.5 with [Garurumon] in name OR [ADVENTURE] trait / Cost 3
 alt_paths:
+  # Printed split circle: Blue|Black Lv.5 / cost 4 — one entry per colour.
+  # A gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 5 }
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
     cost: 4
 
   - kind: digivolve

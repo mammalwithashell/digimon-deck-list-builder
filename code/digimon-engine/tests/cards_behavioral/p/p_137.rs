@@ -1,4 +1,4 @@
-//! P-137 Flamedramon — Digimon, Lv.4, Red/Yellow, Cost 5, DP 5000.
+//! P-137 Flamedramon — Digimon, Lv.4, Red/Blue, Cost 5, DP 5000.
 //!
 //! # Card text (cards.json)
 //!

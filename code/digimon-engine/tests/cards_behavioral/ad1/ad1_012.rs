@@ -195,12 +195,31 @@ fn ad1_012_has_two_alt_paths_standard_and_xros_req() {
         .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
         .collect();
 
+    // The printed circle is a split Blue|Black "Lv.5 / 4" (card image + official
+    // DB), authored as one entry per colour; plus the xros_req route. This used
+    // to assert 2 paths, the first a colour-free `{ level_eq: 5 }` gate that let
+    // the card digivolve from a Lv.5 of any colour.
     assert_eq!(
         digivolve_paths.len(),
-        2,
-        "AD1-012 must have exactly 2 digivolve alt-paths (standard + xros_req); got {}",
+        3,
+        "AD1-012 must have exactly 3 digivolve alt-paths (Blue circle + Black circle + \
+         xros_req); got {}",
         digivolve_paths.len()
     );
+    for colour in [
+        digimon_dsl::compiled::CompiledColor::Blue,
+        digimon_dsl::compiled::CompiledColor::Black,
+    ] {
+        assert!(
+            digivolve_paths.iter().any(|p| {
+                p.cost == Some(digimon_dsl::compiled::CompiledCost::Literal(4))
+                    && p.from.as_deref().is_some_and(|f| {
+                        f.level_eq == Some(5) && f.color_is == Some(colour)
+                    })
+            }),
+            "AD1-012 must author the printed {colour:?} Lv.5 / cost 4 circle"
+        );
+    }
 }
 
 // ─── SECTION 2 — Condition gating: shared clause source-on-field ────────────

@@ -10,8 +10,12 @@ traits: [Shaman, Hybrid, Shambala, SW, TB, TS]
 attribute: Vaccine
 
 alt_paths:
+  # Printed RAINBOW circle: any-colour Lv.6 / cost 6 (card image; official EN DB
+  # "Multicolor 6 from Lv.6", JP 「全 Lv.6から6」 = all colours; DCGO asset: one
+  # EvoCosts row per colour). A rainbow circle is ANY colour, so the gate carries
+  # no `color_is` — the Ukkomon (BT16-082) idiom. cards.json holds it as seven rows.
   - kind: digivolve
-    from: { level_eq: 6, self_color_count_gte: 2 }
+    from: { level_eq: 6 }
     cost: 6
   - kind: digivolve
     from:

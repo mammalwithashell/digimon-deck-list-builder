@@ -7,8 +7,13 @@ cost: 20
 dp: 15000
 traits: [Unanalyzable, X Program]
 alt_paths:
+  # Printed split circle: Purple|Black Lv.6 / cost 6 — one entry per colour.
+  # A gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 6 }
+    from: { level_eq: 6, color_is: purple }
+    cost: 6
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
     cost: 6
 
 effects:

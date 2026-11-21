@@ -7,8 +7,13 @@ cost: 6
 dp: 6000
 traits: [Beast]
 alt_paths:
+  # Printed split circle: Blue|Green Lv.3 / cost 3 — one entry per colour.
+  # A gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 3 }
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
     cost: 3
   - kind: digivolve
     from: { name_contains: "Veemon" }

@@ -26,6 +26,9 @@ mod app_fuse_primitive;
 mod alt_digivolve_support;
 mod assembly_material_predicates;
 mod burst_digivolve_common;
+#[path = "../support/printed_circles.rs"]
+mod printed_circles;
+mod printed_digivolve_circles;
 mod printed_metadata_routes;
 mod printed_attribute_filters;
 mod printed_form_filters;

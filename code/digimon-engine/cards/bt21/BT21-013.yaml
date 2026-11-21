@@ -95,9 +95,10 @@ dp: 5000
 traits: [Wizard, Hero]
 
 alt_paths:
-  # Standard digivolution: Lv.3 Red / cost 2 (printed evo block).
+  # Printed circle: Red Lv.3 / cost 2. The colour is part of the
+  # requirement; a gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 3 }
+    from: { level_eq: 3, color_is: red }
     cost: 2
 
   # xros_req "[Digivolve] [BurningGreymon]: Cost 0" — named-source alt-path.

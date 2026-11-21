@@ -379,7 +379,7 @@
   },
   "AD1-012": {
    "behaviourally_covered": true,
-   "clause_count": 7,
+   "clause_count": 8,
    "constructs": [
     "verb:effect_initiated_dna_digivolve",
     "verb:if",
@@ -394,6 +394,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:binding_present",
+    "predicate:color_is",
     "predicate:dna_field_pair",
     "predicate:is_suspended",
     "predicate:kind",
@@ -3728,7 +3729,7 @@
   },
   "BT16-025": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:add_player_modifier",
     "verb:for_each",
@@ -3910,7 +3911,7 @@
   },
   "BT16-040": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:effect_initiated_digivolve",
     "verb:select_opponent_permanent",
@@ -3919,6 +3920,7 @@
     "verb:suspend",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:color_is",
     "predicate:count_gte",
     "predicate:kind",
     "predicate:level_eq",
@@ -5667,7 +5669,7 @@
   },
   "BT18-102": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:delete_permanent",
     "verb:per_selected",
@@ -8097,6 +8099,7 @@
     "verb:select_trash",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:trait_has",
@@ -8120,6 +8123,7 @@
     "verb:reveal_top_deck",
     "verb:select_reveal",
     "predicate:any_of",
+    "predicate:color_is",
     "predicate:level_eq",
     "predicate:trait_has",
     "predicate:your_turn",
@@ -8367,6 +8371,7 @@
     "verb:place_on_security",
     "verb:select_hand",
     "verb:trash_top_security",
+    "predicate:color_is",
     "predicate:level_eq",
     "predicate:opponent_security_count_lte",
     "predicate:your_turn",
@@ -8391,6 +8396,7 @@
     "predicate:all_turns",
     "predicate:any_of",
     "predicate:can_play_from_effect_without_cost",
+    "predicate:color_is",
     "predicate:dp_lte",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
@@ -8418,6 +8424,7 @@
     "verb:unsuspend",
     "predicate:all_of",
     "predicate:all_turns",
+    "predicate:color_is",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
     "predicate:level_eq",
@@ -8475,6 +8482,7 @@
     "verb:select_opponent_permanent",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:color_is",
     "predicate:dp_lte",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
@@ -8548,13 +8556,14 @@
   },
   "BT21-037": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:if",
     "verb:select_opponent_permanent",
     "verb:suspend",
     "predicate:any_permanent",
+    "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
@@ -9153,11 +9162,12 @@
   },
   "BT21-072": {
    "behaviourally_covered": true,
-   "clause_count": 7,
+   "clause_count": 8,
    "constructs": [
     "verb:may_attack_now",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:color_is",
     "predicate:effect_text_contains",
     "predicate:level_eq",
     "predicate:trait_has",
@@ -9992,7 +10002,7 @@
   },
   "BT22-013": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:delete_permanent",
     "verb:effect_initiated_digivolve",
@@ -10005,6 +10015,7 @@
     "predicate:all_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:color_is",
     "predicate:dp_lte",
     "predicate:equals",
     "predicate:has_digivolve_candidate",
@@ -10223,7 +10234,7 @@
   },
   "BT22-026": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:effect_initiated_digivolve",
     "verb:if",
@@ -10235,6 +10246,7 @@
     "verb:unsuspend",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:color_is",
     "predicate:equals",
     "predicate:kind",
     "predicate:level_eq",
@@ -11102,6 +11114,7 @@
    "constructs": [
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:color_is",
     "predicate:cost_target",
     "predicate:kind",
     "predicate:level_eq",
@@ -11221,6 +11234,7 @@
     "verb:delete_permanent",
     "verb:select_opponent_permanent",
     "predicate:all_of",
+    "predicate:color_is",
     "predicate:dp_lte",
     "predicate:kind",
     "predicate:level_eq",
@@ -12075,6 +12089,7 @@
    "behaviourally_covered": true,
    "clause_count": 5,
    "constructs": [
+    "predicate:color_is",
     "predicate:level_eq",
     "predicate:trait_has",
     "keyword:Raid",
@@ -12096,6 +12111,7 @@
     "verb:return_to_hand",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:other",
@@ -12212,6 +12228,7 @@
     "predicate:any_permanent",
     "predicate:binding_present",
     "predicate:can_play_from_effect_without_cost",
+    "predicate:color_is",
     "predicate:count_gte",
     "predicate:dp_lte",
     "predicate:kind",
@@ -21172,7 +21189,7 @@
   },
   "BT8-084": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:per_selected",
@@ -21181,6 +21198,7 @@
     "verb:select_trash",
     "predicate:all_of",
     "predicate:kind",
+    "predicate:level_eq",
     "predicate:level_lte",
     "predicate:self_color_count_gte",
     "predicate:your_turn",
@@ -21694,11 +21712,12 @@
   },
   "BT9-112": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:de_digivolve",
     "verb:delete_permanent",
     "verb:for_each",
+    "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:level_lte",
@@ -22170,7 +22189,7 @@
   },
   "EX10-036": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:delete_permanent",
     "verb:place_as_bottom_source",
@@ -22181,10 +22200,14 @@
     "verb:trash_top_security",
     "verb:unsuspend",
     "predicate:any_of",
+    "predicate:any_permanent",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
+    "predicate:name_is",
+    "predicate:owner",
     "predicate:trait_has",
+    "predicate:zone",
     "timing:when_attacking",
     "timing:when_digivolving",
     "keyword:Fragment"
@@ -22714,6 +22737,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:color_is",
     "predicate:event_permanent_is_source",
     "predicate:kind",
     "predicate:level_eq",
@@ -25819,7 +25843,6 @@
     "predicate:level_eq",
     "predicate:own_source_stack_color_count_gte",
     "predicate:owner",
-    "predicate:self_color_count_gte",
     "predicate:trait_has",
     "predicate:zone",
     "timing:on_play",
@@ -28467,7 +28490,7 @@
   },
   "EX13-077": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:battle",
     "verb:if",
@@ -28486,6 +28509,7 @@
     "predicate:count_gte",
     "predicate:equals",
     "predicate:kind",
+    "predicate:level_eq",
     "predicate:name_is",
     "predicate:owner",
     "predicate:trait_has",
@@ -31422,7 +31446,7 @@
   },
   "EX8-074": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:delete_permanent",
     "verb:select_any_permanent",
@@ -31430,6 +31454,7 @@
     "verb:suspend",
     "predicate:all_of",
     "predicate:all_turns",
+    "predicate:color_is",
     "predicate:count_gte",
     "predicate:dp_lte",
     "predicate:is_unsuspended",
@@ -31453,6 +31478,7 @@
    "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
+    "predicate:color_is",
     "predicate:level_eq",
     "predicate:trait_has",
     "keyword:Raid",
@@ -31866,7 +31892,7 @@
   },
   "EX9-074": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:delete_one_per_opponent_color",
     "verb:delete_permanent",
@@ -31878,6 +31904,7 @@
     "predicate:color_matches_own_source_stack",
     "predicate:is_source_permanent",
     "predicate:kind",
+    "predicate:level_eq",
     "predicate:level_lte",
     "predicate:own_source_stack_color_count_gte",
     "predicate:owner",
@@ -33209,9 +33236,10 @@
   },
   "P-137": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_top_security_to_hand",
+    "predicate:color_is",
     "predicate:level_eq",
     "predicate:name_contains",
     "predicate:your_turn",
@@ -33716,6 +33744,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:can_play_from_effect_without_cost",
+    "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:play_cost_lte",
@@ -34869,6 +34898,7 @@
    "behaviourally_covered": true,
    "clause_count": 1,
    "constructs": [
+    "predicate:color_is",
     "predicate:level_eq"
    ],
    "effect_clause_count": 0,
@@ -34882,6 +34912,7 @@
    "behaviourally_covered": true,
    "clause_count": 2,
    "constructs": [
+    "predicate:color_is",
     "predicate:level_eq",
     "predicate:your_turn"
    ],
@@ -34896,6 +34927,7 @@
    "behaviourally_covered": true,
    "clause_count": 1,
    "constructs": [
+    "predicate:color_is",
     "predicate:level_eq"
    ],
    "effect_clause_count": 0,
@@ -34909,6 +34941,7 @@
    "behaviourally_covered": true,
    "clause_count": 1,
    "constructs": [
+    "predicate:color_is",
     "predicate:level_eq"
    ],
    "effect_clause_count": 0,
@@ -34923,6 +34956,7 @@
    "clause_count": 3,
    "constructs": [
     "verb:gain_memory",
+    "predicate:color_is",
     "predicate:level_eq",
     "timing:when_attacking",
     "keyword:Blocker"
@@ -34938,6 +34972,7 @@
    "behaviourally_covered": true,
    "clause_count": 2,
    "constructs": [
+    "predicate:color_is",
     "predicate:level_eq",
     "keyword:SecurityAttackPlus"
    ],
@@ -34955,6 +34990,7 @@
     "verb:add_dp_modifier",
     "verb:select_own_permanent",
     "predicate:any_permanent",
+    "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:owner",
@@ -34973,6 +35009,7 @@
    "clause_count": 2,
    "constructs": [
     "verb:gain_memory",
+    "predicate:color_is",
     "predicate:event_permanent_is_source",
     "predicate:level_eq",
     "predicate:your_turn",
@@ -34991,6 +35028,7 @@
    "behaviourally_covered": true,
    "clause_count": 1,
    "constructs": [
+    "predicate:color_is",
     "predicate:level_eq"
    ],
    "effect_clause_count": 0,
@@ -35004,6 +35042,7 @@
    "behaviourally_covered": true,
    "clause_count": 2,
    "constructs": [
+    "predicate:color_is",
     "predicate:level_eq",
     "predicate:your_turn"
    ],
