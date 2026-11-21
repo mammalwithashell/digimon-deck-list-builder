@@ -27,6 +27,7 @@ pub mod formula;
 pub mod identity;
 pub mod loader;
 pub mod pack;
+pub mod play_candidates;
 pub mod predicate;
 pub mod pretty;
 pub mod raw_rust_registry;

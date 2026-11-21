@@ -617,6 +617,39 @@ BT21-092 (`tests/cards_behavioral/bt21/bt21_092.rs`
   `st23_04_two_option_use_reducers_are_both_credited_and_paid`,
   `bt25_088_reducer_that_cannot_make_the_play_payable_stays_declinable`.
 
+## Effect-pick candidate legality, round 3 — added 2026-11-21 (play-from-trash picks, bug scan over 1,224 games)
+
+**`select_trash` -> `play_from_trash_free` / `play_from_trash` picks check play legality at compile time
+[G-DSL-PLAY-FROM-TRASH-PICK-LEGALITY, CLOSED].** Round 2 covered `select_hand` / `select_union_zone` per card;
+74 `select_trash` picks feeding a play-from-trash verb still carried no play-legality leaf, so under a "can't
+play Digimon by effects" lock (Crimson Blaze (BT8-097), Pomumon (BT9-047)) they offered cards the verb then
+refused -- 3 logged `EffectFizzled` picks (Asuna Shiroki (BT24-088), Yellow Scramble (LM-029), Kaguyamon
+(EX12-065)). DCGO ends every such candidate condition with `CanPlayAsNewPermanent(cardSource, false,
+activateClass)` (BT24_088.cs, LM_029.cs:120/265, EX12_065.cs:67).
+
+No new vocabulary. The compiler pass `code/digimon-dsl/src/play_candidates.rs` adds
+`can_play_from_effect_without_cost: true` to the filter of every `select_trash` whose binding feeds
+`play_from_trash_free` / `play_from_trash`, unless the card authored a play-legality leaf itself. It is right for
+every user of the lowering because the leaf reads exactly the refusals `Game::trash_play_refusal` makes before the
+verb moves the card (trash-play lock, full battle area, effect-play lock for the kind, card-level play
+prohibition), with the same destination and controller: a card the leaf rejects is one the verb is certain to
+refuse. Guards: unit tests in the pass, the pool test
+`code/digimon-dsl/tests/card_pool_authoring_guards.rs::every_play_from_trash_pick_checks_play_legality_after_compilation`,
+per-card tests on BT24-088 / LM-029 / EX12-065.
+
+Not covered (authoring stays per card): a PAID `play_from_trash` is not checked for affordability (add
+`affordable_with_cost`); N simultaneous plays check one free slot; the `per_selected` play of Millenniummon (P-220);
+seven `select_union_zone` -> `play_union_bound_free` picks without a leaf (BT13-019, BT21-090, BT22-096 x2,
+BT23-099 x2, BT24-007) -- each needs its DCGO candidate condition read before the leaf is added.
+
+**Authoring lints [dsl-lint `authoring/*`, `code/digimon-dsl/src/authoring_lint.rs`]** (errors):
+`unfiltered-battle-area-count` -- `card_count_in_zone` over `battle_area` must carry a `filter` (an unfiltered
+count is `battle_area.len()`: placed Option cards and Tamers included; ShineGreymon (AD1-016), Medusamon
+(BT24-017), WarGreymon (BT21-026), Gallantmon (BT23-014), DeathXmon (BT9-112) fixed);
+`self-and-observer-timing` -- one `when:` list must not mix a card's own timing with the board-wide observer
+timing of the same event (Snatchmon (BT21-058) `[on_play, on_digivolve]` re-ran on every digivolution;
+Blastmon (EX10-034) `[when_attacking, on_opponent_attack]` missed the controller's other Digimon attacking).
+
 ## Effect-pick candidate legality, round 2 — added 2026-11-13 (select_hand / union playability audit)
 
 Follow-up to G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY below. The audit of

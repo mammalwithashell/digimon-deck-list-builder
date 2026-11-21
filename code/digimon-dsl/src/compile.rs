@@ -83,6 +83,9 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
     if !errors.is_empty() {
         return Err(errors);
     }
+    // A play-from-trash pick offers only cards the play verb would accept (DCGO `CanPlayAsNewPermanent` in the
+    // candidate condition): no dead pick under a "can't play by effects" / trash-play lock or a full battle area.
+    crate::play_candidates::mark_card(&mut card);
     Ok(card)
 }
 

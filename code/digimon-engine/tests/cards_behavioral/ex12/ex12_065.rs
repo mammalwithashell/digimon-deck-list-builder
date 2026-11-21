@@ -481,3 +481,116 @@ fn ex12_065_on_play_can_play_a_shambala_tamer_from_trash() {
 
     assert!(field_contains(&runner, 0, "SHAMBALA-TAMER"));
 }
+
+// ---------------------------------------------------------------------------
+// Effect-play lock: the trash pick offers only cards the play would accept
+// ---------------------------------------------------------------------------
+//
+// DCGO EX12_065.cs:67 ends `CanSelectCardCondition` with
+// `CardEffectCommons.CanPlayAsNewPermanent(cardSource, false, activateClass)`.
+// Bug scan (medusamon--toho-braves pair-000-1 step 62): under Crimson Blaze
+// (BT8-097) Kaguyamon (EX12-065) offered five trash Digimon; Kotemon
+// (BT26-008) was picked and the play fizzled.
+
+fn ex12_065_trash_action(runner: &DebugRunner, id: &str) -> u16 {
+    use digimon_engine::action::space::TRASH_EFFECT_START;
+    runner
+        .game
+        .player(0)
+        .trash
+        .iter()
+        .position(|card| card.card_id(&runner.game.card_data) == id)
+        .map(|idx| TRASH_EFFECT_START + idx as u16)
+        .expect("trash card exists")
+}
+
+/// Step through the prompts the effect opens -- always taking the first
+/// non-PASS action -- until a trash pick is offered. Returns its legal actions,
+/// or `None` when the effect finished without offering one.
+fn ex12_065_first_trash_pick(runner: &mut DebugRunner) -> Option<Vec<u16>> {
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::selection::SelectionKind;
+    for _ in 0..8 {
+        let view = runner.pending_selection_view()?;
+        if view.kind == SelectionKind::Trash {
+            return Some(view.valid_action_ids.clone());
+        }
+        let action = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != PASS)
+            .unwrap_or(view.valid_action_ids[0]);
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("resolve the prompt before the trash pick");
+    }
+    None
+}
+
+fn ex12_065_shambala_tamer() -> digimon_engine::card_data::CardData {
+    use digimon_engine::debug_runner::make_test_card;
+    use digimon_engine::enums::CardKind;
+    let mut tamer = make_test_card("SHAMBALA-TAMER", "Shambala Tamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    tamer.play_cost = 4;
+    tamer.colors = vec![CardColor::Yellow];
+    tamer.traits = vec!["Shambala".to_string()];
+    tamer
+}
+
+#[test]
+fn ex12_065_trash_pick_does_not_offer_digimon_while_effects_cannot_play_digimon() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-065 YAML loads")
+        .add_card(puppet_tb("PUPPET-LOW", 4))
+        .add_card(ex12_065_shambala_tamer())
+        .memory(12)
+        .start();
+    let kaguyamon = runner.place_on_field(0, CARD_ID, Some(0));
+    push_to_trash(&mut runner, 0, "PUPPET-LOW");
+    push_to_trash(&mut runner, 0, "SHAMBALA-TAMER");
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+
+    runner.fire_on_play(0, kaguyamon.index as usize);
+    let valid =
+        ex12_065_first_trash_pick(&mut runner).expect("the Tamer is still a legal trash pick");
+    assert!(valid.contains(&ex12_065_trash_action(&runner, "SHAMBALA-TAMER")));
+    assert!(
+        !valid.contains(&ex12_065_trash_action(&runner, "PUPPET-LOW")),
+        "a Digimon whose play by effect is prohibited must not be offered: {valid:?}"
+    );
+}
+
+#[test]
+fn ex12_065_trash_pick_offers_both_kinds_without_the_lock() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-065 YAML loads")
+        .add_card(puppet_tb("PUPPET-LOW", 4))
+        .add_card(ex12_065_shambala_tamer())
+        .memory(12)
+        .start();
+    let kaguyamon = runner.place_on_field(0, CARD_ID, Some(0));
+    push_to_trash(&mut runner, 0, "PUPPET-LOW");
+    push_to_trash(&mut runner, 0, "SHAMBALA-TAMER");
+
+    runner.fire_on_play(0, kaguyamon.index as usize);
+    let valid = ex12_065_first_trash_pick(&mut runner).expect("trash pick");
+    assert!(valid.contains(&ex12_065_trash_action(&runner, "SHAMBALA-TAMER")));
+    assert!(valid.contains(&ex12_065_trash_action(&runner, "PUPPET-LOW")));
+}
