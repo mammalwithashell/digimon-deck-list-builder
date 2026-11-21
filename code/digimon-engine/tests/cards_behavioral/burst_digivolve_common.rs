@@ -396,3 +396,33 @@ pub fn assert_breeding_burst_turn_end_trash(spec: BurstSpec) {
     let other = slot_of(&r, STACK_TOP).expect("other stack");
     assert_eq!(r.game.players[0].battle_area[other].card_sources.len(), 2);
 }
+
+/// The burst digivolution was performed in the breeding area and the
+/// Digimon then moves to the battle area (CR 4.3 3-4-6 / 3-4-7: the
+/// breeding area is part of the field, and 8-3-2-1 names no zone) before the
+/// turn ends. The pending trash belongs to the Digimon, not to the slot it was
+/// in when it digivolved (DCGO `AddTrashTopCardAtTurnEnd` targets the
+/// `Permanent`), so the top card is still trashed at the end of the turn.
+pub fn assert_breeding_burst_then_move_trashes_top_card(spec: BurstSpec) {
+    let (mut r, host_h, hand_index) = setup(spec, Host::BurstOnly, true);
+    let host = r.game.players[0].battle_area.remove(host_h.index as usize);
+    r.game.players[0].breeding_area = Some(host);
+    let action = encode_digivolve(hand_index as u16, BREEDING_TARGET);
+    r.game.decode_action(action, 0);
+    settle(&mut r);
+    assert_eq!(breeding_stack_ids(&r).len(), 2, "{}: burst in breeding", spec.card);
+    assert!(r.game.move_from_breeding(0), "{}: the Lv.6 moves out of breeding", spec.card);
+    settle(&mut r);
+    assert!(r.game.players[0].breeding_area.is_none());
+
+    let moved = slot_of(&r, spec.card).expect("Burst Mode card on top in the battle area");
+    assert_eq!(r.game.players[0].battle_area[moved].card_sources.len(), 2);
+    r.end_turn();
+    settle(&mut r);
+    assert!(
+        slot_of(&r, spec.card).is_none(),
+        "{}: 8-3-2-1 trashes the top card of the moved Digimon's stack",
+        spec.card
+    );
+    assert!(trash_ids(&r).iter().any(|id| id == spec.card), "{}: in trash", spec.card);
+}
