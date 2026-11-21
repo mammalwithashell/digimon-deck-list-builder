@@ -98,6 +98,7 @@ function MenuShellInner() {
       title: 'Tools',
       items: [
         { to: '/models', label: 'AI Models', glyph: 'M' },
+        { to: '/watch', label: 'Watch AI', glyph: 'W' },
         { to: '/settings/graphics', label: 'Graphics', glyph: 'G' },
       ],
     },
