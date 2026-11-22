@@ -677,3 +677,33 @@ fn ex10_068_play_pick_excludes_trash_card_when_trash_play_is_locked() {
     });
     assert_eq!(n, 1, "only the hand card is offered");
 }
+
+// --- "(Rule) Name: Also treated as [Ken Ichijoji]." -----------------------------
+//
+// Printed (official Bandai DB). The Tamer has the name [Ken Ichijoji] in every
+// zone (CR 4.3 2-3-1-2), so brackets-only [Ken Ichijoji] references see it.
+// DCGO EX10_068.cs: an unconditional `ChangeCardNamesClass` adding
+// "Ken Ichijoji". The spec carried no `also_treated_as`.
+#[test]
+fn ex10_068_has_the_name_ken_ichijoji_in_hand_and_on_the_field() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-068")
+        .expect("EX10-068 YAML loads")
+        .hand(0, &["EX10-068"])
+        .start();
+    assert!(
+        runner.game.players[0].hand[0].contains_card_name("Ken Ichijoji", &runner.game.card_data),
+        "in the hand: \"(Rule) Name: Also treated as [Ken Ichijoji]\""
+    );
+    assert!(
+        !runner.game.players[0].hand[0].contains_card_name("Davis Motomiya", &runner.game.card_data),
+        "control: only the printed alias is added"
+    );
+    let tamer = runner.place_on_field(0, "EX10-068", None);
+    assert!(
+        runner.game.players[0].battle_area[tamer.index as usize]
+            .top_card()
+            .contains_card_name("Ken Ichijoji", &runner.game.card_data),
+        "on the field"
+    );
+}

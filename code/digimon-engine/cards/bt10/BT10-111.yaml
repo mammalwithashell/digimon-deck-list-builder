@@ -7,6 +7,11 @@ cost: 5
 dp: 4000
 traits: [Mini Dragon, Xros Heart]
 attribute: Data
+# Printed (official Bandai DB, first sentence of the effect box): "The name of
+# this card/Digimon is also treated as [Shoutmon]." An identity alias in every
+# zone (CR 4.3 2-3-1-2: a brackets-only [Shoutmon] reference matches it). DCGO
+# BT10_111.cs: unconditional `ChangeCardNamesClass` adding "Shoutmon".
+also_treated_as: [Shoutmon]
 
 alt_paths:
   - kind: digivolve

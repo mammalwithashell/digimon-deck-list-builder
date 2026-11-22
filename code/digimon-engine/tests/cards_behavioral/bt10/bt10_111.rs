@@ -106,5 +106,88 @@ fn bt10_111_on_play_wildcard_can_replace_one_missing_digixros_requirement_this_t
     );
 }
 
+// --- "The name of this card/Digimon is also treated as [Shoutmon]." -----------
+//
+// Printed (official Bandai DB, first sentence of the effect box). CR 4.3
+// 2-3-1-2: a brackets-only reference ("[Digivolve] [Shoutmon]: Cost 4",
+// "[Shoutmon] x [Ballistamon]") matches a card with that NAME, and this card
+// has the name [Shoutmon] wherever it is. DCGO BT10_111.cs: an unconditional
+// `ChangeCardNamesClass` adding "Shoutmon" (`CanUseCondition` returns true).
+// The spec carried no `also_treated_as`, so only substring gates saw it; the
+// 2026-11 name-gate audit made the [Shoutmon] routes of OmniShoutmon (BT19-012)
+// and OmniShoutmon (BT21-021) exact, which dropped this card from them.
+
+/// A Lv.5 blue card whose ONLY digivolve route is the brackets-only
+/// "[Digivolve] [Shoutmon]: Cost 1": Shoutmon (King Version) is red Lv.4, so
+/// nothing but the exact-name gate can let it through.
+const FROM_SHOUTMON_ONLY: &str = r#"
+card: TEST-FROM-SHOUTMON
+name: Shoutmon Route Target
+kind: digimon
+level: 5
+color: [blue]
+cost: 8
+dp: 7000
+alt_paths:
+  - kind: digivolve
+    from: { name_is: Shoutmon }
+    cost: 1
+"#;
+
+#[test]
+fn bt10_111_has_the_name_shoutmon_in_hand_and_as_a_digivolution_card() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT10-111 YAML loads")
+        .from_dsl_yaml(FROM_SHOUTMON_ONLY)
+        .expect("route target YAML compiles")
+        .hand(0, &[CARD_ID])
+        .start();
+    // `card_names` lists the card's exact names (a substring test would pass on
+    // the printed name "Shoutmon (King Version)" alone).
+    assert!(
+        runner.game.players[0].hand[0]
+            .card_names(&runner.game.card_data)
+            .contains(&"Shoutmon"),
+        "in the hand: \"the name of this card ... is also treated as [Shoutmon]\""
+    );
+    runner.place_stack(0, &[CARD_ID, "TEST-FROM-SHOUTMON"]);
+    assert!(
+        runner.game.players[0].battle_area[0].card_sources[0]
+            .card_names(&runner.game.card_data)
+            .contains(&"Shoutmon"),
+        "as a digivolution card"
+    );
+}
+
+#[test]
+fn bt10_111_meets_a_brackets_only_shoutmon_digivolve_route() {
+    use digimon_engine::action::mask::build_action_mask;
+    use digimon_engine::action::space::encode_digivolve;
+    use digimon_engine::enums::{GamePhase, PlaySource};
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT10-111 YAML loads")
+        .from_dsl_yaml(FROM_SHOUTMON_ONLY)
+        .expect("route target YAML compiles")
+        .hand(0, &["TEST-FROM-SHOUTMON"])
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+    runner.game.current_phase = GamePhase::Main;
+    let slot = runner.place_on_field(0, CARD_ID, Some(0)).index as usize;
+
+    assert!(
+        build_action_mask(&runner.game, 0)[encode_digivolve(0, slot as u16) as usize] > 0.5,
+        "Shoutmon (King Version) is a card named [Shoutmon]: the exact-name route is offered"
+    );
+    let memory = runner.memory();
+    assert!(runner
+        .game
+        .digivolve_from_hand(0, 0, slot, PlaySource::ByHand));
+    assert_eq!(memory - runner.memory(), 1, "the [Shoutmon] route's cost");
+}
+
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;
