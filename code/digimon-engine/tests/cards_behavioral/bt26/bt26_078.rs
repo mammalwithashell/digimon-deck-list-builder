@@ -383,3 +383,81 @@ fn bt26_078_second_pending_trigger_of_one_copy_is_lost_after_the_first_returns_i
         "the unpaid trigger granted nothing"
     );
 }
+
+fn titan_on_field(r: &DebugRunner) -> digimon_engine::permanent::PermanentHandle {
+    let index = r.game.players[0]
+        .battle_area
+        .iter()
+        .position(|perm| perm.top_card().card_id(&r.game.card_data) == "TITAN")
+        .expect("the [Titan] Digimon played from the trash");
+    digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: index as u8,
+    }
+}
+
+/// The card's own combo, end to end. [On Play] deletes this Digimon and plays
+/// a [Titan] trait card from the trash; the Cherubimon (BT26-078) that is now
+/// in the trash triggers on that play ({Trash} [Your Turn], opponent at 5 or
+/// more memory), returns itself to the bottom of the deck and gives the played
+/// Digimon <Rush> and <Execute>. Its stay in the trash began inside the same
+/// effect that caused the play, and the trigger is pinned to that stay
+/// (CR 4.3 15-14-3-1; DCGO BT26_078.cs `IsExistOnTrashTrigger`).
+#[test]
+fn bt26_078_own_on_play_then_its_trash_trigger_grants_the_played_titan() {
+    let mut r = setup(-5);
+    let c = r.place_on_field(0, CARD_ID, Some(0));
+    push_trash(&mut r, 0, "TITAN");
+    fire(&mut r, EffectTiming::OnPlay, c);
+    assert!(r.pending_is_optional(), "[On Play] by deleting this Digimon");
+    r.accept_optional_trigger().unwrap();
+    assert_eq!(cherubimon_in_trash(&r), 1, "deleted as the cost");
+    pick_trash(&mut r, 0, "TITAN");
+
+    let titan = titan_on_field(&r);
+    assert!(
+        !has_kw(&r, titan, Keyword::Rush) && !has_kw(&r, titan, Keyword::Execute),
+        "nothing is granted before the card is returned"
+    );
+    let cherubimon = r.game.players[0]
+        .trash
+        .iter()
+        .find(|card| card.card_id(&r.game.card_data) == CARD_ID)
+        .expect("Cherubimon (BT26-078) is in the trash")
+        .handle();
+    let offer = r
+        .pending_selection()
+        .expect("the {Trash} trigger is offered for the play its own effect made");
+    assert!(offer.is_optional, "by returning this card: optional");
+    assert_eq!(offer.source_card, cherubimon);
+    r.accept_optional_trigger().unwrap();
+    // The memory is on the opponent's side, so the turn ends inside the
+    // resolution and the granted <Execute> offers its attack (16-38-2).
+    resolve_until_end_of_turn_keyword_decision(&mut r);
+
+    assert_eq!(cherubimon_in_trash(&r), 0, "returned as the cost");
+    assert_eq!(deck_ids(&r, 0).first().map(String::as_str), Some(CARD_ID));
+    let titan = titan_on_field(&r);
+    assert!(has_kw(&r, titan, Keyword::Rush));
+    assert!(has_kw(&r, titan, Keyword::Execute));
+}
+
+/// Control for the combo: with the opponent at 4 memory the {Trash} effect
+/// cannot activate, so the card stays in the trash and nothing is granted.
+#[test]
+fn bt26_078_own_on_play_combo_needs_opponent_five_memory() {
+    let mut r = setup(-4);
+    let c = r.place_on_field(0, CARD_ID, Some(0));
+    push_trash(&mut r, 0, "TITAN");
+    fire(&mut r, EffectTiming::OnPlay, c);
+    r.accept_optional_trigger().unwrap();
+    pick_trash(&mut r, 0, "TITAN");
+    assert!(
+        !r.pending_is_optional(),
+        "no \"by returning this card\" offer below 5 memory"
+    );
+    let titan = titan_on_field(&r);
+    assert_eq!(cherubimon_in_trash(&r), 1);
+    assert!(!has_kw(&r, titan, Keyword::Rush));
+    assert!(!has_kw(&r, titan, Keyword::Execute));
+}
