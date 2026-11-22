@@ -916,3 +916,80 @@ fn ad1_001_inherited_raid_installs_on_carrier() {
         "inherited Raid from AD1-001 must install on the carrier"
     );
 }
+
+
+// --- "[Digivolve] Lv.3 w/[Omnimon] in text or w/[ADVENTURE] trait: Cost 2" ----
+//
+// Printed on Greymon (AD1-001) (official Bandai DB). "w/[Omnimon] in TEXT" is a
+// whole-card text gate (DCGO `CardSource.HasText`: name, traits and every
+// printed text box), not a name gate. It was authored `name_contains: Omnimon`,
+// which no Lv.3 card satisfies (no Lv.3 is named ...Omnimon...), so the route
+// was dead for the Lv.3 cards that mention [Omnimon] in their text.
+
+/// A purple Lv.3 with the given effect text and no traits: neither the
+/// [ADVENTURE] route nor a colour circle can apply, so only the text route is
+/// under test.
+fn ad1_001_text_route_purple_lv3(id: &str, effect_text: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = digimon_engine::enums::CardKind::Digimon;
+    card.level = Some(3);
+    card.dp = Some(3000);
+    card.colors = vec![digimon_engine::enums::CardColor::Purple];
+    card.traits = Vec::new();
+    card.effect_text = effect_text.to_string();
+    card
+}
+
+/// Stage AD1-001 in hand over `base` on P0's field; returns (runner, slot).
+fn ad1_001_text_route_over(base: CardData) -> (DebugRunner, usize) {
+    let base_id = base.card_id.clone();
+    let mut r = DebugRunner::builder()
+        .dsl_card("AD1-001")
+        .expect("AD1-001 in embedded pack")
+        .add_card(base)
+        .hand(0, &["AD1-001"])
+        .memory(10)
+        .start();
+    r.game.turn_count = 1;
+    r.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    let slot = r.place_on_field(0, &base_id, Some(0)).index as usize;
+    (r, slot)
+}
+
+fn ad1_001_text_route_digivolve_offered(r: &DebugRunner, slot: usize) -> bool {
+    use digimon_engine::action::mask::build_action_mask;
+    use digimon_engine::action::space::encode_digivolve;
+    build_action_mask(&r.game, 0)[encode_digivolve(0, slot as u16) as usize] > 0.5
+}
+
+#[test]
+fn ad1_001_text_route_digivolves_from_a_lv3_with_omnimon_in_its_text_for_2() {
+    let (mut r, slot) = ad1_001_text_route_over(ad1_001_text_route_purple_lv3(
+        "OMNI-TEXT-LV3",
+        "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Omnimon] in its text among them to the hand.",
+    ));
+    assert!(
+        ad1_001_text_route_digivolve_offered(&r, slot),
+        "a Lv.3 with [Omnimon] in its text is a printed source"
+    );
+    let mem = r.memory();
+    assert!(r.game.digivolve_from_hand(
+        0,
+        0,
+        slot,
+        digimon_engine::enums::PlaySource::ByHand
+    ));
+    assert_eq!(mem - r.memory(), 2, "Lv.3 w/[Omnimon] in text: Cost 2");
+}
+
+#[test]
+fn ad1_001_text_route_does_not_digivolve_from_a_lv3_without_omnimon_in_text_or_adventure() {
+    let (r, slot) = ad1_001_text_route_over(ad1_001_text_route_purple_lv3(
+        "PLAIN-TEXT-LV3",
+        "[On Play] Gain 1 memory.",
+    ));
+    assert!(
+        !ad1_001_text_route_digivolve_offered(&r, slot),
+        "no [Omnimon] in text, no [ADVENTURE] trait, no matching colour circle: no route"
+    );
+}
