@@ -3594,11 +3594,21 @@ impl Game {
                     };
                     let kind = state.card_kind;
                     let attacker_opt = state.attacker;
-                    let attacker_top_before = attacker_opt.and_then(|h| {
+                    let defender = state.defender;
+                    // CR 4.3 13-1-5 / 8-1-2-3: "is the attacker still there"
+                    // follows the permanent's stack identity, not its top
+                    // card. A Digimon saved from the battle deletion that then
+                    // digivolves or de-digivolves before this pipeline resumes
+                    // is the same Digimon and keeps checking (bug-scan F03:
+                    // Chronomon: Holy Mode (BT26-016) saved by its own
+                    // would-leave replacement, then digivolved by Yokomon
+                    // (BT26-001) into Chronomon: Destroy Mode (BT26-060)).
+                    let attacker_identity_before = attacker_opt.and_then(|h| {
                         self.player(h.player)
                             .battle_area
                             .get(h.index as usize)
-                            .map(|p| p.top_card().handle())
+                            .is_some()
+                            .then(|| self.capture_digivolve_host_identity(h))
                     });
                     // A DUAL card is a Digimon card (CR 4.3 4-6-1, 4-6-5-2), so a checked one is a
                     // Security Digimon too (13-1-7) and battles.
@@ -3625,7 +3635,7 @@ impl Game {
                                 let sec_dp = raw_sec_dp
                                     .saturating_add(self.attacker_security_dp_adjustment(attacker))
                                     .saturating_add(
-                                        self.defender_security_dp_adjustment(state.defender),
+                                        self.defender_security_dp_adjustment(defender),
                                     );
                                 // Rules 13-1-8-3 / 14-2: this is a battle even
                                 // though the security Digimon cannot be deleted.
@@ -3633,7 +3643,7 @@ impl Game {
                                 // a replacement or an On Deletion choice.
                                 self.set_security_phase(SecurityPhase::EndOfSecurityBattleDrain {
                                     attacker,
-                                    attacker_top: attacker_top_before,
+                                    attacker_identity: attacker_identity_before,
                                     winner: (attacker_dp > sec_dp).then_some(attacker),
                                 });
                                 // RULES_CONTEXT 14-2-1-3: "Same DP = both lose."
@@ -3681,11 +3691,11 @@ impl Game {
                     // assuming a losing compare was lethal. Now that the cause is
                     // Battle, <Barrier>/<Evade> can prevent the deletion, so the
                     // old unconditional `AttackerDeletedBySecurity` would report a
-                    // survivor as deleted. Compared by top-card identity, not by
+                    // survivor as deleted. Compared by stack identity, not by
                     // index: deleting a permanent shifts every later
                     // `battle_area` index down.
                     if let Some(attacker) = attacker_opt {
-                        if !self.attacker_still_on_field(attacker, attacker_top_before) {
+                        if !self.attacker_still_on_field(attacker, attacker_identity_before) {
                             if let Some(st) = self.security_resolution.as_mut() {
                                 st.outcome_so_far = AttackResult::AttackerDeletedBySecurity;
                             }
@@ -3695,7 +3705,7 @@ impl Game {
                 }
                 SecurityPhase::EndOfSecurityBattleDrain {
                     attacker,
-                    attacker_top,
+                    attacker_identity,
                     winner,
                 } => {
                     // Deletion replacements and On Deletion effects finish
@@ -3703,7 +3713,7 @@ impl Game {
                     // is not a winner unless its DP was strictly higher.
                     let enqueue_done = state.phase_enqueue_done;
                     if !enqueue_done {
-                        if !self.attacker_still_on_field(attacker, attacker_top) {
+                        if !self.attacker_still_on_field(attacker, attacker_identity) {
                             if let Some(st) = self.security_resolution.as_mut() {
                                 st.outcome_so_far = AttackResult::AttackerDeletedBySecurity;
                             }
@@ -3934,19 +3944,23 @@ impl Game {
         Some(AttackResult::SecurityCheckSurvived)
     }
 
-    /// True when `handle`'s permanent is still on the field carrying the same
-    /// top card it had before a battle deletion was attempted.
+    /// True when the permanent `handle` named before a battle deletion was
+    /// attempted (stack identity `identity_before`) is still in the battle
+    /// area.
+    ///
+    /// Judged by stack identity (`Permanent::battle_identity`), not by top
+    /// card: CR 4.3 13-1-5 stops a Digimon's checks only once it "is no
+    /// longer present in the battle area", and a Digimon that digivolves
+    /// (8-1-2-3) or de-digivolves stays the same Digimon with a new top card.
+    /// DCGO agrees: `ISecurityCheck.StopSecurityCheck` (CardController.cs)
+    /// stops only when the attacking `Permanent` is gone.
     ///
     /// Index-independent on purpose: deleting a permanent removes it from
     /// `battle_area` and shifts every later index down, so a bare
     /// `handle_valid` can report "still there" while pointing at a different
     /// Digimon that slid into the slot.
-    fn attacker_still_on_field(
-        &self,
-        handle: PermanentHandle,
-        top_before: Option<crate::card_source::CardHandle>,
-    ) -> bool {
-        let Some(card) = top_before else {
+    fn attacker_still_on_field(&self, handle: PermanentHandle, identity_before: Option<u64>) -> bool {
+        let Some(identity) = identity_before else {
             // Nothing was there to begin with; treat as "not deleted here" so
             // the caller does not report a deletion that never happened.
             return true;
@@ -3954,7 +3968,7 @@ impl Game {
         self.player(handle.player)
             .battle_area
             .iter()
-            .any(|p| p.top_card().handle() == card)
+            .any(|p| p.battle_identity == Some(identity))
     }
 
     pub(crate) fn commit_pending_security_loss_replacement(
