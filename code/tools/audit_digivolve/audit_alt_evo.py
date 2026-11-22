@@ -212,7 +212,27 @@ def printed_name_gate(text, name):
     return kinds
 
 
-def audit_name_gates(official, only=None):
+def fallback_alt_texts(cards_path=None):
+    """card_id -> the printed special-digivolution text from `cards.json` (`xros_req`).
+
+    Used only for cards the official mirror has no `[Digivolve]` text for. The API text
+    separates words with non-breaking spaces ("w/[Agumon]\\xa0in name"); they are normalised
+    so the wording classifier reads it like the mirror's text.
+    """
+    path = cards_path or os.path.join(ROOT, "data", "cards.json")
+    try:
+        cards = json.load(open(path, encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    out = {}
+    for cid, card in cards.items():
+        text = (card.get("xros_req") or "").replace(" ", " ")
+        if "[Digivolve]" in text:
+            out[cid] = " ".join(text.split())
+    return out
+
+
+def audit_name_gates(official, only=None, fallback=None):
     """Flag digivolve alt_paths whose NAME predicate disagrees with the printed wording.
 
     NAME_EXACT_AS_CONTAINS -- printed `[Digivolve] [X]: Cost N` (exact name) authored as
@@ -221,16 +241,20 @@ def audit_name_gates(official, only=None):
     itself -- as a cheap source).
     NAME_CONTAINS_AS_EXACT -- printed `w/[X] in name` authored as `name_is: X`.
     NAME_AS_TEXT -- printed `w/[X] in text` authored as a name predicate.
+
+    The printed wording comes from the official Bandai DB mirror. A card the mirror does not
+    carry yet (most of EX12, P-248) is read from `cards.json` `xros_req` instead of being
+    skipped, so its name gate is still checked (see `fallback_alt_texts`).
     """
     findings = []
     impl = {os.path.splitext(os.path.basename(p))[0]: p for p in glob.glob(CARDS_GLOB, recursive=True)}
+    fallback = fallback_alt_texts() if fallback is None else fallback
     for cid, path in sorted(impl.items()):
         if only and cid not in only:
             continue
-        oc = official.get(cid)
-        if not oc:
-            continue
-        text = oc.get("special_digivolution_condition") or ""
+        text = (official.get(cid) or {}).get("special_digivolution_condition") or ""
+        if "[Digivolve]" not in text:
+            text = fallback.get(cid, "")
         if "[Digivolve]" not in text:
             continue
         # Only the [Digivolve] segments: DNA / App Fusion / Assembly name their materials

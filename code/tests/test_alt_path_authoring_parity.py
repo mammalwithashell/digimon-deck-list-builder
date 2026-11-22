@@ -173,3 +173,32 @@ def test_printed_name_gate_classifier():
     assert g("[Digivolve] 0 from Koromon", "Koromon") == {"exact"}
     assert g("[Digivolve] 1 from [RizeGreymon]", "RizeGreymon") == {"exact"}
     assert g("[Digivolve] [Aegiomon]: Cost 3", "Bacchusmon") == set()
+
+
+def test_name_gate_audit_reads_cards_json_when_the_mirror_lacks_the_card():
+    """The official mirror does not carry every implemented card (most of EX12, P-248).
+    Those cards used to be skipped by the name-gate audit, so a WereGarurumon: Sagittarius
+    Mode (EX9-019)-class mistake on them would not have been reported. Their printed wording
+    is read from `cards.json` `xros_req` instead."""
+    audit = _load_audit()
+    official = json.load(open(audit.OFFICIAL, encoding="utf-8"))["cards"]
+    fallback = audit.fallback_alt_texts()
+
+    # Gabumon (EX12-021) prints "[Digivolve] [Tsunomon]/Lv.2 w/[VB] trait: Cost 0" (card image)
+    # and is not in the mirror; the API text has non-breaking spaces, normalised here.
+    assert "EX12-021" not in official or "[Digivolve]" not in (
+        official["EX12-021"].get("special_digivolution_condition") or ""
+    ), "EX12-021 reached the mirror: pick another mirror-less card for this test"
+    assert "[Tsunomon]/Lv.2 w/[VB] trait: Cost 0" in fallback["EX12-021"]
+    assert "\u00a0" not in fallback["EX12-021"]
+
+    # The audit really evaluates such a card: with only the fallback text, a wording that
+    # disagrees with the authored leaf is reported, and the true wording is clean.
+    wrong = {"EX12-021": "[Digivolve] Lv.2 w/[Tsunomon] in name: Cost 0"}
+    found = audit.audit_name_gates({}, only={"EX12-021"}, fallback=wrong)
+    assert [(f["card"], f["type"], f["name"]) for f in found] == [
+        ("EX12-021", "NAME_CONTAINS_AS_EXACT", "Tsunomon")
+    ]
+    assert audit.audit_name_gates({}, only={"EX12-021"}, fallback=fallback) == []
+    # No text at all (neither source): nothing to compare, nothing reported.
+    assert audit.audit_name_gates({}, only={"EX12-021"}, fallback={}) == []
