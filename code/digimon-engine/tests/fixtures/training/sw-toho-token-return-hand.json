@@ -411,22 +411,12 @@
     {
       "action_id": 30,
       "is_game_over": false,
-      "memory_after": 1,
+      "memory_after": -4,
       "memory_before": 1,
+      "migration_note": "the one-element DigiXros commits on this pick: the recorded stop PASS (step 40) answered a 'Select DigiXros material' prompt that is no longer asked once no candidate remains (d76249e94), so that row is dropped and its memory_after moved here",
       "phase": "SelectMaterial",
       "player_id": 1,
       "step": 39,
-      "turn": 6,
-      "winner_id": null
-    },
-    {
-      "action_id": 62,
-      "is_game_over": false,
-      "memory_after": -4,
-      "memory_before": 1,
-      "phase": "SelectMaterial",
-      "player_id": 1,
-      "step": 40,
       "turn": 6,
       "winner_id": null
     },
@@ -1709,5 +1699,5 @@
     "timestamp": "2026-10-28T03:18:57+00:00"
   },
   "tensor_snapshots_count": 0,
-  "total_actions": 132
+  "total_actions": 131
 }
