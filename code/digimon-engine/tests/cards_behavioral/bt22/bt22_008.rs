@@ -203,8 +203,8 @@ fn bt22_008_has_two_digivolve_alt_paths() {
         .collect();
     assert_eq!(
         digivolve_paths.len(),
-        2,
-        "BT22-008 must expose two digivolve alt-paths (standard Lv.2 Red \
+        3,
+        "BT22-008 must expose three digivolve alt-paths (standard Lv.2 Red + Blue split circle \
          + bonus Koromon/Lv.2-CS); got {}",
         digivolve_paths.len()
     );

@@ -18,7 +18,11 @@ fn bt20_036_compiles_with_redirect_and_eot_dna_clauses() {
         .expect("BT20-036 YAML parses and compiles")
         .build();
     let card = r.compiled_card("BT20-036").expect("present in pack");
-    assert_eq!(card.alt_paths.len(), 2, "Lv5 yellow/4 + Lv5 ACCEL/3");
+    assert_eq!(
+        card.alt_paths.len(),
+        3,
+        "Lv5 yellow/4 + Lv5 black/4 (printed split circle) + Lv5 ACCEL/3"
+    );
     assert!(
         card.effects.iter().any(|c| matches!(
             c,

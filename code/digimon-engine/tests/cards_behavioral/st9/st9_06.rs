@@ -163,8 +163,8 @@ fn st9_06_has_exactly_one_alt_path() {
     let compiled = compiled_st9_06();
     assert_eq!(
         compiled.alt_paths.len(),
-        1,
-        "ST9-06 has exactly 1 alt-path (standard digivolve Lv.5 Blue / Cost 4)"
+        2,
+        "ST9-06 has exactly 2 alt-paths (standard digivolve Lv.5 Blue + Green split circle / Cost 4)"
     );
 }
 

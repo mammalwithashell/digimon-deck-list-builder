@@ -167,8 +167,8 @@ fn bt12_043_has_two_authored_alt_paths() {
     let card = compiled();
     assert_eq!(
         card.alt_paths.len(),
-        2,
-        "Red standard-circle restoration + RizeGreymon special alt-path"
+        3,
+        "Red + Yellow standard-circle (printed Yellow|Red split) + RizeGreymon special alt-path"
     );
     let has_red_lv5_cost4 = card.alt_paths.iter().any(|p| {
         matches!(p.kind, CompiledAltPathKind::Digivolve)

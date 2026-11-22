@@ -133,8 +133,8 @@ fn ex4_060_compiles_with_two_alt_paths_and_one_triggered() {
 
     assert_eq!(
         card.alt_paths.len(),
-        2,
-        "expected exactly 2 alt_paths (Digivolve Lv.6/Blue/cost-6 + DnaDigivolve Blue+Red cost-0), got {}",
+        3,
+        "expected exactly 3 alt_paths (Digivolve Lv.6/Blue/cost-6 + Lv.6/Red/cost-6 split circle + DnaDigivolve Blue+Red cost-0), got {}",
         card.alt_paths.len()
     );
 
@@ -175,7 +175,7 @@ fn ex4_060_first_alt_path_is_digivolve_lv6_blue_cost6() {
 #[test]
 fn ex4_060_second_alt_path_is_dna_digivolve_blue_red_cost0() {
     let card = compiled_ex4_060();
-    let path = &card.alt_paths[1];
+    let path = &card.alt_paths[2];
     assert_eq!(path.kind, CompiledAltPathKind::DnaDigivolve);
     assert_eq!(
         path.cost,

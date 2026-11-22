@@ -128,8 +128,8 @@ fn st20_10_has_three_alt_paths() {
     let card = compiled("ST20-10");
     assert_eq!(
         card.alt_paths.len(),
-        3,
-        "expected exactly 3 alt_paths (standard Lv2 Black + xros_req Lv2 \
+        4,
+        "expected exactly 4 alt_paths (standard Lv2 Black + Red split circle + xros_req Lv2 \
          ADVENTURE/Hero + warp-into-WarGreymon); got {}",
         card.alt_paths.len()
     );
@@ -141,7 +141,7 @@ fn st20_10_has_three_alt_paths() {
 #[test]
 fn st20_10_third_alt_path_is_warp_into_wargreymon() {
     let card = compiled("ST20-10");
-    let path = &card.alt_paths[2];
+    let path = &card.alt_paths[3];
     assert_eq!(path.kind, CompiledAltPathKind::Digivolve);
     assert_eq!(
         path.direction,
@@ -201,7 +201,7 @@ fn st20_10_first_alt_path_is_lv2_black_cost0_digivolve() {
 #[test]
 fn st20_10_second_alt_path_is_xros_req_lv2_adventure_or_hero_cost0() {
     let card = compiled("ST20-10");
-    let path = &card.alt_paths[1];
+    let path = &card.alt_paths[2];
     assert_eq!(path.kind, CompiledAltPathKind::Digivolve);
     assert_eq!(
         path.cost,

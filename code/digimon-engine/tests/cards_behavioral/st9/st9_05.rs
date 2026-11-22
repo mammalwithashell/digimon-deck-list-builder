@@ -233,8 +233,8 @@ fn st9_05_has_standard_and_dna_digivolve_alt_paths() {
         .filter(|p| p.kind == CompiledAltPathKind::Digivolve)
         .count();
     assert_eq!(
-        digivolve_count, 1,
-        "ST9-05 must have exactly 1 standard digivolve alt-path"
+        digivolve_count, 2,
+        "ST9-05 must have exactly 2 standard digivolve alt-paths (printed Blue|Green split circle)"
     );
 
     let dna_count = compiled
