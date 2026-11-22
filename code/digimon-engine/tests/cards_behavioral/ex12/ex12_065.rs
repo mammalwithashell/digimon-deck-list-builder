@@ -594,3 +594,113 @@ fn ex12_065_trash_pick_offers_both_kinds_without_the_lock() {
     assert!(valid.contains(&ex12_065_trash_action(&runner, "SHAMBALA-TAMER")));
     assert!(valid.contains(&ex12_065_trash_action(&runner, "PUPPET-LOW")));
 }
+
+/// Fire Kaguyamon (EX12-065)'s own [When Attacking] trigger and return the
+/// trash pick it offers, if any.
+fn ex12_065_when_attacking_trash_pick(
+    runner: &mut DebugRunner,
+    kaguyamon: digimon_engine::permanent::PermanentHandle,
+) -> Option<Vec<u16>> {
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::TriggerSource;
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(kaguyamon),
+    );
+    runner.game.drain_effect_queue();
+    ex12_065_first_trash_pick(runner)
+}
+
+/// "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You MAY play
+/// 1 ... card from your trash": when nothing is played the [Once Per Turn] is
+/// not used up. DCGO EX12_065.cs `AfterSelectCardCoroutine`: `if
+/// (cardSources.Count == 0) activateClass.RemoveUse();`. So declining the
+/// [On Play] pick leaves the play available to a [When Attacking] the same
+/// turn. The clause is optional and its first step is the declinable pick, so
+/// PASS declines the clause and the use is never recorded; the spec needs no
+/// `refund_opt`. (Bug scan finding 26 suspected the use was lost on a pick
+/// that played nothing: that was a PROHIBITED card being picked and fizzling,
+/// which the candidate filter now prevents. This pins the rest.)
+#[test]
+fn ex12_065_declining_the_trash_pick_keeps_the_once_per_turn() {
+    use digimon_engine::action::space::PASS;
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-065 YAML loads")
+        .add_card(puppet_tb("PUPPET-LOW", 4))
+        .memory(12)
+        .start();
+    let kaguyamon = runner.place_on_field(0, CARD_ID, Some(0));
+    push_to_trash(&mut runner, 0, "PUPPET-LOW");
+
+    runner.fire_on_play(0, kaguyamon.index as usize);
+    ex12_065_first_trash_pick(&mut runner).expect("[On Play] offers the trash pick");
+    assert!(
+        runner.pending_selection_view().is_some_and(|view| view.is_optional),
+        "\"you may play\": the pick can be declined"
+    );
+    runner.execute_action(0, PASS).expect("decline the pick");
+    let _ = runner.auto_resolve();
+    assert!(!field_contains(&runner, 0, "PUPPET-LOW"), "nothing was played");
+
+    let again = ex12_065_when_attacking_trash_pick(&mut runner, kaguyamon)
+        .expect("the declined [On Play] did not use the [Once Per Turn]: [When Attacking] offers it again");
+    assert!(again.contains(&ex12_065_trash_action(&runner, "PUPPET-LOW")));
+}
+
+/// Control for the test above: once a card HAS been played, the [Once Per
+/// Turn] is used and a [When Attacking] the same turn offers nothing.
+#[test]
+fn ex12_065_playing_a_card_uses_the_once_per_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-065 YAML loads")
+        .add_card(puppet_tb("PUPPET-LOW", 4))
+        .add_card(puppet_tb("PUPPET-TWO", 4))
+        .memory(12)
+        .start();
+    let kaguyamon = runner.place_on_field(0, CARD_ID, Some(0));
+    push_to_trash(&mut runner, 0, "PUPPET-LOW");
+    push_to_trash(&mut runner, 0, "PUPPET-TWO");
+
+    runner.fire_on_play(0, kaguyamon.index as usize);
+    ex12_065_first_trash_pick(&mut runner).expect("[On Play] offers the trash pick");
+    let pick = ex12_065_trash_action(&runner, "PUPPET-LOW");
+    runner.execute_action(0, pick).expect("play PUPPET-LOW");
+    let _ = runner.auto_resolve();
+    assert!(field_contains(&runner, 0, "PUPPET-LOW"), "the pick was played");
+
+    assert!(
+        ex12_065_when_attacking_trash_pick(&mut runner, kaguyamon).is_none(),
+        "a card was played, so the [Once Per Turn] is used: no second play this turn"
+    );
+}
+
+/// No card in the trash can be played at [On Play] (here: no candidate at all;
+/// under a "can't play Digimon by effects" lock it is the same branch, see
+/// `ex12_065_trash_pick_does_not_offer_digimon_while_effects_cannot_play_digimon`):
+/// no pick opens and, nothing having been played, the [Once Per Turn] is not
+/// used up. A candidate that reaches the trash later the same turn can still be
+/// played by [When Attacking].
+#[test]
+fn ex12_065_no_playable_candidate_keeps_the_once_per_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-065 YAML loads")
+        .add_card(puppet_tb("PUPPET-LOW", 4))
+        .memory(12)
+        .start();
+    let kaguyamon = runner.place_on_field(0, CARD_ID, Some(0));
+
+    runner.fire_on_play(0, kaguyamon.index as usize);
+    assert!(
+        ex12_065_first_trash_pick(&mut runner).is_none(),
+        "no candidate in the trash: no pick"
+    );
+    let _ = runner.auto_resolve();
+
+    push_to_trash(&mut runner, 0, "PUPPET-LOW");
+    let again = ex12_065_when_attacking_trash_pick(&mut runner, kaguyamon)
+        .expect("nothing was played at [On Play], so the [Once Per Turn] is intact");
+    assert!(again.contains(&ex12_065_trash_action(&runner, "PUPPET-LOW")));
+}
