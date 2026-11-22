@@ -146,6 +146,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: red }
     cost: 4
+  # Printed split circle: Red|Yellow Lv.5 / cost 4 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
   # Special alt-path (xros_req black text): "[Digivolve] 3 from Lv.5
   # w/[RizeGreymon] in name". DCGO ContainsCardName is a substring scan.
   - kind: digivolve

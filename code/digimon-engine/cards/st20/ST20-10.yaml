@@ -77,8 +77,12 @@ traits: [Reptile, ADVENTURE, Hero]
 # filter REPLACES the standard colour gate but the standard cost-checking
 # still applies.
 alt_paths:
+  # Printed split circle: Black|Red Lv.2 / cost 0 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 2, color_is: black }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
     cost: 0
 
   - kind: digivolve

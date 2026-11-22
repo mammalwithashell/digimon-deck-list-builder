@@ -103,6 +103,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: black }
     cost: 5
+  # Printed split circle: Black|Red Lv.5 / cost 5 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 5
 
   - kind: digivolve
     from: { name_is: "Gankoomon" }

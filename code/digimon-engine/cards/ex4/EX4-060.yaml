@@ -106,8 +106,12 @@ traits: [Holy Warrior]
 # 2) DNA digivolve: Lv.6 Blue + Lv.6 Red / Cost 0 (per dna_costs in cards.json;
 #    DCGO EX4_060.cs lines 27-100 GetJogress).
 alt_paths:
+  # Printed split circle: Blue|Red Lv.6 / cost 6 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 6, color_is: blue }
+    cost: 6
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
     cost: 6
 
   - kind: dna_digivolve

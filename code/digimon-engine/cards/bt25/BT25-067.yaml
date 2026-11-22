@@ -69,8 +69,12 @@ attribute: Virus
 
 alt_paths:
   # Standard digivolution: Lv.3 Black / cost 3 (printed evo block).
+  # Printed split circle: Black|Purple Lv.3 / cost 3 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
     cost: 3
   # Alt-digivolution: Lv.3 with [D-Brigade] trait / cost 2.
   - kind: digivolve

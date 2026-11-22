@@ -67,8 +67,12 @@ traits: [Dragonkin]
 # 2) DNA digivolve: Blue Lv.4 + Green Lv.4 / Cost 0, stacks unsuspended
 #    (per dna_costs + xros_req in cards.json; DCGO ST9_05.cs AddJogressConditionClass).
 alt_paths:
+  # Printed split circle: Blue|Green Lv.4 / cost 4 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 4, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
     cost: 4
 
   - kind: dna_digivolve

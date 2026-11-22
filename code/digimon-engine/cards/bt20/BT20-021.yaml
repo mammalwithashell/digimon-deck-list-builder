@@ -28,6 +28,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: red }
     cost: 6
+  # Printed split circle: Red|Black Lv.6 / cost 6 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
+    cost: 6
   # DNA Digivolve: a Lv.6 with [Jesmon] in name + a Lv.6 with [Gankoomon] in
   # name, cost 0. DCGO BT20_021.cs GetJogress: ContainsCardName("Jesmon") +
   # ContainsCardName("Gankoomon"), each Levels_ForJogress contains 6.

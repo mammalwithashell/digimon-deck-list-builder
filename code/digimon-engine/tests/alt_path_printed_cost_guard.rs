@@ -51,6 +51,14 @@
 //!     against a card that cannot use its circle (Susanoomon (EX12-076) carried
 //!     `self_color_count_gte: 2` there: "Multicolor" misread as "2+ colours").
 //!
+//!   5. `split-circle-incomplete`: the baseline prints a circle accepting two to
+//!      six colours at one (level, cost), and the spec authors a bare gate for
+//!      at least one of those colours at that level and cost but not for every
+//!      one. Production reads `cards.json`, so live play is unaffected, but
+//!      DebugRunner fixtures back-fill `evo_costs` from the alt-paths and lose
+//!      the missing colour's digivolution. Specs that author NO gate for the
+//!      group, and gates with extra conditions (trait/name), are out of scope.
+//!
 //! Authoring the printed circle as an alt-path at its printed cost and colour
 //! is the established convention (it also backfills DebugRunner fixtures'
 //! `evo_costs` — see `card_data_from_compiled`), and production deduplicates
@@ -68,6 +76,21 @@ use digimon_dsl::compiled::{
     CompiledAltPathDirection, CompiledAltPathKind, CompiledCardKind, CompiledColor, CompiledCost,
     CompiledPredicate,
 };
+
+/// Split-circle groups where the baseline (official mirror / `cards.json`) lists
+/// a second colour the card face does NOT print. Each entry was checked against
+/// the card image and DCGO's `EvoCosts`, which agree with each other and with the
+/// spec; the baseline row is the data error. Entries are (card id, level, cost,
+/// printed colour on the face, the baseline row that is wrong). Rule 5 skips the
+/// group. Do not add an entry without reading the card image.
+const BASELINE_PHANTOM_SPLIT_COLOURS: &[(&str, u8, i64, &str, &str)] = &[
+    // Cendrillmon (EX7-030): face and DCGO print a single yellow Lv.5 / 4 circle;
+    // cards.json and the bundle add a Black Lv.5 / 4 row.
+    ("EX7-030", 5, 4, "yellow", "black Lv.5 / 4"),
+    // Pyramidimon (EX8-055): face and DCGO print a single black Lv.5 / 4 circle;
+    // cards.json and the bundle add a Red Lv.5 / 4 row.
+    ("EX8-055", 5, 4, "black", "red Lv.5 / 4"),
+];
 
 /// Per-card allowlist for bare paths that are FAITHFUL despite not matching a
 /// baseline row. Every entry needs a justification verified against the
@@ -214,6 +237,8 @@ fn check_printed_costs() {
     let mut exercised = 0usize;
     let mut allowlisted = 0usize;
     let mut rainbow_cards = 0usize;
+    let mut split_incomplete = 0usize;
+    let mut split_unauthored: Vec<String> = Vec::new();
     let mut violations: Vec<String> = Vec::new();
 
     // Deterministic order for stable diagnostics.
@@ -331,6 +356,68 @@ fn check_printed_costs() {
             }
         }
 
+        // Split circles: a printed circle accepting 2..=6 colours at one
+        // (level, cost) must be authored for EVERY colour once the spec authors
+        // a bare gate for at least one of them. Specs that author none of the
+        // group's colours are out of scope (counted in the summary line), as
+        // are gates carrying extra conditions (not bare circle gates).
+        if let Some((rows, source)) = baseline_rows(&official, &production, card_id.as_str()) {
+            let mut groups: std::collections::BTreeMap<(u8, i64), std::collections::BTreeSet<u8>> =
+                std::collections::BTreeMap::new();
+            for (colour, level, cost) in &rows {
+                groups.entry((*level, *cost)).or_default().insert(*colour);
+            }
+            for ((level, cost), colours) in groups {
+                if colours.len() < 2 || colours.len() >= 7 {
+                    continue;
+                }
+                if BASELINE_PHANTOM_SPLIT_COLOURS
+                    .iter()
+                    .any(|(id, l, c, _, _)| *id == card_id.as_str() && *l == level && *c == cost)
+                {
+                    continue;
+                }
+                let authored: std::collections::BTreeSet<u8> = compiled
+                    .alt_paths
+                    .iter()
+                    .filter(|ap| {
+                        matches!(ap.kind, CompiledAltPathKind::Digivolve)
+                            && ap.direction == CompiledAltPathDirection::From
+                            && ap.materials.is_empty()
+                            && ap.extra_cost.is_empty()
+                            && ap.on_burst_turn_end.is_empty()
+                            && !ap.stacks_unsuspended
+                            && !ap.marker
+                            && ap.condition.is_none()
+                            && ap.cost == Some(CompiledCost::Literal(cost as i32))
+                    })
+                    .filter_map(|ap| ap.from.as_deref().and_then(bare_circle_gate))
+                    .filter(|(l, c)| *l == level && c.is_some())
+                    .map(|(_, c)| evo_code(c.unwrap()))
+                    .collect();
+                let names = |set: &std::collections::BTreeSet<u8>| -> String {
+                    const N: [&str; 7] =
+                        ["red", "blue", "yellow", "green", "white", "black", "purple"];
+                    set.iter().map(|c| N[*c as usize]).collect::<Vec<_>>().join("+")
+                };
+                if authored.is_empty() {
+                    split_unauthored.push(card_id.clone());
+                    continue;
+                }
+                let missing: std::collections::BTreeSet<u8> =
+                    colours.difference(&authored).copied().collect();
+                if !missing.is_empty() {
+                    split_incomplete += 1;
+                    violations.push(format!(
+                        "  {card_id}: split circle Lv.{level} / cost {cost} (printed colours {} per the {source}) is authored for only [{}]; missing [{}]. Author one `{{ level_eq: {level}, color_is: <colour> }}` alt_path per printed colour at cost {cost}.",
+                        names(&colours),
+                        names(&authored),
+                        names(&missing),
+                    ));
+                }
+            }
+        }
+
         // Converse: a printed rainbow circle must be authored as a colour-free
         // bare path at its level and cost.
         if let Some((rows, source)) = baseline_rows(&official, &production, card_id.as_str()) {
@@ -361,7 +448,9 @@ fn check_printed_costs() {
 
     eprintln!(
         "[alt-path-printed-cost] exercised {exercised} bare digivolve paths \
-         ({allowlisted} allowlisted); {rainbow_cards} rainbow circle(s) in the pack"
+         ({allowlisted} allowlisted); {rainbow_cards} rainbow circle(s) in the pack;          {split_incomplete} incomplete split circle(s); {} card(s) print a split circle the          spec authors no bare gate for (out of scope): {:?}",
+        split_unauthored.len(),
+        split_unauthored,
     );
 
     assert!(

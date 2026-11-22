@@ -73,6 +73,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: red }
     cost: 4
+  # Printed split circle: Red|Green Lv.4 / cost 4 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 4
   # Alt-digivolution: Lv.4 with [Giant Bird] trait / cost 3.
   - kind: digivolve
     from: { level_eq: 4, trait_has: "Giant Bird" }

@@ -10,6 +10,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 3, color_is: yellow }
     cost: 3
+  # Printed split circle: Yellow|Purple Lv.3 / cost 3 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
   - kind: digivolve
     from:
       all_of:

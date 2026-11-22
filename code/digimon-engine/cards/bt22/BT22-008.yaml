@@ -100,8 +100,12 @@ traits: [Reptile, CS]
 
 alt_paths:
   # Standard printed digivolve: Lv.2 Red / cost 0.
+  # Printed split circle: Red|Blue Lv.2 / cost 0 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
     cost: 0
 
   # Bonus printed digivolve (`xros_req`): "[Koromon]/Lv.2 w/[CS] trait: Cost 0"

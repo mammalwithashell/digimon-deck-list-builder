@@ -9,8 +9,12 @@ traits: [Beast, NSo, VB]
 attribute: Vaccine
 
 alt_paths:
+  # Printed split circle: Blue|Purple Lv.3 / cost 3 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
     cost: 3
   - kind: digivolve
     from:

@@ -75,6 +75,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: purple }
     cost: 4
+  # Printed split circle: Purple|Black Lv.5 / cost 4 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
 
 effects:
   # ─── <Collision> / <Piercing> ──────────────────────────────────────────────

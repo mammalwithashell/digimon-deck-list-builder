@@ -8,8 +8,12 @@ dp: 13000
 traits: [Sky Dragon]
 attribute: Data
 alt_paths:
+  # Printed split circle: Black|Red Lv.5 / cost 5 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 5, color_is: black }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
     cost: 5
 
 effects:

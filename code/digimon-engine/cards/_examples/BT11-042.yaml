@@ -11,6 +11,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: yellow }
     cost: 3
+  # Printed split circle: Yellow|Purple Lv.4 / cost 3 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
 
 effects:
   # ─── [When Digivolving] security search → reveal/add → Recovery +1 → shuffle ───

@@ -12,6 +12,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: red }
     cost: 4
+  # Printed split circle: Red|Blue Lv.6 / cost 4 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 4
 
 effects:
   - when: [on_play, when_digivolving]

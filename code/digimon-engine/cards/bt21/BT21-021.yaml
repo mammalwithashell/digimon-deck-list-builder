@@ -76,10 +76,16 @@ digixros_aliases: ["Shoutmon"]
 
 alt_paths:
   # 1) Standard digivolve: Lv.4 Red / Cost 4 (evo_costs)
+  # Printed split circle: Red|Yellow Lv.4 / cost 4 — one entry per colour.
   - kind: digivolve
     from:
       level_eq: 4
       color_is: red
+    cost: 4
+  - kind: digivolve
+    from:
+      level_eq: 4
+      color_is: yellow
     cost: 4
 
   # 2) [Shoutmon] name digivolve: Cost 4 (xros_req)

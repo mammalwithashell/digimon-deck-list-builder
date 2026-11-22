@@ -82,8 +82,12 @@ alt_paths:
   # the Red Lv.3/cost3 circle (auto-lowered, no explicit alt_path needed for
   # it); the official Bandai DB bundle confirms BOTH Red and Black Lv.3/cost3
   # circles are printed. This compensates for the dropped Black circle.
+  # Printed split circle: Black|Red Lv.3 / cost 3 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
     cost: 3
 
   # Alt-digivolve: Lv.3 w/[Agumon] in name OR w/[TS] trait — cost 2.

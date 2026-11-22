@@ -88,8 +88,12 @@ attribute: Vaccine
 # evo color (Red) requirement, we set `ignore_requirements: true` (matches the
 # BT23-014 alt-CS pattern at the same DSL level).
 alt_paths:
+  # Printed split circle: Red|Blue Lv.3 / cost 2 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 3, color_is: red }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
     cost: 2
 
   - kind: digivolve

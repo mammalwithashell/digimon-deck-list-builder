@@ -7,8 +7,12 @@ cost: 3
 dp: 1000
 traits: [Puppet, LIBERATOR]
 alt_paths:
+  # Printed split circle: Yellow|Purple Lv.2 / cost 1 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 2, color_is: yellow }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
     cost: 1
   - kind: digivolve
     from: { name_is: "Kyaromon" }

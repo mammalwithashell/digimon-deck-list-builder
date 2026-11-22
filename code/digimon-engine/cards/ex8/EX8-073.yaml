@@ -60,8 +60,15 @@ alt_paths:
   - kind: digivolve
     from: { name_is: "Gallantmon" }
     cost: 1
+  # Printed split circle: Red|Blue|Yellow Lv.5 / cost 4 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
     cost: 4
 
 effects:

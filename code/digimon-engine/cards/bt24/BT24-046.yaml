@@ -8,8 +8,12 @@ dp: 4000
 traits: [Beast, Iliad, TS]
 
 alt_paths:
+  # Printed split circle: Green|Blue Lv.3 / cost 3 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
     cost: 3
   - kind: digivolve
     from:

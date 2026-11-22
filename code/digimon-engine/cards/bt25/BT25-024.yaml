@@ -61,6 +61,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 3, color_is: blue }
     cost: 2
+  # Printed split circle: Blue|Red Lv.3 / cost 2 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
   # Alt-digivolution: Lv.3 with [TS] trait / cost 2 (printed digivolve box).
   - kind: digivolve
     from: { level_eq: 3, trait_has: TS }

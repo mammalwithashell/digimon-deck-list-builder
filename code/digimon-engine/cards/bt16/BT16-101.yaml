@@ -129,8 +129,12 @@ attribute: Vaccine
 # contains "Rapidmon"; level/color requirement waived (DCGO
 # ignoreDigivolutionRequirement: true).
 alt_paths:
+  # Printed split circle: Yellow|Green Lv.5 / cost 3 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 5, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
     cost: 3
 
   - kind: digivolve
