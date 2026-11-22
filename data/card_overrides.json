@@ -2,6 +2,13 @@
   "EX12-057": {
     "attribute_eng": [
       "Vaccine"
+    ],
+    "type_eng": [
+      "Shaman",
+      "Saneiketsu",
+      "Tentei Hachibushu",
+      "Shambala",
+      "SW"
     ]
   },
   "ST12-13": {
@@ -19460,6 +19467,28 @@
       2,
       3,
       1
+    ]
+  },
+  "_note_trait_line_face_check_2026_11": "Saneiketsu Megas Nezhamon (EX12-019), Erlangmon (EX12-034) and Takutoumon (EX12-057) print .../Shambala/SW on the card face (DCGO_Application/Assets/Textures/Card/<ID>.webp, read 2026-11-22); the digimoncard.io API drops [SW], so Saneiketsu Invitation (EX12-071) <Use Req. ([SW] trait)> and every [SW] filter ignored them. Erlangmon prints Vaccine (the API said Data). The official mirror has no page for these cards.",
+  "EX12-019": {
+    "type_eng": [
+      "Cyborg",
+      "Saneiketsu",
+      "Tentei Hachibushu",
+      "Shambala",
+      "SW"
+    ]
+  },
+  "EX12-034": {
+    "type_eng": [
+      "Shaman",
+      "Saneiketsu",
+      "Tentei Hachibushu",
+      "Shambala",
+      "SW"
+    ],
+    "attribute_eng": [
+      "Vaccine"
     ]
   }
 }
