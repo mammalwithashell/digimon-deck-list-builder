@@ -19071,6 +19071,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:effect_deleted_any_own_digimon",
+    "predicate:effect_returned_any_card",
     "predicate:event_target_in_text_contains",
     "predicate:event_target_kind",
     "predicate:event_target_owner",
