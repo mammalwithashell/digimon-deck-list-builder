@@ -137,7 +137,12 @@ effects:
             - event_is_effect_initiated: true
       - when: on_digivolution_card_trashed
         condition:
-          event_host_is_own_tamer: true
+          all_of:
+            - event_host_is_own_tamer: true
+            - any_of:
+                - event_cause: own_effect
+                - event_cause: opponent_effect
+                - event_cause: cost
     summary: "[All Turns][OPT] When the opponent's hand gains cards by an effect OR a source under your Tamer is trashed, this Digimon may unsuspend"
     process:
       - unsuspend: { target: source }

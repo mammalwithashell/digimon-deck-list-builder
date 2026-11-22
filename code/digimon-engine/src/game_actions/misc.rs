@@ -211,7 +211,8 @@ impl Game {
             }
             card.play_cost(&self.card_data)
         };
-        let base_cost = cost_delta.resolve(printed_cost) as i32;
+        let base_cost = self.resolve_effect_play_cost(
+            self.effect_source_player.unwrap_or(player_id), printed_cost, cost_delta) as i32;
         // Observer dispatch (G-BEFORE-PAY-COST-GAIN-MEMORY) — fires AFTER
         // the cost-reduction chain finishes (`total_reduction` is the sum
         // of accepted reducers) but BEFORE the WhenPermanentWouldPlay

@@ -91,7 +91,12 @@ effects:
           event_discard_player: opponent
       - when: on_digivolution_card_trashed
         condition:
-          event_host_is_own_tamer: true
+          all_of:
+            - event_host_is_own_tamer: true
+            - any_of:
+                - event_cause: own_effect
+                - event_cause: opponent_effect
+                - event_cause: cost
     condition:
       count_gte:
         filter:

@@ -2507,16 +2507,14 @@ fn eval_event_fields(
         // a Tamer owned by the observer ("effects trash cards from under YOUR
         // Tamers"). The host handle's `player` is its controller; its top card's
         // kind must be Tamer.
-        let host = rctx
-            .game
-            .current_trigger_context
-            .as_ref()
-            .and_then(|t| t.event_host_permanent);
-        let is_own_tamer = host
-            .filter(|h| h.player == rctx.player)
-            .and_then(|h| rctx.game.player(h.player).battle_area.get(h.index as usize))
-            .map(|perm| perm.top_card().card_kind(rctx.card_data()) == CardKind::Tamer)
-            .unwrap_or(false);
+        // The host may already have left and its old slot may now hold a
+        // different permanent. Use the event's captured card and controller.
+        let trigger = rctx.game.current_trigger_context.as_ref();
+        let is_own_tamer = trigger
+            .filter(|t| t.event_host_permanent.is_some_and(|h| h.player == rctx.player))
+            .and_then(|t| t.event_host_card)
+            .and_then(|card| rctx.game.card_data_for_handle(card))
+            .is_some_and(|data| data.card_kind == CardKind::Tamer);
         if is_own_tamer != want {
             return false;
         }
@@ -5949,7 +5947,12 @@ fn card_cost_affordable(
             })
             .unwrap_or(0),
     };
-    let pay = (i32::from(delta.resolve(base)) - credit).max(0);
+    let resolved = if is_use {
+        delta.resolve(base)
+    } else {
+        rctx.game.resolve_effect_play_cost(rctx.player, base, delta)
+    };
+    let pay = (i32::from(resolved) - credit).max(0);
     rctx.game.payer_can_pay(rctx.player, pay)
 }
 

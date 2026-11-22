@@ -11,8 +11,7 @@
 # Inherited (OnDigivolutionCardDiscarded, maxPerTurn 1, not optional):
 #   IsOwnerTurn && CanTriggerOnTrashDigivolutionCard(permanent = one of the
 #   OWNER's battle-area Tamers, cardEffect != null i.e. by an effect, any card).
-#   → on_digivolution_card_trashed, your_turn, event_host_is_own_tamer (the
-#   ST24-11 / BT25-029 idiom; sources are only trashed from a Tamer by effects).
+#   → on_digivolution_card_trashed, your_turn, event_host_is_own_tamer plus an effect/cost cause gate; source cleanup when a Tamer leaves is by rule.
 
 card: BT26-002
 name: "Budmon"
@@ -30,7 +29,12 @@ effects:
     active_when:
       your_turn: true
     trigger_if:
-      event_host_is_own_tamer: true
+      all_of:
+        - event_host_is_own_tamer: true
+        - any_of:
+            - event_cause: own_effect
+            - event_cause: opponent_effect
+            - event_cause: cost
     summary: "Inherited [Your Turn][OPT] When effects trash cards from under your Tamers, <Draw 1>"
     process:
       - draw: { of: you, count: 1 }

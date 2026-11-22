@@ -1,0 +1,89 @@
+# Official Bandai English image/category 522040, checked 2026-11-22.
+# Q7881: After requires the suspend payment, even if placement is declined.
+# Q7882: placed cards go at the bottom. Q7886: includes security battles.
+card: BT27-089
+name: Thomas H. Norstein
+kind: tamer
+color: [blue]
+cost: 3
+traits: [DATA SQUAD]
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - kind: digimon
+            - any_of:
+                - name_contains: Gaomon
+                - name_contains: Gaogamon
+        n: 1
+    summary: "By placing a Gaomon/Gaogamon Digimon from hand face down under this Tamer, draw 1 and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: payment
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Gaomon
+                  - name_contains: Gaogamon
+          prompt: "Place 1 Gaomon or Gaogamon Digimon card face down under Thomas?"
+      - if:
+          condition: { binding_present: payment }
+          then:
+            - place_selected_card_under_tamer:
+                card: payment
+                tamer: source
+                face_down: true
+                bind_as: paid
+            - if:
+                condition: { binding_present: paid }
+                then:
+                  - draw: { of: you, count: 1 }
+                  - gain_memory: 1
+  - when: on_add_to_hand
+    optional: true
+    active_when: { all_turns: true }
+    trigger_if:
+      all_of:
+        - event_add_to_hand_player: opponent
+        - event_is_effect_initiated: true
+    summary: "When effects add to your opponent's hand, by suspending this Tamer, you may place the deck top face down under it. After, 1 of your Gaogamon Digimon can't be deleted in battle for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - if:
+          condition:
+            count_gte:
+              filter: { of: you, zone: [deck] }
+              n: 1
+          then:
+            - select_effect_choice:
+                bind_as: place_choice
+                labels: ["Place the top card face down under Thomas", "Don't place"]
+                prompt: "Place the top card of your deck face down under Thomas?"
+            - if:
+                condition: { equals: [place_choice, 0] }
+                then:
+                  - place_as_bottom_source:
+                      source: { deck_top: you }
+                      target: source
+                      face_down: true
+      # Q7881 gates this on suspension, not on optional deck placement.
+      - select_own_permanent:
+          bind_as: protected
+          filter: { kind: digimon, name_contains: Gaogamon }
+          prompt: "Choose 1 of your Gaogamon Digimon to protect in battle this turn"
+      - add_modifier:
+          target: protected
+          modifier: CannotBeDestroyedByBattle
+          value: 1
+          expiry: end_of_turn
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

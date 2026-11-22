@@ -234,3 +234,6 @@ mod plutomon_admission_constructs;
 
 mod can_unsuspend;
 mod royal_knights_training_gate;
+
+mod tamer_source_host_identity;
+mod effect_hand_add_origin;

@@ -1,0 +1,138 @@
+# Shared breeding Burst cleanup repaired in 33dc045e; all 21 focused cases pass.
+# Bandai EN category 522040 / JP category 503042, checked 2026-11-22.
+# Both printed images and Japanese Q7687 leave SEVEN; English Q7687 alone says
+# eight. EN list explicitly states the Japanese list takes priority. This
+# discrepancy is retained as provenance, not silently normalized away.
+# Q7682/83: direct Main activation is an Option effect, NOT Option use.
+# Q7685: both triggered clauses are separately orderable. Q7688/89: blind hand
+# picks, owner-only hand inspection, and unrevealed top-security movement.
+# Q7681: Burst end-turn top-card trash applies even without reminder text.
+card: BT27-035
+name: 'MirageGaogamon: Burst Mode'
+kind: dual
+level: 7
+color: [blue, black]
+dp: 15000
+traits: [Beast Knight, DATA SQUAD]
+form: Mega
+attribute: Data
+dual:
+  digimon:
+    level: 7
+    dp: 15000
+    colors: [blue, black]
+    traits: [Beast Knight, DATA SQUAD]
+    effect_text: "<Reboot> <Blocker> <Evade> [When Digivolving] [When Attacking] [Once Per Turn] You may activate 1 [Main] effect on this card's Option side. [When Digivolving] [When Attacking] If your opponent's hand has 8 or more cards, by returning cards without looking to the bottom of the deck so that it has 7 left, return their top security card to the bottom of the deck."
+  option:
+    use_cost: 6
+    colors: [blue]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        any_of:
+          - kind: digimon
+          - kind: tamer
+        trait_has: DATA SQUAD
+    effect_text: "<Use Req. ([DATA SQUAD] trait)> [Main] Return 1 of your opponent's Digimon to the hand. Then, if their hand has 8 or more cards, 1 of your Digimon may unsuspend. <Arts Digivolve>"
+    keywords: [ArtsDigivolve]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, trait_has: DATA SQUAD }
+    cost: 5
+  - kind: burst_digivolve
+    from: { name_is: MirageGaogamon }
+    cost: 0
+    extra_cost:
+      - select_own_permanent:
+          bind_as: thomas
+          filter: { kind: tamer, name_is: Thomas H. Norstein }
+          prompt: 'Return Thomas H. Norstein to the hand'
+      - return_to_hand: { target: thomas }
+    on_burst_turn_end:
+      - trash_top_source: { target: carrier }
+effects:
+  - kind: grant_keyword
+    keyword: Reboot
+  - kind: grant_keyword
+    keyword: Blocker
+  - kind: grant_keyword
+    keyword: Evade
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    as_option_effect: true
+    summary: 'May activate Full Moon Meteor Impact Main effect'
+    process:
+      - select_opponent_permanent:
+          bind_as: bounced
+          filter: { kind: digimon }
+          prompt: 'Return 1 opposing Digimon to its hand'
+      - return_to_hand: { target: bounced }
+      - if:
+          condition:
+            count_gte:
+              filter: { of: opponent, zone: [hand] }
+              n: 8
+          then:
+            - select_own_permanent:
+                bind_as: unsuspended
+                optional: true
+                filter: { kind: digimon, is_suspended: true }
+                prompt: 'Unsuspend 1 of your Digimon?'
+            - unsuspend: { target: unsuspended }
+  - when: [when_digivolving, when_attacking]
+    optional: true
+    outer_prompt: true
+    condition:
+      count_gte:
+        filter: { of: opponent, zone: [hand] }
+        n: 8
+    summary: 'Reduce opposing hand to seven without looking, then return top security to deck bottom'
+    process:
+      - shuffle_hand: { of: opponent }
+      - select_count_capped_multi:
+          of: opponent
+          zone: hand
+          max:
+            formula:
+              base: -7
+              per: { card_count_in_zone: { of: opponent, zone: hand } }
+              delta: 1
+          clamp_to_available: true
+          filter: {}
+          bind_as: returned_cards
+          prompt: 'Choose opposing hand cards without looking, in return order, so seven remain'
+      - return_hand_list_to_deck:
+          of: opponent
+          cards: returned_cards
+      - if:
+          condition: { effect_returned_any_card: true }
+          then:
+            - return_top_security_to_deck: { of: opponent, position: bottom }
+  - when: main_from_hand
+    summary: 'Return 1 opposing Digimon to hand, then at 8 hand cards may unsuspend 1 of your Digimon'
+    process:
+      - select_opponent_permanent:
+          bind_as: bounced
+          filter: { kind: digimon }
+          prompt: 'Return 1 opposing Digimon to its hand'
+      - return_to_hand: { target: bounced }
+      - if:
+          condition:
+            count_gte:
+              filter: { of: opponent, zone: [hand] }
+              n: 8
+          then:
+            - select_own_permanent:
+                bind_as: unsuspended
+                optional: true
+                filter: { kind: digimon, is_suspended: true }
+                prompt: 'Unsuspend 1 of your Digimon?'
+            - unsuspend: { target: unsuspended }

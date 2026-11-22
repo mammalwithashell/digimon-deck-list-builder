@@ -1,0 +1,24 @@
+{
+  "source": "https://world.digimoncard.com/products/pack/ver27/",
+  "checked": "2026-11-22",
+  "scope": "Exact recommended MirageGaogamon composition; deck inventory, not admission metadata",
+  "counts": {
+    "BT25-002": 4,
+    "BT25-021": 4,
+    "BT27-019": 4,
+    "ST24-02": 3,
+    "BT25-023": 4,
+    "BT27-024": 4,
+    "ST24-03": 2,
+    "BT27-030": 4,
+    "EX4-019": 3,
+    "BT25-029": 2,
+    "BT27-032": 4,
+    "BT27-035": 4,
+    "BT25-087": 2,
+    "BT27-089": 2,
+    "ST24-13": 2,
+    "BT25-096": 2,
+    "ST24-15": 4
+  }
+}

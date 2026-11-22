@@ -1,0 +1,72 @@
+# Bandai English BT27-062 image/category522040, Q7763-64, checked2026-11-22.
+# Q7764 permits full-cost play under Solarmon, but never a reduction.
+card: BT27-062
+name: Maildramon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 4000
+traits: [Cyborg]
+form: Armor Form
+attribute: Free
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects:
+  - when: when_attacking
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - in_text_contains: Knightmon
+            - can_play_or_use_from_effect: true
+            - affordable_with_cost: { reduce: 2 }
+        n: 1
+    summary: "[When Attacking][Once Per Turn] May play or use a Knightmon-text card from hand with the cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: played
+          optional: true
+          filter:
+            all_of:
+              - in_text_contains: Knightmon
+              - can_play_or_use_from_effect: true
+              - affordable_with_cost: { reduce: 2 }
+          prompt: "Play or use 1 Knightmon-text card with cost reduced by 2?"
+      - if:
+          condition: { binding_present: played }
+          then:
+            - play_or_use_from_hand:
+                of: you
+                hand_index: played
+                cost_delta: { reduce: 2 }
+          else:
+            - refund_opt: {}
+
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    once_per_turn: true
+    active_when:
+      all_of:
+        - is_source: true
+        - replacement_subject_is_mine: true
+        - kind: digimon
+    summary: "[Inherited][All Turns][Once Per Turn] By deleting another own Knightmon-text Digimon, this Digimon doesn't leave"
+    process:
+      # The existing selected-deletion payment lowering checks intrinsic
+      # payability and waits for a successful deletion receipt before cancelling.
+      - select_own_permanent:
+          bind_as: prevent_cost
+          optional: true
+          filter: { kind: digimon, other: true, in_text_contains: Knightmon }
+          prompt: "Delete 1 of your other Knightmon-text Digimon to prevent this Digimon leaving?"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}

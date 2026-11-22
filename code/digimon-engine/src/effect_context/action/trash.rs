@@ -583,6 +583,25 @@ impl<'a> EffectContext<'a> {
     /// Reject-before-mutate discipline: invalid handle, empty or 1-card stack
     /// and a non-Digimon top all return `false` before any state change.
     pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
+        // Burst teardown is rule processing (8-3-2-1), including breeding.
+        // Ordinary effects still cannot act on breeding-area cards. No battle-
+        // area trash observers are emitted for this breeding-only rule action.
+        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+            if self.source_kind != crate::enums::EffectSourceKind::Rule {
+                return false;
+            }
+            let eligible = self.game.player(target.player).breeding_area.as_ref()
+                .is_some_and(|p| p.card_sources.len() > 1 && matches!(
+                    p.top_card().card_kind(&self.game.card_data),
+                    crate::enums::CardKind::Digimon | crate::enums::CardKind::Dual));
+            if !eligible { return false; }
+            let removed = self.game.player_mut(target.player).breeding_area.as_mut()
+                .and_then(|p| p.card_sources.pop()).expect("eligible breeding top");
+            self.game.player_mut(removed.owner).put_in_trash(removed);
+            self.game.mark_until_condition_dirty();
+            self.game.reevaluate_until_condition_modifiers_if_dirty();
+            return true;
+        }
         // §8-3-2-1 / §4-7-2 (the burst turn-end trash's own rule): a lone
         // card is not a stacked card, and a non-Digimon top trashes nothing.
         // Checked HERE, not in the shared pop: the generic "trash the top N

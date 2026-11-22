@@ -124,7 +124,12 @@ effects:
     timing_conditions:
       - when: on_digivolution_card_trashed
         condition:
-          event_host_is_own_tamer: true
+          all_of:
+            - event_host_is_own_tamer: true
+            - any_of:
+                - event_cause: own_effect
+                - event_cause: opponent_effect
+                - event_cause: cost
     condition: { source_is_unsuspended: false }
     summary: "[All Turns][Once Per Turn] When attack targets change or effects trash cards from under your Tamers, this Digimon may unsuspend"
     process:
