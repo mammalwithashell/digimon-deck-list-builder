@@ -1,0 +1,34 @@
+# Bandai English BT27 list/image, 2026-11-22; Q7956/Q7957.
+# Production canonical metadata/stable registration remains blocked.
+card: BT27-099
+name: Surtr Brander
+kind: option
+color: [yellow]
+cost: 3
+traits: [X Antibody, Royal Knight]
+effects:
+  - when: main_from_hand
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Give 1 opponent Digimon -6000 DP for the turn"
+      - add_dp_modifier: { target: victim, value: -6000, expiry: end_of_turn }
+      - add_top_security_to_hand: { of: you }
+      - place_on_security: { source: self_option, position: top, face_up: false }
+  - when: on_security
+    scope: inherited
+    process: &security_body
+      - select_opponent_permanent:
+          bind_as: lowest
+          selector: lowest_dp
+          filter: { kind: digimon }
+          prompt: "Place 1 opponent Digimon with the lowest DP as their top security card"
+      - place_on_security:
+          source: { permanent: lowest }
+          of: opponent
+          position: top
+          face_up: false
+  - when: on_discard_security
+    scope: security
+    process: *security_body

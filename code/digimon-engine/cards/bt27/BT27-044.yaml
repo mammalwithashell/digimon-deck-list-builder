@@ -1,0 +1,32 @@
+# Bandai English BT27 list/image, 2026-11-22; Q7710 excludes breeding.
+# Canonical metadata/stable registration remains blocked.
+card: BT27-044
+name: Gekkomon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+traits: [Reptile, Glowing Dawn, BEATBREAK]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Glowing Dawn }
+    cost: 0
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - not: { in_breeding: true }
+        - cost_target: { kind: digimon, color_is: green, trait_has: BEATBREAK }
+    amount: 1
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    target: { is_source: true }
+    dp_modifier: 2000
