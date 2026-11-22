@@ -297,11 +297,26 @@ fn q24_analog_rules_check_deletes_between_queued_effects() {
 /// Judge: NO — you can't play a Digimon yet.
 ///
 /// What this pins (so it cannot pass for the wrong reason):
-///   1. CONTROL: Pillomon's floodgate is genuinely installed on Player 0.
-///   2. After sub-effect 1's -6000, Pillomon is at ≤0 DP but STILL on the field
-///      (no mid-effect deletion) and the floodgate is STILL active.
-///   3. Sub-effect 2's trash-play is BLOCKED — the purple Lv.3 never leaves trash.
-///   4. Only AFTER Flame Hellscythe resolves does the rules-check delete Pillomon.
+///   1. CONTROL (board A, a vanilla 2000-DP victim, no floodgate): after
+///      sub-effect 1's -6000 the trash pick of sub-effect 2 IS offered, and while
+///      it is pending the victim sits at ≤0 DP STILL on the field -- no
+///      mid-effect deletion (the deletion is the rules-check after the effect).
+///   2. Board B: Pillomon's floodgate is genuinely installed on Player 0.
+///   3. Board B: sub-effect 2 offers NO trash pick and the purple Lv.3 never
+///      leaves the trash. The only difference from board A is the floodgate, so
+///      it was still up when sub-effect 2 looked for candidates: Pillomon (at ≤0
+///      DP) had not been deleted yet. (Had it been deleted mid-effect, the pick
+///      would be offered and the play would succeed -- that is Q7.)
+///   4. Board B: after Flame Hellscythe resolves the rules-check deletes Pillomon.
+///
+/// Until 2026-11-21 this test read (3) by taking a trash pick that then did
+/// nothing. A play-from-trash pick now offers only cards the play would accept
+/// (`digimon_dsl::play_candidates`; DCGO BT8_109.cs:43 ends `CanSelectCardCondition`
+/// with `CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)` and
+/// opens no selection when no card qualifies, :92-94), so under the floodgate
+/// there is no pick to take; the mid-effect observation moved to the control
+/// board. Official Q&A Q4296 (Pomumon (BT9-047), the same lock): "You can
+/// activate the effect, but you can't use it to play such a card."
 #[test]
 fn q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves() {
     use digimon_engine::action::space::{encode_attack, PASS};
@@ -309,110 +324,138 @@ fn q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves() {
     use digimon_engine::enums::{CardColor, ModifierType};
     use digimon_engine::selection::SelectionKind;
 
-    // A purple Lv.3 (DP ≤ 6000), no [On Play] — the sub-effect-2 trash candidate.
-    let mut purple_l3 = make_test_card("PURPLE-L3", "Purple L3");
-    purple_l3.card_kind = CardKind::Digimon;
-    purple_l3.colors = vec![CardColor::Purple];
-    purple_l3.level = Some(3);
-    purple_l3.dp = Some(2000);
+    // Build the Q6 board with `victim_id` as Player 1's 2000-DP Digimon, play
+    // Flame Hellscythe and resolve sub-effect 1 (-6000) on that Digimon.
+    fn play_flame_hellscythe_on(victim_id: &str) -> (DebugRunner, PermanentHandle) {
+        // A purple Lv.3 (DP ≤ 6000), no [On Play] — the sub-effect-2 trash candidate.
+        let mut purple_l3 = make_test_card("PURPLE-L3", "Purple L3");
+        purple_l3.card_kind = CardKind::Digimon;
+        purple_l3.colors = vec![CardColor::Purple];
+        purple_l3.level = Some(3);
+        purple_l3.dp = Some(2000);
+        // The control victim: Pillomon's level and DP, no effects.
+        let mut vanilla = make_test_card("VANILLA-2000", "Vanilla 2000");
+        vanilla.card_kind = CardKind::Digimon;
+        vanilla.level = Some(4);
+        vanilla.dp = Some(2000);
 
-    let mut r = DebugRunner::builder()
-        .dsl_card("BT8-109")
-        .expect("BT8-109 Flame Hellscythe loads")
-        .dsl_card("BT9-033")
-        .expect("BT9-033 Pillomon loads")
-        .add_card(purple_l3)
-        .add_card(option_color_provider())
-        .hand(0, &["BT8-109"])
-        .memory(10)
-        .start();
-    r.skip_mulligan();
+        let mut r = DebugRunner::builder()
+            .dsl_card("BT8-109")
+            .expect("BT8-109 Flame Hellscythe loads")
+            .dsl_card("BT9-033")
+            .expect("BT9-033 Pillomon loads")
+            .add_card(purple_l3)
+            .add_card(vanilla)
+            .add_card(option_color_provider())
+            .hand(0, &["BT8-109"])
+            .memory(10)
+            .start();
+        r.skip_mulligan();
 
-    // Player 1's Pillomon (2000 DP) — installs the floodgate.
-    let pillomon = r.place_on_field(1, "BT9-033", Some(0));
-    // Player 0's purple Lv.3 seeded into trash.
-    {
-        let data_idx = r
-            .game
-            .card_data
-            .iter()
-            .position(|c| c.card_id == "PURPLE-L3")
-            .expect("PURPLE-L3 in card_data");
-        let next_idx = r.game.next_card_index();
+        let victim = r.place_on_field(1, victim_id, Some(0));
+        // Player 0's purple Lv.3 seeded into trash.
+        {
+            let data_idx = r
+                .game
+                .card_data
+                .iter()
+                .position(|c| c.card_id == "PURPLE-L3")
+                .expect("PURPLE-L3 in card_data");
+            let next_idx = r.game.next_card_index();
+            r.game.players[0]
+                .trash
+                .push(CardSource::new(data_idx, 0, next_idx));
+        }
+        r.game.tick_declarative_effects();
+        assert_eq!(
+            r.game
+                .modifiers
+                .player_has(0, ModifierType::CannotPlayDigimonByEffect),
+            victim_id == "BT9-033",
+            "only Pillomon's [All Turns] floodgate installs CannotPlayDigimonByEffect on Player 0"
+        );
+
+        // Play Flame Hellscythe; sub-effect 1 prompts for the -6000 target.
+        r.place_in_breeding(0, "OPTION-COLOR-PROVIDER");
+        r.game.enter_main_phase();
+        let action = digimon_engine::action::space::PLAY_HAND_START;
+        assert_eq!(
+            digimon_engine::action::build_action_mask(&r.game, 0)[action as usize],
+            1.0
+        );
+        r.game.decode_action(action, 0);
+        let view = r
+            .pending_selection_view()
+            .expect("[Main] sub-effect 1: -6000 target prompt installs");
+        assert_eq!(view.kind, SelectionKind::OppField);
+        r.game
+            .decode_action(encode_attack(0, victim.index as u16), 0);
+        (r, victim)
+    }
+    let purple_in_trash = |r: &DebugRunner| {
         r.game.players[0]
             .trash
-            .push(CardSource::new(data_idx, 0, next_idx));
-    }
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "PURPLE-L3")
+    };
 
-    r.game.tick_declarative_effects();
-    // (1) CONTROL — the floodgate is genuinely installed on Player 0.
-    assert!(
-        r.game
-            .modifiers
-            .player_has(0, ModifierType::CannotPlayDigimonByEffect),
-        "precondition: Pillomon's [All Turns] floodgate installs CannotPlayDigimonByEffect on Player 0"
-    );
-
-    // Play Flame Hellscythe; sub-effect 1 prompts for the -6000 target.
-    r.place_in_breeding(0, "OPTION-COLOR-PROVIDER");
-    r.game.enter_main_phase();
-    let action = digimon_engine::action::space::PLAY_HAND_START;
-    assert_eq!(
-        digimon_engine::action::build_action_mask(&r.game, 0)[action as usize],
-        1.0
-    );
-    r.game.decode_action(action, 0);
-    let view = r
-        .pending_selection_view()
-        .expect("[Main] sub-effect 1: -6000 target prompt installs");
-    assert_eq!(view.kind, SelectionKind::OppField);
-    r.game
-        .decode_action(encode_attack(0, pillomon.index as u16), 0);
-
-    // (2) Pillomon is at ≤0 DP but NOT deleted mid-effect; floodgate still up.
-    assert!(
-        r.game.effective_dp(pillomon).unwrap_or(1) <= 0,
-        "Pillomon reduced to ≤0 DP (2000 - 6000)"
-    );
-    assert_eq!(
-        r.battle_area_size(1),
-        1,
-        "Pillomon at ≤0 DP is NOT deleted mid-effect (deletion deferred to the rules-check)"
-    );
-    assert!(
-        r.game
-            .modifiers
-            .player_has(0, ModifierType::CannotPlayDigimonByEffect),
-        "Pillomon (still alive at ≤0 DP) keeps its CannotPlayDigimonByEffect floodgate up"
-    );
-
-    // (3) Sub-effect 2: the trash-play. The floodgate blocks the play — drive
-    // whatever prompt installs (select the candidate if offered, else PASS); the
-    // purple Lv.3 must NOT enter the battle area either way.
-    let battle_before = r.battle_area_size(0);
-    if let Some(play_view) = r.pending_selection_view() {
+    // ── Board A (control): a vanilla victim, no floodgate ────────────────────────────
+    {
+        let (mut r, victim) = play_flame_hellscythe_on("VANILLA-2000");
+        // (1) Sub-effect 2's pick is pending, and the victim is at ≤0 DP but NOT
+        // deleted mid-effect.
+        let play_view = r
+            .pending_selection_view()
+            .expect("control: sub-effect 2 offers the trash pick when nothing forbids the play");
+        assert_eq!(play_view.kind, SelectionKind::Trash);
+        assert!(play_view.is_optional, "\"you may play\"");
+        assert!(
+            r.game.effective_dp(victim).unwrap_or(1) <= 0,
+            "the victim is reduced to ≤0 DP (2000 - 6000)"
+        );
+        assert_eq!(
+            r.battle_area_size(1),
+            1,
+            "a Digimon at ≤0 DP is NOT deleted mid-effect (deletion deferred to the rules-check)"
+        );
         let pick = play_view
             .valid_action_ids
             .iter()
             .copied()
             .find(|&id| id != PASS)
-            .unwrap_or(PASS);
+            .expect("the purple Lv.3 is a candidate");
         r.game.decode_action(pick, play_view.selecting_player);
+        r.auto_resolve().ok();
+        assert_eq!(r.battle_area_size(0), 1, "control: the purple Lv.3 is played");
+        assert!(!purple_in_trash(&r), "control: it left the trash");
+        assert_eq!(
+            r.battle_area_size(1),
+            0,
+            "control: the ≤0-DP victim is deleted by the rules-check after the effect resolves"
+        );
     }
-    r.auto_resolve().ok();
 
+    // ── Board B (Q6): Pillomon ──────────────────────────────────────────────────────
+    // (2) is asserted inside the builder (the floodgate is installed).
+    let (mut r, _pillomon) = play_flame_hellscythe_on("BT9-033");
+
+    // (3) Sub-effect 2 offers no pick: the floodgate was still up when it looked
+    // for candidates, so Pillomon had not been deleted by sub-effect 1's -6000.
+    assert!(
+        r.pending_selection_view().is_none(),
+        "Judge NO: no Digimon can be played yet, so no trash pick is offered (got {:?})",
+        r.pending_selection_view().map(|v| (v.kind, v.valid_action_ids))
+    );
+    r.auto_resolve().ok();
     assert_eq!(
         r.battle_area_size(0),
-        battle_before,
+        0,
         "Judge NO: the trash Digimon could NOT be played — Pillomon's floodgate \
          persists because Pillomon (at ≤0 DP) is not deleted until the effect resolves"
     );
     assert!(
-        r.game.players[0]
-            .trash
-            .iter()
-            .any(|c| c.card_id(&r.game.card_data) == "PURPLE-L3"),
-        "the purple Lv.3 stays in Player 0's trash (the blocked play left it there)"
+        purple_in_trash(&r),
+        "the purple Lv.3 stays in Player 0's trash"
     );
 
     // (4) Only after Flame Hellscythe resolves does the rules-check delete Pillomon.

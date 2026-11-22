@@ -101,7 +101,11 @@ fn mark_seq(steps: &mut [CompiledStep], wanted: &BTreeSet<String>) {
 
 /// Whether `filter` authors a play-legality leaf anywhere (itself, a conjunct, a disjunct, or under a negation).
 /// An authored leaf is the card's own statement of which candidates are playable, so the pass leaves it alone.
-pub(crate) fn has_play_leaf(filter: &CompiledPredicate) -> bool {
+///
+/// Public for the engine's pick installer: a filter that carries the leaf reads the "can't play by effects" /
+/// trash-play locks, which continuous effects materialize, so the installer settles continuous state before it
+/// evaluates the candidates (`dsl_cards::step::selections::try_install`).
+pub fn has_play_leaf(filter: &CompiledPredicate) -> bool {
     filter.can_play_from_effect_without_cost.is_some()
         || filter.can_play_or_use_from_effect.is_some()
         || filter.all_of.iter().any(has_play_leaf)

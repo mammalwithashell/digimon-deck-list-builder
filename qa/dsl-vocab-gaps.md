@@ -637,10 +637,40 @@ refuse. Guards: unit tests in the pass, the pool test
 `code/digimon-dsl/tests/card_pool_authoring_guards.rs::every_play_from_trash_pick_checks_play_legality_after_compilation`,
 per-card tests on BT24-088 / LM-029 / EX12-065.
 
+That argument holds only if the leaf and the verb read the SAME state, and at first they did not
+**[G-ENGINE-PLAY-PICK-STALE-CONTINUOUS-STATE, CLOSED 2026-11-21, review]**: the locks the leaf reads are
+materialized by `Game::tick_declarative_effects`, the pick is installed inside the running effect, and an
+earlier step of that effect can have removed the lock's source since the last tick. Eye of the Gorgon (BT9-108)
+deletes Pillomon (BT9-033) ("Players can't play Digimon by effects") and then offers the trash pick; with the
+injected leaf the pick saw the stale lock, found no candidate, and the printed play was never offered (judge
+quiz "Card resolution" Q7 says it succeeds; `judge_quiz::b_deferred_rules_check::q7_...` went red, a suite the
+first pass did not run). Before the leaf the stale lock was harmless because the play verb ran after the pick,
+by which time `decode_action` had ticked. Fix: `dsl_cards::step::selections::try_install` settles continuous
+state before it installs any card pick whose filter carries a play-legality leaf (`select_hand`, `select_trash`,
+`select_reveal`, `select_count_capped_multi`, `select_union_zone` incl. its per-zone filters), authored or
+injected. DCGO evaluates `CanPlayAsNewPermanent` live (BT9_108.cs:47). The mirror case (Flame Hellscythe
+(BT8-109) only reduces Pillomon to 0 DP, which is not deleted mid-effect, so the lock is still up and no pick
+is offered) is `q6_...` in the same file.
+
 Not covered (authoring stays per card): a PAID `play_from_trash` is not checked for affordability (add
 `affordable_with_cost`); N simultaneous plays check one free slot; the `per_selected` play of Millenniummon (P-220);
 seven `select_union_zone` -> `play_union_bound_free` picks without a leaf (BT13-019, BT21-090, BT22-096 x2,
-BT23-099 x2, BT24-007) -- each needs its DCGO candidate condition read before the leaf is added.
+BT23-099 x2, BT24-007) -- each needs its DCGO candidate condition read before the leaf is added. Read on
+2026-11-21 (review), not yet authored: BT13_019.cs:37/58/256/277 and BT23_099.cs:118/257 end the candidate
+condition with `CanPlayAsNewPermanent(cardSource, payCost: false, activateClass)`, so the free-play leaf fits
+those two; BT24_007.cs:47 uses `CanPlayAsNewPermanent(cardSource, true, activateClass, ..., fixedCost: cost - 2)`
+(a PAID play: it needs an affordability-aware leaf, not this one); BT21_090.cs / BT22_096.cs mix a digivolve
+route (`CanPlayCardTargetFrame`) with the play and need a full read.
+
+Kaguyamon (EX12-065) `[Once Per Turn]` **[checked 2026-11-21, review: no spec change needed]**: "You may play 1
+... from your trash" keeps its use when nothing is played (DCGO EX12_065.cs `AfterSelectCardCoroutine`: `if
+(cardSources.Count == 0) activateClass.RemoveUse();`). The bug scan suspected the use was lost on a pick that
+played nothing. That only happened when a PROHIBITED card was picked and the play fizzled, which the candidate
+filter above removes. A declined pick, and a pick with no candidate, already left the use intact (an optional
+clause whose first step is a declinable pick is declined by that PASS) -- probed against the unchanged spec, and
+now pinned by `ex12_065_declining_the_trash_pick_keeps_the_once_per_turn`,
+`ex12_065_no_playable_candidate_keeps_the_once_per_turn` and the control
+`ex12_065_playing_a_card_uses_the_once_per_turn`.
 
 **Authoring lints [dsl-lint `authoring/*`, `code/digimon-dsl/src/authoring_lint.rs`]** (errors):
 `unfiltered-battle-area-count` -- `card_count_in_zone` over `battle_area` must carry a `filter` (an unfiltered
