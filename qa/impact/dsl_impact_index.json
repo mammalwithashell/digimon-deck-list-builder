@@ -16208,6 +16208,7 @@
         "all_of",
         "any_of",
         "effect_deleted_any_own_digimon",
+        "effect_returned_any_card",
         "event_target_in_text_contains",
         "event_target_kind",
         "event_target_owner",
@@ -37510,6 +37511,7 @@
       "BT24-091",
       "BT26-016",
       "BT26-050",
+      "BT26-078",
       "BT26-092"
     ],
     "effect_suspended_any_opponent_digimon": [
