@@ -1,0 +1,78 @@
+# Official Bandai EN category 522040 and BT27-019.png, checked 2026-11-22.
+# Q7631: payment is placed on the bottom under the Tamer; Q7632: no reordering.
+# Q7633: only its player may inspect the face-down card; Q7634: trash face-up.
+# Q7633/7634 are broader engine contracts; this card suite verifies placement.
+# This is new authoring; no historical implementation was recovered.
+card: BT27-019
+name: Gaomon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Beast, DATA SQUAD]
+form: Rookie
+attribute: Data
+alt_paths:
+  # Printed blue Lv.2 circle, explicitly retained while canonical data is pending.
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+  - kind: digivolve
+    from: { name_is: Wanyamon }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: DATA SQUAD }
+    cost: 0
+
+effects:
+  - when: [on_move, on_play]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    condition:
+      all_of:
+        - count_gte:
+            filter: { of: you, zone: [hand] }
+            n: 1
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            name_is: Thomas H. Norstein
+    summary: "[When Moving][On Play] By placing 1 hand card face down under any of your [Thomas H. Norstein]s, both players draw 1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: payment
+          optional: true
+          filter: {}
+          prompt: "Place 1 card from your hand face down under Thomas H. Norstein?"
+      - if:
+          condition: { binding_present: payment }
+          then:
+            - select_own_permanent:
+                bind_as: thomas
+                optional: true
+                filter: { kind: tamer, name_is: Thomas H. Norstein }
+                prompt: "Choose your Thomas H. Norstein to receive the card"
+            - if:
+                condition: { binding_present: thomas }
+                then:
+                  - place_selected_card_under_tamer:
+                      card: payment
+                      tamer: thomas
+                      face_down: true
+                      bind_as: paid
+                  - if:
+                      condition: { binding_present: paid }
+                      then:
+                        - draw: { of: you, count: 1 }
+                        - draw: { of: opponent, count: 1 }
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] Both players draw 1"
+    process:
+      - draw: { of: you, count: 1 }
+      - draw: { of: opponent, count: 1 }

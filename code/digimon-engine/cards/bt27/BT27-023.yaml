@@ -1,0 +1,67 @@
+# Bandai English BT27 face, category 522040; Q7643 full-text matching,
+# Q7644 battle protection includes battles against security Digimon.
+card: BT27-023
+name: KausGammamon
+kind: digimon
+level: 4
+form: Champion
+color: [blue, black]
+cost: 4
+dp: 5000
+attribute: Data
+traits: [Dragonkin, VB]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { name_is: Gammamon }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: VB }
+    cost: 2
+
+effects:
+  - when: [on_move, on_play]
+    # Movement is a board-wide observer; printed When Moving is self-only.
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving] [On Play] 1 of your Digimon with [Gammamon] in its text or the [VB] trait can't be deleted in battle for the turn."
+    process:
+      - select_own_permanent:
+          bind_as: protected
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - in_text_contains: Gammamon
+                  - trait_has: VB
+          prompt: "Choose 1 of your Digimon with [Gammamon] in its text or the [VB] trait"
+      - add_modifier:
+          target: protected
+          modifier: CannotBeDestroyedByBattle
+          value: 1
+          expiry: end_of_turn
+
+  - when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking] [Once Per Turn] 1 of your opponent's level 5 or lower Digimon can't suspend until their turn ends."
+    process:
+      - select_opponent_permanent:
+          bind_as: locked
+          filter: { kind: digimon, level_lte: 5 }
+          prompt: "Choose 1 of your opponent's level 5 or lower Digimon"
+      - add_modifier:
+          target: locked
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Evade
+    summary: "Inherited <Evade> (When this Digimon would be deleted, by suspending it, it isn't deleted.)"

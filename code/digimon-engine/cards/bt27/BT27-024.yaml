@@ -1,0 +1,75 @@
+# Official English card image and category 522040, checked 2026-11-22:
+# https://world.digimoncard.com/images/cardlist/card/BT27-024.png
+# https://world.digimoncard.com/cards/index.php?category=522040&search=true
+# No card-specific Q&A is listed on the official entry.
+# Counts are snapshotted at resolution; both selections are mandatory.
+# host_kind_is excludes sources stashed under Tamers. A zero hand bucket or
+# empty source pool must still continue into the independent "Then" lock.
+card: BT27-024
+name: Gaogamon
+kind: digimon
+level: 4
+color: [blue]
+cost: 5
+dp: 5000
+traits: [Beast, DATA SQUAD]
+attribute: Data
+form: Champion
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: DATA SQUAD }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Jamming
+  - when: [on_play, when_digivolving]
+    summary: "Trash any 2 opposing Digimon sources per 4 opposing hand cards; then lock 1 sourceless opposing Digimon"
+    process:
+      - select_opponent_sources:
+          filter: { host_kind_is: digimon }
+          min:
+            formula:
+              multiply:
+                - 2
+                - floor_div:
+                    - base: 0
+                      per:
+                        card_count_in_zone: { of: opponent, zone: hand }
+                      delta: 1
+                    - 4
+          max:
+            formula:
+              multiply:
+                - 2
+                - floor_div:
+                    - base: 0
+                      per:
+                        card_count_in_zone: { of: opponent, zone: hand }
+                      delta: 1
+                    - 4
+          clamp_to_available: true
+          bind_as: picks
+          prompt: "Trash any 2 digivolution cards per 4 cards in your opponent's hand"
+          then:
+            - trash_selected_sources: { source_refs: picks }
+      - select_opponent_permanent:
+          bind_as: locked
+          filter: { kind: digimon, materials_count_lte: 0 }
+          prompt: "Choose 1 opposing Digimon with no digivolution cards that can't suspend until their turn ends"
+      - add_modifier:
+          target: locked
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking] [Once Per Turn] Both players draw 1"
+    process:
+      - draw: { of: you, count: 1 }
+      - draw: { of: opponent, count: 1 }
