@@ -62,7 +62,6 @@ dp: 12000
 traits: [Ancient Dragon]
 
 alt_paths:
-  # Standard digivolve: Lv.5 Blue / Cost 4 (per evo_costs in cards.json).
   # Printed split circle: Blue|Green Lv.5 / cost 4 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 5, color_is: blue }

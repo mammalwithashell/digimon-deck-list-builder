@@ -22,7 +22,9 @@
 //! `tests/support/printed_circles.rs`; each row was read off the card image.
 //! The production twin of this file is `tests/digivolve_color_requirements.rs`.
 
-use crate::printed_circles::{ALL_COLOURS, COLOURED_CIRCLES, RAINBOW_CIRCLES, RAINBOW_CIRCLE_SPECS};
+use crate::printed_circles::{
+    ALL_COLOURS, COLOURED_CIRCLES, RAINBOW_CIRCLES, RAINBOW_CIRCLE_SPECS, SPLIT_CIRCLES_COMPLETED,
+};
 
 use digimon_engine::action::space::encode_digivolve;
 use digimon_engine::build_action_mask;
@@ -163,12 +165,16 @@ fn every_implemented_rainbow_circle_card_is_swept() {
     }
 }
 
-/// Sweep every `stride`-th row of `COLOURED_CIRCLES` starting at `offset` (the
-/// table is split over three tests so they run in parallel).
-fn check_coloured_circles(offset: usize, stride: usize) {
+/// One row of a printed-circle table: `(card_id, level digivolved from, printed
+/// cost, printed circle colours)`.
+type CircleRow = (&'static str, u8, i16, &'static [CardColor]);
+
+/// Sweep every `stride`-th row of `table` starting at `offset` (a table is
+/// split over several tests so they run in parallel).
+fn check_coloured_circles(table: &[CircleRow], offset: usize, stride: usize) {
     let mut failures: Vec<String> = Vec::new();
-    for (id, level, cost, printed) in COLOURED_CIRCLES.iter().skip(offset).step_by(stride) {
-        let (mut r, slots) = staged(id, one_base_per_colour(*level));
+    for (id, level, cost, printed) in table.iter().skip(offset).step_by(stride) {
+        let (r, slots) = staged(id, one_base_per_colour(*level));
         let offered = mask_offers(&r, &slots);
         for (i, color) in ALL_COLOURS.iter().enumerate() {
             match (printed.contains(color), offered[i]) {
@@ -183,17 +189,16 @@ fn check_coloured_circles(offset: usize, stride: usize) {
                 _ => {}
             }
         }
-        // The action itself, once per printed colour: the first in the sweep
-        // runner, any further colour in a fresh one (the hand card is spent).
-        for (n, color) in printed.iter().enumerate() {
-            let got = if n == 0 {
-                let slot = slots[ALL_COLOURS.iter().position(|c| c == color).unwrap()];
-                digivolve_cost(&mut r, id, slot)
-            } else {
-                let (mut fresh, fresh_slots) =
-                    staged(id, vec![plain_base("PLAIN-BASE", *level, *color)]);
-                digivolve_cost(&mut fresh, id, fresh_slots[0])
-            };
+        // The action itself, once per printed colour, each in a fresh runner
+        // whose only Digimon is the base: the memory paid is then the
+        // digivolution cost alone. (In the seven-base sweep runner a
+        // [When Digivolving] that counts the other Digimon moves the memory
+        // too: Quartzmon (BT12-057) suspends them and gains 1 per 2, so its
+        // printed 6 read as 3.)
+        for color in printed.iter() {
+            let (mut fresh, fresh_slots) =
+                staged(id, vec![plain_base("PLAIN-BASE", *level, *color)]);
+            let got = digivolve_cost(&mut fresh, id, fresh_slots[0]);
             if got != Ok(*cost) {
                 failures.push(format!(
                     "{id} over a {color:?} Lv.{level}: expected the printed cost {cost}, got {got:?}"
@@ -211,17 +216,59 @@ fn check_coloured_circles(offset: usize, stride: usize) {
 
 #[test]
 fn colour_specific_specs_take_only_their_printed_colours_part_1() {
-    check_coloured_circles(0, 3);
+    check_coloured_circles(COLOURED_CIRCLES, 0, 3);
 }
 
 #[test]
 fn colour_specific_specs_take_only_their_printed_colours_part_2() {
-    check_coloured_circles(1, 3);
+    check_coloured_circles(COLOURED_CIRCLES, 1, 3);
 }
 
 #[test]
 fn colour_specific_specs_take_only_their_printed_colours_part_3() {
-    check_coloured_circles(2, 3);
+    check_coloured_circles(COLOURED_CIRCLES, 2, 3);
+}
+
+/// The 99 specs that authored only one colour of their printed split circle
+/// (`SPLIT_CIRCLES_COMPLETED`): over one plain base per colour, the fixture is
+/// offered the digivolve from exactly the printed colours, and the action from
+/// each printed colour pays the printed cost. A colour the card does not print
+/// is as much a fault as a missing one (it is an illegal digivolution in every
+/// test of that card).
+macro_rules! completed_split_circle_parts {
+    ($($name:ident => $offset:expr),+ $(,)?) => {$(
+        #[test]
+        fn $name() {
+            check_coloured_circles(SPLIT_CIRCLES_COMPLETED, $offset, 8);
+        }
+    )+};
+}
+
+completed_split_circle_parts! {
+    completed_split_circle_specs_take_exactly_their_printed_colours_part_1 => 0,
+    completed_split_circle_specs_take_exactly_their_printed_colours_part_2 => 1,
+    completed_split_circle_specs_take_exactly_their_printed_colours_part_3 => 2,
+    completed_split_circle_specs_take_exactly_their_printed_colours_part_4 => 3,
+    completed_split_circle_specs_take_exactly_their_printed_colours_part_5 => 4,
+    completed_split_circle_specs_take_exactly_their_printed_colours_part_6 => 5,
+    completed_split_circle_specs_take_exactly_their_printed_colours_part_7 => 6,
+    completed_split_circle_specs_take_exactly_their_printed_colours_part_8 => 7,
+}
+
+/// The table is the 99 specs of the 2026-11-22 completion and nothing has
+/// dropped out of the sweep: every row names a card in the embedded pack and
+/// a circle of two to six colours.
+#[test]
+fn completed_split_circle_table_is_whole() {
+    let registry = digimon_engine::dsl_registry::from_embedded_cached().expect("embedded pack");
+    assert_eq!(SPLIT_CIRCLES_COMPLETED.len(), 99);
+    for (id, _, _, printed) in SPLIT_CIRCLES_COMPLETED {
+        assert!(registry.lookup(id).is_some(), "{id} has no spec in the embedded pack");
+        assert!(
+            (2..7).contains(&printed.len()),
+            "{id}: a split circle has two to six colours, the row has {printed:?}"
+        );
+    }
 }
 
 /// The logged illegal digivolve, on the DSL fixtures: Dimetromon (P-189) onto
@@ -283,7 +330,8 @@ fn fixture_evo_costs_hold_every_printed_circle_colour() {
         want.sort_unstable();
         if got != want {
             failures.push(format!(
-                "{id}: the fixture's Lv.{level} / cost {cost} circle has colour codes {got:?},                  the printed circle has {want:?}"
+                "{id}: the fixture's Lv.{level} / cost {cost} circle has colour codes {got:?}, \
+                 the printed circle has {want:?}"
             ));
         }
     };
@@ -292,15 +340,13 @@ fn fixture_evo_costs_hold_every_printed_circle_colour() {
             check(id, *level, *cost, ALL_COLOURS.to_vec());
         }
     }
-    for (id, level, cost, printed) in COLOURED_CIRCLES {
+    for (id, level, cost, printed) in COLOURED_CIRCLES.iter().chain(SPLIT_CIRCLES_COMPLETED) {
         check(id, *level, *cost, printed.to_vec());
     }
     assert!(
         failures.is_empty(),
-        "{} fixture evo-cost fault(s):
-{}",
+        "{} fixture evo-cost fault(s):\n{}",
         failures.len(),
-        failures.join("
-")
+        failures.join("\n")
     );
 }

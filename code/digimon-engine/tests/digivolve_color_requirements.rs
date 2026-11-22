@@ -489,6 +489,73 @@ fn colour_specific_circles_take_only_their_printed_colours_at_the_printed_cost()
     });
 }
 
+/// Production twin of the 2026-11-22 spec completion: the 99 cards whose
+/// specs authored one colour of a printed split circle. A spec's `alt_paths`
+/// are live in production too (`collect_dsl_alt_digivolve_routes` adds them
+/// beside the `cards.json` circles, and equal routes collapse into one), so
+/// the claim "production already had every colour, the specs only caught up"
+/// is checked here, on the production card data: each card digivolves over
+/// exactly its printed colours, at the printed cost, with no cost choice.
+///
+/// Mastemon (EX6-029) is the one card that does not: `cards.json` lists a
+/// yellow|purple Lv.5 / cost 5 pair beside the printed cost 4, which the card
+/// face does not print, so production asks which cost to pay. That is a data
+/// error this test pins rather than hides (see `BASELINE_PHANTOM_ROWS` in
+/// `tests/alt_path_printed_cost_guard.rs`): when the rows are removed the
+/// assertion on the cost choice fails and the exception has to go.
+#[test]
+fn completed_split_circles_take_exactly_their_printed_colours_in_production() {
+    use printed_circles::SPLIT_CIRCLES_COMPLETED;
+    const COST_CHOICE_FROM_A_ROW_THE_CARD_DOES_NOT_PRINT: &[&str] = &["EX6-029"];
+    on_big_stack(|| {
+        let data = digimon_engine::deck_tools::full_card_data();
+        let mut failures: Vec<String> = Vec::new();
+        for (id, level, cost, printed) in SPLIT_CIRCLES_COMPLETED {
+            let known_bad = COST_CHOICE_FROM_A_ROW_THE_CARD_DOES_NOT_PRINT.contains(id);
+            for color in ALL_COLOURS {
+                if known_bad && printed.contains(&color) {
+                    // The action pauses on a two-option "which digivolution
+                    // cost do you pay?" choice (the printed 4 and the phantom
+                    // 5) instead of digivolving.
+                    let evolver = data.get(*id).expect("in production cards.json").clone();
+                    let (mut r, slot) =
+                        field_runner(evolver, plain_base("PLAIN-BASE", *level, color));
+                    let proceeded = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+                    let options = r
+                        .pending_selection_view()
+                        .and_then(|view| view.effect_choices.as_ref().map(|c| c.len()));
+                    assert!(
+                        !proceeded && options == Some(2),
+                        "{id} over a {color:?} Lv.{level}: expected the cost choice its \
+                         phantom cards.json row causes, got proceeded = {proceeded}, options = \
+                         {options:?}. If the row left cards.json, delete this exception."
+                    );
+                    continue;
+                }
+                let got = probe_field_digivolve(&data, id, *level, color);
+                if printed.contains(&color) {
+                    if got != Ok(*cost) {
+                        failures.push(format!(
+                            "{id} over a {color:?} Lv.{level}: expected the printed cost {cost}, got {got:?}"
+                        ));
+                    }
+                } else if let Ok(paid) = got {
+                    failures.push(format!(
+                        "{id} over a {color:?} Lv.{level}: the card prints only {printed:?} \
+                         circles, but the digivolve was legal for {paid}"
+                    ));
+                }
+            }
+        }
+        assert!(
+            failures.is_empty(),
+            "{} split-circle fault(s) in production:\n{}",
+            failures.len(),
+            failures.join("\n")
+        );
+    });
+}
+
 /// Stage production `base_id` in P0's breeding area with production
 /// `evolver_id` in hand; returns the runner in Main phase.
 fn production_breeding_runner(base_id: &str, evolver_id: &str) -> DebugRunner {

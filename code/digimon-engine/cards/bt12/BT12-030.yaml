@@ -1,6 +1,12 @@
 # BT12-030 Imperialdramon: Dragon Mode — Digimon, Lv.6, Blue/Green, DP 12000, Cost 12.
 # Traits: Ancient Dragon   Form: Mega   Attribute: Free
-# Evo (official Bandai DB): Blue Lv.5 / 4, Green Lv.5 / 4, Blue Lv.4 / 3, Green Lv.4 / 3
+# Evo (card image, all three printings; DCGO asset): Blue Lv.5 / 4, Green Lv.5 / 4.
+#   The official mirror and cards.json also list Blue Lv.4 / 3 and Green Lv.4 / 3.
+#   The card prints no Lv.4 circle: its only cost 3 is the name-gated line below.
+#   Those two rows are a data error (still live in cards.json, recorded in
+#   BASELINE_PHANTOM_ROWS, tests/alt_path_printed_cost_guard.rs) and are NOT
+#   authored here: they would let every test digivolve this Lv.6 from any blue
+#   or green Lv.4 for 3.
 # [Digivolve] 3 from [Paildramon] or [Dinobeemon]
 #
 # Printed card text (official, data/card_bundles/BT12-030.md):
@@ -40,12 +46,6 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: green }
     cost: 4
-  - kind: digivolve
-    from: { level_eq: 4, color_is: blue }
-    cost: 3
-  - kind: digivolve
-    from: { level_eq: 4, color_is: green }
-    cost: 3
 
   # ─── [Digivolve] [Paildramon] / [Dinobeemon]: Cost 3 ─────────────────────────
   # DCGO: TopCard.CardNames.Contains("Paildramon"|"Dinobeemon") (exact name,

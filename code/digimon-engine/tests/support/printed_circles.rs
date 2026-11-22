@@ -147,3 +147,120 @@ pub const SPLIT_CIRCLES_OUTSIDE_THE_MIRROR: &[(&str, u8, i16, &[CardColor])] = &
     ("EX12-077", 6, 5, &[Red, Purple]),          // Proximamon
     ("P-248", 2, 1, &[Blue, Red]),               // Veemon
 ];
+
+/// Split (two- or three-colour) standard circles whose specs authored only ONE
+/// of the printed colours until 2026-11-22:
+/// `(card_id, level digivolved from, printed cost, printed circle colours)`.
+///
+/// Production reads the circle from `cards.json`, which had every colour, so
+/// live games were right; a DebugRunner fixture builds its card data from the
+/// spec alone, so every test of these 99 cards ran against a card that could
+/// not digivolve from its second (or third) colour.
+///
+/// Each row was read off the card image (circle crop) on 2026-11-22 and agrees
+/// with the DCGO card asset's `EvoCosts` and with `cards.json`; where the card
+/// has an official bundle it agrees with that too, except Mastemon (EX6-029),
+/// whose mirror entry adds a Lv.5 / cost 5 pair the card does not print.
+/// `tests/cards_behavioral/printed_digivolve_circles.rs` sweeps the table:
+/// the fixture digivolves from exactly these colours, at this cost.
+pub const SPLIT_CIRCLES_COMPLETED: &[(&str, u8, i16, &[CardColor])] = &[
+    ("AD1-009", 5, 4, &[Red, Black]),         // BlitzGreymon
+    ("AD1-017", 5, 3, &[Yellow, Red]),        // Dynasmon
+    ("AD1-018", 5, 3, &[Purple, Black]),      // LordKnightmon
+    ("AD1-024", 5, 5, &[Blue, Green]),        // Imperialdramon: Fighter Mode
+    ("BT11-042", 4, 3, &[Yellow, Purple]),    // Angewomon
+    ("BT12-038", 3, 3, &[Red, Yellow]),       // GeoGreymon
+    ("BT12-043", 5, 4, &[Red, Yellow]),       // ShineGreymon
+    ("BT12-047", 2, 0, &[Green, Blue]),       // Wormmon
+    ("BT12-057", 6, 6, &[Green, White, Black]),// Quartzmon
+    ("BT13-019", 5, 5, &[Red, Black]),        // Gankoomon
+    ("BT13-112", 6, 4, &[Red, Blue]),         // Omnimon
+    ("BT16-027", 5, 5, &[Blue, Green]),       // Imperialdramon: Fighter Mode
+    ("BT16-028", 5, 4, &[Blue, Green]),       // Imperialdramon: Dragon Mode
+    ("BT16-077", 4, 4, &[Purple, Red]),       // Dinobeemon
+    ("BT16-101", 5, 3, &[Yellow, Green]),     // Rapidmon (X Antibody)
+    ("BT16-102", 5, 4, &[Yellow, Blue, Black]),// Magnamon (X Antibody)
+    ("BT17-019", 2, 0, &[Blue, Red]),         // Gabumon
+    ("BT17-078", 6, 5, &[Red, Blue]),         // Omnimon
+    ("BT18-019", 6, 4, &[Red, Black]),        // Millenniummon
+    ("BT19-008", 2, 1, &[Red, Yellow]),       // Shoutmon
+    ("BT19-033", 3, 3, &[Yellow, Green]),     // Dorulumon
+    ("BT19-047", 3, 3, &[Black, Green]),      // Ballistamon
+    ("BT19-057", 2, 1, &[Black, Purple]),     // Sparrowmon
+    ("BT19-061", 3, 3, &[Black, Purple]),     // RaptorSparrowmon
+    ("BT19-065", 5, 3, &[Black, Purple]),     // Machinedramon
+    ("BT19-072", 5, 3, &[Purple, Black]),     // LordKnightmon
+    ("BT19-073", 5, 4, &[Purple, Black]),     // LordKnightmon (X Antibody)
+    ("BT20-016", 4, 4, &[Red, Purple]),       // Paildramon
+    ("BT20-021", 6, 6, &[Red, Black]),        // Jesmon GX
+    ("BT20-036", 5, 4, &[Yellow, Black]),     // BanchoLeomon
+    ("BT20-055", 5, 3, &[Black, Blue]),       // Invisimon
+    ("BT20-059", 5, 5, &[Black, Red]),        // Gankoomon (X Antibody)
+    ("BT20-060", 6, 6, &[Black, Yellow, Red]),// Alphamon: Ouryuken
+    ("BT20-076", 5, 4, &[Purple, Red]),       // Imperialdramon: Dragon Mode
+    ("BT20-081", 6, 6, &[Purple, Yellow]),    // Fenriloogamon: Takemikazuchi
+    ("BT21-011", 2, 1, &[Red, Yellow]),       // Shoutmon
+    ("BT21-021", 4, 4, &[Red, Yellow]),       // OmniShoutmon
+    ("BT21-044", 4, 4, &[Yellow, Red]),       // RizeGreymon
+    ("BT22-008", 2, 0, &[Red, Blue]),         // Agumon
+    ("BT22-015", 6, 6, &[Red, Blue]),         // Omnimon
+    ("BT23-008", 3, 2, &[Red, Blue]),         // Greymon
+    ("BT23-018", 3, 2, &[Blue, Red]),         // Garurumon
+    ("BT23-037", 2, 1, &[Green, Yellow]),     // Tentomon
+    ("BT24-010", 3, 3, &[Black, Red]),        // Greymon
+    ("BT24-030", 5, 4, &[Blue, Black]),       // Neptunemon
+    ("BT24-035", 3, 2, &[Yellow, Red]),       // Gatomon
+    ("BT24-037", 4, 4, &[Yellow, Red]),       // Silphymon
+    ("BT24-046", 3, 3, &[Green, Blue]),       // Garurumon
+    ("BT24-051", 5, 4, &[Green, Blue]),       // Merukimon
+    ("BT25-011", 3, 3, &[Red, Yellow]),       // Aquilamon
+    ("BT25-015", 4, 4, &[Red, Green]),        // Garudamon
+    ("BT25-016", 4, 4, &[Red, Green]),        // GrapLeomon
+    ("BT25-017", 4, 3, &[Red, Blue]),         // Flaremon
+    ("BT25-018", 5, 4, &[Red, Yellow]),       // Apollomon
+    ("BT25-024", 3, 2, &[Blue, Red]),         // Lekismon
+    ("BT25-026", 4, 3, &[Blue, Red]),         // Crescemon
+    ("BT25-028", 5, 4, &[Blue, Purple]),      // Dianamon
+    ("BT25-037", 3, 3, &[Yellow, Black]),     // Pegasusmon
+    ("BT25-038", 4, 4, &[Yellow, Black]),     // Shakkoumon
+    ("BT25-054", 4, 4, &[Green, Black]),      // GreatGrizzlymon
+    ("BT25-067", 3, 3, &[Black, Purple]),     // Sealsdramon
+    ("EX3-008", 3, 2, &[Red, Purple]),        // Flamedramon
+    ("EX4-060", 6, 6, &[Blue, Red]),          // Omnimon Alter-S
+    ("EX4-074", 6, 5, &[Purple, Yellow]),     // ShineGreymon: Ruin Mode
+    ("EX5-015", 2, 1, &[Blue, Purple]),       // Gabumon (X Antibody)
+    ("EX6-011", 6, 5, &[Red, Black]),         // RagnaLoardmon
+    ("EX6-029", 5, 4, &[Yellow, Purple]),     // Mastemon
+    ("EX7-049", 5, 5, &[Black, Red]),         // Metallicdramon
+    ("EX8-045", 5, 4, &[Purple, Green]),      // Callismon
+    ("EX8-073", 5, 4, &[Red, Blue, Yellow]),  // Gallantmon (X Antibody)
+    ("EX9-012", 4, 4, &[Red, Black]),         // MetalGreymon: Alterous Mode
+    ("EX9-013", 5, 4, &[Red, Black]),         // BlitzGreymon
+    ("EX9-021", 6, 5, &[Blue, Red]),          // Omnimon Alter-S
+    ("EX9-024", 2, 1, &[Yellow, Purple]),     // Hanimon
+    ("EX9-027", 3, 3, &[Yellow, Purple]),     // Kokeshimon
+    ("EX9-032", 4, 4, &[Yellow, Purple]),     // Karakurumon
+    ("EX9-033", 5, 4, &[Yellow, Purple]),     // Kaguyamon
+    ("EX10-010", 5, 4, &[Red, Black]),        // BlackWarGreymon
+    ("EX10-031", 4, 4, &[Black, Purple]),     // DarkKnightmon
+    ("EX10-059", 6, 6, &[Purple, Black]),     // DarknessBagramon
+    ("EX11-020", 2, 1, &[Yellow, Purple]),    // Hanimon
+    ("EX11-021", 3, 3, &[Yellow, Purple]),    // Kokeshimon
+    ("EX11-023", 5, 4, &[Yellow, Purple]),    // Kaguyamon
+    ("EX12-024", 3, 3, &[Blue, Purple]),      // Garurumon
+    ("EX12-032", 4, 4, &[Blue, Purple]),      // WereGarurumon
+    ("EX12-035", 5, 4, &[Blue, Purple]),      // MetalGarurumon
+    ("EX12-038", 2, 0, &[Yellow, Black]),     // Kokuwamon
+    ("EX12-042", 3, 3, &[Yellow, Green]),     // Gatomon
+    ("EX12-060", 6, 5, &[Black, Purple, Red]),// Chaosdramon
+    ("P-101", 3, 3, &[Purple, Black]),        // Raremon
+    ("P-117", 2, 0, &[Blue, Green]),          // Veemon
+    ("P-186", 5, 4, &[Red, Yellow]),          // Gallantmon
+    ("P-248", 2, 1, &[Blue, Red]),            // Veemon
+    ("ST9-05", 4, 4, &[Blue, Green]),         // Paildramon
+    ("ST9-06", 5, 4, &[Blue, Green]),         // Imperialdramon Dragon Mode
+    ("ST19-04", 2, 1, &[Yellow, Black]),      // PawnChessmon
+    ("ST19-05", 2, 1, &[Black, Yellow]),      // PawnChessmon
+    ("ST20-10", 2, 0, &[Black, Red]),         // Agumon
+    ("ST20-11", 5, 4, &[Black, Red]),         // WarGreymon
+];

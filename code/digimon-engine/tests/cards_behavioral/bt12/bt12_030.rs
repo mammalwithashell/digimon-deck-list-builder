@@ -1,9 +1,12 @@
 //! BT12-030 Imperialdramon: Dragon Mode — Digimon, Lv.6, Blue/Green, DP 12000,
 //! Cost 12. Traits: Ancient Dragon. Form: Mega. Attribute: Free.
 //!
-//! # Card text (official Bandai DB bundle `data/card_bundles/BT12-030.md`)
+//! # Card text (card image; effect text per `data/card_bundles/BT12-030.md`)
 //!
-//! Digivolve: Blue Lv.5 / 4, Green Lv.5 / 4, Blue Lv.4 / 3, Green Lv.4 / 3.
+//! Digivolve: Blue Lv.5 / 4, Green Lv.5 / 4 (the card face and the DCGO asset;
+//! the bundle also lists Blue Lv.4 / 3 and Green Lv.4 / 3, which the card does
+//! not print — see `BASELINE_PHANTOM_ROWS` in
+//! `tests/alt_path_printed_cost_guard.rs`).
 //! [Digivolve] 3 from [Paildramon] or [Dinobeemon]
 //!
 //! [When Digivolving] If this Digimon has a blue digivolution card, unsuspend
@@ -225,7 +228,7 @@ fn bt12_030_metadata_matches_print() {
 }
 
 #[test]
-fn bt12_030_alt_paths_four_circles_plus_name_route() {
+fn bt12_030_alt_paths_two_circles_plus_name_route() {
     let r = builder().start();
     let card = r.compiled_card(CARD_ID).expect("compiled");
     let digis: Vec<_> = card
@@ -233,7 +236,11 @@ fn bt12_030_alt_paths_four_circles_plus_name_route() {
         .iter()
         .filter(|p| p.kind == CompiledAltPathKind::Digivolve)
         .collect();
-    assert_eq!(digis.len(), 5);
+    assert_eq!(
+        digis.len(),
+        3,
+        "blue Lv.5 / 4, green Lv.5 / 4 and the [Paildramon]/[Dinobeemon] name route"
+    );
     let lv5_4 = digis
         .iter()
         .filter(|p| {
@@ -241,15 +248,43 @@ fn bt12_030_alt_paths_four_circles_plus_name_route() {
                 && p.from.as_ref().is_some_and(|f| f.level_eq == Some(5))
         })
         .count();
-    let lv4_3 = digis
+    let lv4 = digis
         .iter()
-        .filter(|p| {
-            p.cost == Some(CompiledCost::Literal(3))
-                && p.from.as_ref().is_some_and(|f| f.level_eq == Some(4))
-        })
+        .filter(|p| p.from.as_ref().is_some_and(|f| f.level_eq == Some(4)))
         .count();
     assert_eq!(lv5_4, 2, "blue/green Lv.5 cost 4");
-    assert_eq!(lv4_3, 2, "blue/green Lv.4 cost 3");
+    assert_eq!(
+        lv4, 0,
+        "the card prints no Lv.4 circle: its cost 3 is the name-gated route"
+    );
+}
+
+/// The card face (all three printings) and the DCGO asset print two circles,
+/// blue Lv.5 / 4 and green Lv.5 / 4; the only cost 3 is "Digivolve: 3 from
+/// [Paildramon] or [Dinobeemon]". The official mirror turned that line into
+/// blue and green Lv.4 / 3 circles, and the spec authored them until
+/// 2026-11-22, so the Lv.6 digivolved from any blue or green Lv.4 for 3.
+/// CR 4.3 §2-3-5-1 (a digivolution requirement is the colour and level of the
+/// card digivolved from), §8-1-3-1.
+#[test]
+fn bt12_030_does_not_digivolve_from_a_blue_or_green_lv4() {
+    for base in ["BLUE-SRC", "GREEN-SRC"] {
+        let mut r = start(&[CARD_ID]);
+        let target = r.place_on_field(0, base, Some(0));
+        let mask = digimon_engine::build_action_mask(&r.game, 0);
+        let action = digimon_engine::action::space::encode_digivolve(0, target.index as u16);
+        assert_eq!(
+            mask[action as usize], 0.0,
+            "the mask must not offer Imperialdramon: Dragon Mode over the Lv.4 {base}"
+        );
+        let memory_before = r.game.memory;
+        assert!(
+            !digivolve(&mut r, CARD_ID, target),
+            "a Lv.5 circle does not accept the Lv.4 {base}"
+        );
+        assert_eq!(r.game.memory, memory_before, "a rejected digivolve pays nothing");
+        assert_eq!(field_ids(&r, 0), vec![base.to_string()]);
+    }
 }
 
 #[test]
