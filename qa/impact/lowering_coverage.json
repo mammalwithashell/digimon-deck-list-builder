@@ -277,7 +277,7 @@
   },
   "AD1-009": {
    "behaviourally_covered": true,
-   "clause_count": 8,
+   "clause_count": 9,
    "constructs": [
     "verb:de_digivolve",
     "verb:effect_initiated_dna_digivolve",
@@ -569,7 +569,7 @@
   },
   "AD1-017": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:add_modifier",
@@ -607,7 +607,7 @@
   },
   "AD1-018": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:de_digivolve",
     "verb:delete_permanent",
@@ -824,7 +824,7 @@
   },
   "AD1-024": {
    "behaviourally_covered": true,
-   "clause_count": 7,
+   "clause_count": 8,
    "constructs": [
     "verb:if",
     "verb:refund_opt",
@@ -1447,7 +1447,7 @@
   },
   "BT11-042": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_to_hand_from_security",
     "verb:gain_memory",
@@ -2080,7 +2080,7 @@
   },
   "BT12-038": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:play_from_hand_free",
@@ -2111,7 +2111,7 @@
   },
   "BT12-043": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:add_player_modifier",
@@ -2138,7 +2138,7 @@
   },
   "BT12-047": {
    "behaviourally_covered": true,
-   "clause_count": 3,
+   "clause_count": 4,
    "constructs": [
     "verb:add_to_hand_from_reveal",
     "verb:may_dna_digivolve_now",
@@ -2191,7 +2191,7 @@
   },
   "BT12-057": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 7,
    "constructs": [
     "verb:for_each",
     "verb:gain_memory",
@@ -2453,7 +2453,7 @@
   },
   "BT13-019": {
    "behaviourally_covered": true,
-   "clause_count": 3,
+   "clause_count": 4,
    "constructs": [
     "verb:play_union_bound_free",
     "verb:select_union_zone",
@@ -3169,7 +3169,7 @@
   },
   "BT13-112": {
    "behaviourally_covered": true,
-   "clause_count": 2,
+   "clause_count": 3,
    "constructs": [
     "verb:delete_permanent",
     "verb:for_each",
@@ -3765,7 +3765,7 @@
   },
   "BT16-027": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:if",
     "verb:return_to_deck",
@@ -3795,7 +3795,7 @@
   },
   "BT16-028": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_modifier",
     "verb:effect_initiated_digivolve",
@@ -4006,7 +4006,7 @@
   },
   "BT16-077": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:grant_keyword",
     "verb:if",
@@ -4143,7 +4143,7 @@
   },
   "BT16-101": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:for_each",
     "verb:gain_memory",
@@ -4179,7 +4179,7 @@
   },
   "BT16-102": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 8,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:grant_effect_immunity",
@@ -4377,7 +4377,7 @@
   },
   "BT17-019": {
    "behaviourally_covered": true,
-   "clause_count": 3,
+   "clause_count": 4,
    "constructs": [
     "verb:draw",
     "verb:may_dna_digivolve_now",
@@ -4614,7 +4614,7 @@
   },
   "BT17-078": {
    "behaviourally_covered": true,
-   "clause_count": 7,
+   "clause_count": 8,
    "constructs": [
     "verb:bind_permanent_property",
     "verb:delete_permanent",
@@ -4975,7 +4975,7 @@
   },
   "BT18-019": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:delete_permanent",
     "verb:gain_memory",
@@ -5750,7 +5750,7 @@
   },
   "BT19-008": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:choose_from_reveal",
     "verb:effect_initiated_digivolve",
@@ -5990,7 +5990,7 @@
   },
   "BT19-033": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:effect_initiated_digivolve",
     "verb:select_under_tamer_sources",
@@ -6143,7 +6143,7 @@
   },
   "BT19-047": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:effect_initiated_digivolve",
     "verb:select_under_tamer_sources",
@@ -6199,7 +6199,7 @@
   },
   "BT19-057": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:effect_initiated_digivolve",
     "verb:select_under_tamer_sources",
@@ -6223,7 +6223,7 @@
   },
   "BT19-061": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_to_hand_from_reveal",
     "verb:if",
@@ -6257,7 +6257,7 @@
   },
   "BT19-065": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:delete_permanent",
     "verb:play_from_trash_free",
@@ -6370,7 +6370,7 @@
   },
   "BT19-072": {
    "behaviourally_covered": true,
-   "clause_count": 3,
+   "clause_count": 4,
    "constructs": [
     "verb:play_from_trash_free",
     "verb:redirect_attack_target",
@@ -6398,7 +6398,7 @@
   },
   "BT19-073": {
    "behaviourally_covered": false,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:add_modifier",
     "verb:de_digivolve",
@@ -6911,7 +6911,7 @@
   },
   "BT20-016": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:effect_initiated_dna_digivolve",
@@ -7056,7 +7056,7 @@
   },
   "BT20-021": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:delete_permanent",
     "verb:if",
@@ -7241,7 +7241,7 @@
   },
   "BT20-036": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:de_digivolve",
@@ -7566,7 +7566,7 @@
   },
   "BT20-055": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:de_digivolve",
     "verb:delete_permanent",
@@ -7645,7 +7645,7 @@
   },
   "BT20-059": {
    "behaviourally_covered": true,
-   "clause_count": 7,
+   "clause_count": 8,
    "constructs": [
     "verb:de_digivolve",
     "verb:grant_effect_immunity",
@@ -7679,7 +7679,7 @@
   },
   "BT20-060": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 8,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:gain_memory",
@@ -7707,7 +7707,7 @@
   },
   "BT20-076": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "predicate:color_is",
     "predicate:level_eq",
@@ -7722,7 +7722,7 @@
   },
   "BT20-081": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "predicate:color_is",
     "predicate:level_eq",
@@ -8174,7 +8174,7 @@
   },
   "BT21-011": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "predicate:all_of",
     "predicate:any_of",
@@ -8305,7 +8305,7 @@
   },
   "BT21-021": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:delete_permanent",
     "verb:if",
@@ -8660,7 +8660,7 @@
   },
   "BT21-044": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_modifier",
     "verb:grant_keyword",
@@ -9925,7 +9925,7 @@
   },
   "BT22-008": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_to_hand_from_trash",
     "verb:may_dna_digivolve_now",
@@ -10047,7 +10047,7 @@
   },
   "BT22-015": {
    "behaviourally_covered": true,
-   "clause_count": 8,
+   "clause_count": 9,
    "constructs": [
     "verb:delete_permanent",
     "verb:may_attack_now",
@@ -11164,7 +11164,7 @@
   },
   "BT23-008": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:place_top_source_as_bottom",
     "verb:play_from_hand",
@@ -11262,7 +11262,7 @@
   },
   "BT23-018": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:place_top_source_as_bottom",
     "verb:play_from_hand",
@@ -11414,7 +11414,7 @@
   },
   "BT23-037": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_modifier",
     "verb:play_from_hand_free",
@@ -12071,7 +12071,7 @@
   },
   "BT24-010": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:de_digivolve",
     "verb:select_opponent_permanent",
@@ -12516,7 +12516,7 @@
   },
   "BT24-030": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:cancel_replacement",
     "verb:for_each",
@@ -12639,7 +12639,7 @@
   },
   "BT24-035": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:effect_initiated_dna_digivolve",
@@ -12699,7 +12699,7 @@
   },
   "BT24-037": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:grant_keyword",
@@ -12899,7 +12899,7 @@
   },
   "BT24-046": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:select_opponent_permanent",
     "verb:suspend",
@@ -12955,7 +12955,7 @@
   },
   "BT24-051": {
    "behaviourally_covered": true,
-   "clause_count": 7,
+   "clause_count": 8,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:may_attack_now",
@@ -14215,7 +14215,7 @@
   },
   "BT25-011": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:if",
     "verb:may_dna_digivolve_now",
@@ -14338,7 +14338,7 @@
   },
   "BT25-015": {
    "behaviourally_covered": true,
-   "clause_count": 7,
+   "clause_count": 8,
    "constructs": [
     "verb:delete_permanent",
     "verb:select_opponent_permanent",
@@ -14366,7 +14366,7 @@
   },
   "BT25-016": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:effect_initiated_digivolve",
@@ -14403,7 +14403,7 @@
   },
   "BT25-017": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:delete_permanent",
     "verb:effect_initiated_digivolve",
@@ -14439,7 +14439,7 @@
   },
   "BT25-018": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:delete_permanent",
@@ -14616,7 +14616,7 @@
   },
   "BT25-024": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:draw",
     "verb:effect_initiated_digivolve",
@@ -14686,7 +14686,7 @@
   },
   "BT25-026": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_modifier",
     "verb:effect_initiated_digivolve",
@@ -14751,7 +14751,7 @@
   },
   "BT25-028": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:add_modifier",
     "verb:delete_permanent",
@@ -15021,7 +15021,7 @@
   },
   "BT25-037": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_top_security_to_hand",
     "verb:if",
@@ -15052,7 +15052,7 @@
   },
   "BT25-038": {
    "behaviourally_covered": true,
-   "clause_count": 7,
+   "clause_count": 8,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:de_digivolve",
@@ -15575,7 +15575,7 @@
   },
   "BT25-054": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:effect_initiated_digivolve",
     "verb:force_attack",
@@ -15957,7 +15957,7 @@
   },
   "BT25-067": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:effect_initiated_digivolve",
     "verb:select_hand",
@@ -21945,7 +21945,7 @@
   },
   "EX10-010": {
    "behaviourally_covered": true,
-   "clause_count": 8,
+   "clause_count": 9,
    "constructs": [
     "verb:delete_permanent",
     "verb:select_opponent_permanent",
@@ -22070,7 +22070,7 @@
   },
   "EX10-031": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:add_modifier",
@@ -22471,7 +22471,7 @@
   },
   "EX10-059": {
    "behaviourally_covered": true,
-   "clause_count": 2,
+   "clause_count": 3,
    "constructs": [
     "predicate:color_is",
     "predicate:level_eq",
@@ -23048,7 +23048,7 @@
   },
   "EX11-020": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:delete_permanent",
     "verb:end_attack",
@@ -23079,7 +23079,7 @@
   },
   "EX11-021": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:delete_permanent",
     "verb:end_attack",
@@ -23155,7 +23155,7 @@
   },
   "EX11-023": {
    "behaviourally_covered": false,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:delete_permanent",
     "verb:play_from_trash_free",
@@ -24440,7 +24440,7 @@
   },
   "EX12-024": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:draw",
     "verb:return_to_hand",
@@ -24604,7 +24604,7 @@
   },
   "EX12-032": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:add_modifier",
     "verb:effect_initiated_digivolve",
@@ -24684,7 +24684,7 @@
   },
   "EX12-035": {
    "behaviourally_covered": true,
-   "clause_count": 8,
+   "clause_count": 9,
    "constructs": [
     "verb:add_modifier",
     "verb:play_from_materials",
@@ -24811,7 +24811,7 @@
   },
   "EX12-038": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:draw",
@@ -24923,7 +24923,7 @@
   },
   "EX12-042": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:add_top_security_to_hand",
     "verb:recover",
@@ -25379,7 +25379,7 @@
   },
   "EX12-060": {
    "behaviourally_covered": true,
-   "clause_count": 9,
+   "clause_count": 10,
    "constructs": [
     "verb:de_digivolve",
     "verb:delete_permanent",
@@ -28640,7 +28640,7 @@
   },
   "EX3-008": {
    "behaviourally_covered": true,
-   "clause_count": 3,
+   "clause_count": 4,
    "constructs": [
     "verb:effect_initiated_digivolve",
     "verb:effect_initiated_dna_digivolve",
@@ -29178,7 +29178,7 @@
   },
   "EX4-060": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:delete_permanent",
     "verb:place_on_security",
@@ -29307,7 +29307,7 @@
   },
   "EX4-074": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_modifier",
     "verb:delete_permanent",
@@ -29336,7 +29336,7 @@
   },
   "EX5-015": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_to_hand_from_reveal",
     "verb:cancel_replacement",
@@ -29617,7 +29617,7 @@
   },
   "EX6-011": {
    "behaviourally_covered": true,
-   "clause_count": 7,
+   "clause_count": 8,
    "constructs": [
     "verb:de_digivolve",
     "verb:delete_permanent",
@@ -29649,7 +29649,7 @@
   },
   "EX6-029": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "predicate:color_is",
     "predicate:level_eq",
@@ -30377,7 +30377,7 @@
   },
   "EX7-049": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_modifier",
     "verb:de_digivolve",
@@ -30948,7 +30948,7 @@
   },
   "EX8-045": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:if",
     "verb:return_to_deck",
@@ -31428,7 +31428,7 @@
   },
   "EX8-073": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 7,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:delete_permanent",
@@ -31509,7 +31509,7 @@
   },
   "EX9-012": {
    "behaviourally_covered": true,
-   "clause_count": 8,
+   "clause_count": 9,
    "constructs": [
     "verb:delete_permanent",
     "verb:effect_initiated_digivolve",
@@ -31542,7 +31542,7 @@
   },
   "EX9-013": {
    "behaviourally_covered": true,
-   "clause_count": 8,
+   "clause_count": 9,
    "constructs": [
     "verb:de_digivolve",
     "verb:effect_initiated_dna_digivolve",
@@ -31616,7 +31616,7 @@
   },
   "EX9-021": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:delete_permanent",
     "verb:for_each",
@@ -31653,7 +31653,7 @@
   },
   "EX9-024": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_to_hand_from_trash",
     "verb:delete_permanent",
@@ -31687,7 +31687,7 @@
   },
   "EX9-027": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:delete_permanent",
@@ -31720,7 +31720,7 @@
   },
   "EX9-032": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:cancel_replacement",
     "verb:delete_permanent",
@@ -31757,7 +31757,7 @@
   },
   "EX9-033": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:delete_permanent",
     "verb:play_from_trash_free",
@@ -32837,7 +32837,7 @@
   },
   "P-101": {
    "behaviourally_covered": true,
-   "clause_count": 3,
+   "clause_count": 4,
    "constructs": [
     "verb:delete_permanent",
     "verb:draw",
@@ -33042,7 +33042,7 @@
   },
   "P-117": {
    "behaviourally_covered": true,
-   "clause_count": 3,
+   "clause_count": 4,
    "constructs": [
     "verb:draw",
     "predicate:all_of",
@@ -33689,7 +33689,7 @@
   },
   "P-186": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 7,
    "constructs": [
     "verb:delete_permanent",
     "verb:if",
@@ -34716,7 +34716,7 @@
   },
   "P-248": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:draw",
     "verb:gain_memory",
@@ -35512,7 +35512,7 @@
   },
   "ST19-04": {
    "behaviourally_covered": true,
-   "clause_count": 3,
+   "clause_count": 4,
    "constructs": [
     "verb:draw",
     "verb:select_hand",
@@ -35535,7 +35535,7 @@
   },
   "ST19-05": {
    "behaviourally_covered": true,
-   "clause_count": 3,
+   "clause_count": 4,
    "constructs": [
     "verb:draw",
     "verb:select_hand",
@@ -36275,7 +36275,7 @@
   },
   "ST20-10": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "predicate:all_of",
     "predicate:any_of",
@@ -36301,7 +36301,7 @@
   },
   "ST20-11": {
    "behaviourally_covered": true,
-   "clause_count": 5,
+   "clause_count": 6,
    "constructs": [
     "verb:delete_permanent",
     "verb:grant_effect_immunity",
@@ -39001,7 +39001,7 @@
   },
   "ST9-05": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:return_to_deck",
     "verb:select_opponent_permanent",
@@ -39023,7 +39023,7 @@
   },
   "ST9-06": {
    "behaviourally_covered": true,
-   "clause_count": 2,
+   "clause_count": 3,
    "constructs": [
     "verb:play_selected_sources_free",
     "verb:select_own_sources",
