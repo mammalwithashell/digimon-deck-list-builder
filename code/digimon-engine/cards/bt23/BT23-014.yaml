@@ -26,6 +26,7 @@ color: [red]
 cost: 11
 dp: 11000
 traits: ["Holy Warrior", "Royal Knight", CS]
+attribute: Virus  # card face: Mega | Virus (cards.json said Data)
 
 alt_paths:
   # Printed circle: Red Lv.5 / cost 3. The colour is part of the

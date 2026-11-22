@@ -375,7 +375,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[All Turns] When your Digimon or Tamers are played or digivolve, if any of them have [Greymon] or [Matt Ishida] in their names, this Digimon may digivolve into a Digimon card with [Garurumon] in its name in the hand without paying the cost.",
     "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
@@ -33180,7 +33180,7 @@
     ],
     "type_eng": [
       "Archangel",
-      "X Antibody}}"
+      "X Antibody"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -86656,7 +86656,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Virus"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] Until your opponent's turn ends, their effects can't play Digimon or Tamers from the trash.\r\n[On Play] [When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.",
     "inherited_effect_description_eng": "",
@@ -88520,7 +88520,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] When any of your Digimon or Tamers would leave the battle area by your opponent's effects, by suspending this Digimon, 1 of those Digimon or Tamers doesn't leave.\r\n[All Turns] [Once Per Turn] When this Digimon suspends, delete all of your opponent's Digimon with the lowest play cost.",
     "inherited_effect_description_eng": "",
@@ -89547,7 +89547,8 @@
       4
     ],
     "type_eng": [
-      "Hudie/CS"
+      "Hudie",
+      "CS"
     ],
     "form_eng": [],
     "attribute_eng": [],
@@ -92746,7 +92747,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Ultimate"
+      "Virus"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] By trashing 1 card in your hand, until your opponent's turn ends, 1 of your Digimon with the [Demon], [Shaman] or [Titan] trait gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.).\r\n[On Deletion] You may play 1 level 4 or lower [Demon] or [Titan] trait Digimon card from your trash without paying the cost.",
     "inherited_effect_description_eng": "[Your Turn] While this Digimon is [Titamon] or has the [Titan] trait, it gains ＜Security A. +1}＞ (This Digimon checks 1} additional security cards.).",
@@ -92864,7 +92865,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Ultimate"
+      "Data"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] By trashing 1 card in your hand, delete 1 each of your opponent's level 3 and level 4 Digimon.",
     "inherited_effect_description_eng": "[Your Turn] While this Digimon is [Titamon] or has the [Titan] trait, it gains ＜Security A. +1}＞ (This Digimon checks 1} additional security cards.).",
@@ -144103,7 +144104,7 @@
       "Mega"
     ],
     "attribute_eng": [
-      "Free}}"
+      "Free"
     ],
     "effect_description_eng": "[When Digivolving] You may play 1 level 4 or lower blue Digimon card and 1 level 4 or lower green Digimon card from this Digimon's digivolution cards without paying their memory costs.",
     "inherited_effect_description_eng": "",
@@ -162221,7 +162222,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "[When Digivolving] 1 of your opponent's Digimon gets -8000 DP until their turn ends. Then, if they have 5 or more memory, gain 2 memory.\r\n[Your Turn] [Once Per Turn] When any of your [Chronicle] trait Digimon or Tamers are played, 1 of your Digimon may attack. Then, you may activate 1 of this Digimon's [When Digivolving] effects.\r\n[End of Your Turn] [Once Per Turn] You may play 1 [Chronicle] trait card without [Alphamon] in its name from your hand with the cost reduced by 6. It gains ＜Rush＞ for the turn. (This Digimon can attack the turn it was played.)",
     "inherited_effect_description_eng": "",

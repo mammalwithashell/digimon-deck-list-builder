@@ -195,6 +195,9 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "attribute_eng": [
+      "Free"
     ]
   },
   "BT12-028": {
@@ -2771,6 +2774,9 @@
         "level": 3,
         "memory_cost": 2
       }
+    ],
+    "attribute_eng": [
+      "Vaccine"
     ]
   },
   "BT12-021": {
@@ -18380,7 +18386,10 @@
       }
     ],
     "inherited_effect_description_eng": "",
-    "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "attribute_eng": [
+      "Vaccine"
+    ]
   },
   "EX13-061": {
     "inherited_effect_description_eng": "",
@@ -19469,7 +19478,7 @@
       1
     ]
   },
-  "_note_trait_line_face_check_2026_11": "Saneiketsu Megas Nezhamon (EX12-019), Erlangmon (EX12-034) and Takutoumon (EX12-057) print .../Shambala/SW on the card face (DCGO_Application/Assets/Textures/Card/<ID>.webp, read 2026-11-22); the digimoncard.io API drops [SW], so Saneiketsu Invitation (EX12-071) <Use Req. ([SW] trait)> and every [SW] filter ignored them. Erlangmon prints Vaccine (the API said Data). The official mirror has no page for these cards.",
+  "_note_trait_line_face_check_2026_11": "Trait-line corrections read off each card face (DCGO_Application/Assets/Textures/Card/<ID>.webp) on 2026-11-22; the digimoncard.io API drops or garbles them. Saneiketsu Megas Nezhamon (EX12-019), Erlangmon (EX12-034) and Takutoumon (EX12-057) print .../Shambala/SW: [SW] was missing, so Saneiketsu Invitation (EX12-071) <Use Req. ([SW] trait)> and every [SW] filter ignored them; Erlangmon prints Vaccine (the API said Data). Attributes the API got wrong, all agreeing with the official mirror: Garurumon AD1-010 Vaccine, Gallantmon BT23-014 Virus, Craniamon BT23-058 Vaccine, SkullGreymon BT24-072 Virus and SkullBaluchimon BT24-075 Data (both filed as 'Ultimate'), Alphamon EX13-060 Vaccine. Ingest residue: Imperialdramon Dragon Mode ST9-06 'Free}}' -> Free, Angewomon (X Antibody) BT9-040 'X Antibody}}' -> X Antibody; Keisuke Amasawa BT23-090 'Hudie/CS' is two traits. Guarded by code/tests/test_card_trait_lines.py.",
   "EX12-019": {
     "type_eng": [
       "Cyborg",
@@ -19489,6 +19498,38 @@
     ],
     "attribute_eng": [
       "Vaccine"
+    ]
+  },
+  "BT23-014": {
+    "attribute_eng": [
+      "Virus"
+    ]
+  },
+  "BT23-058": {
+    "attribute_eng": [
+      "Vaccine"
+    ]
+  },
+  "BT24-072": {
+    "attribute_eng": [
+      "Virus"
+    ]
+  },
+  "BT24-075": {
+    "attribute_eng": [
+      "Data"
+    ]
+  },
+  "BT9-040": {
+    "type_eng": [
+      "Archangel",
+      "X Antibody"
+    ]
+  },
+  "BT23-090": {
+    "type_eng": [
+      "Hudie",
+      "CS"
     ]
   }
 }
