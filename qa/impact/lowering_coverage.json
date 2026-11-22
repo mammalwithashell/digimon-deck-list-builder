@@ -1988,7 +1988,7 @@
   },
   "BT12-030": {
    "behaviourally_covered": true,
-   "clause_count": 7,
+   "clause_count": 5,
    "constructs": [
     "verb:effect_initiated_digivolve",
     "verb:if",
@@ -30849,7 +30849,7 @@
   },
   "EX8-028": {
    "behaviourally_covered": true,
-   "clause_count": 8,
+   "clause_count": 7,
    "constructs": [
     "verb:if",
     "verb:place_on_security",
