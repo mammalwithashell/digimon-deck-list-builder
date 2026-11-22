@@ -866,3 +866,69 @@ fn ex9_012_inherited_dp_inactive_on_opponents_turn() {
         contribution
     );
 }
+
+// --- "[Digivolve] [MetalGreymon]: Cost 1" is an exact-name route --------------
+//
+// Printed box: "[Digivolve] [MetalGreymon]: Cost 1" (brackets only) beside
+// "Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3". CR 4.3 2-3-1-2 /
+// 2-3-5-3: brackets alone = a card NAMED [MetalGreymon]; DCGO EX9_012.cs
+// `EqualsCardName("MetalGreymon")`. Sibling of the WereGarurumon: Sagittarius
+// Mode (EX9-019) regression (digivolving onto another copy of itself for 1).
+
+fn ex9_012_over(base: Option<CardData>, base_id: &str) -> (DebugRunner, usize) {
+    let mut b = DebugRunner::builder()
+        .dsl_card("EX9-012")
+        .expect("EX9-012 found in embedded DSL pack");
+    if let Some(card) = base {
+        b = b.add_card(card);
+    }
+    let mut r = b.hand(0, &["EX9-012"]).memory(10).start();
+    r.game.turn_count = 1;
+    r.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    let slot = r.place_on_field(0, base_id, Some(0)).index as usize;
+    (r, slot)
+}
+
+fn ex9_012_digivolve_offered(r: &DebugRunner, slot: usize) -> bool {
+    use digimon_engine::action::mask::build_action_mask;
+    use digimon_engine::action::space::encode_digivolve;
+    build_action_mask(&r.game, 0)[encode_digivolve(0, slot as u16) as usize] > 0.5
+}
+
+/// Lv.5 purple, no traits: only the name route can apply.
+fn ex9_012_lv5_named(id: &str, name: &str) -> CardData {
+    let mut card = make_test_card(id, name);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(5);
+    card.dp = Some(7000);
+    card.colors = vec![digimon_engine::enums::CardColor::Purple];
+    card.traits = Vec::new();
+    card
+}
+
+#[test]
+fn ex9_012_digivolves_from_a_card_named_metalgreymon_for_1() {
+    let (mut r, slot) = ex9_012_over(Some(ex9_012_lv5_named("MG5", "MetalGreymon")), "MG5");
+    assert!(ex9_012_digivolve_offered(&r, slot));
+    let mem = r.memory();
+    assert!(r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand));
+    assert_eq!(mem - r.memory(), 1, "[Digivolve] [MetalGreymon]: Cost 1");
+}
+
+#[test]
+fn ex9_012_does_not_digivolve_onto_another_copy_of_itself() {
+    let (r, slot) = ex9_012_over(None, "EX9-012");
+    assert!(
+        !ex9_012_digivolve_offered(&r, slot),
+        "EX9-012 must not digivolve onto MetalGreymon: Alterous Mode (EX9-012)"
+    );
+}
+
+#[test]
+fn ex9_012_does_not_digivolve_from_metalgreymon_x_antibody_by_name() {
+    let (r, slot) = ex9_012_over(
+        Some(ex9_012_lv5_named("MGX5", "MetalGreymon (X Antibody)")),
+        "MGX5",
+    );
+    assert!(!ex9_012_digivolve_offered(&r, slot));
+}

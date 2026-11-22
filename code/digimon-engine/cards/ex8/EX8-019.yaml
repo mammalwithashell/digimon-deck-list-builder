@@ -89,7 +89,7 @@ alt_paths:
   # Printed alt evo box: "Digivolve [Hiyarimon]: Cost 0". DCGO gates on
   # ContainsCardName("Hiyarimon") only — no level/color restriction.
   - kind: digivolve
-    from: { name_contains: "Hiyarimon" }
+    from: { name_is: "Hiyarimon" }
     cost: 0
 
 effects:

@@ -507,3 +507,37 @@ fn ex11_053_on_deletion_offers_nothing_when_effect_digimon_play_prohibited() {
     });
     assert_eq!(offered, 0, "a Digimon-play prohibition removes every candidate");
 }
+
+// --- "(Rule) Name: Also treated as [X Antibody]." ------------------------------
+//
+// Printed (official Bandai DB). The card has the name [X Antibody] in every
+// zone (CR 4.3 2-3-1-2), so the brackets-only [X Antibody] references of other
+// cards (X Antibody (BT9-109)'s digivolution-card protection, "[X Antibody] in
+// its digivolution cards") see it. DCGO EX11_053.cs: an unconditional
+// `ChangeCardNamesClass` adding "X Antibody". The spec carried no
+// `also_treated_as`.
+#[test]
+fn ex11_053_has_the_name_x_antibody_in_hand_and_as_a_digivolution_card() {
+    let mut top = make_test_card("ALIAS-TOP", "AliasTop");
+    top.card_kind = CardKind::Digimon;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-053")
+        .expect("EX11-053 YAML loads")
+        .add_card(top)
+        .hand(0, &["EX11-053"])
+        .start();
+    assert!(
+        runner.game.players[0].hand[0].contains_card_name("X Antibody", &runner.game.card_data),
+        "in the hand: \"(Rule) Name: Also treated as [X Antibody]\""
+    );
+    assert!(
+        !runner.game.players[0].hand[0].contains_card_name("Omnimon", &runner.game.card_data),
+        "control: only the printed alias is added"
+    );
+    runner.place_stack(0, &["EX11-053", "ALIAS-TOP"]);
+    assert!(
+        runner.game.players[0].battle_area[0].card_sources[0]
+            .contains_card_name("X Antibody", &runner.game.card_data),
+        "as a digivolution card"
+    );
+}

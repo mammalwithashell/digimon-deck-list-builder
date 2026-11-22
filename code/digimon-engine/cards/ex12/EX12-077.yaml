@@ -2,7 +2,7 @@ card: EX12-077
 name: Proximamon
 kind: digimon
 level: 7
-color: [white, red]
+color: [white, red, purple]
 cost: 15
 dp: 15000
 traits: [Unique, VB]

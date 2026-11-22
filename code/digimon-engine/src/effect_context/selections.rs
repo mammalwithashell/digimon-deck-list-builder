@@ -3695,11 +3695,22 @@ fn union_zone_candidates_impl(
                 .iter()
                 .enumerate()
                 .filter_map(|(index, perm)| {
-                    (perm.top_card().is_digimon(&game.card_data) && perm.card_sources.len() > 1)
-                        .then_some(PermanentHandle {
-                            player: of_player,
-                            index: index as u8,
-                        })
+                    let handle = PermanentHandle {
+                        player: of_player,
+                        index: index as u8,
+                    };
+                    // "your Digimon's digivolution cards": the carrier test is
+                    // the FIELD-level Digimon test, the one a `kind: digimon`
+                    // permanent predicate applies (`kind_matches_field`). A
+                    // DUAL card on the field is a Digimon (CR 4.3 4-6-3), and
+                    // so is a token. The card-level `CardSource::is_digimon`
+                    // (`card_kind == Digimon`) used here before skipped the
+                    // stack under BeelStarmon (BT25-085), so a clause's
+                    // activation gate saw an Option to trash and its cost pick
+                    // found none (bug scan 2026-11, Asuna Shiroki BT25-092).
+                    (perm.card_sources.len() > 1
+                        && perm.is_digimon_for_rules(&game.card_data, &game.modifiers, handle))
+                    .then_some(handle)
                 })
                 // G-UNION-HAND-SOURCE-PLAY: restrict the field carrier scan to
                 // carriers matching `material_carrier_filter` (e.g. a [King

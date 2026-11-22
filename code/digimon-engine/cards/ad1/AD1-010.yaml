@@ -19,7 +19,7 @@ attribute: Vaccine
 # no separate alt-cost; standard color requirements still apply.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, name_contains: "Omnimon" }
+    from: { level_eq: 3, in_text_contains: "Omnimon" }
     cost: 2
   - kind: digivolve
     from: { level_eq: 3, trait_has: ADVENTURE }

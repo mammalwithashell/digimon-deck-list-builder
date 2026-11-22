@@ -11,8 +11,12 @@ attribute: Data
 digixros_aliases: [Sparrowmon]
 
 alt_paths:
+  # Printed split circle: Black|Purple Lv.3 / cost 3 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
     cost: 3
   - kind: digivolve
     from:

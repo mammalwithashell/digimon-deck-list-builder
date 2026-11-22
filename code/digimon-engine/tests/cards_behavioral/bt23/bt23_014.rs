@@ -607,3 +607,116 @@ fn bt23_014_trash_play_gate_reads_the_effect_controller_not_the_trash_owner() {
         );
     }
 }
+
+/// Seat `id` in `player`'s battle area as an Option card an effect PLACED there
+/// (`OptionState::OrdinaryFieldOption`, the Digital Accident Tactics Squad
+/// (P-235) / DNA Charge (ST24-15) shape; CR 4.3 4-28-1). A bare
+/// `place_on_field` of an Option card is not a placed Option and does not stay.
+fn place_option_in_battle_area(runner: &mut DebugRunner, player: u8, id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == id)
+        .unwrap_or_else(|| panic!("unknown card {id}"));
+    let card_index = runner.game.next_card_index();
+    runner.game.install_field_option_as_ordinary(
+        digimon_engine::card_source::CardSource::new(data_idx, player, card_index),
+        player,
+    );
+}
+
+/// The placed Option is still in `player`'s battle area (so the count under
+/// test really had an Option to miscount).
+fn placed_option_is_on_field(runner: &DebugRunner, player: u8, id: &str) -> bool {
+    runner.game.players[player as usize]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == id)
+}
+
+/// "For each of their Digimon and Tamers, add 2000 to this DP deletion
+/// effect's maximum" -- an Option card placed in the opponent's battle area is
+/// neither (CR 4.3 4-28-1). DCGO BT23_014.cs:
+/// `Enemy.GetBattleAreaPermanents().Filter(x => x.IsDigimon || x.IsTamer).Count * 2000`.
+/// Board: 1 opponent Digimon (14000 DP) + 1 Tamer + 1 placed Option. Correct
+/// cap = 8000 + 2000x2 = 12000 -> the 14000 DP Digimon is NOT a legal target.
+/// Regression: the unfiltered count gave 8000 + 2000x3 = 14000 and deleted it.
+#[test]
+fn bt23_014_dp_cap_counts_digimon_and_tamers_but_not_placed_options() {
+    use digimon_engine::enums::CardKind;
+    let mut big = make_test_card("OPP-14K", "Opp14k");
+    big.card_kind = CardKind::Digimon;
+    big.dp = Some(14000);
+    let mut tamer = make_test_card("OPP-TAMER", "OppTamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    let mut option = make_test_card("OPP-OPTION", "OppOption");
+    option.card_kind = CardKind::Option;
+    option.level = None;
+    option.dp = None;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-014")
+        .expect("BT23-014 found in embedded DSL pack")
+        .add_card(big)
+        .add_card(tamer)
+        .add_card(option)
+        .hand(0, &["BT23-014"])
+        .memory(12)
+        .start();
+    runner.place_on_field(1, "OPP-14K", None);
+    runner.place_on_field(1, "OPP-TAMER", None);
+    place_option_in_battle_area(&mut runner, 1, "OPP-OPTION");
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        runner.battle_area_size(1),
+        3,
+        "precondition: Digimon + Tamer + placed Option in the opponent's battle area"
+    );
+
+    let _ = runner.play(0, 0);
+    let _ = runner.auto_resolve();
+
+    assert!(
+        placed_option_is_on_field(&runner, 1, "OPP-OPTION"),
+        "the placed Option is still in the battle area"
+    );
+    assert!(
+        placed_option_is_on_field(&runner, 1, "OPP-14K"),
+        "cap is 8000 + 2000 x (1 Digimon + 1 Tamer) = 12000: the 14000 DP Digimon survives"
+    );
+}
+
+/// Same board with a 12000 DP Digimon: exactly at the cap, so it IS deleted
+/// (the Tamer counts, the placed Option does not).
+#[test]
+fn bt23_014_dp_cap_includes_the_opponents_tamer() {
+    use digimon_engine::enums::CardKind;
+    let mut target = make_test_card("OPP-12K", "Opp12k");
+    target.card_kind = CardKind::Digimon;
+    target.dp = Some(12000);
+    let mut tamer = make_test_card("OPP-TAMER", "OppTamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-014")
+        .expect("BT23-014 found in embedded DSL pack")
+        .add_card(target)
+        .add_card(tamer)
+        .hand(0, &["BT23-014"])
+        .memory(12)
+        .start();
+    runner.place_on_field(1, "OPP-12K", None);
+    runner.place_on_field(1, "OPP-TAMER", None);
+
+    let _ = runner.play(0, 0);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.game.players[1].battle_area.len(),
+        1,
+        "cap 8000 + 2000 x 2 = 12000: the 12000 DP Digimon is deleted, the Tamer stays"
+    );
+}

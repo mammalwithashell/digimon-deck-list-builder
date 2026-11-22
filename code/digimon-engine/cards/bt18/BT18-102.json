@@ -31,6 +31,36 @@
       "card_color": 0,
       "level": 6,
       "memory_cost": 6
+    },
+    {
+      "card_color": 1,
+      "level": 6,
+      "memory_cost": 6
+    },
+    {
+      "card_color": 2,
+      "level": 6,
+      "memory_cost": 6
+    },
+    {
+      "card_color": 3,
+      "level": 6,
+      "memory_cost": 6
+    },
+    {
+      "card_color": 4,
+      "level": 6,
+      "memory_cost": 6
+    },
+    {
+      "card_color": 5,
+      "level": 6,
+      "memory_cost": 6
+    },
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 6
     }
   ],
   "xros_req": "[Digivolve] [Takuya Kanbara] or [Koji Minamoto] w/10 [Hybrid] trait cards under: Cost 6"

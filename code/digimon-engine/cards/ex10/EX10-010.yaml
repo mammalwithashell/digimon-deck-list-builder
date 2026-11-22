@@ -17,8 +17,12 @@ ace_overflow: -4
 # Blast Digivolve ([Hand][Counter]): burst_digivolve with marker:true, cost 0.
 # DCGO: BlastDigivolveEffect at OnCounterTiming.
 alt_paths:
+  # Printed split circle: Red|Black Lv.5 / cost 4 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
     cost: 4
   - kind: burst_digivolve
     marker: true

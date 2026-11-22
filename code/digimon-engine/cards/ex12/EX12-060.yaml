@@ -1,4 +1,4 @@
-# EX12-060 Chaosdramon — Digimon, Lv.7, Black/Purple, DP 15000, Cost 15.
+# EX12-060 Chaosdramon — Digimon, Lv.7, Black/Purple/Red, DP 15000, Cost 15.
 # Traits: Machine, ME. Attribute: Virus.
 # Digivolve: Black Lv.6 / 5.
 # DNA digivolve: Red/Black Lv.6 + Purple/Yellow Lv.6 / 0 (stack the 2 specified
@@ -25,7 +25,7 @@ card: EX12-060
 name: Chaosdramon
 kind: digimon
 level: 7
-color: [black, purple]
+color: [black, purple, red]
 cost: 15
 dp: 15000
 traits: [Machine, ME]
@@ -35,8 +35,12 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: black }
     cost: 5
+  # Printed split circle: Black|Purple|Red Lv.6 / cost 5 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 6, color_is: purple }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
     cost: 5
   - kind: dna_digivolve
     materials:

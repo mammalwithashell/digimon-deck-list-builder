@@ -583,6 +583,9 @@ impl<'a> EffectContext<'a> {
     /// Reject-before-mutate discipline: invalid handle, empty or 1-card stack
     /// and a non-Digimon top all return `false` before any state change.
     pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
+        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+            return self.trash_top_source_in_breeding(target.player);
+        }
         // §8-3-2-1 / §4-7-2 (the burst turn-end trash's own rule): a lone
         // card is not a stacked card, and a non-Digimon top trashes nothing.
         // Checked HERE, not in the shared pop: the generic "trash the top N
@@ -608,6 +611,48 @@ impl<'a> EffectContext<'a> {
             return false;
         };
         self.trash_popped_top_cards(target, vec![removed]);
+        true
+    }
+
+    /// [`Self::trash_top_source`] for a breeding-area stack. A [Burst
+    /// Digivolve] may be performed on a card in the breeding area ("one of
+    /// their cards on the field", CR 4.3 8-3-3-1 / 6-5-1-2-3), and 8-3-2-1's
+    /// turn-end trash is pending processing of that RULE (18-1-1), not an
+    /// effect, so 3-4-7-3 does not shield the stack from it. Same §8-3-2-1 /
+    /// §4-7-2 guards as the battle-area path (stacked, Digimon top). Nothing
+    /// in the breeding area triggers on the trash (3-4-7-4 / 3-4-7-6), so no
+    /// `OnTopCardTrashed` is enqueued, and a card exposed there stays (it is
+    /// not the battle area's exposed-Digi-Egg rule check). Before 2026-11 the
+    /// breeding sentinel index simply missed `battle_area` and the Burst Mode
+    /// card stayed on top for good.
+    fn trash_top_source_in_breeding(&mut self, player: PlayerId) -> bool {
+        let eligible = self
+            .game
+            .player(player)
+            .breeding_area
+            .as_ref()
+            .is_some_and(|p| {
+                p.card_sources.len() > 1
+                    && matches!(
+                        p.top_card().card_kind(&self.game.card_data),
+                        crate::enums::CardKind::Digimon | crate::enums::CardKind::Dual
+                    )
+            });
+        if !eligible {
+            return false;
+        }
+        let Some(removed) = self
+            .game
+            .player_mut(player)
+            .breeding_area
+            .as_mut()
+            .and_then(|p| p.card_sources.pop())
+        else {
+            return false;
+        };
+        self.game.player_mut(removed.owner).put_in_trash(removed);
+        self.game.mark_until_condition_dirty();
+        self.game.reevaluate_until_condition_modifiers_if_dirty();
         true
     }
 

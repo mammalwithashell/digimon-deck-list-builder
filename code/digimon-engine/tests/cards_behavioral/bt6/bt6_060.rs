@@ -444,3 +444,33 @@ fn bt6_060_warp_route_is_gated_to_your_turn() {
     );
     assert_eq!(runner.hand_size(0), 1, "TM-L5 stays in hand");
 }
+
+/// The warp is Deputymon (BT6-060)'s own [Your Turn] effect, so it is off
+/// while the card sits in the breeding area.
+///
+/// CR 4.3 3-4-7-4: "Effects on cards in breeding areas can't trigger or
+/// activate, except for effects that explicitly specify or reference breeding
+/// areas." Official Q&A Q6388 (BlackGatomon (BT25-082), the same clause
+/// shape): "No, you can't. The effect doesn't activate in the breeding area."
+/// DCGO BT6_060.cs gates the clause on `IsOwnerTurn(card) &&
+/// IsExistOnBattleArea(card)`.
+#[test]
+fn bt6_060_warp_is_not_available_in_the_breeding_area() {
+    use digimon_engine::action::space::BREEDING_TARGET;
+    let mut runner = builder().hand(0, &["TM-L5"]).memory(10).start();
+    runner.place_in_breeding(0, CARD_ID);
+    runner.game.current_phase = GamePhase::Main;
+    let memory_before = runner.game.memory;
+
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[encode_digivolve(0, BREEDING_TARGET) as usize],
+        0.0,
+        "the warp must not be offered for a breeding-area Deputymon (BT6-060)"
+    );
+    assert!(!runner
+        .game
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand));
+    let breeding = runner.game.players[0].breeding_area.as_ref().expect("still in breeding");
+    assert_eq!(breeding.top_card().card_id(&runner.game.card_data), CARD_ID);
+    assert_eq!(runner.game.memory, memory_before, "nothing was paid");
+}

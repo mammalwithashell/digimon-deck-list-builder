@@ -4184,6 +4184,45 @@ fn install_security_position_choice(
     selection_result(ctx)
 }
 
+/// A card pick whose filter carries a play-legality leaf (`can_play_from_effect_without_cost` /
+/// `can_play_or_use_from_effect`, authored or added by `digimon_dsl::play_candidates`) reads the
+/// "can't play Digimon / Tamers by effects" and trash-play locks. Those locks are continuous effects
+/// (Pillomon (BT9-033) "[All Turns] Players can't play Digimon by effects"), materialized by
+/// `Game::tick_declarative_effects`, and an EARLIER step of the same effect can have removed their
+/// source since the last tick: Eye of the Gorgon (BT9-108) deletes Pillomon and then offers the
+/// trash pick. A continuous effect stops applying the moment its source leaves (DCGO evaluates
+/// `CanPlayAsNewPermanent` live in `CanSelectCardCondition`, BT9_108.cs:47), and the sub-effects of
+/// one effect resolve in order (judge quiz "Card resolution" Q7: the play succeeds), so the
+/// candidates must be read against the current board, not the state of the last tick. Without this
+/// the injected leaf filtered the card out and the printed play was never offered.
+///
+/// The tick is fingerprint-memoized, so it is a no-op when nothing declarative-relevant changed.
+/// G-ENGINE-PLAY-PICK-STALE-CONTINUOUS-STATE.
+fn settle_continuous_state_for_play_pick(step: &CompiledStep, ctx: &mut EffectContext<'_>) {
+    use digimon_dsl::play_candidates::has_play_leaf;
+    let reads_play_legality = match step {
+        CompiledStep::SelectHand { filter, .. }
+        | CompiledStep::SelectTrash { filter, .. }
+        | CompiledStep::SelectReveal { filter, .. }
+        | CompiledStep::SelectCountCappedMulti { filter, .. } => has_play_leaf(filter),
+        CompiledStep::SelectUnionZone {
+            filter,
+            zone_filters,
+            ..
+        } => {
+            has_play_leaf(filter)
+                || [&zone_filters.hand, &zone_filters.trash, &zone_filters.material]
+                    .into_iter()
+                    .flatten()
+                    .any(has_play_leaf)
+        }
+        _ => false,
+    };
+    if reads_play_legality {
+        ctx.game.tick_declarative_effects();
+    }
+}
+
 /// Installs a selection step or reports how the dispatcher should advance.
 ///
 /// Most selection steps park by installing the remainder as their callback.
@@ -4197,6 +4236,7 @@ pub fn try_install(
     bindings: Bindings,
     runtime: &StepRuntime,
 ) -> InstallResult {
+    settle_continuous_state_for_play_pick(step, ctx);
     match step {
         CompiledStep::PaySourcePrefix {
             host_filter,
@@ -5370,6 +5410,18 @@ pub fn try_install(
             }
             let mut success_tail = then.clone();
             success_tail.extend_from_slice(tail);
+            // A "by trashing 1 ..." cost pick: flagged `cost: true`, or a
+            // mandatory pick whose card the very next step trashes (the same
+            // shape `lower_triggered::leading_cost_guard` reads as
+            // `CostGuard::UnionZoneTrash` when it leads the clause).
+            let pays_cost = *cost
+                || (!*optional
+                    && bind_as.as_ref().is_some_and(|bound| {
+                        matches!(
+                            then.first().or_else(|| tail.first()),
+                            Some(CompiledStep::TrashUnionBound { binding }) if binding == bound
+                        )
+                    }));
             install_select_union_zone(
                 ctx,
                 *of,
@@ -5387,6 +5439,19 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
+            if pays_cost && ctx.game.pending_selection.is_none() {
+                // No candidate: the cost was not carried out, so nothing
+                // after "by ..." may run. CR 4.3 15-7-2: "If the content of
+                // the optional processing conditions isn't executed, the
+                // processing after the conditions can't be executed." The
+                // install parks whenever at least one candidate exists (even
+                // a single one is a real pick), so no pending selection here
+                // means none did. Same unpayable-abort contract as the
+                // face-down / link-card / stack-Option trash costs above:
+                // stop the dispatcher, do NOT run the tail.
+                ctx.cost_unpayable = true;
+                return InstallResult::TailAlreadyRan;
+            }
             selection_result(ctx)
         }
         CompiledStep::SelectOrderedPermutation {

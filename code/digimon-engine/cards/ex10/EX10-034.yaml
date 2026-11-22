@@ -60,7 +60,12 @@ alt_paths:
 # DP until your turn ends."
 #
 # Timing breakdown:
-#   - `when_attacking`    : fires when the controlling player's Digimon attacks.
+#   - `on_ally_attack`    : fires when ANY of the controlling player's Digimon
+#                           attacks, this Digimon included ("When Digimon attack"
+#                           is an observer; `when_attacking` is the SELF timing and
+#                           would miss the controller's other Digimon). DCGO
+#                           EX10_034.cs: `CanTriggerOnPermanentAttack(hashtable,
+#                           IsAttackingDigimon)` -- any attacking Digimon.
 #   - `on_opponent_attack`: fires when the opponent's Digimon attacks (your
 #                           battle area scanned as the observer side).
 #   - `active_when: { all_turns: true }`: remove the default your-turn gate
@@ -124,7 +129,7 @@ effects:
   #
   # Fires when any Digimon attacks (your turn via when_attacking, opponent's
   # turn via on_opponent_attack). Once per turn, optional cost of 2 sources.
-  - when: [when_attacking, on_opponent_attack]
+  - when: [on_ally_attack, on_opponent_attack]
     once_per_turn: true
     optional: true
     active_when: { all_turns: true }

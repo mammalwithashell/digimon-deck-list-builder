@@ -166,6 +166,19 @@ fn lint_file(
         }
     }
 
+    // Raw-YAML authoring lints (unfiltered battle-area counts, a card's own
+    // timing mixed with a board-wide observer timing).
+    if let Ok(raw) = std::fs::read_to_string(path) {
+        for f in digimon_engine::dsl::authoring_lint::check_authoring_yaml(&raw) {
+            diags.push(Diagnostic {
+                file: file.clone(),
+                severity: Severity::Error,
+                path: f.path,
+                message: format!("authoring/{}: {}", f.rule, f.message),
+            });
+        }
+    }
+
     lint_observer_event_conditions(&spec, &file, diags);
     for f in check_carrier_name_stack_scan(&spec) {
         diags.push(Diagnostic {

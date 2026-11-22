@@ -867,9 +867,29 @@ impl Game {
             // ── Direction::Into (Phase 2 Track F): paths registered on the
             // SOURCE (carrier) card; `from:` filters the HAND-card
             // candidate. We resolve the base's top-card id to look these up.
-            let into_paths = self
-                .alt_path_registry
-                .get(base_top.card_id(&self.card_data));
+            //
+            // An Into path is by construction an EFFECT of the base's top card
+            // ("this Digimon can digivolve into [X] in the hand ..."), so it
+            // is off while that card is in the breeding area. CR 4.3 3-4-7-4:
+            // "Effects on cards in breeding areas can't trigger or activate,
+            // except for effects that explicitly specify or reference breeding
+            // areas." Official Q&A Q6388 on BlackGatomon (BT25-082), the same
+            // clause: "No, you can't. The effect doesn't activate in the
+            // breeding area." DCGO gates each of these clauses on
+            // `IsExistOnBattleArea(card)` (ST20_10.cs, ST21_10.cs, BT25_082.cs,
+            // BT6_060.cs, BT21_040.cs). From paths above are untouched: they
+            // are digivolution requirements printed on the HAND card and apply
+            // to a breeding-area base like any printed circle. A future card
+            // whose Into clause names the breeding area needs an explicit
+            // opt-in on the alt path.
+            let base_in_breeding =
+                base_handle.index == crate::action::space::BREEDING_TARGET as u8;
+            let into_paths = if base_in_breeding {
+                None
+            } else {
+                self.alt_path_registry
+                    .get(base_top.card_id(&self.card_data))
+            };
 
             for (path, direction) in from_paths
                 .into_iter()

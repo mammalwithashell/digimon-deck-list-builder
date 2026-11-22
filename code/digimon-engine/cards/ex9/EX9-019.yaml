@@ -128,9 +128,14 @@ dp: 8000
 traits: [Beastkin, ADVENTURE]
 
 # ─── Alt-paths ────────────────────────────────────────────────────────────────
-# Standard digivolve: Lv.4 Blue / Cost 4 (per evo_costs in cards.json).
-# (DCGO's two unprinted alt-source entries — WereGarurumon-name @ cost 1 and
-# Lv4 [Garurumon]/[ADVENTURE] @ cost 3 — are NOT encoded; printed text governs.)
+# Standard digivolve: Lv.4 Blue / Lv.4 Black, Cost 4 (printed circles), PLUS the
+# two printed [Digivolve] boxes (card image / official Bandai DB):
+#   "[Digivolve] [WereGarurumon]: Cost 1"  -- brackets only = EXACT name
+#     (CR 4.3 2-3-1-2 / 2-3-5-3; DCGO EX9_019.cs `EqualsCardName("WereGarurumon")`),
+#     so `name_is`: neither "WereGarurumon: Sagittarius Mode" (this card) nor
+#     "WereGarurumon (X Antibody)" qualifies.
+#   "[Digivolve] Lv.4 w/[Garurumon] in name or w/[ADVENTURE] trait: Cost 3"
+#     -- "in name" = substring (CR 4.3 2-3-1-3), so `name_contains`.
 alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: blue }
@@ -139,7 +144,7 @@ alt_paths:
     from: { level_eq: 4, color_is: black }
     cost: 4
   - kind: digivolve
-    from: { name_contains: "WereGarurumon" }
+    from: { name_is: "WereGarurumon" }
     cost: 1
   - kind: digivolve
     from: { level_eq: 4, name_contains: "Garurumon" }

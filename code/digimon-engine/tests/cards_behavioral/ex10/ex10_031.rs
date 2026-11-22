@@ -44,8 +44,8 @@ fn ex10_031_compiles_with_three_alt_paths() {
     let card = r.compiled_card("EX10-031").expect("present in pack");
     assert_eq!(
         card.alt_paths.len(),
-        3,
-        "2 digivolve paths + 1 digixros path"
+        4,
+        "3 digivolve paths (Black + Purple split circle + Knightmon) + 1 digixros path"
     );
     assert!(
         card.alt_paths

@@ -75,8 +75,12 @@ attribute: Vaccine
 #   color path plus a trait-gated cheaper alt-path); the DSL `from:` predicate
 #   supports `trait_has` on the source.
 alt_paths:
+  # Printed split circle: Green|Yellow Lv.2 / cost 1 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 2, color_is: green }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
     cost: 1
   - kind: digivolve
     from:

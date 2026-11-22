@@ -1,8 +1,10 @@
 //! EX8-028 Skadimon — Digimon, Lv.6, Blue/Yellow, DP 12000, Cost 12.
 //! Traits: Ice-Snow, LIBERATOR. Form: Mega. Attribute: Vaccine. Rarity: SR.
-//! Standard digivolution (official Bandai DB digivolve_costs — THREE circles;
-//! cards.json keeps only the blue half): Blue Lv.5 / cost 4, Yellow Lv.5 /
-//! cost 4, Purple Lv.5 / cost 4.
+//! Standard digivolution (card image, all three printings; DCGO asset): ONE
+//! two-colour circle, Blue|Yellow Lv.5 / cost 4. The official mirror and
+//! `cards.json` add a Purple Lv.5 / cost 4 row the card does not print (the
+//! spec authored it until 2026-11-22; `BASELINE_PHANTOM_ROWS` in
+//! `tests/alt_path_printed_cost_guard.rs` records the data error).
 //! Alt digivolution (printed evo box): "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3".
 //!
 //! # Card text (card image EX8-028.webp — authoritative; cards.json agrees)
@@ -158,7 +160,7 @@ fn plain_lv5(id: &str, color: CardColor) -> CardData {
 }
 
 /// A RED Lv.5 [Ice-Snow] Digimon — matches ONLY Skadimon's printed alt evo box
-/// ("Lv.5 w/[Ice-Snow] trait: Cost 3"), no standard circle (blue/yellow/purple).
+/// ("Lv.5 w/[Ice-Snow] trait: Cost 3"), no standard circle (blue/yellow).
 fn red_ice_snow_lv5(id: &str) -> CardData {
     let mut c = make_test_card(id, "Red IceSnow Lv5");
     c.card_kind = CardKind::Digimon;
@@ -314,29 +316,33 @@ fn ex8_028_compiles_with_printed_stats_and_digivolve_paths() {
         );
     }
 
-    // Standard printed evo box — THREE circles per the official Bandai DB
-    // (digivolve_costs card_color 1/2/6): Blue, Yellow, AND Purple Lv.5, each
-    // for 4 memory. cards.json's lossy ingest keeps only the blue half.
-    for color in [
-        CompiledColor::Blue,
-        CompiledColor::Yellow,
-        CompiledColor::Purple,
-    ] {
+    // Standard printed evo box — ONE two-colour circle on the card face:
+    // Blue|Yellow Lv.5 for 4 memory. Purple is not printed (the official
+    // mirror's third row is a data error), so no path may accept it.
+    let has_circle = |color: CompiledColor| {
+        compiled.alt_paths.iter().any(|path| {
+            path.kind == CompiledAltPathKind::Digivolve
+                && path.cost == Some(CompiledCost::Literal(4))
+                && path.from.as_ref().is_some_and(|from| {
+                    (from.level_eq == Some(5)
+                        || from.all_of.iter().any(|pred| pred.level_eq == Some(5)))
+                        && (from.color_is == Some(color)
+                            || from.all_of.iter().any(|pred| pred.color_is == Some(color)))
+                })
+        })
+    };
+    for color in [CompiledColor::Blue, CompiledColor::Yellow] {
         assert!(
-            compiled.alt_paths.iter().any(|path| {
-                path.kind == CompiledAltPathKind::Digivolve
-                    && path.cost == Some(CompiledCost::Literal(4))
-                    && path.from.as_ref().is_some_and(|from| {
-                        (from.level_eq == Some(5)
-                            || from.all_of.iter().any(|pred| pred.level_eq == Some(5)))
-                            && (from.color_is == Some(color)
-                                || from.all_of.iter().any(|pred| pred.color_is == Some(color)))
-                    })
-            }),
+            has_circle(color),
             "Skadimon must digivolve from a {color:?} Lv.5 for cost 4 \
-             (official Bandai DB standard evo circle)"
+             (printed Blue|Yellow standard evo circle)"
         );
     }
+    assert!(
+        !has_circle(CompiledColor::Purple),
+        "Skadimon prints a Blue|Yellow circle: a Purple Lv.5 path is a digivolution \
+         the card does not have"
+    );
 
     // Printed alt evo box: Lv.5 with [Ice-Snow] trait for 3 memory.
     assert!(
@@ -357,15 +363,54 @@ fn ex8_028_compiles_with_printed_stats_and_digivolve_paths() {
     );
 }
 
-/// BEHAVIORAL: the yellow and purple standard evo circles work — Skadimon
-/// digivolves over a plain (non-[Ice-Snow]) yellow or purple Lv.5 base for
-/// exactly 4 memory. cards.json's lossy ingest drops these two circles, so
-/// this guards the explicit alt_paths encoding (official Bandai DB
-/// digivolve_costs card_color 2 and 6). The base is non-[Ice-Snow], so the
-/// cost-3 alt path cannot match — no cost-choice prompt fires.
+/// BEHAVIORAL: a purple Lv.5 is not a base for Skadimon. The card prints one
+/// Blue|Yellow Lv.5 circle (image, all three printings; DCGO `EvoCosts`); the
+/// official mirror's Purple Lv.5 / cost 4 row is a data error the spec used to
+/// author. A plain (non-[Ice-Snow]) purple Lv.5 matches no circle and not the
+/// [Ice-Snow] alt box, so the digivolve is neither offered nor accepted.
+/// CR 4.3 §2-3-5-1 (a digivolution requirement is the colour and level of the
+/// card digivolved from), §8-1-3-1.
 #[test]
-fn ex8_028_digivolves_over_yellow_and_purple_lv5_for_cost_4() {
-    for (base_id, color) in [("YEL-5", CardColor::Yellow), ("PUR-5", CardColor::Purple)] {
+fn ex8_028_does_not_digivolve_over_a_plain_purple_lv5() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX8-028 found in embedded DSL pack")
+        .add_card(plain_lv5("PUR-5", CardColor::Purple))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(8)
+        .start();
+    runner.game.turn_count = 1;
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+
+    let base = runner.place_on_field(0, "PUR-5", Some(0));
+    let hand_idx = put_in_hand(&mut runner, 0, CARD_ID);
+
+    let mask = digimon_engine::build_action_mask(&runner.game, 0);
+    let action =
+        digimon_engine::action::space::encode_digivolve(hand_idx as u16, base.index as u16);
+    assert_eq!(
+        mask[action as usize], 0.0,
+        "the mask must not offer Skadimon over a plain purple Lv.5"
+    );
+    let memory_before = runner.game.memory;
+    assert!(
+        !runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand),
+        "a Blue|Yellow Lv.5 circle does not accept a purple Lv.5"
+    );
+    assert_eq!(runner.game.memory, memory_before, "a rejected digivolve pays nothing");
+}
+
+/// BEHAVIORAL: both colours of the printed Blue|Yellow circle work — Skadimon
+/// digivolves over a plain (non-[Ice-Snow]) blue or yellow Lv.5 base for
+/// exactly 4 memory. The base is non-[Ice-Snow], so the cost-3 alt path cannot
+/// match — no cost-choice prompt fires.
+#[test]
+fn ex8_028_digivolves_over_blue_and_yellow_lv5_for_cost_4() {
+    for (base_id, color) in [("BLU-5", CardColor::Blue), ("YEL-5", CardColor::Yellow)] {
         let mut runner = DebugRunner::builder()
             .dsl_card(CARD_ID)
             .expect("EX8-028 found in embedded DSL pack")
@@ -386,7 +431,7 @@ fn ex8_028_digivolves_over_yellow_and_purple_lv5_for_cost_4() {
                 .game
                 .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand),
             "Skadimon must digivolve over a plain {color:?} Lv.5 via the \
-             official-DB standard evo circle"
+             printed Blue|Yellow standard evo circle"
         );
         assert_eq!(
             runner.game.memory,
@@ -798,7 +843,7 @@ fn ex8_028_wd_free_play_cap_scales_to_5_with_one_sourceless_opponent() {
         runner.game.memory,
         memory_before - 3,
         "the alt path charges its printed cost 3 (no standard circle — \
-         blue/yellow/purple — matches a red base)"
+         blue/yellow — matches a red base)"
     );
 
     runner.game.drain_effect_queue();

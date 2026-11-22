@@ -255,8 +255,13 @@ effects:
                                     formula:
                                       base: 0
                                       per:
+                                        # "for each of your opponent's
+                                        # Digimon": Tamers and placed Option
+                                        # cards are not counted (DCGO
+                                        # `Enemy.GetBattleAreaDigimons().Count()`).
                                         card_count_in_zone:
                                           of: opponent
                                           zone: battle_area
+                                          filter: { kind: digimon }
                                       delta: 2000
                                   expiry: end_of_opponents_turn

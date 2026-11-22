@@ -58,14 +58,22 @@ fn ex12_standard_dual_color_digivolve_paths_match_printed_circles() {
         );
     }
 
+    // Susanoomon (EX12-076) prints a RAINBOW Lv.6 / cost 6 circle: ANY colour.
+    // Sources: the card image (rainbow-filled circle, read 2026-11-21), the
+    // official EN DB ("Multicolor 6 from Lv.6", span class cardColor_all), the
+    // JP DB (「全 Lv.6から6」, 全 = all) and DCGO EX12_076.asset (one EvoCosts row
+    // per colour). This assertion used to pin `self_color_count_gte: 2` — "a
+    // Lv.6 with 2+ colours", a misreading of "Multicolor" that left a
+    // single-colour non-red Lv.6 without the printed route.
     assert!(
         has_path("EX12-076", CompiledAltPathKind::Digivolve, 6, |path| {
             path.from.as_deref().is_some_and(|from| {
-                pred_any(from, |pred| pred.level_eq == Some(6))
-                    && pred_any(from, |pred| pred.self_color_count_gte == Some(2))
+                from.level_eq == Some(6)
+                    && from.color_is.is_none()
+                    && !pred_any(from, |pred| pred.self_color_count_gte.is_some())
             })
         }),
-        "EX12-076 printed standard circle is multicolor Lv.6 cost 6"
+        "EX12-076 printed standard circle is rainbow (any colour) Lv.6 cost 6"
     );
 }
 

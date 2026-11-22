@@ -391,12 +391,54 @@ fn ad1_004_eot_attack_fizzles_when_attacker_is_removed_before_it_acts() {
 
 // ─── Inherited [When Attacking][OPT] name-gated delete (Greymon/Omnimon) ─────
 //
-// "If the carrier's name contains [Greymon] or [Omnimon], delete 1 opponent
-// Digimon with DP <= this Digimon's DP." `source_name_contains` (AD1-014
-// inherited idiom) + dp_lte source_dp.
+// Printed (card image + official Bandai DB):
+//   "[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with
+//    as much or less DP as this Digimon with [Greymon] or [Omnimon] in its name."
+// No "may": the effect is MANDATORY (CR 4.3 15-1-5, 15-9-1-2). Official Q&A
+// Q6055: "You must activate this card's inherited effect and use up its [Once
+// Per Turn], even if the attacking Digimon doesn't have [Greymon] or [Omnimon]
+// in its name. However, ... you can't reference DP or delete a Digimon."
+// DCGO AD1_004.cs "When Attacking - ESS": `SetUpActivateClass(CanActivateCondition,
+// ActivateCoroutine, 1, false, ...)` (isOptional = false), CanActivateCondition =
+// IsExistOnBattleAreaDigimon(card) only; the name gate and the target check sit
+// INSIDE ActivateCoroutine; the pick is `canNoSelect: false`.
+//
+// These tests used to pin `optional: true` ("you may") with the name gate as
+// the activation `condition`; both were wrong against the card, Q6055 and DCGO.
 
-/// Inherited clause must compile: inherited scope, when_attacking, optional,
-/// once_per_turn, gated by source_name_contains Greymon/Omnimon.
+use digimon_engine::card_source::CardSource;
+use digimon_engine::enums::EffectTiming;
+use digimon_engine::selection::TriggerSource;
+
+/// A Lv.6 top card with the given name and DP, no effects of its own.
+fn ad1_004_top(id: &str, name: &str, dp: i32) -> CardData {
+    let mut c = make_test_card_with_level(id, name, 6);
+    c.card_kind = CardKind::Digimon;
+    c.dp = Some(dp);
+    c
+}
+
+fn ad1_004_inherited_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card("AD1-004")
+        .expect("AD1-004 in pack")
+        .add_card(ad1_004_top("OMNI-TOP", "Omnimon", 15000))
+        .add_card(ad1_004_top("PLAIN-TOP", "Plainmon", 15000))
+        .add_card(digimon_with_dp("OPP-3K", 3000))
+        .memory(15)
+        .start()
+}
+
+fn ad1_004_fire_when_attacking(runner: &mut DebugRunner, attacker: PermanentHandle) {
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(attacker));
+    runner.game.drain_effect_queue();
+}
+
+/// Inherited clause shape: inherited scope, when_attacking, once per turn,
+/// NOT optional, and no activation condition (the name gate is in the body so
+/// the effect activates -- and spends its [Once Per Turn] -- regardless).
 #[test]
 fn ad1_004_inherited_when_attacking_delete_clause_compiles() {
     use digimon_dsl::compiled::CompiledScope;
@@ -418,26 +460,104 @@ fn ad1_004_inherited_when_attacking_delete_clause_compiles() {
         })
         .expect("AD1-004 must carry an inherited [When Attacking] clause");
 
-    assert!(inh.optional, "inherited delete is 'you may' (optional)");
-    assert!(inh.once_per_turn, "inherited delete is [Once Per Turn]");
-    // The Greymon/Omnimon name gate must appear somewhere in the active_when /
-    // condition predicate tree.
-    let gate = inh.condition.as_ref().or(inh.active_when.as_ref());
-    fn pred_has_name(p: &digimon_dsl::compiled::CompiledPredicate, name: &str) -> bool {
-        if p.source_name_contains.as_deref() == Some(name) {
-            return true;
-        }
-        p.all_of.iter().any(|q| pred_has_name(q, name))
-            || p.any_of.iter().any(|q| pred_has_name(q, name))
-            || p.none_of.iter().any(|q| pred_has_name(q, name))
-            || p.not
-                .as_ref()
-                .map(|q| pred_has_name(q, name))
-                .unwrap_or(false)
-    }
-    let g = gate.expect("inherited delete must carry a name-gate condition");
     assert!(
-        pred_has_name(g, "Greymon") && pred_has_name(g, "Omnimon"),
-        "inherited delete gate must check carrier name contains Greymon OR Omnimon"
+        !inh.optional,
+        "inherited delete prints no 'may': it is mandatory (Q6055, DCGO isOptional=false)"
     );
+    assert!(inh.once_per_turn, "inherited delete is [Once Per Turn]");
+    assert!(
+        inh.condition.is_none(),
+        "the [Greymon]/[Omnimon] name gate must not gate ACTIVATION (Q6055: the effect \
+         activates and uses up its [Once Per Turn] even without the name)"
+    );
+}
+
+/// The stack's top card is named [Omnimon]: attacking goes straight to the
+/// mandatory target pick -- no accept/decline prompt -- and the pick deletes.
+#[test]
+fn ad1_004_inherited_delete_is_mandatory_with_no_accept_decline_prompt() {
+    let mut runner = ad1_004_inherited_runner();
+    let attacker = runner.place_stack(0, &["AD1-004", "OMNI-TOP"]);
+    let opp = runner.place_on_field(1, "OPP-3K", None);
+
+    ad1_004_fire_when_attacking(&mut runner, attacker);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("the inherited delete must ask for its target");
+    assert_eq!(
+        view.kind,
+        SelectionKind::OppField,
+        "the first prompt is the delete target, not an optional accept/decline"
+    );
+    assert!(!view.is_optional, "the target pick is mandatory (canNoSelect: false)");
+    assert!(
+        !view.valid_action_ids.contains(&PASS),
+        "a mandatory effect offers no decline"
+    );
+    let want = encode_attack(0, opp.index as u16);
+    assert!(view.valid_action_ids.contains(&want));
+    runner.execute_action(0, want).expect("delete the target");
+    runner.game.drain_effect_queue();
+    assert_eq!(runner.battle_area_size(1), 0, "the 3000 DP Digimon is deleted");
+}
+
+/// Q6055: a top card WITHOUT [Greymon]/[Omnimon] in its name still activates
+/// the inherited effect and uses up its [Once Per Turn], but deletes nothing.
+/// Proof of the spent use: the same stack, now topped by an [Omnimon], gets
+/// no delete from a second attack in the same turn.
+#[test]
+fn ad1_004_inherited_delete_spends_once_per_turn_without_the_name_q6055() {
+    let mut runner = ad1_004_inherited_runner();
+    let attacker = runner.place_stack(0, &["AD1-004", "PLAIN-TOP"]);
+    runner.place_on_field(1, "OPP-3K", None);
+
+    ad1_004_fire_when_attacking(&mut runner, attacker);
+    assert!(
+        runner.pending_selection().is_none(),
+        "without the name nothing is selected (and nothing is asked)"
+    );
+    assert_eq!(runner.battle_area_size(1), 1, "nothing is deleted without the name");
+
+    // Same turn: the stack gains an [Omnimon] top card and attacks again.
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "OMNI-TOP")
+        .expect("OMNI-TOP registered");
+    let card_index = runner.game.next_card_index();
+    runner.game.players[0].battle_area[attacker.index as usize]
+        .card_sources
+        .push(CardSource::new(data_idx, 0, card_index));
+    runner.game.tick_declarative_effects();
+
+    ad1_004_fire_when_attacking(&mut runner, attacker);
+    assert!(
+        runner.pending_selection().is_none(),
+        "the [Once Per Turn] was used up by the first attack (Q6055)"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "no delete: the inherited effect already activated this turn"
+    );
+}
+
+/// No opponent Digimon at or below this Digimon's DP: nothing to select.
+#[test]
+fn ad1_004_inherited_delete_has_no_prompt_without_an_eligible_target() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-004")
+        .expect("AD1-004 in pack")
+        .add_card(ad1_004_top("OMNI-TOP", "Omnimon", 15000))
+        .add_card(digimon_with_dp("OPP-16K", 16000))
+        .memory(15)
+        .start();
+    let attacker = runner.place_stack(0, &["AD1-004", "OMNI-TOP"]);
+    runner.place_on_field(1, "OPP-16K", None);
+
+    ad1_004_fire_when_attacking(&mut runner, attacker);
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(runner.battle_area_size(1), 1);
 }

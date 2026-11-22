@@ -206,3 +206,38 @@ ac86b510e reproduces the new values at 17/25/33/42, 6ef082477 keeps index 41 and
     timing changes; the commit was NOT bisected.
   Neither deck contains a card changed on this branch.
 - **Result:** `replay_corpus verify` 10/10.
+
+## Digest-only re-bless 2026-11-22, part 1: drift already on main (no action changed)
+
+Found while integrating `claude/matrix-bug-fixes`. `replay_corpus verify` is red on
+unmodified main (349816e5c): 000 at step 50, 002 at 43, 004 at 63, 008 at 45. It is
+green (10/10) on 6b1a4fce1, the merge that holds the last bless. Attributed by
+token-tracing `verification_digest` on both commits and diffing every chunk; every
+recorded action stays legal on main (`bless` retires nothing).
+
+- **000, 002, 008** (zero-based digests 49-52, 42-44, 44-53): a8f35680d "Model
+  DCGO's isOptional yes/no activation gate for BT21-001 and ST24-01". The
+  breeding-area BT21-001 inherited trigger now opens "You may activate BT21-001's
+  triggered effect" (accept 59 / PASS 62) before the Digimon pick; it used to open
+  "Choose 1 of your Digimon to digivolve" directly. The recorded PASS declines
+  either prompt, and a declined trigger no longer leaves an `effect_activation`
+  mark for the rest of the turn. No other token differs.
+- **004** (zero-based digests 62-64): only `data_index` of `TOKEN_PETRIFICATION`,
+  4488 -> 4489. The card store gained one row that sorts before it; no gameplay
+  token differs.
+
+## Digest-only re-bless 2026-11-22, part 2: golden 004, two matrix bug-scan fixes (no action changed)
+
+Token trace of main against the merged branch: nine goldens have identical digest
+streams; 004 differs from zero-based digest 62 to the end, for two fixes.
+
+- 8f98f4551, Medusamon (BT24-017) "+2000 DP for each of your opponent's Digimon":
+  at zero-based digest 62 the opponent has seven battle-area permanents: three
+  Digimon (Dimetromon (BT21-017) and two [Petrification] Tokens), three placed
+  Option cards (Offense Training (P-103), two Red Memory Boost! (P-035)) and one
+  Tamer (Owen Dreadnought (BT24-082)). The modifier was `ChangeDp 14000` (every
+  permanent counted) and is `ChangeDp 6000`.
+- a3f27c57f, Petrification Token "[Your Turn] This Digimon can't suspend": on the
+  token controller's turn (digest 64) each token carries a `CannotSuspend`
+  modifier it did not have.
+- **Result:** `replay_corpus verify` 10/10 on the merged tree.

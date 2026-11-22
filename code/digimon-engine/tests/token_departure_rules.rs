@@ -366,15 +366,28 @@ fn recorded_interrupted_token_return_removes_token_and_clones_identically() {
     // a trigger-order pick that resolves the recorded trigger first (30) and,
     // where it has candidates, a decline (62). Inserted rows carry fractional
     // `step` values and a `migration_note`. Every other recorded action is
-    // unchanged; recorded step 91 (the material pick below) is now cursor 92.
-    for _ in 0..92 {
+    // unchanged.
+    //
+    // Migrated 2026-11-21 for d76249e94 (no "Select DigiXros material" prompt
+    // once no candidate remains; DCGO `SelectDigiXrosClass.Select` asks nothing
+    // when only End is left). Both DigiXros plays of this game use a
+    // one-element recipe and now commit on the material pick:
+    // - the hand play at recorded step 38: the stop PASS recorded as step 40
+    //   is dropped and its memory_after moved to the pick (step 39);
+    // - Sagomon (EX12-029), played by Erlangmon (EX12-034) inside the
+    //   interrupted return: the decision made on the clone below is the
+    //   material pick itself (recorded step 90, cursor 90). The stop PASS
+    //   recorded as step 91 has no prompt any more; that row and the ones
+    //   after it are never replayed (see the continuation below).
+    for _ in 0..90 {
         let result = replay.step();
         assert!(result.divergences.is_empty(), "{:?}", result.divergences);
     }
     let mut cloned = replay.game.clone();
-    assert_eq!(build_action_mask(&cloned, 0)[62], 1.0);
-    cloned.decode_action(62, 0);
-    replay.step();
+    assert_eq!(build_action_mask(&cloned, 0)[30], 1.0);
+    cloned.decode_action(30, 0);
+    let result = replay.step();
+    assert!(result.divergences.is_empty(), "{:?}", result.divergences);
     assert_eq!(
         replay.game.verification_digest(),
         cloned.verification_digest()

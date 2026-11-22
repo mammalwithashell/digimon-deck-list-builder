@@ -79,7 +79,7 @@ alt_paths:
     from:
       all_of:
         - level_eq: 6
-        - name_contains: "Imperialdramon: Dragon Mode"
+        - name_is: "Imperialdramon: Dragon Mode"
     cost: 2
     ignore_requirements: true
 

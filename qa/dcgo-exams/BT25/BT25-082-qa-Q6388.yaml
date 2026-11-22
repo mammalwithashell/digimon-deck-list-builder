@@ -1,4 +1,12 @@
 # Q6388: BlackGatomon in the BREEDING area, Asuna (a Tamer with [Three Musketeers] in text) on the field.
+# The ruling is "No, you can't. The effect doesn't activate in the breeding area." Since the
+# 2026-11 breeding-area fix (CR 4.3 3-4-7-4: an Into-direction alt path is the breeding card's
+# own effect and is off there) our engine no longer offers `digivolve: { from: breeding,
+# using: BT25-085 }`, so that step cannot be lowered any more and is gone: the line stops at
+# the main phase in which the grant would have been used, and the ruling claim is the hand
+# as it stands there (BeelStarmon BT25-085 still in it, no digivolution draw). That the
+# action is absent from the mask is pinned by
+# cards_behavioral bt25_082_warp_is_not_available_in_the_breeding_area.
 meta: {produced_by: 20261006T163745972402Z-pilot-three-musketeers-93a263}
 interaction: {id: "qa:Q6388", source: qa, kind: positive}
 covers: [BT25-082#effect#2]
@@ -78,12 +86,9 @@ steps:
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
-  - actor: 0
-    do: { digivolve: { from: breeding, using: BT25-085 } }
-    expect: { prompt: main_phase }
 expect_ruling:
   q_id: Q6388
   assert:
-  - at: 16
+  - at: 15
     that:
       p0.hand: [BT25-085, EX7-073, BT25-083, BT21-071, BT21-074, BT25-083, BT25-082]

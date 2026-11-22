@@ -122,9 +122,16 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: red }
     cost: 4
-  # Printed alt: "[Digivolve] [MetalGreymon]: Cost 1" (name-gated, no level).
+  # Printed split circle: Red|Black Lv.4 / cost 4 — one entry per colour.
   - kind: digivolve
-    from: { name_contains: "MetalGreymon" }
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  # Printed alt: "[Digivolve] [MetalGreymon]: Cost 1" (name-gated, no level).
+  # Brackets only = EXACT name (CR 4.3 2-3-1-2 / 2-3-5-3; DCGO EX9_012.cs
+  # `EqualsCardName("MetalGreymon")`): "MetalGreymon: Alterous Mode" (this card)
+  # and "MetalGreymon (X Antibody)" do not qualify.
+  - kind: digivolve
+    from: { name_is: "MetalGreymon" }
     cost: 1
   # Printed alt: "[Digivolve] Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3".
   - kind: digivolve

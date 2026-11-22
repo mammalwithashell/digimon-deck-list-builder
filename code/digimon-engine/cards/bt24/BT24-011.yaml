@@ -10,8 +10,10 @@ traits: [Dragonkin, Iliad, TS]
 # Digivolution: Lv.3 / 2 memory (standard path)
 # Alt-digivolve: any Lv.3 with TS trait / 2 memory (DCGO: AddSelfDigivolutionRequirementStaticEffect)
 alt_paths:
+  # Printed circle: Red Lv.3 / cost 2. The colour is part of the
+  # requirement; a gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 3 }
+    from: { level_eq: 3, color_is: red }
     cost: 2
   - kind: digivolve
     from: { level_eq: 3, trait_has: TS }

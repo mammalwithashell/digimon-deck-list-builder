@@ -64,8 +64,12 @@ form: Mega
 attribute: Virus
 
 alt_paths:
+  # Printed split circle: Purple|Black Lv.6 / cost 6 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 6, color_is: purple }
+    cost: 6
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
     cost: 6
   - kind: digixros
     materials:

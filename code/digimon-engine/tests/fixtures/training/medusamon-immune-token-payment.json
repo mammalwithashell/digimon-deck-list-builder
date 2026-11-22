@@ -431,28 +431,6 @@
       "winner_id": null
     },
     {
-      "action_id": 144,
-      "is_game_over": false,
-      "memory_after": 3,
-      "memory_before": 3,
-      "phase": "Main",
-      "player_id": 2,
-      "step": 43,
-      "turn": 5,
-      "winner_id": null
-    },
-    {
-      "action_id": 129,
-      "is_game_over": false,
-      "memory_after": 3,
-      "memory_before": 3,
-      "phase": "Main",
-      "player_id": 2,
-      "step": 44,
-      "turn": 5,
-      "winner_id": null
-    },
-    {
       "action_id": 62,
       "is_game_over": false,
       "memory_after": 3,
@@ -970,7 +948,7 @@
       "winner_id": null
     },
     {
-      "action_id": 101,
+      "action_id": 104,
       "is_game_over": false,
       "memory_after": -3,
       "memory_before": -3,
@@ -981,7 +959,7 @@
       "winner_id": null
     },
     {
-      "action_id": 129,
+      "action_id": 174,
       "is_game_over": false,
       "memory_after": -3,
       "memory_before": -3,

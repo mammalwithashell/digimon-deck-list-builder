@@ -77,8 +77,12 @@ traits: [Reptile, ADVENTURE, Hero]
 # filter REPLACES the standard colour gate but the standard cost-checking
 # still applies.
 alt_paths:
+  # Printed split circle: Black|Red Lv.2 / cost 0 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 2, color_is: black }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
     cost: 0
 
   - kind: digivolve
@@ -102,9 +106,12 @@ alt_paths:
   #
   # `direction: into` — the alt-path lives on the SOURCE card (ST20-10) and
   # `from:` filters the destination HAND card (the WarGreymon). `condition:`
-  # attaches the [Your Turn] + disjunctive board-state gate. `your_turn: true`
-  # also implies self-is-on-field is satisfied by the route lookup (the path
-  # only resolves when ST20-10 is the digivolve base permanent).
+  # attaches the [Your Turn] + disjunctive board-state gate. DCGO's
+  # self-on-field gate (`IsExistOnBattleArea(card)`) is enforced by the route
+  # lookup: an Into path resolves only while ST20-10 is the top card of the
+  # digivolve base AND that base is in the battle area — the engine drops
+  # Into paths for a breeding-area base (CR 4.3 3-4-7-4; official Q&A Q6388
+  # on the same clause of BlackGatomon BT25-082).
   - kind: digivolve
     direction: into
     from:

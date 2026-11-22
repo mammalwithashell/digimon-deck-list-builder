@@ -128,8 +128,8 @@ fn st20_10_has_three_alt_paths() {
     let card = compiled("ST20-10");
     assert_eq!(
         card.alt_paths.len(),
-        3,
-        "expected exactly 3 alt_paths (standard Lv2 Black + xros_req Lv2 \
+        4,
+        "expected exactly 4 alt_paths (standard Lv2 Black + Red split circle + xros_req Lv2 \
          ADVENTURE/Hero + warp-into-WarGreymon); got {}",
         card.alt_paths.len()
     );
@@ -141,7 +141,7 @@ fn st20_10_has_three_alt_paths() {
 #[test]
 fn st20_10_third_alt_path_is_warp_into_wargreymon() {
     let card = compiled("ST20-10");
-    let path = &card.alt_paths[2];
+    let path = &card.alt_paths[3];
     assert_eq!(path.kind, CompiledAltPathKind::Digivolve);
     assert_eq!(
         path.direction,
@@ -201,7 +201,7 @@ fn st20_10_first_alt_path_is_lv2_black_cost0_digivolve() {
 #[test]
 fn st20_10_second_alt_path_is_xros_req_lv2_adventure_or_hero_cost0() {
     let card = compiled("ST20-10");
-    let path = &card.alt_paths[1];
+    let path = &card.alt_paths[2];
     assert_eq!(path.kind, CompiledAltPathKind::Digivolve);
     assert_eq!(
         path.cost,
@@ -576,4 +576,44 @@ fn st20_10_warp_into_wargreymon_only_applies_to_st20_10_base() {
          must not pick it up (WarGreymon has empty evo_costs so the rules \
          route also fails)"
     );
+}
+
+/// The warp is Agumon (ST20-10)'s own [Your Turn] effect, so it is off while
+/// the card sits in the breeding area.
+///
+/// CR 4.3 3-4-7-4: "Effects on cards in breeding areas can't trigger or
+/// activate, except for effects that explicitly specify or reference breeding
+/// areas." Official Q&A Q6388 (BlackGatomon (BT25-082), the same clause
+/// shape): "No, you can't. The effect doesn't activate in the breeding area."
+/// DCGO ST20_10.cs gates the clause on `IsExistOnBattleArea(card)`.
+#[test]
+fn st20_10_warp_is_not_available_in_the_breeding_area() {
+    use digimon_engine::action::build_action_mask;
+    use digimon_engine::action::space::{encode_digivolve, BREEDING_TARGET};
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST20-10")
+        .expect("ST20-10 in pack")
+        .add_card(make_wargreymon("WARGREYMON"))
+        .add_card(make_opp_digimon("BIG-DP", 10000))
+        .hand(0, &["WARGREYMON"])
+        .memory(20)
+        .start();
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner.place_in_breeding(0, "ST20-10");
+    runner.place_on_field(1, "BIG-DP", Some(0));
+    let memory_before = runner.game.memory;
+
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[encode_digivolve(0, BREEDING_TARGET) as usize],
+        0.0,
+        "the warp must not be offered for a breeding-area Agumon (ST20-10)"
+    );
+    assert!(!runner.game.digivolve_from_hand_onto_breeding(
+        0,
+        0,
+        digimon_engine::enums::PlaySource::ByHand,
+    ));
+    let breeding = runner.game.players[0].breeding_area.as_ref().expect("still in breeding");
+    assert_eq!(breeding.top_card().card_id(&runner.game.card_data), "ST20-10");
+    assert_eq!(runner.game.memory, memory_before, "nothing was paid");
 }

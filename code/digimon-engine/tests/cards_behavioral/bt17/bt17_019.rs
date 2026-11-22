@@ -168,8 +168,8 @@ fn bt17_019_has_lv2_blue_cost0_digivolve_alt_path() {
         .collect();
     assert_eq!(
         digivolve_paths.len(),
-        1,
-        "BT17-019 must expose exactly one digivolve alt-path; got {}",
+        2,
+        "BT17-019 must expose exactly two digivolve alt-paths (printed Blue|Red split circle); got {}",
         digivolve_paths.len()
     );
     assert_eq!(

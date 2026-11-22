@@ -3,6 +3,10 @@ name: Digimon Emperor
 kind: tamer
 color: [black]
 cost: 5
+# Printed (official Bandai DB): "(Rule) Name: Also treated as [Ken Ichijoji]." An
+# identity alias in every zone (CR 4.3 2-3-1-2). DCGO EX10_068.cs:
+# unconditional `ChangeCardNamesClass` adding "Ken Ichijoji".
+also_treated_as: [Ken Ichijoji]
 
 # Printed card text (cards.json / card image — verbatim):
 #   [Start of Your Main Phase] For every 2 colors your opponent's Digimon and

@@ -42,8 +42,10 @@ fn petrification_fence_preserves_native_play_and_deletion_for_each_controller() 
                         let physical = game.players[seat as usize].battle_area[token.index as usize]
                             .top_card().handle();
                         let effects = game.registry_effects("TOKEN_PETRIFICATION", physical).unwrap();
-                        assert_eq!(effects.len(), 1);
-                        assert_eq!(effects[0].source_card, physical);
+                        // [On Deletion] + the continuous "[Your Turn] This Digimon
+                        // can't suspend" (both printed on the token).
+                        assert_eq!(effects.len(), 2);
+                        assert!(effects.iter().all(|effect| effect.source_card == physical));
                         game.delete_permanent_with_effects(token);
                         assert!(game.players[seat as usize].battle_area.is_empty());
                         assert_eq!(game.players[seat as usize].security.len(), security_count.saturating_sub(1));
@@ -83,6 +85,6 @@ fn petrification_registration_cannot_authorize_an_opaque_replacement() {
         assert!(message.contains("event-reference fence reached opaque factory"));
         assert_eq!(calls.load(Ordering::SeqCst), 0);
         // A retained fixed factory does not acquire the replacement's body.
-        assert_eq!(factory.effects(CardHandle(42)).len(), 1);
+        assert_eq!(factory.effects(CardHandle(42)).len(), 2);
     }
 }

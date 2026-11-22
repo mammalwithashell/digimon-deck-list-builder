@@ -308,6 +308,7 @@ impl Game {
             keyword_effect: None,
             trigger_batch: 0,
             pending_processing: Some(payload),
+            trash_zone_generation: None,
         });
     }
 }

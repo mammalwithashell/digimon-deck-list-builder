@@ -24,7 +24,7 @@ alt_paths:
       all_of:
         - level_eq: 3
         - any_of:
-            - name_contains: "Veemon"
+            - name_is: "Veemon"
             - trait_has: CS
     cost: 3
 

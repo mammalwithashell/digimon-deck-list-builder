@@ -7,8 +7,10 @@ cost: 6
 dp: 6000
 traits: [Reptile, LIBERATOR]
 alt_paths:
+  # Printed circle: Red Lv.3 / cost 2. The colour is part of the
+  # requirement; a gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 3 }
+    from: { level_eq: 3, color_is: red }
     cost: 2
 
 # Clause 1 — [Security] You may play 1 card with the [LIBERATOR] trait and a play

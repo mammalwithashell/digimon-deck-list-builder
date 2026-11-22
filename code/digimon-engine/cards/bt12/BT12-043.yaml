@@ -4,12 +4,12 @@
 # Digivolution requirements (AUTHORITATIVE — official Bandai DB bundle
 # data/card_bundles/BT12-043.md + card image BT12-043.webp):
 #   Standard digivolve cost circles: Yellow Lv.5 / cost 4 AND Red Lv.5 / cost 4.
-#   cards.json evo_costs (BT12-043.json) drops the Red circle — only
-#   {card_color: 2 (Yellow), level: 5, memory_cost: 4} survives the lossy API
-#   ingest. This is the documented multi-colour-digivolve-cost drop (CLAUDE.md
-#   source-priority + qa memory project_bg_imperial_evo_cost_color_gap /
-#   BT12-038 sibling finding). The Red Lv.5/4 circle is authored explicitly
-#   below as a standard `kind: digivolve` alt_path to restore it.
+#   Both colours of the circle are authored below as `kind: digivolve`
+#   alt_paths, one entry per colour. A DebugRunner fixture builds its card data
+#   from this spec alone (it never reads cards.json), so a circle colour missing
+#   here is a digivolution missing from every test of the card. Production
+#   reads the same two rows from cards.json and de-duplicates the equal-cost
+#   routes.
 #   Special alt-path (xros_req, printed black text): "[Digivolve] 3 from Lv.5
 #   w/[RizeGreymon] in name" — cost 3, gated on the base's TOP CARD being a
 #   Lv.5 Digimon whose name contains "RizeGreymon" (a substring gate, not an
@@ -120,8 +120,8 @@
 #
 # | Card-text element                                                | Status      |
 # |-------------------------------------------------------------------|------------|
-# | Standard digivolve: Yellow Lv.5 / cost 4 (cards.json evo_costs)   | IMPLEMENTED |
-# | Standard digivolve: Red Lv.5 / cost 4 (cards.json-dropped circle) | IMPLEMENTED |
+# | Standard digivolve: Yellow Lv.5 / cost 4 (explicit alt_path)      | IMPLEMENTED |
+# | Standard digivolve: Red Lv.5 / cost 4 (explicit alt_path)         | IMPLEMENTED |
 # | Alt-path: [Digivolve] 3 from Lv.5 w/[RizeGreymon] in name          | IMPLEMENTED |
 # | [WD] gate: count(own yellow/red Tamer) >= 1                       | IMPLEMENTED |
 # | [WD] mandatory -3000*count DP to 1 opp Digimon (when any exists)  | IMPLEMENTED |
@@ -140,11 +140,12 @@ traits: ["Light Dragon"]
 attribute: Vaccine
 
 alt_paths:
-  # Standard printed circle dropped by the lossy cards.json multi-colour
-  # digivolve-cost ingest (only Yellow Lv.5/4 survives in evo_costs). The
-  # Yellow circle loads automatically from evo_costs; this restores Red.
+  # Printed split circle: Red|Yellow Lv.5 / cost 4 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
     cost: 4
   # Special alt-path (xros_req black text): "[Digivolve] 3 from Lv.5
   # w/[RizeGreymon] in name". DCGO ContainsCardName is a substring scan.

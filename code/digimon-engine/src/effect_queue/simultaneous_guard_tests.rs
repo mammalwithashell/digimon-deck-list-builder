@@ -32,7 +32,7 @@ fn fixture(player: u8, context: TriggerContext) -> (DebugRunner, QueuedEffect) {
         controller: player, timing: EffectTiming::OnPlay, trigger_context: Some(context),
         effect_slot: 0, is_optional: false, is_turn_player: player == 0, card_id: "SG".into(),
         allow_below_top_liveness: false, dna_origin_context: None, granted_effect_id: Some(922),
-        keyword_effect: None, trigger_batch: 0, pending_processing: None,
+        keyword_effect: None, trigger_batch: 0, pending_processing: None, trash_zone_generation: None,
     };
     (r, qe)
 }

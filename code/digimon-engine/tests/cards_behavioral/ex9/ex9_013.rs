@@ -97,8 +97,8 @@ fn ex9_013_has_two_digivolve_alt_paths() {
         .collect();
     assert_eq!(
         digi_paths.len(),
-        2,
-        "Should have standard (Lv5/4) + alt-digi (Lv5+Greymon|DM/3) paths"
+        3,
+        "Should have standard Red + Black (printed split circle) (Lv5/4) + alt-digi (Lv5+Greymon|DM/3) paths"
     );
 }
 

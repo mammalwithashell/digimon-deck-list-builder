@@ -9,8 +9,12 @@ traits: [Avian, Twilight, Xros Heart]
 attribute: Data
 
 alt_paths:
+  # Printed split circle: Black|Purple Lv.2 / cost 1 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 2, color_is: black }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
     cost: 1
   - kind: digivolve
     from:

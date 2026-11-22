@@ -766,3 +766,63 @@ fn bt25_092_main_target_pick_is_offered_when_the_reduced_cost_is_exactly_payable
     let (runner, _tamer, _base) = pricey_main(1);
     assert!(runner.pending_selection().is_some(), "11 is payable from memory 1: the host is offered");
 }
+
+/// A DUAL card (Digimon/Option, e.g. BeelStarmon (BT25-085)) as the top card.
+fn make_dual_top(id: &str) -> digimon_engine::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Dual;
+    card.colors = vec![CardColor::Purple];
+    card.level = Some(6);
+    card.dp = Some(12000);
+    card.play_cost = 6;
+    card
+}
+
+/// CR 4.3 4-6-3: "A DUAL card placed on the field is treated as a Digimon."
+/// So the cards under a DUAL top card are "your Digimon's digivolution cards"
+/// and an Option among them can pay Asuna Shiroki (BT25-092)'s [Main] cost.
+/// DCGO BT25_092.cs uses `IsPermanentExistsOnOwnerBattleAreaDigimon` for both
+/// the activation gate and the pick.
+///
+/// Bug-scan repro (2026-11): with BeelStarmon (BT25-085) on top and no Option
+/// in hand the activation was accepted (the gate counts a DUAL top as a
+/// Digimon) but the cost scan skipped the stack, so the Tamer suspended,
+/// nothing was trashed, and the digivolve went ahead with the cost unpaid.
+#[test]
+fn bt25_092_main_cost_from_digivolution_cards_under_a_dual_top_card() {
+    let mut runner = main_runner()
+        .add_card(make_dual_top("DUAL-TOP"))
+        .hand(0, &["EVO-HAND"])
+        .memory(5)
+        .start();
+    let tamer = runner.place_on_field(0, "BT25-092", Some(0));
+    let dual = runner.place_on_field(0, "DUAL-TOP", Some(0));
+    runner.push_source(dual, "OPT-UNDER");
+    let sources_before = runner.game.player(0).battle_area[dual.index as usize]
+        .card_sources
+        .len();
+    enter_main(&mut runner);
+
+    assert!(activate_main(&mut runner, tamer.index as usize));
+    assert!(
+        runner.pending_selection_view().is_some(),
+        "the mandatory Option trash must be a real pick"
+    );
+    let source_action = physical_menu::source_action(&runner.game, dual, 0);
+    assert_eq!(
+        offered_actions(&runner),
+        vec![source_action],
+        "the Option under the DUAL top card is the only legal cost"
+    );
+    runner
+        .execute_action(0, source_action)
+        .expect("trash the Option under the DUAL top card");
+    assert!(trash_has(&runner, "OPT-UNDER"));
+    assert_eq!(
+        runner.game.player(0).battle_area[dual.index as usize]
+            .card_sources
+            .len(),
+        sources_before - 1,
+        "the Option left the DUAL card's digivolution cards"
+    );
+}

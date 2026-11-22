@@ -17,7 +17,7 @@ alt_paths:
       all_of:
         - level_eq: 2
         - any_of:
-            - name_contains: Tsunomon
+            - name_is: Tsunomon
             - trait_has: VB
     cost: 0
 

@@ -14,7 +14,7 @@
 #     without paying the cost.
 #   Official Q&A: "[Chronomon] text" scans the whole card.
 #
-# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_078.cs
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Green/BT26_078.cs
 #
 # ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
 # Alt-digivolve: level 5 && TopCard.EqualsTraits("TS"), cost 5.
@@ -32,6 +32,12 @@
 #   on_ally_played per played permanent, and once this card has left the
 #   trash no further copy can activate, so the player's accept/decline over
 #   the per-permanent triggers is the "1 of them" choice.
+#   DCGO `CanActivateCondition` = IsExistOnTrashActivate(card) && opponent
+#   memory >= 5: a copy that left the trash while its trigger was pending can
+#   no longer activate (CR 4.3 15-4-4-3; enforced by the engine's {Trash}
+#   liveness gate, `Game::queued_effect_source_is_live`). The grants are
+#   additionally gated on the return having happened (`effect_returned_any_card`):
+#   the text after "by ..." can't run if the cost wasn't carried out (15-7-2).
 # [On Play][When Digivolving] (shared, optional: true): DeletePermanent(this)
 #   and on success PlayByEffect(Root.Trash, payCost: false, canNoSelect
 #   default true) over HasPlayCost && cost ≤ 12 && (HasText("Chronomon") ||
@@ -78,14 +84,19 @@ effects:
     summary: "[Trash][Your Turn] When any of your [Chronomon] text or [Titan] trait Digimon are played, if your opponent has 5 or more memory, by returning this card to the bottom of the deck, 1 of them gains <Rush> and <Execute> for the turn"
     process:
       - return_trash_list_to_deck_bottom: { of: you, cards: self }
-      - grant_keyword:
-          target: event_target
-          keyword: Rush
-          expiry: end_of_turn
-      - grant_keyword:
-          target: event_target
-          keyword: Execute
-          expiry: end_of_turn
+      # "by returning this card ..." — CR 4.3 15-7-2: nothing after the "by"
+      # runs unless the card was actually returned.
+      - if:
+          condition: { effect_returned_any_card: true }
+          then:
+            - grant_keyword:
+                target: event_target
+                keyword: Rush
+                expiry: end_of_turn
+            - grant_keyword:
+                target: event_target
+                keyword: Execute
+                expiry: end_of_turn
 
   # ─── [On Play][When Digivolving] by deleting this Digimon, may play 1 cost
   #     ≤12 [Chronomon]-text / [Titan] card from trash free ─────────────────

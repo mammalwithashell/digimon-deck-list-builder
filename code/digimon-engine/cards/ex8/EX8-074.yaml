@@ -1,4 +1,4 @@
-# EX8-074 MedievalGallantmon — Digimon, Lv.6, Black+Green, DP 11000, Cost 11.
+# EX8-074 MedievalGallantmon — Digimon, Lv.6, Green+Red, DP 11000, Cost 11.
 # Traits: Warrior, Witchelny, Vortex Warriors.
 #
 # Card text:
@@ -14,14 +14,19 @@ card: EX8-074
 name: MedievalGallantmon
 kind: digimon
 level: 6
-color: [black, green]
+color: [green, red]
 cost: 11
 dp: 11000
 traits: [Warrior, Witchelny, "Vortex Warriors"]
 alt_paths:
+  # Printed split circle: Green|Red Lv.5 / cost 3 — one entry per colour.
+  # A gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 5 }
-    cost: 4
+    from: { level_eq: 5, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
 
 effects:
   # ─── Clause 1: BeforePayCost — suspend 2 Digimon → -4 play cost ─────────────

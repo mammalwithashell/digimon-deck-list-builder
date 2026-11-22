@@ -7,8 +7,13 @@ cost: 20
 dp: 15000
 traits: [Unanalyzable, X Program]
 alt_paths:
+  # Printed split circle: Purple|Black Lv.6 / cost 6 — one entry per colour.
+  # A gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 6 }
+    from: { level_eq: 6, color_is: purple }
+    cost: 6
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
     cost: 6
 
 effects:
@@ -20,8 +25,10 @@ effects:
   # DCGO: ChangeCostClass(EffectTiming.None).
   #   count() = 3 * Enemy.GetBattleAreaPermanents().Count(p => p.IsDigimon || p.IsTamer)
   #
-  # NOTE: card_count_in_zone counts ALL battle_area permanents (Digimon + Tamers)
-  # without a kind filter, matching the printed "each Digimon and Tamer" precisely.
+  # "for each of your opponent's Digimon and Tamers": the count is filtered to
+  # Digimon and Tamers -- an unfiltered battle-area count would also count Option
+  # cards placed in the battle area (CR 4.3 4-28-1). DCGO BT9_112.cs:
+  # `3 * Enemy.GetBattleAreaPermanents().Count(p => p.IsDigimon || p.IsTamer)`.
   # delta: 3 gives 3 memory reduction per opponent permanent.
   - kind: cost_reduction
     reduction_timing: before_pay_cost
@@ -32,6 +39,10 @@ effects:
         card_count_in_zone:
           of: opponent
           zone: battle_area
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
       delta: 3
     summary: "-3 per opponent Digimon/Tamer when played"
 

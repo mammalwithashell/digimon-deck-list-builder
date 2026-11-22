@@ -156,8 +156,12 @@ traits: [Holy Warrior, Royal Knight, CS]
 
 alt_paths:
   # Standard digivolve: Lv.6 Red / Cost 6 (per cards.json evo_costs).
+  # Printed split circle: Red|Blue Lv.6 / cost 6 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 6, color_is: red }
+    cost: 6
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
     cost: 6
 
   # Printed alt digivolve: Lv.6 w/[CS] trait / Cost 5.

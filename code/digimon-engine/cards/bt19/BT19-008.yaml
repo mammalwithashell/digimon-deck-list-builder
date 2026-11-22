@@ -9,8 +9,12 @@ traits: [Mini Dragon, Xros Heart]
 attribute: Data
 
 alt_paths:
+  # Printed split circle: Red|Yellow Lv.2 / cost 1 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 2, color_is: red }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
     cost: 1
   - kind: digivolve
     from:

@@ -101,7 +101,7 @@ alt_paths:
     cost: 4
 
   - kind: digivolve
-    from: { name_contains: "MetalGreymon" }
+    from: { name_is: "MetalGreymon" }
     cost: 3
 
 effects:

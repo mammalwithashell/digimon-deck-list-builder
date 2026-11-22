@@ -105,12 +105,16 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: blue }
     cost: 5
+  # Printed split circle: Blue|Green Lv.5 / cost 5 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 5
 
   - kind: digivolve
     from:
       of: you
       zone: [battle_area]
-      name_contains: "Imperialdramon: Dragon Mode"
+      name_is: "Imperialdramon: Dragon Mode"
     cost: 2
 
   - kind: burst_digivolve

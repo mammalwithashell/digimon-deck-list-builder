@@ -15,7 +15,7 @@ alt_paths:
   - kind: digivolve
     from:
       any_of:
-        - name_contains: Nyaromon
+        - name_is: Nyaromon
         - all_of:
             - level_eq: 2
             - trait_has: VB

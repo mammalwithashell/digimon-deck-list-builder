@@ -496,3 +496,85 @@ fn bt25_082_op_offers_no_tamer_with_a_full_battle_area() {
     );
     assert!(tm_tamer_in_hand(&runner));
 }
+
+// ─── Section 4 — warp into a [Three Musketeers] Digimon (alt-path) ───────────
+
+/// A [Three Musketeers] Lv.6 with EMPTY evo_costs: only the warp can put it on
+/// a Lv.3 BlackGatomon (BT25-082).
+fn warp_target() -> CardData {
+    let mut card = make_digimon("TM-WARP-LV6", 6, &["Three Musketeers"]);
+    card.evo_costs = Vec::new();
+    card
+}
+
+fn warp_runner() -> DebugRunner {
+    let mut runner = base()
+        .add_card(warp_target())
+        .hand(0, &["TM-WARP-LV6"])
+        .memory(10)
+        .start();
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner
+}
+
+/// "While you have a Tamer with [Three Musketeers] in its text, this Digimon
+/// can digivolve into a [Three Musketeers] trait Digimon card in the hand for
+/// a digivolution cost of 4, ignoring digivolution requirements."
+#[test]
+fn bt25_082_warps_into_tm_digimon_for_4_in_the_battle_area() {
+    let mut runner = warp_runner();
+    let gato = place_blackgatomon(&mut runner);
+    runner.place_on_field(0, "TM-TAMER", None);
+    let memory_before = runner.game.memory;
+    assert!(runner.game.digivolve_from_hand(
+        0,
+        0,
+        gato.index as usize,
+        digimon_engine::enums::PlaySource::ByHand,
+    ));
+    let top = runner.game.players[0].battle_area[gato.index as usize].top_card();
+    assert_eq!(top.card_id(&runner.game.card_data), "TM-WARP-LV6");
+    assert_eq!(memory_before - runner.game.memory, 4, "warp costs exactly 4");
+}
+
+#[test]
+fn bt25_082_warp_needs_a_tm_text_tamer() {
+    let mut runner = warp_runner();
+    let gato = place_blackgatomon(&mut runner);
+    runner.place_on_field(0, "PLAIN-TAMER", None);
+    assert!(!runner.game.digivolve_from_hand(
+        0,
+        0,
+        gato.index as usize,
+        digimon_engine::enums::PlaySource::ByHand,
+    ));
+}
+
+/// Official Q&A Q6388 on this card: "I have a Tamer with [Three Musketeers]
+/// in its text. Can I digivolve this card in the breeding area into a Digimon
+/// card with the [Three Musketeers] trait, ignoring digivolution
+/// requirements?" -- "No, you can't. The effect doesn't activate in the
+/// breeding area." CR 4.3 3-4-7-4; DCGO BT25_082.cs gates the clause on
+/// `IsExistOnBattleArea(card)`.
+#[test]
+fn bt25_082_warp_is_not_available_in_the_breeding_area() {
+    use digimon_engine::action::build_action_mask;
+    use digimon_engine::action::space::{encode_digivolve, BREEDING_TARGET};
+    let mut runner = warp_runner();
+    runner.place_in_breeding(0, CARD_ID);
+    runner.place_on_field(0, "TM-TAMER", None);
+    let memory_before = runner.game.memory;
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[encode_digivolve(0, BREEDING_TARGET) as usize],
+        0.0,
+        "the warp must not be offered for a breeding-area BlackGatomon (BT25-082)"
+    );
+    assert!(!runner.game.digivolve_from_hand_onto_breeding(
+        0,
+        0,
+        digimon_engine::enums::PlaySource::ByHand,
+    ));
+    let breeding = runner.game.players[0].breeding_area.as_ref().expect("still in breeding");
+    assert_eq!(breeding.top_card().card_id(&runner.game.card_data), CARD_ID);
+    assert_eq!(runner.game.memory, memory_before, "nothing was paid");
+}

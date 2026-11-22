@@ -171,8 +171,87 @@ fn ex9_019_has_five_printed_digivolve_alt_paths() {
         digi_paths.iter().any(|p| matches!(p.cost, Some(Literal(1)))
             && p.from
                 .as_ref()
-                .is_some_and(|f| f.name_contains.as_deref() == Some("WereGarurumon"))),
-        "the printed [WereGarurumon] cost-1 route must be encoded"
+                .is_some_and(|f| f.name_is.as_deref() == Some("WereGarurumon"))),
+        "the printed [WereGarurumon] cost-1 route must be an EXACT-name gate (name_is)"
+    );
+}
+
+// --- "[Digivolve] [WereGarurumon]: Cost 1" is an exact-name route -------------
+//
+// The printed box reads "[Digivolve] [WereGarurumon]: Cost 1" -- brackets only,
+// next to "Lv.4 w/[Garurumon] in name ...: Cost 3" on the same card. CR 4.3
+// 2-3-1-2 / 2-3-5-3: brackets alone reference only a card NAMED that; only
+// "with [XX] in its name" (2-3-1-3) is a substring match. DCGO EX9_019.cs:
+// `targetPermanent.TopCard.EqualsCardName("WereGarurumon")`.
+// Regression (bug scan, 3 logged games): authored `name_contains`, the card
+// digivolved onto another copy of ITSELF for 1.
+
+/// Stage EX9-019 in hand over `base_id` on P0's field; returns (runner, slot).
+fn ex9_019_over(base: Option<CardData>, base_id: &str) -> (DebugRunner, usize) {
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX9-019 YAML loads");
+    if let Some(card) = base {
+        b = b.add_card(card);
+    }
+    let mut r = b.hand(0, &["EX9-019"]).memory(10).start();
+    r.game.turn_count = 1;
+    r.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    let slot = r.place_on_field(0, base_id, Some(0)).index as usize;
+    (r, slot)
+}
+
+fn ex9_019_digivolve_offered(r: &DebugRunner, slot: usize) -> bool {
+    use digimon_engine::action::mask::build_action_mask;
+    use digimon_engine::action::space::encode_digivolve;
+    build_action_mask(&r.game, 0)[encode_digivolve(0, slot as u16) as usize] > 0.5
+}
+
+/// A Lv.5 purple Digimon named `name`: no standard circle (Lv.4 blue/black)
+/// and no Lv.4 box route can apply, so only the name route is under test.
+fn ex9_019_lv5_named(id: &str, name: &str) -> CardData {
+    let mut card = make_test_card(id, name);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(5);
+    card.dp = Some(7000);
+    card.colors = vec![digimon_engine::enums::CardColor::Purple];
+    card.traits = Vec::new();
+    card
+}
+
+#[test]
+fn ex9_019_digivolves_from_a_card_named_weregarurumon_for_1() {
+    let (mut r, slot) = ex9_019_over(Some(ex9_019_lv5_named("WG5", "WereGarurumon")), "WG5");
+    assert!(ex9_019_digivolve_offered(&r, slot));
+    let mem = r.memory();
+    assert!(r.game.digivolve_from_hand(
+        0,
+        0,
+        slot,
+        digimon_engine::enums::PlaySource::ByHand
+    ));
+    assert_eq!(mem - r.memory(), 1, "[Digivolve] [WereGarurumon]: Cost 1");
+}
+
+#[test]
+fn ex9_019_does_not_digivolve_onto_another_copy_of_itself() {
+    // "WereGarurumon: Sagittarius Mode" is not NAMED "WereGarurumon".
+    let (r, slot) = ex9_019_over(None, "EX9-019");
+    assert!(
+        !ex9_019_digivolve_offered(&r, slot),
+        "EX9-019 must not digivolve onto WereGarurumon: Sagittarius Mode (EX9-019)"
+    );
+}
+
+#[test]
+fn ex9_019_does_not_digivolve_from_weregarurumon_x_antibody_by_name() {
+    let (r, slot) = ex9_019_over(
+        Some(ex9_019_lv5_named("WGX5", "WereGarurumon (X Antibody)")),
+        "WGX5",
+    );
+    assert!(
+        !ex9_019_digivolve_offered(&r, slot),
+        "WereGarurumon (X Antibody) is not named WereGarurumon"
     );
 }
 

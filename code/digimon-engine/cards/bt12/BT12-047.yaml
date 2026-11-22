@@ -54,6 +54,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 2, color_is: green }
     cost: 0
+  # Printed split circle: Green|Blue Lv.2 / cost 0 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
 
 effects:
   # ─── Clause 0 — [On Play] reveal 3 + two-bucket selection ────────────────

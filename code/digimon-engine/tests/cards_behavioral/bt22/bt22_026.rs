@@ -67,7 +67,7 @@
 //!
 //! | Card-text element                                                    | YAML clause                                                                          | Status         |
 //! |----------------------------------------------------------------------|--------------------------------------------------------------------------------------|----------------|
-//! | "Standard Lv.5 Blue digivolve cost 4"                                  | `alt_paths: { kind: digivolve, from: { level_eq: 5 }, cost: 4 }`                       | OK             |
+//! | "Standard split Blue/Red Lv.5 circle, cost 4" (card image)             | two `alt_paths`: `{ kind: digivolve, from: { level_eq: 5, color_is: blue / red }, cost: 4 }` | OK             |
 //! | "[Hand][Main] if Nokia Shiramine, 1 Gabumon digivolves at cost 6, ignore reqs" | `when: main_from_hand` + `condition: { Nokia on field, Gabumon target }` + `select_own_permanent { name_contains: "Gabumon" }` + `effect_initiated_digivolve { from_hand: self, cost: 6, ignore_requirements: true }` | OK (re-modelled off retired activated_digivolve — G-ACTIVATED-DIGIVOLVE-EXECUTION) |
 //! | "[When Digivolving] Activate 1 of the effects below: …"               | `when: when_digivolving` + `select_effect_choice { 2 labels }`                         | OK             |
 //! | "1 of your [Agumon] may digivolve into [WarGreymon] in hand free, ignore reqs" | `select_own_permanent { name_contains: "Agumon" }` + `select_hand { name_contains: "WarGreymon" }` + `effect_initiated_digivolve { ignore_requirements, cost: 0 }` | OK (G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET RESOLVED) |
@@ -199,12 +199,34 @@ fn bt22_026_compiles_with_three_alt_paths_and_three_triggered_clauses() {
     // as a name route + a trait route. (The earlier "cost-3 is unprinted DCGO-only"
     // reasoning was the lossy-cards.json error this change corrects.) The [Hand][Main]
     // Nokia jump remains a separate main_from_hand clause.
+    // The standard circle is a split Red|Blue "Lv.5 / 4" (card image + official
+    // DB), authored as one entry per colour. This used to assert 3 paths, the
+    // first a colour-free `{ level_eq: 5 }` gate that let the card digivolve
+    // from a Lv.5 of any colour.
     assert_eq!(
         card.alt_paths.len(),
-        3,
-        "expected 3 alt_paths (standard Digivolve + Garurumon-name + CS-trait), got {}",
+        4,
+        "expected 4 alt_paths (Red circle + Blue circle + Garurumon-name + CS-trait), got {}",
         card.alt_paths.len()
     );
+    for colour in [
+        digimon_dsl::compiled::CompiledColor::Red,
+        digimon_dsl::compiled::CompiledColor::Blue,
+    ] {
+        assert!(
+            card.alt_paths.iter().any(|p| {
+                p.kind == CompiledAltPathKind::Digivolve
+                    && p.cost == Some(digimon_dsl::compiled::CompiledCost::Literal(4))
+                    && p.from.as_deref().is_some_and(|f| {
+                        f.level_eq == Some(5)
+                            && f.color_is == Some(colour)
+                            && f.name_contains.is_none()
+                            && f.trait_has.is_none()
+                    })
+            }),
+            "BT22-026 must author the printed {colour:?} Lv.5 / cost 4 circle"
+        );
+    }
 
     let triggered: Vec<&CompiledTriggeredClause> = card
         .effects

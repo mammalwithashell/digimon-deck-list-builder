@@ -19,7 +19,7 @@ alt_paths:
     cost: 4
   # Printed alt: "[Digivolve] [Shoutmon]: Cost 4" (name-gated, no level/colour).
   - kind: digivolve
-    from: { name_contains: Shoutmon }
+    from: { name_is: Shoutmon }
     cost: 4
   # Printed alt: "Lv.4 w/[Xros Heart] trait: Cost 3" (cheaper trait route).
   - kind: digivolve

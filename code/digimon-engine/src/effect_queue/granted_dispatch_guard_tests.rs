@@ -23,7 +23,7 @@ fn queued(player: u8, source: CardHandle, host: PermanentHandle, context: Trigge
         controller: player, timing: EffectTiming::OnPlay, trigger_context: Some(context),
         effect_slot: 0, is_optional: false, is_turn_player: player == 0, card_id: "GG".into(),
         allow_below_top_liveness: false, dna_origin_context: None, granted_effect_id: Some(811),
-        keyword_effect: None, trigger_batch: 0, pending_processing: None,
+        keyword_effect: None, trigger_batch: 0, pending_processing: None, trash_zone_generation: None,
     }
 }
 

@@ -5,10 +5,10 @@
 # all in agreement):
 #   Green/Purple Lv.6, DP 12000, cost 12, traits Dark Animal/NSo, Virus, Mega.
 #
-#   Standard digivolve cost circles: Green Lv.5 / cost 4; Purple Lv.5 / cost 4
-#     (cards.json evo_costs only carries the Green entry — the Purple circle
-#     is picked up via an explicit alt_paths digivolve entry below, the usual
-#     multi-colour evo_costs drop CLAUDE.md warns about).
+#   Standard digivolve cost circle: one split circle, Green|Purple Lv.5 /
+#     cost 4, authored below as one alt_paths digivolve entry per colour (a
+#     DebugRunner fixture builds its card data from this spec alone, so both
+#     colours have to be here; production reads the same rows from cards.json).
 #   [Digivolve] Lv.5 w/[NSo] trait: Cost 3
 #   [DNA Digivolve] Green/Purple Lv.5 + Red/Yellow Lv.5: Cost 0. Stack the 2
 #     specified Digimon and digivolve unsuspended.
@@ -52,8 +52,8 @@
 #     opponent board trivially satisfies "no permanent has DP >= mine").
 #
 # Implementation status (faithfulness diff):
-# | Standard digivolve Green Lv.5 / Cost 4                    | IMPLEMENTED (JSON evo_costs)               |
-# | Standard digivolve Purple Lv.5 / Cost 4 (dropped by JSON) | IMPLEMENTED (explicit alt_paths digivolve)  |
+# | Standard digivolve Green Lv.5 / Cost 4                    | IMPLEMENTED (explicit alt_paths digivolve)  |
+# | Standard digivolve Purple Lv.5 / Cost 4                   | IMPLEMENTED (explicit alt_paths digivolve)  |
 # | Alt digivolve Lv.5 w/[NSo] trait / Cost 3                 | IMPLEMENTED (alt_paths trait_has)           |
 # | DNA digivolve Green/Purple Lv.5 + Red/Yellow Lv.5 / Cost 0| IMPLEMENTED — `color_only` (NOT `any_of`;   |
 # |                                                            |   `dsl_bridge::compiled_dna_requirement`'s   |
@@ -85,8 +85,12 @@ traits: [Dark Animal, NSo]
 attribute: Virus
 
 alt_paths:
+  # Printed split circle: Green|Purple Lv.5 / cost 4 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 5, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
     cost: 4
   - kind: digivolve
     from: { level_eq: 5, trait_has: NSo }

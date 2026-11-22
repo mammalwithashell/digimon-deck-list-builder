@@ -11,7 +11,7 @@ alt_paths:
     from: { level_eq: 6, color_is: purple }
     cost: 5
   - kind: digivolve
-    from: { name_contains: "Millenniummon" }
+    from: { name_is: "Millenniummon" }
     cost: 2
 
 # Printed text:

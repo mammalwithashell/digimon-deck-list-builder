@@ -28,9 +28,10 @@ dp: 11000
 traits: ["Holy Warrior", "Royal Knight", CS]
 
 alt_paths:
-  # Standard Lv.5 / cost 3 digivolve (printed on card as default).
+  # Printed circle: Red Lv.5 / cost 3. The colour is part of the
+  # requirement; a gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 5 }
+    from: { level_eq: 5, color_is: red }
     cost: 3
   # Alt-digivolve: Lv.5 with [CS] trait / cost 3 (from xros_req data).
   - kind: digivolve
@@ -86,8 +87,9 @@ effects:
   #
   # The DP cap is a pure-DSL `base + per × delta` formula: 8000 + 2000 ×
   # (count of permanents in the opponent's battle area). `card_count_in_zone`
-  # with no kind filter counts all battle-area permanents = "their Digimon and
-  # Tamers" (only Digimon and Tamers occupy battle-area slots). The `dp_lte`
+  # is filtered to Digimon and Tamers: an Option card placed in the battle area
+  # (CR 4.3 4-28-1) also occupies a battle-area slot and must not be counted
+  # (DCGO BT23_014.cs: `.Filter(x => x.IsDigimon || x.IsTamer).Count * 2000`). The `dp_lte`
   # formula is evaluated per-candidate by `eval_permanent_fields`.
   - when: [on_play, when_digivolving, when_attacking]
     summary: "Delete 1 opp Digimon (≤8000+2000×opp_count DP)"
@@ -103,6 +105,10 @@ effects:
                     card_count_in_zone:
                       of: opponent
                       zone: battle_area
+                      filter:
+                        any_of:
+                          - kind: digimon
+                          - kind: tamer
                   delta: 2000
           prompt: "Delete opponent Digimon (≤8000+2000×opp count DP)"
       - delete_permanent: { target: tgt }

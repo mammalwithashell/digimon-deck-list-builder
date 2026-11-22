@@ -148,8 +148,8 @@ fn bt22_015_compiles_with_three_alt_paths_and_grant_keyword_and_two_triggered() 
     // added under promote-official-bandai-card-source) + DnaDigivolve (2).
     assert_eq!(
         card.alt_paths.len(),
-        3,
-        "expected 3 alt_paths (Digivolve + CS-trait Digivolve + DnaDigivolve), got {}",
+        4,
+        "expected 4 alt_paths (Red + Blue split-circle Digivolve + CS-trait Digivolve + DnaDigivolve), got {}",
         card.alt_paths.len()
     );
 
@@ -205,9 +205,9 @@ fn bt22_015_first_alt_path_is_digivolve_lv6_red_cost6() {
 #[test]
 fn bt22_015_third_alt_path_is_dna_digivolve_greymon_garurumon_cost0() {
     let card = compiled_bt22_015();
-    // Index 2: the CS-trait alt (index 1) was inserted between the standard route (0)
-    // and the DNA route under promote-official-bandai-card-source.
-    let path = &card.alt_paths[2];
+    // Index 3: the standard Red (0) and Blue (1, printed Red|Blue split circle)
+    // routes and the CS-trait alt (2) precede the DNA route.
+    let path = &card.alt_paths[3];
     assert_eq!(path.kind, CompiledAltPathKind::DnaDigivolve);
     assert_eq!(
         path.cost,

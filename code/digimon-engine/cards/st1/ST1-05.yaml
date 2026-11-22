@@ -10,8 +10,10 @@ form: Champion
 attribute: Vaccine
 
 alt_paths:
+  # Printed circle: Red Lv.3 / cost 2. The colour is part of the
+  # requirement; a gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 3 }
+    from: { level_eq: 3, color_is: red }
     cost: 2
 
 effects: []

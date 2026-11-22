@@ -403,6 +403,20 @@ mod burst_digivolve {
         assert_effect_cannot_burst(SPEC);
     }
 
+    /// Bug-scan lead (2026-11): 2 of 2 breeding-area bursts kept Rosemon:
+    /// Burst Mode (BT26-050) on top after the turn ended.
+    #[test]
+    fn breeding_area_burst_trashes_top_card_at_turn_end() {
+        assert_breeding_burst_turn_end_trash(SPEC);
+    }
+
+    /// The burst Digimon leaves the breeding area for the battle area before
+    /// the turn ends: its pending turn-end trash follows it.
+    #[test]
+    fn breeding_area_burst_then_move_still_trashes_top_card_at_turn_end() {
+        assert_breeding_burst_then_move_trashes_top_card(SPEC);
+    }
+
     /// Two qualifying Tamers: the player picks which returns.
     #[test]
     fn bt26_050_burst_two_tamers_is_a_player_choice() {

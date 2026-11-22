@@ -59,8 +59,12 @@ ace_overflow: -4
 #    lines 31-35: BlastDigivolveEffect at OnCounterTiming. Same idiom as
 #    EX9-013 and EX10-010 — see those for canonical examples.
 alt_paths:
+  # Printed split circle: Black|Red Lv.5 / cost 4 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
     cost: 4
 
   - kind: digivolve

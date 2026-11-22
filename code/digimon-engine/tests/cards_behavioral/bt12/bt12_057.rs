@@ -69,7 +69,9 @@ fn bt12_057_metadata_is_green_lv7_15000() {
         .contains(&digimon_dsl::compiled::CompiledColor::Green));
     // Two digivolve alt-paths: the printed Lv.6 Green/6 route + the
     // "Lv.5 w/＜Save＞ in text: Cost 9" special route.
-    assert_eq!(card.alt_paths.len(), 2);
+    // Printed Green|Black|White Lv.6/6 split circle authors one entry per
+    // colour (3), plus the Save-text route (1).
+    assert_eq!(card.alt_paths.len(), 4);
 }
 
 // ─── SECTION 2 — [When Digivolving] suspend all others + memory ÷2 ──────────

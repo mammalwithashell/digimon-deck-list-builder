@@ -75,6 +75,13 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: green }
     cost: 6
+  # Printed split circle: Green|Black|White Lv.6 / cost 6 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 6, color_is: white }
+    cost: 6
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
+    cost: 6
   # "[Digivolve] Lv.5 w/＜Save＞ in text: Cost 9" (DCGO HasSaveText).
   - kind: digivolve
     from:

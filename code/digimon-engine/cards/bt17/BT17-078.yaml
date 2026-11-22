@@ -66,8 +66,12 @@ ace_overflow: -5
 #    families. This matches DCGO's OnCounterTiming
 #    `BlastDNADigivolveEffect(card, [WarGreymon, MetalGarurumon])` emitter.
 alt_paths:
+  # Printed split circle: Red|Blue Lv.6 / cost 5 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 6, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
     cost: 5
 
   - kind: dna_digivolve

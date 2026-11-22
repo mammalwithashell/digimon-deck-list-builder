@@ -237,8 +237,8 @@ fn ad1_009_has_two_digivolve_alt_paths() {
         .collect();
     assert_eq!(
         digi_paths.len(),
-        2,
-        "Should have standard (Lv5/4) + alt-digi (Lv5+[Greymon]|[ADVENTURE]/3) paths"
+        3,
+        "Should have standard Red + Black (printed Red|Black Lv5/4 split circle) + alt-digi (Lv5+[Greymon]|[ADVENTURE]/3) paths"
     );
 }
 

@@ -115,14 +115,18 @@ traits: [Ancient Dragon]
 # Printed evo_costs: [{ card_color: 1 (blue), level: 5, memory_cost: 4 }].
 # The DCGO Paildramon/Dinobeemon alt-source (cost 3) is unprinted and omitted.
 alt_paths:
+  # Printed split circle: Blue|Green Lv.5 / cost 4 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 5, color_is: blue }
     cost: 4
   - kind: digivolve
-    from: { name_contains: "Paildramon" }
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: "Paildramon" }
     cost: 3
   - kind: digivolve
-    from: { name_contains: "Dinobeemon" }
+    from: { name_is: "Dinobeemon" }
     cost: 3
 
 effects:

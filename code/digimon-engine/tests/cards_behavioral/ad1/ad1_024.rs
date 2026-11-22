@@ -235,8 +235,8 @@ fn ad1_024_has_three_digivolve_alt_paths() {
 
     assert_eq!(
         digivolve_paths.len(),
-        3,
-        "AD1-024 must have exactly 3 digivolve alt-paths (standard + Dragon Mode + Hero); got {}",
+        4,
+        "AD1-024 must have exactly 4 digivolve alt-paths (standard Blue + Green split circle + Dragon Mode + Hero); got {}",
         digivolve_paths.len()
     );
 
@@ -254,8 +254,8 @@ fn ad1_024_has_three_digivolve_alt_paths() {
     );
     assert_eq!(
         costs.iter().filter(|&&c| c == 5).count(),
-        2,
-        "the standard Blue Lv.5 path and the Hero path must both cost 5; got {:?}",
+        3,
+        "the standard Blue and Green Lv.5 paths (printed split circle) and the Hero path must all cost 5; got {:?}",
         costs
     );
 }

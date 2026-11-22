@@ -30,10 +30,13 @@
 #![allow(dead_code)]
 
 use digimon_dsl::compiled::{CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::action::space::{encode_digivolve, HAND_EFFECT_START, PASS, PLAY_HAND_START};
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{
+    encode_digivolve, BREEDING_TARGET, HAND_EFFECT_START, PASS, PLAY_HAND_START,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind, PlaySource};
+use digimon_engine::enums::{CardColor, CardKind, GamePhase, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::SelectionKind;
 
@@ -191,6 +194,64 @@ fn st21_10_warp_blocked_on_opponents_turn() {
     let (mut runner, me) = warp_runner(Some("BIG-DP"), &[]);
     runner.game.turn_player_idx = 1;
     assert!(!runner.game.digivolve_from_hand(0, 0, me.index as usize, PlaySource::ByHand));
+}
+
+// ─── Section 2b — the warp is an effect of this card: off in the breeding area
+
+/// CR 4.3 3-4-7-4: "Effects on cards in breeding areas can't trigger or
+/// activate, except for effects that explicitly specify or reference breeding
+/// areas." The warp is Gabumon (ST21-10)'s own [Your Turn] effect and carries
+/// no [Breeding] icon. Official Q&A Q6388 rules the identical clause on
+/// BlackGatomon (BT25-082): "No, you can't. The effect doesn't activate in the
+/// breeding area." DCGO ST21_10.cs gates it on `IsExistOnBattleArea(card)`.
+#[test]
+fn st21_10_warp_is_not_available_in_the_breeding_area() {
+    let mut runner = builder()
+        .hand(0, &["METALGARURUMON"])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL"])
+        .memory(20)
+        .start();
+    runner.skip_mulligan();
+    runner.game.current_phase = GamePhase::Main;
+    runner.place_in_breeding(0, CARD_ID);
+    runner.place_on_field(1, "BIG-DP", Some(0));
+    let action = encode_digivolve(0, BREEDING_TARGET);
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[action as usize],
+        0.0,
+        "the warp must not be offered for a breeding-area Gabumon (ST21-10)"
+    );
+    let before = runner.memory();
+    assert!(!runner.game.digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand));
+    let breeding = runner.game.players[0].breeding_area.as_ref().expect("still in breeding");
+    assert_eq!(breeding.top_card().card_id(&runner.game.card_data), CARD_ID);
+    assert_eq!(runner.memory(), before, "nothing was paid");
+}
+
+/// The other direction is NOT an effect of the breeding-area card: the
+/// "[Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0" box is a digivolution
+/// requirement printed on the HAND card, and those apply to a breeding-area
+/// base as usual (CR 4.3 6-5-1-2-1 lets the main-phase digivolve target the
+/// breeding area; DCGO `AddSelfDigivolutionRequirementStaticEffect` has no
+/// battle-area gate on the target).
+#[test]
+fn st21_10_own_digivolve_box_still_applies_onto_a_breeding_base() {
+    let mut runner = builder()
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL"])
+        .memory(5)
+        .start();
+    runner.skip_mulligan();
+    runner.game.current_phase = GamePhase::Main;
+    // Yellow Lv.2 with [ADVENTURE]: no Purple/Blue circle matches, only the box.
+    runner.place_in_breeding(0, "ADV-YELLOW-LV2");
+    let action = encode_digivolve(0, BREEDING_TARGET);
+    assert_eq!(build_action_mask(&runner.game, 0)[action as usize], 1.0);
+    assert!(runner.game.digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand));
+    let breeding = runner.game.players[0].breeding_area.as_ref().expect("breeding");
+    assert_eq!(breeding.top_card().card_id(&runner.game.card_data), CARD_ID);
 }
 
 // ─── Section 3 — inherited [When Attacking][OPT] draw 1, trash 1 ─────────────

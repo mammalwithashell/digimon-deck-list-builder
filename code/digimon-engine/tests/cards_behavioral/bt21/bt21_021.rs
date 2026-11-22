@@ -263,7 +263,10 @@ fn bt21_021_has_three_digivolve_alt_paths() {
         .iter()
         .filter(|p| p.kind == CompiledAltPathKind::Digivolve)
         .count();
-    assert_eq!(digivolve_paths, 3, "exactly 3 Digivolve alt_paths required");
+    assert_eq!(
+        digivolve_paths, 4,
+        "exactly 4 Digivolve alt_paths required (the printed Red|Yellow split circle is two)"
+    );
 }
 
 /// The end_of_attack clause exists as a triggered clause, optional.

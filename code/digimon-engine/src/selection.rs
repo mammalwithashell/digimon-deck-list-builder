@@ -514,6 +514,18 @@ pub struct QueuedEffect {
     /// branch, which names it as pending processing. Plain data, so
     /// `Game: Clone` stays faithful.
     pub pending_processing: Option<crate::scheduled_effects::PendingProcessing>,
+    /// `Some(generation)` for a `{Trash}`-zone trigger (`scope: trash`): the
+    /// source card's trash-entry generation (`Player::trash_entry_generations`;
+    /// `None` inside when the card was put there without one) at the moment it
+    /// triggered. CR 4.3 15-14-3-1: a {Trash} effect can trigger and activate
+    /// "while the card with the effect is in your trash"; a card that leaves
+    /// the trash is a new card (3-1-3-1), and its pending effect can no longer
+    /// be activated (15-4-4-3) -- also when it has re-entered the trash since,
+    /// which the generation tells apart. Read by
+    /// `Game::queued_effect_source_is_live`. `None` for every other entry.
+    /// Deliberately NOT part of the verification digest: it is derived from
+    /// state the digest already covers at trigger time.
+    pub trash_zone_generation: Option<Option<u64>>,
 }
 
 /// Queued triggered effect parked after its `pay_cost_fn` installed a

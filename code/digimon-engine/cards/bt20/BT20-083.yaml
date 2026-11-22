@@ -7,6 +7,10 @@ cost: 5
 dp: 5000
 traits: [Puppet, X Antibody, LIBERATOR]
 attribute: Data
+# Printed (official Bandai DB): "(Rule) Name: Also treated as [X Antibody]." An
+# identity alias in every zone (CR 4.3 2-3-1-2). DCGO BT20_083.cs:
+# unconditional `ChangeCardNamesClass` adding "X Antibody".
+also_treated_as: [X Antibody]
 
 effects:
   - kind: grant_keyword

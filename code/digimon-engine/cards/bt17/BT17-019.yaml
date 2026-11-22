@@ -53,8 +53,12 @@ dp: 1000
 traits: [Reptile]
 
 alt_paths:
+  # Printed split circle: Blue|Red Lv.2 / cost 0 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 2, color_is: blue }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
     cost: 0
 
 effects:

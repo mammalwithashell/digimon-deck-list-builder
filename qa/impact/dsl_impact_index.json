@@ -8,6 +8,7 @@
         "any_of",
         "event_card_name_contains",
         "event_target_owner",
+        "in_text_contains",
         "kind",
         "level_eq",
         "name_contains",
@@ -38,7 +39,7 @@
         "dp_lte",
         "has_inherited",
         "kind",
-        "name_contains",
+        "name_is",
         "owner",
         "trait_has",
         "your_turn",
@@ -117,6 +118,7 @@
       ],
       "verbs": [
         "delete_permanent",
+        "if",
         "may_attack_now",
         "optional",
         "select_opponent_permanent",
@@ -270,6 +272,7 @@
         "all_of",
         "any_of",
         "event_card_name_contains",
+        "in_text_contains",
         "kind",
         "level_eq",
         "name_contains",
@@ -318,6 +321,7 @@
         "all_of",
         "any_of",
         "binding_present",
+        "color_is",
         "dna_field_pair",
         "is_suspended",
         "kind",
@@ -711,7 +715,7 @@
         "is_suspended",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "not",
         "owner",
         "trait_has",
@@ -1728,6 +1732,7 @@
         "event_target_owner",
         "kind",
         "name_contains",
+        "name_is",
         "your_turn"
       ],
       "timings": [
@@ -1873,6 +1878,7 @@
         "any_of",
         "kind",
         "name_contains",
+        "name_is",
         "source_name_contains"
       ],
       "timings": [
@@ -2391,7 +2397,6 @@
       "path": "bt13/BT13-088.yaml",
       "predicates": [
         "count_gte",
-        "name_contains",
         "name_is",
         "opponents_turn",
         "owner",
@@ -3130,7 +3135,7 @@
         "event_target_owner",
         "event_target_trait_has",
         "level_eq",
-        "name_contains",
+        "name_is",
         "your_turn"
       ],
       "timings": [
@@ -3152,7 +3157,7 @@
         "kind",
         "level_eq",
         "materials_count_lte",
-        "name_contains"
+        "name_is"
       ],
       "timings": [
         "on_suspend"
@@ -3199,7 +3204,7 @@
         "kind",
         "level_eq",
         "materials_count_lte",
-        "name_contains",
+        "name_is",
         "owner",
         "self_digivolution_sources_contain_name",
         "zone"
@@ -3233,6 +3238,7 @@
         "kind",
         "level_eq",
         "name_contains",
+        "name_is",
         "owner",
         "zone"
       ],
@@ -3321,6 +3327,7 @@
       "predicates": [
         "all_of",
         "any_of",
+        "color_is",
         "count_gte",
         "kind",
         "level_eq",
@@ -3521,7 +3528,7 @@
         "is_suspended",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "owner",
         "self_digivolution_sources_contain_name",
         "self_digivolution_sources_trait_has",
@@ -4460,7 +4467,7 @@
       "predicates": [
         "color_is",
         "level_eq",
-        "name_contains",
+        "name_is",
         "opponents_turn"
       ],
       "timings": [
@@ -4927,7 +4934,7 @@
         "dp_lte",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "source_permanent_trait_has",
         "trait_has",
         "your_turn"
@@ -5476,7 +5483,7 @@
         "is_source",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "replacement_subject_is_mine",
         "trait_has"
       ],
@@ -5972,7 +5979,7 @@
         "dp_lte",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "owner",
         "self_digivolution_sources_contain_name",
         "zone"
@@ -6774,7 +6781,7 @@
         "any_of",
         "binding_absent",
         "kind",
-        "name_contains",
+        "name_is",
         "not_in_binding",
         "owner",
         "self_digivolution_sources_contain_name"
@@ -6859,6 +6866,7 @@
       "predicates": [
         "all_of",
         "any_of",
+        "color_is",
         "kind",
         "level_eq",
         "trait_has",
@@ -6876,6 +6884,7 @@
       "path": "bt21/BT21-008.yaml",
       "predicates": [
         "any_of",
+        "color_is",
         "level_eq",
         "trait_has",
         "your_turn"
@@ -6948,7 +6957,7 @@
         "has_inherited",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "trait_has",
         "your_turn"
       ],
@@ -7040,7 +7049,7 @@
         "equals",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "source_permanent_trait_has",
         "trait_has",
         "your_turn"
@@ -7088,6 +7097,7 @@
     "BT21-024": {
       "path": "bt21/BT21-024.yaml",
       "predicates": [
+        "color_is",
         "level_eq",
         "opponent_security_count_lte",
         "your_turn"
@@ -7110,6 +7120,7 @@
         "all_turns",
         "any_of",
         "can_play_from_effect_without_cost",
+        "color_is",
         "dp_lte",
         "event_target_owner",
         "event_target_trait_has",
@@ -7133,8 +7144,10 @@
       "predicates": [
         "all_of",
         "all_turns",
+        "color_is",
         "event_target_kind",
         "event_target_owner",
+        "kind",
         "level_eq"
       ],
       "timings": [
@@ -7152,7 +7165,7 @@
         "binding_present",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "trait_has"
       ],
       "timings": [
@@ -7173,6 +7186,7 @@
       "predicates": [
         "all_of",
         "any_permanent",
+        "color_is",
         "dp_lte",
         "event_target_kind",
         "event_target_owner",
@@ -7237,9 +7251,10 @@
       "path": "bt21/BT21-037.yaml",
       "predicates": [
         "any_permanent",
+        "color_is",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "owner",
         "zone"
       ],
@@ -7513,9 +7528,9 @@
         "zone"
       ],
       "timings": [
-        "on_digivolve",
         "on_play",
-        "on_source_returned_to_deck_bottom"
+        "on_source_returned_to_deck_bottom",
+        "when_digivolving"
       ],
       "verbs": [
         "delete_permanent",
@@ -7756,6 +7771,7 @@
       "predicates": [
         "all_turns",
         "any_of",
+        "color_is",
         "effect_text_contains",
         "level_eq",
         "trait_has",
@@ -8487,6 +8503,7 @@
         "all_of",
         "any_permanent",
         "binding_present",
+        "color_is",
         "dp_lte",
         "equals",
         "has_digivolve_candidate",
@@ -8681,6 +8698,7 @@
       "predicates": [
         "all_of",
         "any_permanent",
+        "color_is",
         "equals",
         "kind",
         "level_eq",
@@ -8875,6 +8893,7 @@
         "level_eq",
         "level_lte",
         "name_contains",
+        "name_is",
         "owner",
         "trait_has",
         "zone"
@@ -9434,6 +9453,7 @@
       "predicates": [
         "all_of",
         "any_of",
+        "color_is",
         "cost_target",
         "kind",
         "level_eq",
@@ -9533,6 +9553,8 @@
       "path": "bt23/BT23-014.yaml",
       "predicates": [
         "all_of",
+        "any_of",
+        "color_is",
         "dp_lte",
         "kind",
         "level_eq",
@@ -9756,7 +9778,7 @@
         "color_is",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "trait_has"
       ],
       "timings": [
@@ -9836,7 +9858,7 @@
         "any_permanent",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "owner",
         "trait_has",
         "zone"
@@ -10045,7 +10067,7 @@
         "count_gte",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "owner",
         "play_cost_lte",
         "trait_has",
@@ -10253,6 +10275,7 @@
     "BT24-011": {
       "path": "bt24/BT24-011.yaml",
       "predicates": [
+        "color_is",
         "level_eq",
         "trait_has"
       ],
@@ -10264,6 +10287,7 @@
       "predicates": [
         "all_of",
         "any_of",
+        "color_is",
         "kind",
         "level_eq",
         "other",
@@ -10328,6 +10352,7 @@
         "kind",
         "level_eq",
         "name_contains",
+        "name_is",
         "none_of",
         "replacement_cause",
         "security_count_lte"
@@ -10353,6 +10378,7 @@
         "any_permanent",
         "binding_present",
         "can_play_from_effect_without_cost",
+        "color_is",
         "count_gte",
         "dp_lte",
         "kind",
@@ -12060,7 +12086,7 @@
         "color_is",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "trait_has",
         "your_turn",
         "zone"
@@ -12436,6 +12462,7 @@
         "kind",
         "level_eq",
         "name_contains",
+        "name_is",
         "none_of",
         "replacement_cause",
         "security_count_lte",
@@ -12740,7 +12767,7 @@
         "equals",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "trait_has"
       ],
       "timings": [
@@ -13180,6 +13207,7 @@
         "kind",
         "level_eq",
         "name_contains",
+        "name_is",
         "none_of",
         "owner",
         "replacement_cause",
@@ -13461,6 +13489,7 @@
         "event_permanent_is_source",
         "level_eq",
         "name_contains",
+        "name_is",
         "trait_has"
       ],
       "timings": [
@@ -15803,6 +15832,7 @@
         "kind",
         "level_eq",
         "name_contains",
+        "name_is",
         "owner"
       ],
       "timings": [
@@ -16208,6 +16238,7 @@
         "all_of",
         "any_of",
         "effect_deleted_any_own_digimon",
+        "effect_returned_any_card",
         "event_target_in_text_contains",
         "event_target_kind",
         "event_target_owner",
@@ -17963,6 +17994,7 @@
       "predicates": [
         "all_of",
         "kind",
+        "level_eq",
         "level_lte",
         "self_color_count_gte",
         "your_turn"
@@ -18184,7 +18216,7 @@
         "color_is",
         "count_gte",
         "kind",
-        "name_contains",
+        "name_is",
         "owner",
         "self_digivolution_sources_contain_name",
         "your_turn",
@@ -18407,6 +18439,8 @@
     "BT9-112": {
       "path": "bt9/BT9-112.yaml",
       "predicates": [
+        "any_of",
+        "color_is",
         "kind",
         "level_eq",
         "level_lte",
@@ -18788,9 +18822,9 @@
         "trait_has"
       ],
       "timings": [
+        "on_ally_attack",
         "on_opponent_attack",
         "on_play",
-        "when_attacking",
         "when_digivolving"
       ],
       "verbs": [
@@ -18807,10 +18841,14 @@
       "path": "ex10/EX10-036.yaml",
       "predicates": [
         "any_of",
+        "any_permanent",
         "color_is",
         "kind",
         "level_eq",
-        "trait_has"
+        "name_is",
+        "owner",
+        "trait_has",
+        "zone"
       ],
       "timings": [
         "when_attacking",
@@ -19264,6 +19302,7 @@
         "all_of",
         "any_of",
         "any_permanent",
+        "color_is",
         "event_permanent_is_source",
         "kind",
         "level_eq",
@@ -19512,7 +19551,6 @@
         "event_cause",
         "kind",
         "level_eq",
-        "name_contains",
         "name_is",
         "not",
         "opponents_turn",
@@ -20639,6 +20677,7 @@
         "count_lte",
         "level_eq",
         "name_contains",
+        "name_is",
         "owner",
         "trait_has",
         "your_turn",
@@ -21035,7 +21074,7 @@
         "cost_target",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "source_is_cost_target_permanent",
         "trait_has",
         "your_turn"
@@ -21080,7 +21119,7 @@
         "any_of",
         "color_is",
         "level_eq",
-        "name_contains",
+        "name_is",
         "trait_has"
       ],
       "timings": [
@@ -21867,7 +21906,6 @@
         "level_eq",
         "own_source_stack_color_count_gte",
         "owner",
-        "self_color_count_gte",
         "trait_has",
         "zone"
       ],
@@ -24111,6 +24149,7 @@
         "count_gte",
         "equals",
         "kind",
+        "level_eq",
         "name_is",
         "owner",
         "trait_has",
@@ -24656,6 +24695,7 @@
         "level_eq",
         "level_lte",
         "name_contains",
+        "name_is",
         "other",
         "source_name_contains"
       ],
@@ -26015,7 +26055,7 @@
         "cost_target",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "source_is_cost_target_permanent",
         "trait_has",
         "your_turn"
@@ -26609,6 +26649,7 @@
       "predicates": [
         "all_of",
         "all_turns",
+        "color_is",
         "count_gte",
         "dp_lte",
         "is_unsuspended",
@@ -26631,6 +26672,7 @@
     "EX9-008": {
       "path": "ex9/EX9-008.yaml",
       "predicates": [
+        "color_is",
         "level_eq",
         "trait_has"
       ],
@@ -26650,6 +26692,7 @@
         "kind",
         "level_eq",
         "name_contains",
+        "name_is",
         "trait_has",
         "your_turn"
       ],
@@ -26712,6 +26755,7 @@
         "kind",
         "level_eq",
         "name_contains",
+        "name_is",
         "trait_has",
         "your_turn"
       ],
@@ -26771,7 +26815,7 @@
         "count_gte",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "opponents_turn",
         "other",
         "owner",
@@ -26992,6 +27036,7 @@
         "color_matches_own_source_stack",
         "is_source_permanent",
         "kind",
+        "level_eq",
         "level_lte",
         "own_source_stack_color_count_gte",
         "owner",
@@ -28184,8 +28229,9 @@
     "P-137": {
       "path": "p/P-137.yaml",
       "predicates": [
+        "color_is",
         "level_eq",
-        "name_contains",
+        "name_is",
         "your_turn"
       ],
       "timings": [
@@ -28617,6 +28663,7 @@
         "all_of",
         "any_of",
         "can_play_from_effect_without_cost",
+        "color_is",
         "kind",
         "level_eq",
         "play_cost_lte",
@@ -28977,6 +29024,7 @@
         "kind",
         "level_eq",
         "name_contains",
+        "name_is",
         "none_of",
         "replacement_cause",
         "security_count_lte"
@@ -29618,6 +29666,7 @@
     "ST1-02": {
       "path": "st1/ST1-02.yaml",
       "predicates": [
+        "color_is",
         "level_eq"
       ],
       "timings": [],
@@ -29626,6 +29675,7 @@
     "ST1-03": {
       "path": "st1/ST1-03.yaml",
       "predicates": [
+        "color_is",
         "level_eq",
         "your_turn"
       ],
@@ -29635,6 +29685,7 @@
     "ST1-04": {
       "path": "st1/ST1-04.yaml",
       "predicates": [
+        "color_is",
         "level_eq"
       ],
       "timings": [],
@@ -29643,6 +29694,7 @@
     "ST1-05": {
       "path": "st1/ST1-05.yaml",
       "predicates": [
+        "color_is",
         "level_eq"
       ],
       "timings": [],
@@ -29651,6 +29703,7 @@
     "ST1-06": {
       "path": "st1/ST1-06.yaml",
       "predicates": [
+        "color_is",
         "level_eq"
       ],
       "timings": [
@@ -29663,6 +29716,7 @@
     "ST1-07": {
       "path": "st1/ST1-07.yaml",
       "predicates": [
+        "color_is",
         "level_eq"
       ],
       "timings": [],
@@ -29672,6 +29726,7 @@
       "path": "st1/ST1-08.yaml",
       "predicates": [
         "any_permanent",
+        "color_is",
         "kind",
         "level_eq",
         "owner",
@@ -29688,6 +29743,7 @@
     "ST1-09": {
       "path": "st1/ST1-09.yaml",
       "predicates": [
+        "color_is",
         "event_permanent_is_source",
         "level_eq",
         "your_turn"
@@ -29702,6 +29758,7 @@
     "ST1-10": {
       "path": "st1/ST1-10.yaml",
       "predicates": [
+        "color_is",
         "level_eq"
       ],
       "timings": [],
@@ -29710,6 +29767,7 @@
     "ST1-11": {
       "path": "st1/ST1-11.yaml",
       "predicates": [
+        "color_is",
         "level_eq",
         "your_turn"
       ],
@@ -31754,7 +31812,7 @@
         "is_source",
         "kind",
         "level_eq",
-        "name_contains",
+        "name_is",
         "play_or_use_cost_lte",
         "replacement_subject_is_mine",
         "source_name_contains",
@@ -34565,6 +34623,7 @@
       "BT23-006",
       "BT23-008",
       "BT23-013",
+      "BT23-014",
       "BT23-018",
       "BT23-027",
       "BT23-032",
@@ -34752,6 +34811,7 @@
       "BT8-070",
       "BT8-109",
       "BT9-041",
+      "BT9-112",
       "EX1-014",
       "EX10-003",
       "EX10-009",
@@ -35184,6 +35244,7 @@
       "EX10-025",
       "EX10-028",
       "EX10-032",
+      "EX10-036",
       "EX10-063",
       "EX11-008",
       "EX11-012",
@@ -36153,6 +36214,7 @@
       "AD1-008",
       "AD1-009",
       "AD1-011",
+      "AD1-012",
       "AD1-015",
       "AD1-017",
       "AD1-018",
@@ -36226,6 +36288,7 @@
       "BT16-029",
       "BT16-031",
       "BT16-033",
+      "BT16-040",
       "BT16-055",
       "BT16-070",
       "BT16-077",
@@ -36318,6 +36381,8 @@
       "BT20-060",
       "BT20-076",
       "BT20-081",
+      "BT21-007",
+      "BT21-008",
       "BT21-009",
       "BT21-011",
       "BT21-013",
@@ -36326,7 +36391,12 @@
       "BT21-018",
       "BT21-021",
       "BT21-023",
+      "BT21-024",
+      "BT21-025",
+      "BT21-026",
+      "BT21-029",
       "BT21-032",
+      "BT21-037",
       "BT21-042",
       "BT21-044",
       "BT21-046",
@@ -36338,6 +36408,7 @@
       "BT21-061",
       "BT21-069",
       "BT21-071",
+      "BT21-072",
       "BT21-073",
       "BT21-074",
       "BT21-078",
@@ -36345,12 +36416,14 @@
       "BT22-008",
       "BT22-009",
       "BT22-012",
+      "BT22-013",
       "BT22-015",
       "BT22-017",
       "BT22-019",
       "BT22-022",
       "BT22-023",
       "BT22-025",
+      "BT22-026",
       "BT22-029",
       "BT22-032",
       "BT22-036",
@@ -36367,9 +36440,11 @@
       "BT22-057",
       "BT22-059",
       "BT22-064",
+      "BT23-005",
       "BT23-006",
       "BT23-008",
       "BT23-013",
+      "BT23-014",
       "BT23-018",
       "BT23-022",
       "BT23-027",
@@ -36384,8 +36459,11 @@
       "BT23-102",
       "BT24-009",
       "BT24-010",
+      "BT24-011",
+      "BT24-012",
       "BT24-013",
       "BT24-014",
+      "BT24-016",
       "BT24-017",
       "BT24-018",
       "BT24-020",
@@ -36526,6 +36604,7 @@
       "BT9-047",
       "BT9-070",
       "BT9-108",
+      "BT9-112",
       "EX1-021",
       "EX10-009",
       "EX10-010",
@@ -36545,6 +36624,7 @@
       "EX10-056",
       "EX10-059",
       "EX11-007",
+      "EX11-008",
       "EX11-012",
       "EX11-013",
       "EX11-014",
@@ -36748,6 +36828,8 @@
       "EX8-062",
       "EX8-064",
       "EX8-073",
+      "EX8-074",
+      "EX9-008",
       "EX9-012",
       "EX9-013",
       "EX9-019",
@@ -36800,6 +36882,7 @@
       "P-118",
       "P-119",
       "P-134",
+      "P-137",
       "P-138",
       "P-153",
       "P-165",
@@ -36810,6 +36893,7 @@
       "P-182",
       "P-186",
       "P-187",
+      "P-189",
       "P-194",
       "P-196",
       "P-197",
@@ -36823,6 +36907,16 @@
       "P-249",
       "P-250",
       "RB1-010",
+      "ST1-02",
+      "ST1-03",
+      "ST1-04",
+      "ST1-05",
+      "ST1-06",
+      "ST1-07",
+      "ST1-08",
+      "ST1-09",
+      "ST1-10",
+      "ST1-11",
       "ST12-03",
       "ST12-12",
       "ST13-08",
@@ -37510,6 +37604,7 @@
       "BT24-091",
       "BT26-016",
       "BT26-050",
+      "BT26-078",
       "BT26-092"
     ],
     "effect_suspended_any_opponent_digimon": [
@@ -38619,7 +38714,9 @@
       "BT24-007"
     ],
     "in_text_contains": [
+      "AD1-001",
       "AD1-007",
+      "AD1-010",
       "BT17-070",
       "BT18-065",
       "BT20-002",
@@ -39098,6 +39195,7 @@
       "BT21-021",
       "BT21-023",
       "BT21-025",
+      "BT21-026",
       "BT21-027",
       "BT21-029",
       "BT21-030",
@@ -40392,6 +40490,7 @@
       "BT7-071",
       "BT7-073",
       "BT8-071",
+      "BT8-084",
       "BT8-110",
       "BT9-033",
       "BT9-047",
@@ -40554,6 +40653,7 @@
       "EX13-066",
       "EX13-071",
       "EX13-076",
+      "EX13-077",
       "EX3-008",
       "EX3-012",
       "EX3-014",
@@ -40638,6 +40738,7 @@
       "EX9-033",
       "EX9-058",
       "EX9-060",
+      "EX9-074",
       "LM-020",
       "LM-021",
       "P-092",
@@ -41117,7 +41218,6 @@
     ],
     "name_contains": [
       "AD1-001",
-      "AD1-002",
       "AD1-003",
       "AD1-004",
       "AD1-008",
@@ -41129,7 +41229,6 @@
       "AD1-016",
       "AD1-018",
       "AD1-021",
-      "AD1-024",
       "BT11-023",
       "BT11-040",
       "BT11-043",
@@ -41152,17 +41251,12 @@
       "BT13-065",
       "BT13-083",
       "BT13-087",
-      "BT13-088",
       "BT13-095",
       "BT13-101",
       "BT13-103",
       "BT15-020",
       "BT15-092",
-      "BT16-017",
-      "BT16-021",
-      "BT16-027",
       "BT16-028",
-      "BT16-101",
       "BT16-102",
       "BT17-007",
       "BT17-015",
@@ -41179,32 +41273,23 @@
       "BT18-007",
       "BT18-015",
       "BT18-060",
-      "BT18-064",
       "BT18-073",
       "BT18-092",
       "BT19-008",
-      "BT19-012",
       "BT19-014",
       "BT19-033",
       "BT19-047",
       "BT19-057",
       "BT19-073",
-      "BT19-075",
       "BT19-099",
       "BT20-014",
       "BT20-016",
-      "BT20-020",
       "BT20-023",
       "BT20-036",
       "BT20-040",
       "BT20-059",
       "BT20-093",
       "BT20-100",
-      "BT20-102",
-      "BT21-013",
-      "BT21-021",
-      "BT21-027",
-      "BT21-037",
       "BT21-042",
       "BT21-044",
       "BT21-061",
@@ -41229,13 +41314,10 @@
       "BT23-008",
       "BT23-013",
       "BT23-018",
-      "BT23-054",
       "BT23-057",
-      "BT23-059",
       "BT23-072",
       "BT23-076",
       "BT23-099",
-      "BT23-101",
       "BT24-010",
       "BT24-014",
       "BT24-046",
@@ -41244,7 +41326,6 @@
       "BT24-084",
       "BT24-093",
       "BT24-101",
-      "BT25-011",
       "BT25-016",
       "BT25-021",
       "BT25-024",
@@ -41252,7 +41333,6 @@
       "BT25-026",
       "BT25-028",
       "BT25-029",
-      "BT25-037",
       "BT25-053",
       "BT25-054",
       "BT25-063",
@@ -41270,12 +41350,10 @@
       "BT7-056",
       "BT7-058",
       "BT7-059",
-      "BT9-041",
       "BT9-098",
       "EX10-042",
       "EX11-001",
       "EX11-007",
-      "EX11-020",
       "EX12-005",
       "EX12-010",
       "EX12-016",
@@ -41284,8 +41362,6 @@
       "EX12-024",
       "EX12-032",
       "EX12-035",
-      "EX12-040",
-      "EX12-042",
       "EX13-001",
       "EX13-003",
       "EX13-007",
@@ -41325,17 +41401,14 @@
       "EX6-043",
       "EX7-016",
       "EX8-009",
-      "EX8-019",
       "EX9-012",
       "EX9-013",
       "EX9-019",
       "EX9-021",
-      "EX9-024",
       "EX9-066",
       "P-094",
       "P-118",
       "P-119",
-      "P-137",
       "P-138",
       "P-182",
       "P-186",
@@ -41349,7 +41422,6 @@
       "ST17-07",
       "ST19-10",
       "ST24-05",
-      "ST24-06",
       "ST24-07"
     ],
     "name_in": [
@@ -41380,10 +41452,12 @@
       "ST22-12"
     ],
     "name_is": [
+      "AD1-002",
       "AD1-003",
       "AD1-008",
       "AD1-015",
       "AD1-021",
+      "AD1-024",
       "AD1-025",
       "BT10-009",
       "BT10-013",
@@ -41395,7 +41469,9 @@
       "BT12-024",
       "BT12-029",
       "BT12-030",
+      "BT12-034",
       "BT12-043",
+      "BT12-059",
       "BT12-112",
       "BT13-008",
       "BT13-013",
@@ -41411,11 +41487,16 @@
       "BT13-093",
       "BT13-110",
       "BT15-020",
+      "BT16-017",
+      "BT16-021",
+      "BT16-027",
+      "BT16-028",
       "BT16-031",
       "BT16-033",
       "BT16-040",
       "BT16-055",
       "BT16-070",
+      "BT16-101",
       "BT17-007",
       "BT17-012",
       "BT17-023",
@@ -41428,6 +41509,7 @@
       "BT18-042",
       "BT18-060",
       "BT18-063",
+      "BT18-064",
       "BT18-065",
       "BT18-067",
       "BT18-076",
@@ -41435,11 +41517,13 @@
       "BT18-081",
       "BT18-097",
       "BT18-102",
+      "BT19-012",
       "BT19-036",
       "BT19-042",
       "BT19-066",
       "BT19-070",
       "BT19-073",
+      "BT19-075",
       "BT19-090",
       "BT19-093",
       "BT19-101",
@@ -41448,6 +41532,7 @@
       "BT20-012",
       "BT20-015",
       "BT20-018",
+      "BT20-020",
       "BT20-023",
       "BT20-025",
       "BT20-026",
@@ -41465,10 +41550,15 @@
       "BT20-091",
       "BT20-093",
       "BT20-100",
+      "BT20-102",
       "BT21-006",
       "BT21-009",
+      "BT21-013",
       "BT21-017",
+      "BT21-021",
+      "BT21-027",
       "BT21-032",
+      "BT21-037",
       "BT21-040",
       "BT21-044",
       "BT21-046",
@@ -41483,6 +41573,7 @@
       "BT22-013",
       "BT22-026",
       "BT22-036",
+      "BT22-042",
       "BT22-053",
       "BT22-057",
       "BT22-059",
@@ -41496,10 +41587,14 @@
       "BT23-013",
       "BT23-018",
       "BT23-027",
+      "BT23-054",
+      "BT23-059",
       "BT23-072",
+      "BT23-101",
       "BT23-102",
       "BT24-009",
       "BT24-013",
+      "BT24-014",
       "BT24-016",
       "BT24-018",
       "BT24-021",
@@ -41520,12 +41615,17 @@
       "BT24-093",
       "BT24-094",
       "BT25-010",
+      "BT25-011",
       "BT25-013",
       "BT25-017",
       "BT25-021",
       "BT25-023",
+      "BT25-025",
+      "BT25-037",
       "BT25-039",
       "BT25-052",
+      "BT25-053",
+      "BT25-063",
       "BT25-084",
       "BT25-094",
       "BT25-095",
@@ -41541,6 +41641,7 @@
       "BT26-050",
       "BT26-056",
       "BT26-059",
+      "BT26-060",
       "BT26-065",
       "BT26-066",
       "BT26-069",
@@ -41564,10 +41665,12 @@
       "BT5-092",
       "BT7-058",
       "BT7-063",
+      "BT9-041",
       "BT9-070",
       "BT9-109",
       "EX10-031",
       "EX10-032",
+      "EX10-036",
       "EX10-042",
       "EX10-044",
       "EX10-059",
@@ -41590,6 +41693,9 @@
       "EX12-007",
       "EX12-013",
       "EX12-017",
+      "EX12-021",
+      "EX12-040",
+      "EX12-042",
       "EX13-008",
       "EX13-011",
       "EX13-014",
@@ -41621,6 +41727,7 @@
       "EX3-041",
       "EX4-005",
       "EX4-006",
+      "EX4-051",
       "EX4-061",
       "EX4-074",
       "EX5-015",
@@ -41629,8 +41736,12 @@
       "EX5-070",
       "EX7-025",
       "EX8-009",
+      "EX8-019",
       "EX8-048",
       "EX8-073",
+      "EX9-012",
+      "EX9-019",
+      "EX9-024",
       "EX9-067",
       "LM-055",
       "LM-057",
@@ -41643,10 +41754,12 @@
       "P-094",
       "P-128",
       "P-136",
+      "P-137",
       "P-153",
       "P-174",
       "P-193",
       "P-204",
+      "P-213",
       "P-220",
       "P-240",
       "P-244",
@@ -41660,6 +41773,7 @@
       "ST21-10",
       "ST21-15",
       "ST24-04",
+      "ST24-06",
       "ST24-11"
     ],
     "name_matches_returned_card": [
@@ -42370,6 +42484,7 @@
       "EX10-025",
       "EX10-028",
       "EX10-032",
+      "EX10-036",
       "EX10-040",
       "EX10-041",
       "EX10-042",
@@ -43028,7 +43143,6 @@
       "BT25-084",
       "BT8-084",
       "BT8-095",
-      "EX12-076",
       "P-117",
       "P-118",
       "P-119",
@@ -44888,6 +45002,7 @@
       "EX10-025",
       "EX10-028",
       "EX10-032",
+      "EX10-036",
       "EX10-040",
       "EX10-042",
       "EX10-046",
@@ -45561,6 +45676,7 @@
       "BT26-093",
       "BT6-089",
       "BT9-084",
+      "EX10-034",
       "EX11-069",
       "EX12-066",
       "EX12-069",
@@ -45866,7 +45982,6 @@
       "BT17-053",
       "BT17-081",
       "BT20-091",
-      "BT21-058",
       "BT21-061",
       "BT21-078",
       "BT21-083",
@@ -47401,7 +47516,6 @@
       "EX10-020",
       "EX10-032",
       "EX10-033",
-      "EX10-034",
       "EX10-036",
       "EX10-040",
       "EX10-046",
@@ -47701,6 +47815,7 @@
       "BT21-044",
       "BT21-046",
       "BT21-052",
+      "BT21-058",
       "BT21-060",
       "BT21-061",
       "BT21-062",
@@ -50047,6 +50162,7 @@
     ],
     "if": [
       "AD1-002",
+      "AD1-004",
       "AD1-005",
       "AD1-007",
       "AD1-009",

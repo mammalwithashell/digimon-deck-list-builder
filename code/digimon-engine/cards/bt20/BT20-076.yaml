@@ -13,6 +13,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: purple }
     cost: 4
+  # Printed split circle: Purple|Red Lv.5 / cost 4 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
   # Printed: [DNA Digivolve] Purple Lv.5 + red Lv.5: Cost 0. <Blast DNA
   # Digivolve> can't ignore it (CR 4.3 §16-31-5).
   - kind: dna_digivolve

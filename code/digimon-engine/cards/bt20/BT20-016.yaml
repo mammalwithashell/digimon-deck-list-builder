@@ -13,6 +13,10 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: red }
     cost: 4
+  # Printed split circle: Red|Purple Lv.4 / cost 4 — one entry per colour.
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
 
   - kind: dna_digivolve
     materials:

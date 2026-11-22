@@ -24,8 +24,12 @@ traits: [Machine, ME]
 attribute: Data
 
 alt_paths:
+  # Printed split circle: Yellow|Black Lv.2 / cost 0 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 2, color_is: yellow }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
     cost: 0
   - kind: digivolve
     from:

@@ -2,21 +2,26 @@ card: P-137
 name: Flamedramon
 kind: digimon
 level: 4
-color: [red, yellow]
+color: [red, blue]
 cost: 5
 dp: 5000
 traits: [Dragonkin]
 
-# Standard digivolution: Lv.3 Red / cost 3 (from card metadata).
+# Standard digivolution: split Red|Blue Lv.3 circle / cost 3 (card image + official DB).
 # Alt path: any Veemon-topped permanent / cost 2 (DCGO: AddSelfDigivolutionRequirementStaticEffect
 # with PermanentCondition = targetPermanent.TopCard.CardNames.Contains("Veemon"),
 # digivolutionCost: 2, ignoreDigivolutionRequirement: false).
 alt_paths:
+  # Printed split circle: Red|Blue Lv.3 / cost 3 — one entry per colour.
+  # A gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 3 }
+    from: { level_eq: 3, color_is: red }
     cost: 3
   - kind: digivolve
-    from: { name_contains: "Veemon" }
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { name_is: "Veemon" }
     cost: 2
     ignore_requirements: false
 

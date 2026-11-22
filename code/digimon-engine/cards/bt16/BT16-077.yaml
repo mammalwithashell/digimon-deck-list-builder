@@ -42,8 +42,12 @@ form: Ultimate
 attribute: Free
 
 alt_paths:
+  # Printed split circle: Purple|Red Lv.4 / cost 4 — one entry per colour.
   - kind: digivolve
     from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
     cost: 4
   - kind: dna_digivolve
     materials:
