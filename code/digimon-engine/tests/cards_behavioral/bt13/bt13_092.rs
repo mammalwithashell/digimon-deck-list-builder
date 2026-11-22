@@ -393,6 +393,22 @@ mod burst_digivolve {
         assert_effect_cannot_burst(SPEC);
     }
 
+    /// CR 4.3 6-5-1-2-3 / 8-3-3-1: the burst base is "one of your cards on the
+    /// field", which includes the breeding area; 8-3-2-1's turn-end trash is
+    /// pending processing of that rule, so it happens there too (bug scan
+    /// 2026-11; shared scenario in `burst_digivolve_common`).
+    #[test]
+    fn bt13_092_breeding_area_burst_trashes_top_card_at_turn_end() {
+        assert_breeding_burst_turn_end_trash(SPEC);
+    }
+
+    /// The burst Digimon moves from the breeding area to the battle area
+    /// before the turn ends: the pending turn-end trash follows it.
+    #[test]
+    fn bt13_092_breeding_area_burst_then_move_still_trashes_top_card() {
+        assert_breeding_burst_then_move_trashes_top_card(SPEC);
+    }
+
     /// Two qualifying Tamers: the player picks which returns.
     #[test]
     fn bt13_092_burst_two_tamers_is_a_player_choice() {
