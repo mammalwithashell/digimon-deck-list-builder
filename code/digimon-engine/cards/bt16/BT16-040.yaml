@@ -2,13 +2,18 @@ card: BT16-040
 name: Wormmon
 kind: digimon
 level: 3
-color: [green, white]
+color: [green, purple]
 cost: 3
 dp: 2000
 traits: [Larva]
 alt_paths:
+  # Printed split circle: Blue|Red Lv.2 / cost 1 — one entry per colour.
+  # A gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 2 }
+    from: { level_eq: 2, color_is: blue }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
     cost: 1
   - kind: digivolve
     from: { name_is: "Minomon" }

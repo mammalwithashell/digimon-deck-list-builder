@@ -28,9 +28,10 @@ dp: 11000
 traits: ["Holy Warrior", "Royal Knight", CS]
 
 alt_paths:
-  # Standard Lv.5 / cost 3 digivolve (printed on card as default).
+  # Printed circle: Red Lv.5 / cost 3. The colour is part of the
+  # requirement; a gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 5 }
+    from: { level_eq: 5, color_is: red }
     cost: 3
   # Alt-digivolve: Lv.5 with [CS] trait / cost 3 (from xros_req data).
   - kind: digivolve

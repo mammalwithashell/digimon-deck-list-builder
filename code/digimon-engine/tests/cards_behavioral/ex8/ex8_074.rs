@@ -1,4 +1,4 @@
-//! EX8-074 MedievalGallantmon — Digimon, Lv.6, Green (DCGO), DP 11000, Cost 11.
+//! EX8-074 MedievalGallantmon — Digimon, Lv.6, Green+Red, DP 11000, Cost 11.
 //! Traits: Warrior, Witchelny, Vortex Warriors.
 //!
 //! # Card text (cards.json)

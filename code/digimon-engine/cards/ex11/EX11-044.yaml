@@ -38,9 +38,10 @@ dp: 12000
 traits: [Mineral, LIBERATOR]
 attribute: Virus
 alt_paths:
+  # Printed circle: Black Lv.5 / cost 3 (card image + official DB).
   - kind: digivolve
     from: { level_eq: 5, color_is: black }
-    cost: 4
+    cost: 3
 
 effects:
   # ─── Printed keywords ─────────────────────────────────────────────────────

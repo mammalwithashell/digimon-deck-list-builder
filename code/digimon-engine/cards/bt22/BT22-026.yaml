@@ -199,9 +199,13 @@ dp: 12000
 traits: [Cyborg, CS]
 
 alt_paths:
-  # Standard digivolution from any Lv.5 (printed Lv.5/Blue, cost 4).
+  # Printed split circle: Blue|Red Lv.5 / cost 4 — one entry per colour.
+  # A gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 5 }
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
     cost: 4
   # Printed alt: Lv.5 w/[Garurumon] in name: Cost 3 (printed special digivolution)
   - kind: digivolve

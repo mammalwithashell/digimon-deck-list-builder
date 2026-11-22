@@ -177,6 +177,13 @@ attribute: Data
 # `CanTargetCondition_ByPreSelecetedList` rejecting a repeat NAME across the
 # 7 picks.
 alt_paths:
+  # Printed RAINBOW circle: any-colour Lv.4 / cost 5 (card image; official EN DB
+  # "Multicolor 5 from Lv.4", JP 「全 Lv.4から5」 = all colours; DCGO asset: one
+  # EvoCosts row per colour). A rainbow circle is ANY colour, so the gate carries
+  # no `color_is` — the Ukkomon (BT16-082) idiom. cards.json holds it as seven rows.
+  - kind: digivolve
+    from: { level_eq: 4 }
+    cost: 5
   - kind: assembly
     materials:
       - { level_eq: 4, trait_has: DM, zones: [trash], stack_under: true, distinct_by: name }

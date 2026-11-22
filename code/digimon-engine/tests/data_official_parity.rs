@@ -24,6 +24,10 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+#[path = "support/printed_circles.rs"]
+mod printed_circles;
+use printed_circles::{RAINBOW_CIRCLES, SPLIT_CIRCLES_OUTSIDE_THE_MIRROR};
+
 /// Official-mirror circles the card face does NOT print (the mirror keeps
 /// every printing's rows / has DB errors; CLAUDE.md "Printed card data").
 /// `(card_id, color, level, cost)`. Each entry must still be in the mirror,
@@ -33,6 +37,8 @@ const MIRROR_CIRCLE_ERRORS: &[(&str, i64, i64, i64)] = &[
     // circle; the mirror adds a Green Lv.3 / cost 0 row.
     ("BT10-048", 3, 3, 0),
 ];
+
+const ALL_COLOURS: std::ops::RangeInclusive<i64> = 0..=6;
 
 fn repo_data(file: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -228,5 +234,319 @@ fn official_db_inherited_text_matches_cards_json() {
          (reconcile via data/card_overrides.json + data/cards.json):\n{}",
         failures.len(),
         failures.join("\n")
+    );
+}
+
+fn read_json(path: &std::path::Path) -> serde_json::Value {
+    serde_json::from_str(
+        &std::fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display())),
+    )
+    .unwrap_or_else(|e| panic!("parse {}: {e}", path.display()))
+}
+
+/// `(colour, level, cost)` rows of an `evo_costs` / `digivolve_costs` array.
+fn circle_rows(value: Option<&serde_json::Value>) -> Option<HashSet<(i64, i64, i64)>> {
+    let rows = value?.as_array()?;
+    Some(
+        rows.iter()
+            .map(|e| {
+                (
+                    e["card_color"].as_i64().unwrap_or(-1),
+                    e["level"].as_i64().unwrap_or(-1),
+                    e["memory_cost"].as_i64().unwrap_or(-1),
+                )
+            })
+            .collect(),
+    )
+}
+
+/// `(level, cost)` pairs carried by ALL seven colours — i.e. rainbow circles.
+fn seven_colour_circles(rows: &HashSet<(i64, i64, i64)>) -> Vec<(i64, i64)> {
+    let mut pairs: Vec<(i64, i64)> = rows.iter().map(|(_, l, c)| (*l, *c)).collect();
+    pairs.sort_unstable();
+    pairs.dedup();
+    pairs
+        .into_iter()
+        .filter(|(l, c)| ALL_COLOURS.clone().all(|colour| rows.contains(&(colour, *l, *c))))
+        .collect()
+}
+
+/// Every rainbow circle is seven rows — in `data/cards.json` (what real games
+/// read), in `data/card_overrides.json` (what the next ingest re-applies), in
+/// the official mirror `data/card_official.json` (what reconciles compare
+/// against) and in the per-card JSON beside the YAML — and no card outside
+/// `RAINBOW_CIRCLES` (`support/printed_circles.rs`) carries one.
+#[test]
+fn rainbow_circles_are_one_row_per_colour_in_every_data_file() {
+    let cards_path = repo_data("cards.json");
+    let overrides_path = repo_data("card_overrides.json");
+    let official_path = repo_data("card_official.json");
+    if !cards_path.exists() || !overrides_path.exists() || !official_path.exists() {
+        eprintln!("Skipping: data/*.json missing — full repo checkout required");
+        return;
+    }
+    let cards = read_json(&cards_path);
+    let overrides = read_json(&overrides_path);
+    let official = read_json(&official_path);
+
+    let mut failures: Vec<String> = Vec::new();
+
+    for (id, level, cost) in RAINBOW_CIRCLES {
+        let (level, cost) = (&i64::from(*level), &i64::from(*cost));
+        let want: HashSet<(i64, i64, i64)> =
+            ALL_COLOURS.clone().map(|colour| (colour, *level, *cost)).collect();
+        let per_card_json = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("cards")
+            .join(id.split('-').next().unwrap().to_lowercase())
+            .join(format!("{id}.json"));
+        let per_card = per_card_json.exists().then(|| read_json(&per_card_json));
+        let sources: [(&str, Option<HashSet<(i64, i64, i64)>>); 4] = [
+            ("data/cards.json", circle_rows(cards[*id].get("evo_costs"))),
+            (
+                "data/card_overrides.json (re-applied by every ingest)",
+                circle_rows(overrides[*id].get("evo_costs")),
+            ),
+            (
+                "data/card_official.json (the official mirror)",
+                circle_rows(official["cards"][*id].get("digivolve_costs")),
+            ),
+            (
+                "the per-card JSON under code/digimon-engine/cards/",
+                match &per_card {
+                    Some(doc) => circle_rows(doc.get("evo_costs")),
+                    // No per-card JSON for this id: nothing to keep in step.
+                    None => Some(want.clone()),
+                },
+            ),
+        ];
+        for (source, got) in sources {
+            match got {
+                Some(got) if got == want => {}
+                Some(got) => {
+                    let mut got: Vec<_> = got.into_iter().collect();
+                    got.sort_unstable();
+                    failures.push(format!(
+                        "{id}: rainbow Lv.{level} / cost {cost} circle must be one row per colour \
+                         (0..=6) in {source}; found {got:?}"
+                    ));
+                }
+                None => failures.push(format!(
+                    "{id}: rainbow Lv.{level} / cost {cost} circle has no evo-cost rows in {source}"
+                )),
+            }
+        }
+    }
+
+    // Closed list: a seven-colour circle anywhere else is either a new rainbow
+    // card (read its face, then add it above) or a data error.
+    let listed = |id: &str, level: i64, cost: i64| {
+        RAINBOW_CIRCLES
+            .iter()
+            .any(|e| e.0 == id && i64::from(e.1) == level && i64::from(e.2) == cost)
+    };
+    let card_map = cards.as_object().expect("cards.json is an object keyed by card id");
+    for (id, card) in card_map {
+        if let Some(rows) = circle_rows(card.get("evo_costs")) {
+            for (level, cost) in seven_colour_circles(&rows) {
+                if !listed(id, level, cost) {
+                    failures.push(format!(
+                        "{id}: data/cards.json carries a seven-colour Lv.{level} / cost {cost} \
+                         circle but the card is not in RAINBOW_CIRCLES"
+                    ));
+                }
+            }
+        }
+    }
+    for (id, entry) in official["cards"].as_object().expect("official cards map") {
+        if let Some(rows) = circle_rows(entry.get("digivolve_costs")) {
+            for (level, cost) in seven_colour_circles(&rows) {
+                if !listed(id, level, cost) {
+                    failures.push(format!(
+                        "{id}: the official mirror lists a \"Multicolor {cost} from Lv.{level}\" \
+                         (rainbow) circle but the card is not in RAINBOW_CIRCLES"
+                    ));
+                }
+            }
+        }
+    }
+
+    assert!(
+        failures.is_empty(),
+        "{} rainbow-circle data fault(s) — a rainbow circle is ANY colour, held as seven \
+         evo-cost rows (see RAINBOW_CIRCLES):\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}
+
+/// Split circles of cards the official mirror does not carry (EX12 and two
+/// promos): the API-only `cards.json` had kept one colour of each, so a base of
+/// the other printed colour could not be digivolved onto. Every data file the
+/// engine or the next ingest reads must carry exactly the printed colours
+/// (`SPLIT_CIRCLES_OUTSIDE_THE_MIRROR`, read off the card faces).
+#[test]
+fn split_circles_outside_the_mirror_carry_every_printed_colour() {
+    let cards_path = repo_data("cards.json");
+    let overrides_path = repo_data("card_overrides.json");
+    if !cards_path.exists() || !overrides_path.exists() {
+        eprintln!("Skipping: data/*.json missing — full repo checkout required");
+        return;
+    }
+    let cards = read_json(&cards_path);
+    let overrides = read_json(&overrides_path);
+    let mut failures: Vec<String> = Vec::new();
+    for (id, level, cost, colours) in SPLIT_CIRCLES_OUTSIDE_THE_MIRROR {
+        let (level, cost) = (i64::from(*level), i64::from(*cost));
+        let want: HashSet<(i64, i64, i64)> =
+            colours.iter().map(|c| (*c as i64, level, cost)).collect();
+        let per_card_json = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("cards")
+            .join(id.split('-').next().unwrap().to_lowercase())
+            .join(format!("{id}.json"));
+        let per_card = per_card_json.exists().then(|| read_json(&per_card_json));
+        let mut sources: Vec<(&str, Option<HashSet<(i64, i64, i64)>>)> = vec![
+            ("data/cards.json", circle_rows(cards[*id].get("evo_costs"))),
+            (
+                "data/card_overrides.json (re-applied by every ingest)",
+                circle_rows(overrides[*id].get("evo_costs")),
+            ),
+        ];
+        if let Some(doc) = &per_card {
+            sources.push((
+                "the per-card JSON under code/digimon-engine/cards/",
+                circle_rows(doc.get("evo_costs")),
+            ));
+        }
+        for (source, got) in sources {
+            // Only this circle's (level, cost) is compared: a card may print
+            // other circles too.
+            let got: Option<HashSet<(i64, i64, i64)>> = got.map(|rows| {
+                rows.into_iter()
+                    .filter(|(_, l, c)| *l == level && *c == cost)
+                    .collect()
+            });
+            if got.as_ref() != Some(&want) {
+                let mut found: Vec<_> = got.unwrap_or_default().into_iter().collect();
+                found.sort_unstable();
+                failures.push(format!(
+                    "{id}: the printed Lv.{level} / cost {cost} circle has colours {colours:?}                      but {source} carries {found:?}"
+                ));
+            }
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "{} split-circle data fault(s):
+{}",
+        failures.len(),
+        failures.join("
+")
+    );
+}
+
+/// The six three-colour EX12 cards. The API truncated each to two colours, so
+/// production saw `card_colors` with one colour missing: a Digimon that counts
+/// as fewer colours (Omnimon: Merciful Mode (EX13-077) adds DP per colour among
+/// your Digimon and Tamers) and two Options that can be played without their
+/// third colour (CR 4.3 §4-22-3). The card face shows three colour bars and
+/// DCGO's `cardColors` lists three (read 2026-11-21).
+const THREE_COLOUR_CARDS: &[(&str, [i64; 3])] = &[
+    ("EX12-037", [1, 2, 0]), // Omnimon: Blue / Yellow / Red
+    ("EX12-060", [5, 6, 0]), // Chaosdramon: Black / Purple / Red
+    ("EX12-070", [2, 3, 1]), // Sanmyojin Arrival (Option): Yellow / Green / Blue
+    ("EX12-071", [5, 1, 0]), // Saneiketsu Invitation (Option): Black / Blue / Red
+    ("EX12-076", [2, 4, 0]), // Susanoomon: Yellow / White / Red
+    ("EX12-077", [4, 0, 6]), // Proximamon: White / Red / Purple
+];
+
+#[test]
+fn three_colour_ex12_cards_keep_all_three_colours() {
+    let cards_path = repo_data("cards.json");
+    let overrides_path = repo_data("card_overrides.json");
+    if !cards_path.exists() || !overrides_path.exists() {
+        eprintln!("Skipping: data/*.json missing — full repo checkout required");
+        return;
+    }
+    let cards = read_json(&cards_path);
+    let overrides = read_json(&overrides_path);
+    let sorted = |v: Option<&serde_json::Value>| -> Option<Vec<i64>> {
+        let mut colours: Vec<i64> = v?.as_array()?.iter().filter_map(|c| c.as_i64()).collect();
+        colours.sort_unstable();
+        Some(colours)
+    };
+    let mut failures: Vec<String> = Vec::new();
+    for (id, colours) in THREE_COLOUR_CARDS {
+        let mut want = colours.to_vec();
+        want.sort_unstable();
+        let per_card_json = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("cards")
+            .join("ex12")
+            .join(format!("{id}.json"));
+        let per_card = read_json(&per_card_json);
+        for (source, got) in [
+            ("data/cards.json", sorted(cards[*id].get("card_colors"))),
+            (
+                "data/card_overrides.json (re-applied by every ingest)",
+                sorted(overrides[*id].get("card_colors")),
+            ),
+            (
+                "the per-card JSON under code/digimon-engine/cards/",
+                sorted(per_card.get("card_colors")),
+            ),
+        ] {
+            if got.as_ref() != Some(&want) {
+                failures.push(format!(
+                    "{id}: card colour codes must be {want:?} (three-colour card) in {source};                      found {got:?}"
+                ));
+            }
+        }
+    }
+    // The YAML specs feed DebugRunner fixtures, which never read cards.json.
+    let spec_failures = std::thread::Builder::new()
+        .stack_size(256 * 1024 * 1024)
+        .spawn(|| {
+            use digimon_dsl::compiled::CompiledColor;
+            let registry = digimon_engine::dsl_registry::from_embedded_cached()
+                .expect("embedded cards.pack loads");
+            let mut out: Vec<String> = Vec::new();
+            for (id, colours) in THREE_COLOUR_CARDS {
+                let spec = registry
+                    .lookup(id)
+                    .unwrap_or_else(|| panic!("{id} in the embedded DSL pack"));
+                let mut got: Vec<i64> = spec
+                    .color
+                    .iter()
+                    .map(|c| match c {
+                        CompiledColor::Red => 0,
+                        CompiledColor::Blue => 1,
+                        CompiledColor::Yellow => 2,
+                        CompiledColor::Green => 3,
+                        CompiledColor::White => 4,
+                        CompiledColor::Black => 5,
+                        CompiledColor::Purple => 6,
+                    })
+                    .collect();
+                got.sort_unstable();
+                let mut want = colours.to_vec();
+                want.sort_unstable();
+                if got != want {
+                    out.push(format!(
+                        "{id}: the YAML spec's `color:` has codes {got:?}, the card prints {want:?}"
+                    ));
+                }
+            }
+            out
+        })
+        .expect("spawn large-stack thread")
+        .join()
+        .expect("spec colour check panicked");
+    failures.extend(spec_failures);
+    assert!(
+        failures.is_empty(),
+        "{} three-colour card data fault(s):
+{}",
+        failures.len(),
+        failures.join("
+")
     );
 }

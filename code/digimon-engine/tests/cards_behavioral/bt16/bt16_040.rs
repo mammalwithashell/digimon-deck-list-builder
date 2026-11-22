@@ -1,4 +1,4 @@
-//! BT16-040 Wormmon — Digimon, Lv.3, Green+White, DP 2000, Cost 3.
+//! BT16-040 Wormmon — Digimon, Lv.3, Green+Purple, DP 2000, Cost 3.
 //! Traits: Larva
 //! Evo: Lv.2 / cost 1
 //!

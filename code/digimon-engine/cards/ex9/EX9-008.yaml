@@ -10,8 +10,10 @@ traits: [Bird, DM, Ver.4]
 # Standard digivolution: Lv2 Red / Cost 0.
 # Alt-digivolve (xros_req): Lv2 with [DM] trait / Cost 0.
 alt_paths:
+  # Printed circle: Red Lv.2 / cost 0. The colour is part of the
+  # requirement; a gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 2 }
+    from: { level_eq: 2, color_is: red }
     cost: 0
 
   - kind: digivolve

@@ -8,9 +8,23 @@ dp: 14000
 traits: [Rock Dragon, LIBERATOR, Mineral]
 attribute: Virus
 alt_paths:
+  # Printed circle: Black Lv.6 / cost 4 (card image + official DB). This gate used
+  # to carry cost 6, which is the cost of the special condition below.
   - kind: digivolve
     from: { level_eq: 6, color_is: black }
+    cost: 4
+  # Printed special digivolution condition: "[Digivolve] While you have [Close],
+  # [Proganomon]: Cost 6". DCGO EX10_036.cs: AddSelfDigivolutionRequirement with
+  # PermanentCondition = top card named [Proganomon], digivolutionCost 6,
+  # condition = the owner has a permanent whose top card is named [Close].
+  - kind: digivolve
+    from: { name_is: Proganomon }
     cost: 6
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        name_is: Close
 
 # Authoritative card text (data/cards.json):
 #

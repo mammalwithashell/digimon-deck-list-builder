@@ -176,8 +176,30 @@ fn ex13_077_metadata_alt_paths_and_color_distinct_assembly() {
         .iter()
         .filter(|p| p.kind == CompiledAltPathKind::Digivolve)
         .collect();
-    assert_eq!(digi.len(), 1);
-    assert_eq!(digi[0].cost, Some(CompiledCost::Literal(2)));
+    // Two printed digivolution requirements. This test used to pin ONE (the
+    // black-text "[Digivolve] [Omnimon]: Cost 2"), because the official-mirror
+    // bundle listed no standard circle. The card face prints a RAINBOW
+    // (any-colour) "Lv.6 / 6" circle as well — official EN DB "Multicolor 6
+    // from Lv.6", JP 「全 Lv.6から6」, DCGO EX13_077.asset one EvoCosts row per
+    // colour (image and live pages read 2026-11-21). The mirror builder dropped
+    // "Multicolor"; in 1,224 logged games the card was never offered its Lv.6
+    // digivolve.
+    assert_eq!(digi.len(), 2);
+    let circle = digi
+        .iter()
+        .find(|p| p.cost == Some(CompiledCost::Literal(6)))
+        .expect("rainbow Lv.6 / cost 6 circle");
+    let from = circle.from.as_deref().expect("circle has a from gate");
+    assert_eq!(from.level_eq, Some(6));
+    assert_eq!(from.color_is, None, "a rainbow circle is any colour");
+    let named = digi
+        .iter()
+        .find(|p| p.cost == Some(CompiledCost::Literal(2)))
+        .expect("[Digivolve] [Omnimon]: Cost 2");
+    assert_eq!(
+        named.from.as_deref().and_then(|f| f.name_is.as_deref()),
+        Some("Omnimon")
+    );
     let asm = c
         .alt_paths
         .iter()

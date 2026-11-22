@@ -723,13 +723,31 @@ fn bt21_072_has_two_digivolve_alt_paths_standard_and_xros_req() {
         .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
         .collect();
 
+    // The printed circle is a split Purple|Red "Lv.4 / 4" (card image + official
+    // DB), authored as one entry per colour; plus the xros_req route. This used
+    // to assert 2 paths, the first a colour-free `{ level_eq: 4 }` gate that let
+    // the card digivolve from a Lv.4 of any colour.
     assert_eq!(
         digivolve_paths.len(),
-        2,
-        "BT21-072 must have exactly 2 digivolve alt-paths (standard cost-4 + xros_req cost-3); \
-         got {}",
+        3,
+        "BT21-072 must have exactly 3 digivolve alt-paths (Purple circle + Red circle, cost 4, \
+         + xros_req cost-3); got {}",
         digivolve_paths.len()
     );
+    for colour in [
+        digimon_dsl::compiled::CompiledColor::Purple,
+        digimon_dsl::compiled::CompiledColor::Red,
+    ] {
+        assert!(
+            digivolve_paths.iter().any(|p| {
+                p.cost == Some(digimon_dsl::compiled::CompiledCost::Literal(4))
+                    && p.from.as_deref().is_some_and(|f| {
+                        f.level_eq == Some(4) && f.color_is == Some(colour)
+                    })
+            }),
+            "BT21-072 must author the printed {colour:?} Lv.4 / cost 4 circle"
+        );
+    }
 }
 
 /// The xros_req cost-3 alt-path's `from:` filter must be an OR of

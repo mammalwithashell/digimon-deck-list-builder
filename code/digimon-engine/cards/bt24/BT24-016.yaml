@@ -9,8 +9,10 @@ traits: [Dragonkin, LIBERATOR]
 
 # Standard digivolution: from any Lv.4, cost 3 (printed default digivolve path).
 alt_paths:
+  # Printed circle: Red Lv.4 / cost 3. The colour is part of the
+  # requirement; a gate without `color_is` digivolves from any colour.
   - kind: digivolve
-    from: { level_eq: 4 }
+    from: { level_eq: 4, color_is: red }
     cost: 3
 
 effects:

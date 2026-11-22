@@ -1144,3 +1144,142 @@ fn ex10_036_clause_b_no_unsuspend_when_fewer_than_3_mineral_rock_in_trash() {
          expected 1 top + 2 placed = 3 total, got {sources_after}"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Digivolution requirements
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Printed (card image EX10-036.webp + official DB bundle, read 2026-11-21):
+//   - one standard circle: Black "Lv.6 / 4";
+//   - black text: "[Digivolve] While you have [Close], [Proganomon]: Cost 6".
+//
+// DCGO EX10_036.cs: `AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+// top card named [Proganomon], digivolutionCost: 6, condition: the owner has a
+// permanent whose top card is named [Close])`. Rules: CR 4.3 §2-3-5-3 (a card
+// may print additional digivolution requirements) and §8-1-3-1 (the player
+// picks one requirement and a card that meets it).
+//
+// The spec used to carry ONE path, `{ level_eq: 6, color_is: black }` at cost
+// 6: the circle's level with the special condition's cost. A black Lv.6 then
+// had two routes (4 from cards.json, 6 from the spec) and Proganomon had none.
+
+fn named_card(
+    id: &str,
+    name: &str,
+    kind: digimon_engine::enums::CardKind,
+    level: Option<u8>,
+    color: digimon_engine::enums::CardColor,
+) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = kind;
+    c.level = level;
+    c.dp = level.map(|_| 7000);
+    c.colors = vec![color];
+    c
+}
+
+/// Magneticdramon in hand over `base` on the field, with `others` (card id,
+/// owning player) also on the field. Returns `(mask offers it, action result,
+/// memory paid, top card of the base stack)`.
+fn try_hand_digivolve(
+    base: digimon_engine::card_data::CardData,
+    others: Vec<(digimon_engine::card_data::CardData, u8)>,
+) -> (bool, bool, i16, String) {
+    use digimon_engine::action::space::encode_digivolve;
+    use digimon_engine::enums::{GamePhase, PlaySource};
+
+    let base_id = base.card_id.clone();
+    let mut builder = DebugRunner::builder()
+        .dsl_card("EX10-036")
+        .expect("EX10-036 in the embedded DSL pack")
+        .add_card(base);
+    for (card, _) in &others {
+        builder = builder.add_card(card.clone());
+    }
+    let mut runner = builder.hand(0, &["EX10-036"]).memory(10).start();
+    runner.game.turn_count = 1;
+    runner.game.current_phase = GamePhase::Main;
+    let slot = runner.place_on_field(0, &base_id, Some(0)).index as usize;
+    for (card, owner) in &others {
+        runner.place_on_field(*owner, &card.card_id, Some(0));
+    }
+
+    let mask = digimon_engine::build_action_mask(&runner.game, 0);
+    let offered = mask[encode_digivolve(0, slot as u16) as usize] == 1.0;
+    let mem_before = runner.game.memory;
+    let ok = runner
+        .game
+        .digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    let top = runner.game.players[0].battle_area[slot]
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string();
+    (offered, ok, mem_before - runner.game.memory, top)
+}
+
+fn proganomon() -> digimon_engine::card_data::CardData {
+    use digimon_engine::enums::{CardColor, CardKind};
+    named_card("PROGANO", "Proganomon", CardKind::Digimon, Some(5), CardColor::Black)
+}
+
+fn close_tamer(id: &str) -> digimon_engine::card_data::CardData {
+    use digimon_engine::enums::{CardColor, CardKind};
+    named_card(id, "Close", CardKind::Tamer, None, CardColor::Black)
+}
+
+/// "[Digivolve] While you have [Close], [Proganomon]: Cost 6" — the Lv.5
+/// Proganomon is a legal base for 6 while its owner has [Close].
+#[test]
+fn ex10_036_digivolves_over_proganomon_for_six_while_you_have_close() {
+    let (offered, ok, paid, top) = try_hand_digivolve(proganomon(), vec![(close_tamer("CLOSE"), 0)]);
+    assert!(offered, "mask offers Magneticdramon over [Proganomon] while you have [Close]");
+    assert!(ok, "the digivolve resolves");
+    assert_eq!(top, "EX10-036", "Magneticdramon lands on top");
+    assert_eq!(paid, 6, "the special condition's printed cost 6 is paid");
+}
+
+/// Without [Close] the special condition is off, and a Lv.5 does not meet the
+/// Lv.6 circle either: no route.
+#[test]
+fn ex10_036_cannot_digivolve_over_proganomon_without_close() {
+    let (offered, ok, paid, top) = try_hand_digivolve(proganomon(), vec![]);
+    assert!(!offered, "mask must not offer the digivolve without [Close]");
+    assert!(!ok, "no requirement is met");
+    assert_eq!(paid, 0, "no memory paid");
+    assert_eq!(top, "PROGANO", "the base is untouched");
+}
+
+/// "While YOU have [Close]": the opponent's [Close] does not turn it on
+/// (DCGO `HasMatchConditionOwnersPermanent`).
+#[test]
+fn ex10_036_cannot_digivolve_over_proganomon_with_only_the_opponents_close() {
+    let (offered, ok, _, top) = try_hand_digivolve(proganomon(), vec![(close_tamer("CLOSE"), 1)]);
+    assert!(!offered, "the opponent's [Close] does not count");
+    assert!(!ok);
+    assert_eq!(top, "PROGANO");
+}
+
+/// The special condition names [Proganomon]: another Lv.5 is not a base even
+/// while you have [Close].
+#[test]
+fn ex10_036_special_condition_needs_the_name_proganomon() {
+    use digimon_engine::enums::{CardColor, CardKind};
+    let other = named_card("OTHER5", "Landramon", CardKind::Digimon, Some(5), CardColor::Black);
+    let (offered, ok, _, _) = try_hand_digivolve(other, vec![(close_tamer("CLOSE"), 0)]);
+    assert!(!offered && !ok, "a Lv.5 not named [Proganomon] meets no requirement");
+}
+
+/// The printed circle: a black Lv.6 for 4 — one route, so no "which
+/// digivolution cost do you pay?" choice, with or without [Close].
+#[test]
+fn ex10_036_digivolves_over_a_black_lv6_for_the_printed_four() {
+    use digimon_engine::enums::{CardColor, CardKind};
+    for with_close in [false, true] {
+        let base = named_card("BLACK6", "Pyramidimon", CardKind::Digimon, Some(6), CardColor::Black);
+        let others = if with_close { vec![(close_tamer("CLOSE"), 0)] } else { vec![] };
+        let (offered, ok, paid, top) = try_hand_digivolve(base, others);
+        assert!(offered && ok, "black Lv.6 circle applies (with_close = {with_close})");
+        assert_eq!(top, "EX10-036", "digivolve completes without a cost choice");
+        assert_eq!(paid, 4, "printed circle cost 4 (with_close = {with_close})");
+    }
+}

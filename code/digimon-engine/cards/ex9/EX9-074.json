@@ -31,6 +31,36 @@
       "card_color": 0,
       "level": 4,
       "memory_cost": 5
+    },
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 5
+    },
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 5
+    },
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 5
+    },
+    {
+      "card_color": 4,
+      "level": 4,
+      "memory_cost": 5
+    },
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 5
+    },
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 5
     }
   ],
   "xros_req": "Assembly Requirements [Assembly -7] 7 level 4 [DM] trait Digimon cards w/different names\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
