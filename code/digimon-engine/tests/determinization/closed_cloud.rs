@@ -262,6 +262,78 @@ fn ordered_stack_return_routes_eggs_to_the_egg_deck_without_corrupting_counts() 
     });
 }
 
+/// Every belief fact that carries a position (a known card, or a concealed
+/// placement) must name the place its card really occupies in the deck,
+/// security stack or Digi-Egg deck. Returns how many facts were checked.
+pub(super) fn assert_belief_positions_match_zones(
+    game: &digimon_engine::Game,
+    context: &str,
+) -> usize {
+    let mut checked = 0;
+    for seat in 0..2 {
+        let facts = serde_json::to_value(game.belief_knowledge(seat).unwrap()).unwrap();
+        for fact in facts["cards"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .chain(facts["concealed_positions"].as_array().unwrap())
+            .filter(|c| !c["position"].is_null())
+        {
+            let owner = fact["owner"].as_u64().unwrap() as usize;
+            let zone = match fact["zone"].as_str().unwrap() {
+                "deck" => &game.players[owner].deck,
+                "security" => &game.players[owner].security,
+                "digitama" => &game.players[owner].digitama_deck,
+                _ => continue,
+            };
+            let actual = zone
+                .iter()
+                .rev()
+                .position(|c| c.card_index == fact["instance"].as_u64().unwrap() as u16);
+            assert_eq!(
+                actual,
+                Some(fact["position"].as_u64().unwrap() as usize),
+                "{context}, seat {seat}, stale {fact}"
+            );
+            checked += 1;
+        }
+    }
+    checked
+}
+
+/// The closed world for the decision player of a Chronomon-history state.
+pub(super) fn materialize_chronomon_history_world(
+    game: &digimon_engine::Game,
+    cards: &[String],
+) -> Result<digimon_engine::Game, String> {
+    let prior = WeightedDeckPrior::new(
+        PriorSnapshot::new(
+            "standard",
+            "native-security-history",
+            cards.iter().cloned().collect(),
+            vec![CandidateDeck {
+                cards: cards.to_vec(),
+                weight: 1.0,
+            }],
+            0.1,
+            128,
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let viewer = decision_player(game);
+    materialize_closed(
+        game,
+        viewer,
+        game.belief_knowledge(viewer).unwrap(),
+        &prior,
+        88,
+    )
+}
+
+/// A recorded Chronomon mirror game (regenerate with `fixture_regen`, see that
+/// module): the belief positions stay true after every decision, and the
+/// final state has a closed world.
 #[test]
 fn native_chronomon_security_history_positions_remain_consistent() {
     with_big_stack(|| {
@@ -275,64 +347,15 @@ fn native_chronomon_security_history_positions_remain_consistent() {
         for (decision, step) in fixture["actions"].as_array().unwrap().iter().enumerate() {
             let player = step[0].as_u64().unwrap() as u8;
             let action = step[1].as_u64().unwrap() as u16;
-            assert_eq!(decision_player(&game), player, "{step}");
+            assert_eq!(decision_player(&game), player, "decision {decision} {step}");
             assert!(
                 digimon_engine::build_action_mask(&game, player)[action as usize] > 0.5,
-                "{step}"
+                "decision {decision} {step}"
             );
             game.decode_action(action, player);
-            for seat in 0..2 {
-                let facts = serde_json::to_value(game.belief_knowledge(seat).unwrap()).unwrap();
-                for fact in facts["cards"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .chain(facts["concealed_positions"].as_array().unwrap())
-                    .filter(|c| !c["position"].is_null())
-                {
-                    let owner = fact["owner"].as_u64().unwrap() as usize;
-                    let zone = match fact["zone"].as_str().unwrap() {
-                        "deck" => &game.players[owner].deck,
-                        "security" => &game.players[owner].security,
-                        "digitama" => &game.players[owner].digitama_deck,
-                        _ => continue,
-                    };
-                    let actual = zone
-                        .iter()
-                        .rev()
-                        .position(|c| c.card_index == fact["instance"].as_u64().unwrap() as u16);
-                    assert_eq!(
-                        actual,
-                        Some(fact["position"].as_u64().unwrap() as usize),
-                        "after decision {decision} {step}, seat {seat}, stale {fact}"
-                    );
-                }
-            }
+            assert_belief_positions_match_zones(&game, &format!("after decision {decision} {step}"));
         }
-        let prior = WeightedDeckPrior::new(
-            PriorSnapshot::new(
-                "standard",
-                "native-security-history",
-                cards.iter().cloned().collect(),
-                vec![CandidateDeck {
-                    cards: cards.clone(),
-                    weight: 1.0,
-                }],
-                0.1,
-                128,
-            )
-            .unwrap(),
-        )
-        .unwrap();
-        let viewer = decision_player(&game);
-        materialize_closed(
-            &game,
-            viewer,
-            game.belief_knowledge(viewer).unwrap(),
-            &prior,
-            88,
-        )
-        .unwrap();
+        materialize_chronomon_history_world(&game, &cards).unwrap();
     });
 }
 
