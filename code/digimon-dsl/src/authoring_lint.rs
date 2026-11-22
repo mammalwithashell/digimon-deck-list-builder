@@ -133,9 +133,14 @@ fn walk(value: &Value, path: &str, out: &mut Vec<AuthoringFinding>) {
                 };
                 if key == "card_count_in_zone" {
                     if let Value::Mapping(spec) = child {
-                        let filter_missing = spec
-                            .get("filter")
-                            .is_none_or(|filter| matches!(filter, Value::Null));
+                        // Absent, null, or an empty mapping (`filter: {}`): a
+                        // present key that constrains nothing still counts
+                        // every permanent.
+                        let filter_missing = spec.get("filter").is_none_or(|filter| match filter {
+                            Value::Null => true,
+                            Value::Mapping(map) => map.is_empty(),
+                            _ => false,
+                        });
                         if zone_includes_battle_area(spec.get("zone")) && filter_missing {
                             out.push(AuthoringFinding {
                                 rule: "unfiltered-battle-area-count",
@@ -196,6 +201,20 @@ mod tests {
         assert!(rules(filtered).is_empty());
         let trash = "effects:\n  - when: on_play\n    process:\n      - x:\n          per:\n            card_count_in_zone: { of: you, zone: trash }\n";
         assert!(rules(trash).is_empty());
+    }
+
+    /// `filter: {}` is a present key with no constraint: the count is still
+    /// every permanent, so it is the same finding as a missing filter.
+    #[test]
+    fn empty_filter_mapping_is_an_unfiltered_battle_area_count() {
+        for filter in ["{}", "{ }", "null", "~"] {
+            let raw = format!(
+                "effects:\n  - when: on_play\n    process:\n      - x:\n          per:\n            card_count_in_zone: {{ of: you, zone: battle_area, filter: {filter} }}\n"
+            );
+            assert_eq!(rules(&raw), vec!["unfiltered-battle-area-count"], "filter: {filter}");
+        }
+        let list_zone = "effects:\n  - when: on_play\n    process:\n      - x:\n          per:\n            card_count_in_zone: { of: you, zone: [battle_area], filter: {} }\n";
+        assert_eq!(rules(list_zone), vec!["unfiltered-battle-area-count"]);
     }
 
     #[test]
