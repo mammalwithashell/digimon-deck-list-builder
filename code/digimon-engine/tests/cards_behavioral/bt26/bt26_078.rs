@@ -321,3 +321,65 @@ fn bt26_078_only_the_copy_still_in_the_trash_activates() {
     assert!(has_kw(&r, t, Keyword::Rush));
     assert!(has_kw(&r, t, Keyword::Execute));
 }
+
+/// ONE Cherubimon (BT26-078) in the trash with TWO of its triggers pending:
+/// a second [Titan] Digimon was played before the first trigger resolved (in
+/// a game, by the effect of the first one). The first activation pays the
+/// cost, so the card is in the deck when the second trigger's turn comes.
+/// CR 4.3 15-4-4-3: that trigger can no longer be activated; 15-14-3-1: a
+/// {Trash} effect activates "while the card with the effect is in your
+/// trash". DCGO BT26_078.cs `IsExistOnTrashActivate`.
+///
+/// This is the shape a recorded Chronomon mirror game hit (the
+/// `chronomon-security-history` fixture of tests/determinization, decision
+/// 58): the second trigger was offered, returned nothing, and still granted
+/// <Rush> and <Execute>.
+#[test]
+fn bt26_078_second_pending_trigger_of_one_copy_is_lost_after_the_first_returns_it() {
+    let mut r = setup(-5);
+    push_trash(&mut r, 0, CARD_ID);
+    let first = r.place_on_field(0, "TITAN", None);
+    let second = r.place_on_field(0, "TITAN", None);
+    r.fire_play_event_triggers(0, first.index as usize, false, false);
+    assert!(r.pending_is_optional(), "the first trigger's \"by returning\"");
+    // The second play happens while the first trigger is still pending.
+    r.fire_play_event_triggers(0, second.index as usize, false, false);
+
+    let mut offers = 0;
+    for _ in 0..8 {
+        if r.pending_is_end_of_turn_keyword_decision() {
+            break;
+        }
+        let Some(sel) = r.pending_selection() else {
+            break;
+        };
+        if sel.is_optional {
+            offers += 1;
+        }
+        let (player, action) = (
+            sel.selecting_player,
+            sel.valid_action_ids
+                .iter()
+                .copied()
+                .find(|&a| a != digimon_engine::action::space::PASS)
+                .expect("an accepting action"),
+        );
+        r.execute_action(player, action).unwrap();
+    }
+    assert_eq!(offers, 1, "one card in the trash pays once: one \"by returning\" offer");
+    assert_eq!(cherubimon_in_trash(&r), 0);
+    assert_eq!(
+        deck_ids(&r, 0).iter().filter(|id| *id == CARD_ID).count(),
+        1,
+        "the card was returned once"
+    );
+    let granted = [first, second]
+        .iter()
+        .filter(|h| has_kw(&r, **h, Keyword::Rush) && has_kw(&r, **h, Keyword::Execute))
+        .count();
+    assert_eq!(granted, 1, "\"1 of them\": only the Digimon the paid trigger was for");
+    assert!(
+        !(has_kw(&r, first, Keyword::Rush) && has_kw(&r, second, Keyword::Rush)),
+        "the unpaid trigger granted nothing"
+    );
+}
