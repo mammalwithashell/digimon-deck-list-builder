@@ -32,8 +32,9 @@
 //! - E3 shared OPT hash across WhenDigivolving + WhenAttacking
 //! - C1 union hand-OR-trash free play of named Tamer (play_union_bound_free)
 //! - D1 formula-valued DP debuff (-3000 × own Digimon+Tamer count, expiry
-//!   end_of_opponents_turn). "Your Digimon and Tamers" = unfiltered
-//!   card_count_in_zone over battle_area (only Digimon/Tamers live there).
+//!   end_of_opponents_turn). "Your Digimon and Tamers" = card_count_in_zone
+//!   over battle_area FILTERED to Digimon/Tamers (a placed Option card also
+//!   lives there and is not counted).
 //! - B3 all-turns observer (on_enter_field_anyone OR on_suspend) for own
 //!   Marcus Damon
 //! - F delete 1 opp Digimon with DP ≤ this Digimon's DP (dp_lte source_dp)
@@ -1030,5 +1031,89 @@ fn ad1_016_when_digivolving_trash_marcus_not_offered_under_cannot_play_from_tras
     assert_eq!(
         marcus_union_offered(&mut runner, perm),
         vec!["Hand:MD-HAND".to_string()]
+    );
+}
+
+/// Seat `id` in `player`'s battle area as an Option card an effect PLACED there
+/// (`OptionState::OrdinaryFieldOption`, the Digital Accident Tactics Squad
+/// (P-235) / DNA Charge (ST24-15) shape; CR 4.3 4-28-1). A bare
+/// `place_on_field` of an Option card is not a placed Option and does not stay.
+fn place_option_in_battle_area(runner: &mut DebugRunner, player: u8, id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == id)
+        .unwrap_or_else(|| panic!("unknown card {id}"));
+    let card_index = runner.game.next_card_index();
+    runner.game.install_field_option_as_ordinary(
+        digimon_engine::card_source::CardSource::new(data_idx, player, card_index),
+        player,
+    );
+}
+
+/// The placed Option is still in `player`'s battle area (so the count under
+/// test really had an Option to miscount).
+fn placed_option_is_on_field(runner: &DebugRunner, player: u8, id: &str) -> bool {
+    runner.game.players[player as usize]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == id)
+}
+
+/// "give -3000 DP for each of your Digimon and Tamers": an OPTION card placed
+/// in the battle area (Digital Accident Tactics Squad (P-235), DNA Charge
+/// (ST24-15), ...) is neither -- CR 4.3 4-28-1 / 17-1-3-2-2: it stays in the
+/// battle area as an Option card. DCGO AD1_016.cs:
+/// `-3000 * GetBattleAreaPermanents().Count(permanent.IsDigimon || permanent.IsTamer)`.
+/// Regression (bug scan): the count was `battle_area.len()`, so a placed Option
+/// added an extra -3000 and changed which Digimon was deleted.
+#[test]
+fn ad1_016_dp_debuff_does_not_count_an_option_placed_in_the_battle_area() {
+    use digimon_engine::action::space::PASS;
+    let mut placed_option = make_test_card("PLACED-OPT", "Placed Option");
+    placed_option.card_kind = CardKind::Option;
+    placed_option.level = None;
+    placed_option.dp = None;
+    let mut runner = shinegreymon_runner()
+        .add_card(make_tamer("TAMER"))
+        .add_card(placed_option)
+        .add_card(make_digimon("OPP", 7, 14000))
+        .memory(20)
+        .start();
+    let perm = runner.place_on_field(0, "AD1-016", Some(0));
+    runner.place_on_field(0, "TAMER", Some(0));
+    place_option_in_battle_area(&mut runner, 0, "PLACED-OPT");
+    let _ = runner.auto_resolve();
+    let opp = runner.place_on_field(1, "OPP", Some(0));
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(perm),
+    );
+    runner.game.drain_effect_queue();
+    while let Some(view) = runner.pending_selection_view() {
+        let accept = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != PASS)
+            .unwrap_or(view.valid_action_ids[0]);
+        runner
+            .execute_action(view.selecting_player, accept)
+            .expect("resolve pending selection");
+    }
+    let _ = runner.auto_resolve();
+
+    assert!(
+        placed_option_is_on_field(&runner, 0, "PLACED-OPT"),
+        "precondition: the placed Option is in the battle area when the count is read"
+    );
+    assert_eq!(runner.battle_area_size(0), 3, "ShineGreymon + Tamer + placed Option");
+    // ShineGreymon + 1 Tamer = 2 (the Option is not counted): 14000 - 6000.
+    assert_eq!(
+        runner.dp_of(opp),
+        Some(8000),
+        "debuff must be -3000 x (Digimon + Tamers = 2); the placed Option is not counted"
     );
 }

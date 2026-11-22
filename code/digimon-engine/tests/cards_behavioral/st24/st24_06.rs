@@ -268,7 +268,7 @@ fn st24_06_metadata_and_two_alt_paths() {
     let geo = card.alt_paths.iter().any(|p| {
         p.from
             .as_ref()
-            .map(|f| f.name_contains.as_deref() == Some("GeoGreymon"))
+            .map(|f| f.name_is.as_deref() == Some("GeoGreymon"))
             .unwrap_or(false)
     });
     assert!(geo, "GeoGreymon-named alt-path present");

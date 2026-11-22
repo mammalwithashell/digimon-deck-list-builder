@@ -27,6 +27,7 @@ mod alt_digivolve_support;
 mod assembly_material_predicates;
 mod bugscan_engine_guards;
 mod burst_digivolve_common;
+mod card_pool_authoring_guards;
 mod printed_metadata_routes;
 mod printed_attribute_filters;
 mod printed_form_filters;

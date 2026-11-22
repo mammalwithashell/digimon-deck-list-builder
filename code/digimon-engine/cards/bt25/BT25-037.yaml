@@ -43,7 +43,7 @@ alt_paths:
     from: { level_eq: 3, color_is: yellow }
     cost: 3
   - kind: digivolve
-    from: { name_contains: "Patamon" }
+    from: { name_is: "Patamon" }
     cost: 2
   - kind: digivolve
     from: { level_eq: 3, trait_has: TS }

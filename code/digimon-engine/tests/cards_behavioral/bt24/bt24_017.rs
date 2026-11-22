@@ -1133,3 +1133,91 @@ fn bt24_017_deck_add_observer_waits_for_the_whole_effect() {
         sel.prompt
     );
 }
+
+/// Seat `id` in `player`'s battle area as an Option card an effect PLACED there
+/// (`OptionState::OrdinaryFieldOption`, the Digital Accident Tactics Squad
+/// (P-235) / DNA Charge (ST24-15) shape; CR 4.3 4-28-1). A bare
+/// `place_on_field` of an Option card is not a placed Option and does not stay.
+fn place_option_in_battle_area(runner: &mut DebugRunner, player: u8, id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == id)
+        .unwrap_or_else(|| panic!("unknown card {id}"));
+    let card_index = runner.game.next_card_index();
+    runner.game.install_field_option_as_ordinary(
+        digimon_engine::card_source::CardSource::new(data_idx, player, card_index),
+        player,
+    );
+}
+
+/// The placed Option is still in `player`'s battle area (so the count under
+/// test really had an Option to miscount).
+fn placed_option_is_on_field(runner: &DebugRunner, player: u8, id: &str) -> bool {
+    runner.game.players[player as usize]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == id)
+}
+
+/// "this Digimon gets +2000 DP for each of your opponent's DIGIMON": an
+/// opposing Tamer and an Option card placed in their battle area are not
+/// Digimon (CR 4.3 4-4-1, 4-28-1). DCGO BT24_017.cs:
+/// `2000 * card.Owner.Enemy.GetBattleAreaDigimons().Count()`.
+/// Regression (bug scan, dynasmon--medusamon pair-000-0 step 67): the
+/// unfiltered battle-area count also counted Kari Kamiya (BT15-084), a Tamer.
+#[test]
+fn bt24_017_dp_boost_counts_only_opponent_digimon() {
+    let mut opp_digimon = make_test_card("OPP-D", "OppD");
+    opp_digimon.dp = Some(4000);
+    let mut opp_tamer = make_test_card("OPP-TAMER", "OppTamer");
+    opp_tamer.card_kind = CardKind::Tamer;
+    opp_tamer.level = None;
+    opp_tamer.dp = None;
+    let mut opp_option = make_test_card("OPP-OPTION", "OppOption");
+    opp_option.card_kind = CardKind::Option;
+    opp_option.level = None;
+    opp_option.dp = None;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("YAML loads")
+        .add_card(opp_digimon)
+        .add_card(opp_tamer)
+        .add_card(opp_option)
+        .add_card(make_test_card("TRASH-A", "TrashA"))
+        .add_card(make_test_card("TRASH-B", "TrashB"))
+        .memory(20)
+        .start();
+
+    let bt24_handle = place_bt24_on_field(&mut runner, 0);
+    runner.place_on_field(1, "OPP-D", None);
+    runner.place_on_field(1, "OPP-TAMER", None);
+    place_option_in_battle_area(&mut runner, 1, "OPP-OPTION");
+    let _ = runner.auto_resolve();
+    push_to_trash(&mut runner, 1, "TRASH-A");
+    push_to_trash(&mut runner, 1, "TRASH-B");
+
+    trigger_when_digivolving(&mut runner, bt24_handle);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
+    resolve_first(&mut runner); // delete the lowest-DP Digimon
+    accept_return_two_cost(&mut runner);
+    resolve_first(&mut runner);
+    resolve_first(&mut runner);
+
+    assert_eq!(token_count(&runner, 1), 2, "2 Petrification Tokens spawn");
+    assert!(
+        placed_option_is_on_field(&runner, 1, "OPP-OPTION")
+            && placed_option_is_on_field(&runner, 1, "OPP-TAMER"),
+        "precondition: the Tamer and the placed Option are in the opponent's battle area"
+    );
+    assert_eq!(runner.battle_area_size(1), 4, "Tamer + placed Option + 2 tokens");
+    // Opponent battle area: Tamer + placed Option + 2 tokens. Only the 2
+    // tokens are Digimon -> +4000 (not +8000).
+    assert_eq!(
+        runner.effective_dp(bt24_handle),
+        Some(11000 + 4000),
+        "+2000 x 2 opponent Digimon; the Tamer and the placed Option do not count"
+    );
+}

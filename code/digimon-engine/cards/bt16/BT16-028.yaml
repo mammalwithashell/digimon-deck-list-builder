@@ -119,10 +119,10 @@ alt_paths:
     from: { level_eq: 5, color_is: blue }
     cost: 4
   - kind: digivolve
-    from: { name_contains: "Paildramon" }
+    from: { name_is: "Paildramon" }
     cost: 3
   - kind: digivolve
-    from: { name_contains: "Dinobeemon" }
+    from: { name_is: "Dinobeemon" }
     cost: 3
 
 effects:

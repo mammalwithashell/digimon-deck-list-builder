@@ -70,8 +70,12 @@ security removal on demand via **Petrification Tokens**.
   security/chain consequence).
 
 > Faithfulness note: the token's `[Your Turn] This Digimon can't suspend` rider
-> is **not yet implemented** (`petrification.rs` gap — only the OnDeletion clause
-> ships). Tests must not assert can't-suspend.
+> is **implemented** (`petrification.rs`: a continuous `CannotSuspend` on the
+> token while it is its controller's turn, DCGO `BT21_029_token.cs` region
+> "Cant Suspend"). A token can't attack on its controller's turn (CR 4.3
+> 11-2-5) and can be suspended on the opponent's turn. Pinned by
+> `petrification_token_cannot_suspend_or_attack_on_each_of_its_controllers_turns`
+> (`tests/cards_behavioral/tokens.rs`).
 
 ### Owen digivolve buff + extra attack
 - Cards: BT24-082 Owen Dreadnought + any [Reptile]/[Dragonkin] ally.

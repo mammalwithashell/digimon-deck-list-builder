@@ -11,7 +11,7 @@ alt_paths:
     from: { level_eq: 3, color_is: black }
     cost: 2
   - kind: digivolve
-    from: { name_contains: "Sephirothmon" }
+    from: { name_is: "Sephirothmon" }
     cost: 0
 
 effects:

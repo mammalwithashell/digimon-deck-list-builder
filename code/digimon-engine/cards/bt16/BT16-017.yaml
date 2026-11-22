@@ -35,7 +35,7 @@ alt_paths:
     from: { level_eq: 2, color_is: purple }
     cost: 1
   - kind: digivolve
-    from: { name_contains: "DemiVeemon" }
+    from: { name_is: "DemiVeemon" }
     cost: 0
 
 effects:

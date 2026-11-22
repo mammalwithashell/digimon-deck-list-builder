@@ -332,11 +332,11 @@ fn bt22_042_has_conditional_chaperomon_cost_6_alt_path() {
         .as_ref()
         .expect("the Chaperomon route filters its digivolve source");
     assert!(
-        from.name_contains.as_deref() == Some("Chaperomon")
+        from.name_is.as_deref() == Some("Chaperomon")
             || from
                 .all_of
                 .iter()
-                .any(|pred| pred.name_contains.as_deref() == Some("Chaperomon")),
+                .any(|pred| pred.name_is.as_deref() == Some("Chaperomon")),
         "the cost-6 route digivolves from a Chaperomon"
     );
 }
@@ -346,13 +346,7 @@ fn bt22_042_chaperomon_alt_digivolve_requires_arisa_kinosaki() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
         .expect("BT22-042 YAML loads")
-        .add_card(make_digimon(
-            "CHAPEROMON",
-            5,
-            7000,
-            CardColor::Yellow,
-            &["Puppet"],
-        ))
+        .add_card(named_chaperomon())
         .hand(0, &["BT22-042"])
         .memory(10)
         .start();
@@ -371,13 +365,7 @@ fn bt22_042_chaperomon_alt_digivolve_costs_6_while_arisa_is_present() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
         .expect("BT22-042 YAML loads")
-        .add_card(make_digimon(
-            "CHAPEROMON",
-            5,
-            7000,
-            CardColor::Yellow,
-            &["Puppet"],
-        ))
+        .add_card(named_chaperomon())
         .add_card(make_tamer("ARISA", "Arisa Kinosaki"))
         .hand(0, &["BT22-042"])
         .memory(10)
@@ -587,6 +575,15 @@ fn make_digimon(id: &str, level: u8, dp: i32, color: CardColor, traits: &[&str])
     card.dp = Some(dp);
     card.colors = vec![color];
     card.traits = traits.iter().map(|s| s.to_string()).collect();
+    card
+}
+
+/// A card actually NAMED [Chaperomon]: the route is the exact-name gate
+/// "[Digivolve] While you have [Arisa Kinosaki], [Chaperomon]: Cost 6"
+/// (CR 4.3 2-3-1-2 / 2-3-5-3), so the fixture's name must be exact.
+fn named_chaperomon() -> CardData {
+    let mut card = make_digimon("CHAPEROMON", 5, 7000, CardColor::Yellow, &["Puppet"]);
+    card.card_name = "Chaperomon".to_string();
     card
 }
 

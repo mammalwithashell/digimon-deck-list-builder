@@ -74,7 +74,7 @@ attribute: Vaccine
 alt_paths:
   # [Digivolve] from [GeoGreymon] (any level): cost 3.
   - kind: digivolve
-    from: { name_contains: "GeoGreymon" }
+    from: { name_is: "GeoGreymon" }
     cost: 3
   # [Digivolve] Lv.4 with the [DATA SQUAD] trait: cost 3.
   - kind: digivolve

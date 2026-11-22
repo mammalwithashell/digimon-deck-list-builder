@@ -547,3 +547,78 @@ fn bt9_112_yaml_compiles_without_error() {
         "BT9-112 must be present in the embedded DSL pack (YAML must parse + compile)"
     );
 }
+
+/// Seat `id` in `player`'s battle area as an Option card an effect PLACED there
+/// (`OptionState::OrdinaryFieldOption`, the Digital Accident Tactics Squad
+/// (P-235) / DNA Charge (ST24-15) shape; CR 4.3 4-28-1). A bare
+/// `place_on_field` of an Option card is not a placed Option and does not stay.
+fn place_option_in_battle_area(runner: &mut DebugRunner, player: u8, id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == id)
+        .unwrap_or_else(|| panic!("unknown card {id}"));
+    let card_index = runner.game.next_card_index();
+    runner.game.install_field_option_as_ordinary(
+        digimon_engine::card_source::CardSource::new(data_idx, player, card_index),
+        player,
+    );
+}
+
+/// The placed Option is still in `player`'s battle area (so the count under
+/// test really had an Option to miscount).
+fn placed_option_is_on_field(runner: &DebugRunner, player: u8, id: &str) -> bool {
+    runner.game.players[player as usize]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == id)
+}
+
+/// "reduce the play cost by 3 for each of your opponent's Digimon and Tamers"
+/// -- an Option card placed in the opponent's battle area is neither (CR 4.3
+/// 4-28-1: it stays there as an Option card). DCGO BT9_112.cs:
+/// `3 * Enemy.GetBattleAreaPermanents().Count(permanent.IsDigimon || permanent.IsTamer)`.
+/// Regression: the unfiltered battle-area count also counted placed Options.
+#[test]
+fn bt9_112_cost_reduction_counts_digimon_and_tamers_but_not_placed_options() {
+    use digimon_engine::enums::CardKind;
+    let mut tamer = make_test_card("OPP-TAMER", "OppTamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    let mut option = make_test_card("OPP-OPTION", "OppOption");
+    option.card_kind = CardKind::Option;
+    option.level = None;
+    option.dp = None;
+    let mut digimon = make_test_card("OPP-DIGI", "OppDigi");
+    digimon.card_kind = CardKind::Digimon;
+    digimon.level = Some(6);
+    digimon.dp = Some(11000);
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT9-112")
+        .expect("BT9-112 in embedded DSL pack")
+        .add_card(digimon)
+        .add_card(tamer)
+        .add_card(option)
+        .hand(0, &["BT9-112"])
+        .memory(20)
+        .start();
+    r.place_on_field(1, "OPP-DIGI", None);
+    r.place_on_field(1, "OPP-TAMER", None);
+    place_option_in_battle_area(&mut r, 1, "OPP-OPTION");
+    let _ = r.auto_resolve();
+    assert_eq!(
+        r.battle_area_size(1),
+        3,
+        "precondition: Digimon + Tamer + placed Option in the opponent's battle area"
+    );
+
+    let mem_before = r.memory();
+    r.play(0, 0);
+    let cost = mem_before - r.memory();
+    assert_eq!(
+        cost, 14,
+        "1 Digimon + 1 Tamer (the placed Option is not counted): 20 - 3x2 = 14; got {cost}"
+    );
+}

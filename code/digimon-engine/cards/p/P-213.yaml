@@ -107,7 +107,7 @@ alt_paths:
     from: { level_eq: 4, color_is: red }
     cost: 3
   - kind: digivolve
-    from: { name_contains: "Aegiomon" }
+    from: { name_is: "Aegiomon" }
     cost: 3
 
 effects:

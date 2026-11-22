@@ -48,6 +48,32 @@ fn blastmon_runner() -> DebugRunner {
         .build()
 }
 
+/// One of player 0's Digimon (`attacker`) declares an attack, as the attack
+/// declaration dispatches it to observers: the `OnAllyAttack` batch, scanned
+/// over the attacker-controller's battle area with no attacker exclusion (so
+/// the attacker itself observes its own attack). "[All Turns] When Digimon
+/// attack" is an OBSERVER -- DCGO EX10_034.cs registers it on
+/// `EffectTiming.OnAllyAttack` with `CanTriggerOnPermanentAttack(hashtable,
+/// IsAttackingDigimon)` (any attacking Digimon). These tests used to fire the
+/// SELF timing `WhenAttacking`, which pinned a spec that missed the
+/// controller's OTHER Digimon attacking.
+fn own_digimon_attacks(
+    runner: &mut DebugRunner,
+    attacker: digimon_engine::permanent::PermanentHandle,
+) {
+    let card = runner.game.players[attacker.player as usize].battle_area[attacker.index as usize]
+        .top_card()
+        .handle();
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAllyAttack,
+        TriggerSource::PlayerBattleAreaAttack {
+            player: attacker.player,
+            attacker,
+            card,
+        },
+    );
+}
+
 /// Build a plain source card (level 3, no special traits).
 fn make_source(id: &str) -> digimon_engine::card_data::CardData {
     let mut c = make_test_card(id, &format!("{id} Source"));
@@ -272,8 +298,13 @@ fn ex10_034_clause_b_has_when_attacking_once_per_turn_optional() {
             CompiledClause::Triggered(t) => Some(t),
             _ => None,
         })
-        .find(|t| t.when.contains(&CompiledTiming::WhenAttacking))
-        .expect("EX10-034 must have a triggered clause with WhenAttacking timing (Clause B)");
+        .find(|t| t.when.contains(&CompiledTiming::OnAllyAttack))
+        .expect("EX10-034 must have a triggered clause with OnAllyAttack timing (Clause B)");
+    assert!(
+        !clause.when.contains(&CompiledTiming::WhenAttacking),
+        "\"When Digimon attack\" is an observer: the SELF timing when_attacking would miss \
+         the controller's other Digimon (its own attack is inside on_ally_attack)"
+    );
 
     assert_eq!(
         clause.scope,
@@ -290,7 +321,7 @@ fn ex10_034_clause_b_has_when_attacking_once_per_turn_optional() {
     );
     assert!(
         clause.when.contains(&CompiledTiming::OnOpponentAttack),
-        "[All Turns] requires on_opponent_attack timing alongside when_attacking"
+        "[All Turns] requires on_opponent_attack timing alongside on_ally_attack"
     );
     assert!(
         clause
@@ -330,10 +361,7 @@ fn ex10_034_clause_b_when_attacking_prompts_source_multi_2_of_2() {
     runner.push_source(blastmon, "SRC-B1");
     runner.push_source(blastmon, "SRC-B2");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(blastmon),
-    );
+    own_digimon_attacks(&mut runner, blastmon);
     runner.game.drain_effect_queue();
 
     // Outer Replacement (optional accept/decline) installed first.
@@ -433,10 +461,7 @@ fn ex10_034_clause_b_no_source_multi_when_zero_own_sources() {
     let blastmon = runner.place_on_field(0, "EX10-034", None);
     // No sources pushed — stack has only the top card (EX10-034).
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(blastmon),
-    );
+    own_digimon_attacks(&mut runner, blastmon);
     runner.game.drain_effect_queue();
 
     // §15-7-4: the unpayable condition can't be chosen -- no prompt.
@@ -484,10 +509,7 @@ fn ex10_034_clause_b_no_source_multi_when_only_one_source() {
     let blastmon = runner.place_on_field(0, "EX10-034", None);
     runner.push_source(blastmon, "ONE-SRC");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(blastmon),
-    );
+    own_digimon_attacks(&mut runner, blastmon);
     runner.game.drain_effect_queue();
 
     assert!(
@@ -537,10 +559,7 @@ fn ex10_034_clause_b_grants_security_attack_plus_1_after_cost() {
     runner.push_source(blastmon, "SA-SRC1");
     runner.push_source(blastmon, "SA-SRC2");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(blastmon),
-    );
+    own_digimon_attacks(&mut runner, blastmon);
     runner.game.drain_effect_queue();
 
     // Step 1: outer Replacement (accept/decline) installed.
@@ -600,10 +619,7 @@ fn ex10_034_clause_b_grants_plus_3000_dp_after_cost() {
 
     let dp_before = runner.dp_of(blastmon).unwrap_or(0);
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(blastmon),
-    );
+    own_digimon_attacks(&mut runner, blastmon);
     runner.game.drain_effect_queue();
 
     // Accept outer optional.
@@ -650,10 +666,7 @@ fn ex10_034_clause_b_removes_2_sources_from_stack() {
     // stack_before should be 2 (2 sources below top card EX10-034).
     // The top card itself is not counted in card_sources (it's the permanent's card_idx).
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(blastmon),
-    );
+    own_digimon_attacks(&mut runner, blastmon);
     runner.game.drain_effect_queue();
 
     // Accept outer optional.
@@ -703,10 +716,7 @@ fn ex10_034_clause_b_opt_blocks_second_when_attacking_same_turn() {
     runner.push_source(blastmon, "OPT-SRC4");
 
     // First activation: outer Replacement installs, then SourceMulti after accept.
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(blastmon),
-    );
+    own_digimon_attacks(&mut runner, blastmon);
     runner.game.drain_effect_queue();
     assert_eq!(
         runner.pending_kind(),
@@ -730,10 +740,7 @@ fn ex10_034_clause_b_opt_blocks_second_when_attacking_same_turn() {
     runner.auto_resolve().ok();
 
     // Second activation same turn: OPT flag blocks it — nothing installed.
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(blastmon),
-    );
+    own_digimon_attacks(&mut runner, blastmon);
     runner.game.drain_effect_queue();
 
     assert!(
@@ -836,4 +843,53 @@ fn ex10_034_digixros_three_hand_materials_reduce_cost_by_six_and_go_under() {
             "{id} is placed under Blastmon"
         );
     }
+}
+
+// ---------------------------------------------------------------------------
+// "When Digimon attack" -- ANOTHER of the controller's Digimon attacking
+// ---------------------------------------------------------------------------
+
+/// The controller's OTHER Digimon attacks: Blastmon (EX10-034) observes it
+/// ("[All Turns] [Once Per Turn] When Digimon attack" has no "this Digimon").
+/// Regression: authored `[when_attacking, on_opponent_attack]`, only Blastmon's
+/// own attack and the opponent's attacks triggered it.
+#[test]
+fn ex10_034_clause_b_fires_when_another_own_digimon_attacks() {
+    let mut ally = make_test_card("ALLY-ATK", "Ally Attacker");
+    ally.level = Some(4);
+    ally.dp = Some(5000);
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-034")
+        .expect("EX10-034 YAML parses and compiles")
+        .add_card(make_source("AA-SRC1"))
+        .add_card(make_source("AA-SRC2"))
+        .add_card(ally)
+        .memory(10)
+        .start();
+
+    let blastmon = runner.place_on_field(0, "EX10-034", None);
+    runner.push_source(blastmon, "AA-SRC1");
+    runner.push_source(blastmon, "AA-SRC2");
+    let ally = runner.place_on_field(0, "ALLY-ATK", None);
+
+    own_digimon_attacks(&mut runner, ally);
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "another own Digimon attacking must offer Clause B; got {:?}",
+        runner.pending_kind()
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept outer optional");
+    assert!(
+        matches!(
+            runner.pending_kind(),
+            Some(SelectionKind::SourceMulti { min: 2, max: 2, .. })
+        ),
+        "the cost is 2 of BLASTMON's own digivolution cards; got {:?}",
+        runner.pending_kind()
+    );
 }

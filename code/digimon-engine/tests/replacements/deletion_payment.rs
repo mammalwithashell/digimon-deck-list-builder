@@ -347,6 +347,24 @@ fn recorded_medusamon_immune_token_payment_does_not_loop() {
     // moved to the decline: 2 -> 3). The two existing declines (steps 58 and
     // 60) now answer that yes/no prompt (phase SelectEffectChoice). Declining
     // keeps the [Once Per Turn] (Q1818), so the game's outcome is unchanged.
+    // 2026-11-21: the recording had the token's controller ATTACK with its
+    // Petrification Tokens on its own turn. The token prints "[Your Turn] This
+    // Digimon can't suspend" (Medusamon (EX11-012) / (BT24-017) / (BT21-029);
+    // DCGO BT21_029_token.cs "Cant Suspend"), now implemented, and a Digimon
+    // that can't suspend can't declare an attack (CR 4.3 11-2-5). Three
+    // recorded choices were token attacks:
+    //   * steps 43 and 44 (Main phase, actions 144 and 129: both tokens at
+    //     security) -- removed. Every later row still replays without
+    //     divergence, so the payment boundary is reached on the same board
+    //     except that the Medusamon seat kept those two security cards.
+    //   * step 90, the pick for an effect's "Choose 1 of your Digimon to
+    //     attack": the token (action 101) is no longer offered; the row now
+    //     picks the other offered Digimon, BT20-012 in slot 4 (action 104),
+    //     and step 91 declares the same security attack for that slot (129 ->
+    //     174). The attack triggers the same "-8000 DP" answer at steps 92-93,
+    //     which deletes Medusamon (EX11-012) while the only opposing Token is
+    //     the IMMUNE one (step 85) -- the payment boundary this test pins.
+    // `code/tools/cloud_search/smoke.py` replays the same file.
     let recording: serde_json::Value = serde_json::from_str(include_str!(
         "../fixtures/training/medusamon-immune-token-payment.json"
     ))

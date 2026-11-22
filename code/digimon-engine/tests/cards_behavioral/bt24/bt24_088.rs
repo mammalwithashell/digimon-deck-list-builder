@@ -328,3 +328,138 @@ fn zone_ids(cards: &[CardSource], data: &[CardData]) -> Vec<String> {
         .map(|card| card.card_id(data).to_string())
         .collect()
 }
+
+// ---------------------------------------------------------------------------
+// Effect-play lock: the trash pick offers only cards the play would accept
+// ---------------------------------------------------------------------------
+//
+// While "your opponent's effects can't play Digimon" is active (Crimson Blaze
+// (BT8-097)), DCGO filters the candidates: BT24_088.cs `CanSelectCardCondition`
+// ends with `CardEffectCommons.CanPlayAsNewPermanent(cardSource, false,
+// activateClass)`. Bug scan (medusamon--three-musketeers pair-003-0 step 44):
+// the engine listed Scopemon (BT21-071) and the pick fizzled with "playing
+// this kind of card by effects is prohibited". The leaf is added by the DSL
+// lowering for every select_trash -> play_from_trash pick
+// (`digimon_dsl::play_candidates`).
+
+fn lock_effect_digimon_plays(runner: &mut DebugRunner, player: u8) {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    runner.game.modifiers.add_player_modifier(
+        player,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - player,
+        ),
+    );
+}
+
+/// Step through the prompts the effect opens -- always taking the first
+/// non-PASS action (accept the optional trigger, pay the cost) -- until a trash
+/// pick is offered. Returns its legal actions, or `None` when the effect
+/// finished without offering one.
+fn first_trash_pick(runner: &mut DebugRunner) -> Option<Vec<u16>> {
+    for _ in 0..8 {
+        let view = runner.pending_selection_view()?;
+        if view.kind == SelectionKind::Trash {
+            return Some(view.valid_action_ids.clone());
+        }
+        let action = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != PASS)
+            .unwrap_or(view.valid_action_ids[0]);
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("resolve the prompt before the trash pick");
+    }
+    None
+}
+
+#[test]
+fn bt24_088_trash_pick_does_not_offer_digimon_while_effects_cannot_play_digimon() {
+    let mut runner = asuna_runner()
+        .add_card(asuna_copy("ASUNA-COPY"))
+        .add_card(ts_digimon("TS-L4", 4))
+        .add_card(three_musketeers_text_digimon("TEXT-L4", 4))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(4)
+        .start();
+    let asuna = runner.place_on_field(0, CARD_ID, Some(0));
+    for id in ["ASUNA-COPY", "TS-L4", "TEXT-L4"] {
+        push_to_trash(&mut runner, 0, id);
+    }
+    runner.game.set_memory(4);
+    lock_effect_digimon_plays(&mut runner, 0);
+
+    fire_start_of_turn(&mut runner, asuna);
+    runner
+        .accept_optional_trigger()
+        .expect("accept Asuna trigger");
+
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Trash));
+    let valid = runner
+        .pending_selection()
+        .expect("trash selection")
+        .valid_action_ids
+        .clone();
+    assert!(
+        valid.contains(&trash_action_for_id(&runner, "ASUNA-COPY")),
+        "the Tamer is still playable by effect (the lock is Digimon-only)"
+    );
+    assert!(
+        !valid.contains(&trash_action_for_id(&runner, "TS-L4"))
+            && !valid.contains(&trash_action_for_id(&runner, "TEXT-L4")),
+        "Digimon whose play by effect is prohibited must not be offered: {valid:?}"
+    );
+}
+
+/// Every candidate is a prohibited Digimon: no trash pick opens at all, and
+/// nothing is reported as a fizzled play. (Returning the Tamer is the printed
+/// "by returning ..." condition, which may be paid regardless -- CR 4.3 15-7-5;
+/// DCGO BT24_088.cs also bounces Asuna and then selects nothing.)
+#[test]
+fn bt24_088_trash_pick_does_not_open_when_only_prohibited_digimon_qualify() {
+    use digimon_engine::events::GameEvent;
+    let mut runner = asuna_runner()
+        .add_card(ts_digimon("TS-L4", 4))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(4)
+        .start();
+    let asuna = runner.place_on_field(0, CARD_ID, Some(0));
+    push_to_trash(&mut runner, 0, "TS-L4");
+    runner.game.set_memory(4);
+    lock_effect_digimon_plays(&mut runner, 0);
+    let checkpoint = runner.event_checkpoint();
+
+    fire_start_of_turn(&mut runner, asuna);
+    assert!(
+        first_trash_pick(&mut runner).is_none(),
+        "no trash pick may be offered for a card the play would refuse"
+    );
+    let _ = runner.auto_resolve();
+    assert!(
+        runner
+            .events_since(checkpoint)
+            .iter()
+            .all(|e| !matches!(e, GameEvent::EffectFizzled { .. })),
+        "no dead pick, so no fizzled play"
+    );
+    assert!(
+        runner
+            .game
+            .player(0)
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "TS-L4"),
+        "the prohibited Digimon stays in the trash"
+    );
+}

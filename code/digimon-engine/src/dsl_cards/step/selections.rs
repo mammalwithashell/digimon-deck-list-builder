@@ -4184,6 +4184,45 @@ fn install_security_position_choice(
     selection_result(ctx)
 }
 
+/// A card pick whose filter carries a play-legality leaf (`can_play_from_effect_without_cost` /
+/// `can_play_or_use_from_effect`, authored or added by `digimon_dsl::play_candidates`) reads the
+/// "can't play Digimon / Tamers by effects" and trash-play locks. Those locks are continuous effects
+/// (Pillomon (BT9-033) "[All Turns] Players can't play Digimon by effects"), materialized by
+/// `Game::tick_declarative_effects`, and an EARLIER step of the same effect can have removed their
+/// source since the last tick: Eye of the Gorgon (BT9-108) deletes Pillomon and then offers the
+/// trash pick. A continuous effect stops applying the moment its source leaves (DCGO evaluates
+/// `CanPlayAsNewPermanent` live in `CanSelectCardCondition`, BT9_108.cs:47), and the sub-effects of
+/// one effect resolve in order (judge quiz "Card resolution" Q7: the play succeeds), so the
+/// candidates must be read against the current board, not the state of the last tick. Without this
+/// the injected leaf filtered the card out and the printed play was never offered.
+///
+/// The tick is fingerprint-memoized, so it is a no-op when nothing declarative-relevant changed.
+/// G-ENGINE-PLAY-PICK-STALE-CONTINUOUS-STATE.
+fn settle_continuous_state_for_play_pick(step: &CompiledStep, ctx: &mut EffectContext<'_>) {
+    use digimon_dsl::play_candidates::has_play_leaf;
+    let reads_play_legality = match step {
+        CompiledStep::SelectHand { filter, .. }
+        | CompiledStep::SelectTrash { filter, .. }
+        | CompiledStep::SelectReveal { filter, .. }
+        | CompiledStep::SelectCountCappedMulti { filter, .. } => has_play_leaf(filter),
+        CompiledStep::SelectUnionZone {
+            filter,
+            zone_filters,
+            ..
+        } => {
+            has_play_leaf(filter)
+                || [&zone_filters.hand, &zone_filters.trash, &zone_filters.material]
+                    .into_iter()
+                    .flatten()
+                    .any(has_play_leaf)
+        }
+        _ => false,
+    };
+    if reads_play_legality {
+        ctx.game.tick_declarative_effects();
+    }
+}
+
 /// Installs a selection step or reports how the dispatcher should advance.
 ///
 /// Most selection steps park by installing the remainder as their callback.
@@ -4197,6 +4236,7 @@ pub fn try_install(
     bindings: Bindings,
     runtime: &StepRuntime,
 ) -> InstallResult {
+    settle_continuous_state_for_play_pick(step, ctx);
     match step {
         CompiledStep::PaySourcePrefix {
             host_filter,

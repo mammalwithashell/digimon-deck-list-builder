@@ -1272,3 +1272,98 @@ fn lm_029_main_field_pick_is_route_only_and_unpayable_hand_offers_nothing() {
         .iter()
         .any(|c| c.card_id(&runner.game.card_data) == "CAND-PRICEY"));
 }
+
+// ---------------------------------------------------------------------------
+// Effect-play lock: the [Security] trash pick offers only playable cards
+// ---------------------------------------------------------------------------
+//
+// DCGO LM_029.cs:120 / :265 end both trash-pick conditions with
+// `CardEffectCommons.CanPlayAsNewPermanent(cardSource, false, activateClass)`.
+// Bug scan (dynasmon--ts-gear-forest pair-003-0 step 91): with Pomumon
+// (BT9-047) in play ("players can't play Digimon by effects"), Yellow Scramble
+// (LM-029) [Security] offered four trash Digimon; Candlemon (EX13-025) was
+// picked and the play fizzled. The mandatory "Then, add this card to the hand"
+// still runs (official Q&A on the Pomumon lock: the effect activates, it just
+// can't play such a card).
+#[test]
+fn lm_029_security_offers_no_trash_pick_while_effects_cannot_play_digimon() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::events::GameEvent;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+
+    let mut attacker = filler("ATTACKER");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(4);
+    attacker.dp = Some(6000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-029 YAML parses")
+        .add_card(attacker)
+        .add_card(yellow_small("YELLOW-SMALL"))
+        .add_card(filler("FILL"))
+        .security(1, &["LM-029"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["YELLOW-SMALL"])
+        .memory(0)
+        .start();
+    let small = runner.game.players[1]
+        .deck
+        .pop()
+        .expect("small yellow seed in deck");
+    runner.game.players[1].trash.push(small);
+    // "Players can't play Digimon by effects": the defender's effects are locked.
+    runner.game.modifiers.add_player_modifier(
+        1,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            0,
+        ),
+    );
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    let checkpoint = runner.event_checkpoint();
+    let _ = runner.attack_player(attacker, 1, false);
+
+    // Walk every prompt the security effect opens; none may be a trash pick.
+    for _ in 0..8 {
+        let Some(kind) = runner.pending_kind() else {
+            break;
+        };
+        assert_ne!(
+            kind,
+            SelectionKind::Trash,
+            "a Digimon whose play by effect is prohibited must not be offered"
+        );
+        if kind == SelectionKind::Replacement {
+            runner
+                .accept_optional_trigger()
+                .expect("accept the optional [Security] effect");
+        } else {
+            runner.auto_resolve().expect("resolve");
+        }
+    }
+
+    assert_eq!(runner.battle_area_size(1), 0, "nothing was played");
+    assert_eq!(runner.trash_size(1), 1, "the Digimon stays in the trash");
+    assert!(
+        runner
+            .events_since(checkpoint)
+            .iter()
+            .all(|e| !matches!(e, GameEvent::EffectFizzled { .. })),
+        "no dead pick, so no fizzled play"
+    );
+    assert_eq!(
+        runner.game.players[1]
+            .hand
+            .iter()
+            .filter(|c| c.card_id(&runner.game.card_data) == "LM-029")
+            .count(),
+        1,
+        "the mandatory tail still adds Yellow Scramble (LM-029) to the hand"
+    );
+}

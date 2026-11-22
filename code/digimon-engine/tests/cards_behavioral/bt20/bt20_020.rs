@@ -73,10 +73,10 @@ fn pred_color_is(p: &CompiledPredicate) -> Option<CompiledColor> {
         .or_else(|| p.all_of.iter().find_map(pred_color_is))
 }
 
-fn pred_name_contains(p: &CompiledPredicate) -> Option<String> {
-    p.name_contains
+fn pred_name_is(p: &CompiledPredicate) -> Option<String> {
+    p.name_is
         .clone()
-        .or_else(|| p.all_of.iter().find_map(pred_name_contains))
+        .or_else(|| p.all_of.iter().find_map(pred_name_is))
 }
 
 // ─── Section 1 — Identity assertions ─────────────────────────────────────────
@@ -139,7 +139,7 @@ fn bt20_020_has_dragon_mode_alt_digivolve() {
             && path.cost == Some(CompiledCost::Literal(2))
             && path.from.as_ref().is_some_and(|from| {
                 pred_level_eq(from) == Some(6)
-                    && pred_name_contains(from)
+                    && pred_name_is(from)
                         .as_deref()
                         .is_some_and(|n| n.contains("Imperialdramon"))
             })

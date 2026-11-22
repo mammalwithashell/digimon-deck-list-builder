@@ -85,7 +85,7 @@ alt_paths:
   # 2) [Shoutmon] name digivolve: Cost 4 (xros_req)
   - kind: digivolve
     from:
-      name_contains: "Shoutmon"
+      name_is: "Shoutmon"
     cost: 4
 
   # 3) Lv.4 [Xros Heart] or [Hero] trait digivolve: Cost 3 (xros_req)

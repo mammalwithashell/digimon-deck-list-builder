@@ -109,7 +109,7 @@ attribute: Vaccine
 #   digivolutionCost: 0, ignoreDigivolutionRequirement: false.
 alt_paths:
   - kind: digivolve
-    from: { name_contains: "Koromon" }
+    from: { name_is: "Koromon" }
     cost: 0
 
 effects:

@@ -71,7 +71,7 @@ traits: [Hybrid, Variable, Wizard]
 alt_paths:
   - kind: digivolve
     from:
-      name_contains: "Takuya Kanbara"
+      name_is: "Takuya Kanbara"
     cost: 3
     ignore_requirements: false
 

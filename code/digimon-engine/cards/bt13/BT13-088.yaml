@@ -39,7 +39,7 @@ attribute: Virus
 # contains "Belphemon: Rage Mode", digivolutionCost 1).
 alt_paths:
   - kind: digivolve
-    from: { name_contains: "Belphemon: Rage Mode" }
+    from: { name_is: "Belphemon: Rage Mode" }
     cost: 1
 
 effects:

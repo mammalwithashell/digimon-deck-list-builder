@@ -214,7 +214,7 @@ fn bt13_088_has_rage_mode_cost_one_alt_digivolve() {
             p.kind == CompiledAltPathKind::Digivolve
                 && p.from
                     .as_ref()
-                    .and_then(|f| f.name_contains.as_deref())
+                    .and_then(|f| f.name_is.as_deref())
                     .map(|n| n.contains("Belphemon: Rage Mode"))
                     .unwrap_or(false)
         })

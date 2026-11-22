@@ -76,11 +76,11 @@ fn bt12_059_has_koromon_named_alt_digivolve_path_at_cost_zero() {
         let Some(from) = path.from.as_ref() else {
             return false;
         };
-        let name_match = from.name_contains.as_deref() == Some("Koromon")
+        let name_match = from.name_is.as_deref() == Some("Koromon")
             || from
                 .all_of
                 .iter()
-                .any(|p| p.name_contains.as_deref() == Some("Koromon"));
+                .any(|p| p.name_is.as_deref() == Some("Koromon"));
         name_match && path.cost == Some(CompiledCost::Literal(0))
     });
     assert!(

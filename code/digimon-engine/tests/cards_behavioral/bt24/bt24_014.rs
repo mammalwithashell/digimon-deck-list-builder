@@ -370,7 +370,7 @@ fn bt24_014_special_alt_path_is_aegiomon_cost3() {
                 && p.cost == Some(CompiledCost::Literal(3))
                 && p.from
                     .as_ref()
-                    .is_some_and(|f| f.name_contains.as_deref() == Some("Aegiomon"))
+                    .is_some_and(|f| f.name_is.as_deref() == Some("Aegiomon"))
         }),
         "special [Digivolve] [Aegiomon]: Cost 3 alt-path must exist; alt_paths: {:?}",
         card.alt_paths

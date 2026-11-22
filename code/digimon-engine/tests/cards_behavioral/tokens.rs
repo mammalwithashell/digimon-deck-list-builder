@@ -462,3 +462,127 @@ fn familiar_on_deletion_target_prompt_clones_faithfully() {
         "original and clone replay the Familiar target prompt identically"
     );
 }
+
+/// Rotate the active player to `target`, flushing the EndOfTurnAction step.
+fn petrification_advance_to_turn_player(r: &mut DebugRunner, target: u8) {
+    for _ in 0..8 {
+        if r.turn_player() == target {
+            break;
+        }
+        let _ = r.auto_resolve();
+        r.pass_turn();
+        let _ = r.auto_resolve();
+        if r.game.current_phase == digimon_engine::enums::GamePhase::EndOfTurnAction {
+            r.game.pass_end_of_turn_action();
+            let _ = r.auto_resolve();
+        }
+    }
+    assert_eq!(r.turn_player(), target, "failed to rotate turn player");
+    assert_eq!(
+        r.current_phase(),
+        digimon_engine::enums::GamePhase::Main,
+        "rotation must land in the Main phase"
+    );
+}
+
+/// Petrification Token (TOKEN_PETRIFICATION), printed on Medusamon (BT21-029),
+/// Medusamon (EX11-012) and Medusamon (BT24-017):
+/// "(Digimon/White/3000 DP/[Your Turn] This Digimon can't suspend.
+///   [On Deletion] Trash your top security card.)"
+///
+/// "[Your Turn]" is the token CONTROLLER's turn (the opponent of the Medusamon
+/// that made them play it). DCGO `BT21_029_token.cs` region "Cant Suspend":
+/// `CantSuspendStaticEffect` gated on `IsExistOnBattleArea && IsOwnerTurn`.
+/// CR 4.3 11-2-5: "An attack declaration can't be made using a Digimon that
+/// can't suspend."  The gate is a continuous effect, so it must hold on EVERY
+/// one of the controller's turns and lift on every opponent turn.
+#[test]
+fn petrification_token_cannot_suspend_or_attack_on_each_of_its_controllers_turns() {
+    use digimon_engine::action::mask::build_action_mask;
+    use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
+    use digimon_engine::enums::ModifierType;
+    use digimon_engine::permanent::PermanentHandle;
+
+    let filler = ["FILL"; 8];
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("TEST-023", "PlayPetrificationToken"))
+        .add_card(make_test_card("FILL", "Filler"))
+        .hand(0, &["TEST-023"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .security(0, &["FILL", "FILL", "FILL"])
+        .security(1, &["FILL", "FILL", "FILL"])
+        .memory(5)
+        .start();
+    r.play(0, 0);
+    let token_idx = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token)
+        .expect("token missing");
+    let host_idx = 1 - token_idx;
+    let token = PermanentHandle {
+        player: 0,
+        index: token_idx as u8,
+    };
+    let host = PermanentHandle {
+        player: 0,
+        index: host_idx as u8,
+    };
+    let token_attack = encode_attack(token_idx as u16, SECURITY_TARGET) as usize;
+    let host_attack = encode_attack(host_idx as u16, SECURITY_TARGET) as usize;
+    let cant_suspend =
+        |r: &DebugRunner| r.game.modifiers.has(token, ModifierType::CannotSuspend);
+    let token_suspended =
+        |r: &DebugRunner| r.game.player(0).battle_area[token_idx].is_suspended;
+
+    // Controller's turn (the turn it was played): the prohibition is live, so
+    // an effect-driven suspension silently no-ops (CR 4.3 15-1-3).
+    r.game.tick_declarative_effects();
+    assert!(cant_suspend(&r), "[Your Turn] can't suspend on the play turn");
+    r.game.suspend(token);
+    assert!(!token_suspended(&r), "a can't-suspend token is not suspended");
+
+    for round in 0..2 {
+        // Opponent's turn: "[Your Turn]" is off, the token can be suspended.
+        petrification_advance_to_turn_player(&mut r, 1);
+        assert!(
+            !cant_suspend(&r),
+            "round {round}: the gate lifts on the opponent's turn"
+        );
+        r.game.suspend(token);
+        assert!(
+            token_suspended(&r),
+            "round {round}: the token can be suspended on the opponent's turn"
+        );
+
+        // Controller's next turn: unsuspended by the unsuspend phase, no
+        // summoning sickness -- and still unable to attack (11-2-5).
+        petrification_advance_to_turn_player(&mut r, 0);
+        assert!(!token_suspended(&r), "round {round}: unsuspend phase");
+        assert!(
+            cant_suspend(&r),
+            "round {round}: the gate is back on the controller's turn"
+        );
+        assert!(
+            !r.game.can_attack(token, false),
+            "round {round}: 11-2-5 -- a Digimon that can't suspend can't attack"
+        );
+        let mask = build_action_mask(&r.game, 0);
+        assert!(
+            mask[token_attack] < 0.5,
+            "round {round}: the mask must not offer the token as an attacker"
+        );
+        // Control: the ordinary Digimon beside it CAN attack, so the token's
+        // refusal is the printed clause and not turn state.
+        assert!(r.game.can_attack(host, false), "round {round}: control");
+        assert!(mask[host_attack] > 0.5, "round {round}: control in the mask");
+        r.game.suspend(token);
+        assert!(
+            !token_suspended(&r),
+            "round {round}: effects can't suspend it on its controller's turn"
+        );
+    }
+}

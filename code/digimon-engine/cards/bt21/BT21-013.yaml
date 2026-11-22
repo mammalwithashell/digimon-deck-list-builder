@@ -102,7 +102,7 @@ alt_paths:
 
   # xros_req "[Digivolve] [BurningGreymon]: Cost 0" — named-source alt-path.
   - kind: digivolve
-    from: { name_contains: "BurningGreymon" }
+    from: { name_is: "BurningGreymon" }
     cost: 0
 
 effects:

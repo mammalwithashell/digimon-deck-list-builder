@@ -139,7 +139,7 @@ fn bt16_027_has_dragon_mode_add_source_digivolve_path() {
             && p.cost == Some(CompiledCost::Literal(2))
             && p.from
                 .as_ref()
-                .is_some_and(|f| f.name_contains.as_deref() == Some("Imperialdramon: Dragon Mode"))
+                .is_some_and(|f| f.name_is.as_deref() == Some("Imperialdramon: Dragon Mode"))
     });
     assert!(
         has_add_source,

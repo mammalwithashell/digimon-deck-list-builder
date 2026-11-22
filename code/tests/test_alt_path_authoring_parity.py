@@ -129,3 +129,76 @@ def test_alt_path_authoring_matches_official_db():
             "\n[alt-path-authoring-parity] allowlist entries no longer flagged (prune them): "
             + ", ".join(stale)
         )
+
+
+# card_id -> reason. Only for a printed name gate the audit's regex cannot read.
+NAME_GATE_ALLOWLIST = {}
+
+
+def test_alt_path_name_gates_match_printed_exactness():
+    """A printed `[Digivolve] [X]: Cost N` is an EXACT-name gate; only `w/[X] in name`
+    is a substring gate (CR 4.3 2-3-1-2, 2-3-1-3, 2-3-5-3: "[Koromon]: Cost 0" can digivolve
+    from a card NAMED [Koromon]). The YAML must use `name_is` for the first and
+    `name_contains` for the second, and `in_text_contains` for `w/[X] in text`.
+
+    Regression: WereGarurumon: Sagittarius Mode (EX9-019) printed "[Digivolve]
+    [WereGarurumon]: Cost 1" was authored `name_contains`, so the card digivolved onto
+    another copy of itself for 1 (DCGO EX9_019.cs: `EqualsCardName("WereGarurumon")`).
+    """
+    audit = _load_audit()
+    official = json.load(open(audit.OFFICIAL, encoding="utf-8"))["cards"]
+    findings = [f for f in audit.audit_name_gates(official) if f["card"] not in NAME_GATE_ALLOWLIST]
+    if findings:
+        pytest.fail(
+            f"Alt-digivolve NAME gate drift vs the official Bandai DB ({len(findings)}):\n"
+            + "\n".join(
+                f"  {f['card']} [{f['type']}] {f['detail']} | official: {f['official']}"
+                for f in findings
+            )
+            + "\n\nUse name_is for a brackets-only printed name, name_contains only for "
+            "'w/[X] in name', in_text_contains for 'w/[X] in text'."
+        )
+
+
+def test_printed_name_gate_classifier():
+    audit = _load_audit()
+    g = audit.printed_name_gate
+    assert g("[Digivolve] [WereGarurumon]: Cost 1", "WereGarurumon") == {"exact"}
+    assert g("[Digivolve] Lv.4 w/[Garurumon] in name or w/[ADVENTURE] trait: Cost 3", "Garurumon") == {"contains"}
+    assert g("[Digivolve] Lv.5 w/[Greymon]/[Omnimon] in its name: Cost 3", "Greymon") == {"contains"}
+    assert g("[Digivolve] [Veemon]/Lv.3 w/[CS] trait: Cost 3", "Veemon") == {"exact"}
+    assert g("[Digivolve] Lv.6 w/[Chronomon] in text/[Giant Slayer]: Cost 5", "Giant Slayer") == {"exact"}
+    assert g("[Digivolve] Lv.6 w/[Chronomon] in text/[Giant Slayer]: Cost 5", "Chronomon") == {"text"}
+    assert g("[Digivolve]2 if name contains [Dracomon]", "Dracomon") == {"contains"}
+    assert g("[Digivolve] 0 from Koromon", "Koromon") == {"exact"}
+    assert g("[Digivolve] 1 from [RizeGreymon]", "RizeGreymon") == {"exact"}
+    assert g("[Digivolve] [Aegiomon]: Cost 3", "Bacchusmon") == set()
+
+
+def test_name_gate_audit_reads_cards_json_when_the_mirror_lacks_the_card():
+    """The official mirror does not carry every implemented card (most of EX12, P-248).
+    Those cards used to be skipped by the name-gate audit, so a WereGarurumon: Sagittarius
+    Mode (EX9-019)-class mistake on them would not have been reported. Their printed wording
+    is read from `cards.json` `xros_req` instead."""
+    audit = _load_audit()
+    official = json.load(open(audit.OFFICIAL, encoding="utf-8"))["cards"]
+    fallback = audit.fallback_alt_texts()
+
+    # Gabumon (EX12-021) prints "[Digivolve] [Tsunomon]/Lv.2 w/[VB] trait: Cost 0" (card image)
+    # and is not in the mirror; the API text has non-breaking spaces, normalised here.
+    assert "EX12-021" not in official or "[Digivolve]" not in (
+        official["EX12-021"].get("special_digivolution_condition") or ""
+    ), "EX12-021 reached the mirror: pick another mirror-less card for this test"
+    assert "[Tsunomon]/Lv.2 w/[VB] trait: Cost 0" in fallback["EX12-021"]
+    assert "\u00a0" not in fallback["EX12-021"]
+
+    # The audit really evaluates such a card: with only the fallback text, a wording that
+    # disagrees with the authored leaf is reported, and the true wording is clean.
+    wrong = {"EX12-021": "[Digivolve] Lv.2 w/[Tsunomon] in name: Cost 0"}
+    found = audit.audit_name_gates({}, only={"EX12-021"}, fallback=wrong)
+    assert [(f["card"], f["type"], f["name"]) for f in found] == [
+        ("EX12-021", "NAME_CONTAINS_AS_EXACT", "Tsunomon")
+    ]
+    assert audit.audit_name_gates({}, only={"EX12-021"}, fallback=fallback) == []
+    # No text at all (neither source): nothing to compare, nothing reported.
+    assert audit.audit_name_gates({}, only={"EX12-021"}, fallback={}) == []

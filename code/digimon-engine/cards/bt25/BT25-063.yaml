@@ -18,7 +18,7 @@ attribute: Virus
 alt_paths:
   # [Missimon] — any level material whose top card is named Missimon.
   - kind: digivolve
-    from: { name_contains: Missimon }
+    from: { name_is: Missimon }
     cost: 0
   # Lv.2 with [ACCEL] trait.
   - kind: digivolve

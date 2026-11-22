@@ -490,3 +490,74 @@ fn bt21_026_unsuspend_opt_blocks_second_deletion_trigger() {
 fn bt21_026_unsuspend_opt_resets_after_end_turn() {
     // Body deferred — substrate ready; sibling regression coverage exists.
 }
+
+/// Seat `id` in `player`'s battle area as an Option card an effect PLACED there
+/// (`OptionState::OrdinaryFieldOption`, the Digital Accident Tactics Squad
+/// (P-235) / DNA Charge (ST24-15) shape; CR 4.3 4-28-1). A bare
+/// `place_on_field` of an Option card is not a placed Option and does not stay.
+fn place_option_in_battle_area(runner: &mut DebugRunner, player: u8, id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == id)
+        .unwrap_or_else(|| panic!("unknown card {id}"));
+    let card_index = runner.game.next_card_index();
+    runner.game.install_field_option_as_ordinary(
+        digimon_engine::card_source::CardSource::new(data_idx, player, card_index),
+        player,
+    );
+}
+
+/// The placed Option is still in `player`'s battle area (so the count under
+/// test really had an Option to miscount).
+fn placed_option_is_on_field(runner: &DebugRunner, player: u8, id: &str) -> bool {
+    runner.game.players[player as usize]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == id)
+}
+
+/// "reduce the play cost by 2 for each of your opponent's DIGIMON" -- an
+/// opposing Tamer and an Option card placed in their battle area are not
+/// Digimon (CR 4.3 4-4-1, 4-28-1). DCGO BT21_026.cs:
+/// `2 * card.Owner.Enemy.GetBattleAreaPermanents().Count(permanent => permanent.IsDigimon)`.
+/// Regression: the unfiltered battle-area count also counted Tamers/Options.
+#[test]
+fn bt21_026_cost_reduction_counts_only_opponent_digimon() {
+    let mut tamer = make_digimon_filler("OPP-TAMER");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    let mut option = make_digimon_filler("OPP-OPTION");
+    option.card_kind = CardKind::Option;
+    option.level = None;
+    option.dp = None;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-026")
+        .expect("BT21-026 in embedded pack")
+        .add_card(make_digimon_filler("OPP-DIGI-1"))
+        .add_card(tamer)
+        .add_card(option)
+        .hand(0, &["BT21-026"])
+        .memory(15)
+        .start();
+
+    runner.place_on_field(1, "OPP-DIGI-1", None);
+    runner.place_on_field(1, "OPP-TAMER", None);
+    place_option_in_battle_area(&mut runner, 1, "OPP-OPTION");
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        runner.battle_area_size(1),
+        3,
+        "precondition: Digimon + Tamer + placed Option in the opponent's battle area"
+    );
+
+    let mem_before = runner.memory();
+    runner.play(0, 0);
+    let cost = mem_before - runner.memory();
+    assert_eq!(
+        cost, 9,
+        "1 opponent Digimon (+ a Tamer and a placed Option that do not count): 11-2=9; got {cost}"
+    );
+}
