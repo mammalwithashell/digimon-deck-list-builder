@@ -105,16 +105,15 @@ fn bt26_055_doing_nothing_refunds_once_per_turn() {
     assert!(field_ids(&r, 0).is_empty());
 }
 
-/// The [Counter] timing of the same printed effect is activation-type (CR 4.3
-/// 15-16-14-1): the player activates it by declaring it in the counter timing
-/// (11-3), and CR 4.3 15-14-1-4 counts that declaration as the use "even if
-/// the effect's processing can't be executed". Placing nothing and answering
-/// "No" afterwards still spends the [Once Per Turn], for every timing of this
-/// one effect. (At [On Play] / [When Digivolving], declining both halves keeps
-/// the use: owner-decided W13, the test above.) DCGO BT26_055.cs RemoveUse()s
-/// at [Counter] too; the rules text decides.
+/// The [Counter] timing of the same printed "You may place ... Then, you may
+/// delete ..." effect: with both halves declined nothing executed, so the use
+/// is kept at [Counter] as at [On Play] / [When Digivolving] (owner-decided
+/// 2026-10-21, W13; DCGO BT26_055.cs runs one shared effect for all three
+/// timings and RemoveUse()s when neither the placement nor the deletion
+/// happened). The kept use is the one [Once Per Turn] of every timing
+/// (official Q1550).
 #[test]
-fn bt26_055_counter_declared_then_nothing_done_spends_once_per_turn() {
+fn bt26_055_counter_doing_nothing_keeps_once_per_turn() {
     let mut r = setup();
     let giro = r.place_on_field(0, CARD_ID, Some(0));
     r.place_on_field(1, "OPPA", Some(0));
@@ -124,17 +123,111 @@ fn bt26_055_counter_declared_then_nothing_done_spends_once_per_turn() {
     r.execute_branch(1).expect("No");
     let _ = r.auto_resolve();
     assert_eq!(field_ids(&r, 1), vec!["OPPA".to_string()]);
+    assert_eq!(r.hand_size(0), 1, "nothing was placed");
     fire(&mut r, EffectTiming::CounterEffect, giro);
     assert!(
-        r.pending_selection_view().is_none(),
-        "the declared [Counter] used the [Once Per Turn]"
+        r.pending_selection_view().is_some_and(|v| v.is_optional),
+        "a [Counter] that declined both halves keeps the [Once Per Turn]"
     );
+    pass(&mut r, 0);
+    r.execute_branch(1).expect("No");
+    let _ = r.auto_resolve();
+    fire(&mut r, EffectTiming::OnPlay, giro);
+    assert!(
+        r.pending_selection_view().is_some_and(|v| v.is_optional),
+        "and the [On Play] timing of the same effect is still offered"
+    );
+}
+
+/// One half executed at [Counter] spends the one [Once Per Turn] of every
+/// timing (official Q1550; W13: spent as soon as either half executes).
+#[test]
+fn bt26_055_counter_placing_spends_once_per_turn_for_every_timing() {
+    let mut r = setup();
+    let giro = r.place_on_field(0, CARD_ID, Some(0));
+    r.place_on_field(1, "OPPA", Some(0));
+    push_hand(&mut r, 0, "FILLER");
+    push_hand(&mut r, 0, "FILLER");
+    fire(&mut r, EffectTiming::CounterEffect, giro);
+    pick_hand(&mut r, 0, "FILLER");
+    r.execute_branch(1).expect("No");
+    let _ = r.auto_resolve();
+    assert_eq!(sources(&r, giro), 1, "a card was placed");
+    fire(&mut r, EffectTiming::CounterEffect, giro);
+    assert!(r.pending_selection_view().is_none(), "[Counter] spent");
     fire(&mut r, EffectTiming::OnPlay, giro);
     assert!(
         r.pending_selection_view().is_none(),
         "the [On Play] timing of the same effect shares that use"
     );
-    assert_eq!(r.hand_size(0), 1, "nothing was placed");
+}
+
+/// One half executed at [On Play] spends the [Counter] timing too.
+#[test]
+fn bt26_055_on_play_placing_spends_the_counter_timing() {
+    let mut r = setup();
+    let giro = r.place_on_field(0, CARD_ID, Some(0));
+    r.place_on_field(1, "OPPA", Some(0));
+    push_hand(&mut r, 0, "FILLER");
+    push_hand(&mut r, 0, "FILLER");
+    fire(&mut r, EffectTiming::OnPlay, giro);
+    pick_hand(&mut r, 0, "FILLER");
+    r.execute_branch(1).expect("No");
+    let _ = r.auto_resolve();
+    fire(&mut r, EffectTiming::CounterEffect, giro);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "the [On Play] use spent the [Counter] timing"
+    );
+}
+
+/// There is no "nothing was possible" state for this effect: with an empty
+/// hand (nothing to place) and no opponent Digimon, the delete half is still
+/// offered, because Giromon is itself a [Ver.3] Digimon. Declining it is then
+/// declining something possible, which keeps the use (W13); choosing it
+/// spends the use.
+#[test]
+fn bt26_055_empty_hand_still_offers_the_delete_half() {
+    let mut r = setup();
+    let giro = r.place_on_field(0, CARD_ID, Some(0));
+    assert_eq!(r.hand_size(0), 0);
+    fire(&mut r, EffectTiming::CounterEffect, giro);
+    let v = r.pending_selection_view().expect("the delete half is offered");
+    assert!(v.prompt.contains("Delete"), "{:?}", v.prompt);
+    r.execute_branch(1).expect("No");
+    let _ = r.auto_resolve();
+    fire(&mut r, EffectTiming::CounterEffect, giro);
+    assert!(
+        r.pending_selection_view().is_some(),
+        "declining the possible half kept the [Once Per Turn]"
+    );
+    r.execute_branch(0).expect("Yes");
+    pick_first(&mut r, 0);
+    let _ = r.auto_resolve();
+    assert!(field_ids(&r, 0).is_empty(), "Giromon deleted itself");
+}
+
+/// One printed effect, one clause: [On Play] [When Digivolving] [Counter]
+/// share a single [Once Per Turn] (official Q1550) and its W13 refund, as
+/// DCGO's one shared effect does.
+#[test]
+fn bt26_055_one_clause_carries_all_three_timings() {
+    use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
+    let r = setup();
+    let card = r.compiled_card(CARD_ID).expect("compiled");
+    let opt: Vec<_> = card
+        .effects
+        .iter()
+        .filter_map(|e| match e {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::Counter) => Some(t),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(opt.len(), 1, "one clause for the printed effect");
+    for timing in [CompiledTiming::OnPlay, CompiledTiming::WhenDigivolving] {
+        assert!(opt[0].when.contains(&timing), "{timing:?}");
+    }
+    assert!(opt[0].once_per_turn);
 }
 
 #[test]

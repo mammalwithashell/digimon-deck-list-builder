@@ -493,6 +493,24 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 - Tests: `rules_conformance -- ch15_14_effect_icons::then_may_effect_with_both_halves_declined_keeps_its_once_per_turn` and `::then_may_effect_with_one_half_executed_spends_its_once_per_turn`; `cards_behavioral -- bt25_028_all_turns_both_halves_declined_keeps_once_per_turn` and `bt25_028_all_turns_one_half_executed_spends_once_per_turn`; `dsl -- folded_may_opt_refund::then_may_*`.
 - **Cost if ever reversed to (b):** drop the `then_may_refund_process` branch in `lower_triggered.rs` (one `.or_else`) and flip the two "both declined" tests.
 
+**W14. §15-14-1-4 [X Per Turn] behind an accept prompt the card does not print.** *Controller reading, applied on branch `claude/mf3-opt` on 2026-11-23; awaiting the owner's confirmation.* Many clauses open with an accept step the card does not print: DCGO's skippable Yes/No (`SetIsSkippable(true)` / `isOptional: true`), an optional replacement's "May accept replacement", or the [Main] / [Counter] declaration. When the printed effect is one "you may X", choosing to activate it is choosing to do X, so accepting the prompt does not by itself spend the use. The table:
+- (a) Declined at the accept prompt: use **kept** (Q1818).
+- (b) Accepted, X was possible, and the player then declined X (passed the pick, chose "Don't play"): use **kept**. Q1818 (BT9-018 "you may delete"), Q4086 (RB1-010 "you may unsuspend") and Q6946 (BT25-077 "you may suspend" not processed).
+- (c) Accepted, and the player chose X: use **spent**, whatever then happens to X (§15-14-1-4; Q5426, ST22-06: spent "as soon as you choose to" do it, even if it is then prevented).
+- (d) Accepted when X was impossible (nothing to pick): use **spent** (§15-14-1-4). Exception: if DCGO does not offer the effect in that state (its `CanActivate` / `CanUse` is false), the clause does not offer it either.
+- (e) Mandatory content ran, or an opponent's choice was processed: use **spent** (Q4739, Q5056, Q5171, Q5330).
+- W13 ("you may A. Then, you may B.", both halves declined: kept) applies at every timing of the effect, [Counter] included. All of an effect's timings share one [Once Per Turn] (Q1550).
+- **Cards on this reading:**
+  - Chronomon: Destroy Mode (BT26-060) refunds on (b) again. It is not offered on (d), matching DCGO `CanActivateCondition`.
+  - Erlangmon (EX12-034) refunds on (b) again. It spends on (d), because DCGO offers it there.
+  - Thundermon (EX12-041) [Main] refunds on (b). It is not offered on (d), matching DCGO `CanUseCondition`.
+  - GraceNovamon (BT25-103) and Giromon (BT26-055) are one clause each again and refund on W13 at [Counter] too. Neither has a (d) state: the end-attack half and the delete half are always possible.
+  - WarGreymon (EX12-017) [Counter] refunds on W13. Its redirect pick now continues on decline so the refund can be reached. It has no (d) state: the redirect is always possible.
+  - Imperialdramon: Fighter Mode (AD1-024) keeps its W13 refund but now spends on (d).
+  - **Not changed, and now inconsistent with this table:** Manekimon (BT26-012). Its [Main] prints the same "You may play or use 1 ... card" shape as Thundermon (EX12-041), but its refund was removed on 2026-10-25 (`docs/RUST_ENGINE_GAPS.md`, "Explicit Main-declaration correction": a declared [Main] spends the use, after a declare-and-pass cycle in a recorded game), so it still spends on (b) while Thundermon now keeps. Whichever way the owner confirms this table, the two cards should end up the same.
+  - Each refund behind an accept is listed in `REFUND_AFTER_ACCEPT_REVIEWED` (`code/digimon-dsl/src/authoring_lint.rs`) with its row and the behavioural tests that prove it. That table is a review record: the lint sees that a clause refunds behind an accept, not which path reaches the refund, so the named tests carry the proof (kept on the listed row, spent on (c), spent or not offered on (d)). The pool guards fail on a new unlisted clause, on a stale entry and on a named test that no longer exists.
+- **Cost if reversed** (back to "accepting is the activation"): revert the one card commit on this branch that applies this table, which also restores those cards' tests and table entries, then regenerate the readiness artifacts.
+
 ## Retracted or resolved during the campaign
 
 - `G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT`: retracted (`b20297ec9`). The engine's per-event `replacement_fired` scope is right; `ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause` now proves §15-8-5-4 (W7).

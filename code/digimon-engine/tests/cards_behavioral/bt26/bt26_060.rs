@@ -219,27 +219,97 @@ fn return_two_stacks(r: &mut DebugRunner, me: PermanentHandle, timing: EffectTim
     }
 }
 
-/// CR 4.3 15-14-1-4: "When a player chooses to activate an [X Per Turn]
-/// effect, it will count toward 1 use of [X Per Turn], even if the effect's
-/// processing can't be executed." Accepting the outer "you may delete" prompt
-/// is that choice: passing the delete pick afterwards still uses the
-/// [Once Per Turn], and a second own-effect deck add this turn offers nothing.
-/// DCGO BT26_060.cs RemoveUse()s here; the rules text decides.
+/// The outer Yes/No is not printed: it is DCGO's skippable prompt
+/// (BT26_060.cs `SetIsSkippable(true)`). The printed effect is the whole
+/// "you may delete 1 of your opponent's Digimon", so the choice to activate it
+/// is the choice to delete. Accepting the prompt and then passing the delete
+/// pick while a Digimon could be deleted is choosing not to delete, which
+/// keeps the [Once Per Turn] (official Q1818 for BT9-018's "you may delete";
+/// Q4086, Q6946; CR 4.3 15-14-1-4 counts the use only when the player chooses
+/// to activate). DCGO agrees (`if (!isUsed) activateClass.RemoveUse()`).
 #[test]
-fn bt26_060_accepted_then_declined_delete_spends_the_once_per_turn() {
+fn bt26_060_accepted_then_declined_delete_keeps_the_once_per_turn() {
     let mut r = setup();
     let me = r.place_on_field(0, CARD_ID, Some(0));
     return_two_stacks(&mut r, me, EffectTiming::OnPlay, ["B1", "B2", "A1", "A2"]);
     let accept = non_pass(&r)[0];
     r.execute_action(0, accept).unwrap();
-    // Pass the pick itself after accepting.
+    let v = r.pending_selection_view().expect("the delete pick");
+    assert!(
+        v.valid_action_ids.iter().any(|&a| a != PASS),
+        "a Digimon could be deleted"
+    );
+    // Pass the pick itself after accepting: choosing not to delete.
     r.execute_action(0, PASS).unwrap();
     let _ = r.auto_resolve();
     return_two_stacks(&mut r, me, EffectTiming::WhenDigivolving, ["A3", "A4", "A5", "A6"]);
     assert!(
-        r.pending_selection_view().is_none(),
-        "the accepted activation used the [Once Per Turn]: no second offer this turn"
+        r.pending_selection_view().is_some_and(|v| v.is_optional),
+        "choosing not to delete kept the [Once Per Turn]: offered again this turn"
     );
+}
+
+/// Choosing a Digimon to delete is choosing to activate (CR 4.3 15-14-1-4;
+/// official Q5426: the use counts as soon as the player chooses the action):
+/// the [Once Per Turn] is spent and a second own-effect deck add this turn
+/// offers nothing. DCGO sets `isUsed` on the selection.
+#[test]
+fn bt26_060_accepted_and_delete_chosen_spends_the_once_per_turn() {
+    let mut r = setup();
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    return_two_stacks(&mut r, me, EffectTiming::OnPlay, ["B1", "B2", "A1", "A2"]);
+    let accept = non_pass(&r)[0];
+    r.execute_action(0, accept).unwrap();
+    let victim = non_pass(&r)[0];
+    r.execute_action(0, victim).unwrap();
+    let _ = r.auto_resolve();
+    assert_eq!(field_ids(&r, 1).len(), 1, "one opponent Digimon was deleted");
+    return_two_stacks(&mut r, me, EffectTiming::WhenDigivolving, ["A3", "A4", "A5", "A6"]);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "the delete was chosen: no second offer this turn"
+    );
+}
+
+/// Nothing to delete: DCGO does not offer the effect at all
+/// (BT26_060.cs `CanActivateCondition` needs an opponent Digimon), so neither
+/// does the engine (`condition: any_field_permanent`). GraceNovamon
+/// (BT25-103)'s [When Digivolving] bottom-decks the opponent's Digimon, an own
+/// effect adding to a deck. With the opponent's only Digimon gone nothing is
+/// offered; with a second one left the delete is offered.
+#[test]
+fn bt26_060_not_offered_when_the_opponent_has_no_digimon() {
+    for (opponent_digimon, offered) in [(1usize, false), (2, true)] {
+        let mut r = DebugRunner::builder()
+            .dsl_card(CARD_ID)
+            .expect("BT26-060")
+            .dsl_card("BT25-103")
+            .expect("BT25-103 GraceNovamon")
+            .add_card(filler("FILLER"))
+            .add_card(digimon("C1", "C One", CardColor::Blue, 3, 3, &[]))
+            .add_card(digimon("C2", "C Two", CardColor::Blue, 3, 3, &[]))
+            .deck(0, &["FILLER"; 6])
+            .deck(1, &["FILLER"; 6])
+            .security(0, &["FILLER"; 3])
+            .security(1, &["FILLER"; 3])
+            .memory(3)
+            .start();
+        r.set_first_player(0);
+        r.place_on_field(0, CARD_ID, Some(0));
+        let grace = r.place_on_field(0, "BT25-103", Some(0));
+        for id in ["C1", "C2"].iter().take(opponent_digimon) {
+            r.place_on_field(1, id, Some(0));
+        }
+        fire(&mut r, EffectTiming::WhenDigivolving, grace);
+        let bounce = non_pass(&r)[0];
+        r.execute_action(0, bounce).unwrap();
+        assert_eq!(field_ids(&r, 1).len(), opponent_digimon - 1, "one was bottom-decked");
+        assert_eq!(
+            r.pending_selection_view().is_some_and(|v| v.is_optional),
+            offered,
+            "{opponent_digimon} opponent Digimon before the deck add"
+        );
+    }
 }
 
 /// The other side (official Q1818, "You may delete that Digimon ... If you

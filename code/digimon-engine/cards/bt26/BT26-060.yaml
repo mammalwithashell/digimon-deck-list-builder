@@ -34,11 +34,16 @@
 #   opponent Digimon): canNoSelect pick of 1 opponent Digimon → delete; nothing
 #   picked → RemoveUse.
 #   → `on_add_to_deck` + `event_caused_by_own_effect`; optional + outer prompt;
-#   optional pick (continue_on_decline). Declining the outer prompt keeps the
-#   [Once Per Turn] (official Q1818). Accepting it is choosing to activate,
-#   so passing the pick afterwards still uses it: CR 4.3 15-14-1-4 ("even if
-#   the effect's processing can't be executed"). No RemoveUse-style refund;
-#   the rules text decides.
+#   optional pick (continue_on_decline) + `refund_opt` when nothing was picked.
+#   The outer prompt is DCGO's skippable Yes/No, not printed: the printed
+#   effect is the whole "you may delete", so choosing to activate it is
+#   choosing to delete (CR 4.3 15-14-1-4). Declining the outer prompt, or
+#   accepting it and passing the pick while a Digimon could be deleted, is
+#   choosing not to delete and keeps the [Once Per Turn] (official Q1818,
+#   Q4086, Q6946; DCGO RemoveUse). Choosing a Digimon spends it even if the
+#   deletion is then prevented (Q5426; DCGO sets isUsed on the pick). With no
+#   opponent Digimon DCGO does not offer the effect (CanActivate), and the
+#   `condition:` below mirrors that.
 
 card: BT26-060
 name: "Chronomon: Destroy Mode"
@@ -132,3 +137,7 @@ effects:
           condition: { binding_present: victim }
           then:
             - delete_permanent: { target: victim }
+          else:
+            # Row b of the [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md
+            # W14): accepted, a Digimon could be deleted, and the player chose not to.
+            - refund_opt: {}

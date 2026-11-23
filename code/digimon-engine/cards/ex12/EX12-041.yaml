@@ -21,9 +21,12 @@
 #     of a [Mutant]/[ME] card that is an Option (not CanNotPlayThisOption) or a
 #     Digimon/Tamer with a play cost that can be played for cost-2; the chosen
 #     card is then played/used paying the reduced cost. Nothing picked ->
-#     DCGO RemoveUse(). Not here: a [Main] is activation-type (CR 4.3 15-8-4),
-#     and declaring it uses the [Once Per Turn] even if nothing is then
-#     played (CR 4.3 15-14-1-4); the rules text decides.
+#     RemoveUse() (the once-per-turn is not consumed) -> `refund_opt`. The
+#     printed effect is the whole "you may play or use", so declaring the
+#     [Main] and passing the pick while a card could be played is choosing not
+#     to, which keeps the use (official Q1818, Q4086, Q6946; CR 4.3 15-14-1-4).
+#     Picking a card spends it (Q5426). With no playable card DCGO does not
+#     offer the [Main] (CanUseCondition) and neither does the `condition:`.
 #     Mirrors EX12-013 (BetelGammamon).
 #   - Inherited: OnAllyAttack, OPT (hash EX12_041_Inherited), mandatory target.
 
@@ -92,6 +95,10 @@ effects:
                 of: you
                 hand_index: pick
                 cost_delta: { reduce: 2 }
+          else:
+            # DCGO `if (!isUsed) activateClass.RemoveUse()`. Row b of the
+            # [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md W14).
+            - refund_opt: {}
 
   - scope: inherited
     when: when_attacking

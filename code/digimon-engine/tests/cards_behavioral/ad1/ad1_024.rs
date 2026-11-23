@@ -735,6 +735,39 @@ fn ad1_024_all_turns_accept_then_decline_everything_keeps_opt() {
     let _ = fighter;
 }
 
+/// Nothing possible: no opponent Digimon to suspend, this Digimon already
+/// unsuspended, and not played by an effect. DCGO still offers the effect
+/// (AD1_024.cs `CanActivateCondition` only checks that the card is on the
+/// field), so accepting it is choosing to activate an effect whose processing
+/// can't be executed, which uses the [Once Per Turn] (CR 4.3 15-14-1-4; row d
+/// of the [Once Per Turn] table, qa/rules/mechanics-gaps-2026-10.md W14). A
+/// second qualifying play this turn offers nothing.
+#[test]
+fn ad1_024_all_turns_accepted_with_nothing_possible_spends_opt() {
+    let mut runner = fighter_mode_runner(&[
+        friendly_filler("AD1-024-FILLER"),
+        friendly_filler("AD1-024-FILLER-2"),
+    ]);
+
+    let fighter = runner.place_on_field(0, "AD1-024", Some(0));
+    assert!(!runner.game.players[0].battle_area[fighter.index as usize].is_suspended);
+
+    let first = runner.place_on_field(0, "AD1-024-FILLER", None);
+    runner.fire_play_event_triggers(0, first.index as usize, false, false);
+    pick_first(&mut runner); // accept the outer confirm
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "nothing to suspend, unsuspend or return: no pick is offered"
+    );
+
+    let second = runner.place_on_field(0, "AD1-024-FILLER-2", None);
+    runner.fire_play_event_triggers(0, second.index as usize, false, false);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "accepted with nothing possible: the [Once Per Turn] is used"
+    );
+}
+
 /// Declining the suspend pick does NOT skip the by-effect bounce leg — in DCGO
 /// the two are independent once the initial Yes/No is accepted. And because the
 /// bounce executed, the OPT is consumed (no refund).

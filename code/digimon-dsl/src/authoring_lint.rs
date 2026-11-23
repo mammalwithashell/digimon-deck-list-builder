@@ -168,11 +168,114 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "Imperialdramon: Fighter Mode prints \"you may suspend 1 of your opponent's Digimon and ",
             "unsuspend this Digimon. Then, if played or digivolved by effects, you may return ...\": ",
             "W13. Its outer_prompt is DCGO's unprinted skippable Yes/No (AD1_024.cs SetIsSkippable). ",
-            "The refund needs every pick absent, so no half executed."
+            "The refund needs every pick absent, so no half executed, and an opponent Digimon or this ",
+            "Digimon being suspended, so something was possible: with neither, DCGO still offers the ",
+            "effect and accepting it spends the use (row d)."
         ),
         tests: &[
             "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_accept_then_decline_everything_keeps_opt",
             "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_is_once_per_turn",
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_accepted_with_nothing_possible_spends_opt",
+        ],
+    },
+    ReviewedRefund {
+        card: "BT25-103",
+        clause: "effects[4]",
+        row: RefundRow::BothHalvesDeclined,
+        reason: concat!(
+            "GraceNovamon [When Attacking] [Counter] \"you may trash ... Then, you may end this attack\": W13, ",
+            "which the owner decision names (\"DCGO has the Dianamon/GraceNovamon effect correct\"); one clause ",
+            "for both timings (Q1550), as DCGO BT25_103.cs's one shared effect. The refund needs nothing trashed ",
+            "AND \"Don't end the attack\", so no half executed. No row-d state exists: the end-attack half is ",
+            "offered even with nothing to trash.",
+        ),
+        tests: &[
+            "cards_behavioral/bt25/bt25_103.rs::bt25_103_when_attacking_declining_everything_keeps_opt",
+            "cards_behavioral/bt25/bt25_103.rs::bt25_103_counter_declining_everything_keeps_opt",
+            "cards_behavioral/bt25/bt25_103.rs::bt25_103_when_attacking_trashing_spends_opt_for_counter",
+            "cards_behavioral/bt25/bt25_103.rs::bt25_103_ending_attack_alone_spends_opt",
+            "cards_behavioral/bt25/bt25_103.rs::bt25_103_no_sources_on_self_skips_trash_still_offers_end",
+        ],
+    },
+    ReviewedRefund {
+        card: "BT26-055",
+        clause: "effects[1]",
+        row: RefundRow::BothHalvesDeclined,
+        reason: concat!(
+            "Giromon [On Play] [When Digivolving] [Counter] \"You may place ... Then, you may delete ...\": W13 at ",
+            "every timing (Q1550; DCGO BT26_055.cs one shared effect). The refund needs nothing placed and ",
+            "\"Don't delete\". No row-d state exists: the delete half is offered even with an empty hand and no ",
+            "opponent Digimon, because Giromon is itself [Ver.3].",
+        ),
+        tests: &[
+            "cards_behavioral/bt26/bt26_055.rs::bt26_055_doing_nothing_refunds_once_per_turn",
+            "cards_behavioral/bt26/bt26_055.rs::bt26_055_counter_doing_nothing_keeps_once_per_turn",
+            "cards_behavioral/bt26/bt26_055.rs::bt26_055_counter_placing_spends_once_per_turn_for_every_timing",
+            "cards_behavioral/bt26/bt26_055.rs::bt26_055_empty_hand_still_offers_the_delete_half",
+        ],
+    },
+    ReviewedRefund {
+        card: "BT26-060",
+        clause: "effects[5]",
+        row: RefundRow::DeclinedWhilePossible,
+        reason: concat!(
+            "Chronomon: Destroy Mode prints \"you may delete 1 of your opponent's Digimon\"; the outer prompt is ",
+            "DCGO's skippable Yes/No. The refund runs only when the delete pick is passed; the clause's ",
+            "`condition:` (an opponent Digimon exists, DCGO CanActivateCondition) means a target was always ",
+            "possible (row b, Q1818) and the effect is not offered without one (row d). A chosen target spends ",
+            "it (row c).",
+        ),
+        tests: &[
+            "cards_behavioral/bt26/bt26_060.rs::bt26_060_accepted_then_declined_delete_keeps_the_once_per_turn",
+            "cards_behavioral/bt26/bt26_060.rs::bt26_060_accepted_and_delete_chosen_spends_the_once_per_turn",
+            "cards_behavioral/bt26/bt26_060.rs::bt26_060_not_offered_when_the_opponent_has_no_digimon",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX12-017",
+        clause: "effects[3]",
+        row: RefundRow::BothHalvesDeclined,
+        reason: concat!(
+            "WarGreymon [Counter] \"2 of your Digimon may DNA digivolve ... Then, you may change the attack ",
+            "target\": W13 (DCGO EX12_017.cs RemoveUse when neither happened). The refund needs both the DNA ",
+            "pair and the redirect pick absent. No row-d state exists: the redirect is offered even without a ",
+            "DNA pair, because WarGreymon is itself a candidate.",
+        ),
+        tests: &[
+            "cards_behavioral/ex12/ex12_017.rs::ex12_017_counter_both_halves_declined_keeps_the_once_per_turn",
+            "cards_behavioral/ex12/ex12_017.rs::ex12_017_counter_redirect_chosen_spends_the_once_per_turn",
+            "cards_behavioral/ex12/ex12_017.rs::redirect_is_offered_even_without_a_dna",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX12-034",
+        clause: "effects[2]",
+        row: RefundRow::DeclinedWhilePossible,
+        reason: concat!(
+            "Erlangmon prints \"you may play 1 level 5 or lower [SW] ... card\"; the replacement's accept is DCGO's ",
+            "skippable prompt. The refund runs only on \"Don't play\" while a zone held a playable card (row b, ",
+            "Q1818); with nothing playable it does not run and the use is spent (row d: DCGO offers the effect ",
+            "and its RemoveUse sits inside `if (validHandCard || validDigivolutionCard)`).",
+        ),
+        tests: &[
+            "cards_behavioral/ex12/ex12_034.rs::ex12_034_leave_accepted_then_dont_play_keeps_once_per_turn",
+            "cards_behavioral/ex12/ex12_034.rs::ex12_034_leave_accepted_and_card_played_spends_once_per_turn",
+            "cards_behavioral/ex12/ex12_034.rs::ex12_034_leave_with_no_playable_card_plays_nothing",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX12-041",
+        clause: "effects[0]",
+        row: RefundRow::DeclinedWhilePossible,
+        reason: concat!(
+            "Thundermon [Main] prints \"You may play or use 1 [Mutant]/[ME] card ...\". The refund runs only when ",
+            "the pick is passed; the clause's `condition:` (a playable card in hand, DCGO CanUseCondition) means ",
+            "one was always possible (row b, Q1818) and the [Main] is not offered without one (row d). A picked ",
+            "card spends it (row c).",
+        ),
+        tests: &[
+            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_declared_then_pick_passed_keeps_the_once_per_turn",
+            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_never_offers_a_card_without_the_mutant_or_me_trait",
         ],
     },
 ];
