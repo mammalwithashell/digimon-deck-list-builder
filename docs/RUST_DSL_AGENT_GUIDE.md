@@ -103,6 +103,12 @@ Both triggered and declarative clauses accept `text: "..."`: copy the printed
 sentence verbatim, including any leading timing tags. This optional authoring
 metadata records the printed span the clause implements; it has no runtime
 semantics. The printed-text lint compares it with the official text sections.
+Keyword reminder choices are owned by the keyword implementation. The lint
+also recognizes optional "by ..." payments (CR 4.3 §15-7-1), zero-floor zone
+selections, `optional_zero`, and explicit Decline/Don't-use choice branches.
+Run `PYTHONPATH=code python -m tools.backfill_clause_text --output-dir <new-dir>
+--write` to conservatively backfill unambiguous clauses; the tool verifies DSL
+load/compile equivalence before writing and leaves ambiguous clauses untouched.
 
 Use triggered clauses for effects that fire at a timing:
 

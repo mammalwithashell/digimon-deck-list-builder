@@ -3,7 +3,8 @@ use digimon_dsl::security_icon_lint::PrintedSection;
 
 fn check(clause: &str, printed: &str) -> Vec<&'static str> {
     let yaml = format!("card: X-1\nname: X\nkind: digimon\nlevel: 3\ncolor: [yellow]\ncost: 3\ndp: 1000\neffects:\n{clause}\n");
-    let spec: digimon_dsl::CardSpec = serde_yml::from_str(&yaml).unwrap_or_else(|e| panic!("{clause}: {e}"));
+    let spec: digimon_dsl::CardSpec =
+        serde_yml::from_str(&yaml).unwrap_or_else(|e| panic!("{clause}: {e}"));
     check_printed_text(
         &spec,
         &[PrintedSection {
@@ -68,4 +69,62 @@ fn printed_text_round_trip_and_schema() {
         digimon_dsl::compile::compile(&spec).unwrap(),
         digimon_dsl::compile::compile(&without).unwrap()
     );
+}
+
+#[test]
+fn printed_text_keyword_reminder_choices_belong_to_keyword_machinery() {
+    let text = "＜Raid＞ (When attacking, you may change the target.)";
+    assert!(check(
+        &format!("- kind: grant_keyword\n  keyword: Raid\n  text: '{text}'"),
+        text
+    )
+    .is_empty());
+    assert_eq!(
+        check(
+            "- when: when_attacking\n  text: You may change the target.",
+            "You may change the target."
+        ),
+        vec!["may_without_optional"]
+    );
+}
+
+#[test]
+fn printed_text_by_payment_is_optional_without_the_word_may() {
+    let text = "[On Play] By trashing 1 card, draw 2.";
+    assert!(check(
+        &format!("- when: on_play\n  optional: true\n  text: '{text}'"),
+        text
+    )
+    .is_empty());
+    assert_eq!(
+        check(
+            "- when: on_play\n  optional: true\n  text: Reduce the cost by 3.",
+            "Reduce the cost by 3."
+        ),
+        vec!["optional_without_may"]
+    );
+}
+
+#[test]
+fn printed_text_zero_floor_and_optional_zero_are_declinable() {
+    for fields in ["min: 0", "min: 2, optional_zero: true"] {
+        assert!(check(&format!("- when: on_play\n  text: You may place cards.\n  process:\n    - select_zone_cards: {{zones: [hand, trash], filter: {{}}, bind_as: picks, prompt: Choose, {fields}}}"), "You may place cards.").is_empty());
+    }
+    assert_eq!(check("- when: on_play\n  text: You may place cards.\n  process:\n    - select_zone_cards: {zones: [hand], filter: {}, min: 2, prompt: Choose}", "You may place cards."), vec!["may_without_optional"]);
+}
+
+#[test]
+fn printed_text_explicit_decline_branch_is_optional() {
+    let text = "[Security] You may play a Tamer. Then, add this card to the hand.";
+    assert!(check(&format!("- when: on_security\n  text: '{text}'\n  process:\n    - select_effect_choice: {{labels: [Play Tamer, Decline]}}"), text).is_empty());
+    assert_eq!(check(&format!("- when: on_security\n  text: '{text}'\n  process:\n    - select_effect_choice: {{labels: [Play Tamer, Draw]}}"), text), vec!["may_without_optional"]);
+}
+
+#[test]
+fn printed_text_may_requires_word_boundaries() {
+    assert!(check(
+        "- when: on_play\n  text: Names may1 and may_name are not permissions.",
+        "Names may1 and may_name are not permissions."
+    )
+    .is_empty());
 }

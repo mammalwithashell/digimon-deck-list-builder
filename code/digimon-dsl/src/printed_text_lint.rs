@@ -1,6 +1,6 @@
 //! Authoring checks against the official printed text; no runtime semantics.
 
-use crate::clause::{ClauseSpec, Timing, TimingSet};
+use crate::clause::{ClauseSpec, DeclarativeKind, Timing, TimingSet};
 use crate::security_icon_lint::PrintedSection;
 use crate::spec::CardSpec;
 use serde_json::Value;
@@ -29,7 +29,7 @@ fn normalize(text: &str) -> String {
 
 fn has_may(text: &str) -> bool {
     let words: Vec<_> = text
-        .split(|c: char| !c.is_alphabetic())
+        .split(|c: char| !c.is_alphanumeric() && c != '_')
         .filter(|s| !s.is_empty())
         .collect();
     words
@@ -38,11 +38,43 @@ fn has_may(text: &str) -> bool {
         .any(|(i, w)| *w == "may" && words.get(i + 1) != Some(&"not"))
 }
 
+fn has_optional_payment(text: &str) -> bool {
+    let words: Vec<_> = text
+        .split(|c: char| !c.is_alphabetic())
+        .filter(|s| !s.is_empty())
+        .collect();
+    words.windows(2).any(|pair| {
+        pair[0] == "by"
+            && matches!(
+                pair[1],
+                "trashing"
+                    | "suspending"
+                    | "deleting"
+                    | "returning"
+                    | "placing"
+                    | "discarding"
+                    | "paying"
+                    | "attacking"
+                    | "digivolving"
+                    | "revealing"
+            )
+    })
+}
+
 fn has_optional(value: &Value) -> bool {
     match value {
         Value::Object(map) => map.iter().any(|(key, v)| {
             ((key == "optional" && (v == &Value::Bool(true) || v.is_array()))
-                || (key == "outer_prompt" && v == &Value::Bool(true)))
+                || (matches!(key.as_str(), "outer_prompt" | "optional_zero")
+                    && v == &Value::Bool(true)))
+                || (key == "select_zone_cards" && v["min"].as_u64().unwrap_or(0) == 0)
+                || (key == "select_effect_choice"
+                    && v["labels"].as_array().map_or(false, |labels| {
+                        labels.iter().filter_map(Value::as_str).any(|label| {
+                            let label = normalize(label);
+                            label == "decline" || label.starts_with("don't ")
+                        })
+                    }))
                 || (!matches!(key.as_str(), "text" | "summary" | "summary_key") && has_optional(v))
         }),
         Value::Array(items) => items.iter().any(has_optional),
@@ -118,10 +150,15 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
             report("text_not_printed");
         }
         let value = serde_json::to_value(clause).expect("clause serializes");
-        match (has_may(&text), has_optional(&value)) {
-            (true, false) => report("may_without_optional"),
-            (false, true) => report("optional_without_may"),
-            _ => (),
+        let keyword = matches!(clause, ClauseSpec::Declarative(c) if c.kind == DeclarativeKind::GrantKeyword)
+            && (text.starts_with('<') || text.starts_with('＜'));
+        // Keyword machinery owns the choices described by keyword reminder text.
+        if !keyword {
+            match (has_may(&text), has_optional(&value)) {
+                (true, false) => report("may_without_optional"),
+                (false, true) if !has_optional_payment(&text) => report("optional_without_may"),
+                _ => (),
+            }
         }
         let tags = leading_tags(&text);
         let mapped: Vec<_> = tags.iter().filter_map(|tag| timing(tag)).collect();
