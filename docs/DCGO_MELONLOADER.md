@@ -303,8 +303,11 @@ All three run on the sandbox copies (`D:\DCGO_mod_sandbox`, `D:\DCGO_mod_sandbox
 
 `UserData/DcgoRecorder/auto.txt` = `host` (or `join`) and the shared dir. The host creates a Photon room and writes
 `room.txt`; the joiner enters it; both pick a deck, ready, and the host's room starts the battle. Each client simulates
-both decks, so each raw log converts to a full recording (`convert_raw.py`); the first PvP recordings replay with 0
-divergences.
+both decks, so either client's raw log can produce a full recording (`convert_raw.py`) if it captures the game end.
+The checked-in `qa/dcgo-mod-recordings/pvp/pvp1_host.jsonl` is a full pass. The joiner fixture, `pvp1_join.jsonl`,
+has no `game_end` row: all four post-mulligan decisions replay without divergence, but the outcome is unverifiable,
+so `dcgo-replay` reports `partial_pass`. The joiner's raw log is not checked in, so the reason it lacks a game end is
+unknown. A complete capture is required to verify the rest; do not infer a winner from this prefix.
 
 ### A model plays a seat (`dcgo-agent`)
 
