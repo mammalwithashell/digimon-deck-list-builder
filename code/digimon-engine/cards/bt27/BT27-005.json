@@ -1,0 +1,27 @@
+{
+  "index": 4492,
+  "norm_id": 0.2246,
+  "card_id": "BT27-005",
+  "card_index": 5,
+  "card_name_eng": "Motimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_005",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your black Digimon are played, ＜Draw 1＞.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

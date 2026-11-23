@@ -1,0 +1,37 @@
+{
+  "index": 4533,
+  "norm_id": 0.22665,
+  "card_id": "BT27-046",
+  "card_index": 46,
+  "card_name_eng": "Armalizamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_046",
+  "play_cost": 4,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Reptile",
+    "Glowing Dawn",
+    "BEATBREAK"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Security] [When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer card with [Tomoro Tenma] in its name from your hand without paying the cost.",
+  "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Glowing Dawn] trait: Cost 2"
+}

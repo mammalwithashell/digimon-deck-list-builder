@@ -1,0 +1,98 @@
+{
+  "index": 4521,
+  "norm_id": 0.22605,
+  "card_id": "BT27-034",
+  "card_index": 34,
+  "card_name_eng": "Examon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_034",
+  "play_cost": 6,
+  "dp": 16000,
+  "level": 7,
+  "card_kind": 4,
+  "rarity": 3,
+  "card_colors": [
+    1,
+    0,
+    3
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "X Antibody",
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Raid＞ ＜Piercing＞ ＜Security A.+1＞ ＜Blocker＞ ＜Evade＞ ＜Decode (Green Lv.5)＞ ＜Decode (Blue Lv.5)＞ [When Digivolving] [When Attacking] [Counter] [Once Per Turn] You may suspend up to 3 Digimon or Tamers. Then, by trashing 1 [Examon] or [X Antibody] from this Digimon's digivolution cards, activate 1 [Main] effect on this card's Option side.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 6,
+      "memory_cost": 6
+    },
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 6
+    },
+    {
+      "card_color": 3,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] [Examon]: Cost 2",
+  "dual": {
+    "digimon": {
+      "colors": [
+        "Blue",
+        "Red",
+        "Green"
+      ],
+      "dp": 16000,
+      "effect_text": "＜Raid＞ ＜Piercing＞ ＜Security A.+1＞ ＜Blocker＞ ＜Evade＞ ＜Decode (Green Lv.5)＞ ＜Decode (Blue Lv.5)＞ [When Digivolving] [When Attacking] [Counter] [Once Per Turn] You may suspend up to 3 Digimon or Tamers. Then, by trashing 1 [Examon] or [X Antibody] from this Digimon's digivolution cards, activate 1 [Main] effect on this card's Option side.",
+      "evo_costs": [
+        {
+          "card_color": 1,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 0,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 3,
+          "level": 6,
+          "memory_cost": 6
+        }
+      ],
+      "inherited_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ],
+      "level": 7,
+      "traits": [
+        "Holy Warrior",
+        "X Antibody",
+        "Royal Knight"
+      ]
+    },
+    "option": {
+      "colors": [
+        "Red"
+      ],
+      "effect_text": "[Main] Delete up to 9000 DP's total worth of your opponent's Digimon. For each of their Digimon and Tamers, add 3000 to this effect's DP maximum. If this effect didn't delete, trash 1 of their Option cards in the battle area.",
+      "keywords": [
+        "ArtsDigivolve"
+      ],
+      "security_text": "",
+      "use_cost": 6
+    }
+  }
+}
