@@ -24,6 +24,49 @@ fn add_card_to_reveal_for_test(
 }
 
 #[test]
+fn reveal_buckets_reserve_a_dual_match_for_the_only_bucket_that_needs_it() {
+    use digimon_engine::action::space::SEL_REVEAL_START;
+
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("DUAL", "Dual Match"))
+        .add_card(make_test_card("SINGLE", "Single Match"))
+        .start();
+    let dual = add_card_to_reveal_for_test(&mut r, 0, "DUAL");
+    let single = add_card_to_reveal_for_test(&mut r, 0, "SINGLE");
+    let picked = Arc::new(Mutex::new(Vec::new()));
+    let result = Arc::clone(&picked);
+    EffectContext::new(&mut r.game, CardHandle(0), None, 0).select_reveal_buckets(
+        vec![
+            RevealBucketSelection {
+                bind_as: "either".to_string(),
+                min: 1,
+                max: 1,
+                candidates: vec![dual, single],
+            },
+            RevealBucketSelection {
+                bind_as: "dual_only".to_string(),
+                min: 1,
+                max: 1,
+                candidates: vec![dual],
+            },
+        ],
+        "Choose cards",
+        true,
+        move |_ctx, buckets| *result.lock().unwrap() = buckets,
+    );
+    for action in [SEL_REVEAL_START + 1, SEL_REVEAL_START] {
+        let pending = r.game.pending_selection.as_ref().unwrap();
+        assert_eq!(pending.valid_action_ids, [action]);
+        assert!(!pending.is_optional);
+        r.game.resolve_selection(0, action).unwrap();
+    }
+    assert_eq!(
+        *picked.lock().unwrap(),
+        [("either".to_string(), vec![single]), ("dual_only".to_string(), vec![dual])]
+    );
+}
+
+#[test]
 fn reveal_buckets_prevent_cross_bucket_duplicate_pick() {
     let mut r = DebugRunner::builder()
         .add_card(make_test_card("BT17-009", "Hybrid Candidate"))
