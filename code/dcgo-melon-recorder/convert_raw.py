@@ -398,8 +398,8 @@ def convert(rows, cards, allow_truncated=False):
         own-side SelectPermanentEffect rows immediately before its play packet (`own_picks_before`)."""
         return own_picks_before(seat, ridx, 2)
 
-    # Bot turns: the bot decides without any hooked setter, so its breeding PASS comes first on a turn and its
-    # main-phase PASS closes the turn. Track which bot turns already had their breeding / pass synthesised.
+    # Bot turns: the bot's breeding decision comes first, and its main-phase PASS closes the turn.
+    # Track which bot turns already had these decisions synthesised.
     bot_turn_open = None  # turn index of the bot's currently open turn
     bot_bred = False
 
@@ -421,9 +421,30 @@ def convert(rows, cards, allow_truncated=False):
             return False
         return bot_eggs(rows[before[-1]]) - bot_eggs(rows[after[0]]) == 1
 
+    def opening_bot_hatch_target(idx, turn):
+        """A first play onto the top Digi-Egg immediately after the empty post-mulligan snapshot proves a hatch."""
+        if not (turn == 1 and first_player == bot and 0 < idx < len(rows) and post is rows[idx - 1]
+                and post.get("turn_count") == turn):
+            return None
+        pl, play = pm[bot], rows[idx]
+        target = play.get("target")
+        if not (pl.get("breeding") == [] and pl.get("egg_library")
+                and play["method"] in ("PlayCardClass.ctor", "PlayCardClass.PlayCard")
+                and play.get("tp") == bot and (play.get("hand") or {}).get("player") == bot
+                and play.get("pay_cost") is True and play.get("play_provenance") != "effect"
+                and play.get("target_breeding") is True and isinstance(target, dict)):
+            return None
+        egg = target.get("card_id")
+        return egg if egg and egg == pl["egg_library"][0] else None
+
     def breeding_for_bot(idx, turn):
-        """The bot's breeding decision for a turn: HATCH when the egg deck shrank, otherwise PASS (both inferred)."""
-        if bot_hatched_near(idx):
+        """Infer HATCH from a recorded opening egg target or egg-deck shrinkage, otherwise PASS."""
+        opening_egg = opening_bot_hatch_target(idx, turn)
+        if opening_egg:
+            action(bot, ACTION_HATCH, "Breeding", "breeding_action", inferred_row=True)
+            inferred.append("bot breeding HATCH (opening digivolve targets Digi-Egg %s, seq %s), turn %s"
+                            % (opening_egg, rows[idx].get("seq"), turn))
+        elif bot_hatched_near(idx):
             action(bot, ACTION_HATCH, "Breeding", "breeding_action", inferred_row=True)
             inferred.append("bot breeding HATCH (egg deck shrank), turn %s" % turn)
         else:
