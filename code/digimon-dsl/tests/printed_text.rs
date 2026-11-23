@@ -185,6 +185,33 @@ fn printed_text_zero_minimum_reveal_buckets_are_declinable() {
 }
 
 #[test]
+fn printed_text_chosen_activation_declines_payment_but_not_body_choices() {
+    for timing in ["main_from_hand", "main_on_field"] {
+        let text = "By placing 1 card from your trash under this Digimon, draw 1.";
+        assert!(check(&format!("- when: {timing}\n  text: '{text}'"), text).is_empty());
+        let text = "By placing 1 card from your trash under this Digimon, you may draw 1.";
+        assert_eq!(
+            check(&format!("- when: {timing}\n  text: '{text}'"), text),
+            vec!["may_without_optional"]
+        );
+        assert_eq!(
+            check(
+                &format!("- when: {timing}\n  text: You may draw 1."),
+                "You may draw 1."
+            ),
+            vec!["may_without_optional"]
+        );
+    }
+    for timing in ["main", "on_play", "[main_from_hand, on_play]"] {
+        let text = "By placing 1 card, draw 1.";
+        assert_eq!(
+            check(&format!("- when: {timing}\n  text: '{text}'"), text),
+            vec!["may_without_optional"]
+        );
+    }
+}
+
+#[test]
 fn printed_text_zero_minimum_source_selections_are_declinable() {
     let text = "You may play 1 Digimon from under your Tamers.";
     for step in ["select_under_tamer_sources", "select_own_sources"] {

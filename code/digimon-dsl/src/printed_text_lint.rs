@@ -170,10 +170,16 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
             && (text.starts_with('<') || text.starts_with('＜'));
         // Keyword machinery owns the choices described by keyword reminder text.
         if !keyword {
+            let activated_payment = has_optional_payment(&text)
+                && !has_may(&text)
+                && matches!(clause, ClauseSpec::Triggered(c) if match &c.when {
+                    TimingSet::Single(t) => matches!(t, Timing::MainFromHand | Timing::MainOnField),
+                    TimingSet::Multi(ts) => !ts.is_empty() && ts.iter().all(|t| matches!(t, Timing::MainFromHand | Timing::MainOnField)),
+                });
             let text_optional = has_may(&text)
                 || has_optional_payment(&text)
                 || matches!(clause, ClauseSpec::Declarative(c) if c.kind == DeclarativeKind::Delay);
-            match (text_optional, has_optional(&value)) {
+            match (text_optional, has_optional(&value) || activated_payment) {
                 (true, false) => report("may_without_optional"),
                 (false, true) => report("optional_without_may"),
                 _ => (),

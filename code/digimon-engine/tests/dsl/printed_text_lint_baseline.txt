@@ -181,7 +181,6 @@ BT18-067 missing_text 1
 BT18-073 missing_text 1
 BT18-073 missing_text 3
 BT18-076 missing_text 0
-BT18-081 may_without_optional 1
 BT18-087 missing_text 0
 BT18-087 missing_text 1
 BT18-098 missing_text 0
@@ -372,7 +371,6 @@ BT22-015 missing_text 1
 BT22-015 missing_text 2
 BT22-026 missing_text 0
 BT22-034 missing_text 1
-BT22-036 may_without_optional 1
 BT22-040 missing_text 0
 BT22-040 missing_text 1
 BT22-040 missing_text 2
@@ -456,7 +454,6 @@ BT24-013 missing_text 0
 BT24-014 missing_text 0
 BT24-014 missing_text 1
 BT24-014 missing_text 3
-BT24-016 missing_text 0
 BT24-018 missing_text 0
 BT24-018 missing_text 1
 BT24-018 missing_text 2

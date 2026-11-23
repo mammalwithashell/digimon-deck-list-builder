@@ -109,6 +109,8 @@ selections, zero-minimum reveal buckets and source selections, `optional_zero`,
 and explicit Decline/Don't-use choice branches.
 An optional "by ..." payment without a DSL decline path reports
 `may_without_optional`, even if the printed text has no literal "may".
+Choosing a `main_from_hand` or `main_on_field` action supplies the choice for
+"by ..." payments; a separate "may" in the body still needs a DSL decline path.
 Run `PYTHONPATH=code python -m tools.backfill_clause_text --output-dir <new-dir>
 --write` to conservatively backfill unambiguous clauses; the tool verifies DSL
 load/compile equivalence before writing and leaves ambiguous clauses untouched.

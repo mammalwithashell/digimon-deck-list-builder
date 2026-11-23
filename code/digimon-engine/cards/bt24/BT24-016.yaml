@@ -51,7 +51,8 @@ effects:
   # No digivolve-payment gate: "by placing ..., it digivolves" can be chosen
   # even when the digivolve then fails (CR 4.3 15-7-5), and DCGO
   # `CanUseCondition` (BT24_016.cs:29-36) does not check it either.
-  - when: main_from_hand
+  - text: "{Hand} [Main] If you have [Owen Dreadnought], by placing 1 [Dimetromon] from your trash as any of your [Elizamon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements."
+    when: main_from_hand
     summary: "[Hand][Main] If you have Owen Dreadnought: place a Dimetromon from trash under your Elizamon, then digivolve into this card for cost 3"
     condition:
       all_of:
