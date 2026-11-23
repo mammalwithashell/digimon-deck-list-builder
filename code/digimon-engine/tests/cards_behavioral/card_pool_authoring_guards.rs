@@ -100,14 +100,44 @@ fn pool_guard_printed_turn_durations_use_player_relative_expiries() {
     );
 }
 
-/// Each reviewed `refund-after-explicit-accept` exemption must still match a
-/// refund in its card's spec; drop an entry the card no longer needs.
+/// Each `REFUND_AFTER_ACCEPT_REVIEWED` entry (a `refund_opt` behind an
+/// explicit accept, reviewed against the [Once Per Turn] table in
+/// qa/rules/mechanics-gaps-2026-10.md W14) must still match a refund at its
+/// clause; a stale entry (refund gone, clause moved) must be re-reviewed or
+/// dropped. A new unreviewed clause fails the authoring-lint guard above.
 #[test]
-fn pool_guard_refund_after_accept_exemptions_are_still_needed() {
-    for (card, _reason) in digimon_dsl::authoring_lint::REFUND_AFTER_ACCEPT_REVIEWED {
-        assert!(
-            digimon_dsl::authoring_lint::refund_exemption_is_still_needed(&cards_root(), card),
-            "{card}: the refund-after-explicit-accept exemption is no longer needed"
-        );
+fn pool_guard_refund_after_accept_reviews_are_live() {
+    let stale = digimon_dsl::authoring_lint::stale_refund_reviews(&cards_root());
+    assert!(
+        stale.is_empty(),
+        "REFUND_AFTER_ACCEPT_REVIEWED entries no longer match their clause:\n{}",
+        stale.join("\n")
+    );
+}
+
+/// Each `REFUND_AFTER_ACCEPT_REVIEWED` entry names the behavioural tests that
+/// prove its row (the table itself is a review record: the lint cannot see
+/// which path reaches a `refund_opt`). A named test that no longer exists
+/// leaves the entry unproven.
+#[test]
+fn pool_guard_refund_after_accept_reviews_name_existing_tests() {
+    let tests_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests");
+    let mut missing = Vec::new();
+    for entry in digimon_dsl::authoring_lint::REFUND_AFTER_ACCEPT_REVIEWED {
+        for named in entry.tests {
+            let (file, test) = named.split_once("::").expect("<file>::<test fn>");
+            let source = std::fs::read_to_string(tests_root.join(file)).unwrap_or_default();
+            let declared = source
+                .match_indices(&format!("fn {test}("))
+                .any(|(at, _)| source[..at].trim_end().ends_with("#[test]"));
+            if !declared {
+                missing.push(format!("{} {}: {named}", entry.card, entry.clause));
+            }
+        }
     }
+    assert!(
+        missing.is_empty(),
+        "REFUND_AFTER_ACCEPT_REVIEWED names tests that do not exist:\n{}",
+        missing.join("\n")
+    );
 }
