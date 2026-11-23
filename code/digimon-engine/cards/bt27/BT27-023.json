@@ -21,7 +21,7 @@
   ],
   "form_eng": [],
   "attribute_eng": [
-    "Vaccine"
+    "Data"
   ],
   "effect_description_eng": "[When Moving] [On Play] 1 of your Digimon with [Gammamon] in its text or the [VB] trait can't be deleted in battle for the turn.\r\n[When Attacking] [Once Per Turn] 1 of your opponent's level 5 or lower Digimon can't suspend until their turn ends.",
   "inherited_effect_description_eng": "＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)",

@@ -19508,7 +19508,11 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": "[Digivolve] Lv.2 w/[Flame] trait: Cost 0"
+    "xros_req": "[Digivolve] Lv.2 w/[Flame] trait: Cost 0",
+    "type_eng": [
+      "Machine",
+      "Flame"
+    ]
   },
   "BT27-008": {
     "evo_costs": [
@@ -19666,7 +19670,10 @@
           "ArtsDigivolve"
         ]
       }
-    }
+    },
+    "attribute_eng": [
+      "Data"
+    ]
   },
   "BT27-017": {
     "evo_costs": [
@@ -19703,7 +19710,12 @@
   },
   "BT27-020": {
     "dp": 2000,
-    "effect_description_eng": "[On Play] By placing 1 level 4 or lower [Aquatic] or [DATA SQUAD] trait Digimon card from your hand as any of your Digimon's bottom digivolution card, or face down under any of your [DATA SQUAD] trait Tamers, ＜Draw 1＞. (Rule) Trait: Has [Aquatic] Type."
+    "effect_description_eng": "[On Play] By placing 1 level 4 or lower [Aquatic] or [DATA SQUAD] trait Digimon card from your hand as any of your Digimon's bottom digivolution card, or face down under any of your [DATA SQUAD] trait Tamers, ＜Draw 1＞. (Rule) Trait: Has [Aquatic] Type.",
+    "type_eng": [
+      "Cyborg",
+      "DATA SQUAD",
+      "Aquatic"
+    ]
   },
   "BT27-021": {
     "card_colors": [
@@ -19740,7 +19752,12 @@
     "play_cost": 3,
     "dp": 2000,
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Ice-Snow] or [ALYSION] trait card and 1 blue Tamer card among them to the hand. Return the rest to the bottom of the deck. (Rule) Trait: Has [Ice-Snow] Type.",
-    "inherited_effect_description_eng": "[When Attacking] If this Digimon has the [Ice-Snow] trait, you may change the attack target to 1 of your opponent's unsuspended Digimon with the fewest digivolution cards."
+    "inherited_effect_description_eng": "[When Attacking] If this Digimon has the [Ice-Snow] trait, you may change the attack target to 1 of your opponent's unsuspended Digimon with the fewest digivolution cards.",
+    "type_eng": [
+      "Beastkin",
+      "ALYSION",
+      "Ice-Snow"
+    ]
   },
   "BT27-023": {
     "evo_costs": [
@@ -19754,13 +19771,21 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "attribute_eng": [
+      "Data"
     ]
   },
   "BT27-024": {
     "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Both players ＜Draw 1＞."
   },
   "BT27-025": {
-    "effect_description_eng": "[On Play] [When Digivolving] 1 of your Digimon can't be deleted in battle until your opponent's turn ends. If played by effects, it also gains ＜Blocker＞. (Rule) Trait: Has [Aquatic] Type."
+    "effect_description_eng": "[On Play] [When Digivolving] 1 of your Digimon can't be deleted in battle until your opponent's turn ends. If played by effects, it also gains ＜Blocker＞. (Rule) Trait: Has [Aquatic] Type.",
+    "type_eng": [
+      "Cyborg",
+      "DATA SQUAD",
+      "Aquatic"
+    ]
   },
   "BT27-026": {
     "evo_costs": [
@@ -19788,7 +19813,12 @@
     "play_cost": 5,
     "dp": 5000,
     "effect_description_eng": "＜Iceclad＞ [On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, you may place 1 level 4 or lower [Ice-Snow] trait Digimon card from your hand as any of your Digimon's bottom digivolution card. (Rule) Trait: Has [Ice-Snow] Type.",
-    "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] Gain 1 memory."
+    "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] Gain 1 memory.",
+    "type_eng": [
+      "Mysterious Beast",
+      "ALYSION",
+      "Ice-Snow"
+    ]
   },
   "BT27-029": {
     "evo_costs": [
@@ -19801,10 +19831,20 @@
     "play_cost": 7,
     "dp": 7000,
     "effect_description_eng": "＜Iceclad＞ [On Play] [When Digivolving] Trash any 3 digivolution cards from your opponent's Digimon. Then, if they don't have a Digimon with digivolution cards, this Digimon gains ＜Blocker＞ and can't be deleted other than in battle until their turn ends. (Rule) Trait: Has [Ice-Snow] Type.",
-    "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. If this effect didn't trash, this [Ice-Snow] trait Digimon may unsuspend."
+    "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. If this effect didn't trash, this [Ice-Snow] trait Digimon may unsuspend.",
+    "type_eng": [
+      "Beastkin",
+      "ALYSION",
+      "Ice-Snow"
+    ]
   },
   "BT27-031": {
-    "inherited_effect_description_eng": ""
+    "inherited_effect_description_eng": "",
+    "type_eng": [
+      "Cyborg",
+      "DATA SQUAD",
+      "Aquatic"
+    ]
   },
   "BT27-032": {
     "evo_costs": [
@@ -20187,6 +20227,9 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "attribute_eng": [
+      "Data"
     ]
   },
   "BT27-048": {
@@ -20202,7 +20245,13 @@
         "memory_cost": 3
       }
     ],
-    "inherited_effect_description_eng": ""
+    "inherited_effect_description_eng": "",
+    "type_eng": [
+      "Stegosaur",
+      "Kurata's Army",
+      "Bio",
+      "Dinosaur"
+    ]
   },
   "BT27-049": {
     "evo_costs": [
@@ -20234,7 +20283,13 @@
         "memory_cost": 4
       }
     ],
-    "xros_req": "[Digivolve] Lv.4 w/[Leomon] in name or w/[Holy Beast]/[ACCEL] trait: Cost 3"
+    "xros_req": "[Digivolve] Lv.4 w/[Leomon] in name or w/[Holy Beast]/[ACCEL] trait: Cost 3",
+    "type_eng": [
+      "Machine",
+      "ACCEL",
+      "Holy Beast"
+    ],
+    "level": 5
   },
   "BT27-052": {
     "evo_costs": [
@@ -20485,7 +20540,10 @@
           "ArtsDigivolve"
         ]
       }
-    }
+    },
+    "attribute_eng": [
+      "Data"
+    ]
   },
   "BT27-069": {
     "evo_costs": [
@@ -20632,7 +20690,10 @@
           "ArtsDigivolve"
         ]
       }
-    }
+    },
+    "attribute_eng": [
+      "Virus"
+    ]
   },
   "BT27-083": {
     "effect_description_eng": "＜Blocker＞ ＜Retaliation＞ [When Digivolving] Your opponent trashes any 1 card from their hand or security stack. [On Deletion] If your opponent's hand has 7 or fewer cards, you may play 1 play cost 7 or lower purple Digimon card with [Avian] or [Bird] in any of its traits from your trash without paying the cost. (Rule) Trait: Has [Birdkin] Type.",
@@ -20674,7 +20735,12 @@
           "ArtsDigivolve"
         ]
       }
-    }
+    },
+    "type_eng": [
+      "Cyborg",
+      "DATA SQUAD",
+      "Birdkin"
+    ]
   },
   "BT27-084": {
     "evo_costs": [
@@ -20966,5 +21032,12 @@
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "[Security] Play this card without paying the cost."
   },
-  "_note_BT27": "BT27, ingested 2026-11-23 from digimoncard.io. The API rows are pre-release stubs or garbled for much of the set: cost 0 / no DP / no evo circles / '|applinkdp =' inherited text (BT27-006/011/014/018/022/027/029/033), second digivolve circles and third colours dropped, Assembly and some special digivolution conditions missing from xros_req, inherited text misfiled under 'Inherited Effect' with its timing and bracketed names stripped, BT27-068 typed Digimon instead of DUAL, and the 13 DUAL rows without stats or Option text. Every BT27 override is rebuilt from the official Bandai DB (data/card_bundles/BT27-*.md, data/card_official.json); text is overridden only where it differs from the official text beyond keyword reminder text."
+  "_note_BT27": "BT27, ingested 2026-11-23 from digimoncard.io. The API rows are pre-release stubs or garbled for much of the set: cost 0 / no DP / no evo circles / '|applinkdp =' inherited text (BT27-006/011/014/018/022/027/029/033), second digivolve circles and third colours dropped, Assembly and some special digivolution conditions missing from xros_req, inherited text misfiled under 'Inherited Effect' with its timing and bracketed names stripped, BT27-068 typed Digimon instead of DUAL, and the 13 DUAL rows without stats or Option text. Every BT27 override is rebuilt from the official Bandai DB (data/card_bundles/BT27-*.md, data/card_official.json); text is overridden only where it differs from the official text beyond keyword reminder text.",
+  "BT27-028": {
+    "type_eng": [
+      "Wizard",
+      "DATA SQUAD",
+      "Aquatic"
+    ]
+  }
 }
