@@ -502,23 +502,26 @@ fn ex12_041_main_never_offers_a_card_without_the_mutant_or_me_trait() {
     );
 }
 
+/// Thundermon (EX12-041): a [Main] is activation-type (CR 4.3 15-8-4); the
+/// player activates it by declaring it, and CR 4.3 15-14-1-4 counts that
+/// declaration as the [Once Per Turn] use "even if the effect's processing
+/// can't be executed". Passing the card pick afterwards still uses it. DCGO
+/// EX12_041.cs `if (!isUsed) activateClass.RemoveUse()` refunds it; the rules
+/// text decides.
 #[test]
-fn ex12_041_main_declined_does_not_spend_the_once_per_turn() {
-    // DCGO EX12_041.cs: `if (!isUsed) activateClass.RemoveUse()`.
+fn ex12_041_main_declared_then_pick_passed_spends_the_once_per_turn() {
     let mut r = thundermon_runner(&["MUTANT-3"]);
     let t = r.place_on_field(0, "EX12-041", Some(0));
     assert!(r.game.activate_field_main(0, t.index as usize));
-    r.execute_action(0, PASS).expect("decline the pick");
+    r.execute_action(0, PASS).expect("pass the pick");
     let _ = r.auto_resolve();
     assert!(
-        r.game.activate_field_main(0, t.index as usize),
-        "declining keeps the [Once Per Turn] available"
-    );
-    select_hand_card(&mut r, 0, "MUTANT-3");
-    r.auto_resolve().expect("resolve Thundermon Main");
-    assert!(
         !r.game.activate_field_main(0, t.index as usize),
-        "now used"
+        "the declared [Main] used the [Once Per Turn]"
+    );
+    assert!(
+        r.game.players[0].hand.iter().any(|c| c.card_id(&r.game.card_data) == "MUTANT-3"),
+        "nothing was played"
     );
 }
 
