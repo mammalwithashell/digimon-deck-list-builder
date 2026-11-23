@@ -52,11 +52,17 @@
 //!     15-14-1-4); where DCGO does not offer the effect in that state the
 //!     clause mirrors that with a `condition:` instead -- a refund is wrong;
 //!   - e. mandatory content ran, or an opponent's choice was processed:
-//!     SPENT (official Q4739, Q5056, Q5171, Q5330) -- a refund is wrong.
+//!     SPENT (official Q4739, Q5056, Q5171, Q5330) -- a refund is wrong;
+//!   - f. accepted, then the optional cost of a "by X, ..." effect was
+//!     declined: KEPT on Slayerdramon (EX13-024) by owner ruling
+//!     (2026-11-23, that card only) -- the refund is right there; on every
+//!     other card the current behaviour (spent) stands until the owner
+//!     rules, so a refund is wrong.
 //!   So every such clause is listed in [`REFUND_AFTER_ACCEPT_REVIEWED`] with
-//!   the row its refund path is reached on (b or W13 only; [`RefundRow`] has
-//!   no variant for c, d or e), why it is reached on no other, and the
-//!   behavioural tests that prove it. An unlisted clause is an error, and the
+//!   the row its refund path is reached on (b, W13, or f by owner ruling;
+//!   [`RefundRow`] has no variant for c, d or e), why it is reached on no
+//!   other, and the behavioural tests that prove it. An unlisted clause is an
+//!   error, and the
 //!   pool guards fail on an entry whose clause no longer refunds behind an
 //!   accept ([`stale_refund_reviews`]) or whose named test is gone. The table
 //!   is a review record, not a check of the row: the lint cannot see which
@@ -119,7 +125,7 @@ const OBSERVER_TIMINGS: &[&str] = &[
 /// The rows of the [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md
 /// W14) on which a refund behind an explicit accept is right. Rows c, d and e
 /// spend the use, so they have no variant: a clause that refunds on them
-/// cannot be listed.
+/// cannot be listed. Row f is right only by a per-card owner ruling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RefundRow {
     /// b: accepted, the printed "you may X" was possible, and the player chose
@@ -128,6 +134,12 @@ pub enum RefundRow {
     /// W13: "you may A. Then, you may B." with both halves declined
     /// (owner decision 2026-10-21).
     BothHalvesDeclined,
+    /// f: the optional cost of a "by X, ..." effect was declined after the
+    /// accept, on a card the owner has ruled keeps the use then. Only
+    /// Slayerdramon (EX13-024) (owner ruling 2026-11-23, that card only);
+    /// on every other card a declined "by X" cost spends the use today, and
+    /// none may be listed on this row without its own ruling.
+    CostDeclinedByOwnerRuling,
 }
 
 /// One reviewed `refund_opt` behind an explicit accept.
@@ -278,6 +290,35 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_never_offers_a_card_without_the_mutant_or_me_trait",
         ],
     },
+    ReviewedRefund {
+        card: "EX13-024",
+        clause: "effects[3]",
+        row: RefundRow::CostDeclinedByOwnerRuling,
+        reason: concat!(
+            "Slayerdramon \"by suspending 1 of your such Digimon, they don't leave\": owner ruling 2026-11-23 ",
+            "(qa/rules/mechanics-gaps-2026-10.md W14), for this card only: the suspend declined keeps the use ",
+            "(DCGO EX13_024.cs RemoveUse). The replacement is offered only while a payer exists (`active_when`), ",
+            "so the refund runs only on a decline while the suspend was possible; a suspended Digimon spends it.",
+        ),
+        tests: &[
+            "ex13_024_plural_prevention.rs::face_cost_picker_decline_keeps_opt_and_clones",
+            "ex13_024_plural_prevention.rs::successful_face_payment_consumes_opt_with_another_payer_available",
+            "cards_behavioral/ex13/ex13_024.rs::ex13_024_no_unsuspended_text_digimon_means_no_offer",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX13-024",
+        clause: "effects[4]",
+        row: RefundRow::CostDeclinedByOwnerRuling,
+        reason: concat!(
+            "Slayerdramon's inherited copy of effects[3]: same ruling, separate [Once Per Turn].",
+        ),
+        tests: &[
+            "ex13_024_plural_prevention.rs::inherited_cost_picker_decline_keeps_opt_and_clones",
+            "ex13_024_plural_prevention.rs::successful_inherited_payment_consumes_opt_with_another_payer_available",
+            "cards_behavioral/ex13/ex13_024.rs::ex13_024_inherited_no_unsuspended_text_digimon_means_no_offer",
+        ],
+    },
 ];
 
 /// Whether `finding` is the reviewed refund `entry` of `card`.
@@ -413,7 +454,7 @@ fn walk(value: &Value, path: &str, out: &mut Vec<AuthoringFinding>) {
                         rule: "refund-after-explicit-accept",
                         path: if path.is_empty() { "process".into() } else { format!("{path}.process") },
                         message: format!(
-                            "unreviewed `refund_opt` in {why}. Check which path reaches it against the [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md W14): a refund is right only when the player chose not to do a printed \"you may X\" that was possible (row b: Q1818, Q4086, Q6946) or declined both halves of \"you may A. Then, you may B.\" (W13); it is wrong once the player chose X (row c: CR 4.3 15-14-1-4, Q5426), when nothing was possible but the effect was offered (row d), or after mandatory content or an opponent's choice (row e: Q4739, Q5056). List the clause in REFUND_AFTER_ACCEPT_REVIEWED with its row, reason and tests, or gate or drop the refund"
+                            "unreviewed `refund_opt` in {why}. Check which path reaches it against the [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md W14): a refund is right only when the player chose not to do a printed \"you may X\" that was possible (row b: Q1818, Q4086, Q6946) or declined both halves of \"you may A. Then, you may B.\" (W13); it is wrong once the player chose X (row c: CR 4.3 15-14-1-4, Q5426), when nothing was possible but the effect was offered (row d), after mandatory content or an opponent's choice (row e: Q4739, Q5056), or when the declined thing is the optional cost of a \"by X, ...\" effect (row f; kept only by a per-card owner ruling). List the clause in REFUND_AFTER_ACCEPT_REVIEWED with its row, reason and tests, or gate or drop the refund"
                         ),
                     });
                 }
@@ -636,6 +677,9 @@ mod tests {
             assert!(!a.reason.trim().is_empty(), "{} {}", a.card, a.clause);
             assert!(a.clause.starts_with("effects["), "{} {}", a.card, a.clause);
             assert!(!a.tests.is_empty(), "{} {}: name the tests that prove the row", a.card, a.clause);
+            if a.row == RefundRow::CostDeclinedByOwnerRuling {
+                assert_eq!(a.card, "EX13-024", "row f needs an owner ruling for that card ({})", a.card);
+            }
             for t in a.tests {
                 let (file, name) = t.split_once("::").unwrap_or(("", ""));
                 assert!(

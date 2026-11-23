@@ -22,12 +22,14 @@
 #   their Digimon with the fewest digivolution cards" governs → 0-source
 #   Digimon count). WhenRemoveField × {face-up, inherited}, separate OPT
 #   hashes, any cause: optional suspend of an unsuspended own Dracomon/Examon
-#   text Digimon → all leaving matching Digimon stay. DCGO RemoveUse()s when
-#   no Digimon is suspended; here accepting the replacement is choosing to
-#   activate it, which uses the [Once Per Turn] even if the suspend pick is
-#   then declined (CR 4.3 15-14-1-4; owner ruling #20: a declined optional
-#   cost of an activated effect spends the use). Declining the replacement
-#   itself keeps the use (Q1818). Bug scan: 2 turns over the cap.
+#   text Digimon → all leaving matching Digimon stay. Accepting the
+#   replacement and then declining the suspend pick keeps the [Once Per Turn]
+#   and the Digimon leave as normal (owner ruling 2026-11-23,
+#   qa/rules/mechanics-gaps-2026-10.md W14; DCGO EX13_024.cs RemoveUse()s when
+#   no Digimon is suspended). Choosing a Digimon to suspend spends it, even if
+#   the "don't leave" is then prevented (CR 4.3 15-14-1-4, Q5426). Declining
+#   the replacement itself keeps it (Q1818). The face and inherited clauses
+#   have separate uses.
 #
 # DSL: EX13-044 Assembly shape; `select_opponent_sources` with `min = max =
 # source_material_count` + `clamp_to_available` → `trash_selected_sources`;
@@ -181,6 +183,9 @@ effects:
                     - any_of:
                         - in_text_contains: Dracomon
                         - in_text_contains: Examon
+          else:
+            # Owner ruling 2026-11-23 (W14): the suspend declined keeps the use.
+            - refund_opt: {}
 
   - kind: replacement
     scope: inherited
@@ -230,3 +235,6 @@ effects:
                     - any_of:
                         - in_text_contains: Dracomon
                         - in_text_contains: Examon
+          else:
+            # Owner ruling 2026-11-23 (W14): the suspend declined keeps the use.
+            - refund_opt: {}

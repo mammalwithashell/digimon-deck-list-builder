@@ -377,6 +377,21 @@ fn ex13_024_inherited_replacement_works_from_a_source() {
     assert!(is_suspended(&r, handle_of(&r, 0, "DRACO")));
 }
 
+/// The inherited clause is not offered either when no [Dracomon]/[Examon]
+/// text Digimon could be suspended, so its refund (owner ruling 2026-11-23:
+/// the suspend declined keeps the use) is only ever reached by declining a
+/// suspend that was possible.
+#[test]
+fn ex13_024_inherited_no_unsuspended_text_digimon_means_no_offer() {
+    let mut r = start(&[], 5);
+    let host = r.place_stack(0, &[CARD_ID, "DRACO2"]);
+    set_suspended(&mut r, host, true);
+    let ally = r.place_on_field(0, "DRACO", Some(0));
+    set_suspended(&mut r, ally, true);
+    delete_with(&mut r, ally, ReplacementCause::OpponentEffect);
+    assert!(r.pending_selection().is_none(), "no payable suspend cost");
+}
+
 #[test]
 fn ex13_024_assembly_preserves_exact_physical_recipe_order() {
     let mut r = start(&[CARD_ID], 10);
