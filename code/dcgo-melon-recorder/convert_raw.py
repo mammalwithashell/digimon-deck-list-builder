@@ -703,9 +703,9 @@ def convert(rows, cards, allow_truncated=False):
                 # an effect's play / digivolve step that played nothing (e.g. a "may digivolve" with no card chosen):
                 # no card moved, no decision
                 continue
-            # A main-phase play is always queued first (a play packet naming the card). A paid play with no such
-            # packet is an effect's play or digivolve ("may digivolve into ... with the cost reduced by 1"): the
-            # effect's own selection rows carry that decision, so it is not a main-phase action.
+            # Human main-phase plays have a play packet naming the card; the built-in bot sets PlayCard directly
+            # on its own turn. An unqueued paid play outside that bot path is an effect's play or digivolve,
+            # whose selection rows carry the decision.
             hand_cards = (r.get("hand") or {}).get("cards") or []
             slot = (r.get("hand") or {}).get("slot", -1)
             played_index = hand_cards[slot].get("card_index") if 0 <= slot < len(hand_cards) else None
@@ -722,7 +722,8 @@ def convert(rows, cards, allow_truncated=False):
                                 "%s is not taken (positional only)" % (actor, played_card, r.get("seq"), slot,
                                                                        listed_card, played_index))
                 played_index = None
-            if played_index is not None and played_index not in queued_play_indexes:
+            bot_paid_play = is_ai and actor == bot == tp and r.get("pay_cost") is True
+            if played_index is not None and played_index not in queued_play_indexes and not bot_paid_play:
                 continue
             if played_index is not None:
                 queued_play_indexes.discard(played_index)
