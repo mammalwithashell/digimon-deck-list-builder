@@ -8885,10 +8885,9 @@ impl ReplayDriver {
     /// eligible Digimon), so the recording has no row for it, while the engine
     /// parks the pick. `apply_selection_step` already answers such a prompt when
     /// a SELECTION row arrives; this covers the case where the next row is an
-    /// action. Applied only when that action is not currently legal: the field-
-    /// pick ids (100..) overlap the attack ids, so a legal action means the
-    /// prompt is not what the row is about. The single candidate leaves no
-    /// choice, so legality proves the answer.
+    /// action. A defender index identifies an attack even when its action ID
+    /// overlaps the field pick's ID. Without that evidence, leave a currently
+    /// legal ID alone: it could be an answer to the prompt.
     fn answer_dcgo_silent_lone_target_pick(&mut self, game: &mut Game, at: usize) {
         for _ in 0..4 {
             let Some(step) = self.source.steps().get(at) else {
@@ -8900,23 +8899,19 @@ impl ReplayDriver {
             let Some((actor, action)) = self.dcgo_silent_lone_field_pick(game) else {
                 return;
             };
-            // Would the recorded action be legal as it stands? Then the row is
-            // an answer to something else, not a prompt DCGO skipped.
-            let mask = crate::action::build_action_mask(game, step.actor);
-            let remapped = remap_board_slots(
-                game,
-                step.action_id,
-                step.actor,
-                step.board_p0.as_ref(),
-                step.board_p1.as_ref(),
-            );
-            let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
-            let already_legal = match self.named_attack_target(game, step.actor, at as u32, step.action_id, remapped) {
-                Ok((named, true)) => legal(named),
-                _ => legal(step.action_id) || legal(remapped),
-            };
-            if already_legal {
-                return;
+            if self.source.dcgo_attack_target_index(at as u32).is_none() {
+                let mask = crate::action::build_action_mask(game, step.actor);
+                let remapped = remap_board_slots(
+                    game,
+                    step.action_id,
+                    step.actor,
+                    step.board_p0.as_ref(),
+                    step.board_p1.as_ref(),
+                );
+                let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
+                if legal(step.action_id) || legal(remapped) {
+                    return;
+                }
             }
             game.decode_action(action, actor);
             // Answering the pick can park the NEXT prompt DCGO skips - the one-card deck order that ends the same

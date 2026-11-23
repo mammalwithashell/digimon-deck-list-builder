@@ -280,6 +280,31 @@ fn the_attack_hits_the_recorded_copy_not_the_copy_in_occurrence_order() {
 }
 
 #[test]
+fn a_named_attack_is_not_consumed_as_a_silent_lone_field_pick() {
+    use digimon_engine::effect_context::EffectContext;
+    use digimon_engine::events::GameEvent;
+
+    let mut s = defender_session(Some(DIGIVOLVED));
+    let attacker = s.game.players[1].battle_area[0].top_card().handle();
+    EffectContext::new(&mut s.game, attacker, None, 1).select_opponent_permanent(
+        "Choose the one eligible Digimon",
+        false,
+        |_, target| target.index == 1,
+        |_, _| {},
+    );
+    let pending = s.game.pending_selection.as_ref().expect("field pick parked");
+    assert_eq!(pending.valid_action_ids, [encode_attack(0, 1)]);
+
+    s.step();
+    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
+    assert!(s.is_complete());
+    assert!(s.game.events.iter().any(|event| matches!(
+        event,
+        GameEvent::Attack { target_field_index: Some(1), target_player: Some(0), .. }
+    )));
+}
+
+#[test]
 fn an_unpaired_defender_index_stops_without_attacking_either_copy() {
     let mut s = defender_session(Some(12345));
     s.step();
