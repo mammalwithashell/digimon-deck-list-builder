@@ -7,7 +7,7 @@ traits: ["Kurata's Army"]
 
 effects:
   - when: on_any_deletion
-    trigger_if: { event_card_kind: digimon }
+    trigger_if: { event_target_kind: digimon }
     optional: true
     condition: { source_is_unsuspended: true }
     text: "[All Turns] When any Digimon are deleted, by suspending this Tamer, you may place the top 2 cards of your deck face down under this Tamer."

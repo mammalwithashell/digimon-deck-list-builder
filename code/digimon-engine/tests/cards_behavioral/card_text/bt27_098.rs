@@ -131,3 +131,28 @@ fn deletion_placement_can_be_declined_and_cannot_pay_with_a_suspended_kurata() {
         assert_eq!(r.game.players[0].deck.len(), deck_count);
     }
 }
+
+#[test]
+fn deletion_of_either_players_digimon_token_can_suspend_kurata_and_stash_two_cards() {
+    const CARD: &str = "BT27-098";
+    const TOKEN: &str = "TEXT-KURATA-TOKEN";
+    for token_owner in [0, 1] {
+        let mut token = make_test_card(TOKEN, "Digimon Token");
+        token.card_kind = digimon_engine::enums::CardKind::Token;
+        let mut r = start(builder(CARD).add_card(token));
+        let kurata = r.place_on_field(0, CARD, Some(0));
+        let victim = r.place_on_field(token_owner, TOKEN, Some(0));
+        let deck_count = r.game.players[0].deck.len();
+
+        r.game.delete_permanent_with_effects(victim);
+        r.assert_prompt(SelectionKind::TriggerOrder, true, 0);
+        r.execute_branch(0).unwrap();
+
+        let kurata = &r.game.players[0].battle_area[kurata.index as usize];
+        assert!(kurata.is_suspended);
+        assert_eq!(kurata.card_sources.len(), 3);
+        assert!(kurata.card_sources[..2].iter().all(|card| card.face_down));
+        assert_eq!(r.game.players[0].deck.len(), deck_count - 2);
+        assert!(r.pending_selection().is_none());
+    }
+}

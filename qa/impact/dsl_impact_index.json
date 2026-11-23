@@ -17300,7 +17300,7 @@
       "predicates": [
         "any_of",
         "can_play_from_effect_without_cost",
-        "event_card_kind",
+        "event_target_kind",
         "face_down_sources_under_tamers_gte",
         "kind",
         "name_contains",
@@ -38139,7 +38139,6 @@
       "BT13-096",
       "BT23-006",
       "BT23-013",
-      "BT27-098",
       "EX3-065",
       "EX6-063",
       "EX9-067"
@@ -38524,6 +38523,7 @@
       "BT26-091",
       "BT26-095",
       "BT27-055",
+      "BT27-098",
       "BT27-102",
       "BT6-089",
       "BT8-070",

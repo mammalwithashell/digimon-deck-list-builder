@@ -20353,7 +20353,7 @@
     "verb:trash_bottom_face_down_sources_under_tamers",
     "predicate:any_of",
     "predicate:can_play_from_effect_without_cost",
-    "predicate:event_card_kind",
+    "predicate:event_target_kind",
     "predicate:face_down_sources_under_tamers_gte",
     "predicate:kind",
     "predicate:name_contains",
