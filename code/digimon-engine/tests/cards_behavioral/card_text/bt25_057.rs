@@ -268,6 +268,134 @@ fn dual_immediate_attack_can_digivolve_and_use_another_option() {
 }
 
 #[test]
+fn dual_immediate_attack_can_accept_arts_then_digivolve_and_use_another_option() {
+    for (effect_driven, first_effect) in [false, true]
+        .into_iter()
+        .flat_map(|effect_driven| (0..3).map(move |first_effect| (effect_driven, first_effect)))
+    {
+        let mut option = make_test_card("TEXT-OPTION", "Fixture Option");
+        option.card_kind = digimon_engine::enums::CardKind::Option;
+        option.level = None;
+        option.dp = None;
+        option.play_cost = 5;
+        option.colors = vec![CardColor::Green];
+        option.traits = vec!["Glowing Dawn".into()];
+        let mut r = start(
+            builder(CARD)
+                .dsl_card("ST23-01")
+                .unwrap()
+                .dsl_card("ST23-08")
+                .unwrap()
+                .add_card(option)
+                .add_card(digimon("TEXT-ARTS-HOST", 4, 4000, true))
+                .add_card(digimon("TEXT-INITIAL-HOST", 4, 4000, true))
+                .hand(
+                    0,
+                    if effect_driven {
+                        &["ST23-08", CARD, "ST23-08", "TEXT-OPTION"]
+                    } else {
+                        &[CARD, "ST23-08", "TEXT-OPTION"]
+                    },
+                ),
+        );
+        let attacker = r.place_stack(0, &["ST23-01", "TEXT-4"]);
+        let arts_host = r.place_on_field(0, "TEXT-ARTS-HOST", Some(0));
+        if effect_driven {
+            let tamer = r.place_stack(0, &["TEXT-BOTTOM", "TEXT-BOTTOM", "TEXT-TOP", "TEXT-TAMER"]);
+            for c in &mut r.game.players[0].battle_area[tamer.index as usize].card_sources[..3] {
+                c.face_down = true;
+            }
+            let initial_host = r.place_on_field(0, "TEXT-INITIAL-HOST", Some(0));
+            action(&mut r, 0, encode_digivolve(0, initial_host.index as u16));
+            r.assert_prompt(SelectionKind::OwnField, true, 0);
+            r.choose_prompt_card("TEXT-TAMER", None).unwrap();
+            r.assert_prompt(SelectionKind::Hand, true, 0);
+            r.choose_prompt_card(CARD, None).unwrap();
+        } else {
+            stocked_tamer(&mut r, "TEXT-TAMER");
+            action(&mut r, 0, PLAY_HAND_START);
+        }
+        r.assert_prompt(SelectionKind::OwnField, false, 0);
+        r.choose_prompt_card("TEXT-4", None).unwrap();
+        r.assert_prompt(SelectionKind::Target, true, 0);
+        assert!(r.game.pending_option.is_some());
+        action(&mut r, 0, encode_attack(attacker.index as u16, 14));
+        r.assert_prompt(SelectionKind::OwnField, true, 0);
+        assert!(r.game.pending_option.is_some());
+        assert_eq!(candidates(&r), ["TEXT-4", "TEXT-ARTS-HOST"]);
+        r.choose_prompt_card("TEXT-ARTS-HOST", None).unwrap();
+        assert!(r.game.pending_option.is_none());
+        assert_eq!(
+            r.game.players[0].battle_area[arts_host.index as usize]
+                .top_card()
+                .card_id(&r.game.card_data),
+            CARD
+        );
+        r.assert_prompt(SelectionKind::TriggerOrder, true, 0);
+        let choices = r
+            .pending_selection()
+            .unwrap()
+            .effect_choices
+            .as_ref()
+            .unwrap();
+        assert_eq!(choices.len(), 3);
+        let inherited = choices
+            .iter()
+            .position(|c| c.label.starts_with("ST23-01 "))
+            .unwrap();
+        let arts_effects: Vec<_> = choices
+            .iter()
+            .enumerate()
+            .filter_map(|(i, c)| c.label.starts_with("BT25-057 ").then_some(i))
+            .collect();
+        assert_eq!(arts_effects.len(), 2);
+        if first_effect != 0 {
+            r.execute_branch(arts_effects[first_effect - 1]).unwrap();
+            if first_effect == 1 {
+                r.assert_prompt(SelectionKind::Replacement, true, 0);
+                r.decline_prompt().unwrap();
+            }
+            r.assert_prompt(SelectionKind::TriggerOrder, true, 0);
+            let inherited = r
+                .pending_selection()
+                .unwrap()
+                .effect_choices
+                .as_ref()
+                .unwrap()
+                .iter()
+                .position(|c| c.label.starts_with("ST23-01 "))
+                .unwrap();
+            r.execute_branch(inherited).unwrap();
+        } else {
+            r.execute_branch(inherited).unwrap();
+        }
+        r.assert_prompt(SelectionKind::Replacement, true, 0);
+        r.accept_optional_trigger().unwrap();
+        r.assert_prompt(SelectionKind::OwnField, false, 0);
+        r.choose_prompt_card("TEXT-TAMER", None).unwrap();
+        r.assert_prompt(SelectionKind::Hand, true, 0);
+        r.choose_prompt_card("ST23-08", None).unwrap();
+        r.assert_prompt(SelectionKind::OwnField, true, 0);
+        r.choose_prompt_card("TEXT-TAMER", None).unwrap();
+        r.assert_prompt(SelectionKind::Hand, true, 0);
+        assert!(r.game.pending_option.is_none());
+        r.choose_prompt_card("TEXT-OPTION", None).unwrap();
+        assert!(r.pending_selection().is_none());
+        assert!(r.game.pending_option.is_none());
+        assert_eq!(r.memory(), 3);
+        assert_eq!(r.security_count(1), 3);
+        assert_eq!(
+            r.game.players[0].battle_area[attacker.index as usize]
+                .top_card()
+                .card_id(&r.game.card_data),
+            "ST23-08"
+        );
+        assert!(ids(&r, &r.game.players[0].trash).contains(&"TEXT-OPTION".into()));
+        assert!(!ids(&r, &r.game.players[0].trash).contains(&CARD.into()));
+    }
+}
+
+#[test]
 fn arts_digivolve_may_evolve_a_legal_host_for_free_or_decline_to_trash_the_used_option() {
     for accept in [false, true] {
         let mut r = start(builder(CARD).hand(0, &[CARD]));
