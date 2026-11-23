@@ -46,11 +46,13 @@ effects:
           of: you
           count: 3
           buckets:
-            - filter: { in_text_contains: Knightmon }
+            - optional: false
+              filter: { in_text_contains: Knightmon }
               to: hand
               max: 1
               prompt: "Add 1 card with [Knightmon] in its text to the hand"
-            - filter: { name_contains: Knightmon }
+            - optional: false
+              filter: { name_contains: Knightmon }
               to: hand
               max: 1
               prompt: "Add 1 card with [Knightmon] in its name to the hand"
@@ -68,6 +70,7 @@ effects:
     summary: "Inherited [All Turns][OPT] By deleting 1 of your other [Knightmon]-text Digimon, this Digimon doesn't leave (not by your effects)"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: prevent_cost
           filter:
             all_of:

@@ -15,6 +15,7 @@ alt_paths:
     cost: 2
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: TS

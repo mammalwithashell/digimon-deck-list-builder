@@ -51,6 +51,7 @@ effects:
         materials_count_gte: 1
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: trash_target
           filter:
             all_of:
@@ -94,6 +95,7 @@ effects:
                 - event_target_color_any_of: [blue]
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: bounce_target
           filter:
             all_of:

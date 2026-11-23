@@ -73,6 +73,7 @@ effects:
     summary: "[Main] 1 of your [Hybrid]-form Digimon: +3000 DP, <Security Attack +1>, and '[Your Turn] when blocked gain +3 memory' for the turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: hybrid
           filter:
             all_of:

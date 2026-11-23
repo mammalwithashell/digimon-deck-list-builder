@@ -71,6 +71,7 @@ alt_paths:
     cost: 0
     extra_cost:
       - select_own_permanent:
+          optional: false
           bind_as: marcus
           filter: { kind: tamer, name_is: "Marcus Damon" }
           prompt: "Return Marcus Damon to hand"

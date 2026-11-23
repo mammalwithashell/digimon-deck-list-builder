@@ -95,6 +95,7 @@ effects:
         name_contains: Mamemon
     process:
       - select_own_permanent:
+          optional: false
           bind_as: sacrifice
           filter:
             all_of:
@@ -103,6 +104,7 @@ effects:
           prompt: "Delete 1 of your Digimon with [Mamemon] in its name"
       - delete_permanent: { target: sacrifice }
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter: { kind: digimon }
           selector: lowest_play_cost
@@ -124,6 +126,7 @@ effects:
         name_contains: Mamemon
     process:
       - select_own_permanent:
+          optional: false
           bind_as: sacrifice
           filter:
             all_of:

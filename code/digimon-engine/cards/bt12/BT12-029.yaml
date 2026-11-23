@@ -24,6 +24,7 @@ effects:
     summary: "[When Digivolving] Unsuspend this Digimon or 1 of your blue Tamers"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: refreshed
           filter:
             all_of:
@@ -50,6 +51,7 @@ effects:
                 value: 1
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: returned
           filter:
             all_of:

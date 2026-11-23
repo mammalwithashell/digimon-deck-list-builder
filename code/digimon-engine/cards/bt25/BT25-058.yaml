@@ -80,7 +80,7 @@ attribute: Virus
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 5, trait_has: TS }
+    from: { any_color: true, level_eq: 5, trait_has: TS }
     cost: 4
     ignore_requirements: true
 
@@ -133,6 +133,7 @@ effects:
           prompt: "You may suspend 1 of your opponent's Digimon or Tamers"
       - suspend: { target: suspend_target }
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             any_of:
@@ -168,6 +169,7 @@ effects:
     summary: "[All Turns][OPT] When effects play/digivolve any Digimon: <De-Digivolve 1> 1 opp Digimon, then this Digimon may battle 1 opp Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dd_target
           filter: { kind: digimon }
           prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"

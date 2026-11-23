@@ -20,6 +20,7 @@ effects:
     summary: "[When Digivolving] Trash 2 bottom sources of 1 opponent Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

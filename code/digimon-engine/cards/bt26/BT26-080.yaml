@@ -148,6 +148,7 @@ effects:
           condition: { source_is_unsuspended: true }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter:
                   all_of:
@@ -157,6 +158,7 @@ effects:
             - delete_permanent: { target: victim }
           else:
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim_s
                 filter:
                   all_of:

@@ -59,6 +59,7 @@ effects:
     summary: "[When Digivolving] If you don't have an [Arata Sanada] card in play, you may play one from your hand without paying its memory cost"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: arata
           filter:

@@ -53,6 +53,7 @@ alt_paths:
   # (DCGO AddSelfDigivolutionRequirementStaticEffect: IsLevel2 && (Appmon || Hero)).
   - kind: digivolve
     from:
+      any_color: true
       level_eq: 2
       any_of:
         - trait_has: Appmon

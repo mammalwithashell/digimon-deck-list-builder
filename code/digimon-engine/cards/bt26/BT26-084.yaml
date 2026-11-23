@@ -55,7 +55,7 @@ alt_paths:
     from: { level_eq: 2, color_is: purple }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Appmon }
+    from: { any_color: true, level_eq: 2, trait_has: Appmon }
     cost: 0
 
 effects:

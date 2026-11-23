@@ -14,10 +14,10 @@ alt_paths:
     from: { level_eq: 4, color_is: green }
     cost: 4
   - kind: digivolve
-    from: { level_eq: 4, name_contains: "Tyrannomon" }
+    from: { any_color: true, level_eq: 4, name_contains: "Tyrannomon" }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 4, name_contains: "Raremon" }
+    from: { any_color: true, level_eq: 4, name_contains: "Raremon" }
     cost: 3
 
 effects:

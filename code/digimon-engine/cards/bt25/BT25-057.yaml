@@ -74,6 +74,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: "Glowing Dawn"
@@ -100,8 +101,9 @@ dual:
         optional: true
         summary: "[WD][WA][OPT] By trashing the bottom face-down card under a Tamer, <De-Digivolve 1> 1 opponent Digimon"
         process:
-          - trash_bottom_face_down_source_under_tamer: { of: you }
+          - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
           - select_opponent_permanent:
+              optional: false
               bind_as: degen_target
               filter: { kind: digimon }
               prompt: "Choose 1 opponent Digimon to <De-Digivolve 1>"
@@ -114,6 +116,7 @@ dual:
         summary: "[WD] This Digimon may battle 1 opponent Digimon"
         process:
           - select_opponent_permanent:
+              optional: false
               bind_as: battle_target
               filter: { kind: digimon }
               prompt: "Choose 1 opponent Digimon to battle"
@@ -143,6 +146,7 @@ dual:
         summary: "[Main] 1 of your Digimon gains <Rush> + <Security A. +1> + 5000 DP until your opponent's turn ends, then may attack"
         process:
           - select_own_permanent:
+              optional: false
               bind_as: buffed
               filter: { kind: digimon }
               prompt: "Choose 1 of your Digimon to gain <Rush>, <Security A. +1> and +5000 DP"

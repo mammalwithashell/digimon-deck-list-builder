@@ -41,7 +41,7 @@ attribute: Virus
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "TS" }
+    from: { any_color: true, level_eq: 3, trait_has: "TS" }
     cost: 2
 
 effects:
@@ -66,6 +66,7 @@ effects:
           then:
             - suspend: { target: susp }
       - select_own_permanent:
+          optional: false
           bind_as: buff
           filter:
             all_of:

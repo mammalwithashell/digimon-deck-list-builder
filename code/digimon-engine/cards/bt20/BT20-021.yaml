@@ -70,6 +70,7 @@ effects:
           then:
             - place_as_bottom_source: { source: rk_card, target: source }
             - select_opponent_permanent:
+                optional: false
                 bind_as: del_target
                 filter:
                   all_of:

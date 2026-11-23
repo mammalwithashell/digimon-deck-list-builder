@@ -13,6 +13,7 @@ digixros_aliases: [Ballistamon]
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: "Xros Heart"
@@ -24,6 +25,7 @@ effects:
     summary: "[On Play][When Digivolving] Protect 1 own Digimon from hand/deck return and give +3000 DP"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon"
@@ -55,6 +57,7 @@ effects:
           condition: { binding_present: tamer }
           then:
             - select_union_zone:
+                optional: false
                 of: you
                 zones: [hand, trash]
                 bind_as: stash

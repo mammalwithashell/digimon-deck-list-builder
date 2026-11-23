@@ -29,6 +29,7 @@ effects:
           condition: { equals: [paid_security, 1] }
           then:
             - select_any_permanent:
+                optional: false
                 bind_as: target
                 filter: { all_of: [{ kind: digimon }, { zone: [battle_area] }] }
                 prompt: "Change 1 Digimon's original DP to 6000"

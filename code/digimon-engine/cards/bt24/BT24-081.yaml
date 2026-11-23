@@ -141,6 +141,7 @@ effects:
     summary: "[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost"
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: revive
           filter:

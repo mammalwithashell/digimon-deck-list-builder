@@ -80,12 +80,14 @@ effects:
       - activation_cost: { suspend_self: true }
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}
           prompt: "Trash 1 card in your hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - select_trash:
+          optional: false
           of: you
           bind_as: stash
           filter:

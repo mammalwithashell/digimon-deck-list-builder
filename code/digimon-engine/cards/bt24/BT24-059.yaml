@@ -60,6 +60,7 @@ alt_paths:
   # Reduced cost-3 digivolve off a Lv.4 with [Aqua] or [Sea Animal] or [TS].
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -78,6 +79,7 @@ effects:
     summary: "[On Play][When Digivolving] De-Digivolve 1 one opponent Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigivolve_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
@@ -143,6 +145,7 @@ effects:
     summary: "[When Attacking][OPT] Place 1 of your other Digimon as this Digimon's bottom source; it unsuspends"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: place_source
           filter:
             all_of:

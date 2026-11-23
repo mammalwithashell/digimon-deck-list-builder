@@ -33,7 +33,8 @@ effects:
           of: you
           count: 3
           buckets:
-            - filter: { in_text_contains: Huckmon }
+            - optional: false
+              filter: { in_text_contains: Huckmon }
               to: hand
               max: 1
               prompt: "Add 1 card with [Huckmon] in its text to the hand"

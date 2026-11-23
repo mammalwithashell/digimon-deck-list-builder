@@ -100,6 +100,7 @@ effects:
               - event_target_name_contains: Garurumon
           then:
             - select_union_zone:
+                optional: false
                 of: you
                 zones: [hand, trash]
                 bind_as: partner
@@ -114,6 +115,7 @@ effects:
                 condition: { event_target_name_contains: Greymon }
                 then:
                   - select_union_zone:
+                      optional: false
                       of: you
                       zones: [hand, trash]
                       bind_as: partner
@@ -121,6 +123,7 @@ effects:
                       prompt: "Play 1 [Gabumon] from your hand or trash without paying the cost"
                 else:
                   - select_union_zone:
+                      optional: false
                       of: you
                       zones: [hand, trash]
                       bind_as: partner

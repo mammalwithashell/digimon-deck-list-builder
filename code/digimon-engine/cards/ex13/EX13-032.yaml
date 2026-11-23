@@ -65,7 +65,7 @@ alt_paths:
     from: { level_eq: 4, color_is: yellow }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 4, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 4, trait_has: "DATA SQUAD" }
     cost: 3
 
 effects:
@@ -109,6 +109,7 @@ effects:
                         any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: lock_a
                             filter: { kind: digimon }
                             prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
@@ -120,13 +121,14 @@ effects:
             - if:
                 condition: { equals: [cost_choice, 1] }
                 then:
-                  - trash_bottom_face_down_source_under_tamer: { of: you }
+                  - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
                   - unsuspend: { target: source }
                   - if:
                       condition:
                         any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: lock_b
                             filter: { kind: digimon }
                             prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
@@ -146,6 +148,7 @@ effects:
                         any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: lock_c
                             filter: { kind: digimon }
                             prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
@@ -155,13 +158,14 @@ effects:
                             value: 1
                             expiry: end_of_opponents_turn
                 else:
-                  - trash_bottom_face_down_source_under_tamer: { of: you }
+                  - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
                   - unsuspend: { target: source }
                   - if:
                       condition:
                         any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: lock_d
                             filter: { kind: digimon }
                             prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"

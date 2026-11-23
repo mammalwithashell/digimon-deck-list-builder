@@ -40,6 +40,7 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: "TS"
@@ -92,6 +93,7 @@ effects:
               n: 6
           then:
             - select_union_zone:
+                optional: false
                 of: you
                 zones: [hand]
                 bind_as: bottomed

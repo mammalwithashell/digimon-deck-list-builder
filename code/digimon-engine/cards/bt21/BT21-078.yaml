@@ -46,6 +46,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -62,6 +63,7 @@ effects:
           condition: { distinct_tamer_colors_gte: 2 }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target
                 filter:
                   all_of:
@@ -71,6 +73,7 @@ effects:
             - delete_permanent: { target: delete_target }
           else:
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target
                 filter:
                   all_of:
@@ -92,6 +95,7 @@ effects:
         - event_target_trait_has: ADVENTURE
     process:
       - select_own_permanent:
+          optional: false
           bind_as: alliance_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"

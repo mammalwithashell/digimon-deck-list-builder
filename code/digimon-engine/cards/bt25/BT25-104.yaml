@@ -116,6 +116,7 @@ dual:
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 6
         - trait_has: "DATA SQUAD"
@@ -125,6 +126,7 @@ alt_paths:
     cost: 0
     extra_cost:
       - select_own_permanent:
+          optional: false
           bind_as: marcus
           filter: { kind: tamer, name_is: "Marcus Damon" }
           prompt: "Return Marcus Damon to hand"
@@ -179,6 +181,7 @@ effects:
     summary: "[WD][WA][OPT] Activate this card's Option [Main]: 1 opp Digimon -15000 DP; then you may play 1 Tamer from hand free"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -15000 DP for the turn"
@@ -236,6 +239,7 @@ effects:
     summary: "[Main] 1 opp Digimon -15000 DP for the turn; then you may play 1 Tamer from hand free"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -15000 DP for the turn"

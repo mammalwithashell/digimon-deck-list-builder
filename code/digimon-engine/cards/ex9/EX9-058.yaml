@@ -69,7 +69,7 @@ alt_paths:
     cost: 0
 
   - kind: digivolve
-    from: { level_eq: 2, trait_has: DM }
+    from: { any_color: true, level_eq: 2, trait_has: DM }
     cost: 0
 
 effects:
@@ -92,6 +92,7 @@ effects:
           filter: { trait_has: "Ver.5" }
           prompt: "Select 1 [Ver.5] trait card to place as a bottom digivolution card"
       - select_own_permanent:
+          optional: false
           bind_as: target_perm
           filter: { kind: digimon, trait_has: DM }
           prompt: "Choose 1 of your [DM] trait Digimon to receive the [Ver.5] card"

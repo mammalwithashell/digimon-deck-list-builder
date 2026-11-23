@@ -140,7 +140,7 @@ alt_paths:
   # Special digivolve condition (xros_req): "[Digivolve] Lv.4 w/[Composite]
   # trait: Cost 3" — a from-base level+trait gate.
   - kind: digivolve
-    from: { level_eq: 4, trait_has: "Composite" }
+    from: { any_color: true, level_eq: 4, trait_has: "Composite" }
     cost: 3
 
 effects:
@@ -176,6 +176,7 @@ effects:
               kind: digimon
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 selector: lowest_dp
                 filter: { kind: digimon }

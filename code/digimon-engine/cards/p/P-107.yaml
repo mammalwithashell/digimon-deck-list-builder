@@ -43,6 +43,7 @@ effects:
               cost: { reduce: 2 }
           prompt: "Choose 1 of your Digimon to digivolve"
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:

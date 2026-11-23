@@ -50,7 +50,7 @@ attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: TS }
+    from: { any_color: true, level_eq: 2, trait_has: TS }
     cost: 0
 
 effects:
@@ -65,6 +65,7 @@ effects:
     summary: "[SOMP] If <=4 memory, this Digimon may free-digivolve into a [Beast]/[Animal]/[Sovereign] (not [Sea Animal])/[TS] Digimon from hand"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:

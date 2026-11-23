@@ -70,12 +70,14 @@ effects:
                 - not: { kind: token }
           then:
             - select_trash:
+                optional: false
                 of: you
                 bind_as: material
                 filter: { trait_has: X Antibody }
                 prompt: "Choose 1 X Antibody card in your trash to place as a bottom digivolution card"
                 then:
                   - select_own_permanent:
+                      optional: false
                       bind_as: recipient
                       filter:
                         all_of:

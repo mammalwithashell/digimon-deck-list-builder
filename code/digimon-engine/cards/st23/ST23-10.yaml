@@ -46,7 +46,7 @@ attribute: Vaccine
 # Alt-digivolve: Lv.2 with the [Glowing Dawn] trait / cost 0.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: "Glowing Dawn" }
+    from: { any_color: true, level_eq: 2, trait_has: "Glowing Dawn" }
     cost: 0
 
 effects:

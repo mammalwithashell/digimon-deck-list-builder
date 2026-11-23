@@ -33,6 +33,7 @@ alt_paths:
     cost: 0
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: ME
@@ -46,7 +47,8 @@ effects:
           of: you
           count: 3
           buckets:
-            - filter:
+            - optional: false
+              filter:
                 any_of:
                   - trait_has: Machine
                   - trait_has: Cyborg
@@ -54,7 +56,8 @@ effects:
               to: hand
               max: 1
               prompt: "Add 1 card with the [Machine], [Cyborg] or [Mutant] trait to the hand"
-            - filter: { trait_has: ME }
+            - optional: false
+              filter: { trait_has: ME }
               to: hand
               max: 1
               prompt: "Add 1 card with the [ME] trait to the hand"

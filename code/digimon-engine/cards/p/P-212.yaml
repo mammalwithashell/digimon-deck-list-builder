@@ -72,6 +72,7 @@ effects:
       - draw: { of: you, count: 1 }
       # Mandatory pick — DCGO DrawAndDiscardCards(trashAmount 1), no canNoSelect.
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}
@@ -85,6 +86,7 @@ effects:
                 - trait_has: TS
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: tgt
                 filter:
                   all_of:

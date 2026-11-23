@@ -8,13 +8,14 @@ dp: 15000
 traits: [Fairy]
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 6, name_is: "Rosemon" }
+    from: { any_color: true, level_eq: 6, name_is: "Rosemon" }
     cost: 5
   - kind: burst_digivolve
     from: { level_eq: 6, name_is: "Rosemon" }
     cost: 0
     extra_cost:
       - select_own_permanent:
+          optional: false
           bind_as: yoshi
           filter: { kind: tamer, name_is: "Yoshino Fujieda" }
           prompt: "Return Yoshino Fujieda"
@@ -26,11 +27,13 @@ effects:
   - when: when_digivolving
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: d
           filter: { kind: digimon }
           prompt: "Suspend opponent Digimon"
       - suspend: { target: d }
       - select_opponent_permanent:
+          optional: false
           bind_as: t
           filter: { kind: tamer }
           prompt: "Suspend opponent Tamer"

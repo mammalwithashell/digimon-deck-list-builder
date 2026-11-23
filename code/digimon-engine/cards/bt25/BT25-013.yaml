@@ -57,7 +57,7 @@ attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: TS }
+    from: { any_color: true, level_eq: 3, trait_has: TS }
     cost: 2
 
 effects:
@@ -106,6 +106,7 @@ effects:
     summary: "[Your Turn] When a blue Digimon of yours is played/digivolves, may digivolve this into [Flaremon] from hand, cost -1"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: flaremon
           # DCGO BT25_013.cs:153-169 -> DigivolveIntoHandOrTrashCard

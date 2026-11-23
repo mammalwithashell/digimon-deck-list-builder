@@ -36,7 +36,7 @@ attribute: Data
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 4, trait_has: DATA SQUAD }
+    from: { any_color: true, level_eq: 4, trait_has: DATA SQUAD }
     cost: 3
 
 effects:
@@ -83,7 +83,7 @@ effects:
         - replacement_subject_is_mine: true
     summary: "[All Turns][OPT] Trash FD under a Tamer so this Digimon doesn't leave"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - cancel_replacement: {}
 
   # ─── Inherited [All Turns][OPT] leave-prevention (Gaogamon-name / DATA SQUAD) ─
@@ -105,5 +105,5 @@ effects:
             - source_permanent_trait_has: DATA SQUAD
     summary: "Inherited [All Turns][OPT] Gaogamon-name/DATA SQUAD carrier doesn't leave by trashing FD"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - cancel_replacement: {}

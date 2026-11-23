@@ -76,6 +76,7 @@ effects:
     process:
       # Step 1: choose which [Elizamon] to digivolve into.
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:
@@ -84,6 +85,7 @@ effects:
           prompt: "Choose an Elizamon to digivolve into Lamiamon"
       # Step 2: choose a [Dimetromon] from trash (the printed cost).
       - select_trash:
+          optional: false
           of: you
           bind_as: dimetromon
           filter: { kind: digimon, name_is: "Dimetromon" }
@@ -165,6 +167,7 @@ effects:
     summary: "[Inherited][All Turns][OPT] Opponent's security removed → may play a Reptile/Dragonkin Digimon (DP <= 5000) from hand free"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: pick
           filter:

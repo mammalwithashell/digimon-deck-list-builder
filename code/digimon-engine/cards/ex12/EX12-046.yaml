@@ -17,7 +17,7 @@ alt_paths:
     from: { level_eq: 4, color_is: red }
     cost: 4
   - kind: digivolve
-    from: { level_eq: 4, trait_has: Shambala }
+    from: { any_color: true, level_eq: 4, trait_has: Shambala }
     cost: 3
   - kind: assembly
     materials:
@@ -35,6 +35,7 @@ effects:
     summary: "[On Play][When Digivolving] 1 opponent Digimon gets Security Attack -1 and -3000 DP until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: debuff_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get Security Attack -1 and -3000 DP"

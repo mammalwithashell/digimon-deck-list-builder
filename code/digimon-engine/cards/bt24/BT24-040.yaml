@@ -9,6 +9,7 @@ traits: [Shaman, Olympos XII, Iliad, TS]
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - trait_has: TS
@@ -26,11 +27,13 @@ effects:
     summary: "Trash all sources of 1 opponent Digimon, then lock 2 opponent Digimon/Tamers"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: source_stack
           filter: { kind: digimon }
           prompt: "Trash all digivolution cards of 1 opponent Digimon"
       - trash_all_sources: { target: source_stack }
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_1
           filter:
             any_of:
@@ -48,6 +51,7 @@ effects:
           value: 1
           expiry: end_of_opponents_turn
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_2
           filter:
             all_of:
@@ -106,6 +110,7 @@ effects:
     # `TopCard.Owner.CanAddSecurity`; the PDF governs.
     process:
       - select_any_permanent:
+          optional: false
           bind_as: cost_body
           filter:
             all_of:

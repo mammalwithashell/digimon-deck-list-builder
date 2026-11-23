@@ -58,6 +58,7 @@ effects:
                 of: opponent
                 body:
                   - select_opponent_permanent:
+                      optional: false
                       bind_as: attacker
                       filter: { kind: digimon }
                       prompt: "Choose 1 of your Digimon to attack (even one that cannot attack)"
@@ -97,6 +98,7 @@ effects:
                 of: opponent
                 body:
                   - select_opponent_permanent:
+                      optional: false
                       bind_as: attacker
                       filter: { kind: digimon }
                       prompt: "Choose 1 of your Digimon to attack (even one that cannot attack)"

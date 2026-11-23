@@ -62,7 +62,7 @@ attribute: Data
 alt_paths:
   # Lv.2 with [Maquinamon] in text → Cost 0 (DCGO HasText("Maquinamon")).
   - kind: digivolve
-    from: { level_eq: 2, effect_text_contains: "Maquinamon" }
+    from: { any_color: true, level_eq: 2, effect_text_contains: "Maquinamon" }
     cost: 0
 
 effects:

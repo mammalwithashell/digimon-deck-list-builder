@@ -20,6 +20,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -58,6 +59,7 @@ effects:
       # feed an RL action space instead, where a PASS that cannot change the
       # outcome is pollution.
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source
           filter:
@@ -123,6 +125,7 @@ effects:
     summary: "[All Turns][OPT] When any of your Digimon are played or digivolve, 1 opponent Digimon can't activate WD effects or suspend until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to lock"

@@ -9,6 +9,7 @@ effects:
     summary: "[Main] Delete 1 opp Digimon with the highest DP; if a 13000+-DP Digimon was deleted by this effect, trash opp top security"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -34,6 +35,7 @@ effects:
     summary: "[Security] Activate this card's Main effect (delete highest-DP; 13000+-DP deletion trashes opp top security)"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

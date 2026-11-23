@@ -48,7 +48,7 @@ traits: [Dark Dragon, Titan, TS]
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 4, trait_has: TS }
+    from: { any_color: true, level_eq: 4, trait_has: TS }
     cost: 3
 
 effects:
@@ -68,6 +68,7 @@ effects:
           - kind: tamer
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: locked
           filter:
             any_of:

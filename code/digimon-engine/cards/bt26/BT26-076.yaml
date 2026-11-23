@@ -48,7 +48,7 @@ attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 4, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 4, trait_has: "DATA SQUAD" }
     cost: 3
 
 effects:
@@ -59,6 +59,7 @@ effects:
     summary: "[When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon. Then, by trashing a bottom face-down card under a Tamer, they trash 1 card in their hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -71,6 +72,7 @@ effects:
           of: opponent
           body:
             - select_hand:
+                optional: false
                 of: opponent
                 bind_as: discarded
                 filter: {}

@@ -82,6 +82,7 @@ effects:
     summary: "Give 1 opponent Digimon -3000 DP for each of your Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "Give -3000 DP per own Digimon"

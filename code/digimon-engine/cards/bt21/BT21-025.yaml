@@ -53,6 +53,7 @@ effects:
     active_when: { all_turns: true }
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: pick
           filter:

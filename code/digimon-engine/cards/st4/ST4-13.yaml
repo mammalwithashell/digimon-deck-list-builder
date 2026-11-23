@@ -32,6 +32,7 @@ effects:
           then:
             - trash_selected_sources_as_cost: { source_refs: burst_sources }
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

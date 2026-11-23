@@ -35,7 +35,7 @@ alt_paths:
     cost: 3
   # Alt-digivolve: Lv.5 with [CS] trait / cost 3 (from xros_req data).
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from: { any_color: true, level_eq: 5, trait_has: CS }
     cost: 3
     ignore_requirements: true
 
@@ -97,6 +97,7 @@ effects:
     summary: "Delete 1 opp Digimon (≤8000+2000×opp_count DP)"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:

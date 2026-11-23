@@ -72,6 +72,7 @@ alt_paths:
   # ─── [Digivolve] Lv.5 w/[WarGrowlmon] in name or w/[Hero] trait: Cost 3 ──────
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -122,6 +123,7 @@ effects:
     summary: "[When Digivolving][When Attacking][Once Per Turn] Delete 1 of your opponent's lowest DP Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: gallant_lowest
           selector: lowest_dp
           filter: { kind: digimon }

@@ -17,6 +17,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -93,6 +94,7 @@ dual:
               condition: { binding_present: placed }
               then:
                 - select_opponent_permanent:
+                    optional: false
                     bind_as: dp_target
                     filter: { kind: digimon }
                     prompt: "1 opponent Digimon gets -2000 DP for each of this Digimon's digivolution cards"
@@ -126,6 +128,7 @@ dual:
         summary: "[Main] Delete 1 opponent highest-DP Digimon; then 1 of your Digimon may attack"
         process:
           - select_opponent_permanent:
+              optional: false
               bind_as: victim
               selector: highest_dp
               filter: { kind: digimon }
@@ -146,6 +149,7 @@ dual:
                     condition: { equals: [main_attack_choice, 0] }
                     then:
                       - select_own_permanent:
+                          optional: false
                           bind_as: attack_target
                           # DCGO EX12_018.cs: IsPermanentExistsOnOwnerBattleAreaDigimon && CanAttack.
                           filter: { kind: digimon, can_attack: { targets: any } }

@@ -58,6 +58,7 @@ alt_paths:
 
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - { level_eq: 5, name_contains: "Garurumon" }
         - { level_eq: 5, trait_has: ADVENTURE }

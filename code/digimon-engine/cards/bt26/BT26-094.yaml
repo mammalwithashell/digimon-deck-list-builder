@@ -71,6 +71,7 @@ effects:
     process:
       - activation_cost: { suspend_self: true }
       - select_own_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:

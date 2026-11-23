@@ -143,7 +143,7 @@ attribute: Virus
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 5, trait_has: "Composite" }
+    from: { any_color: true, level_eq: 5, trait_has: "Composite" }
     cost: 3
 
 effects:
@@ -170,6 +170,7 @@ effects:
     amount: 4
     pay_cost:
       - select_own_permanent:
+          optional: false
           bind_as: sacrifice
           filter:
             all_of:
@@ -361,6 +362,7 @@ effects:
           - trait_has: "Wicked God"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: redirect_target
           filter:
             all_of:
@@ -369,4 +371,4 @@ effects:
                   - trait_has: "Composite"
                   - trait_has: "Wicked God"
           prompt: "Switch the attack target to 1 of your [Composite] or [Wicked God] Digimon"
-      - redirect_attack_target: { new_target: redirect_target }
+      - redirect_attack_target: { optional: false, new_target: redirect_target }

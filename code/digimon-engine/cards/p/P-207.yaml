@@ -90,11 +90,11 @@ alt_paths:
     cost: 4
 
   - kind: digivolve
-    from: { level_eq: 5, trait_has: Beastkin }
+    from: { any_color: true, level_eq: 5, trait_has: Beastkin }
     cost: 3
 
   - kind: digivolve
-    from: { level_eq: 5, trait_has: TS }
+    from: { any_color: true, level_eq: 5, trait_has: TS }
     cost: 3
 
 effects:

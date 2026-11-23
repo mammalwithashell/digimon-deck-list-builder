@@ -74,6 +74,7 @@ alt_paths:
   # Special: "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0".
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - in_text_contains: "Three Musketeers"

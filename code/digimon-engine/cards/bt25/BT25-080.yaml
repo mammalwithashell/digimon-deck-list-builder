@@ -61,6 +61,7 @@ attribute: Data
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: TS
@@ -100,6 +101,7 @@ effects:
                 condition: { event_is_effect_initiated: true }
                 then:
                   - select_opponent_permanent:
+                      optional: false
                       bind_as: victim
                       filter:
                         all_of:
@@ -124,6 +126,7 @@ effects:
     summary: "[Inherited][All Turns][Once Per Turn] When your hand is trashed from, if this Digimon has the [Titan] trait, delete 1 of your opponent's level 4 or lower Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

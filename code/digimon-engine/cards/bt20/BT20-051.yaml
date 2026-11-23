@@ -19,6 +19,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: Dorumon
         - all_of:

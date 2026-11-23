@@ -123,6 +123,7 @@ effects:
             # the buff target. Separate from the source host — any of your
             # Mineral or Rock Digimon may receive the buff.
             - select_own_permanent:
+                optional: false
                 bind_as: target_digi
                 filter:
                   all_of:
@@ -172,6 +173,7 @@ effects:
     summary: "When this source is trashed from a Mineral/Rock Digimon, delete an opponent Digimon cost 4 or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon, play_cost_lte: 4 }
           prompt: "Choose 1 opponent Digimon with play cost 4 or less"

@@ -55,6 +55,7 @@ traits: [Reptile, Glowing Dawn, BEATBREAK]
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: "Glowing Dawn"
@@ -93,7 +94,7 @@ effects:
     once_per_turn: true
     amount: 3
     pay_cost:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
     summary: "[Your Turn][Once Per Turn] When you would use a [Glowing Dawn] Option card, by trashing a bottom face-down card under a Tamer, reduce the cost by 3"
 
   # ─── Inherited <Piercing> ──────────────────────────────────────────────────

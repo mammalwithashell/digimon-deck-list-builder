@@ -7,6 +7,7 @@ effects:
   - when: main_from_hand
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get Security Attack -3"

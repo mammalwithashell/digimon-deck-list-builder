@@ -156,6 +156,7 @@ effects:
     amount: 4
     pay_cost:
       - select_own_permanent:
+          optional: false
           bind_as: sacrifice
           filter:
             all_of:
@@ -177,12 +178,14 @@ effects:
     process:
       - draw: { of: you, count: 2 }
       - select_hand:
+          optional: false
           of: you
           bind_as: trash_a
           filter: {}
           prompt: "Trash 1 of 2 cards from your hand"
       - trash_from_hand_by_index: { of: you, hand_index: trash_a }
       - select_hand:
+          optional: false
           of: you
           bind_as: trash_b
           filter: {}

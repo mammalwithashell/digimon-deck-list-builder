@@ -74,6 +74,7 @@ effects:
           of: opponent
           body:
             - select_opponent_permanent:
+                optional: false
                 bind_as: kept
                 filter: { kind: digimon }
                 prompt: "Choose 1 of your Digimon to keep"

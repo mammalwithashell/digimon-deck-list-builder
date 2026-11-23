@@ -109,6 +109,7 @@ def load_predicate_keys(predicate_rs: Path = PREDICATE_RS) -> set[str]:
         raise RuntimeError(f"could not locate PredicateSpec in {predicate_rs}") from exc
     keys = set(re.findall(r"\bpub\s+([a-zA-Z0-9_]+)\s*:", body))
     keys.discard("extra")
+    keys.discard("any_color")
     keys.update(PREDICATE_ALIASES.values())
     return keys
 

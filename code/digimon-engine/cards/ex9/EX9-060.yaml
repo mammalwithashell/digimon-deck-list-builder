@@ -113,7 +113,7 @@ alt_paths:
     cost: 2
 
   - kind: digivolve
-    from: { level_eq: 3, trait_has: DM }
+    from: { any_color: true, level_eq: 3, trait_has: DM }
     cost: 2
     ignore_requirements: true
 
@@ -153,6 +153,7 @@ effects:
     summary: "[Inherited][On Deletion] Delete 1 of your opponent's level 4 or lower Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

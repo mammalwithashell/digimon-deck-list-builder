@@ -51,6 +51,7 @@ effects:
         kind: digimon
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigi_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 1>"
@@ -71,6 +72,7 @@ effects:
     summary: "Inherited [All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent it from being deleted"
     process:
       - select_any_permanent:
+          optional: false
           bind_as: prevent_cost
           filter:
             all_of:

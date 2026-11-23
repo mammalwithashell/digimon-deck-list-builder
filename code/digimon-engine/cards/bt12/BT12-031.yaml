@@ -262,6 +262,7 @@ effects:
               n: 0
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: suspended_target
                 filter:
                   all_of:

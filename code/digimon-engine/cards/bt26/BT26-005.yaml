@@ -40,7 +40,7 @@ effects:
         has_face_down_source: true
     summary: "Inherited [On Deletion] By trashing a bottom face-down card under a Tamer, you may play 1 cost<=5 [Avian]/[DATA SQUAD] card from trash free"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - select_trash:
           of: you
           bind_as: revive

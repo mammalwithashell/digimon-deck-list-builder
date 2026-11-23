@@ -70,6 +70,7 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: demon_lord }
       - place_remainder_on_deck: { of: you, position: bottom }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

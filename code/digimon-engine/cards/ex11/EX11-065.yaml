@@ -146,6 +146,7 @@ effects:
           condition: { equals: [zone_choice, 0] }
           then:
             - select_hand:
+                optional: false
                 of: you
                 bind_as: source_card
                 filter:
@@ -160,6 +161,7 @@ effects:
           condition: { equals: [zone_choice, 1] }
           then:
             - select_trash:
+                optional: false
                 of: you
                 bind_as: source_card
                 filter:

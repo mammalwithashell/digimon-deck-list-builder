@@ -102,6 +102,7 @@ effects:
                       condition: { effect_deleted_any_own_digimon: true }
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim
                             filter:
                               all_of:
@@ -128,6 +129,7 @@ effects:
                             of: you
                             cards: returned
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim2
                             filter:
                               all_of:
@@ -150,6 +152,7 @@ effects:
                       condition: { effect_deleted_any_own_digimon: true }
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim3
                             filter:
                               all_of:

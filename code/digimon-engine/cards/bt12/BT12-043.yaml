@@ -150,7 +150,7 @@ alt_paths:
   # Special alt-path (xros_req black text): "[Digivolve] 3 from Lv.5
   # w/[RizeGreymon] in name". DCGO ContainsCardName is a substring scan.
   - kind: digivolve
-    from: { level_eq: 5, name_contains: "RizeGreymon" }
+    from: { any_color: true, level_eq: 5, name_contains: "RizeGreymon" }
     cost: 3
 
 effects:
@@ -186,6 +186,7 @@ effects:
       # own tail only (no opponent Digimon on field), matching DCGO's
       # `if (HasMatchConditionPermanent(...))` guard around step (a) alone.
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your opponent's Digimon to get -3000 DP for the turn per your yellow/red Tamer"

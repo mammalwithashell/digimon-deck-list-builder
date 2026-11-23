@@ -9,6 +9,7 @@ effects:
     summary: "[Main] Return 1 opponent suspended Digimon to hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:
@@ -22,6 +23,7 @@ effects:
     summary: "[Security] Activate this card's Main effect"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

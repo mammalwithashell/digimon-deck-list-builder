@@ -27,6 +27,7 @@ effects:
   - when_digivolving
   process:
   - select_own_permanent:
+      optional: false
       bind_as: ally
       filter:
         kind: digimon

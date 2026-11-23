@@ -74,7 +74,7 @@ alt_paths:
     cost: 2
   # Special digivolution condition: any Lv.3 with the [TS] trait, cost 2.
   - kind: digivolve
-    from: { level_eq: 3, trait_has: TS }
+    from: { any_color: true, level_eq: 3, trait_has: TS }
     cost: 2
     ignore_requirements: true
 
@@ -92,6 +92,7 @@ effects:
           condition: { equals: [dest_choice, 0] }
           then:
             - choose_from_reveal:
+                optional: false
                 of: you
                 filter:
                   all_of:
@@ -109,6 +110,7 @@ effects:
           condition: { equals: [dest_choice, 1] }
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: place_target
                 filter:
                   all_of:
@@ -122,6 +124,7 @@ effects:
                 condition: { binding_present: place_target }
                 then:
                   - choose_from_reveal:
+                      optional: false
                       of: you
                       filter:
                         all_of:

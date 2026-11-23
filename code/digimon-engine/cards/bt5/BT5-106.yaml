@@ -21,6 +21,7 @@ effects:
           prompt: "Delete 1 of your Digimon"
       - delete_permanent: { target: sacrifice }
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

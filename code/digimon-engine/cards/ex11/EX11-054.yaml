@@ -57,6 +57,7 @@ effects:
       - activation_cost: { suspend_self: true }
       - draw: { of: you, count: 1 }
       - select_own_permanent:
+          optional: false
           bind_as: progress_target
           filter:
             all_of:

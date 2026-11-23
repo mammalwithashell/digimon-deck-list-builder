@@ -91,6 +91,8 @@ BT13-007 missing_text 3
 BT13-008 missing_text 0
 BT13-015 missing_text 0
 BT13-015 missing_text 1
+BT13-015 name_match_mismatch 2
+BT13-020 name_match_mismatch 0
 BT13-033 optional_without_may 1
 BT13-040 missing_text 0
 BT13-040 missing_text 1
@@ -182,6 +184,7 @@ BT18-073 missing_text 3
 BT18-076 missing_text 0
 BT18-087 missing_text 0
 BT18-087 missing_text 1
+BT18-092 name_match_mismatch 0
 BT18-098 missing_text 0
 BT18-098 missing_text 1
 BT19-012 may_without_optional 1
@@ -300,6 +303,7 @@ BT21-043 missing_text 3
 BT21-043 missing_text 4
 BT21-044 missing_text 0
 BT21-044 missing_text 1
+BT21-044 name_match_mismatch 2
 BT21-047 missing_text 0
 BT21-047 missing_text 2
 BT21-047 missing_text 3
@@ -387,6 +391,7 @@ BT22-052 missing_text 0
 BT22-052 missing_text 1
 BT22-052 missing_text 2
 BT22-054 missing_text 1
+BT22-057 name_match_mismatch 0
 BT22-064 missing_text 0
 BT22-064 missing_text 1
 BT22-064 missing_text 2
@@ -892,10 +897,12 @@ BT8-108 missing_text 1
 BT8-109 missing_text 0
 BT8-109 optional_without_may 1
 BT8-110 missing_text 0
+BT8-110 trait_match_mismatch 1
 BT9-092 optional_without_may 0
 BT9-098 missing_text 0
 BT9-103 missing_text 0
 BT9-104 missing_text 0
+BT9-104 trait_match_mismatch 1
 BT9-108 missing_text 0
 BT9-108 optional_without_may 1
 BT9-109 missing_text 0
@@ -1527,6 +1534,7 @@ ST12-13 missing_text 0
 ST12-13 missing_text 1
 ST12-15 missing_text 0
 ST12-15 missing_text 2
+ST12-15 trait_match_mismatch 1
 ST15-16 missing_text 0
 ST15-16 missing_text 1
 ST16-03 missing_text 1

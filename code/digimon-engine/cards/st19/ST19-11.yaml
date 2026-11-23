@@ -17,6 +17,7 @@ effects:
     summary: "1 opponent Digimon gets -3000 DP for the turn; if 3+ total Digimon increase by another -3000"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get DP reduced"
@@ -57,6 +58,7 @@ effects:
     summary: "[All Turns][OPT] Delete 1 Token or other Puppet Digimon so this Digimon doesn't leave"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: prevent_cost
           filter:
             all_of:

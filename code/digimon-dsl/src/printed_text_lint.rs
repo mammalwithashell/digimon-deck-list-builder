@@ -5,6 +5,9 @@ use crate::security_icon_lint::PrintedSection;
 use crate::spec::CardSpec;
 use serde_json::Value;
 
+#[path = "printed_text_lint_picks.rs"]
+mod picks;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrintedTextFinding {
     pub kind: &'static str,
@@ -194,6 +197,9 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
             report("text_not_printed");
         }
         let value = serde_json::to_value(clause).expect("clause serializes");
+        for kind in picks::check(&value, &text) {
+            report(kind);
+        }
         let keyword = matches!(clause, ClauseSpec::Declarative(c) if c.kind == DeclarativeKind::GrantKeyword)
             && (text.starts_with('<') || text.starts_with('＜'));
         // Keyword machinery owns the choices described by keyword reminder text.

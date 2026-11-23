@@ -26,6 +26,7 @@ effects:
     summary: "Delete 1 of your opponent's Digimon with 6000 DP or less."
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon, dp_lte: 6000 }
           prompt: "Delete 1 opponent Digimon with 6000 DP or less"

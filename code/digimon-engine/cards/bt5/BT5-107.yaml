@@ -42,6 +42,7 @@ effects:
               color_is: purple
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: sacrifice
                 filter:
                   all_of:

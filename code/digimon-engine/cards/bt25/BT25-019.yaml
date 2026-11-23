@@ -46,6 +46,7 @@ traits: [Cyborg, X Antibody, Titan, TS, Dinosaur]
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -81,6 +82,7 @@ effects:
         kind: digimon
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

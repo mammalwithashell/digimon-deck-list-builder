@@ -11,6 +11,7 @@ effects:
     summary: "1 of your yellow Digimon gains Barrier until the end of your opponent's turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

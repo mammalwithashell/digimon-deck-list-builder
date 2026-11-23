@@ -26,6 +26,7 @@ effects:
     summary: "[When Digivolving] By placing 1 Digimon as its owner's top security, reveal all opposing security; place 1 on top of their deck and shuffle the rest"
     process:
       - select_any_permanent:
+          optional: false
           bind_as: payer
           filter: { kind: digimon }
           prompt: "Place 1 Digimon as its owner's top security card"
@@ -40,6 +41,7 @@ effects:
           then:
             - reveal_security: { of: opponent }
             - select_security:
+                optional: false
                 of: opponent
                 bind_as: selected_security
                 filter: {}

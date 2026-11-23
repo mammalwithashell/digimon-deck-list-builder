@@ -220,6 +220,7 @@ effects:
           condition: { dna_origin: true }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: opp_stack
                 filter: { kind: digimon }
                 prompt: "Choose an opponent Digimon to trash 3 digivolution cards from"

@@ -39,6 +39,7 @@ effects:
     summary: "[Main]<Delay> Play 1 Royal Knight from breeding sources free; suppress On Play and grant Rush"
     process:
       - select_own_breeding_permanent:
+          optional: false
           bind_as: breeding_digimon
           prompt: "Choose your breeding Digimon"
           filter:

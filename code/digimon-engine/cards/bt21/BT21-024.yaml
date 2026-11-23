@@ -47,6 +47,7 @@ effects:
           of: opponent
           body:
             - select_hand:
+                optional: false
                 of: opponent
                 bind_as: pick
                 filter: {}

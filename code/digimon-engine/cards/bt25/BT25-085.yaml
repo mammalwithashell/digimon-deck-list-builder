@@ -131,6 +131,7 @@ alt_paths:
   # (DCGO ignoreDigivolutionRequirement: true).
   - kind: digivolve
     from:
+      any_color: true
       level_eq: 5
       any_of:
         - in_text_contains: "Three Musketeers"
@@ -245,6 +246,7 @@ dual:
           # by the mandatory two-pick cost; with no Option anywhere the
           # `condition` above keeps the trigger from queuing at all.
           - trash_option_from_own_stacks:
+              optional: false
               of: you
           - unsuspend: { target: source }
 
@@ -269,6 +271,7 @@ dual:
         summary: "[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] card from your hand or trash as any of your Digimon's bottom digivolution card"
         process:
           - select_opponent_permanent:
+              optional: false
               bind_as: delete_target
               filter:
                 all_of:

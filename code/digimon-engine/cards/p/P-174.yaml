@@ -42,6 +42,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - trait_has: NSo
@@ -73,6 +74,7 @@ effects:
     summary: "[When Digivolving][On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of their level 4 or lower Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigi
           filter: { kind: digimon }
           prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
@@ -80,6 +82,7 @@ effects:
           target: dedigi
           amount: 1
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

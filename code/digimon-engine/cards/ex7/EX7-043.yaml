@@ -89,6 +89,7 @@ alt_paths:
   # Special: "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2".
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - in_text_contains: "Three Musketeers"
@@ -122,6 +123,7 @@ effects:
       # Picks 2/3 and 3/3 — mandatory once engaged; guaranteed payable by the
       # clause-level `count_gte: 3` gate.
       - select_union_zone:
+          optional: false
           of: you
           zones: [hand, trash]
           bind_as: return_2
@@ -130,6 +132,7 @@ effects:
           prompt: "Return 3 cards with the [Three Musketeers] trait from your hand or trash to the top of the deck (2/3)"
       - return_union_bound_to_deck: { binding: return_2, position: top }
       - select_union_zone:
+          optional: false
           of: you
           zones: [hand, trash]
           bind_as: return_3
@@ -147,6 +150,7 @@ effects:
               kind: digimon
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: dedigivolve_target
                 filter: { kind: digimon }
                 prompt: "De-Digivolve 1 one of your opponent's Digimon"

@@ -91,12 +91,14 @@ effects:
       - activation_cost: { suspend_self: true }
       - reveal_top_deck: { of: you, count: 2, bind_as: revealed }
       - choose_from_reveal:
+          optional: false
           of: you
           filter: { name_is: "Vemmon" }
           destination:
             bottom_source_of: { target: event_target }
           prompt: "Place [Vemmon] as that Digimon's bottom digivolution card"
       - choose_from_reveal:
+          optional: false
           of: you
           filter: { name_is: "Vemmon" }
           destination:

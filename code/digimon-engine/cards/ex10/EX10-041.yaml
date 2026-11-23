@@ -17,7 +17,7 @@ alt_paths:
     from: { level_eq: 3, color_is: yellow }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 3, trait_has: Evil }
+    from: { any_color: true, level_eq: 3, trait_has: Evil }
     cost: 2
 effects:
   - when: on_discard_deck
@@ -25,6 +25,7 @@ effects:
     summary: "When effects trash this card from deck, 1 opposing Digimon gets Security A. -1 until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Give 1 opposing Digimon Security A. -1 until their turn ends"
@@ -38,6 +39,7 @@ effects:
     summary: "When effects trash this card from security, 1 opposing Digimon gets Security A. -1 until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Give 1 opposing Digimon Security A. -1 until their turn ends"

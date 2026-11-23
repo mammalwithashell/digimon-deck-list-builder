@@ -129,6 +129,7 @@ alt_paths:
   # applies). ───────────────────────────────────────────────────────────────
   - kind: digivolve
     from:
+      any_color: true
       level_eq: 4
       any_of:
         - in_text_contains: "Three Musketeers"
@@ -161,6 +162,7 @@ effects:
           prompt: "Place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution cards"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: bottom_target
                 filter:
                   kind: digimon
@@ -192,6 +194,7 @@ effects:
     summary: "[When Digivolving][When Attacking][OPT] Trash 1 Option from any of your Digimon's digivolution cards -> may use 1 [Three Musketeers] Option from trash, cost -3"
     process:
       - select_union_zone:
+          optional: false
           of: you
           zones: [material]
           bind_as: option_source
@@ -220,6 +223,7 @@ effects:
     summary: "[Inherited][On Deletion] Play 1 level 4 or lower [Three Musketeers]-in-text Digimon from trash free"
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: revive_pick
           filter:

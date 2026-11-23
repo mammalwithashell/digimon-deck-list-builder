@@ -27,7 +27,7 @@ attribute: Vaccine
 alt_paths:
   # [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0.
   - kind: digivolve
-    from: { level_eq: 2, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 2, trait_has: ADVENTURE }
     cost: 0
 
 effects:

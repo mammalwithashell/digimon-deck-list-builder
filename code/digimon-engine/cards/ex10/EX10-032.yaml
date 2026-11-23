@@ -113,11 +113,13 @@ effects:
             n: 1
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: landramon
           filter: { name_is: "Landramon" }
           prompt: "Choose 1 Landramon from your trash"
       - select_own_permanent:
+          optional: false
           bind_as: sunarizamon
           filter: { kind: digimon, name_is: "Sunarizamon" }
           prompt: "Choose 1 of your Sunarizamon to place Landramon under and digivolve"
@@ -188,6 +190,7 @@ effects:
 
       # Step 3: Select 1 of your Mineral/Rock Digimon to receive the buffs.
       - select_own_permanent:
+          optional: false
           bind_as: target_digi
           filter:
             all_of:
@@ -237,6 +240,7 @@ effects:
     summary: "When this source is trashed from a Mineral/Rock Digimon, De-Digivolve 1"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 1"

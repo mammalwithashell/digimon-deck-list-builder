@@ -55,7 +55,7 @@ alt_paths:
     from: { level_eq: 4, color_is: yellow }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 4, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 4, trait_has: ADVENTURE }
     cost: 3
 
 effects:
@@ -64,6 +64,7 @@ effects:
     summary: "[On Play][When Digivolving] Place 1 of your opponent's 6000 DP or lower Digimon as the top security card; +2000 to the DP maximum for every 2 colors your Tamers have"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: to_security
           filter:
             all_of:
@@ -102,6 +103,7 @@ effects:
         - event_target_trait_has: ADVENTURE
     process:
       - select_own_permanent:
+          optional: false
           bind_as: alliance_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"

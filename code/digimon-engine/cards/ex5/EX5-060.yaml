@@ -78,6 +78,7 @@ effects:
           of: opponent
           body:
             - select_trash:
+                optional: false
                 of: opponent
                 bind_as: opp_pick
                 filter:
@@ -104,6 +105,7 @@ effects:
     summary: "[All Turns][Once Per Turn] When an effect plays an opponent's Digimon, you may play 1 purple Digimon card with a level less than or equal to it from your trash without paying the cost"
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: recur_pick
           filter:

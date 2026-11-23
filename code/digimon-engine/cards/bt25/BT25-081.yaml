@@ -41,6 +41,7 @@ effects:
     summary: "[On Play][When Digivolving] Suspend 1 non-purple Tamer"
     process:
       - select_any_permanent:
+          optional: false
           bind_as: tamer_target
           filter:
             all_of:

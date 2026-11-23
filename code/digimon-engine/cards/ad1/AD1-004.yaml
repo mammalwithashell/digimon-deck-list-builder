@@ -16,13 +16,13 @@ alt_paths:
     from: { level_eq: 5, color_is: black }
     cost: 4
   - kind: digivolve
-    from: { level_eq: 5, name_contains: "Greymon" }
+    from: { any_color: true, level_eq: 5, name_contains: "Greymon" }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 5, trait_has: ADVENTURE }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: Hero }
+    from: { any_color: true, level_eq: 5, trait_has: Hero }
     cost: 3
 
 effects:
@@ -50,6 +50,7 @@ effects:
         dp_lte: { formula: { source_dp: {} } }
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: del_target
           filter:
             all_of:
@@ -104,6 +105,7 @@ effects:
     process:
       - optional:
           - select_own_permanent:
+              optional: false
               bind_as: attacker
               filter: { kind: digimon, can_attack: { targets: any } }
               prompt: "Choose 1 of your Digimon that may attack"
@@ -148,6 +150,7 @@ effects:
               - source_name_contains: "Omnimon"
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: inh_del
                 filter:
                   all_of:

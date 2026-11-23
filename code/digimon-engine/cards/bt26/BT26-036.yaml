@@ -37,7 +37,7 @@ attribute: Data
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 2, trait_has: "DATA SQUAD" }
     cost: 0
 
 effects:
@@ -51,6 +51,7 @@ effects:
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
       - select_reveal:
+          optional: false
           of: you
           bind_as: pick
           filter:

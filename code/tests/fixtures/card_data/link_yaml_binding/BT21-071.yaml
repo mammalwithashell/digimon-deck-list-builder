@@ -44,7 +44,7 @@ alt_paths:
   # DCGO: AddSelfDigivolutionRequirementStaticEffect(HasText("Three Musketeers") && Level == 3, 2, ...).
   # `in_text_contains` = DCGO CardSource.HasText (name/traits/all printed text).
   - kind: digivolve
-    from: { level_eq: 3, in_text_contains: "Three Musketeers" }
+    from: { any_color: true, level_eq: 3, in_text_contains: "Three Musketeers" }
     cost: 2
 
 # ─── Effects ─────────────────────────────────────────────────────────────────
@@ -175,12 +175,14 @@ effects:
     process:
       - draw: { of: you, count: 2 }
       - select_hand:
+          optional: false
           of: you
           bind_as: trash_a
           filter: {}
           prompt: "Trash 1 of 2 cards from your hand (When Linking)"
       - trash_from_hand_by_index: { of: you, hand_index: trash_a }
       - select_hand:
+          optional: false
           of: you
           bind_as: trash_b
           filter: {}

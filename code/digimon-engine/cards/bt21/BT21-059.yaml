@@ -80,6 +80,7 @@ effects:
     summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, <De-Digivolve 1> 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dedi_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 1>"
@@ -97,6 +98,7 @@ effects:
     summary: "[When Linking] <De-Digivolve 1> 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: link_dedi_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 1>"

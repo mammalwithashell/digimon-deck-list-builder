@@ -19,6 +19,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: Ginryumon
         - all_of:
@@ -46,6 +47,7 @@ effects:
           condition: { during_attack: true }
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: boosted
                 filter: { kind: digimon }
                 prompt: "Choose 1 Digimon to gain Security A. +1 and +5000 DP"

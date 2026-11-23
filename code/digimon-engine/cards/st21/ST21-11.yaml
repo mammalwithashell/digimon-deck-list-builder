@@ -50,7 +50,7 @@ ace_overflow: -4
 alt_paths:
   # [Digivolve] Lv.5 w/[ADVENTURE] trait: Cost 3.
   - kind: digivolve
-    from: { level_eq: 5, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 5, trait_has: ADVENTURE }
     cost: 3
   # {Hand} [Counter] <Blast Digivolve>.
   - kind: burst_digivolve
@@ -64,6 +64,7 @@ effects:
     summary: "[On Play][When Digivolving] Return 1 of your opponent's level 4 (+1 per 2 Tamer colors) or lower Digimon to the bottom of the deck"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: bounce_target
           filter:
             all_of:

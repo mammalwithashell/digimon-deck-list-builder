@@ -3,12 +3,12 @@
   "source_yaml": [
     {
       "path": "code\\digimon-engine\\cards\\bt21\\BT21-071.yaml",
-      "sha256": "18ad0845f21b6847342293792e4c42bf3f02863bf41c9a346cbedd3cd1da0a36",
+      "sha256": "905972be1f78b54d506b70c2d62feb0172ee7001f9de096ae26e18cf37765941",
       "fixture": "BT21-071.yaml"
     },
     {
       "path": "code\\digimon-engine\\cards\\bt21\\BT21-074.yaml",
-      "sha256": "dd8c0434fcc62b7e25b363506b5ac501eab12c7293ee725e908396f182635d12",
+      "sha256": "e1226f9fb243f94036c7f7e4961de01bfcff0576648dba44e5d6ca6639627e4d",
       "fixture": "BT21-074.yaml"
     }
   ],

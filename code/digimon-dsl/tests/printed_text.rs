@@ -42,6 +42,182 @@ fn printed_text_findings_and_clean_cases() {
 }
 
 #[test]
+fn printed_text_pick_kind_requires_a_single_selection_and_card_noun() {
+    for (text, filter, expected) in [
+        (
+            "Add 1 Digimon card to your hand.",
+            "{}",
+            vec!["kind_mismatch"],
+        ),
+        (
+            "Add 1 Tamer card to your hand.",
+            "{kind: digimon}",
+            vec!["kind_mismatch"],
+        ),
+        ("Add 1 Option card to your hand.", "{kind: option}", vec![]),
+        (
+            "Add 1 yellow card with the [Vaccine] trait.",
+            "{kind: digimon, color_is: yellow, trait_has: Vaccine}",
+            vec!["kind_mismatch"],
+        ),
+        (
+            "Add 1 yellow card with the [Vaccine] trait.",
+            "{color_is: yellow, trait_has: Vaccine}",
+            vec![],
+        ),
+        (
+            "Add 1 Digimon card to your hand.",
+            "{all_of: [{kind: digimon}, {trait_has: Vaccine}]}",
+            vec![],
+        ),
+        (
+            "Add 1 Digimon card to your hand.",
+            "{any_of: [{kind: digimon}, {kind: tamer}]}",
+            vec!["kind_mismatch"],
+        ),
+        (
+            "Add 1 card to your hand.",
+            "{any_of: [{kind: digimon}, {kind: tamer}]}",
+            vec!["kind_mismatch"],
+        ),
+        (
+            "Add 1 card to your hand.",
+            "{any_of: [{kind: digimon}, {trait_has: Vaccine}]}",
+            vec![],
+        ),
+        ("Add 1 Digimon or Tamer card.", "{}", vec![]),
+        ("Play 1 card.", "{any_of: [{kind: digimon}, {kind: tamer}]}", vec![]),
+        ("Play 1 card.", "{kind: digimon}", vec!["kind_mismatch"]),
+        ("Play 1 card.", "{kind: tamer}", vec!["kind_mismatch"]),
+        ("Play 1 level 3 card.", "{kind: digimon, level_eq: 3}", vec![]),
+        ("Play 1 card with 5000 DP or less.", "{kind: digimon, dp_lte: 5000}", vec![]),
+        ("Play 1 card.", "{none_of: [{kind: tamer}]}", vec!["kind_mismatch"]),
+        ("Play 1 card.", "{not: {kind: option}}", vec!["kind_mismatch"]),
+        ("Play 1 card.", "{none_of: [{kind: option}]}", vec!["kind_mismatch"]),
+        ("Play 1 card.", "{any_of: [{not: {kind: option}}, {kind: dual}]}", vec![]),
+        ("Play 1 card.", "{not: {kind: tamer}}", vec!["kind_mismatch"]),
+        ("Play 1 card.", "{not: {not: {any_of: [{kind: digimon}, {kind: tamer}]}}}", vec![]),
+        ("Play 1 card.", "{not: {all_of: [{kind: option}, {trait_has: Vaccine}]}}", vec![]),
+        ("Play 1 card with 5000 DP or less.", "{any_of: [{kind: digimon, dp_lte: 5000}, {kind: tamer}]}", vec!["kind_mismatch"]),
+        ("Play 1 card with 5000 DP or less.", "{any_of: [{dp_lte: 5000}, {kind: tamer, dp_lte: 5000}]}", vec![]),
+        ("Play 1 card with 5000 DP or less.", "{dp_lte: 5000}", vec![]),
+        ("Play 1 level 3 card.", "{any_of: [{level_eq: 3}, {kind: tamer}]}", vec!["kind_mismatch"]),
+        ("Add 1 Digimon card.", "{all_of: [{not: {kind: option}}, {not: {kind: tamer}}]}", vec!["kind_mismatch"]),
+        ("Add 1 Tamer card.", "{any_of: [{kind: tamer}, {kind: dual}]}", vec!["kind_mismatch"]),
+        ("Add 1 Digimon card.", "{kind: digimon}", vec![]),
+        ("Add 1 Option card.", "{kind: option}", vec![]),
+        ("[On Play] Use 1 Option card.", "{kind: option}", vec![]),
+        ("[On Play] Use 1 Option card.", "{kind: digimon}", vec!["kind_mismatch"]),
+        ("[On Play] Add 1 card to your hand.", "{any_of: [{kind: digimon}, {kind: tamer}]}", vec!["kind_mismatch"]),
+        ("[On Play] Add 1 card to your hand.", "{}", vec![]),
+        ("[On Play] Use 1 card.", "{kind: option}", vec![]),
+        ("[On Play] Play or use 1 white card.", "{kind: option}", vec!["kind_mismatch"]),
+        ("[On Play] Use or play 1 white card.", "{kind: option}", vec!["kind_mismatch"]),
+        ("[On Play] Play or use 1 white card.", "{color_is: white}", vec![]),
+        ("[On Play] Use or play 1 white card.", "{any_of: [{kind: digimon}, {kind: tamer}, {kind: option}]}", vec![]),
+        ("Add 1 Digimon card. Trash 1 Tamer card.", "{}", vec![]),
+        ("Choose 1 Digimon.", "{}", vec![]),
+        ("You may play 1 [Hiroko Sagisaka] or 1 [TS] trait Digimon card with 5000 DP or less.", "{any_of: [{name_is: Hiroko Sagisaka}, {kind: digimon, trait_has: TS, dp_lte: 5000}]}", vec!["may_without_optional"]),
+        ("Play 1 [Arisa Kinosaki] or 1 [Puppet] trait Digimon card from your hand.", "{any_of: [{kind: tamer, name_is: Arisa Kinosaki}, {kind: digimon, trait_has: Puppet}]}", vec![]),
+    ] {
+        let clause = format!("- when: on_play\n  text: '{text}'\n  process:\n    - select_hand: {{of: you, optional: false, filter: {filter}, bind_as: pick, prompt: Choose}}");
+        assert_eq!(check(&clause, text), expected, "{text}, {filter}");
+    }
+    let text = "Choose 1 Digimon card.";
+    let clause = format!("- when: on_play\n  text: '{text}'\n  process:\n    - select_hand: {{of: you, optional: false, filter: {{}}, bind_as: a, prompt: Choose}}\n    - select_trash: {{of: you, optional: false, filter: {{}}, bind_as: b, prompt: Choose}}");
+    assert!(check(&clause, text).is_empty());
+    assert!(check("- when: on_play\n  text: Draw 1.", "Draw 1.").is_empty());
+}
+
+#[test]
+fn printed_text_name_match_modes() {
+    for (text, filter, expected) in [
+        (
+            "Add 1 card with [Agumon] in its name.",
+            "{name_is: Agumon}",
+            vec!["name_match_mismatch"],
+        ),
+        (
+            "Add 1 card with [Agumon] in its name.",
+            "{name_contains: Agumon}",
+            vec![],
+        ),
+        (
+            "Add cards with [Agumon] in their names.",
+            "{name_is: Agumon}",
+            vec!["name_match_mismatch"],
+        ),
+        (
+            "Add 1 [Agumon] from your trash.",
+            "{name_contains: Agumon}",
+            vec!["name_match_mismatch"],
+        ),
+        (
+            "Add 1 [Agumon] from your trash.",
+            "{name_is: Agumon}",
+            vec![],
+        ),
+        (
+            "Add 1 card with the [Agumon] trait.",
+            "{name_contains: Agumon}",
+            vec![],
+        ),
+        (
+            "Add 1 card with [Agumon] in its text.",
+            "{name_contains: Agumon}",
+            vec![],
+        ),
+        (
+            "Add 1 card with [Agumon] in its name or the [Agumon] trait.",
+            "{name_is: Agumon}",
+            vec![],
+        ),
+    ] {
+        let clause = format!("- when: on_play\n  text: '{text}'\n  process:\n    - select_trash: {{of: you, optional: false, filter: {filter}, bind_as: pick, prompt: Choose}}");
+        assert_eq!(check(&clause, text), expected, "{text}, {filter}");
+    }
+}
+
+#[test]
+fn printed_text_trait_match_modes() {
+    for (text, filter, expected) in [
+        (
+            "Add 1 card with the [Dragon] trait.",
+            "{trait_contains: Dragon}",
+            vec!["trait_match_mismatch"],
+        ),
+        (
+            "Add 1 card with the [Dragon] trait.",
+            "{trait_has: Dragon}",
+            vec![],
+        ),
+        (
+            "Add 1 card with [Dragon] in its traits.",
+            "{trait_has: Dragon}",
+            vec!["trait_match_mismatch"],
+        ),
+        (
+            "Add 1 card with [Dragon] in its type.",
+            "{trait_has: Dragon}",
+            vec!["trait_match_mismatch"],
+        ),
+        (
+            "Add 1 card with [Dragon] in its traits.",
+            "{trait_contains: Dragon}",
+            vec![],
+        ),
+        (
+            "Add 1 card with [Dragon] in its name.",
+            "{trait_contains: Dragon}",
+            vec![],
+        ),
+    ] {
+        let clause = format!("- when: on_play\n  text: '{text}'\n  process:\n    - select_hand: {{of: you, optional: false, filter: {filter}, bind_as: pick, prompt: Choose}}");
+        assert_eq!(check(&clause, text), expected, "{text}, {filter}");
+    }
+}
+
+#[test]
 fn printed_text_round_trip_and_schema() {
     let yaml = "card: X-1\nname: X\nkind: digimon\nlevel: 3\ncolor: [yellow]\ncost: 3\ndp: 1000\neffects:\n- when: on_play\n  text: '[On Play] Draw 1.'\n  process: [{draw: {of: you, count: 1}}]\n- kind: cost_reduction\n  text: You may reduce the cost.\n  optional: true\n  amount: 1\n";
     let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).unwrap();

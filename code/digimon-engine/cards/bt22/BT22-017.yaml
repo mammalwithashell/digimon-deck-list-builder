@@ -129,7 +129,7 @@ alt_paths:
   # TRAIT-gated alt — same cost as standard routes; the base must carry [CS] trait.
   # Per EX11-017/P-215 idiom: one alt_path with trait_has predicate, no color restriction.
   - kind: digivolve
-    from: { level_eq: 2, trait_has: CS }
+    from: { any_color: true, level_eq: 2, trait_has: CS }
     cost: 0
 
 

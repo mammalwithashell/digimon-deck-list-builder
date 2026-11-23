@@ -65,6 +65,7 @@ alt_paths:
     cost: 1
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - in_text_contains: Huckmon
@@ -89,6 +90,7 @@ dual:
         summary: "<Decode ([Sistermon Noir]/[Sistermon Ciel])> play 1 matching source when this would leave outside battle"
         process:
           - select_material:
+              optional: false
               of_permanent: replacement_subject
               bind_as: decode_source
               filter:
@@ -106,6 +108,7 @@ dual:
         summary: "[When Digivolving] Delete 1 opponent Digimon with play cost 4 or less"
         process:
           - select_opponent_permanent:
+              optional: false
               bind_as: target
               filter:
                 all_of:
@@ -141,6 +144,7 @@ dual:
           - play_union_bound_free:
               binding: sistermon_free
           - select_opponent_permanent:
+              optional: false
               bind_as: dd_target
               filter: { kind: digimon }
               prompt: "<De-Digivolve 1> 1 of your opponent's Digimon for each of your Digimon"

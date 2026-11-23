@@ -148,7 +148,7 @@ alt_paths:
     cost: 4
   # Alt-digivolution: Lv.4 with the [TS] trait / cost 3.
   - kind: digivolve
-    from: { level_eq: 4, trait_has: TS }
+    from: { any_color: true, level_eq: 4, trait_has: TS }
     cost: 3
 
 effects:

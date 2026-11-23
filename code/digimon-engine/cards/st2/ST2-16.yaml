@@ -9,6 +9,7 @@ effects:
     summary: "[Main] Return 1 opponent Digimon to hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to return to hand"
@@ -19,6 +20,7 @@ effects:
     summary: "[Security] Activate this card's Main effect"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to return to hand"

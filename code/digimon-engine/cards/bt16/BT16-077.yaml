@@ -121,5 +121,6 @@ effects:
       # `windowed: true` (an AD1-004 EOT-ordering device) deferred the attack
       # AND dropped the player-only restriction (exam BT16-077#effect#3).
       - may_attack_now:
+          optional: false
           attacker: rusher
           targets: player

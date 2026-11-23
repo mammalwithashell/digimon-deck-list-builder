@@ -69,6 +69,7 @@ traits: [Light Dragon, DATA SQUAD]
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -130,6 +131,7 @@ dual:
           # "Then, 1 of your opponent's Digimon gets -9000 DP for the turn." —
           # DCGO canNoSelect:false (mandatory when an opponent Digimon exists).
           - select_opponent_permanent:
+              optional: false
               bind_as: dp_target
               filter: { kind: digimon }
               prompt: "1 of your opponent's Digimon gets -9000 DP for the turn"
@@ -162,6 +164,7 @@ dual:
           # "1 of your opponent's Digimon gets -6000 DP for the turn." —
           # mandatory (canNoSelect:false when an opponent Digimon exists).
           - select_opponent_permanent:
+              optional: false
               bind_as: dp_target
               filter: { kind: digimon }
               prompt: "1 of your opponent's Digimon gets -6000 DP for the turn"

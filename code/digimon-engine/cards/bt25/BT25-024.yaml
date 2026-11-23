@@ -67,7 +67,7 @@ alt_paths:
     cost: 2
   # Alt-digivolution: Lv.3 with [TS] trait / cost 2 (printed digivolve box).
   - kind: digivolve
-    from: { level_eq: 3, trait_has: TS }
+    from: { any_color: true, level_eq: 3, trait_has: TS }
     cost: 2
 
 effects:
@@ -89,6 +89,7 @@ effects:
       event_target_owner: you
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: evo
           filter:

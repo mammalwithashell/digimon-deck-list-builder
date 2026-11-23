@@ -39,7 +39,7 @@ alt_paths:
     from: { name_is: "Gigimon" }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Hero }
+    from: { any_color: true, level_eq: 2, trait_has: Hero }
     cost: 0
 
 effects:

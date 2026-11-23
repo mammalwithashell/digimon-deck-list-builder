@@ -34,7 +34,7 @@ attribute: Data
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 3, trait_has: "DATA SQUAD" }
     cost: 2
 
 effects:
@@ -88,6 +88,7 @@ effects:
     summary: "Inherited [When Attacking][OPT] 1 of your opponent's Digimon can't unsuspend until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon can't unsuspend until their turn ends"

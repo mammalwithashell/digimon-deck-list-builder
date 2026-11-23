@@ -40,7 +40,7 @@ alt_paths:
     from: { level_eq: 3, color_is: yellow }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 3, trait_has: "DATA SQUAD" }
     cost: 2
 
 effects:

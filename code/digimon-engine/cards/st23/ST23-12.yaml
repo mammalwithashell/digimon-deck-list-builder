@@ -43,7 +43,7 @@ attribute: Virus
 # Alt-digivolve: Lv.2 with the [Glowing Dawn] trait / cost 0.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: "Glowing Dawn" }
+    from: { any_color: true, level_eq: 2, trait_has: "Glowing Dawn" }
     cost: 0
 
 effects:
@@ -59,7 +59,7 @@ effects:
       # "By trashing the bottom face-down card from under any of your Tamers" —
       # the activation cost. Its tail runs ONLY if a face-down source was
       # actually trashed (BT25-027/041 if-trashed idiom).
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       # "you may return 1 [Glowing Dawn] Digimon from your trash" — optional pick.
       - select_trash:
           of: you

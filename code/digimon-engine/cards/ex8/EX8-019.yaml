@@ -133,6 +133,7 @@ effects:
     summary: "[Inherited][When Attacking] Give 1 opponent Digimon Security A. -1 until the end of their turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to gain Security Attack -1"

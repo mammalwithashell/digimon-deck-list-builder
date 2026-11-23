@@ -102,7 +102,7 @@ attribute: Vaccine
 # requirements still apply (no ignore flag).
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, name_contains: "Agumon", trait_has: Dinosaur }
+    from: { any_color: true, level_eq: 3, name_contains: "Agumon", trait_has: Dinosaur }
     cost: 2
 
 effects:

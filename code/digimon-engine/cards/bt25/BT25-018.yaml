@@ -85,7 +85,7 @@ alt_paths:
     from: { level_eq: 5, color_is: yellow }
     cost: 4
   - kind: digivolve
-    from: { level_eq: 5, trait_has: TS }
+    from: { any_color: true, level_eq: 5, trait_has: TS }
     cost: 3
     ignore_requirements: true
 
@@ -131,6 +131,7 @@ effects:
                     delta: -2000
                 expiry: end_of_turn
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -154,6 +155,7 @@ effects:
               - zone: [battle_area]
           prompt: "Choose the first of 2 of your Digimon to DNA digivolve into [GraceNovamon]"
       - may_dna_digivolve_now:
+          optional: false
           anchor: { binding: dna_anchor }
           partner_filter:
             all_of:
@@ -190,6 +192,7 @@ effects:
     summary: "[Inherited][When Attacking][OPT] Delete 1 opp Digimon with as much DP as this Digimon or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: ess_victim
           filter:
             all_of:

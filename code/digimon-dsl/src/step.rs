@@ -1696,7 +1696,7 @@ pub struct TrashBottomFaceDownSourceUnderTamerArgs {
     /// ST24-11 Rosemon: "you may suspend up to 2 … then, by trashing … none of
     /// their Digimon can unsuspend" — the trash+lock is declinable apart from
     /// the suspend. `G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER`.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
 }
 
@@ -1728,7 +1728,7 @@ pub struct TrashLinkCardOfOwnDigimonArgs {
     /// "By trashing 1 of your Digimon's link cards, you MAY …" clause. On decline
     /// nothing is trashed and the step's tail does not run. Default `false`
     /// leaves the decline to a clause-level `optional`.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
 }
 
@@ -1746,7 +1746,7 @@ pub struct TrashOptionFromOwnStacksArgs {
     /// trashing 1 Option …, this Digimon MAY …" clause. On decline nothing is
     /// trashed and the step's tail does not run. Default `false` leaves the
     /// decline to a clause-level `optional`.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
 }
 
@@ -1970,7 +1970,7 @@ pub struct MayAttackNowArgs {
     pub without_suspending: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_summoning_sickness: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub windowed: bool,
@@ -2018,7 +2018,7 @@ pub struct MayDnaDigivolveNowArgs {
     pub cost: u16,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
@@ -2041,7 +2041,7 @@ pub struct RedirectAttackTargetArgs {
     pub player: Option<PlayerRef>,
     #[serde(default)]
     pub targets: AttackTargetSpec,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
@@ -2052,7 +2052,7 @@ pub struct RedirectAttackTargetArgs {
 pub struct RefireEffectArgs {
     pub source: BindingRef,
     pub timing: String,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     /// Activate as the target's own effect, retaining its card and source kind.
     /// Default false preserves effects explicitly attributed to the grantor.
@@ -2242,7 +2242,7 @@ pub struct RevealSearchBucket {
     pub filter: PredicateSpec,
     pub to: RevealSearchDest,
     pub max: u8,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
@@ -2295,7 +2295,7 @@ pub struct ChooseFromRevealArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     /// Optional localization-key override for `prompt`. If absent, derived
     /// positionally from `(card_id, clause_index, step_path)`.
@@ -2573,7 +2573,7 @@ pub struct SearchOwnSecurityStackArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     pub on_select: Vec<StepSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2879,7 +2879,7 @@ pub struct UseOptionFromHandArgs {
     /// memory") without adding a one-off formula primitive.
     #[serde(default, skip_serializing_if = "is_false")]
     pub use_cost_lte_opponent_memory: bool,
-    #[serde(default, skip_serializing_if = "is_false")]
+    #[serde(default)]
     pub optional: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
@@ -2903,7 +2903,7 @@ pub struct UseOptionFromTrashArgs {
     /// shared `CostDelta` shape (same as the play half's `cost:`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost: Option<CostDelta>,
-    #[serde(default, skip_serializing_if = "is_false")]
+    #[serde(default)]
     pub optional: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
@@ -3134,7 +3134,7 @@ pub struct AppFuseArgs {
     pub result_filter: Option<PredicateSpec>,
     /// "may" — PASS is legal at each selection. The shipped riders set this
     /// true; defaults false to match every other step's convention.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     /// Bind the result Card only after a successful commit. Absent on PASS or
     /// unavailable/rejected selection. Opts into continuing the tail on PASS;
@@ -3557,7 +3557,7 @@ pub struct SelectFieldArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub selector: Option<FieldSelector>,
     pub prompt: String,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     /// PASSing this optional pick CONTINUES the clause with the binding
     /// unresolved (DCGO: a declined `SelectPermanentEffect` resolves with an
@@ -3593,7 +3593,7 @@ pub struct SelectDnaPairArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
 }
 
@@ -3609,7 +3609,7 @@ pub struct SelectZoneArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     /// Mark this prompt as a cost-pay (only meaningful when
     /// `optional: true`). When set, declining the prompt aborts the rest of
@@ -3665,7 +3665,7 @@ pub struct SelectMaterialArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     /// Optional localization-key override for `prompt`. If absent, derived
     /// positionally from `(card_id, clause_index, step_path)`.
@@ -4011,7 +4011,7 @@ pub struct SelectOwnBreedingPermanentArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     /// Optional predicate the selected breeding permanent must satisfy.
     /// Used by Royal Knights cards like BT13-093 that require the
@@ -4072,7 +4072,7 @@ pub struct SelectUnionArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     /// Mark this prompt as a cost-pay (only meaningful when
     /// `optional: true`). When set, declining the prompt aborts the rest of
@@ -4294,7 +4294,7 @@ fn is_default_turn_boundary(v: &DeleteTurnBoundary) -> bool {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LinkToOwnDigimonArgs {
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub optional: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub free: bool,

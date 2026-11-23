@@ -38,7 +38,7 @@ attribute: Navi
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Appmon }
+    from: { any_color: true, level_eq: 2, trait_has: Appmon }
     cost: 0
 
 effects:

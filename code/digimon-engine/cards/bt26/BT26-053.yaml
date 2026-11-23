@@ -46,6 +46,7 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: "Glowing Dawn"
@@ -67,7 +68,7 @@ effects:
     condition: { face_down_sources_under_tamers_gte: 1 }
     summary: "[All Turns][Once Per Turn] When attack targets change, by trashing the bottom face-down card from under any of your Tamers, you may use 1 Option card with the [Glowing Dawn] trait and a use cost of 4 or less from your hand without paying the cost"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - use_option_from_hand:
           of: you
           optional: true

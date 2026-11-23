@@ -65,7 +65,7 @@ effects:
       # "By trashing the bottom face-down card from under any of your Tamers" —
       # the activation cost (multi-Tamer pick surfaced), paid first and
       # unconditionally once the effect is activated (ST23_01.cs:90-93).
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       # "this Digimon may digivolve into a [Glowing Dawn] trait Digimon card in
       # the hand" — the optional select_hand carries the "may".
       - select_hand:

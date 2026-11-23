@@ -134,6 +134,7 @@ effects:
       event_permanent_is_source: true
     process:
       - select_own_permanent:
+          optional: false
           bind_as: base
           filter:
             all_of:

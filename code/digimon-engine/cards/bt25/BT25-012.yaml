@@ -53,7 +53,7 @@ attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: TS }
+    from: { any_color: true, level_eq: 3, trait_has: TS }
     cost: 2
     ignore_requirements: true
 
@@ -80,6 +80,7 @@ effects:
           - trait_has: TS
     process:
       - select_own_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:

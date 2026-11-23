@@ -81,6 +81,7 @@ effects:
     process:
       # Pick 1
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_a
           filter:
             any_of:
@@ -94,6 +95,7 @@ effects:
           expiry: end_of_opponents_turn
       # Pick 2 (must differ from pick 1)
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_b
           filter:
             all_of:
@@ -109,6 +111,7 @@ effects:
           expiry: end_of_opponents_turn
       # Pick 3 (must differ from picks 1 and 2)
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_c
           filter:
             all_of:

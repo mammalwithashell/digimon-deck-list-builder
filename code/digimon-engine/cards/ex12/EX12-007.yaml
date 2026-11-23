@@ -17,6 +17,7 @@ alt_paths:
     cost: 1
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: Gurimon
         - all_of:

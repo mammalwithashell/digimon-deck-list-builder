@@ -16,7 +16,7 @@ alt_paths:
     from: { level_eq: 2, color_is: red }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: CS }
+    from: { any_color: true, level_eq: 2, trait_has: CS }
     cost: 0
     ignore_requirements: true
 
@@ -29,14 +29,16 @@ effects:
           of: you
           count: 3
           buckets:
-            - filter:
+            - optional: false
+              filter:
                 any_of:
                   - name_contains: Huckmon
                   - name_contains: Sistermon
               to: hand
               max: 1
               prompt: "Add 1 card with [Huckmon] or [Sistermon] in its name"
-            - filter: { trait_has: Royal Knight }
+            - optional: false
+              filter: { trait_has: Royal Knight }
               to: hand
               max: 1
               prompt: "Add 1 card with the [Royal Knight] trait"

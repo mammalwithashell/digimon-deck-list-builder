@@ -9,6 +9,7 @@ effects:
     summary: "[Main] Suspend 1 opponent Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:
@@ -21,6 +22,7 @@ effects:
     summary: "[Security] Activate this card's Main effect, then add it to hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

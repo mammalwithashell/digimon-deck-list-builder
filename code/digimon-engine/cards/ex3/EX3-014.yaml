@@ -56,6 +56,7 @@ effects:
     summary: "[On Play] Delete 1 opp Digimon with DP <= 3000 + 2000 per Dragon/saur/Ceratopsian digivolution source"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

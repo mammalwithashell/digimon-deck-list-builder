@@ -91,6 +91,7 @@ alt_paths:
   # [Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 3.
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - in_text_contains: "Three Musketeers"
@@ -112,6 +113,7 @@ effects:
     summary: "[On Play][When Digivolving] Return 1 Option card from your trash to the hand. Then, you may use 1 [Three Musketeers] Option from hand free"
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: returned_option
           filter: { kind: option }

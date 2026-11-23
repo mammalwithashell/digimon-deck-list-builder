@@ -31,6 +31,7 @@ effects:
     process:
       - draw: { of: you, count: 2 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

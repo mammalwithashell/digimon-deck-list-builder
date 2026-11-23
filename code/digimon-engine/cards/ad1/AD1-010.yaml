@@ -19,10 +19,10 @@ attribute: Vaccine
 # no separate alt-cost; standard color requirements still apply.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, in_text_contains: "Omnimon" }
+    from: { any_color: true, level_eq: 3, in_text_contains: "Omnimon" }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 3, trait_has: ADVENTURE }
     cost: 2
 
 effects:
@@ -85,6 +85,7 @@ effects:
         - event_card_name_contains: "Matt Ishida"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: garu
           filter:
@@ -107,6 +108,7 @@ effects:
         - event_card_name_contains: "Matt Ishida"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: garu
           filter:

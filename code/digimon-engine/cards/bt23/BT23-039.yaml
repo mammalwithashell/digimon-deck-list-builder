@@ -44,7 +44,7 @@ alt_paths:
     cost: 0
   # Printed special condition: "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0".
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Appmon }
+    from: { any_color: true, level_eq: 2, trait_has: Appmon }
     cost: 0
 
 effects:

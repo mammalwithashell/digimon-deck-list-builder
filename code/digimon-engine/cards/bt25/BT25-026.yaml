@@ -95,7 +95,7 @@ alt_paths:
     cost: 3
   # Alt-digivolution: Lv.4 with [TS] trait / cost 3.
   - kind: digivolve
-    from: { level_eq: 4, trait_has: TS }
+    from: { any_color: true, level_eq: 4, trait_has: TS }
     cost: 3
 
 effects:
@@ -110,6 +110,7 @@ effects:
     summary: "[OP][WD] Trash bottom 3 sources of 1 opp Digimon; then 1 opp Digimon with no sources can't suspend until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: src_target
           filter: { kind: digimon }
           prompt: "Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon"
@@ -117,6 +118,7 @@ effects:
           target: src_target
           count: 3
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             all_of:
@@ -141,6 +143,7 @@ effects:
       event_target_owner: you
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: evo
           filter:

@@ -69,7 +69,7 @@ alt_paths:
     cost: 1
   # Printed alt evo box: "Digivolve Lv.2 w/[Royal Base] trait: Cost 0".
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Royal Base }
+    from: { any_color: true, level_eq: 2, trait_has: Royal Base }
     cost: 0
 
 effects:

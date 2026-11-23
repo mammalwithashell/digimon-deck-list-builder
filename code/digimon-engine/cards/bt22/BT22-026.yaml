@@ -209,11 +209,11 @@ alt_paths:
     cost: 4
   # Printed alt: Lv.5 w/[Garurumon] in name: Cost 3 (printed special digivolution)
   - kind: digivolve
-    from: { level_eq: 5, name_contains: "Garurumon" }
+    from: { any_color: true, level_eq: 5, name_contains: "Garurumon" }
     cost: 3
   # Printed alt: Lv.5 w/[CS] trait: Cost 3 (printed special digivolution)
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from: { any_color: true, level_eq: 5, trait_has: CS }
     cost: 3
 
 effects:
@@ -263,6 +263,7 @@ effects:
             this_card_can_digivolve_onto: { cost: 6, ignore_requirements: true }
     process:
       - select_own_permanent:
+          optional: false
           bind_as: base
           filter:
             all_of:
@@ -322,6 +323,7 @@ effects:
             # [Agumon] / [WarGreymon] are card names (CR 4.3 2-3-1-2; DCGO
             # `EqualsCardName`, BT22_026.cs:159,164), not "in its name".
             - select_own_permanent:
+                optional: false
                 bind_as: base
                 filter: { name_is: "Agumon" }
                 prompt: "Choose your Agumon"
@@ -340,6 +342,7 @@ effects:
           condition: { equals: [branch, 1] }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter:
                   all_of:

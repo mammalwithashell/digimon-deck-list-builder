@@ -57,6 +57,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -84,10 +85,12 @@ effects:
           prompt: "Trash 1 card in your hand to delete 1 each of your opponent's level 3 and level 4 Digimon"
       - trash_from_hand_by_index: { of: you, hand_index: cost_card }
       - select_opponent_permanent:
+          optional: false
           bind_as: lv3_target
           filter: { kind: digimon, level_eq: 3 }
           prompt: "Delete 1 of your opponent's level 3 Digimon"
       - select_opponent_permanent:
+          optional: false
           bind_as: lv4_target
           filter: { kind: digimon, level_eq: 4 }
           prompt: "Delete 1 of your opponent's level 4 Digimon"

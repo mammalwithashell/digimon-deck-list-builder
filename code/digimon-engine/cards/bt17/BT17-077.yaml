@@ -125,6 +125,7 @@ alt_paths:
   #    digivolutionCost: 5, ignoreDigivolutionRequirement: false.
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 6
         - name_contains: "Imperialdramon"
@@ -233,6 +234,7 @@ effects:
     process:
       # Select 1 opponent Digimon with no digivolution cards.
       - select_opponent_permanent:
+          optional: false
           bind_as: bounce_target
           filter:
             all_of:

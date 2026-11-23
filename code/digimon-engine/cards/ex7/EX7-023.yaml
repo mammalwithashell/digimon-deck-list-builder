@@ -317,6 +317,7 @@ effects:
               stack_size_gte: 2
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: tamer_target
                 filter: { kind: tamer }
                 prompt: "Return 1 of your opponent's Tamers to the bottom of the deck"

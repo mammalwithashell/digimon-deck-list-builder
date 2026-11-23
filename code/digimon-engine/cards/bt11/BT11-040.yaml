@@ -83,6 +83,7 @@ effects:
     summary: "Inherited [All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion"
     process:
       - select_any_permanent:
+          optional: false
           bind_as: prevent_cost
           filter:
             all_of:

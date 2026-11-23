@@ -175,6 +175,7 @@ effects:
     summary: "[When Attacking] This Digimon may digivolve into a red [Hybrid]/[Hero] Digimon in hand, cost -1"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:

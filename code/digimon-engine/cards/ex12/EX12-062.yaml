@@ -15,6 +15,7 @@ alt_paths:
     cost: 2
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - any_of:
@@ -37,6 +38,7 @@ effects:
           then:
             - delete_permanent: { target: cost_digimon }
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target
                 filter:
                   all_of:
@@ -52,6 +54,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

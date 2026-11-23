@@ -53,7 +53,7 @@ attribute: Virus
 # Alt-digivolve: Lv.3 with the [Glowing Dawn] trait / cost 2.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "Glowing Dawn" }
+    from: { any_color: true, level_eq: 3, trait_has: "Glowing Dawn" }
     cost: 2
 
 effects:
@@ -81,7 +81,7 @@ effects:
     optional: true
     amount: 2
     pay_cost:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
     summary: "[Your Turn] When this Digimon would digivolve into a [Glowing Dawn] Digimon card, by trashing a bottom face-down card under a Tamer, reduce the cost by 2"
 
   # ─── Inherited <Barrier> ───────────────────────────────────────────────────

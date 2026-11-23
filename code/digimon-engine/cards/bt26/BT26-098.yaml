@@ -52,7 +52,7 @@ effects:
     optional: true
     amount: 2
     pay_cost:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
     summary: "When this card would be used, by trashing the bottom face-down card under a Tamer, reduce the use cost by 2"
 
   - when: main_from_hand

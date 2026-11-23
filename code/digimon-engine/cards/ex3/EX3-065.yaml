@@ -38,7 +38,7 @@ effects:
           condition:
             any_permanent: { of: you, is_source: true, is_suspended: true }
           then:
-            - refire_effect: { source: event_target, timing: on_play, target_attribution: true }
+            - refire_effect: { optional: false, source: event_target, timing: on_play, target_attribution: true }
   - text: "[Security] Play this card without paying the cost."
     when: on_security
     process:

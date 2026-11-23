@@ -37,6 +37,7 @@ effects:
   when: when_digivolving
   process:
   - select_opponent_permanent:
+      optional: false
       bind_as: strip
       filter:
         kind: digimon
@@ -50,6 +51,7 @@ effects:
       count:
         binding_value: colors
   - select_opponent_permanent:
+      optional: false
       bind_as: bounce
       filter:
         kind: digimon
@@ -60,6 +62,7 @@ effects:
 - when: on_security
   process:
   - select_any_permanent:
+      optional: false
       bind_as: dedigi
       filter:
         kind: digimon

@@ -26,13 +26,13 @@ alt_paths:
   # blue/black Lv.3 base WITHOUT the trait gets only the standard cost 3 (no longer the
   # over-permissive colour-gated cost 2).
   - kind: digivolve
-    from: { level_eq: 3, trait_has: Ice-Snow }
+    from: { any_color: true, level_eq: 3, trait_has: Ice-Snow }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: Mineral }
+    from: { any_color: true, level_eq: 3, trait_has: Mineral }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: Rock }
+    from: { any_color: true, level_eq: 3, trait_has: Rock }
     cost: 2
 
 # ─── Clause 0: [When Moving][On Play][When Digivolving] source-placement +
@@ -141,6 +141,7 @@ effects:
             # Step 2: Select 1 of your [Ice-Snow], [Mineral] or [Rock] Digimon
             # to receive the protection.
             - select_own_permanent:
+                optional: false
                 bind_as: protect_target
                 filter:
                   all_of:

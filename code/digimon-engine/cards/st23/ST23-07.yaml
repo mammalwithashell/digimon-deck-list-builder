@@ -40,7 +40,7 @@ attribute: Data
 # Alt-digivolve: Lv.3 with the [Glowing Dawn] trait / cost 2.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "Glowing Dawn" }
+    from: { any_color: true, level_eq: 3, trait_has: "Glowing Dawn" }
     cost: 2
 
 effects:

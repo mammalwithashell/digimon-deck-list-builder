@@ -148,6 +148,7 @@ effects:
       # this select silently (matches DCGO's HasMatchConditionPermanent
       # gate at line 169).
       - select_opponent_permanent:
+          optional: false
           bind_as: del_target
           filter:
             all_of:
@@ -160,6 +161,7 @@ effects:
       # not the first arm found a legal target. DCGO line 191 gates on
       # its OWN HasMatchConditionPermanent.
       - select_opponent_permanent:
+          optional: false
           bind_as: return_target
           filter:
             all_of:
@@ -192,6 +194,7 @@ effects:
     summary: "[All Turns] On leave-other-than-own-effect, play BlitzGreymon + CresGarurumon from own digivolution cards free; then place self at security bottom face down"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: blitz_source
           filter:
@@ -204,6 +207,7 @@ effects:
           source_index: blitz_source
           cost_delta: free
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: cres_source
           filter:

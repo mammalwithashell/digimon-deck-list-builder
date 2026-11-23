@@ -158,6 +158,7 @@ effects:
     summary: "[Main] Delete 1 of your opponent's level 6 or higher Digimon; then you may link this card to 1 of your Digimon free"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -183,6 +184,7 @@ effects:
     summary: "[Security] Activate [Main] effects: delete 1 opponent's level 6 or higher Digimon; then you may link this card free"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: sec_victim
           filter:
             all_of:
@@ -213,6 +215,7 @@ effects:
     summary: "[When Attacking][Once Per Turn] Delete 1 of your opponent's level 5 or lower Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: wa_victim
           filter:
             all_of:

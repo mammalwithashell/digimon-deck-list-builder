@@ -46,6 +46,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -72,6 +73,7 @@ effects:
       # Top-level select+delete (BT17-016 / BT25-014 idiom): the result-log
       # stays visible to the trailing `effect_deleted_*` check.
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -83,6 +85,7 @@ effects:
           condition: { effect_deleted_any_opponent_digimon: false }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: dedigi
                 filter: { kind: digimon }
                 prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
@@ -128,6 +131,7 @@ effects:
           condition: { source_is_unsuspended: true }
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: lowest
                 selector: lowest_play_cost
                 filter: { kind: digimon }

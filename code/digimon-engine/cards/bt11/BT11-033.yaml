@@ -64,6 +64,7 @@ effects:
     summary: "[When Digivolving] Return 1 opp Lv.5-or-lower Digimon to hand; if none returned, opponent adds their top security to hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: returned
           filter:
             all_of:

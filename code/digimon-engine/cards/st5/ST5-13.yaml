@@ -28,6 +28,7 @@ effects:
           prompt: "Choose 2 digivolution cards under this Digimon to trash for Digi-Burst 2"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: dp_target
                 filter: { kind: digimon }
                 prompt: "Choose 1 of your Digimon to get +4000 DP"

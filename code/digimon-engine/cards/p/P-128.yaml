@@ -61,6 +61,7 @@ effects:
                       name_is: Ankylomon
                 prompt: "Choose 1 of your Digimon to digivolve"
             - select_hand:
+                optional: false
                 of: you
                 bind_as: ankylomon
                 filter:

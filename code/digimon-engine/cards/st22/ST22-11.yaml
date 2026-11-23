@@ -96,6 +96,7 @@ effects:
     summary: "[Security] De-Digivolve 2 1 opponent Digimon, then add this card to hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
@@ -130,6 +131,7 @@ effects:
           free: true
           filter: { kind: digimon }
       - select_own_permanent:
+          optional: false
           bind_as: buff_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain Reboot and +3000 DP until end of opponent's turn"

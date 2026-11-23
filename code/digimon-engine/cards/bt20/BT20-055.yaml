@@ -28,6 +28,7 @@ effects:
     summary: "De-Digivolve 2, then delete an opponent Digimon with 1 or fewer sources"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigivolve_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
@@ -38,6 +39,7 @@ effects:
       - flip_security_face_up:
           of: opponent
       - select_opponent_permanent:
+          optional: false
           bind_as: delete_target
           filter:
             all_of:

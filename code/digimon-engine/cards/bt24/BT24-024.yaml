@@ -48,6 +48,7 @@ alt_paths:
   # [Digivolve] [Armadillomon]/Lv.3 w/[TS] trait: Cost 2.
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: "Armadillomon"
         - all_of:
@@ -70,6 +71,7 @@ effects:
     summary: "[When Attacking][Once Per Turn] You may play 1 Tamer card with the [TS] trait from your hand with the play cost reduced by 2"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: ts_tamer
           filter:

@@ -46,6 +46,7 @@ effects:
     summary: "[Main] For the turn, 1 of your Digimon gains <Jamming> and can't be blocked by your opponent's Digimon"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: tgt
           filter:
             kind: digimon

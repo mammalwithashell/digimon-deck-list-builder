@@ -23,6 +23,7 @@ alt_paths:
   # Lv.2 with [ACCEL] trait.
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: ACCEL
@@ -39,6 +40,7 @@ effects:
     process:
       - reveal_top_deck: { of: you, count: 3 }
       - choose_from_reveal:
+          optional: false
           of: you
           filter:
             any_of:

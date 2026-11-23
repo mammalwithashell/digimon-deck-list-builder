@@ -50,6 +50,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: Chronicle
@@ -61,6 +62,7 @@ effects:
     summary: "[On Play][When Digivolving] Until your opponent's turn ends, 1 of your [X Antibody]/[Chronicle] Digimon gains Reboot and Blocker; if during an attack, it also isn't affected by their Digimon effects and gets +5000 DP"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: boost
           filter:
             all_of:

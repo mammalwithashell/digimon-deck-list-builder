@@ -59,7 +59,7 @@ alt_paths:
     from: { level_eq: 4, color_is: blue }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 4, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 4, trait_has: ADVENTURE }
     cost: 3
 
 effects:
@@ -71,6 +71,7 @@ effects:
           condition: { distinct_tamer_colors_gte: 2 }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: strip_host
                 filter:
                   all_of:
@@ -107,6 +108,7 @@ effects:
                 then:
                   - trash_selected_sources: { source_refs: stripped }
       - select_opponent_permanent:
+          optional: false
           bind_as: bounce_target
           filter:
             all_of:
@@ -128,6 +130,7 @@ effects:
         - event_target_trait_has: ADVENTURE
     process:
       - select_own_permanent:
+          optional: false
           bind_as: alliance_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"

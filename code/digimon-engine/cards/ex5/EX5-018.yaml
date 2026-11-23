@@ -60,12 +60,14 @@ effects:
       # "trash 2 cards in your hand" is a mandatory pick of min(2, hand size)
       # (DCGO canNoSelect: false). A pick with an empty hand is a no-op.
       - select_hand:
+          optional: false
           of: you
           bind_as: discard_a
           filter: {}
           prompt: "Trash 2 cards in your hand (1 of 2)"
       - trash_from_hand_by_index: { of: you, hand_index: discard_a }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard_b
           filter: {}

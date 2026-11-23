@@ -181,6 +181,7 @@ effects:
       # auto-skips (no prompt) when the opponent has no Digimon, matching
       # DCGO's HasMatchConditionPermanent gate. The pick itself is mandatory.
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigivolve_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 2"

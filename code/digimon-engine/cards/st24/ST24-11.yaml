@@ -59,7 +59,7 @@ alt_paths:
     cost: 3
   # [Digivolve] Lv.5 with the [DATA SQUAD] trait: cost 3.
   - kind: digivolve
-    from: { level_eq: 5, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 5, trait_has: "DATA SQUAD" }
     cost: 3
 
 effects:

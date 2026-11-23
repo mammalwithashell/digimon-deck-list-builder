@@ -99,6 +99,7 @@ effects:
       - suspend: { target: source }
       # Body step 1: pick 1 Mineral/Rock card from own trash.
       - select_trash:
+          optional: false
           of: you
           bind_as: source_card
           filter:
@@ -108,6 +109,7 @@ effects:
           prompt: "Choose a [Mineral] or [Rock] card from your trash"
       # Body step 2: pick which of your Digimon to place the card under.
       - select_own_permanent:
+          optional: false
           filter:
             kind: digimon
           bind_as: target_digi

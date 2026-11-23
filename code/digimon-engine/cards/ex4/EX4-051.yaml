@@ -154,6 +154,7 @@ effects:
                 # matches DCGO's early-return on a null selectedPermanent.
                 optional: true
             - select_hand:
+                optional: false
                 of: you
                 bind_as: evo_card
                 filter:

@@ -55,6 +55,7 @@ effects:
     summary: "[Main] Trash the top card of 1 of your [Armor Form] Digimon. Then, you may digivolve 1 of your Digimon into an [Armor Form] Digimon card in your hand for its digivolution cost; if you do, unsuspend that Digimon"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: trash_host
           filter:
             all_of:

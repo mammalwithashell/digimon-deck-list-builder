@@ -57,6 +57,7 @@ alt_paths:
   # Printed alt evo box: "Digivolve [Pinamon] or Lv.2 w/[ACCEL] trait: Cost 0".
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: "Pinamon"
         - all_of:

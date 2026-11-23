@@ -13,7 +13,7 @@ traits: [Ancient Fairy]
 # the faithful authoring (allowlisted in tests/alt_path_printed_cost_guard.rs).
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2 }
+    from: { any_color: true, level_eq: 2 }
     cost: 0
 
 # Printed text (cards.json):

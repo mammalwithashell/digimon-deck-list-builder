@@ -17,6 +17,7 @@ alt_paths:
     cost: 2
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - trait_has: "Xros Heart"
@@ -31,6 +32,7 @@ effects:
     summary: "[On Play][When Digivolving] Delete 1 opponent lowest-DP Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           selector: lowest_dp
           filter: { kind: digimon }

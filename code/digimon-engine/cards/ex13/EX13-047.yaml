@@ -47,11 +47,13 @@ effects:
           of: you
           count: 3
           buckets:
-            - filter: { trait_has: "Royal Knight" }
+            - optional: false
+              filter: { trait_has: "Royal Knight" }
               to: hand
               max: 1
               prompt: "Add 1 card with the [Royal Knight] trait to the hand"
-            - filter: { printed_keyword: Blocker }
+            - optional: false
+              filter: { printed_keyword: Blocker }
               to: hand
               max: 1
               prompt: "Add 1 card with <Blocker> to the hand"

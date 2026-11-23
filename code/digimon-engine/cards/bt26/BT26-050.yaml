@@ -80,6 +80,7 @@ dual:
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 6
         - trait_has: "DATA SQUAD"
@@ -89,6 +90,7 @@ alt_paths:
     cost: 0
     extra_cost:
       - select_own_permanent:
+          optional: false
           bind_as: yoshino
           filter: { kind: tamer, name_is: "Yoshino Fujieda" }
           prompt: "Return [Yoshino Fujieda] to the hand"

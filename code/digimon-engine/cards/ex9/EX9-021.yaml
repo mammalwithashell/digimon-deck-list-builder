@@ -121,7 +121,7 @@ alt_paths:
     cost: 5
 
   - kind: digivolve
-    from: { level_eq: 6, trait_has: DM }
+    from: { any_color: true, level_eq: 6, trait_has: DM }
     cost: 5
 
   - kind: dna_digivolve
@@ -222,6 +222,7 @@ effects:
             equals: [end_attack_choice, 0]
           then:
             - select_material:
+                optional: false
                 of_permanent: source
                 bind_as: greymon_pick
                 filter:
@@ -237,6 +238,7 @@ effects:
                 cost_delta: free
                 bind_as: greymon_played
             - select_material:
+                optional: false
                 of_permanent: source
                 bind_as: garurumon_pick
                 filter:

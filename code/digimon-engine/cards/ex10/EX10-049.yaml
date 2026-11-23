@@ -66,6 +66,7 @@ effects:
               n: 10
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target_5
                 filter:
                   all_of:
@@ -75,6 +76,7 @@ effects:
             - delete_permanent: { target: delete_target_5 }
           else:
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target_3
                 filter:
                   all_of:

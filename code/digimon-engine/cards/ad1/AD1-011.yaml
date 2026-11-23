@@ -52,6 +52,7 @@ alt_paths:
   # at level 4. Attributes are folded into traits by the card-data loader.
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - { level_eq: 4, trait_has: Free }
         - { level_eq: 4, trait_has: Hero }

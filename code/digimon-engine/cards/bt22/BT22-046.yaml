@@ -51,7 +51,7 @@ alt_paths:
     cost: 3
   # Printed alt evo box: "Digivolve Lv.3 w/[CS] trait: Cost 2".
   - kind: digivolve
-    from: { level_eq: 3, trait_has: CS }
+    from: { any_color: true, level_eq: 3, trait_has: CS }
     cost: 2
 
 effects:

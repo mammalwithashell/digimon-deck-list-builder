@@ -53,7 +53,7 @@ alt_paths:
     from: { level_eq: 5, color_is: yellow }
     cost: 4
   - kind: digivolve
-    from: { level_eq: 5, trait_has: "Glowing Dawn" }
+    from: { any_color: true, level_eq: 5, trait_has: "Glowing Dawn" }
     cost: 3
 
 dual:
@@ -167,6 +167,7 @@ dual:
         summary: "[Main] 1 opp Digimon -8000 DP; then by trashing your top security, all opp Digimon -5000 DP for the turn"
         process:
           - select_opponent_permanent:
+              optional: false
               bind_as: dp_target
               filter: { kind: digimon }
               prompt: "Choose 1 of your opponent's Digimon to get -8000 DP for the turn"

@@ -74,6 +74,7 @@ effects:
           condition: { equals: [branch, 0] }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target
                 filter: { kind: digimon }
                 prompt: "Choose an opponent Digimon to delete"
@@ -82,6 +83,7 @@ effects:
           condition: { equals: [branch, 1] }
           then:
             - select_own_breeding_permanent:
+                optional: false
                 bind_as: breeding_digimon
                 prompt: "Choose your breeding Digimon"
                 filter:

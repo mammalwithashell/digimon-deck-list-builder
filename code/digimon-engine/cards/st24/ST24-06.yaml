@@ -78,7 +78,7 @@ alt_paths:
     cost: 3
   # [Digivolve] Lv.4 with the [DATA SQUAD] trait: cost 3.
   - kind: digivolve
-    from: { level_eq: 4, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 4, trait_has: "DATA SQUAD" }
     cost: 3
 
 effects:
@@ -93,6 +93,7 @@ effects:
       # canNoSelect:false → mandatory when a target exists; short-circuits when
       # none do.
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -5000 DP for the turn"
@@ -170,5 +171,5 @@ effects:
             - source_permanent_trait_has: "DATA SQUAD"
     summary: "Inherited [All Turns][OPT] When this [ShineGreymon]-name / [DATA SQUAD] Digimon would leave, by trashing a bottom face-down card under a Tamer, it doesn't leave"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - cancel_replacement: {}

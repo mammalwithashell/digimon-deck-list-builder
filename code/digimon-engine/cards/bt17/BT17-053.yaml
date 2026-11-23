@@ -62,6 +62,7 @@ effects:
     summary: "[Opponent's Turn] When an opponent's level 5+ Digimon is played or digivolves, may digivolve into an [Infermon] from hand for free, ignoring requirements"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: infermon
           filter: { name_is: Infermon }

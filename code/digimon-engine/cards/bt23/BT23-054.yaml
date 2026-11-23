@@ -21,6 +21,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - any_of:
@@ -42,6 +43,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_own_permanent:
+          optional: false
           bind_as: protected
           filter:
             all_of:

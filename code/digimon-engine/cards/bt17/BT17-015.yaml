@@ -9,7 +9,7 @@ traits: [Dragonkin]
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 5, name_contains: "Greymon" }
+    from: { any_color: true, level_eq: 5, name_contains: "Greymon" }
     cost: 3
 
 effects:
@@ -40,6 +40,7 @@ effects:
           condition: { equals: [branch, 0] }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: target
                 filter:
                   all_of:
@@ -51,6 +52,7 @@ effects:
           condition: { equals: [branch, 1] }
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: base
                 filter: { name_contains: "Gabumon" }
                 prompt: "Choose 1 Gabumon"

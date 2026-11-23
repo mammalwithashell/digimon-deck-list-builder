@@ -76,6 +76,7 @@ attribute: Data
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: "Composite"
@@ -119,6 +120,7 @@ effects:
       # candidate at that level exists — matching DCGO's per-level
       # HasMatchConditionPermanent guard with no explicit `if` needed.
       - select_opponent_permanent:
+          optional: false
           bind_as: opp_l3
           filter:
             all_of:
@@ -127,6 +129,7 @@ effects:
           prompt: "Delete 1 of your opponent's level 3 Digimon"
       - delete_permanent: { target: opp_l3 }
       - select_opponent_permanent:
+          optional: false
           bind_as: opp_l4
           filter:
             all_of:
@@ -135,6 +138,7 @@ effects:
           prompt: "Delete 1 of your opponent's level 4 Digimon"
       - delete_permanent: { target: opp_l4 }
       - select_opponent_permanent:
+          optional: false
           bind_as: opp_l5
           filter:
             all_of:

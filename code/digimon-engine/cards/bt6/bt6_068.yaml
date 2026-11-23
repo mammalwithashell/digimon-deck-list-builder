@@ -30,6 +30,7 @@ effects:
           condition: { effect_trashed_any_hand_card: true }
           then:
             - select_trash:
+                optional: false
                 of: you
                 bind_as: returned
                 filter:
