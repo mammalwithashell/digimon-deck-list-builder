@@ -4494,17 +4494,6 @@ fn can_card_digivolve_onto_waiving(
     // alone is insufficient: both the host and its controller must currently
     // be allowed to digivolve. Match the controller used by the DSL commit,
     // which can differ from the player owning the initiating effect.
-    if rctx
-        .game
-        .modifiers
-        .has(target, crate::enums::ModifierType::CannotDigivolve)
-        || rctx.game.modifiers.player_has(
-            target.player,
-            crate::enums::ModifierType::CannotDigivolveDigimonByEffect,
-        )
-    {
-        return false;
-    }
     let Some(candidate) = rctx.game.card_source_for_handle(card) else {
         return false;
     };
@@ -4513,7 +4502,11 @@ fn can_card_digivolve_onto_waiving(
     } else {
         rctx.game.all_digivolve_routes_for_card(candidate, target)
     };
-    routes.iter().any(|route| !route.app_fusion)
+    routes.iter().any(|route| {
+        !route.app_fusion && rctx.game.digivolve_route_passes_prohibitions(
+            target, target.player, crate::enums::PlaySource::ByEffect, route.as_tamer,
+        )
+    })
 }
 
 /// `this_card_can_digivolve_onto` — permanent-subject probe: can the effect's

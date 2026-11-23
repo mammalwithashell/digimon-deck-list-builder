@@ -897,6 +897,11 @@ pub enum SecurityRemovalDestination {
         target: PermanentHandle,
         turn: u16,
     },
+    DigivolveAsTamer {
+        player: PlayerId,
+        target: PermanentHandle,
+        turn: u16,
+    },
     Security {
         player: PlayerId,
         position: crate::enums::StackPosition,

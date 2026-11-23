@@ -31,6 +31,7 @@ mod digivolve_target_predicates;
 mod digixros_transaction_steps;
 mod dp_deletion_max_modifier;
 mod digivolve_ignore_level_and_tamer_base;
+mod digivolve_as_tamer;
 mod effect_battle;
 mod effect_granted_attack;
 mod effect_immunity_step;
