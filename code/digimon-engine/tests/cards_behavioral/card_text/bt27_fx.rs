@@ -132,3 +132,40 @@ pub fn attack_security(r: &mut DebugRunner, attacker: u8) {
     assert!(build_action_mask(&r.game, 0)[a as usize] > 0.5, "security attack illegal");
     r.game.decode_action(a, 0);
 }
+
+/// Digivolve hand card `id` onto `target` (player 0) through the real action.
+pub fn digivolve_hand(r: &mut DebugRunner, id: &str, target: PermanentHandle) -> bool {
+    let a = digimon_engine::action::space::encode_digivolve(hand_index(r, 0, id) as u16, target.index as u16);
+    if build_action_mask(&r.game, 0)[a as usize] <= 0.5 {
+        return false;
+    }
+    r.game.decode_action(a, 0);
+    true
+}
+
+
+/// Attack a suspended 99000 DP opposing wall so `attacker` loses the battle.
+pub fn lose_battle(r: &mut DebugRunner, attacker: u8) -> PermanentHandle {
+    let wall = r.place_on_field(1, "WALL", Some(0));
+    attack(r, attacker, wall);
+    wall
+}
+
+pub fn wall() -> CardData {
+    let mut c = mon("WALL", "Wall", 7, 12, &[]);
+    c.dp = Some(99000);
+    c
+}
+
+/// Return `mine` to hand by an opposing effect sourced from `opp_src`.
+pub fn opponent_bounces(r: &mut DebugRunner, opp_src: PermanentHandle, mine: PermanentHandle) {
+    use digimon_engine::effect_context::EffectContext;
+    let card = r.top_card(opp_src);
+    r.game.set_effect_source_player_for_test(Some(1));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, card, Some(opp_src), 1);
+        let _ = ctx.return_to_hand(mine);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    r.game.drain_effect_queue();
+}

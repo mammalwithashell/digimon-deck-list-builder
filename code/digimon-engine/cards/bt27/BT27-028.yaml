@@ -1,0 +1,91 @@
+# Source: data/card_bundles/BT27-028.md (official Bandai text).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Blue/BT27_028.cs
+#   (Decode on both faces; On Play / When Digivolving mandatory pick of an
+#   opposing Digimon or Tamer that can't suspend until their turn ends.)
+card: BT27-028
+name: Shaujinmon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+traits: [Wizard, DATA SQUAD, Aquatic]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, level_eq: 4, trait_has: DATA SQUAD }
+    cost: 3
+
+effects:
+  - text: "＜Decode (Lv.4 or lower w/[Aquatic]/[DATA SQUAD] trait)＞"
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode (Lv.4 or lower [Aquatic]/[DATA SQUAD])> play 1 such Digimon from sources when this would leave other than in battle"
+    process:
+      - select_material:
+          optional: false
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Aquatic
+                  - trait_has: DATA SQUAD
+          prompt: "Choose a level 4 or lower [Aquatic]/[DATA SQUAD] Digimon source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  - text: "＜Decode (Lv.4 or lower w/[Aquatic]/[DATA SQUAD] trait)＞"
+    kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "[Inherited] <Decode (Lv.4 or lower [Aquatic]/[DATA SQUAD])> play 1 such Digimon from sources when this would leave other than in battle"
+    process:
+      - select_material:
+          optional: false
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Aquatic
+                  - trait_has: DATA SQUAD
+          prompt: "Choose a level 4 or lower [Aquatic]/[DATA SQUAD] Digimon source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  - text: "[On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends."
+    when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: locked
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 of your opponent's Digimon or Tamers that can't suspend until their turn ends"
+      - add_modifier:
+          target: locked
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn

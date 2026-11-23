@@ -14,6 +14,17 @@ traits: [Beast, DATA SQUAD]
 form: Rookie
 attribute: Data
 
+alt_paths:
+  - kind: digivolve
+    from:
+      any_color: true
+      any_of:
+        - name_is: "Wanyamon"
+        - all_of:
+            - level_eq: 2
+            - trait_has: DATA SQUAD
+    cost: 0
+
 effects:
   - text: "[When Moving] [On Play] By placing 1 card from your hand face down under any of your [Thomas H. Norstein]s, both players ＜Draw 1＞."
     when: [on_play, on_move]

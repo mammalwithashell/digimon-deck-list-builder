@@ -1,0 +1,57 @@
+# Source: data/card_bundles/BT27-057.md (official Bandai text and Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Black/BT27_057.cs
+card: BT27-057
+name: PawnChessmon
+kind: digimon
+level: 3
+color: [black, yellow]
+cost: 3
+dp: 2000
+traits: [Puppet, DATA SQUAD]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      any_color: true
+      all_of:
+        - level_eq: 2
+        - any_of:
+            - in_text_contains: Chessmon
+            - trait_has: DATA SQUAD
+    cost: 0
+
+effects:
+  - text: "[Start of Your Main Phase] By trashing 1 card with [Chessmon] in its text from your hand, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand], in_text_contains: Chessmon }
+        n: 1
+    summary: "[Start of Your Main Phase] By trashing 1 card with [Chessmon] in its text from your hand, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discarded
+          optional: true
+          filter: { in_text_contains: Chessmon }
+          prompt: "Trash 1 card with [Chessmon] in its text from your hand to <Draw 1> and gain 1 memory"
+      - if:
+          condition: { binding_present: discarded }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discarded }
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  - text: "[On Deletion] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+    scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: dedigi_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve: { target: dedigi_target, amount: 1 }

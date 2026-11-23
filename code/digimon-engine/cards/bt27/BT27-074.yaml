@@ -1,0 +1,82 @@
+# Source: data/card_bundles/BT27-074.md (official Bandai text and Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Purple/BT27_074.cs
+#   (When Moving / On Play: skippable hand pick placed face down at the bottom
+#   of a [Keenan Crier]; draw 1 then trash 1. Inherited When Attacking OPT.)
+card: BT27-074
+name: Falcomon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 1000
+traits: [Avian, DATA SQUAD]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, level_eq: 2, trait_has: DATA SQUAD }
+    cost: 0
+
+effects:
+  - text: "[When Moving] [On Play] By placing 1 card from your hand face down under any of your [Keenan Crier]s, ＜Draw 1＞ and trash 1 card in your hand."
+    when: [on_play, on_move]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    condition:
+      all_of:
+        - count_gte:
+            filter: { of: you, zone: [hand] }
+            n: 1
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            name_is: "Keenan Crier"
+    summary: "[When Moving][On Play] By placing 1 hand card face down under 1 of your [Keenan Crier]s, <Draw 1> and trash 1 card in your hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter: {}
+          prompt: "Place 1 card from your hand face down under 1 of your [Keenan Crier]s"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - select_own_permanent:
+                optional: false
+                bind_as: keenan
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - name_is: "Keenan Crier"
+                prompt: "Choose the [Keenan Crier] to place the card under"
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: keenan
+                face_down: true
+            - draw: { of: you, count: 1 }
+            - select_hand:
+                of: you
+                bind_as: discarded
+                optional: false
+                filter: {}
+                prompt: "Trash 1 card in your hand"
+            - trash_from_hand_by_index: { of: you, hand_index: discarded }
+
+  - text: "[When Attacking] [Once Per Turn] ＜Draw 1＞ and trash 1 card in your hand."
+    scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] <Draw 1> and trash 1 card in your hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discarded
+          optional: false
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discarded }

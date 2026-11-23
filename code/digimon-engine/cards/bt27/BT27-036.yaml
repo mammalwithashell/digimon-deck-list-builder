@@ -16,6 +16,17 @@ traits: [Puppet, DATA SQUAD]
 form: Rookie
 attribute: Virus
 
+alt_paths:
+  - kind: digivolve
+    from:
+      any_color: true
+      all_of:
+        - level_eq: 2
+        - any_of:
+            - in_text_contains: Chessmon
+            - trait_has: DATA SQUAD
+    cost: 0
+
 effects:
   - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Chessmon] in its text and 1 [DATA SQUAD] trait card among them to the hand. Return the rest to the bottom of the deck."
     when: on_play

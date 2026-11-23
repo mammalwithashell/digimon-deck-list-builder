@@ -1,0 +1,69 @@
+# Source: data/card_bundles/BT27-039.md (official Bandai text and Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Yellow/BT27_039.cs
+card: BT27-039
+name: KnightChessmon
+kind: digimon
+level: 4
+color: [yellow, black]
+cost: 4
+dp: 4000
+traits: [Puppet, DATA SQUAD]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      any_color: true
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - name_contains: Chessmon
+            - trait_has: DATA SQUAD
+    cost: 2
+
+effects:
+  - text: "＜Barrier＞"
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier>"
+
+  - text: "[When Attacking] [Once Per Turn] You may play 1 Digimon card with [Chessmon] in its name from your hand with the cost reduced by 2."
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][Once Per Turn] You may play 1 [Chessmon]-named Digimon card from your hand with the cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: chessmon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Chessmon
+              - can_play_from_effect_without_cost: true
+              - affordable_with_cost: { reduce: 2 }
+          prompt: "Play 1 Digimon card with [Chessmon] in its name from your hand with the cost reduced by 2"
+      - if:
+          condition: { binding_present: chessmon }
+          then:
+            - play_from_hand:
+                of: you
+                hand_index: chessmon
+                cost_delta: { reduce: 2 }
+
+  - text: "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn."
+    scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -2000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -2000
+          expiry: end_of_turn

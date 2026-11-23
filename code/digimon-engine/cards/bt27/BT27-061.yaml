@@ -1,0 +1,61 @@
+# Source: data/card_bundles/BT27-061.md (official Bandai text).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Black/BT27_061.cs
+card: BT27-061
+name: KnightChessmon
+kind: digimon
+level: 4
+color: [black, yellow]
+cost: 4
+dp: 4000
+traits: [Puppet, DATA SQUAD]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      any_color: true
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - name_contains: Chessmon
+            - trait_has: DATA SQUAD
+    cost: 2
+
+effects:
+  - text: "＜Blocker＞"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "[On Deletion] You may play 1 play cost 4 or lower Digimon card with [Chessmon] in its name from your hand without paying the cost."
+    when: on_deletion
+    summary: "[On Deletion] You may play 1 play cost 4 or lower [Chessmon]-named Digimon card from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: chessmon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Chessmon
+              - play_cost_lte: 4
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 play cost 4 or lower Digimon card with [Chessmon] in its name from your hand without paying the cost"
+      - if:
+          condition: { binding_present: chessmon }
+          then:
+            - play_from_hand_free: { of: you, hand_index: chessmon }
+
+  - text: "[On Deletion] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+    scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: dedigi_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve: { target: dedigi_target, amount: 1 }

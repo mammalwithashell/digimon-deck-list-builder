@@ -14,6 +14,11 @@ traits: [Cyborg, DATA SQUAD, Aquatic]
 form: Rookie
 attribute: Data
 
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, level_eq: 2, trait_has: DATA SQUAD }
+    cost: 0
+
 effects:
   - text: "[On Play] By placing 1 level 4 or lower [Aquatic] or [DATA SQUAD] trait Digimon card from your hand as any of your Digimon's bottom digivolution card, or face down under any of your [DATA SQUAD] trait Tamers, ＜Draw 1＞."
     when: on_play
