@@ -57,6 +57,22 @@ fn skullmeramon_inheritance_can_be_refired_to_trash_opponent_security() {
 }
 
 #[test]
+fn a_face_down_skullmeramon_cannot_contribute_its_inherited_deletion_effect() {
+    let mut r = start(builder(CARD).dsl_card("BT27-010").unwrap());
+    let carrier = r.place_stack(0, &[CARD, "BT27-010"]);
+    r.game.players[0].battle_area[carrier.index as usize].card_sources[0].face_down = true;
+    let face = r.top_card(carrier);
+    let security_before = r.game.players[1].security.len();
+    action(&mut r, 0, main_action(carrier.index));
+    r.assert_prompt(SelectionKind::EffectChoice, true, 0);
+    let choices = r.pending_selection_view().unwrap().effect_choices.unwrap();
+    assert_eq!(choices.len(), 1);
+    assert_eq!(choices[0].source_card, Some(face));
+    r.execute_branch(0).unwrap();
+    assert_eq!(r.game.players[1].security.len(), security_before);
+}
+
+#[test]
 fn deleting_a_carrier_with_skullmeramon_under_it_trashes_the_top_security_card() {
     let mut r = start(builder(CARD).security(1, &["TEXT-4", "TEXT-5"]));
     let top = r.game.players[1].security.last().unwrap().handle();

@@ -17205,7 +17205,7 @@
       "archetype": "BT27 staples and unclustered",
       "yaml_path": "code/digimon-engine/cards/bt27/BT27-012.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_012.rs",
-      "test_count": 3,
+      "test_count": 4,
       "integration_verification": "limited"
     },
     "BT27-023": {

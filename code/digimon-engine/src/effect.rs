@@ -1872,6 +1872,9 @@ pub fn enumerate_refireable_effects(
         .filter(|_| is_deletion)
         .map(|card| (None, card));
     for (stack_index, card) in stack_sources.chain(linked_sources) {
+        if is_deletion && card.face_down {
+            continue;
+        }
         let source_card = card.handle();
         let card_id = card.card_id(&game.card_data);
         let Some(effects) = game.effects_for_card(card_id, source_card) else {
