@@ -17074,7 +17074,7 @@
   },
   "BT25-103": {
    "behaviourally_covered": true,
-   "clause_count": 10,
+   "clause_count": 9,
    "constructs": [
     "verb:end_attack",
     "verb:if",
@@ -17099,7 +17099,7 @@
     "timing:when_digivolving",
     "keyword:Iceclad"
    ],
-   "effect_clause_count": 6,
+   "effect_clause_count": 5,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -18487,7 +18487,7 @@
   },
   "BT26-055": {
    "behaviourally_covered": false,
-   "clause_count": 5,
+   "clause_count": 4,
    "constructs": [
     "verb:delete_all_permanents",
     "verb:if",
@@ -18517,7 +18517,7 @@
     "timing:when_digivolving",
     "keyword:Fragment"
    ],
-   "effect_clause_count": 4,
+   "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
@@ -18650,6 +18650,7 @@
    "constructs": [
     "verb:delete_permanent",
     "verb:if",
+    "verb:refund_opt",
     "verb:return_top_stacked_to_deck",
     "verb:select_count_capped_multi",
     "verb:select_opponent_permanent",
@@ -24268,6 +24269,7 @@
     "verb:if",
     "verb:play_from_materials",
     "verb:redirect_attack_target",
+    "verb:refund_opt",
     "verb:select_dna_pair",
     "verb:select_hand",
     "verb:select_material",
@@ -24275,6 +24277,7 @@
     "verb:select_own_permanent",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:binding_absent",
     "predicate:binding_present",
     "predicate:color_is",
     "predicate:dna_field_pair",
@@ -24668,6 +24671,7 @@
     "verb:play_from_hand_free",
     "verb:play_from_materials",
     "verb:play_token",
+    "verb:refund_opt",
     "verb:return_to_deck",
     "verb:select_effect_choice",
     "verb:select_hand",
@@ -24675,8 +24679,10 @@
     "verb:select_opponent_permanent",
     "predicate:all_of",
     "predicate:all_turns",
+    "predicate:any_of",
     "predicate:can_play_from_effect_without_cost",
     "predicate:color_is",
+    "predicate:count_gte",
     "predicate:equals",
     "predicate:event_target_kind",
     "predicate:kind",
@@ -24915,6 +24921,7 @@
     "verb:add_dp_modifier",
     "verb:if",
     "verb:play_or_use_from_hand",
+    "verb:refund_opt",
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "predicate:affordable_with_cost",
@@ -26675,6 +26682,7 @@
    "clause_count": 9,
    "constructs": [
     "verb:if",
+    "verb:refund_opt",
     "verb:return_all_to_deck",
     "verb:select_effect_choice",
     "verb:select_opponent_sources",
