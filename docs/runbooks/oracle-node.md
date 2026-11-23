@@ -30,6 +30,18 @@ A node needs, in total:
 
 ## 2. Payload
 
+On the build machine, prepare the pinned DCGO project using
+[`docs/DCGO_BUILD.md`](../DCGO_BUILD.md). Use an activated Unity 2021.3.45f2
+Editor with Windows Mono Build Support to build the player and its manifest:
+
+```bash
+cargo run --locked -p dcgo-harness -- build --unity "$UNITY" \
+    --project "$PWD/DCGO" --output "$PLAYER"
+```
+
+Run this from the base repo. `UNITY` is the Editor executable, and `PLAYER`
+is a new output directory outside the DCGO project.
+
 [`scripts/build-oracle-node.sh`](../../scripts/build-oracle-node.sh) assembles
 items 1–3 from a build machine (one that has the base repo — DCGO submodule
 and the rules PDFs live only there, per rules 29 and 32) into a directory
