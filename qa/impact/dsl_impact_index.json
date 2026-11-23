@@ -29129,6 +29129,7 @@
       "predicates": [
         "all_of",
         "any_of",
+        "count_gte",
         "count_lte",
         "kind",
         "level_gte",
@@ -33045,7 +33046,7 @@
       ]
     }
   },
-  "cards_root": "code/digimon-engine/cards",
+  "cards_root": "/home/ubuntu/repos/digimon-deck-list-builder/code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost": [
       "AD1-019",
@@ -37275,6 +37276,7 @@
       "P-193",
       "P-206",
       "P-220",
+      "P-224",
       "P-240",
       "P-247",
       "P-248",
