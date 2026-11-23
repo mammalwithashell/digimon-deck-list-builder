@@ -48,12 +48,13 @@ dual:
               max: 1
               filter: { any_of: [{ name_is: LordKnightmon }, { name_is: X Antibody }] }
               prompt: "Trash a [LordKnightmon] or [X Antibody] digivolution card"
-          - trash_selected_sources_as_cost: { source_refs: payment, min_count: 1 }
+          - trash_selected_sources_as_cost: { source_refs: payment, min_count: 0 }
           - if:
-              condition: { not: { binding_present: payment } }
+              condition: { binding_count_eq: { binding: payment, n: 0 } }
               then:
                 - refund_opt: {}
-          - refire_effect: { source: source, timing: option_main, optional: false }
+              else:
+                - refire_effect: { source: source, timing: option_main, optional: false }
   option:
     use_cost: 5
     colors: [purple, black]

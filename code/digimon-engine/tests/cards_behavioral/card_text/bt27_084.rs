@@ -125,6 +125,9 @@ fn digivolving_can_play_knightmon_text_cards_up_to_eight_total_or_decline() {
                 }
             } else {
                 r.decline_prompt().unwrap();
+                assert_eq!(candidates(&r), ["BASE"]);
+                r.decline_prompt().unwrap();
+                assert!(r.game.players[0].trash.is_empty());
             }
             assert_eq!(r.battle_area_size(0), 3);
         } else {
@@ -200,6 +203,28 @@ fn playing_then_losing_another_digimon_shares_one_activation_per_turn() {
     assert!(r.pending_selection().is_none());
     assert_eq!(ids(&r, &r.game.players[0].trash), ["X", "TEXT-3"]);
     assert_eq!(ids(&r, &r.game.players[0].battle_area[0].card_sources), ["TEXT-5", "X", CARD]);
+}
+
+#[test]
+fn declining_source_payment_on_play_leaves_it_available_for_a_later_play() {
+    let mut x = digimon("X", 3, 2000, false);
+    x.card_name = "X Antibody".into();
+    let mut r = start(builder(CARD).add_card(x).hand(0, &["TEXT-3", "TEXT-4"]));
+    r.place_stack(0, &["X", CARD]);
+    r.place_on_field(1, "TEXT-3", Some(0));
+
+    action(&mut r, 0, PLAY_HAND_START);
+    assert_eq!(candidates(&r), ["X"]);
+    r.decline_prompt().unwrap();
+    assert!(r.game.players[0].trash.is_empty());
+
+    action(&mut r, 0, PLAY_HAND_START);
+    assert_eq!(candidates(&r), ["X"]);
+    r.choose_prompt_card("X", None).unwrap();
+    assert_eq!(candidates(&r), ["TEXT-3"]);
+    r.choose_prompt_card("TEXT-3", None).unwrap();
+    assert_eq!(ids(&r, &r.game.players[0].trash), ["X"]);
+    assert_eq!(ids(&r, &r.game.players[1].trash), ["TEXT-3"]);
 }
 
 #[test]
