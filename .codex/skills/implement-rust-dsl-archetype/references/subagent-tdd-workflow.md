@@ -4,11 +4,13 @@ Use this reference after the target card pool is resolved, classified, and group
 
 ## Controller Rules
 
+- For IMPLEMENT and AUDIT, keep YAML, existing tests, scout implementation analysis and DCGO bodies out of the initial worker context. First write and run bundle/rules-derived `card_text/<id>.rs` tests; only then release deferred references. Scout briefs must not embed YAML for the first phase.
+
 - Process the entire requested queue, one batch at a time; default batch size is 4.
 - Dispatch one fresh worker per non-skipped card in the current batch.
 - Provide exact card context; do not make workers rediscover the whole archetype.
 - Do not dispatch parallel workers that touch the same YAML file, Rust test file, Rust module, selection/action internals, or shared tracker.
-- Keep workers confined to `code/digimon-engine/cards/<set>/<CARD-ID>.yaml` and `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs`.
+- Keep workers confined to `code/digimon-engine/cards/<set>/<CARD-ID>.yaml` and `code/digimon-engine/tests/cards_behavioral/card_text/<card_id_lower>.rs`.
 - Keep the main session responsible for `main.rs`, `mod.rs`, `validated_cards_dsl.json`, gap trackers, QA artifacts, integration, and final verification.
 - Review each batch in two stages: spec compliance first, code quality second.
 - After a batch passes review and targeted tests, immediately continue to the next planned batch. Do not pause for user confirmation, and do not send a long per-batch report unless blocked.
@@ -40,9 +42,9 @@ Note: [I] = IMPLEMENT, [A] = AUDIT
 
 Before dispatching the first batch, pre-wire test discovery for every non-skipped card:
 
-1. Ensure `code/digimon-engine/tests/cards_behavioral/<set>/mod.rs` exists and contains `mod <card_id_lower>;`.
-2. Ensure `code/digimon-engine/tests/cards_behavioral/main.rs` contains `mod <set>;`.
-3. Ensure `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs` exists, even if empty.
+1. Ensure `code/digimon-engine/tests/cards_behavioral/card_text/mod.rs` exists and contains `mod <card_id_lower>;`.
+2. Ensure `code/digimon-engine/tests/cards_behavioral/main.rs` contains `mod card_text;`.
+3. Ensure `code/digimon-engine/tests/cards_behavioral/card_text/<card_id_lower>.rs` exists, even if empty.
 
 If a card returns `BLOCKED` and wrote no tests, remove its module line and placeholder file during merge. Workers must not edit registration files themselves.
 
@@ -50,10 +52,10 @@ If a card returns `BLOCKED` and wrote no tests, remove its module line and place
 
 For each card in a batch, gather:
 
-- Printed text and metadata from `code/digimon-engine/cards/<set>/<CARD-ID>.json`: name, kind, level, DP, play cost, colors, traits, `evo_costs`, `xros_req`, effect, inherited, and security text. Use `data/cards.json` only as a fallback or mismatch cross-check.
+- Initial authoring source: `data/card_bundles/<ID>.md`, including identity, evolution data, printed sections and official Q&A, plus rules. Defer implementation references and supplemental metadata until the first test run.
 - DCGO C# reference if present at `DCGO/Assets/Scripts/CardEffect/<SET>/*/<CARD_ID_UNDERSCORE>.cs`.
 - Prior DSL verdict from `qa/qa-reports/validated_cards_dsl.json`, if present.
-- Existing YAML and tests for `AUDIT` mode.
+- Existing YAML and tests for `AUDIT` mode are deferred references: pass paths only, never bodies before the first independent card-text run.
 
 Use printed text as authoritative. DCGO is a behavioral implementation reference and tiebreaker only.
 
@@ -78,23 +80,25 @@ Each `IMPLEMENT` worker task should include:
 Use TDD to implement <CARD-ID> as a Rust engine YAML DSL card.
 
 Context:
-- Printed text: <effect/inherited/security text from code/digimon-engine/cards/<set>/<CARD-ID>.json>
-- Metadata: <kind, level, DP, play cost, colors, traits, evo costs, xros_req from per-card JSON>
+- Printed text and official Q&A: data/card_bundles/<CARD-ID>.md
+- Metadata/evolution requirements: from the bundle above.
 - Required docs: AGENTS.md, docs/RUST_DSL_AGENT_GUIDE.md, docs/RUST_DSL_TEST_API.md, docs/RUST_ENGINE_API.md
-- Existing examples to inspect: <YAML/test paths>
-- Scout brief: <brief or "none">
+- Deferred examples (open only after first test run): <YAML/test paths>
+- Scout brief: withheld by controller until first card-text run; no YAML embedded in the initial brief.
 - Known gaps to respect: <tracker entries or "none">
 - Allowed write paths:
   - code/digimon-engine/cards/<set>/<CARD-ID>.yaml
-  - code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs
+  - code/digimon-engine/tests/cards_behavioral/card_text/<card_id_lower>.rs
 
-RED:
-- Add/enable this failing test: <exact path and behavior>
+RED (before reading YAML or existing tests):
+- Write code/digimon-engine/tests/cards_behavioral/card_text/<card_id_lower>.rs from the bundle and rules alone. Quote printed sections and official Q&A; cover every clause, every may-decline and each Q&A through real actions. Follow card_text/bt17_015.rs and docs/RUST_DSL_TEST_API.md, Card-text tests.
+- Assert and answer each prompt with explicit helpers; no auto_resolve*, wrappers or enqueue_triggered. Structural assertions are optional and discouraged.
+- First test behavior: <exact printed clause>
 - Run: <targeted cargo test command>
 - Expected failure: <missing behavior, not parser typo>
 
-GREEN:
-- Implement the minimal YAML/DSL/engine change.
+GREEN (only after recording the first test run):
+- Obtain deferred scout context, open references/YAML/old tests, then implement the minimal change.
 - Preserve PendingSelection/action-mask visibility for choices.
 - Do not use no-op raw_rust or auto-selection.
 - Run: <targeted cargo test command>
@@ -119,26 +123,28 @@ Each `AUDIT` worker task should include:
 Audit <CARD-ID> for Rust DSL faithfulness and test coverage.
 
 Context:
-- Printed text: <effect/inherited/security text from code/digimon-engine/cards/<set>/<CARD-ID>.json>
-- Metadata: <kind, level, DP, play cost, colors, traits, evo costs, xros_req from per-card JSON>
-- Existing YAML: code/digimon-engine/cards/<set>/<CARD-ID>.yaml
-- Existing tests: code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs
-- DCGO reference: <path/body or "absent">
+- Printed text and official Q&A: data/card_bundles/<CARD-ID>.md
+- Metadata/evolution requirements: from the bundle above.
+- Deferred YAML (path only, do not read before first test run): code/digimon-engine/cards/<set>/<CARD-ID>.yaml
+- Deferred existing tests: canonical card_text/<card_id_lower>.rs and legacy <set>/<card_id_lower>.rs; no bodies in the initial prompt.
+- Deferred DCGO reference: <path only or "absent">
 - Required docs: docs/RUST_DSL_AGENT_GUIDE.md, docs/RUST_DSL_TEST_API.md, docs/RUST_ENGINE_API.md
-- Allowed write path:
-  - code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs
+- Allowed write paths:
+  - code/digimon-engine/tests/cards_behavioral/card_text/<card_id_lower>.rs
+  - code/digimon-engine/cards/<set>/<CARD-ID>.yaml
 
 Audit:
-- Walk every printed clause and compare it to YAML.
+- FIRST write and run independent card_text/<card_id_lower>.rs tests from data/card_bundles/<CARD-ID>.md plus rules, before opening YAML or existing tests. Quote all printed sections and official Q&A, cover each clause, every may-decline and each Q&A, use real actions and explicit prompt helpers. No auto_resolve*, wrappers or enqueue_triggered; compiled-shape assertions are optional and discouraged.
+- Record the initial output, then open deferred references and compare every printed clause to YAML.
 - Check optionality, branches, conditions, once-per-turn, source/target filters, and player-visible choices.
 - Add missing behavioral tests when YAML is faithful but coverage is incomplete.
-- Do not modify existing YAML in audit mode; report drift instead.
+- A failing card-text test is a finding: fix clearly wrong YAML with existing vocabulary, preserve correct assertions, and rerun canonical plus existing per-card tests. Report ambiguous rulings or missing capabilities.
 
 Final response:
 - Verdict: AUDITED-OK | AUDITED-MISSING-TESTS | AUDITED-DRIFT | BLOCKED
 - Files changed
 - Tests added or run
-- Drift diff proposal if any
+- Printed-text finding and applied YAML diff, or unresolved blocker
 - Gap kind if blocked: engine | dsl | hybrid | rules | test | data
 ```
 
@@ -152,7 +158,7 @@ Check:
 - The task did not implement extra unrequested card behavior.
 - Every player-visible choice is exposed through action masks or PendingSelection.
 - Optionality, PASS, filters, event subjects, replacement causes, and OPT are covered where relevant.
-- AUDIT-mode YAML drift is reported, not silently rewritten.
+- AUDIT-mode findings and any existing-vocabulary YAML fixes are reported with initial/final test evidence; ambiguity or missing capabilities are explicit.
 - Gap trackers accurately distinguish closed, partial, and still-open work.
 
 Return findings first with file/line references. If no issues, say "Spec compliant" and list residual unclaimed scope per card.
@@ -209,5 +215,5 @@ After all batches:
    - Selection/action masks: relevant `selection`, `mask_and_tensor`, or `action` tests.
    - Card behavior: `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- <card_or_set> --nocapture`
 4. Re-scan for placeholders:
-   - `rg "process: \\[\\]|raw_rust|TODO|BLOCKED" code/digimon-engine/cards/<sets> code/digimon-engine/tests/cards_behavioral/<sets>`
+   - `rg "process: \\[\\]|raw_rust|TODO|BLOCKED" code/digimon-engine/cards/<sets> code/digimon-engine/tests/cards_behavioral/card_text`
 5. Run `git diff --check`.

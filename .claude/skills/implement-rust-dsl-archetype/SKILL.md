@@ -11,6 +11,12 @@ Implement an archetype by converting a resolved card pool into tested Rust engin
 
 **REQUIRED SUB-SKILLS:** Use `superpowers:test-driven-development`, `superpowers:subagent-driven-development`, and `superpowers:verification-before-completion`. Use `assess-archetype-rust` for card-pool and gap-resolution evidence.
 
+## Card-text-first tests (IMPLEMENT and AUDIT)
+
+Fresh implementers/auditors first read `data/card_bundles/<ID>.md` plus rules, write `code/digimon-engine/tests/cards_behavioral/card_text/<id>.rs`, and run it **before the card's YAML or existing tests enter context**. The controller withholds scout implementation analysis, YAML and existing-test bodies until that run; initial briefs contain only bundle/rules context, not embedded YAML. Then open/write YAML and reconcile existing tests.
+
+Follow docs/RUST_DSL_TEST_API.md, “Card-text tests”, and `card_text/bt17_015.rs`: quote all printed sections and official Q&A, test each clause, every “may” decline and each Q&A, reach triggers through real actions, and assert/answer every prompt with the explicit helpers. No `auto_resolve*`, wrappers or `enqueue_triggered`; compiled-shape assertions are optional and discouraged. In AUDIT, a failing printed-text test is a finding: fix clearly wrong YAML with existing vocabulary and rerun canonical plus existing card tests; report ambiguity or missing capabilities rather than weakening assertions.
+
 ## Required Docs
 
 Read these before dispatching implementation work:
@@ -61,9 +67,9 @@ Load reference files only when needed:
 
 Every task must include:
 
-- Printed text evidence from `data/cards.json`.
-- Existing YAML/DSL examples to mimic when possible.
-- A failing test under `code/digimon-engine/tests/` before YAML or engine edits.
+- Initial printed text and official Q&A from `data/card_bundles/<ID>.md`.
+- Existing YAML/DSL examples to inspect only after the first independent card-text run.
+- A recorded initial run of independent `tests/cards_behavioral/card_text/<id>.rs` tests before reading/writing YAML or reading old tests; IMPLEMENT must demonstrate RED.
 - Action-mask or pending-selection assertions for every player-visible choice.
 - Negative tests for filters, missing targets, optional decline, and once-per-turn where relevant.
 - Tracker edits that are precise about closed, partial, and still-open sub-shapes.

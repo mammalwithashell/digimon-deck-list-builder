@@ -989,6 +989,26 @@ pub(super) fn fresh_zone_card_pick_stands_for_zone_menu(game: &Game) -> bool {
             .is_some_and(|d| dcgo_zone_menu_asked_for_either_zone(&d.card_id))
 }
 
+pub(crate) fn pending_frame_card_candidates(game: &Game) -> Option<Vec<(u16, String)>> {
+    let pending = game.pending_selection.as_ref()?;
+    let valid = &pending.valid_action_ids;
+    if let Some(pairs) = zone_card_candidate_ids(game, valid) {
+        return Some(pairs);
+    }
+    if matches!(pending.kind, SelectionKind::SourceMulti { .. }) {
+        return source_multi_candidate_ids(game, valid);
+    }
+    let (ids, base) = match pending.kind {
+        SelectionKind::Material => material_source_ids(game, valid)?,
+        SelectionKind::CountCappedMultiSelect { .. } => count_capped_zone_ids(game, valid)?,
+        SelectionKind::OrderedPermutation { .. } => (permutation_remaining_ids(game)?, SEL_REVEAL_START),
+        _ => return None,
+    };
+    Some(valid.iter().filter_map(|&action| {
+        ids.get(action.checked_sub(base)? as usize).map(|id| (action, id.clone()))
+    }).collect())
+}
+
 fn zone_card_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, String)>> {
     let state = pending_zone_card_pick(game)?;
     let pairs: Vec<(u16, String)> = state

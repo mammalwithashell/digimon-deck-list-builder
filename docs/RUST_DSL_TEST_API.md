@@ -32,6 +32,9 @@ code/digimon-engine/
 └── tests/
     ├── cards_behavioral/               # Per-card TDD tests (the home for DSL card tests)
     │   ├── main.rs                     # Module index
+    │   ├── card_text/                   # New printed-text-first tests
+    │   │   ├── mod.rs                   # Canonical card-text modules
+    │   │   └── <card_id>.rs             # Template: bt17_015.rs
     │   ├── <set>/                      # One subdirectory per set (bt15/, bt17/, ex11/, ...)
     │   │   ├── mod.rs                  # Registers all card tests in the set
     │   │   └── <card_id>.rs            # One file per card (e.g. bt15_003.rs)
@@ -52,12 +55,14 @@ code/digimon-engine/
 
 | Card ID | Module | File |
 |---|---|---|
-| `BT15-003` | `bt15_003` | `tests/cards_behavioral/bt15/bt15_003.rs` |
-| `EX11-027` | `ex11_027` | `tests/cards_behavioral/ex11/ex11_027.rs` |
-| `P-117` | `p_117` | `tests/cards_behavioral/p/p_117.rs` |
-| `LM-029` | `lm_029` | `tests/cards_behavioral/lm/lm_029.rs` |
+| `BT15-003` | `bt15_003` | `tests/cards_behavioral/card_text/bt15_003.rs` |
+| `EX11-027` | `ex11_027` | `tests/cards_behavioral/card_text/ex11_027.rs` |
+| `P-117` | `p_117` | `tests/cards_behavioral/card_text/p_117.rs` |
+| `LM-029` | `lm_029` | `tests/cards_behavioral/card_text/lm_029.rs` |
 
-Each `<set>/mod.rs` registers every card module in the set:
+New files are registered in `tests/cards_behavioral/card_text/mod.rs`, with `mod card_text;` in `main.rs`. The set-based registrations below describe legacy tests only.
+
+Each legacy `<set>/mod.rs` registers its card modules:
 
 ```rust
 // tests/cards_behavioral/bt15/mod.rs
@@ -85,9 +90,9 @@ Production card specs live at `code/digimon-engine/cards/<set>/<card_id>.yaml`. 
 
 Five buckets. Each bucket has a clear home; do not mix them.
 
-### Per-card behavioral tests (`tests/cards_behavioral/<set>/<card_id>.rs`)
+### Per-card behavioral tests (`tests/cards_behavioral/card_text/<card_id>.rs`)
 
-One file per card. Tests every clause that card declares — structural shape, condition gating, behavioral outcome, branch coverage. Most of the test suite lives here. **§4** is the full walkthrough.
+New per-card tests follow **Card-text tests** below and §5: printed clauses, conditions, observable outcomes, and every player choice. Legacy tests remain under `<set>/`. Compiled-shape assertions are optional and discouraged for individual cards because they restate the YAML.
 
 ### Mechanic-level tests (`tests/{combat, effects, selection, replacements, flood_gates, option_flow, keywords}/...`)
 
@@ -127,7 +132,7 @@ Current Phase 3 infra coverage includes:
 
 ### Decision tree
 
-> Is the test about a single card's effects? → **per-card** in `cards_behavioral/<set>/`.
+> Is the test about a single card's effects? → **per-card** in `cards_behavioral/card_text/`.
 > Is the test about one engine *mechanic* across ≥2 cards (e.g. Alliance triggering off another card's attack)? → **mechanic-level** under the relevant mechanic dir.
 > Is the test a *named combo* from an archetype's model (its real cards playing as the deck does)? → **archetype interaction** in `tests/archetypes/<slug>.rs`.
 > Is the test about one DSL construct's lowering, for the training gate? → **construct test** in `tests/dsl/constructs/<family>.rs`.
@@ -172,9 +177,9 @@ let mut runner = DebugRunner::builder()
 |---|---|
 | `runner.play(player, hand_index)` (existing) | Play from hand; returns the new battle-area index. |
 | `runner.attack_digimon(attacker, defender, vortex)` / `attack_player(...)` (existing) | Combat entry points. |
-| `runner.execute_action(action_id: u16)` **(spec)** | Submit an action ID to the action decoder. Used to drive a specific branch of a pending selection. |
-| `runner.auto_resolve()` **(spec)** | Pick the *first legal action* at every prompt until no `pending_selection` remains. Mirror of Python `runner.auto_resolve()`. Use only when the test is asserting end-state aggregates, not branch-specific behavior. |
-| `runner.execute_branch(label_index: usize)` **(spec)** | For `EffectChoice` selections only — submit the action ID matching `effect_choices[label_index].action_id`. Convenience wrapper over `execute_action`. |
+| `runner.execute_action(player: PlayerId, action_id: u16)` **(spec)** | Submit an action ID to the action decoder. Used to drive a specific branch of a pending selection. |
+| `runner.auto_resolve()` (legacy) | Automated first-choice resolution. Forbidden in `card_text/`; do not add per-card uses elsewhere (the lint baseline can only shrink). |
+| `runner.execute_branch(label_index: usize)` **(spec)** | For `EffectChoice` or `TriggerOrder` selections — submit the action ID matching `effect_choices[label_index].action_id`. Convenience wrapper over `execute_action`. |
 
 ### Inspecting pending selections
 
@@ -235,7 +240,7 @@ All required:
 
 ### Selection rules (per row)
 
-1. The card must have an existing Python script *or* DCGO C# reference (test author needs ground truth).
+1. The card must have a printed-text bundle with evolution data and available official Q&A. The initial test author uses this and rules, not existing implementations.
 2. For deck-anchored patterns (Liberator, Dark Masters, etc.): pick the most-included card across decklists; break ties by simplest YAML.
 3. For generic patterns (searching rookie, OPT, etc.): pick a card whose YAML is ≤40 lines so the worked example reads cleanly.
 4. Skip any card depending on an unclosed engine gap.
@@ -350,221 +355,77 @@ The pool is regenerated when the DSL vocabulary expands or new launch archetypes
 
 ---
 
+## Card-text tests
+
+New per-card behavioral tests live in `code/digimon-engine/tests/cards_behavioral/card_text/<id>.rs` (lowercase, underscores). Copy [`card_text/bt17_015.rs`](../code/digimon-engine/tests/cards_behavioral/card_text/bt17_015.rs), not a legacy auto-resolving test.
+
+1. Read `data/card_bundles/<ID>.md` and relevant rules **before reading the card's YAML or existing tests**. Scout briefs must not embed YAML, old tests or implementation-derived expectations into this phase.
+2. Write the tests from printed text alone, then run them once. Only after that run may you open or write YAML and compare old tests. A failing test is a finding to triage against printed text: fix a wrong test, or fix clearly wrong YAML with existing vocabulary. Never weaken a correct assertion to match the implementation.
+3. Quote every printed section verbatim in the header: digivolution requirements, effect/inherited/security/DUAL text, and each official Q&A. State the bundle source path.
+4. Write at least one test per printed clause, including every “may” decline and each Q&A. Cover missing targets, ineligible candidates, paid costs, conditions, expiry and once-per-turn/reset behavior where relevant.
+5. Reach triggers through real play, digivolve, attack, security or turn actions: check the action mask and submit via `Game::decode_action` (or a runner helper driving that action). `place_stack`, hand/deck builders and other fixture setup are fine; do not inject triggers with `enqueue_triggered` or `fire_on_play`.
+6. Assert and answer **every** prompt: kind, optionality, selecting player and exact card candidates before choosing. Do not silently drain follow-ups.
+
+### Explicit-prompt helper API
+
+On `DebugRunner`:
+
+```rust
+pub fn assert_prompt(&self, kind: SelectionKind, optional: bool, player: PlayerId);
+pub fn prompt_card_candidates(&self) -> Vec<(u16, String)>;
+pub fn choose_prompt_card(
+    &mut self, card_id: &str, ordinal: Option<usize>,
+) -> Result<(), SelectionError>;
+pub fn decline_prompt(&mut self) -> Result<(), SelectionError>;
+```
+
+`assert_prompt` includes the actual pending prompt on mismatch. Candidates retain duplicates and expose the current page for paged prompts. `choose_prompt_card` rejects absent or ambiguous IDs unless a zero-based duplicate ordinal is supplied. `decline_prompt` requires an optional prompt and submits PASS. Unwrap returned results.
+
+Use existing `execute_branch(index)` for effect/trigger-order choices and `accept_optional_trigger()` for optional-trigger acceptance, after `assert_prompt`. An initial `TriggerOrder` pick may still expose a `Replacement` accept/decline gate. Once only one effect remains, expect its actual optional gate, not necessarily another `TriggerOrder`.
+
+### Explicit-prompt lint
+
+`tests/dsl/explicit_prompt_lint.rs` scans `tests/cards_behavioral/**/*.rs`, including shared wrappers. **No `auto_resolve*`, wrappers around them, or `enqueue_triggered` are allowed in `card_text/`**, which can never be baselined.
+
+Elsewhere, `tests/dsl/auto_resolve_baseline.json` records existing per-file counts. New/increased counts and stale entries fail: the baseline can only shrink. After removing legacy calls, regenerate from the repo root:
+
+```bash
+UPDATE_AUTO_RESOLVE_BASELINE=1 cargo test -p digimon-engine --test dsl per_card_tests_require_explicit_prompts
+```
+
+Regeneration rejects increases. Run the lint with:
+
+```bash
+cargo test -p digimon-engine --test dsl explicit_prompt_lint
+```
+
 ## 5. Per-card test pattern
 
-Every per-card test file follows the same shape. **Spotlight example: BT15-003 Nyaromon.** It exercises the most patterns at once (DigiEgg, inherited When Attacking, OPT, optional, top/bottom branch selection, cost-as-trashing, event firing).
+Use `card_text/bt17_015.rs` as the canonical template. Organize coverage by printed clause, not compiled YAML slots.
 
 ### File header
 
-```rust
-//! BT15-003 Nyaromon — Digi-Egg, Lv.2, Yellow.
-//!
-//! # Card text (cards.json)
-//!
-//! Inherited Effect [When Attacking] [Once Per Turn]
-//! By trashing the top or bottom card of your security stack, gain 1 memory.
-//!
-//! # DCGO C# reference
-//! DCGO/Assets/Scripts/CardEffect/BT15/Yellow/BT15_003.cs
-//!
-//! # Patterns this test covers
-//! - G4 inherited When Attacking on DigiEgg
-//! - E2 OPT + optional decline
-//! - F5-adjacent: trash-as-cost firing OnDiscardSecurity / OnLoseSecurity
-//! - Selection: Top/Bottom branch via SelectionKind::EffectChoice
-```
+Quote the bundle's printed sections and official Q&A verbatim and identify `data/card_bundles/<ID>.md`. DCGO paths and pattern tags may be supplemental context, not substitutes for the printed source or inputs to the initial assertions.
 
-The file header docstring is mandatory. It records the card text verbatim, the C# reference path, and the pattern rows from §4.3 the test covers. Maintainers reading a failing test should not need to open `cards.json` to understand intent.
+### Section 1 — Optional structural assertions (discouraged)
 
-### Section 1 — Structural assertions
-
-These assert the *shape* of the compiled card. They are fast, do not run the engine, and catch DSL drift at the source.
-
-```rust
-use digimon_dsl::compiled::{
-    CompiledClause, CompiledScope, CompiledTiming, CompiledTriggeredClause,
-};
-use digimon_engine::debug_runner::DebugRunner;
-
-fn nyaromon() -> DebugRunner {
-    DebugRunner::builder()
-        .dsl_card("BT15-003")
-        .dsl_card("ST1-03")              // top card the egg lives under
-        .memory(5)
-        .build()
-}
-
-#[test]
-fn bt15_003_has_one_inherited_when_attacking_clause() {
-    let runner = nyaromon();
-    let compiled = runner.compiled_card("BT15-003");
-
-    let triggered: Vec<&CompiledTriggeredClause> = compiled
-        .effects
-        .iter()
-        .filter_map(|c| match c {
-            CompiledClause::Triggered(t) => Some(t),
-            _ => None,
-        })
-        .collect();
-
-    assert_eq!(triggered.len(), 1, "Nyaromon has exactly one triggered clause");
-    let clause = triggered[0];
-    assert_eq!(clause.scope, CompiledScope::Inherited);
-    assert_eq!(clause.when, vec![CompiledTiming::WhenAttacking]);
-    assert!(clause.optional);
-    assert!(clause.once_per_turn);
-}
-```
-
-What to assert structurally — **only** what the DSL guarantees stays stable across vocabulary expansions:
-
-- Number of triggered clauses, by `scope` (own / inherited / security).
-- The `when` vector for each triggered clause.
-- `optional`, `once_per_turn`, `max_per_turn` flags.
-- For declaratives: the `CompiledDeclarativeClause` variant (Aura / CostReduction / Replacement / Partition / GrantKeyword / AceOverflow).
-- For alt-paths: `CompiledAltPathKind` (Digivolve / DnaDigivolve / DigiXros / BurstDigivolve / Assembly / ActivatedDigivolve).
-
-Do **not** assert on `process` step contents — those will change as DSL verbs evolve, and the behavioral tests below cover what the steps actually do.
+Compiled clause counts, timing vectors, flags and process shapes mostly restate YAML. They are **not required** for per-card coverage and cannot replace behavioral evidence. Prefer parser/lowering construct tests in `tests/dsl/` when a compiled-shape contract matters. Do not use YAML decomposition to decide how many printed clauses need tests.
 
 ### Section 2 — Condition gating
 
-For every clause with a `condition`, write one positive and one negative test. A single test asserting both directions is forbidden — split them.
+Cover positive and negative conditions, exact eligible candidates, empty/no-target cases and unavailable actions. Derive eligibility from printed text and rules, not implementation. Fixture placement may set up post-play state; On Play coverage must actually play the card.
 
-```rust
-#[test]
-fn bt15_003_condition_blocks_with_no_security() {
-    let mut runner = nyaromon();
-    runner.game.players[0].security.clear();
-    let perm = runner.place_on_field(0, "BT15-003", None);
-    runner.fire_on_play(0, perm.index as usize); // structural setup; no effect fires here
+### Section 3 — Behavioral outcome (per printed clause and choice)
 
-    // Drive the When Attacking by faking an attack — but the condition should
-    // gate before any selection installs.
-    let attacker = runner.place_on_field(0, "ST1-03", Some(0));
-    let defender = runner.place_on_field(1, "ST1-03", Some(0));
-    runner.attack_digimon(attacker, defender, false);
-
-    assert!(
-        runner.pending_selection().is_none(),
-        "no selection should install when security is empty"
-    );
-}
-
-#[test]
-fn bt15_003_condition_passes_with_security() {
-    let mut runner = nyaromon();
-    let perm = runner.place_on_field(0, "BT15-003", None);
-    let attacker = runner.place_on_field(0, "ST1-03", Some(0));
-    let defender = runner.place_on_field(1, "ST1-03", Some(0));
-    runner.attack_digimon(attacker, defender, false);
-
-    let kind = runner.pending_kind().expect("Top/Bottom prompt must install");
-    assert_eq!(kind, SelectionKind::EffectChoice);
-}
-```
-
-### Section 3 — Behavioral outcome (per branch)
-
-Every observable branch gets its own test. For Nyaromon: trash-top, trash-bottom, decline.
-
-```rust
-#[test]
-fn bt15_003_trash_top_security_gains_one_memory() {
-    let mut runner = nyaromon();
-    // ... attack setup as above ...
-
-    let security_before = runner.security_count(0);
-    let memory_before = runner.memory();
-    let top_card = runner.game.players[0].security[0].handle();
-
-    runner.execute_branch(0); // 0 = "Top"
-    runner.auto_resolve();
-
-    assert_eq!(runner.security_count(0), security_before - 1);
-    assert_eq!(runner.memory(), memory_before + 1);
-    // Top card landed in trash, not bottom.
-    assert!(runner.game.players[0].trash.iter().any(|c| c.handle() == top_card));
-}
-
-#[test]
-fn bt15_003_trash_bottom_security_gains_one_memory() {
-    // Mirror of above, but execute_branch(1).
-}
-
-#[test]
-fn bt15_003_declining_does_nothing() {
-    let mut runner = nyaromon();
-    // ... attack setup ...
-
-    let security_before = runner.security_count(0);
-    let memory_before = runner.memory();
-    assert!(runner.pending_is_optional());
-
-    runner.execute_action(action::PASS);
-
-    assert_eq!(runner.security_count(0), security_before);
-    assert_eq!(runner.memory(), memory_before);
-}
-```
+Drive real actions and assert costs and outcomes. Cover every branch and every “may” decline, including declines after a cost where legal. Use the explicit-prompt helpers above. Assert follow-ups individually or assert none remains. Add a named regression for each official Q&A.
 
 ### Section 4 — Cost firing (events)
 
-Replaces the Python `_fire_timing` spy. When an effect's cost has side effects on the game (trashing security fires `OnDiscardSecurity` and `OnLoseSecurity`), assert via the event log:
+Where costs trigger observers (security trash, deletion, source trash), assert paid card/zone changes and relevant events using `event_checkpoint` / `events_since`. Reach both cost and observers through real actions, not injected timings.
 
-```rust
-#[test]
-fn bt15_003_trashing_security_fires_discard_and_lose_events() {
-    use digimon_engine::events::GameEventKind;
+### Section 5 — OPT enforcement and duration
 
-    let mut runner = nyaromon();
-    // ... attack setup ...
-
-    let cp = runner.event_checkpoint();
-    runner.execute_branch(0);
-    runner.auto_resolve();
-
-    let events = runner.events_since(cp);
-    let discard_count = events.iter()
-        .filter(|e| matches!(e.kind, GameEventKind::OnDiscardSecurity { .. }))
-        .count();
-    let lose_count = events.iter()
-        .filter(|e| matches!(e.kind, GameEventKind::OnLoseSecurity { .. }))
-        .count();
-
-    assert!(discard_count >= 1, "OnDiscardSecurity must fire");
-    assert!(lose_count >= 1, "OnLoseSecurity must fire");
-}
-```
-
-This is what stops a regression where a DSL `trash_security` step silently bypasses the events that BT15-038 Angewomon and similar cards subscribe to.
-
-### Section 5 — OPT enforcement
-
-For every `once_per_turn: true` clause, write a test that exercises the lockout.
-
-```rust
-#[test]
-fn bt15_003_opt_blocks_second_activation_in_same_turn() {
-    let mut runner = nyaromon();
-    // ... fire once with auto-resolve ...
-    runner.execute_branch(0);
-    runner.auto_resolve();
-
-    // Second attack same turn → no selection installs.
-    let attacker = runner.perm_handle(0, 1);
-    let defender2 = runner.place_on_field(1, "ST1-03", Some(0));
-    runner.attack_digimon(attacker, defender2, false);
-    assert!(runner.pending_selection().is_none(), "OPT must lock the second attempt");
-
-    // After end_turn, the lockout clears.
-    runner.end_turn(); // now it's player 1's turn
-    runner.end_turn(); // player 0 again
-    let defender3 = runner.place_on_field(1, "ST1-03", Some(0));
-    runner.attack_digimon(attacker, defender3, false);
-    assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
-}
-```
+For printed once-per-turn clauses, test second-activation lockout and reset on the appropriate later turn. Check modifiers while active, across relevant turn boundaries and after expiry; “for the turn” and “until your opponent's turn ends” are different contracts.
 
 ---
 
@@ -653,28 +514,29 @@ let labels: Vec<&str> = view.effect_choices.as_ref().unwrap()
     .iter().map(|c| c.label.as_str()).collect();
 assert_eq!(labels, vec!["Top", "Bottom"]);
 
-runner.execute_branch(0);   // first label
-runner.auto_resolve();
+runner.assert_prompt(SelectionKind::EffectChoice, false, 0);
+runner.execute_branch(0).unwrap();
+// Assert and answer follow-up prompts explicitly.
 ```
 
 ### Target / OwnField / OppField
 
 ```rust
-assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
-let view = runner.pending_selection_view().unwrap();
-assert_eq!(view.valid_action_ids.len(), 2, "two opponent permanents in scope");
-
-// Drive the first legal action explicitly when the test cares which target.
-runner.execute_action(view.valid_action_ids[0]);
-runner.auto_resolve();
+runner.assert_prompt(SelectionKind::OppField, false, 0);
+let candidates = runner.prompt_card_candidates();
+assert_eq!(candidates.iter().map(|(_, id)| id.as_str()).collect::<Vec<_>>(),
+    vec!["TARGET-A", "TARGET-B"]);
+runner.choose_prompt_card("TARGET-B", None).unwrap();
+// Assert and answer follow-up prompts explicitly.
 ```
 
 ### Hand / Trash / Reveal
 
 ```rust
-assert_eq!(runner.pending_kind(), Some(SelectionKind::Trash));
-runner.execute_action(/* SEL_TRASH_START + index */);
-runner.auto_resolve();
+runner.assert_prompt(SelectionKind::Trash, true, 0);
+assert_eq!(runner.prompt_card_candidates().len(), 1);
+runner.choose_prompt_card("EXPECTED-CARD-ID", None).unwrap();
+// In a separate decline case: runner.decline_prompt().unwrap();
 ```
 
 Use `digimon_engine::action::space::*` constants (`SEL_TRASH_START`, `SEL_HAND_START`, `SEL_OWN_FIELD_START`, etc.) — never hard-code action IDs.
@@ -743,7 +605,7 @@ assert_eq!(runner.pending_kind(), Some(SelectionKind::Material));
 
 ### Anti-pattern: silent auto-resolve through a multi-branch prompt
 
-`runner.auto_resolve()` picks the first legal action at every prompt. That makes it a **bad** way to test which branch fires — it always picks the same one. For per-branch tests, drive the specific action explicitly with `execute_branch` or `execute_action`, then call `auto_resolve` only after the branching choice is locked in.
+`auto_resolve*` silently chooses for the player and is forbidden throughout `card_text/`, even after the first branching choice. Assert and answer every prompt explicitly. Existing calls elsewhere are legacy debt, not an authoring pattern.
 
 ---
 
@@ -760,7 +622,7 @@ Loads fixture cards into both players' battle areas, drives `attack_digimon` or 
 - Security DP application (Security A. ±N).
 - Interrupt ordering (Alliance / Counter / Block).
 
-Spotlight: D1 Conditional DP buff (BT17-015 WarGreymon). Test: with trait-matching ally on field, attack lifts DP by 2000 during the attack window only. Drives the attack, asserts `effective_dp` at `phase == GamePhase::DuringAttack`, then again after `auto_resolve` — the buff must be gone in the second snapshot.
+Spotlight: D1 Conditional DP buff (BT17-015 WarGreymon). Test: with trait-matching ally on field, attack lifts DP by 2000 during the attack window only. Drives the attack, asserts `effective_dp` at `phase == GamePhase::DuringAttack`, then again after explicitly resolving combat prompts — the buff must be gone in the second snapshot.
 
 ### Effects (`tests/effects/`)
 
@@ -856,13 +718,13 @@ A consolidated list. Each anti-pattern fails review.
 1. **Don't paste production card YAML inline.** Use `dsl_card(id)`. Inline copies drift; behavioral tests must follow the shipping spec.
 2. **Don't reach into `Game` internals when `EffectContext` or runner helpers cover it.** `runner.dp_of(handle)` not `&game.modifiers; sum hand-rolled`. The escape hatch (`runner.game_mut()`) exists but its use is a smell.
 3. **Don't write a single test asserting both branches of a conditional.** Split positive and negative — failing one half should fail one test, not the whole pair.
-4. **Don't auto-resolve when testing a specific branch.** `auto_resolve` picks the first legal action at every prompt; it cannot tell you which branch fired. Use `execute_branch` / `execute_action`, then `auto_resolve` only after the branching decision is locked.
+4. **Don't auto-resolve per-card tests.** `card_text/` bans all `auto_resolve*` calls and wrappers, even after a branch is chosen; the baseline elsewhere can only shrink. Assert and answer each prompt explicitly.
 5. **Don't test DSL syntax in `cards_behavioral/`.** Parser / validator / lowering belongs in `tests/dsl/`. Card behavioral tests assume the DSL works.
 6. **Don't use synthetic `TEST-*` cards when a real DSL card from the same set covers the mechanic.** `make_test_card` is for the runner's own self-tests and for one-off engine primitive coverage, not for archetype work.
 7. **Don't assert on `process` step contents.** Step vocabulary changes; behavioral assertions cover the outcome.
 8. **Don't stub a test with `#[ignore]` for missing features without naming the gap.** Use `#[ignore = "pending: <gap-id> from docs/RUST_ENGINE_GAPS.md"]` or `#[ignore = "pending: <gap-id> from qa/dsl-vocab-gaps.md"]` so the unblock is mechanical.
 9. **Don't share fixtures across unrelated tests via mutable global state.** Each test builds its own runner; cross-test contamination is forbidden.
-10. **Don't omit the file header docstring.** Card text + C# reference + pattern row tags are mandatory.
+10. **Don't omit the file header docstring.** Quote the bundle's printed sections and official Q&A verbatim, with the source path. C# paths and pattern tags are optional supplemental context.
 11. **Don't use `place_on_field` to skip a real OnPlay path you should be testing.** `place_on_field` skips cost payment, OnPlay observers, and registry-driven triggers. Use it when the test is about *post-play* state (combat, inherited effects on a stacked egg) — not as a shortcut around play resolution.
 12. **Don't hard-code action IDs.** Use the `digimon_engine::action::space::*` constants.
 
@@ -874,6 +736,8 @@ Worked example: implementing **EX11-027 Maquinamon** from scratch (3-way zone ch
 
 ### Step 1 — Read the card text
 
+Read `data/card_bundles/EX11-027.md` and rules first; the snippets here illustrate scope, not a substitute for the verbatim bundle or the canonical `card_text/bt17_015.rs` template. Do not open YAML or existing tests until the new tests are written and run once.
+
 > **[On Play]** [Once Per Turn] Choose one: trash 1 of your link cards, trash 1 of your hand cards, or trash 1 of your digivolution cards. Then, this Digimon gets +2000 DP for the turn.
 > **[When Removed from the Battle Area]** Choose 1 of your link cards. Move it to your hand.
 
@@ -881,12 +745,12 @@ Identify pattern rows from §4.3: **C3** (link selection on removal), **E1** (3-
 
 ### Step 2 — Write the failing test file
 
-`tests/cards_behavioral/ex11/ex11_027.rs`:
+`tests/cards_behavioral/card_text/ex11_027.rs`:
 
 ```rust
 //! EX11-027 Maquinamon — Lv.6, Yellow.
 //!
-//! # Card text (cards.json)
+//! Source: `data/card_bundles/EX11-027.md` (printed text and official Q&A).
 //! ... (full text) ...
 //!
 //! # DCGO C# reference
@@ -898,7 +762,6 @@ Identify pattern rows from §4.3: **C3** (link selection on removal), **E1** (3-
 //! - E2 OPT
 //! - D1 conditional DP buff (turn-scoped)
 
-use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::selection::SelectionKind;
 
@@ -910,17 +773,6 @@ fn maquinamon() -> DebugRunner {
         .memory(12)
         .start()
 }
-
-// --- Structural ---
-
-#[test]
-fn ex11_027_has_on_play_and_when_removed_clauses() { /* ... */ }
-
-#[test]
-fn ex11_027_on_play_is_once_per_turn() { /* ... */ }
-
-#[test]
-fn ex11_027_on_play_offers_three_branches() { /* ... */ }
 
 // --- OnPlay branches ---
 
@@ -948,7 +800,15 @@ fn ex11_027_when_removed_offers_link_selection() { /* delete the perm; assert Ow
 fn ex11_027_when_removed_picked_card_moves_to_hand() { /* execute_action; assert hand += 1, link -= 1 */ }
 ```
 
-### Step 3 — Author the YAML
+### Step 3 — Run the independent tests before reading or writing YAML
+
+```bash
+cargo test -p digimon-engine --test cards_behavioral card_text::ex11_027
+```
+
+Record the initial result. Only now inspect existing tests and implementation references; do not derive the initial assertions from them.
+
+### Step 4 — Author the YAML and re-run
 
 `code/digimon-engine/cards/ex11/EX11-027.yaml`:
 
@@ -984,7 +844,7 @@ effects:
       - move_link_card_to_hand: { of: you, card: pick }
 ```
 
-### Step 4 — Run the tests
+Re-run the tests:
 
 ```bash
 cargo test --test cards_behavioral -- ex11_027
@@ -1019,7 +879,7 @@ For anyone porting a test from `code/engine_py_legacy/tests/behavioral/btXX/test
 | `inherited_wa.timing == EffectTiming.OnUseAttack` | `c.when == vec![CompiledTiming::WhenAttacking]` |
 | `inherited_wa.is_inherited_effect` | `c.scope == CompiledScope::Inherited` |
 | `effect.on_process_callback({...})` | `let mut ctx = EffectContext::new(...); process(&mut ctx);` (see §7) |
-| `runner.auto_resolve()` | `runner.auto_resolve()` (signature spec'd in §3) |
+| `runner.auto_resolve()` | Legacy only; replace per-card calls with explicit prompt helpers (Card-text tests). |
 | `runner.execute(SEL_EFFECT_CHOICE_START + 1)` | `runner.execute_branch(1)` or `runner.execute_action(action::SEL_EFFECT_CHOICE_START + 1)` |
 | `runner.inject_card(p, "ST1-01", "security_top")` | Push directly: `runner.game.players[p as usize].security.insert(0, ...)`. Helper not yet provided; file under `runner-extensions` if frequent. |
 | `game.player1.trash_security_card(card)` | Drive through the engine — call the security-trash code path via an effect, not a direct method. The events fire correctly only when invoked through engine APIs. |
@@ -1059,7 +919,7 @@ assert_eq!(view.valid_action_ids.len(), 1, "exactly one ACCEPT entry");
 
 // Drive the accept branch:
 runner.execute_action(view.valid_action_ids[0]).unwrap();
-runner.auto_resolve().unwrap();
+// ... assert and answer each follow-up prompt explicitly before continuing ...
 
 // In a separate test, drive the decline branch via PASS:
 //   runner.execute_action(PASS).unwrap();
@@ -1110,7 +970,7 @@ one-shot.
 ```rust
 // EX10-040-style grant: target gains "[End of Your Turn]: gain 1 memory"
 runner.play(0, hand_index_of_grantor).unwrap();
-runner.auto_resolve().unwrap();
+// ... assert and answer each follow-up prompt explicitly before continuing ...
 let target = /* ... */;
 runner.end_turn();  // first fire
 runner.end_turn();  // returns to grantor's turn
@@ -1148,7 +1008,7 @@ breeding observers must place a permanent in breeding via
 runner.place_in_breeding(0, "BT15-003");          // egg under breeding
 runner.end_turn();
 runner.end_turn();                                 // back to player 0; Main phase enters
-runner.auto_resolve().unwrap();
+// ... assert and answer each follow-up prompt explicitly before continuing ...
 // Assert the egg's StartOfYourMainPhase observer fired …
 ```
 
@@ -1228,7 +1088,7 @@ verifying these payloads use the event log:
 ```rust
 let cp = runner.event_checkpoint();
 runner.attack_digimon(atk, def, false);
-runner.auto_resolve().unwrap();
+// ... assert and answer each follow-up prompt explicitly before continuing ...
 
 let events = runner.events_since(cp);
 let deletion = events.iter().find(|e| matches!(e.kind, GameEventKind::OnAnyDeletion { .. }));
