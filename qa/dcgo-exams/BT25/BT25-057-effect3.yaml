@@ -31,13 +31,14 @@
 # over YOUR Digimon -> GainRush + SAttack+1 + DP+5000 -> "then may attack"
 # = SelectAttackEffect; Arts Digivolve = CardEffectFactory.ArtsDigivolveEffect):
 #   * Use from hand: no face-choice prompt (the Digimon face has no play cost).
-#   * ENGINE FINDING (expected oracle divergence -- "Then, it may attack"):
-#     our DSL lowers `may_attack_now ... windowed: true` to an end-of-turn
-#     MayAttack MODIFIER instead of an attack inside the effect. So ours asks
-#     NO SelectAttackEffect during the [Main]; the Arts Digivolve prompt comes
-#     first and the attack is a later ordinary main-phase attack. DCGO asks
-#     SelectAttackEffect immediately, before the Arts/trash decision. The
-#     printed "Then, it may attack" is an attack DURING the effect.
+#   * "Then, it may attack" (FIXED 2026-11-23, 32d148445): ours used to lower
+#     `may_attack_now ... windowed: true` to an end-of-turn MayAttack modifier,
+#     so no attack was asked inside the [Main] and the Arts Digivolve prompt
+#     came first. Ours now asks the attack inside the effect, before the
+#     Arts/trash decision, as DCGO's SelectAttackEffect does (CR 4.3 15-1-2,
+#     11-1-5). This line DECLINES that in-effect attack (one new step after the
+#     Option's target pick; every later `at:` moved up by one); Cougarmon
+#     keeps <Rush>, so the rest of the line is unchanged.
 #   * The Arts Digivolve prompt (ours: OwnField "Choose a card for Arts
 #     Digivolve, or pass to trash this Option") has no DCGO prompt kind pinned
 #     here; its shape on the wire is unverified.
@@ -108,6 +109,10 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
+  # "Then, it may attack": the attack asked inside the [Main] -- declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectAttackEffect }
   - actor: 0
     do: { select: { decline: true } }
   - actor: 0
@@ -122,7 +127,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 18
+  - at: 19
     that:
       turn: 5
       p0.memory: 0
