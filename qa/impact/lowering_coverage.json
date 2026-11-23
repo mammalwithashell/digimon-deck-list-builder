@@ -20005,7 +20005,7 @@
   },
   "BT27-017": {
    "behaviourally_covered": true,
-   "clause_count": 9,
+   "clause_count": 10,
    "constructs": [
     "verb:delete_permanent",
     "verb:select_opponent_permanent",
@@ -20038,7 +20038,7 @@
   },
   "BT27-026": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_modifier",
     "verb:delete_permanent",
@@ -20060,6 +20060,7 @@
     "predicate:not",
     "predicate:owner",
     "predicate:source_count",
+    "predicate:trait_has",
     "predicate:zone",
     "timing:on_play",
     "timing:when_attacking",
@@ -20077,7 +20078,7 @@
   },
   "BT27-038": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:delete_permanent",
@@ -20092,6 +20093,7 @@
     "predicate:kind",
     "predicate:level_eq",
     "predicate:not",
+    "predicate:trait_has",
     "timing:on_play",
     "timing:when_attacking",
     "timing:when_digivolving",
@@ -20109,7 +20111,7 @@
   },
   "BT27-048": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:add_modifier",
     "verb:delete_permanent",
@@ -20127,6 +20129,7 @@
     "predicate:kind",
     "predicate:level_eq",
     "predicate:not",
+    "predicate:trait_has",
     "timing:on_play",
     "timing:when_attacking",
     "timing:when_digivolving",
@@ -20143,7 +20146,7 @@
   },
   "BT27-055": {
    "behaviourally_covered": true,
-   "clause_count": 9,
+   "clause_count": 10,
    "constructs": [
     "verb:add_modifier",
     "verb:per_selected",
@@ -20181,7 +20184,7 @@
   },
   "BT27-071": {
    "behaviourally_covered": true,
-   "clause_count": 9,
+   "clause_count": 10,
    "constructs": [
     "verb:de_digivolve",
     "verb:grant_effect_immunity",
@@ -20300,10 +20303,11 @@
   },
   "BT27-092": {
    "behaviourally_covered": true,
-   "clause_count": 3,
+   "clause_count": 4,
    "constructs": [
     "verb:delete_permanents",
     "verb:draw",
+    "verb:effect_initiated_digivolve",
     "verb:gain_memory",
     "verb:if",
     "verb:place_selected_card_under_tamer",
@@ -20312,16 +20316,21 @@
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "verb:select_own_permanent",
+    "verb:select_union_zone",
+    "verb:trash_bottom_face_down_sources_under_tamers",
     "predicate:binding_present",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:dp_lte",
+    "predicate:face_down_sources_under_tamers_gte",
     "predicate:kind",
     "predicate:not",
     "predicate:trait_has",
     "timing:end_of_attack",
+    "timing:main_on_field",
     "timing:on_security",
     "timing:start_of_your_main_phase"
    ],
-   "effect_clause_count": 3,
+   "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -20330,22 +20339,27 @@
   },
   "BT27-098": {
    "behaviourally_covered": false,
-   "clause_count": 2,
+   "clause_count": 3,
    "constructs": [
+    "verb:activation_cost",
     "verb:place_as_bottom_source",
+    "verb:place_deck_top_under",
     "verb:play_from_security",
     "verb:play_union_bound_free",
     "verb:select_union_zone",
     "verb:trash_bottom_face_down_sources_under_tamers",
     "predicate:any_of",
     "predicate:can_play_from_effect_without_cost",
+    "predicate:event_card_kind",
     "predicate:face_down_sources_under_tamers_gte",
     "predicate:kind",
     "predicate:name_contains",
+    "predicate:source_is_unsuspended",
     "timing:end_of_all_turns",
+    "timing:on_any_deletion",
     "timing:on_security"
    ],
-   "effect_clause_count": 2,
+   "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [],
@@ -20356,19 +20370,24 @@
   },
   "BT27-102": {
    "behaviourally_covered": true,
-   "clause_count": 2,
+   "clause_count": 3,
    "constructs": [
+    "verb:effect_initiated_digivolve",
     "verb:place_self_as_delay_option",
     "verb:play_union_bound_free",
+    "verb:select_own_permanent",
     "verb:select_union_zone",
+    "predicate:all_turns",
+    "predicate:can_digivolve_onto_with_cost",
     "predicate:can_play_from_effect_without_cost",
+    "predicate:event_target_kind",
     "predicate:kind",
     "predicate:play_cost_lte",
     "predicate:trait_has",
     "timing:main_from_hand",
     "timing:on_security"
    ],
-   "effect_clause_count": 2,
+   "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -47869,12 +47888,16 @@
    "signals": {
     "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer": [
      "yaml_key"
+    ],
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
+     "yaml_key"
     ]
    },
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
-    "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer"
+    "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer",
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline"
    ]
   },
   "predicate:event_card_level_eq": {
@@ -48035,6 +48058,9 @@
     "dsl::parse_predicates.rs::parse_battle_winner_and_discard_hand_predicate_leaves": [
      "yaml_key"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
+     "yaml_key"
+    ],
     "rules_conformance::ch15_04_effect_states.rs::effect_battle_triggers_wait_for_the_effect_and_pool_with_it": [
      "fixture"
     ],
@@ -48055,6 +48081,7 @@
    "tested_behaviourally": true,
    "tests": [
     "dsl::parse_predicates.rs::parse_battle_winner_and_discard_hand_predicate_leaves",
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline",
     "rules_conformance::ch15_04_effect_states.rs::effect_battle_triggers_wait_for_the_effect_and_pool_with_it",
     "rules_conformance::ch15_04_effect_states.rs::returned_to_deck_bottom_triggers_wait_for_the_effect_and_pool_with_it",
     "rules_conformance::ch15_04_effect_states.rs::rule_check_after_a_queued_effect_pools_with_its_window_triggers",
@@ -51492,6 +51519,9 @@
     "dsl::phase3b_replacement_process.rs::replacement_cancels_only_when_other_sourceless_digimon_is_placed_in_security": [
      "yaml_key"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck": [
+     "yaml_key"
+    ],
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_cannot_be_played_to_the_field": [
      "yaml_key"
     ],
@@ -52648,6 +52678,7 @@
     "dsl::phase2f2_modifier_formula.rs::add_modifier_filter_target_formula_evaluated_per_match",
     "dsl::phase3_reducer_selection.rs::select_any_permanent_and_select_dna_pair_compile",
     "dsl::phase3b_replacement_process.rs::replacement_cancels_only_when_other_sourceless_digimon_is_placed_in_security",
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck",
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_cannot_be_played_to_the_field",
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_is_not_a_play_cost_candidate_for_an_effect_play",
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack",
@@ -62443,6 +62474,9 @@
     ],
     "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material": [
      "yaml_key"
+    ],
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
+     "yaml_key"
     ]
    },
    "tested": true,
@@ -62483,7 +62517,8 @@
     "dsl::constructs/meta_source_keyword.rs::mixed_source_visibility_preserves_the_higher_cards_identity_in_battle_and_breeding",
     "dsl::constructs/meta_source_keyword.rs::top_source_declining_material_or_host_leaves_both_origins_and_stacks_untouched",
     "dsl::constructs/meta_source_keyword.rs::top_source_from_hand_or_trash_preserves_exact_stack_and_physical_identity",
-    "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material"
+    "dsl::constructs/meta_source_keyword.rs::top_source_without_a_matching_host_does_not_consume_the_selected_material",
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline"
    ]
   },
   "timing:on_add_to_deck": {
@@ -62857,6 +62892,9 @@
     "dsl::name_standardization.rs::permanent_effective_name_and_deleted_snapshot_apply_exclusions": [
      "yaml_key"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
+     "yaml_key"
+    ],
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event": [
      "yaml_key"
     ],
@@ -62917,6 +62955,7 @@
     "dsl::constructs/zone_moves.rs::two_member_group_requires_mandatory_controller_order_at_either_end",
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards",
     "dsl::name_standardization.rs::permanent_effective_name_and_deleted_snapshot_apply_exclusions",
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline",
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event",
     "dsl::predicate_leaves_ii.rs::event_target_source_count_leaves_compile_from_yaml",
     "dsl::royal_knights_training_gate.rs::event_target_level_lte_uses_deleted_snapshot_not_observer_level",
@@ -65695,6 +65734,9 @@
     "dsl::place_as_bottom_source_deck_top.rs::place_as_bottom_source_deck_top_stashes_deck_top_face_down": [
      "yaml_key"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck": [
+     "yaml_key"
+    ],
     "dsl::place_as_bottom_source_face_down.rs::place_as_bottom_source_face_down_omitted_defaults_face_up": [
      "yaml_key"
     ],
@@ -66466,6 +66508,7 @@
     "dsl::phase3a_cost_delta.rs::effect_initiated_digivolve_cost_accepts_reduce_delta",
     "dsl::phase3a_cost_delta.rs::effect_initiated_dna_digivolve_cost_accepts_reduce_delta",
     "dsl::place_as_bottom_source_deck_top.rs::place_as_bottom_source_deck_top_stashes_deck_top_face_down",
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck",
     "dsl::place_as_bottom_source_face_down.rs::place_as_bottom_source_face_down_omitted_defaults_face_up",
     "dsl::place_as_bottom_source_face_down.rs::place_as_bottom_source_face_down_true_marks_bottom_source_face_down",
     "dsl::play_or_use_from_sources.rs::play_or_use_from_sources_compiles_from_yaml",
@@ -68803,6 +68846,9 @@
     "dsl::activation_cost.rs::validator_rejects_activation_cost_with_no_kind_set": [
      "yaml_key"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
+     "yaml_key"
+    ],
     "lib::src/dsl_cards/step/mod.rs::first_typed_tail_reparks_then_second_sees_both_bindings_in_clones": [
      "variant"
     ],
@@ -68835,6 +68881,7 @@
     "dsl::activation_cost.rs::validator_rejects_activation_cost_mid_body",
     "dsl::activation_cost.rs::validator_rejects_activation_cost_with_both_kinds_set",
     "dsl::activation_cost.rs::validator_rejects_activation_cost_with_no_kind_set",
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline",
     "lib::src/dsl_cards/step/mod.rs::first_typed_tail_reparks_then_second_sees_both_bindings_in_clones",
     "lib::src/dsl_cards/step/mod.rs::optional_security_accept_executes_bound_enclosing_tail_in_clones",
     "lib::src/dsl_cards/step/mod.rs::optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection",
@@ -74140,6 +74187,9 @@
     "dsl::phase3e_scheduled_reentry.rs::scheduled_during_the_pool_waits_for_the_next_boundary": [
      "variant"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
+     "yaml_key"
+    ],
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event": [
      "yaml_key"
     ],
@@ -75286,6 +75336,7 @@
     "dsl::phase3e_on_dna_digivolve.rs::user_action_dna_fires_on_dna_digivolve",
     "dsl::phase3e_scheduled_reentry.rs::scheduled_drain_resumes_after_selection_and_continues_remaining_effects",
     "dsl::phase3e_scheduled_reentry.rs::scheduled_during_the_pool_waits_for_the_next_boundary",
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline",
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
@@ -77498,6 +77549,9 @@
     "dsl::place_as_bottom_source_deck_top.rs::place_as_bottom_source_deck_top_stashes_deck_top_face_down": [
      "yaml_key"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck": [
+     "yaml_key"
+    ],
     "dsl::place_as_bottom_source_face_down.rs::place_as_bottom_source_face_down_omitted_defaults_face_up": [
      "yaml_key"
     ],
@@ -77544,6 +77598,7 @@
     "dsl::phase2f1_placement_steps.rs::place_as_bottom_source_step_tucks_hand_card_under_target_permanent",
     "dsl::phase2f1_placement_steps.rs::place_as_bottom_source_uses_bound_hand_owner",
     "dsl::place_as_bottom_source_deck_top.rs::place_as_bottom_source_deck_top_stashes_deck_top_face_down",
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck",
     "dsl::place_as_bottom_source_face_down.rs::place_as_bottom_source_face_down_omitted_defaults_face_up",
     "dsl::place_as_bottom_source_face_down.rs::place_as_bottom_source_face_down_true_marks_bottom_source_face_down",
     "dsl::royal_knights_union_source_flows.rs::hand_or_source_play_binds_played_permanent_for_attach_self_follow_up",
@@ -77721,6 +77776,28 @@
     "lib::src/dsl_cards/step/mod.rs::optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection",
     "lib::src/dsl_cards/step/mod.rs::resume_without_pending_selection_preserves_enclosing_tail",
     "lib::src/dsl_cards/step/mod.rs::two_typed_outer_continuations_both_receive_inner_binding_and_clone"
+   ]
+  },
+  "verb:place_deck_top_under": {
+   "kind": "verb",
+   "lowering_files": [
+    "code/digimon-engine/src/dsl_cards/step/play_digivolve.rs"
+   ],
+   "name": "place_deck_top_under",
+   "parsed_only": false,
+   "signals": {
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
+     "yaml_key"
+    ],
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline",
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck"
    ]
   },
   "verb:place_on_security": {
@@ -83322,6 +83399,9 @@
     "dsl::phase3b_replacement_process.rs::replacement_cancels_only_when_other_sourceless_digimon_is_placed_in_security": [
      "yaml_key"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck": [
+     "yaml_key"
+    ],
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources": [
      "variant"
     ],
@@ -83572,6 +83652,7 @@
     "dsl::phase2f3_as_selecting_player.rs::as_selecting_player_with_self_as_of_routes_to_controller",
     "dsl::phase2f3_end_to_end.rs::opponents_vote_card_lets_opponent_apply_minus_3000_dp_to_controllers_perm",
     "dsl::phase3b_replacement_process.rs::replacement_cancels_only_when_other_sourceless_digimon_is_placed_in_security",
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_false_offers_only_tamer_without_stash",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_offers_only_tamer_with_face_down_stash",
@@ -86396,7 +86477,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2310,
+  "behavioural_tests": 2312,
   "cards": {
    "behaviourally_covered": 1285,
    "lowering_covered": 1303,
@@ -86433,11 +86514,11 @@
    },
    "verb": {
     "parsed_only": 5,
-    "tested": 184,
-    "tested_behaviourally": 179,
-    "total": 189,
+    "tested": 185,
+    "tested_behaviourally": 180,
+    "total": 190,
     "untested": 5,
-    "used_by_cards": 177,
+    "used_by_cards": 178,
     "used_untested": 5
    }
   },
@@ -86561,7 +86642,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 425,
-  "scanned_tests": 2736,
+  "scanned_tests": 2738,
   "top_untested": [
    {
     "cards_blocked": 3,

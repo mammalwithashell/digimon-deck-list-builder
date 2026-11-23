@@ -3452,6 +3452,12 @@ fn compile_step(
             face_down: a.face_down,
             bind_placed_as: a.bind_placed_as.clone(),
         },
+        S::PlaceDeckTopUnder(a) => CompiledStep::PlaceDeckTopUnder {
+            of: compile_player_ref(a.of),
+            count: a.count,
+            target: compile_binding_ref(&a.target),
+            face_down: a.face_down,
+        },
         S::PlaceAsTopSource(a) => CompiledStep::PlaceAsTopSource {
             source: compile_binding_ref(&a.source),
             target: compile_binding_ref(&a.target),

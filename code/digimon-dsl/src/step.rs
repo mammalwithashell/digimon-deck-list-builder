@@ -200,6 +200,8 @@ pub enum StepSpec {
     PlaceOnSecurity(PlaceOnSecurityArgs),
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
+    /// Move the top cards of a deck together to the bottom of a permanent's stack.
+    PlaceDeckTopUnder(PlaceDeckTopUnderArgs),
     /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05): place a card as
     /// `target`'s TOP digivolution source — inserted directly beneath the
     /// active top card (DCGO `Permanent.AddDigivolutionCardsTop`, which
@@ -686,6 +688,7 @@ impl Serialize for StepSpec {
             StepSpec::PlaceOnSecurity(v) => kv!(s, "place_on_security", v),
             StepSpec::PlayToken(v) => kv!(s, "play_token", v),
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
+            StepSpec::PlaceDeckTopUnder(v) => kv!(s, "place_deck_top_under", v),
             StepSpec::PlaceAsTopSource(v) => kv!(s, "place_as_top_source", v),
             StepSpec::PlaceTopSourceAsBottom(v) => kv!(s, "place_top_source_as_bottom", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
@@ -996,6 +999,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_on_security" => StepSpec::PlaceOnSecurity(map.next_value()?),
             "play_token" => StepSpec::PlayToken(map.next_value()?),
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
+            "place_deck_top_under" => StepSpec::PlaceDeckTopUnder(map.next_value()?),
             "place_as_top_source" => StepSpec::PlaceAsTopSource(map.next_value()?),
             "place_top_source_as_bottom" => StepSpec::PlaceTopSourceAsBottom(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
@@ -1261,6 +1265,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "place_on_security",
                         "play_token",
                         "place_as_bottom_source",
+                        "place_deck_top_under",
                         "place_as_top_source",
                         "place_top_source_as_bottom",
                         "trash_top_source",
@@ -2625,6 +2630,16 @@ pub struct PlaceAsBottomSourceArgs {
     /// trash/hand index bound by the upstream select step.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_placed_as: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceDeckTopUnderArgs {
+    pub of: PlayerRef,
+    pub count: u8,
+    pub target: BindingRef,
+    #[serde(default)]
+    pub face_down: bool,
 }
 
 /// Args for `place_as_top_source` — same shape as

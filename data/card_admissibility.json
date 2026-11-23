@@ -22194,7 +22194,7 @@
       "admissible": false,
       "dsl": true,
       "has_card_test": true,
-      "needs_card_test": false,
+      "needs_card_test": true,
       "reason": "failed_verdict",
       "reasons": [
         "failed_verdict"
@@ -48141,12 +48141,12 @@
     "untested_card": 17,
     "untested_lowering": 3303
   },
-  "generated_at": "2026-11-23T22:14:45+00:00",
+  "generated_at": "2026-11-23T22:18:19+00:00",
   "sources": {
     "behavioral_test_modules_sha256": "10541e5a5950f2989518f8e6ae3a241293d84a66290372a221a1bed4719f8e9a",
     "card_registry_sha256": "76d299f56767401907be0c9d0206557ec7e668d9f8748677c3e586e80a6a85e2",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "78bca1a93edae22f7221d358bb8b4a2a941a9e7d918d331ea036ad41a6361f41",
+    "lowering_coverage_sha256": "c9adc2378f3661e8c1b0671ac5cec6646d0b0ea5620e6f406f444b863a615412",
     "validated_cards_dsl_sha256": "2af0ab7888048da6908b222059b4acf364d8dc8091b95966848280321a6e42a4",
     "validated_cards_sha256": "c1ca1b49d7c58d7ab9e1ab29ca05b5f06e075e19acdde6aca4494da54d318a05"
   },
