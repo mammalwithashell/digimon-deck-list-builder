@@ -1,0 +1,75 @@
+{
+  "index": 4570,
+  "norm_id": 0.2285,
+  "card_id": "BT27-083",
+  "card_index": 83,
+  "card_name_eng": "Ravemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_083",
+  "play_cost": 5,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 4,
+  "rarity": 2,
+  "card_colors": [
+    6,
+    3
+  ],
+  "type_eng": [
+    "Cyborg",
+    "DATA SQUAD",
+    "Birdkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Blocker＞ ＜Retaliation＞ [When Digivolving] Your opponent trashes any 1 card from their hand or security stack. [On Deletion] If your opponent's hand has 7 or fewer cards, you may play 1 play cost 7 or lower purple Digimon card with [Avian] or [Bird] in any of its traits from your trash without paying the cost. (Rule) Trait: Has [Birdkin] Type.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Crowmon]/Lv.5 w/[DATA SQUAD] trait: Cost 3",
+  "dual": {
+    "digimon": {
+      "colors": [
+        "Purple",
+        "Green"
+      ],
+      "dp": 12000,
+      "effect_text": "＜Blocker＞ ＜Retaliation＞ [When Digivolving] Your opponent trashes any 1 card from their hand or security stack. [On Deletion] If your opponent's hand has 7 or fewer cards, you may play 1 play cost 7 or lower purple Digimon card with [Avian] or [Bird] in any of its traits from your trash without paying the cost. (Rule) Trait: Has [Birdkin] Type.",
+      "evo_costs": [
+        {
+          "card_color": 6,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "inherited_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ],
+      "level": 6,
+      "traits": [
+        "Cyborg",
+        "DATA SQUAD"
+      ]
+    },
+    "option": {
+      "colors": [
+        "Purple"
+      ],
+      "effect_text": "＜Use Req. ([DATA SQUAD] trait)＞ (Specified conditions meet color requirements.) [Main] Your opponent trashes cards in their hand so that they have 7 left. If this effect didn't trash, delete 1 of their Digimon.",
+      "keywords": [
+        "ArtsDigivolve"
+      ],
+      "security_text": "",
+      "use_cost": 5
+    }
+  }
+}

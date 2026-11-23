@@ -1,0 +1,37 @@
+{
+  "index": 4518,
+  "norm_id": 0.2259,
+  "card_id": "BT27-031",
+  "card_index": 31,
+  "card_name_eng": "JumboGamemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_031",
+  "play_cost": 12,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Cyborg",
+    "DATA SQUAD",
+    "Aquatic"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Decode (Lv.5 w/[Aquatic]/[DATA SQUAD] trait)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)\r\n[On Play] [When Digivolving] [Counter] [Once Per Turn] By placing 1 of your other Digimon or Tamers as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon with as many digivolution cards as this Digimon or fewer to the bottom of the deck.\r\n[All Turns] [Once Per Turn] When effects add to this Digimon's digivolution cards, you may play 1 play cost 5 or lower blue card from its digivolution cards without paying the cost.\r\n(Rule) Trait: Has [Aquatic] Type.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[DATA SQUAD] trait: Cost 4"
+}

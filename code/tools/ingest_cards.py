@@ -95,6 +95,21 @@ DUAL_OPTION_COLOR_OVERRIDES = {
     # Option face on a two-colour Digimon face.
     "EX13-065": ["White"],           # Sistermon Blanc (Awakened) (card White/Yellow)
     "EX13-066": ["White"],           # Sistermon Noir (Awakened) (card White/Black)
+    # BT27 (2026-11-23) — from the official Bandai DB "DUAL Color" field
+    # (`dual_colors` in data/card_official.json).
+    "BT27-016": ["White"],           # Jesmon (X Antibody) (card Red/White)
+    "BT27-032": ["Blue"],            # MirageGaogamon (card Blue/Black)
+    "BT27-034": ["Red"],             # Examon (X Antibody) (card Blue/Red/Green)
+    "BT27-035": ["Blue"],            # MirageGaogamon: Burst Mode (card Blue/Black)
+    "BT27-043": ["Yellow"],          # Kentaurosmon (X Antibody) (card Yellow)
+    "BT27-067": ["Black"],           # Artiomon (card Black/Red)
+    "BT27-068": ["White"],           # Gankoomon (X Antibody) (card Black/White)
+    "BT27-070": ["Black"],           # Craniamon (X Antibody) (card Black)
+    "BT27-082": ["Purple"],          # Nosferamon (card Purple/Yellow)
+    "BT27-083": ["Purple"],          # Ravemon (card Purple/Green)
+    "BT27-084": ["Purple", "Black"], # LordKnightmon (X Antibody) (card Purple/Black)
+    "BT27-085": ["Purple"],          # Ravemon: Burst Mode (card Purple/Green)
+    "BT27-103": ["Black"],           # Alphamon: Ouryuken (card Black/Yellow/Red)
 }
 
 RARITY_MAP = {

@@ -1,0 +1,28 @@
+{
+  "index": 4491,
+  "norm_id": 0.22455,
+  "card_id": "BT27-004",
+  "card_index": 4,
+  "card_name_eng": "Kapurimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_004",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Lesser",
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your other Digimon with [Chessmon] in their names are played, this Digimon may digivolve into a Digimon card with [Chessmon] in its name in the hand with the cost reduced by 2.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

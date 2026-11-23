@@ -1,0 +1,43 @@
+{
+  "index": 4540,
+  "norm_id": 0.227,
+  "card_id": "BT27-053",
+  "card_index": 53,
+  "card_name_eng": "BanchoLeomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_053",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3,
+    2
+  ],
+  "type_eng": [
+    "Beastkin",
+    "Boss",
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "When this card would be played, if your opponent has a Digimon with 11000 DP or more, reduce the cost by 6.\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] This Digimon may battle 1 of your opponent's Digimon.\r\n[On Deletion] You may play or use 1 Tamer or Option card with the [Boss] or [DATA SQUAD] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 5
+    },
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Leomon] in name or w/[DATA SQUAD] trait: Cost 4"
+}

@@ -1,0 +1,37 @@
+{
+  "index": 4514,
+  "norm_id": 0.2257,
+  "card_id": "BT27-027",
+  "card_index": 27,
+  "card_name_eng": "Tenkomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_027",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mysterious Beast",
+    "ALYSION",
+    "Ice-Snow"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Iceclad＞ [On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, you may place 1 level 4 or lower [Ice-Snow] trait Digimon card from your hand as any of your Digimon's bottom digivolution card. (Rule) Trait: Has [Ice-Snow] Type.",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] Gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

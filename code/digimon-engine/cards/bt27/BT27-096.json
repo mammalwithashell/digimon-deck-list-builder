@@ -1,0 +1,27 @@
+{
+  "index": 4583,
+  "norm_id": 0.22915,
+  "card_id": "BT27-096",
+  "card_index": 96,
+  "card_name_eng": "Keenan Crier",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_096",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When hands are trashed from, by suspending this Tamer, you may place the top 2 cards of your deck face down under this Tamer.\r\n[Main] [Once Per Turn] By trashing 5 bottom face-down cards from under any of your Tamers, you may use 1 Option card with [Ravemon] in its text from your trash without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "evo_costs": [],
+  "xros_req": ""
+}
