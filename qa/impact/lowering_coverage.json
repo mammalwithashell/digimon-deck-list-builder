@@ -46447,6 +46447,9 @@
     ],
     "dsl::constructs/tamer_color_predicates.rs::distinct_tamer_colors_gte_counts_distinct_colours_of_own_tamers_only": [
      "variant"
+    ],
+    "dsl::constructs/tamer_color_predicates.rs::distinct_tamer_colors_gte_counts_gained_and_drops_replaced_colours": [
+     "variant"
     ]
    },
    "tested": true,
@@ -46454,7 +46457,8 @@
    "tests": [
     "dsl::constructs/tamer_color_predicates.rs::distinct_colors_gte_counts_only_permanents_matching_the_filter",
     "dsl::constructs/tamer_color_predicates.rs::distinct_tamer_colors_gte_compiles_from_yaml",
-    "dsl::constructs/tamer_color_predicates.rs::distinct_tamer_colors_gte_counts_distinct_colours_of_own_tamers_only"
+    "dsl::constructs/tamer_color_predicates.rs::distinct_tamer_colors_gte_counts_distinct_colours_of_own_tamers_only",
+    "dsl::constructs/tamer_color_predicates.rs::distinct_tamer_colors_gte_counts_gained_and_drops_replaced_colours"
    ]
   },
   "predicate:dna_field_pair": {
@@ -85839,7 +85843,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2307,
+  "behavioural_tests": 2310,
   "cards": {
    "behaviourally_covered": 1274,
    "lowering_covered": 1292,
@@ -86002,7 +86006,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 422,
-  "scanned_tests": 2729,
+  "scanned_tests": 2732,
   "top_untested": [
    {
     "cards_blocked": 3,

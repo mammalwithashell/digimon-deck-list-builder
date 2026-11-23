@@ -603,14 +603,22 @@ fn eval_predicate_ref_known(
         // the observer's battle-area Tamer permanents. ST20-10's warp
         // alt-path condition ("your Tamers have 3 or more total colors").
         let mut colors: Vec<CardColor> = Vec::new();
-        for perm in &rctx.game.player(rctx.player).battle_area {
+        for (index, perm) in rctx.game.player(rctx.player).battle_area.iter().enumerate() {
             let top = perm.top_card();
             if top.card_kind(rctx.card_data()) != CardKind::Tamer {
                 continue;
             }
-            for c in top.colors(rctx.card_data()) {
-                if !colors.contains(c) {
-                    colors.push(*c);
+            // A Tamer's colors as currently modified (`ChangeBaseCardColor` /
+            // `AddColor`), the same rules colors `distinct_colors_gte` reads.
+            // DCGO counts `TopCard.CardColors`, which folds color-change
+            // effects (CardSource.cs:446-476). Scan finding F04 class.
+            let handle = crate::permanent::PermanentHandle {
+                player: rctx.player,
+                index: index as u8,
+            };
+            for c in perm.colors_for_rules(rctx.card_data(), &rctx.game.modifiers, handle) {
+                if !colors.contains(&c) {
+                    colors.push(c);
                 }
             }
         }
