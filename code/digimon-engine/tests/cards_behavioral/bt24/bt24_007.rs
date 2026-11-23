@@ -27,6 +27,7 @@ fn setup(first: u8) -> DebugRunner {
         .add_card(digimon("DEMON5", "Demon Five", CardColor::Purple, 5, 7, &["Demon"]))
         .add_card(digimon("TITAN3", "Titan Three", CardColor::Purple, 3, 4, &["Titan"]))
         .add_card(digimon("PLAIN4", "Plain Four", CardColor::Purple, 4, 5, &[]))
+        .add_card(digimon("TITAN-HUGE", "Titan Huge", CardColor::Purple, 6, 18, &["Titan"]))
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
         .memory(5)
@@ -188,4 +189,54 @@ fn bt24_007_once_per_turn_after_a_play() {
     let _ = r.auto_resolve();
     assert!(r.pending_selection_view().is_none(), "OPT spent");
     assert!(trash_ids(&r, 0).contains(&"DEMON5".to_string()));
+}
+
+// Play-legality of the union pick: under "can't play Digimon by effects"
+// (Pomumon (BT9-047)) the trashed [Titan] can't be played, so no pick opens and
+// the card stays in the trash (bug scan 2026-11: the pick fed
+// `play_union_bound_free` with no play-legality leaf; DCGO BT24_007.cs filters
+// with `CanPlayAsNewPermanent`). The leaf is added by the DSL lowering
+// (`digimon_dsl::play_candidates`).
+#[test]
+fn bt24_007_offers_no_pick_while_effects_cannot_play_digimon() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup(0);
+    board(&mut r);
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+    push_hand(&mut r, 0, "TITAN4");
+    trash_from_hand(&mut r, 0, "TITAN4");
+    assert!(
+        non_pass(&r).is_empty(),
+        "no pick for a card the play would refuse: {:?}",
+        r.pending_selection_view()
+    );
+    let _ = r.auto_resolve();
+    assert!(trash_ids(&r, 0).contains(&"TITAN4".to_string()));
+    assert!(!field_ids(&r, 0).contains(&"TITAN4".to_string()));
+    assert_eq!(r.memory(), 5);
+}
+
+// Affordability of the paid play: "play 1 of them with the play cost reduced by 2"
+// pays printed cost - 2 (DCGO BT24_007.cs:47 `CanPlayAsNewPermanent(cardSource, true,
+// ..., fixedCost: cost - 2)`). A cost-18 Titan costs 16, more than the 5 + 10 the
+// player can pay, so it is not offered.
+#[test]
+fn bt24_007_does_not_offer_a_titan_it_cannot_afford() {
+    let mut r = setup(0);
+    board(&mut r);
+    push_hand(&mut r, 0, "TITAN-HUGE");
+    trash_from_hand(&mut r, 0, "TITAN-HUGE");
+    assert!(non_pass(&r).is_empty(), "unaffordable play is not offered: {:?}", r.pending_selection_view());
+    let _ = r.auto_resolve();
+    assert!(trash_ids(&r, 0).contains(&"TITAN-HUGE".to_string()));
 }

@@ -77,6 +77,10 @@ effects:
               - any_of:
                   - trait_has: Demon
                   - trait_has: Titan
+              # A PAID play (cost - 2): DCGO BT24_007.cs:47 `CanPlayAsNewPermanent(cardSource, true,
+              # activateClass, ..., fixedCost: cost - 2)`. The play-legality leaf (lock, slot, play cost)
+              # is added by the DSL lowering (`digimon_dsl::play_candidates`); affordability is per card.
+              - affordable_with_cost: { reduce: 2 }
           prompt: "You may play 1 of the level 4 or higher [Demon]/[Titan] Digimon cards just trashed from your hand with the play cost reduced by 2"
       - if:
           condition: { binding_present: pick }
