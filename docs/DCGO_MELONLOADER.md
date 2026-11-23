@@ -339,6 +339,11 @@ and reorder a mulligan reshuffle to the plan. The host picks the first player wi
   (animations). Converting the packet at queue time let the agent answer prompts DCGO had not opened. Plays are now
   taken only from `PlayCardClass.PlayCard` rows (logged at resolution, with the resolved hand slot and target, on
   every client), and the mod only queues a turn action while DCGO's main-phase loop is idle.
+- **Paid plays during effects.** `PlayCardClass.PlayCard` can include optional `play_provenance`: `effect` when
+  DCGO supplies an effect context, or `direct` when the played card matches the turn state's `PlayCard` and there
+  is no effect context. If neither is observed, the recorder omits the field. For older offline logs, the
+  converter links an unqueued paid bot play only to an immediately preceding hand pick by that bot on the same
+  turn naming the same `CardIndex`; it does not carry hand picks across other events.
 - **Attacks were never recorded.** `SetAttackingPermaent` (called by `AttackPermanentAction.Execute`) is inlined in
   the shipped build and never reaches its hook. Attacks are decoded from the attack packet, which now carries both
   seats' `GetFieldPermanents()` order (`boards`) so `remap_board_slots` maps DCGO indices onto engine slots.

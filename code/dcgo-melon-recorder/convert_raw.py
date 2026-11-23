@@ -151,6 +151,20 @@ def pick_card_indexes(args, card_ids):
     return list(args[1])
 
 
+def hand_pick_claims_play(pick, actor, turn, played_index):
+    method = pick.get("method")
+    if method != "SelectHandEffect.SetTargetHandCards" and not (
+            method == "SelectCardEffect.SetTargetCardAndIndicies" and pick.get("zone") == "Hand"
+            and not pick.get("stray") and not pick.get("mechanic")):
+        return False
+    args, card_ids = pick.get("args", []), pick.get("card_ids")
+    if not (turn == pick.get("turn", pick.get("turn_count")) and pick.get("tp") == actor
+            and args and args[0] == actor and card_ids and None not in card_ids):
+        return False
+    indexes = pick_card_indexes(args, card_ids)
+    return indexes is not None and played_index in indexes
+
+
 def pick_list_positions(args, card_ids):
     """The position of each pick in the candidate list DCGO showed, parallel to `card_ids`, or None.
 
@@ -696,8 +710,9 @@ def convert(rows, cards, allow_truncated=False):
             # the resolved hand slot and target on every client. The play packet is logged when the play is queued
             # (replaying it then ran ahead of DCGO), and on the receiving PvP client it is decoded against a state
             # that has not caught up yet (hand slot / target missing).
-            if r.get("pay_cost") is False:
-                # an effect playing a card (not a main-phase decision): resolved by the effect itself
+            provenance = r.get("play_provenance")
+            if provenance == "effect" or r.get("pay_cost") is False:
+                # The engine's effect resolves this play, even when DCGO charged its cost.
                 continue
             if not r.get("cards") and not r.get("hand"):
                 # an effect's play / digivolve step that played nothing (e.g. a "may digivolve" with no card chosen):
@@ -723,6 +738,17 @@ def convert(rows, cards, allow_truncated=False):
                                                                        listed_card, played_index))
                 played_index = None
             bot_paid_play = is_ai and actor == bot == tp and r.get("pay_cost") is True
+            if bot_paid_play and provenance != "direct" and ridx > 0:
+                exact = r.get("card_indexes")
+                claimed_index = played_index
+                if (isinstance(exact, list) and len(exact) == 1 and type(exact[0]) is int
+                        and (played_index is not None or r.get("root") == "Hand")):
+                    claimed_index = exact[0]
+                # Legacy rows have no resolution ID. Only link an immediately preceding hand pick in the same
+                # turn, not a historical pick of a card that might still be in hand.
+                if (claimed_index is not None and claimed_index not in queued_play_indexes
+                        and hand_pick_claims_play(rows[ridx - 1], actor, turn, claimed_index)):
+                    continue
             if played_index is not None and played_index not in queued_play_indexes and not bot_paid_play:
                 continue
             if played_index is not None:
