@@ -33,7 +33,7 @@ effects:
       - select_opponent_permanent:
           bind_as: chosen
           filter: { kind: digimon }
-          optional: false
+          optional: true
           prompt: Choose an opponent's Digimon to attack
       # Q2320: the instruction affects the player, not the chosen Digimon.
       - force_attack:

@@ -94,6 +94,7 @@ BT13-040 missing_text 1
 BT13-065 missing_text 0
 BT13-075 missing_text 0
 BT13-075 missing_text 1
+BT13-077 optional_without_may 2
 BT13-083 missing_text 0
 BT13-083 missing_text 1
 BT13-083 missing_text 2

@@ -59,10 +59,10 @@ fn bt13_077_q2320_immune_attacker_is_mandatory_for_opponent_and_clones() {
             ),
         );
         r.end_turn();
-        assert!(
-            !r.pending_selection().unwrap().is_optional,
-            "printed \"Choose 1\" is mandatory"
-        );
+        assert!(r.pending_selection().unwrap().is_optional);
+        let mut decline = DebugRunner::wrap(r.game.clone());
+        choose(&mut decline, owner, PASS);
+        assert_eq!(decline.game.players[owner as usize].security.len(), 5);
         first(&mut r, owner);
         assert!(
             !r.pending_selection()
