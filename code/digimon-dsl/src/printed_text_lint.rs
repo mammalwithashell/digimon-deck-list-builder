@@ -63,20 +63,24 @@ fn has_optional_payment(text: &str) -> bool {
 
 fn has_optional(value: &Value) -> bool {
     match value {
-        Value::Object(map) => map.iter().any(|(key, v)| {
-            ((key == "optional" && (v == &Value::Bool(true) || v.is_array()))
-                || (matches!(key.as_str(), "outer_prompt" | "optional_zero")
-                    && v == &Value::Bool(true)))
-                || (key == "select_zone_cards" && v["min"].as_u64().unwrap_or(0) == 0)
-                || (key == "select_effect_choice"
-                    && v["labels"].as_array().map_or(false, |labels| {
-                        labels.iter().filter_map(Value::as_str).any(|label| {
-                            let label = normalize(label);
-                            label == "decline" || label.starts_with("don't ")
-                        })
-                    }))
-                || (!matches!(key.as_str(), "text" | "summary" | "summary_key") && has_optional(v))
-        }),
+        Value::Object(map) => {
+            map.get("kind").and_then(Value::as_str) == Some("delay")
+                || map.iter().any(|(key, v)| {
+                    ((key == "optional" && (v == &Value::Bool(true) || v.is_array()))
+                        || (matches!(key.as_str(), "outer_prompt" | "optional_zero")
+                            && v == &Value::Bool(true)))
+                        || (key == "select_zone_cards" && v["min"].as_u64().unwrap_or(0) == 0)
+                        || (key == "select_effect_choice"
+                            && v["labels"].as_array().map_or(false, |labels| {
+                                labels.iter().filter_map(Value::as_str).any(|label| {
+                                    let label = normalize(label);
+                                    label == "decline" || label.starts_with("don't ")
+                                })
+                            }))
+                        || (!matches!(key.as_str(), "text" | "summary" | "summary_key")
+                            && has_optional(v))
+                })
+        }
         Value::Array(items) => items.iter().any(has_optional),
         _ => false,
     }
@@ -154,9 +158,12 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
             && (text.starts_with('<') || text.starts_with('＜'));
         // Keyword machinery owns the choices described by keyword reminder text.
         if !keyword {
-            match (has_may(&text), has_optional(&value)) {
+            let text_optional = has_may(&text)
+                || has_optional_payment(&text)
+                || matches!(clause, ClauseSpec::Declarative(c) if c.kind == DeclarativeKind::Delay);
+            match (text_optional, has_optional(&value)) {
                 (true, false) => report("may_without_optional"),
-                (false, true) if !has_optional_payment(&text) => report("optional_without_may"),
+                (false, true) => report("optional_without_may"),
                 _ => (),
             }
         }

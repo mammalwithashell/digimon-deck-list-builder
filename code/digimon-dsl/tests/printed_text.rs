@@ -147,3 +147,22 @@ fn printed_text_option_main_and_delay_timings() {
         vec!["timing_tag_mismatch"]
     );
 }
+
+#[test]
+fn printed_text_by_payment_requires_declinable_dsl() {
+    let text = "[Start of Your Main Phase] By placing 1 Digimon card from your hand under this Tamer, draw 1.";
+    let clause = format!("- when: start_of_your_main_phase\n  text: '{text}'\n  process:\n    - select_hand: {{of: you, filter: {{kind: digimon}}, bind_as: stash, prompt: Place}}\n    - place_selected_card_under_tamer: {{card: stash, tamer: source}}\n    - draw: {{of: you, count: 1}}");
+    assert_eq!(check(&clause, text), vec!["may_without_optional"]);
+    assert!(check(
+        &clause.replace("bind_as: stash", "optional: true, bind_as: stash"),
+        text
+    )
+    .is_empty());
+    assert_eq!(check("- when: on_play\n  text: By suspending this Tamer, gain 1 memory.\n  process:\n    - activation_cost: {suspend_self: true}\n    - gain_memory: 1", "By suspending this Tamer, gain 1 memory."), vec!["may_without_optional"]);
+    let text = "[Main] ＜Delay＞ Gain 2 memory.";
+    assert!(check(
+        &format!("- kind: delay\n  trigger: delayed\n  text: '{text}'"),
+        text
+    )
+    .is_empty());
+}
