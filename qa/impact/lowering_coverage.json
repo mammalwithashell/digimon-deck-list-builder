@@ -4680,8 +4680,7 @@
    "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
-    "predicate:card_in_zone",
-    "predicate:is_source_card"
+    "predicate:card_in_zone"
    ]
   },
   "BT17-081": {
@@ -32908,7 +32907,7 @@
    "untested_constructs": []
   },
   "LM-068": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 7,
    "constructs": [
     "verb:delete_permanent",
@@ -32946,12 +32945,10 @@
    ],
    "effect_clause_count": 5,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:is_source_card"
-   ]
+   "untested_constructs": []
   },
   "P-035": {
    "behaviourally_covered": true,
@@ -50035,15 +50032,21 @@
   "predicate:is_source_card": {
    "kind": "predicate",
    "name": "is_source_card",
-   "near_miss_files": [
-    "src/dsl_cards/predicate.rs",
-    "tests/dsl/predicate_is_source_card.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source": [
+     "yaml_key"
+    ],
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source",
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source"
+   ]
   },
   "predicate:is_source_permanent": {
    "kind": "predicate",
@@ -65494,6 +65497,12 @@
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
      "yaml_key"
     ],
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source": [
+     "yaml_key"
+    ],
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source": [
+     "yaml_key"
+    ],
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling": [
      "yaml_key"
     ],
@@ -66239,6 +66248,8 @@
     "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source",
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_option_by_use_cost",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_uses_max_of_both_dual_faces",
@@ -83034,6 +83045,12 @@
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_offers_only_tamer_with_face_down_stash": [
      "variant"
     ],
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source": [
+     "yaml_key"
+    ],
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source": [
+     "yaml_key"
+    ],
     "dsl::xros_reusable_primitives.rs::moved_source_count_can_reduce_followup_play_cost": [
      "yaml_key"
     ],
@@ -83275,6 +83292,8 @@
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_false_offers_only_tamer_without_stash",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_offers_only_tamer_with_face_down_stash",
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source",
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source",
     "dsl::xros_reusable_primitives.rs::moved_source_count_can_reduce_followup_play_cost",
     "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection",
     "rules_conformance::ch15_08_effect_categories.rs::battle_result_trigger_condition_false_at_the_battle_never_activates",
@@ -86086,9 +86105,9 @@
  "summary": {
   "behavioural_tests": 2309,
   "cards": {
-   "behaviourally_covered": 1279,
-   "lowering_covered": 1297,
-   "not_covered": 52,
+   "behaviourally_covered": 1280,
+   "lowering_covered": 1298,
+   "not_covered": 51,
    "total": 1349
   },
   "constructs": {
@@ -86103,12 +86122,12 @@
    },
    "predicate": {
     "parsed_only": 7,
-    "tested": 208,
-    "tested_behaviourally": 201,
+    "tested": 209,
+    "tested_behaviourally": 202,
     "total": 240,
-    "untested": 32,
+    "untested": 31,
     "used_by_cards": 213,
-    "used_untested": 24
+    "used_untested": 23
    },
    "timing": {
     "parsed_only": 2,
@@ -86270,11 +86289,6 @@
     "cards_blocked": 5,
     "construct": "predicate:stack_size_lte",
     "ex13_lists_blocked": 29
-   },
-   {
-    "cards_blocked": 2,
-    "construct": "predicate:is_source_card",
-    "ex13_lists_blocked": 26
    },
    {
     "cards_blocked": 1,

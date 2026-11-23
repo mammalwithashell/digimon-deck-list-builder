@@ -6,9 +6,7 @@
 
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 
-fn selector_yaml(want: bool) -> String {
-    format!(
-        r#"
+const SOURCE_ONLY_YAML: &str = r#"
 card: TEST-ISC
 name: Is Source Selector
 kind: digimon
@@ -22,15 +20,31 @@ effects:
       - select_own_permanent:
           bind_as: pick
           optional: true
-          filter: {{ is_source_card: {want} }}
+          filter: { is_source_card: true }
           prompt: "Pick a Digimon"
-"#
-    )
-}
+"#;
 
-fn offered(want: bool) -> usize {
+const OTHERS_ONLY_YAML: &str = r#"
+card: TEST-ISC
+name: Is Source Selector
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    process:
+      - select_own_permanent:
+          bind_as: pick
+          optional: true
+          filter: { is_source_card: false }
+          prompt: "Pick a Digimon"
+"#;
+
+fn offered(yaml: &str) -> usize {
     let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(&selector_yaml(want))
+        .from_dsl_yaml(yaml)
         .expect("selector YAML parses")
         .add_card(make_test_card("OTHER", "Other"))
         .deck(0, &["OTHER"; 4])
@@ -52,10 +66,10 @@ fn offered(want: bool) -> usize {
 
 #[test]
 fn is_source_card_true_admits_only_the_source() {
-    assert_eq!(offered(true), 1, "only the source Digimon is offered");
+    assert_eq!(offered(SOURCE_ONLY_YAML), 1, "only the source Digimon is offered");
 }
 
 #[test]
 fn is_source_card_false_excludes_the_source() {
-    assert_eq!(offered(false), 2, "both other Digimon, not the source");
+    assert_eq!(offered(OTHERS_ONLY_YAML), 2, "both other Digimon, not the source");
 }
