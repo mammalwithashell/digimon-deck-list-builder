@@ -21,7 +21,9 @@
     "Royal Knight"
   ],
   "form_eng": [],
-  "attribute_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
   "effect_description_eng": "＜Progress＞＜Piercing＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.) [When Digivolving] [When Attacking] [Once Per Turn] This Digimon gets +6000 DP until your opponent's turn ends. Then, by returning 1 of your other Digimon or 1 [Jesmon] or [X Antibody] from this Digimon's digivolution cards to the bottom of the deck, activate 1 [Main] effect on this card's Option side.",
   "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",

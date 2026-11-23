@@ -397,7 +397,7 @@ impl Game {
             return false;
         };
         let scope = self.effect_digivolve_scopes.remove(index);
-        let blocked = self
+        let blocked = !scope.identity.as_tamer && self
             .resolve_effect_digivolve_host(&scope.declaration)
             .is_some_and(|h| self.modifiers.has(h, ModifierType::CannotDigivolve));
         self.clear_would_digivolve_identity(&scope.identity);
@@ -747,6 +747,8 @@ impl Game {
                     delta.resolve(cost.memory_cost),
                     if cost.treated_as.is_some() {
                         " (treated as Digimon)"
+                    } else if cost.as_tamer {
+                        " (as Tamer)"
                     } else {
                         ""
                     }
@@ -1127,14 +1129,6 @@ impl Game {
             player: player_id,
             index: field_index as u8,
         };
-        if self.modifiers.has(handle, ModifierType::CannotDigivolve) {
-            self.logger.log(&format!(
-                "[Rejected] digivolve_from_hand: permanent at field index {} blocked by CannotDigivolve modifier",
-                field_index
-            ));
-            return false;
-        }
-
         let card = player.hand[hand_index].clone();
         let perm = &player.battle_area[field_index];
         // CR 8-3-3-2 already performed: this attempt is a [Burst Digivolve]
@@ -1193,6 +1187,9 @@ impl Game {
             Some(paid) => paid.route,
             None => self.pending_digivolve_route_choice.unwrap_or(min_route),
         };
+        if !self.digivolve_route_passes_prohibitions(handle, player_id, PlaySource::ByHand, route.as_tamer) {
+            return false;
+        }
         // CR 8-3-3-2: a chosen [Burst Digivolve] route returns its Tamer to
         // the hand BEFORE the cost is paid (8-3-3-3), then the action
         // continues (re-entered with `pending_burst_digivolve` set).
@@ -1222,6 +1219,7 @@ impl Game {
                 card: card.handle(),
                 effective_cost: 0,
                 app_fusion: route.app_fusion,
+                as_tamer: route.as_tamer,
                 burst: route.burst,
             });
         }
@@ -1321,6 +1319,7 @@ impl Game {
                     card: card.handle(),
                     effective_cost,
                     app_fusion: route.app_fusion,
+                    as_tamer: route.as_tamer,
                     burst: route.burst,
                 });
         resume.permanent = handle;
@@ -1556,6 +1555,8 @@ impl Game {
                     )
                 } else if r.app_fusion {
                     format!("Digivolve for cost {} (App Fusion)", r.memory_cost)
+                } else if r.as_tamer {
+                    format!("Digivolve for cost {} (as Tamer)", r.memory_cost)
                 } else if let Some(profile) = r.treated_as {
                     format!(
                         "Digivolve for cost {} (treat base as Lv.{} {:?} {:?})",
@@ -1800,11 +1801,6 @@ impl Game {
         let Some(host) = self.digivolve_base_permanent(target) else {
             return false;
         };
-        if self.modifiers.has(target, ModifierType::CannotDigivolve)
-            || self.modifiers.player_has(acting_player, ModifierType::CannotDigivolveDigimonByEffect)
-        {
-            return false;
-        }
         let Some(card) = self.card_source_ref_peek(source_ref) else { return false; };
         let result_card = card.handle();
         let target_top = host.top_card().handle();
@@ -1818,7 +1814,9 @@ impl Game {
             self.all_digivolve_routes_for_card(card, target)
         }
         .into_iter()
-        .filter(|route| !route.app_fusion)
+        .filter(|route| !route.app_fusion && self.digivolve_route_passes_prohibitions(
+            target, acting_player, PlaySource::ByEffect, route.as_tamer,
+        ))
         .collect();
         if routes.is_empty() { return false; }
 
@@ -1887,6 +1885,21 @@ impl Game {
         }
     }
 
+    pub(crate) fn digivolve_route_passes_prohibitions(
+        &self,
+        target: PermanentHandle,
+        acting_player: PlayerId,
+        source: PlaySource,
+        as_tamer: bool,
+    ) -> bool {
+        if as_tamer {
+            return self.digivolve_base_is_tamer(target);
+        }
+        !self.modifiers.has(target, ModifierType::CannotDigivolve)
+            && !(source == PlaySource::ByEffect
+                && self.modifiers.player_has(acting_player, ModifierType::CannotDigivolveDigimonByEffect))
+    }
+
     /// Existential search over the same legal payment prompts used at commit.
     /// Only isolated clones consume payments or OPTs; the live declaration
     /// retains every player choice, including an optional decline.
@@ -1923,6 +1936,7 @@ impl Game {
                 card: declaration.result_card,
                 effective_cost: 0,
                 app_fusion: false,
+                as_tamer: route.as_tamer,
                 burst: None,
             },
         });
@@ -2388,13 +2402,6 @@ impl Game {
         {
             return false;
         }
-        if self
-            .modifiers
-            .has(resume.permanent, ModifierType::CannotDigivolve)
-        {
-            return false;
-        }
-
         let Some(hand_index) = self
             .player(resume.player)
             .hand
@@ -2403,7 +2410,7 @@ impl Game {
         else {
             return false;
         };
-        // Re-validate that SOME route still applies (the board may have shifted
+        // Re-validate that a route of the declared source mode still applies (the board may have shifted
         // since the resume was built), but use the player's CHOSEN route's
         // app-fusion-ness — not the re-derived min — so the commit honors the
         // cost choice.
@@ -2415,10 +2422,13 @@ impl Game {
                 self.burst_route_base_still_valid(&card, resume.permanent, choice)
             }
             None => self
-                .normal_digivolve_route_for_hand_card(resume.player, hand_index, resume.permanent)
-                .is_some(),
+                .distinct_digivolve_routes_for_hand_card(resume.player, hand_index, resume.permanent)
+                .iter()
+                .any(|route| route.as_tamer == resume.as_tamer),
         };
-        if !route_still_applies {
+        if !route_still_applies || !self.digivolve_route_passes_prohibitions(
+            resume.permanent, resume.player, PlaySource::ByHand, resume.as_tamer,
+        ) {
             return false;
         }
         let is_app_fusion = resume.app_fusion;
@@ -2493,7 +2503,11 @@ impl Game {
 
         let _ = self.draw_one_for_player(resume.player);
 
-        self.fire_digivolve_event_triggers(resume.permanent, event_card, false, false);
+        if resume.as_tamer {
+            self.maybe_drain_effect_queue();
+        } else {
+            self.fire_digivolve_event_triggers(resume.permanent, event_card, false, false);
+        }
 
         // Reward-shaping counter — bumped here at the user-action choke
         // point that both `digivolve_from_hand_inner` and the
@@ -3111,26 +3125,6 @@ impl Game {
             DigivolveRequirementWaiver::Color | DigivolveRequirementWaiver::All
         );
         let ignore_requirements = waiver == DigivolveRequirementWaiver::All;
-        if source == PlaySource::ByEffect
-            && self
-                .modifiers
-                .player_has(player_id, ModifierType::CannotDigivolveDigimonByEffect)
-        {
-            self.logger.log(
-                "[Rejected] effect_initiated_digivolve: blocked by CannotDigivolveDigimonByEffect",
-            );
-            return false;
-        }
-
-        // Recheck the host prohibition after a hand/source or cost-choice
-        // prompt resumes, before taking cards or paying memory. Waiving
-        // digivolution requirements never waives a prohibiting effect.
-        if self.modifiers.has(target, ModifierType::CannotDigivolve) {
-            self.logger
-                .log("[Rejected] effect_initiated_digivolve: target blocked by CannotDigivolve");
-            return false;
-        }
-
         let Some((evo_card_handle, evo_card_data_index, _)) =
             self.card_source_ref_snapshot(source_ref)
         else {
@@ -3213,9 +3207,13 @@ impl Game {
             }
             route_costs
         };
+        route_costs.retain(|route| {
+            self.digivolve_route_passes_prohibitions(target, player_id, source, route.as_tamer)
+        });
         route_costs.sort_by_key(|r| {
             (
                 r.memory_cost,
+                r.as_tamer,
                 r.treated_as.map(|p| (p.kind as u8, p.level, p.colors)),
             )
         });
@@ -3268,7 +3266,7 @@ impl Game {
             // Fixed/free effects and reductions that collapse both routes to
             // the same cost have no distinct payable decision.
             route_costs.dedup_by_key(|route| {
-                (effective_delta.resolve(route.memory_cost), route.treated_as)
+                (effective_delta.resolve(route.memory_cost), route.treated_as, route.as_tamer)
             });
             if route_costs.len() > 1 {
                 // Search real payment choices on clones. Summing optional
@@ -3379,6 +3377,7 @@ impl Game {
                 card: evo_card_handle,
                 effective_cost: 0,
                 app_fusion: false,
+                as_tamer: matching_memory_cost.as_tamer,
                 burst: None,
             },
         });
@@ -3511,13 +3510,8 @@ impl Game {
         if !self.effect_digivolve_source_supported(source_ref, target) {
             return false;
         }
-        if self.modifiers.has(target, ModifierType::CannotDigivolve)
-            || (state.source == PlaySource::ByEffect
-                && self.modifiers.player_has(
-                    state.acting_player,
-                    ModifierType::CannotDigivolveDigimonByEffect,
-                ))
-        {
+        let as_tamer = state.printed_costs.first().is_some_and(|route| route.as_tamer);
+        if !self.digivolve_route_passes_prohibitions(target, state.acting_player, state.source, as_tamer) {
             return false;
         }
         let player_id = state.acting_player;
@@ -3547,10 +3541,18 @@ impl Game {
                 player_id,
                 cause,
                 card,
-                crate::selection::SecurityRemovalDestination::Digivolve {
-                    player: player_id,
-                    target,
-                    turn: self.turn_count,
+                if as_tamer {
+                    crate::selection::SecurityRemovalDestination::DigivolveAsTamer {
+                        player: player_id,
+                        target,
+                        turn: self.turn_count,
+                    }
+                } else {
+                    crate::selection::SecurityRemovalDestination::Digivolve {
+                        player: player_id,
+                        target,
+                        turn: self.turn_count,
+                    }
                 },
             );
             return true;
@@ -3634,7 +3636,11 @@ impl Game {
         self.emit_eval_digivolve(target, effective_cost as i16, false, false);
 
         // 5. Fire WhenDigivolving triggers.
-        self.fire_digivolve_event_triggers(target, event_card, true, false);
+        if as_tamer {
+            self.maybe_drain_effect_queue();
+        } else {
+            self.fire_digivolve_event_triggers(target, event_card, true, false);
+        }
 
         true
     }

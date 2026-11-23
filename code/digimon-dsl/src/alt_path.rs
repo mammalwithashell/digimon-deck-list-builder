@@ -32,7 +32,7 @@ pub struct AltPathSpec {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_requirements: bool,
 
-    /// Identity override (X-Antibody).
+    /// Temporary identity override, or `tamer` to digivolve from a Tamer as-is.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_treated_as: Option<String>,
 

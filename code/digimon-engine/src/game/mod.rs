@@ -444,6 +444,7 @@ pub(crate) struct PendingWouldDigivolveResume {
     /// Threaded from the chosen route so the commit honors the player's pick
     /// (`pending_digivolve_route_choice`) rather than re-deriving the min route.
     pub(crate) app_fusion: bool,
+    pub(crate) as_tamer: bool,
     /// The [Burst Digivolve] route being performed (its Tamer has already
     /// been returned, CR 8-3-3-2). The commit re-validates only the base
     /// requirement and registers the 8-3-2-1 turn-end trash.
@@ -465,6 +466,9 @@ impl std::fmt::Debug for PendingWouldDigivolveResume {
             .field("app_fusion", &self.app_fusion);
         if let Some(burst) = &self.burst {
             d.field("burst", burst);
+        }
+        if self.as_tamer {
+            d.field("as_tamer", &true);
         }
         d.finish()
     }

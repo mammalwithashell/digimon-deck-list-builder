@@ -254,6 +254,7 @@ pub(crate) struct PendingBurstDigivolve {
 pub(crate) struct DigivolveRouteMatch {
     /// The chosen route's temporary source identity; never inferred from cost.
     pub treated_as: Option<DigivolveTreatedIdentity>,
+    pub as_tamer: bool,
     pub memory_cost: u16,
     /// True when this route is an **App Fusion** alt-play (Appmon
     /// "App Fusion" mechanic). Unlike a normal/alt digivolve, App Fusion
@@ -284,6 +285,9 @@ impl std::fmt::Debug for DigivolveRouteMatch {
         if let Some(burst) = &self.burst {
             d.field("burst", burst);
         }
+        if self.as_tamer {
+            d.field("as_tamer", &true);
+        }
         d.finish()
     }
 }
@@ -295,6 +299,7 @@ impl DigivolveRouteMatch {
             memory_cost,
             app_fusion: false,
             treated_as: None,
+            as_tamer: false,
             burst: None,
         }
     }
@@ -305,6 +310,7 @@ impl DigivolveRouteMatch {
             memory_cost,
             app_fusion: true,
             treated_as: None,
+            as_tamer: false,
             burst: None,
         }
     }
@@ -455,6 +461,12 @@ impl Game {
             .min_by_key(|route| route.memory_cost)
     }
 
+    pub(crate) fn digivolve_base_is_tamer(&self, base: PermanentHandle) -> bool {
+        self.digivolve_base_permanent(base).is_some_and(|perm| {
+            perm.synth_identity(&self.card_data, &self.modifiers, base).kind == CardKind::Tamer
+        })
+    }
+
     /// Every route the player's hand-digivolve ACTION offers for `card` onto
     /// `base_handle`: the normal routes (`all_digivolve_routes_for_card`)
     /// plus the [Burst Digivolve] routes (CR 6-5-1-2-3, 8-3), one per
@@ -466,6 +478,12 @@ impl Game {
         base_handle: PermanentHandle,
     ) -> Vec<DigivolveRouteMatch> {
         let mut routes = self.all_digivolve_routes_for_card(card, base_handle);
+        if base_handle.index != crate::action::space::BREEDING_TARGET as u8
+            && self.modifiers.has(base_handle, ModifierType::CannotDigivolve)
+        {
+            routes.retain(|route| route.as_tamer);
+            return routes;
+        }
         let burst = self.burst_digivolve_routes_for_card(card, base_handle);
         if burst.is_empty() {
             return routes;
@@ -476,6 +494,7 @@ impl Game {
                 r.memory_cost,
                 r.app_fusion,
                 r.burst,
+                r.as_tamer,
                 r.treated_as.map(|p| (p.kind as u8, p.level, p.colors)),
             )
         });
@@ -747,7 +766,7 @@ impl Game {
         // `route.app_fusion` to also consume the host's linked cards.
         routes.extend(self.collect_dsl_alt_digivolve_routes(card, base_handle, false));
         routes.extend(self.collect_app_fusion_routes(card, base_handle));
-        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion, r.treated_as.map(|p| (p.kind as u8, p.level, p.colors))));
+        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion, r.as_tamer, r.treated_as.map(|p| (p.kind as u8, p.level, p.colors))));
         routes.dedup();
         routes
     }
@@ -800,7 +819,7 @@ impl Game {
             }
         };
         routes.extend(self.collect_dsl_alt_digivolve_routes(card, base_handle, true));
-        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion, r.treated_as.map(|p| (p.kind as u8, p.level, p.colors))));
+        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion, r.as_tamer, r.treated_as.map(|p| (p.kind as u8, p.level, p.colors))));
         routes.dedup();
         routes
     }
@@ -966,7 +985,17 @@ impl Game {
                 }
 
                 let mut treated_identity = None;
-                let treated_as_cost = if let Some(profile) = path.source_treated_as.as_deref() {
+                let as_tamer = path.source_treated_as.as_deref() == Some("tamer");
+                let treated_as_cost = if as_tamer {
+                    if base_in_breeding
+                        || path.cost.is_none()
+                        || !self.digivolve_base_is_tamer(base_handle)
+                        || !card.is_digimon_card_for_search(&self.card_data)
+                    {
+                        continue;
+                    }
+                    None
+                } else if let Some(profile) = path.source_treated_as.as_deref() {
                     let Some(mut profile) = parse_treated_as_profile(profile) else {
                         continue;
                     };
@@ -1047,6 +1076,7 @@ impl Game {
                 };
                 let mut route = DigivolveRouteMatch::digivolve(memory_cost);
                 route.treated_as = treated_identity;
+                route.as_tamer = as_tamer;
                 routes.push(route);
             }
             routes

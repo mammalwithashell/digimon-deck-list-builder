@@ -44321,6 +44321,15 @@
     "dsl::constructs/zone_moves.rs::field_option_pass_and_nonfield_source_do_not_move": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::dna_field_pair_masks.rs::first_and_second_choices_are_correlated_with_the_result_and_each_other": [
      "yaml_key"
     ],
@@ -44454,6 +44463,9 @@
     "dsl::constructs/zone_moves.rs::field_option_before_host_preserves_identity_after_compaction",
     "dsl::constructs/zone_moves.rs::field_option_moves_facedown_and_faceup",
     "dsl::constructs/zone_moves.rs::field_option_pass_and_nonfield_source_do_not_move",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::dna_field_pair_masks.rs::first_and_second_choices_are_correlated_with_the_result_and_each_other",
     "dsl::dna_field_pair_masks.rs::no_prompt_when_no_hand_card_has_a_legal_pair",
     "dsl::dna_field_pair_masks.rs::result_choice_offers_only_a_card_with_a_legal_field_pair",
@@ -44763,6 +44775,15 @@
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidates_surface_two_hosts_and_two_results_for_either_controller": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards": [
      "yaml_key"
     ],
@@ -44839,6 +44860,9 @@
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_retains_legacy_hand_and_trash_zone_support",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_routes_exclude_wrong_level_color_and_breeding_hosts",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidates_surface_two_hosts_and_two_results_for_either_controller",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards",
     "dsl::digivolve_target_predicates.rs::compile_lowers_both_leaves",
     "dsl::digivolve_target_predicates.rs::has_digivolve_candidate_only_offers_permanents_with_a_routable_result",
@@ -49708,6 +49732,15 @@
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidates_surface_two_hosts_and_two_results_for_either_controller": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards": [
      "yaml_key"
     ],
@@ -49745,6 +49778,9 @@
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_retains_legacy_hand_and_trash_zone_support",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidate_routes_exclude_wrong_level_color_and_breeding_hosts",
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidates_surface_two_hosts_and_two_results_for_either_controller",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards",
     "dsl::digivolve_target_predicates.rs::compile_lowers_both_leaves",
     "dsl::digivolve_target_predicates.rs::has_digivolve_candidate_only_offers_permanents_with_a_routable_result",
@@ -50991,6 +51027,15 @@
      "yaml_key"
     ],
     "dsl::delay_union_play_flow.rs::delay_union_flow_plays_reward_on_field_and_subject_completes_leave": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
      "yaml_key"
     ],
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards": [
@@ -52449,6 +52494,9 @@
     "dsl::delay_union_play_flow.rs::delay_union_flow_comparator_uses_pre_leave_subject_cost_snapshot",
     "dsl::delay_union_play_flow.rs::delay_union_flow_offer_installs_with_zero_candidates",
     "dsl::delay_union_play_flow.rs::delay_union_flow_plays_reward_on_field_and_subject_completes_leave",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards",
     "dsl::digivolve_target_predicates.rs::compile_lowers_both_leaves",
     "dsl::digivolve_target_predicates.rs::has_digivolve_candidate_only_offers_permanents_with_a_routable_result",
@@ -55226,6 +55274,9 @@
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
     "dsl::digixros_transaction_steps.rs::turn_scoped_wildcard_step_makes_source_legal_for_later_digixros": [
      "yaml_key"
     ],
@@ -55419,6 +55470,7 @@
     "dsl::constructs/zone_moves.rs::own_group_hand_return_removes_token_and_routes_real_mother_to_egg_deck",
     "dsl::constructs/zone_moves.rs::sequential_union_picks_define_top_order",
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
     "dsl::digixros_transaction_steps.rs::turn_scoped_wildcard_step_makes_source_legal_for_later_digixros",
     "dsl::group7_alt_path_registration.rs::alt_path_direction_into_compiles_and_preserves_field",
     "dsl::group7_alt_path_registration.rs::alt_path_direction_into_filter_rejects_non_matching_hand_card",
@@ -56495,6 +56547,15 @@
     "dsl::constructs/zone_moves.rs::two_member_group_requires_mandatory_controller_order_at_either_end": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards": [
      "yaml_key"
     ],
@@ -56960,6 +57021,9 @@
     "dsl::constructs/zone_moves.rs::separate_return_steps_remain_two_observer_events",
     "dsl::constructs/zone_moves.rs::simultaneous_return_observer_fires_once_for_two_departures",
     "dsl::constructs/zone_moves.rs::two_member_group_requires_mandatory_controller_order_at_either_end",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards",
     "dsl::digivolve_target_predicates.rs::compile_lowers_both_leaves",
     "dsl::digivolve_target_predicates.rs::has_digivolve_candidate_only_offers_permanents_with_a_routable_result",
@@ -59098,6 +59162,15 @@
     "dsl::delay_union_play_flow.rs::delay_union_flow_plays_reward_on_field_and_subject_completes_leave": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::digivolve_ignore_level_and_tamer_base.rs::ignore_level_alt_path_rejects_a_base_matching_nothing": [
      "yaml_key"
     ],
@@ -59660,6 +59733,9 @@
     "dsl::delay_union_play_flow.rs::delay_union_flow_comparator_uses_pre_leave_subject_cost_snapshot",
     "dsl::delay_union_play_flow.rs::delay_union_flow_offer_installs_with_zero_candidates",
     "dsl::delay_union_play_flow.rs::delay_union_flow_plays_reward_on_field_and_subject_completes_leave",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::ignore_level_alt_path_rejects_a_base_matching_nothing",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::ignore_level_alt_path_trait_gate_still_applies",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::ignore_level_strips_the_alt_path_level_leaf_but_keeps_its_trait_gate",
@@ -60353,6 +60429,15 @@
     "dsl::constructs/zone_moves.rs::two_member_group_requires_mandatory_controller_order_at_either_end": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards": [
      "yaml_key"
     ],
@@ -60557,6 +60642,9 @@
     "dsl::constructs/zone_moves.rs::separate_return_steps_remain_two_observer_events",
     "dsl::constructs/zone_moves.rs::simultaneous_return_observer_fires_once_for_two_departures",
     "dsl::constructs/zone_moves.rs::two_member_group_requires_mandatory_controller_order_at_either_end",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards",
     "dsl::digivolve_target_predicates.rs::compile_lowers_both_leaves",
     "dsl::digivolve_target_predicates.rs::has_digivolve_candidate_only_offers_permanents_with_a_routable_result",
@@ -61238,6 +61326,15 @@
     "dsl::cross_check.rs::cross_check_mismatched_name": [
      "fixture"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::embedded_registry.rs::embedded_registry_loads_examples": [
      "fixture"
     ],
@@ -61843,6 +61940,9 @@
     "dsl::cross_check.rs::cross_check_matches",
     "dsl::cross_check.rs::cross_check_mismatched_kind",
     "dsl::cross_check.rs::cross_check_mismatched_name",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::embedded_registry.rs::embedded_registry_loads_examples",
     "dsl::group4_zone_movement.rs::group4_zone_movement_effect_digivolve_accepts_source_yaml",
     "dsl::group4_zone_movement.rs::security_stack_steps_parse_and_compile",
@@ -63564,6 +63664,15 @@
     "dsl::constructs/meta_effect_payment.rs::security_digivolution_draw_precedes_when_digivolving_and_empty_deck_still_evolves": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::group7_predicate_batch.rs::event_card_color_has_compiles_from_yaml": [
      "yaml_key"
     ],
@@ -63605,6 +63714,9 @@
    "tested_behaviourally": true,
    "tests": [
     "dsl::constructs/meta_effect_payment.rs::security_digivolution_draw_precedes_when_digivolving_and_empty_deck_still_evolves",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::group7_predicate_batch.rs::event_card_color_has_compiles_from_yaml",
     "dsl::phase3_dna_digivolve_triggers.rs::effect_initiated_dna_sets_effect_origin_on_global_payload",
     "dsl::phase3_dna_digivolve_triggers.rs::on_digivolve_global_observer_reads_dna_origin_payload",
@@ -67996,6 +68108,15 @@
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::dp_deletion_max_modifier.rs::another_permanents_delta_does_not_apply": [
      "yaml_key"
     ],
@@ -68306,6 +68427,9 @@
     "dsl::constructs/zone_moves.rs::simultaneous_return_observer_fires_once_for_two_departures",
     "dsl::constructs/zone_moves.rs::two_member_group_requires_mandatory_controller_order_at_either_end",
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::dp_deletion_max_modifier.rs::another_permanents_delta_does_not_apply",
     "dsl::dp_deletion_max_modifier.rs::deletion_consumed_dp_budget_is_flagged",
     "dsl::dp_deletion_max_modifier.rs::deletion_dp_budget_is_raised",
@@ -72103,6 +72227,15 @@
     "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::digivolve_ignore_level_and_tamer_base.rs::dsl_ignore_level_parses_and_compiles": [
      "variant"
     ],
@@ -72253,6 +72386,9 @@
     "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_not_offered_when_unpayable",
     "dsl::constructs/this_card_can_digivolve_onto.rs::fixed_cost_ignoring_requirements_is_offered_while_payable",
     "dsl::constructs/this_card_can_digivolve_onto.rs::the_written_out_fixture_matches_the_template",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::dsl_ignore_level_parses_and_compiles",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::dsl_ignore_level_step_lowers_to_the_ignore_level_digivolve",
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards",
@@ -73515,6 +73651,15 @@
      "yaml_key"
     ],
     "dsl::deck_trash_event.rs::verification_distinguishes_reentered_pending_source_with_identical_visible_zones": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
      "yaml_key"
     ],
     "dsl::embedded_registry.rs::embedded_registry_loads_examples": [
@@ -74979,6 +75124,9 @@
     "dsl::deck_trash_event.rs::rollback_storage_insertion_preserves_the_pending_trash_incarnation",
     "dsl::deck_trash_event.rs::unrelated_trash_arrival_history_does_not_change_verification_state",
     "dsl::deck_trash_event.rs::verification_distinguishes_reentered_pending_source_with_identical_visible_zones",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::embedded_registry.rs::embedded_registry_loads_examples",
     "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer",
     "dsl::event_context_bindings.rs::source_trashed_event_exposes_trashed_source_card_to_followup_predicate",
@@ -76233,6 +76381,15 @@
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::dna_field_pair_masks.rs::first_and_second_choices_are_correlated_with_the_result_and_each_other": [
      "yaml_key"
     ],
@@ -76594,6 +76751,9 @@
     "dsl::constructs/zone_moves.rs::field_option_pass_and_nonfield_source_do_not_move",
     "dsl::constructs/zone_moves.rs::sequential_union_picks_define_top_order",
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::dna_field_pair_masks.rs::first_and_second_choices_are_correlated_with_the_result_and_each_other",
     "dsl::dna_field_pair_masks.rs::no_prompt_when_no_hand_card_has_a_legal_pair",
     "dsl::dna_field_pair_masks.rs::result_choice_offers_only_a_card_with_a_legal_field_pair",
@@ -83068,6 +83228,15 @@
     "dsl::constructs/zone_moves.rs::field_option_pass_and_nonfield_source_do_not_move": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards": [
      "yaml_key"
     ],
@@ -83372,6 +83541,9 @@
     "dsl::constructs/zone_moves.rs::field_option_before_host_preserves_identity_after_compaction",
     "dsl::constructs/zone_moves.rs::field_option_moves_facedown_and_faceup",
     "dsl::constructs/zone_moves.rs::field_option_pass_and_nonfield_source_do_not_move",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards",
     "dsl::digivolve_target_predicates.rs::compile_lowers_both_leaves",
     "dsl::digivolve_target_predicates.rs::has_digivolve_candidate_only_offers_permanents_with_a_routable_result",
@@ -84100,6 +84272,15 @@
     "dsl::delay_union_play_flow.rs::delay_union_flow_plays_reward_on_field_and_subject_completes_leave": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
+     "yaml_key"
+    ],
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
+     "yaml_key"
+    ],
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards": [
      "yaml_key"
     ],
@@ -84226,6 +84407,9 @@
     "dsl::delay_union_play_flow.rs::delay_union_flow_comparator_uses_pre_leave_subject_cost_snapshot",
     "dsl::delay_union_play_flow.rs::delay_union_flow_offer_installs_with_zero_candidates",
     "dsl::delay_union_play_flow.rs::delay_union_flow_plays_reward_on_field_and_subject_completes_leave",
+    "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
+    "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards",
     "dsl::digivolve_target_predicates.rs::compile_lowers_both_leaves",
     "dsl::digivolve_target_predicates.rs::has_digivolve_candidate_only_offers_permanents_with_a_routable_result",
@@ -86212,7 +86396,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2307,
+  "behavioural_tests": 2310,
   "cards": {
    "behaviourally_covered": 1285,
    "lowering_covered": 1303,
@@ -86376,8 +86560,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 424,
-  "scanned_tests": 2733,
+  "scanned_files": 425,
+  "scanned_tests": 2736,
   "top_untested": [
    {
     "cards_blocked": 3,

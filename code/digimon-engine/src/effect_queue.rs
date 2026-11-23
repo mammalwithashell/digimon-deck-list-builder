@@ -6094,7 +6094,8 @@ impl Game {
                             );
                         }
                     }
-                    SecurityRemovalDestination::Digivolve {
+                    SecurityRemovalDestination::Digivolve { player, target, turn }
+                    | SecurityRemovalDestination::DigivolveAsTamer {
                         player,
                         target,
                         turn,
@@ -6110,7 +6111,9 @@ impl Game {
                             // digivolution procedure, including results from
                             // security, and precedes When Digivolving effects.
                             let _ = self.draw_one_for_player(player);
-                            completed_digivolve = Some((target, event_card));
+                            if matches!(pending.destination, SecurityRemovalDestination::Digivolve { .. }) {
+                                completed_digivolve = Some((target, event_card));
+                            }
                         } else {
                             let owner = security.card.owner;
                             self.player_mut(owner).put_in_trash(security.card);
