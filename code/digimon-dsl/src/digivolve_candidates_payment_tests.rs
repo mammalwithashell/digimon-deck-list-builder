@@ -130,7 +130,8 @@ fn pick_filters<'a>(body: &'a [CompiledStep], binding: &str) -> Vec<&'a Compiled
         | S::SelectTrash { bind_as: Some(b), filter, .. }
         | S::SelectZoneCards { bind_as: Some(b), filter, .. }
         | S::SelectReveal { bind_as: Some(b), filter, .. }
-        | S::SelectUnionZone { bind_as: Some(b), filter, .. } = s
+        | S::SelectUnionZone { bind_as: Some(b), filter, .. }
+        | S::SelectOwnSources { bind_as: Some(b), filter, .. } = s
         {
             if b == binding {
                 out.push(filter);
