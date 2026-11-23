@@ -65,8 +65,11 @@ effects:
   # ─── [On Play][When Digivolving][Counter][OPT] may place 1 hand card face
   #     down as bottom source; then may delete 1 own [Ver.3] Digimon + all
   #     opponent's lowest-play-cost Digimon ─────────────────────────────────
-  - when: [on_play, when_digivolving, counter]
+  - when: [on_play, when_digivolving]
+    opt_group: ver3_delete
     once_per_turn: true
+    # The trigger arm keeps the refund when both "you may" halves are
+    # declined (owner-decided 2026-10-21, W13). Its [Counter] arm follows.
     summary: "[On Play][When Digivolving][Counter][Once Per Turn] You may place 1 card in your hand face down as this Digimon's bottom digivolution card. Then, you may delete 1 of your [Ver.3] Digimon and all of your opponent's Digimon with the lowest play cost"
     process:
       - if:
@@ -144,6 +147,85 @@ effects:
               - not: { equals: [del_choice, 0] }
           then:
             - refund_opt: {}
+
+  - when: counter
+    opt_group: ver3_delete
+    once_per_turn: true
+    # The [Counter] arm of the same printed effect (shared [Once Per Turn]
+    # via `opt_group`, CR 4.3 15-14-1 / Q1550). [Counter] is activation-type
+    # (CR 4.3 15-16-14-1): declaring it uses the [Once Per Turn] even if
+    # nothing then happens (CR 4.3 15-14-1-4), so this arm has no DCGO-style
+    # RemoveUse refund; the rules text decides.
+    summary: "[On Play][When Digivolving][Counter][Once Per Turn] You may place 1 card in your hand face down as this Digimon's bottom digivolution card. Then, you may delete 1 of your [Ver.3] Digimon and all of your opponent's Digimon with the lowest play cost"
+    process:
+      - if:
+          condition:
+            count_gte:
+              filter: { of: you, zone: [hand] }
+              n: 1
+          then:
+            - select_hand:
+                of: you
+                bind_as: placed
+                optional: true
+                filter: {}
+                prompt: "You may place 1 card in your hand face down as this Digimon's bottom digivolution card"
+      - if:
+          condition: { binding_present: placed }
+          then:
+            - place_as_bottom_source:
+                source: placed
+                target: source
+                face_down: true
+      - if:
+          condition:
+            any_of:
+              - any_field_permanent:
+                  of: you
+                  kind: digimon
+                  trait_has: "Ver.3"
+              - any_field_permanent:
+                  of: opponent
+                  kind: digimon
+          then:
+            - select_effect_choice:
+                bind_as: del_choice
+                labels:
+                  - "Delete 1 of your [Ver.3] Digimon and all of your opponent's lowest play cost Digimon"
+                  - "Don't delete"
+                prompt: "Delete 1 of your [Ver.3] trait Digimon and all of your opponent's Digimon with the lowest play cost?"
+      - if:
+          condition:
+            all_of:
+              - equals: [del_choice, 0]
+              - any_field_permanent:
+                  of: you
+                  kind: digimon
+                  trait_has: "Ver.3"
+          then:
+            - select_own_permanent:
+                bind_as: ver3
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Ver.3"
+                prompt: "Select 1 of your [Ver.3] trait Digimon to delete"
+      # One DestroyPermanentsClass batch: the picked [Ver.3] + every opponent
+      # Digimon at the opponent's lowest Digimon play cost (ties all go).
+      - if:
+          condition: { equals: [del_choice, 0] }
+          then:
+            - delete_all_permanents:
+                over:
+                  any_of:
+                    - of_permanent: ver3
+                    - all_of:
+                        - of: opponent
+                        - kind: digimon
+                        - play_cost_lte:
+                            aggregate:
+                              selector: lowest_play_cost
+                              scope: opponent
 
   # ─── Inherited [All Turns][OPT] when this Digimon would leave the battle
   #     area, trash your opponent's top security card ────────────────────────
