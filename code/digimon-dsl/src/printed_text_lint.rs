@@ -70,6 +70,18 @@ fn has_optional(value: &Value) -> bool {
                         || (matches!(key.as_str(), "outer_prompt" | "optional_zero")
                             && v == &Value::Bool(true)))
                         || (key == "select_zone_cards" && v["min"].as_u64().unwrap_or(0) == 0)
+                        || (matches!(
+                            key.as_str(),
+                            "select_own_sources" | "select_under_tamer_sources"
+                        ) && v["min"].as_u64() == Some(0)
+                            && v["max"].as_u64().map_or(false, |max| max > 0))
+                        || (key == "select_reveal_buckets"
+                            && v["buckets"].as_array().map_or(false, |buckets| {
+                                buckets.iter().any(|bucket| {
+                                    bucket["min"].as_u64().unwrap_or(0) == 0
+                                        && bucket["max"].as_u64().unwrap_or(1) > 0
+                                })
+                            }))
                         || (key == "select_effect_choice"
                             && v["labels"].as_array().map_or(false, |labels| {
                                 labels.iter().filter_map(Value::as_str).any(|label| {

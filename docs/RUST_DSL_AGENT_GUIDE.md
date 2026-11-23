@@ -105,7 +105,8 @@ metadata records the printed span the clause implements; it has no runtime
 semantics. The printed-text lint compares it with the official text sections.
 Keyword reminder choices are owned by the keyword implementation. The lint
 also recognizes optional "by ..." payments (CR 4.3 §15-7-1), zero-floor zone
-selections, `optional_zero`, and explicit Decline/Don't-use choice branches.
+selections, zero-minimum reveal buckets and source selections, `optional_zero`,
+and explicit Decline/Don't-use choice branches.
 An optional "by ..." payment without a DSL decline path reports
 `may_without_optional`, even if the printed text has no literal "may".
 Run `PYTHONPATH=code python -m tools.backfill_clause_text --output-dir <new-dir>

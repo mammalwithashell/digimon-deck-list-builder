@@ -166,3 +166,38 @@ fn printed_text_by_payment_requires_declinable_dsl() {
     )
     .is_empty());
 }
+
+#[test]
+fn printed_text_zero_minimum_reveal_buckets_are_declinable() {
+    let text = "[On Deletion] Reveal 3. You may play 1 card. Trash the rest.";
+    for min in ["min: 0, ", ""] {
+        let clause = format!("- when: on_deletion\n  text: '{text}'\n  process:\n    - reveal_top_deck: {{of: you, count: 3, bind_as: revealed}}\n    - if:\n        condition: {{your_turn: true}}\n        then:\n          - select_reveal_buckets: {{from: revealed, buckets: [{{bind_as: pick, {min}max: 1}}]}}");
+        assert!(check(&clause, text).is_empty());
+    }
+    for buckets in [
+        "[]",
+        "[{bind_as: pick, min: 1, max: 1}]",
+        "[{bind_as: pick, min: 0, max: 0}]",
+    ] {
+        let clause = format!("- when: on_deletion\n  text: '{text}'\n  process:\n    - select_reveal_buckets: {{from: revealed, buckets: {buckets}}}");
+        assert_eq!(check(&clause, text), vec!["may_without_optional"]);
+    }
+}
+
+#[test]
+fn printed_text_zero_minimum_source_selections_are_declinable() {
+    let text = "You may play 1 Digimon from under your Tamers.";
+    for step in ["select_under_tamer_sources", "select_own_sources"] {
+        for min in [0, 1] {
+            let clause = format!("- when: on_play\n  text: '{text}'\n  process:\n    - {step}: {{min: {min}, max: 1, bind_as: pick}}");
+            assert_eq!(
+                check(&clause, text),
+                if min == 0 {
+                    vec![]
+                } else {
+                    vec!["may_without_optional"]
+                }
+            );
+        }
+    }
+}
