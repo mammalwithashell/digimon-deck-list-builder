@@ -11,6 +11,8 @@
 
 use super::common::*;
 use digimon_engine::action::space::{encode_attack, encode_digivolve, PLAY_HAND_START};
+use digimon_engine::debug_runner::make_test_card;
+use digimon_engine::enums::{CardColor, CardKind};
 use digimon_engine::selection::SelectionKind;
 
 const CARD: &str = "ST23-08";
@@ -63,6 +65,56 @@ fn on_play_and_when_digivolving_may_pay_bottom_face_down_card_to_play_glowing_da
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&r.game.card_data) == "TEXT-3"));
+    }
+}
+
+#[test]
+fn on_play_and_when_digivolving_may_use_glowing_dawn_option_three_cheaper_or_decline_after_paying()
+{
+    for evolve in [false, true] {
+        for use_option in [false, true] {
+            let mut option = make_test_card("TEXT-OPTION", "Fixture Option");
+            option.card_kind = CardKind::Option;
+            option.level = None;
+            option.dp = None;
+            option.play_cost = 5;
+            option.colors = vec![CardColor::Green];
+            option.traits = vec!["Glowing Dawn".into()];
+            let mut r = start(
+                builder(CARD)
+                    .add_card(option)
+                    .hand(0, &[CARD, "TEXT-OPTION"]),
+            );
+            stocked_tamer(&mut r, "TEXT-TAMER");
+            if evolve {
+                let base = r.place_on_field(0, "TEXT-4", Some(0));
+                action(&mut r, 0, encode_digivolve(0, base.index as u16));
+            } else {
+                action(&mut r, 0, PLAY_HAND_START);
+            }
+            r.assert_prompt(SelectionKind::OwnField, true, 0);
+            r.choose_prompt_card("TEXT-TAMER", None).unwrap();
+            r.assert_prompt(SelectionKind::Hand, true, 0);
+            assert_eq!(candidates(&r), ["TEXT-OPTION"]);
+            if use_option {
+                r.choose_prompt_card("TEXT-OPTION", None).unwrap();
+            } else {
+                r.decline_prompt().unwrap();
+            }
+            assert!(r.pending_selection().is_none());
+            assert_eq!(
+                r.memory(),
+                (if evolve { 7 } else { 3 }) - if use_option { 2 } else { 0 }
+            );
+            assert_eq!(
+                ids(&r, &r.game.players[0].trash),
+                if use_option {
+                    vec!["TEXT-BOTTOM", "TEXT-OPTION"]
+                } else {
+                    vec!["TEXT-BOTTOM"]
+                }
+            );
+        }
     }
 }
 
