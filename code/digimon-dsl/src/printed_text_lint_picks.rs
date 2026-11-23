@@ -21,15 +21,18 @@ fn selections<'a>(value: &'a Value, out: &mut Vec<(&'a str, &'a Value)>) {
     }
 }
 
-const DIGIMON: u8 = 1;
-const PLAYABLE: u8 = 3;
-const ALL_KINDS: u8 = 7;
+const DUAL: u8 = 8;
+const DIGIMON: u8 = 1 | DUAL;
+const OPTION: u8 = 4 | DUAL;
+const PLAYABLE: u8 = DIGIMON | 2;
+const ALL_KINDS: u8 = PLAYABLE | OPTION;
 
 fn kind_bit(kind: &str) -> u8 {
     match kind {
         "digimon" => DIGIMON,
         "tamer" => 2,
-        "option" => 4,
+        "option" => OPTION,
+        "dual" => DUAL,
         _ => 0,
     }
 }
@@ -84,10 +87,10 @@ fn kind_bounds(filter: &Value) -> (u8, u8) {
 }
 
 fn kind_mismatch(filter: &Value, preceding: &[&str], tail: &[&str]) -> bool {
-    let action_kinds = if preceding.first() == Some(&"play") {
-        PLAYABLE
-    } else {
-        ALL_KINDS
+    let action_kinds = match preceding.first() {
+        Some(&"play") => PLAYABLE,
+        Some(&"use") => OPTION,
+        _ => ALL_KINDS,
     };
     let mut printed = preceding
         .last()
@@ -148,7 +151,21 @@ pub(super) fn check(value: &Value, text: &str) -> Vec<&'static str> {
         return vec![];
     };
     let mut findings = Vec::new();
-    let words: Vec<_> = text
+    let mut body = text.trim_start();
+    loop {
+        let close = match body.chars().next() {
+            Some('[') => ']',
+            Some('{') => '}',
+            Some('＜') => '＞',
+            Some('<') => '>',
+            _ => break,
+        };
+        let Some((_, tail)) = body.split_once(close) else {
+            break;
+        };
+        body = tail.trim_start();
+    }
+    let words: Vec<_> = body
         .split(|c: char| !c.is_alphanumeric() && c != '_')
         .filter(|w| !w.is_empty())
         .collect();
@@ -164,7 +181,7 @@ pub(super) fn check(value: &Value, text: &str) -> Vec<&'static str> {
             .rposition(|word| {
                 matches!(
                     *word,
-                    "add" | "play" | "select" | "choose" | "place" | "trash" | "return"
+                    "add" | "play" | "use" | "select" | "choose" | "place" | "trash" | "return"
                 )
             })
             .unwrap_or(0);
