@@ -27839,9 +27839,10 @@
         "all_of",
         "any_of",
         "binding_present",
+        "can_change_orientation",
+        "can_unsuspend",
         "color_is",
         "count_gte",
-        "is_suspended",
         "is_unsuspended",
         "kind",
         "level_eq",
@@ -27881,6 +27882,7 @@
         "binding_card_kind",
         "binding_count_eq",
         "binding_present",
+        "can_play_from_effect_without_cost",
         "color_is",
         "in_text_contains",
         "kind",
@@ -27899,7 +27901,7 @@
       ],
       "verbs": [
         "de_digivolve",
-        "delete_permanent",
+        "delete_bound_permanents",
         "if",
         "per_selected",
         "place_as_bottom_source",
@@ -35972,7 +35974,8 @@
       "EX13-023",
       "EX13-024",
       "EX3-024",
-      "EX3-065"
+      "EX3-065",
+      "LM-066"
     ],
     "can_digivolve_from_source": [
       "BT13-013",
@@ -36307,6 +36310,7 @@
       "EX8-064",
       "EX8-071",
       "EX9-067",
+      "LM-067",
       "LM-068",
       "P-128",
       "P-136",
@@ -36373,7 +36377,8 @@
     "can_unsuspend": [
       "BT12-029",
       "BT20-027",
-      "BT22-023"
+      "BT22-023",
+      "LM-066"
     ],
     "card_in_zone": [
       "BT17-080"
@@ -39168,7 +39173,6 @@
       "EX3-024",
       "EX3-065",
       "EX8-045",
-      "LM-066",
       "ST21-09",
       "ST23-09",
       "ST4-16",
@@ -49395,6 +49399,7 @@
       "BT8-070",
       "EX4-073",
       "LM-021",
+      "LM-067",
       "P-094"
     ],
     "delete_for_cost_reduction": [
@@ -49613,7 +49618,6 @@
       "EX9-033",
       "EX9-060",
       "EX9-074",
-      "LM-067",
       "LM-068",
       "P-101",
       "P-174",
