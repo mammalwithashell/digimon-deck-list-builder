@@ -225,16 +225,6 @@
         "card_color": 3,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 1,
-        "level": 4,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 3,
-        "level": 4,
-        "memory_cost": 3
       }
     ]
   },
@@ -389,16 +379,6 @@
         "card_color": 6,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 5,
-        "memory_cost": 5
-      },
-      {
-        "card_color": 6,
-        "level": 5,
-        "memory_cost": 5
       }
     ]
   },
@@ -1250,11 +1230,6 @@
       },
       {
         "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 6,
         "level": 5,
         "memory_cost": 4
       }
@@ -2832,11 +2807,6 @@
         "card_color": 6,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 6,
-        "level": 2,
-        "memory_cost": 0
       }
     ]
   },
@@ -3061,11 +3031,6 @@
         "card_color": 2,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 5,
-        "memory_cost": 4
       }
     ]
   },
@@ -3087,11 +3052,6 @@
     "evo_costs": [
       {
         "card_color": 5,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 0,
         "level": 5,
         "memory_cost": 4
       }
@@ -3661,11 +3621,6 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 5
       }
     ]
   },
@@ -4097,11 +4052,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 0,
-        "level": 4,
-        "memory_cost": 3
       }
     ]
   },
@@ -4216,11 +4166,6 @@
     "evo_costs": [
       {
         "card_color": 3,
-        "level": 2,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 3,
         "level": 3,
         "memory_cost": 2
       }
@@ -4259,11 +4204,6 @@
       {
         "card_color": 5,
         "level": 4,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 5,
         "memory_cost": 4
       }
     ]
@@ -4358,11 +4298,6 @@
         "card_color": 2,
         "level": 2,
         "memory_cost": 1
-      },
-      {
-        "card_color": 0,
-        "level": 2,
-        "memory_cost": 0
       }
     ]
   },
@@ -4377,11 +4312,6 @@
         "card_color": 2,
         "level": 3,
         "memory_cost": 3
-      },
-      {
-        "card_color": 0,
-        "level": 3,
-        "memory_cost": 2
       }
     ]
   },
@@ -4424,11 +4354,6 @@
         "card_color": 1,
         "level": 6,
         "memory_cost": 4
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 6
       }
     ]
   },
@@ -4569,16 +4494,6 @@
         "card_color": 1,
         "level": 4,
         "memory_cost": 3
-      },
-      {
-        "card_color": 3,
-        "level": 5,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 3
       }
     ]
   },
@@ -4663,16 +4578,6 @@
         "card_color": 3,
         "level": 4,
         "memory_cost": 3
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 3,
-        "level": 4,
-        "memory_cost": 0
       }
     ]
   },
@@ -4822,16 +4727,6 @@
         "card_color": 0,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 0,
-        "level": 3,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 2,
-        "level": 3,
-        "memory_cost": 3
       }
     ]
   },
@@ -4906,11 +4801,6 @@
         "card_color": 3,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 3,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -4948,11 +4838,6 @@
         "card_color": 5,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 5,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -4967,11 +4852,6 @@
         "card_color": 5,
         "level": 4,
         "memory_cost": 1
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 3
       }
     ]
   },
@@ -5359,16 +5239,6 @@
         "card_color": 6,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] [Seraphimon]: Cost 1"
@@ -5421,11 +5291,6 @@
         "card_color": 0,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 6,
-        "level": 5,
-        "memory_cost": 4
       }
     ]
   },
@@ -5503,11 +5368,6 @@
     "evo_costs": [
       {
         "card_color": 2,
-        "level": 5,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 0,
         "level": 5,
         "memory_cost": 3
       }
@@ -7304,11 +7164,6 @@
         "card_color": 0,
         "level": 2,
         "memory_cost": 0
-      },
-      {
-        "card_color": 0,
-        "level": 2,
-        "memory_cost": 2
       }
     ]
   },
@@ -7365,11 +7220,6 @@
   },
   "BT19-027": {
     "evo_costs": [
-      {
-        "card_color": 6,
-        "level": 5,
-        "memory_cost": 4
-      },
       {
         "card_color": 1,
         "level": 5,
@@ -7533,16 +7383,6 @@
   },
   "BT19-053": {
     "evo_costs": [
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
-      },
       {
         "card_color": 3,
         "level": 5,
@@ -7927,11 +7767,6 @@
       {
         "card_color": 5,
         "level": 2,
-        "memory_cost": 1
-      },
-      {
-        "card_color": 2,
-        "level": 3,
         "memory_cost": 1
       }
     ]
@@ -8655,11 +8490,6 @@
         "card_color": 6,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 6,
-        "level": 3,
-        "memory_cost": 3
       }
     ]
   },
@@ -9710,11 +9540,6 @@
         "card_color": 6,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 6,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -9908,11 +9733,6 @@
         "card_color": 6,
         "level": 2,
         "memory_cost": 0
-      },
-      {
-        "card_color": 6,
-        "level": 2,
-        "memory_cost": 2
       }
     ]
   },
@@ -10678,11 +10498,6 @@
         "card_color": 0,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 0,
-        "level": 2,
-        "memory_cost": 0
       }
     ]
   },
@@ -11005,16 +10820,6 @@
         "card_color": 0,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 5,
-        "level": 2,
-        "memory_cost": 2
-      },
-      {
-        "card_color": 0,
-        "level": 2,
-        "memory_cost": 2
       }
     ]
   },
@@ -11134,11 +10939,6 @@
     "evo_costs": [
       {
         "card_color": 1,
-        "level": 2,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 1,
         "level": 3,
         "memory_cost": 2
       }
@@ -11149,11 +10949,6 @@
       {
         "card_color": 1,
         "level": 3,
-        "memory_cost": 2
-      },
-      {
-        "card_color": 1,
-        "level": 4,
         "memory_cost": 2
       }
     ]
@@ -11197,16 +10992,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 4,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 0,
-        "level": 4,
-        "memory_cost": 0
       }
     ]
   },
@@ -11698,6 +11483,11 @@
         "card_color": 6,
         "level": 5,
         "memory_cost": 6
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 6
       }
     ],
     "card_colors": [
@@ -12116,11 +11906,6 @@
         "card_color": 1,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 3
       }
     ]
   },
@@ -12177,11 +11962,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 6,
-        "level": 4,
-        "memory_cost": 3
       }
     ],
     "type_eng": [
@@ -12434,11 +12214,6 @@
       {
         "card_color": 6,
         "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 6,
-        "level": 5,
         "memory_cost": 3
       }
     ]
@@ -12496,11 +12271,6 @@
         "card_color": 6,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 4
       }
     ]
   },
@@ -12512,7 +12282,7 @@
         "memory_cost": 3
       },
       {
-        "card_color": 6,
+        "card_color": 5,
         "level": 4,
         "memory_cost": 3
       }
@@ -12580,11 +12350,6 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 1,
-        "level": 4,
-        "memory_cost": 4
       }
     ]
   },
@@ -13195,11 +12960,6 @@
       },
       {
         "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 3,
         "level": 5,
         "memory_cost": 4
       }
@@ -13935,6 +13695,11 @@
         "card_color": 5,
         "level": 6,
         "memory_cost": 7
+      },
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 7
       }
     ]
   },
@@ -14177,11 +13942,6 @@
         "card_color": 0,
         "level": 5,
         "memory_cost": 5
-      },
-      {
-        "card_color": 3,
-        "level": 5,
-        "memory_cost": 5
       }
     ]
   },
@@ -14280,16 +14040,6 @@
         "card_color": 3,
         "level": 5,
         "memory_cost": 5
-      },
-      {
-        "card_color": 5,
-        "level": 5,
-        "memory_cost": 5
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 5
       }
     ]
   },
@@ -14332,11 +14082,6 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 4
       }
     ]
   },
@@ -14524,11 +14269,6 @@
         "card_color": 1,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 1,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -14566,11 +14306,6 @@
         "card_color": 2,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 2,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -14825,11 +14560,6 @@
       {
         "card_color": 1,
         "level": 2,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 1,
-        "level": 3,
         "memory_cost": 0
       }
     ]
@@ -15452,11 +15182,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 3
-      },
-      {
-        "card_color": 0,
-        "level": 5,
-        "memory_cost": 3
       }
     ]
   },
@@ -15479,15 +15204,10 @@
       {
         "card_color": 0,
         "level": 6,
-        "memory_cost": 5
+        "memory_cost": 6
       },
       {
         "card_color": 6,
-        "level": 6,
-        "memory_cost": 5
-      },
-      {
-        "card_color": 0,
         "level": 6,
         "memory_cost": 6
       }
@@ -15532,16 +15252,6 @@
         "card_color": 6,
         "level": 3,
         "memory_cost": 3
-      },
-      {
-        "card_color": 2,
-        "level": 3,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 6,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -15908,11 +15618,6 @@
     "evo_costs": [
       {
         "card_color": 3,
-        "level": 5,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 1,
         "level": 5,
         "memory_cost": 3
       }
@@ -19531,5 +19236,20 @@
       "Hudie",
       "CS"
     ]
-  }
+  },
+  "BT3-055": {
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "_note_face_read_digivolve_circles_2026_11": "Standard digivolve circles read off each card face (DCGO_Application/Assets/Textures/Card/<ID>.webp) on 2026-11-22 for the 57 cards whose cards.json circles differed from the DCGO card asset's EvoCosts. 54 were wrong here and are corrected (DCGO agreed with the face on all 54): most extra rows came from the official mirror, which keeps rows of every printing and reads a name-gated 'Digivolve: N from [X]' cost as a circle (Imperialdramon: Dragon Mode BT12-030 blue|green Lv.4/3, RizeGreymon (X Antibody) BT9-041 yellow|red Lv.4/0), the rest from the API alone (Garurumon BT21-067 purple Lv.3/3 beside the printed 2, which opened a cost choice). Dinobeemon BT3-055 (blue Lv.4/3), MaloMyotismon EX10-011 (blue Lv.5/6), UltimateChaosmon EX6-062 (purple Lv.6/7) and Lavogaritamon EX3-011 (black, not purple, Lv.4/3) gained a printed colour; Proximamon RB1-036 costs 6, not 5. Yasyamon BT12-051, Ganemon BT12-061 and Bulucomon P-067 have no local image: mirror and DCGO agree. The table is FACE_READ_CIRCLES in code/digimon-engine/tests/support/printed_circles.rs; tests/data_official_parity.rs pins these entries."
 }
