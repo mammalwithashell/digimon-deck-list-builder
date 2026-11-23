@@ -624,7 +624,7 @@ fn ad1_024_all_turns_is_once_per_turn() {
     );
 }
 
-// ─── SECTION 4 — [All Turns] decline keeps the OPT; accept spends it ────────
+// ─── SECTION 4 — [All Turns] nothing executed keeps the OPT (W13) ──────────
 
 /// Decline the selection currently pending (PASS on an optional selection).
 fn decline_pending(runner: &mut DebugRunner) {
@@ -683,13 +683,18 @@ fn ad1_024_all_turns_decline_outer_confirm_refunds_opt() {
     );
 }
 
-/// Accepting the outer confirm is choosing to activate the effect, so it uses
-/// the [Once Per Turn] even when every sub-pick is then declined (CR 4.3
-/// 15-14-1-4: it counts "even if the effect's processing can't be
-/// executed"). DCGO's executed-flag RemoveUse refunds it; the rules text
-/// decides. (Declining the confirm itself keeps the use: the test above.)
+/// The printed effect is "you may suspend ... Then, ... you may return ..." --
+/// the owner-decided W13 shape (qa/rules/mechanics-gaps-2026-10.md W13,
+/// 2026-10-21: "DCGO has the Dianamon/GraceNovamon effect correct"): when
+/// BOTH "you may" halves are declined nothing executed, the effect was not
+/// activated, and the [Once Per Turn] is not used (CR 4.3 15-14-1-4 is silent
+/// on declined optional parts; Q1818). The outer Yes/No is not printed -- it
+/// is DCGO's always-shown skippable prompt -- so accepting it and then
+/// declining both halves is still "both halves declined": DCGO's
+/// executed-flag RemoveUse refunds the use, and so must we. A second
+/// qualifying play this turn offers the observer again.
 #[test]
-fn ad1_024_all_turns_accept_then_decline_everything_spends_opt() {
+fn ad1_024_all_turns_accept_then_decline_everything_keeps_opt() {
     let mut runner = fighter_mode_runner(&[
         opp_digimon("AD1-024-OPP-A", "OppA", 5000),
         friendly_filler("AD1-024-FILLER"),
@@ -719,12 +724,13 @@ fn ad1_024_all_turns_accept_then_decline_everything_spends_opt() {
     let opp_perm = &runner.game.players[1].battle_area[opp.index as usize];
     assert!(!opp_perm.is_suspended, "nothing may have been suspended");
 
-    // OPT spent: a second qualifying play this turn does not prompt.
+    // Both halves declined (W13): the OPT is not used, so a second
+    // qualifying play this turn offers the observer again.
     let second = runner.place_on_field(0, "AD1-024-FILLER-2", None);
     runner.fire_play_event_triggers(0, second.index as usize, false, false);
     assert!(
-        runner.game.pending_selection.is_none(),
-        "the accepted activation used the [Once Per Turn]"
+        runner.game.pending_selection.is_some(),
+        "both \"you may\" halves declined must keep the [Once Per Turn] (W13): the observer must fire again on the next qualifying play this turn"
     );
     let _ = fighter;
 }

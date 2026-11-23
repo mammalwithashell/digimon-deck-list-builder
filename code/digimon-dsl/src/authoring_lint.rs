@@ -48,7 +48,10 @@
 //!   "you may A. Then, you may B." shape (W13); neither has an explicit
 //!   accept. A [When Attacking] [Counter] effect that refunds on its trigger
 //!   arm is authored as two arms sharing an `opt_group` (GraceNovamon
-//!   (BT25-103)).
+//!   (BT25-103)). [`REFUND_AFTER_ACCEPT_REVIEWED`] lists the reviewed cards
+//!   whose `outer_prompt` is an unprinted DCGO Yes/No in front of a W13
+//!   "you may A. Then, you may B." body (Imperialdramon: Fighter Mode
+//!   (AD1-024)); there both halves declined keeps the use.
 
 use serde_yml::Value;
 
@@ -102,14 +105,61 @@ const OBSERVER_TIMINGS: &[&str] = &[
     "on_any_deletion",
 ];
 
-/// Lint one card's raw YAML text. A file that does not parse yields no
-/// findings here (the loader reports the parse error).
-pub fn check_authoring_yaml(raw: &str) -> Vec<AuthoringFinding> {
+/// Cards whose explicit-accept clause keeps a `refund_opt` on purpose, each
+/// with the reason. The pool guards fail on an entry the card no longer needs
+/// ([`refund_exemption_is_still_needed`]).
+pub const REFUND_AFTER_ACCEPT_REVIEWED: &[(&str, &str)] = &[(
+    "AD1-024",
+    concat!(
+        "Imperialdramon: Fighter Mode prints \"you may suspend ... Then, ... you may return ...\": ",
+        "the owner-decided W13 shape (qa/rules/mechanics-gaps-2026-10.md W13, 2026-10-21), where ",
+        "both halves declined means nothing executed, the effect was not activated and the ",
+        "[Once Per Turn] is kept. Its `outer_prompt` is DCGO's unprinted always-shown Yes/No, ",
+        "not a printed whole-effect \"you may\", so accepting it and then declining both halves ",
+        "is still both halves declined (DCGO AD1_024.cs executed-flag RemoveUse)."
+    ),
+)];
+
+fn card_id(value: &Value) -> Option<&str> {
+    value.as_mapping()?.get("card")?.as_str()
+}
+
+/// Lint one card's raw YAML text, ignoring [`REFUND_AFTER_ACCEPT_REVIEWED`].
+pub fn check_authoring_yaml_unexempted(raw: &str) -> Vec<AuthoringFinding> {
     let mut out = Vec::new();
     if let Ok(value) = serde_yml::from_str::<Value>(raw) {
         walk(&value, "", &mut out);
     }
     out
+}
+
+/// Lint one card's raw YAML text. A file that does not parse yields no
+/// findings here (the loader reports the parse error).
+pub fn check_authoring_yaml(raw: &str) -> Vec<AuthoringFinding> {
+    let mut out = check_authoring_yaml_unexempted(raw);
+    let card = serde_yml::from_str::<Value>(raw)
+        .ok()
+        .and_then(|v| card_id(&v).map(str::to_string));
+    if let Some(card) = card {
+        if REFUND_AFTER_ACCEPT_REVIEWED.iter().any(|(id, _)| *id == card) {
+            out.retain(|f| f.rule != "refund-after-explicit-accept");
+        }
+    }
+    out
+}
+
+/// Whether the reviewed refund exemption for `card` still matches a
+/// `refund-after-explicit-accept` finding in its spec under `cards_root`.
+pub fn refund_exemption_is_still_needed(cards_root: &std::path::Path, card: &str) -> bool {
+    pool_card_files(cards_root)
+        .into_iter()
+        .filter(|f| f.file_stem().and_then(|s| s.to_str()) == Some(card))
+        .filter_map(|f| std::fs::read_to_string(f).ok())
+        .any(|raw| {
+            check_authoring_yaml_unexempted(&raw)
+                .iter()
+                .any(|f| f.rule == "refund-after-explicit-accept")
+        })
 }
 
 /// Every production card spec under `cards_root` (`code/digimon-engine/cards`), sorted. `_examples/` holds DSL
@@ -338,6 +388,24 @@ mod tests {
         // An explicit-accept clause without a refund is fine.
         let raw = "effects:\n  - when: main_on_field\n    once_per_turn: true\n    process:\n      - draw: { of: you, count: 1 }\n";
         assert!(rules(raw).is_empty());
+    }
+
+    #[test]
+    fn reviewed_refund_exemption_applies_to_its_card_only() {
+        let body = format!(
+            "effects:\n  - when: on_play\n    once_per_turn: true\n    optional: true\n    outer_prompt: true\n{REFUND_TAIL}"
+        );
+        let exempt = format!("card: AD1-024\n{body}");
+        assert!(rules(&exempt).is_empty());
+        assert_eq!(
+            check_authoring_yaml_unexempted(&exempt)
+                .into_iter()
+                .map(|f| f.rule)
+                .collect::<Vec<_>>(),
+            vec!["refund-after-explicit-accept"]
+        );
+        let other = format!("card: AD1-025\n{body}");
+        assert_eq!(rules(&other), vec!["refund-after-explicit-accept"]);
     }
 
     #[test]

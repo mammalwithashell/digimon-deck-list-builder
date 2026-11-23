@@ -96,3 +96,15 @@ fn pool_guard_printed_turn_durations_use_player_relative_expiries() {
         report.stale_exemptions
     );
 }
+
+/// Each reviewed `refund-after-explicit-accept` exemption must still match a
+/// refund in its card's spec; drop an entry the card no longer needs.
+#[test]
+fn pool_guard_refund_after_accept_exemptions_are_still_needed() {
+    for (card, _reason) in digimon_dsl::authoring_lint::REFUND_AFTER_ACCEPT_REVIEWED {
+        assert!(
+            digimon_dsl::authoring_lint::refund_exemption_is_still_needed(&cards_root(), card),
+            "{card}: the refund-after-explicit-accept exemption is no longer needed"
+        );
+    }
+}

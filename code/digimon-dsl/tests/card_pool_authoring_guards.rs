@@ -92,3 +92,15 @@ fn may_attack_now_rejects_the_removed_windowed_flag() {
     .expect_err("`windowed` must not parse");
     assert!(err.to_string().contains("windowed"), "{err}");
 }
+
+/// Each reviewed `refund-after-explicit-accept` exemption must still match a
+/// refund in its card's spec; drop an entry the card no longer needs.
+#[test]
+fn refund_after_accept_exemptions_are_still_needed() {
+    for (card, _reason) in digimon_dsl::authoring_lint::REFUND_AFTER_ACCEPT_REVIEWED {
+        assert!(
+            digimon_dsl::authoring_lint::refund_exemption_is_still_needed(&cards_root(), card),
+            "{card}: the refund-after-explicit-accept exemption is no longer needed"
+        );
+    }
+}
