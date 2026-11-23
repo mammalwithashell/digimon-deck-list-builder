@@ -495,6 +495,7 @@ mod tests {
                     card_index: None,
                     operand_card_index: None,
                     operand_card_index_source: None,
+                    attack_target_card_index: None,
                     memory_before: None,
                 }),
                 Row::Action(crate::recording::ActionRow {
@@ -511,6 +512,7 @@ mod tests {
                     card_index: None,
                     operand_card_index: None,
                     operand_card_index_source: None,
+                    attack_target_card_index: None,
                     memory_before: None,
                 }),
             ],
@@ -569,6 +571,7 @@ mod tests {
                     card_index: None,
                     operand_card_index: None,
                     operand_card_index_source: None,
+                    attack_target_card_index: None,
                     memory_before: None,
                 }),
             ],

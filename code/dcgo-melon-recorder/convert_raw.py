@@ -151,6 +151,20 @@ def pick_card_indexes(args, card_ids):
     return list(args[1])
 
 
+def hand_pick_matches_play(pick, actor, turn, played_index):
+    method = pick.get("method")
+    if method != "SelectHandEffect.SetTargetHandCards" and not (
+            method == "SelectCardEffect.SetTargetCardAndIndicies" and pick.get("zone") == "Hand"
+            and not pick.get("stray") and not pick.get("mechanic")):
+        return False
+    args, card_ids = pick.get("args", []), pick.get("card_ids")
+    if not (turn == pick.get("turn", pick.get("turn_count")) and pick.get("tp") == actor
+            and args and args[0] == actor and card_ids and None not in card_ids):
+        return False
+    indexes = pick_card_indexes(args, card_ids)
+    return indexes is not None and played_index in indexes
+
+
 def pick_list_positions(args, card_ids):
     """The position of each pick in the candidate list DCGO showed, parallel to `card_ids`, or None.
 
@@ -305,7 +319,7 @@ def convert(rows, cards, allow_truncated=False):
         return k
 
     def action(actor, action_id, phase, source, card_id=None, inferred_row=False, boards=None, card_index=None,
-               operand_card_index=None, operand_source="recorder"):
+               operand_card_index=None, operand_source="recorder", attack_target_card_index=None):
         nonlocal step
         row = {"type": "action", "step": step, "actor": actor, "action_id": action_id,
                "phase": phase, "source": source}
@@ -325,6 +339,8 @@ def convert(rows, cards, allow_truncated=False):
             # identity (`ReplayDriver::named_operand_slot`) instead of pairing duplicates in occurrence order
             row["operand_card_index"] = operand_card_index
             row["operand_card_index_source"] = operand_source
+        if attack_target_card_index is not None:
+            row["attack_target_card_index"] = attack_target_card_index
         out.append(row)
         step += 1
 
@@ -382,8 +398,8 @@ def convert(rows, cards, allow_truncated=False):
         own-side SelectPermanentEffect rows immediately before its play packet (`own_picks_before`)."""
         return own_picks_before(seat, ridx, 2)
 
-    # Bot turns: the bot decides without any hooked setter, so its breeding PASS comes first on a turn and its
-    # main-phase PASS closes the turn. Track which bot turns already had their breeding / pass synthesised.
+    # Bot turns: the bot's breeding decision comes first, and its main-phase PASS closes the turn.
+    # Track which bot turns already had these decisions synthesised.
     bot_turn_open = None  # turn index of the bot's currently open turn
     bot_bred = False
 
@@ -405,9 +421,30 @@ def convert(rows, cards, allow_truncated=False):
             return False
         return bot_eggs(rows[before[-1]]) - bot_eggs(rows[after[0]]) == 1
 
+    def opening_bot_hatch_target(idx, turn):
+        """A first play onto the top Digi-Egg immediately after the empty post-mulligan snapshot proves a hatch."""
+        if not (turn == 1 and first_player == bot and 0 < idx < len(rows) and post is rows[idx - 1]
+                and post.get("turn_count") == turn):
+            return None
+        pl, play = pm[bot], rows[idx]
+        target = play.get("target")
+        if not (pl.get("breeding") == [] and pl.get("egg_library")
+                and play["method"] in ("PlayCardClass.ctor", "PlayCardClass.PlayCard")
+                and play.get("tp") == bot and (play.get("hand") or {}).get("player") == bot
+                and play.get("pay_cost") is True and play.get("play_provenance") != "effect"
+                and play.get("target_breeding") is True and isinstance(target, dict)):
+            return None
+        egg = target.get("card_id")
+        return egg if egg and egg == pl["egg_library"][0] else None
+
     def breeding_for_bot(idx, turn):
-        """The bot's breeding decision for a turn: HATCH when the egg deck shrank, otherwise PASS (both inferred)."""
-        if bot_hatched_near(idx):
+        """Infer HATCH from a recorded opening egg target or egg-deck shrinkage, otherwise PASS."""
+        opening_egg = opening_bot_hatch_target(idx, turn)
+        if opening_egg:
+            action(bot, ACTION_HATCH, "Breeding", "breeding_action", inferred_row=True)
+            inferred.append("bot breeding HATCH (opening digivolve targets Digi-Egg %s, seq %s), turn %s"
+                            % (opening_egg, rows[idx].get("seq"), turn))
+        elif bot_hatched_near(idx):
             action(bot, ACTION_HATCH, "Breeding", "breeding_action", inferred_row=True)
             inferred.append("bot breeding HATCH (egg deck shrank), turn %s" % turn)
         else:
@@ -696,8 +733,9 @@ def convert(rows, cards, allow_truncated=False):
             # the resolved hand slot and target on every client. The play packet is logged when the play is queued
             # (replaying it then ran ahead of DCGO), and on the receiving PvP client it is decoded against a state
             # that has not caught up yet (hand slot / target missing).
-            if r.get("pay_cost") is False:
-                # an effect playing a card (not a main-phase decision): resolved by the effect itself
+            provenance = r.get("play_provenance")
+            if provenance == "effect" or r.get("pay_cost") is False:
+                # The engine's effect resolves this play, even when DCGO charged its cost.
                 continue
             if not r.get("cards") and not r.get("hand"):
                 # an effect's play / digivolve step that played nothing (e.g. a "may digivolve" with no card chosen):
@@ -723,6 +761,20 @@ def convert(rows, cards, allow_truncated=False):
                                                                        listed_card, played_index))
                 played_index = None
             bot_paid_play = is_ai and actor == bot == tp and r.get("pay_cost") is True
+            if bot_paid_play and provenance != "direct" and ridx > 0:
+                exact = r.get("card_indexes")
+                claimed_index = played_index
+                if (isinstance(exact, list) and len(exact) == 1 and type(exact[0]) is int
+                        and (played_index is not None or r.get("root") == "Hand")):
+                    claimed_index = exact[0]
+                # A legacy hand pick may reveal a card without moving it. Even an adjacent pick of this exact
+                # copy cannot distinguish an effect play from a direct play after the effect ended.
+                if (claimed_index is not None and claimed_index not in queued_play_indexes
+                        and hand_pick_matches_play(rows[ridx - 1], actor, turn, claimed_index)):
+                    truncated_at = truncated_at or (
+                        "ambiguous paid bot play after hand pick (CardIndex %d, seq %s, step %d)"
+                        % (claimed_index, r.get("seq"), step))
+                    break
             if played_index is not None and played_index not in queued_play_indexes and not bot_paid_play:
                 continue
             if played_index is not None:
@@ -1070,7 +1122,8 @@ def convert(rows, cards, allow_truncated=False):
                 break
             target = SECURITY_TARGET if a[1] < 0 else a[1]
             action(actor, ATTACK_START + a[0] * TARGETS_PER_ATTACKER + target, "Main", "main_phase", boards=r.get("boards"),
-                   operand_card_index=board_operand_index(r, actor, a[0]))
+                   operand_card_index=board_operand_index(r, actor, a[0]),
+                   attack_target_card_index=board_operand_index(r, 1 - actor, a[1]))
             continue
         if m in ("TurnStateMachine.QueueMainPhaseAction", "TurnStateMachine.PassTurn"):
             continue  # the Internal row above already carries the decision

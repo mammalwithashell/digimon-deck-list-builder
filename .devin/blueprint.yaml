@@ -1,0 +1,40 @@
+initialize: |
+  set -euo pipefail
+  . /etc/os-release
+  if [[ "$ID:$VERSION_ID:$(uname -m)" != "ubuntu:22.04:x86_64" ]]; then
+    exit 0
+  fi
+
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' EXIT
+  wine_url='https://dl.winehq.org/wine-builds/ubuntu/pool/main/w/wine'
+  download_wine() {
+    curl -fsSL --retry 3 -o "$tmp/$1" "$wine_url/$1"
+    printf '%s  %s\n' "$2" "$tmp/$1" | sha256sum -c -
+  }
+  download_wine wine-stable_11.0.0.0~jammy-1_amd64.deb 2866ffa79a28cbe64128f18a9172f8ba6dd7c2ff0c9491a92a8e6816faff8f1f
+  download_wine wine-stable-amd64_11.0.0.0~jammy-1_amd64.deb 39d85b8f51728e44b5186a43126498149a885d49008ec31ac41f4548be8773bf
+  download_wine wine-stable-i386_11.0.0.0~jammy-1_i386.deb db5b6b73f4a11987ea083ec1e7668952a1ca3c7866755819d57efcec9a38c11f
+  sudo dpkg --add-architecture i386
+  sudo apt-get -o Acquire::https::Timeout=15 -o Acquire::Retries=1 update
+  sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$tmp"/wine-*.deb xvfb xauth unzip
+
+  # Jammy cannot link the Rust workspace's default static ONNX Runtime.
+  support="$HOME/.local/share/digimon-devin"
+  mkdir -p "$support"
+  curl -fsSL --retry 3 -o "$tmp/ort.whl" 'https://files.pythonhosted.org/packages/35/af/ad86cfbfd65d5a86204b3a30893e92c0cf3f1a56280efc5a12e69d81f52d/onnxruntime-1.24.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl'
+  printf '%s  %s\n' '09aa6f8d766b4afc3cfba68dd10be39586b49f9462fbd1386c5d5644239461ca' "$tmp/ort.whl" | sha256sum -c -
+  unzip -jo "$tmp/ort.whl" 'onnxruntime/capi/libonnxruntime*.so*' -d "$support"
+  ln -sfn libonnxruntime.so.1.24.2 "$support/libonnxruntime.so"
+  ln -sfn libonnxruntime.so.1.24.2 "$support/libonnxruntime.so.1"
+  cat > "$support/oracle-env.sh" <<'EOF'
+  export PATH="/opt/wine-stable/bin:$PATH"
+  export ORT_LIB_LOCATION="$HOME/.local/share/digimon-devin"
+  export ORT_PREFER_DYNAMIC_LINK=1
+  export LD_LIBRARY_PATH="$ORT_LIB_LOCATION${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  EOF
+knowledge:
+  - name: DCGO card exam runtime on Ubuntu 22.04
+    contents: |
+      Source "$HOME/.local/share/digimon-devin/oracle-env.sh" before building the Rust harness or running the Wine launcher.
+      See docs/runbooks/oracle-node.md for the separately supplied scripted player and live card exam workflow.
