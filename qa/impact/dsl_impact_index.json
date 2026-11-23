@@ -8463,7 +8463,8 @@
       "timings": [
         "on_play",
         "on_security",
-        "when_digivolving"
+        "when_digivolving",
+        "when_linked"
       ],
       "verbs": [
         "delete_permanent",
@@ -10178,6 +10179,7 @@
     "BT24-007": {
       "path": "bt24/BT24-007.yaml",
       "predicates": [
+        "affordable_with_cost",
         "all_of",
         "any_of",
         "binding_present",
@@ -10765,14 +10767,21 @@
       "path": "bt24/BT24-037.yaml",
       "predicates": [
         "all_of",
+        "any_of",
         "any_permanent",
         "can_attack",
+        "can_play_from_effect_without_cost",
         "color_is",
         "dna_origin",
         "event_target_owner",
+        "is_source",
         "kind",
         "level_eq",
+        "level_lte",
+        "none_of",
         "owner",
+        "replacement_cause",
+        "replacement_subject_is_mine",
         "trait_has",
         "zone"
       ],
@@ -10785,6 +10794,8 @@
         "grant_keyword",
         "may_attack_now",
         "optional",
+        "play_from_materials",
+        "select_material",
         "select_opponent_permanent",
         "select_own_permanent"
       ]
@@ -10961,20 +10972,24 @@
       "path": "bt24/BT24-047.yaml",
       "predicates": [
         "all_of",
+        "all_turns",
         "any_of",
         "color_is",
         "effect_suspended_any_own_digimon",
         "is_suspended",
         "kind",
         "level_eq",
+        "source_deleted_battle_opponent",
         "trait_contains",
         "trait_has"
       ],
       "timings": [
+        "on_any_deletion",
         "on_play",
         "when_digivolving"
       ],
       "verbs": [
+        "gain_memory",
         "if",
         "may_attack_now",
         "select_any_permanent",
@@ -11708,17 +11723,20 @@
         "any_field_permanent",
         "any_of",
         "card_number_is",
+        "is_suspended",
         "kind",
         "owner",
         "trait_has"
       ],
       "timings": [
         "main_from_hand",
-        "on_security"
+        "on_security",
+        "when_attacking"
       ],
       "verbs": [
         "add_modifier",
         "link_to_own_digimon",
+        "return_to_hand",
         "select_opponent_permanent",
         "suspend"
       ]
@@ -15843,7 +15861,6 @@
       "verbs": [
         "delete_permanent",
         "if",
-        "refund_opt",
         "return_top_stacked_to_deck",
         "select_count_capped_multi",
         "select_opponent_permanent"
@@ -20172,13 +20189,15 @@
       ],
       "timings": [
         "main_on_field",
-        "on_play"
+        "on_play",
+        "on_security"
       ],
       "verbs": [
         "activation_cost",
         "add_to_hand_from_reveal",
         "place_remainder_on_deck",
         "play_from_hand",
+        "play_from_security",
         "reveal_top_deck",
         "select_hand",
         "select_reveal_buckets"
@@ -20555,7 +20574,6 @@
       "predicates": [
         "all_of",
         "any_of",
-        "binding_absent",
         "binding_present",
         "color_is",
         "dna_field_pair",
@@ -20582,7 +20600,6 @@
         "if",
         "play_from_materials",
         "redirect_attack_target",
-        "refund_opt",
         "select_dna_pair",
         "select_hand",
         "select_material",
@@ -20891,7 +20908,6 @@
       "predicates": [
         "all_of",
         "all_turns",
-        "binding_absent",
         "can_play_from_effect_without_cost",
         "color_is",
         "equals",
@@ -20915,7 +20931,6 @@
         "play_from_hand_free",
         "play_from_materials",
         "play_token",
-        "refund_opt",
         "return_to_deck",
         "select_effect_choice",
         "select_hand",
@@ -21107,7 +21122,6 @@
         "add_dp_modifier",
         "if",
         "play_or_use_from_hand",
-        "refund_opt",
         "select_hand",
         "select_opponent_permanent"
       ]
@@ -22610,7 +22624,6 @@
       ],
       "verbs": [
         "if",
-        "refund_opt",
         "return_all_to_deck",
         "select_effect_choice",
         "select_opponent_sources",
@@ -31242,13 +31255,18 @@
       "predicates": [
         "all_of",
         "any_field_permanent",
+        "any_permanent",
+        "can_attack",
         "card_number_is",
         "dp_lte",
+        "is_source",
         "kind",
         "level_gte",
-        "owner"
+        "owner",
+        "zone"
       ],
       "timings": [
+        "end_of_your_turn",
         "main_from_hand",
         "on_security"
       ],
@@ -31256,6 +31274,7 @@
         "add_this_option_to_hand",
         "delete_permanent",
         "link_to_own_digimon",
+        "may_attack_now",
         "select_opponent_permanent",
         "select_own_permanent"
       ]
@@ -33059,6 +33078,7 @@
       "BT21-092",
       "BT23-008",
       "BT23-018",
+      "BT24-007",
       "BT24-024",
       "BT24-090",
       "BT24-094",
@@ -34200,6 +34220,7 @@
       "BT24-016",
       "BT24-018",
       "BT24-030",
+      "BT24-047",
       "BT24-084",
       "BT24-090",
       "BT24-094",
@@ -34652,6 +34673,7 @@
       "BT24-026",
       "BT24-030",
       "BT24-035",
+      "BT24-037",
       "BT24-040",
       "BT24-041",
       "BT24-042",
@@ -35342,6 +35364,7 @@
       "ST21-10",
       "ST21-12",
       "ST21-13",
+      "ST22-08",
       "ST22-11",
       "ST23-01",
       "ST23-06",
@@ -35390,8 +35413,6 @@
       "BT26-055",
       "BT26-059",
       "BT26-086",
-      "EX12-017",
-      "EX12-034",
       "EX13-014",
       "EX13-019",
       "EX13-020",
@@ -35730,7 +35751,8 @@
       "ST20-09",
       "ST21-04",
       "ST21-06",
-      "ST21-09"
+      "ST21-09",
+      "ST22-08"
     ],
     "can_change_orientation": [
       "BT11-112",
@@ -35968,6 +35990,7 @@
       "BT24-016",
       "BT24-024",
       "BT24-034",
+      "BT24-037",
       "BT24-041",
       "BT24-059",
       "BT24-063",
@@ -38847,6 +38870,7 @@
       "BT22-022",
       "BT22-036",
       "BT24-003",
+      "BT24-037",
       "BT25-027",
       "BT26-015",
       "BT26-044",
@@ -38865,6 +38889,7 @@
       "EX9-032",
       "P-249",
       "ST19-11",
+      "ST22-08",
       "ST24-06",
       "ST24-10"
     ],
@@ -38895,6 +38920,7 @@
       "BT23-047",
       "BT24-047",
       "BT24-051",
+      "BT24-095",
       "BT25-039",
       "BT25-050",
       "BT25-055",
@@ -40974,6 +41000,7 @@
       "BT23-064",
       "BT23-102",
       "BT24-023",
+      "BT24-037",
       "BT24-072",
       "BT24-073",
       "BT24-074",
@@ -41846,6 +41873,7 @@
       "BT24-014",
       "BT24-021",
       "BT24-023",
+      "BT24-037",
       "BT24-040",
       "BT24-043",
       "BT25-009",
@@ -42950,6 +42978,7 @@
       "BT24-014",
       "BT24-023",
       "BT24-030",
+      "BT24-037",
       "BT24-040",
       "BT25-025",
       "BT25-039",
@@ -43021,6 +43050,7 @@
       "BT24-012",
       "BT24-018",
       "BT24-030",
+      "BT24-037",
       "BT24-040",
       "BT24-065",
       "BT24-101",
@@ -43230,6 +43260,7 @@
     ],
     "source_deleted_battle_opponent": [
       "BT16-004",
+      "BT24-047",
       "BT25-015",
       "BT25-048",
       "BT25-051",
@@ -45237,6 +45268,7 @@
       "ST21-11",
       "ST21-12",
       "ST21-13",
+      "ST22-08",
       "ST22-11",
       "ST23-01",
       "ST23-05",
@@ -45390,7 +45422,8 @@
       "EX9-033",
       "P-118",
       "P-119",
-      "P-250"
+      "P-250",
+      "ST22-08"
     ],
     "main": [
       "BT18-097",
@@ -45757,6 +45790,7 @@
       "BT22-040",
       "BT22-042",
       "BT22-059",
+      "BT24-047",
       "BT25-015",
       "BT25-048",
       "BT25-051",
@@ -46968,6 +47002,7 @@
       "EX11-065",
       "EX11-066",
       "EX11-069",
+      "EX11-071",
       "EX12-066",
       "EX12-069",
       "EX12-070",
@@ -47451,6 +47486,7 @@
       "BT24-074",
       "BT24-081",
       "BT24-091",
+      "BT24-095",
       "BT24-097",
       "BT25-001",
       "BT25-003",
@@ -48210,6 +48246,7 @@
       "BT21-070",
       "BT21-071",
       "BT21-074",
+      "BT22-009",
       "BT23-039",
       "BT25-007",
       "BT25-036",
@@ -49878,6 +49915,7 @@
       "BT23-079",
       "BT24-008",
       "BT24-012",
+      "BT24-047",
       "BT24-084",
       "BT24-085",
       "BT24-087",
@@ -50778,7 +50816,8 @@
       "ST20-09",
       "ST21-04",
       "ST21-06",
-      "ST21-09"
+      "ST21-09",
+      "ST22-08"
     ],
     "may_dna_digivolve_now": [
       "BT12-021",
@@ -51480,6 +51519,7 @@
       "BT23-072",
       "BT24-014",
       "BT24-023",
+      "BT24-037",
       "BT25-025",
       "BT25-053",
       "BT26-029",
@@ -51630,6 +51670,7 @@
       "EX11-065",
       "EX11-066",
       "EX11-069",
+      "EX11-071",
       "EX12-066",
       "EX13-054",
       "EX13-067",
@@ -52001,15 +52042,11 @@
       "BT26-049",
       "BT26-055",
       "BT26-059",
-      "BT26-060",
       "BT26-066",
       "BT26-069",
       "BT26-074",
       "BT26-086",
-      "EX12-017",
       "EX12-021",
-      "EX12-034",
-      "EX12-041",
       "EX13-004",
       "EX13-005",
       "EX13-012",
@@ -52018,7 +52055,6 @@
       "EX13-020",
       "EX13-022",
       "EX13-023",
-      "EX13-024",
       "EX13-042",
       "EX13-043",
       "EX13-045",
@@ -52139,6 +52175,7 @@
       "BT23-101",
       "BT24-012",
       "BT24-091",
+      "BT24-095",
       "BT25-027",
       "BT25-029",
       "BT25-104",
@@ -53047,6 +53084,7 @@
       "BT23-032",
       "BT24-014",
       "BT24-023",
+      "BT24-037",
       "BT25-025",
       "BT25-038",
       "BT25-053",
