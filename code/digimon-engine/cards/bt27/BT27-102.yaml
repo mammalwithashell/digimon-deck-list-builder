@@ -1,0 +1,32 @@
+card: BT27-102
+name: "Bio Hybrid Digivolution"
+kind: option
+color: [purple]
+cost: 3
+traits: ["Kurata's Army"]
+
+effects:
+  - when: main_from_hand
+    text: "[Main] You may play 1 [Kurata's Army] trait Tamer card from your hand or trash without paying the cost. Then, place this card in the battle area."
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: played
+          filter: { kind: tamer, trait_has: "Kurata's Army", can_play_from_effect_without_cost: true }
+          prompt: "You may play 1 [Kurata's Army] Tamer from your hand or trash"
+      - play_union_bound_free: { binding: played }
+      - place_self_as_delay_option: {}
+
+  - when: on_security
+    text: "[Security] You may play 1 play cost 5 or lower [Kurata's Army] trait card from your hand or trash without paying the cost."
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: played
+          filter: { trait_has: "Kurata's Army", play_cost_lte: 5, can_play_from_effect_without_cost: true }
+          prompt: "You may play 1 [Kurata's Army] card with play cost 5 or lower"
+      - play_union_bound_free: { binding: played }

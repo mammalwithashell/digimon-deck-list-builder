@@ -1,3 +1,15 @@
+## Digivolution from a Tamer without treating it as a Digimon [G-ENGINE-TAMER-BASE-AS-TAMER]
+
+- **Status:** Open. BT27-017, BT27-026, BT27-038, BT27-048, BT27-055, BT27-071, BT27-092 and BT27-102.
+- **Requirement:** A card can use a printed, trait-gated Tamer base in the main phase and also when instructed by an effect. The Tamer is not treated as a Digimon for this procedure. Per the BT27 Q&A, it does not dispatch `WhenDigivolving` or normal Digimon-digivolved observers and is not blocked by a restriction on Digimon digivolving.
+- **Current boundary:** `collect_dsl_alt_digivolve_routes` requires a treated-as identity on a non-Digimon base; that identity must be a Digimon or Digi-Egg. `digivolve_from_hand_inner_body` and the effect-driven path check digivolution restrictions and use normal digivolution trigger dispatch. A treated-as route would change the ruling rather than implement it. The Tamer routes and dependent Main/Delay effects are not authored. The six ignored `card_text::bt27_*` Tamer evolution tests are witnesses for the hand action.
+
+## Breeding-area deletion as an interactive fixed play-cost payment [G-ENGINE-BREEDING-DELETION-PAYMENT]
+
+- **Status:** Open. BT27-075, BT27-076 and BT27-079.
+- **Requirement:** Offer the correct level of Digimon in breeding (alone or alongside battle-area candidates as printed), and grant the fixed reduction only after the chosen deletion succeeds.
+- **Current boundary:** The DSL deletion receipt expansion retains only battle-area handles; `trash_breeding_permanent` is a trash operation, not a deletion with a successful payment receipt. `delete_for_cost_reduction` derives an override from the deleted card's play cost, not the printed fixed amount. Do not substitute battle-area-only candidates or grant a reduction for a prevented deletion.
+
 ## Player-directed forced attacks — resolved 2026-11-09
 
 `force_attack.affects_player: true` implements an instruction to the selected

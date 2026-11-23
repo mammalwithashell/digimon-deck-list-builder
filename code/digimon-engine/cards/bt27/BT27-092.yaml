@@ -1,0 +1,57 @@
+card: BT27-092
+name: "Nanami, Kouki, & Ivan"
+kind: tamer
+color: [green, black, red]
+cost: 4
+traits: ["Kurata's Army"]
+
+effects:
+  - when: on_security
+    text: "[Security] Play this card without paying the cost."
+    process:
+      - play_from_security: {}
+
+  - when: start_of_your_main_phase
+    text: "[Start of Your Main Phase] By placing 1 [Kurata's Army] trait card from your hand face down under this Tamer, ＜Draw 1＞ and gain 1 memory."
+    process:
+      - select_hand:
+          of: you
+          optional: true
+          bind_as: stash
+          filter: { trait_has: "Kurata's Army" }
+          prompt: "Choose 1 [Kurata's Army] card to place face down under this Tamer"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - place_selected_card_under_tamer: { card: stash, tamer: source, face_down: true, bind_as: placed }
+            - if:
+                condition: { binding_present: placed }
+                then:
+                  - draw: { of: you, count: 1 }
+                  - gain_memory: 1
+
+  - when: end_of_attack
+    scope: inherited
+    once_per_turn: true
+    text: "[End of Attack] [Once Per Turn] By choosing 1 of your Digimon, delete it and 1 of your opponent's Digimon with as much DP as this Digimon or less."
+    process:
+      - select_own_permanent:
+          optional: true
+          continue_on_decline: true
+          bind_as: sacrifice
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to delete"
+      - if:
+          condition: { binding_present: sacrifice }
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: victim
+                filter: { kind: digimon, dp_lte: { formula: { source_dp: {} } } }
+                prompt: "Choose 1 opposing Digimon with as much DP as this Digimon or less"
+            - delete_permanents: { targets: [sacrifice, victim] }
+
+      - if:
+          condition: { not: { binding_present: sacrifice } }
+          then:
+            - refund_opt: {}

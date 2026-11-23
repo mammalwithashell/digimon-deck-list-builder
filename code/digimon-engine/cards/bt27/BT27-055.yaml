@@ -1,0 +1,69 @@
+card: BT27-055
+name: "Lotosmon"
+kind: digimon
+level: 6
+color: [green, purple]
+cost: 11
+dp: 11000
+traits: [Fairy, "Kurata's Army", Bio]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Quetzalmon", trait_has: Bio }
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    text: "＜Piercing＞"
+  - kind: grant_keyword
+    keyword: Vortex
+    text: "＜Vortex＞"
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    text: "＜Armor Purge＞"
+
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    text: "[When Digivolving] [When Attacking] [Once Per Turn] Suspend up to 2 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          min: 0
+          max: 2
+          optional_zero: true
+          filter: { any_of: [{ kind: digimon }, { kind: tamer }], is_unsuspended: true }
+          bind_as: targets
+          prompt: "Suspend up to 2 of your opponent's Digimon or Tamers"
+      - per_selected:
+          selection: targets
+          bind_as: picked
+          body:
+            - suspend: { target: picked }
+      - select_opponent_permanent:
+          optional: false
+          bind_as: lock_target
+          filter: { any_of: [{ kind: digimon }, { kind: tamer }] }
+          prompt: "Choose 1 opposing Digimon or Tamer that can't unsuspend"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotUnsuspend
+          expiry: end_of_opponents_turn
+          value: 1
+
+  - when: on_suspend
+    once_per_turn: true
+    optional: true
+    condition: { source_is_unsuspended: false, can_unsuspend: true }
+    trigger_if: { event_target_kind: digimon }
+    text: "[All Turns] [Once Per Turn] When any Digimon suspend, this Digimon may unsuspend."
+    process:
+      - unsuspend: { target: source }
+
+  - kind: flood_gate
+    modifier: CannotDigivolve
+    target: { is_source_permanent: true }
+    text: "[All Turns] This Digimon can't digivolve."

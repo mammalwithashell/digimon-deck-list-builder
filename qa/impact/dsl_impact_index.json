@@ -17026,6 +17026,283 @@
         "use_option_from_hand"
       ]
     },
+    "BT27-017": {
+      "path": "bt27/BT27-017.yaml",
+      "predicates": [
+        "dp_lte",
+        "is_source_permanent",
+        "kind",
+        "name_is",
+        "opponents_turn",
+        "owner",
+        "source_is_unsuspended",
+        "trait_has",
+        "zone"
+      ],
+      "timings": [
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "delete_permanent",
+        "select_opponent_permanent"
+      ]
+    },
+    "BT27-026": {
+      "path": "bt27/BT27-026.yaml",
+      "predicates": [
+        "all_of",
+        "any_permanent",
+        "binding_present",
+        "equals",
+        "host_kind_is",
+        "kind",
+        "not",
+        "owner",
+        "source_count",
+        "zone"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_modifier",
+        "delete_permanent",
+        "if",
+        "refund_opt",
+        "select_effect_choice",
+        "select_opponent_permanent",
+        "select_opponent_sources",
+        "select_own_permanent",
+        "trash_selected_sources"
+      ]
+    },
+    "BT27-038": {
+      "path": "bt27/BT27-038.yaml",
+      "predicates": [
+        "all_of",
+        "binding_present",
+        "kind",
+        "not"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "delete_permanent",
+        "grant_keyword",
+        "if",
+        "refund_opt",
+        "select_opponent_permanent",
+        "select_own_permanent"
+      ]
+    },
+    "BT27-048": {
+      "path": "bt27/BT27-048.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_present",
+        "is_unsuspended",
+        "kind",
+        "not"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_modifier",
+        "delete_permanent",
+        "if",
+        "refund_opt",
+        "select_any_permanent",
+        "select_opponent_permanent",
+        "select_own_permanent",
+        "suspend"
+      ]
+    },
+    "BT27-055": {
+      "path": "bt27/BT27-055.yaml",
+      "predicates": [
+        "any_of",
+        "can_unsuspend",
+        "event_target_kind",
+        "is_source_permanent",
+        "is_unsuspended",
+        "kind",
+        "name_is",
+        "source_is_unsuspended",
+        "trait_has"
+      ],
+      "timings": [
+        "on_suspend",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_modifier",
+        "per_selected",
+        "select_count_capped_multi",
+        "select_opponent_permanent",
+        "suspend",
+        "unsuspend"
+      ]
+    },
+    "BT27-071": {
+      "path": "bt27/BT27-071.yaml",
+      "predicates": [
+        "is_source_permanent",
+        "kind",
+        "name_is",
+        "trait_has"
+      ],
+      "timings": [
+        "counter",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "de_digivolve",
+        "grant_effect_immunity",
+        "select_opponent_permanent"
+      ]
+    },
+    "BT27-075": {
+      "path": "bt27/BT27-075.yaml",
+      "predicates": [
+        "can_play_from_effect_without_cost",
+        "count_gte",
+        "is_source_permanent",
+        "kind",
+        "name_contains",
+        "name_is",
+        "owner",
+        "zone"
+      ],
+      "timings": [
+        "on_deletion"
+      ],
+      "verbs": [
+        "play_from_trash_free",
+        "return_trash_list_to_deck_bottom",
+        "select_count_capped_multi",
+        "select_trash"
+      ]
+    },
+    "BT27-076": {
+      "path": "bt27/BT27-076.yaml",
+      "predicates": [
+        "can_play_from_effect_without_cost",
+        "count_gte",
+        "is_source_permanent",
+        "kind",
+        "name_contains",
+        "name_is",
+        "owner",
+        "zone"
+      ],
+      "timings": [
+        "on_deletion",
+        "on_play"
+      ],
+      "verbs": [
+        "play_from_hand_free",
+        "play_from_trash_free",
+        "return_trash_list_to_deck_bottom",
+        "select_count_capped_multi",
+        "select_hand",
+        "select_trash"
+      ]
+    },
+    "BT27-079": {
+      "path": "bt27/BT27-079.yaml",
+      "predicates": [
+        "can_play_from_effect_without_cost",
+        "is_source_permanent",
+        "play_cost_lte",
+        "trait_has"
+      ],
+      "timings": [
+        "on_deletion"
+      ],
+      "verbs": [
+        "play_union_bound_free",
+        "select_union_zone"
+      ]
+    },
+    "BT27-092": {
+      "path": "bt27/BT27-092.yaml",
+      "predicates": [
+        "binding_present",
+        "dp_lte",
+        "kind",
+        "not",
+        "trait_has"
+      ],
+      "timings": [
+        "end_of_attack",
+        "on_security",
+        "start_of_your_main_phase"
+      ],
+      "verbs": [
+        "delete_permanents",
+        "draw",
+        "gain_memory",
+        "if",
+        "place_selected_card_under_tamer",
+        "play_from_security",
+        "refund_opt",
+        "select_hand",
+        "select_opponent_permanent",
+        "select_own_permanent"
+      ]
+    },
+    "BT27-098": {
+      "path": "bt27/BT27-098.yaml",
+      "predicates": [
+        "any_of",
+        "can_play_from_effect_without_cost",
+        "face_down_sources_under_tamers_gte",
+        "kind",
+        "name_contains"
+      ],
+      "timings": [
+        "end_of_all_turns",
+        "on_security"
+      ],
+      "verbs": [
+        "place_as_bottom_source",
+        "play_from_security",
+        "play_union_bound_free",
+        "select_union_zone",
+        "trash_bottom_face_down_sources_under_tamers"
+      ]
+    },
+    "BT27-102": {
+      "path": "bt27/BT27-102.yaml",
+      "predicates": [
+        "can_play_from_effect_without_cost",
+        "kind",
+        "play_cost_lte",
+        "trait_has"
+      ],
+      "timings": [
+        "main_from_hand",
+        "on_security"
+      ],
+      "verbs": [
+        "place_self_as_delay_option",
+        "play_union_bound_free",
+        "select_union_zone"
+      ]
+    },
     "BT3-002": {
       "path": "bt3/BT3-002.yaml",
       "predicates": [
@@ -33048,7 +33325,7 @@
       ]
     }
   },
-  "cards_root": "code/digimon-engine/cards",
+  "cards_root": "/home/ubuntu/repos/digimon-deck-list-builder/code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost": [
       "AD1-019",
@@ -33641,6 +33918,9 @@
       "BT26-102",
       "BT26-103",
       "BT26-104",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
       "BT3-077",
       "BT3-093",
       "BT4-086",
@@ -34799,6 +35079,9 @@
       "BT26-100",
       "BT26-101",
       "BT26-102",
+      "BT27-048",
+      "BT27-055",
+      "BT27-098",
       "BT5-092",
       "BT6-022",
       "BT6-068",
@@ -35226,6 +35509,7 @@
       "BT26-097",
       "BT26-100",
       "BT26-101",
+      "BT27-026",
       "BT4-086",
       "BT4-097",
       "BT4-105",
@@ -35603,6 +35887,10 @@
       "BT26-098",
       "BT26-102",
       "BT26-104",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-092",
       "BT4-086",
       "BT7-058",
       "BT7-063",
@@ -36015,6 +36303,11 @@
       "BT26-100",
       "BT26-101",
       "BT26-102",
+      "BT27-075",
+      "BT27-076",
+      "BT27-079",
+      "BT27-098",
+      "BT27-102",
       "BT5-063",
       "BT5-092",
       "BT5-107",
@@ -36142,7 +36435,8 @@
     "can_unsuspend": [
       "BT12-029",
       "BT20-027",
-      "BT22-023"
+      "BT22-023",
+      "BT27-055"
     ],
     "card_in_zone": [
       "BT17-080"
@@ -37192,6 +37486,8 @@
       "BT26-097",
       "BT26-098",
       "BT26-104",
+      "BT27-075",
+      "BT27-076",
       "BT5-063",
       "BT7-063",
       "BT9-006",
@@ -37498,6 +37794,8 @@
       "BT26-015",
       "BT26-016",
       "BT26-101",
+      "BT27-017",
+      "BT27-092",
       "BT8-097",
       "BT8-109",
       "EX10-009",
@@ -37686,6 +37984,7 @@
       "BT26-073",
       "BT26-082",
       "BT26-101",
+      "BT27-026",
       "BT7-063",
       "EX10-039",
       "EX10-041",
@@ -38173,6 +38472,7 @@
       "BT26-079",
       "BT26-091",
       "BT26-095",
+      "BT27-055",
       "BT6-089",
       "BT8-070",
       "BT8-094",
@@ -38564,6 +38864,7 @@
       "BT26-075",
       "BT26-082",
       "BT26-098",
+      "BT27-098",
       "EX13-071",
       "ST24-06",
       "ST24-10",
@@ -38686,6 +38987,7 @@
     "host_kind_is": [
       "BT13-096",
       "BT25-103",
+      "BT27-026",
       "EX12-077"
     ],
     "host_permanent_trait_has": [
@@ -38875,6 +39177,12 @@
     ],
     "is_source_permanent": [
       "BT24-062",
+      "BT27-017",
+      "BT27-055",
+      "BT27-071",
+      "BT27-075",
+      "BT27-076",
+      "BT27-079",
       "BT7-058",
       "EX13-032",
       "EX5-070",
@@ -38946,6 +39254,8 @@
       "BT26-032",
       "BT26-047",
       "BT26-080",
+      "BT27-048",
+      "BT27-055",
       "BT4-097",
       "BT8-107",
       "BT9-108",
@@ -39515,6 +39825,17 @@
       "BT26-102",
       "BT26-103",
       "BT26-104",
+      "BT27-017",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-055",
+      "BT27-071",
+      "BT27-075",
+      "BT27-076",
+      "BT27-092",
+      "BT27-098",
+      "BT27-102",
       "BT3-093",
       "BT3-105",
       "BT3-109",
@@ -41344,6 +41665,9 @@
       "BT26-097",
       "BT26-100",
       "BT26-101",
+      "BT27-075",
+      "BT27-076",
+      "BT27-098",
       "BT5-008",
       "BT5-092",
       "BT5-093",
@@ -41661,6 +41985,11 @@
       "BT26-098",
       "BT26-102",
       "BT26-103",
+      "BT27-017",
+      "BT27-055",
+      "BT27-071",
+      "BT27-075",
+      "BT27-076",
       "BT4-086",
       "BT5-063",
       "BT5-067",
@@ -41940,6 +42269,10 @@
       "BT26-059",
       "BT26-075",
       "BT26-095",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-092",
       "BT7-063",
       "BT9-047",
       "BT9-104",
@@ -42019,6 +42352,7 @@
       "BT25-055",
       "BT25-074",
       "BT26-092",
+      "BT27-017",
       "BT5-008",
       "BT5-021",
       "BT5-033",
@@ -42451,6 +42785,10 @@
       "BT26-101",
       "BT26-102",
       "BT26-104",
+      "BT27-017",
+      "BT27-026",
+      "BT27-075",
+      "BT27-076",
       "BT3-105",
       "BT4-011",
       "BT4-086",
@@ -42861,6 +43199,8 @@
       "BT26-097",
       "BT26-101",
       "BT26-102",
+      "BT27-079",
+      "BT27-102",
       "BT6-060",
       "BT6-105",
       "BT9-103",
@@ -43223,6 +43563,7 @@
       "BT24-074",
       "BT25-085",
       "BT25-092",
+      "BT27-026",
       "BT7-038",
       "BT9-109",
       "EX5-070",
@@ -43312,6 +43653,8 @@
       "BT26-093",
       "BT26-095",
       "BT26-104",
+      "BT27-017",
+      "BT27-055",
       "BT3-096",
       "BT6-089",
       "BT8-070",
@@ -43941,6 +44284,12 @@
       "BT26-102",
       "BT26-103",
       "BT26-104",
+      "BT27-017",
+      "BT27-055",
+      "BT27-071",
+      "BT27-079",
+      "BT27-092",
+      "BT27-102",
       "BT4-098",
       "BT6-060",
       "BT6-068",
@@ -44973,6 +45322,10 @@
       "BT26-100",
       "BT26-101",
       "BT26-104",
+      "BT27-017",
+      "BT27-026",
+      "BT27-075",
+      "BT27-076",
       "BT4-086",
       "BT4-097",
       "BT4-098",
@@ -45279,6 +45632,7 @@
       "BT25-103",
       "BT26-055",
       "BT26-103",
+      "BT27-071",
       "EX12-017",
       "EX12-055",
       "EX12-057",
@@ -45286,6 +45640,9 @@
       "EX13-015",
       "EX13-016",
       "EX13-036"
+    ],
+    "end_of_all_turns": [
+      "BT27-098"
     ],
     "end_of_attack": [
       "AD1-002",
@@ -45301,6 +45658,7 @@
       "BT21-029",
       "BT25-041",
       "BT26-082",
+      "BT27-092",
       "EX11-012",
       "EX11-013",
       "EX12-046",
@@ -45477,6 +45835,7 @@
       "BT26-100",
       "BT26-101",
       "BT26-102",
+      "BT27-102",
       "BT3-105",
       "BT3-109",
       "BT4-098",
@@ -45890,6 +46249,9 @@
       "BT26-076",
       "BT26-082",
       "BT26-083",
+      "BT27-075",
+      "BT27-076",
+      "BT27-079",
       "BT3-006",
       "BT5-067",
       "BT5-112",
@@ -46539,6 +46901,11 @@
       "BT26-086",
       "BT26-087",
       "BT26-104",
+      "BT27-017",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-076",
       "BT3-093",
       "BT4-086",
       "BT5-092",
@@ -46920,6 +47287,9 @@
       "BT26-101",
       "BT26-102",
       "BT26-104",
+      "BT27-092",
+      "BT27-098",
+      "BT27-102",
       "BT3-093",
       "BT3-096",
       "BT3-103",
@@ -47165,6 +47535,7 @@
       "BT26-044",
       "BT26-049",
       "BT26-091",
+      "BT27-055",
       "EX11-074",
       "EX13-021",
       "EX13-022",
@@ -47264,6 +47635,7 @@
       "BT26-094",
       "BT26-095",
       "BT26-104",
+      "BT27-092",
       "EX10-039",
       "EX10-040",
       "EX10-046",
@@ -47506,6 +47878,11 @@
       "BT26-074",
       "BT26-079",
       "BT26-080",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-055",
+      "BT27-071",
       "BT3-002",
       "BT6-022",
       "BT7-032",
@@ -47980,6 +48357,12 @@
       "BT26-083",
       "BT26-086",
       "BT26-103",
+      "BT27-017",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-055",
+      "BT27-071",
       "BT5-063",
       "BT5-112",
       "BT7-038",
@@ -48405,6 +48788,7 @@
       "BT26-057",
       "BT26-081",
       "BT26-103",
+      "BT27-038",
       "BT4-072",
       "BT6-089",
       "BT8-084",
@@ -48558,6 +48942,9 @@
       "BT26-083",
       "BT26-089",
       "BT26-101",
+      "BT27-026",
+      "BT27-048",
+      "BT27-055",
       "BT3-105",
       "BT4-098",
       "BT8-095",
@@ -49029,6 +49416,7 @@
       "BT26-051",
       "BT26-056",
       "BT26-057",
+      "BT27-071",
       "BT9-112",
       "EX10-032",
       "EX12-017",
@@ -49220,6 +49608,10 @@
       "BT26-083",
       "BT26-086",
       "BT26-101",
+      "BT27-017",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
       "BT4-086",
       "BT5-106",
       "BT5-107",
@@ -49329,6 +49721,7 @@
     "delete_permanents": [
       "BT16-070",
       "BT24-075",
+      "BT27-092",
       "EX7-071"
     ],
     "digi_burst": [
@@ -49447,6 +49840,7 @@
       "BT26-094",
       "BT26-095",
       "BT26-104",
+      "BT27-092",
       "BT3-002",
       "BT3-006",
       "BT6-006",
@@ -49903,6 +50297,7 @@
       "BT26-094",
       "BT26-095",
       "BT26-104",
+      "BT27-092",
       "BT3-096",
       "BT4-086",
       "BT4-097",
@@ -50031,6 +50426,7 @@
       "BT25-060",
       "BT26-047",
       "BT26-057",
+      "BT27-071",
       "EX11-046",
       "EX12-019",
       "EX13-057",
@@ -50085,6 +50481,7 @@
       "BT26-078",
       "BT26-093",
       "BT26-094",
+      "BT27-038",
       "BT3-105",
       "BT7-073",
       "EX10-028",
@@ -50436,6 +50833,10 @@
       "BT26-101",
       "BT26-102",
       "BT26-104",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-092",
       "BT4-086",
       "BT4-105",
       "BT5-107",
@@ -50883,6 +51284,7 @@
       "BT26-050",
       "BT26-080",
       "BT26-083",
+      "BT27-055",
       "BT6-060",
       "BT8-084",
       "BT9-104",
@@ -50964,6 +51366,7 @@
       "BT26-095",
       "BT26-097",
       "BT26-098",
+      "BT27-098",
       "BT7-058",
       "BT8-084",
       "BT9-104",
@@ -51227,6 +51630,7 @@
       "BT26-093",
       "BT26-094",
       "BT26-095",
+      "BT27-092",
       "EX13-026",
       "P-224",
       "ST23-06",
@@ -51262,6 +51666,7 @@
       "BT24-099",
       "BT24-100",
       "BT25-098",
+      "BT27-102",
       "BT8-108",
       "EX10-069",
       "EX10-070",
@@ -51421,6 +51826,7 @@
       "BT26-014",
       "BT26-039",
       "BT26-045",
+      "BT27-076",
       "BT5-063",
       "BT5-092",
       "BT9-041",
@@ -51608,6 +52014,8 @@
       "BT26-095",
       "BT26-096",
       "BT26-104",
+      "BT27-092",
+      "BT27-098",
       "BT3-093",
       "BT3-096",
       "BT4-097",
@@ -51718,6 +52126,8 @@
       "BT26-075",
       "BT26-076",
       "BT26-078",
+      "BT27-075",
+      "BT27-076",
       "BT3-109",
       "BT5-106",
       "BT5-107",
@@ -51862,6 +52272,9 @@
       "BT26-100",
       "BT26-101",
       "BT26-102",
+      "BT27-079",
+      "BT27-098",
+      "BT27-102",
       "BT8-110",
       "EX10-068",
       "EX11-022",
@@ -52008,6 +52421,10 @@
       "BT26-069",
       "BT26-074",
       "BT26-086",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-092",
       "EX12-017",
       "EX12-021",
       "EX12-034",
@@ -52173,6 +52590,8 @@
       "BT26-073",
       "BT26-078",
       "BT26-087",
+      "BT27-075",
+      "BT27-076",
       "EX10-068",
       "EX11-012",
       "EX12-047",
@@ -52430,6 +52849,7 @@
       "BT26-050",
       "BT26-069",
       "BT26-080",
+      "BT27-048",
       "EX11-012",
       "EX13-043",
       "EX13-044",
@@ -52473,6 +52893,9 @@
       "BT26-060",
       "BT26-080",
       "BT26-083",
+      "BT27-055",
+      "BT27-075",
+      "BT27-076",
       "BT8-084",
       "EX10-033",
       "EX12-047",
@@ -52554,6 +52977,7 @@
       "BT26-073",
       "BT26-082",
       "BT26-101",
+      "BT27-026",
       "BT7-063",
       "EX10-039",
       "EX10-044",
@@ -52847,6 +53271,8 @@
       "BT26-098",
       "BT26-102",
       "BT26-104",
+      "BT27-076",
+      "BT27-092",
       "BT3-006",
       "BT5-063",
       "BT5-092",
@@ -53338,6 +53764,13 @@
       "BT26-089",
       "BT26-101",
       "BT26-103",
+      "BT27-017",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-055",
+      "BT27-071",
+      "BT27-092",
       "BT5-112",
       "BT6-089",
       "BT6-102",
@@ -53556,6 +53989,7 @@
       "BT24-074",
       "BT25-028",
       "BT25-103",
+      "BT27-026",
       "EX11-016",
       "EX11-017",
       "EX11-057",
@@ -53745,6 +54179,10 @@
       "BT26-098",
       "BT26-101",
       "BT26-102",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-092",
       "BT3-105",
       "BT3-109",
       "BT4-072",
@@ -54170,6 +54608,8 @@
       "BT26-095",
       "BT26-097",
       "BT26-098",
+      "BT27-075",
+      "BT27-076",
       "BT5-106",
       "BT5-107",
       "BT6-068",
@@ -54329,6 +54769,9 @@
       "BT26-100",
       "BT26-101",
       "BT26-102",
+      "BT27-079",
+      "BT27-098",
+      "BT27-102",
       "BT7-063",
       "BT8-110",
       "EX10-042",
@@ -54529,6 +54972,8 @@
       "BT26-050",
       "BT26-080",
       "BT26-088",
+      "BT27-048",
+      "BT27-055",
       "BT4-097",
       "BT5-092",
       "BT6-103",
@@ -54622,6 +55067,7 @@
       "BT25-035",
       "BT26-070",
       "BT26-082",
+      "BT27-098",
       "EX13-071",
       "ST24-06",
       "ST24-10"
@@ -54843,6 +55289,7 @@
       "BT24-074",
       "BT25-028",
       "BT25-103",
+      "BT27-026",
       "EX11-016",
       "EX11-017",
       "EX11-057",
@@ -55054,6 +55501,7 @@
       "BT26-057",
       "BT26-080",
       "BT26-101",
+      "BT27-055",
       "BT5-106",
       "BT8-070",
       "BT8-110",

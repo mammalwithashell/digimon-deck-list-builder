@@ -1,0 +1,48 @@
+card: BT27-017
+name: "Spinomon"
+kind: digimon
+level: 6
+color: [red, purple]
+cost: 11
+dp: 11000
+traits: [Dinosaur, "Kurata's Army", Bio]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Stegomon", trait_has: Bio }
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    text: "＜Security A. +1＞"
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    text: "＜Armor Purge＞"
+  - kind: grant_keyword
+    keyword: Engage
+    text: "＜Engage＞"
+
+  - when: [on_play, when_digivolving]
+    text: "[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with as much DP as this Digimon or less."
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon, dp_lte: { formula: { source_dp: {} } } }
+          prompt: "Delete 1 of your opponent's Digimon with as much DP as this Digimon or less"
+      - delete_permanent: { target: victim }
+
+  - kind: flood_gate
+    modifier: CannotDigivolve
+    target: { is_source_permanent: true }
+    text: "[All Turns] This Digimon can't digivolve."
+
+  - kind: aura
+    active_when: { opponents_turn: true, source_is_unsuspended: false }
+    target: { owner: opponent, zone: [battle_area], kind: digimon }
+    modifier: CannotAttackPlayer
+    text: "[Opponent's Turn] While this Digimon is suspended, none of your opponent's Digimon can attack players."

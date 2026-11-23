@@ -2,6 +2,114 @@
   "version": 1,
   "last_updated": "2026-11-18",
   "cards": {
+    "BT27-017": {
+      "card_name": "Spinomon",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_017.rs",
+      "notes": "G-ENGINE-TAMER-BASE-AS-TAMER: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
+    "BT27-026": {
+      "card_name": "Thunderbirdmon",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-026.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_026.rs",
+      "notes": "G-ENGINE-TAMER-BASE-AS-TAMER: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
+    "BT27-038": {
+      "card_name": "Quetzalmon",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-038.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_038.rs",
+      "notes": "G-ENGINE-TAMER-BASE-AS-TAMER: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
+    "BT27-048": {
+      "card_name": "Stegomon",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-048.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_048.rs",
+      "notes": "G-ENGINE-TAMER-BASE-AS-TAMER: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
+    "BT27-055": {
+      "card_name": "Lotosmon",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-055.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_055.rs",
+      "notes": "G-ENGINE-TAMER-BASE-AS-TAMER: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
+    "BT27-071": {
+      "card_name": "Darkdramon",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-071.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_071.rs",
+      "notes": "G-ENGINE-TAMER-BASE-AS-TAMER: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
+    "BT27-075": {
+      "card_name": "ProtoGizmon",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-075.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_075.rs",
+      "notes": "G-ENGINE-BREEDING-DELETION-PAYMENT: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
+    "BT27-076": {
+      "card_name": "Gizmon: AT",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-076.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_076.rs",
+      "notes": "G-ENGINE-BREEDING-DELETION-PAYMENT: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
+    "BT27-079": {
+      "card_name": "Gizmon: XT",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-079.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_079.rs",
+      "notes": "G-ENGINE-BREEDING-DELETION-PAYMENT: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
+    "BT27-092": {
+      "card_name": "Nanami, Kouki, & Ivan",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-092.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_092.rs",
+      "notes": "G-ENGINE-TAMER-BASE-AS-TAMER: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
+    "BT27-098": {
+      "card_name": "Akihiro Kurata",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_098.rs",
+      "notes": "G-DSL-CONCEALED-DECK-TO-SOURCE-BATCH: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
+    "BT27-102": {
+      "card_name": "Bio Hybrid Digivolution",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-102.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_102.rs",
+      "notes": "G-ENGINE-TAMER-BASE-AS-TAMER: unsupported printed clause omitted; behavioral tests require engine CI."
+    },
     "ST2-01": {
       "card_name": "Tsunomon",
       "validated_date": "2026-06-14",

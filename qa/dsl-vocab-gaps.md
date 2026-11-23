@@ -1,3 +1,8 @@
+## Place multiple hidden deck cards under a permanent in one event [G-DSL-CONCEALED-DECK-TO-SOURCE-BATCH]
+
+- **Status:** Open. BT27-098's all-turns deletion observer may suspend the Tamer to place the top two cards of the deck face down beneath it in one placement.
+- **Current boundary:** `place_as_bottom_source` can take a single hidden deck-top card; repeating it emits separate source-placement events. `place_cards_as_bottom_sources` accepts a previously selected card list, not a hidden deck prefix with a face-down flag. Revealing the deck prefix would expose private information. The observer clause is omitted until it can place the cards without revealing them or splitting the placement.
+
 ## Player-directed forced attacks — resolved 2026-11-09
 
 `force_attack.affects_player: true` implements an instruction to the selected
