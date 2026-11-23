@@ -37,8 +37,11 @@ use digimon_engine::{action::space::PLAY_HAND_START, enums::Keyword};
 
 #[test]
 fn on_play_can_choose_itself_by_its_mamemon_name_rule() {
+    use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
+
     let mut r = start(builder(CARD).hand(0, &[CARD]));
     r.place_on_field(0, "TEXT-3", Some(0));
+    let attacker = r.place_on_field(1, "TEXT-3", Some(0));
     action(&mut r, 0, PLAY_HAND_START);
     assert_eq!(candidates(&r), [CARD]);
     r.choose_prompt_card(CARD, None).unwrap();
@@ -49,6 +52,42 @@ fn on_play_can_choose_itself_by_its_mamemon_name_rule() {
         },
         Keyword::Blocker
     ));
+    next_turn(&mut r);
+    action(&mut r, 1, encode_attack(attacker.index.into(), SECURITY_TARGET));
+    assert_eq!(candidates(&r), [CARD]);
+    r.choose_prompt_card(CARD, None).unwrap();
+    assert_eq!(r.security_count(0), 5);
+    assert_eq!(ids(&r, &r.game.players[1].trash), ["TEXT-3"]);
+}
+
+#[test]
+fn including_mamemon_in_its_name_does_not_make_it_exactly_mamemon() {
+    let mut mamemon = digimon("MAME", 5, 7000, false);
+    mamemon.card_name = "Mamemon".into();
+    let mut r = start(builder(CARD).add_card(mamemon).from_dsl_yaml(r#"
+card: EXACT-NAME
+name: Exact name selector
+kind: digimon
+level: 3
+dp: 2000
+color: [black]
+cost: 3
+effects:
+  - when: on_play
+    process:
+      - select_own_permanent:
+          bind_as: mamemon
+          filter: { kind: digimon, name_is: Mamemon }
+          prompt: Choose a Digimon named Mamemon
+      - add_dp_modifier: { target: mamemon, value: 1000, expiry: end_of_turn }
+"#).unwrap().hand(0, &["EXACT-NAME"]));
+    let thundermon = r.place_on_field(0, CARD, Some(0));
+    let mamemon = r.place_on_field(0, "MAME", Some(0));
+    action(&mut r, 0, PLAY_HAND_START);
+    assert_eq!(candidates(&r), ["MAME"]);
+    r.choose_prompt_card("MAME", None).unwrap();
+    assert_eq!(r.effective_dp(thundermon), Some(5000));
+    assert_eq!(r.effective_dp(mamemon), Some(8000));
 }
 
 #[test]

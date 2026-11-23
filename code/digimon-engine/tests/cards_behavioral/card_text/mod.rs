@@ -19,6 +19,7 @@ mod bt27_084;
 mod bt27_099;
 mod bt27_100;
 mod bt27_103;
+mod bt27_keywords;
 mod common;
 mod st23_01;
 mod st23_03;

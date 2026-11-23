@@ -174,6 +174,35 @@ fn ally_deletion_on_the_opponents_turn_can_trash_an_x_antibody_source_to_refire_
 }
 
 #[test]
+fn playing_then_losing_another_digimon_shares_one_activation_per_turn() {
+    use digimon_engine::action::space::encode_attack;
+
+    let mut x = digimon("X", 3, 2000, false);
+    x.card_name = "X Antibody".into();
+    let mut r = start(
+        builder(CARD).add_card(x)
+            .add_card(digimon("FATAL", 7, 20000, false))
+            .hand(0, &["TEXT-4"])
+            .security(1, &["FATAL"]),
+    );
+    r.place_stack(0, &["TEXT-5", "X", "X", CARD]);
+    let ally = r.place_on_field(0, "TEXT-3", Some(0));
+    r.place_on_field(1, "TEXT-3", Some(0));
+    action(&mut r, 0, PLAY_HAND_START);
+    assert_eq!(candidates(&r), ["X", "X"]);
+    let payment = r.pending_selection_view().unwrap().valid_action_ids[0];
+    action(&mut r, 0, payment);
+    assert_eq!(candidates(&r), ["TEXT-3"]);
+    r.choose_prompt_card("TEXT-3", None).unwrap();
+    assert_eq!(ids(&r, &r.game.players[1].trash), ["TEXT-3"]);
+
+    action(&mut r, 0, encode_attack(ally.index.into(), 14));
+    assert!(r.pending_selection().is_none());
+    assert_eq!(ids(&r, &r.game.players[0].trash), ["X", "TEXT-3"]);
+    assert_eq!(ids(&r, &r.game.players[0].battle_area[0].card_sources), ["TEXT-5", "X", CARD]);
+}
+
+#[test]
 fn used_option_can_arts_digivolve_onto_lordknightmon_at_no_extra_cost() {
     use digimon_engine::action::space::encode_attack;
     use digimon_engine::selection::SelectionKind;

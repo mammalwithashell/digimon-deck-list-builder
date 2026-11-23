@@ -116,3 +116,52 @@ fn digivolving_during_an_attack_de_digivolves_before_filtering_the_deletion() {
     assert_eq!(ids(&r, &r.game.players[1].trash), ["TEXT-4", "TEXT-3", "TEXT-FILLER"]);
     assert_eq!(r.battle_area_size(1), 1);
 }
+
+#[test]
+fn digivolving_at_end_of_attack_still_applies_the_attack_only_deletion() {
+    use digimon_engine::action::space::{encode_attack, PLAY_HAND_START};
+    use digimon_engine::selection::SelectionKind;
+
+    let mut r = start(builder(CARD).from_dsl_yaml(r#"
+card: END-EVO
+name: Ginryumon
+kind: digimon
+level: 4
+dp: 6000
+color: [red]
+cost: 5
+effects:
+  - when: end_of_attack
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: evolution
+          filter: { card_number_is: BT27-013, can_digivolve_from_source: true }
+          prompt: Choose the evolution at end of attack
+      - effect_initiated_digivolve: { target: source, source: evolution, cost: printed }
+"#).unwrap().hand(0, &[CARD, CARD]));
+    let attacker = r.place_on_field(0, "END-EVO", Some(0));
+    r.place_stack(1, &["TEXT-3", "TEXT-4"]);
+    action(&mut r, 0, encode_attack(attacker.index.into(), 14));
+    assert_eq!(r.security_count(1), 4);
+    assert_eq!(candidates(&r), [CARD, CARD]);
+    r.choose_prompt_card(CARD, Some(0)).unwrap();
+    r.assert_prompt(SelectionKind::OppField, false, 0);
+    assert_eq!(candidates(&r), ["TEXT-4"]);
+    r.choose_prompt_card("TEXT-4", None).unwrap();
+    r.assert_prompt(SelectionKind::OppField, false, 0);
+    assert_eq!(candidates(&r), ["TEXT-3"]);
+    r.choose_prompt_card("TEXT-3", None).unwrap();
+    assert!(r.pending_selection().is_none());
+    assert_eq!(ids(&r, &r.game.players[1].trash), ["TEXT-FILLER", "TEXT-4", "TEXT-3"]);
+    assert!(r.game.pending_attack.is_none());
+
+    r.place_stack(1, &["TEXT-3", "TEXT-4"]);
+    action(&mut r, 0, PLAY_HAND_START);
+    r.assert_prompt(SelectionKind::OppField, false, 0);
+    assert_eq!(candidates(&r), ["TEXT-4"]);
+    r.choose_prompt_card("TEXT-4", None).unwrap();
+    assert!(r.pending_selection().is_none());
+    assert_eq!(ids(&r, &r.game.players[1].battle_area[0].card_sources), ["TEXT-3"]);
+}

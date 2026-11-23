@@ -29,6 +29,7 @@ use digimon_engine::action::space::PLAY_HAND_START;
 fn arts_dna_uses_two_matching_field_materials_or_trashes_the_used_option() {
     use digimon_engine::action::space::encode_attack;
     use digimon_engine::enums::EffectTiming;
+    use digimon_engine::events::GameEvent;
     use digimon_engine::selection::SelectionKind;
 
     for (stop_after, reverse) in [(0, false), (1, false), (2, false), (2, true)] {
@@ -67,7 +68,19 @@ fn arts_dna_uses_two_matching_field_materials_or_trashes_the_used_option() {
             if stop_after == 1 {
                 r.decline_prompt().unwrap();
             } else {
+                let before_dna = r.event_checkpoint();
                 action(&mut r, 0, encode_attack(0, second.index as u16));
+                let events = r.events_of_kind(before_dna, |event| {
+                    matches!(event, GameEvent::Digivolve { was_dna: true, .. })
+                });
+                let [GameEvent::Digivolve { from_stack_top, top_card_id, field_index, .. }] =
+                    events.as_slice()
+                else {
+                    panic!("expected exactly one DNA Digivolve event, got {events:?}");
+                };
+                assert_eq!(from_stack_top, if reverse { "OURYU" } else { "ALPHA" });
+                assert_eq!(top_card_id, CARD);
+                assert_eq!(*field_index, 0);
                 r.assert_prompt(SelectionKind::TriggerOrder, false, 0);
                 let choices = r.pending_selection_view().unwrap().effect_choices.unwrap();
                 let recover = choices.iter().find(|effect|

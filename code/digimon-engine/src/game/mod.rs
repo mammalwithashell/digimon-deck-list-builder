@@ -3192,7 +3192,7 @@ impl Game {
         let from_stack_top = self
             .player(target_a.player)
             .battle_area
-            .get(target_a_index_after)
+            .get(target_a.index as usize)
             .map(|p| p.top_card().card_id(&self.card_data).to_string())
             .unwrap_or_default();
 
