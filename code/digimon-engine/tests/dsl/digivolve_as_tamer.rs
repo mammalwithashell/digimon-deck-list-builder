@@ -102,6 +102,60 @@ fn setup(result: &str, hand: &[&str]) -> DebugRunner {
 }
 
 #[test]
+fn rosemon_burst_mode_option_blocks_suspended_tamer_digivolution() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT26-050")
+        .unwrap()
+        .from_dsl_yaml(TAMER)
+        .unwrap()
+        .from_dsl_yaml(RESULT)
+        .unwrap()
+        .from_dsl_yaml(
+            r#"
+card: TEST-DATA-SQUAD
+name: Data Squad Tamer
+kind: tamer
+color: [green]
+cost: 3
+traits: ["DATA SQUAD"]
+"#,
+        )
+        .unwrap()
+        .hand(0, &["BT26-050"])
+        .hand(1, &["TEST-THUNDERBIRD"])
+        .deck(1, &["TEST-KURATA"; 6])
+        .memory(8)
+        .start();
+    r.set_first_player(0);
+    r.set_phase(GamePhase::Main);
+    r.place_on_field(0, "TEST-DATA-SQUAD", Some(0));
+    let hosts = [
+        r.place_on_field(1, "TEST-KURATA", Some(0)),
+        r.place_on_field(1, "TEST-KURATA", Some(0)),
+        r.place_on_field(1, "TEST-KURATA", Some(0)),
+    ];
+    r.game.play_option_from_hand(0, 0);
+    while let Some(selection) = r.game.pending_selection.as_ref() {
+        r.execute_action(selection.selecting_player, selection.valid_action_ids[0])
+            .unwrap();
+    }
+    r.pass_turn();
+    r.set_phase(GamePhase::Main);
+    let mask = build_action_mask(&r.game, 1);
+    let mut suspended = 0;
+    for host in hosts {
+        let action = encode_digivolve(0, host.index.into());
+        if r.game.players[1].battle_area[host.index as usize].is_suspended {
+            suspended += 1;
+            assert_eq!(mask[action as usize], 0.0);
+        } else {
+            assert_eq!(mask[action as usize], 1.0);
+        }
+    }
+    assert_eq!(suspended, 2);
+}
+
+#[test]
 fn printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers() {
     let mut r = setup(RESULT, &["TEST-THUNDERBIRD"]);
     let host = r.place_stack(0, &["TEST-OBSERVER", "TEST-KURATA"]);

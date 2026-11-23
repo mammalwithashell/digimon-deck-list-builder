@@ -220,3 +220,9 @@ effects:
           value: 1
           expiry: end_of_opponents_turn
           continuous: true
+      - add_modifier:
+          target: { of: opponent, is_suspended: true, kind: tamer }
+          modifier: CannotDigivolveAsTamer
+          value: 1
+          expiry: end_of_opponents_turn
+          continuous: true

@@ -50666,6 +50666,9 @@
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution": [
+     "yaml_key"
+    ],
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards": [
      "yaml_key"
     ],
@@ -52125,6 +52128,7 @@
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
+    "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution",
     "dsl::digivolve_target_predicates.rs::can_digivolve_onto_filters_the_union_result_to_routable_cards",
     "dsl::digivolve_target_predicates.rs::compile_lowers_both_leaves",
     "dsl::digivolve_target_predicates.rs::has_digivolve_candidate_only_offers_permanents_with_a_routable_result",
@@ -58799,6 +58803,9 @@
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution": [
+     "yaml_key"
+    ],
     "dsl::digivolve_ignore_level_and_tamer_base.rs::ignore_level_alt_path_rejects_a_base_matching_nothing": [
      "yaml_key"
     ],
@@ -59364,6 +59371,7 @@
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
+    "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::ignore_level_alt_path_rejects_a_base_matching_nothing",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::ignore_level_alt_path_trait_gate_still_applies",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::ignore_level_strips_the_alt_path_level_leaf_but_keeps_its_trait_gate",
@@ -67745,6 +67753,9 @@
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution": [
+     "yaml_key"
+    ],
     "dsl::dp_deletion_max_modifier.rs::another_permanents_delta_does_not_apply": [
      "yaml_key"
     ],
@@ -68058,6 +68069,7 @@
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
+    "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution",
     "dsl::dp_deletion_max_modifier.rs::another_permanents_delta_does_not_apply",
     "dsl::dp_deletion_max_modifier.rs::deletion_consumed_dp_budget_is_flagged",
     "dsl::dp_deletion_max_modifier.rs::deletion_dp_budget_is_raised",
@@ -73290,6 +73302,9 @@
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution": [
+     "yaml_key"
+    ],
     "dsl::embedded_registry.rs::embedded_registry_loads_examples": [
      "fixture"
     ],
@@ -74755,6 +74770,7 @@
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
+    "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution",
     "dsl::embedded_registry.rs::embedded_registry_loads_examples",
     "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer",
     "dsl::event_context_bindings.rs::source_trashed_event_exposes_trashed_source_card_to_followup_predicate",
@@ -86024,7 +86040,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2310,
+  "behavioural_tests": 2311,
   "cards": {
    "behaviourally_covered": 1274,
    "lowering_covered": 1292,
@@ -86189,7 +86205,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 425,
-  "scanned_tests": 2736,
+  "scanned_tests": 2737,
   "top_untested": [
    {
     "cards_blocked": 3,

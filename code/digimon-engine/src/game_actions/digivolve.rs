@@ -1893,7 +1893,8 @@ impl Game {
         as_tamer: bool,
     ) -> bool {
         if as_tamer {
-            return self.digivolve_base_is_tamer(target);
+            return self.digivolve_base_is_tamer(target)
+                && !self.modifiers.has(target, ModifierType::CannotDigivolveAsTamer);
         }
         !self.modifiers.has(target, ModifierType::CannotDigivolve)
             && !(source == PlaySource::ByEffect

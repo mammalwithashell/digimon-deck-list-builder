@@ -1078,6 +1078,8 @@ pub enum ModifierType {
     /// attackers, non-Option Security effects, and security-removal timings
     /// are unaffected. Appended to preserve existing modifier IDs.
     DoesNotActivateOptionSecurityEffects,
+    /// Supplement to `CannotDigivolve` when the restriction also names Tamers.
+    CannotDigivolveAsTamer,
 }
 
 /// When a modifier expires.
