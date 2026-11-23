@@ -2752,7 +2752,7 @@ pub(crate) fn install_reveal_bucket_resume_step(
     game: &mut crate::game::Game,
     mut state: crate::resume::RevealBucketState,
 ) {
-    use crate::effect_context::selections::reveal_bucket_action_ids;
+    use crate::action::space::{MAX_REVEALED, SEL_REVEAL_START};
     use crate::selection::{PendingSelection, SelectionKind};
     loop {
         let Some(bucket) = state.buckets.get(state.bucket_index).cloned() else {
@@ -2766,13 +2766,27 @@ pub(crate) fn install_reveal_bucket_resume_step(
             state.current_bucket_picks = Vec::new();
             continue;
         }
-        let valid_action_ids = reveal_bucket_action_ids(
-            game,
-            &state.buckets[state.bucket_index..],
-            &state.picked_buckets,
-            &state.current_bucket_picks,
-            state.no_duplicate_cards,
-        );
+        let already_chosen: std::collections::HashSet<crate::card_source::CardHandle> = state
+            .picked_buckets
+            .iter()
+            .flat_map(|(_, cards)| cards.iter().copied())
+            .chain(state.current_bucket_picks.iter().copied())
+            .collect();
+        let cap = game.revealed_cards.len().min(MAX_REVEALED);
+        let mut valid_action_ids = Vec::new();
+        for idx in 0..cap {
+            let handle = game.revealed_cards[idx].handle();
+            if !bucket.candidates.contains(&handle) {
+                continue;
+            }
+            if state.current_bucket_picks.contains(&handle) {
+                continue;
+            }
+            if state.no_duplicate_cards && already_chosen.contains(&handle) {
+                continue;
+            }
+            valid_action_ids.push(SEL_REVEAL_START + idx as u16);
+        }
         if valid_action_ids.is_empty() {
             let current = std::mem::take(&mut state.current_bucket_picks);
             state.picked_buckets.push((bucket.bind_as, current));

@@ -147,64 +147,6 @@ fn select_reveal_buckets_singleton_bucket_can_add_to_hand_from_reveal() {
 }
 
 #[test]
-fn select_reveal_buckets_keeps_both_required_picks_possible() {
-    use digimon_engine::action::space::SEL_REVEAL_START;
-
-    let mut runner = DebugRunner::builder()
-        .add_card(make_test_card("SRC", "Source"))
-        .add_card(make_test_card("DUAL", "Dual Match"))
-        .add_card(make_test_card("SINGLE", "Single Match"))
-        .hand(0, &["SRC"])
-        .build();
-    push_to_revealed(&mut runner, 0, "DUAL");
-    push_to_revealed(&mut runner, 0, "SINGLE");
-    let src = runner.game.players[0].hand[0].handle();
-    let mut bindings = Bindings::new();
-    bindings.insert_card_list(
-        "revealed",
-        runner.game.revealed_cards.iter().map(CardSource::handle).collect(),
-    );
-    let steps = compile_steps(
-        r#"
-card: TEST-REVEAL-MATCHING
-name: Reveal Matching Test
-kind: option
-color: [red]
-cost: 0
-effects:
-  - when: main
-    process:
-      - select_reveal_buckets:
-          from: revealed
-          buckets:
-            - { bind_as: either, min: 1, max: 1, filter: { name_contains: Match } }
-            - { bind_as: dual_only, min: 1, max: 1, filter: { name_contains: Dual } }
-          no_duplicate_cards: true
-      - add_to_hand_from_reveal: { of: you, card: either }
-      - add_to_hand_from_reveal: { of: you, card: dual_only }
-"#,
-    );
-    run_steps(
-        &steps,
-        &mut EffectContext::new(&mut runner.game, src, None, 0),
-        &mut bindings,
-    );
-    for action in [SEL_REVEAL_START + 1, SEL_REVEAL_START] {
-        let pending = runner.game.pending_selection.as_ref().unwrap();
-        assert_eq!(pending.valid_action_ids, [action]);
-        assert!(!pending.is_optional);
-        runner.game.resolve_selection(0, action).unwrap();
-    }
-    let hand: Vec<_> = runner.game.players[0]
-        .hand
-        .iter()
-        .map(|card| card.card_id(&runner.game.card_data))
-        .collect();
-    assert_eq!(hand, ["SRC", "SINGLE", "DUAL"]);
-    assert!(runner.game.revealed_cards.is_empty());
-}
-
-#[test]
 fn select_reveal_buckets_empty_nested_body_runs_tail_synchronously() {
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("SRC", "Source"))

@@ -54690,9 +54690,6 @@
     "dsl::phase3b_replacement_process.rs::replacement_body_with_nested_selection_resumes_and_sets_outcome": [
      "yaml_key"
     ],
-    "dsl::reveal_buckets.rs::select_reveal_buckets_keeps_both_required_picks_possible": [
-     "yaml_key"
-    ],
     "dsl::reveal_search.rs::reveal_search_adds_all_when_fewer_than_max_match": [
      "yaml_key"
     ],
@@ -54802,7 +54799,6 @@
     "dsl::phase1c_lowering.rs::filtered_aura_emits_declarative_with_process_but_no_static_dp",
     "dsl::phase3a_binding_player_id.rs::hand_selection_binding_carries_selected_player_into_tail_steps",
     "dsl::phase3b_replacement_process.rs::replacement_body_with_nested_selection_resumes_and_sets_outcome",
-    "dsl::reveal_buckets.rs::select_reveal_buckets_keeps_both_required_picks_possible",
     "dsl::reveal_search.rs::reveal_search_adds_all_when_fewer_than_max_match",
     "dsl::reveal_search.rs::reveal_search_adds_two_matching_to_hand_rest_to_bottom",
     "dsl::reveal_search.rs::reveal_search_optional_bucket_declined_adds_nothing",
@@ -61343,9 +61339,6 @@
     "dsl::reveal_buckets.rs::select_reveal_buckets_compiles_named_buckets": [
      "yaml_key"
     ],
-    "dsl::reveal_buckets.rs::select_reveal_buckets_keeps_both_required_picks_possible": [
-     "yaml_key"
-    ],
     "dsl::track_e_reveal_ordering.rs::yaml_round_trip_compiles_new_verbs_to_expected_shapes": [
      "yaml_key"
     ],
@@ -61367,7 +61360,6 @@
    "tests": [
     "dsl::folded_may_opt_refund.rs::activation_type_main_clause_is_not_rewritten",
     "dsl::reveal_buckets.rs::select_reveal_buckets_compiles_named_buckets",
-    "dsl::reveal_buckets.rs::select_reveal_buckets_keeps_both_required_picks_possible",
     "dsl::track_e_reveal_ordering.rs::yaml_round_trip_compiles_new_verbs_to_expected_shapes",
     "dsl::xros_reusable_primitives.rs::moved_source_count_can_reduce_followup_play_cost",
     "dsl::xros_reusable_primitives.rs::select_under_tamer_sources_can_play_origin_preserved_source_for_free",
@@ -69573,9 +69565,6 @@
     "dsl::reveal_buckets.rs::select_reveal_buckets_compiles_named_buckets": [
      "yaml_key"
     ],
-    "dsl::reveal_buckets.rs::select_reveal_buckets_keeps_both_required_picks_possible": [
-     "yaml_key"
-    ],
     "dsl::reveal_buckets.rs::select_reveal_buckets_singleton_bucket_can_add_to_hand_from_reveal": [
      "variant"
     ],
@@ -69592,7 +69581,6 @@
     "dsl::phase2b_zone_moves_extra.rs::add_to_hand_from_reveal_consumes_card_binding",
     "dsl::phase2e_select_reveal.rs::reveal_overlay_survives_select_reveal_until_destination_move",
     "dsl::reveal_buckets.rs::select_reveal_buckets_compiles_named_buckets",
-    "dsl::reveal_buckets.rs::select_reveal_buckets_keeps_both_required_picks_possible",
     "dsl::reveal_buckets.rs::select_reveal_buckets_singleton_bucket_can_add_to_hand_from_reveal",
     "lib::src/dsl_cards/lower_triggered.rs::resource_flow_catalog_detects_nested_draw_steps",
     "lib::src/dsl_cards/lower_triggered.rs::resource_flow_catalog_ignores_non_hand_resource_steps"
@@ -83909,9 +83897,6 @@
     "dsl::reveal_buckets.rs::select_reveal_buckets_empty_nested_body_runs_tail_synchronously": [
      "variant"
     ],
-    "dsl::reveal_buckets.rs::select_reveal_buckets_keeps_both_required_picks_possible": [
-     "yaml_key"
-    ],
     "dsl::reveal_buckets.rs::select_reveal_buckets_singleton_bucket_can_add_to_hand_from_reveal": [
      "variant"
     ]
@@ -83924,7 +83909,6 @@
     "dsl::option_source_use_cluster.rs::dsl_use_option_from_revealed_mid_body_park_resolves_before_outer_tail",
     "dsl::reveal_buckets.rs::select_reveal_buckets_compiles_named_buckets",
     "dsl::reveal_buckets.rs::select_reveal_buckets_empty_nested_body_runs_tail_synchronously",
-    "dsl::reveal_buckets.rs::select_reveal_buckets_keeps_both_required_picks_possible",
     "dsl::reveal_buckets.rs::select_reveal_buckets_singleton_bucket_can_add_to_hand_from_reveal"
    ]
   },
@@ -86401,7 +86385,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2308,
+  "behavioural_tests": 2307,
   "cards": {
    "behaviourally_covered": 1293,
    "lowering_covered": 1311,
@@ -86566,7 +86550,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 424,
-  "scanned_tests": 2734,
+  "scanned_tests": 2733,
   "top_untested": [
    {
     "cards_blocked": 3,

@@ -2649,102 +2649,6 @@ type RevealBucketCallback = std::sync::Arc<
 // ── reveal bucket trampoline ────────────────────────────────────────────────
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn reveal_bucket_action_ids(
-    game: &Game,
-    buckets: &[RevealBucketSelection],
-    picked_buckets: &[(String, Vec<CardHandle>)],
-    current_picks: &[CardHandle],
-    no_duplicate_cards: bool,
-) -> Vec<u16> {
-    use crate::action::space::{MAX_REVEALED, SEL_REVEAL_START};
-
-    let Some(bucket) = buckets.first() else {
-        return Vec::new();
-    };
-    let available: Vec<_> = game
-        .revealed_cards
-        .iter()
-        .take(MAX_REVEALED)
-        .enumerate()
-        .map(|(idx, card)| (idx, card.handle()))
-        .filter(|(_, handle)| {
-            !current_picks.contains(handle)
-                && (!no_duplicate_cards
-                    || !picked_buckets.iter().any(|(_, picks)| picks.contains(handle)))
-        })
-        .collect();
-    let required_here = usize::from(bucket.min.min(bucket.max)).saturating_sub(current_picks.len());
-    let mut required_slots = Vec::new();
-    if no_duplicate_cards && buckets.len() > 1 {
-        for (idx, bucket) in buckets.iter().enumerate() {
-            let count = if idx == 0 {
-                required_here
-            } else {
-                usize::from(bucket.min.min(bucket.max))
-            };
-            let eligible = available.iter().fold(0u16, |mask, (card_idx, handle)| {
-                if bucket.candidates.contains(handle) {
-                    mask | (1 << card_idx)
-                } else {
-                    mask
-                }
-            });
-            required_slots.extend(std::iter::repeat_n(eligible, count.min(available.len())));
-        }
-    }
-    let required_matches = max_required_reveal_matches(&required_slots, 0);
-    available
-        .into_iter()
-        .filter(|(idx, handle)| {
-            if !bucket.candidates.contains(handle) {
-                return false;
-            }
-            if required_matches == 0 {
-                return true;
-            }
-            let fills_slot = usize::from(required_here > 0);
-            fills_slot + max_required_reveal_matches(&required_slots[fills_slot..], 1 << idx)
-                == required_matches
-        })
-        .map(|(idx, _)| SEL_REVEAL_START + idx as u16)
-        .collect()
-}
-
-fn max_required_reveal_matches(slots: &[u16], excluded: u16) -> usize {
-    use crate::action::space::MAX_REVEALED;
-
-    fn augment(
-        slot: usize,
-        slots: &[u16],
-        owners: &mut [Option<usize>; MAX_REVEALED],
-        seen: &mut u16,
-    ) -> bool {
-        let mut remaining = slots[slot] & !*seen;
-        while remaining != 0 {
-            let card = remaining.trailing_zeros() as usize;
-            let bit = 1 << card;
-            remaining &= !bit;
-            if *seen & bit != 0 {
-                continue;
-            }
-            *seen |= bit;
-            if owners[card].is_none_or(|owner| augment(owner, slots, owners, seen)) {
-                owners[card] = Some(slot);
-                return true;
-            }
-        }
-        false
-    }
-
-    let mut owners = [None; MAX_REVEALED];
-    (0..slots.len())
-        .filter(|&slot| {
-            let mut seen = excluded;
-            augment(slot, slots, &mut owners, &mut seen)
-        })
-        .count()
-}
-
 fn install_reveal_bucket_step(
     game: &mut Game,
     buckets: Vec<RevealBucketSelection>,
@@ -2760,7 +2664,7 @@ fn install_reveal_bucket_step(
     previous_phase: GamePhase,
     final_callback: RevealBucketCallback,
 ) {
-    use crate::action::space::SEL_REVEAL_START;
+    use crate::action::space::{MAX_REVEALED, SEL_REVEAL_START};
 
     let Some(bucket) = buckets.get(bucket_index).cloned() else {
         if let Some(cb) = final_callback.lock().unwrap().take() {
@@ -2790,13 +2694,26 @@ fn install_reveal_bucket_step(
         return;
     }
 
-    let valid_action_ids = reveal_bucket_action_ids(
-        game,
-        &buckets[bucket_index..],
-        &picked_buckets,
-        &current_bucket_picks,
-        no_duplicate_cards,
-    );
+    let already_chosen: std::collections::HashSet<CardHandle> = picked_buckets
+        .iter()
+        .flat_map(|(_, cards)| cards.iter().copied())
+        .chain(current_bucket_picks.iter().copied())
+        .collect();
+    let cap = game.revealed_cards.len().min(MAX_REVEALED);
+    let mut valid_action_ids = Vec::new();
+    for idx in 0..cap {
+        let handle = game.revealed_cards[idx].handle();
+        if !bucket.candidates.contains(&handle) {
+            continue;
+        }
+        if current_bucket_picks.contains(&handle) {
+            continue;
+        }
+        if no_duplicate_cards && already_chosen.contains(&handle) {
+            continue;
+        }
+        valid_action_ids.push(SEL_REVEAL_START + idx as u16);
+    }
 
     if valid_action_ids.is_empty() {
         let mut next_picked = picked_buckets;
