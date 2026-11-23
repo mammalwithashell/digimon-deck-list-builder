@@ -27,7 +27,7 @@ fn resolve_retaliation_first(r: &mut digimon_engine::debug_runner::DebugRunner) 
         .as_ref()
         .unwrap()
         .iter()
-        .position(|entry| entry.label == "<Retaliation>")
+        .position(|entry| entry.keyword == Some(Keyword::Retaliation))
         .unwrap();
     r.execute_branch(retaliation).unwrap();
 }

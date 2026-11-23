@@ -66,6 +66,12 @@ fn delete_suspended_target_in_battle(
 ) {
     let attacker = r.place_on_field(1, HIGH, Some(0));
     next_turn(r);
+    if r.pending_selection()
+        .is_some_and(|pending| pending.prompt.starts_with("<Engage>"))
+    {
+        r.assert_prompt(SelectionKind::Target, true, 0);
+        r.decline_prompt().unwrap();
+    }
     r.game.players[0].battle_area[target.index as usize].is_suspended = true;
     action(
         r,

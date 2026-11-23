@@ -89,7 +89,6 @@ fn end_of_turn_is_optional_and_requires_five_face_down_cards() {
 }
 
 #[test]
-#[ignore = "G-DSL-CONCEALED-DECK-TO-SOURCE-BATCH"]
 fn deletion_can_suspend_kurata_and_put_the_two_deck_cards_face_down_at_the_bottom() {
     let mut r = start(builder("BT27-098"));
     let tamer = r.place_stack(0, &[BOUNDARY, "BT27-098"]);
@@ -111,4 +110,24 @@ fn deletion_can_suspend_kurata_and_put_the_two_deck_cards_face_down_at_the_botto
     }
     assert_eq!(tamer.card_sources[2].card_id(&r.game.card_data), BOUNDARY);
     assert!(r.pending_selection().is_none());
+}
+
+#[test]
+fn deletion_placement_can_be_declined_and_cannot_pay_with_a_suspended_kurata() {
+    for already_suspended in [false, true] {
+        let mut r = start(builder("BT27-098"));
+        let tamer = r.place_on_field(0, "BT27-098", Some(0));
+        r.game.players[0].battle_area[tamer.index as usize].is_suspended = already_suspended;
+        let deck_count = r.game.players[0].deck.len();
+        delete_in_battle(&mut r, GIZMON);
+        if !already_suspended {
+            r.assert_prompt(SelectionKind::Replacement, true, 0);
+            r.decline_optional_trigger().unwrap();
+        }
+        assert!(r.pending_selection().is_none());
+        let tamer = &r.game.players[0].battle_area[tamer.index as usize];
+        assert_eq!(tamer.is_suspended, already_suspended);
+        assert_eq!(tamer.card_sources.len(), 1);
+        assert_eq!(r.game.players[0].deck.len(), deck_count);
+    }
 }
