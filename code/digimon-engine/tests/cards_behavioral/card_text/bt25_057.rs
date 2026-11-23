@@ -132,16 +132,16 @@ fn official_qa_when_digivolving_allows_both_activation_orders() {
         if battle_first {
             r.assert_prompt(SelectionKind::OppField, false, 0);
             r.choose_prompt_card("TEXT-3", None).unwrap();
-            r.assert_prompt(SelectionKind::TriggerOrder, true, 0);
-            r.execute_branch(0).unwrap();
+            r.assert_prompt(SelectionKind::Replacement, true, 0);
+            r.accept_optional_trigger().unwrap();
         }
         r.assert_prompt(SelectionKind::OwnField, false, 0);
         r.choose_prompt_card("TEXT-TAMER", None).unwrap();
         r.assert_prompt(SelectionKind::OppField, false, 0);
         r.choose_prompt_card("TEXT-6", None).unwrap();
         if !battle_first {
-            r.assert_prompt(SelectionKind::TriggerOrder, true, 0);
-            r.execute_branch(0).unwrap();
+            r.assert_prompt(SelectionKind::Replacement, true, 0);
+            r.accept_optional_trigger().unwrap();
             r.assert_prompt(SelectionKind::OppField, false, 0);
             r.choose_prompt_card("TEXT-3", None).unwrap();
         }

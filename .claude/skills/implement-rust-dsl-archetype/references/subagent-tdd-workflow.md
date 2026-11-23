@@ -4,6 +4,8 @@ Use this reference after the target card pool is resolved and tasks are sliced.
 
 ## Controller Rules
 
+- For IMPLEMENT and AUDIT, keep YAML, existing tests, scout implementation analysis and DCGO bodies out of the initial worker context. First write and run bundle/rules-derived `card_text/<id>.rs` tests; only then release deferred references. Scout briefs must not embed YAML for the first phase.
+
 - Dispatch one fresh implementer subagent per independent task.
 - Provide exact task text; do not make implementers rediscover the whole archetype.
 - Do not dispatch parallel tasks that touch the same YAML, Rust module, test module, selection/action internals, or tracker section.
@@ -20,18 +22,20 @@ Each implementer task should include:
 Use TDD to implement <CARD-ID> <clause/primitive>.
 
 Context:
-- Printed text: <effect/inherited/security text from data/cards.json>
+- Printed text and official Q&A: data/card_bundles/<CARD-ID>.md
 - Required docs: AGENTS.md, docs/RUST_DSL_AGENT_GUIDE.md, docs/RUST_DSL_TEST_API.md, docs/RUST_ENGINE_API.md
-- Existing examples to inspect: <YAML/test paths>
+- Deferred examples (open only after first test run): <YAML/test paths>
 - Known gaps to respect: <tracker entries or "none">
 
-RED:
-- Add/enable this failing test: <exact path and behavior>
+RED (before reading YAML or existing tests):
+- Write code/digimon-engine/tests/cards_behavioral/card_text/<card_id_lower>.rs from the bundle and rules alone. Quote printed sections and official Q&A; cover every clause, every may-decline and each Q&A through real actions. Follow card_text/bt17_015.rs and docs/RUST_DSL_TEST_API.md, Card-text tests.
+- Assert and answer each prompt with explicit helpers; no auto_resolve*, wrappers or enqueue_triggered. Structural assertions are optional and discouraged.
+- First test behavior: <exact printed clause>
 - Run: <targeted cargo test command>
 - Expected failure: <missing behavior, not parser typo>
 
-GREEN:
-- Implement the minimal YAML/DSL/engine change.
+GREEN (only after recording the first test run):
+- Obtain deferred scout context, open references/YAML/old tests, then implement the minimal change.
 - Preserve PendingSelection/action-mask visibility for choices.
 - Do not use no-op raw_rust or auto-selection.
 - Run: <targeted cargo test command>
@@ -86,5 +90,5 @@ After all task slices:
    - Selection/action masks: relevant `selection`, `mask_and_tensor`, or `action` tests.
    - Card behavior: `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- <card_or_set> --nocapture`
 3. Re-scan for placeholders:
-   - `rg "process: \\[\\]|raw_rust|TODO|BLOCKED" code/digimon-engine/cards/<sets> code/digimon-engine/tests/cards_behavioral/<sets>`
+   - `rg "process: \\[\\]|raw_rust|TODO|BLOCKED" code/digimon-engine/cards/<sets> code/digimon-engine/tests/cards_behavioral/card_text`
 4. Run `git diff --check`.
