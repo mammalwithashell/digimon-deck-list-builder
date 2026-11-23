@@ -24,7 +24,7 @@
 
 use std::collections::HashMap;
 
-use digimon_engine::action::space::{encode_attack, encode_digivolve, SECURITY_TARGET};
+use digimon_engine::action::space::{encode_attack, encode_digivolve, PASS, SECURITY_TARGET};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::dcgo_recording::CardIndexSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -49,8 +49,15 @@ fn lv4(id: &str) -> CardData {
 /// then holds two `COPY` that differ (one has a source), in slots 0 and 1,
 /// and both can attack (a digivolve does not reset the turn played).
 fn board() -> Game {
+    board_with_defender_test_setup(false)
+}
+
+fn board_with_defender_test_setup(defender_test: bool) -> Game {
+    let mut attacker = make_test_card("ATTACKER", "ATTACKER");
+    attacker.dp = Some(10000);
     let mut r = DebugRunner::builder()
         .add_card(lv4("COPY"))
+        .add_card(attacker)
         .add_card(make_test_card("BASE", "BASE"))
         .add_card(make_test_card("MISS", "MISS"))
         .deck(0, &["MISS"; 10])
@@ -63,6 +70,12 @@ fn board() -> Game {
     let old = r.place_on_field(0, "COPY", Some(0));
     r.push_source(old, "MISS");
     r.place_on_field(0, "BASE", Some(0));
+    if defender_test {
+        r.place_on_field(1, "ATTACKER", Some(0));
+        for p in &mut r.game.players[0].battle_area {
+            p.is_suspended = true;
+        }
+    }
     r.add_to_hand(0, "COPY");
     r.game.enter_main_phase();
     r.game
@@ -75,6 +88,7 @@ struct StagedDcgo {
     action_indexes: Vec<Option<i32>>,
     /// DCGO card index of each action row's own-board operand, by row.
     operand_indexes: Vec<Option<(i32, Option<CardIndexSource>)>>,
+    attack_target_index: Option<i32>,
 }
 
 impl RecordingSource for StagedDcgo {
@@ -99,6 +113,9 @@ impl RecordingSource for StagedDcgo {
     }
     fn dcgo_action_operand_index(&self, row: u32) -> Option<(i32, Option<CardIndexSource>)> {
         self.operand_indexes.get(row as usize).copied().flatten()
+    }
+    fn dcgo_attack_target_index(&self, row: u32) -> Option<i32> {
+        (row as usize == self.steps.len() - 1).then_some(self.attack_target_index).flatten()
     }
 }
 
@@ -135,6 +152,7 @@ fn session(operand: Option<(i32, Option<CardIndexSource>)>) -> ReplaySession {
             steps: vec![digivolve, attack],
             action_indexes: vec![Some(DIGIVOLVED), None],
             operand_indexes: vec![None, operand],
+            attack_target_index: None,
         }),
         &HashMap::new(),
         false,
@@ -210,6 +228,7 @@ fn a_named_copy_that_cannot_attack_is_a_divergence_not_a_substitution() {
             steps: vec![digivolve, attack],
             action_indexes: vec![Some(DIGIVOLVED), None],
             operand_indexes: vec![None, Some((DIGIVOLVED, Some(CardIndexSource::Recorder)))],
+            attack_target_index: None,
         }),
         &HashMap::new(),
         false,
@@ -223,4 +242,82 @@ fn a_named_copy_that_cannot_attack_is_a_divergence_not_a_substitution() {
     }
     assert!(s.is_paused(), "the replay stops: {:?}", s.divergences());
     assert!(!s.game.players[0].battle_area[0].is_suspended, "the older copy was not substituted");
+}
+
+fn defender_session(target_index: Option<i32>) -> ReplaySession {
+    let digivolve = spec(encode_digivolve(0, 1), Some("COPY"), Some((&["COPY", "BASE"], &["ATTACKER"])));
+    let pass = spec(PASS, None, None);
+    let mut attack = spec(encode_attack(0, 0), None, Some((&["COPY", "COPY"], &["ATTACKER"])));
+    attack.actor = 1;
+    let mut s = ReplaySession::with_source(
+        Box::new(StagedDcgo {
+            game: board_with_defender_test_setup(true),
+            steps: vec![digivolve, pass, attack],
+            action_indexes: vec![Some(DIGIVOLVED), None, None],
+            operand_indexes: vec![],
+            attack_target_index: target_index,
+        }),
+        &HashMap::new(),
+        false,
+    )
+    .expect("staged session");
+    s.step();
+    s.step();
+    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
+    s
+}
+
+#[test]
+fn the_attack_hits_the_recorded_copy_not_the_copy_in_occurrence_order() {
+    let mut s = defender_session(Some(DIGIVOLVED));
+    s.step();
+    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
+    assert!(s.is_complete(), "every row replays");
+    let [survivor] = s.game.players[0].battle_area.as_slice() else {
+        panic!("exactly one copy should survive");
+    };
+    assert_eq!(survivor.card_sources[0].card_id(&s.game.card_data), "MISS");
+}
+
+#[test]
+fn a_named_attack_is_not_consumed_as_a_silent_lone_field_pick() {
+    use digimon_engine::effect_context::EffectContext;
+    use digimon_engine::events::GameEvent;
+
+    let mut s = defender_session(Some(DIGIVOLVED));
+    let attacker = s.game.players[1].battle_area[0].top_card().handle();
+    EffectContext::new(&mut s.game, attacker, None, 1).select_opponent_permanent(
+        "Choose the one eligible Digimon",
+        false,
+        |_, target| target.index == 1,
+        |_, _| {},
+    );
+    let pending = s.game.pending_selection.as_ref().expect("field pick parked");
+    assert_eq!(pending.valid_action_ids, [encode_attack(0, 1)]);
+
+    s.step();
+    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
+    assert!(s.is_complete());
+    assert!(s.game.events.iter().any(|event| matches!(
+        event,
+        GameEvent::Attack { target_field_index: Some(1), target_player: Some(0), .. }
+    )));
+}
+
+#[test]
+fn an_unpaired_defender_index_stops_without_attacking_either_copy() {
+    let mut s = defender_session(Some(12345));
+    s.step();
+    assert!(s.is_paused(), "the replay must not substitute a defender");
+    assert!(format!("{:?}", s.divergences()).contains("12345"));
+    assert_eq!(s.game.players[0].battle_area.len(), 2);
+}
+
+#[test]
+fn a_missing_named_defender_is_not_replaced_by_the_only_engine_copy() {
+    let mut s = defender_session(Some(DIGIVOLVED));
+    s.game.players[0].battle_area.remove(1);
+    s.step();
+    assert!(s.is_paused(), "the replay must not substitute a defender");
+    assert_eq!(s.game.players[0].battle_area.len(), 1);
 }
