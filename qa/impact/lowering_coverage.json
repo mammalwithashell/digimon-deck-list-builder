@@ -43157,6 +43157,18 @@
     "dsl::battle_deleter.rs::mutual_snapshot_text_and_optional_observer_survive_clone": [
      "yaml_key"
     ],
+    "dsl::constructs/effect_play_results.rs::a_late_play_restriction_does_not_publish_a_played_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/effect_play_results.rs::a_previous_effects_completed_play_does_not_leak_into_a_new_effect": [
+     "yaml_key"
+    ],
+    "dsl::constructs/effect_play_results.rs::declining_selection_does_not_publish_a_played_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/effect_play_results.rs::played_result_credits_completed_digimon_and_tamer_plays": [
+     "yaml_key"
+    ],
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_capacity_checks_destination_board_not_effect_controllers_board": [
      "yaml_key"
     ],
@@ -43178,10 +43190,19 @@
     "dsl::constructs/meta_source_keyword.rs::mixed_source_visibility_preserves_the_higher_cards_identity_in_battle_and_breeding": [
      "yaml_key"
     ],
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option": [
+     "yaml_key"
+    ],
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_effect_result_dependencies": [
      "yaml_key"
     ],
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_nested_and_formula_binding_dependencies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/security_stack.rs::play_security_card_rejected_commit_emits_no_removal": [
      "yaml_key"
     ],
     "dsl::constructs/zone_moves.rs::own_group_hand_return_removes_token_and_routes_real_mother_to_egg_deck": [
@@ -43315,6 +43336,10 @@
    "tested_behaviourally": true,
    "tests": [
     "dsl::battle_deleter.rs::mutual_snapshot_text_and_optional_observer_survive_clone",
+    "dsl::constructs/effect_play_results.rs::a_late_play_restriction_does_not_publish_a_played_result",
+    "dsl::constructs/effect_play_results.rs::a_previous_effects_completed_play_does_not_leak_into_a_new_effect",
+    "dsl::constructs/effect_play_results.rs::declining_selection_does_not_publish_a_played_result",
+    "dsl::constructs/effect_play_results.rs::played_result_credits_completed_digimon_and_tamer_plays",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_capacity_checks_destination_board_not_effect_controllers_board",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_cross_owner_uses_causing_controller_for_prohibitions",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_false_polarity_selects_blocked_cards_without_bypassing_commit_legality",
@@ -43322,8 +43347,11 @@
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_prohibitions_discriminate_digimon_and_tamer_for_both_owners",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_union_filters_hand_and_trash_and_preserves_the_chosen_instance",
     "dsl::constructs/meta_source_keyword.rs::mixed_source_visibility_preserves_the_higher_cards_identity_in_battle_and_breeding",
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option",
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_effect_result_dependencies",
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_nested_and_formula_binding_dependencies",
+    "dsl::constructs/security_stack.rs::play_security_card_rejected_commit_emits_no_removal",
     "dsl::constructs/zone_moves.rs::own_group_hand_return_removes_token_and_routes_real_mother_to_egg_deck",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::without_subject_level_leaves_strips_positive_positions_only",
     "dsl::group7_formula_batch.rs::filtered_card_zone_count_allows_mixed_any_and_not_combinators",
@@ -44710,6 +44738,18 @@
    "name": "can_play_from_effect_without_cost",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/effect_play_results.rs::a_late_play_restriction_does_not_publish_a_played_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/effect_play_results.rs::a_previous_effects_completed_play_does_not_leak_into_a_new_effect": [
+     "yaml_key"
+    ],
+    "dsl::constructs/effect_play_results.rs::declining_selection_does_not_publish_a_played_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/effect_play_results.rs::played_result_credits_completed_digimon_and_tamer_plays": [
+     "yaml_key"
+    ],
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_capacity_checks_destination_board_not_effect_controllers_board": [
      "yaml_key"
     ],
@@ -44739,11 +44779,18 @@
     ],
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
      "yaml_key"
+    ],
+    "dsl::constructs/security_stack.rs::play_security_card_rejected_commit_emits_no_removal": [
+     "yaml_key"
     ]
    },
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/effect_play_results.rs::a_late_play_restriction_does_not_publish_a_played_result",
+    "dsl::constructs/effect_play_results.rs::a_previous_effects_completed_play_does_not_leak_into_a_new_effect",
+    "dsl::constructs/effect_play_results.rs::declining_selection_does_not_publish_a_played_result",
+    "dsl::constructs/effect_play_results.rs::played_result_credits_completed_digimon_and_tamer_plays",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_capacity_checks_destination_board_not_effect_controllers_board",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_cross_owner_uses_causing_controller_for_prohibitions",
     "dsl::constructs/meta_play_and_source_predicates.rs::free_play_false_polarity_selects_blocked_cards_without_bypassing_commit_legality",
@@ -44753,7 +44800,8 @@
     "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
-    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies"
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies",
+    "dsl::constructs/security_stack.rs::play_security_card_rejected_commit_emits_no_removal"
    ]
   },
   "predicate:can_play_or_use_from_effect": {
@@ -44779,6 +44827,9 @@
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition": [
      "yaml_key"
     ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free": [
      "yaml_key"
     ],
@@ -44798,6 +44849,7 @@
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_exclude_the_digi_egg",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option"
@@ -55434,7 +55486,28 @@
    "name": "not",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/effect_play_results.rs::a_late_play_restriction_does_not_publish_a_played_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/effect_play_results.rs::a_previous_effects_completed_play_does_not_leak_into_a_new_effect": [
+     "yaml_key"
+    ],
+    "dsl::constructs/effect_play_results.rs::declining_selection_does_not_publish_a_played_result": [
+     "yaml_key"
+    ],
+    "dsl::constructs/effect_play_results.rs::played_result_credits_completed_digimon_and_tamer_plays": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option": [
+     "yaml_key"
+    ],
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_nested_and_formula_binding_dependencies": [
+     "yaml_key"
+    ],
+    "dsl::constructs/security_stack.rs::play_security_card_rejected_commit_emits_no_removal": [
      "yaml_key"
     ],
     "dsl::group7_formula_batch.rs::filtered_card_zone_count_allows_mixed_any_and_not_combinators": [
@@ -55453,7 +55526,14 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/effect_play_results.rs::a_late_play_restriction_does_not_publish_a_played_result",
+    "dsl::constructs/effect_play_results.rs::a_previous_effects_completed_play_does_not_leak_into_a_new_effect",
+    "dsl::constructs/effect_play_results.rs::declining_selection_does_not_publish_a_played_result",
+    "dsl::constructs/effect_play_results.rs::played_result_credits_completed_digimon_and_tamer_plays",
+    "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commit_refuses_an_off_colour_option",
     "dsl::constructs/plural_security_prevention.rs::plural_security_rejects_nested_and_formula_binding_dependencies",
+    "dsl::constructs/security_stack.rs::play_security_card_rejected_commit_emits_no_removal",
     "dsl::group7_formula_batch.rs::filtered_card_zone_count_allows_mixed_any_and_not_combinators",
     "dsl::phase1c_predicate.rs::not_fails_when_child_matches",
     "dsl::phase1c_predicate.rs::not_inverts_single_child",
