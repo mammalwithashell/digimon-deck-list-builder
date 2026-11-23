@@ -21,50 +21,86 @@ fn selections<'a>(value: &'a Value, out: &mut Vec<(&'a str, &'a Value)>) {
     }
 }
 
-fn forced_kind(filter: &Value) -> Option<&str> {
-    if let Some(kind) = filter["kind"].as_str() {
-        return Some(kind);
+const DIGIMON: u8 = 1;
+const PLAYABLE: u8 = 3;
+const ALL_KINDS: u8 = 7;
+
+fn kind_bit(kind: &str) -> u8 {
+    match kind {
+        "digimon" => DIGIMON,
+        "tamer" => 2,
+        "option" => 4,
+        _ => 0,
     }
-    if let Some(items) = filter["all_of"].as_array() {
-        let kinds: Vec<_> = items.iter().filter_map(forced_kind).collect();
-        if let Some(kind) = kinds.first() {
-            if kinds.iter().all(|k| k == kind) {
-                return Some(kind);
-            }
-        }
-    }
-    if let Some(items) = filter["any_of"].as_array() {
-        if let Some(kind) = items.first().and_then(forced_kind) {
-            if items.iter().all(|item| forced_kind(item) == Some(kind)) {
-                return Some(kind);
-            }
-        }
-    }
-    None
 }
 
-fn restricts_kind(filter: &Value) -> bool {
-    filter["kind"].is_string()
-        || filter["all_of"]
-            .as_array()
-            .is_some_and(|items| items.iter().any(restricts_kind))
-        || filter["any_of"]
-            .as_array()
-            .is_some_and(|items| !items.is_empty() && items.iter().all(restricts_kind))
+// Guaranteed/possible matches preserve unknown name/trait constraints under NOT.
+fn kind_bounds(filter: &Value) -> (u8, u8) {
+    let mut result = (ALL_KINDS, ALL_KINDS);
+    if let Some(fields) = filter.as_object() {
+        for (key, value) in fields {
+            if value.is_null() {
+                continue;
+            }
+            let bounds = match key.as_str() {
+                "kind" => {
+                    let kind = kind_bit(value.as_str().unwrap_or_default());
+                    (kind, kind)
+                }
+                "all_of" => value
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(kind_bounds)
+                    .fold((ALL_KINDS, ALL_KINDS), |(a, b), (c, d)| (a & c, b & d)),
+                "any_of" | "none_of" => {
+                    let items = value.as_array().unwrap();
+                    if items.is_empty() {
+                        continue;
+                    }
+                    let (low, high) = items
+                        .iter()
+                        .map(kind_bounds)
+                        .fold((0, 0), |(a, b), (c, d)| (a | c, b | d));
+                    if key == "none_of" {
+                        (ALL_KINDS & !high, ALL_KINDS & !low)
+                    } else {
+                        (low, high)
+                    }
+                }
+                "not" => {
+                    let (low, high) = kind_bounds(value);
+                    (ALL_KINDS & !high, ALL_KINDS & !low)
+                }
+                "dp" | "dp_eq" | "dp_lte" | "dp_gte" | "level" | "level_eq" | "level_lte"
+                | "level_gte" => (0, DIGIMON),
+                "any_color" => continue,
+                _ => (0, ALL_KINDS),
+            };
+            result = (result.0 & bounds.0, result.1 & bounds.1);
+        }
+    }
+    result
 }
 
-fn permits_kind(filter: &Value, kind: &str) -> bool {
-    filter["kind"].as_str().map_or(true, |k| k == kind)
-        && filter["all_of"]
-            .as_array()
-            .map_or(true, |items| items.iter().all(|p| permits_kind(p, kind)))
-        && filter["any_of"].as_array().map_or(true, |items| {
-            items.is_empty() || items.iter().any(|p| permits_kind(p, kind))
-        })
-        && !filter["none_of"]
-            .as_array()
-            .is_some_and(|items| items.iter().any(restricts_kind))
-        && !restricts_kind(&filter["not"])
+fn kind_mismatch(filter: &Value, preceding: &[&str], tail: &[&str]) -> bool {
+    let action_kinds = if preceding.first() == Some(&"play") {
+        PLAYABLE
+    } else {
+        ALL_KINDS
+    };
+    let mut printed = preceding
+        .last()
+        .map(|k| kind_bit(k))
+        .filter(|k| *k != 0)
+        .unwrap_or(action_kinds);
+    if preceding.contains(&"level")
+        || matches!(tail, ["with", amount, "dp", ..] if amount.chars().all(|c| c.is_ascii_digit()))
+        || tail.starts_with(&["with", "a", "level"])
+    {
+        printed &= DIGIMON;
+    }
+    kind_bounds(filter).1 & action_kinds != printed
 }
 
 fn leaves<'a>(filter: &'a Value, out: &mut Vec<(&'a str, &'a str)>) {
@@ -139,25 +175,7 @@ pub(super) fn check(value: &Value, text: &str) -> Vec<&'static str> {
                 "or" | "and" | "except" | "digivolution" | "this" | "that"
             )
         }) {
-            let printed_kind = preceding
-                .last()
-                .filter(|w| matches!(**w, "digimon" | "tamer" | "option"))
-                .copied();
-            if printed_kind.map_or_else(
-                || {
-                    if preceding.first() == Some(&"play") {
-                        let tail = &words[i + 1..];
-                        let digimon_only = preceding.contains(&"level")
-                            || matches!(tail, ["with", amount, "dp", ..] if amount.chars().all(|c| c.is_ascii_digit()))
-                            || tail.starts_with(&["with", "a", "level"]);
-                        !permits_kind(filter, "digimon")
-                            || (!digimon_only && !permits_kind(filter, "tamer"))
-                    } else {
-                        restricts_kind(filter)
-                    }
-                },
-                |kind| forced_kind(filter) != Some(kind),
-            ) {
+            if kind_mismatch(filter, preceding, &words[i + 1..]) {
                 findings.push("kind_mismatch");
             }
         }
