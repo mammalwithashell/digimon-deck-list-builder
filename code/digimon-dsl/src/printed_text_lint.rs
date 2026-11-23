@@ -98,14 +98,16 @@ fn has_optional(value: &Value) -> bool {
     }
 }
 
-fn leading_tags(mut text: &str) -> Vec<&str> {
+fn leading_tags(mut text: &str) -> (Vec<&str>, Vec<&str>) {
     let mut tags = Vec::new();
+    let mut zones = Vec::new();
     loop {
         text = text.trim_start();
         if let Some(rest) = text.strip_prefix('{') {
-            let Some((_, tail)) = rest.split_once('}') else {
+            let Some((zone, tail)) = rest.split_once('}') else {
                 break;
             };
+            zones.push(zone);
             text = tail;
             continue;
         }
@@ -121,10 +123,23 @@ fn leading_tags(mut text: &str) -> Vec<&str> {
         let Some((tag, tail)) = rest.split_once(close) else {
             break;
         };
-        tags.push(tag);
+        if matches!(tag, "hand" | "trash" | "breeding" | "battle area" | "field") {
+            zones.push(tag);
+        } else {
+            tags.push(tag);
+        }
         text = tail;
     }
-    tags
+    (tags, zones)
+}
+
+fn main_zone_timing(zone: &str) -> Option<Timing> {
+    match zone {
+        "hand" => Some(Timing::MainFromHand),
+        "trash" => Some(Timing::MainFromTrash),
+        "battle area" | "field" => Some(Timing::MainOnField),
+        _ => None,
+    }
 }
 
 fn timing(tag: &str) -> Option<Timing> {
@@ -198,15 +213,33 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
                 _ => (),
             }
         }
-        let tags = leading_tags(&text);
-        let mapped: Vec<_> = tags.iter().filter_map(|tag| timing(tag)).collect();
+        let (tags, zones) = leading_tags(&text);
+        let main_zones: Vec<_> = zones
+            .iter()
+            .filter_map(|zone| main_zone_timing(zone))
+            .collect();
+        let mapped: Vec<_> = tags
+            .iter()
+            .filter_map(|tag| timing(tag))
+            .flat_map(|t| {
+                if t == Timing::Main && !main_zones.is_empty() {
+                    main_zones.clone()
+                } else {
+                    vec![t]
+                }
+            })
+            .collect();
         let timing_matches = match clause {
             ClauseSpec::Triggered(c) => mapped.iter().any(|t| match &c.when {
                 TimingSet::Single(when) => {
-                    when == t || (*t == Timing::Main && *when == Timing::MainFromHand)
+                    when == t
+                        || (zones.is_empty() && *t == Timing::Main && *when == Timing::MainFromHand)
                 }
                 TimingSet::Multi(when) => {
-                    when.contains(t) || (*t == Timing::Main && when.contains(&Timing::MainFromHand))
+                    when.contains(t)
+                        || (zones.is_empty()
+                            && *t == Timing::Main
+                            && when.contains(&Timing::MainFromHand))
                 }
             }),
             ClauseSpec::Declarative(c) => {

@@ -163,11 +163,7 @@ fn printed_text_timing_tags_after_zone_icons_and_angle_prefixes() {
         );
         assert!(check(&format!("- when: main_from_hand\n  text: '{text}'"), &text).is_empty());
     }
-    for text in [
-        "{Security} [Main] Draw 1.",
-        "＜Main＞ Draw 1.",
-        "<Main> Draw 1.",
-    ] {
+    for text in ["＜Main＞ Draw 1.", "<Main> Draw 1."] {
         assert!(check(&format!("- when: main_from_hand\n  text: '{text}'"), text).is_empty());
         assert_eq!(
             check(&format!("- when: on_security\n  text: '{text}'"), text),
@@ -190,6 +186,56 @@ fn printed_text_timing_tags_after_zone_icons_and_angle_prefixes() {
             expected
         );
     }
+}
+
+#[test]
+fn printed_text_main_timing_preserves_the_activation_zone() {
+    for (zone, timing) in [
+        ("{Hand}", "main_from_hand"),
+        ("[Hand]", "main_from_hand"),
+        ("{Trash}", "main_from_trash"),
+        ("[Trash]", "main_from_trash"),
+        ("{Battle Area}", "main_on_field"),
+        ("{Field}", "main_on_field"),
+    ] {
+        let text = format!("{zone} [Main] Draw 1.");
+        for authored in ["main_from_hand", "main_from_trash", "main_on_field", "main"] {
+            let expected = if authored == timing {
+                vec![]
+            } else {
+                vec!["timing_tag_mismatch"]
+            };
+            assert_eq!(
+                check(&format!("- when: {authored}\n  text: '{text}'"), &text),
+                expected,
+                "{zone} with {authored}"
+            );
+        }
+    }
+    let text = "{Trash}[Main] Draw 1.";
+    assert!(check(&format!("- when: main_from_trash\n  text: '{text}'"), text).is_empty());
+    assert_eq!(
+        check(&format!("- when: main_from_hand\n  text: '{text}'"), text),
+        vec!["timing_tag_mismatch"]
+    );
+    let text = "{Hand} {Trash} [Main] Draw 1.";
+    assert!(check(
+        &format!("- when: [main_from_hand, main_from_trash]\n  text: '{text}'"),
+        text
+    )
+    .is_empty());
+    let text = "{Breeding} [Start of Your Main Phase] Draw 1.";
+    assert!(check(
+        &format!("- when: start_of_your_main_phase\n  text: '{text}'"),
+        text
+    )
+    .is_empty());
+    let text = "{Security} [Main] Draw 1.";
+    assert!(check(&format!("- when: main\n  text: '{text}'"), text).is_empty());
+    assert_eq!(
+        check(&format!("- when: main_from_hand\n  text: '{text}'"), text),
+        vec!["timing_tag_mismatch"]
+    );
 }
 
 #[test]
