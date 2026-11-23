@@ -169,3 +169,51 @@ pub fn opponent_bounces(r: &mut DebugRunner, opp_src: PermanentHandle, mine: Per
     r.game.set_effect_source_player_for_test(None);
     r.game.drain_effect_queue();
 }
+
+/// Put `tamer` on player 0's field over face-down `stock` (bottom first).
+pub fn stocked(r: &mut DebugRunner, tamer: &str, stock: &[&str]) -> PermanentHandle {
+    let mut ids: Vec<&str> = stock.to_vec();
+    ids.push(tamer);
+    let h = r.place_stack(0, &ids);
+    let p = &mut r.game.players[0].battle_area[h.index as usize];
+    let n = p.card_sources.len();
+    for s in &mut p.card_sources[..n - 1] {
+        s.face_down = true;
+    }
+    h
+}
+
+pub fn main_action(h: PermanentHandle) -> u16 {
+    use digimon_engine::action::space::{
+        EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
+    };
+    FIELD_EFFECT_START + h.index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN
+}
+
+pub fn main_legal(r: &mut DebugRunner, h: PermanentHandle) -> bool {
+    r.game.enter_main_phase();
+    // Entering Main fires Start of Your Main Phase; skip that prompt here.
+    while r.pending_selection_view().is_some_and(|v| v.is_optional) {
+        r.decline_prompt().unwrap();
+    }
+    build_action_mask(&r.game, 0)[main_action(h) as usize] > 0.5
+}
+
+pub fn activate_main(r: &mut DebugRunner, h: PermanentHandle) {
+    if !main_legal(r, h) {
+        let m = build_action_mask(&r.game, 0);
+        let on: Vec<usize> = (0..m.len()).filter(|&i| m[i] > 0.5).collect();
+        panic!("[Main] not activatable: action {} idx {} legal {:?}", main_action(h), h.index, on);
+    }
+    r.game.decode_action(main_action(h), 0);
+}
+
+/// Answer each "which Tamer" prompt while paying a face-down-card cost.
+pub fn pay_tamer_stock(r: &mut DebugRunner) {
+    while let Some(v) = r.pending_selection_view() {
+        if v.is_optional || !v.prompt.contains("face-down") {
+            break;
+        }
+        r.execute_action(0, v.valid_action_ids[0]).unwrap();
+    }
+}

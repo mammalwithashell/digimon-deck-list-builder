@@ -15,6 +15,8 @@ mod bt27_057;
 mod bt27_061;
 mod bt27_074;
 mod bt27_078;
+mod bt27_093;
+mod bt27_095;
 mod bt27_fx;
 mod common;
 mod st23_01;
