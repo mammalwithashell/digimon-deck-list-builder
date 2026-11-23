@@ -17029,9 +17029,11 @@
     "BT27-017": {
       "path": "bt27/BT27-017.yaml",
       "predicates": [
+        "color_is",
         "dp_lte",
         "is_source_permanent",
         "kind",
+        "level_eq",
         "name_is",
         "opponents_turn",
         "owner",
@@ -17054,9 +17056,11 @@
         "all_of",
         "any_permanent",
         "binding_present",
+        "color_is",
         "equals",
         "host_kind_is",
         "kind",
+        "level_eq",
         "not",
         "owner",
         "source_count",
@@ -17084,7 +17088,9 @@
       "predicates": [
         "all_of",
         "binding_present",
+        "color_is",
         "kind",
+        "level_eq",
         "not"
       ],
       "timings": [
@@ -17108,8 +17114,10 @@
         "all_of",
         "any_of",
         "binding_present",
+        "color_is",
         "is_unsuspended",
         "kind",
+        "level_eq",
         "not"
       ],
       "timings": [
@@ -17133,10 +17141,12 @@
       "predicates": [
         "any_of",
         "can_unsuspend",
+        "color_is",
         "event_target_kind",
         "is_source_permanent",
         "is_unsuspended",
         "kind",
+        "level_eq",
         "name_is",
         "source_is_unsuspended",
         "trait_has"
@@ -17158,8 +17168,10 @@
     "BT27-071": {
       "path": "bt27/BT27-071.yaml",
       "predicates": [
+        "color_is",
         "is_source_permanent",
         "kind",
+        "level_eq",
         "name_is",
         "trait_has"
       ],
@@ -36868,6 +36880,12 @@
       "BT26-083",
       "BT26-084",
       "BT26-103",
+      "BT27-017",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-055",
+      "BT27-071",
       "BT3-054",
       "BT3-077",
       "BT3-093",
@@ -40792,6 +40810,12 @@
       "BT26-083",
       "BT26-084",
       "BT26-103",
+      "BT27-017",
+      "BT27-026",
+      "BT27-038",
+      "BT27-048",
+      "BT27-055",
+      "BT27-071",
       "BT3-054",
       "BT3-077",
       "BT4-011",

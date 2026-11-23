@@ -9,6 +9,14 @@ traits: ["Giant Bird", "Kurata's Army", Bio]
 form: Armor Form
 attribute: Data
 
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+
 effects:
   - kind: grant_keyword
     keyword: ArmorPurge

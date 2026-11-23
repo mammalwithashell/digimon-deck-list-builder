@@ -6,9 +6,9 @@
 
 ## Breeding-area deletion as an interactive fixed play-cost payment [G-ENGINE-BREEDING-DELETION-PAYMENT]
 
-- **Status:** Open. BT27-075, BT27-076 and BT27-079.
-- **Requirement:** Offer the correct level of Digimon in breeding (alone or alongside battle-area candidates as printed), and grant the fixed reduction only after the chosen deletion succeeds.
-- **Current boundary:** The DSL deletion receipt expansion retains only battle-area handles; `trash_breeding_permanent` is a trash operation, not a deletion with a successful payment receipt. `delete_for_cost_reduction` derives an override from the deleted card's play cost, not the printed fixed amount. Do not substitute battle-area-only candidates or grant a reduction for a prevented deletion.
+- **Status:** Open. BT27-075.
+- **Requirement:** Offer the level 2 Digimon in the breeding area and grant the fixed reduction only after the chosen deletion succeeds.
+- **Current boundary:** The DSL deletion receipt expansion retains only battle-area handles; `trash_breeding_permanent` is a trash operation, not a deletion with a successful payment receipt.
 
 ## Player-directed forced attacks — resolved 2026-11-09
 

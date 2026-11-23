@@ -35,3 +35,28 @@ fn playing_with_no_egg_costs_three_and_grants_blocker() {
     );
     assert!(r.pending_selection().is_none());
 }
+
+#[test]
+fn deletion_recycles_exactly_two_gizmon_to_play_at() {
+    gizmon_recycles_two_to_play_from_trash(CARD, GIZMON);
+}
+
+#[test]
+#[ignore = "G-ENGINE-BREEDING-DELETION-PAYMENT"]
+fn playing_may_delete_the_level_two_in_breeding_for_two_memory() {
+    let mut egg = digimon_engine::debug_runner::make_test_card("TEXT-EGG", "Level 2");
+    egg.card_kind = digimon_engine::enums::CardKind::DigiEgg;
+    egg.level = Some(2);
+    let mut r = start(builder(CARD).add_card(egg).hand(0, &[CARD]));
+    r.place_in_breeding(0, "TEXT-EGG");
+    let before = r.memory();
+    action(&mut r, 0, PLAY_HAND_START);
+    r.accept_optional_trigger().unwrap();
+    action(
+        &mut r,
+        0,
+        digimon_engine::action::space::BREEDING_SELECT_PLAYER_0,
+    );
+    assert_eq!(before - r.memory(), 1);
+    assert!(r.game.players[0].breeding_area.is_none());
+}

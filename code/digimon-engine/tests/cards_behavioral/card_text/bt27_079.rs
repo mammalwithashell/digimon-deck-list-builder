@@ -14,6 +14,9 @@
 use super::bt27_common::*;
 use digimon_engine::action::space::PLAY_HAND_START;
 use digimon_engine::enums::Keyword;
+use digimon_engine::selection::SelectionKind;
+
+const CARD: &str = "BT27-079";
 
 #[test]
 fn playing_without_a_level_four_costs_nine_and_grants_both_keywords() {
@@ -27,5 +30,47 @@ fn playing_without_a_level_four_costs_nine_and_grants_both_keywords() {
     };
     assert!(r.game.has_keyword(h, Keyword::Blocker));
     assert!(r.game.has_keyword(h, Keyword::Retaliation));
+    assert_cannot_digivolve(&r, h);
     assert!(r.pending_selection().is_none());
+}
+
+#[test]
+fn retaliation_deletes_the_digimon_that_won_the_battle() {
+    let mut r = start(builder(CARD));
+    delete_in_battle(&mut r, CARD);
+    assert!(r.game.players[1].battle_area.is_empty());
+    assert_eq!(ids(&r, &r.game.players[1].trash), [HIGH]);
+    assert!(r.pending_selection().is_none());
+}
+
+#[test]
+#[ignore = "G-DSL-FIXED-DELETION-COST-RECEIPT"]
+fn level_four_in_battle_area_pays_fixed_reduction() {
+    fixed_play_cost_payment(CARD, 4, 9, 6);
+}
+
+#[test]
+fn deletion_offers_kuratas_army_from_hand_or_trash_at_cost_five_or_less() {
+    for choice in [Some(TAMER), Some(KURATA), None] {
+        let mut r = start(builder(CARD).hand(0, &[TAMER, BOUNDARY, CARD]));
+        r.inject_trash(0, KURATA);
+        delete_in_battle(&mut r, CARD);
+        let kind = r.pending_selection().unwrap().kind.clone();
+        assert!(matches!(kind, SelectionKind::UnionZone { .. }));
+        r.assert_prompt(kind, true, 0);
+        assert_eq!(candidates(&r), [KURATA, TAMER]);
+        let before = r.memory();
+        if let Some(id) = choice {
+            r.choose_prompt_card(id, None).unwrap();
+            assert_eq!(
+                ids(&r, &r.game.players[0].battle_area[0].card_sources),
+                [id]
+            );
+        } else {
+            r.decline_prompt().unwrap();
+            assert!(r.game.players[0].battle_area.is_empty());
+        }
+        assert_eq!(r.memory(), before);
+        assert!(r.pending_selection().is_none());
+    }
 }

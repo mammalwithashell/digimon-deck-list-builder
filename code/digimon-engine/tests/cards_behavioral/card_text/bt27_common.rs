@@ -1,14 +1,19 @@
-pub(super) use super::common::{action, candidates, start};
-use digimon_engine::action::space::{encode_attack, encode_digivolve, SECURITY_TARGET};
+pub(super) use super::common::{action, candidates, ids, next_turn, start};
+use digimon_engine::action::space::{
+    encode_attack, encode_digivolve, PLAY_HAND_START, SECURITY_TARGET,
+};
 use digimon_engine::card_data::EvoCost;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, Keyword};
+use digimon_engine::selection::SelectionKind;
 
 pub(super) const TAMER: &str = "TEXT-KURATA-TAMER";
 pub(super) const BOUNDARY: &str = "TEXT-KURATA-11000";
 pub(super) const HIGH: &str = "TEXT-KURATA-12000";
 pub(super) const KURATA: &str = "TEXT-KURATA-NAME";
 pub(super) const EVOLUTION: &str = "TEXT-KURATA-EVOLUTION";
+pub(super) const GIZMON: &str = "TEXT-KURATA-GIZMON";
+pub(super) const XT: &str = "TEXT-KURATA-XT";
 const FILLER: &str = "TEXT-KURATA-FILLER";
 
 pub(super) fn builder(card: &str) -> DebugRunnerBuilder {
@@ -40,12 +45,146 @@ pub(super) fn builder(card: &str) -> DebugRunnerBuilder {
         .add_card(boundary)
         .add_card(high)
         .add_card(evolution)
+        .add_card(make_test_card(GIZMON, "Gizmon: AT"))
+        .add_card(make_test_card(XT, "Gizmon: XT"))
         .add_card(make_test_card(FILLER, "Filler"))
         .deck(0, &[FILLER; 30])
         .deck(1, &[FILLER; 30])
         .security(0, &[FILLER; 5])
         .security(1, &[FILLER; 5])
         .memory(10)
+}
+
+pub(super) fn delete_in_battle(r: &mut DebugRunner, card: &str) {
+    let target = r.place_on_field(0, card, Some(0));
+    delete_suspended_target_in_battle(r, target);
+}
+
+fn delete_suspended_target_in_battle(
+    r: &mut DebugRunner,
+    target: digimon_engine::permanent::PermanentHandle,
+) {
+    r.game.players[0].battle_area[target.index as usize].is_suspended = true;
+    let attacker = r.place_on_field(1, HIGH, Some(0));
+    next_turn(r);
+    action(
+        r,
+        1,
+        encode_attack(attacker.index as u16, target.index as u16),
+    );
+}
+
+pub(super) fn armor_purge_in_battle(card: &str) {
+    for accept in [false, true] {
+        let mut r = start(builder(card));
+        let host = r.place_stack(0, &[BOUNDARY, card]);
+        delete_suspended_target_in_battle(&mut r, host);
+        if r.current_phase() == digimon_engine::enums::GamePhase::CounterTiming {
+            r.assert_prompt(SelectionKind::Hand, true, 0);
+            r.decline_prompt().unwrap();
+        }
+        r.assert_prompt(SelectionKind::Replacement, true, 0);
+        if accept {
+            r.accept_optional_trigger().unwrap();
+            assert_eq!(
+                ids(&r, &r.game.players[0].battle_area[0].card_sources),
+                [BOUNDARY]
+            );
+            assert_eq!(ids(&r, &r.game.players[0].trash), [card]);
+        } else {
+            r.decline_optional_trigger().unwrap();
+            assert!(r.game.players[0].battle_area.is_empty());
+            let mut trashed = ids(&r, &r.game.players[0].trash);
+            trashed.sort();
+            assert_eq!(trashed, [card, BOUNDARY]);
+        }
+        assert!(r.pending_selection().is_none());
+    }
+}
+
+pub(super) fn gizmon_recycles_two_to_play_from_trash(card: &str, reward: &str) {
+    let payments = ["TEXT-PAY-GIZMON-A", "TEXT-PAY-GIZMON-B"];
+    for (accept, play) in [(false, false), (true, false), (true, true)] {
+        let mut r = start(
+            builder(card)
+                .add_card(make_test_card(payments[0], "ProtoGizmon"))
+                .add_card(make_test_card(payments[1], "Gizmon Prototype")),
+        );
+        for entry in [payments[0], payments[1], reward, BOUNDARY] {
+            r.inject_trash(0, entry);
+        }
+        delete_in_battle(&mut r, card);
+        r.assert_prompt(SelectionKind::Replacement, true, 0);
+        if !accept {
+            r.decline_optional_trigger().unwrap();
+            assert_eq!(r.trash_size(0), 5);
+            assert!(r.pending_selection().is_none());
+            continue;
+        }
+        r.accept_optional_trigger().unwrap();
+        for payment in payments {
+            let kind = r.pending_selection().unwrap().kind.clone();
+            assert!(matches!(kind, SelectionKind::CountCappedMultiSelect { .. }));
+            r.assert_prompt(kind, false, 0);
+            assert!(!candidates(&r).contains(&BOUNDARY.to_string()));
+            r.choose_prompt_card(payment, None).unwrap();
+        }
+        let mut returned = ids(&r, &r.game.players[0].deck[..2]);
+        returned.sort();
+        assert_eq!(returned, payments);
+        r.assert_prompt(SelectionKind::Trash, true, 0);
+        assert_eq!(candidates(&r), [reward]);
+        if play {
+            r.choose_prompt_card(reward, None).unwrap();
+            assert_eq!(
+                ids(&r, &r.game.players[0].battle_area[0].card_sources),
+                [reward]
+            );
+        } else {
+            r.decline_prompt().unwrap();
+            assert!(r.game.players[0].battle_area.is_empty());
+        }
+        assert!(r.pending_selection().is_none());
+    }
+}
+
+pub(super) fn fixed_play_cost_payment(card: &str, level: u8, full: i16, reduction: i16) {
+    const COST: &str = "TEXT-KURATA-COST";
+    for accept in [false, true] {
+        let mut payment = make_test_card(COST, "Cost candidate");
+        payment.level = Some(level);
+        payment.play_cost = 1;
+        let mut decoy = make_test_card("TEXT-COST-DECOY", "Wrong level");
+        decoy.level = Some(level + 1);
+        let mut r = start(
+            builder(card)
+                .add_card(payment)
+                .add_card(decoy)
+                .hand(0, &[card]),
+        );
+        r.place_on_field(0, COST, Some(0));
+        r.place_on_field(0, "TEXT-COST-DECOY", Some(0));
+        r.place_on_field(1, COST, Some(0));
+        let before = r.memory();
+        action(&mut r, 0, PLAY_HAND_START);
+        r.assert_prompt(SelectionKind::Replacement, true, 0);
+        if accept {
+            r.accept_optional_trigger().unwrap();
+            r.assert_prompt(SelectionKind::OwnField, false, 0);
+            assert_eq!(candidates(&r), [COST]);
+            r.choose_prompt_card(COST, None).unwrap();
+            assert_eq!(ids(&r, &r.game.players[0].trash), [COST]);
+        } else {
+            r.decline_optional_trigger().unwrap();
+            assert_eq!(r.trash_size(0), 0);
+        }
+        assert_eq!(
+            before - r.memory(),
+            if accept { full - reduction } else { full }
+        );
+        assert_eq!(r.game.players[1].battle_area.len(), 1);
+        assert!(r.pending_selection().is_none());
+    }
 }
 
 pub(super) fn tamer_evolution(card: &str, cost: i16, keywords: &[Keyword]) {
@@ -86,4 +225,74 @@ pub(super) fn security_plays_self(card: &str) {
         card
     );
     assert!(r.pending_selection().is_none());
+}
+
+pub(super) fn evolving(
+    card: &str,
+    base: digimon_engine::card_data::CardData,
+    cost: i16,
+) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let base_id = base.card_id.clone();
+    let mut r = start(builder(card).add_card(base).hand(0, &[card]));
+    let host = r.place_on_field(0, &base_id, Some(0));
+    let before = r.memory();
+    action(&mut r, 0, encode_digivolve(0, host.index as u16));
+    assert_eq!(before - r.memory(), cost);
+    assert_eq!(
+        ids(&r, &r.game.players[0].battle_area[0].card_sources),
+        [base_id.as_str(), card]
+    );
+    (r, host)
+}
+
+pub(super) fn standard_routes(
+    card: &str,
+    color: CardColor,
+    level: u8,
+    cost: i16,
+    keywords: &[Keyword],
+) {
+    for color in [color, CardColor::Purple] {
+        let mut base = make_test_card("TEXT-BT27-STD-BASE", "Standard base");
+        base.colors = vec![color];
+        base.level = Some(level);
+        let (r, host) = evolving(card, base, cost);
+        for &kw in keywords {
+            assert!(r.game.has_keyword(host, kw), "{card} lacks {kw:?}");
+        }
+        assert!(r.pending_selection().is_none());
+    }
+}
+
+pub(super) fn evolve_against_an_enemy(
+    card: &str,
+) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut base = make_test_card("TEXT-PURPLE-ROOKIE", "Purple level 3");
+    base.colors = vec![CardColor::Purple];
+    let mut r = start(builder(card).add_card(base).hand(0, &[card]));
+    let host = r.place_on_field(0, "TEXT-PURPLE-ROOKIE", Some(0));
+    r.place_on_field(1, HIGH, Some(0));
+    action(&mut r, 0, encode_digivolve(0, host.index as u16));
+    (r, host)
+}
+
+pub(super) fn attack_security(
+    r: &mut DebugRunner,
+    host: digimon_engine::permanent::PermanentHandle,
+) {
+    action(
+        r,
+        host.player,
+        encode_attack(host.index as u16, SECURITY_TARGET),
+    );
+}
+
+pub(super) fn assert_cannot_digivolve(
+    r: &DebugRunner,
+    host: digimon_engine::permanent::PermanentHandle,
+) {
+    assert!(r
+        .game
+        .modifiers
+        .has(host, digimon_engine::enums::ModifierType::CannotDigivolve));
 }

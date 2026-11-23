@@ -31,7 +31,25 @@ fn may_play_akihiro_kurata_from_hand_for_free_or_decline() {
             r.decline_prompt().unwrap();
         }
         assert_eq!(r.game.players[0].battle_area.len(), 1 + usize::from(accept));
+        assert_cannot_digivolve(
+            &r,
+            digimon_engine::permanent::PermanentHandle {
+                player: 0,
+                index: 0,
+            },
+        );
         assert_eq!(before - r.memory(), 6);
         assert!(r.pending_selection().is_none());
     }
+}
+
+#[test]
+#[ignore = "G-DSL-FIXED-DELETION-COST-RECEIPT"]
+fn level_three_in_battle_area_pays_fixed_reduction() {
+    fixed_play_cost_payment(CARD, 3, 6, 4);
+}
+
+#[test]
+fn deletion_recycles_exactly_two_gizmon_to_play_xt() {
+    gizmon_recycles_two_to_play_from_trash(CARD, XT);
 }

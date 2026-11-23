@@ -1,3 +1,9 @@
+## Credit a fixed reduction only for an actual deletion payment [G-DSL-FIXED-DELETION-COST-RECEIPT]
+
+- **Status:** Open. BT27-076 and BT27-079 require a level 3 or 4 battle-area Digimon respectively; neither names the breeding area.
+- **Requirement:** The chosen permanent must actually be deleted before the play receives the fixed reduction, even if a deletion replacement can prevent the payment.
+- **Current boundary:** `delete_for_cost_reduction` credits the chosen card's own play cost after the deletion receipt is confirmed. A normal `delete_permanent` followed by the generic fixed-amount payment completion does not gate payment completion on that receipt.
+
 ## Place multiple hidden deck cards under a permanent in one event [G-DSL-CONCEALED-DECK-TO-SOURCE-BATCH]
 
 - **Status:** Open. BT27-098's all-turns deletion observer may suspend the Tamer to place the top two cards of the deck face down beneath it in one placement.

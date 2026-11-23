@@ -16,8 +16,24 @@
 
 use super::bt27_common::*;
 use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
-use digimon_engine::enums::Keyword;
+use digimon_engine::enums::{CardColor, Keyword};
 use digimon_engine::selection::SelectionKind;
+
+#[test]
+fn armor_purge_can_save_the_base_or_be_declined() {
+    armor_purge_in_battle("BT27-071");
+}
+
+#[test]
+fn both_printed_standard_digivolution_routes_grant_keywords() {
+    standard_routes(
+        "BT27-071",
+        CardColor::Black,
+        5,
+        4,
+        &[Keyword::ArmorPurge, Keyword::Reboot, Keyword::Blocker],
+    );
+}
 
 #[test]
 #[ignore = "G-ENGINE-TAMER-BASE-AS-TAMER"]
@@ -45,5 +61,92 @@ fn when_attacking_de_digivolves_an_opposing_stack_to_level_three() {
     let stack = &r.game.players[1].battle_area[opponent.index as usize];
     assert_eq!(stack.card_sources.len(), 1);
     assert_eq!(stack.top_card().card_id(&r.game.card_data), BOUNDARY);
+    assert!(r.pending_selection().is_none());
+}
+
+#[test]
+fn bio_thunderbirdmon_evolution_grants_only_opposing_digimon_effect_immunity() {
+    use digimon_engine::debug_runner::make_test_card;
+    use digimon_engine::enums::EffectSourceKind;
+    let mut base = make_test_card("TEXT-BIO-THUNDERBIRD", "Thunderbirdmon");
+    base.traits = vec!["Bio".into()];
+    base.level = Some(4);
+    let (mut r, host) = evolving("BT27-071", base, 5);
+    assert_cannot_digivolve(&r, host);
+    assert!(r
+        .game
+        .modifiers
+        .is_unaffected_by(host, 1, EffectSourceKind::Digimon));
+    assert!(!r
+        .game
+        .modifiers
+        .is_unaffected_by(host, 0, EffectSourceKind::Digimon));
+    assert!(!r
+        .game
+        .modifiers
+        .is_unaffected_by(host, 1, EffectSourceKind::Tamer));
+    assert!(!r
+        .game
+        .modifiers
+        .is_unaffected_by(host, 1, EffectSourceKind::Option));
+    next_turn(&mut r);
+    assert!(r
+        .game
+        .modifiers
+        .is_unaffected_by(host, 1, EffectSourceKind::Digimon));
+    next_turn(&mut r);
+    assert!(!r
+        .game
+        .modifiers
+        .is_unaffected_by(host, 1, EffectSourceKind::Digimon));
+}
+
+#[test]
+fn field_counter_de_digivolves_two_before_the_blocker_decision() {
+    const CARD: &str = "BT27-071";
+    let mut r = start(builder(CARD));
+    let defender = r.place_on_field(0, CARD, Some(0));
+    let attacker = r.place_stack(1, &[BOUNDARY, EVOLUTION, EVOLUTION]);
+    let second = r.place_on_field(1, GIZMON, Some(0));
+    next_turn(&mut r);
+    action(
+        &mut r,
+        1,
+        encode_attack(attacker.index as u16, SECURITY_TARGET),
+    );
+    r.assert_prompt(SelectionKind::Hand, true, 0);
+    assert_eq!(
+        r.pending_selection().unwrap().valid_action_ids,
+        [encode_attack(0, defender.index as u16)]
+    );
+    action(&mut r, 0, encode_attack(0, defender.index as u16));
+    r.assert_prompt(SelectionKind::OppField, false, 0);
+    assert_eq!(candidates(&r), [EVOLUTION, GIZMON]);
+    r.choose_prompt_card(EVOLUTION, None).unwrap();
+    assert_eq!(
+        ids(
+            &r,
+            &r.game.players[1].battle_area[attacker.index as usize].card_sources
+        ),
+        [BOUNDARY]
+    );
+    r.assert_prompt(SelectionKind::OwnField, true, 0);
+    r.decline_prompt().unwrap();
+    attack_security(&mut r, second);
+    r.assert_prompt(SelectionKind::OwnField, true, 0);
+    r.choose_prompt_card(CARD, None).unwrap();
+    assert!(r.game.players[0].battle_area[defender.index as usize].is_suspended);
+    assert_eq!(r.security_count(0), 4);
+    assert!(r.pending_selection().is_none());
+}
+
+#[test]
+fn reboot_unsuspends_darkdramon_at_the_start_of_the_opponents_turn() {
+    let mut r = start(builder("BT27-071"));
+    let host = r.place_on_field(0, "BT27-071", Some(0));
+    attack_security(&mut r, host);
+    assert!(r.game.players[0].battle_area[host.index as usize].is_suspended);
+    next_turn(&mut r);
+    assert!(!r.game.players[0].battle_area[host.index as usize].is_suspended);
     assert!(r.pending_selection().is_none());
 }

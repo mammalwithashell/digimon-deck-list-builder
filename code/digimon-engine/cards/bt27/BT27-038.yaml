@@ -9,6 +9,14 @@ traits: ["Mythical Beast", "Kurata's Army", Bio]
 form: Armor Form
 attribute: Free
 
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+
 effects:
   - kind: grant_keyword
     keyword: ArmorPurge
