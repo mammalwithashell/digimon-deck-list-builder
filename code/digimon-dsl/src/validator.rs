@@ -1050,7 +1050,23 @@ fn validate_step(
             validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
         }
         StepSpec::PlaceDeckTopUnder(args) => {
-            validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
+            let path = format!("{prefix}.target");
+            validate_binding_ref(&args.target, &path, card_id, errors);
+            let card_only = match &args.target {
+                BindingRef::Named(name) => matches!(name.as_str(), "self" | "event_card"),
+                BindingRef::Structured(reference) => {
+                    reference.top_of.is_some()
+                        || reference.deck_top.is_some()
+                        || reference.security_top.is_some()
+                }
+            };
+            if card_only {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path,
+                    message: "place_deck_top_under target must resolve to a permanent".into(),
+                });
+            }
             if args.count == 0 {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
@@ -2348,8 +2364,7 @@ fn validate_step_binding_scope(
                     .as_ref()
                     .or(reference.binding.as_ref())
                     .or(reference.of_permanent.as_ref())
-                    .or(reference.played_carrier.as_ref())
-                    .or(reference.top_of.as_ref()),
+                    .or(reference.played_carrier.as_ref()),
                 _ => None,
             };
             if let Some(name) = name {
