@@ -18350,7 +18350,6 @@
    "clause_count": 5,
    "constructs": [
     "verb:add_modifier",
-    "verb:add_player_modifier",
     "verb:if",
     "verb:per_selected",
     "verb:return_to_deck",
