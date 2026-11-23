@@ -155,3 +155,17 @@ effects:
       all_of:
         - kind: digimon
         - level_gte: 3
+
+  # ─── Link Effect: <Blocker> (card-face link box; bundle "### Link Effect") ─
+  # BT25-101 idiom for a linked keyword grant.
+  - kind: grant_keyword
+    scope: linked
+    keyword: Blocker
+    summary: "[Link] <Blocker>"
+
+  # ─── Link DP +2000 (card-face link box) ─────────────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon (host)"
