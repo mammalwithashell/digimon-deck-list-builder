@@ -222,3 +222,201 @@ fn attacker_deleted_by_security_battle_stops_checking() {
     assert_eq!(field_top_id(&r, 0, 0), FILL);
     assert_eq!(r.security_count(1), 3, "only the first check was made");
 }
+
+// ─── The attacker digivolves into a NEW Digimon mid-check ────────────────────
+//
+// The checks follow the attacker's stack identity
+// (`Permanent::battle_identity`). A DNA digivolution builds a new stack, so
+// the identity is gone. That is what the rules say: CR 4.3 8-2-1 (the
+// stacked cards digivolve "into 1 new Digimon"), 8-2-2-1-3 ("If a Digimon was
+// attacking before a digivolution, the attacking Digimon is considered to be
+// no longer present") and 13-1-5 (a Digimon no longer present in the battle
+// area makes no more security checks). DCGO agrees: the DNA branch of
+// `PlayCardClass.PlayCard` (CardController.cs) removes both material
+// Permanents and creates a new one, so `ISecurityCheck.StopSecurityCheck`
+// sees the old `AttackingPermanent` without a top card and stops.
+//
+// App fusion is different: CR 4.3 8-4 has no "new Digimon" or "no longer
+// present" rule, the app-fused stack keeps its bottom cards (3-1-3-1-3), and
+// DCGO runs it through the ordinary digivolve onto the same Permanent. The
+// attacker keeps checking.
+
+use std::sync::Arc;
+
+use digimon_engine::card_source::CardHandle;
+use digimon_engine::debug_runner::make_test_dna_card;
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::enums::EffectTiming;
+use digimon_engine::game_actions::AppFuseSourceZone;
+
+fn hand_card(r: &digimon_engine::game::Game, id: &str) -> Option<CardHandle> {
+    r.players[0]
+        .hand
+        .iter()
+        .find(|c| c.card_id(&r.card_data) == id)
+        .map(|c| c.handle())
+}
+
+/// "When this Digimon checks security, DNA digivolve it with `partner` into
+/// RESULT from hand" (a test fixture: no pool card prints it).
+struct DnaOnCheck {
+    attacker: PermanentHandle,
+    partner: PermanentHandle,
+}
+impl CardEffect for DnaOnCheck {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let (attacker, partner) = (self.attacker, self.partner);
+        vec![Effect::on_play(card)
+            .name("DNA digivolve the attacker as it checks security")
+            .timing(EffectTiming::OnSecurityCheck)
+            .process(move |ctx| {
+                let Some(result) = hand_card(ctx.game, "RESULT") else {
+                    return;
+                };
+                ctx.effect_initiated_dna_digivolve(attacker, partner, result, 0, false)
+                    .expect("the DNA digivolution commits");
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn attacker_dna_digivolved_mid_check_stops_checking() {
+    let mut atk = card("ATK", 9000);
+    atk.level = Some(6);
+    atk.keywords = vec![Keyword::SecurityAttackPlus(2)];
+    let mut partner = card("PARTNER", 5000);
+    partner.level = Some(5);
+    let mut result = make_test_dna_card("RESULT", "Result", 6, 5, 0);
+    result.level = Some(7);
+    result.dp = Some(14000);
+    let mut r = DebugRunner::builder()
+        .add_card(atk)
+        .add_card(partner)
+        .add_card(result)
+        .add_card(card(FILL, 2000))
+        .hand(0, &["RESULT"])
+        .deck(0, &[FILL; 6])
+        .deck(1, &[FILL; 6])
+        .security(0, &[FILL; 3])
+        .security(1, &[FILL; 4])
+        .memory(10)
+        .start();
+    r.set_first_player(0);
+    let attacker = r.place_on_field(0, "ATK", Some(0));
+    let partner = r.place_on_field(0, "PARTNER", Some(1));
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Rush, Expiry::EndOfTurn, 0);
+    r.register_effect("ATK", Arc::new(DnaOnCheck { attacker, partner }));
+    let _ = r.attack_player(attacker, 1, false);
+    let prompts = accept_all(&mut r);
+
+    let tops: Vec<String> = (0..r.game.players[0].battle_area.len())
+        .map(|i| field_top_id(&r, 0, i))
+        .collect();
+    assert_eq!(tops, vec!["RESULT".to_string()], "the DNA digivolution happened; prompts {prompts:?}");
+    assert_eq!(
+        r.security_count(1),
+        3,
+        "the attacker is no longer present after the first check (CR 4.3 8-2-2-1-3, \
+         13-1-5): its two remaining checks are not made; prompts {prompts:?}"
+    );
+    assert!(r.game.pending_attack.is_none(), "the attack has ended");
+    assert!(
+        !r.game.players[0].battle_area[0].is_attacking,
+        "the DNA result is not attacking"
+    );
+}
+
+const APP_FUSION_YAML: &str = r#"
+card: TEST-APPFUSE
+name: Test App Fusion Digimon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 9000
+traits: [Appmon]
+alt_paths:
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Kabemon, Gomimon]
+    cost: 0
+"#;
+
+/// "When this Digimon checks security, app fuse it into TEST-APPFUSE from
+/// hand" (a test fixture).
+struct AppFuseOnCheck {
+    host: PermanentHandle,
+}
+impl CardEffect for AppFuseOnCheck {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let host = self.host;
+        vec![Effect::on_play(card)
+            .name("App fuse the attacker as it checks security")
+            .timing(EffectTiming::OnSecurityCheck)
+            .process(move |ctx| {
+                let Some(result) = hand_card(ctx.game, "TEST-APPFUSE") else {
+                    return;
+                };
+                assert!(
+                    ctx.game
+                        .commit_effect_app_fuse(0, host, result, AppFuseSourceZone::Hand),
+                    "the app fusion commits"
+                );
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn attacker_app_fused_mid_check_keeps_checking() {
+    let mut kabe = make_test_card("HOST-KABE", "Kabemon");
+    kabe.level = Some(4);
+    kabe.dp = Some(9000);
+    let mut gomi = make_test_card("HOST-GOMI", "Gomimon");
+    gomi.level = Some(4);
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(APP_FUSION_YAML)
+        .expect("app fusion card")
+        .add_card(kabe)
+        .add_card(gomi)
+        .add_card(card(FILL, 2000))
+        .hand(0, &["TEST-APPFUSE"])
+        .deck(0, &[FILL; 6])
+        .deck(1, &[FILL; 6])
+        .security(0, &[FILL; 3])
+        .security(1, &[FILL; 4])
+        .memory(10)
+        .start();
+    r.set_first_player(0);
+    let host = r.place_on_field(0, "HOST-KABE", Some(0));
+    r.push_linked_owned(host, "HOST-GOMI", 0);
+    r.game
+        .modifiers
+        .grant_keyword(host, Keyword::Rush, Expiry::EndOfTurn, 0);
+    r.game.modifiers.grant_keyword(
+        host,
+        Keyword::SecurityAttackPlus(2),
+        Expiry::EndOfTurn,
+        0,
+    );
+    r.register_effect("HOST-KABE", Arc::new(AppFuseOnCheck { host }));
+    let _ = r.attack_player(host, 1, false);
+    let prompts = accept_all(&mut r);
+
+    assert_eq!(
+        field_top_id(&r, 0, 0),
+        "TEST-APPFUSE",
+        "the app fusion happened; prompts {prompts:?}"
+    );
+    assert_eq!(
+        r.security_count(1),
+        1,
+        "the app-fused Digimon is the same attacker and makes all 3 checks; \
+         prompts {prompts:?}"
+    );
+    assert!(r.game.pending_attack.is_none(), "the attack has ended");
+}
