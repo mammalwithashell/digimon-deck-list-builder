@@ -55,10 +55,33 @@ def _bt20_099_paid_play(selection_method, selected_index=55, **play_overrides):
     "SelectCardEffect.SetTargetCardAndIndicies",
 ])
 def test_paid_effect_play_is_not_emitted_after_the_selection(selection_method):
-    rows, _ = convert_raw.convert(_bt20_099_paid_play(selection_method), cards={})
+    raw = _bt20_099_paid_play(selection_method, play_provenance="effect")
+    rows, _ = convert_raw.convert(raw, cards={})
     [pick] = [row for row in rows if row["type"] == "selection"]
     assert (pick["actor"], pick["card_ids"], pick["card_indexes"]) == (1, ["BT20-030"], [55])
     assert not [row for row in rows if row.get("card_id") == "BT20-030"]
+
+
+@pytest.mark.parametrize("selection_method", [
+    "SelectHandEffect.SetTargetHandCards",
+    "SelectCardEffect.SetTargetCardAndIndicies",
+])
+def test_legacy_paid_effect_play_with_matching_hand_pick_is_unsupported(selection_method):
+    raw = _bt20_099_paid_play(selection_method)
+    with pytest.raises(SystemExit, match="unsupported decision .*ambiguous paid bot play.*CardIndex 55"):
+        convert_raw.convert(raw, cards={})
+
+
+def test_legacy_bot_reveal_then_play_is_not_silently_dropped():
+    # BT13-046 can reveal a non-yellow card and leave it in hand to be played normally.
+    raw = _raw_game()
+    raw.insert(2, {"method": "SelectHandEffect.SetTargetHandCards", "args": [1, [55]],
+                   "card_ids": ["ST1-03"], "tp": 1, "turn": 2})
+    with pytest.raises(SystemExit, match="unsupported decision .*ambiguous paid bot play.*CardIndex 55"):
+        convert_raw.convert(raw, cards={})
+    rows, _ = convert_raw.convert(raw, cards={}, allow_truncated=True)
+    assert rows[-1]["type"] == "selection"
+    assert rows[-1]["card_indexes"] == [55]
 
 
 @pytest.mark.parametrize("boundary", ["different_copy", "different_turn", "direct_set", "direct_provenance"])

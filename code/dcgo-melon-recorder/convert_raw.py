@@ -151,7 +151,7 @@ def pick_card_indexes(args, card_ids):
     return list(args[1])
 
 
-def hand_pick_claims_play(pick, actor, turn, played_index):
+def hand_pick_matches_play(pick, actor, turn, played_index):
     method = pick.get("method")
     if method != "SelectHandEffect.SetTargetHandCards" and not (
             method == "SelectCardEffect.SetTargetCardAndIndicies" and pick.get("zone") == "Hand"
@@ -744,11 +744,14 @@ def convert(rows, cards, allow_truncated=False):
                 if (isinstance(exact, list) and len(exact) == 1 and type(exact[0]) is int
                         and (played_index is not None or r.get("root") == "Hand")):
                     claimed_index = exact[0]
-                # Legacy rows have no resolution ID. Only link an immediately preceding hand pick in the same
-                # turn, not a historical pick of a card that might still be in hand.
+                # A legacy hand pick may reveal a card without moving it. Even an adjacent pick of this exact
+                # copy cannot distinguish an effect play from a direct play after the effect ended.
                 if (claimed_index is not None and claimed_index not in queued_play_indexes
-                        and hand_pick_claims_play(rows[ridx - 1], actor, turn, claimed_index)):
-                    continue
+                        and hand_pick_matches_play(rows[ridx - 1], actor, turn, claimed_index)):
+                    truncated_at = truncated_at or (
+                        "ambiguous paid bot play after hand pick (CardIndex %d, seq %s, step %d)"
+                        % (claimed_index, r.get("seq"), step))
+                    break
             if played_index is not None and played_index not in queued_play_indexes and not bot_paid_play:
                 continue
             if played_index is not None:
