@@ -2362,13 +2362,8 @@ impl Game {
         let Some(player) = self.players.get(destination as usize) else {
             return false;
         };
-        if self.players.get(controller as usize).is_none() {
-            return false;
-        }
-        if self.card_data_for_handle(card).map(|d| d.card_kind) == Some(CardKind::Option) {
-            return self.can_use_option_from_effect(card, controller);
-        }
-        if player.battle_area.len() + required_slots > self.rules.field_slots as usize
+        if self.players.get(controller as usize).is_none()
+            || player.battle_area.len() + required_slots > self.rules.field_slots as usize
         {
             return false;
         }
@@ -2387,32 +2382,6 @@ impl Game {
             _ => return true,
         };
         !self.modifiers.player_has(controller, restriction)
-    }
-
-    /// Whether `controller` could use this Option card via an effect: not
-    /// under `CannotUseOptionCards`, its colour requirement / `<Use Req.>` is
-    /// met (CR 4.3 4-22, checked even for free uses), and an authored card
-    /// has a `[Main]` effect to resolve. The same gates `use_option` applies.
-    fn can_use_option_from_effect(
-        &self,
-        card: crate::card_source::CardHandle,
-        controller: PlayerId,
-    ) -> bool {
-        if self.option_use_blocked(controller) {
-            return false;
-        }
-        let Some(source) = self.card_source_for_handle(card) else {
-            return false;
-        };
-        if !crate::action::mask::option_use_requirement_or_color_available(source, self, controller)
-        {
-            return false;
-        }
-        let authored = self
-            .effects_for_card(source.card_id(&self.card_data), source.handle())
-            .unwrap_or_default();
-        authored.is_empty()
-            || crate::action::mask::option_has_active_main_effect(source, self, controller)
     }
 
     pub fn card(&self, card: crate::card_source::CardHandle) -> &CardData {

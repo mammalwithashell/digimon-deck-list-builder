@@ -148,7 +148,7 @@ mod play_token_bind_as;
 mod predicate_face_down_stack_position;
 mod predicate_leaves_ii;
 mod predicate_is_source_card;
-mod predicate_can_play_option_from_effect;
+mod predicate_can_play_or_use_option;
 mod predicate_play_or_use_cost_lte;
 mod pretty;
 mod protect_others_leave_replacement;

@@ -128,5 +128,5 @@ fn lm_067_reveal_pick_requires_a_card_the_effect_can_play_or_use() {
     let dual = card.dual.as_ref().expect("dual");
     let t = triggered_with(&dual.digimon.effects, CompiledTiming::WhenDigivolving, CompiledTiming::Counter)
         .expect("WD/Counter clause");
-    assert!(format!("{:?}", t.process).contains("can_play_from_effect_without_cost: Some(true)"));
+    assert!(format!("{:?}", t.process).contains("can_play_or_use_from_effect: Some(true)"));
 }

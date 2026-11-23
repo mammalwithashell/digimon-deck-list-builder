@@ -1,4 +1,4 @@
-//! `can_play_from_effect_without_cost` on an Option card: the effect can use
+//! `can_play_or_use_from_effect` on an Option card: the effect can use
 //! it only when its colour requirement is met (CR 4.3 4-22, checked even for
 //! free uses) and Option use isn't prohibited. LM-067 Gundramon filters its
 //! reveal pick with it so an unusable Option is never offered.
@@ -20,7 +20,7 @@ effects:
           of: you
           bind_as: pick
           optional: true
-          filter: { kind: option, can_play_from_effect_without_cost: true }
+          filter: { kind: option, can_play_or_use_from_effect: true }
           prompt: "Pick an Option you could use"
 "#;
 

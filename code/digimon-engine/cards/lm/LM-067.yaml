@@ -66,7 +66,7 @@ dual:
                     all_of:
                       - in_text_contains: "Three Musketeers"
                       - play_or_use_cost_lte: 6
-                      - can_play_from_effect_without_cost: true
+                      - can_play_or_use_from_effect: true
                       - any_of:
                           - kind: digimon
                           - kind: tamer
