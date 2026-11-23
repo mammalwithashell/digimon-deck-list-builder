@@ -78,7 +78,7 @@ fn when_attacking_offers_only_level_four_or_lower_aquatic_or_data_squad_digimon_
     let mut r = runner();
     let attacker = stack(&mut r);
     attack(&mut r, attacker);
-    r.assert_prompt(SelectionKind::Source, true, 0);
+    r.assert_prompt(SelectionKind::Material, true, 0);
     assert_eq!(candidates(&r), vec!["TEXT-AQ4", "TEXT-DS3"]);
 }
 
