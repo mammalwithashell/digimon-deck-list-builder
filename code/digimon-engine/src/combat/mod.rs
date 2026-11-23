@@ -2686,6 +2686,18 @@ impl Game {
     /// Enumerate Raid's printed candidates: opponent unsuspended Digimon tied
     /// for highest DP, excluding the current target because choosing it would
     /// not switch the attack target or fire the observer.
+    ///
+    /// The highest DP is taken over every unsuspended Digimon the opponent
+    /// has, the current target included (§16-23-1: the switch is "to the
+    /// opponent's unsuspended Digimon with the highest DP"; §16-23-4: a tie is
+    /// the activating player's choice). The current target is dropped only
+    /// AFTER the maximum is known, so when it already is the highest, <Raid>
+    /// offers only the other Digimon tied with it, or nothing -- never a
+    /// lower one. DCGO `RaidProcess` (CardEffectCommons/KeyWordEffects/
+    /// Raid.cs) likewise takes `IsMaxDP` over all unsuspended Digimon without
+    /// excluding the defender. Seen with Medusamon (BT24-017)'s printed
+    /// <Raid> plus Cyclonemon (BT24-011)'s inherited <Raid>: the second one
+    /// offered a lower-DP Digimon after the first had switched to the highest.
     fn raid_switch_candidates(
         &self,
         attacker: PermanentHandle,
@@ -2698,38 +2710,44 @@ impl Game {
         }
 
         let opp = self.player(opp_id);
-        let mut unsuspended: Vec<(u8, i32)> = Vec::new();
+        // (index, DP, is the current attack target)
+        let mut unsuspended: Vec<(u8, i32, bool)> = Vec::new();
         for (index, target) in opp.battle_area.iter().enumerate() {
             let handle = PermanentHandle {
                 player: opp_id,
                 index: index as u8,
             };
-            if !current_target_removed
-                && matches!(current_target, AttackTarget::Digimon(current) if current == handle) {
-                continue;
-            }
+            let is_current = !current_target_removed
+                && matches!(current_target, AttackTarget::Digimon(current) if current == handle);
             if !matches!(target.option_state, crate::permanent::OptionState::Standard) {
                 continue;
             }
             if !self.permanent_is_digimon_for_rules(handle) || target.is_suspended {
                 continue;
             }
-            if self
-                .validate_attack_redirect_target(attacker, AttackTarget::Digimon(handle))
-                .is_err()
+            // The current target is already the attack target: it competes
+            // for the highest DP whether or not it could be redirected to.
+            if !is_current
+                && self
+                    .validate_attack_redirect_target(attacker, AttackTarget::Digimon(handle))
+                    .is_err()
             {
                 continue;
             }
-            unsuspended.push((index as u8, self.effective_dp(handle).unwrap_or(0)));
+            unsuspended.push((
+                index as u8,
+                self.effective_dp(handle).unwrap_or(0),
+                is_current,
+            ));
         }
 
-        let Some(max_dp) = unsuspended.iter().map(|&(_, dp)| dp).max() else {
+        let Some(max_dp) = unsuspended.iter().map(|&(_, dp, _)| dp).max() else {
             return Vec::new();
         };
         unsuspended
             .into_iter()
-            .filter(|&(_, dp)| dp == max_dp)
-            .map(|(index, _)| index)
+            .filter(|&(_, dp, is_current)| dp == max_dp && !is_current)
+            .map(|(index, _, _)| index)
             .collect()
     }
 
