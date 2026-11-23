@@ -32806,6 +32806,153 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "LM-066": {
+   "behaviourally_covered": true,
+   "clause_count": 9,
+   "constructs": [
+    "verb:add_modifier",
+    "verb:battle",
+    "verb:cancel_replacement",
+    "verb:if",
+    "verb:per_selected",
+    "verb:return_to_deck",
+    "verb:select_any_permanent",
+    "verb:select_count_capped_multi",
+    "verb:select_opponent_permanent",
+    "verb:suspend",
+    "verb:unsuspend",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:binding_present",
+    "predicate:color_is",
+    "predicate:count_gte",
+    "predicate:is_suspended",
+    "predicate:is_unsuspended",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:none_of",
+    "predicate:owner",
+    "predicate:play_cost_gte",
+    "predicate:replacement_cause",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:main",
+    "timing:when_attacking",
+    "timing:when_digivolving",
+    "keyword:Blocker",
+    "keyword:Piercing",
+    "keyword:Vortex"
+   ],
+   "effect_clause_count": 7,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "clause:replacement",
+    "predicate:replacement_cause",
+    "trigger:when_would_leave_battle_area",
+    "verb:cancel_replacement"
+   ],
+   "untested_constructs": []
+  },
+  "LM-067": {
+   "behaviourally_covered": true,
+   "clause_count": 8,
+   "constructs": [
+    "verb:de_digivolve",
+    "verb:delete_permanent",
+    "verb:if",
+    "verb:per_selected",
+    "verb:place_as_bottom_source",
+    "verb:place_remainder_on_deck",
+    "verb:play_from_revealed_free",
+    "verb:reveal_top_deck",
+    "verb:select_count_capped_multi",
+    "verb:select_own_permanent",
+    "verb:select_own_sources",
+    "verb:select_reveal_buckets",
+    "verb:select_union_zone",
+    "verb:trash_selected_sources_as_cost",
+    "verb:use_option_from_revealed",
+    "predicate:all_of",
+    "predicate:any_field_permanent",
+    "predicate:any_of",
+    "predicate:any_permanent",
+    "predicate:binding_card_kind",
+    "predicate:binding_count_eq",
+    "predicate:binding_present",
+    "predicate:color_is",
+    "predicate:in_text_contains",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:owner",
+    "predicate:play_cost_lte",
+    "predicate:play_or_use_cost_lte",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:counter",
+    "timing:main",
+    "timing:when_attacking",
+    "timing:when_digivolving",
+    "keyword:Blocker",
+    "keyword:Fragment",
+    "keyword:Reboot"
+   ],
+   "effect_clause_count": 6,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "keyword:Fragment"
+   ],
+   "untested_constructs": []
+  },
+  "LM-068": {
+   "behaviourally_covered": false,
+   "clause_count": 7,
+   "constructs": [
+    "verb:delete_permanent",
+    "verb:if",
+    "verb:play_from_trash_free",
+    "verb:select_effect_choice",
+    "verb:select_hand",
+    "verb:select_opponent_permanent",
+    "verb:select_trash",
+    "verb:trash_from_hand_by_index",
+    "verb:use_option_from_trash",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
+    "predicate:color_is",
+    "predicate:count_lte",
+    "predicate:equals",
+    "predicate:event_target_owner",
+    "predicate:event_target_trait_has",
+    "predicate:is_source_card",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:level_gte",
+    "predicate:level_lte",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "predicate:zone",
+    "timing:end_of_attack",
+    "timing:main",
+    "timing:on_ally_attack",
+    "timing:on_deletion",
+    "timing:when_digivolving",
+    "keyword:SecurityAttackPlus"
+   ],
+   "effect_clause_count": 5,
+   "has_card_test": true,
+   "lowering_covered": false,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": [
+    "predicate:is_source_card"
+   ]
+  },
   "P-035": {
    "behaviourally_covered": true,
    "clause_count": 3,
@@ -49889,7 +50036,8 @@
    "kind": "predicate",
    "name": "is_source_card",
    "near_miss_files": [
-    "src/dsl_cards/predicate.rs"
+    "src/dsl_cards/predicate.rs",
+    "tests/dsl/predicate_is_source_card.rs"
    ],
    "parsed_only": false,
    "signals": {},
@@ -85936,12 +86084,12 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2307,
+  "behavioural_tests": 2309,
   "cards": {
-   "behaviourally_covered": 1277,
-   "lowering_covered": 1295,
-   "not_covered": 51,
-   "total": 1346
+   "behaviourally_covered": 1279,
+   "lowering_covered": 1297,
+   "not_covered": 52,
+   "total": 1349
   },
   "constructs": {
    "keyword": {
@@ -86100,8 +86248,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 424,
-  "scanned_tests": 2733,
+  "scanned_files": 425,
+  "scanned_tests": 2735,
   "top_untested": [
    {
     "cards_blocked": 3,
@@ -86124,13 +86272,13 @@
     "ex13_lists_blocked": 29
    },
    {
-    "cards_blocked": 1,
-    "construct": "predicate:card_in_zone",
+    "cards_blocked": 2,
+    "construct": "predicate:is_source_card",
     "ex13_lists_blocked": 26
    },
    {
     "cards_blocked": 1,
-    "construct": "predicate:is_source_card",
+    "construct": "predicate:card_in_zone",
     "ex13_lists_blocked": 26
    },
    {
