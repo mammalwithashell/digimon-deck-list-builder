@@ -3,10 +3,8 @@
 //! TDD test file lands here alongside its `CardEffect` impl in
 //! `src/cards/<set>/<card_id>.rs`.
 //!
-//! See `sample_bt17_015.rs` for the template shape new tests should
-//! follow (doc-comment at top that summarizes the card text, two
-//! companion tests covering the positive and negative branch of any
-//! conditional effect).
+//! See `card_text/bt17_015.rs` for the printed-text test template: quote the
+//! card bundle, drive real actions, and answer every prompt explicitly.
 
 /// EXPERIMENT (2026-08-24): swap the global allocator for this test binary.
 ///
@@ -53,10 +51,6 @@ mod tokens;
 mod trash_count_binding_primitive;
 mod keramon_line_support;
 mod reveal_bucket_support;
-
-// Sample template for forthcoming hand-written production card tests.
-// Currently ignored pending the engine gaps that BT17-015 depends on.
-mod sample_bt17_015;
 
 // Per-set per-card test modules (added by /batch-implement-cards-rust-dsl)
 mod ad1;
