@@ -45229,6 +45229,9 @@
     "dsl::digivolve_target_predicates.rs::validator_rejects_unsupported_has_digivolve_candidate_zone": [
      "yaml_key"
     ],
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option": [
+     "yaml_key"
+    ],
     "dsl::group7_alt_path_registration.rs::alt_path_direction_from_defaults_when_omitted": [
      "yaml_key"
     ],
@@ -45803,6 +45806,7 @@
     "dsl::digivolve_target_predicates.rs::no_candidate_permanent_means_no_prompt_at_all",
     "dsl::digivolve_target_predicates.rs::validator_rejects_undeclared_can_digivolve_onto_binding",
     "dsl::digivolve_target_predicates.rs::validator_rejects_unsupported_has_digivolve_candidate_zone",
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option",
     "dsl::group7_alt_path_registration.rs::alt_path_direction_from_defaults_when_omitted",
     "dsl::phase2e_select_material.rs::select_material_filter_narrows_by_source_card_fields",
     "dsl::predicate_leaves_ii.rs::binding_card_color_compiles_from_yaml",
@@ -50714,6 +50718,9 @@
     "dsl::effect_granted_attack.rs::redirect_attack_target_step_rewrites_active_attack_from_bound_selection": [
      "yaml_key"
     ],
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option": [
+     "yaml_key"
+    ],
     "dsl::folded_may_opt_refund.rs::activation_type_main_clause_is_not_rewritten": [
      "yaml_key"
     ],
@@ -52108,6 +52115,7 @@
     "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment",
     "dsl::effect_granted_attack.rs::force_attack_step_prompts_forced_attacker_controller",
     "dsl::effect_granted_attack.rs::redirect_attack_target_step_rewrites_active_attack_from_bound_selection",
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option",
     "dsl::folded_may_opt_refund.rs::activation_type_main_clause_is_not_rewritten",
     "dsl::folded_may_opt_refund.rs::binding_present_branch_counts_as_dependent",
     "dsl::folded_may_opt_refund.rs::folded_may_pick_gets_a_refund_after_the_pick",
@@ -52733,6 +52741,9 @@
      "yaml_key"
     ],
     "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment": [
+     "yaml_key"
+    ],
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option": [
      "yaml_key"
     ],
     "dsl::effect_refiring.rs::refire_card_effect_yaml_lowers_with_bound_card_and_timing": [
@@ -53426,6 +53437,7 @@
     "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment",
     "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple",
     "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment",
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option",
     "dsl::effect_refiring.rs::refire_card_effect_yaml_lowers_with_bound_card_and_timing",
     "dsl::group7_alt_path_registration.rs::alt_path_direction_from_defaults_when_omitted",
     "dsl::parse_alt_paths.rs::parse_burst_digivolve_with_extra_cost_and_teardown",
@@ -60788,6 +60800,9 @@
    "name": "main",
    "parsed_only": false,
    "signals": {
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option": [
+     "yaml_key"
+    ],
     "dsl::folded_may_opt_refund.rs::activation_type_main_clause_is_not_rewritten": [
      "yaml_key"
     ],
@@ -60813,6 +60828,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option",
     "dsl::folded_may_opt_refund.rs::activation_type_main_clause_is_not_rewritten",
     "dsl::reveal_buckets.rs::select_reveal_buckets_compiles_named_buckets",
     "dsl::track_e_reveal_ordering.rs::yaml_round_trip_compiles_new_verbs_to_expected_shapes",
@@ -67675,6 +67691,9 @@
     "dsl::effect_immunity_step.rs::dsl_grants_opponent_digimon_effect_immunity_to_self": [
      "yaml_key"
     ],
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option": [
+     "yaml_key"
+    ],
     "dsl::group7_predicate_batch.rs::materials_count_matches_aggregate_predicate_compiles": [
      "yaml_key"
     ],
@@ -67951,6 +67970,7 @@
     "dsl::effect_granted_attack.rs::may_attack_now_ignore_summoning_sickness_yaml_lowers_to_compiled_step",
     "dsl::effect_granted_attack.rs::may_attack_now_yaml_lowers_to_compiled_step",
     "dsl::effect_immunity_step.rs::dsl_grants_opponent_digimon_effect_immunity_to_self",
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option",
     "dsl::group7_predicate_batch.rs::materials_count_matches_aggregate_predicate_compiles",
     "dsl::group7_predicate_batch.rs::self_digivolution_contains_name_compiles_in_when_digivolving_condition",
     "dsl::group7_predicate_batch.rs::self_digivolution_contains_name_scans_source_permanent_stack_at_runtime",
@@ -70243,6 +70263,9 @@
     "dsl::dp_deletion_max_modifier.rs::without_the_modifier_the_printed_cap_holds": [
      "yaml_key"
     ],
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option": [
+     "yaml_key"
+    ],
     "dsl::folded_may_opt_refund.rs::activation_type_main_clause_is_not_rewritten": [
      "yaml_key"
     ],
@@ -70633,6 +70656,7 @@
     "dsl::dp_deletion_max_modifier.rs::source_joining_by_this_digivolve_counts_immediately",
     "dsl::dp_deletion_max_modifier.rs::stacked_deltas_sum",
     "dsl::dp_deletion_max_modifier.rs::without_the_modifier_the_printed_cap_holds",
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option",
     "dsl::folded_may_opt_refund.rs::activation_type_main_clause_is_not_rewritten",
     "dsl::folded_may_opt_refund.rs::binding_present_branch_counts_as_dependent",
     "dsl::folded_may_opt_refund.rs::folded_may_pick_gets_a_refund_after_the_pick",
@@ -78540,6 +78564,9 @@
    "name": "refire_effect",
    "parsed_only": false,
    "signals": {
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option": [
+     "yaml_key"
+    ],
     "dsl::effect_refiring.rs::refire_effect_accepts_on_play_or_when_digivolving_timing": [
      "variant",
      "yaml_key"
@@ -78562,6 +78589,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option",
     "dsl::effect_refiring.rs::refire_effect_accepts_on_play_or_when_digivolving_timing",
     "dsl::effect_refiring.rs::refire_effect_accepts_on_play_timing",
     "dsl::effect_refiring.rs::refire_effect_rejects_optional_combined_timing",
@@ -81358,6 +81386,9 @@
     "dsl::effect_granted_attack.rs::redirect_attack_target_step_rewrites_active_attack_from_bound_selection": [
      "yaml_key"
     ],
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option": [
+     "yaml_key"
+    ],
     "dsl::folded_may_opt_refund.rs::activation_type_main_clause_is_not_rewritten": [
      "yaml_key"
     ],
@@ -81900,6 +81931,7 @@
     "dsl::dp_deletion_max_modifier.rs::without_the_modifier_the_printed_cap_holds",
     "dsl::effect_granted_attack.rs::force_attack_step_prompts_forced_attacker_controller",
     "dsl::effect_granted_attack.rs::redirect_attack_target_step_rewrites_active_attack_from_bound_selection",
+    "dsl::effect_refiring.rs::dual_option_main_refire_uses_option_attribution_without_playing_the_option",
     "dsl::folded_may_opt_refund.rs::activation_type_main_clause_is_not_rewritten",
     "dsl::folded_may_opt_refund.rs::binding_present_branch_counts_as_dependent",
     "dsl::folded_may_opt_refund.rs::folded_may_pick_gets_a_refund_after_the_pick",
@@ -85840,7 +85872,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2307,
+  "behavioural_tests": 2308,
   "cards": {
    "behaviourally_covered": 1274,
    "lowering_covered": 1292,
@@ -85943,7 +85975,6 @@
    "tests/cost_hooks/static_builder_surface.rs",
    "tests/dsl/constructs/mod.rs",
    "tests/dsl/cross_check.rs",
-   "tests/dsl/effect_refiring.rs",
    "tests/dsl/embedded_registry.rs",
    "tests/dsl/explicit_prompt_lint.rs",
    "tests/dsl/folded_may_opt_refund.rs",
@@ -86005,7 +86036,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 424,
-  "scanned_tests": 2733,
+  "scanned_tests": 2734,
   "top_untested": [
    {
     "cards_blocked": 3,

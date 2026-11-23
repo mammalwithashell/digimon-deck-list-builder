@@ -1093,13 +1093,13 @@ fn validate_step(
             validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
             if !matches!(
                 args.timing.as_str(),
-                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "option_main"
             ) {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
                     path: format!("{prefix}.timing"),
                     message: format!(
-                        "refire_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
+                        "unsupported refire_effect timing: {}",
                         args.timing
                     ),
                 });
