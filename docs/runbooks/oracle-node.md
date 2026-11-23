@@ -150,6 +150,11 @@ this job queue. Do not commit the player or upload it to public CI artifacts.
 The Devin blueprint installs Wine/Xvfb and the shared ONNX Runtime on Ubuntu
 22.04 x86-64; it does not install the player or start a service.
 
+After the blueprint lands on the default branch, follow Devin's
+[Git-backed blueprint setup](https://docs.devin.ai/onboard-devin/environment/git-backed-blueprints)
+to switch this repo's blueprint to Git if needed, sync it, and build a snapshot.
+Start new sessions from that snapshot.
+
 From the repo root, in both shells:
 
 ```bash
