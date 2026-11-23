@@ -7,6 +7,7 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod activation_cost;
+mod explicit_prompt_lint;
 mod dna_field_pair_masks;
 mod use_req_kind_and_breeding;
 mod play_and_attack_rule_guards;
