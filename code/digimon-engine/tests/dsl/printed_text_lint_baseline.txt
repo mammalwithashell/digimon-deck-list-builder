@@ -281,7 +281,6 @@ BT21-011 missing_text 1
 BT21-018 missing_text 2
 BT21-018 missing_text 3
 BT21-018 missing_text 5
-BT21-021 kind_mismatch 0
 BT21-023 may_without_optional 3
 BT21-023 missing_text 0
 BT21-023 missing_text 1
@@ -346,8 +345,6 @@ BT21-073 missing_text 3
 BT21-074 missing_text 0
 BT21-074 missing_text 1
 BT21-074 missing_text 4
-BT21-075 kind_mismatch 1
-BT21-075 kind_mismatch 2
 BT21-083 may_without_optional 0
 BT21-086 missing_text 0
 BT21-086 missing_text 1
@@ -357,7 +354,6 @@ BT21-090 missing_text 0
 BT21-090 missing_text 1
 BT21-091 missing_text 0
 BT21-091 missing_text 1
-BT21-092 kind_mismatch 1
 BT21-092 missing_text 0
 BT21-093 missing_text 0
 BT21-093 missing_text 1
@@ -808,7 +804,6 @@ BT26-067 missing_text 0
 BT26-069 missing_text 0
 BT26-070 missing_text 0
 BT26-070 missing_text 1
-BT26-073 kind_mismatch 1
 BT26-073 missing_text 2
 BT26-075 missing_text 2
 BT26-075 missing_text 3
@@ -1247,7 +1242,6 @@ EX13-056 missing_text 1
 EX13-056 missing_text 2
 EX13-058 missing_text 1
 EX13-058 missing_text 2
-EX13-060 kind_mismatch 2
 EX13-061 missing_text 0
 EX13-061 missing_text 1
 EX13-061 missing_text 2
@@ -1478,7 +1472,6 @@ P-186 missing_text 1
 P-186 missing_text 2
 P-186 optional_without_may 3
 P-187 missing_text 0
-P-189 kind_mismatch 0
 P-193 missing_text 0
 P-193 missing_text 1
 P-193 optional_without_may 2

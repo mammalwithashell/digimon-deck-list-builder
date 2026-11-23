@@ -53,6 +53,20 @@ fn restricts_kind(filter: &Value) -> bool {
             .is_some_and(|items| !items.is_empty() && items.iter().all(restricts_kind))
 }
 
+fn permits_kind(filter: &Value, kind: &str) -> bool {
+    filter["kind"].as_str().map_or(true, |k| k == kind)
+        && filter["all_of"]
+            .as_array()
+            .map_or(true, |items| items.iter().all(|p| permits_kind(p, kind)))
+        && filter["any_of"].as_array().map_or(true, |items| {
+            items.is_empty() || items.iter().any(|p| permits_kind(p, kind))
+        })
+        && !filter["none_of"]
+            .as_array()
+            .is_some_and(|items| items.iter().any(restricts_kind))
+        && !restricts_kind(&filter["not"])
+}
+
 fn leaves<'a>(filter: &'a Value, out: &mut Vec<(&'a str, &'a str)>) {
     if let Some(fields) = filter.as_object() {
         for (key, value) in fields {
@@ -130,7 +144,18 @@ pub(super) fn check(value: &Value, text: &str) -> Vec<&'static str> {
                 .filter(|w| matches!(**w, "digimon" | "tamer" | "option"))
                 .copied();
             if printed_kind.map_or_else(
-                || restricts_kind(filter),
+                || {
+                    if preceding.first() == Some(&"play") {
+                        let tail = &words[i + 1..];
+                        let digimon_only = preceding.contains(&"level")
+                            || matches!(tail, ["with", amount, "dp", ..] if amount.chars().all(|c| c.is_ascii_digit()))
+                            || tail.starts_with(&["with", "a", "level"]);
+                        !permits_kind(filter, "digimon")
+                            || (!digimon_only && !permits_kind(filter, "tamer"))
+                    } else {
+                        restricts_kind(filter)
+                    }
+                },
                 |kind| forced_kind(filter) != Some(kind),
             ) {
                 findings.push("kind_mismatch");
