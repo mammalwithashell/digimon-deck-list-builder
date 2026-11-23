@@ -20341,7 +20341,7 @@
    "untested_constructs": []
   },
   "BT27-098": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -20364,12 +20364,10 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:end_of_all_turns"
-   ]
+   "untested_constructs": []
   },
   "BT27-102": {
    "behaviourally_covered": true,
@@ -60837,15 +60835,17 @@
   "timing:end_of_all_turns": {
    "kind": "timing",
    "name": "end_of_all_turns",
-   "near_miss_files": [
-    "src/dsl_cards/lower_delay.rs",
-    "src/dsl_cards/timing_map.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::phase2a_triggered.rs::end_of_all_turns_triggers_for_the_controller_and_opponent_turns": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::phase2a_triggered.rs::end_of_all_turns_triggers_for_the_controller_and_opponent_turns"
+   ]
   },
   "timing:end_of_attack": {
    "kind": "timing",
@@ -85482,6 +85482,9 @@
     "dsl::phase2a_steps.rs::trash_from_top_moves_deck_to_trash": [
      "variant"
     ],
+    "dsl::phase2a_triggered.rs::end_of_all_turns_triggers_for_the_controller_and_opponent_turns": [
+     "yaml_key"
+    ],
     "dsl::phase3_reducer_costs.rs::dsl_cost_reduction_pay_cost_body_runs_before_reduction_applies": [
      "yaml_key"
     ],
@@ -85497,6 +85500,7 @@
    "tests": [
     "dsl::effect_refiring.rs::refire_card_effect_yaml_lowers_with_bound_card_and_timing",
     "dsl::phase2a_steps.rs::trash_from_top_moves_deck_to_trash",
+    "dsl::phase2a_triggered.rs::end_of_all_turns_triggers_for_the_controller_and_opponent_turns",
     "dsl::phase3_reducer_costs.rs::dsl_cost_reduction_pay_cost_body_runs_before_reduction_applies",
     "rules_conformance::ch18_pending_overwrite.rs::long_finite_chain_is_not_an_infinite_loop",
     "rules_conformance::ch18_pending_overwrite.rs::stoppable_loop_repeats_until_its_owner_stops_it"
@@ -86530,11 +86534,11 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2314,
+  "behavioural_tests": 2315,
   "cards": {
-   "behaviourally_covered": 1285,
-   "lowering_covered": 1303,
-   "not_covered": 52,
+   "behaviourally_covered": 1286,
+   "lowering_covered": 1304,
+   "not_covered": 51,
    "total": 1355
   },
   "constructs": {
@@ -86558,12 +86562,12 @@
    },
    "timing": {
     "parsed_only": 2,
-    "tested": 60,
-    "tested_behaviourally": 58,
+    "tested": 61,
+    "tested_behaviourally": 59,
     "total": 67,
-    "untested": 7,
+    "untested": 6,
     "used_by_cards": 59,
-    "used_untested": 5
+    "used_untested": 4
    },
    "verb": {
     "parsed_only": 5,
@@ -86695,7 +86699,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 426,
-  "scanned_tests": 2740,
+  "scanned_tests": 2741,
   "top_untested": [
    {
     "cards_blocked": 3,
@@ -86855,11 +86859,6 @@
    {
     "cards_blocked": 1,
     "construct": "predicate:self_stack_same_level_count_gte",
-    "ex13_lists_blocked": 0
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "timing:end_of_all_turns",
     "ex13_lists_blocked": 0
    },
    {
