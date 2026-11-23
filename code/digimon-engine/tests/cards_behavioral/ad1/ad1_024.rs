@@ -624,7 +624,7 @@ fn ad1_024_all_turns_is_once_per_turn() {
     );
 }
 
-// ─── SECTION 4 — [All Turns] decline + OPT refund (DCGO RemoveUse) ──────────
+// ─── SECTION 4 — [All Turns] decline keeps the OPT; accept spends it ────────
 
 /// Decline the selection currently pending (PASS on an optional selection).
 fn decline_pending(runner: &mut DebugRunner) {
@@ -683,10 +683,13 @@ fn ad1_024_all_turns_decline_outer_confirm_refunds_opt() {
     );
 }
 
-/// Accepting the outer confirm but then declining every sub-pick also refunds
-/// the OPT (DCGO's executed-flag: nothing ran → RemoveUse).
+/// Accepting the outer confirm is choosing to activate the effect, so it uses
+/// the [Once Per Turn] even when every sub-pick is then declined (CR 4.3
+/// 15-14-1-4: it counts "even if the effect's processing can't be
+/// executed"). DCGO's executed-flag RemoveUse refunds it; the rules text
+/// decides. (Declining the confirm itself keeps the use: the test above.)
 #[test]
-fn ad1_024_all_turns_accept_then_decline_everything_refunds_opt() {
+fn ad1_024_all_turns_accept_then_decline_everything_spends_opt() {
     let mut runner = fighter_mode_runner(&[
         opp_digimon("AD1-024-OPP-A", "OppA", 5000),
         friendly_filler("AD1-024-FILLER"),
@@ -716,12 +719,12 @@ fn ad1_024_all_turns_accept_then_decline_everything_refunds_opt() {
     let opp_perm = &runner.game.players[1].battle_area[opp.index as usize];
     assert!(!opp_perm.is_suspended, "nothing may have been suspended");
 
-    // OPT refunded: a second qualifying play prompts again.
+    // OPT spent: a second qualifying play this turn does not prompt.
     let second = runner.place_on_field(0, "AD1-024-FILLER-2", None);
     runner.fire_play_event_triggers(0, second.index as usize, false, false);
     assert!(
-        runner.game.pending_selection.is_some(),
-        "accept-then-decline-everything must refund the OPT (DCGO executed-flag RemoveUse)"
+        runner.game.pending_selection.is_none(),
+        "the accepted activation used the [Once Per Turn]"
     );
     let _ = fighter;
 }

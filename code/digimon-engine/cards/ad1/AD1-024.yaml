@@ -50,9 +50,10 @@
 #       effect-initiated (DCGO CardEffectCommons.IsByEffect →
 #       `event_is_effect_initiated`) and is INDEPENDENT of the suspend pick;
 #       its select is optional (DCGO canNoSelect: true).
-#     - If NOTHING executed (every binding absent), `refund_opt` un-records
-#       the once-per-turn — DCGO's executed-flag RemoveUse for the
-#       accepted-then-declined-everything path.
+#     - DCGO's executed-flag RemoveUse also refunds an ACCEPTED confirm when
+#       every pick was then declined. Not here: accepting the confirm is
+#       choosing to activate, which uses the [Once Per Turn] even if nothing
+#       is then processed (CR 4.3 15-14-1-4); the rules text decides.
 
 card: AD1-024
 name: "Imperialdramon: Fighter Mode"
@@ -188,12 +189,3 @@ effects:
                     - is_suspended: true
                 prompt: "Return 1 of your opponent's suspended Digimon to the bottom of the deck"
             - return_to_deck: { target: byeffect_bounce, position: bottom }
-      # DCGO executed-flag: nothing ran → RemoveUse (refund the OPT).
-      - if:
-          condition:
-            all_of:
-              - binding_absent: suspend_target
-              - binding_absent: standalone_unsuspend
-              - binding_absent: byeffect_bounce
-          then:
-            - refund_opt: {}
