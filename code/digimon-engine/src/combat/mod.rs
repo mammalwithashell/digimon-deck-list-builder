@@ -759,6 +759,11 @@ impl Game {
             state: AttackState::Declared,
             counter_depth: 0,
         });
+        // An Option in flight declared this attack in its `[Main]` body: hold
+        // it until the attack ends, freeing the in-flight slot for Options
+        // used during the attack (CR 4.3 15-1-4, 9-1-5;
+        // G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD).
+        self.hold_option_for_body_attack();
         // A new attack: the previous attack's stack identity no longer names
         // its attacker (`fire_on_attack` captures this one's). §16-39-3:
         // `<Progress>` applies from the declaration.
@@ -4227,19 +4232,9 @@ impl Game {
         }
         // An Option whose `[Main]` body declared this attack finishes now
         // (trash / <Arts Digivolve>, CR 4.3 9-1-5 / 4-20-1): the attack was
-        // the body's last process (`complete_option_body_if_done`).
-        // (Inside a deferred-drain scope, the scope's exit drain does it.)
-        if !self.option_body_attack_open_at_start {
-            if self.option_body_pending
-                && self.pending_selection.is_none()
-                && self.draining_deferred <= self.option_body_outer_deferred
-            {
-                self.complete_option_body_if_done();
-            }
-            if self.pending_option.is_some() && self.pending_selection.is_none() {
-                self.advance_pending_option();
-            }
-        }
+        // the body's last process. It was held out of `pending_option` while
+        // the attack ran (`hold_option_for_body_attack`).
+        self.release_held_option_after_attack();
 
         // An attack-time effect — e.g. ST1-06 Coredramon's [When Attacking]
         // "Lose 2 memory" — can push memory across to the opponent's side. The

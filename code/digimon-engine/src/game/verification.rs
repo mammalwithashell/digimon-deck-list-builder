@@ -407,6 +407,11 @@ impl Game {
             &self.pending_effect_security_removal,
         );
         debug_field(&mut h, "pending_option", &self.pending_option);
+        // Empty except while an Option body's own attack runs, so it joins
+        // the digest only when set (settled goldens keep their value).
+        if !self.held_options.is_empty() {
+            debug_field(&mut h, "held_options", &self.held_options);
+        }
         debug_field(&mut h, "security_resolution", &self.security_resolution);
         debug_field(&mut h, "pending_granted_fires", &self.pending_granted_fires);
         field(

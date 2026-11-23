@@ -635,7 +635,7 @@ impl KnowledgeLedger {
         for c in game
             .revealed_cards
             .iter()
-            .chain(game.pending_option.iter().map(|p| &p.card))
+            .chain(game.in_flight_option_cards())
             .chain(public_pending_security(game))
         {
             if !c.is_token && !c.is_opaque_placeholder {
@@ -866,7 +866,7 @@ impl BeliefEvidence {
         for c in game
             .revealed_cards
             .iter()
-            .chain(game.pending_option.iter().map(|p| &p.card))
+            .chain(game.in_flight_option_cards())
             .chain(public_pending_security(game))
         {
             add(c)?;

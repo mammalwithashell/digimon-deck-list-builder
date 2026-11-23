@@ -7305,12 +7305,6 @@ impl Game {
         if !self.effect_queue.is_empty() {
             return;
         }
-        // The body declared an attack that is still running: the body has not
-        // resolved (see `complete_option_body_if_done`). The attack's end
-        // re-enters here.
-        if self.option_body_attack_in_progress() {
-            return;
-        }
         let Some(pending) = self.pending_option.as_ref() else {
             // The body CLAIMED `pending_option` (`place_self_under_permanent`,
             // `add_this_option_to_hand`, a link plug-in) while a selection was
@@ -7320,7 +7314,14 @@ impl Game {
             // here, exactly as it did when this arm returned early before.)
             if self.on_use_option_armed.is_some() {
                 self.fire_on_use_option_observers();
+                if self.pending_selection.is_some() {
+                    return;
+                }
             }
+            // An Option held for its body's attack, when that attack ended
+            // while an Option used during it was still resolving, finishes
+            // once that one is done.
+            self.release_held_option_after_attack();
             return;
         };
         match pending.resolution_phase {
@@ -7441,14 +7442,10 @@ impl Game {
         if !self.option_body_pending || self.pending_selection.is_some() {
             return;
         }
-        // An attack the body declared is still running: the body has not
-        // resolved yet (CR 4.3 15-1-2 / 15-1-4 / 11-1-5). The attack's end
-        // re-enters here (`finish_attack_after_end_of_attack_timing`).
-        // Monarchlizamon (BT25-057): "Then, it may attack." before the
-        // <Arts Digivolve> / trash.
-        if self.option_body_attack_in_progress() {
-            return;
-        }
+        // (An attack the body declared holds the Option in `held_options`, out
+        // of `pending_option` and with `option_body_pending` cleared, so this
+        // is a no-op for it until the attack's end puts it back:
+        // `release_held_option_after_attack`.)
         let Some(pending) = self.pending_option.as_ref() else {
             // The body CLAIMED the card (placed it under a Digimon, added it
             // to hand, linked it). Nothing to dispose; the observers are
@@ -7496,12 +7493,74 @@ impl Game {
         self.dispose_option();
     }
 
-    /// An attack declared by the in-flight Option's `[Main]` body (not one
-    /// already open when the body started) is still in progress.
-    pub(crate) fn option_body_attack_in_progress(&self) -> bool {
-        self.pending_option.is_some()
-            && self.pending_attack.is_some()
-            && !self.option_body_attack_open_at_start
+    /// An attack is being installed (`begin_attack_open`) while an Option is
+    /// in flight: that Option's `[Main]` body declared it ("Then, it may
+    /// attack." -- Monarchlizamon (BT25-057) "Final Judgment"; no attack can
+    /// already be open, 11-2-4, so the attack is the body's own process).
+    /// The body has not resolved until the attack has ended (CR 4.3 15-1-2,
+    /// 15-1-4, 11-1-5), so the Option must be neither trashed nor offered for
+    /// <Arts Digivolve> (9-1-5, 4-20-1/4-20-2) before then, and it stays out
+    /// of every area (9-1-4). Move it, with the per-use body state, out of
+    /// `pending_option` into `held_options`: Options used during the attack
+    /// (a [When Attacking] "use 1 Option card" -- EX7-059, BT26-026,
+    /// EX13-014, BT25-083 --, EX12-066's attack trigger, BT26-053's target
+    /// change trigger, a defender's [Counter] Option, a security Option's
+    /// effect) then have the single in-flight slot, as they had when the
+    /// attack was a deferred grant. G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD.
+    pub(crate) fn hold_option_for_body_attack(&mut self) {
+        let Some(option) = self.pending_option.take() else {
+            return;
+        };
+        self.held_options.push(crate::selection::HeldOptionBody {
+            option,
+            body_pending: std::mem::take(&mut self.option_body_pending),
+            outer_deferred: std::mem::take(&mut self.option_body_outer_deferred),
+            first_main_resolved: std::mem::take(&mut self.option_first_main_resolved),
+            on_use_option_armed: self.on_use_option_armed.take(),
+        });
+    }
+
+    /// The attack a held Option's body declared has ended: put the Option
+    /// back in flight and finish it as its body's last process (trash, or
+    /// the <Arts Digivolve> offer, or placement; `complete_option_body_if_done`
+    /// / `advance_pending_option`), exactly once. No-op while the attack is
+    /// still running, while an Option used during it is still in flight
+    /// (its own end calls this again: `advance_pending_option`,
+    /// `play_option_core`), or while a selection is parked.
+    pub(crate) fn release_held_option_after_attack(&mut self) {
+        if self.held_options.is_empty()
+            || self.pending_attack.is_some()
+            || self.pending_option.is_some()
+            || self.option_body_pending
+            || self.on_use_option_armed.is_some()
+            || self.pending_selection.is_some()
+        {
+            return;
+        }
+        let held = self.held_options.pop().expect("checked non-empty");
+        self.pending_option = Some(held.option);
+        self.option_body_pending = held.body_pending;
+        self.option_body_outer_deferred = held.outer_deferred;
+        self.option_first_main_resolved = held.first_main_resolved;
+        self.on_use_option_armed = held.on_use_option_armed;
+        // (Inside a deferred-drain scope, the scope's exit drain disposes it.)
+        if self.option_body_pending && self.draining_deferred <= self.option_body_outer_deferred {
+            self.complete_option_body_if_done();
+        }
+        if self.pending_option.is_some() && self.pending_selection.is_none() {
+            self.advance_pending_option();
+        }
+    }
+
+    /// Every Option card in flight and in no area (9-1-4): the one being
+    /// used (`pending_option`) and any held for its body's attack
+    /// (`held_options`). Card identity / conservation readers walk these
+    /// with the zones.
+    pub fn in_flight_option_cards(&self) -> impl Iterator<Item = &crate::card_source::CardSource> {
+        self.pending_option
+            .iter()
+            .map(|p| &p.card)
+            .chain(self.held_options.iter().map(|h| &h.option.card))
     }
 
     /// Index of the queued `OptionMain` body of the Option currently being

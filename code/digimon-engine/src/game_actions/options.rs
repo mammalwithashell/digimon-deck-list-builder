@@ -365,7 +365,11 @@ impl Game {
         // single-occupancy slot is about to be overwritten, which
         // silently corrupts the prior in-flight Option's resolution.
         // Better to fail loudly so the crash recorder names both cards;
-        // the wrapper converts the panic into a terminal step.
+        // the wrapper converts the panic into a terminal step. (An Option
+        // whose body declared an attack is not "mid-resolution" here: it was
+        // moved to `held_options` when that attack was installed, so Options
+        // used during the attack never reach this guard on its account.
+        // G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD.)
         {
             if let Some(pending) = self.pending_option.as_ref() {
                 let pending_card_id = pending.card.card_id(&self.card_data).to_string();
@@ -714,7 +718,6 @@ impl Game {
         // callback starts with `draining_deferred > 0`; the body has finished
         // when the drain is back at THIS depth (§9-1-5, see the field).
         self.option_body_outer_deferred = self.draining_deferred;
-        self.option_body_attack_open_at_start = self.pending_attack.is_some();
         self.option_first_main_resolved = false;
         self.enqueue_option_main_from_pending(&card_id, card_handle, player_id, mode.is_link());
         self.drain_effect_queue();
@@ -742,6 +745,12 @@ impl Game {
         // Resolve the observers + the triggers the body caused, now that the
         // Option has left the executing area.
         self.maybe_drain_effect_queue();
+        if self.pending_selection.is_some() {
+            return OptionPlayResult::Pending;
+        }
+        // An Option whose body declared an attack that has already ended
+        // (this use outlived it) finishes now that this one is done.
+        self.release_held_option_after_attack();
         if self.pending_selection.is_some() {
             return OptionPlayResult::Pending;
         }

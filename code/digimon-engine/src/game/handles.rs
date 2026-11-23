@@ -103,10 +103,11 @@ impl Game {
         // currently being checked. `OnUseOption` observers keyed on the used
         // card ("When you use [TS] trait Option cards", BT25-091) resolve
         // `event_card` through here. G-ENGINE-ON-USE-OPTION-EVENT-CARD.
-        if let Some(pending) = self.pending_option.as_ref() {
-            if pending.card.card_index == target_index {
-                return Some(&self.card_data[pending.card.data_index]);
-            }
+        if let Some(card) = self
+            .in_flight_option_cards()
+            .find(|c| c.card_index == target_index)
+        {
+            return Some(&self.card_data[card.data_index]);
         }
         if let Some(pending) = self.pending_security.as_ref() {
             if pending.card.card_index == target_index {
@@ -233,10 +234,11 @@ impl Game {
             return Some(cs);
         }
         // Same transients as `card_data_for_handle`.
-        if let Some(pending) = self.pending_option.as_ref() {
-            if pending.card.card_index == target_index {
-                return Some(&pending.card);
-            }
+        if let Some(card) = self
+            .in_flight_option_cards()
+            .find(|c| c.card_index == target_index)
+        {
+            return Some(card);
         }
         if let Some(pending) = self.pending_security.as_ref() {
             if pending.card.card_index == target_index {

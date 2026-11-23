@@ -193,7 +193,7 @@ fn audit(root: &mut Game, viewer: u8, memory: &KnowledgeLedger) -> Result<(), St
     allowed.extend(
         root.revealed_cards
             .iter()
-            .chain(root.pending_option.iter().map(|p| &p.card))
+            .chain(root.in_flight_option_cards())
             .chain(super::beliefs::public_pending_security(root))
             .map(|c| c.handle()),
     );
@@ -992,7 +992,7 @@ pub fn materialize_closed_with_diagnostics(
                 .iter()
                 .flat_map(|(_, _, p)| p.card_sources.iter().chain(&p.linked_cards)),
         )
-        .chain(world.pending_option.iter().map(|p| &p.card))
+        .chain(world.in_flight_option_cards())
         .chain(super::beliefs::physical_security_transits(&world))
         .map(|c| c.card_index)
         .chain(known.iter().map(|c| c.0))
@@ -1318,9 +1318,7 @@ pub fn check_hypothesis(world: &Game) -> Result<(), String> {
         }
     }
     for c in world
-        .pending_option
-        .iter()
-        .map(|p| &p.card)
+        .in_flight_option_cards()
         .chain(super::beliefs::physical_security_transits(world))
     {
         if !c.is_token {

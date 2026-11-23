@@ -2792,7 +2792,24 @@ pub enum OptionPlayResult {
 
 // game.rs — single-slot pending state
 pub pending_option: Option<PendingOption>;
+// Options whose [Main] body declared the attack now in progress, held out of
+// `pending_option` until that attack ends (see below)
+pub held_options: Vec<HeldOptionBody>;
 ```
+
+`pending_option` holds ONE Option: `play_option_core` panics ("reentrant
+Option play while another is mid-resolution") when a second Option starts
+while one is still resolving. An Option whose `[Main]` body declares an
+attack ("Then, it may attack." -- Monarchlizamon (BT25-057)) is not
+resolved until that attack has ended (CR 4.3 15-1-4, 9-1-5), yet other
+Options may be used during the attack. So `begin_attack_open` moves the
+in-flight Option, with its per-use body state, into `held_options`
+(`Game::hold_option_for_body_attack`), and the attack's end puts it back and
+finishes it (`Game::release_held_option_after_attack`: trash, <Arts
+Digivolve> offer or placement). Code that walks every in-flight Option card
+(card lookup by handle, determinization, conservation checks) uses
+`Game::in_flight_option_cards()`, never `pending_option` alone.
+G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD.
 
 ### Option lifecycle entry points
 
