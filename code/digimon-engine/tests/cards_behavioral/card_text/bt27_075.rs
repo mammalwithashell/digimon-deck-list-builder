@@ -42,7 +42,6 @@ fn deletion_recycles_exactly_two_gizmon_to_play_at() {
 }
 
 #[test]
-#[ignore = "G-ENGINE-BREEDING-DELETION-PAYMENT"]
 fn playing_may_delete_the_level_two_in_breeding_for_two_memory() {
     let mut egg = digimon_engine::debug_runner::make_test_card("TEXT-EGG", "Level 2");
     egg.card_kind = digimon_engine::enums::CardKind::DigiEgg;
@@ -51,6 +50,11 @@ fn playing_may_delete_the_level_two_in_breeding_for_two_memory() {
     r.place_in_breeding(0, "TEXT-EGG");
     let before = r.memory();
     action(&mut r, 0, PLAY_HAND_START);
+    let mut declined = digimon_engine::debug_runner::DebugRunner::wrap(r.game.clone());
+    declined.decline_optional_trigger().unwrap();
+    assert_eq!(before - declined.memory(), 3);
+    assert!(declined.game.players[0].breeding_area.is_some());
+
     r.accept_optional_trigger().unwrap();
     action(
         &mut r,

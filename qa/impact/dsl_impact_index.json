@@ -17196,6 +17196,7 @@
         "count_gte",
         "is_source_permanent",
         "kind",
+        "level_eq",
         "name_contains",
         "name_is",
         "owner",
@@ -17205,9 +17206,11 @@
         "on_deletion"
       ],
       "verbs": [
+        "pay_breeding_deletion",
         "play_from_trash_free",
         "return_trash_list_to_deck_bottom",
         "select_count_capped_multi",
+        "select_own_breeding_permanent",
         "select_trash"
       ]
     },
@@ -40849,6 +40852,7 @@
       "BT27-048",
       "BT27-055",
       "BT27-071",
+      "BT27-075",
       "BT27-076",
       "BT27-079",
       "BT3-054",
@@ -51317,6 +51321,9 @@
       "P-108",
       "P-167"
     ],
+    "pay_breeding_deletion": [
+      "BT27-075"
+    ],
     "pay_source_prefix": [
       "EX2-055"
     ],
@@ -54085,6 +54092,7 @@
       "BT20-087",
       "BT20-095",
       "BT23-072",
+      "BT27-075",
       "P-130"
     ],
     "select_own_permanent": [

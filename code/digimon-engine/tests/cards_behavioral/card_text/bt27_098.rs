@@ -98,8 +98,8 @@ fn deletion_can_suspend_kurata_and_put_the_two_deck_cards_face_down_at_the_botto
         .map(|c| c.handle())
         .collect::<Vec<_>>();
     delete_in_battle(&mut r, GIZMON);
-    r.assert_prompt(SelectionKind::Replacement, true, 0);
-    r.accept_optional_trigger().unwrap();
+    r.assert_prompt(SelectionKind::TriggerOrder, true, 0);
+    r.execute_branch(0).unwrap();
     let tamer = &r.game.players[0].battle_area[tamer.index as usize];
     assert!(tamer.is_suspended);
     assert_eq!(tamer.card_sources.len(), 4);
@@ -121,7 +121,7 @@ fn deletion_placement_can_be_declined_and_cannot_pay_with_a_suspended_kurata() {
         let deck_count = r.game.players[0].deck.len();
         delete_in_battle(&mut r, GIZMON);
         if !already_suspended {
-            r.assert_prompt(SelectionKind::Replacement, true, 0);
+            r.assert_prompt(SelectionKind::TriggerOrder, true, 0);
             r.decline_optional_trigger().unwrap();
         }
         assert!(r.pending_selection().is_none());

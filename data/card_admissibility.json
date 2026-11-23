@@ -21366,14 +21366,12 @@
       "untested_constructs": []
     },
     "BT27-017": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-018": {
@@ -21465,14 +21463,12 @@
       "untested_constructs": []
     },
     "BT27-026": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-027": {
@@ -21597,14 +21593,12 @@
       "untested_constructs": []
     },
     "BT27-038": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-039": {
@@ -21707,14 +21701,12 @@
       "untested_constructs": []
     },
     "BT27-048": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-049": {
@@ -21784,14 +21776,12 @@
       "untested_constructs": []
     },
     "BT27-055": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-056": {
@@ -21960,14 +21950,12 @@
       "untested_constructs": []
     },
     "BT27-071": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-072": {
@@ -22004,25 +21992,21 @@
       "untested_constructs": []
     },
     "BT27-075": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-076": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-077": {
@@ -22048,14 +22032,12 @@
       "untested_constructs": []
     },
     "BT27-079": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-080": {
@@ -22191,14 +22173,12 @@
       "untested_constructs": []
     },
     "BT27-092": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-093": {
@@ -22263,8 +22243,7 @@
       "needs_card_test": false,
       "reason": "untested_lowering",
       "reasons": [
-        "untested_lowering",
-        "failed_verdict"
+        "untested_lowering"
       ],
       "untested_constructs": [
         "timing:end_of_all_turns"
@@ -22304,14 +22283,12 @@
       "untested_constructs": []
     },
     "BT27-102": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": false,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-103": {
@@ -48133,21 +48110,21 @@
     }
   },
   "counts": {
-    "admissible": 1239,
+    "admissible": 1250,
     "diverged_no_quirk": 0,
-    "failed_verdict": 28,
+    "failed_verdict": 17,
     "registered": 4587,
     "unregistered": 0,
     "untested_card": 17,
     "untested_lowering": 3303
   },
-  "generated_at": "2026-11-23T22:18:19+00:00",
+  "generated_at": "2026-11-23T22:34:46+00:00",
   "sources": {
     "behavioral_test_modules_sha256": "10541e5a5950f2989518f8e6ae3a241293d84a66290372a221a1bed4719f8e9a",
     "card_registry_sha256": "76d299f56767401907be0c9d0206557ec7e668d9f8748677c3e586e80a6a85e2",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "c9adc2378f3661e8c1b0671ac5cec6646d0b0ea5620e6f406f444b863a615412",
-    "validated_cards_dsl_sha256": "2af0ab7888048da6908b222059b4acf364d8dc8091b95966848280321a6e42a4",
+    "lowering_coverage_sha256": "968c3b978f7ae9d44b84d5337bf59527f1cd0a711e8c30244245456b67d54cc2",
+    "validated_cards_dsl_sha256": "6098e13ab47e492e20b67a0f6dee6607335cc03ea735e4917bc3f494227dc5e0",
     "validated_cards_sha256": "c1ca1b49d7c58d7ab9e1ab29ca05b5f06e075e19acdde6aca4494da54d318a05"
   },
   "version": 2

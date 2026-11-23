@@ -268,6 +268,24 @@ impl Game {
             }
         }
     }
+
+    pub(crate) fn reject_parked_play_reduction(&mut self, source: CardHandle) {
+        for hook in self.after_selection_resume_hooks.0.iter_mut().rev() {
+            if let crate::resume::AfterSelectionHook::PlayCostContinuation {
+                accumulated_reduction,
+                processed,
+                ..
+            } = hook
+            {
+                if processed.last().is_some_and(|key| key.source_card == source) {
+                    if let Some(amount) = accumulated_reduction.pending_reduction.take() {
+                        accumulated_reduction.reduction -= amount;
+                    }
+                    break;
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -270,6 +270,37 @@ impl Game {
     /// caller's single `<Overflow>` pass (§4-19-5).
     pub(crate) fn trash_breeding_permanent_by_rule(&mut self, player: PlayerId) -> Vec<CardSource> {
         let movement_snapshot = self.breeding_movement_snapshot(player);
+        let leaving = self.trash_breeding_stack(player);
+        self.observe_rule_trash_completed(movement_snapshot);
+        leaving
+    }
+
+    pub(crate) fn delete_breeding_digimon_for_payment(&mut self, player: PlayerId) -> bool {
+        let Some(top) = self
+            .player(player)
+            .breeding_area
+            .as_ref()
+            .and_then(|p| p.card_sources.last())
+        else {
+            return false;
+        };
+        if top.face_down
+            || !matches!(
+                top.card_kind(&self.card_data),
+                CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual | CardKind::Token
+            )
+        {
+            return false;
+        }
+
+        // CR 4.3 3-4-7-4/6: ordinary deletion effects and replacements don't
+        // trigger from a Digimon in breeding.
+        let leaving = self.trash_breeding_stack(player);
+        self.apply_ace_overflow_for_sources(&leaving);
+        true
+    }
+
+    fn trash_breeding_stack(&mut self, player: PlayerId) -> Vec<CardSource> {
         let Some(perm) = self.player_mut(player).breeding_area.take() else {
             return Vec::new();
         };
@@ -295,9 +326,6 @@ impl Game {
             self.trash_card(owner, card);
         }
         self.mark_until_condition_dirty();
-        // Recorder parity with the battle-area rule trash
-        // (`trash_battle_permanent_by_rule`).
-        self.observe_rule_trash_completed(movement_snapshot);
         leaving
     }
 

@@ -10,6 +10,19 @@ form: Rookie
 attribute: Unknown
 
 effects:
+  - kind: cost_reduction
+    when_playing_this: true
+    optional: true
+    amount: 2
+    text: "When this card would be played, by deleting 1 of your level 2 Digimon in the breeding area, reduce the cost by 2."
+    pay_cost:
+      - select_own_breeding_permanent:
+          optional: false
+          bind_as: payer
+          filter: { kind: digimon, level_eq: 2 }
+          prompt: "Choose your level 2 Digimon in the breeding area to delete"
+      - pay_breeding_deletion: { target: payer }
+
   - kind: grant_keyword
     keyword: Blocker
     text: "＜Blocker＞"

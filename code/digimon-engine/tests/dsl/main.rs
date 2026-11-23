@@ -237,3 +237,4 @@ mod plutomon_admission_constructs;
 
 mod can_unsuspend;
 mod royal_knights_training_gate;
+mod breeding_deletion_payment;
