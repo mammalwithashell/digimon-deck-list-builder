@@ -4301,6 +4301,7 @@
     "verb:trash_top_security",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:binding_exists",
     "predicate:dp_lte",
     "predicate:equals",
     "predicate:kind",
@@ -85944,6 +85945,7 @@
    "tests/dsl/cross_check.rs",
    "tests/dsl/effect_refiring.rs",
    "tests/dsl/embedded_registry.rs",
+   "tests/dsl/explicit_prompt_lint.rs",
    "tests/dsl/folded_may_opt_refund.rs",
    "tests/dsl/grant_triggered_trigger_if.rs",
    "tests/dsl/i18n_scaffolding.rs",
@@ -86001,8 +86003,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 422,
-  "scanned_tests": 2729,
+  "scanned_files": 423,
+  "scanned_tests": 2732,
   "top_untested": [
    {
     "cards_blocked": 3,
