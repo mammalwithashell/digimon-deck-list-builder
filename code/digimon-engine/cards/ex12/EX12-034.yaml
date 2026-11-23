@@ -56,25 +56,21 @@ effects:
     summary: "[All Turns][OPT] When any own Digimon would leave, play 1 level 5 or lower [SW] from hand or this Digimon's sources free"
     # DCGO EX12_034.cs ActivateCoroutine: offers "Play from hand" only when the
     # hand holds a playable card, "Play from this Digimon's Digivolution Cards"
-    # only when its sources do, plus "Don't play"; if nothing is played the
-    # [Once Per Turn] use is refunded (RemoveUse). Known difference: DCGO's
-    # RemoveUse sits inside `if (validHandCard || validDigivolutionCard)`
-    # (EX12_034.cs:161-219), and DCGO activates this effect without a yes/no
-    # prompt, so when NO zone holds a playable card DCGO spends the use with
-    # nothing played. Here the clause is `optional: true` ("you may play",
-    # CR 4.3 15-9-2) and with no playable card only "Don't play" remains, so
-    # the use is refunded — the same outcome as declining the optional
-    # effect, which doesn't spend it. A later "would leave" in that turn can
-    # still use it here but not in DCGO. Deck audit 2026-11-10: both
-    # zones were always offered and the OPT was spent on an empty pick.
+    # only when its sources do, plus "Don't play". Here the clause is
+    # `optional: true` ("you may play"), so the player first accepts or
+    # declines the replacement. Declining keeps the [Once Per Turn] (official
+    # Q1818). Accepting is choosing to activate, so it uses the [Once Per Turn]
+    # even if "Don't play" is then chosen or nothing is playable: CR 4.3
+    # 15-14-1-4, "even if the effect's processing can't be executed". DCGO
+    # refunds that use (RemoveUse when nothing was played); the rules text
+    # decides, so there is no refund here (bug scan: 4 turns over the cap).
     # Both the zone offer and the pick use DCGO's CanSelectCardCondition
     # (EX12_034.cs:146-152), which requires CanPlayAsNewPermanent(payCost:
     # false): a card under a play prohibition or with no free frame is never
     # offered, and a zone holding only such cards is not offered.
-    # The card pick inside a zone is mandatory: DCGO lets you decline it
-    # (PlayByEffect canNoSelect) and then refunds, which is the same outcome
-    # as "Don't play"; an optional pick here ended the clause before the
-    # refund ran.
+    # The card pick inside a zone is mandatory: "Don't play" is the one
+    # opt-out after accepting (DCGO also lets you decline the pick,
+    # PlayByEffect canNoSelect, with the same outcome).
     process:
       - select_effect_choice:
           bind_as: play_zone
@@ -133,10 +129,3 @@ effects:
                 target: source
                 source_index: sw_source
                 cost_delta: free
-      - if:
-          condition:
-            all_of:
-              - binding_absent: sw_hand
-              - binding_absent: sw_source
-          then:
-            - refund_opt: {}
