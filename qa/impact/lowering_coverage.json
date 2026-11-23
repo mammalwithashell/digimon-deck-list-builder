@@ -20186,6 +20186,7 @@
     "predicate:binding_absent",
     "predicate:can_unsuspend",
     "predicate:color_is",
+    "predicate:host_kind_is",
     "predicate:is_source",
     "predicate:is_suspended",
     "predicate:kind",

@@ -17172,6 +17172,7 @@
         "binding_absent",
         "can_unsuspend",
         "color_is",
+        "host_kind_is",
         "is_source",
         "is_suspended",
         "kind",
@@ -38979,6 +38980,7 @@
     "host_kind_is": [
       "BT13-096",
       "BT25-103",
+      "BT27-029",
       "EX12-077"
     ],
     "host_permanent_trait_has": [

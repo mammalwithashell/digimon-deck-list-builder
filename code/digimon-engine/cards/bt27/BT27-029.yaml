@@ -24,6 +24,7 @@ effects:
     summary: "[On Play][When Digivolving] Trash any 3 opposing digivolution cards; if none remain, gain Blocker and non-battle deletion protection until their turn ends"
     process:
       - select_opponent_sources:
+          filter: { host_kind_is: digimon }
           min: 3
           max: 3
           clamp_to_available: true

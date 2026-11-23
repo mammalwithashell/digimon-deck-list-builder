@@ -24,6 +24,7 @@ use digimon_engine::selection::SelectionKind;
 fn sekkamon_trashes_available_sources_and_gains_blocker() {
     let mut r = start(fixture(&["BT27-029"]).hand(0, &["BT27-029"]));
     r.place_stack(1, &["ICE", "FILLER"]);
+    r.place_stack(1, &["ALYSION", "BLUE-TAMER"]);
     action(&mut r, 0, PLAY_HAND_START);
     r.assert_prompt(
         SelectionKind::SourceMulti {
@@ -36,6 +37,10 @@ fn sekkamon_trashes_available_sources_and_gains_blocker() {
     );
     r.choose_prompt_card("ICE", None).unwrap();
     assert_eq!(ids(&r, &r.game.players[1].trash), ["ICE"]);
+    assert_eq!(
+        ids(&r, &r.game.players[1].battle_area[1].card_sources),
+        ["ALYSION", "BLUE-TAMER"]
+    );
     let sekkamon = digimon_engine::permanent::PermanentHandle {
         player: 0,
         index: 0,

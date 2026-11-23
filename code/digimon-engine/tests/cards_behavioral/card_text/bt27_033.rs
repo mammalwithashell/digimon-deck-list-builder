@@ -27,10 +27,12 @@ fn yukinamon_trashes_the_top_two_sources_from_each_opponent() {
     let mut r = start(fixture(&["BT27-033"]).hand(0, &["BT27-033"]).memory(15));
     r.place_stack(1, &["ALYSION", "ICE", "ICE", "FILLER"]);
     r.place_stack(1, &["ICE", "FILLER"]);
+    r.place_stack(1, &["ICE", "BLUE-TAMER"]);
     action(&mut r, 0, PLAY_HAND_START);
     let area = &r.game.players[1].battle_area;
     assert_eq!(ids(&r, &area[0].card_sources), ["ALYSION", "FILLER"]);
     assert_eq!(ids(&r, &area[1].card_sources), ["FILLER"]);
+    assert_eq!(ids(&r, &area[2].card_sources), ["ICE", "BLUE-TAMER"]);
 }
 
 #[test]
