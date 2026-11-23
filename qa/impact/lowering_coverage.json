@@ -50660,6 +50660,9 @@
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::from_master_to_disciple_saves_its_discount_for_a_digimon": [
+     "yaml_key"
+    ],
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
      "yaml_key"
     ],
@@ -52126,6 +52129,7 @@
     "dsl::delay_union_play_flow.rs::delay_union_flow_offer_installs_with_zero_candidates",
     "dsl::delay_union_play_flow.rs::delay_union_flow_plays_reward_on_field_and_subject_completes_leave",
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::from_master_to_disciple_saves_its_discount_for_a_digimon",
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution",
@@ -58797,6 +58801,9 @@
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::from_master_to_disciple_saves_its_discount_for_a_digimon": [
+     "yaml_key"
+    ],
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
      "yaml_key"
     ],
@@ -59369,6 +59376,7 @@
     "dsl::delay_union_play_flow.rs::delay_union_flow_offer_installs_with_zero_candidates",
     "dsl::delay_union_play_flow.rs::delay_union_flow_plays_reward_on_field_and_subject_completes_leave",
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::from_master_to_disciple_saves_its_discount_for_a_digimon",
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution",
@@ -67747,6 +67755,9 @@
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::from_master_to_disciple_saves_its_discount_for_a_digimon": [
+     "yaml_key"
+    ],
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
      "yaml_key"
     ],
@@ -68067,6 +68078,7 @@
     "dsl::constructs/zone_moves.rs::two_member_group_requires_mandatory_controller_order_at_either_end",
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards",
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::from_master_to_disciple_saves_its_discount_for_a_digimon",
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution",
@@ -73296,6 +73308,9 @@
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
      "yaml_key"
     ],
+    "dsl::digivolve_as_tamer.rs::from_master_to_disciple_saves_its_discount_for_a_digimon": [
+     "yaml_key"
+    ],
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers": [
      "yaml_key"
     ],
@@ -74768,6 +74783,7 @@
     "dsl::deck_trash_event.rs::unrelated_trash_arrival_history_does_not_change_verification_state",
     "dsl::deck_trash_event.rs::verification_distinguishes_reentered_pending_source_with_identical_visible_zones",
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
+    "dsl::digivolve_as_tamer.rs::from_master_to_disciple_saves_its_discount_for_a_digimon",
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers",
     "dsl::digivolve_as_tamer.rs::rosemon_burst_mode_option_blocks_suspended_tamer_digivolution",
@@ -86040,7 +86056,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2311,
+  "behavioural_tests": 2312,
   "cards": {
    "behaviourally_covered": 1274,
    "lowering_covered": 1292,
@@ -86205,7 +86221,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 425,
-  "scanned_tests": 2737,
+  "scanned_tests": 2738,
   "top_untested": [
    {
     "cards_blocked": 3,

@@ -1,8 +1,11 @@
-use digimon_engine::action::space::PLAY_HAND_START;
+use digimon_engine::action::space::{
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PLAY_HAND_START,
+};
 use digimon_engine::action::{build_action_mask, encode_digivolve};
-use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{Expiry, GamePhase, ModifierType};
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardKind, DelayTrigger, Expiry, GamePhase, ModifierType};
 use digimon_engine::modifiers::{ModifierEntry, PlayerModifierEntry};
+use digimon_engine::permanent::OptionState;
 use digimon_engine::selection::SelectionKind;
 
 const TAMER: &str = r#"
@@ -189,6 +192,55 @@ fn printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers() {
     );
     assert!(perm.is_suspended);
     assert!(perm.card_sources[0].face_down);
+}
+
+#[test]
+fn from_master_to_disciple_saves_its_discount_for_a_digimon() {
+    let mut base = make_test_card("TEST-LV3", "Level 3 Digimon");
+    base.card_kind = CardKind::Digimon;
+    base.level = Some(3);
+    base.dp = Some(3000);
+    let result = format!(
+        "{}  - kind: digivolve\n    from: {{ kind: digimon, level_eq: 3 }}\n    cost: 3\n",
+        RESULT.split_once("effects:").unwrap().0
+    );
+    let mut r = DebugRunner::builder()
+        .dsl_card("ST12-15")
+        .unwrap()
+        .from_dsl_yaml(TAMER)
+        .unwrap()
+        .from_dsl_yaml(&result)
+        .unwrap()
+        .add_card(base)
+        .hand(0, &["TEST-THUNDERBIRD", "TEST-THUNDERBIRD"])
+        .deck(0, &["TEST-LV3"; 6])
+        .memory(5)
+        .start();
+    let tamer = r.place_on_field(0, "TEST-KURATA", Some(0));
+    let digimon = r.place_on_field(0, "TEST-LV3", Some(0));
+    let delay = r.place_on_field(0, "ST12-15", Some(0));
+    r.game.players[0].battle_area[delay.index as usize].option_state = OptionState::Delayed {
+        owner: 0,
+        trash_on_turn: u16::MAX,
+        trigger: DelayTrigger::MainPhaseActivated,
+        placed_on_turn: 0,
+    };
+    r.set_phase(GamePhase::Main);
+    r.set_turn(1);
+    let delay_action = FIELD_EFFECT_START
+        + u16::from(delay.index) * EFFECTS_PER_PERMANENT
+        + FIELD_EFFECT_SLOT_FOR_MAIN;
+    assert_eq!(build_action_mask(&r.game, 0)[delay_action as usize], 1.0);
+    r.game.decode_action(delay_action, 0);
+    assert_eq!(r.game.player_digivolve_cost_reducers.len(), 1);
+
+    r.game.decode_action(encode_digivolve(0, tamer.index.into()), 0);
+    assert_eq!(r.memory(), 3, "pay the full Tamer route cost");
+    assert_eq!(r.game.player_digivolve_cost_reducers.len(), 1);
+
+    r.game.decode_action(encode_digivolve(0, digimon.index.into()), 0);
+    assert_eq!(r.memory(), 1, "pay 3 minus the saved discount");
+    assert!(r.game.player_digivolve_cost_reducers.is_empty());
 }
 
 #[test]

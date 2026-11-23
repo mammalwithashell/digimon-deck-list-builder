@@ -1232,7 +1232,9 @@ impl Game {
         // with `player_reducer_resolved = true`.
         if !player_reducer_resolved {
             if let Some(result) =
-                self.try_prompt_player_digivolve_cost_reducer(player_id, handle, hand_index, source)
+                self.try_prompt_player_digivolve_cost_reducer(
+                    player_id, handle, hand_index, source, route.as_tamer,
+                )
             {
                 return result;
             }
@@ -1947,6 +1949,7 @@ impl Game {
             target,
             declaration.source,
             Some(declaration.clone()),
+            route.as_tamer,
             true,
         );
         let mut frontier = vec![initial];
@@ -3411,6 +3414,7 @@ impl Game {
                 cost_target_ctx,
                 source,
                 Some(declaration),
+                matching_memory_cost.as_tamer,
             ) {
                 return result;
             }
