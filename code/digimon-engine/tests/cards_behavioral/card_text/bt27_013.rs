@@ -24,10 +24,13 @@ fn inherited_redirect_can_choose_a_chronicle_digimon_or_keep_the_security_attack
     for redirect in [false, true] {
         let mut chronicle = digimon("CHRONICLE", 5, 7000, false);
         chronicle.traits = vec!["Chronicle".into()];
-        let mut r = start(builder(CARD).add_card(chronicle));
+        let mut r = start(
+            builder(CARD).add_card(chronicle).add_card(digimon("ATTACKER", 4, 6000, false))
+        );
         r.place_stack(0, &[CARD, "TEXT-6"]);
         r.place_on_field(0, "CHRONICLE", Some(0));
-        let attacker = r.place_on_field(1, "TEXT-3", Some(0));
+        let attacker = r.place_on_field(1, "ATTACKER", Some(0));
+        let second = (!redirect).then(|| r.place_on_field(1, "ATTACKER", Some(0)));
         next_turn(&mut r);
         action(&mut r, 1, encode_attack(attacker.index as u16, 14));
         assert_eq!(candidates(&r), ["CHRONICLE"]);
@@ -37,6 +40,12 @@ fn inherited_redirect_can_choose_a_chronicle_digimon_or_keep_the_security_attack
             assert_eq!(r.security_count(0), 5);
         } else {
             r.decline_prompt().unwrap();
+            assert_eq!(r.security_count(0), 4);
+            assert_eq!(r.battle_area_size(1), 2);
+            action(&mut r, 1, encode_attack(second.unwrap().index.into(), 14));
+            assert_eq!(candidates(&r), ["CHRONICLE"]);
+            r.choose_prompt_card("CHRONICLE", None).unwrap();
+            assert_eq!(r.battle_area_size(1), 1);
             assert_eq!(r.security_count(0), 4);
         }
         assert!(r.pending_selection().is_none());

@@ -39,8 +39,10 @@ dual:
         when: on_own_security_removed
         once_per_turn: true
         process:
-          - select_material:
-              of_permanent: source
+          - select_union_zone:
+              of: you
+              zones: [material]
+              material_of: source
               bind_as: payment
               optional: true
               filter: { any_of: [{ name_is: Kentaurosmon }, { name_is: X Antibody }] }

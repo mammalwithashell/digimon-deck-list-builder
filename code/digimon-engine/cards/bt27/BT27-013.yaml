@@ -58,6 +58,7 @@ effects:
       - select_own_permanent:
           bind_as: defender
           optional: true
+          continue_on_decline: true
           filter: { kind: digimon, trait_has: Chronicle }
           prompt: "Change the attack target to 1 of your [Chronicle] Digimon"
       - if:

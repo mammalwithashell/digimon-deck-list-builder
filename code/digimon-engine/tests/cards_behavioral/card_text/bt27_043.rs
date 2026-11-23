@@ -110,6 +110,39 @@ fn security_payment_places_only_an_eligible_source_and_counts_both_security_stac
 }
 
 #[test]
+fn declining_a_security_payment_leaves_it_available_for_the_next_check() {
+    use digimon_engine::selection::SelectionKind;
+
+    let mut x = digimon("X", 3, 1000, false);
+    x.card_name = "X Antibody".into();
+    let mut r = start(
+        builder(CARD)
+            .add_card(x)
+            .add_card(digimon("GIANT", 7, 40000, false)),
+    );
+    let kentaurosmon = r.place_stack(0, &["X", CARD]);
+    r.game.players[0].battle_area[kentaurosmon.index as usize].is_suspended = true;
+    for _ in 0..2 {
+        r.place_on_field(1, "GIANT", Some(0));
+    }
+    next_turn(&mut r);
+    for i in 0..2 {
+        action(&mut r, 1, encode_attack(i, 14));
+        assert_eq!(candidates(&r), ["X"]);
+        if i == 0 {
+            r.decline_prompt().unwrap();
+        } else {
+            r.choose_prompt_card("X", None).unwrap();
+            r.assert_prompt(SelectionKind::OppField, false, 0);
+            r.choose_prompt_card("GIANT", Some(0)).unwrap();
+        }
+        assert!(r.pending_selection().is_none());
+    }
+    assert_eq!(ids(&r, &r.game.players[0].security)[0], "X");
+    assert_eq!(r.security_count(0), 4);
+}
+
+#[test]
 fn option_can_arts_digivolve_into_kentaurosmon_after_its_main_effect() {
     use digimon_engine::action::space::PLAY_HAND_START;
     use digimon_engine::selection::SelectionKind;
