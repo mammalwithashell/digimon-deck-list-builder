@@ -269,12 +269,11 @@ fn ex8_055_clause_a_silently_skips_when_fewer_than_3_sources() {
     );
     runner.game.drain_effect_queue();
 
-    // Drain any partial SourceMulti prompts that may appear.
-    for _ in 0..4 {
-        if runner.pending_selection().is_some() {
-            runner.auto_resolve().ok();
-        }
-    }
+    // §15-7-4: an unpayable "By trashing any 3" condition is not offered.
+    assert!(
+        runner.pending_selection().is_none(),
+        "Clause A must not offer activation when fewer than 3 Mineral/Rock sources exist"
+    );
 
     // EX8-055 must still be suspended (effect never fired).
     assert!(
