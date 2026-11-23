@@ -99,6 +99,50 @@ fn place_deck_top_under_rejects_zero_and_an_unbound_target() {
     }
 }
 
+#[test]
+fn place_deck_top_under_rejects_card_only_targets() {
+    let registry = StubRegistry::empty();
+    let context = ValidationContext { raw_rust: &registry };
+    for target in [
+        "{ top_of: recipient }",
+        "{ deck_top: you }",
+        "{ security_top: you }",
+        "self",
+        "event_card",
+        "{ permanent: recipient }",
+    ] {
+        let yaml = format!(
+            r#"
+card: X-ZONE
+name: Zone Verb Test
+kind: tamer
+color: [blue]
+cost: 4
+effects:
+  - when: main_on_field
+    process:
+      - select_own_permanent:
+          bind_as: recipient
+          filter: {{ kind: digimon }}
+          prompt: Choose a Digimon
+      - place_deck_top_under: {{ of: you, count: 2, target: {target}, face_down: true }}
+"#
+        );
+        let spec: CardSpec = serde_yml::from_str(&yaml).expect("card YAML parses");
+        let result = validate(&spec, &context);
+        if target == "{ permanent: recipient }" {
+            result.expect("a permanent reference to a selected Digimon is valid");
+        } else {
+            let errors = result.expect_err(target);
+            assert!(
+                errors.iter().any(|error| error.path.ends_with(".target")
+                    && error.message == "place_deck_top_under target must resolve to a permanent"),
+                "{target}: {errors:?}"
+            );
+        }
+    }
+}
+
 fn compile_steps(yaml_steps: &str) -> Vec<CompiledStep> {
     let yaml = format!(
         r#"
